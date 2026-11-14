@@ -2304,10 +2304,10 @@ print("PLAN " + json.dumps(out))
         pr = subprocess.run([sys.executable, "-c", PROBE], cwd=ROOT, env=ENV, capture_output=True, text=True, timeout=120)
         plans = next((json.loads(ln[5:]) for ln in pr.stdout.splitlines() if ln.startswith("PLAN ")), {})
         check("the Gallery's reads are on their indexes: New the posts by their time's own index, newest first, with no"
-              " sort of its own; Hot the week's plays by the views' time (through recent_plays)",
+              " sort of its own; Hot the week's plays by the views' time, both ends of the week (through recent_plays)",
               any("ix_social_posts_created" in x for x in plans.get("new", []))
               and not any("TEMP B-TREE" in x for x in plans.get("new", []))
-              and any("ix_skribl_views_created" in x for x in plans.get("hot", [])),
+              and any("ix_skribl_views_created (created_at>? AND created_at<?)" in x for x in plans.get("hot", [])),
               f"{plans or pr.stderr[-300:]}")
 
         # EVERY WORD AT 4.5:1, EVERY CONTROL 44px, THE BOX 16px (the suite's own

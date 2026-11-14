@@ -38543,9 +38543,12 @@ time but where said):
   itself (red: Skribl's model imported in gallery.py).
 
 FOUND WRONG, AND MENDED, while it was built: the tile's rounded corner (above);
-and three instruments of mine: section 13's row gap read a rounded top
-against a true bottom (18.48 for 18); verify_hostseams' listing row counted
-the plays the suite's other sections leave in the same database; and
+and four instruments of mine: section 13's row gap read a rounded top
+against a true bottom (18.48 for 18); its plan row asked only that the views'
+index appear, and with the week's first end read through a function SQLite
+still used it for the last, so the row stayed green until it asked for both
+ends of the week on the index; verify_hostseams' listing row counted the
+plays the suite's other sections leave in the same database; and
 verify_seam's guide row found "outer" inside `outerjoin` in the sample, so
 the word taken out of the prose went unnoticed until it asked for the word.
 
