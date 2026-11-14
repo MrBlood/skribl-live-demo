@@ -866,7 +866,7 @@ with sync_playwright() as p:
         pg = mira.pg
         pg.goto(BASE + f"/social/p/{pid}")
         pg.wait_for_timeout(800)
-        pg.click(".top [data-post-menu]")
+        pg.click(".post-page .post-row [data-post-menu]")
         pg.wait_for_timeout(600)
         mine = pg.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => (b.querySelector('.mu-words b') || b).textContent.trim())")
         pg.click("#postSheet [data-act=copy]")
@@ -877,7 +877,7 @@ with sync_playwright() as p:
         jp = juno.pg
         jp.goto(BASE + f"/social/p/{pid}")
         jp.wait_for_timeout(800)
-        jp.click(".top [data-post-menu]")
+        jp.click(".post-page .post-row [data-post-menu]")
         jp.wait_for_timeout(600)
         theirs = jp.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => (b.querySelector('.mu-words b') || b).textContent.trim())")
         jp.click("#postSheet [data-act=report]")
@@ -913,7 +913,7 @@ with sync_playwright() as p:
         try:
             pg.goto(BASE + f"/social/p/{pid}")
             pg.wait_for_timeout(700)
-            pg.click(".top [data-post-menu]")
+            pg.click(".post-page .post-row [data-post-menu]")
             pg.wait_for_timeout(600)
             pg.click("#postSheet [data-act=delete]")
             pg.wait_for_timeout(700)
@@ -923,7 +923,7 @@ with sync_playwright() as p:
             pg.click("#deleteSheet .post-sheet-acts [data-make-close]", timeout=5000)
             pg.wait_for_timeout(600)
             kept = post_row(pid) is not None and skribl_row(skid) is not None
-            pg.click(".top [data-post-menu]", timeout=5000)
+            pg.click(".post-page .post-row [data-post-menu]", timeout=5000)
             pg.wait_for_timeout(600)
             pg.click("#postSheet [data-act=delete]", timeout=5000)
             pg.wait_for_timeout(700)
@@ -1290,7 +1290,7 @@ with sync_playwright() as p:
               const g = document.createRange(); g.setStart(n, i); g.setEnd(n, i + needle.length); return g.getBoundingClientRect(); } }
             return null; };
           let xy;
-          if (what === 'ground') { const f = R('.post-row'), n = R('.post-row .lk-heart'), s = R('.post-share');
+          if (what === 'ground') { const f = R('.post-row'), n = R('.post-row .post-more'), s = R('.post-open');
             xy = [(n.right + s.left) / 2, f.top + f.height / 2]; }
           else if (what === 'words') xy = mid(text(c.querySelector('.post-words'), 'a card'));
           else if (what === 'drawing') xy = mid(R('.post-art .skribl-inline'));
@@ -1389,7 +1389,8 @@ with sync_playwright() as p:
         ok_open = all(r.get("ground") == ("card", page) and r.get("words", (None, None))[1] == page
                       and r.get("count", (None, None))[1] == page + "#comments"
                       and r.get("open") == ("post-open", page) for r in res.values())
-        check("a tap anywhere on a card's own ground (here in the row, between the heart and Share) opens its page, as"
+        check("a tap anywhere on a card's own ground (here in the row, between the ⋯ and Open ›, where no finger is"
+              " snapped to a button) opens its page, as"
               " a tap on its words does and Open › at the row's end; the 💬 opens it at its comments: a touch on a"
               " phone, a click on a desk",
               bool(card) and ok_open,
@@ -1458,8 +1459,9 @@ with sync_playwright() as p:
                  ("a profile", "/social/@juno", TILE.format(g_sid), g_sid, to_post),
                  ("a profile", "/social/@juno", TILE.format(lone), lone, to_lone)]
         # Where a finger goes on a card: the drawing's middle, the name's, and
-        # the ground's: Home's "watching at" (the line under the drawing), a
-        # Gallery card's time; scrolled to the screen's middle first.
+        # the ground's: on Home's calm card the row's open space between the ⋯
+        # and Open › (its line waits until played, Nov 14), a Gallery card's
+        # time; scrolled to the screen's middle first.
         SPOT12 = """([sel, what]) => { const c = document.querySelector(sel); if (!c) return null;
           const text = (root, needle) => { if (!root) return null; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
             for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.textContent.indexOf(needle); if (i >= 0) {
@@ -1467,7 +1469,10 @@ with sync_playwright() as p:
             return null; };
           const at = { drawing: () => c.querySelector('.skribl-inline'),
                        name: () => { const e = c.querySelector('.post-name, .tdn'); return e && text(e, e.textContent.trim()); },
-                       ground: () => text(c.querySelector('.skribl-inline-say'), 'watching at') || text(c.querySelector('.tm'), c.querySelector('.tm') ? c.querySelector('.tm').textContent.trim() : '') }[what];
+                       ground: () => { const m = c.querySelector('.post-row .post-more'), o = c.querySelector('.post-row .post-open');
+                         if (m && o) return { getBoundingClientRect: () => { const a = m.getBoundingClientRect(), z = o.getBoundingClientRect();
+                           return { left: a.right, top: a.top, width: z.left - a.right, height: a.height }; } };
+                         return text(c.querySelector('.tm'), c.querySelector('.tm') ? c.querySelector('.tm').textContent.trim() : ''); } }[what];
           const it = at && at(); if (!it || !it.getBoundingClientRect().width) return null;
           let r = it.getBoundingClientRect();
           window.scrollTo({ top: r.top + scrollY + r.height / 2 - innerHeight / 2, behavior: 'instant' });
@@ -1554,7 +1559,7 @@ with sync_playwright() as p:
               f"{ {r['label']: r.get('person') for r in cards12} }")
         check("...and a finger's tap on the ground opens the right page, followed: a post's drawing its post"
               " (/social/p/…), one on its own its page (/social/b/…), one by somebody not on the site Skribl's own"
-              " page for it (/s/…); on Home under the drawing at \"watching at\", on a Gallery card at its time",
+              " page for it (/s/…); on Home in the row between the ⋯ and Open ›, on a Gallery card at its time",
               made and all(r.get("finger") == r["want"] for r in cards12),
               f"{ {r['label']: r.get('finger') for r in cards12 if r.get('finger') != r['want']} }")
 
@@ -1602,6 +1607,14 @@ with sync_playwright() as p:
         try:
             sel = f'.post-card[data-post="{g_post}"]'
             ready(cpg, "/social/", sel)
+            # A card's line waits until its drawing is first played (the calm
+            # card, Nov 14): played and paused, it is open, as for a person.
+            cpg.evaluate("(s) => SkriblInline.mount(document.querySelector(s + ' .post-art'))[0].toggle()", sel)
+            cpg.wait_for_function("(s) => !document.querySelector(s + ' .skribl-inline-line').className.match(/is-(waiting|opening)/)",
+                                  arg=sel, timeout=8000)
+            cpg.evaluate("(s) => { const p = SkriblInline.mount(document.querySelector(s + ' .post-art'))[0];"
+                         " if (p.state().state === 'playing') p.toggle(); }", sel)
+            cpg.wait_for_timeout(300)
             cpg.locator(sel + " .rl-speed").scroll_into_view_if_needed()
             cpg.locator(sel + " .rl-speed").tap()
             cpg.wait_for_timeout(300)
@@ -1626,7 +1639,8 @@ with sync_playwright() as p:
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
             line["stopped"] = str(exc).splitlines()[0][:160]
         close_ctx(ctx, cpg)
-        check("...and on Home the line's own controls keep their taps: the speed opens its choices (a tap between two"
+        check("...and on Home, once its drawing is played (the line waits until then), the line's own controls keep"
+              " their taps: the speed opens its choices (a tap between two"
               " of them opens nothing and leaves them open) and takes one (2×), the loop stops repeating, and the page"
               " stays",
               made and line.get("chips") == "true" and line.get("between") == (True, "/social/", "true")
@@ -1697,8 +1711,8 @@ with sync_playwright() as p:
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is its rows' red
             desk["stopped"] = str(exc).splitlines()[0][:160]
         close_ctx(ctx, cpg)
-        check("on a desk, Ctrl or the middle button opens the card in a new tab and this page stays: Home's card (at"
-              " \"watching at\") and a Gallery card (at its time)",
+        check("on a desk, Ctrl or the middle button opens the card in a new tab and this page stays: Home's card (in"
+              " its row, between the ⋯ and Open ›) and a Gallery card (at its time)",
               made and all(desk.get(k) == (w, p_) for k, w, p_ in (("home ctrl", to_post, "/social/"),
                                                                   ("home middle", to_post, "/social/"),
                                                                   ("explore ctrl", to_lone, "/social/explore"),

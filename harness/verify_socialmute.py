@@ -1719,7 +1719,7 @@ with sync_playwright() as p:
                                " const n = c.querySelector('.lk-n'); return { likes: n ? n.textContent.trim() : '0',"
                                " comments: c.querySelector('.post-count').getAttribute('aria-label') }; }", zp)
             go(pg, f"/social/p/{zp}", wait=600)
-            page = pg.evaluate("() => { const n = document.querySelector('.post-art .lk-n');"
+            page = pg.evaluate("() => { const n = document.querySelector('.post-page .post-row .lk-n');"
                                " return { likes: n ? n.textContent.trim() : '0', comments: (document.querySelector('[data-cm-count]') || {}).textContent,"
                                " folded: document.querySelectorAll('.cm.is-quiet').length }; }")
             go(pg, f"/social/p/{xp}", wait=600)

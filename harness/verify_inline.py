@@ -1842,7 +1842,22 @@ with sync_playwright() as sp:
     #   elements, and no test for a Flip before its pages come (its line has
     #   no length to put a moment on): 2,807 B down to 2,300. 81,241 B
     #   measured.
-    EMBED_RATCHET = 81_244
+    # RAISED (the owner's "Yes on everything", Nov 14: the calm card, the
+    #   quick-patterns mock's B), for one named cost: +543 B -- a line that
+    #   WAITS (skribl_inline line_waits=True; docs/INTEGRATION.md, "A line
+    #   that waits"), a GENERAL seam: no room and nothing shown until the
+    #   first play, the play button saying what the line would (the pill the
+    #   Gallery's cards already wear), the first play opening it, gliding to
+    #   its own height read off the line, and under Reduce Motion the room put
+    #   there unseen (inlineplayer.js: openLine, the pill kept at rest;
+    #   inlineplayer.css: the waiting and opening rules, and Reduce Motion's).
+    #   WHICH CALLER PAYS: every page that shows a post, for an option only a
+    #   host that asks for it uses (the site's cards). Spent first: the line's
+    #   LEAD is retired, its slot, dress, focus ring and hover (the site's
+    #   heart, its only user, is in the site's own row now); openLine written
+    #   in one pass, one handler for both endings; the transitions' default
+    #   timing left out. 81,784 B measured, against 81,241 before it.
+    EMBED_RATCHET = 81_787
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

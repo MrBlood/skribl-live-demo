@@ -536,6 +536,13 @@ CARD_ROW = ["count", "heart", "share", "more", "open"]
 PAGE_ROW = ["count", "heart", "share", "more"]
 
 
+def to_middle(pg, sel):
+    """`sel` in the middle of the screen, clear of the bars: a row under the
+    bottom bar is "in view" to the browser, and a press there lands on the bar."""
+    pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", sel)
+    pg.wait_for_timeout(300)
+
+
 def placed(rw, kids=CARD_ROW):
     """The heart's place in the row (ROW's reading), as the quick-patterns
     mock's B has it: after the comments, before Share, the ⋯ and (on a card)
@@ -1046,17 +1053,14 @@ with sync_playwright() as p:
 
             ctx, pg = browser_as(b, ann)
             go(pg, "/social/")
-            pg.locator(card(p1) + " .post-row").scroll_into_view_if_needed()
-            pg.wait_for_timeout(300)
+            to_middle(pg, card(p1) + " .post-row")
             with_h = pg.evaluate(ROW, card(p1))
-            pg.locator(card(p1d) + " .post-row").scroll_into_view_if_needed()
-            pg.wait_for_timeout(300)
+            to_middle(pg, card(p1d) + " .post-row")
             without = pg.evaluate(ROW, card(p1d))
             close_ctx(ctx, pg)
             ctx, pg = browser_as(b, bea)
             go(pg, "/social/")
-            pg.locator(card(p1) + " .post-row").scroll_into_view_if_needed()
-            pg.wait_for_timeout(300)
+            to_middle(pg, card(p1) + " .post-row")
             rw = pg.evaluate(ROW, card(p1))
             h = pg.evaluate(HEART, card(p1) + " .lk-heart")
             check("on Home's card the heart is in the row under the drawing, after the comments and before Share, the ⋯"
@@ -1075,8 +1079,7 @@ with sync_playwright() as p:
                   and without["kids"] == [k for k in CARD_ROW if k != "heart"] and with_h["kids"] == CARD_ROW,
                   f"with {with_h and (with_h['kids'], with_h['h'])}; without {without and (without['kids'], without['h'])}")
             go(pg, f"/social/p/{p1}")
-            pg.locator(".post-page > .post-row").scroll_into_view_if_needed()
-            pg.wait_for_timeout(300)
+            to_middle(pg, ".post-page > .post-row")
             m = pg.evaluate(META)
             rp = pg.evaluate(ROW, ".post-page")
             hp = pg.evaluate(HEART, PAGE_HEART)
@@ -1086,8 +1089,7 @@ with sync_playwright() as p:
                   and hp["pressed"] == "false" and hp["label"] == "Like" and hp["n"] is None,
                   told(rp) + f"; meta {m and (m['h'], m['lh'], m['heart'])}")
             go(pg, f"/social/b/{d1}")
-            pg.locator(".post-page > .post-row").scroll_into_view_if_needed()
-            pg.wait_for_timeout(300)
+            to_middle(pg, ".post-page > .post-row")
             rd_ = pg.evaluate(ROW, ".post-page")
             hd = pg.evaluate(HEART, PAGE_HEART)
             check("on a drawing's own page (/social/b/<id>) the same row, the heart in the same place, to its own like",
@@ -2009,16 +2011,14 @@ with sync_playwright() as p:
                     # The heart sits as built on this screen too (the census
                     # above leaves Skribl's line to Skribl's suites): read
                     # after it, so its scroll moves nothing it reads.
-                    pg.locator(card(p12b) + " .post-row").scroll_into_view_if_needed()
-                    pg.wait_for_timeout(200)
+                    to_middle(pg, card(p12b) + " .post-row")
                     sits.append((tag, "Home's card", pg.evaluate(ROW, card(p12b)), CARD_ROW))
                     go(pg, f"/social/p/{p12}#liked", wait=200)
                     tints.append((tag, pg.evaluate(LK_TINT)))
                     pg.wait_for_timeout(3000)
                     got.append(("a post's page", pg.evaluate(READ)))
                     marks += [(tag, "post", m) for m in pg.evaluate(MARKS)]
-                    pg.locator(".post-page > .post-row").scroll_into_view_if_needed()
-                    pg.wait_for_timeout(200)
+                    to_middle(pg, ".post-page > .post-row")
                     sits.append((tag, "a post's page", pg.evaluate(ROW, ".post-page"), PAGE_ROW))
                     pg.locator("[data-like-by]").click()
                     pg.wait_for_timeout(700)
@@ -2443,20 +2443,24 @@ with sync_playwright() as p:
             air = max((len({f["k"] for f in fs if f["c"] == "lk-rise" and f["T"] == T}) for T in {f["T"] for f in fs}), default=0)
             # NEVER LATE, judged by the playhead itself: each heart starts at a
             # dot, and on its first frame the playhead is at that dot or just
-            # past it (3px: at 16x it covers about one a frame here). Not by
-            # the events: a host can send one again, late. (The busy piece's
-            # last like is 3% before its end, so no heart is born as the
+            # past it: by three frames of the playhead's travel at 16x, worked
+            # out from this line's width and the piece's length (about 3px when
+            # the heart took room on the line; the line is wider since Nov 14).
+            # Not by the events: a host can send one again, late. (The busy
+            # piece's last like is 3% before its end, so no heart is born as the
             # playhead comes round.)
             behind = [round(v[0]["head"] - v[0]["x"], 2) for v in rs.values() if v[0]["head"] is not None]
             at_dot = all(any(abs(v[0]["x"] - d["cx"]) < 1 for d in busy["dots"]) for v in rs.values())
-            fresh = at_dot and len(behind) == len(rs) and all(0 <= d <= 3 for d in behind)
+            per_frame = busy["w"] / (busy["play"] / 16) * (1000 / 60) if busy.get("play") else 1
+            fresh = at_dot and len(behind) == len(rs) and all(0 <= d <= 3 * max(1, per_frame) for d in behind)
             check("calm at 16x: on a busy drawing (40 likes, %d dots) the playhead reaches dots by the dozen, and at"
                   " most three hearts are in the air, each a third of a second or more after the one before, each"
                   " rising from a dot just reached (never late)" % len(busy["dots"]),
                   len(busy["dots"]) >= 30 and len(mk) >= 40 and len(rs) >= 6 and air <= 3 and min(gaps or [0]) >= 320
                   and fresh,
                   json.dumps({"dots": len(busy["dots"]), "reached": len(mk), "hearts": len(rs), "most in the air": air,
-                              "closest": round(min(gaps or [0])), "fresh": fresh, "behind the playhead": behind}))
+                              "closest": round(min(gaps or [0])), "fresh": fresh, "behind the playhead": behind,
+                              "a frame's travel": round(per_frame, 2)}))
             # NOTHING ELSE MOVES on Home's card while a heart rises from its line,
             # and a heart takes no tap: one on the drawing where it is pauses it.
             ctx, pg = browser_as(b, wim)
@@ -2468,6 +2472,10 @@ with sync_playwright() as p:
             pg.wait_for_function("(s) => SkriblInline.mount(document.querySelector(s))[0].state().loaded", arg=c15,
                                  timeout=15000)
             pg.evaluate("(s) => { const p = SkriblInline.mount(document.querySelector(s))[0]; p.pause(); }", c15)
+            # The card's line waits until its first play, then glides open:
+            # read once it has.
+            pg.wait_for_function("(s) => !document.querySelector(s + ' .skribl-inline-line').className.match(/is-(waiting|opening)/)",
+                                 arg=c15, timeout=5000)
             pg.wait_for_timeout(200)
             pg.evaluate(CARD_FRAMES, [c15, 1300])
             pg.evaluate(RISE, [c15, 1300])
@@ -2495,7 +2503,7 @@ with sync_playwright() as p:
             parts = sorted(cf[0]["boxes"]) if cf else []
             moved = {k: max(abs(f["boxes"][k][i] - cf[0]["boxes"][k][i]) for f in cf for i in range(4)) for k in parts}
             check("nothing else on the card moves while a heart rises from its line: its head, words, drawing, heart,"
-                  " scrubber, line and foot keep their boxes, frame by frame",
+                  " scrubber, line and row keep their boxes, frame by frame",
                   cf and len(cf) > 20 and {f["k"] for f in fs if f["c"] == "lk-rise"} and parts
                   and all(v < 0.01 for v in moved.values()),
                   json.dumps({"frames": len(cf or []), "hearts": len({f["k"] for f in fs if f["c"] == "lk-rise"}), "moved": moved}))
