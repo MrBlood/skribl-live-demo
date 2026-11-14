@@ -38322,3 +38322,52 @@ Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
 their smoke after the merge); SF and Segoe UI (the row is laid out by flex
 and gaps, the line's height read off the line in the page's own fonts); the
 live site.
+
+## After v330 -- A first visit fades too: the theme boot after the stylesheets that ask
+
+Main's run after #889 and #892's dispatched full run were each red on one
+row of verify_socialposts: "Transition was aborted because of invalid state.
+ViewTransition opt-in disabled" on a drawing's page (/s/<id>). #890 put it
+down to the suite going on to the next page mid-fade, and waited longer. That
+was wrong: leaving a page mid-fade, 10 times of 10, reported nothing. Its
+comment in `follow` now says so; the 400ms stays, harmless.
+
+WHAT IT WAS. Chrome decides whether an arriving page cross-fades when its
+parser reaches <body>, from the stylesheets loaded by then
+(ViewTransitionSupplement::WillInsertBody, which Chrome's own comment calls
+"probably a bit of a heavy hammer", crbug 1463966), and checks that answer
+at the first frame. If no loaded sheet asked, it drops the fade, a cut where
+a fade belongs, and reports it as an error on the page. A drawing's page had
+Skribl's theme boot before player.css, its one stylesheet and the last thing
+in its head, so nothing held the parser: on a first visit (nothing cached)
+the sheet was still on its way at <body>, every time, and whether anything
+brought the styles up to date before the first frame was a race. With
+player.css held back 150ms, 6 of 48 first visits by a tap dropped the fade,
+each with that error. The site's pages had the same order (the boot, then social.css). The
+Pad and Flip did not: their stylesheets come before the theme boot and three
+more small inline boots, and a parser waits at an inline script for the
+stylesheets above it.
+
+THE FIX is that order: the theme boot after the stylesheet, on a drawing's
+page and in the site's base.html. It still runs before the first paint
+(verify_theme and verify_identity read the theme and the browser's bar at
+<body>). The boot's own comment and docs/INTEGRATION.md ("Put it after your
+stylesheets") say so for every page and host that asks for the fade, and
+START-HERE's invariants name the rule and its suites.
+
+THE CHECKS read it where Chrome does: at the moment <body> appears, on a
+first visit (a fresh context, nothing cached, every stylesheet held back
+300ms by the browser), whether a loaded stylesheet asks for the cross-fade
+(browsing.fade_at_body). verify_menu reads the Pad, Flip and a drawing's
+page; verify_socialsettings part 4 reads Home and Explore. Each was shown red
+in a copy of the tree: the drawing's page and the site with the boot moved
+back before their stylesheet; the Pad and Flip with styles.css moved after
+every inline script (moving the theme boot alone could not break them: their
+other boots hold the parser too). Green as built. As a person meets it, first
+visits by a tap with player.css held back 150ms: 6 of 48 dropped the fade
+with the boot first, none of 48 as built (all 48 faded).
+
+Pad and Flip: they had this order already; nothing changes in either, and
+verify_menu now guards it. Not tested here: WebKit and Firefox (the rule is
+the HTML parser's, which they share, and main's lanes run their smoke after
+the merge); the live site.
