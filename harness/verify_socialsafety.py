@@ -684,13 +684,14 @@ with sync_playwright() as p:
             pg.click("#blockSheet [data-safety-block]")
         pg.wait_for_timeout(800)
         prof = pg.evaluate("""() => ({ at: location.pathname, note: (document.querySelector('.prof-blocked') || {}).textContent,
-          unblock: !!document.querySelector('form[data-unblock] button'), skribls: !!document.getElementById('profSkribls'),
+          unblock: !!document.querySelector('form[data-unblock] button'),
+          skribls: !!document.querySelector('[data-prof-tabs], [data-prof-panel], .post-card, .gal-tile'),
           more: !!document.querySelector('[data-person-menu]') })""")
         rows = db("select blocker_id, blocked_id from social_blocks")
         aid, _ = pid_of("ada")
         nid, _ = pid_of("ben")
         check("Block @them is asked once, in its own words (both ways, quietly, undone in Settings); then their profile"
-              " says you blocked them, with Unblock, and shows nothing they made",
+              " says you blocked them, with Unblock, and shows nothing they made (no tabs, no card, no tile)",
               ask == {"title": "Block @ben?",
                       "lede": "You won’t see each other’s posts or drawings, and they can’t see your profile. They aren’t"
                               " told. You can unblock them in Settings.", "go": "Block"}

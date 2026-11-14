@@ -701,9 +701,10 @@ CARD_GET = r"""([handle]) => {""" + TOAST_GET + r"""
                            nav: navTop() }, toastOf()); };
   return !!card && !!next; }"""
 
-# Their page's line (its room, once it has one), and the Skribls heading under it.
+# Their page's line (its room, once it has one), and what is under it: their
+# tabs (the map's step 4: the strip took the place of the Skribls heading).
 LINE_GET = r"""() => {""" + TOAST_GET + r"""
-  const head = document.getElementById('profSkribls');
+  const head = document.querySelector('[data-prof-tabs]');
   /* The line's room, or once it stands without one, the line with its margins
      (the room holds them both: a reader of the bare line reads a hop that
      isn't there). */
@@ -1208,8 +1209,16 @@ with sync_playwright() as p:
             to(pg, f'.post-card[data-post="{ap}"]', 120)
             open_sheet(pg, f'.post-card[data-post="{ap}"] [data-post-menu]', "postSheet")
             own_card = [r["name"] for r in pg.evaluate(ACTS, "#postSheet")]
+            # YOUR OWN PAGE (its tabs since the map's step 4 hold Home's cards:
+            # your posts, and on Likes other people's, whose ⋯ is Home's): no
+            # ⋯ of yours, nothing that would mute you, and your own post's ⋯
+            # there as on Home.
             go(pg, "/social/@ann")
-            own_page = pg.evaluate("() => ({ more: !!document.querySelector('[data-person-menu]'), rows: document.querySelectorAll('.mu-act').length })")
+            own_page = pg.evaluate("() => ({ more: !!document.querySelector('[data-person-menu]'),"
+                                   " self: document.documentElement.outerHTML.includes('Mute @ann') })")
+            to(pg, f'[data-prof-list] .post-card[data-post="{ap}"]', 120)
+            open_sheet(pg, f'[data-prof-list] .post-card[data-post="{ap}"] [data-post-menu]', "postSheet")
+            own_page["card"] = [r["name"] for r in pg.evaluate(ACTS, "#postSheet")]
             close_ctx(ctx, pg)
             ctx, pg = browser_as(b, None)
             go(pg, "/social/@ben")
@@ -1219,9 +1228,11 @@ with sync_playwright() as p:
             open_sheet(pg, ".post-page .post-row .post-more", "postSheet")
             out_post = [r["name"] for r in pg.evaluate(ACTS, "#postSheet")]
             close_ctx(ctx, pg)
-            check("never on your own post (Copy link, Share…, Delete post) nor your own page (no ⋯ at all); never"
-                  " signed out (a person's ⋯ says Report @ben alone, a post's Copy link, Share…, Report this post)",
-                  own_card == ["Copy link", "Share…", "Delete post"] and not own_page["more"] and own_page["rows"] == 0
+            check("never on your own post (Copy link, Share…, Delete post), on Home or your own page's Posts, nor of you"
+                  " on your own page (no ⋯ of yours, no Mute @ann in it); never signed out (a person's ⋯ says Report"
+                  " @ben alone, a post's Copy link, Share…, Report this post)",
+                  own_card == ["Copy link", "Share…", "Delete post"] and not own_page["more"] and not own_page["self"]
+                  and own_page.get("card") == ["Copy link", "Share…", "Delete post"]
                   and out_person == ["Report @ben"] and out_post == ["Copy link", "Share…", "Report this post"],
                   f"own card {own_card}; own page {own_page}; signed out {out_person} / {out_post}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
@@ -1397,7 +1408,7 @@ with sync_playwright() as p:
                   and st["words"] == thanks("Jay"),
                   json.dumps({"line": line, "toast": st and st["box"], "more": more}))
             check("the line's room opens on every frame (no frame more than 30% of the way, eight frames or more), then it"
-                  " fades in (no frame more than 35%), the Skribls heading moving down without going back, nothing"
+                  " fades in (no frame more than 35%), their tabs under it moving down without going back, nothing"
                   " hopping; the toast as on Home",
                   room["ok"] and tst["ok"], json.dumps({"room": room, "toast": tst}))
             check("nothing changes on their side, and nobody is told: Jay's own page, his Home and his Activity, and Kip's"
@@ -1406,7 +1417,9 @@ with sync_playwright() as p:
                   f"same: {[x == y for x, y in zip(seen_before, seen_after)]}")
             go(pg, "/social/@jay", wait=1200)
             line2 = pg.evaluate(LINE)
-            listed = pg.evaluate("(id) => !!document.querySelector('#skriblGallery [data-id=\"' + id + '\"]')", js)
+            go(pg, "/social/@jay/gallery", wait=600)
+            listed = pg.evaluate("(id) => !!document.querySelector('[data-prof-list] .gal-tile[data-drawing=\"' + id + '\"]')", js)
+            go(pg, "/social/@jay", wait=600)
             open_sheet(pg, "[data-person-menu]", "personSheet")
             acts = pg.evaluate(ACTS, "#personSheet")
             pg.keyboard.press("Escape")
@@ -1416,7 +1429,7 @@ with sync_playwright() as p:
             more_from = jp2 in c.get(f"/social/p/{jp1}")[1]
             payload = c.get_json(f"/api/skribls/{js}")[0]
             check("loaded muted, their page says so and their ⋯ says Unmute @jay first; what you go to stays: Jay's"
-                  " drawing in his page's Skribls, his post's page with More from his other post, his drawing's page,"
+                  " drawing in his page's Gallery, his post's page with More from his other post, his drawing's page,"
                   " its link page and its payload",
                   line2 and line2["words"] == "You muted Jay · Unmute" and acts and acts[0]["name"] == "Unmute @jay"
                   and listed and all(v == 200 for v in pages.values()) and more_from and payload == 200,
@@ -1430,7 +1443,7 @@ with sync_playwright() as p:
             acts3 = pg.evaluate(ACTS, "#personSheet")
             close_ctx(ctx, pg)
             check("Unmute on the line unmutes (nothing kept): the line fades, then its room closes (no frame more than 30%"
-                  " of the way), the heading moving up without going back; the toast says “Unmuted. Jay’s posts are"
+                  " of the way), their tabs moving up without going back; the toast says “Unmuted. Jay’s posts are"
                   " back.”, and the ⋯ says Mute @jay again",
                   mutes_of("ida", "jay") == [] and shut["ok"] and gone and st3 and st3["words"] == "Unmuted. Jay’s posts are back."
                   and acts3 and acts3[0]["name"] == "Mute @jay",
@@ -1920,15 +1933,23 @@ with sync_playwright() as p:
             check("signed out there is no mute anywhere: no row, no toast, no script, on somebody's page, a post's page"
                   " and Home", not any(out.values()), json.dumps(out))
             c = jon.client()
-            own = [m for m in marks if m in c.get("/social/@jon")[1]]
+            # YOUR OWN PAGE mutes nobody of itself: no Mute @jon and no line;
+            # since the map's step 4 its tabs hold Home's cards (on Likes,
+            # other people's posts), so the cards' ⋯, its toast and its
+            # script are there, as on Home.
+            own_text = c.get("/social/@jon")[1]
+            own = [m for m in ("Mute @jon", "data-mute-line", "data-person-menu") if m in own_text]
+            own_cards = [m for m in ("data-mute-toasts", "mutes.js") if m in own_text]
             block(jon, "kai")
             blocked = [m for m in marks if m in c.get("/social/@kai")[1]]
             unblock(jon, "kai")
             home = [m for m in ("data-mute-toasts", "mutes.js") if m in c.get("/social/")[1]]
-            check("your own page has none of it, nor the page of somebody you blocked (Unblock is there); signed in, Home"
+            check("your own page mutes nobody of itself (no Mute @you, no line, no ⋯ of yours; its cards' ⋯ and toast are"
+                  " Home's), and the page of somebody you blocked has none of it (Unblock is there); signed in, Home"
                   " carries the toast and its script",
-                  not own and not blocked and home == ["data-mute-toasts", "mutes.js"],
-                  f"own {own}; blocked {blocked}; Home {home}")
+                  not own and own_cards == ["data-mute-toasts", "mutes.js"] and not blocked
+                  and home == ["data-mute-toasts", "mutes.js"],
+                  f"own {own}, its cards' {own_cards}; blocked {blocked}; Home {home}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(12, exc)
 

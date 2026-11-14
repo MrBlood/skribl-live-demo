@@ -916,6 +916,52 @@ check("the site goes through the seam alone: no module of social/ reaches Skribl
       and "recent_plays(as_of=as_of)" in _gal_code and "outerjoin(plays, plays.c.skribl_id == Post.skribl_id)" in _gal_code,
       f"{ {k: v for k, v in _site_rows.items() if v} }")
 
+# ---------------------------------------------------------------------------
+print("\nA PERSON'S DRAFTS — list_drafts, for a host's page that is theirs alone")
+# docs/INTEGRATION.md, "A person's drafts on your own page" (Nov 14, the Skribl
+# site's profile, its Drafts tab, the map's step 4): the list the editors' Your
+# drafts shows, newest saved first, without payloads, by the id the host hands
+# Skribl for the person; each opens in the editor that made it with
+# ?draft=<id>, the editors' own hand-off. Pinned as source here;
+# verify_hostseams asks it in a throwaway host, and verify_socialprofile
+# section 16 opens one from the Skribl site's profile.
+_drafts_src = (ROOT / "skribl" / "drafts.py").read_text(encoding="utf-8")
+_ld_fn = next((n for n in ast.parse(_drafts_src).body if isinstance(n, ast.FunctionDef) and n.name == "list_drafts"), None)
+_ld_code = ast.unparse(ast.Module(body=_ld_fn.body[1:], type_ignores=[])) if _ld_fn else ""
+check("list_drafts is exported (skribl.__all__, from drafts.py) and reads only: the author's own rows, by the id the"
+      " host hands Skribl, newest saved first, their payloads never read, nothing added, deleted, flushed or committed",
+      '"list_drafts"' in _init and "from .drafts import list_drafts" in _init and bool(_ld_fn)
+      and [a.arg for a in _ld_fn.args.args] == ["author_id"] and "_owner(author_id)" in _ld_code
+      and "SkriblDraft.user_id == owner" in _ld_code and "defer(SkriblDraft.payload_json)" in _ld_code
+      and "SkriblDraft.updated_at.desc()" in _ld_code
+      and not re.search(r"\.add\(|\.delete\(|\.flush\(|\.commit\(|\.update\(|\.execute\(", _ld_code), _ld_code[:240])
+check("it is general: nothing in it names a host or a host's rows",
+      bool(_ld_code) and not re.search(r"social|blooby|site:|Person|(?<!Skribl)Post\b", _ld_code), _ld_code[:120])
+_sdjs = strip_comments((_layout.STATIC_DIR / "lib" / "savedrafts.js").read_text(encoding="utf-8"))
+_ofu = _fn("openFromUrl", _sdjs)
+check("the editors open a draft named at their address as their own Your drafts does: ?draft=<id> read once and"
+      " dropped from the address, the draft loaded from the store (the account's, signed in), work on the canvas"
+      " asked about before anything replaces it, and the draft adopted, so Save goes on updating it",
+      "get('draft')" in _ofu and "searchParams.delete('draft')" in _ofu and "history.replaceState" in _ofu
+      and "backend.load(id)" in _ofu and "opts.hasContent && opts.hasContent()" in _ofu and "ask(id, rec)" in _ofu
+      and "adopt(id, rec)" in _ofu, _ofu.strip()[:200] or "no openFromUrl")
+_dg = re.search(r"\*\*A person's drafts on your own page\*\*(.*?)\n## ", _guide, re.S)
+_dgw = " ".join(_dg.group(1).split()) if _dg else ""
+check("docs/INTEGRATION.md documents it: skribl.list_drafts(author_id), newest saved first, no payload read, only on a"
+      " page that is theirs alone, nobody refused, and ?draft=<id> on the editor that made it, which asks before"
+      " anything replaces work on its canvas",
+      bool(_dg) and all(w in _dgw for w in ("skribl.list_drafts(author_id)", "newest saved first", "No payload is read",
+                                            "theirs alone", "refuses", "?draft=<id>", "asked about",
+                                            "skribl.skribl_editor", "skribl.skribl_flip")),
+      _dgw[:200] or "no such paragraph")
+_prof_code = source.read_py(ROOT / "social" / "profiles.py")
+check("the site goes through the seam alone: its profile's Drafts lists them with list_drafts, for the person whose"
+      " page it is, and opens each at the editor's own address with draft=; no module of social/ reaches Skribl's"
+      " drafts itself (their model, their table)",
+      "from skribl import list_drafts" in _prof_code and "list_drafts(me.public_id)" in _prof_code
+      and 'draft=d["id"]' in _prof_code and '".skribl_flip"' in _prof_code and '".skribl_editor"' in _prof_code
+      and not any(v for v in _site_rows.values()), f"{ {k: v for k, v in _site_rows.items() if v} }")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

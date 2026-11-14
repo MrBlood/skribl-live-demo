@@ -167,6 +167,23 @@ def page(viewer, show="everyone", sort="new", q="", before=None, limit=PAGE):
     return entries, (_cursor(entries[-1]) if (more and entries) else None)
 
 
+def person_page(person, viewer, before=None, limit=PAGE):
+    """A page of ONE PERSON'S GALLERY (their profile's Gallery tab, the map's
+    step 4): every drawing and Flip they have shared, newest first, (entries,
+    next cursor or None). Their posts, and the drawings they showed in
+    Skribl's gallery outside a post (the map's decision 2: "nothing is lost"),
+    read as More from reads one person's (posts.feed_page, Home's cursor):
+    nobody a block hides either way, a mute changing nothing (their page is
+    what the viewer went to). A face and a drawing kept link-only are no
+    post and not public, so neither is ever in it; what is taken down, or no
+    longer described, has no tile (tiles())."""
+    from .posts import _uncursor, feed_page
+    if before and (len(before) > 200 or _uncursor(before) is None):
+        # A cursor that cannot be read ends the list, never starts it again.
+        return [], None
+    return feed_page(before, limit=limit, viewer=viewer, person=person)
+
+
 def duration_words(ms):
     """How long a drawing took, as the in-post player says it at rest
     (lib/replayline.js words(): its rounding, Math.round, is half up): "15
@@ -202,7 +219,10 @@ def tiles(entries, viewer):
     its post's address and the words a screen reader hears for the link. A
     post whose drawing Skribl no longer describes to `viewer` (deleted or
     withheld since) or that is taken down has no tile: the drawing is the
-    tile."""
+    tile. A DRAWING SHOWN OUTSIDE A POST (one person's Gallery, a profile's
+    tab: posts.feed_page's kind "s") is the same tile, opening its own page
+    (/b/<id>), its words its title; `kind` says which, so the tile names a
+    post only when it is one."""
     from .posts import cards
     out = []
     for c in (cards(entries, viewer) if entries else []):
@@ -220,7 +240,7 @@ def tiles(entries, viewer):
             label += f", {likes} {'like' if likes == 1 else 'likes'}"
         if comments:
             label += f", {comments} {'comment' if comments == 1 else 'comments'}"
-        out.append({"post": c["post"].public_id, "url": c["url"], "who": who, "first": first,
+        out.append({"post": c["post"].public_id, "kind": c["kind"], "url": c["url"], "who": who, "first": first,
                     "sk": sk, "says": said, "likes": likes, "comments": comments, "label": label})
     return out
 

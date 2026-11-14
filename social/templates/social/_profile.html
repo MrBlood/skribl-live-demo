@@ -1,0 +1,76 @@
+{#  A PROFILE'S TABS (the map's step 4, docs/SOCIAL-SITE.md section 16; the
+    owner's "Yes" to its mock, Nov 14). profiles.py says what each tab holds
+    and for whom; tabs.js moves them; social.css, "A PROFILE'S TABS", dresses
+    them.
+
+    profile_tabs(tabs, tab, whose)   the strip, where the "Skribls" heading was:
+                        Posts · Gallery · Likes · Drafts on your own page,
+                        Posts · Gallery on anybody else's, each tab 48px tall
+                        and a link with its own address (the back button and
+                        a shared link land on it). The chosen one in the
+                        first ink, with the bar's own pen underline under it
+                        (the mark the bar puts under the page you are on);
+                        the others in the second. The line is placed by the
+                        tab's place (--at of --n), so it is under the chosen
+                        one before any script runs, and glides to the next.
+    tab_panel(p, who, mine)   what a tab holds, its first page: Posts and
+                        Likes as Home's one card, the Gallery as the Gallery's
+                        tiles, your Drafts as tiles of the same shape; then,
+                        when there is nothing, its kind words, each saying
+                        what happens next; then Load more.
+    tab_items(p)        a page of them alone (Load more's).
+    tab_words()         what tabs.js says ([data-tab-words]).
+
+    Import these WITH CONTEXT: the cards and the tiles read the page's me,
+    skribl_bp, when_iso and when_day. #}
+{% from 'social/_post.html' import post_card with context %}
+{% from 'social/_gallery.html' import gallery_tile, draft_tile with context %}
+{% import 'social/_icons.html' as ic %}
+
+{% macro profile_tabs(tabs, tab, whose) -%}
+{%- set at = (tabs|map(attribute=0)|list).index(tab) -%}
+<nav class="prof-tabs" data-prof-tabs aria-label="{{ whose }}" style="--n: {{ tabs|length }}; --at: {{ at }}">
+  {%- for key, name, url in tabs %}
+  <a class="prof-tab" href="{{ url }}" data-tab="{{ key }}"{% if key == tab %} aria-current="page"{% endif %}>{{ name }}</a>
+  {%- endfor %}
+  <span class="prof-pen" aria-hidden="true">{{ ic.underline() }}</span>
+</nav>
+{%- endmacro %}
+
+{% macro tab_items(p) -%}
+{%- if p.tab in ('posts', 'likes') %}{% for c in p.cards %}{{ post_card(c) }}{% endfor %}
+{%- elif p.tab == 'gallery' %}{% for t in p.tiles %}{{ gallery_tile(t) }}{% endfor %}
+{%- else %}{% for d in p.drafts %}{{ draft_tile(d) }}{% endfor %}{% endif %}
+{%- endmacro %}
+
+{#  NOTHING HERE YET, kindly, in each tab's own words: what puts something
+    there, or for anybody else's page, that it comes when they share one.
+    The Gallery's own words are the Gallery of everyone's. #}
+{% macro _none(p, who, mine) -%}
+{%- set first = who.display_name.split(' ')[0] -%}
+{%- if p.tab == 'posts' -%}
+{{ 'No posts yet. Say something on Home, then draw it, and your posts show up here.' if mine else 'No posts from ' ~ first ~ ' yet. When ' ~ first ~ ' shares one, it shows up here.' }}
+{%- elif p.tab == 'gallery' -%}
+{{ 'No drawings here yet. Share one in a post, and it shows up here.' if mine else 'No drawings from ' ~ first ~ ' yet. When ' ~ first ~ ' shares one, it shows up here.' }}
+{%- elif p.tab == 'likes' -%}
+Nothing liked yet. Tap the heart on a post you love, and it’s kept here. Only you can see your likes.
+{%- else -%}
+No drafts yet. To finish a drawing later, open ⋯ in the Pad or Flip and tap Save. It waits here for you.
+{%- endif -%}
+{%- endmacro %}
+
+{% macro tab_panel(p, who, mine) -%}
+{%- set filled = p.cards or p.tiles or p.drafts -%}
+<div class="prof-panel" data-prof-panel data-tab="{{ p.tab }}">
+  <h2 class="sr">{{ {'posts': 'Posts', 'gallery': 'Drawings and Flips', 'likes': 'Posts you liked', 'drafts': 'Your drafts'}[p.tab] }}</h2>
+  <div class="{{ 'feed' if p.tab in ('posts', 'likes') else 'gal-grid' }}" data-prof-list>{{ tab_items(p) }}</div>
+  <p class="feed-none prof-none" data-prof-none{% if filled %} hidden{% endif %}>{{ _none(p, who, mine) }}</p>
+  <button class="btn btn-wide feed-more" type="button" data-prof-next="{{ p.next or '' }}"{% if not p.next %} hidden{% endif %}>Load more</button>
+</div>
+{%- endmacro %}
+
+{% macro tab_words() -%}
+<div class="words" data-tab-words hidden>
+  <span data-word="network">That didn’t reach us. Check your connection and try again.</span>
+</div>
+{%- endmacro %}

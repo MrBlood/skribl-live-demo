@@ -528,13 +528,13 @@ def create_app():
     # WHO SEES WHOM: a block on the site (both ways, quietly), and a person an
     # admin took down, reach Skribl's own pages too, through the two seams
     # docs/INTEGRATION.md gives a host for a block list: the listings
-    # (the first visit's gallery, a profile's skribls, More from's drawings) leave out the
+    # (the first visit's gallery, a profile's Gallery tab's and More from's drawings) leave out the
     # people the site hides from the viewer, and a drawing's link page, card,
     # picture and payload are not theirs (visible_to). Anybody else is
     # decided as before: the policy says nothing (None) and Skribl's rules stand.
     # A MUTE on the site (C, quiet everywhere) leaves the people this viewer
     # muted out of a listing of everybody's (the first visit's gallery,
-    # Skribl's own /gallery), never out of one person's own (their page's skribls, More
+    # Skribl's own /gallery), never out of one person's own (their page's Gallery, More
     # from): Skribl tells the filter which, by `author` (docs/INTEGRATION.md,
     # "The feed does not call your policy"). The policy never hears of mutes:
     # a mute hides no page.
@@ -737,8 +737,9 @@ def _site_brand(app):
 
 def _site_cards(app):
     """EVERY CARD OPENS ITS POST (the owner's "I thought on card?", Nov 13):
-    on the site's own pages (a profile's Skribls, the first visit's
-    newest), a card of Skribl's Gallery opens the drawing's page on the site,
+    on the site's own pages (the first visit's newest; a profile's Skribls
+    too until the map's step 4 made it the site's own tabs), a card of
+    Skribl's Gallery opens the drawing's page on the site,
     /social/b/<id>, which goes on to the post where the drawing is a post's
     (social/posts.py, bloob_page). Through the seam Skribl gives any host for
     this (skribl.set_card_url, docs/INTEGRATION.md "Where a Gallery card

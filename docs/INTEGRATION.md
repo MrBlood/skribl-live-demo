@@ -1041,6 +1041,32 @@ rows keep drafts in that browser only, and the menu says which.
 
 `harness/verify_clouddrafts.py` drives all of it in `examples/host_app`.
 
+**A person's drafts on your own page** (Nov 14: the Skribl site's profile,
+its Drafts tab). `skribl.list_drafts(author_id)` hands back the person's
+saved drafts, newest saved first, the list the editors' Your drafts and the
+Library show: each `{id, kind, title, thumbnail, sizeBytes, createdAt,
+updatedAt}`, `kind` `"pad"` or `"flip"`, `thumbnail` the editor's own small
+picture as a `data:` URL (a JPEG, PNG or WebP Skribl checked when it was
+saved) or `None`. No payload is read; it reads only, on your session, and
+flushes and commits nothing. Pass the id your `current_user_id` hands Skribl
+for that person, and show the list only on a page that is theirs alone: a
+draft is its author's and nobody else's. Asked for nobody (`None`) it
+refuses, as `GET /api/drafts` answers 401.
+
+To open one, link to the editor that made it with `?draft=<id>`, the
+editors' own hand-off:
+
+```python
+url_for("skribl.skribl_flip" if d["kind"] == "flip" else "skribl.skribl_editor", draft=d["id"])
+```
+
+The editor opens it as its own Your drafts does: the id is dropped from the
+address once read, a drawing already on the canvas is asked about in one
+line before anything replaces it, and Save goes on updating that draft. It
+needs the person signed in to Skribl (your `current_user_id`) on the
+editor's page too. `verify_hostseams.py` ("A person's drafts") asks it as a
+host does, and `verify_seam.py` holds the source.
+
 ## Taking one back: delete and revoke
 
 An external review of v277 named this the largest product gap: Skribl could

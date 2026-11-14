@@ -43,6 +43,7 @@ from .creation import (CreatedPost, SkriblIdempotencyRace, SkriblRejected,
 from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
                        set_post_visibility)
 from .describing import describe_posts, list_public_posts, recent_plays
+from .drafts import list_drafts
 from .moderation import close_reports, list_reports
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
                      session, set_card_url, set_visibility_policy)
@@ -86,6 +87,12 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            # close a drawing's reports once looked at (skribl/moderation.py,
            # docs/INTEGRATION.md "Your own reports page").
            "list_reports", "close_reports",
+           # A person's saved drafts, for a page of the host's that is theirs
+           # alone: newest first, no payloads; each opens in the editor that
+           # made it with ?draft=<id>, as the editors' own Your drafts does
+           # (skribl/drafts.py, docs/INTEGRATION.md "A person's drafts on
+           # your own page").
+           "list_drafts",
            # Speed: do every file's strip-and-compress before the first
            # visitor (gunicorn.conf.py calls it in each worker).
            "warm_assets",

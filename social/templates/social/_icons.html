@@ -235,6 +235,13 @@
 <svg class="ic ic-tri" viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M2 1.2v7.6L8.6 5z" fill="currentColor"/></svg>
 {%- endmacro %}
 
+{# A draft's chip on its tile (a profile's Drafts, the map's step 4), small
+   where a Gallery tile's ▶ sits: a pen at work, the step 4 mock's own line,
+   so at 11px it still reads as a pen. #}
+{% macro draft() -%}
+<svg class="ic ic-draft" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1L19 8l-3-3L5 16z"/></svg>
+{%- endmacro %}
+
 {% macro comment() -%}
 {{ _svg('<path d="M12 4.5c4.4 0 8 3 8 6.8s-3.6 6.8-8 6.8c-1 0-2-.2-2.9-.5L4.5 19.5l1.2-3.6C4.6 14.7 4 13.1 4 11.3 4 7.5 7.6 4.5 12 4.5z"/>') }}
 {%- endmacro %}

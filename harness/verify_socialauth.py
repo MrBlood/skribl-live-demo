@@ -882,10 +882,13 @@ with sync_playwright() as p_:
         check("and Flip's own Post sheet posts as them too (Pad and Flip move together)",
               flipped == 201 and f_author.get("id") == pid and f_author.get("username") == "priya",
               f"post {flipped}; author {f_author}")
-        g = p.ctx.new_page()
-        # Skribl's Gallery card on the site: her own page's skribls (Explore's
-        # cards were Skribl's until the map's step 3; its tiles are the site's).
-        g.goto(BASE + "/social/@priya")
+        # Skribl's Gallery card on the site: the first visit's, signed out, the
+        # one page of the site that still shows Skribl's own cards (Explore's
+        # were until the map's step 3, her own page's until its step 4, whose
+        # Gallery tab is the site's own tiles).
+        oc = b.new_context(**DESK, extra_http_headers={"X-Forwarded-For": address()})
+        g = oc.new_page()
+        g.goto(BASE + "/social/")
         try:
             g.wait_for_function("(t) => [...document.querySelectorAll('#skriblGallery .tile')].some(x => x.textContent.includes(t))",
                                 arg="Priya's skribl " + tag, timeout=15000)
@@ -894,9 +897,9 @@ with sync_playwright() as p_:
         card = g.evaluate("""(t) => { const tile = [...document.querySelectorAll('#skriblGallery .tile')].find(x => x.textContent.includes(t));
             return tile ? (tile.querySelector('.tauth') || tile).innerText.replace(/\\s+/g, ' ').trim() : null; }""",
                           "Priya's skribl " + tag)
-        check("and the Gallery's card on the site (their own page's skribls) says who drew it: their name and @handle",
+        check("and the Gallery's card on the site (the first visit's) says who drew it: their name and @handle",
               bool(card) and "Priya Raman" in card and "@priya" in card, str(card))
-        g.close()
+        oc.close()
         sign_out_here(p)
         anon = pad_post(p.ctx, "Nobody's skribl " + tag)
         a_item = listed("Nobody's skribl " + tag)
@@ -1370,9 +1373,10 @@ with sync_playwright() as p_:
                     # Activity (notifications): whose, newest first (the owner's own index
                     # folded into it), and whom an answer answers, newest first
                     "ix_social_comments_owner_created", "ix_social_comments_to_created",
-                    # likes: once a person a thing, a thing's newest first, whose newest first
+                    # likes: once a person a thing, a thing's newest first, whose newest first,
+                    # and who liked, newest first (a profile's Likes tab, the map's step 4)
                     "ix_social_likes_person_post", "ix_social_likes_person_drawing", "ix_social_likes_post_created",
-                    "ix_social_likes_drawing_created", "ix_social_likes_owner_created",
+                    "ix_social_likes_drawing_created", "ix_social_likes_owner_created", "ix_social_likes_person_created",
                     # follows: one row a pair, and newest first both ways
                     "ix_social_follows_pair", "ix_social_follows_follower_created", "ix_social_follows_followed_created",
                     # mutes: one row a pair, whose newest first, and whom

@@ -1,0 +1,6 @@
+{#  A profile's tab, as /@<handle>/more sends it (profiles.py): the whole
+    panel for a switch, or a page of its cards or tiles for Load more. The
+    same macros the page renders, so a tab loaded later is the tab loaded
+    first. #}
+{% from 'social/_profile.html' import tab_panel, tab_items with context %}
+{% if items_only %}{{ tab_items(p) }}{% else %}{{ tab_panel(p, who, mine) }}{% endif %}

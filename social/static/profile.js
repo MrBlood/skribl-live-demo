@@ -62,8 +62,13 @@
   var meta = doc.querySelector('meta[name="social-csrf"]');
   var token = meta ? meta.getAttribute('content') : '';
   var words = {};
-  Array.prototype.forEach.call(doc.querySelectorAll('[data-word]'), function (w) {
-    words[w.getAttribute('data-word')] = w.textContent;
+  /* Every word on the page, then this page's own over them: a profile holds
+     the cards' words too (posts.js's, a tab's), some by the same names
+     ("failed", "stale"), and each file says its own. */
+  ['[data-word]', '[data-profile-words] [data-word]'].forEach(function (sel) {
+    Array.prototype.forEach.call(doc.querySelectorAll(sel), function (w) {
+      words[w.getAttribute('data-word')] = w.textContent;
+    });
   });
   function say(key, vars) {
     var s = words[key] || words.failed || '';

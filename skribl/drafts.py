@@ -176,7 +176,18 @@ def _summary(d):
 
 
 def list_drafts(author_id):
-    """The author's drafts, newest first, WITHOUT payloads."""
+    """The author's drafts, newest first, WITHOUT payloads.
+
+    A HOST'S SEAM TOO (skribl.__all__; Nov 14, for the Skribl site's profile,
+    its Drafts tab): a page of the host's that is the person's own lists
+    their drafts with this, by the id its current_user_id hands Skribl for
+    them, and links each to the editor that made it with ?draft=<id> (the
+    editors' own hand-off, which asks before replacing work on the canvas).
+    Each is {id, kind ("pad" or "flip"), title, thumbnail (the editor's own
+    small picture, a data: URL, or None), sizeBytes, createdAt, updatedAt},
+    newest saved first. Reads only, on the host's session: it flushes and
+    commits nothing. Nobody (None) is refused (DraftRejected, 401), as the
+    route refuses them: a page of drafts is somebody's own."""
     owner = _owner(author_id)
     # The list carries no payloads, so none is read: a drafts sheet opened at
     # the cap pulled every full drawing over the database connection to discard
