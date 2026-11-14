@@ -1164,24 +1164,45 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .feed-more { margin-top: 16px; }
 .feed-more[hidden] { display: none; }
 
-/* THE ⋯ SHEET's rows, the mock's: a row a card, its icon and its words;
-   Report and Delete in the danger ink. Report's and Delete's own sheets. */
-.post-acts { display: flex; flex-direction: column; gap: 8px; }
+/* THE ⋯ SHEET's rows, each its icon and its words; Report, Block and Delete
+   in the danger ink. ONE CARD (the owner's "B, equal lines", Nov 14: "Do we
+   need everything to be in a pill?"), as the Pad's own menu list draws it
+   (styles.css .menu-list), in the site's tokens for the same roles: the card
+   --row-bg (--menu-card), 16px round, the rows on it with nothing of their
+   own behind them, and a hairline (--rule, --menu-card-rule) between two
+   that show. The risky rows are a card of their own, 12px under it (a
+   comment's ⋯ holds only those). The ☰'s, a post's, a comment's and a
+   person's ⋯ have no Cancel: the grip, a tap outside, a swipe down and Esc
+   close them, as they close the Pad's menu. Report's reasons are one card
+   the same way. Report's and Delete's own sheets follow. */
+.post-acts { display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; background: var(--row-bg); }
+.post-acts + .post-acts { margin-top: 12px; }
+.post-acts > :not([hidden]) ~ :not([hidden]) { border-top: 1px solid var(--rule); }
 .post-act {
   display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 0 16px; border: 0;
-  border-radius: 16px; background: var(--row-bg); color: var(--ink); font: inherit; font-size: 17px;
+  border-radius: 0; background: none; color: var(--ink); font: inherit; font-size: 17px;
   font-weight: 600; text-align: left; cursor: pointer;
 }
 .post-act[hidden] { display: none; }
+/* A key's ring is the row's, drawn inside it, as the Gallery's page menu
+   draws its rows' (pagemenu.css .pm-item): outside, the card's own edge cut
+   it to the line under the row. The first row that shows and the last turn
+   with the card's corners, so the ring does too (Sign out's form passes its
+   corners to its button). */
+.post-act:focus-visible { outline-offset: -2px; }
+.post-acts > :not([hidden]):not(:not([hidden]) ~ *) { border-top-left-radius: inherit; border-top-right-radius: inherit; }
+.post-acts > :not([hidden]):not(:has(~ :not([hidden]))) { border-bottom-left-radius: inherit; border-bottom-right-radius: inherit; }
+.menu-out > .post-act { border-radius: inherit; }
 .post-act .ic { width: 22px; height: 22px; color: var(--ink-2); }
 .post-act.is-danger, .post-act.is-danger .ic { color: var(--danger-ink); }
 .post-say { margin: 10px 4px 0; }
 .post-lede { margin: 0 4px 14px; color: var(--ink); font-size: 15px; line-height: 1.45; }
-.post-reasons { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; padding: 0; border: 0; }
-.post-reason {
-  display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: 16px;
-  background: var(--row-bg); font-size: 16px; cursor: pointer;
+.post-reasons {
+  display: flex; flex-direction: column; margin: 0 0 12px; padding: 0; border: 0;
+  overflow: hidden; border-radius: 16px; background: var(--row-bg);
 }
+.post-reason { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; font-size: 16px; cursor: pointer; }
+.post-reason + .post-reason { border-top: 1px solid var(--rule); }
 .post-reason input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--fill); }
 .post-note-label { display: block; margin: 4px 4px 6px; font-size: 15px; font-weight: 600; }
 .post-note-label span { color: var(--ink-2); font-weight: 400; }
@@ -1711,7 +1732,7 @@ button.fo-n {
 
 /* ---- MUTE (phase 2, mutes; the mute mock and the owner's "Yes to all", C,
    quiet everywhere, Nov 13), in the mock's own sizes. SAME ROLE, SAME TOKEN:
-   the ⋯'s row is the sheet's own row on --row-bg, its second line Make's
+   the ⋯'s row is the sheet's own row, on its card's --row-bg, its second line Make's
    doors' (--ink-2, 15px); the toast a small card (--card, --card-line,
    --card-drop) with the second button for Undo; Show and Unmute the small
    violet words (--accent-ink); Settings' Muted the Blocked panel's own rows.

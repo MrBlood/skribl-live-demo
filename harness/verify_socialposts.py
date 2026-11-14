@@ -112,6 +112,16 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      (elementFromPoint), phone and desk, light and dark; their words and the
      eye at 4.5:1 off the pixels over a picture; and hidden with the eye, the
      picture at its sides fades with the drawing.
+ 16. A LIST OF CHOICES IS ONE CARD (B, the owner's "B, equal lines", Nov 14),
+     on every menu sheet of the site: the ☰'s, a post's ⋯ (yours and
+     somebody else's), a comment's ⋯, a person's ⋯, and Report's reasons:
+     each list one card (--row-bg, 16 round), its rows on it with nothing of
+     their own, touching, a hairline (--rule) between two; the risky rows a
+     card of their own 12px under the other; no Cancel under a menu sheet
+     (Report keeps its pair), which goes by Esc, a tap outside, its grip and
+     a swipe down; the card's colour in each row's margin and the paper
+     between two cards, read off the screen; a key's ring drawn inside the
+     row. Phone and desk, light and dark.
 
 SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
@@ -119,8 +129,9 @@ green as built: DECISIONS.md, "Posts at /social (phase 1, piece 4)",
 "Comments on every drawing" for 10 and 11, "Every card opens its post"
 for 12, "Explore becomes the Gallery of everyone" for 13, "Six small
 yeses" for 14 and the rows of 3, 12 and 13 it changed, "The Gallery of
-every skribl" for the rows of 9, 13 and 14 it changed, and "A drawing on a
-photo keeps its photo at its sides" for 15.
+every skribl" for the rows of 9, 13 and 14 it changed, "A drawing on a
+photo keeps its photo at its sides" for 15, and "One card for a list of
+choices, and the menu's equal lines" for 16.
 """
 import base64
 import json
@@ -567,6 +578,55 @@ READ = """(sel) => {
 
 STATE = """() => { const p = window.SkriblInline ? SkriblInline.players() : [];
   return p.map(x => x.state().state); }"""
+
+# A LIST OF CHOICES IS ONE CARD (section 16). Every list of rows in the sheet
+# `root` (a ⋯'s .post-acts, Report's .post-reasons): its colour, its corners
+# and its box; and each row that shows (Sign out's form is a row, its button
+# its face): its words (a mute row's name), whether it is a risky one, what is
+# behind its words (its own background), the room between it and the row
+# before, the line along its top, its box, and whether it is what is painted
+# at its middle. And the Cancel and Send report painted in the sheet.
+ONECARD = r"""(root) => {
+  const R = document.querySelector(root); if (!R) return null;
+  const shown = e => e.getClientRects().length > 0;
+  const hit = (e, x, y) => { const at = document.elementFromPoint(x, y); return !!at && (at === e || e.contains(at)); };
+  const lists = [...R.querySelectorAll('.post-acts, .post-reasons')].filter(shown).map(l => {
+    const cs = getComputedStyle(l), lr = l.getBoundingClientRect();
+    let prev = null;
+    const rows = [...l.children].filter(x => shown(x) && !x.matches('legend')).map(x => {
+      const q = x.getBoundingClientRect(), c = getComputedStyle(x);
+      const face = x.matches('form') ? x.querySelector('.post-act') : x;
+      const out = { words: (x.querySelector('.mu-words b') || x).textContent.trim().replace(/\s+/g, ' ').slice(0, 32),
+        risky: x.matches('.is-danger') || !!x.querySelector('.is-danger'), own: getComputedStyle(face).backgroundColor,
+        gap: prev ? Math.round((q.top - prev.bottom) * 10) / 10 : null,
+        line: c.borderTopWidth === '0px' ? 'none' : c.borderTopWidth + ' ' + c.borderTopStyle + ' ' + c.borderTopColor,
+        left: q.left, right: q.right, mid: (q.top + q.bottom) / 2, painted: hit(x, q.left + q.width / 2, (q.top + q.bottom) / 2) };
+      prev = q; return out; });
+    return { bg: cs.backgroundColor, r: [cs.borderTopLeftRadius, cs.borderBottomRightRadius],
+             top: lr.top, bottom: lr.bottom, left: lr.left, right: lr.right, rows };
+  });
+  const said = t => [...R.querySelectorAll('button, a')].filter(b => shown(b) && b.textContent.trim() === t).length;
+  return { lists, cancel: said('Cancel'), send: said('Send report') }; }"""
+
+# The tokens those roles wear, as the page resolves them: a card on a sheet
+# (--row-bg, --menu-card), the sheet's paper (--sheet-paper), the line
+# between two rows (--rule, --menu-card-rule).
+TOKENS16 = """() => { const p = document.createElement('i'); document.body.appendChild(p);
+  const read = v => { p.style.color = 'var(' + v + ')'; return getComputedStyle(p).color; };
+  const o = { row: read('--row-bg'), paper: read('--sheet-paper'), rule: read('--rule') }; p.remove(); return o; }"""
+
+# A finger on a sheet: down 60px from its top, moved by each of `dys` in turn,
+# `every` ms apart, and lifted (verify_social's, for any sheet).
+SWIPE16 = """([sel, dys, every]) => new Promise(res => { const s = document.querySelector(sel), r = s.getBoundingClientRect();
+  const x = r.left + r.width / 2, y = r.top + 60;
+  const fire = (type, yy) => { const t = new Touch({ identifier: 7, target: s, clientX: x, clientY: yy });
+    const end = type === 'touchend';
+    s.dispatchEvent(new TouchEvent(type, { touches: end ? [] : [t], targetTouches: end ? [] : [t], changedTouches: [t],
+                                           bubbles: true, cancelable: true, view: window })); };
+  fire('touchstart', y);
+  let i = 0;
+  (function step() { if (i < dys.length) { fire('touchmove', y + dys[i++]); setTimeout(step, every); }
+                     else { fire('touchend', y + dys[dys.length - 1]); setTimeout(res, 700); } })(); })"""
 
 # A drawing posted from the Pad on its own page (Make's Draw), as the Pad posts
 # it: Skribl's API, as the person signed in (or nobody), its own token from its
@@ -3227,6 +3287,192 @@ print("PLAN " + json.dumps(out))
               and bool(still) and still[0][0] is None,
               f"{fade15.get('stopped') or ''} opacity {fade15.get('opacity')}; shown {short(sh)}; hidden {short(hd)};"
               f" in the Gallery again {bool(still) and still[0][0] is None}")
+
+    # ------------------------------------------------------------------ 16
+    # A LIST OF CHOICES IS ONE CARD (the owner's "B, equal lines", Nov 14: "Do
+    # we need everything to be in a pill?"), on every menu sheet of the site:
+    # the ☰'s (a touch phone's Home), a post's ⋯ (yours and somebody else's),
+    # a comment's ⋯ and a person's ⋯, and Report's reasons. Read, for each,
+    # on a touch phone and a desk, light and dark, as Ana: what the sheet
+    # says its lists are (ONECARD), what is painted (the card's colour in
+    # each row's margin, the sheet's paper between two cards, off the
+    # screen), a key's ring on a row (off the screen), and, on a phone, the
+    # four ways a menu sheet goes with no Cancel.
+    if part(16, "a list of choices is one card: the ☰'s, a post's ⋯, a comment's ⋯, a person's ⋯, Report's reasons"):
+        try:
+            ana = someone(b, "ana", "Ana Ruiz")
+            ben = someone(b, "ben", "Ben Holt")
+            _, ja = make_post(ana, "Ana's, for the ⋯ sheets", seed=161)
+            _, jb = make_post(ben, "Ben's, for the ⋯ sheets", seed=162)
+            mine16, theirs16 = ja.get("post"), jb.get("post")
+            bc = ben.client()
+            bc.get(f"/social/p/{mine16}")
+            stc, jc = bc.post_json(f"/social/p/{mine16}/comments", {"words": "Ben says hello"})
+            # (name, page, what opens it, its wrap's id, a menu sheet?, a phone's alone?)
+            SHEETS16 = (("the ☰", "/social/", ("[data-site-menu]",), "siteMenu", True, True),
+                        ("your post's ⋯", f"/social/p/{mine16}", (".post-page .post-row [data-post-menu]",), "postSheet", True, False),
+                        ("their post's ⋯", f"/social/p/{theirs16}", (".post-page .post-row [data-post-menu]",), "postSheet", True, False),
+                        ("a comment's ⋯", f"/social/p/{mine16}", (".cm:not([data-mine]) [data-cm-menu]",), "commentSheet", True, False),
+                        ("a person's ⋯", "/social/@ben", ("[data-person-menu]",), "personSheet", True, False),
+                        ("Report's reasons", f"/social/p/{theirs16}",
+                         (".post-page .post-row [data-post-menu]", "#postSheet [data-act=report]"), "reportSheet", False, False))
+            WANT16 = {"your post's ⋯": [["Copy link", "Share…"], ["Delete post"]],
+                      "their post's ⋯": [["Copy link", "Share…", "Mute @ben"], ["Report this post", "Block @ben"]],
+                      "a comment's ⋯": [["Remove from my post", "Report comment"]],
+                      "a person's ⋯": [["Mute @ben"], ["Report @ben", "Block @ben"]],
+                      "Report's reasons": [["Spam or misleading", "Abusive or hateful", "Copies someone else’s work",
+                                            "A child’s safety", "Something else"]]}
+
+            def open16(pg, page, steps, wrap):
+                pg.goto(BASE + page)
+                pg.wait_for_timeout(700)
+                for sel in steps:
+                    pg.evaluate("(s) => { const e = [...document.querySelectorAll(s)].find(x => x.getClientRects().length);"
+                                " if (e) e.scrollIntoView({ block: 'center' }); }", sel)
+                    pg.click(f"{sel} >> visible=true", timeout=5000)
+                    pg.wait_for_timeout(650)
+                pg.wait_for_function("(id) => document.getElementById(id).classList.contains('is-open')", arg=wrap, timeout=5000)
+                pg.wait_for_timeout(450)
+
+            def rgb16(s):
+                n = [float(x) for x in re.findall(r"[\d.]+", s)[:3]]
+                return tuple(round(v) for v in n)
+
+            def near16(px, want, tol=6):
+                return all(abs(a - b_) <= tol for a, b_ in zip(px[:3], want))
+
+            looks16, rings16, ways16 = {}, {}, {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    for name, page, steps, wrap, menu, phone_only in SHEETS16:
+                        if phone_only and screen != "phone":
+                            continue
+                        key = (screen, scheme, name)
+                        ctx, cpg = browser_as(b, ana, screen, scheme, reduced=True)
+                        try:
+                            open16(cpg, page, steps, wrap)
+                            got = cpg.evaluate(ONECARD, f"#{wrap} .make-sheet")
+                            tok = cpg.evaluate(TOKENS16)
+                            im = Image.open(io.BytesIO(cpg.screenshot())).convert("RGB") if Image else None
+                            # The card's colour where each row has nothing (5px in from the card's
+                            # edge, at the row's middle), and the sheet's paper between two cards.
+                            margins, between = [], []
+                            if im and got:
+                                for li, L in enumerate(got["lists"]):
+                                    for r_ in L["rows"]:
+                                        margins.append(im.getpixel((int(L["left"] + 5), int(r_["mid"]))))
+                                    if li:
+                                        P_ = got["lists"][li - 1]
+                                        between.append(im.getpixel((int((L["left"] + L["right"]) / 2), int((P_["bottom"] + L["top"]) / 2))))
+                            looks16[key] = {"got": got, "tok": tok, "margins": margins, "between": between}
+                            # A key's ring on a row, inside it: Tab puts focus on a row (the next,
+                            # where the sheet put it on its first), and its four sides are read
+                            # off the screen one pixel inside the row's edge.
+                            if menu and screen == "phone" and im:
+                                cpg.keyboard.press("Tab")
+                                cpg.wait_for_timeout(250)
+                                fr = cpg.evaluate("""() => { const a = document.activeElement; if (!a || !a.matches('.post-act')) return null;
+                                  const r = a.getBoundingClientRect(); return { words: a.textContent.trim().slice(0, 24), l: r.left, r: r.right,
+                                  t: r.top, b: r.bottom, ring: getComputedStyle(a).outlineColor, fv: a.matches(':focus-visible') }; }""")
+                                if fr:
+                                    # the pixel whose whole square lies in the ring's 2px band inside each edge
+                                    im2 = Image.open(io.BytesIO(cpg.screenshot())).convert("RGB")
+                                    my, mx = int((fr["t"] + fr["b"]) / 2), int((fr["l"] + fr["r"]) / 2)
+                                    fr["sides"] = [im2.getpixel((int(fr["l"] + 0.5), my)), im2.getpixel((int(fr["r"] - 1.5), my)),
+                                                   im2.getpixel((mx, int(fr["t"] + 0.5))), im2.getpixel((mx, int(fr["b"] - 1.5)))]
+                                rings16[key] = fr
+                        except Exception as exc:  # noqa: BLE001
+                            looks16[key] = {"stopped": str(exc).splitlines()[0][:120]}
+                        close_ctx(ctx, cpg)
+            # The four ways a menu sheet goes, with no Cancel: Esc, a tap outside it,
+            # its grip, and a swipe down (a touch phone, light).
+            for name, page, steps, wrap, menu, phone_only in SHEETS16:
+                if not menu:
+                    continue
+                for how in ("Esc", "outside", "grip", "swipe"):
+                    ctx, cpg = browser_as(b, ana, "phone", "light")
+                    try:
+                        open16(cpg, page, steps, wrap)
+                        if how == "Esc":
+                            cpg.keyboard.press("Escape")
+                        elif how == "outside":
+                            cpg.mouse.click(200, 30)
+                        elif how == "grip":
+                            cpg.click(f"#{wrap} .make-grip", timeout=3000)
+                        else:
+                            cpg.evaluate(SWIPE16, [f"#{wrap} .make-sheet", [12, 40, 90, 160, 220], 90])
+                        cpg.wait_for_timeout(700)
+                        ways16[(name, how)] = cpg.evaluate("(id) => document.getElementById(id).hidden", wrap)
+                    except Exception as exc:  # noqa: BLE001
+                        ways16[(name, how)] = str(exc).splitlines()[0][:80]
+                    close_ctx(ctx, cpg)
+
+            bad_card, bad_risky, bad_cancel, bad_paint, bad_ring = [], [], [], [], []
+            for key, v in looks16.items():
+                tag = " ".join(key)
+                got, tok = v.get("got"), v.get("tok")
+                if not got or not got["lists"]:
+                    bad_card.append(f"{tag}: {v.get('stopped') or 'no lists'}")
+                    continue
+                for L in got["lists"]:
+                    rows = L["rows"]
+                    ok = (L["bg"] == tok["row"] and L["r"] == ["16px", "16px"] and rows
+                          and all(r_["own"] == "rgba(0, 0, 0, 0)" and r_["painted"]
+                                  and abs(r_["left"] - L["left"]) <= 0.5 and abs(r_["right"] - L["right"]) <= 0.5 for r_ in rows)
+                          and rows[0]["line"] == "none" and rows[0]["gap"] is None
+                          and all(abs(r_["gap"]) <= 0.5 and r_["line"] == f"1px solid {tok['rule']}" for r_ in rows[1:]))
+                    if not ok:
+                        bad_card.append(f"{tag}: card {L['bg']} {L['r']}; rows "
+                                        + "; ".join(f"{r_['words']} own {r_['own']} gap {r_['gap']} line {r_['line']}"
+                                                    f" painted {r_['painted']}" for r_ in rows))
+                name = key[2]
+                words = [[r_["words"] for r_ in L["rows"]] for L in got["lists"]]
+                risky = [[r_["risky"] for r_ in L["rows"]] for L in got["lists"]]
+                if name in WANT16:
+                    gaps = [round(got["lists"][i]["top"] - got["lists"][i - 1]["bottom"], 1) for i in range(1, len(got["lists"]))]
+                    rk = name != "Report's reasons"
+                    if not (words == WANT16[name] and gaps == [12.0] * (len(words) - 1)
+                            and (not rk or (all(risky[-1]) and not any(x for r_ in risky[:-1] for x in r_)))):
+                        bad_risky.append(f"{tag}: {words} risky {risky} {gaps}px apart")
+                elif not (len(words) == 1 and len(words[0]) >= 4 and not any(risky[0])):
+                    bad_risky.append(f"{tag}: {words}")
+                menu = name != "Report's reasons"
+                if (menu and got["cancel"]) or (not menu and not (got["cancel"] == 1 and got["send"] == 1)):
+                    bad_cancel.append(f"{tag}: Cancel {got['cancel']}, Send report {got['send']}")
+                if Image and not (v["margins"] and all(near16(px, rgb16(tok["row"])) for px in v["margins"])
+                                  and all(near16(px, rgb16(tok["paper"])) for px in v["between"])):
+                    bad_paint.append(f"{tag}: margins {v['margins']}; between {v['between']} (card {tok['row']}, paper {tok['paper']})")
+            for key, fr in rings16.items():
+                if not (fr and fr["fv"] and len(fr.get("sides", [])) == 4
+                        and all(near16(px, rgb16(fr["ring"]), 24) for px in fr["sides"])):
+                    bad_ring.append(f"{' '.join(key)}: {fr}")
+            read16 = len(looks16)
+            print(f"    {read16} sheets read; a row's ring on {len(rings16)}; {len(ways16)} closings")
+            check("every list of choices on the site's menu sheets is ONE CARD, as the Pad's own menu list draws it:"
+                  " the card --row-bg and 16 round, its rows on it with nothing of their own behind them, as wide as the"
+                  " card and touching, a hairline (--rule) between two that show, each row what is painted at its"
+                  " middle (the ☰'s, a post's ⋯ yours and somebody else's, a comment's ⋯, a person's ⋯ and Report's"
+                  " reasons; phone and desk, light and dark)",
+                  read16 == 22 and not bad_card, "; ".join(bad_card)[:1400] or f"{read16} read")
+            check("the risky rows (Report, Block, Delete, Remove) are a card of their own, 12px under the other, its"
+                  " rows the risky ones alone: your post's Copy link, Share… | Delete post; somebody else's Copy link,"
+                  " Share…, Mute | Report, Block; a comment's ⋯ only its risky card; a person's Mute | Report, Block;"
+                  " the ☰ one card with nothing risky; Report's reasons one card",
+                  read16 == 22 and not bad_risky, "; ".join(bad_risky)[:1400])
+            check("no Cancel under a menu sheet (the ☰'s, a post's ⋯, a comment's ⋯, a person's ⋯); Report keeps"
+                  " its Cancel | Send report", read16 == 22 and not bad_cancel, "; ".join(bad_cancel)[:900])
+            check("what is painted says the same: the card's own colour in every row's margin, and the sheet's paper"
+                  " in the 12px between two cards (off the screen)",
+                  read16 == 22 and not bad_paint, "; ".join(bad_paint)[:1400])
+            check("a key's ring on a row is drawn inside the row, so the card's edge never cuts it: its four sides"
+                  " painted in the ring's colour a pixel inside the row (a touch phone, light and dark, every menu sheet)",
+                  len(rings16) == 10 and not bad_ring, "; ".join(bad_ring)[:1400] or f"{len(rings16)} read")
+            check("a menu sheet with no Cancel still goes four ways: Esc, a tap outside it, its grip and a swipe down"
+                  " (the ☰'s, a post's ⋯ yours and somebody else's, a comment's ⋯, a person's ⋯; a touch phone)",
+                  len(ways16) == 20 and all(v_ is True for v_ in ways16.values()),
+                  "; ".join(f"{n} {h}: {v_}" for (n, h), v_ in ways16.items() if v_ is not True)[:900])
+        except Exception as exc:  # noqa: BLE001
+            check("section 16 ran to its end", False, str(exc).splitlines()[0][:200])
 
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):

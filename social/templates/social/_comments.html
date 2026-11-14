@@ -178,7 +178,9 @@
 {% endif %}
 
 {#  A COMMENT'S ⋯, Make's own sheet (social.js), as the post's: comments.js
-    shows the rows for whose comment it is, and titles it. #}
+    shows the rows for whose comment it is, and titles it. Every row here is
+    a risky one, so the one card is theirs (the owner's "B, equal lines",
+    Nov 14); no Cancel, as on the post's. #}
 <div class="make post-sheet" id="commentSheet" hidden>
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="commentSheetTitle">
@@ -190,7 +192,6 @@
       <button class="post-act is-danger" type="button" data-cm-act="report">{{ ic.flag() }}<span>Report comment</span></button>
     </div>
     <p class="say post-say" data-cm-sheet-say role="status" hidden></p>
-    <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
   </div>
 </div>
 

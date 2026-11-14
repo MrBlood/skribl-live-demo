@@ -40221,3 +40221,195 @@ rows, the revision migrating there, posting through it); WebKit (the owner's
 iPhone) and Firefox (main's lanes run their smoke after the merge); SF and
 Segoe UI (nothing here is type); the live site, and the backfill against the
 owner's own drawings.
+
+## After v330 -- One card for a list of choices, and the menu's equal lines
+
+The owner, Nov 14 (Mountain Time), on the ☰ sheet (each row its own rounded
+card, an outlined Cancel pill under them): "Do we need everything to be in a
+pill? It starts looking weird when everything is in one everywhere... look
+for all of them across entire app. Not pill sliders but like the
+screenshot." A census of every sheet, then the mock: now beside A (plain
+rows on the sheet, thin lines between, no Cancel) and B (one card holding
+the rows, as the Pad's own menu list draws it, the risky rows in a card of
+their own, no Cancel), on the ☰ sheet, a post's ⋯ and Skribl's Export, light
+and dark; and the ☰ with its third line as long as the other two. About
+12:35 PM: "B, equal lines". Items 3 to 5 of that message (the eye also out
+of Skribl's own /gallery; your own tab's never-public link-only drawings; a
+hidden tile's blurred sides fading) were not answered, and are as built.
+Built Nov 14.
+
+WHAT CHANGED.
+
+- THE SITE'S MENU SHEETS ARE ONE CARD (`_menu.html`, `_post.html`,
+  `_comments.html`, `_safety.html`; social.css, "THE ⋯ SHEET"): the ☰'s, a
+  post's ⋯ (yours and somebody else's), a comment's ⋯ and a person's ⋯. The
+  card is the Pad list's, in the site's tokens for the same roles: `--row-bg`
+  (`--menu-card`), 16 round, the rows on it with nothing of their own behind
+  them, and a hairline, `--rule` (`--menu-card-rule`), between two that show,
+  Sign out's form a row like the others (the mock missed that line). No edge
+  and no drop: the site's rows never wore either, and the approved B has
+  none. THE RISKY ROWS (Report, Block, Delete, Remove from my post) are a card
+  of their own, 12px under the other: your post's Copy link, Share… | Delete
+  post; somebody else's Copy link, Share…, Mute | Report, Block; a person's
+  Mute | Report, Block; a comment's ⋯, every row of which is a risky one,
+  holds that card alone. Each template writes its cards, and none is ever
+  empty: posts.js shows a post's rows for whose post it is, and each card
+  keeps one.
+- NO CANCEL UNDER A MENU SHEET: the four sheets' Cancel buttons are gone.
+  Their grip, a tap outside, a swipe down and Esc close them, as they close
+  the Pad's menu (social.js's SocialSheet, unchanged; its notes say so).
+- REPORT'S REASONS ARE ONE CARD (`.post-reasons`: a post's, a comment's and
+  a person's report), the radio rows on it, a hairline between two; its
+  Cancel | Send report pair kept.
+- THE ☰'S THREE LINES ARE ONE LENGTH (`_icons.html` menu(), the mock's
+  EQUAL): the third stroke runs to 19.2 as the others do; 14.7, 14.5 and 14.4
+  units long, where it was 11.1.
+- SKRIBL, THE PAD AND FLIP ALIKE: EXPORT'S FORMATS are one card
+  (`_skribl_export.html` `.export-list`; styles.css), the menu's white card,
+  its lilac edge and drop, 16 round, the menu's rule between PNG, Video and
+  GIF; GIF's Background stays under GIF inside the card, behind its own
+  rule. The mock's B drew this card without the drop; the menu's list wears
+  it, as every card on the menu's paper does (each format wore it too), so
+  the built card does. YOUR DRAFTS' SAVED ROWS are one card (`.sdrafts-card`, which
+  lib/savedrafts.js lays them in; a note above the list stays outside it),
+  as As a file under them already was. HOW IT WORKS' PEOPLE OFTEN ASK was
+  already one card; it lacked only the menu list's drop, which it wears now.
+- A KEY'S RING ON A ROW IS DRAWN INSIDE IT, found on the way: on a card that
+  clips, a ring drawn outside the row was cut by the card's own edge, and on
+  the Pad's own menu list How it works, focused, showed only the line under
+  it (photographed). Inside now (outline-offset -2px, as the Gallery's page
+  menu draws its rows, pagemenu.css .pm-item), and the first row that shows
+  and the last turn with the card's corners (16 on the site's card, 15
+  inside the 1px edge of Skribl's), so the ring turns with them. On the site,
+  and on every Skribl list above, the Pad's menu list and As a file included.
+
+WHAT STAYS A CARD, AND WHY (the census): Report's Cancel | Send report, and
+Mute's and Block's confirm pairs (a question's two answers, not a list);
+Make's two doors and Your face's three ways (doors, each its picture and its
+words; the brief kept them as they are, their Cancel with them); the
+Settings page's section cards (sections, not rows); the Pad menu's four
+tiles (New, Save, Export, Library); every pill slider; the Library's ⋯
+popover (already one card). Found and left as built, for the owner to look
+at: the foot of How it works holds two cards one above the other, "Name
+every button" and "Everything, by section", which the census did not list.
+
+Pad and Flip: shared. Export's formats and Your drafts are one template and
+one module for both editors (`_skribl_export.html`, lib/savedrafts.js), as
+the menu's list and How it works are; verify_contrast reads each on both,
+phone and desk, light and dark, and holds the two to one look. Nothing here
+is Flip's alone: Flip's Size, Pages and Loops under Export are pill sliders,
+kept as they are.
+
+CONTRAST: no colour and no token added; every word sits on the colour it
+sat on (each row was a card of `--row-bg` or `--menu-card`, and the card is
+that colour). On the site's cards, measured on the page as its suites read
+words (the ink over the grounds under it; each sheet on a phone and a desk,
+light and dark) and the same from the tokens: a row's words 17.95:1 light
+and 14.05:1 dark, the lowest word on any card a mute row's line (`--ink-2`)
+at 7.56 and 8.59, the risky rows (`--danger-ink`) 11.00 and 9.48; the
+sheets' titles on the paper (6.74 and 9.69) and Send report on the purple
+(5.33) where they were. The ring (`--focus`) on the card 5.33 and 8.39,
+past the 3:1 a focus mark needs. The hairline on the card 1.21 and 1.28
+(the site's own `--rule`, as its Settings rows' lines are), and the card
+against the paper 1.12 and 1.13, as each row was (decoration, with no
+requirement). Every word on these sheets
+reads 4.5:1 or more on what is painted behind it (verify_socialposts 7,
+verify_socialsettings 10, verify_socialsafety 9, verify_socialcomments,
+verify_socialmute); on Skribl's, verify_contrast read every word on the
+menu, Export, Your drafts with three saved and Ask at AA on its painted
+ground and, on a phone, every word off the brand purple at 7:1 (its two
+inks), Pad and Flip, light and dark.
+
+THE CHECKS, each new or changed row shown red by a break of its own in a
+throwaway copy of the tree, with an untouched copy as the control (green
+every time):
+
+- verify_socialposts 16, A LIST OF CHOICES IS ONE CARD (new, six rows; Ana
+  and Ben, Ana's post with Ben's comment on it, Ben's post and Ben's page,
+  each sheet on a touch phone and a desk, light and dark, the ☰ a phone's
+  alone: 22 sheets read). Every list one card, `--row-bg` and 16 round, its
+  rows with nothing of their own behind them, as wide as the card, touching,
+  `--rule` between two, each row what is painted at its middle (red: the
+  rows back to pills, each its own `--row-bg` 8px apart; no hairline between
+  rows; Report's reasons back to pills). The risky rows a card of their own
+  12px under the other, each sheet's words in order (red: a post's risky
+  rows back in its first card, `_post.html`; a person's back with Mute,
+  `_safety.html`; 8px between the two cards). No Cancel under a menu sheet,
+  Report keeping its pair (red: Cancel back under the ☰, `_menu.html`;
+  under a comment's ⋯, `_comments.html`). What is painted: the card's own
+  colour 5px in from its edge at every row's middle, and the paper in the
+  12px between two cards, off the screen (red: a veil over every sheet that
+  takes no tap, under which the elementFromPoint row stays green, which is
+  why the paint is read too). A key's ring, ten rows on a touch phone (a
+  middle row, a top one, a bottom one and a row alone), its four sides
+  painted a pixel inside the row (red: the ring's offset line taken out;
+  and the veil). The four ways a menu sheet goes, twenty (red: a post's ⋯
+  grip without its close; Esc doing nothing, social.js; a swipe that never
+  closes, social.js; a tap outside a person's ⋯ doing nothing).
+- verify_socialsettings 10, the ☰ (four rows changed). Its three strokes of
+  one length, within half a unit, where the row held the last one shorter
+  (red: the last line shorter again, `_icons.html`). Its sheet one card of
+  `--row-bg`, the rows with nothing of their own and touching, Sign out's
+  form read as its row (red: the rows back to pills). No Cancel, and Esc, a
+  tap outside, its grip and a swipe down each close it, focus back on the ☰
+  (red: Cancel back, `_menu.html`; its grip without its close). Every word on
+  it at 4.5:1 and every row 44px, its floor four words where Cancel made
+  five signed out (red: the rows in a faint ink, #c9c4d9).
+- verify_contrast, ONE CARD (new, three rows; the menu, Export, Ask, and a
+  new surface, Your drafts with three saved, the drafts' only other reads
+  being empty or under a row's open ⋯; Pad and Flip, phone and desk, light
+  and dark: 32 sheets read). Each list the menu's white card, lilac edge,
+  drop and 16 round, its rows with nothing of their own (How it works keeps
+  its tint), as wide as the card's inside, touching, the menu's rule between
+  two, each what is painted at its middle (red: Export's formats back to a
+  card each; no rule between them; Your drafts back to a card each; no rule
+  between them; People often ask without the drop). The card's white 4px
+  inside its edge at every row's middle, off the screen (red: a veil over
+  Export that takes no tap). A key's ring on each list's first row that
+  takes focus, its four sides painted a pixel inside the row, 36 read (red:
+  the ring's rule taken out; and the veil). In CONSISTENCY, Export's card
+  stands for its rows in "every choice is a white card" and "one corner per
+  kind", as the drafts' card does for its rows, and the new surface joins
+  the paper census. Calibrated with CONTRAST_ONLY on the four surfaces: six
+  rows that read the Post sheet's tick box and the dock's drawers are red in
+  every copy, the control's too, because the narrowed run leaves out what
+  they read; the whole run below is green.
+- verify_menu 4 (one row changed, Pad and Flip, light and dark): the saved
+  drafts' card is as wide as the cards above and below it; it was the row,
+  which is the card's inside now (red: the card 6px in from each side).
+
+FOUND WRONG, AND MENDED: two instruments of mine. verify_socialsettings'
+card row first read Sign out's gap from its button, 1px under the form that
+carries the hairline; it reads the card's own child. verify_contrast's ring
+first took a tooltip for the ring: a focused control's title shows on a
+keyboard's focus and lay over the top of Flip's PNG row; the tooltip is
+hidden for that one photograph. And one row the change outgrew:
+verify_menu's width (above).
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py, its logs in a
+folder of its own), on the tree as committed: verify_socialposts 79/79,
+verify_socialsettings 44/44, verify_socialcomments 93/93,
+verify_socialsafety 38/38, verify_socialmute 68/68, verify_socialprofile
+88/88, verify_socialfollow 74/74, verify_socialauth 66/66, verify_social
+41/41, verify_contrast 645/645, verify_menu 72/72, verify_galib 176/176,
+verify_clouddrafts 116/116, verify_drafts 99/99, verify_amber 111/111,
+verify_nametab 29/29, verify_names 9/9, verify_tips 72/72, verify_exportui
+66/66, verify_sheetfit 16/16, verify_sheetswipe 247/247, verify_onepill
+2878/2878, verify_ask 54/54, verify_ux 487/487, verify_a11y 444/444,
+verify_surfaces 13/13, verify_docs 144/144 (and again with this entry in):
+27 suites in 37 minutes, none red beside the others, so none re-run alone.
+cssgraph re-emitted player.css, fullband.css and gallerysection.css byte for
+byte as they were, so verify_player_isolation and verify_jsstrip, which the
+player's CSS calls for, were not run. The full battery was not run; main's
+run after the merge is that.
+
+THE FOUR. Simple: a list looks like a list, the way iOS and the Pad's own
+menu draw one, and the risky choices sit apart where a thumb does not land
+on them by accident. Kind: nothing to cancel, so nothing to miss; the grip,
+a tap outside, a swipe and Esc all put a sheet away, and a keyboard's ring
+is never cut. Playful: the drawings stay the loudest thing on the screen.
+Powerful: one look on every sheet, site and editors, from one rule each.
+
+Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
+their smoke after the merge); SF and Segoe UI (nothing here is type, and the
+ring and the cards are drawn by the box, not the face); the live site.

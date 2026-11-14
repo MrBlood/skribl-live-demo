@@ -4147,30 +4147,42 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
+/* THE FORMATS ARE ONE CARD (the owner's "B, equal lines", Nov 14: "Do we
+   need everything to be in a pill?"): the menu's own list (.menu-list) in
+   its tokens, the menu's white card with its lilac edge and drop, 16 round,
+   a hairline between two rows. Each was a card of its own (after v324: the
+   sheets mock), and before that a see-through grey box on the lilac paper. */
+.export-list {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--menu-card-line);
+  background: var(--menu-card);
+  box-shadow: var(--menu-card-drop);
+  border-radius: var(--r-card);
+  margin-bottom: 8px;
+  flex: none;
+}
+.export-list > :not([hidden]) ~ :not([hidden]) { border-top: 1px solid var(--menu-card-rule); }
+
+/* A ROW ON IT: nothing of its own behind its words, a tint under a pointer. */
 .export-opt {
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
   padding: 12px 14px;
-  /* A card like the menu's (after v324: the sheets mock, "All yes"); they
-     were see-through grey boxes on the lilac paper. */
-  border: 1px solid var(--menu-card-line);
-  background: var(--menu-card);
-  box-shadow: var(--menu-card-drop);
-  border-radius: var(--r-card);
+  border: 0;
+  background: none;
+  border-radius: 0;
   cursor: pointer;
   text-align: left;
-  margin-bottom: 8px;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 @media (hover: hover) {
-  .export-opt:hover:not(:disabled) {
-    background: rgba(124,92,255,0.08);
-    border-color: rgba(124,92,255,0.4);
-  }
+  .export-opt:hover:not(:disabled) { background: rgba(124,92,255,0.08); }
 }
 
 .export-opt:disabled { opacity: 0.5; cursor: default; }
@@ -4193,22 +4205,12 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .export-opt-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .export-opt-desc { font-size: 12px; color: var(--text-secondary); }   /* --text-muted read 4.25:1 on the dark card */
 
-/* GIF is a grouped "tray": the option card and its Background/Transparent toggle
-   share one bordered box, so the toggle clearly belongs to GIF instead of reading
-   as a detached row below it. The inner card drops its own border/background/margin
-   and the toggle sits flush beneath, split by a hairline so the hierarchy reads.
-   When the toggle is hidden (GIF unavailable) the group looks like a normal card. */
-.export-opt-group {
-  border: 1px solid var(--menu-card-line);
-  background: var(--menu-card);
-  box-shadow: var(--menu-card-drop);
-  border-radius: var(--r-card);
-  margin-bottom: 8px;
-  overflow: hidden;
-}
-.export-opt-group .export-opt { border: 0; background: none; box-shadow: none; border-radius: 0; margin-bottom: 0; }
-@media (hover: hover) { .export-opt-group:has(.export-opt:hover:not(:disabled)) { border-color: rgba(124,92,255,0.4); } }
-@media (hover: hover) { .export-opt-group .export-opt:hover:not(:disabled) { background: rgba(124,92,255,0.08); border-color: transparent; } }
+/* GIF is a grouped "tray": the option and its Background/Transparent toggle
+   are one row of the card, so the toggle clearly belongs to GIF instead of
+   reading as a detached row below it: the toggle sits flush beneath, split by
+   a hairline so the hierarchy reads. When the toggle is hidden (GIF
+   unavailable) the group is a row like the others. It was a bordered card of
+   its own until the formats became one card. */
 .export-opt-group .export-gif-toggle { border-top: 1px solid var(--menu-card-rule); padding-top: 10px; }
 
 /* GIF background toggle (segmented) -- a track of the one pill, like every
@@ -7847,11 +7849,15 @@ body.playing .flip-grid { display: none; }
 .sdrafts-retry { align-self: center; min-height: 44px; padding: 0 20px; border-radius: 999px;
   border: 1px solid var(--hairline, #252a35); background: transparent; color: var(--text-heading);
   font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
-/* ONE ROW, BOTH PLACES (v317): the same card as the Library's Drafts tab --
-   picture, name, "Pad · 12m ago", and a bin. The whole card opens the draft;
-   there is no second button that says so. */
-.sdrafts-row { display: flex; align-items: center; gap: 4px; border-radius: var(--r-card);
-  border: 1px solid var(--hairline, #252a35); background: rgba(var(--wash-rgb), .03); }
+/* ONE ROW, BOTH PLACES (v317): the same row as the Library's Drafts tab --
+   picture, name, "Pad · 12m ago", and its end. The whole row opens the draft;
+   there is no second button that says so. THE ROWS ARE ONE CARD (the owner's
+   "B, equal lines", Nov 14: "Do we need everything to be in a pill?"), as
+   "As a file" under them is and as the menu's own list draws it, a hairline
+   between two (THE MENU'S PAPER, below); each was a card of its own. */
+.sdrafts-card { display: flex; flex-direction: column; border-radius: var(--r-card); overflow: hidden;
+  border: 1px solid var(--hairline, #252a35); flex: none; }
+.sdrafts-row { display: flex; align-items: center; gap: 4px; }
 .sdrafts-open { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px;
   padding: 8px; border: 0; border-radius: 14px; background: transparent; color: inherit;
   font: inherit; text-align: left; cursor: pointer; }
@@ -8558,7 +8564,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.menu-tile, .menu-list, .sdrafts-row, .sdrafts-files {
+.menu-tile, .menu-list, .sdrafts-card, .sdrafts-files, .ask-list {
   background: var(--menu-card);
   border-color: var(--menu-card-line);
   box-shadow: var(--menu-card-drop);
@@ -8567,6 +8573,23 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .sdrafts-this { box-shadow: inset 0 0 0 1px var(--menu-card-line); }
 .menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden]),
 .sdrafts-files > .menu-item + .menu-item { border-top-color: var(--menu-card-rule); }
+.sdrafts-card > .sdrafts-row + .sdrafts-row { border-top: 1px solid var(--menu-card-rule); }
+/* A LIST OF CHOICES IS ONE CARD (the owner's "B, equal lines", Nov 14): the
+   menu's list, Export's formats, Your drafts and "As a file", and Ask's
+   People often ask, each the white card above, its rows on it. A key's ring
+   on a row is drawn inside the row, as the Gallery's page menu draws its
+   rows' (pagemenu.css .pm-item): outside it, the card's own edge cut it to
+   the line under the row (the menu's list did). The first row that shows and
+   the last turn with the card's corners (15, inside its 1px edge), so the
+   ring does too. */
+:is(.menu-list > .menu-item, .sdrafts-files > .menu-item, .ask-list > .ask-row, .export-list .export-opt):focus-visible { outline-offset: -2px; }
+:is(.menu-list, .sdrafts-card, .sdrafts-files, .ask-list, .export-list) > :not([hidden]):not(:not([hidden]) ~ *) {
+  border-top-left-radius: 15px; border-top-right-radius: 15px; }
+:is(.menu-list, .sdrafts-card, .sdrafts-files, .ask-list, .export-list) > :not([hidden]):not(:has(~ :not([hidden]))) {
+  border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; }
+/* ...and GIF, the last row, passes its corners to its button while its
+   Background is not shown. */
+.export-opt-group > .export-opt:not(:has(~ :not([hidden]))) { border-radius: 0 0 15px 15px; }
 /* EVERY CHOICE ON THE PAPER IS A WHITE CARD (owner, after v324: the sheets
    mock, A, "All yes"). The Pad | Flip switch was a lilac track that ran into
    the lilac paper, and Theme, Tips, Canvas and New's shapes kept the old grey

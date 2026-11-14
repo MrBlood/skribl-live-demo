@@ -308,6 +308,12 @@
         'No saved drafts yet. Save this one with Save, above.'));
       return;
     }
+    /* THE DRAFTS ARE ONE CARD (the owner's "B, equal lines", Nov 14: "Do we
+       need everything to be in a pill?"), as the menu's own list draws it,
+       a hairline between two rows (styles.css .sdrafts-card); a note above
+       the list stays outside it. */
+    var card = el('div', 'sdrafts-card');
+    listEl.appendChild(card);
     items.forEach(function (it) {
       var row = el('div', 'sdrafts-row');
       var openBtn = el('button', 'sdrafts-open');
@@ -370,7 +376,7 @@
           });
         }
       });
-      listEl.appendChild(row);
+      card.appendChild(row);
     });
     lane();
   }

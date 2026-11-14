@@ -408,11 +408,13 @@ with sync_playwright() as p:
         check(f"{name}: ...and a key brings the ring back", k and k["fv"] and k["how"] == "key" and k["outline"] != "none", str(k))
         c.close()
 
-        # 4. Your drafts' rows (owner's iPhone, after v324: "Weird border"). A
-        # saved row is as wide as the cards above and below it, and a focused
-        # row's ring is drawn INSIDE the row: the old ring sat 3px outside the
-        # open button, shorter than the card, and the list's clip cut its left
-        # edge. Read as a painted pixel just inside the row's left edge.
+        # 4. Your drafts' rows (owner's iPhone, after v324: "Weird border"). The
+        # saved drafts are one card (the owner's "B, equal lines", Nov 14), as
+        # wide as the cards above and below it, each row its inside, and a
+        # focused row's ring is drawn INSIDE the row: the old ring sat 3px
+        # outside the open button, shorter than the card, and the list's clip
+        # cut its left edge. Read as a painted pixel just inside the row's left
+        # edge.
         for scheme in ("light", "dark"):
             c = b.new_context(color_scheme=scheme, **PHONE)
             q = c.new_page()
@@ -435,9 +437,9 @@ with sync_playwright() as p:
             q.wait_for_timeout(600)
             w = q.evaluate("""() => { const s = document.getElementById('savedDraftsSheet');
               const wd = sel => { const e = s.querySelector(sel); return e ? [Math.round(e.getBoundingClientRect().left), Math.round(e.getBoundingClientRect().right)] : null; };
-              return { row: wd('.sdrafts-row'), mine: wd('.sdrafts-this'), files: wd('.sdrafts-files') }; }""")
-            check(f"{name} {scheme}: a saved draft's row is as wide as the cards above and below it",
-                  w["row"] and w["row"] == w["mine"] == w["files"], str(w))
+              return { card: wd('.sdrafts-card'), mine: wd('.sdrafts-this'), files: wd('.sdrafts-files') }; }""")
+            check(f"{name} {scheme}: the saved drafts' card is as wide as the cards above and below it",
+                  w["card"] and w["card"] == w["mine"] == w["files"], str(w))
             # Keyboard focus: Tab back onto the row's open button from its ⋯.
             q.focus("#savedDraftsSheet .sdrafts-row .draft-more")
             q.keyboard.press("Shift+Tab")
