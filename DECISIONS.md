@@ -38079,3 +38079,17 @@ fonts; the line, the fold's words and the toast's words wrap and the fold
 measures its own height, so each fits in any font); PostgreSQL itself (the
 chain's DDL read offline, the reads' plans SQLite's; CI's postgres job runs
 the suites after the merge); and the live site.
+
+THE FINAL RUN, Nov 13 (6 PM MT), on the tree merged with #888, the affected
+suites side by side (run_parallel -j 3): verify_socialposts 42/42,
+verify_socialsafety 35/35, verify_socialauth 64/64, verify_hostseams 115/115,
+verify_createpost 85/85, verify_migrations 77/77, verify_a11ypages 162/162,
+verify_docs 144/144; verify_socialmute 66/67 beside them and 66/67 alone, one
+row red both times: section 4's "nothing changes on their side" read all four
+of Jay's pages as changed. Its instrument, not mute: since #888 every page
+carries Skribl's theme boot inline with a nonce of its own each request, and
+the row stripped one-time values from content= and value= only. It strips
+nonce= too now; shown red by a break of its own (a mute that shows "You
+muted Jay" to everybody, so Kip's view of Jay's page changes: 5/6, that row
+alone) and green without it (6/6); then verify_socialmute 67/67 alone. The
+full battery was not run here; main's run after the merge is.
