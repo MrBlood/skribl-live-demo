@@ -214,9 +214,12 @@ def says(sk):
 
 def tiles(entries, viewer):
     """What each tile shows: the post's drawing (Skribl's description, for its
-    shape and its poster), what its ▶ says, its maker's face and first name,
-    its likes and comments (each only when there are some: the template's),
-    its post's address and the words a screen reader hears for the link. A
+    shape, its poster and its ground), what its ▶ says, its maker's face and
+    name (as they wrote it, "Mr. Blood", never its first word: the owner's
+    "Your picks", Nov 14; social.css cuts it with … only when it doesn't
+    fit), its likes and comments (each only when there are some: the
+    template's), its post's address and the words a screen reader hears for
+    the link. A
     post whose drawing Skribl no longer describes to `viewer` (deleted or
     withheld since) or that is taken down has no tile: the drawing is the
     tile. A DRAWING SHOWN OUTSIDE A POST (one person's Gallery, a profile's
@@ -229,20 +232,37 @@ def tiles(entries, viewer):
         sk, who = c["sk"], c["who"]
         if not sk or c["down"]:
             continue
-        first = who.display_name.split(" ")[0]
+        name = who.display_name
         said, pages = says(sk)
         words = (c["post"].words or "").split("\n", 1)[0].strip()
         likes, comments = int(c["likes"]["n"] or 0), int(c["comments"] or 0)
-        label = f"{first}: {words}" if words else (f"A Flip by {first}" if pages else f"A drawing by {first}")
+        label = f"{name}: {words}" if words else (f"A Flip by {name}" if pages else f"A drawing by {name}")
         if said:
             label += ", " + (said if pages else "drawn in " + said)
         if likes:
             label += f", {likes} {'like' if likes == 1 else 'likes'}"
         if comments:
             label += f", {comments} {'comment' if comments == 1 else 'comments'}"
-        out.append({"post": c["post"].public_id, "kind": c["kind"], "url": c["url"], "who": who, "first": first,
+        out.append({"post": c["post"].public_id, "kind": c["kind"], "url": c["url"], "who": who, "name": name,
                     "sk": sk, "says": said, "likes": likes, "comments": comments, "label": label})
     return out
+
+
+#: The first visit's tiles (Home signed out): the Gallery's newest six.
+FRESH = 6
+
+
+@_rests()
+def first_visit():
+    """HOME FOR NOBODY SIGNED IN, the first visit (the owner's B, Nov 14): the
+    welcome, Blooby drawing his card, as it was; under "Fresh from everyone"
+    the six newest tiles of the Gallery of everyone, as /explore shows them
+    signed out (posts only: never a drawing shown outside a post, a face or a
+    drawing kept link-only, which are no post), then "See the whole Gallery
+    ›". Twice the six are asked, so a drawing withheld since (no tile) leaves
+    no gap."""
+    entries, _ = page(None, "everyone", "new", "", limit=FRESH * 2)
+    return render_template("social/home.html", here="home", fresh=tiles(entries, None)[:FRESH])
 
 
 @_rests()

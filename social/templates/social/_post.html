@@ -72,10 +72,12 @@
     go to the player as its line's marks (Skribl's seam, docs/INTEGRATION.md
     "Marks on the line"), which draws them; data-like-at is where this
     viewer's own like landed, so likes.js can move their dot with their
-    heart. Nothing taken down has any. #}
-{% macro heart(c) -%}
+    heart. Nothing taken down has any. `landing`: the heart is where a like
+    row in Activity lands (id="liked"), on its maker's own page when there is
+    no "Liked by" line to land on (they are the only one: _likes.html). #}
+{% macro heart(c, landing=false) -%}
 {%- set n = c.likes.n %}{% set mine = c.likes.mine -%}
-<button class="lk-heart{% if mine %} is-liked{% endif %}{% if not n %} is-zero{% endif %}" type="button" data-first="{{ c.who.display_name.split(' ')[0] }}"
+<button class="lk-heart{% if mine %} is-liked{% endif %}{% if not n %} is-zero{% endif %}" type="button"{% if landing %} id="liked"{% endif %} data-first="{{ c.who.display_name.split(' ')[0] }}"
         {%- if mine and c.likes.at is not none %} data-like-at="{{ c.likes.at }}"{% endif %}
         {%- if me %} data-like="{{ c.like }}"{% else %} data-like-out aria-haspopup="dialog" aria-controls="likeOutSheet" aria-expanded="false"{% endif %}
         aria-pressed="{{ 'true' if mine else 'false' }}" aria-label="{{ 'Liked' if mine else 'Like' }}{% if n %}, {{ n }} {{ 'like' if n == 1 else 'likes' }}{% endif %}">{{ ic.heart() }}{% if n %}<span class="lk-n">{{ n }}</span>{% endif %}</button>
@@ -84,11 +86,12 @@
 {#  THE ROW under every post (the quick-patterns mock's B; the owner's "Yes
     on everything", Nov 13): the comments, even at none (the icon alone,
     "Comment", a way to the box), the heart and how many, Share, the ⋯, and
-    on a card "Open ›", the post, at the end. Each 44px to a finger. #}
-{% macro post_row(c, open=true) -%}
+    on a card "Open ›", the post, at the end. Each 44px to a finger.
+    `landing`: heart()'s, on a post's own page. #}
+{% macro post_row(c, open=true, landing=false) -%}
 <footer class="post-row">
   <a class="post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d comment%s' % (c.comments, '' if c.comments == 1 else 's')) if c.comments else 'Comment' }}">{{ ic.comment() }}{% if c.comments %}<span>{{ c.comments }}</span>{% endif %}</a>
-  {% if not c.down %}{{ heart(c) }}{% endif %}
+  {% if not c.down %}{{ heart(c, landing) }}{% endif %}
   <button class="icon-btn post-share" type="button" data-post-share aria-label="Share this post">{{ ic.share() }}</button>
   <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
           aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
@@ -204,6 +207,7 @@
   <span data-word="report_limited">Too many reports from here right now. Try again later.</span>
   <span data-word="done">Done</span>
   <span data-word="deleting">Deleting…</span>
+  <span data-word="deleted">Your post is gone, its drawing with it.</span>
   <span data-word="now">now</span>
   <span data-word="at">{day} at {time}</span>
 </div>

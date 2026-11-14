@@ -4,12 +4,17 @@
 
     liked_by(lk)        the maker's line, under the time-and-plays line on their
                         own post's or drawing's page: "Liked by Mira, Ada and 3
-                        others" (you first when one is yours), the newest faces,
-                        opening the sheet of who. id="liked": a like row in
-                        Activity lands here, and it glows a moment (likes.js).
+                        others", the newest faces, opening the sheet of who.
+                        The others only, never the maker (the owner's A, Nov
+                        14: their filled heart says it); when the maker is the
+                        only one, no line (likes.py by_line). id="liked": a
+                        like row in Activity lands here, and it glows a moment
+                        (likes.js); with no line it lands on the heart, which
+                        then wears the id (_post.html heart).
     who_rows(lk)        the sheet's rows, newest first: face, name, @handle,
                         when, and the moment their heart landed, if one was
-                        kept; each a way to their page.
+                        kept; each a way to their page. Everyone, the maker's
+                        own like among them.
     like_sheets(lk, c)  the sheet of who (the maker's: Make's own sheet, its
                         paper, the people on one card), the signed-out sheet
                         ("Like this drawing?"), and likes.js's words.
@@ -25,7 +30,7 @@
 {%- set l = lk.line -%}
 <button class="lk-by" id="liked" type="button" data-like-by aria-haspopup="dialog" aria-controls="likeSheet" aria-expanded="false">
   <span class="lk-faces" aria-hidden="true">{% for p in l.faces %}{{ face(p) }}{% endfor %}</span>
-  <span class="lk-by-words">Liked by {% for n in l.names %}{% if not loop.first %}{{ ' and ' if loop.last and not l.more else ', ' }}{% endif %}{% if n == 'you' %}you{% else %}<b>{{ n }}</b>{% endif %}{% endfor %}{% if l.more %} and {{ l.more }} {{ 'other' if l.more == 1 else 'others' }}{% endif %}</span>
+  <span class="lk-by-words">Liked by {% for n in l.names %}{% if not loop.first %}{{ ' and ' if loop.last and not l.more else ', ' }}{% endif %}<b>{{ n }}</b>{% endfor %}{% if l.more %} and {{ l.more }} {{ 'other' if l.more == 1 else 'others' }}{% endif %}</span>
 </button>
 {%- endmacro %}
 

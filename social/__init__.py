@@ -282,13 +282,15 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
     def home():
         """The site's Home. Signed in (piece 4): "Say something, then draw
         it...", then everyone's posts, newest first. Otherwise the first visit:
-        Blooby's card above the newest public skribls."""
+        Blooby's card above the Gallery's six newest (gallery.first_visit).
+        Without accounts there are no posts: the first visit says so."""
         if site is not None:
-            from . import posts
+            from . import gallery, posts
             page = posts.home_page(skribl_blueprint)
             if page is not None:
                 return page
-        return render_template("social/home.html", here="home")
+            return gallery.first_visit()
+        return render_template("social/home.html", here="home", fresh=[])
 
     @bp.get("/explore")
     def explore():

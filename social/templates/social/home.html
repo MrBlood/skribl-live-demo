@@ -8,15 +8,17 @@
     under Reduce Motion it rests finished. The box is held at the card's
     shape (816 x 612) before the drawing arrives, so nothing below it moves.
 
-    UNDER IT, THE NEWEST PUBLIC SKRIBLS: Skribl's own Gallery section, its
-    cards and its New first, as /gallery shows them. One section to
-    a page; this page holds one. #}
+    UNDER IT, FRESH FROM EVERYONE (the owner's B, Nov 14): the six newest
+    tiles of the Gallery of everyone, as /social/explore shows them signed
+    out (gallery.first_visit: posts only, the one tile, _gallery.html), then
+    "See the whole Gallery ›" to it. Skribl's own Gallery section, every
+    public skribl, was here until then. With nothing shared yet, the
+    Gallery's own words for that, and no way to an empty Gallery. #}
 {% extends 'social/base.html' %}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
-{% from 'skribl/_skribl_gallery_section.html' import skribl_gallery_assets, skribl_gallery_section %}
+{% from 'social/_gallery.html' import gallery_tile with context %}
 {% import 'social/_icons.html' as ic %}
 
-{% block head %}{{ skribl_gallery_assets() }}{% endblock %}
 {% block scripts %}<script src="{{ social_asset('hello.js') }}" defer></script>{% endblock %}
 
 {% block main %}
@@ -34,6 +36,13 @@
   <p class="fine">No account needed to look, or to make one.</p>
 </section>
 
-<h2 class="sec">Fresh from everyone</h2>
-{{ skribl_gallery_section(bp=skribl_bp, door='app') }}
+<section class="fresh" aria-labelledby="freshTitle">
+  <h2 class="sec" id="freshTitle">Fresh from everyone</h2>
+  {% if fresh %}
+  <div class="gal-grid" data-fresh>{% for t in fresh %}{{ gallery_tile(t) }}{% endfor %}</div>
+  <p class="fresh-more"><a href="{{ url_for('social.explore') }}">See the whole Gallery<span aria-hidden="true">›</span></a></p>
+  {% else %}
+  <p class="feed-none">No drawings here yet. Share one in a post, and it shows up here.</p>
+  {% endif %}
+</section>
 {% endblock %}

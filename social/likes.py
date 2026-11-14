@@ -38,9 +38,13 @@ from them as the replay plays are the page's (likes.js).
 
 WHO LIKED IT is the maker's alone: on their own post's or drawing's page,
 "Liked by Mira, Ada and 3 others" opens the sheet of who, newest first, each
-with when and the moment, if one was kept (for_maker()). A like the maker
-gives or takes back on their own answers with both again, so the line never
-says "you" after they have taken theirs back.
+with when and the moment, if one was kept (for_maker()). The line names the
+others, never the maker (the owner's A, Nov 14: their filled heart says it),
+and when the maker is the only one there is no line; the sheet lists
+everyone, the maker too. A like the maker gives or takes back on their own
+answers with both again, so the sheet is never stale (and the line, should
+somebody else have liked it meanwhile, says so). With no line, a like row
+in Activity lands on the post's heart instead (#liked, _post.html heart).
 
 WHAT YOU LIKED IS YOURS ALONE TOO (the map's step 4): your own profile's
 Likes tab lists the posts you liked, newest liked first (liked_page()), and
@@ -176,18 +180,25 @@ def moment(at_ms):
 def by_line(rows, viewer, n=None, mine=None):
     """The maker's "Liked by" line, from who()'s rows and, when given, how
     many there are (`n`) and whether one is theirs (`mine`), which a long
-    list's newest rows cannot say: the first names it says (you first when
-    one is yours; all of them up to three, else two) and how many more, and
-    the newest three faces. None for none."""
+    list's newest rows cannot say: the first names it says (all of them up to
+    three, else two) and how many more, and the newest three faces.
+
+    IT LEAVES THE MAKER OUT (the owner's A, Nov 14: "It's not really necessary
+    to say liked by you because the filled heart" does): only the others,
+    "Liked by Juno and 2 others", their faces without the maker's; and when
+    the maker is the only one, None, no line at all. The sheet it opens still
+    lists everyone, the maker included (who()). None for none."""
     people = [p for _, p in rows]
     me_id = viewer.id if viewer is not None else None
     n = len(people) if n is None else n
+    mine = any(p.id == me_id for p in people) if mine is None else mine
+    others = [p for p in people if p.id != me_id]
+    n = max(0, n - (1 if mine else 0))
     if not n:
         return None
-    mine = any(p.id == me_id for p in people) if mine is None else mine
-    names = (["you"] if mine else []) + [p.display_name.split(" ")[0] for p in people if p.id != me_id]
+    names = [p.display_name.split(" ")[0] for p in others]
     shown = names[:3] if n <= 3 else names[:2]
-    return {"names": shown, "more": max(0, n - len(shown)), "faces": people[:3], "you": bool(mine)}
+    return {"names": shown, "more": max(0, n - len(shown)), "faces": others[:3]}
 
 
 def for_maker(on, viewer):

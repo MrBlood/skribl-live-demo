@@ -9,9 +9,12 @@
     Reduce Motion, its line there from the start (you went there to watch).
     Its author, its words, the row every post has (_post.html post_row: the
     comments, a way down to them here, the heart, Share and the ⋯, the one ⋯
-    on the page; not Open ›, as this is the post), when and its plays, and
-    Make your own; its comments (phase 2: _comments.html, comments.py), on a
-    desk beside the drawing; on a desk, More from its author beside it. A
+    on the page; not Open ›, as this is the post), when and its plays; its
+    comments (phase 2: _comments.html, comments.py), on a desk beside the
+    drawing; on a desk, More from its author beside it. NO "MAKE YOUR OWN"
+    HERE (the owner's "Yes, remove it", Nov 14): it was the bar's Make by
+    another name, the same sheet; Make stays in the bar (a phone) and the
+    rail (a desk), on this page as on every other. A
     drawing shown outside a post (/social/b/<id>) is this page too, its
     comments and all (the owner's yes, Nov 12: "whatever you open has the
     comment box"). Its ⋯ is the feed's sheet.
@@ -19,7 +22,9 @@
     LIKES (phase 2; the likes mock, "I like d."): the heart and how many in
     the row under the drawing (_post.html, heart(); Nov 13, it sat at the
     start of the drawing's line until then), and for its maker alone "Liked
-    by…" under the time-and-plays line, opening who (_likes.html).
+    by…" under the time-and-plays line, opening who (_likes.html): the others,
+    never the maker, and no line when the maker is the only one (the owner's
+    A, Nov 14), when a like row in Activity lands on the heart instead.
 
     MUTE (mutes; the owner's C): signed in, the ⋯ says Mute @them after
     Share… (Unmute once muted), and the toast says so; a post's own page is
@@ -31,7 +36,7 @@
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% from 'social/_comments.html' import comments_section, comment_sheets with context %}
 {% from 'social/_mute.html' import mute_parts with context %}
-{% from 'social/_gallery.html' import plate_frame %}
+{% from 'social/_gallery.html' import plate_frame, plate_ground %}
 {% import 'social/_icons.html' as ic %}
 {% set p = card.post %}{% set who = card.who %}
 
@@ -67,13 +72,9 @@
   <div class="post-art">{{ player(card, waits=false) }}
     {% if card.sk and card.sk.caption %}<p class="post-caption">{{ card.sk.caption }}</p>{% endif %}
   </div>
-  {{ post_row(card, open=false) }}
+  {{ post_row(card, open=false, landing=(lk is not none and not lk.line)) }}
   <p class="post-meta"><time datetime="{{ when_iso(p.created_at) }}" data-when="at">{{ when_day(p.created_at) }}</time>{% if card.plays %} · {{ card.plays }}{% endif %}</p>
   {% if lk and lk.line %}{{ liked_by(lk) }}{% endif %}
-  <div class="post-actions">
-    <button class="btn" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet"
-            aria-expanded="false">{{ ic.pen() }}<span>Make your own</span></button>
-  </div>
   {% if cm %}{{ comments_section(cm) }}{% endif %}
   {% if more %}
   <section class="more-from" aria-labelledby="moreTitle">
@@ -81,7 +82,7 @@
     <div class="more-grid">
       {% for m in more %}
       <a class="more-tile" href="{{ m.url }}">
-        <span class="more-pic">{% if m.sk %}<span class="more-plate" style="{{ plate_frame(m.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=m.post.skribl_id) }}" alt="" loading="lazy" decoding="async"></span>{% endif %}</span>
+        <span class="more-pic"{{ plate_ground(m.sk) }}>{% if m.sk %}<span class="more-plate" style="{{ plate_frame(m.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=m.post.skribl_id) }}" alt="" loading="lazy" decoding="async"></span>{% endif %}</span>
         <b class="more-words">{{ m.post.words.split('\n')[0] if m.post.words else 'A drawing' }}</b>
         {% if m.plays %}<span class="more-plays">{{ m.plays }}</span>{% endif %}
       </a>
