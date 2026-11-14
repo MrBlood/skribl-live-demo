@@ -167,6 +167,7 @@ here is the rule you can break tomorrow.
 | An anonymous retry replays to the post the first request made, scoped by a client capability, and the key that deletes it was minted before the answer could be lost. | `verify_apiedges.py`, `verify_posted.py` |
 | The Pad's idempotency key is judged on the drawing, not on serialise-time stamps; a Pad entry in Your Skribls holds its revocation key. | `verify_posted.py` |
 | The Pad, Flip, the player, the library and the gallery carry the app's identity (manifest, theme-color, icons); the feed, a host's page, carries none. | `verify_identity.py` |
+| A page that asks for the cross-fade between pages (`@view-transition`: the Pad, Flip, a drawing's page, the site's pages) has the stylesheet that asks loaded when `<body>` starts, where Chrome decides whether an arriving page fades: Skribl's theme boot, an inline script, comes after it, so a first visit (nothing cached) fades too. | `verify_menu.py` (the Pad, Flip, a drawing's page), `verify_socialsettings.py` part 4 (Home, Explore) |
 | The feed says it is a developer demo; its consumer states carry no code, and its error state can retry. | `verify_inline.py` |
 | Every live bar and header control answers a tap 44px tall (40 at the 320 safety net); the visible pill is a different floor. | `verify_layout.py`, `verify_a11y.py` |
 | The Motion Smear's trail reaches back to where the object came from, measured on the render. | `verify_tween.py` |
