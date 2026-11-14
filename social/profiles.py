@@ -69,11 +69,9 @@ from .models import Person, as_utc
 from .safety import between, i_blocked
 from .security import csrf_token, current_person, origin_ok, over, public_origin, site, token_ok
 
-#: A profile's tabs, in their order (the map's step 4): Posts opens first.
+#: A profile's tabs, in their order (the map's step 4): Posts opens first;
+#: the last two, Likes and Drafts, are yours alone (tabs_for).
 TABS = ("posts", "gallery", "likes", "drafts")
-
-#: Yours alone: on your own page and nobody else's, nor in its source.
-OWN_TABS = ("likes", "drafts")
 
 #: What each tab is called.
 TAB_NAMES = {"posts": "Posts", "gallery": "Gallery", "likes": "Likes", "drafts": "Drafts"}
@@ -84,7 +82,8 @@ _THUMB_KINDS = ("data:image/jpeg;base64,", "data:image/png;base64,", "data:image
 
 
 def tabs_for(mine):
-    """The tabs a profile shows: everybody's two, and your own two more."""
+    """The tabs a profile shows: everybody's two, and on your own page the
+    two that are yours alone, on nobody else's page nor in its source."""
     return TABS if mine else TABS[:2]
 
 
