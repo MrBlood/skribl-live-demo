@@ -267,6 +267,14 @@ body {
 .ic-blooby.is-lit .bl-hand { fill: var(--brand); stroke: var(--blooby-ink); stroke-width: 1; }
 /* The pen's line under the page you are on, as wide as its name. */
 .nav .pen-line { position: absolute; left: -2px; bottom: -5px; width: calc(100% + 4px); height: 6px; color: var(--brand); }
+/* IT DRAWS ITSELF AS THE PAGE COMES IN (the owner's "Yes to both", Nov 14, to
+   the mock where the profile's line slid): it waits until the page has
+   mostly faded in (0.15s of the cross-fade's 0.28s), then draws itself left
+   to right in 0.17s on the pen's curve, Make's doors' own (pen-in). The path
+   is one unit long (_icons.html underline, pathLength), so "1 2" is the whole
+   line and a gap past its far end: no dot waits there before it starts.
+   Under Reduce Motion it is simply there (with the profile's, below). */
+.nav .pen-line path { stroke-dasharray: 1 2; animation: pen-in 0.17s cubic-bezier(0.3, 0.7, 0.3, 1) 0.15s both; }
 /* Make is the one action in the bar: its icon sits on the action purple. */
 .nav .tab-make .tab-ic { width: 52px; height: 32px; border-radius: 999px; background: var(--fill); color: var(--on-fill); box-shadow: var(--fill-drop); }
 .nav .tab-make .ic { width: 22px; height: 22px; }
@@ -753,7 +761,9 @@ body.focus .top { justify-content: center; }
  * under the page you are on: 44 x 8, 4px off the tab's foot, the pen's
  * purple), the others in the second ink. The line's place is the chosen
  * tab's (--at of --n, written on the strip), so it is there before a script
- * runs; tabs.js changes --at and it glides, put there under Reduce Motion.
+ * runs. A tap (tabs.js changes --at) puts it under the new tab at once and
+ * it draws itself there, as the bar's does, while the one it left fades where
+ * it was; under Reduce Motion it is simply put there.
  * The panel under it fades as the Gallery's tiles do (.gal-swap). */
 .prof-tabs {
   position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
@@ -768,10 +778,17 @@ body.focus .top { justify-content: center; }
 .prof-pen {
   position: absolute; bottom: 4px; left: calc(100% * (var(--at, 0) + 0.5) / var(--n, 1) - 22px);
   width: 44px; height: 8px; color: var(--brand); pointer-events: none;
-  transition: left 0.42s cubic-bezier(0.4, 0, 0.2, 1.1);
 }
 .prof-pen .pen-line { display: block; width: 100%; height: 100%; }
-@media (prefers-reduced-motion: reduce) { .prof-pen { transition: none; } }
+/* A tap: the line draws itself under its tab in 0.17s, at once (no page to
+   wait for), and a copy of the one it left fades in 0.12s where it was. */
+.prof-pen.is-drawn .pen-line path { stroke-dasharray: 1 2; animation: pen-in 0.17s cubic-bezier(0.3, 0.7, 0.3, 1) both; }
+.prof-pen.is-leaving { animation: pen-leave 0.12s ease-out both; }
+@keyframes pen-leave { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .nav .pen-line path, .prof-pen.is-drawn .pen-line path { stroke-dasharray: none; animation: none; }
+  .prof-pen.is-leaving { display: none; }
+}
 @media (min-width: 900px) { .prof-tabs { margin: 24px 0 14px; } }
 @media (hover: hover) { .prof-tab:hover { color: var(--ink); } }
 /* A DRAFT'S TILE (your Drafts, the mock's A): the Gallery's tile, its

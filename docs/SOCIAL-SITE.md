@@ -1738,8 +1738,9 @@ Skribls heading and Skribl's Gallery section were, Posts · Gallery · Likes ·
 Drafts on your own page and Posts · Gallery on anybody else's, Posts first,
 the chosen tab marked with the bar's own pen line; each tab a link with its
 own address (`/social/@<handle>`, then `/gallery`, `/likes`, `/drafts`), the
-back button and a shared link landing on it, the line gliding and the panel
-fading between them (`profiles.py`, `_profile.html`, `tabs.js`). Posts and
+back button and a shared link landing on it, the line drawing itself under
+each (since Nov 14; it glided at first) and the panel fading between them
+(`profiles.py`, `_profile.html`, `tabs.js`). Posts and
 Likes are Home's one card; the Gallery is the Gallery of everyone's tile
 with one person in it, a drawing shown outside a post opening its own page,
 so nothing is lost; Likes and Drafts are yours alone, nothing of either on

@@ -4,8 +4,9 @@
  * profiles.py says what each holds and for whom.
  *
  * EACH TAB IS A LINK WITH ITS OWN ADDRESS. A tap stays on the page: the
- * pen's line glides under the tab (social.css places it by the tab's place,
- * --at), the tab takes the first ink, the panel fades out, the tab's first
+ * pen's line draws itself under the tab, the one it left fading where it was
+ * (social.css places it by the tab's place, --at, and draws it: .is-drawn,
+ * .is-leaving), the tab takes the first ink, the panel fades out, the tab's first
  * page goes in while it can't be seen (/@<handle>/more), and fades back;
  * then the address is the tab's own (history.pushState), so the back button
  * comes back to the tab before, and a reload or a shared link opens on it.
@@ -15,8 +16,9 @@
  * LOAD MORE brings a tab's next page in place, by its cursor; the players
  * are mounted and the times said, as Home's Load more does.
  *
- * KIND, NEVER JUMPY: the line glides and the panel fades, nothing else
- * moves. The page doesn't scroll: the panel keeps its height while the new
+ * KIND, NEVER JUMPY: the line draws itself (the owner's "Yes to both", Nov
+ * 14: "draw itself really fast instead of sliding") and the panel fades;
+ * nothing else moves. The page doesn't scroll: the panel keeps its height while the new
  * one fades in, and then keeps whatever room holds the page where it is (a
  * short tab under a page scrolled to its strip), so nothing hops. Under
  * Reduce Motion the line is put there and the panel still only fades. Only
@@ -57,15 +59,38 @@
   }
   function chosen() { return keyOf(strip.querySelector('a[aria-current]')); }
 
-  /* The strip says `key`: its ink, and the pen's place, which glides there
-     (social.css; put there under Reduce Motion). */
+  /* The strip says `key`: its ink, and the pen's place. When the place
+     changes, a copy of the line fades where it was and the line draws itself
+     at its new place (social.css: .is-leaving, .is-drawn); under Reduce
+     Motion it is simply put there. */
+  var pen = strip.querySelector('.prof-pen');
+  var still = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   function mark(key) {
+    var to = -1;
+    tabs.forEach(function (a, i) { if (keyOf(a) === key) to = i; });
+    var moves = to >= 0 && String(to) !== strip.style.getPropertyValue('--at').trim();
+    var drawn = moves && pen && !(still && still.matches);
+    if (drawn) {
+      var left = pen.cloneNode(true);
+      left.classList.remove('is-drawn');
+      left.classList.add('is-leaving');
+      left.style.left = getComputedStyle(pen).left;
+      strip.appendChild(left);
+      var gone = function () { if (left.parentNode) left.parentNode.removeChild(left); };
+      left.addEventListener('animationend', gone);
+      setTimeout(gone, 400);
+    }
     tabs.forEach(function (a, i) {
-      if (keyOf(a) === key) {
+      if (i === to) {
         a.setAttribute('aria-current', 'page');
         strip.style.setProperty('--at', String(i));
       } else a.removeAttribute('aria-current');
     });
+    if (drawn) {
+      pen.classList.remove('is-drawn');
+      void pen.getBoundingClientRect();   /* so it starts again, every time */
+      pen.classList.add('is-drawn');
+    }
   }
 
   function ask(key, before) {
