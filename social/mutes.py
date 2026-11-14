@@ -31,7 +31,8 @@ their page. The visibility policy is untouched: a mute never hides a page.
 
 COUNTS AND "LIKED BY…" STAY TRUE, for everybody and for you: a mute changes
 what reaches you, never a number (a folded comment is counted, their like
-is in the count and in "Liked by…", their follow in "Followed by…").
+is in the count and in "Liked by…", their follow in the counts and the
+lists).
 
 ONE WAY, AND QUIET. Nothing changes on their side, and nobody is told: their
 page, posts, counts and who follows them look the same to them and to
