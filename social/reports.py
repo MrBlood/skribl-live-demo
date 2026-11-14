@@ -11,10 +11,10 @@ Nov 12): what people reported, for the site's admins, and their two answers.
 
 ONE QUEUE FROM TWO. The site's own reports (social_reports: somebody, a post,
 a drawing shown outside a post, a comment) and Skribl's (what people reported on
-Skribl's own pages: the Gallery's tiles on Explore, a drawing's link page),
+Skribl's own pages: its Gallery's tiles, a drawing's link page),
 read through Skribl's documented seams (list_reports, close_reports,
 set_post_visibility: docs/INTEGRATION.md, "Your own reports page"). A post's
-drawing reported on Explore is the post's card; anything else Skribl's
+drawing reported on a Gallery tile of Skribl's is the post's card; anything else Skribl's
 queue holds is a drawing's.
 
 TAKING IT DOWN keeps everything. A person: their profile is nobody's to
@@ -69,7 +69,7 @@ def queue():
     Each card: kind, target, who (the person it is about, or None), what
     (the post or drawing, or None), reasons [(words, count)], count, notes
     [(who wrote it or None, the note)], reporters (names, or "somebody signed
-    out" / "somebody on Explore"), child, latest."""
+    out" / "somebody in the Skribls gallery"), child, latest."""
     from skribl import describe_posts, list_reports
     sess = site().session()
     cards = {}
@@ -102,7 +102,7 @@ def queue():
         for reason, n in grp["reasons"].items():
             c["reasons"][reason] = c["reasons"].get(reason, 0) + n
         c["count"] += grp["count"]
-        c["reporters"] += ["somebody on Explore"] * grp["count"]
+        c["reporters"] += ["somebody in the Skribls gallery"] * grp["count"]
         c["notes"] += [(None, n) for n in grp["notes"]]
         c["child"] = c["child"] or grp["child_safety"]
         from datetime import datetime

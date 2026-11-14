@@ -21,6 +21,8 @@
                         follows.js's words (follow_words(), Home's too).
     home_pill(show)     Home's pill under the composer: Following | Everyone,
                         the Gallery's New / Hot, value for value.
+    gallery_show_pill(show), gallery_sort_pill(sort)   the Gallery's two:
+                        Following | Everyone (signed in) and New | Hot.
     feed_extra(kind)    what Home's Following says between its cards: the
                         kind card for somebody who follows nobody ("none"),
                         "You're caught up…" ("caught"), Fresh from everyone
@@ -61,8 +63,8 @@
 {% macro _pill(label, opts, on, data, cls='') -%}
 <div class="fo-seg{{ ' ' ~ cls if cls }}" role="group" aria-label="{{ label }}"{{ caller() if caller }}>
   <span class="fo-slider" aria-hidden="true"></span>
-  {%- for key, words in opts %}
-  <button type="button" data-{{ data }}="{{ key }}" aria-pressed="{{ 'true' if key == on else 'false' }}">{{ words }}</button>
+  {%- for opt in opts %}
+  <button type="button" data-{{ data }}="{{ opt[0] }}" aria-pressed="{{ 'true' if opt[0] == on else 'false' }}"{% if opt|length > 2 %} title="{{ opt[2] }}"{% endif %}>{{ opt[1] }}</button>
   {%- endfor %}
 </div>
 {%- endmacro %}
@@ -142,6 +144,24 @@
 {% macro home_pill(show) -%}
 {% call _pill('Show posts from', (('following', 'Following'), ('everyone', 'Everyone')), show, 'show', 'fo-home') -%}
 {{ ' ' }}data-home-pill data-pick="{{ url_for('social.home_show') }}" data-first="{{ url_for('social.feed_more') }}"
+{%- endcall %}
+{%- endmacro %}
+
+{#  THE GALLERY'S PILLS (the map's step 3; the Gallery mock's "Following |
+    Everyone on top, Home's own pill, New, Hot and search under it as
+    today"): the one pill twice. Following | Everyone is Home's, for somebody
+    signed in, with nothing kept for the account (the Gallery opens on
+    Everyone, its own words); New | Hot is the Gallery's own New / Hot, its
+    words in the tips Skribl's gallery gives them. explore.js moves both. #}
+{% macro gallery_show_pill(show) -%}
+{% call _pill('Show drawings from', (('following', 'Following'), ('everyone', 'Everyone')), show, 'show', 'fo-home gal-show') -%}
+{{ ' ' }}data-gal-show
+{%- endcall %}
+{%- endmacro %}
+
+{% macro gallery_sort_pill(sort) -%}
+{% call _pill('Order', (('new', 'New', 'Newest first'), ('hot', 'Hot', 'Most played in the last seven days')), sort, 'sort', 'gal-sort') -%}
+{{ ' ' }}data-gal-sort
 {%- endcall %}
 {%- endmacro %}
 

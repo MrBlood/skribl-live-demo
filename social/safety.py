@@ -30,8 +30,8 @@ Unblock. It reaches every page that shows either of them:
 
   * the site's own pages: Home's feed, a post's page, a drawing's page, More
     from, and the profile (blocked_ids, below, one query a request);
-  * Skribl's pages, which the site does not draw: Explore's gallery and a
-    profile's skribls (its listing), and a drawing's own link page, its
+  * Skribl's pages, which the site does not draw: the first visit's gallery
+    and a profile's skribls (its listing), and a drawing's own link page, its
     share card, its picture and its payload (visible_to), through the two
     seams Skribl gives every host for exactly this (docs/INTEGRATION.md: a
     feed filter and a visibility policy). The host installs them, as it

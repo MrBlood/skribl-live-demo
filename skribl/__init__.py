@@ -42,7 +42,7 @@ from .creation import (CreatedPost, SkriblIdempotencyRace, SkriblRejected,
                        SkriblUnavailable, create_post)
 from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
                        set_post_visibility)
-from .describing import describe_posts, list_public_posts
+from .describing import describe_posts, list_public_posts, recent_plays
 from .moderation import close_reports, list_reports
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
                      session, set_card_url, set_visibility_policy)
@@ -77,6 +77,11 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            # ...and the newest public ones, by author (skribl/describing.py,
            # docs/INTEGRATION.md "A feed of your own people's drawings").
            "list_public_posts",
+           # ...and how many plays each had in the last seven days, as a
+           # subquery a host joins to its own posts: the gallery's Hot, for a
+           # host's own list (skribl/describing.py, docs/INTEGRATION.md
+           # "What is played most, among your own posts").
+           "recent_plays",
            # The report queue, for a host's own Reports page: read it, and
            # close a drawing's reports once looked at (skribl/moderation.py,
            # docs/INTEGRATION.md "Your own reports page").

@@ -11,11 +11,20 @@ describe_posts() hands them over by public id: for each, the listing's own
 item (SkriblPost.feed_dict()), so a host's feed and Skribl's listing can
 never disagree about a drawing.
 
+AND WHAT IS PLAYED MOST (Nov 14, for the Skribl site's Gallery, Hot): the
+gallery's Hot is plays counted in the last seven days, from Skribl's own
+record of them; recent_plays() hands a host that count as a subquery to join
+to its own posts, so the host's Hot is one query on its own rows, with its
+own rules, paged by its own cursor.
+
 Reads only, on the host's session: it flushes nothing and commits nothing.
 """
+from datetime import datetime, timedelta, timezone
+
 import sqlalchemy as sa
 
-from .models import SkriblPost, apply_feed_filter, normalise_user_id, session
+from .core import HOT_DAYS
+from .models import SkriblPost, SkriblView, apply_feed_filter, normalise_user_id, session
 
 #: The most ids one call reads, in one query: a page of a feed, with room.
 MAX_DESCRIBE = 200
@@ -121,3 +130,36 @@ def list_public_posts(*, author=None, author_prefix=None, authors=None, before=N
     rows = q.order_by(SkriblPost.created_at.desc(), SkriblPost.public_id.desc()).limit(limit + 1).all()
     more = len(rows) > limit
     return [p.feed_dict() for p in rows[:limit] if p.visible_to(viewer_id)], more
+
+
+def recent_plays(*, as_of=None):
+    """The plays counted in the HOT_DAYS (seven) days up to `as_of`, as a
+    SUBQUERY for a host to join to its own posts: one row per skribl played
+    in that window, its public id as `skribl_id` and how many plays as
+    `plays` (a skribl nobody played in it has no row, so join it outer and
+    read a missing count as 0). The gallery's own Hot counts the same rows
+    (GET /api/skribls?sort=hot): one play per client per post per UTC day.
+
+    as_of   the moment the window ends (now, unsaid): hold one for a whole
+            scroll-through, as the gallery's Hot does, so a drawing that
+            climbs while somebody scrolls is neither shown twice nor skipped.
+
+    It says nothing of who may see a drawing: joined to the host's own
+    rows, those rows' rules decide what is shown, and a skribl the host
+    holds no row for never comes into its list. It reads no payload and
+    runs nothing until the host's query does; reading it counts no play.
+    Joined on the host's session, in the host's own query:
+
+        plays = skribl.recent_plays()
+        hot = sa.func.coalesce(plays.c.plays, 0)
+        q = (sa.select(Post, hot).outerjoin(plays, plays.c.skribl_id == Post.skribl_id)
+             .order_by(hot.desc(), Post.created_at.desc()))
+    """
+    if as_of is None:
+        as_of = datetime.now(timezone.utc)
+    since = as_of - timedelta(days=HOT_DAYS)
+    return (sa.select(SkriblPost.public_id.label("skribl_id"), sa.func.count(SkriblView.id).label("plays"))
+            .join(SkriblView, SkriblView.post_id == SkriblPost.id)
+            .where(SkriblView.created_at >= since, SkriblView.created_at <= as_of)
+            .group_by(SkriblPost.public_id)
+            .subquery("skribl_recent_plays"))
