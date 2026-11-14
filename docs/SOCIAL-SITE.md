@@ -4,6 +4,11 @@
 section 8.** Nothing here is built yet except where it says "have", and phase
 1's first piece, the frame, which section 9 describes.
 
+**The map since Nov 14 is section 16**: a post is the one thing people
+share. Where an earlier section says otherwise (Home holding every drawing,
+a profile's Skribls being Skribl's Gallery, no follower counts), section 16
+is the decision.
+
 The owner, Nov 10: "we are beginning to build the social media site, so we
 need to take care to keep it straight. This may be the beginning of a social
 media site that will have millions of users, so keep scale in mind and be
@@ -1544,3 +1549,109 @@ no editor's.
 `verify_hostseams.py` and `verify_createpost.py` hold the feed filter's
 `author`. DECISIONS.md ("Mute at /social: quiet everywhere") says what each
 check was shown red by.
+
+---
+
+## 16. The map: a post is the one thing people share
+
+The owner, Nov 14, after Explore's card turned out to be a different card
+from Home's: "I'm starting to think we should do the social site like
+skribls.net. It's a social site already that we were going to drop skribl
+into as a feature, like GIF, add image, add video, poll... we can have the
+gallery which is just the skribls (not post) and library drafts as part of
+profile? We are kind of getting disorganized and random. We can clean this
+up." Then, to the map below and its defaults: "Yes on everything."
+
+**Why.** The original intent (docs/SKRIBLS-NET.md) was Skribl as a feature
+of a social site: a drawing rides in a post the way a video does, beside the
+photos, video, emoji, GIF and polls skribls.net's composer already has.
+Section 1's three layers still say so. What drifted was the site's side: it
+came to treat a post and a drawing shown outside a post as two kinds of
+thing. Home held both, Explore borrowed Skribl's Gallery (its own card, its
+own initials for faces, no heart and no comments), a profile's Skribls was
+the Gallery too, and likes and comments each had two routes, one for a post
+and one for a drawing outside a post. Two cards on the same site was the
+first thing the owner saw of it.
+
+**The map.**
+
+| Place | What it is |
+|---|---|
+| **A post** | The one thing people share: words, and one thing attached, a drawing or a Flip (words optional). Likes, comments, Activity, mutes and reports are about posts. |
+| **Home** | Posts: Following, or Everyone. |
+| **Explore** | Everyone's posts: New, Hot and search. The site lists it itself; it no longer borrows Skribl's Gallery section. |
+| **A profile** | Posts · Gallery · Likes · Drafts. **Gallery** is the person's drawings and Flips as drawings (Skribl's Library: a drawing on a stage above a grid), every one they have shared, each opening its post. **Likes** and **Drafts** are yours alone, on your own profile; Drafts are the drafts Skribl already keeps on your account (SkriblDraft). |
+| **Make** | One composer, the same from the bar and from Home: words, and Draw or Flip. |
+| **Activity, Settings** | As built. Settings from the ☰ on a phone (and the profile's button), the rail on a desk. |
+
+**The owner's decisions (Nov 14, "Yes on everything").**
+
+1. **Every share is a post** (words optional). Your Gallery collects every
+   drawing you have shared, each opening its post. This replaces the Nov 11
+   A, "Home holds every drawing, posts or not".
+2. **Drawings already shared without a post stay in their author's Gallery**,
+   so nothing is lost; Home and Explore show posts from then on.
+3. **Photos, GIFs, video and polls: not now.** The composer keeps room for
+   them in the same place a drawing goes. skribls.net has them already. A poll
+   would be the easy first one. Photos and video bring storage that grows
+   with use (a bill: asked first, WORKING-AGREEMENTS "Spending") and a
+   child-safety duty to scan and report; a GIF needs an outside service. Each
+   comes with its own plan and the owner's yes.
+4. **The look, from the quick-patterns mock**
+   (https://claude.ai/artifact/S7171kFpfXxiLUzPLJJYwY, its defaults):
+   - **One calm card everywhere** (its B): at rest, who made it, the words,
+     the drawing with its play button saying "drawn in 5 sec" (as Explore's
+     does today), and one row. Press play and the drawing's line (scrubbing,
+     speed, loop, the likes' dots) glides open under it and stays. A post's
+     own page shows the line from the start. A desk keeps two columns where
+     Explore has them today. Faces are the site's everywhere: the empty
+     circle before somebody draws one, never an initial.
+   - **One row under every card** (its B): 💬 count, ♡ count, Share, ⋯, and
+     Open › at the end. The heart moves into the row from the drawing's line
+     (the line keeps the likes' dots, and the hearts still rise from them);
+     the ⋯ moves from the head into the row; the plays sit beside the time,
+     and nothing is said at none.
+   - **A profile's tabs** in the pen's underline, as the bar marks the page
+     you are on (its B), now Posts · Gallery · Likes · Drafts. The Gallery and
+     Drafts tabs are mocked before they are built.
+   - **A ☰ on a phone** at the top left of Home and Explore, opening the
+     site's own sheet: Settings, Community rules, Privacy, Your reports, Sign
+     out. Help joins it when there is a Help page. The profile keeps its
+     Settings button; a desk is unchanged.
+   - **Make stays in the bar.** A floating button would sit over every card's
+     Share.
+   - **You stays your face with the word "You".**
+   - **Counts on every profile** (its A): "3 followers · 2 following", "New
+     here" while nobody follows them yet, a following count only when it is
+     not zero. The lists of who follows whom stay yours alone, opened by the
+     counts on your own page, where they take the place of "Followed by…".
+     This replaces the Nov 13 B, "no counts, ever".
+
+**What stays.** The three layers (section 1). Section 8's item 9: our own
+build, not a copy of skribls.net; it is skribls.net's shape that is taken.
+Skribl's own pages, its /gallery, and every seam a host uses, so Skribl can
+still stand alone and still drop into skribls.net. Nothing changes in the Pad
+or Flip. On Skribl's side one new option on the in-post player, a seam: a
+post's line can wait until it is played (the site turns it on; Skribl's own
+pages and other hosts stay as they are).
+
+**What goes, as it is built.** Drawings outside a post in Home and Explore;
+the likes and comments of a drawing outside a post (`/b/<id>/like`,
+`/b/<id>/comments`), the few there are kept readable, nothing deleted; Home's
+drawing card (`data-kind="s"`). Each goes in the PR that replaces it, with the
+suites that held it.
+
+**The order**, one PR at a time, each finished before the next starts:
+
+1. This map (docs).
+2. The one card and its row, on Home and a post's page.
+3. Every share is a post; Explore lists posts with the one card.
+4. A profile's tabs: Posts · Gallery · Likes · Drafts (mocked first).
+5. The ☰ on a phone, and the counts.
+6. Likes and comments on posts only; what goes, taken out.
+
+**The four.** Simple: one thing to share, one card, one place for your
+things. Kind: nothing anybody made is lost, Likes and Drafts stay yours
+alone, nothing covers a button. Playful: the drawing still draws itself in
+every card, and your Gallery is your drawings as drawings. Powerful: Skribl
+drops into skribls.net exactly as it drops into our site.
