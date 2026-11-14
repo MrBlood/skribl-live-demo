@@ -38976,8 +38976,13 @@ the section rather than of the row, so a tap on a count that is not there
 reads as its row's red now (tap_if), shown again by a break that leaves your
 own counts words.
 
-THE AFFECTED SUITES, side by side (harness/run_parallel.py): COUNTS-HERE.
-The full battery was not run; main's run after the merge is that.
+THE AFFECTED SUITES, side by side (harness/run_parallel.py), every one
+green on its first run: verify_socialsettings 44/44, verify_socialfollow
+74/74, verify_socialmute 68/68, verify_socialprofile 55/55,
+verify_socialactivity 44/44, verify_social 40/40, verify_socialauth 64/64,
+verify_socialposts 59/59, verify_sociallikes 96/96, verify_socialcomments
+93/93, verify_socialsafety 38/38, verify_docs 144/144. The full battery was
+not run; main's run after the merge is that.
 
 CONTRAST, measured on the built pages (and the same as the mock measured):
 the counts' numbers 17.47:1 light and 17.17:1 dark, their words and the dot
@@ -38995,6 +39000,10 @@ can read the rules and what is kept before anybody invites them; nothing
 covers a button. Playful: the ☰ drawn in our pen, its last stroke shorter;
 the counts fade as you follow. Powerful: Settings, the rules, privacy,
 reports and Sign out one tap from Home on a phone.
+
+Asked, for the owner: signed out, the ☰ holds Sign in, Community rules and
+Privacy (the mock showed it signed in only). Is that what a visitor should
+find there?
 
 Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
 their smoke after the merge); SF and Segoe UI (the counts wrap and centre by
