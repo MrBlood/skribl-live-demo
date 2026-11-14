@@ -7,7 +7,10 @@ section 8.** Nothing here is built yet except where it says "have", and phase
 **The map since Nov 13 is section 16**: a post is the one thing people
 share. Where an earlier section says otherwise (Home holding every drawing,
 what Explore and a profile show, no follower counts), section 16 is the
-decision.
+decision. **Its part two, since Nov 14, is section 17**: what any social site
+has (bookmarks, reposts and quote posts, mentions, finding people, open
+sign-up, push notifications, direct messages), in the owner's order, and one
+drawing, one conversation.
 
 The owner, Nov 10: "we are beginning to build the social media site, so we
 need to take care to keep it straight. This may be the beginning of a social
@@ -1679,7 +1682,10 @@ the likes and comments of a drawing outside a post (`/b/<id>/like`,
 `/b/<id>/comments`), the few there are kept readable, nothing deleted; Home's
 drawing card (`data-kind="s"`). Each goes in the PR that replaces it, with the
 suites that held it. The first and the last went with step 3 (DECISIONS,
-"Home shows posts only"); the likes and comments go with step 6.
+"Home shows posts only"). The likes and comments STAY (the owner, Nov 14,
+"Keep likes and comments", once the Gallery held every skribl): a drawing
+shown outside a post keeps its own, by section 17's rule, one drawing, one
+conversation.
 
 **The order**, one PR at a time, each finished before the next starts:
 
@@ -1690,7 +1696,9 @@ suites that held it. The first and the last went with step 3 (DECISIONS,
 4. A profile's tabs: Posts · Gallery · Likes · Drafts (the Gallery and
    Drafts tabs mocked first, with step 3's tiles).
 5. The ☰ on a phone, and the counts.
-6. Likes and comments on posts only; what goes, taken out.
+6. Likes and comments on posts only; what goes, taken out. (Changed, Nov
+   14: they stay on a drawing shown outside a post, and one drawing has one
+   conversation; section 17.)
 7. Add to Home Screen (the owner, Nov 13, after the map): a way to put
    Blooby on a phone's Home Screen, so it opens full screen like an app.
    Mocked first, once steps 3 to 6 are in. (The owner also noted that in
@@ -1750,7 +1758,7 @@ so nothing is lost; Likes and Drafts are yours alone, nothing of either on
 anybody else's page or in its source. Drafts are the ones Skribl keeps on
 your account, listed through its new seam `list_drafts()` and opened in the
 Pad or Flip with `?draft=<id>` (docs/INTEGRATION.md, "A person's drafts on
-your own page"). Next is step 6.
+your own page"). Next was step 6, which the owner changed (section 17).
 
     /social/@<handle>            Posts, which opens first
     /social/@<handle>/gallery    the Gallery
@@ -1862,3 +1870,49 @@ things. Kind: nothing anybody made is lost, Likes and Drafts stay yours
 alone, nothing covers a button. Playful: the drawing still draws itself in
 every card, and your Gallery is your drawings as drawings. Powerful: Skribl
 drops into skribls.net exactly as it drops into our site.
+
+## 17. The map, part two: what any social site has
+
+The owner, Nov 14, after the map's steps 1 to 5 were built: "Keep likes and
+comments. Not sure how likes and comments work on pads/flips and posts?
+Let's think about how that might work. Sign up is needed, reposts are
+needed, push notifications (not sure what they are), Bookmarks I didn't mean
+to say no to that. We need direct messages. We need all the things that any
+social site has." Then "Yes" to the rule and the order below. Each piece is
+mocked first, light and dark, phone and desk, and asked for before it is
+built.
+
+**One drawing, one conversation.** A post's hearts and comments are the
+post's; its drawing has no count of its own. A drawing shown outside a post
+(the Pad's own share, `/social/b/<id>`) keeps its own hearts and comments.
+When an older drawing is posted (the composer's "Yours"), its hearts and
+comments move onto the new post and its own page sends people to the post:
+nothing is lost, and there are never two conversations about one drawing. A
+drawing is in one post; sharing it again is a repost. A repost shows the
+original, and its hearts and comments are the original's (as on Bluesky); a
+quote post is a repost with your own words, or your own drawing. A Gallery
+tile shows that one conversation's counts.
+
+**Push notifications**, said plainly for the owner: the alerts a phone shows
+on its lock screen ("Rook liked your drawing") when the site is not open. An
+iPhone lets a website send them only once it is on the Home Screen, so they
+follow step 7.
+
+**The order**, one PR at a time, as part one:
+
+1. The composer (the owner's yes, the morning of Nov 14): one Make sheet
+   everywhere, words and a drawing; "Yours" posts an older drawing, its
+   conversation moving with it. Quote posts reuse it.
+2. Bookmarks: save a post; yours alone.
+3. Reposts, then quote posts.
+4. Mentions: an @handle in a post or a comment links to that person and
+   tells them.
+5. Finding people: search by name or @handle.
+6. Open sign-up, with what it needs to stay kind (limits for new accounts,
+   the admins' tools); the owner's rules asked when it is mocked.
+7. Add to Home Screen (part one's step 7), then push notifications.
+8. Direct messages: one to one, a drawing as easily as words, who may
+   message you, and a requests inbox.
+9. The smaller things most sites have: pin a post to your profile, edit a
+   post's words (shown "edited"; the owner's yes), tags, download your data,
+   and words that describe a drawing to a screen reader.

@@ -40413,3 +40413,34 @@ Powerful: one look on every sheet, site and editors, from one rule each.
 Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
 their smoke after the merge); SF and Segoe UI (nothing here is type, and the
 ring and the cards are drawn by the box, not the face); the live site.
+
+## After v330 -- The map, part two: what any social site has (docs)
+
+The owner, Nov 14, asked where the site stood and what was left for it to be
+complete as a social site. Told: the map's steps 1 to 5 built, step 6 (likes
+and comments on posts only) and step 7 (Add to Home Screen) left, and the
+composer; and, outside the map, open sign-up, reposts, push notifications.
+(Cal also wrote that the owner had said no to direct messages; they never
+had, and it was corrected.) The owner: "Keep likes and comments. Not sure how
+likes and comments work on pads/flips and posts? Let's think about how that
+might work. Sign up is needed, reposts are needed, push notifications (not
+sure what they are), Bookmarks I didn't mean to say no to that. We need
+direct messages. We need all the things that any social site has." Proposed:
+one drawing, one conversation, and an order; "Yes" to both, to quote posts,
+and to editing a post's words shown "edited".
+
+WRITTEN INTO docs/SOCIAL-SITE.md: section 17, "The map, part two", with the
+owner's words, the rule (a post's hearts and comments are the post's; a
+drawing shown outside a post keeps its own; posting an older drawing moves
+its conversation onto the new post, its page sending people there; a drawing
+is in one post, sharing it again a repost; a repost's and a quote post's
+hearts and comments are the original's; a tile shows the one conversation's
+counts), push notifications said plainly, and the order: the composer;
+bookmarks; reposts, then quote posts; mentions; finding people; open sign-up
+with its safety; Add to Home Screen, then push notifications; direct
+messages; then the smaller things (pin a post, edit a post's words, tags,
+download your data, words that describe a drawing to a screen reader). Step
+6's line and section 16's "what goes" say the likes and comments stay. Each
+piece is mocked first and asked for before it is built.
+
+Docs only: no code, no check. verify_docs run on the final tree.
