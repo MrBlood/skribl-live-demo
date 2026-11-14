@@ -846,13 +846,14 @@ with sync_playwright() as p:
             pg.wait_for_timeout(500)
             press(pg, "#composeSheet [data-compose-open=pad]")
             fr = editor_in_frame(pg, "skribl-pad")
-            pad_dark = fr.evaluate(EDITOR) if fr else {}
+            NONE = {"mode": None, "stamp": None, "on": [], "ground": None}   # no editor opened: the row's red
+            pad_dark = fr.evaluate(EDITOR) if fr else dict(NONE)
             if fr:
                 fr.click("#composeCloseBtn")
                 pg.wait_for_timeout(700)
             press(pg, "#composeSheet [data-compose-open=flip]")
             fr = editor_in_frame(pg, "/flip?")
-            flip_dark = fr.evaluate(EDITOR) if fr else {}
+            flip_dark = fr.evaluate(EDITOR) if fr else dict(NONE)
             check("Dark chosen on Settings is kept as Skribl's own choice (skribl_theme_v1, nothing else added), the"
                   " site turns dark, and the Pad and Flip open dark, their own switch saying Dark",
                   site_dark["kept"] == "dark" and site_dark["stamp"] == "dark" and site_dark["page"] == PAGE_RGB["dark"]
