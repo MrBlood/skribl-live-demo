@@ -13,7 +13,8 @@
     out (gallery.first_visit: posts only, the one tile, _gallery.html), then
     "See the whole Gallery ›" to it. Skribl's own Gallery section, every
     public skribl, was here until then. With nothing shared yet, the
-    Gallery's own words for that, and no way to an empty Gallery. #}
+    Gallery's own words for that, and no way to an empty Gallery; when the
+    site's posts cannot be read (`fresh` is None), the welcome alone. #}
 {% extends 'social/base.html' %}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
 {% from 'social/_gallery.html' import gallery_tile with context %}
@@ -36,6 +37,7 @@
   <p class="fine">No account needed to look, or to make one.</p>
 </section>
 
+{% if fresh is not none %}
 <section class="fresh" aria-labelledby="freshTitle">
   <h2 class="sec" id="freshTitle">Fresh from everyone</h2>
   {% if fresh %}
@@ -45,4 +47,5 @@
   <p class="feed-none">No drawings here yet. Share one in a post, and it shows up here.</p>
   {% endif %}
 </section>
+{% endif %}
 {% endblock %}

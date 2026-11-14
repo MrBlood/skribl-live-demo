@@ -260,9 +260,25 @@ def first_visit():
     signed out (posts only: never a drawing shown outside a post, a face or a
     drawing kept link-only, which are no post), then "See the whole Gallery
     ›". Twice the six are asked, so a drawing withheld since (no tile) leaves
-    no gap."""
-    entries, _ = page(None, "everyone", "new", "", limit=FRESH * 2)
-    return render_template("social/home.html", here="home", fresh=tiles(entries, None)[:FRESH])
+    no gap.
+
+    WHEN THE SITE'S POSTS CANNOT BE READ (its chain failed, the database is
+    away) the welcome still stands, without Fresh from everyone (None): it is
+    the front page a failed chain never takes down (verify_socialauth 14),
+    and saying "nothing here yet" would not be true. The Gallery itself rests,
+    as every page of posts does."""
+    try:
+        entries, _ = page(None, "everyone", "new", "", limit=FRESH * 2)
+        fresh = tiles(entries, None)[:FRESH]
+    except sa.exc.SQLAlchemyError:
+        try:
+            site().session().rollback()
+        except Exception:            # noqa: BLE001 -- nothing more to undo
+            pass
+        site().say_once("first-visit", "the site's posts could not be read, so the first visit shows its "
+                                       "welcome without Fresh from everyone until they can")
+        fresh = None
+    return render_template("social/home.html", here="home", fresh=fresh)
 
 
 @_rests()
