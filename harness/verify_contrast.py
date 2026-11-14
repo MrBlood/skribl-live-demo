@@ -242,16 +242,27 @@ LISTS = r"""(root) => {
   const p = document.createElement('i'); document.body.appendChild(p);
   const read = (prop, v) => { p.style.cssText = prop + ': ' + v; return getComputedStyle(p)[prop === 'color' ? 'color' : 'boxShadow']; };
   const tok = { card: read('color', 'var(--menu-card)'), line: read('color', 'var(--menu-card-line)'),
-                rule: read('color', 'var(--menu-card-rule)'), drop: read('box-shadow', 'var(--menu-card-drop)') };
+                rule: read('color', 'var(--menu-card-rule)'), drop: read('box-shadow', 'var(--menu-card-drop)'),
+                rowline: read('color', 'var(--row-line)') };
   p.remove();
   const lists = [...R.querySelectorAll('.menu-list, .export-list, .sdrafts-card, .sdrafts-files, .ask-list')].filter(shown).map(l => {
     const cs = getComputedStyle(l), lr = l.getBoundingClientRect();
     let prev = null;
+      const thin = (x, c) => { if (c.borderTopWidth !== '0px') return 'border ' + c.borderTopWidth + ' ' + c.borderTopColor;
+        const bb = getComputedStyle(x, '::before');
+        if (!bb.content || bb.content === 'none' || bb.content === 'normal' || bb.display === 'none') return 'none';
+        const m = bb.transform === 'none' ? 1 : new DOMMatrix(bb.transform).d;
+        return { color: bb.backgroundColor, from: Math.round(parseFloat(bb.left) * 10) / 10, to: Math.round(parseFloat(bb.right) * 10) / 10,
+                 px: Math.round(parseFloat(bb.height) * m * devicePixelRatio * 100) / 100 }; };
+      const wordsAt = (x) => { const w = document.createTreeWalker(x, NodeFilter.SHOW_TEXT); let n;
+        while ((n = w.nextNode())) { if (!n.textContent.trim()) continue; const g = document.createRange(); g.selectNodeContents(n);
+          const b = g.getBoundingClientRect(); if (b.width) return Math.round((b.left - x.getBoundingClientRect().left) * 10) / 10; }
+        return null; };
     const rows = [...l.children].filter(shown).map(x => {
       const q = x.getBoundingClientRect(), c = getComputedStyle(x);
       const o = { name: (x.id ? '#' + x.id : x.className.split(' ')[0]) + ' "' + x.textContent.trim().replace(/\s+/g, ' ').slice(0, 20) + '"',
         tinted: x.matches('.menu-feature'), own: c.backgroundColor, gap: prev ? Math.round((q.top - prev.bottom) * 10) / 10 : null,
-        line: c.borderTopWidth === '0px' ? 'none' : c.borderTopWidth + ' ' + c.borderTopStyle + ' ' + c.borderTopColor,
+        line: thin(x, c), words_at: wordsAt(x), end: parseFloat(getComputedStyle(x).paddingRight),
         l: q.left, r: q.right, t: q.top, b: q.bottom, painted: hit(x, q.left + q.width / 2, (q.top + q.bottom) / 2) };
       prev = q; return o; });
     return { kind: l.classList[0], bg: cs.backgroundColor, edge: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor,
@@ -934,6 +945,18 @@ def _rgb(s):
     return tuple(round(v) for v in n)
 
 
+def thin_ok(row, colour):
+    """The line over a row of a card, Apple's way (the owner's "Apple's thin
+    line", Nov 14): its own thin line and no top border, in --row-line, from
+    where the row's words start (to the pixel) to the row's own inside edge
+    (its right padding; 14px for a row with none), one screen pixel tall at
+    the screen's own scale."""
+    line = row.get("line")
+    end = row.get("end") or 14
+    return (isinstance(line, dict) and line["color"] == colour and row.get("words_at") is not None
+            and abs(line["from"] - row["words_at"]) <= 1 and abs(line["to"] - end) <= 0.5 and abs(line["px"] - 1) <= 0.05)
+
+
 def _near(px, want, tol):
     return all(abs(a - b) <= tol for a, b in zip(px[:3], want))
 
@@ -954,7 +977,7 @@ if not ONLY or set(ONECARD) & set(ONLY):
                     and all((r["tinted"] or r["own"] == "rgba(0, 0, 0, 0)") and r["painted"]
                             and abs(r["l"] - L["l"]) <= 0.5 and abs(r["r"] - L["r_"]) <= 0.5 for r in rows)
                     and rows[0]["line"] == "none"
-                    and all(abs(r["gap"]) <= 0.5 and r["line"] == f"1px solid {tok['rule']}" for r in rows[1:])):
+                    and all(abs(r["gap"]) <= 0.5 and thin_ok(r, tok["rowline"]) for r in rows[1:])):
                 bad_card.append(f"{tag} {L['kind']}: card {L['bg']} edge {L['edge']} {L['r']}/{L['foot']} drop {L['drop'][:40]};"
                                 f" rows " + "; ".join(f"{r['name']} own {r['own']} gap {r['gap']} line {r['line']} painted {r['painted']}"
                                                       for r in rows))

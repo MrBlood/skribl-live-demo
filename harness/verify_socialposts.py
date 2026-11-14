@@ -363,10 +363,13 @@ class Person:
             return []
 
 
-def browser_as(b, who, screen="phone", scheme="light", reduced=False):
+def browser_as(b, who, screen="phone", scheme="light", reduced=False, scale=None):
     kw = {"reduced_motion": "reduce"} if reduced else {}
+    opts = dict(PHONE if screen == "phone" else DESK)
+    if scale:
+        opts["device_scale_factor"] = scale
     ctx = b.new_context(color_scheme=scheme, extra_http_headers={"X-Forwarded-For": who.xff if who else address()},
-                        **(PHONE if screen == "phone" else DESK), **kw)
+                        **opts, **kw)
     ctx.add_init_script(WATCH)
     if who:
         ctx.add_cookies([{k: v for k, v in c.items() if k in ("name", "value", "domain", "path", "httpOnly",
@@ -597,13 +600,23 @@ ONECARD = r"""(root) => {
   const lists = [...R.querySelectorAll('.post-acts, .post-reasons')].filter(shown).map(l => {
     const cs = getComputedStyle(l), lr = l.getBoundingClientRect();
     let prev = null;
+      const thin = (x, c) => { if (c.borderTopWidth !== '0px') return 'border ' + c.borderTopWidth + ' ' + c.borderTopColor;
+        const bb = getComputedStyle(x, '::before');
+        if (!bb.content || bb.content === 'none' || bb.content === 'normal' || bb.display === 'none') return 'none';
+        const m = bb.transform === 'none' ? 1 : new DOMMatrix(bb.transform).d;
+        return { color: bb.backgroundColor, from: Math.round(parseFloat(bb.left) * 10) / 10, to: Math.round(parseFloat(bb.right) * 10) / 10,
+                 px: Math.round(parseFloat(bb.height) * m * devicePixelRatio * 100) / 100 }; };
+      const wordsAt = (x) => { const w = document.createTreeWalker(x, NodeFilter.SHOW_TEXT); let n;
+        while ((n = w.nextNode())) { if (!n.textContent.trim()) continue; const g = document.createRange(); g.selectNodeContents(n);
+          const b = g.getBoundingClientRect(); if (b.width) return Math.round((b.left - x.getBoundingClientRect().left) * 10) / 10; }
+        return null; };
     const rows = [...l.children].filter(x => shown(x) && !x.matches('legend')).map(x => {
       const q = x.getBoundingClientRect(), c = getComputedStyle(x);
       const face = x.matches('form') ? x.querySelector('.post-act') : x;
       const out = { words: (x.querySelector('.mu-words b') || x).textContent.trim().replace(/\s+/g, ' ').slice(0, 32),
         risky: x.matches('.is-danger') || !!x.querySelector('.is-danger'), own: getComputedStyle(face).backgroundColor,
         gap: prev ? Math.round((q.top - prev.bottom) * 10) / 10 : null,
-        line: c.borderTopWidth === '0px' ? 'none' : c.borderTopWidth + ' ' + c.borderTopStyle + ' ' + c.borderTopColor,
+        line: thin(x, c), words_at: wordsAt(x),
         left: q.left, right: q.right, mid: (q.top + q.bottom) / 2, painted: hit(x, q.left + q.width / 2, (q.top + q.bottom) / 2) };
       prev = q; return out; });
     return { bg: cs.backgroundColor, r: [cs.borderTopLeftRadius, cs.borderBottomRightRadius],
@@ -612,12 +625,22 @@ ONECARD = r"""(root) => {
   const said = t => [...R.querySelectorAll('button, a')].filter(b => shown(b) && b.textContent.trim() === t).length;
   return { lists, cancel: said('Cancel'), send: said('Send report') }; }"""
 
+def thin_ok(row, colour, end):
+    """The line over a row, Apple's way (the owner's "Apple's thin line",
+    Nov 14): its own thin line and no top border, in --row-line, from where
+    the row's words start (to the pixel) to `end` px before the card's edge,
+    one screen pixel tall at the screen's own scale."""
+    line = row.get("line")
+    return (isinstance(line, dict) and line["color"] == colour and row.get("words_at") is not None
+            and abs(line["from"] - row["words_at"]) <= 1 and abs(line["to"] - end) <= 0.5 and abs(line["px"] - 1) <= 0.05)
+
+
 # The tokens those roles wear, as the page resolves them: a card on a sheet
 # (--row-bg, --menu-card), the sheet's paper (--sheet-paper), the line
 # between two rows (--rule, --menu-card-rule).
 TOKENS16 = """() => { const p = document.createElement('i'); document.body.appendChild(p);
   const read = v => { p.style.color = 'var(' + v + ')'; return getComputedStyle(p).color; };
-  const o = { row: read('--row-bg'), paper: read('--sheet-paper'), rule: read('--rule') }; p.remove(); return o; }"""
+  const o = { row: read('--row-bg'), paper: read('--sheet-paper'), rule: read('--rule'), rowline: read('--row-line') }; p.remove(); return o; }"""
 
 # A finger on a sheet: down 60px from its top, moved by each of `dys` in turn,
 # `every` ms apart, and lifted (verify_social's, for any sheet).
@@ -3431,7 +3454,7 @@ print("PLAN " + json.dumps(out))
                           and all(r_["own"] == "rgba(0, 0, 0, 0)" and r_["painted"]
                                   and abs(r_["left"] - L["left"]) <= 0.5 and abs(r_["right"] - L["right"]) <= 0.5 for r_ in rows)
                           and rows[0]["line"] == "none" and rows[0]["gap"] is None
-                          and all(abs(r_["gap"]) <= 0.5 and r_["line"] == f"1px solid {tok['rule']}" for r_ in rows[1:]))
+                          and all(abs(r_["gap"]) <= 0.5 and thin_ok(r_, tok["rowline"], 16) for r_ in rows[1:]))
                     if not ok:
                         bad_card.append(f"{tag}: card {L['bg']} {L['r']}; rows "
                                         + "; ".join(f"{r_['words']} own {r_['own']} gap {r_['gap']} line {r_['line']}"
@@ -3461,10 +3484,26 @@ print("PLAN " + json.dumps(out))
             print(f"    {read16} sheets read; a row's ring on {len(rings16)}; {len(ways16)} closings")
             check("every list of choices on the site's menu sheets is ONE CARD, as the Pad's own menu list draws it:"
                   " the card --row-bg and 16 round, its rows on it with nothing of their own behind them, as wide as the"
-                  " card and touching, a hairline (--rule) between two that show, each row what is painted at its"
-                  " middle (the ☰'s, a post's ⋯ yours and somebody else's, a comment's ⋯, a person's ⋯ and Report's"
-                  " reasons; phone and desk, light and dark)",
+                  " card and touching, Apple's thin line between two that show (the owner's \"Apple's thin line\":"
+                  " its own line, no top border, in --row-line, from where the row's words start to 16px before the"
+                  " card's edge), each row what is painted at its middle (the ☰'s, a post's ⋯ yours and somebody"
+                  " else's, a comment's ⋯, a person's ⋯ and Report's reasons; phone and desk, light and dark)",
                   read16 == 22 and not bad_card, "; ".join(bad_card)[:1400] or f"{read16} read")
+            # ...and ONE SCREEN PIXEL on the owner's own phone's screen (3x): the
+            # line's height times its own scale times the screen's, read off its
+            # style; a line left a CSS pixel thick is three there.
+            px3 = []
+            ctx, cpg = browser_as(b, ana, "phone", "dark", reduced=True, scale=3)
+            try:
+                open16(cpg, "/social/", ("[data-site-menu]",), "siteMenu")
+                got3 = cpg.evaluate(ONECARD, "#siteMenu .make-sheet")
+                px3 = [r_["line"]["px"] if isinstance(r_["line"], dict) else r_["line"]
+                       for L in (got3 or {}).get("lists", []) for r_ in L["rows"][1:]]
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                px3 = [f"stopped: {str(exc).splitlines()[0][:120]}"]
+            ctx.close()
+            check("...and that line is one screen pixel on a 3x phone, the owner's (the ☰'s four lines)",
+                  len(px3) == 4 and all(isinstance(v, (int, float)) and abs(v - 1) <= 0.05 for v in px3), f"{px3}")
             check("the risky rows (Report, Block, Delete, Remove) are a card of their own, 12px under the other, its"
                   " rows the risky ones alone: your post's Copy link, Share… | Delete post; somebody else's Copy link,"
                   " Share…, Mute | Report, Block; a comment's ⋯ only its risky card; a person's Mute | Report, Block;"

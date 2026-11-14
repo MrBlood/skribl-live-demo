@@ -53,6 +53,7 @@
   --card-line: rgba(124, 92, 255, 0.34);   /* --menu-card-line */
   --card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
   --rule: rgba(80, 60, 170, 0.12);  /* --menu-card-rule */
+  --row-line: rgba(20, 10, 60, 0.16);  /* the thin line between two rows of a card (Apple's way) */
   --field: #ffffff;
   --field-line: rgba(124, 92, 255, 0.75);  /* 3:1 against the card, as a field's edge must be */
   --tint: rgba(124, 92, 255, 0.12); /* a note: words in the first ink on it */
@@ -131,6 +132,7 @@
   --card-line: rgba(167, 146, 255, 0.12);
   --card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
   --rule: rgba(167, 146, 255, 0.14);
+  --row-line: rgba(255, 255, 255, 0.16);
   --field: #17142a;
   --field-line: rgba(167, 146, 255, 0.7);
   --tint: rgba(124, 92, 255, 0.18);
@@ -172,6 +174,7 @@
     --card-line: rgba(167, 146, 255, 0.12);
     --card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
     --rule: rgba(167, 146, 255, 0.14);
+    --row-line: rgba(255, 255, 255, 0.16);
     --field: #17142a;
     --field-line: rgba(167, 146, 255, 0.7);
     --tint: rgba(124, 92, 255, 0.18);
@@ -1243,15 +1246,28 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    need everything to be in a pill?"), as the Pad's own menu list draws it
    (styles.css .menu-list), in the site's tokens for the same roles: the card
    --row-bg (--menu-card), 16px round, the rows on it with nothing of their
-   own behind them, and a hairline (--rule, --menu-card-rule) between two
-   that show. The risky rows are a card of their own, 12px under it (a
+   own behind them, and a thin line between two that show (below, Apple's
+   way, since the owner's "Apple's thin line"). The risky rows are a card of their own, 12px under it (a
    comment's ⋯ holds only those). The ☰'s, a post's, a comment's and a
    person's ⋯ have no Cancel: the grip, a tap outside, a swipe down and Esc
    close them, as they close the Pad's menu. Report's reasons are one card
    the same way. Report's and Delete's own sheets follow. */
 .post-acts { display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; background: var(--row-bg); }
 .post-acts + .post-acts { margin-top: 12px; }
-.post-acts > :not([hidden]) ~ :not([hidden]) { border-top: 1px solid var(--rule); }
+/* THE LINE BETWEEN TWO ROWS, APPLE'S WAY (the owner, Nov 14, "Apple's thin
+   line", to the mock beside the line as it was, no lines, and three lines
+   with depth): one screen pixel (1px scaled by --hair to the screen's own
+   pixel), from where the row's words start (--line-start) to 16px before
+   the card's edge, in --row-line. Report's reasons the same way. */
+:root { --hair: 1; }
+@media (min-resolution: 2dppx) { :root { --hair: 0.5; } }
+@media (min-resolution: 3dppx) { :root { --hair: 0.3334; } }
+.post-acts > :not([hidden]) ~ :not([hidden]), .post-reason + .post-reason { position: relative; }
+.post-acts > :not([hidden]) ~ :not([hidden])::before, .post-reason + .post-reason::before {
+  content: ""; position: absolute; top: 0; left: var(--line-start, 52px); right: 16px; height: 1px;
+  background: var(--row-line); transform: scaleY(var(--hair)); transform-origin: top; pointer-events: none;
+}
+.post-reasons { --line-start: 48px; }
 .post-act {
   display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 0 16px; border: 0;
   border-radius: 0; background: none; color: var(--ink); font: inherit; font-size: 17px;
@@ -1276,7 +1292,6 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
   overflow: hidden; border-radius: 16px; background: var(--row-bg);
 }
 .post-reason { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; font-size: 16px; cursor: pointer; }
-.post-reason + .post-reason { border-top: 1px solid var(--rule); }
 .post-reason input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--fill); }
 .post-note-label { display: block; margin: 4px 4px 6px; font-size: 15px; font-weight: 600; }
 .post-note-label span { color: var(--ink-2); font-weight: 400; }

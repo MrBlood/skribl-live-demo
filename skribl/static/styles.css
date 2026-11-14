@@ -173,6 +173,8 @@
   --menu-card:       #231e3b;
   --menu-card-line:  rgba(167, 146, 255, 0.12);
   --menu-card-rule:  rgba(167, 146, 255, 0.12);
+  --row-line:        rgba(255, 255, 255, 0.16);
+  --hair: 1;
   --menu-card-drop:  0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
   /* A SELECTED OPTION IS A TINT, AN ACTION IS SOLID. The same purple used to
      mean both, so a drawer carried five or six purple slabs and nothing said
@@ -334,6 +336,8 @@
      editors (styles.css "Replay auto-hide", flip.css). Mocked with the owner. */
   --drawer-rest: 0.4;
 }
+@media (min-resolution: 2dppx) { :root { --hair: 0.5; } }
+@media (min-resolution: 3dppx) { :root { --hair: 0.3334; } }
 
 * { box-sizing: border-box; }
 
@@ -8590,6 +8594,29 @@ body.stroking .toolbar, body.stroking .flip-tools {
 /* ...and GIF, the last row, passes its corners to its button while its
    Background is not shown. */
 .export-opt-group > .export-opt:not(:has(~ :not([hidden]))) { border-radius: 0 0 15px 15px; }
+/* THE LINE BETWEEN TWO ROWS, APPLE'S WAY (the owner, Nov 14, "Apple's thin
+   line", to the mock beside the line as it was, no lines, and three with
+   depth), the site's own (social.css): one screen pixel (1px scaled by
+   --hair to the screen's own pixel), from where a row's words start
+   (--line-start, each list's own) to the row's own inside edge (--line-end),
+   in --row-line. The lines these lists drew as a row's top border are gone.
+   --hair is set beside the tokens. */
+:is(.menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden]), .sdrafts-files > .menu-item + .menu-item,
+    .sdrafts-card > .sdrafts-row + .sdrafts-row, .export-list > :not([hidden]) ~ :not([hidden]),
+    .ask-list > .ask-row + .ask-row) { border-top: 0; position: relative; }
+:is(.menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden]), .sdrafts-files > .menu-item + .menu-item,
+    .sdrafts-card > .sdrafts-row + .sdrafts-row, .export-list > :not([hidden]) ~ :not([hidden]),
+    .ask-list > .ask-row + .ask-row)::before {
+  content: ""; position: absolute; top: 0; left: var(--line-start, 50px); right: var(--line-end, 14px); height: 1px;
+  background: var(--row-line); transform: scaleY(var(--hair)); transform-origin: top; pointer-events: none;
+}
+.menu-list { --line-start: 50px; }
+.sdrafts-files { --line-start: 44px; }
+.sdrafts-card { --line-start: 92px; }
+.export-list { --line-start: 64px; }
+.ask-list { --line-start: 14px; }
+/* A desk's sheet pads a menu row 12px (min-width 641px, .menu-sheet above). */
+@media (min-width: 641px) { .menu-sheet:not(.export-sheet) .menu-list { --line-start: 48px; --line-end: 12px; } }
 /* EVERY CHOICE ON THE PAPER IS A WHITE CARD (owner, after v324: the sheets
    mock, A, "All yes"). The Pad | Flip switch was a lilac track that ran into
    the lilac paper, and Theme, Tips, Canvas and New's shapes kept the old grey
@@ -9312,6 +9339,7 @@ body.replaying .media-card { pointer-events: none; }
   --menu-card:               #ffffff;
   --menu-card-line:          rgba(124, 92, 255, 0.34);
   --menu-card-rule:          rgba(80, 60, 170, 0.10);
+  --row-line:                rgba(20, 10, 60, 0.16);
   --menu-card-drop:          0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
   /* AA on what is actually painted behind it: #5b3be6 was 4.37:1 on the tint
      over the drawers' track, under the unselected label's 4.99. One step
