@@ -549,9 +549,9 @@ demo's Skribl. Phase 1's first piece is its frame: Home, Explore and Make;
 its second is sign-in, invite-only, with passkeys, in tables of its own
 (section 9 of that document). Skribl never imports it. Its map, since
 Nov 14, is section 16 of that document: a post is the one thing people
-share (words, and a drawing or a Flip), Home and Explore are posts, and a
-profile is Posts · Gallery · Likes · Drafts. Read it before changing what
-the site shows.
+share (words, and a drawing or a Flip), Home is posts, Explore is the
+Gallery of everyone's drawings, and a profile is Posts · Gallery · Likes ·
+Drafts. Read it before changing what the site shows.
 
     SKRIBL_VERSION   see skribl/core.py — the archive name derives from it.
                      This line used to hand-type it, and read v191 while the

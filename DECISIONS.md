@@ -38116,7 +38116,10 @@ likes' and comments' routes.
 
 docs/SOCIAL-SITE.md section 16 is the map, the decisions and the order of
 work. In short: a post is the one thing people share (words and a drawing or
-a Flip); Home and Explore are posts, with one calm card; a profile is Posts ·
+a Flip); Home is posts, with one calm card; Explore is the Gallery of
+everyone, drawings as drawings, Following or Everyone (the owner, after the
+map: "Also gallery of everyone is a thing, then can select followers,
+everyone, and more filters to come down the road"); a profile is Posts ·
 Gallery · Likes · Drafts; photos, GIFs, video and polls are not now. It
 replaces two earlier choices, said so here so nobody restores them by
 accident: the Nov 11 A ("Home holds every drawing, posts or not") and the
