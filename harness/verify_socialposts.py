@@ -167,7 +167,14 @@ PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=1, is_m
 DESK = dict(viewport={"width": 1280, "height": 860}, device_scale_factor=1)
 ERRS = []
 WATCH = ("document.addEventListener('securitypolicyviolation', e => "
-         "(window.__csp = window.__csp || []).push(e.violatedDirective + ' ' + e.blockedURI));")
+         "(window.__csp = window.__csp || []).push(e.violatedDirective + ' ' + e.blockedURI));"
+         # The arriving page's cross-fade, as the page has it: 'none' when it
+         # came without one, 'on' while it runs, 'done' once it has ended.
+         # Only `finished` is watched (it settles whether the fade ran or was
+         # skipped); `ready` is left alone, so a fade Chrome aborts still
+         # reaches the page's errors row.
+         "addEventListener('pagereveal', e => { const t = e.viewTransition; window.__fade = t ? 'on' : 'none';"
+         " if (t) t.finished.then(() => { window.__fade = 'done'; }, () => { window.__fade = 'done'; }); });")
 _addr = [0]
 
 
@@ -1496,9 +1503,15 @@ with sync_playwright() as p:
             # The page arrives with Skribl's and the site's cross-fade (0.28s,
             # @view-transition): leave it to finish, as a person does. Going on
             # within it made Chrome abort the fade and report it as an error on
-            # the page arrived at (main's run after #889: "Transition was
-            # aborted because of invalid state", on /s/<id>).
-            pg_.wait_for_timeout(400)
+            # the page arrived at ("Transition was aborted because of invalid
+            # state. ViewTransition opt-in disabled", on /s/<id>: main's run
+            # after #889 at 150ms, and #892's at 400ms). So its end is read off
+            # the page (WATCH keeps pagereveal's transition), never guessed: a
+            # busy runner paints the arriving page late, and the fade ends late.
+            try:
+                pg_.wait_for_function("() => window.__fade === 'none' || window.__fade === 'done'", timeout=5000)
+            except Exception:  # noqa: BLE001 -- a fade left running is the errors row's to say
+                pass
             u = urllib.parse.urlsplit(pg_.url)
             return u.path + ("#" + u.fragment if u.fragment else "")
 
