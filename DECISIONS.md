@@ -39597,3 +39597,36 @@ you see where you are: should it say so nearer the finger?
 Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
 their smoke after the merge); SF and Segoe UI (the name is cut by the
 browser's own ellipsis, the link centred by flex); the live site.
+
+## After v330 -- The pen's line draws itself (a profile's tabs, the bar and the rail)
+
+The owner, Nov 14, on their phone's profile, its Gallery tab: "Can the
+underline on tabs draw itself really fast instead of sliding? Same with home,
+gallery, you?" Mocked on the real pages, every animation seeked frame by
+frame (a GIF; then, since a phone's file viewer can show a GIF still, a video
+and a strip of frames), and "Yes to both, build them".
+
+WHAT CHANGES.
+- A profile's tabs: a tap puts the pen's line under the tab at once, and it
+  draws itself there left to right in 0.17s on the pen's curve
+  (cubic-bezier(0.3, 0.7, 0.3, 1), Make's doors' own pen-in), while a copy of
+  the line it left fades where it was in 0.12s and is gone. Nothing slides.
+  The back button and a tab that could not be had draw it the same way
+  (tabs.js mark(); social.css .prof-pen.is-drawn, .is-leaving).
+- The bar and a desk's rail: the line under the page you are on draws itself
+  as the page comes in. It waits 0.15s, while the page's own cross-fade
+  (0.28s) brings the page mostly in, then draws in 0.17s: Home, the Gallery,
+  Activity, You and Settings (social.css .nav .pen-line path).
+- WHY IT WAITS: the mock's first version drew the bar's line at once, during
+  the page's cross-fade, and the strip of frames showed what a person would
+  see: a line fading in, not one being drawn. The wait is what the owner
+  said yes to.
+- Under Reduce Motion the line is simply there, whole, and nothing fades
+  where it was.
+- The underline's path is one unit long (pathLength="1", _icons.html
+  underline), so its dash is the whole line, and "1 2" leaves no dot at its
+  far end before it starts.
+
+PAD AND FLIP: nothing. This is the site's own frame (its bar, its rail, a
+profile's strip); Skribl's editors have no such line.
+

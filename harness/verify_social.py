@@ -17,9 +17,12 @@ what it promises, through the demo's own server:
      (Explore's place, its name since the map's step 3), Make and Sign in
      (You once signed in, piece 2: verify_socialauth), and
      on a desk the rail holds the wordmark and the same four; the
-     page you are on carries the pen's line (painted, not merely there);
-     every target is 44px or more; nothing of the frame covers the page; and
-     no id is on a page twice.
+     page you are on carries the pen's line (painted, not merely there),
+     which draws itself as the page comes in (read on every frame: it waits
+     while the page fades in, then draws on several frames, never faster than
+     its curve; under Reduce Motion it is there whole); every target is 44px
+     or more; nothing of the frame covers the page; and no id is on a page
+     twice.
   3. MAKE: the sheet opens from the bar on a phone, the rail on a desk and
      Home's button; its doors are Skribl's own Pad and Flip (url_for's own
      addresses, and they open); a door picked, Esc, a tap outside, a tap on
@@ -545,6 +548,69 @@ with sync_playwright() as p:
         dup = {f"{s} {pg_}": v for (s, pg_), v in twice.items() if v}
         check("no id is on a page of the site twice (the two wordmarks carry none: one stroke colour each), phone and desk",
               len(twice) == 4 and not dup, f"repeated: {dup}")
+
+        # THE PEN'S LINE DRAWS ITSELF AS A PAGE COMES IN (the owner's "Yes to
+        # both", Nov 14: "draw itself really fast instead of sliding"), read in
+        # the page on every frame from its first (an init script, before the
+        # page's own): how much of the line under the page's name is drawn,
+        # by each frame's own time, and the line's own timing. It is not all
+        # there as the page first shows; it waits while the page fades in
+        # (0.15s, of the page's 0.28s), then draws on several frames, one way,
+        # no frame drawing more than its curve ever does (0.17s on the pen's
+        # curve, whose steepest is 2.33 times its average; 0.15 over, for
+        # where in a frame it began), all of it within 0.7s of the page's
+        # first frame. Under Reduce Motion it is there whole from the first.
+        # A touch phone taps the bar's Gallery on Home (the page's own
+        # cross-fade); a desk opens the Gallery; Reduce Motion on a phone.
+        PEN_DRAWS = r"""(() => { const out = window.__penDraw = [], t0 = performance.now();
+          (function f(frame) { const p = document.querySelector('nav.nav .tab[aria-current] .tab-name .pen-line path');
+            if (p) { const cs = getComputedStyle(p), a = p.getAnimations()[0];
+              if (!window.__penTiming) window.__penTiming = a ? { delay: a.effect.getTiming().delay, ms: a.effect.getTiming().duration } : {};
+              out.push([Math.round(((frame === undefined ? performance.now() : frame) - t0) * 10) / 10,
+                        cs.strokeDasharray === 'none' ? 1 : Math.round(Math.max(0, Math.min(1, 1 - parseFloat(cs.strokeDashoffset))) * 1000) / 1000]); }
+            if (performance.now() - t0 < 1500) requestAnimationFrame(f); })(); })()"""
+
+        def drew_in(samples, timing, reduced):
+            if not samples:
+                return False, "no frames"
+            ds = [d for _, d in samples]
+            if reduced:
+                return all(d >= 0.999 for d in ds) and not timing, f"drawn {sorted(set(ds))[:6]}, timing {timing}"
+            steps = [(z[1] - a[1], z[0] - a[0]) for a, z in zip(samples, samples[1:])]
+            pace = max((st / ((0.7 / 0.3) * max(dt, 1.0) / 170 + 0.15) for st, dt in steps), default=0)
+            mids = sorted({d for d in ds if 0.02 < d < 0.98})
+            whole = next((t for t, d in samples if d >= 0.999), None)
+            ok = (ds[0] < 0.98 and len(mids) >= 2 and all(st >= -0.01 for st, _ in steps) and pace <= 1.0
+                  and whole is not None and whole - samples[0][0] <= 700
+                  and (timing or {}).get("delay", 0) >= 100 and 120 <= (timing or {}).get("ms", 0) <= 250)
+            return ok, (f"first {ds[0]}, drawn {mids[:8]}, pace {pace:.2f}, whole at"
+                        f" {None if whole is None else round(whole - samples[0][0])}ms, {len(ds)} frames, timing {timing}")
+        pen_drawn = {}
+        for name, opts, via in (("phone, from Home's bar", dict(PHONE), "tap"), ("desk", dict(DESK), "open"),
+                                ("phone, Reduce Motion", dict(PHONE, reduced_motion="reduce"), "open")):
+            c = b.new_context(**opts)
+            c.add_init_script(PEN_DRAWS)
+            pg = c.new_page()
+            try:
+                if via == "tap":
+                    pg.goto(SITE + "/")
+                    pg.wait_for_timeout(800)
+                    pg.tap('nav.nav a.tab[href$="/social/explore"]')
+                    pg.wait_for_url("**/social/explore", timeout=15000)
+                else:
+                    pg.goto(SITE + "/explore")
+                pg.wait_for_timeout(1700)
+                pen_drawn[name] = drew_in(pg.evaluate("() => window.__penDraw || []"),
+                                          pg.evaluate("() => window.__penTiming || null"), "Reduce" in name)
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                pen_drawn[name] = (False, "stopped: " + str(exc).splitlines()[0][:160])
+            c.close()
+        check("the pen's line under the page you are on draws itself as the page comes in: not all there at first, it"
+              " waits while the page fades in, then draws on several frames, one way, never faster than its curve,"
+              " whole within 0.7s (a phone tapping the bar's Gallery on Home, a desk opening the Gallery); under"
+              " Reduce Motion it is there whole from the first frame",
+              all(v[0] for v in pen_drawn.values()) and len(pen_drawn) == 3,
+              "; ".join(f"{k}: {v[1]}" for k, v in pen_drawn.items()))
 
     # ------------------------------------------------------------------ 3
     if part(3, "Make: two doors into Skribl's Pad and Flip"):

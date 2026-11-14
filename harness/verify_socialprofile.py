@@ -78,9 +78,10 @@ events with pressure, a hand's timing).
       and Drafts nowhere on anybody else's page or in its source, their
       addresses sending anybody else to the person's page; each tab its own
       address, the back button and forward, a reload and a shared link
-      landing on it; the switch read on every frame (the line glides, the
-      panel fades and changes only while unseen, the page holds still), and
-      under Reduce Motion the line put there and the panel still fading.
+      landing on it; the switch read on every frame (the line put under the
+      tab and drawing itself there, the one it left fading; the panel fades
+      and changes only while unseen, the page holds still), and under Reduce
+      Motion the line put there whole and the panel still fading.
   16. WHAT EACH TAB HOLDS: Posts, their posts as Home's one card, newest
       first, Load more; the Gallery, every drawing and Flip they shared, a
       post's tile opening its post and one shown outside a post its own
@@ -918,60 +919,77 @@ def pen_paint(pg, st):
 #: The strip and its panel on every animation frame from now, for `ms`, kept
 #: in the page (window.__tabs) for reading after a person's tap: the pen
 #: line's middle, the panel's opacity, which tab it holds, the page's scroll,
-#: the strip's top and the frame's own time (the one its glide is drawn for,
-#: never when its callback happened to run).
+#: the strip's top, the frame's own time (the one it is drawn for, never when
+#: its callback happened to run), how much of the line is drawn (its path's
+#: dash: 1 when it has none), and each copy of the line that is leaving, its
+#: middle and opacity.
 TABS_SAMPLE = r"""(ms) => { const s = document.querySelector('[data-prof-tabs]'), sw = document.querySelector('[data-prof-swap]');
   const pen = s.querySelector('.prof-pen'), out = window.__tabs = [], t0 = performance.now();
-  (function f(frame) { const p = pen.getBoundingClientRect(), panel = sw.querySelector('[data-prof-panel]');
-    out.push([Math.round((p.left + p.width / 2) * 100) / 100, +getComputedStyle(sw).opacity,
+  const mid = e => { const r = e.getBoundingClientRect(); return Math.round((r.left + r.width / 2) * 100) / 100; };
+  (function f(frame) { const panel = sw.querySelector('[data-prof-panel]'), cs = getComputedStyle(pen.querySelector('path'));
+    out.push([mid(pen), +getComputedStyle(sw).opacity,
               panel ? panel.getAttribute('data-tab') : null, Math.round(scrollY),
               Math.round(s.getBoundingClientRect().top * 100) / 100,
-              Math.round(((frame === undefined ? performance.now() : frame) - t0) * 10) / 10]);
+              Math.round(((frame === undefined ? performance.now() : frame) - t0) * 10) / 10,
+              cs.strokeDasharray === 'none' ? 1 : Math.round(Math.max(0, Math.min(1, 1 - parseFloat(cs.strokeDashoffset))) * 1000) / 1000,
+              [...s.querySelectorAll('.prof-pen.is-leaving')].map(e => [mid(e), Math.round(+getComputedStyle(e).opacity * 1000) / 1000])]);
     if (performance.now() - t0 < ms) requestAnimationFrame(f); })(); }"""
 
 
-#: The pen line's glide (social.css .prof-pen): 0.42s on the one pill's curve,
-#: whose steepest is 2.91 times its average speed.
-PEN_MS, PEN_STEEPEST = 420, 2.91
+#: The pen line draws itself (social.css .prof-pen.is-drawn): 0.17s on the
+#: pen's curve, cubic-bezier(0.3, 0.7, 0.3, 1), whose steepest is 0.7 / 0.3 =
+#: 2.33 times its average speed. The line it left fades in 0.12s.
+PEN_MS, PEN_STEEPEST = 170, 0.7 / 0.3
 
 
 def judge_switch(frames, x0, x1, reduced=False):
-    """A switch, as read frame by frame: the pen line glides one way from
-    `x0` to `x1` on many frames, no frame moving it faster than its curve
-    ever goes (by each frame's own time, so a runner that stalls a frame
-    reads as the stall it is, never as a jump; a quarter over, for where in
-    a frame the glide began; a jump is eight times over in one frame, and
-    twice over even in a frame stalled 60ms; a settle past the end under
-    5%), or under Reduce Motion is put there; the panel fades out,
+    """A switch, as read frame by frame (the owner's "Yes to both", Nov 14:
+    the line "draw itself really fast instead of sliding"): the pen line is
+    put under the new tab with no place between (never a glide), and draws
+    itself there, one way, on several frames, no frame drawing more than its
+    curve ever does (by each frame's own time, so a runner that stalls a frame
+    reads as the stall it is; 0.15 over, for where in a frame it began), all
+    of it within 0.17s and a stalled frame's slack; a copy of the line fades
+    where it was, on frames between, and is gone. Under Reduce Motion it is
+    put there whole, on every frame, and nothing fades. The panel fades out,
     changes only while it can't be seen, and fades back in; the page and the
     strip do not move."""
     if not frames:
         return {"ok": False, "why": "no frames"}
     xs, ops, tabs = [f[0] for f in frames], [f[1] for f in frames], [f[2] for f in frames]
-    ts = [f[5] for f in frames]
+    ts, ds, gone = [f[5] for f in frames], [f[6] for f in frames], [f[7] for f in frames]
     at = next((i for i, t in enumerate(tabs) if t != tabs[0]), None)
-    travel = x1 - x0
-    sign = 1 if travel >= 0 else -1
-    steps = [z - a for a, z in zip(xs, xs[1:])]
-    places = len({round(x, 1) for x in xs})
-    # How fast each frame moved it, as a share of the fastest its curve goes.
-    pace = [abs(st_) / (abs(travel) * PEN_STEEPEST * max(dt, 1.0) / PEN_MS + 1.0) if travel else 0
-            for st_, dt in zip(steps, [z - a for a, z in zip(ts, ts[1:])])]
+    places = sorted({round(x, 1) for x in xs})
+    put = (abs(xs[-1] - x1) <= 0.6 and len(places) <= 2 and all(min(abs(x - x0), abs(x - x1)) <= 0.6 for x in xs))
+    moved = next((i for i, x in enumerate(xs) if abs(x - x1) <= 0.6), None)
+    after = ds[moved:] if moved is not None else []
+    steps = [z - a for a, z in zip(after, after[1:])]
+    dts = [z - a for a, z in zip(ts[moved:], ts[moved + 1:])] if moved is not None else []
+    pace = [st_ / (PEN_STEEPEST * max(dt, 1.0) / PEN_MS + 0.15) for st_, dt in zip(steps, dts)]
+    done = next((ts[moved + i] for i, d in enumerate(after) if d >= 0.999), None) if moved is not None else None
+    leaving = [(f[5], g) for f in frames for g in f[7]]
     if reduced:
-        glide = abs(xs[-1] - x1) <= 0.6 and places <= 2
+        drew = put and all(d >= 0.999 for d in ds)
+        faded_old = not leaving
     else:
-        glide = (abs(xs[-1] - x1) <= 0.6 and places >= 6 and abs(travel) > 1
-                 and all(s_ * sign >= -0.05 * abs(travel) for s_ in steps) and max(pace, default=0) <= 1.25
-                 and max((x - x1) * sign for x in xs) <= 0.05 * abs(travel))
+        drew = (put and moved is not None and bool(after) and after[0] <= 0.5
+                and len({round(d, 3) for d in after if 0.02 < d < 0.98}) >= 2
+                and all(st_ >= -0.01 for st_ in steps) and max(pace, default=0) <= 1.0
+                and done is not None and done - ts[moved] <= PEN_MS + 120)
+        lops = [o for _, (_, o) in leaving]
+        faded_old = (bool(leaving) and all(abs(lx - x0) <= 0.6 for _, (lx, _) in leaving)
+                     and len([o for o in lops if 0.05 < o < 0.95]) >= 1
+                     and all(z <= a + 0.01 for a, z in zip(lops, lops[1:])) and not frames[-1][7])
     down = [o for o in ops[:at] if 0.05 < o < 0.95] if at else []
     up = [o for o in ops[at:] if 0.05 < o < 0.95] if at is not None else []
     unseen = at is not None and ops[at] <= 0.05 and all(t == tabs[-1] for t in tabs[at:])
     faded = len(down) >= 2 and len(up) >= 2 and ops[-1] >= 0.99
     held = len({f[3] for f in frames}) == 1 and len({f[4] for f in frames}) == 1
-    return {"ok": bool(glide and unseen and faded and held), "glide": glide, "unseen": unseen, "faded": faded,
-            "held": held, "places": places, "from": xs[0], "to": xs[-1], "want": round(x1, 2),
-            "biggest": round(max((abs(s_) for s_ in steps), default=0), 2), "pace": round(max(pace, default=0), 2),
-            "changed at": at,
+    return {"ok": bool(drew and faded_old and unseen and faded and held), "drew": drew, "old line": faded_old,
+            "unseen": unseen, "faded": faded, "held": held, "places": places, "want": round(x1, 2),
+            "drawn": [d for d in after if 0 < d < 1][:12], "first": after[0] if after else None,
+            "pace": round(max(pace, default=0), 2), "done in": round(done - ts[moved], 1) if done is not None and moved is not None else None,
+            "leaving": [round(o, 2) for _, (_, o) in leaving][:12], "changed at": at,
             "opacity there": ops[at] if at is not None else None, "fading": [len(down), len(up)]}
 
 
@@ -2835,14 +2853,15 @@ with sync_playwright() as p_:
             except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
                 glides[(screen, scheme, reduced)] = {"ok": False, "stopped": str(exc).splitlines()[0][:160]}
             close_ctx(ctx, pg)
-        check("the switch, read on every frame (a touch phone in light, a desk in dark): the pen line glides from Posts to"
-              " Likes, one way, on many frames, no frame moving it faster than its curve ever goes (by each frame's own"
-              " time), a settle past it under 5%, ending under Likes; the panel fades out, changes only while it can't"
-              " be seen (under 5%), and fades back in; the page doesn't scroll and the strip doesn't move",
+        check("the switch, read on every frame (a touch phone in light, a desk in dark): the pen line is put under Likes"
+              " with no place between and draws itself there, one way, on several frames, no frame drawing more than"
+              " its curve ever does (by each frame's own time), all of it within 0.17s and a frame's slack, while the"
+              " line under Posts fades where it was and is gone; the panel fades out, changes only while it can't be"
+              " seen (under 5%), and fades back in; the page doesn't scroll and the strip doesn't move",
               all(glides.get((s_, c_, False), {}).get("ok") for s_, c_ in (("phone", "light"), ("desk", "dark"))),
               json.dumps({f"{k[0]} {k[1]}": v for k, v in glides.items() if not k[2]}))
-        check("under Reduce Motion the pen line is put there, no frame between, and the panel still only fades, changing"
-              " while unseen",
+        check("under Reduce Motion the pen line is put there whole, no frame between, nothing fading where it was, and"
+              " the panel still only fades, changing while unseen",
               bool(glides.get(("phone", "light", True), {}).get("ok")), json.dumps(glides.get(("phone", "light", True))))
 
     # ------------------------------------------------------------------ 16
