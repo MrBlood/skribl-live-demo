@@ -26,6 +26,9 @@ whose browser went through `waits.instrument()` it ends as soon as the page
 has nothing left due inside the old sleep, and on any other page it IS the
 old sleep.
 """
+import re
+import time
+
 import waits
 
 BOOT_MARKER = {
@@ -287,3 +290,44 @@ def pad_drawer_close(page, settle=300):
         return
     waits.settle(page, settle)
     wait_scroll_still(page)
+
+
+# A FIRST VISIT'S FADE (after #892's full run). Chrome decides whether an
+# arriving page fades between pages when its parser reaches <body>, from the
+# stylesheets loaded by then (ViewTransitionSupplement::WillInsertBody), and
+# drops the fade, reporting it as an error on the page, when none of them
+# asks. On a first visit nothing is cached, so the sheet that asks has loaded
+# at <body> only when the parser waited for it: Skribl's theme boot, an inline
+# script, comes after the page's stylesheets, and a parser waits at an inline
+# script for the stylesheets above it. Read at that moment, through a
+# MutationObserver armed before the page parses, with every stylesheet held
+# back by the browser so the answer cannot ride on how fast the server is.
+_FADE_AT_BODY = """(() => {
+  const asks = rules => { for (const r of rules) { if (/^@view-transition\\b/.test(r.cssText)) return true;
+    if (r.cssRules && asks(r.cssRules)) return true; } return false; };
+  const mo = new MutationObserver(() => { if (!document.body) return; mo.disconnect();
+    let ask = false, sheets = 0;
+    for (const s of document.styleSheets) { sheets++; try { if (asks(s.cssRules)) ask = true; } catch (e) {} }
+    window.__fadeAtBody = { ask: ask, sheets: sheets }; });
+  mo.observe(document, { childList: true, subtree: true });
+})();"""
+
+
+def fade_at_body(browser, base, path, hold_ms=300, **context):
+    """A first visit to `path` (a fresh context, nothing cached, every
+    stylesheet held back `hold_ms`): whether a stylesheet that asks for the
+    cross-fade (@view-transition) had loaded when <body> started, as
+    {"ask": bool, "sheets": n loaded then}; None if the page never said."""
+    ctx = browser.new_context(**context)
+    try:
+        ctx.add_init_script(_FADE_AT_BODY)
+
+        def _hold(route):
+            time.sleep(hold_ms / 1000)
+            route.continue_()
+        ctx.route(re.compile(r".*\.css(\?.*)?$"), _hold)
+        pg = ctx.new_page()
+        pg.goto(base + path, wait_until="load")
+        return pg.evaluate("() => window.__fadeAtBody || null")
+    finally:
+        ctx.close()

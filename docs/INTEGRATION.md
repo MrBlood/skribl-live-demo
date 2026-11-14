@@ -628,8 +628,9 @@ docs/SOCIAL-SITE.md). Two parts, both Skribl's own:
 <head>
   <meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)" data-light="#fbfcfd" data-dark="#0b0d12">
   <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" data-light="#fbfcfd" data-dark="#0b0d12">
-  {% include 'skribl/_skribl_theme_boot.html' %}
   ...
+  <link rel="stylesheet" href="/your.css">
+  {% include 'skribl/_skribl_theme_boot.html' %}
   <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
 </head>
 ```
@@ -654,6 +655,16 @@ The boot is inline, so your policy must let it run: it carries
 that name and put the same one in your `script-src` (the site does:
 `social/__init__.py`, `site_csp`), or allow the script by its hash. Do not
 reach for `'unsafe-inline'`.
+
+**Put it after your stylesheets** if your pages ask for the cross-fade
+between pages (`@view-transition`), as Skribl's pages and the site's do.
+Chrome decides whether an arriving page fades when its parser reaches
+`<body>`, from the stylesheets loaded by then, and a parser waits at an
+inline script for the stylesheets above it. With the boot after the sheet
+that asks, the request is always there in time. With the boot before it, a
+first visit (an empty cache) can arrive with a cut instead of the fade, and
+Chrome reports the dropped fade as an error on the page. Either way the
+boot still runs before the first paint.
 
 **`lib/theme.js`** keeps the page with the choice afterwards (the device
 changing its mind while System is chosen, another tab choosing) and is the
