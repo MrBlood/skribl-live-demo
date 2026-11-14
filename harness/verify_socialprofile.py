@@ -12,13 +12,15 @@ Chromium's virtual authenticator. Faces are drawn through the real Pad, in
 the profile's own overlay, with pen input (harness/tools/artdraw.py: CDP pen
 events with pressure, a hand's timing).
 
-   1. A PROFILE: name, @handle and bio (its line breaks kept); Skribl's own
-      Gallery section with that person's public skribls only, newest first,
-      to visitors and to the person alike, Load more paging within them;
-      any case of the handle; a kind 404 for nobody; You leads to your own
-      profile, and somebody else's marks no place in the bar; the gear leads
-      to Settings; an empty profile in its own words (to its own person, what
-      puts a skribl there; to anybody else, that there are none yet).
+   1. A PROFILE: name, @handle and bio (its line breaks kept); on its
+      Gallery tab that person's drawings shown outside a post, public only,
+      newest first, each opening its own page, to visitors and to the person
+      alike, Load more paging within them, and nothing of Skribl's Gallery
+      section any more (the map's step 4); any case of the handle; a kind 404
+      for nobody; You leads to your own profile, and somebody else's marks
+      no place in the bar; the gear leads to Settings; an empty profile in
+      its own words, tab by tab (to its own person, what puts something
+      there; to anybody else, that there is nothing yet).
    2. DRAW YOUR FACE through the real Pad in its face mode (compose=1&face=1:
       square, a face's words, no Flip switch), in an overlay that glides up
       (read on every frame) and fades where it sits under Reduce Motion; the
@@ -67,6 +69,30 @@ events with pressure, a hand's timing).
       reads at 4.5:1 over the photo's darkest middle (off the paint, light and
       dark); Use this face sends the lines alone (no photo in any frame, none
       on the card), and the site drops a photo sent anyway.
+  15. A PROFILE'S TABS, THE STRIP (the map's step 4; the owner's "Yes" to its
+      mock, Nov 14): Posts · Gallery · Likes · Drafts on your own page, Posts
+      · Gallery on anybody else's, on a touch phone and a desk, light and
+      dark: painted, 48px, the strip the screen's width on a phone and the
+      column's on a desk; the chosen one in the first ink with the bar's pen
+      line under it, read off the paint, the others in the second ink; Likes
+      and Drafts nowhere on anybody else's page or in its source, their
+      addresses sending anybody else to the person's page; each tab its own
+      address, the back button and forward, a reload and a shared link
+      landing on it; the switch read on every frame (the line glides, the
+      panel fades and changes only while unseen, the page holds still), and
+      under Reduce Motion the line put there and the panel still fading.
+  16. WHAT EACH TAB HOLDS: Posts, their posts as Home's one card, newest
+      first, Load more; the Gallery, every drawing and Flip they shared, a
+      post's tile opening its post and one shown outside a post its own
+      page, with its length, never a face or one kept link-only, each tile
+      one link; Likes, yours alone, the posts you liked, newest liked first,
+      Load more (posts only, nobody a block hides, nothing taken down, a mute
+      changing nothing); Drafts, yours alone, your account's drafts as tiles,
+      newest saved first, each opening the Pad or Flip with that draft; the
+      reads on their indexes; every tab's kind words when it holds nothing.
+  17. THE TABS' WORDS: every word on the strip and in every tab at 4.5:1 on
+      what is painted behind it, every control 44px, phone and desk, light
+      and dark.
 
 The layers (the site imports only Skribl's documented names, and its
 templates only documented partials, the face player's now among them) stay
@@ -454,6 +480,65 @@ def post_skribl(who, title, visibility="public", base=None):
     return r.json().get("id") if r.ok else None
 
 
+# ---- posts, likes and drafts, for a profile's tabs (sections 15 to 17) ------------
+
+def tab_drawing(seed=0, n=40, step=30, flip=False):
+    """A small drawing as the editors hand one back (`n` points `step` ms
+    apart), or a Flip of three pages."""
+    pts = [{"x": round(408 + math.cos((i + seed) / 9) * (30 + i * 3), 1),
+            "y": round(306 + math.sin((i + seed) / 9) * (30 + i * 3), 1),
+            "color": "#7c5cff", "size": 6 + (i % 4), "t": i * step, "start": i == 0} for i in range(n)]
+    body = {"version": 2, "schemaVersion": 2, "playbackMode": "flip" if flip else "replay",
+            "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+            "frames": [{"strokes": pts, "strokeGroups": [n], "background": {"color": "#f6f2ea"}}]}
+    if flip:
+        body["fps"] = 12
+        body["frames"] += [{"strokes": [dict(p, x=p["x"] + 20 * k) for p in pts], "strokeGroups": [n],
+                            "background": {"color": "#f6f2ea"}} for k in (1, 2)]
+    return body
+
+
+def site_post(who, words, payload=None):
+    """A post as Home's composer sends one (/social/posts): its address, or None."""
+    c = who.client()
+    c.get("/social/")
+    st, j = c.post_json("/social/posts", {"words": words, "payload": payload or tab_drawing()})
+    return j.get("post") if st == 200 and isinstance(j, dict) else None
+
+
+def like_it(who, path, liked=True):
+    """`who`'s like on a post (/p/<id>) or a drawing (/b/<id>), set or taken back: the status."""
+    c = who.client()
+    c.get("/social" + path)
+    return c.post_json("/social" + path + "/like", {"liked": liked})[0]
+
+
+def thumb_of(rgb):
+    """A draft's small picture as the editors make one: a JPEG data URL, the
+    paper and a line in `rgb` (None without Pillow, which the editors' never is)."""
+    if Image is None:
+        return None
+    from PIL import ImageDraw
+    im = Image.new("RGB", (240, 180), (246, 242, 234))
+    ImageDraw.Draw(im).line([(36, 120), (90, 48), (150, 138), (204, 58)], fill=rgb, width=8)
+    buf = io.BytesIO()
+    im.save(buf, "JPEG", quality=80)
+    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def save_draft(who, kind, title, payload, thumbnail, draft_id=None):
+    """A draft saved to `who`'s account through Skribl's own API, as the
+    editors' Save does (a new one, or `draft_id` saved again): its id."""
+    ctx = who.ctx
+    ctx.request.get(BASE + "/api/skribls?limit=1")
+    tok = next((c["value"] for c in ctx.cookies(BASE) if c["name"] == "skribl_csrf"), "")
+    h = {"Content-Type": "application/json", "X-Skribl-CSRF": tok}
+    data = json.dumps({"kind": kind, "title": title, "payload": payload, "thumbnail": thumbnail})
+    r = (ctx.request.put(BASE + f"/api/drafts/{draft_id}", data=data, headers=h) if draft_id
+         else ctx.request.post(BASE + "/api/drafts", data=data, headers=h))
+    return r.json().get("id") if r.ok else f"refused {r.status} {r.text()[:120]}"
+
+
 # ---- a face, drawn through the real Pad with a pen ----------------------------------
 
 PURPLE, INK, PINK = artdraw.PURPLE, artdraw.INK, "#ff6f91"
@@ -713,7 +798,9 @@ DECODED = """(sels) => Promise.all(sels.map(s => { const i = document.querySelec
 
 # THE SITE'S OWN WORDS AND CONTROLS, read from the paint (verify_socialauth's
 # reader, with the face player counted among Skribl's parts, which keep their
-# own: a face has no words).
+# own: a face has no words; and since a profile holds Home's cards (its tabs,
+# the map's step 4), the player's line under a drawing among them, as every
+# other social suite's reader counts it).
 READ = """(sel) => {
   const rgba = s => { const m = (s.match(/[\\d.]+/g) || []).map(Number); return m.length >= 3 ? [m[0], m[1], m[2], m.length > 3 ? m[3] : 1] : null; };
   const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
@@ -725,7 +812,7 @@ READ = """(sel) => {
     let g = [255, 255, 255];
     for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; g = [0, 1, 2].map(k => l[k] * l[3] + g[k] * (1 - l[3])); }
     return g; };
-  const SKRIBLS = '.skribl-inline, #skriblGallery, .skribl-face';
+  const SKRIBLS = '.skribl-inline, .skribl-inline-line, #skriblGallery, .skribl-face';
   const out = { read: 0, low: [], small: [], fields: [], lowest: 99 };
   const roots = [...document.querySelectorAll(sel || 'main, header.top, nav.nav')];
   roots.forEach(root => root.querySelectorAll('*').forEach(e => {
@@ -780,6 +867,201 @@ def same_frame(a, b, tol=0.01):
     return all(a.get(k) is not None and abs(a[k] - b[k]) <= tol for k in ("w", "x", "y"))
 
 
+# ---- a profile's tabs (sections 15 to 17; the map's step 4) --------------------------
+
+#: The strip as it stands: each tab's box, whether it is painted where it is
+#: (what is at its middle is the tab), its ink and whether it is the chosen
+#: one; the inks it should wear, from the page's own tokens; the pen line's
+#: box; and where the column's content runs.
+STRIP = r"""() => { const s = document.querySelector('[data-prof-tabs]'); if (!s) return null;
+  const probe = c => { const e = document.createElement('i'); e.style.color = c; document.body.append(e);
+    const v = getComputedStyle(e).color; e.remove(); return v; };
+  const col = document.querySelector('main .col'), cs = getComputedStyle(col), cb = col.getBoundingClientRect();
+  const r = s.getBoundingClientRect(), pen = s.querySelector('.prof-pen'), p = pen ? pen.getBoundingClientRect() : null;
+  return { left: r.left, right: r.right, vw: innerWidth,
+    inner: [cb.left + parseFloat(cs.paddingLeft), cb.right - parseFloat(cs.paddingRight)],
+    ink: probe('var(--ink)'), ink2: probe('var(--ink-2)'), brand: probe('var(--brand)'),
+    pen: p && { cx: p.left + p.width / 2, w: p.width, h: p.height, top: p.top, bottom: p.bottom },
+    tabs: [...s.querySelectorAll('a[data-tab]')].map(a => { const b = a.getBoundingClientRect();
+      const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      return { key: a.getAttribute('data-tab'), name: a.textContent.trim(), cur: a.getAttribute('aria-current'),
+               href: a.getAttribute('href'), w: b.width, h: b.height, cx: b.left + b.width / 2, top: b.top, bottom: b.bottom,
+               painted: !!hit && (hit === a || a.contains(hit)), color: getComputedStyle(a).color }; }) }; }"""
+
+
+def pen_paint(pg, st):
+    """The pen line read off the paint: under each tab, in the line's own
+    band, how many pixels are the pen's purple ({key: count})."""
+    if Image is None or not st or not st.get("pen"):
+        return {}
+    want = [int(v) for v in re.findall(r"[\d.]+", st["brand"])[:3]]
+    top, bottom = max(0, st["pen"]["top"] - 2), st["pen"]["bottom"] + 2
+    png = pg.screenshot(clip={"x": 0, "y": top, "width": st["vw"], "height": bottom - top})
+    im = Image.open(io.BytesIO(png)).convert("RGB")
+    px, out = im.load(), {}
+    for t in st["tabs"]:
+        n = 0
+        for x in range(max(0, int(t["cx"] - 26)), min(im.width, int(t["cx"] + 26))):
+            for y in range(im.height):
+                if sum((a - c) ** 2 for a, c in zip(px[x, y], want)) <= 70 ** 2:
+                    n += 1
+        out[t["key"]] = n
+    return out
+
+
+#: The strip and its panel on every animation frame from now, for `ms`, kept
+#: in the page (window.__tabs) for reading after a person's tap: the pen
+#: line's middle, the panel's opacity, which tab it holds, the page's scroll
+#: and the strip's top.
+TABS_SAMPLE = r"""(ms) => { const s = document.querySelector('[data-prof-tabs]'), sw = document.querySelector('[data-prof-swap]');
+  const pen = s.querySelector('.prof-pen'), out = window.__tabs = [], t0 = performance.now();
+  (function f() { const p = pen.getBoundingClientRect(), panel = sw.querySelector('[data-prof-panel]');
+    out.push([Math.round((p.left + p.width / 2) * 100) / 100, +getComputedStyle(sw).opacity,
+              panel ? panel.getAttribute('data-tab') : null, Math.round(scrollY),
+              Math.round(s.getBoundingClientRect().top * 100) / 100]);
+    if (performance.now() - t0 < ms) requestAnimationFrame(f); })(); }"""
+
+
+def judge_switch(frames, x0, x1, reduced=False):
+    """A switch, as read frame by frame: the pen line glides one way from
+    `x0` to `x1` on many frames (no step past 30% of the way, a settle past
+    the end under 5%), or under Reduce Motion is put there; the panel fades
+    out, changes only while it can't be seen, and fades back in; the page and
+    the strip do not move."""
+    if not frames:
+        return {"ok": False, "why": "no frames"}
+    xs, ops, tabs = [f[0] for f in frames], [f[1] for f in frames], [f[2] for f in frames]
+    at = next((i for i, t in enumerate(tabs) if t != tabs[0]), None)
+    travel = x1 - x0
+    sign = 1 if travel >= 0 else -1
+    steps = [z - a for a, z in zip(xs, xs[1:])]
+    places = len({round(x, 1) for x in xs})
+    if reduced:
+        glide = abs(xs[-1] - x1) <= 0.6 and places <= 2
+    else:
+        glide = (abs(xs[-1] - x1) <= 0.6 and places >= 8 and abs(travel) > 1
+                 and all(s_ * sign >= -0.05 * abs(travel) for s_ in steps)
+                 and max(abs(s_) for s_ in steps) <= 0.3 * abs(travel)
+                 and max((x - x1) * sign for x in xs) <= 0.05 * abs(travel))
+    down = [o for o in ops[:at] if 0.05 < o < 0.95] if at else []
+    up = [o for o in ops[at:] if 0.05 < o < 0.95] if at is not None else []
+    unseen = at is not None and ops[at] <= 0.05 and all(t == tabs[-1] for t in tabs[at:])
+    faded = len(down) >= 2 and len(up) >= 2 and ops[-1] >= 0.99
+    held = len({f[3] for f in frames}) == 1 and len({f[4] for f in frames}) == 1
+    return {"ok": bool(glide and unseen and faded and held), "glide": glide, "unseen": unseen, "faded": faded,
+            "held": held, "places": places, "from": xs[0], "to": xs[-1], "want": round(x1, 2),
+            "biggest": round(max((abs(s_) for s_ in steps), default=0), 2), "changed at": at,
+            "opacity there": ops[at] if at is not None else None, "fading": [len(down), len(up)]}
+
+
+#: Every place a finger can be on a tile, every 6px: is it on the tile's one
+#: link (whatever is painted there belongs to it)?
+ONELINK = r"""(sel) => { const t = document.querySelector(sel); if (!t) return null; t.scrollIntoView({ block: 'center' });
+  const r = t.getBoundingClientRect(), bad = []; let n = 0;
+  for (let y = r.top + 1; y < r.bottom - 1; y += 6) for (let x = r.left + 1; x < r.right - 1; x += 6) {
+    n++; const h = document.elementFromPoint(x, y); if (!h || h.closest('a') !== t) bad.push([Math.round(x - r.left), Math.round(y - r.top)]); }
+  return { n, bad: bad.length, where: bad.slice(0, 4), href: t.getAttribute('href'), mid: [r.left + r.width / 2, r.top + r.height / 2] }; }"""
+
+#: What a tab's panel holds, in order: each card's post, each tile's post or
+#: drawing, each draft's id; and whether Load more is there.
+PANEL = r"""() => { const p = document.querySelector('[data-prof-panel]'); if (!p) return null;
+  const items = [...p.querySelectorAll('[data-prof-list] > *')];
+  const more = p.querySelector('[data-prof-next]'), none = p.querySelector('[data-prof-none]');
+  const c = document.querySelector('[data-prof-tabs] a[aria-current]');
+  return { tab: p.getAttribute('data-tab'), chosen: c ? c.getAttribute('data-tab') : null,
+    ids: items.map(e => e.getAttribute('data-post') || e.getAttribute('data-drawing') || e.getAttribute('data-draft')),
+    more: !!more && !more.hidden, none: none && !none.hidden ? none.innerText.replace(/\s+/g, ' ').trim() : null,
+    at: location.pathname }; }"""
+
+_TABS = {}
+
+
+def tab_people(b):
+    """Pia's page, with something in every tab, and the people around it:
+    Kai, whose posts she likes (one of his drawings too, shown outside a post,
+    which is no post); Lux, whose post she likes and who then blocks her; Ola,
+    who has nothing yet. Made once for sections 15 to 17, whichever runs."""
+    if _TABS:
+        return _TABS
+    pia = _people.get("tabpia") or member(b, "tabpia", "Pia Rowe")
+    kai = _people.get("tabkai") or member(b, "tabkai", "Kai Dunn")
+    lux = _people.get("tablux") or member(b, "tablux", "Lux Reyes")
+    ola = _people.get("tabola") or member(b, "tabola", "Ola Nyberg")
+    tag = secrets.token_hex(3)
+    # HER GALLERY, oldest first: a drawing shown outside a post before posts,
+    # her posts, one shown from the Pad between them, and a Flip; her face and
+    # one kept link-only are no post and never public.
+    seq = [("s", post_skribl(pia, f"Pia before posts {tag}"))]
+    linkonly = post_skribl(pia, f"Pia link-only {tag}", visibility=None)
+    face = post_skribl(pia, f"Pia's face {tag}", visibility=None)
+    db("update social_people set face_id = ?, face_w = 816, face_h = 612 where handle_key = 'tabpia'", (face,), write=True)
+    posts = []
+    for k in range(1, 23):
+        if k == 12:
+            seq.append(("s", post_skribl(pia, f"Pia from the Pad {tag}")))
+        posts.append(site_post(pia, f"Pia's post {k} {tag}", tab_drawing(seed=k)))
+        seq.append(("p", posts[-1]))
+    flip = site_post(pia, f"Pia's flip {tag}", tab_drawing(seed=30, flip=True))
+    posts.append(flip)
+    seq.append(("p", flip))
+    # HER LIKES: Kai's posts in an order of their own, her own post, a drawing
+    # of Kai's shown outside a post (no post), and Lux's post, Lux then
+    # blocking her.
+    kais = [site_post(kai, f"Kai's post {k} {tag}", tab_drawing(seed=40 + k)) for k in range(21)]
+    kai_d = post_skribl(kai, f"Kai's drawing {tag}")
+    luxp = site_post(lux, f"Lux's post {tag}", tab_drawing(seed=70))
+    order = [kais[i] for i in (5, 0, 17, 3, 12, 20, 8, 1, 14, 6, 19, 2, 10, 16, 4, 11, 9, 15, 7, 13, 18)]
+    liked, statuses = [], []
+    for pid in order[:10]:
+        statuses.append(like_it(pia, f"/p/{pid}"))
+        liked.append(pid)
+    statuses.append(like_it(pia, f"/p/{posts[4]}"))
+    liked.append(posts[4])
+    statuses.append(like_it(pia, f"/b/{kai_d}"))
+    statuses.append(like_it(pia, f"/p/{luxp}"))
+    liked.append(luxp)
+    for pid in order[10:]:
+        statuses.append(like_it(pia, f"/p/{pid}"))
+        liked.append(pid)
+    lc = lux.client()
+    lc.get("/social/")
+    blocked = lc.post_json("/social/@tabpia/block", {})[0]
+    # HER DRAFTS, as the editors save them: the snail, the bike, then the
+    # snail again (newest saved first: the snail); and one of Kai's.
+    snail = save_draft(pia, "pad", f"A snail for Kai {tag}", tab_drawing(seed=50), thumb_of((124, 92, 255)))
+    bike = save_draft(pia, "flip", f"The bike, half done {tag}", tab_drawing(seed=51, flip=True), thumb_of((255, 111, 145)))
+    again = save_draft(pia, "pad", f"A snail for Kai {tag}", tab_drawing(seed=52), thumb_of((124, 92, 255)), draft_id=snail)
+    kais_draft = save_draft(kai, "pad", f"Kai's own draft {tag}", tab_drawing(seed=53), thumb_of((31, 27, 46)))
+    _TABS.update(pia=pia, kai=kai, lux=lux, ola=ola, tag=tag, seq=seq, posts=posts, flip=flip, linkonly=linkonly,
+                 face=face, kais=kais, kai_d=kai_d, luxp=luxp, order=order, liked=liked, blocked=blocked,
+                 snail=snail, bike=bike, again=again, kais_draft=kais_draft,
+                 made=(all(posts) and all(kais) and all(i for _, i in seq) and bool(linkonly and face and kai_d and luxp)
+                       and all(s_ == 200 for s_ in statuses) and blocked == 200 and again == snail
+                       and all(isinstance(x, str) and not x.startswith("refused") for x in (snail, bike, kais_draft))))
+    return _TABS
+
+
+def follow_to(pg_, path, wait=4000):
+    """Where a tap took the page: its path, once it left `path` (or `path`)."""
+    try:
+        pg_.wait_for_url(lambda u: urllib.parse.urlsplit(u).path != path, timeout=wait)
+        pg_.wait_for_load_state("load", timeout=10000)
+    except Exception:  # noqa: BLE001 -- staying is an answer
+        pass
+    pg_.wait_for_timeout(300)
+    return urllib.parse.urlsplit(pg_.url).path
+
+
+def tab_shown(pg_, key, timeout=8000):
+    """Wait for the panel to hold `key` and stand still (faded back in)."""
+    try:
+        pg_.wait_for_function("(k) => { const p = document.querySelector('[data-prof-panel]'), s = document.querySelector('[data-prof-swap]');"
+                              " return !!p && p.getAttribute('data-tab') === k && !s.classList.contains('is-out')"
+                              " && +getComputedStyle(s).opacity >= 0.99; }", arg=key, timeout=timeout)
+    except Exception:  # noqa: BLE001 -- not there is the row's red
+        pass
+
+
 with sync_playwright() as p_:
     b = p_.chromium.launch()
 
@@ -796,21 +1078,22 @@ with sync_playwright() as p_:
         newer = post_skribl(mira, f"Mira's newer {tag}")
         hidden = post_skribl(mira, f"Mira's link-only {tag}", visibility=None)
         theirs = post_skribl(juno, f"Juno's {tag}")
-        mid = person_row("mira")[0]
 
-        def profile_view(pg, handle):
-            pg.goto(BASE + f"/social/@{handle}")
-            try:
-                pg.wait_for_function("() => document.querySelectorAll('#galleryList > article.tile').length > 0"
-                                     " || !document.getElementById('galleryEmpty').hidden", timeout=15000)
-            except Exception:
-                pass
+        # THEIR DRAWINGS ON THEIR GALLERY TAB (the map's step 4: the tabs took
+        # the place of Skribl's Gallery section, which held their public
+        # skribls). These were shown outside a post (Skribl's own API), so each
+        # is a tile opening its own page; the link-only one and Juno's are not
+        # Mira's Gallery's.
+        def profile_view(pg, handle, path="/gallery"):
+            pg.goto(BASE + f"/social/@{handle}{path}")
             pg.wait_for_timeout(300)
             return pg.evaluate("""() => { const t = s => { const e = document.querySelector(s); return e ? e.innerText : null; };
-                const g = document.getElementById('skriblGallery');
+                const tiles = [...document.querySelectorAll('[data-prof-list] .gal-tile')];
                 return { name: t('.prof-name'), handle: t('.prof-handle'), bio: t('.prof-bio'),
-                         author: g && g.getAttribute('data-skribl-author'), sections: document.querySelectorAll('[data-skribl-gallery]').length,
-                         tiles: [...document.querySelectorAll('#galleryList > article.tile')].map(a => a.getAttribute('data-id')),
+                         sections: document.querySelectorAll('[data-skribl-gallery], #skriblGallery, #profSkribls').length,
+                         chosen: (document.querySelector('[data-prof-tabs] a[aria-current]') || {}).textContent || null,
+                         tiles: tiles.map(a => a.getAttribute('data-drawing') || a.getAttribute('data-post')),
+                         hrefs: tiles.map(a => a.getAttribute('href')),
                          canonical: (document.querySelector('link[rel=canonical]') || {}).href || null,
                          title: document.title }; }""")
         vctx, vpg = browser_as(b, juno)
@@ -819,45 +1102,47 @@ with sync_playwright() as p_:
         actx, apg = browser_as(b, None)
         seen_by_nobody = profile_view(apg, "mira")
         close_ctx(actx, apg)
-        check("a profile shows the person's name, @handle and bio (its line break kept), and Skribl's own Gallery"
-              " section with their public skribls only, newest first: to somebody signed in and to nobody alike",
+        check("a profile shows the person's name, @handle and bio (its line break kept), and on its Gallery tab their"
+              " public drawings shown outside a post, newest first, each opening its own page, and nothing of Skribl's"
+              " Gallery section: to somebody signed in and to nobody alike",
               st_bio == 303 and all(v["name"] == "Mira Okafor" and v["handle"] == "@mira" and v["bio"] == bio
-                                    and v["author"] == mid and v["sections"] == 1 and v["tiles"] == [newer, older]
+                                    and v["sections"] == 0 and v["chosen"] == "Gallery" and v["tiles"] == [newer, older]
+                                    and v["hrefs"] == [f"/social/b/{newer}", f"/social/b/{older}"]
                                     for v in (seen_by_juno, seen_by_nobody)),
               f"bio saved {st_bio}; seen by Juno {seen_by_juno}; by nobody {seen_by_nobody}; ids: newer {newer},"
               f" older {older}, link-only {hidden}, Juno's {theirs}")
         own = profile_view(mira.pg, "mira")
-        check("on your own profile you see what your visitors see: your public skribls, not the link-only one",
+        check("on your own profile's Gallery you see what your visitors see: your public drawings, not the link-only one",
               own["tiles"] == [newer, older], f"{own['tiles']}; link-only {hidden}")
-        # AN EMPTY PROFILE IN ITS OWN WORDS (the owner's yes, Nov 10): to its
-        # own person, what puts a skribl there, in the Pad's tick's words; to
-        # anybody else, signed in or not, only that there are none yet. It
-        # said "their author" to its own author before.
+        # AN EMPTY PROFILE IN ITS OWN WORDS, TAB BY TAB (the owner's yes, Nov
+        # 10, kept through the map's step 4): to its own person, what puts
+        # something there; to anybody else, signed in or not, only that there
+        # is nothing yet, and that it comes when they share one.
         ines = member(b, "ines", "Ines Vale")
 
-        def empty_words(pg):
-            pg.goto(BASE + "/social/@ines")
-            try:
-                pg.wait_for_function("() => !document.getElementById('galleryEmpty').hidden", timeout=15000)
-            except Exception:
-                pass
-            return pg.evaluate("""() => { const e = document.getElementById('galleryEmpty');
-                return e && !e.hidden ? e.innerText.replace(/\\s+/g, ' ').trim() : null; }""")
-        own_empty = empty_words(ines.pg)
+        def empty_words(pg, path=""):
+            pg.goto(BASE + "/social/@ines" + path)
+            pg.wait_for_timeout(200)
+            return pg.evaluate("""() => { const e = document.querySelector('[data-prof-none]');
+                return e && !e.hidden && e.getClientRects().length ? e.innerText.replace(/\\s+/g, ' ').trim() : null; }""")
+        own_empty = (empty_words(ines.pg), empty_words(ines.pg, "/gallery"))
         ectx, epg = browser_as(b, juno)
-        their_empty = empty_words(epg)
+        their_empty = (empty_words(epg), empty_words(epg, "/gallery"))
         close_ctx(ectx, epg)
         nctx, npg = browser_as(b, None)
-        nobodys_empty = empty_words(npg)
+        nobodys_empty = (empty_words(npg), empty_words(npg, "/gallery"))
         close_ctx(nctx, npg)
-        check("an empty profile says it in its own words: to its own person what puts a skribl there (the Pad's"
-              " tick), to anybody else only that there are none yet",
-              own_empty == ("Nothing here yet. Your skribls show here when you tick Show in the public gallery as"
-                            " you post, or later in your Library.")
-              and their_empty == "No skribls here yet." and nobodys_empty == "No skribls here yet.",
+        theirs_words = ("No posts from Ines yet. When Ines shares one, it shows up here.",
+                        "No drawings from Ines yet. When Ines shares one, it shows up here.")
+        check("an empty profile says it in its own words, tab by tab: to its own person what puts something there"
+              " (Posts: say something on Home and draw it; the Gallery: share one in a post), to anybody else only"
+              " that there is nothing yet, and that it comes when they share one",
+              own_empty == ("No posts yet. Say something on Home, then draw it, and your posts show up here.",
+                            "No drawings here yet. Share one in a post, and it shows up here.")
+              and their_empty == theirs_words and nobodys_empty == theirs_words,
               f"own {own_empty!r}; Juno's view {their_empty!r}; signed out {nobodys_empty!r}")
         actx, apg = browser_as(b, None)
-        loud = profile_view(apg, "MiRa")
+        loud = profile_view(apg, "MiRa", "")
         close_ctx(actx, apg)
         resp = http("/social/@MIRA")[0]
         check("a handle written in another case is the same profile, and the page names its own address",
@@ -903,28 +1188,28 @@ with sync_playwright() as p_:
               all(places[(s, "mira")]["href"] == "/social/@mira" and places[(s, "mira")]["current"] == ["You"]
                   and places[(s, "juno")]["current"] == [] for s in ("phone", "desk")),
               json.dumps({f"{k[0]} @{k[1]}": v for k, v in places.items()}))
-        # PAGING STAYS WITHIN THEM: past one page of 24, Load more brings the
-        # rest of theirs by the listing's own cursor, and nobody else's.
+        # PAGING STAYS WITHIN THEM, now on their Gallery tab (the map's step 4):
+        # past one page of 24, Load more brings the rest of theirs by its own
+        # cursor (a drawing's, here: these were shown outside a post), and
+        # nobody else's.
         many = [post_skribl(juno, f"Juno's page {tag} {i}") for i in range(26)]
         pctx, ppg = browser_as(b, None)
-        ppg.goto(BASE + "/social/@juno")
+        ppg.goto(BASE + "/social/@juno/gallery")
+        TILES = "() => [...document.querySelectorAll('[data-prof-list] .gal-tile')].map(a => a.getAttribute('data-drawing'))"
+        first_page = ppg.evaluate(TILES)
         try:
-            ppg.wait_for_function("() => document.querySelectorAll('#galleryList > article.tile').length >= 24", timeout=15000)
-        except Exception:
-            pass
-        first_page = ppg.evaluate("() => [...document.querySelectorAll('#galleryList > article.tile')].map(a => a.getAttribute('data-id'))")
-        try:
-            ppg.click("#galleryMore", timeout=5000)
-            ppg.wait_for_function("(n) => document.querySelectorAll('#galleryList > article.tile').length > n",
+            ppg.click("[data-prof-next]", timeout=5000)
+            ppg.wait_for_function("(n) => document.querySelectorAll('[data-prof-list] .gal-tile').length > n",
                                   arg=len(first_page), timeout=15000)
         except Exception:
             pass
         ppg.wait_for_timeout(400)
-        both = ppg.evaluate("() => [...document.querySelectorAll('#galleryList > article.tile')].map(a => a.getAttribute('data-id'))")
-        more_left = ppg.evaluate("() => { const m = document.getElementById('galleryMore'); return !!m && !m.hidden; }")
+        both = ppg.evaluate(TILES)
+        more_left = ppg.evaluate("() => { const m = document.querySelector('[data-prof-next]'); return !!m && !m.hidden; }")
         close_ctx(pctx, ppg)
         juno_all = [theirs] + many
-        check("past a page, Load more brings the rest of their skribls by the listing's own cursor, and nobody else's",
+        check("past a page of their Gallery, Load more brings the rest of their drawings by its own cursor, and nobody"
+              " else's",
               len(first_page) == 24 and len(both) == 27 and sorted(both) == sorted(juno_all) and len(set(both)) == 27
               and not more_left,
               f"first page {len(first_page)}, after Load more {len(both)} (theirs {len(juno_all)}), more left {more_left};"
@@ -2367,6 +2652,439 @@ with sync_playwright() as p_:
               f"offsets {[round(o, 2) for o in offs[:4]]}..{[round(o, 2) for o in offs[-2:]]} on {len({round(o, 3) for o in offs})} values;"
               f" the face {drawn[-1][2:] if drawn else None}; reduced: offsets {sorted({round(f[1] or 0, 3) for f in still})[:3]},"
               f" face {still[-1][2] if still else None}")
+
+    # ------------------------------------------------------------------ 15
+    # A PROFILE'S TABS, THE STRIP (the map's step 4; the owner's "Yes" to its
+    # mock, Nov 14), where the "Skribls" heading and Skribl's Gallery section
+    # were. Pia's page, from her own browser, Kai's and nobody's.
+    if part(15, "a profile's tabs, the strip: painted, its inks and pen line, yours alone, its own addresses, gliding"):
+        T = tab_people(b)
+        pia, kai = T["pia"], T["kai"]
+        check("(setup) Pia's posts, drawings shown outside a post, likes and drafts, Kai's posts, Lux's post and block,"
+              " each made as a person makes it",
+              T["made"], json.dumps({k: T[k] for k in ("flip", "luxp", "blocked", "snail", "bike", "again", "kais_draft")}))
+        strips, pens = {}, {}
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                for who, label in ((pia, "own"), (kai, "theirs"), (None, "nobody")):
+                    ctx, pg = browser_as(b, who, screen, scheme)
+                    pg.goto(BASE + "/social/@tabpia/gallery")
+                    pg.evaluate("() => { const s = document.querySelector('[data-prof-tabs]'); if (s) s.scrollIntoView({ block: 'center' }); }")
+                    pg.wait_for_timeout(300)
+                    strips[(screen, scheme, label)] = st = pg.evaluate(STRIP)
+                    pens[(screen, scheme, label)] = pen_paint(pg, st)
+                    close_ctx(ctx, pg)
+        names = {k: [t["name"] for t in (v or {}).get("tabs", [])] for k, v in strips.items()}
+        wide = {}
+        for (screen, scheme, label), st in strips.items():
+            span = ([0, st["vw"]] if screen == "phone" else st["inner"]) if st else None
+            wide[(screen, scheme, label)] = bool(st) and (
+                abs(st["left"] - span[0]) <= 0.5 and abs(st["right"] - span[1]) <= 0.5
+                and all(t["painted"] and abs(t["h"] - 48) <= 0.5 and t["w"] >= 44 for t in st["tabs"]))
+        check("the strip where the Skribls heading was: Posts · Gallery · Likes · Drafts on your own page, Posts · Gallery"
+              " on anybody else's and signed out, in that order; each tab painted where it is, 48px tall and more than"
+              " 44 wide; the strip the screen's width on a touch phone and the column's on a desk; light and dark",
+              all(names[k] == (["Posts", "Gallery", "Likes", "Drafts"] if k[2] == "own" else ["Posts", "Gallery"])
+                  for k in strips) and all(wide.values()),
+              f"names { {' '.join(k): v for k, v in names.items() if k[1] == 'light'} }; not so"
+              f" { {' '.join(k): (strips[k] or {}).get('tabs') for k, v in wide.items() if not v} }"[:900])
+        inks = {}
+        for k, st in strips.items():
+            g = next((t for t in (st or {}).get("tabs", []) if t["key"] == "gallery"), None)
+            pen, paint = (st or {}).get("pen") or {}, pens.get(k) or {}
+            inks[k] = (bool(g) and [t["key"] for t in st["tabs"] if t["cur"] == "page"] == ["gallery"]
+                       and g["color"] == st["ink"] and all(t["color"] == st["ink2"] for t in st["tabs"] if t["key"] != "gallery")
+                       and abs(pen.get("w", 0) - 44) <= 0.5 and abs(pen.get("h", 0) - 8) <= 0.5
+                       and abs(pen.get("cx", -99) - g["cx"]) <= 0.6 and abs(g["bottom"] - pen.get("bottom", -99) - 4) <= 0.6
+                       and paint.get("gallery", 0) >= 30 and all(n == 0 for t_, n in paint.items() if t_ != "gallery"))
+        check("the chosen tab (the Gallery, at its own address) in the first ink, with the bar's own pen line under it,"
+              " 44 x 8, 4px off its foot, its middle under the tab's, read off the paint (the pen's purple under it and"
+              " under no other tab); the others in the second ink; phone and desk, light and dark, every page",
+              all(inks.values()),
+              f"paint {pens.get(('phone', 'light', 'own'))}; not so"
+              f" { {' '.join(k): (pens.get(k), (strips[k] or {}).get('pen')) for k, v in inks.items() if not v} }"[:900])
+
+        # LIKES AND DRAFTS ARE YOURS ALONE, in the page and in its source.
+        kc, nc, pc = kai.client(), Client(), pia.client()
+        mine_src = pc.get("/social/@tabpia")[2]
+        srcs = {(name, path): cl.get(path)[2] for name, cl in (("Kai", kc), ("nobody", nc))
+                for path in ("/social/@tabpia", "/social/@tabpia/gallery")}
+        secret = [T["snail"], T["bike"], "A snail for Kai", "The bike, half done", 'data-tab="likes"',
+                  'data-tab="drafts"', "/@tabpia/likes", "/@tabpia/drafts", T["luxp"]] + [
+                  p for p in T["liked"] if p != T["posts"][4]]
+        leaks = {f"{k[0]} {k[1]}": [x for x in secret if x in src] for k, src in srcs.items()}
+        sends = {}
+        for name, cl in (("Kai", kc), ("nobody", nc)):
+            for tab in ("likes", "drafts"):
+                st_, hd, _ = cl._req("GET", f"/social/@tabpia/{tab}")
+                js = cl._req("GET", f"/social/@tabpia/more?tab={tab}")
+                sends[f"{name} {tab}"] = (st_, (hd.get("Location") or "").split("?")[0], js[0], js[2][:60])
+        own_has = all(x in mine_src for x in ('data-tab="likes"', 'data-tab="drafts"', "/social/@tabpia/likes",
+                                               "/social/@tabpia/drafts"))
+        check("Likes and Drafts are yours alone: on Kai's view of Pia's page and a signed-out one there is no such tab,"
+              " no address of either, no draft and nothing she liked, in the page or its source; their addresses send"
+              " anybody else to her page (302), and the tab's own JSON answers them 404 with nothing; her own page has"
+              " both",
+              own_has and not any(leaks.values())
+              and all(v[0] == 302 and v[1].endswith("/social/@tabpia") and v[2] == 404 and T["snail"] not in v[3]
+                      for v in sends.values()),
+              f"her own page has them {own_has}; leaks { {k: v for k, v in leaks.items() if v} }; {sends}")
+
+        # EACH TAB ITS OWN ADDRESS: a tap, the back button and forward, a
+        # reload, a tile opened and the way back.
+        def is_(v, key, path):
+            return bool(v) and isinstance(v, dict) and v.get("tab") == key and v.get("chosen") == key and v.get("at") == path
+        trail = {}
+        ctx, pg = browser_as(b, pia, "phone", "light")
+        try:
+            pg.goto(BASE + "/social/@tabpia")
+            tab_shown(pg, "posts")
+            trail["start"] = pg.evaluate(PANEL)
+            for key in ("gallery", "likes"):
+                pg.tap(f'[data-prof-tabs] a[data-tab="{key}"]')
+                tab_shown(pg, key)
+                pg.wait_for_timeout(250)
+                trail[key] = pg.evaluate(PANEL)
+            pg.go_back()
+            tab_shown(pg, "gallery")
+            trail["back"] = pg.evaluate(PANEL)
+            pg.go_back()
+            tab_shown(pg, "posts")
+            trail["back again"] = pg.evaluate(PANEL)
+            pg.go_forward()
+            tab_shown(pg, "gallery")
+            trail["forward"] = pg.evaluate(PANEL)
+            pg.reload()
+            tab_shown(pg, "gallery")
+            trail["reload"] = pg.evaluate(PANEL)
+            pg.tap("[data-prof-list] .gal-tile")
+            trail["tile"] = follow_to(pg, "/social/@tabpia/gallery")
+            pg.go_back()
+            tab_shown(pg, "gallery")
+            trail["after the tile"] = pg.evaluate(PANEL)
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            trail["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, pg)
+        G, H = "/social/@tabpia/gallery", "/social/@tabpia"
+        check("each tab is a link with its own address: a tap on the Gallery, then Likes, stays on the page, the address"
+              " the tab's once it is in; the back button brings back the Gallery, then Posts, and forward the Gallery"
+              " again, the strip and the panel with them; a reload opens on the tab; a tile opened, then the way back,"
+              " lands on the Gallery",
+              is_(trail.get("start"), "posts", H) and is_(trail.get("gallery"), "gallery", G)
+              and is_(trail.get("likes"), "likes", H + "/likes") and is_(trail.get("back"), "gallery", G)
+              and is_(trail.get("back again"), "posts", H) and is_(trail.get("forward"), "gallery", G)
+              and is_(trail.get("reload"), "gallery", G) and trail.get("tile") == f"/social/p/{T['flip']}"
+              and is_(trail.get("after the tile"), "gallery", G),
+              json.dumps({k: (v if not isinstance(v, dict) else [v.get("tab"), v.get("chosen"), v.get("at")])
+                          for k, v in trail.items()}))
+        shared = {}
+        for name, who, screen, path in (("Kai", kai, "desk", G), ("nobody", None, "phone", G),
+                                        ("Pia's Drafts", pia, "desk", H + "/drafts")):
+            ctx, pg = browser_as(b, who, screen, "dark")
+            pg.goto(BASE + path)
+            shared[name] = pg.evaluate(PANEL)
+            close_ctx(ctx, pg)
+        check("...and a shared link lands on its tab: Pia's Gallery, opened by Kai and signed out, on the Gallery, its"
+              " tiles there; her own link to her Drafts on her Drafts",
+              is_(shared.get("Kai"), "gallery", G) and is_(shared.get("nobody"), "gallery", G)
+              and len(shared["Kai"]["ids"]) == 24 and is_(shared.get("Pia's Drafts"), "drafts", H + "/drafts"),
+              json.dumps({k: v and [v.get("tab"), v.get("chosen"), v.get("at"), len(v.get("ids") or [])] for k, v in shared.items()}))
+
+        # THE SWITCH, READ ON EVERY FRAME.
+        glides = {}
+        for screen, scheme, reduced in (("phone", "light", False), ("desk", "dark", False), ("phone", "light", True)):
+            ctx, pg = browser_as(b, pia, screen, scheme, reduced=reduced)
+            try:
+                pg.goto(BASE + "/social/@tabpia")
+                tab_shown(pg, "posts")
+                pg.evaluate("() => document.querySelector('[data-prof-tabs]').scrollIntoView({ block: 'center' })")
+                pg.wait_for_timeout(300)
+                st = pg.evaluate(STRIP)
+                x0 = next(t["cx"] for t in st["tabs"] if t["key"] == "posts")
+                x1 = next(t["cx"] for t in st["tabs"] if t["key"] == "likes")
+                pg.evaluate(TABS_SAMPLE, 1500)
+                if screen == "phone":
+                    pg.tap('[data-prof-tabs] a[data-tab="likes"]')
+                else:
+                    pg.click('[data-prof-tabs] a[data-tab="likes"]')
+                pg.wait_for_timeout(1700)
+                glides[(screen, scheme, reduced)] = judge_switch(pg.evaluate("() => window.__tabs || []"), x0, x1, reduced)
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                glides[(screen, scheme, reduced)] = {"ok": False, "stopped": str(exc).splitlines()[0][:160]}
+            close_ctx(ctx, pg)
+        check("the switch, read on every frame (a touch phone in light, a desk in dark): the pen line glides from Posts to"
+              " Likes, one way, on many frames (no step past 30% of the way, a settle past it under 5%), ending under"
+              " Likes; the panel fades out, changes only while it can't be seen (under 5%), and fades back in; the page"
+              " doesn't scroll and the strip doesn't move",
+              all(glides.get((s_, c_, False), {}).get("ok") for s_, c_ in (("phone", "light"), ("desk", "dark"))),
+              json.dumps({f"{k[0]} {k[1]}": v for k, v in glides.items() if not k[2]}))
+        check("under Reduce Motion the pen line is put there, no frame between, and the panel still only fades, changing"
+              " while unseen",
+              bool(glides.get(("phone", "light", True), {}).get("ok")), json.dumps(glides.get(("phone", "light", True))))
+
+    # ------------------------------------------------------------------ 16
+    # WHAT EACH TAB HOLDS (the map's step 4): Posts, the Gallery, Likes and
+    # Drafts, each read from the database's own order; the editors a draft
+    # opens in; the reads' plans; the kind words.
+    if part(16, "what each tab holds: Posts, the Gallery, Likes and Drafts, Load more, the editors, the kind words"):
+        T = tab_people(b)
+        pia, kai, ola = T["pia"], T["kai"], T["ola"]
+        drawings = [i for k, i in T["seq"] if k == "s"]
+
+        def more_of(pg_, sel, tap=True):
+            """Load more, as a person presses it, and its page in."""
+            n = pg_.evaluate("(s) => document.querySelectorAll(s).length", sel)
+            try:
+                (pg_.tap if tap else pg_.click)("[data-prof-next]")
+                pg_.wait_for_function("([s, n]) => document.querySelectorAll(s).length > n", arg=[sel, n], timeout=15000)
+            except Exception:  # noqa: BLE001 -- none coming is the row's red
+                pass
+            pg_.wait_for_timeout(400)
+            return pg_.evaluate(PANEL)
+
+        # POSTS: Kai's view of Pia's, and Home's own card for the same viewer.
+        posts_want = list(reversed(T["posts"]))
+        ctx, pg = browser_as(b, kai, "phone", "light")
+        pg.goto(BASE + "/social/@tabpia")
+        p1 = pg.evaluate(PANEL)
+        p2 = more_of(pg, "[data-prof-list] > .post-card")
+        late = pg.evaluate("""() => [...document.querySelectorAll('[data-prof-list] > .post-card')].slice(-3).map(c => {
+            const box = c.querySelector('.skribl-inline'), t = c.querySelector('time[data-when]');
+            return [!!(box && box._skriblInline), t ? t.textContent.trim() : null]; })""")
+        close_ctx(ctx, pg)
+        oc = ola.client()
+        home_html, prof_html = oc.get("/social/")[2], oc.get("/social/@tabkai")[2]
+
+        def card_of(html_, pid):
+            m = re.search(r'<article class="post-card" data-post="' + re.escape(pid) + r'".*?</article>', html_, re.S)
+            return m.group(0) if m else None
+        k_last = T["kais"][-1]
+        same = card_of(home_html, k_last) is not None and card_of(home_html, k_last) == card_of(prof_html, k_last)
+        check("Posts: their posts and nothing else (not the drawings they showed outside a post), as Home's one card (the"
+              " card Home shows the same viewer, the same), newest first; Load more brings the rest by its cursor, none"
+              " twice, mounted and its times said as Home's are, and goes",
+              p1["ids"] == posts_want[:20] and p1["more"] and p2["ids"] == posts_want and not p2["more"]
+              and not set(drawings) & set(p2["ids"]) and same
+              and all(m_ and re.fullmatch(r"now|\d+[mhd]", t_ or "") for m_, t_ in late),
+              f"first {len(p1['ids'])} (more {p1['more']}), then {len(p2['ids'])} (more {p2['more']}); in order"
+              f" {p2['ids'] == posts_want}; the last cards {late}; Home's card the same {same}")
+
+        # THE GALLERY: her posts' drawings and the two she showed outside a post.
+        gal_want = [i for _, i in reversed(T["seq"])]
+        kind_of = {i: k for k, i in T["seq"]}
+        ctx, pg = browser_as(b, kai, "phone", "dark")
+        pg.goto(BASE + "/social/@tabpia/gallery")
+        g1 = pg.evaluate(PANEL)
+        g2 = more_of(pg, "[data-prof-list] > .gal-tile")
+        tiles = pg.evaluate("""() => [...document.querySelectorAll('[data-prof-list] > .gal-tile')].map(a => ({
+            id: a.getAttribute('data-post') || a.getAttribute('data-drawing'), post: a.hasAttribute('data-post'),
+            href: a.getAttribute('href'), says: ((a.querySelector('.gal-dur span') || {}).textContent || '').trim(),
+            src: (a.querySelector('.gal-plate img') || { getAttribute: () => '' }).getAttribute('src'),
+            name: ((a.querySelector('.gal-by b') || {}).textContent || '').trim() }))""")
+        close_ctx(ctx, pg)
+        wrong = [t_ for t_ in tiles
+                 if t_["post"] != (kind_of.get(t_["id"]) == "p")
+                 or t_["href"] != (f"/social/p/{t_['id']}" if t_["post"] else f"/social/b/{t_['id']}")
+                 or t_["says"] != ("3 pages" if t_["id"] == T["flip"] else "1 sec" if t_["post"] else "2 sec")
+                 or t_["name"] != "Pia"]
+        hidden_ = [x for x in (T["face"], T["linkonly"]) if any(x in (t_["id"] or "") or x in (t_["src"] or "") for t_ in tiles)]
+        check("the Gallery: every drawing and Flip Pia shared, newest first, her posts' and the two she showed outside a"
+              " post (before posts, and from the Pad between them) together; a post's tile opens its post and the others"
+              " their own page, each saying its length (\"1 sec\", \"2 sec\", a Flip \"3 pages\") and her name; her face"
+              " and her link-only drawing never; a page of 24, Load more bringing the last",
+              len(g1["ids"]) == 24 and g1["more"] and g2["ids"] == gal_want and not g2["more"] and not wrong
+              and not hidden_ and len(drawings) == 2 and all(d_ in g2["ids"] for d_ in drawings),
+              f"first {len(g1['ids'])}, then {len(g2['ids'])}; in order {g2['ids'] == gal_want}; wrong {wrong[:3]};"
+              f" face or link-only shown {hidden_}")
+        links = {}
+        ctx, pg = browser_as(b, kai, "phone", "light")
+        for key, sel, want in (("post", f'.gal-tile[data-post="{T["posts"][-2]}"]', f"/social/p/{T['posts'][-2]}"),
+                               ("drawing", f'.gal-tile[data-drawing="{drawings[1]}"]', f"/social/b/{drawings[1]}")):
+            try:
+                pg.goto(BASE + "/social/@tabpia/gallery")
+                one = pg.evaluate(ONELINK, sel)
+                pg.touchscreen.tap(*one["mid"])
+                links[key] = (one, follow_to(pg, "/social/@tabpia/gallery"), want)
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                links[key] = ({"stopped": str(exc).splitlines()[0][:120]}, None, want)
+        close_ctx(ctx, pg)
+        check("each tile is one link, whole (a finger anywhere on it, every 6px, is on that link), and a tap on it opens the"
+              " right page: a post's its post (/social/p/…), one shown outside a post its own page (/social/b/…)",
+              len(links) == 2 and all(v[0].get("bad") == 0 and v[0].get("n", 0) > 100 and v[1] == v[2] for v in links.values()),
+              json.dumps(links))
+
+        # LIKES, Pia's own.
+        likes_want = [p for p in reversed(T["liked"]) if p != T["luxp"]]
+        ctx, pg = browser_as(b, pia, "desk", "light")
+        pg.goto(BASE + "/social/@tabpia/likes")
+        l1 = pg.evaluate(PANEL)
+        l2 = more_of(pg, "[data-prof-list] > .post-card", tap=False)
+        close_ctx(ctx, pg)
+        check("Likes, on Pia's own page: the posts she liked, newest liked first (not the order they were posted), her own"
+              " among them, as cards; not the drawing she liked outside a post, nor Lux's post now Lux has blocked her;"
+              " Load more brings the rest by its cursor, none twice",
+              l1["ids"] == likes_want[:20] and l1["more"] and l2["ids"] == likes_want and not l2["more"]
+              and T["luxp"] not in l2["ids"] and T["posts"][4] in l2["ids"],
+              f"first {len(l1['ids'])} (more {l1['more']}), then {len(l2['ids'])}; in order {l2['ids'] == likes_want};"
+              f" Lux's there {T['luxp'] in l2['ids']}")
+        gone, down = T["order"][0], T["order"][1]
+        un = like_it(pia, f"/p/{gone}", liked=False)
+        db("update social_posts set taken_down_at = ? where public_id = ?", ("2026-11-14 12:00:00.000000", down), write=True)
+        pc = pia.client()
+        pc.get("/social/")
+        muted = pc.post_json("/social/@tabkai/mute", {})[0]
+        ctx, pg = browser_as(b, pia, "desk", "light")
+        pg.goto(BASE + "/social/@tabpia/likes")
+        l3 = more_of(pg, "[data-prof-list] > .post-card", tap=False)
+        close_ctx(ctx, pg)
+        unmuted = pc.post_json("/social/@tabkai/unmute", {})[0]
+        db("update social_posts set taken_down_at = NULL where public_id = ?", (down,), write=True)
+        check("...a like taken back leaves it, a post taken down leaves it, and a mute changes nothing there (her likes of"
+              " Kai's posts stay while she mutes him: what you go to stays)",
+              un == 200 and muted == 200 and unmuted == 200
+              and l3["ids"] == [p for p in likes_want if p not in (gone, down)],
+              f"unliked {un}, muted {muted}; {len(l3['ids'])} now; the two gone {[x in l3['ids'] for x in (gone, down)]};"
+              f" Kai's still there {sum(1 for x in l3['ids'] if x in T['kais'])}")
+
+        # DRAFTS, Pia's own: the tiles, and the editors they open.
+        ctx, pg = browser_as(b, pia, "phone", "light")
+        pg.goto(BASE + "/social/@tabpia/drafts")
+        drafts_ = pg.evaluate("""() => [...document.querySelectorAll('[data-prof-list] > .gal-tile')].map(a => {
+            const pic = a.querySelector('.gal-pic'), r = pic.getBoundingClientRect(), img = a.querySelector('img'), b = a.querySelector('.gal-by b');
+            return { id: a.getAttribute('data-draft'), kind: a.getAttribute('data-kind'), href: a.getAttribute('href'),
+                     src: img ? img.getAttribute('src').slice(0, 23) : null, fit: img ? getComputedStyle(img).objectFit : null,
+                     chip: (a.querySelector('.gal-dur') || {}).innerText, pen: !!a.querySelector('.gal-dur svg'),
+                     title: b ? b.textContent : null, weight: b ? getComputedStyle(b).fontWeight : null,
+                     line: (a.querySelector('.gal-when') || {}).textContent, ratio: r.width / r.height }; })""")
+        close_ctx(ctx, pg)
+        tg = T["tag"]
+        want_d = [(T["snail"], "pad", f"/skribl-pad?draft={T['snail']}", f"A snail for Kai {tg}", "Pad · saved just now"),
+                  (T["bike"], "flip", f"/flip?draft={T['bike']}", f"The bike, half done {tg}", "Flip · saved just now")]
+        check("Drafts, on Pia's own page: the drafts on her account and nobody else's, newest saved first (the snail, saved"
+              " again after the bike), each a tile of the Gallery's shape: its own small picture whole on the paper,"
+              " \"✎ Draft\" where the ▶ sits, its title (600) and \"Pad · saved just now\" (or Flip) under it, one link"
+              " to the editor that made it with ?draft=<id>",
+              [(d_["id"], d_["kind"], d_["href"], d_["title"], d_["line"]) for d_ in drafts_] == want_d
+              and all(d_["src"] == "data:image/jpeg;base64," and d_["fit"] == "contain" and (d_["chip"] or "").strip() == "Draft"
+                      and d_["pen"] and d_["weight"] == "600" and abs(d_["ratio"] - 650 / 486) <= 0.01 for d_ in drafts_),
+              json.dumps(drafts_))
+        opened = {}
+        for key, did, path, read in (("pad", T["snail"], "/skribl-pad", "strokes.length"),
+                                     ("flip", T["bike"], "/flip", "serializeFlip({ recipes: true }).frames.length")):
+            ctx, pg = browser_as(b, pia, "phone", "light")
+            try:
+                pg.goto(BASE + "/social/@tabpia/drafts")
+                pg.tap(f'.gal-tile[data-draft="{did}"]')
+                pg.wait_for_url(lambda u, p=path: urllib.parse.urlsplit(u).path == p, timeout=20000)
+                pg.wait_for_function("(id) => !!window.SkriblSavedDrafts && window.SkriblSavedDrafts.current() === id",
+                                     arg=did, timeout=20000)
+                opened[key] = pg.evaluate("() => ({ current: SkriblSavedDrafts.current(), name: window.SkriblName ? SkriblName.get() : null,"
+                                          " at: location.pathname + location.search, drawn: " + read + " })")
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                opened[key] = {"stopped": str(exc).splitlines()[0][:160]}
+            close_ctx(ctx, pg)
+        check("a tap on a draft opens it to keep drawing, as the editors' own Your drafts does: the Pad at its address,"
+              " ?draft= gone once read, the draft open (the Pad's own draft, named as it is, its drawing on the canvas);"
+              " a Flip draft in Flip the same way, its three pages there",
+              opened.get("pad", {}).get("current") == T["snail"] and opened["pad"].get("at") == "/skribl-pad"
+              and opened["pad"].get("name") == f"A snail for Kai {tg}" and (opened["pad"].get("drawn") or 0) > 0
+              and opened.get("flip", {}).get("current") == T["bike"] and opened["flip"].get("at") == "/flip"
+              and opened["flip"].get("name") == f"The bike, half done {tg}" and opened["flip"].get("drawn") == 3,
+              json.dumps(opened))
+
+        # THE READS ON THEIR INDEXES (docs/SOCIAL-SITE.md section 3: every new
+        # query's plan checked in its suite): Likes on the likes' own index for
+        # who liked, newest first; Posts on the posts' own index for one
+        # person's, newest first.
+        PROBE = r"""
+import json
+from sqlalchemy import event, select
+from app import app, db
+from social import likes, posts
+from social.models import Person
+seen = []
+def keep(conn, cursor, statement, params, context, executemany):
+    if statement.lstrip().upper().startswith("SELECT"):
+        seen.append((statement, params))
+out = {}
+with app.test_request_context("/social/@tabpia"):
+    pia = db.session.execute(select(Person).where(Person.handle_key == "tabpia")).scalar_one()
+    for key, table, fn in (("likes", "FROM social_likes", lambda: likes.liked_page(pia)),
+                           ("posts", "FROM social_posts", lambda: posts.person_page(pia, pia))):
+        seen.clear()
+        event.listen(db.engine, "before_cursor_execute", keep)
+        fn()
+        event.remove(db.engine, "before_cursor_execute", keep)
+        st, pr = next((s, p) for s, p in seen if table in s)
+        out[key] = [r[3] for r in db.session.connection().exec_driver_sql("EXPLAIN QUERY PLAN " + st, pr).fetchall()]
+print("PLAN " + json.dumps(out))
+"""
+        pr = subprocess.run([sys.executable, "-c", PROBE], cwd=ROOT, env=ENV, capture_output=True, text=True, timeout=120)
+        plans = next((json.loads(ln[5:]) for ln in pr.stdout.splitlines() if ln.startswith("PLAN ")), {})
+        check("the tabs' reads are on their indexes: Likes by who liked, newest first (ix_social_likes_person_created),"
+              " sorting no more than likes made in the same moment; Posts one person's, newest first"
+              " (ix_social_posts_person_created)",
+              any("ix_social_likes_person_created" in x for x in plans.get("likes", []))
+              and not any("TEMP B-TREE FOR ORDER BY" in x for x in plans.get("likes", []))
+              and any("ix_social_posts_person_created" in x for x in plans.get("posts", [])),
+              f"{plans or pr.stderr[-300:]}")
+
+        # NOTHING THERE YET, KINDLY: Ola, who has nothing, and Kai at her page.
+        empty = {}
+        for path, who, label in (("", ola, "own posts"), ("/gallery", ola, "own gallery"), ("/likes", ola, "own likes"),
+                                 ("/drafts", ola, "own drafts"), ("", kai, "Kai's view, posts"),
+                                 ("/gallery", kai, "Kai's view, gallery")):
+            ctx, pg = browser_as(b, who, "phone", "light")
+            pg.goto(BASE + "/social/@tabola" + path)
+            empty[label] = pg.evaluate(PANEL)
+            close_ctx(ctx, pg)
+        want_e = {"own posts": "No posts yet. Say something on Home, then draw it, and your posts show up here.",
+                  "own gallery": "No drawings here yet. Share one in a post, and it shows up here.",
+                  "own likes": "Nothing liked yet. Tap the heart on a post you love, and it’s kept here. Only you can"
+                               " see your likes.",
+                  "own drafts": "No drafts yet. To finish a drawing later, open ⋯ in the Pad or Flip and tap Save. It"
+                                " waits here for you.",
+                  "Kai's view, posts": "No posts from Ola yet. When Ola shares one, it shows up here.",
+                  "Kai's view, gallery": "No drawings from Ola yet. When Ola shares one, it shows up here."}
+        check("every tab says kindly when it holds nothing, in its own words: on your own page what puts something there,"
+              " on anybody else's that it comes when they share one; and no Load more",
+              all((empty.get(k) or {}).get("none") == v and not empty[k]["ids"] and not empty[k]["more"]
+                  for k, v in want_e.items()),
+              json.dumps({k: (v or {}).get("none") for k, v in empty.items()}))
+
+    # ------------------------------------------------------------------ 17
+    # THE TABS' WORDS, READ ON THE PAINT (WORKING-AGREEMENTS, "Contrast and
+    # consistency"): the strip and every tab's panel, scrolled to the top of
+    # the screen, with the suite's own reader.
+    if part(17, "the tabs' words: 4.5:1 on what is painted behind them, every control 44px; phone and desk, light and dark"):
+        T = tab_people(b)
+        pia, kai, ola = T["pia"], T["kai"], T["ola"]
+        looks = {}
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                for who, path, label in ((pia, "/social/@tabpia", "own Posts"), (pia, "/social/@tabpia/gallery", "own Gallery"),
+                                         (pia, "/social/@tabpia/likes", "own Likes"), (pia, "/social/@tabpia/drafts", "own Drafts"),
+                                         (kai, "/social/@tabpia", "Kai's view, Posts"),
+                                         (None, "/social/@tabpia/gallery", "signed out, the Gallery"),
+                                         (ola, "/social/@tabola/likes", "empty Likes"), (ola, "/social/@tabola/drafts", "empty Drafts"),
+                                         (kai, "/social/@tabola", "Kai's view, empty Posts")):
+                    ctx, pg = browser_as(b, who, screen, scheme, reduced=True)
+                    pg.goto(BASE + path)
+                    pg.evaluate("() => { const s = document.querySelector('[data-prof-tabs]');"
+                                " if (s) window.scrollTo(0, s.getBoundingClientRect().top + scrollY - 8); }")
+                    pg.wait_for_timeout(400)
+                    looks[(screen, scheme, label)] = pg.evaluate(READ, ".prof-tabs, .prof-swap")
+                    close_ctx(ctx, pg)
+        low = [f"{k[0]} {k[1]} {k[2]}: {x}" for k, v in looks.items() for x in v["low"]]
+        reads = sum(v["read"] for v in looks.values())
+        lowest = min(((v["lowest"], " ".join(k)) for k, v in looks.items()), default=(0, "nothing"))
+        check("every word on the strip and in every tab (a card's, a tile's, a draft's chip, title and when, each tab's kind"
+              " words) reads at 4.5:1 or more on what is painted behind it: phone and desk, light and dark, yours and"
+              " somebody else's",
+              reads >= 300 and not low, f"{reads} read, the lowest {lowest}; under 4.5: {low[:5]}")
+        small = [f"{k[0]} {k[1]} {k[2]}: {x}" for k, v in looks.items() for x in v["small"]]
+        check("every link and button on them is 44px or more each way: a tab, a tile, a card's row, Load more",
+              not small, "; ".join(small[:6]))
 
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):

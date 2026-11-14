@@ -13,7 +13,20 @@
                         the maker's face (the empty circle before they draw
                         one, never an initial) and first name, and the hearts
                         and comments, each only when there are some. The link
-                        says it all in words to a screen reader.
+                        says it all in words to a screen reader. On one
+                        person's Gallery (a profile's tab, the map's step 4)
+                        a drawing they showed outside a post is the same tile,
+                        opening its own page (/b/<id>): data-drawing, not
+                        data-post.
+    draft_tile(d)       one of your drafts (a profile's Drafts tab, yours
+                        alone; the step 4 mock's A): the tile's shape, the
+                        draft's own small picture whole on the paper, "✎
+                        Draft" where the ▶ sits, its title (600) and "Pad ·
+                        saved 2 hours ago" under it. ONE link, to the editor
+                        that made it with ?draft=<id>, the editors' own
+                        hand-off (Skribl's seam, docs/INTEGRATION.md "A
+                        person's drafts on your own page"), which opens it as
+                        their Your drafts does.
     plate_frame(sk)     a drawing cut out of its poster: the share card, the
                         drawing on a plate on the card's own ground over a
                         strip with the wordmark, which "reads as an advert
@@ -47,7 +60,7 @@
 {%- endmacro %}
 
 {% macro gallery_tile(t) -%}
-<a class="gal-tile" href="{{ t.url }}" data-post="{{ t.post }}" data-handle="{{ t.who.handle }}" aria-label="{{ t.label }}">
+<a class="gal-tile" href="{{ t.url }}" {% if t.kind == 's' %}data-drawing="{{ t.sk.id }}"{% else %}data-post="{{ t.post }}"{% endif %} data-handle="{{ t.who.handle }}" aria-label="{{ t.label }}">
   <span class="gal-pic"><span class="gal-plate" style="{{ plate_frame(t.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=t.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
     <span class="gal-dur">{{ ic.tri() }}{% if t.says %}<span>{{ t.says }}</span>{% endif %}</span></span>
   <span class="gal-by">{{ face(t.who) }}<b>{{ t.first }}</b>
@@ -55,6 +68,14 @@
     {%- if t.likes %}<span class="gal-likes">{{ ic.heart() }}{{ t.likes }}</span>{% endif %}
     {%- if t.comments %}<span class="gal-comments">{{ ic.comment() }}{{ t.comments }}</span>{% endif -%}
     </span>{% endif %}</span>
+</a>
+{%- endmacro %}
+
+{% macro draft_tile(d) -%}
+<a class="gal-tile is-draft" href="{{ d.url }}" data-draft="{{ d.id }}" data-kind="{{ d.kind }}" aria-label="{{ d.label }}">
+  <span class="gal-pic">{% if d.thumbnail %}<img class="gal-thumb" src="{{ d.thumbnail }}" alt="" decoding="async">{% endif %}
+    <span class="gal-dur">{{ ic.draft() }}<span>Draft</span></span></span>
+  <span class="gal-by"><b>{{ d.title }}</b><span class="gal-when">{{ d.line }}</span></span>
 </a>
 {%- endmacro %}
 
