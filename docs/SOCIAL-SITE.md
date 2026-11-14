@@ -599,18 +599,18 @@ query a page, for the person looking; each card is still until tapped. Load
 more brings the next page in place, paged by a cursor that names no internal
 id.
 
-**Home holds every drawing the site's people show** (the owner, Nov 12, of
-Home saying "No posts yet" while Explore was full: "all yes" to A). A
-drawing posted from the Pad on its own page (Make's Draw) and shown in the
-gallery is on Home too, among the posts, newest first: a card whose words
-are its title, with a page of its own (`/social/b/<id>`: its drawing plays
-by itself, More from its author's posts and drawings, its ⋯ and its Delete,
-its author's alone, and since phase 2 its comments, section 10). It comes
-through Skribl's `list_public_posts`
-(docs/INTEGRATION.md, "A feed of your own people's drawings"), one cursor
-walking both; a post's drawing shows once, as the post, and its page is the
-post's. Not one kept unlisted, nor one by somebody not on the site.
-`harness/verify_socialposts.py` section 9 holds it.
+**A drawing shown outside a post has a page of its own**: one posted from
+the Pad on its own page (Make's Draw) and shown in the gallery
+(`/social/b/<id>`: its drawing plays by itself, More from its author's posts
+and drawings, its ⋯ and its Delete, its author's alone, and since phase 2
+its comments, section 10). From Nov 12 (the owner's "all yes" to A, of Home
+saying "No posts yet" while Explore was full) such a drawing was on Home
+too, among the posts. Since the map's step 3 Home holds posts only (section
+16, decision 2): the drawing stays on its own page, its maker's page and
+More from, which reads it through Skribl's `list_public_posts`
+(docs/INTEGRATION.md, "A feed of your own people's drawings"). A post's
+drawing's page is the post's. `harness/verify_socialposts.py` section 9
+holds it.
 
 **Every card opens its post** (the owner, Nov 13, from the phone: "Show me
 where you click or touch to go to post view? It's not clear. I thought on
@@ -683,8 +683,8 @@ lifts a block. Deleting an account takes its blocks; a report naming it
 stays, naming nobody.
 
 **A block reaches Skribl's pages** through the two seams Skribl gives every
-host for a block list (docs/INTEGRATION.md): a feed filter (Explore's
-gallery, a profile's skribls, Home's drawings) and a visibility policy (a
+host for a block list (docs/INTEGRATION.md): a feed filter (the first
+visit's gallery, a profile's skribls, More from's drawings) and a visibility policy (a
 drawing's link page, payload and card; the card falls back to its blank
 canvas). A host that mounts the site installs both, asking
 `social.hidden_authors(viewer_id)` (a block either way, and since the second
@@ -858,7 +858,7 @@ however it was made, so whatever you open has the comment box"). A drawing
 shown outside a post, made in the Pad or Flip on their own pages and shown in
 the gallery, has the same comments on its own page (`/social/b/<id>`): the
 box, answers, drawing answers, the ⋯ (its maker removes, as a post's author
-does), reports, Load more, Home's count. They follow its page, which decides
+does), reports, Load more, the count in the row under it. They follow its page, which decides
 who may see it (public, its maker one of the site's people, no block either
 way, nothing taken down but to its maker: `posts.bloob`, one rule for the page
 and its comments). A block either way with its maker, the drawing taken down
@@ -870,7 +870,8 @@ with it, in code, and their drawing answers.
 
 **Easier to open a post** (the same yes: "tap its words, its name line or its
 time; the 💬 shows even at zero"). On Home's cards the words and the time are
-each a link to the card's own page (a post's or a drawing's); the face, the
+each a link to the card's own page (a post's; a drawing's too until the
+map's step 3); the face, the
 name and the @handle still go to the person's page, as everywhere else on the
 site (the owner was told: "its name line" kept going to the profile). The 💬
 shows even at none: its icon alone, named "Comment", a 44px way to the
@@ -1155,7 +1156,8 @@ their share. Likes that land so close their dots would overlap are one dot of
 the same size, a step redder: two together, then three or more, never bigger
 and never a number (a desk's longer line can keep apart what a phone's
 doubles). On Home's cards and a post's or a drawing's page alike, from the
-same grouped read as the count (one a kind for Home's whole page), counted by
+same grouped read as the count (one for Home's whole page, which holds posts
+only), counted by
 the viewer in the same way: a like with no moment has no dot, and nobody
 hidden from the viewer (a block either way, or taken down) has one. Dots say
 where, never who: the page is sent each moment and how many, nothing else.
@@ -1264,7 +1266,7 @@ the name on a card already opens the person's page. No "Follow back", no
 "Follows you".
 
 **Unfollowing asks once.** A tap on Following raises a small sheet, Make's
-own: "Unfollow Theo?", "You'll still see Theo's drawings under Everyone.
+own: "Unfollow Theo?", "You'll still see Theo's posts under Everyone.
 They aren't told.", Keep following beside Unfollow, the big button, the
 focus on Keep following. Nobody is told either way.
 
@@ -1292,7 +1294,7 @@ is there for them (not taken down, no block either way), never themselves;
 the token and Origin first, then the limit (60 an hour, follows and unfollows
 alike). A refusal in the page puts the button back and says why, kindly.
 Signed out, Follow is there all the same, and a tap raises the small sheet the
-heart uses: "Follow Theo?", "Sign in, and Theo's new drawings show first on
+heart uses: "Follow Theo?", "Sign in, and Theo's new posts show first on
 your Home.", Not now and Sign in, which comes back to the same page, where
 Follow waits: nothing is pressed for them.
 
@@ -1306,8 +1308,9 @@ switch: the pill glides, the posts fade, change while they can't be seen, and
 fade back; the page doesn't scroll. Under Reduce Motion the pill is put there
 and the posts only fade.
 
-**Following never runs out.** It is the people you follow and you, posts and
-drawings alike (Skribl's listing, through its `authors`:
+**Following never runs out.** It is the people you follow and you, their
+posts (posts only, as all of Home since the map's step 3; until then their
+drawings shown outside a post too, through Skribl's listing's `authors`:
 docs/INTEGRATION.md), newest first, nothing ranked. After the last of them,
 "You're caught up with the people you follow." with a small check in the pen,
 then Fresh from everyone: everybody else's, so nothing shows twice. Load more
@@ -1348,8 +1351,8 @@ pair, never yourself (`ck_social_follows_not_self`); indexed both ways newest
 first, by `(follower_id, created_at)` and `(followed_id, created_at)`. And
 `social_people.home_feed`, Home's pick. Home's Following is one read of posts
 (the people you follow as a subquery, on the posts' own person index: SQLite
-plans it as a MULTI-INDEX OR) and one of drawings, as Everyone's page reads
-them, with no read a card.
+plans it as a MULTI-INDEX OR), as Everyone's page reads them, with no read a
+card (and until the map's step 3 one of drawings).
 
 **Pad and Flip:** nothing changes in either editor. Home's cards play Pad
 drawings and Flips in the one player they share, so Following shows both
@@ -1475,9 +1478,8 @@ toast says why. Under Reduce Motion nothing glides: a room is put there or
 away only while what it holds can't be seen, and the fades remain.
 
 **What goes quiet** (C), for you alone:
-- Home, Following and Everyone: their posts and drawings, left out in the
-  query (Home's own posts, and its drawings through Skribl's listing and the
-  host's feed filter), so every page stays whole;
+- Home, Following and Everyone: their posts, left out in the query, so every
+  page stays whole (Home holds posts only since the map's step 3);
 - Explore, and Skribl's other listings of everybody's: their drawings,
   through the feed filter the host installs (below);
 - comments, on what you read and on your own: their comment or answer is one
@@ -1527,8 +1529,9 @@ installs, which Skribl now tells which listing it is (docs/INTEGRATION.md, "A
 filter can ask which listing it is"): a filter that names `author` is told the
 one author a listing is narrowed to, or `None` for many people's. The host
 leaves out `social.muted_authors(viewer_id)` only when it is `None` (the demo's
-`app.py` does), so a mute quiets Explore and Home's drawings and keeps their
-page's skribls and More from. The visibility policy never hears of mutes.
+`app.py` does), so a mute quiets Skribl's listings of everybody's (the first
+visit's gallery, Skribl's own /gallery) and keeps their page's skribls and More
+from. The visibility policy never hears of mutes.
 
 **Data.** One table on the site's chain (migration `4cdc4af46a77`, after
 `1757a4385be8`), `social_mutes`: `muter_id`, `muted_id` (both to
@@ -1656,7 +1659,8 @@ pages and other hosts stay as they are).
 the likes and comments of a drawing outside a post (`/b/<id>/like`,
 `/b/<id>/comments`), the few there are kept readable, nothing deleted; Home's
 drawing card (`data-kind="s"`). Each goes in the PR that replaces it, with the
-suites that held it.
+suites that held it. The first and the last went with step 3 (DECISIONS,
+"Home shows posts only"); the likes and comments go with step 6.
 
 **The order**, one PR at a time, each finished before the next starts:
 
@@ -1686,9 +1690,17 @@ at `/social/explore/more`, JSON, for Load more and a new pick), the tiles the
 mock's B, Following | Everyone on top,
 New, Hot and search under it, and the bar says Gallery. Its Hot is Skribl's
 new seam, `recent_plays()` (docs/INTEGRATION.md, "What is played most, among
-your own posts"). Next is step 3's second part: Home keeps posts only, and
-the drawings shown outside a post stay in their author's Gallery (step 4).
-The notes written for it before it was built are in this file's history.
+your own posts").
+
+**Step 3 is built**, its second part too (DECISIONS, "Home shows posts
+only"): Home's feed, Following and Everyone, signed in and out, holds posts
+alone (`posts.feed_page`; one person's, More from, keeps their drawings). A
+drawing shown in the gallery outside a post, the Pad's own or anything
+shared before posts, is on no Home and not in the Gallery of everyone; it
+keeps its own page (`/social/b/<id>`), its maker's page (their Skribls, which
+step 4 makes their Gallery) and More from, so nothing is lost. The first
+visit is as it was: Skribl's own Gallery section, every public skribl. Next
+is step 4.
 
 **The four.** Simple: one thing to share, one card for it, one Gallery
 (everyone's, the people you follow, or one person's), one place for your
