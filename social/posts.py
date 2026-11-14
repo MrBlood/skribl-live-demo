@@ -375,8 +375,9 @@ def bloob(skribl_id, viewer):
 
 def shown_elsewhere(skribl_id, viewer, skribl_blueprint="skribl"):
     """Skribl's own page for a drawing a gallery shows `viewer` that is
-    nobody's on the site (made in Skribl's own Pad, say: the first visit lists every
-    public skribl), or None. The site has no page for it, so its card opens
+    nobody's on the site (made in Skribl's own Pad, say: Skribl's own /gallery
+    lists every public skribl, as the site's first visit did until Nov 14), or
+    None. The site has no page for it, so its card opens
     the one it has. Public to them as Skribl describes it (the host's
     visibility policy applied), and its author not one of the site's people,
     whose drawings are bloob()'s alone."""
@@ -503,8 +504,9 @@ def register(bp, skribl_blueprint="skribl"):
         """A drawing one of the site's people showed in the gallery outside a
         post, on a page of its own: a post's page without words, its comments
         and all. EVERY CARD OPENS HERE (the owner's "I thought on card?", Nov
-        13): the first visit's newest open /b/<id> (app.py,
-        skribl.set_card_url), and so does a profile's Gallery tile for a
+        13): Skribl's Gallery cards open /b/<id> where a page of the site
+        holds them (app.py, skribl.set_card_url; the first visit's did until
+        Nov 14, none does now), and so does a profile's Gallery tile for a
         drawing shown outside a post (the map's step 4), so one address
         serves every drawing a gallery can show. A post's drawing goes to its post, for
         anybody who may see the post (comments.on_post, the post's own page's

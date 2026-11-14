@@ -28,10 +28,12 @@ while it stands. The blocker
 still finds the blocked person's profile, saying they are blocked, with
 Unblock. It reaches every page that shows either of them:
 
-  * the site's own pages: Home's feed, a post's page, a drawing's page, More
-    from, and the profile (blocked_ids, below, one query a request);
-  * Skribl's pages, which the site does not draw: the first visit's gallery
-    and Skribl's listing of one person's (a profile's Gallery tab and More
+  * the site's own pages: Home's feed, the first visit and the Gallery of
+    everyone, a post's page, a drawing's page, More from, and the profile
+    (blocked_ids, below, one query a request);
+  * Skribl's pages, which the site does not draw: its own /gallery (the
+    site's first visit held its section until Nov 14) and Skribl's listing
+    of one person's (a profile's Gallery tab and More
     from read it for the drawings shown outside a post), and a drawing's own
     link page, its
     share card, its picture and its payload (visible_to), through the two
