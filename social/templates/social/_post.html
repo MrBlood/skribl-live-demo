@@ -123,7 +123,11 @@
 {%- endmacro %}
 
 {% macro post_sheets() -%}
-{#  THE ⋯ SHEET, Make's own (social.js), as the mock drew it. #}
+{#  THE ⋯ SHEET, Make's own (social.js). Its rows are one card, and the risky
+    ones (Report, Block, Delete) a card of their own under it (the owner's
+    "B, equal lines", Nov 14); posts.js shows the rows for whose post it is,
+    and each card always holds one. No Cancel: its grip, a tap outside it, a
+    swipe down and Esc close it, as on the Pad's menu. #}
 <div class="make post-sheet" id="postSheet" hidden>
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="postSheetTitle">
@@ -133,12 +137,13 @@
       <button class="post-act" type="button" data-act="copy">{{ ic.link() }}<span>Copy link</span></button>
       <button class="post-act" type="button" data-act="share">{{ ic.share() }}<span>Share…</span></button>
       {% if me %}{{ mute_row('', false, 'post') }}{% endif %}
+    </div>
+    <div class="post-acts">
       <button class="post-act is-danger" type="button" data-act="report" data-theirs>{{ ic.flag() }}<span>Report this post</span></button>
       {% if me %}<button class="post-act is-danger" type="button" data-act="block" data-theirs>{{ ic.block() }}<span data-block-who>Block</span></button>{% endif %}
       <button class="post-act is-danger" type="button" data-act="delete" data-mine-only>{{ ic.trash() }}<span>Delete post</span></button>
     </div>
     <p class="say post-say" data-post-say role="status" hidden></p>
-    <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
   </div>
 </div>
 

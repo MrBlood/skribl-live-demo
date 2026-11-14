@@ -651,7 +651,9 @@ of its share card as Skribl's face macro does.
 post (and since piece 5, signed in, Block @them), or on your own Delete
 post. Report rises as a sheet of its own (since piece 5 into the site's own
 queue, below). Delete asks once and takes the words and the drawing.
-Deleting an account takes its posts the same way.
+Deleting an account takes its posts the same way. Since Nov 14 its rows are
+one card, the risky ones a card of their own, with no Cancel ("A list of
+choices is one card", at the end).
 
 `harness/verify_socialposts.py` holds it through the demo's own server.
 
@@ -1833,6 +1835,26 @@ time beside the ground's (docs/INTEGRATION.md, "The ground a drawing is
 painted on"); a drawing from before the columns is read from the drawing
 until `python -m skribl.backfill_ground --write` is run, which is optional:
 nothing breaks without it.
+
+**A list of choices is one card, and the ☰'s equal lines** (the owner, Nov
+14, "B, equal lines"; DECISIONS, "One card for a list of choices, and the
+menu's equal lines"). On the ☰'s sheet, each row its own rounded card and an
+outlined Cancel under them: "Do we need everything to be in a pill? It
+starts looking weird when everything is in one everywhere... look for all of
+them across entire app. Not pill sliders but like the screenshot." EVERY
+MENU SHEET OF THE SITE, the ☰'s, a post's ⋯ (yours and somebody else's), a
+comment's ⋯ and a person's ⋯, holds its rows on ONE CARD, as the Pad's own
+menu list draws it: the rows on it with nothing of their own behind them, a
+hairline between two (`social.css`, "THE ⋯ SHEET", in the site's tokens for
+those roles). The risky rows (Report, Block, Delete, Remove from my post)
+are a card of their own, 12px under the other; a comment's ⋯ holds only
+those. THERE IS NO CANCEL under a menu sheet: its grip, a tap outside it, a
+swipe down and Esc close it, as they close the Pad's menu. Report's reasons
+are one card the same way. Kept as they were: Report's Cancel | Send report,
+Mute's and Block's pairs, Make's two doors, Your face's three ways and the
+Settings page's cards. The ☰ itself is three lines of one length. Skribl's
+own sheets did the same on the Pad and Flip (Export's formats, Your drafts):
+one look across the site and the editors.
 
 **The four.** Simple: one thing to share, one card for it, one Gallery
 (everyone's, the people you follow, or one person's), one place for your

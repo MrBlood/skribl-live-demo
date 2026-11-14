@@ -14,7 +14,8 @@
  * hides the sheet once the last of it has faded (the scrim, the slowest).
  *
  * IT GOES AWAY EASILY: a door picked (the door's own link then opens its
- * editor), Cancel, a tap outside it, a tap on its grip, Esc, and on a phone a
+ * editor), Cancel where a sheet has one (Make's; a ⋯'s has none), a tap
+ * outside it, a tap on its grip, Esc, and on a phone a
  * swipe down from anywhere on it, which follows the finger (the owner, v317:
  * "menus should always go down or away easily"). Nothing behind it scrolls
  * meanwhile: the stylesheet gives it touch-action: none, which also stops a
@@ -317,8 +318,10 @@
      everything", Nov 13): the site's own sheet (_menu.html), the ⋯'s, rising
      from the bottom, focus on its first row. A row picked (a link, or Sign
      out's form) goes, and the sheet goes down as it does, so the page the
-     back button brings back has it closed. Esc, a tap outside it, its grip,
-     Cancel and a swipe down close it, giving the ☰ its focus back. */
+     back button brings back has it closed. Esc, a tap outside it, its grip
+     and a swipe down close it, giving the ☰ its focus back; it has no
+     Cancel (the owner's "B, equal lines", Nov 14), as the Pad's menu has
+     none. */
   var siteMenu = doc.getElementById('siteMenu');
   var menuBtn = doc.querySelector('[data-site-menu]');
   if (siteMenu && menuBtn) {

@@ -32,6 +32,14 @@ THE DRAWERS' TYPE: every word in the dock's drawers, Tune and the shape
 picker is 12 to 16px, a size nearer the menu's 16 over 14 (the owner, of the
 type mock's B), none is cut off at a side, and none is left alone on the last
 line of words that wrap; the shape picker's knobs hold their words a size up.
+
+ONE CARD (the owner's "B, equal lines", Nov 14): a list of choices on the
+editors' sheets (the menu's own list, Export's formats, Your drafts and As a
+file, Ask's People often ask) is one card as the menu's list draws it, its
+rows on it with nothing of their own, touching, the menu's rule between two;
+the card's white read off the screen in each row's margin; a key's ring on a
+row drawn inside it. Shown red by a break of each part and green as built:
+DECISIONS.md, "One card for a list of choices, and the menu's equal lines".
 """
 import io
 import math
@@ -75,7 +83,11 @@ DRAWERS = ("Tune", "Tune, with Beat", "The shape picker", "The draw drawer", "Th
 SHELF = ("The stamp shelf", "The stamp shelf, with stamps")       # the Pad has no stamps,
 FLIP_ONLY = SHELF + ("Tune, with Beat",)                          # nor pages to put on a song's beat
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
-         "Post, posted", "Post, the reason", "Ask", "Ask, its answers", "Ask, an answer", "The little book")
+         "Post, posted", "Post, the reason", "Ask", "Ask, its answers", "Ask, an answer", "The little book",
+         "Your drafts, three saved")
+# The sheets whose lists of choices are one card (the owner's "B, equal
+# lines", Nov 14), read by ONE CARD below.
+ONECARD = ("the menu", "Export", "Your drafts, three saved", "Ask")
 
 # A picture and a song to load into the photo and music drawers.
 _im = Image.new("RGB", (300, 300), (243, 240, 255))
@@ -181,7 +193,7 @@ CENSUS = r"""(root) => {
     side: cs.borderLeftWidth !== '0px' ? cs.borderLeftColor : 'none', r: cs.borderTopLeftRadius, foot: cs.borderBottomLeftRadius, blur: cs.backdropFilter }; };
   const cards = {};
   for (const sel of ['.menu-tile', '.menu-list', '.seg', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
-                     '.help-tip', '.help-search', '.export-opt', '.tune-row', '.post-card', '.ask-list', '.accordion-header', '.post-preview',
+                     '.help-tip', '.help-search', '.export-list', '.export-opt', '.sdrafts-card', '.tune-row', '.post-card', '.ask-list', '.accordion-header', '.post-preview',
                      '.bk-pic', '.ask-go', '.menu-start', '.export-nameinput', '.post-input', '.bk-back',
                      '.smooth-seg', '.media-tabs', '.photo-fit-group', '.reposition-btn', '.clear-drawer-btn', '.edge-controls',
                      '.dp-tile', '.dp-panel', '.loop-btn.subtle', '.onion-tint:not(.active)', '.post-check-box', '.mt-rv', '.dz-lead',
@@ -213,6 +225,55 @@ CENSUS = r"""(root) => {
     && a.borderLeftColor === 'rgba(0, 0, 0, 0)' ? a.borderTopColor : null;
   return { sheet: s(R), arrow, cards, labels, caps };
 }"""
+
+# A LIST OF CHOICES IS ONE CARD (the owner's "B, equal lines", Nov 14: "Do we
+# need everything to be in a pill?"). Every list in the surface: the menu's
+# own (.menu-list), Export's formats (.export-list), Your drafts' (.sdrafts-card)
+# and As a file (.sdrafts-files), Ask's People often ask (.ask-list): its
+# colour, edge, corner and drop, its inside edges, and each row that shows:
+# its own ground (How it works keeps its tint, the menu's first), the room
+# between it and the row before, the line along its top, its box, and whether
+# it is what is painted at its middle. And the tokens those roles wear, as the
+# page resolves them (the card, its line, its rule, its drop).
+LISTS = r"""(root) => {
+  const R = document.querySelector(root); if (!R) return null;
+  const shown = e => e.getClientRects().length > 0;
+  const hit = (e, x, y) => { const at = document.elementFromPoint(x, y); return !!at && (at === e || e.contains(at)); };
+  const p = document.createElement('i'); document.body.appendChild(p);
+  const read = (prop, v) => { p.style.cssText = prop + ': ' + v; return getComputedStyle(p)[prop === 'color' ? 'color' : 'boxShadow']; };
+  const tok = { card: read('color', 'var(--menu-card)'), line: read('color', 'var(--menu-card-line)'),
+                rule: read('color', 'var(--menu-card-rule)'), drop: read('box-shadow', 'var(--menu-card-drop)') };
+  p.remove();
+  const lists = [...R.querySelectorAll('.menu-list, .export-list, .sdrafts-card, .sdrafts-files, .ask-list')].filter(shown).map(l => {
+    const cs = getComputedStyle(l), lr = l.getBoundingClientRect();
+    let prev = null;
+    const rows = [...l.children].filter(shown).map(x => {
+      const q = x.getBoundingClientRect(), c = getComputedStyle(x);
+      const o = { name: (x.id ? '#' + x.id : x.className.split(' ')[0]) + ' "' + x.textContent.trim().replace(/\s+/g, ' ').slice(0, 20) + '"',
+        tinted: x.matches('.menu-feature'), own: c.backgroundColor, gap: prev ? Math.round((q.top - prev.bottom) * 10) / 10 : null,
+        line: c.borderTopWidth === '0px' ? 'none' : c.borderTopWidth + ' ' + c.borderTopStyle + ' ' + c.borderTopColor,
+        l: q.left, r: q.right, t: q.top, b: q.bottom, painted: hit(x, q.left + q.width / 2, (q.top + q.bottom) / 2) };
+      prev = q; return o; });
+    return { kind: l.classList[0], bg: cs.backgroundColor, edge: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor,
+             r: cs.borderTopLeftRadius, foot: cs.borderBottomRightRadius, drop: cs.boxShadow,
+             l: lr.left + parseFloat(cs.borderLeftWidth), r_: lr.right - parseFloat(cs.borderRightWidth), rows };
+  });
+  return { tok, lists }; }"""
+
+# ...and a key's ring on the first row of each list that takes focus: the
+# row's own focusable (a draft row's is its open button, the ring drawn by
+# the row) put in focus with the keyboard's modality, so :focus-visible holds.
+RING = r"""([root, i]) => { const R = document.querySelector(root);
+  const l = [...R.querySelectorAll('.menu-list, .export-list, .sdrafts-card, .sdrafts-files, .ask-list')].filter(e => e.getClientRects().length)[i];
+  const rows = [...l.children].filter(e => e.getClientRects().length);
+  for (const row of rows) { const f = row.matches('button, a') ? row : row.querySelector('.sdrafts-open, button.export-opt');
+    if (!f || f.disabled) continue;
+    f.focus({ preventScroll: true });
+    const drawn = row.matches('.sdrafts-row') ? row : f, q = drawn.getBoundingClientRect(), c = getComputedStyle(drawn);
+    return { name: (f.id ? '#' + f.id : f.className.split(' ')[0]), fv: f.matches(':focus-visible'), ring: c.outlineColor,
+             style: c.outlineStyle, l: q.left, r: q.right, t: q.top, b: q.bottom }; }
+  return null; }"""
+
 
 # THE DRAWERS' TYPE (the owner, of the type mock's B: "all yes"). Every word
 # laid out in the open drawer, scrolled into view or not (a size does not
@@ -368,6 +429,39 @@ def measure(q, root, scale):
         if worst < sharp and not (w.get("fill") and sharp == 7):
             SHORT7.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{sharp} ({said})')
     return words, low
+
+
+def read_cards(q, root, scale):
+    """ONE CARD: the surface's lists (LISTS); the colour painted 4px in from
+    each card's inside edge at every row's middle, off the screen; and a key's
+    ring on each list's first row that takes focus, a pixel inside each of the
+    row's four edges (Tab first, so the focus the script then moves is the
+    keyboard's)."""
+    got = q.evaluate(LISTS, root)
+    if not got:
+        return None
+    im = Image.open(io.BytesIO(q.screenshot())).convert("RGB")
+
+    def at(img, x, y):
+        return img.getpixel((min(img.width - 1, max(0, int(x * scale))), min(img.height - 1, max(0, int(y * scale)))))
+    for L in got["lists"]:
+        L["margins"] = [at(im, L["l"] + 4, (r["t"] + r["b"]) / 2) for r in L["rows"] if not r["tinted"]]
+    rings = []
+    for i in range(len(got["lists"])):
+        q.keyboard.press("Tab")
+        fr = q.evaluate(RING, [root, i])
+        if fr:
+            # A focused control's title shows as a tooltip (lib/tooltip.js), which
+            # can lie over the row's edge; it is not the ring, so it is not read.
+            tips = q.add_style_tag(content=".skribl-tip { visibility: hidden !important; }")
+            q.wait_for_timeout(120)
+            im2 = Image.open(io.BytesIO(q.screenshot())).convert("RGB")
+            tips.evaluate("s => s.remove()")
+            my, mx = (fr["t"] + fr["b"]) / 2, (fr["l"] + fr["r"]) / 2
+            fr["sides"] = [at(im2, fr["l"] + 1, my), at(im2, fr["r"] - 1, my), at(im2, mx, fr["t"] + 1), at(im2, mx, fr["b"] - 1)]
+        rings.append(fr)
+    got["rings"] = rings
+    return got
 
 
 # What a point lands on, and what the editor held after the stroke: the Post
@@ -643,6 +737,22 @@ def surfaces(name, ids, q, canvas, btn):
         q.locator("#savedDraftsSheet .sdrafts-row .draft-more").first.click(timeout=5000)
         q.wait_for_timeout(300)
 
+    # Your drafts with three of them, nothing open over the list: its rows are
+    # one card (the owner's "B, equal lines", Nov 14), read as the menu's list
+    # is. Each saved after forget(), so each is a draft of its own; after the
+    # row's menu, so the stroke kept in the autosave changes nothing before it.
+    def drafts_saved():
+        bx = q.locator(canvas).bounding_box()
+        cx, cy = bx["x"] + bx["width"] / 2, bx["y"] + bx["height"] / 2
+        q.mouse.move(cx - 40, cy + 40); q.mouse.down()
+        for i in range(20):
+            q.mouse.move(cx - 40 + i * 4, cy + 40 + math.sin(i / 4) * 30)
+        q.mouse.up(); q.wait_for_timeout(400)
+        q.evaluate("""async () => { for (const n of ['A row to read', 'Another to read', 'A third to read']) {
+          SkriblSavedDrafts.forget(); if (window.SkriblName) SkriblName.set(n); await SkriblSavedDrafts.save(); } }""")
+        q.wait_for_timeout(600)
+        via("openCloudDraftItem")()
+
     return ((("the menu", menu, m), ("New", page("new"), m), ("Settings", page("settings"), m),
              ("Your drafts", via("openCloudDraftItem"), "#savedDraftsSheet"),
              ("Export", via(ids["export"]), "#exportSheet"), ("Report a problem", via(ids["report"]), "#reportSheet"),
@@ -667,10 +777,12 @@ def surfaces(name, ids, q, canvas, btn):
                 ("Tune, with Beat", tune_beat, "#tuneShell")) if name == "Flip" else ())
             + (("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
                ("Name every button", names, ".lc-tags"),
-               ("Your drafts, a row's menu", drafts_menu, "#savedDraftsSheet")))
+               ("Your drafts, a row's menu", drafts_menu, "#savedDraftsSheet"),
+               ("Your drafts, three saved", drafts_saved, "#savedDraftsSheet")))
 
 
 census = {}
+onecard = {}   # (editor, scheme, device, surface): its lists of choices (ONE CARD)
 typeset = {}   # (editor, scheme, device): every drawer's words, cuts and knobs
 with sync_playwright() as p:
     b = p.chromium.launch()
@@ -724,6 +836,11 @@ with sync_playwright() as p:
                               bool(words) and not _s7, "; ".join(_s7[:6]) + (f" (+{len(_s7) - 6} more)" if len(_s7) > 6 else ""))
                     if dev == "phone":
                         census[(name, scheme, label)] = q.evaluate(CENSUS, root)
+                    if label in ONECARD:
+                        try:
+                            onecard[(name, scheme, dev, label)] = read_cards(q, root, opts.get("device_scale_factor", 1))
+                        except Exception as e:
+                            onecard[(name, scheme, dev, label)] = {"stopped": repr(e)[:240]}
                     if label in DRAWERS:
                         tp = q.evaluate(TYPE, root)
                         agg = typeset.setdefault((name, scheme, dev), {"read": 0, "words": [], "cut": [], "alone": [], "knobs": []})
@@ -800,6 +917,72 @@ with sync_playwright() as p:
             c.close()
     b.close()
 
+# A LIST OF CHOICES IS ONE CARD (the owner's "B, equal lines", Nov 14: "Do we
+# need everything to be in a pill?"), on the editors' sheets as on the menu:
+# the menu's own list, Export's formats, Your drafts and As a file, and Ask's
+# People often ask. Each the menu's white card, its lilac edge and its drop,
+# 16 round; its rows on it with nothing of their own behind them (How it works
+# keeps its tint), as wide as the card's inside and touching, the menu's rule
+# between two that show, and each what is painted at its middle; the card's
+# white in every row's margin, off the screen; and a key's ring on a row drawn
+# inside it, its four sides painted. Pad and Flip, phone and desk, light and dark.
+print("\nONE CARD")
+
+
+def _rgb(s):
+    n = [float(x) for x in s[s.index("(") + 1:s.index(")")].replace(",", " ").replace("/", " ").split()][:3]
+    return tuple(round(v) for v in n)
+
+
+def _near(px, want, tol):
+    return all(abs(a - b) <= tol for a, b in zip(px[:3], want))
+
+
+if not ONLY or set(ONECARD) & set(ONLY):
+    bad_card, bad_paint, bad_ring, kinds, rings_read = [], [], [], set(), 0
+    for key, got in sorted(onecard.items()):
+        tag = " ".join(key)
+        if not got or got.get("stopped") or not got["lists"]:
+            bad_card.append(f"{tag}: {got and got.get('stopped') or 'no lists'}")
+            continue
+        tok = got["tok"]
+        for L in got["lists"]:
+            kinds.add(L["kind"])
+            rows = L["rows"]
+            if not (L["bg"] == tok["card"] and L["edge"] == f"1px solid {tok['line']}" and L["r"] == "16px"
+                    and L["foot"] == "16px" and L["drop"] == tok["drop"] and rows
+                    and all((r["tinted"] or r["own"] == "rgba(0, 0, 0, 0)") and r["painted"]
+                            and abs(r["l"] - L["l"]) <= 0.5 and abs(r["r"] - L["r_"]) <= 0.5 for r in rows)
+                    and rows[0]["line"] == "none"
+                    and all(abs(r["gap"]) <= 0.5 and r["line"] == f"1px solid {tok['rule']}" for r in rows[1:])):
+                bad_card.append(f"{tag} {L['kind']}: card {L['bg']} edge {L['edge']} {L['r']}/{L['foot']} drop {L['drop'][:40]};"
+                                f" rows " + "; ".join(f"{r['name']} own {r['own']} gap {r['gap']} line {r['line']} painted {r['painted']}"
+                                                      for r in rows))
+            if not (L["margins"] and all(_near(px, _rgb(tok["card"]), 4) for px in L["margins"])):
+                bad_paint.append(f"{tag} {L['kind']}: {L['margins']} (card {tok['card']})")
+        for i, fr in enumerate(got.get("rings", [])):
+            if fr is None:
+                continue
+            rings_read += 1
+            if not (fr["fv"] and fr["style"] != "none" and len(fr.get("sides", [])) == 4
+                    and all(_near(px, _rgb(fr["ring"]), 40) for px in fr["sides"])):
+                bad_ring.append(f"{tag} list {i}: {fr}")
+    want = len(EDITORS) * 2 * 2 * len([s for s in ONECARD if not ONLY or s in ONLY])
+    check(f"a list of choices on the editors' sheets is ONE CARD, as the menu's own list draws it: the menu's white card,"
+          f" its lilac edge and drop, 16 round; its rows on it with nothing of their own behind them (How it works keeps"
+          f" its tint), as wide as the card's inside and touching, the menu's rule between two that show, each what is"
+          f" painted at its middle: the menu's list, Export's formats, Your drafts and As a file, Ask's People often ask"
+          f" ({len(onecard)} sheets read, Pad and Flip, phone and desk, light and dark)",
+          len(onecard) == want and not bad_card
+          and (bool(ONLY) or kinds == {"menu-list", "export-list", "sdrafts-card", "sdrafts-files", "ask-list"}),
+          "; ".join(bad_card)[:1500] or f"{len(onecard)} of {want} read; lists {sorted(kinds)}")
+    check("and what is painted says the same: the card's own white 4px inside its edge at every row's middle, off the"
+          " screen", len(onecard) == want and not bad_paint, "; ".join(bad_paint)[:1200])
+    check(f"a key's ring on a row in one card is drawn inside the row, so the card's edge never cuts it: its four sides"
+          f" painted in the ring's colour a pixel inside the row ({rings_read} read)",
+          rings_read >= (1 if ONLY else len(onecard)) and not bad_ring, "; ".join(bad_ring)[:1200])
+
+
 # CONSISTENCY, asserted where the answer is already decided: Pad and Flip
 # wear the same sheet and the same cards (one product, two editors: any
 # difference is drift), and every sheet the menu opens is the menu's paper.
@@ -824,13 +1007,15 @@ for scheme in ("light", "dark"):
     # Every pick-one track on the menu's sheets (the Pad | Flip switch, New's
     # shapes, Theme, Tips, Canvas) and Export's options are the menu's white
     # card, the colour of the tiles; and each kind of thing has one corner:
-    # a sheet 22, a card 16, a button or field 12.
+    # a sheet 22, a card 16, a button or field 12. Export's options are one
+    # card since the owner's "B, equal lines" (Nov 14): the card is read
+    # (.export-list), its rows have nothing of their own (ONE CARD, above).
     tile = ((census.get(("Pad", scheme, "the menu")) or {}).get("cards", {}).get(".menu-tile") or {}).get("bg")
     # Post's fields and its checkbox, Tune's round buttons and Hear the
     # restart joined this list with the drawers' census (after #630): they
     # were the page's grey, or a grey fill inside the lilac edge.
     # And the stamp shelf's cells, their × and its way out (with the shelf).
-    CARDLIKE = (".seg", ".export-opt", ".smooth-seg", ".media-tabs", ".photo-fit-group", ".reposition-btn",
+    CARDLIKE = (".seg", ".export-list", ".smooth-seg", ".media-tabs", ".photo-fit-group", ".reposition-btn",
                 ".clear-drawer-btn", ".edge-controls", ".dp-tile", ".dp-panel",
                 ".loop-btn.subtle", ".onion-tint:not(.active)", ".post-input", ".post-check-box",
                 '.stamp-btn:not([aria-pressed="true"])', ".stamp-del", ".stamp-empty-go")
@@ -904,7 +1089,7 @@ for scheme in ("light", "dark"):
           _read >= (1 if ONLY else 36) and not capped, "; ".join(capped[:8]))
     KIND = {".menu-tile": "16px", ".menu-list": "16px", ".sdrafts-this": "16px", ".sdrafts-files": "16px", ".learn-card": "16px",
             ".ask-tour": "16px", ".ask-best-card": "16px", ".ask-list": "16px", ".help-tip": "16px", ".accordion-header": "16px",
-            ".export-opt": "16px", ".post-preview": "16px", ".bk-pic": "16px", ".sdrafts-row": "16px",
+            ".export-list": "16px", ".post-preview": "16px", ".bk-pic": "16px", ".sdrafts-card": "16px",
             ".seg": "12px", ".help-search": "12px", ".ask-go": "12px", ".menu-start": "12px", ".export-nameinput": "12px",
             ".post-input": "12px", ".bk-back": "12px", ".smooth-seg": "12px", ".media-tabs": "12px", ".photo-fit-group": "12px",
             ".reposition-btn": "12px", ".clear-drawer-btn": "12px", ".edge-controls": "12px", ".dp-tile": "16px",

@@ -21,12 +21,13 @@
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="personSheetTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="personSheetTitle">@{{ who.handle }}</h2>
+    {#  One card, and the risky rows a card of their own under it, as a
+        post's ⋯ (the owner's "B, equal lines", Nov 14); no Cancel. #}
+    {% if me and can_mute %}<div class="post-acts">{{ mute_row(who.handle, muted, 'person') }}</div>{% endif %}
     <div class="post-acts">
-      {% if me and can_mute %}{{ mute_row(who.handle, muted, 'person') }}{% endif %}
       <button class="post-act is-danger" type="button" data-safety="report-person">{{ ic.flag() }}<span>Report @{{ who.handle }}</span></button>
       {% if me %}<button class="post-act is-danger" type="button" data-safety="block">{{ ic.block() }}<span>Block @{{ who.handle }}</span></button>{% endif %}
     </div>
-    <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
   </div>
 </div>
 {%- endmacro %}

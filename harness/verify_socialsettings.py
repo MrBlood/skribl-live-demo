@@ -46,13 +46,15 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
  10. THE ☰ ON A PHONE (the quick-patterns mock; the owner's "Yes on
      everything", Nov 13, the map's step 5): at the top left of Home and the
      Gallery on a touch phone, first in the top, painted, 44px every way,
-     named Menu, three strokes in our pen, the last shorter, in the top's ink;
+     named Menu, three strokes in our pen of one length (the owner's "B,
+     equal lines", Nov 14), in the top's ink;
      a desk has none, nor any other page; it opens the site's own sheet, the
      ⋯'s, titled with your name: Settings, Community rules, Privacy, Your
      reports (an admin's alone) and Sign out (a form with the page's token, on
-     the Gallery too), no Help; signed out, titled Blooby, Sign in, Community
-     rules and Privacy; each row opens what it says, the sheet going down as
-     it does; Sign out signs out; Esc, a tap outside and Cancel close it,
+     the Gallery too), its rows one card, no Help; signed out, titled Blooby,
+     Sign in, Community rules and Privacy; each row opens what it says, the
+     sheet going down as it does; Sign out signs out; no Cancel: Esc, a tap
+     outside, its grip and a swipe down close it,
      focus back on the ☰; it rises and goes down read on every frame, and
      under Reduce Motion fades where it rests; every word at 4.5:1, every row
      44px, light and dark.
@@ -61,7 +63,8 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
 SOCIALSETTINGS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
 part and green as built: DECISIONS.md, "Settings: the theme, one choice for
-Blooby, Pad and Flip".
+Blooby, Pad and Flip", and "One card for a list of choices, and the menu's
+equal lines" for the rows of 10 it changed.
 """
 import ast
 import io
@@ -560,18 +563,25 @@ MENU = r"""() => { const b = document.querySelector('[data-site-menu]'); if (!b 
 
 # Its sheet: open or not, what it is (the ⋯'s: .make.post-sheet), its title,
 # its paper, its rows in order (words, where each goes, a form's action,
-# method and token, its height and icon), where focus is, and the page behind.
+# method and token, its height and icon, its own ground, and the room above
+# it), its cards (B, the owner's "B, equal lines", Nov 14: the rows one card),
+# a Cancel if one is painted, where focus is, and the page behind.
 MSHEET = r"""() => { const w = document.getElementById('siteMenu'); if (!w) return null;
   const s = w.querySelector('.make-sheet'), t = w.querySelector('.make-title'), a = document.activeElement, r = s.getBoundingClientRect();
   const btn = document.querySelector('[data-site-menu]'), meta = document.querySelector('meta[name="social-csrf"]');
+  let above = null;
   return { open: !w.hidden && w.classList.contains('is-open'), hidden: w.hidden, sheet: w.matches('.make.post-sheet'),
     role: s.getAttribute('role'), modal: s.getAttribute('aria-modal'), labelled: !!t && s.getAttribute('aria-labelledby') === t.id,
     title: t ? t.textContent.trim() : null, paper: getComputedStyle(s).backgroundColor,
     rows: [...w.querySelectorAll('.post-acts .post-act')].map(e => { const q = e.getBoundingClientRect();
+      const o = e.closest('.post-acts > *').getBoundingClientRect();   // Sign out's row is its form
+      const gap = above ? Math.round((o.top - above.bottom) * 10) / 10 : null; above = o;
       return { words: e.textContent.trim(), href: e.tagName === 'A' ? new URL(e.href).pathname : null,
         form: e.form ? { action: new URL(e.form.action).pathname, method: e.form.method,
                          token: (e.form.querySelector('input[name="csrf"]') || {}).value || '' } : null,
-        h: Math.round(q.height * 100) / 100, icon: !!e.querySelector('svg.ic'), bg: getComputedStyle(e).backgroundColor }; }),
+        h: Math.round(q.height * 100) / 100, icon: !!e.querySelector('svg.ic'), bg: getComputedStyle(e).backgroundColor, gap }; }),
+    cards: [...w.querySelectorAll('.post-acts')].filter(c => c.getClientRects().length).map(c => getComputedStyle(c).backgroundColor),
+    cancel: [...s.querySelectorAll('button, a')].filter(e => e.getClientRects().length && e.textContent.trim() === 'Cancel').length,
     focus: a && s.contains(a) ? a.textContent.trim() : null, onMenu: !!a && a === btn,
     expanded: btn ? btn.getAttribute('aria-expanded') : null,
     inert: ['body > .top', 'body > .nav', '#main'].map(q => document.querySelector(q).hasAttribute('inert')),
@@ -586,6 +596,19 @@ MGLIDE = r"""([how, ms]) => new Promise(res => { const w = document.getElementBy
   (function f() { const r = s.getBoundingClientRect();
     out.push([Math.round(r.top * 10) / 10, +getComputedStyle(s).opacity, w.hidden]);
     if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); })"""
+
+# A finger on the ☰'s sheet: down 60px from its top, moved by each of `dys`
+# in turn, `every` ms apart, and lifted (verify_social's, for Make's).
+MSWIPE = r"""([dys, every]) => new Promise(res => { const s = document.querySelector('#siteMenu .make-sheet'), r = s.getBoundingClientRect();
+  const x = r.left + r.width / 2, y = r.top + 60;
+  const fire = (type, yy) => { const t = new Touch({ identifier: 7, target: s, clientX: x, clientY: yy });
+    const end = type === 'touchend';
+    s.dispatchEvent(new TouchEvent(type, { touches: end ? [] : [t], targetTouches: end ? [] : [t], changedTouches: [t],
+                                           bubbles: true, cancelable: true, view: window })); };
+  fire('touchstart', y);
+  let i = 0;
+  (function step() { if (i < dys.length) { fire('touchmove', y + dys[i++]); setTimeout(step, every); }
+                     else { fire('touchend', y + dys[dys.length - 1]); setTimeout(res, 700); } })(); })"""
 
 
 def glide(frames, rest, start):
@@ -1297,13 +1320,14 @@ with sync_playwright() as p:
                 if not (m and m["painted"] and m["reach"] and m["w"] == 44 and m["h"] == 44 and m["x"] == 6 and m["first"]
                         and m["gap"] == 2 and abs(m["mid"]) <= 0.5 and m["label"] == "Menu" and m["popup"] == "dialog"
                         and m["controls"] == "siteMenu" and m["expanded"] == "false" and m["pen"] and len(m["lengths"]) == 3
-                        and m["lengths"][2] < 0.85 * min(m["lengths"][:2]) and same_colour(m["color"], m["ink"])
+                        and max(m["lengths"]) - min(m["lengths"]) <= 0.5 and same_colour(m["color"], m["ink"])
                         and (m["bell"] is None or same_colour(m["color"], m["bell"])) and m["k"] >= 3):
                     bad.append(f"{k}: {json.dumps(m)}")
             check("on a touch phone Home and the Gallery have the ☰ at the top left, first in the top, the wordmark 2px"
                   " after it: painted where it stands, 44px to a finger every way, its box reaching 10px past the top's"
                   " edge as the mock placed it, its middle on the top's; named Menu, opening a dialog; drawn in our pen,"
-                  " three strokes, the last one shorter; in the top's ink (the bell's), 3:1 or more as a mark; signed in"
+                  " three strokes of one length, within half a unit (the owner's equal lines, Nov 14: the last was"
+                  " shorter); in the top's ink (the bell's), 3:1 or more as a mark; signed in"
                   " and signed out, light and dark", not bad and len(seen) == 8, "; ".join(bad)[:1200] or f"{len(seen)} read")
             print("    the ☰'s strokes and ink:", json.dumps({f"{k[0]} {k[1]} {k[2]}": [m and m["lengths"], m and m["k"]]
                                                           for k, m in list(seen.items())[:2]}))
@@ -1343,13 +1367,17 @@ with sync_playwright() as p:
                         and [[r["words"], r["href"]] for r in s1["rows"]][:3] == want and len(s1["rows"]) == 4
                         and s1["rows"][3]["words"] == "Sign out" and s1["token"]
                         and s1["rows"][3]["form"] == {"action": "/social/signout", "method": "post", "token": s1["token"]}
-                        and all(r["h"] >= 56 and r["icon"] and same_colour(r["bg"], ROWBG["light"]) for r in s1["rows"])
+                        and len(s1["cards"]) == 1 and same_colour(s1["cards"][0], ROWBG["light"])
+                        and all(r["h"] >= 56 and r["icon"] and r["bg"] == "rgba(0, 0, 0, 0)" for r in s1["rows"])
+                        and all(abs(r["gap"]) <= 0.5 for r in s1["rows"][1:])
                         and s1["focus"] == "Settings" and all(s1["inert"]) and s1["expanded"] == "true"):
                     bad.append(f"{path}: {json.dumps(s1)}")
             check("signed in, it opens the site's own sheet, the ⋯'s (Make's sheet in its paper, a modal dialog named by"
                   " its title, your name): Settings, Community rules, Privacy and Sign out (a form posting to the"
-                  " sign-out with the page's own token, the Gallery's too), a row a card 56px tall with its icon, no Help;"
-                  " focus on Settings, the page behind inert, the ☰ marked open; on Home and on the Gallery",
+                  " sign-out with the page's own token, the Gallery's too), each row 56px tall with its icon, no Help;"
+                  " its rows ONE CARD (--row-bg; the owner's \"B, equal lines\", Nov 14: they were a card each), nothing"
+                  " of their own behind them and touching; focus on Settings, the page behind inert, the ☰ marked"
+                  " open; on Home and on the Gallery",
                   not bad and len(sheets) == 2, "; ".join(bad)[:1200])
 
             # (d) an admin's has Your reports; nobody else's
@@ -1449,26 +1477,31 @@ with sync_playwright() as p:
                   all(v == ["/social/signin?out=1", "You’re signed out. See you soon.", {"first": True, "signin": True, "title": "Blooby"}]
                       for v in gone.values()) and len(gone) == 2, json.dumps(gone))
 
-            # (h) Esc, a tap outside, Cancel: closed, focus back on the ☰
-            closed = {}
-            for how in ("Escape", "outside", "Cancel"):
+            # (h) no Cancel (the owner's "B, equal lines", Nov 14), so Esc, a tap
+            # outside, its grip and a swipe down: closed, focus back on the ☰
+            closed, cancels = {}, {}
+            for how in ("Escape", "outside", "grip", "swipe"):
                 ctx, pg = browser_as(b, plain, "phone", "light", theme=None)
                 go(pg, "/social/")
                 press(pg, "[data-site-menu]")
                 pg.wait_for_timeout(700)
+                cancels[how] = pg.evaluate(MSHEET)["cancel"]
                 if how == "Escape":
                     pg.keyboard.press("Escape")
                 elif how == "outside":
                     pg.touchscreen.tap(200, 140)
+                elif how == "grip":
+                    press(pg, "#siteMenu .make-grip")
                 else:
-                    press(pg, "#siteMenu .make-cancel")
+                    pg.evaluate(MSWIPE, [[12, 40, 90, 160, 220], 90])
                 pg.wait_for_timeout(700)
                 s2 = pg.evaluate(MSHEET)
                 closed[how] = s2 and [s2["hidden"], s2["onMenu"], s2["expanded"], any(s2["inert"])]
                 close_ctx(ctx, pg)
-            check("Esc, a tap outside it and Cancel each close it, giving the ☰ its focus back, marked closed, nothing"
-                  " behind it inert", all(v == [True, True, "false", False] for v in closed.values()) and len(closed) == 3,
-                  json.dumps(closed))
+            check("it has no Cancel under its rows, as the Pad's menu has none, and Esc, a tap outside it, its grip"
+                  " and a swipe down each close it, giving the ☰ its focus back, marked closed, nothing behind it inert",
+                  not any(cancels.values()) and all(v == [True, True, "false", False] for v in closed.values())
+                  and len(closed) == 4, f"Cancel {cancels}; {json.dumps(closed)}")
 
             # (i) it rises, read on every frame; under Reduce Motion it fades where it rests
             rises = {}
@@ -1515,9 +1548,9 @@ with sync_playwright() as p:
             low = [f"{k}: {x}" for k, v in looks.items() for x in v["low"]]
             small = [f"{k}: {x}" for k, v in looks.items() for x in v["small"]]
             print("    the ☰'s sheet, the lowest word:", json.dumps({f"{k[0]} {k[1]}": v["lowest"] for k, v in looks.items()}))
-            check("every word on its sheet (the title, every row, Cancel) reads at 4.5:1 or more on what is painted behind"
+            check("every word on its sheet (the title and every row) reads at 4.5:1 or more on what is painted behind"
                   " it, and every row is 44px or more to a finger: light and dark, an admin's and signed out",
-                  all(v["read"] >= 5 for v in looks.values()) and not low and not small and len(looks) == 4,
+                  all(v["read"] >= 4 for v in looks.values()) and not low and not small and len(looks) == 4,
                   f"read {[(k, v['read']) for k, v in looks.items()]}; low {low[:4]}; small {small[:4]}")
         except Exception as exc:  # noqa: BLE001
             stopped(10, exc)
