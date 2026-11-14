@@ -1484,7 +1484,12 @@ with sync_playwright() as p:
                 pg_.wait_for_load_state("load", timeout=10000)
             except Exception:  # noqa: BLE001 -- staying is an answer
                 pass
-            pg_.wait_for_timeout(150)
+            # The page arrives with Skribl's and the site's cross-fade (0.28s,
+            # @view-transition): leave it to finish, as a person does. Going on
+            # within it made Chrome abort the fade and report it as an error on
+            # the page arrived at (main's run after #889: "Transition was
+            # aborted because of invalid state", on /s/<id>).
+            pg_.wait_for_timeout(400)
             u = urllib.parse.urlsplit(pg_.url)
             return u.path + ("#" + u.fragment if u.fragment else "")
 

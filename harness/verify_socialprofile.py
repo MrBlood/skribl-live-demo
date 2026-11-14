@@ -1569,9 +1569,10 @@ with sync_playwright() as p_:
         open_face_sheet(pg)
         GROW = """(ms) => new Promise(res => { const s = document.querySelector('#faceSheet .make-sheet'), out = [];
             const t0 = performance.now(); document.querySelector('#faceSheet [data-face-go=pick]').click();
-            (function f() { out.push(Math.round(s.getBoundingClientRect().height));
+            (function f() { out.push([Math.round(s.getBoundingClientRect().height), performance.now() - t0]);
               if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); })"""
-        grow = pg.evaluate(GROW, 1000)
+        grown = pg.evaluate(GROW, 1000)
+        grow, grow_t = [h for h, _ in grown], [t for _, t in grown]
         try:
             pg.wait_for_function("() => document.querySelectorAll('#faceSheet .face-tile').length > 0", timeout=15000)
         except Exception:
@@ -1582,16 +1583,24 @@ with sync_playwright() as p_:
             style: i ? i.getAttribute('style') : null }; })""")
         gsteps = [z - a for a, z in zip(grow, grow[1:])]
         gtravel = abs(grow[-1] - grow[0]) if grow else 0
+        # JUDGED FAIRLY (main's run after #889 read this red on a busy runner):
+        # a step is judged over the display frames it spans, so a frame the
+        # browser dropped is not read as a jump; and the change must take a
+        # glide's time (150ms or more from its first frame to its last), so a
+        # snap is a snap however the frames fell.
+        _moves = [(a, b, ta, tb) for (a, ta), (b, tb) in zip(zip(grow, grow_t), zip(grow[1:], grow_t[1:])) if b != a]
+        gbig = max((abs(b - a) / max(1.0, round((tb - ta) / (1000 / 60))) for a, b, ta, tb in _moves), default=0)
+        gspan = (_moves[-1][3] - _moves[0][2]) if _moves else 0
         titles = [t["title"] for t in tiles]
         check("Use one you made glides the sheet to its new height (read every frame: one way, never a jump) and lists"
               " their own skribls, newest first, the link-only one too: Pad drawings only, never a Flip, never somebody"
               " else's; each tile is the drawing cut from its own card",
-              grow and gtravel > 40 and len(set(grow)) >= 6 and all(x >= 0 for x in gsteps)
-              and max((abs(x) for x in gsteps), default=0) <= 0.45 * gtravel
+              grow and gtravel > 40 and all(x >= 0 for x in gsteps)
+              and gbig <= 0.45 * gtravel and gspan >= 150
               and titles == [f"Nell's newer {tag}", f"Nell's link-only {tag}", f"Nell's older {tag}"]
               and all(t["src"] and t["src"].endswith("/poster") for t in tiles),
-              f"heights {grow[:1]} to {grow[-1:]} on {len(set(grow))} values, biggest step"
-              f" {max((abs(x) for x in gsteps), default=0)} of {gtravel}; tiles {titles}; flip {flipped}; Juno's {theirs}")
+              f"heights {grow[:1]} to {grow[-1:]} on {len(set(grow))} values over {round(gspan)}ms, biggest step a frame"
+              f" {round(gbig, 1)} of {gtravel}; tiles {titles}; flip {flipped}; Juno's {theirs}")
 
         # PLACE: pick the newest; it starts on its middle square, painted whole.
         pg.click(f"#faceSheet .face-tile:has-text(\"Nell's newer {tag}\")", timeout=5000)

@@ -38093,3 +38093,73 @@ nonce= too now; shown red by a break of its own (a mute that shows "You
 muted Jay" to everybody, so Kip's view of Jay's page changes: 5/6, that row
 alone) and green without it (6/6); then verify_socialmute 67/67 alone. The
 full battery was not run here; main's run after the merge is.
+
+## After v330 -- The map: a post is the one thing people share
+
+The owner, Nov 14, looking at Explore on the phone ("Why does EXPLORE show
+with no stats or hearts? ... The posts should show the same as the post
+everywhere right? And it should not look crazy busy. Kind. And intuitive."),
+then: "I'm starting to think we should do the social site like skribls.net.
+It's a social site already that we were going to drop skribl into as a
+feature, like GIF, add image, add video, poll... we can have the gallery
+which is just the skribls (not post) and library drafts as part of profile?
+We are kind of getting disorganized and random. We can clean this up." To
+the map and its defaults: "Yes on everything."
+
+Explore's card was Skribl's Gallery tile, which keeps every style of its
+host out on purpose (skribl/static/gallerysection.css, "NOTHING LEAKS
+IN"), so the heart, the comments and the drawing's line that Home's card
+grew never reached it.
+The cause underneath: the site had come to treat a post and a drawing outside
+a post as two kinds of thing, in Home, in Explore, in a profile, and in
+likes' and comments' routes.
+
+docs/SOCIAL-SITE.md section 16 is the map, the decisions and the order of
+work. In short: a post is the one thing people share (words and a drawing or
+a Flip); Home is posts, with one calm card; Explore is the Gallery of
+everyone, drawings as drawings, Following or Everyone (the owner, after the
+map: "Also gallery of everyone is a thing, then can select followers,
+everyone, and more filters to come down the road"); a profile is Posts ·
+Gallery · Likes · Drafts; photos, GIFs, video and polls are not now. It
+replaces two earlier choices, said so here so nobody restores them by
+accident: the Nov 11 A ("Home holds every drawing, posts or not") and the
+Nov 13 B ("no follower counts, ever"). The heart moves from the drawing's
+line into the card's row (the line keeps the likes' dots). Section 8's item 9
+stands: our own build, in skribls.net's shape.
+
+The mock: https://claude.ai/artifact/S7171kFpfXxiLUzPLJJYwY (quick-patterns,
+version 2), made on the real pages with test people, light and dark, a
+402px touch phone and a 1280px desk. Every new word read 7.36:1 or more; the
+one lower pair is white on the action purple, 5.33:1, as on every action
+button. Rook's and Pip's empty boxes on the live Explore were drawings a
+test script posted without their still picture (their posters answer
+skribl/static/poster-blank.svg); anything drawn in the Pad or Flip has one.
+
+Pad and Flip: nothing changes in either editor. One option on the in-post
+player that both share, a seam the site turns on: a post's line waits until
+it is played.
+
+## After v330 -- Main red after #889: two instruments that read a busy runner as a fault
+
+Main's run after #889 (Mute) was red on two PostgreSQL shards, each one row
+of a suite the dispatched run on the same tree had passed whole, and the
+SQLite shards too:
+
+- verify_socialposts, "no page errors": Chrome reported "Transition was
+  aborted because of invalid state" on Skribl's own page for a drawing
+  (/s/<id>). Both pages ask for the cross-fade (@view-transition), so nothing
+  was missing: section 12's `follow` waited 150ms after a page arrived and
+  then went on to the next, inside the fade's 0.28s, and Chrome cut the fade
+  short and said so. It waits 400ms now, as a person's next tap would; a real
+  page error is still the row's red.
+- verify_socialprofile, "Use one you made glides the sheet": the heights
+  read [357] to [616], and the rest of the line was cut short in the run's
+  summary (the proxy here refuses the full log). Here it reads 16 heights, the
+  biggest step 62px of 259. The row judged a step as a share of the way with
+  no clock, so a frame a busy runner dropped read as a jump; it judges each
+  step over the display frames it spans now, as Mute's and Following's rows
+  do, and asks that the change take a glide's time (150ms or more), so a snap
+  is a snap however the frames fell. Shown red by the snap itself (profile.js
+  without its glide's class: 7/8, that row alone) and green without it (8/8).
+
+Load, not a defect, both: no product code changed.

@@ -4,6 +4,11 @@
 section 8.** Nothing here is built yet except where it says "have", and phase
 1's first piece, the frame, which section 9 describes.
 
+**The map since Nov 14 is section 16**: a post is the one thing people
+share. Where an earlier section says otherwise (Home holding every drawing,
+what Explore and a profile show, no follower counts), section 16 is the
+decision.
+
 The owner, Nov 10: "we are beginning to build the social media site, so we
 need to take care to keep it straight. This may be the beginning of a social
 media site that will have millions of users, so keep scale in mind and be
@@ -1544,3 +1549,151 @@ no editor's.
 `verify_hostseams.py` and `verify_createpost.py` hold the feed filter's
 `author`. DECISIONS.md ("Mute at /social: quiet everywhere") says what each
 check was shown red by.
+
+---
+
+## 16. The map: a post is the one thing people share
+
+The owner, Nov 14, after Explore's card turned out to be a different card
+from Home's: "I'm starting to think we should do the social site like
+skribls.net. It's a social site already that we were going to drop skribl
+into as a feature, like GIF, add image, add video, poll... we can have the
+gallery which is just the skribls (not post) and library drafts as part of
+profile? We are kind of getting disorganized and random. We can clean this
+up." Then, to the map below and its defaults: "Yes on everything." And
+after it: "Also gallery of everyone is a thing, then can select followers,
+everyone, and more filters to come down the road."
+
+**Why.** The original intent (docs/SKRIBLS-NET.md) was Skribl as a feature
+of a social site: a drawing rides in a post the way a video does, beside the
+photos, video, emoji, GIF and polls skribls.net's composer already has.
+Section 1's three layers still say so. What drifted was the site's side: it
+came to treat a post and a drawing shown outside a post as two kinds of
+thing. Home held both, Explore borrowed Skribl's Gallery (its own card, its
+own initials for faces, no heart and no comments), a profile's Skribls was
+the Gallery too, and likes and comments each had two routes, one for a post
+and one for a drawing outside a post. Two cards on the same site was the
+first thing the owner saw of it.
+
+**The map.**
+
+| Place | What it is |
+|---|---|
+| **A post** | The one thing people share: words, and one thing attached, a drawing or a Flip (words optional). Likes, comments, Activity, mutes and reports are about posts. |
+| **Home** | Posts: Following, or Everyone. |
+| **Explore: the Gallery of everyone** | Drawings and Flips as drawings, each opening its post: Following, or Everyone, with more filters to come. Home's Everyone already shows everyone's posts, so Explore shows the drawings. |
+| **A profile** | Posts · Gallery · Likes · Drafts. **Gallery** is the same Gallery with one person in it: every drawing and Flip they have shared, as drawings, each opening its post. **Likes** and **Drafts** are yours alone, on your own profile; Drafts are the drafts Skribl already keeps on your account (SkriblDraft). |
+| **Make** | One composer, the same from the bar and from Home: words, and Draw or Flip. |
+| **Activity, Settings** | As built. Settings from the ☰ on a phone (and the profile's button), the rail on a desk. |
+
+**The owner's decisions (Nov 14, "Yes on everything").**
+
+1. **Every share is a post** (words optional). Your Gallery collects every
+   drawing you have shared, each opening its post. This replaces the Nov 11
+   A, "Home holds every drawing, posts or not".
+2. **Drawings already shared without a post stay in their author's Gallery**,
+   so nothing is lost: the Gallery shows them, and Home shows posts from
+   then on.
+3. **Photos, GIFs, video and polls: not now.** The composer keeps room for
+   them in the same place a drawing goes. skribls.net has them already. A poll
+   would be the easy first one. Photos and video bring storage that grows
+   with use (a bill: asked first, WORKING-AGREEMENTS "Spending") and a
+   child-safety duty to scan and report; a GIF needs an outside service. Each
+   comes with its own plan and the owner's yes.
+4. **The look, from the quick-patterns mock**
+   (https://claude.ai/artifact/S7171kFpfXxiLUzPLJJYwY, its defaults):
+   - **One calm card for every post** (its B): at rest, who made it, the words,
+     the drawing with its play button saying "drawn in 5 sec" (as Explore's
+     does today), and one row. Press play and the drawing's line (scrubbing,
+     speed, loop, the likes' dots) glides open under it and stays. A post's
+     own page shows the line from the start. Faces are the site's: the
+     empty circle before somebody draws one, never an initial.
+   - **One row under every card** (its B): 💬 count, ♡ count, Share, ⋯, and
+     Open › at the end. The heart moves into the row from the drawing's line
+     (the line keeps the likes' dots, and the hearts still rise from them);
+     the ⋯ moves from the head into the row; the plays sit beside the time,
+     and nothing is said at none.
+   - **A profile's tabs** in the pen's underline, as the bar marks the page
+     you are on (its B), now Posts · Gallery · Likes · Drafts. The Gallery and
+     Drafts tabs are mocked before they are built.
+   - **A ☰ on a phone** at the top left of Home and Explore, opening the
+     site's own sheet: Settings, Community rules, Privacy, Your reports, Sign
+     out. Help joins it when there is a Help page. The profile keeps its
+     Settings button; a desk is unchanged.
+   - **Make stays in the bar.** A floating button would sit over every card's
+     Share.
+   - **You stays your face with the word "You".**
+   - **Counts on every profile** (its A): "3 followers · 2 following", "New
+     here" while nobody follows them yet, a following count only when it is
+     not zero. The lists of who follows whom stay yours alone, opened by the
+     counts on your own page, where they take the place of "Followed by…".
+     This replaces the Nov 13 B, "no counts, ever".
+5. **The Gallery of everyone** (the owner's addition, the same evening):
+   Explore becomes it, with Following | Everyone, and more filters later.
+   Asked, with defaults, before it is built: the bar says "Gallery" (the
+   word the profile's tab uses), with Blooby's icon kept; its tiles, what a
+   tile shows (the post's hearts and comments?) and what a tap does, mocked
+   first, with the profile's Gallery tab.
+
+**What stays.** The three layers (section 1). Section 8's item 9: our own
+build, not a copy of skribls.net; it is skribls.net's shape that is taken.
+Skribl's own pages, its /gallery, and every seam a host uses, so Skribl can
+still stand alone and still drop into skribls.net. Nothing changes in the Pad
+or Flip. On Skribl's side one new option on the in-post player, a seam: a
+post's line can wait until it is played (the site turns it on; Skribl's own
+pages and other hosts stay as they are).
+
+**What goes, as it is built.** Drawings outside a post in Home;
+the likes and comments of a drawing outside a post (`/b/<id>/like`,
+`/b/<id>/comments`), the few there are kept readable, nothing deleted; Home's
+drawing card (`data-kind="s"`). Each goes in the PR that replaces it, with the
+suites that held it.
+
+**The order**, one PR at a time, each finished before the next starts:
+
+1. This map (docs).
+2. The one card and its row, on Home and a post's page.
+3. Every share is a post; Explore becomes the Gallery of everyone,
+   Following | Everyone (its tiles mocked first).
+4. A profile's tabs: Posts · Gallery · Likes · Drafts (the Gallery and
+   Drafts tabs mocked first, with step 3's tiles).
+5. The ☰ on a phone, and the counts.
+6. Likes and comments on posts only; what goes, taken out.
+
+**Notes for step 2, from the session that wrote the map** (read the code
+before trusting them):
+
+- The "drawn in 5 sec" pill already exists: inlineplayer.js builds it on the
+  play button (`is-says`) whenever a box has no line. A line that waits can
+  reuse it at rest, so Skribl's new option is small: the macro's
+  `skribl_inline` gains it beside `line`, the line opens on the first play
+  and stays. inlineplayer.css ships on every page with a player, so its bytes
+  are watched (verify_inline's embed ratchet, verify_player_isolation).
+- This reverses a v322 choice, in the macro's own comment: the line was
+  "always there, so a post is the same height at rest and playing and the
+  feed never jumps". The owner chose B knowing the card grows when played;
+  the room glides open (read on every frame, red on a snap first), and under
+  Reduce Motion it is put there while what it holds can't be seen.
+- The heart is the line's `lead` today (`_post.html`, `heart()`), and
+  likes.js finds its player from the heart with `closest('.post-art')`
+  (`playerOf`): out of the line, it finds the player through its card. The
+  likes' dots stay the line's marks.
+- The ⋯ moves from a card's head into its row; the mute toast "never covers
+  the ⋯ that opened the sheet" (verify_socialmute), and a row sits near the
+  bottom of the screen more often than a head did.
+- A post's own page (`post.html`) differs from a card: the ⋯ is in the top
+  bar on a phone and in the head on a desk, Share and "Make your own" are
+  buttons under the drawing, "Liked by…" sits over them, and the drawing
+  plays by itself (`data-autoplay`). Show the owner that page with the row
+  before merging; it was agreed in words, not in a picture.
+- The suites that hold today's card: verify_sociallikes (the heart on the
+  line), verify_socialposts (the foot, the ⋯ in the head), verify_socialmute
+  and verify_socialsafety (opening the ⋯), verify_socialcomments (the count's
+  link), verify_inline (the player), verify_a11ypages, verify_docs.
+
+**The four.** Simple: one thing to share, one card for it, one Gallery
+(everyone's, the people you follow, or one person's), one place for your
+things. Kind: nothing anybody made is lost, Likes and Drafts stay yours
+alone, nothing covers a button. Playful: the drawing still draws itself in
+every card, and your Gallery is your drawings as drawings. Powerful: Skribl
+drops into skribls.net exactly as it drops into our site.
