@@ -39300,3 +39300,300 @@ Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
 their smoke after the merge); SF and Segoe UI (the strip is a grid of equal
 shares, its words centred by the grid and the pen line placed by the tab's
 share, not by a word's width); the live site.
+
+## After v330 -- Six small yeses: the tile's own ground, whole names, the first visit, Liked by, Make your own, Delete on your own page
+
+The owner's yeses of Nov 14 (Mountain Time, the morning), each to its own
+mock, beside "now": A for the tile ("Your picks": on their phone a tall
+drawing made on the Pad's dark canvas sat on the tile's cream paper with
+cream bars at its sides, and its maker read "Mr.", the first word of "Mr.
+Blood"); the whole name ("Your picks"); B for the first visit ("Your
+picks"); A for "Liked by" ("Your pick, A"; the owner: "It's not really
+necessary to say liked by you because the filled heart"); "Yes, remove it"
+for "Make your own" on a post's page; and a plain "Yes" to #898's question,
+deleting a post from your own page keeps you there. And #898's other
+question answered: a mute does NOT take that person's posts out of your
+Likes. No change: your Likes are your own record of what you did.
+
+WHAT CHANGED.
+
+- THE TILE WEARS ITS DRAWING'S OWN GROUND (`_gallery.html` `plate_ground`,
+  social.css): the box around a drawing whose shape is not the tile's is the
+  colour the drawing is painted on, `--plate-ground` set on the box, and
+  where that is not known the paper it had (`--blooby-paper`). Never
+  cropped: a tall drawing made on the Pad's dark sits whole in its own
+  dark, and a paper drawing looks as it did. Everywhere the tile is: the
+  Gallery of everyone, a profile's Gallery tab, the first visit; and More
+  from on a post's page (its grey, `--draw-wait`, where the ground is not
+  known). Your Drafts' tiles keep the paper: Skribl's list of drafts reads
+  no payload, so their ground is not known.
+- SKRIBL'S DESCRIBE SEAM SAYS THE GROUND (`skribl/describing.py`
+  `describe_posts`; docs/INTEGRATION.md, "The ground a drawing is painted
+  on"): `ground`, the colour the player paints the drawing's first page on
+  (inlineplayer.js: `frames[0]`'s background, else the payload's own), a hex
+  colour, lowercase, six digits (three written out), or None for anything
+  else, so a host sets it as a value of its own CSS and never meets more
+  than a colour. Read by the database at its path in the JSON (SQLite's
+  json_extract, PostgreSQL's #>>) in the same one query; the payload is
+  deferred, as the listing's is. A drawing shown outside a post comes from
+  Skribl's listing, which says no ground: the site's `posts.cards` asks
+  `describe_posts` for those too, in its one read. Every host gets it.
+- A TILE SAYS THE NAME AS WRITTEN, "Mr. Blood" (`gallery.tiles`; it said
+  `display_name.split(" ")[0]`), cut with … only when it doesn't fit, as the
+  tile's CSS already cut a long one; a screen reader hears it whole too
+  ("Gwen Lark: lighthouse at dusk, ...").
+- THE FIRST VISIT, B (`gallery.first_visit`, home.html, social.css "FRESH
+  FROM EVERYONE"): Home signed out keeps its welcome, Blooby drawing his
+  card; under "Fresh from everyone" the six newest tiles of the Gallery of
+  everyone, as /social/explore shows them signed out (posts only: never a
+  drawing shown outside a post, a face or a drawing kept link-only, which
+  are no post), then "See the whole Gallery ›" in the small violet words
+  (`--accent-ink`, 600, 16px), centred, 44px to a finger, to /social/explore.
+  It replaces Skribl's own Gallery section there (every public skribl, a
+  drawing outside a post and drawings by people not on the site among them).
+  With nothing shared yet, the Gallery's own words ("No drawings here yet.
+  Share one in a post, and it shows up here.") and no way to an empty
+  Gallery; without accounts, the same. When the site's posts cannot be read
+  (its chain failed, the database away) the welcome stands alone, as the
+  front page always stood: a failed chain never takes the demo down
+  (verify_socialauth 14); the Gallery rests, as every page of posts does.
+- "LIKED BY" LEAVES THE MAKER OUT (`likes.by_line`, `_likes.html`): on the
+  maker's own post's page it names the others only, "Liked by Juno and 2
+  others", their faces without the maker's; when the maker is the only one,
+  no line at all (the filled heart says it). The sheet it opens still lists
+  everyone, the maker included. Their own like, given or taken back, brings
+  the sheet up to date and leaves the line as it was; the line comes or goes
+  only when somebody else's like came or went meanwhile, its room opening
+  or closing as before.
+- WHERE A LIKE ROW LANDS WITH NO LINE: a like row in Activity opens the post
+  at `#liked`; with no line there (the like it was about gone since, its
+  maker the only one left), the page's heart is `#liked`
+  (`_post.html` heart(landing)), 200px from the top as the line lands
+  (`scroll-margin-top`), and likes.js hands the id between the line and the
+  heart when the line comes or goes, so the page never holds two.
+- NO "MAKE YOUR OWN" ON A POST'S PAGE (post.html; its `.post-actions` rule
+  went from social.css): it was the bar's Make by another name, the same
+  sheet. Make stays in the bar (a phone) and the rail (a desk), on that page
+  as on every other.
+- DELETE ON YOUR OWN PAGE KEEPS YOU THERE (posts.js): Delete post on a card
+  of your own profile (Posts, or Likes where your own post is) folds the
+  post away where it was: it fades, then its room closes and the next card
+  rises into its place, mutes.js's fold on Home with its times and curve;
+  under Reduce Motion it fades, and its room goes once it can't be seen.
+  The page says "Your post is gone, its drawing with it." (Home's note's own
+  words) on its status line at the foot of the tab, where a card's "Link
+  copied." is said too, and a screen reader hears it at once; focus goes to
+  the next card's ⋯ (else the one before, else the tab); the last one gone
+  leaves the tab's own kind words. From a post's own page, and from Home, it
+  lands on Home with its note, as before.
+- WORDS THAT DESCRIBED THE OLD FIRST VISIT, made true: social/__init__.py's
+  Home and muted_authors, posts.py's shown_elsewhere and bloob_page,
+  safety.py's list of where a block reaches, app.py's notes on the feed
+  filter and the card's address; docs/SOCIAL-SITE.md (every card opens its
+  post, a post's own page, "Liked by", Activity's landing, and section 16,
+  "Six small yeses after step 4"); START-HERE's rows for the profile's tabs,
+  a post, the Gallery of everyone (the ground, the name, the first visit)
+  and likes.
+
+JUDGMENT CALLS, said so they read true:
+
+- THE GROUND IS frames[0]'S FIRST, THEN THE PAYLOAD'S: the player's order
+  (inlineplayer.js `under`), not the brief's (the payload's first). The Pad
+  and Flip write `frames[0]` alone, a payload from before frames has only
+  the top level, and where both are there the player paints frames[0]'s, so
+  the tile wears what the drawing shows. An empty frames[0] colour falls to
+  the top level's, as the player's `||` does.
+- EIGHT HEX DIGITS ARE NO GROUND: a see-through ground would show the page
+  through the box; the paper stands in.
+- MORE FROM'S BOX WEARS THE GROUND TOO, as asked, so there a paper drawing
+  now sits in its paper, where it sat in the grey a drawing waits in
+  (`--draw-wait`) with 8px of it round the plate; with a known ground the 8px
+  is the drawing's own colour. Asked below.
+- TWELVE ASKED, SIX SHOWN: the first visit asks the Gallery for twice the
+  six, so a drawing withheld since (no tile) leaves no gap.
+- NO PAGE OF THE SITE HOLDS SKRIBL'S GALLERY SECTION NOW (the first visit's
+  was the last). The rows that read Skribl's cards there moved:
+  verify_socialposts 12's to Skribl's own /gallery given the address the
+  site's pages gave Skribl's cards (`/social/b/__ID__`), put on its root as
+  the page is read, before gallery.js reads it, which is what a host's page
+  sends (verify_hostseams holds the sending); verify_socialauth 5,
+  verify_socialprofile 7 and verify_socialsafety 8 to /gallery as it is,
+  where the site's author resolver names its people and the report sheet is
+  the section's. app.py still says where Skribl's cards open on the site's
+  pages: the seam is every host's, and harmless with no card to ask it.
+- THE HEART LANDS WITHOUT A GLOW: the line glows in the note's tint when a
+  row lands on it; the heart has no glow of its own, and one would be a new
+  look, not mocked. It lands where the line would, and its filled heart
+  says what the row said.
+- DELETE'S WORDS ON THE STATUS LINE, NOT A NOTE: the fold is what you see,
+  and the page's status line says it in Home's own words, a screen reader
+  hearing it at once. A note at the top, as Home's, would push the page down
+  under the finger.
+- THE FOLD IS POSTS.JS'S OWN (twenty lines, mutes.js's times and curve):
+  mutes.js loads only where a mute is possible and keeps its fold to
+  itself; a card's delete is posts.js's.
+
+Pad and Flip: nothing changes in either editor. The describe seam is
+Skribl's, and reads only. Not for Flip: there is nothing editor-side; a
+Flip's tile wears its first page's ground as a drawing's does.
+
+THE CHECKS, each new or changed row shown red by a break of its own in a
+throwaway copy of the tree, with an unbroken copy as the control (green
+every time):
+
+- verify_createpost 11, THE GROUND (three new rows, one changed): each item
+  the listing's own and its ground (it was the listing's own alone); the
+  ground as the player paints it, frames[0]'s, else the payload's own, an
+  empty one falling to the top level's, three digits written out, lowercase
+  (red: the top level's alone read); never anything but a colour, words
+  after one, a rule, a name, eight digits, a number and none all None (red:
+  any string let through); one query selecting no payload, the ground's two
+  paths its only looks inside (red: the payload loaded, as it was).
+- verify_socialposts 13 (three new rows, one changed): THE BOX WEARS THE
+  DRAWING'S OWN GROUND, read off the paint in the middle of the bars beside
+  the plate: in the Gallery a tall drawing on the Pad's dark (#0d0f14) in its
+  dark, a tall paper one's bars and a 4:3's box the paper they had (red: the
+  tile's box back to the paper); on its maker's Gallery tab, a post's tile
+  and one shown outside a post (red: the same; and a drawing shown outside a
+  post not asked its ground); in More from, both kinds (red: More from's box
+  back to the grey; a drawing shown outside a post not asked). The face and
+  name row asks for the name whole, "Gwen Lark", a long one cut with an
+  ellipsis on a phone, and a screen reader's words with it whole (red: the
+  first word).
+- verify_socialposts 14, THE FIRST VISIT (new, four rows; Oda shares eight
+  posts, then four things newer that are no post): the welcome, and the six
+  newest tiles, those /social/explore shows signed out and the database's
+  own six (red: Skribl's own section back; seven tiles); posts only, none of
+  the four, none of Skribl's section (red: the same two); "See the whole
+  Gallery ›", its › hidden from a screen reader, --accent-ink, 600, 16px,
+  centred, 44px, landing on the Gallery from a tap and a click (red:
+  Skribl's section back; the link to Home; 40px tall; a faint ink); every
+  word at 4.5:1, every control 44px, phone and desk, light and dark (red:
+  Skribl's section back; 40px tall; a faint ink).
+- verify_socialposts 3 (new row): no Make your own on a post's page, phone
+  and desk, and the bar's Make on a touch phone and the rail's on a desk
+  opening its sheet there (red: Make your own back; the bar's Make no make
+  button).
+- verify_socialposts 12, MOVED: its rows on the first visit's Skribl cards
+  read the same cards on Skribl's own /gallery given the address the site's
+  pages gave them (the tap map with Home's cards, a finger on the drawing,
+  the name and the ground, Ctrl and the middle button, a drag and a
+  selection, the title a keyboard's link, the ⋯), each card landing where
+  it did (red: gallery.js deaf to the host's address, six rows; a drag or a
+  selection opening the card, the drag's own guard alone having stayed
+  green, as a drag across the card's time selects a word as well, which the
+  selection's guard holds; the card's title no link).
+- verify_socialprofile 18, DELETE FROM YOUR OWN PAGE (new, four rows; Mo's
+  six posts): you stay on your page, never Home or its note, the post and
+  its row gone, the cards around it as they were, the status line saying
+  "Your post is gone, its drawing with it.", focus on the next card's ⋯
+  (red: Delete landing on Home from your page, every row); read on every
+  frame it fades, the next card still while it can be seen, then its room
+  closes over many frames, never in one, the page not scrolling (red: the
+  room put away at once); under Reduce Motion it fades and its room goes in
+  one step once unseen, the last one gone leaving the tab's kind words and
+  focus on the tab (red: gliding under Reduce Motion); what the page says at
+  4.5:1, a touch phone and a desk, light and dark, the desk staying on the
+  page too (red: Delete landing on Home). 7, MOVED to Skribl's own /gallery:
+  a card's name links to the profile (red: no address for a person). 16,
+  RESTATED: the Gallery tab's tiles say "Pia Rowe" (red: the first word).
+- verify_sociallikes 8, RESTATED and new (four rows): the maker's own like
+  leaves the line as it was, the others only, their faces without the
+  maker's, the maker's row in the sheet at once (red: the line naming the
+  maker again; the maker's face among the faces; the sheet without the
+  maker); the maker the only one, no line before or after a reload, nothing
+  moving (red: the line naming the maker); somebody else's like come
+  meanwhile, the maker's tap brings the line, its room opening over many
+  frames, and gone, closing (red: the room put there at once; the line
+  naming the maker). 9, new: with no line to land on, a like row lands on
+  the post's heart, scrolled to and in view (red: the heart no landing; the
+  line naming the maker).
+- verify_socialcomments 12, RESTATED: on a desk the comments sit right under
+  the time-and-plays line, in the same column (they sat under Make your own;
+  red: Make your own back).
+- verify_social 4, RESTATED (the newest under Blooby): "Fresh from
+  everyone", posts only, the drawing the suite posts through Skribl's own
+  API not there, none of Skribl's section, the Gallery's words with nothing
+  shared and no link (red: Skribl's section back; the empty words naming the
+  tick). 9, INVERTED (the empty first visit named the Pad's tick, from
+  Skribl's section): it says what the Gallery says and names no tick (red:
+  the same two).
+- verify_socialauth 5, MOVED to Skribl's own /gallery: a card of Skribl's
+  says who drew it, name and @handle (red: the card naming the handle). 14,
+  AS IT WAS, now also holding the first visit: a site chain that fails
+  leaves `/social/` served, the welcome alone (red: the first visit resting
+  when the site's posts cannot be read).
+- verify_socialsafety 8, MOVED to Skribl's own /gallery: the section's own
+  report sheet offers A child's safety (red: the sheet without it). Its 5
+  and verify_socialmute 6 name the first visit no more (words alone).
+
+FOUND WRONG, AND MENDED. DESCRIBE_POSTS LOADED EVERY PAYLOAD, found while
+adding the ground: its query did not defer the column the listing defers,
+so every page of Home, the Gallery and a profile read each drawing whole,
+its inline photo and music too, and decoded it, to hand back a few numbers;
+its docstring said "no payload is read". It defers it now, the ground its
+only look inside, by the database. Measured here on SQLite, 24 drawings of
+about 3.9 MB each: the two paths read in 31 ms, where loading and decoding
+the payloads took 351 ms. And the first visit, built first as a page of
+posts like the Gallery, rested (503) when the site's tables could not be
+read, where verify_socialauth 14 serves `/social/` (200) after a failed
+chain: found by reading every suite that opens the site's Home before
+running them, mended before the row ran (the welcome stands alone there).
+One instrument of mine, caught by reading before it ran: section 18 first
+read what the page said with the suite's census, which reads the words
+inside its roots and never a root's own, so it would have read nothing; it
+reads each with a reader of its own.
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py), on the tree
+as committed: verify_socialposts 67/67, verify_socialcomments 93/93,
+verify_socialmute 68/68, verify_socialfollow 74/74, verify_socialsafety
+38/38, verify_socialauth 64/64, verify_socialactivity 44/44,
+verify_socialsettings 44/44, verify_social 40/40, verify_createpost 88/88,
+verify_seam 506/506, verify_hostseams 128/128, verify_docs 144/144 (and
+again with this entry in); verify_sociallikes 98/99 beside the others and
+99/99 alone, and verify_socialprofile 77/78 beside them and 78/78 alone,
+each red load, not a defect: rows this change does not touch, with a
+calibration's browser still running beside the three (verify_sociallikes 3,
+a refused like's count still fading 700ms after the answer;
+verify_socialprofile 2, the face's Pad overlay going down with a 307px step
+of its 874). verify_contrast was not run: it reads Skribl's own sheets, the
+Pad and Flip, none of which changed. The full battery was not run; main's
+run after the merge is that.
+
+CONTRAST, measured on the built pages, light and dark, a touch phone and a
+desk: under "Fresh from everyone" every word at 8.04:1 or more light and
+10.25:1 dark, the lowest the way to the Gallery itself (--accent-ink on the
+page; the mock measured the same, 8.04 and 10.25), the names 17.47:1 and
+17.17:1 (verify_socialposts 14); a tile's whole name 17.47:1 and 17.17:1,
+and its ▶'s words over a dark ground 7.08:1, the glass over #0d0f14 as over
+any dark drawing; "Liked by Juno, Rook and Pip" 7.36:1 and 10.49:1, the
+line's own inks as before; "Your post is gone, its drawing with it."
+17.47:1 and 17.17:1, and the tab's kind words after the last 10.49:1 dark
+(verify_socialprofile 18); the first visit's words for nothing shared are
+the Gallery's --ink-2 on the page, read by verify_social 6. No colour or
+token added: the ground is the drawing's own colour, on a box that holds no
+words but the ▶'s on their own glass, and --plate-ground is a value set per
+tile, not a token; every word wears the token its role had (--accent-ink
+for the small violet words, the inks). Photographed beside the mocks, as
+built on a copy of the mock's own database: the tile, the first visit and
+"Liked by" are the mocks' pictures, the Pad's own dark (#0d0f14) where the
+mock painted a stand-in (#0b0d12).
+
+THE FOUR. Simple: a drawing sits in its own colour, a name reads as it is
+written, the first visit shows what the Gallery is and one way to the rest,
+and one Make. Kind: no cream bars round somebody's dark drawing, nobody cut
+to "Mr.", "Liked by" never tells you about yourself, a delete leaves you
+where you were, and nothing jumps. Playful: the first visit is drawings
+first, each one opening its post where it draws itself. Powerful:
+skribls.net gets the ground from describe_posts the same day, and a page of
+any feed reads no payload to describe its drawings.
+
+Asked, for the owner: More from's box wears the drawing's ground now, so a
+paper drawing there sits in its paper rather than in the grey it waited in:
+is that right? And deleting a post from your own page says so on the
+page's status line at the foot of the tab, the post folding away being what
+you see where you are: should it say so nearer the finger?
+
+Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
+their smoke after the merge); SF and Segoe UI (the name is cut by the
+browser's own ellipsis, the link centred by flex); the live site.
