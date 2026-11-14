@@ -361,10 +361,11 @@ def first_visit():
     """HOME FOR NOBODY SIGNED IN, the first visit (the owner's B, Nov 14): the
     welcome, Blooby drawing his card, as it was; under "Fresh from everyone"
     the six newest tiles of the Gallery of everyone, as /explore shows them
-    signed out (posts only: never a drawing shown outside a post, a face or a
-    drawing kept link-only, which are no post), then "See the whole Gallery
-    ›". Twice the six are asked, so a drawing withheld since (no tile) leaves
-    no gap.
+    signed out (every skribl the site's people shared, a drawing shown
+    outside a post among them since Nov 14; never a face, a comment's drawing,
+    one kept link-only or hidden from the Gallery, or one by nobody on the
+    site), then "See the whole Gallery ›". Twice the six are asked, so a
+    drawing withheld since (no tile) leaves no gap.
 
     WHEN THE SITE'S POSTS CANNOT BE READ (its chain failed, the database is
     away) the welcome still stands, without Fresh from everyone (None): it is

@@ -38,8 +38,9 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      somebody not on the site are on nobody's Home (its maker's Following
      and Everyone, a follower's, somebody else's, signed out; each walked
      with Load more, every card a post, signed out read against the
-     database itself), nor in the Gallery, while the drawing keeps its own
-     page and its maker's; the posts shared the same minute are there; a
+     database itself); the drawing is in the Gallery (every skribl, since
+     Nov 14) and keeps its own page and its maker's; the posts shared the
+     same minute are there; a
      cursor from before that names a drawing reads as its time; Load more
      walks the posts alone; a drawing's own page, its ⋯ and its Delete, and
      their guards.
@@ -69,8 +70,10 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      drag, the title a keyboard's link; the ⋯; and Skribl's own /gallery,
      with no address said, as it was.
  13. THE GALLERY OF EVERYONE (Explore; the map's step 3, the Gallery mock's
-     B): posts only, every post once, a Flip's too, never a drawing outside
-     a post, one kept link-only, a face or one by somebody not on the site;
+     B), OF EVERY SKRIBL since the owner's "Yes, your picks" (Nov 14): every
+     post once, a Flip's too, and every drawing the site's people showed
+     outside a post (its tile opening its own page), in one order; never one
+     kept link-only, a face or one by somebody not on the site;
      its tiles two across on a touch phone and three on a desk, each the
      drawing whole in 650 x 486, the box around it the drawing's own ground
      (a tall one on the Pad's dark in its dark, read off the paint, there,
@@ -82,16 +85,19 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      every 4px of it its one link); Following only the people you follow and
      you, Everyone everybody, the pill gliding and the tiles fading, read on
      every frame, the address saying which; Hot plays in the last seven
-     days, most first; a search by the words, the name and the @handle;
-     Load more, by a cursor that names no internal id; every word at 4.5:1
+     days, most first, both kinds in one order; a search by the words, a
+     drawing's title, the name and the @handle; Load more through both, by a
+     cursor that names no internal id; the reads on their indexes; every
+     word at 4.5:1
      (the ▶'s words read off the pixels under them), every control 44px,
      the box 16px: phone and desk, light and dark.
  14. THE FIRST VISIT, B (the owner's "Your picks", Nov 14): Home signed out
      keeps its welcome; under "Fresh from everyone" the six newest tiles of
      the Gallery of everyone (the first six /social/explore shows signed
-     out, read against the database), posts only (never a drawing outside a
-     post, one kept link-only, a face or one by somebody not on the site,
-     each newer than the six), none of Skribl's own Gallery section; then
+     out, read against the database), every skribl (a drawing shown outside
+     a post among them, opening its own page; never one kept link-only, a
+     face or one by somebody not on the site, each newer than the six), none
+     of Skribl's own Gallery section; then
      "See the whole Gallery ›" in the small violet words, 44px, landing on
      the Gallery; every word at 4.5:1, every control 44px, phone and desk,
      light and dark.
@@ -100,8 +106,9 @@ SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
 green as built: DECISIONS.md, "Posts at /social (phase 1, piece 4)",
 "Comments on every drawing" for 10 and 11, "Every card opens its post"
-for 12, "Explore becomes the Gallery of everyone" for 13, and "Six small
-yeses" for 14 and the rows of 3, 12 and 13 it changed.
+for 12, "Explore becomes the Gallery of everyone" for 13, "Six small
+yeses" for 14 and the rows of 3, 12 and 13 it changed, and "The Gallery of
+every skribl" for the rows of 9, 13 and 14 it changed.
 """
 import base64
 import json
@@ -1266,10 +1273,11 @@ with sync_playwright() as p:
               f" {out_walk == oracle9} ({len(out_walk)} of {len(oracle9)}); her Home {st_h}, the drawing on it"
               f" {lone in noor_home}")
 
-        # ...AND NOTHING IS LOST: not in the Gallery of everyone either (posts
-        # only, section 13), while it keeps its own page and its maker's page
-        # (her Gallery tab since the map's step 4, where it is a tile opening
-        # its own page; verify_socialprofile section 16 holds the tab).
+        # ...AND NOTHING IS LOST: in the Gallery of everyone (every skribl
+        # since Nov 14, section 13; until then posts only), a tile opening its
+        # own page, and it keeps its own page and its maker's page (her
+        # Gallery tab since the map's step 4, where it is a tile opening its
+        # own page; verify_socialprofile section 16 holds the tab).
         gal9 = {}
         for name, cl, show in (("signed out", Client(), "everyone"), ("Sora's Everyone", sora.client(), "everyone"),
                                ("Sora's Following", sora.client(), "following")):
@@ -1291,12 +1299,14 @@ with sync_playwright() as p:
             except Exception:  # noqa: BLE001 -- not listed is the row's red
                 listed9[name] = False
             close_ctx(ctx, cpg)
-        in_gal = [k for k, h in gal9.items() if f"/s/{lone}/poster" in h]
+        in_gal = [k for k, h in gal9.items() if f'<a class="gal-tile" href="/social/b/{lone}"' in h
+                  and f"/s/{lone}/poster" in h]
         post_there = [k for k, h in gal9.items() if f'href="/social/p/{p_after}"' in h]
-        check("...nor in the Gallery of everyone (signed out, and a follower's Everyone and Following), where the post"
-              " after it is; and nothing is lost: it keeps its own page (/social/b/<id>), signed in and out, and its"
-              " maker's Gallery holds it, a tile opening that page, signed in and out",
-              made9 and not in_gal and len(post_there) == 3
+        check("...and in the Gallery of everyone (every skribl, since Nov 14: signed out, and a follower's Everyone and"
+              " Following), a tile opening its own page, beside the post after it; and nothing is lost: it keeps its"
+              " own page (/social/b/<id>), signed in and out, and its maker's Gallery holds it, a tile opening that"
+              " page, signed in and out",
+              made9 and len(in_gal) == 3 and len(post_there) == 3
               and all(st_ == 200 and f'data-skribl="{lone}"' in html_ and 'data-kind="s"' in html_
                       for st_, html_ in own9.values())
               and listed9 == {"signed out": True, "Sora": True},
@@ -1417,15 +1427,20 @@ with sync_playwright() as p:
         mc.get("/social/")
         no_token = mc.post_json(f"/social/b/{sid_k}/delete", {}, token=False)[0]
         a_posts = mc.post_json(f"/social/b/{g_skribl}/delete", {})[0]
-        pages = {k: mc.get(f"/social/b/{v}")[0] for k, v in (("unlisted", kept), ("nobody's", nobodys), ("none", "nope0000000"))}
+        pages = {k: c.get(f"/social/b/{v}")[0] for k, v in (("unlisted", kept), ("nobody's", nobodys), ("none", "nope0000000"))}
+        # ITS MAKER'S OWN, kept unlisted (link-only: hidden from the Gallery, the
+        # eye on her Gallery tab, since Nov 14), opens for her alone, as her
+        # Gallery tab shows it to her.
+        pages["unlisted, hers"] = mc.get(f"/social/b/{kept}")[0]
         # One by somebody not on the site has no page here, so since every card
         # opens /social/b/<id> (section 12) it goes on to Skribl's own (a 302).
         check("a drawing's Delete needs the page's token (403), is its author's alone (somebody else's: 404, the"
               " drawing kept), and never takes a post's drawing without the post (404); a drawing's page is a kind"
-              " 404 for one kept unlisted and none, and one by somebody not on the site goes on to Skribl's own page",
+              " 404 for one kept unlisted (to anybody but its maker, whose own it is) and none, and one by somebody"
+              " not on the site goes on to Skribl's own page",
               no_token == 403 and not_mine == 404 and skribl_row(sid_k) is not None
               and a_posts == 404 and skribl_row(g_skribl) is not None and post_row(g_post) is not None
-              and pages == {"unlisted": 404, "nobody's": 302, "none": 404},
+              and pages == {"unlisted": 404, "nobody's": 302, "none": 404, "unlisted, hers": 200},
               f"no token {no_token}; somebody else's {not_mine} (kept {skribl_row(sid_k) is not None});"
               f" a post's drawing {a_posts}; pages {pages}")
 
@@ -2056,13 +2071,16 @@ with sync_playwright() as p:
     # THE GALLERY OF EVERYONE (the map's step 3; the Gallery mock's B and the
     # owner's "Your picks are great", Nov 13): Explore lists the site's own
     # posts as their drawings, each tile one link to its post, Following |
-    # Everyone on top (Home's own pill), New, Hot and a search under it.
+    # Everyone on top (Home's own pill), New, Hot and a search under it; and
+    # since the owner's "Yes, your picks" (Nov 14) every skribl the site's
+    # people shared, a drawing shown outside a post a tile opening its own
+    # page, both kinds in one order.
     # Quin looks (following Gwen alone, muting and blocking nobody); Gwen,
     # Hugo and Ivy share. Every post here says one word nothing else in the
     # suite says (G13), so a search on it is this section's own posts
     # whatever the sections before it made; Everyone and Load more are read
     # against the database itself.
-    if part(13, "the Gallery of everyone: posts as drawings, two across and three, a tap opens its post"):
+    if part(13, "the Gallery of everyone: every skribl as drawings, two across and three, a tap opens its post"):
         from datetime import datetime, timedelta, timezone
         G13 = "gal" + secrets.token_hex(3)
         gwen = someone(b, "galgwen", "Gwen Lark")
@@ -2127,7 +2145,17 @@ with sync_playwright() as p:
         # least), then a 4:3 drawing of 15 seconds, a Flip of three pages, a
         # tall one of four minutes, one on a dark paper of an hour and five
         # minutes, Quin's own and Gwen's newest, all on the first page.
-        fill = [share(ivy, f"{G13} filler {i:02d}", timed(2000 + i, 10 + i)) for i in range(24)]
+        # Among Ivy's, after her eighth: a drawing she shows from the Pad on its
+        # own, outside a post (d13): the 24th newest of the section's own, so
+        # the search's first page ends on it and Load more goes on from a
+        # drawing (since Nov 14 the Gallery is every skribl).
+        fill, d13 = [], None
+        for i in range(24):
+            fill.append(share(ivy, f"{G13} filler {i:02d}", timed(2000 + i, 10 + i)))
+            if i == 7:
+                ivy.pg.goto(BASE + "/social/")
+                _, d13 = ivy.pg.evaluate(PAD, [f"{G13} Ivy's drawing between posts", "public", 135])
+                time.sleep(0.012)
         p_a = share(gwen, f"{G13} lighthouse at dusk", timed(15015, 1))
         p_flip = share(gwen, f"{G13} a flip of three", timed(3000, 2, flip=True))
         p_b = share(hugo, f"{G13} a tall one", timed(240000, 3, size=(531, 944)), size=(531, 944))
@@ -2139,7 +2167,8 @@ with sync_playwright() as p:
                (("a", p_a), ("flip", p_flip), ("b", p_b), ("c", p_c), ("q", p_q), ("g2", p_g2)) if v}
         # NOT POSTS: a drawing Gwen showed in the gallery outside a post (the
         # Pad on its own), one she kept link-only, her face, and one by somebody
-        # not on the site. None of them is ever a tile.
+        # not on the site. Since Nov 14 the first is a tile, opening its own
+        # page (the Gallery is every skribl); the other three never are.
         gwen.pg.goto(BASE + "/social/")
         _, lone13 = gwen.pg.evaluate(PAD, [f"{G13} shown outside a post", "public", 131])
         _, kept13 = gwen.pg.evaluate(PAD, [f"{G13} kept link-only", "unlisted", 132])
@@ -2167,7 +2196,10 @@ with sync_playwright() as p:
         followed = qc.post_json("/social/@galgwen/follow", {"following": True})[0]
         # PLAYS: Gwen's 4:3 played by three this week, Hugo's by two, Ivy's dark
         # one by one this week and by five eight days ago (outside the window).
-        for key, n in (("a", 3), ("b", 2), ("c", 1)):
+        # And Gwen's drawing shown outside a post by two this week, as many as
+        # Hugo's post and newer: Hot ranks both kinds in one order.
+        sid["lone"] = lone13
+        for key, n in (("a", 3), ("b", 2), ("c", 1), ("lone", 2)):
             for _ in range(n):
                 urllib.request.urlopen(urllib.request.Request(BASE + f"/api/skribls/{sid.get(key)}",
                                                               headers={"X-Forwarded-For": address()}), timeout=30).read()
@@ -2184,13 +2216,18 @@ with sync_playwright() as p:
             except ValueError:
                 return st_, None
 
+        HREF13 = {}
+
         def walk(cl, show="everyone", sort="new", q=""):
-            """The Gallery walked to its end with Load more: (posts, their drawings' skribls, page sizes, cursors)."""
+            """The Gallery walked to its end with Load more: (its tiles, a post's by its address and a drawing
+            shown outside a post by its skribl's, their drawings' skribls, page sizes, cursors)."""
             qs = "&".join(x for x in (f"show={show}", f"sort={sort}", "q=" + urllib.parse.quote(q) if q else "") if x)
             posts, sids, sizes, cursors = [], [], [], []
             st_, j = getj(cl, "/social/explore/more?" + qs)
             while isinstance(j, dict):
-                got = re.findall(r'<a class="gal-tile" href="/social/p/([^"]+)"', j.get("html", ""))
+                pairs = re.findall(r'<a class="gal-tile" href="/social/([pb])/([^"]+)"', j.get("html", ""))
+                HREF13.update({x: f"/social/{k}/{x}" for k, x in pairs})
+                got = [x for _, x in pairs]
                 posts += got
                 sids += re.findall(r'class="gal-plate"[^>]*><img src="[^"]*/s/([A-Za-z0-9_-]+)/poster"', j.get("html", ""))
                 sizes.append(len(got))
@@ -2200,29 +2237,49 @@ with sync_playwright() as p:
                 st_, j = getj(cl, "/social/explore/more?" + qs + "&before=" + urllib.parse.quote(j["next"]))
             return posts, sids, sizes, cursors
 
-        oracle = [r[0] for r in db(
-            "select p.public_id from social_posts p join social_people pe on pe.id = p.person_id"
-            " join skribl_posts s on s.public_id = p.skribl_id where p.taken_down_at is null and pe.taken_down_at is null"
-            " and s.visibility in ('public', 'unlisted') order by p.created_at desc, p.public_id desc")]
+        # The database's own Gallery, both kinds in one order (time, a drawing
+        # before the posts of its moment, then the address), each with its
+        # maker's handle: every post not taken down nor hidden, its drawing
+        # still there; every public skribl of the site's people that is no
+        # post's, no comment's and not their face.
+        ORACLE13 = ("select x.id, x.handle from ("
+                    "select p.public_id id, p.created_at at, 'p' k, pe.handle handle from social_posts p"
+                    " join social_people pe on pe.id = p.person_id join skribl_posts s on s.public_id = p.skribl_id"
+                    " where p.taken_down_at is null and pe.taken_down_at is null and p.gallery_hidden_at is null"
+                    " and s.visibility in ('public', 'unlisted')"
+                    " union all select s.public_id, s.created_at, 's', pe.handle from skribl_posts s"
+                    " join social_people pe on pe.public_id = s.user_id where s.visibility = 'public'"
+                    " and pe.taken_down_at is null and s.public_id not in (select skribl_id from social_posts)"
+                    " and s.public_id not in (select skribl_id from social_comments where skribl_id is not null)"
+                    " and (pe.face_id is null or pe.face_id != s.public_id)"
+                    ") x order by x.at desc, x.k desc, x.id desc")
+        oracle_rows = db(ORACLE13)
+        oracle = [r[0] for r in oracle_rows]
+        maker13 = {r[0]: r[1] for r in oracle_rows}
         anon = Client()
         anon.get("/social/explore")
         q_cl = quin.client()
         q_cl.get("/social/explore")
         a_posts, a_sids, a_sizes, a_curs = walk(anon)
         q_posts, q_sids, q_sizes, q_curs = walk(q_cl)
-        not_posts = {lone13, kept13, face13, nobody13}
-        mine13 = [p_g2, p_q, p_c, p_b, p_flip, p_a] + fill[::-1]
-        check("THE GALLERY IS POSTS ONLY: walked to its end (signed out, and signed in) it is every post, once each,"
-              " newest first, a Flip's too, read against the database itself; never a drawing shown outside a post,"
-              " one kept link-only, a face, or one by somebody not on the site",
-              made13 and bool(lone13 and kept13 and face13 and nobody13) and a_posts == oracle and q_posts == oracle
+        not_posts = {kept13, face13, nobody13}
+        mine13 = ([lone13, p_g2, p_q, p_c, p_b, p_flip, p_a] + list(reversed(fill[8:])) + [d13]
+                  + list(reversed(fill[:8])))
+        check("THE GALLERY IS EVERY SKRIBL (the owner's \"I thought gallery was only skribls (pad or flip)?\", Nov 14):"
+              " walked to its end (signed out, and signed in) it is every post and every drawing the site's people"
+              " showed outside a post, once each, newest first in one order, a Flip's too, read against the database"
+              " itself; a post's tile opens its post and a drawing's its own page; never one kept link-only, a face, or"
+              " one by somebody not on the site",
+              made13 and bool(lone13 and d13 and kept13 and face13 and nobody13) and a_posts == oracle and q_posts == oracle
               and all(m in oracle for m in mine13) and [x for x in oracle if x in mine13] == mine13
-              and not (not_posts & set(a_sids)) and not (not_posts & set(q_sids))
+              and HREF13.get(lone13) == f"/social/b/{lone13}" and HREF13.get(d13) == f"/social/b/{d13}"
+              and HREF13.get(p_a) == f"/social/p/{p_a}"
+              and not (not_posts & set(a_sids)) and not (not_posts & set(q_sids)) and {lone13, d13} <= set(a_sids)
               and len(a_sids) == len(a_posts) and set(a_sids) >= {sid.get("a"), sid.get("flip"), sid.get("b")},
               f"made {made13}; signed out {len(a_posts)} of {len(oracle)} (same {a_posts == oracle}), signed in"
-              f" {len(q_posts)} (same {q_posts == oracle}); not posts among them"
-              f" {sorted(x for x in not_posts & (set(a_sids) | set(q_sids)) if x)}")
-        new_cur = re.compile(r"\d{16}\.p[A-Za-z0-9_-]{11}")
+              f" {len(q_posts)} (same {q_posts == oracle}); the drawings {HREF13.get(lone13)}, {HREF13.get(d13)};"
+              f" never these, among them {sorted(x for x in not_posts & (set(a_sids) | set(q_sids)) if x)}")
+        new_cur = re.compile(r"\d{16}\.[ps][A-Za-z0-9_-]{11}")
 
         def raw_of(cur, hot=False):
             try:
@@ -2230,46 +2287,58 @@ with sync_playwright() as p:
                 return base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)).decode()
             except Exception:  # noqa: BLE001 -- unreadable is the row's red
                 return ""
+        g_tiles, _, g_sizes, g_curs = walk(q_cl, "everyone", "new", G13)
         check("Load more walks it a page of 24 at a time, every page whole but the last, by a cursor that names a"
-              " time and a post's public id, never an internal id",
+              " time and a post's or a drawing's public id, never an internal id; THROUGH BOTH KINDS: a page that ends on"
+              " a drawing shown outside a post goes on from it, the posts of its moment and older next, none twice and"
+              " none missed",
               len(a_sizes) >= 2 and all(n == 24 for n in a_sizes[:-1]) and 0 < a_sizes[-1] <= 24
-              and all(new_cur.fullmatch(raw_of(c)) for c in a_curs),
-              f"pages {a_sizes}; cursors {[raw_of(c) for c in a_curs[:2]]}")
+              and all(new_cur.fullmatch(raw_of(c)) for c in a_curs)
+              and g_sizes == [24, len(mine13) - 24] and len(g_curs) == 1 and raw_of(g_curs[0]).endswith(".s" + str(d13))
+              and g_tiles == mine13,
+              f"pages {a_sizes}; cursors {[raw_of(c) for c in a_curs[:2]]}; the section's own {g_sizes}, its cursor"
+              f" {[raw_of(c) for c in g_curs]} (Ivy's drawing {d13}), in order {g_tiles == mine13}")
 
         # FOLLOWING | EVERYONE: Following is the people Quin follows (Gwen) and
         # Quin; Everyone everybody (here, the section's own, by its word).
         f_posts, _, _, _ = walk(q_cl, "following")
         e_posts, _, _, _ = walk(q_cl, "everyone", q=G13)
-        gwen_quin = [x for x in oracle if x in (p_a, p_flip, p_q, p_g2)
-                     or (post_row(x) or ("", "", ""))[2] in ("galgwen", "galquin")]
+        gwen_quin = [x for x in oracle if maker13.get(x) in ("galgwen", "galquin")]
         check("Following holds only the people you follow and your own (Quin follows Gwen: hers and Quin's, newest"
-              " first); Everyone holds everybody's",
-              followed == 200 and f_posts == gwen_quin and set(f_posts) >= {p_a, p_flip, p_q, p_g2}
+              " first, her drawing shown outside a post among them); Everyone holds everybody's",
+              followed == 200 and f_posts == gwen_quin and set(f_posts) >= {p_a, p_flip, p_q, p_g2, lone13}
               and e_posts == mine13,
               f"follow {followed}; following {len(f_posts)} (want {len(gwen_quin)}), Hugo's or Ivy's among them"
               f" {[x for x in f_posts if x in (p_b, p_c)]}; everyone {len(e_posts)} of {len(mine13)}")
 
         # HOT: plays in the last seven days, most first, newest first among equals.
         h_posts, _, h_sizes, h_curs = walk(q_cl, "everyone", "hot", G13)
-        zero = [x for x in mine13 if x not in (p_a, p_b, p_c)]
-        hot_cur = re.compile(r"\d+\|\d{16}\|[A-Za-z0-9_-]{11}\|\d{16}")
-        check("Hot is plays in the last seven days, most first: three this week, then two, then one (five eight days"
-              " ago count for nothing), then the rest newest first; Load more keeps its order, by a cursor that holds"
-              " the moment it was ranked at and names no internal id",
-              h_posts == [p_a, p_b, p_c] + zero and len(h_sizes) >= 2
-              and all(c.startswith("h.") and hot_cur.fullmatch(raw_of(c, hot=True)) for c in h_curs),
-              f"first {[{p_a: 'a3', p_b: 'b2', p_c: 'c1'}.get(x, x) for x in h_posts[:5]]}; pages {h_sizes};"
+        zero = [x for x in mine13 if x not in (p_a, lone13, p_b, p_c)]
+        hot_cur = re.compile(r"\d+\|\d{16}\|[ps][A-Za-z0-9_-]{11}\|\d{16}")
+        check("Hot is plays in the last seven days, most first, both kinds in one order: three this week, then two (the"
+              " drawing shown outside a post, newer, before the post), then one (five eight days ago count for"
+              " nothing), then the rest newest first; Load more keeps its order, by a cursor that holds the moment it"
+              " was ranked at and names no internal id, and goes on from a drawing too",
+              h_posts == [p_a, lone13, p_b, p_c] + zero and h_sizes == [24, len(mine13) - 24]
+              and all(c.startswith("h.") and hot_cur.fullmatch(raw_of(c, hot=True)) for c in h_curs)
+              and len(h_curs) == 1 and f"|s{d13}|" in raw_of(h_curs[0], hot=True),
+              f"first {[{p_a: 'a3', lone13: 'lone2', p_b: 'b2', p_c: 'c1'}.get(x, x) for x in h_posts[:5]]}; pages {h_sizes};"
               f" cursors {[raw_of(c, hot=True) for c in h_curs[:1]]}")
 
-        # SEARCH: the post's words, the maker's name and @handle; nothing else.
+        # SEARCH: the post's words, a drawing's title, the maker's name and
+        # @handle; nothing else.
         found = {q: walk(q_cl, "everyone", "new", q)[0] for q in
-                 ("lighthouse at dusk", "Hugo Bell", "galivy", "@galivy", "WILHELMINACONSTANCE", "zz" + G13)}
-        ivy_all = [x for x in mine13 if x in fill or x == p_c]
-        check("a search finds a post by its words, and its maker by name or @handle (any case), and nothing else;"
-              " a search that finds nothing finds nothing",
+                 ("lighthouse at dusk", "Hugo Bell", "galivy", "@galivy", "WILHELMINACONSTANCE", "zz" + G13,
+                  f"{G13} shown outside", "drawing between POSTS", f"{G13} kept link-only")}
+        ivy_all = [x for x in mine13 if x in fill or x in (p_c, d13)]
+        check("a search finds a post by its words, a drawing shown outside a post by its title (any case), and its maker"
+              " by name or @handle (any case), and nothing else; never a drawing kept link-only; a search that finds"
+              " nothing finds nothing",
               found["lighthouse at dusk"] == [p_a] and found["Hugo Bell"] == [p_b]
               and found["galivy"] == ivy_all and found["@galivy"] == ivy_all
-              and found["WILHELMINACONSTANCE"] == ivy_all and found["zz" + G13] == [],
+              and found["WILHELMINACONSTANCE"] == ivy_all and found["zz" + G13] == []
+              and found[f"{G13} shown outside"] == [lone13] and found["drawing between POSTS"] == [d13]
+              and found[f"{G13} kept link-only"] == [],
               json.dumps({k: len(v) for k, v in found.items()}) + f"; Ivy's {len(ivy_all)}")
 
         # THE TILES, ON A TOUCH PHONE AND A DESK (light): two across and three,
@@ -2509,7 +2578,7 @@ with sync_playwright() as p:
                     focus = cpg.evaluate("() => { const a = document.activeElement; return a ? [a.className, a.getAttribute('href')] : null; }")
                     cpg.keyboard.press("Enter")
                     try:
-                        cpg.wait_for_url(lambda u: "/social/p/" in u, timeout=5000)
+                        cpg.wait_for_url(lambda u: "/social/p/" in u or "/social/b/" in u, timeout=5000)
                     except Exception:  # noqa: BLE001 -- staying is the row's red
                         pass
                     taps[("desk", "keyboard")] = (focus, urllib.parse.urlsplit(cpg.url).path)
@@ -2523,8 +2592,8 @@ with sync_playwright() as p:
               all(taps.get((s, k)) == f"/social/p/{p_a}" for s in ("phone", "desk")
                   for k in ("drawing", "play", "face", "name", "counts", "corner", "between"))
               and all(m and set(m) == {"own|a.gal-tile"} for m in tmaps.values()) and len(tmaps) == 2
-              and taps.get(("desk", "keyboard")) == (["gal-tile", f"/social/p/{first_tile[0]}"],
-                                                     f"/social/p/{first_tile[0]}") if first_tile else False,
+              and taps.get(("desk", "keyboard")) == (["gal-tile", HREF13.get(first_tile[0])],
+                                                     HREF13.get(first_tile[0])) if first_tile else False,
               f"taps { {f'{s} {k}': v for (s, k), v in taps.items() if v != f'/social/p/{p_a}'} }; maps {tmaps}")
 
         # THE PILL: a tap on Following, read on every frame (light and dark, and
@@ -2534,7 +2603,7 @@ with sync_playwright() as p:
         # opens on it.
         GFRAMES = r"""([ms]) => { window.__gf = []; const seg = document.querySelector('[data-gal-show]'), sl = seg.querySelector('.fo-slider');
           const swap = document.querySelector('[data-gal-swap]'), grid = document.querySelector('[data-gal-grid]'), t0 = performance.now();
-          const sig = () => [...grid.children].slice(0, 4).map(e => e.getAttribute('data-post')).join('|') + '#' + grid.children.length;
+          const sig = () => [...grid.children].slice(0, 4).map(e => e.getAttribute('data-post') || e.getAttribute('data-drawing')).join('|') + '#' + grid.children.length;
           const step = () => { const r = sl.getBoundingClientRect();
             window.__gf.push({ t: Math.round(performance.now() - t0), x: r.left, op: +getComputedStyle(swap).opacity, sig: sig(), y: window.scrollY });
             if (performance.now() - t0 < ms) requestAnimationFrame(step); };
@@ -2578,11 +2647,11 @@ with sync_playwright() as p:
                 cpg.wait_for_timeout(1900)
                 got = judge(cpg.evaluate("() => window.__gf"), reduced)
                 got["url"] = urllib.parse.urlsplit(cpg.url).query
-                got["shown"] = cpg.evaluate("() => [...document.querySelectorAll('.gal-tile')].map(a => a.dataset.post)")[:30]
+                got["shown"] = cpg.evaluate("() => [...document.querySelectorAll('.gal-tile')].map(a => a.dataset.post || a.dataset.drawing)")[:30]
                 cpg.reload()
                 cpg.wait_for_timeout(700)
                 got["after reload"] = cpg.evaluate("""() => [(document.querySelector('[data-gal-show] button[aria-pressed="true"]') || {}).textContent,
-                  [...document.querySelectorAll('.gal-tile')].map(a => a.dataset.post).slice(0, 30)]""")
+                  [...document.querySelectorAll('.gal-tile')].map(a => a.dataset.post || a.dataset.drawing).slice(0, 30)]""")
             except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
                 got = {"ok": False, "stopped": str(exc).splitlines()[0][:160]}
             sw[tag] = got
@@ -2601,10 +2670,16 @@ with sync_playwright() as p:
               json.dumps({k: v for k, v in sw.get("light reduced", {}).items() if k not in ("shown", "after reload")}))
 
         # THE READS ON THEIR INDEXES (docs/SOCIAL-SITE.md section 3, item 8:
-        # every new query's plan checked in its suite): New reads the posts by
-        # their time's own index, newest first, with no sort of its own; Hot
+        # every new query's plan checked in its suite): the Gallery is two
+        # reads, each a page long, merged (since Nov 14, every skribl). New
+        # reads the posts by their time's own index, newest first, with no sort
+        # of its own; and the drawings shown outside a post by Skribl's index
+        # for the gallery's (visibility, time), through shared_skribls, newest
+        # first, sorting only those of one moment by their address, each asked
+        # whether a post or a comment holds it on that table's own index. Hot
         # reads the week's plays on the views' time (Skribl's index, through
-        # recent_plays), and then orders by them, as the gallery's own Hot does.
+        # recent_plays) for both, and then orders by them, as the gallery's own
+        # Hot does.
         PROBE = r"""
 import json
 from sqlalchemy import event
@@ -2612,7 +2687,7 @@ from app import app, db
 from social import gallery
 seen = []
 def keep(conn, cursor, statement, params, context, executemany):
-    if "FROM social_posts" in statement and statement.lstrip().upper().startswith("SELECT"):
+    if statement.lstrip().upper().startswith("SELECT") and ("FROM social_posts" in statement or "skribl_shared" in statement):
         seen.append((statement, params))
 out = {}
 with app.test_request_context("/social/explore"):
@@ -2621,17 +2696,26 @@ with app.test_request_context("/social/explore"):
         event.listen(db.engine, "before_cursor_execute", keep)
         gallery.page(None, "everyone", sort, "")
         event.remove(db.engine, "before_cursor_execute", keep)
-        out[sort] = [r[3] for st, pr in seen[:1]
-                     for r in db.session.connection().exec_driver_sql("EXPLAIN QUERY PLAN " + st, pr).fetchall()]
+        for kind, pick in (("posts", lambda s: "skribl_shared" not in s), ("drawings", lambda s: "skribl_shared" in s)):
+            out[sort + " " + kind] = [r[3] for st, pr in [x for x in seen if pick(x[0])][:1]
+                                      for r in db.session.connection().exec_driver_sql("EXPLAIN QUERY PLAN " + st, pr).fetchall()]
 print("PLAN " + json.dumps(out))
 """
         pr = subprocess.run([sys.executable, "-c", PROBE], cwd=ROOT, env=ENV, capture_output=True, text=True, timeout=120)
         plans = next((json.loads(ln[5:]) for ln in pr.stdout.splitlines() if ln.startswith("PLAN ")), {})
+        nd = plans.get("new drawings", [])
         check("the Gallery's reads are on their indexes: New the posts by their time's own index, newest first, with no"
-              " sort of its own; Hot the week's plays by the views' time, both ends of the week (through recent_plays)",
-              any("ix_social_posts_created" in x for x in plans.get("new", []))
-              and not any("TEMP B-TREE" in x for x in plans.get("new", []))
-              and any("ix_skribl_views_created (created_at>? AND created_at<?)" in x for x in plans.get("hot", [])),
+              " sort of its own, and the drawings shown outside a post by Skribl's (visibility, time) index (through"
+              " shared_skribls), sorting no more than those of one moment, a post's and a comment's asked on their own"
+              " indexes; Hot the week's plays by the views' time, both ends of the week (through recent_plays), for both",
+              any("ix_social_posts_created" in x for x in plans.get("new posts", []))
+              and not any("TEMP B-TREE" in x for x in plans.get("new posts", []))
+              and any("ix_skribl_posts_visibility_created (visibility=?)" in x for x in nd)
+              and not any("TEMP B-TREE FOR ORDER BY" in x for x in nd)
+              and any("ix_social_posts_skribl_id (skribl_id=?)" in x for x in nd)
+              and any("ix_social_comments_skribl_id (skribl_id=?)" in x for x in nd)
+              and all(any("ix_skribl_views_created (created_at>? AND created_at<?)" in x for x in plans.get(k, []))
+                      for k in ("hot posts", "hot drawings")),
               f"{plans or pr.stderr[-300:]}")
 
         # EVERY WORD AT 4.5:1, EVERY CONTROL 44px, THE BOX 16px (the suite's own
@@ -2686,13 +2770,14 @@ print("PLAN " + json.dumps(out))
     # ------------------------------------------------------------------ 14
     # THE FIRST VISIT, B (the owner's "Your picks", Nov 14): Home signed out
     # keeps its welcome; under "Fresh from everyone" the six newest tiles of
-    # the Gallery of everyone, as /social/explore shows them signed out (posts
-    # only), then "See the whole Gallery ›" (the small violet words, 44px) to
-    # it: where Skribl's own Gallery section was, every public skribl, a
-    # drawing outside a post among them. Oda shares eight posts; then, newer
+    # the Gallery of everyone, as /social/explore shows them signed out, then
+    # "See the whole Gallery ›" (the small violet words, 44px) to it: where
+    # Skribl's own Gallery section was, every public skribl, drawings by
+    # people not on the site among them. Oda shares eight posts; then, newer
     # than all of them, she shows a drawing in the gallery outside a post,
     # keeps one link-only and draws her face, and somebody not on the site
-    # shows one: none of them is a post, and none is on the first visit.
+    # shows one: since the Gallery is every skribl (Nov 14) the first is the
+    # newest tile, opening its own page, and the other three never are.
     if part(14, "the first visit: the welcome, then the Gallery's six newest and See the whole Gallery ›"):
         F14 = "fv" + secrets.token_hex(3)
         oda = someone(b, "fvoda", "Oda Wren")
@@ -2724,7 +2809,8 @@ print("PLAN " + json.dumps(out))
           const hid = a ? [...a.querySelectorAll('[aria-hidden="true"]')].map(e => e.textContent).join('') : null;
           return { welcome: !!document.querySelector('.hello #helloCard') && !!document.querySelector('.hello .cta [data-make]'),
                    heading: h ? h.textContent.trim() : null,
-                   posts: tiles.map(t => t.getAttribute('data-post')), drawings: tiles.filter(t => !t.hasAttribute('data-post')).length,
+                   tiles: tiles.map(t => t.getAttribute('data-post') || t.getAttribute('data-drawing')),
+                   drawings: tiles.filter(t => !t.hasAttribute('data-post')).map(t => t.getAttribute('href')),
                    srcs: tiles.map(t => (t.querySelector('.gal-plate img') || { getAttribute: () => '' }).getAttribute('src')),
                    inOrder: !!(h && a && tiles.length && (h.compareDocumentPosition(tiles[0]) & 4) && (tiles[tiles.length - 1].compareDocumentPosition(a) & 4)),
                    link: a ? { words: a.textContent.replace(hid, '').trim(), hidden: hid, href: a.getAttribute('href'),
@@ -2743,29 +2829,41 @@ print("PLAN " + json.dumps(out))
         anon14 = Client()
         st_e, text_e = anon14._req("GET", "/social/explore/more?show=everyone&sort=new")
         try:
-            explore6 = re.findall(r'<a class="gal-tile" href="/social/p/([^"]+)"', json.loads(text_e).get("html", ""))[:6]
+            explore6 = [x for _, x in re.findall(r'<a class="gal-tile" href="/social/([pb])/([^"]+)"',
+                                                  json.loads(text_e).get("html", ""))][:6]
         except ValueError:
             explore6 = []
+        # The database's own six newest, both kinds in one order: posts, and
+        # public skribls of the site's people that are no post's, comment's or
+        # face (section 13's oracle).
         oracle14 = [r_[0] for r_ in db(
-            "select p.public_id from social_posts p join social_people pe on pe.id = p.person_id"
-            " join skribl_posts s on s.public_id = p.skribl_id where p.taken_down_at is null and pe.taken_down_at is null"
-            " and s.visibility in ('public', 'unlisted') order by p.created_at desc, p.public_id desc limit 6")]
+            "select x.id from (select p.public_id id, p.created_at at, 'p' k from social_posts p"
+            " join social_people pe on pe.id = p.person_id join skribl_posts s on s.public_id = p.skribl_id"
+            " where p.taken_down_at is null and pe.taken_down_at is null and p.gallery_hidden_at is null"
+            " and s.visibility in ('public', 'unlisted')"
+            " union all select s.public_id, s.created_at, 's' from skribl_posts s join social_people pe"
+            " on pe.public_id = s.user_id where s.visibility = 'public' and pe.taken_down_at is null"
+            " and s.public_id not in (select skribl_id from social_posts)"
+            " and s.public_id not in (select skribl_id from social_comments where skribl_id is not null)"
+            " and (pe.face_id is null or pe.face_id != s.public_id)) x order by x.at desc, x.k desc, x.id desc limit 6")]
         fv_p = firsts.get("phone") or {}
         shown14 = {re.sub(r"^.*/s/([A-Za-z0-9_-]+)/poster.*$", r"\1", x or "") for v in firsts.values() for x in v.get("srcs", [])}
+        want14 = [lone14] + list(reversed(made14))[:5]
         check("THE FIRST VISIT keeps its welcome (Blooby's card, Make a skribl), and under \"Fresh from everyone\" the six"
               " newest tiles of the Gallery of everyone: the first six /social/explore shows signed out, read against the"
               " database itself, phone and desk; six at most though more are shared",
               made_ok and all(v.get("welcome") and v.get("heading") == "Fresh from everyone" and v.get("inOrder")
-                              and v.get("posts") == explore6 == oracle14 for v in firsts.values())
-              and len(explore6) == 6 and explore6 == list(reversed(made14))[:6],
-              f"made {made_ok}; first visit {fv_p.get('posts')}; explore {explore6}; database {oracle14};"
-              f" Oda's newest {list(reversed(made14))[:6]}")
-        check("...posts only: never a drawing shown outside a post, one kept link-only, a face, or one by somebody not on"
-              " the site, though each is newer than the six; and nothing of Skribl's own Gallery section on the page",
-              made_ok and all(v.get("drawings") == 0 and not v.get("skribls") for v in firsts.values())
-              and not (not14 & shown14) and len(shown14) == 6,
-              f"tiles not a post's {[v.get('drawings') for v in firsts.values()]}; Skribl's section"
-              f" {[v.get('skribls') for v in firsts.values()]}; not posts shown {sorted(not14 & shown14)}")
+                              and v.get("tiles") == explore6 == oracle14 for v in firsts.values())
+              and len(explore6) == 6 and explore6 == want14,
+              f"made {made_ok}; first visit {fv_p.get('tiles')}; explore {explore6}; database {oracle14};"
+              f" want {want14}")
+        check("...every skribl (since Nov 14): the drawing Oda showed outside a post, the newest, a tile opening its own"
+              " page; never one kept link-only, a face, or one by somebody not on the site, though each is newer than the"
+              " six; and nothing of Skribl's own Gallery section on the page",
+              made_ok and all(v.get("drawings") == [f"/social/b/{lone14}"] and not v.get("skribls") for v in firsts.values())
+              and not ((not14 - {lone14}) & shown14) and lone14 in shown14 and len(shown14) == 6,
+              f"tiles of drawings outside a post {[v.get('drawings') for v in firsts.values()]}; Skribl's section"
+              f" {[v.get('skribls') for v in firsts.values()]}; never-shown ones shown {sorted((not14 - {lone14}) & shown14)}")
         lk14 = fv_p.get("link") or {}
         went = {}
         for screen in ("phone", "desk"):

@@ -528,7 +528,8 @@ def create_app():
     # WHO SEES WHOM: a block on the site (both ways, quietly), and a person an
     # admin took down, reach Skribl's own pages too, through the two seams
     # docs/INTEGRATION.md gives a host for a block list: the listings
-    # (Skribl's own /gallery, a profile's Gallery tab's and More from's drawings) leave out the
+    # (Skribl's own /gallery, and More from's drawings; the site's Gallery reads
+    # its people's through shared_skribls by its own rules since Nov 14) leave out the
     # people the site hides from the viewer, and a drawing's link page, card,
     # picture and payload are not theirs (visible_to). Anybody else is
     # decided as before: the policy says nothing (None) and Skribl's rules stand.

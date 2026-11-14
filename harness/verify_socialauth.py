@@ -37,7 +37,8 @@ keys and user verification on, as Face ID or Windows Hello would be.
   13. THE COOKIE: HttpOnly, SameSite=Lax, path /, Secure over HTTPS, 30 days,
       signed.
   14. THE SITE'S OWN MIGRATION CHAIN: empty to head on SQLite with its own
-      version table, Skribl's chain untouched in either order, no drift;
+      version table (its posts with the eye's column since Nov 14), Skribl's
+      chain untouched in either order, no drift;
       gunicorn (as Render starts it) runs it, and one that fails is logged
       and the demo serves on.
   15. THE NEW SCREENS: every word at 4.5:1 on what is painted behind it,
@@ -1388,6 +1389,14 @@ with sync_playwright() as p_:
               and stamps == {"social_alembic_version": [heads]},
               f"exit {r1.returncode} {r1.stderr.strip().splitlines()[-1:] if r1.returncode else ''}; tables {sorted(names)};"
               f" missing indexes {sorted(want_idx - idx)}; stamps {stamps}")
+        # THE EYE (the owner's "Yes, the eye in view", Nov 14): a post's drawing
+        # hidden from the Gallery by the site's own flag on the post.
+        con = sqlite3.connect(d1)
+        post_cols = {r[1]: (r[2], r[3]) for r in con.execute("pragma table_info(social_posts)")}
+        con.close()
+        check("...its posts with the eye's column: social_posts.gallery_hidden_at, a time, nullable (a post's drawing"
+              " hidden from the Gallery by its maker; none, in it)",
+              post_cols.get("gallery_hidden_at") == ("DATETIME", 0), f"{post_cols}")
         d2 = os.path.join(TMP, "chain-both-a.db")
         a1, a2 = alembic(d2, "upgrade", "head", ini=False), alembic(d2, "upgrade", "head")
         d3 = os.path.join(TMP, "chain-both-b.db")

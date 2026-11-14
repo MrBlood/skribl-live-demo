@@ -1604,7 +1604,7 @@ first thing the owner saw of it.
 |---|---|
 | **A post** | The one thing people share: words, and one thing attached, a drawing or a Flip (words optional). Likes, comments, Activity, mutes and reports are about posts. |
 | **Home** | Posts: Following, or Everyone. |
-| **Explore: the Gallery of everyone** | Drawings and Flips as drawings, each opening its post: Following, or Everyone, with more filters to come. Home's Everyone already shows everyone's posts, so Explore shows the drawings. |
+| **Explore: the Gallery of everyone** | Drawings and Flips as drawings, each opening its post: Following, or Everyone, with more filters to come. Home's Everyone already shows everyone's posts, so Explore shows the drawings. Since Nov 14 every drawing and Flip the site's people shared, in a post or not (below, "The Gallery is every skribl"). |
 | **A profile** | Posts · Gallery · Likes · Drafts. **Gallery** is the same Gallery with one person in it: every drawing and Flip they have shared, as drawings, each opening its post. **Likes** and **Drafts** are yours alone, on your own profile; Drafts are the drafts Skribl already keeps on your account (SkriblDraft). |
 | **Make** | One composer, the same from the bar and from Home: words, and Draw or Flip. |
 | **Activity, Settings** | As built. Settings from the ☰ on a phone (and the profile's button), the rail on a desk. |
@@ -1713,9 +1713,10 @@ your own posts").
 only"): Home's feed, Following and Everyone, signed in and out, holds posts
 alone (`posts.feed_page`; one person's, More from, keeps their drawings). A
 drawing shown in the gallery outside a post, the Pad's own or anything
-shared before posts, is on no Home and not in the Gallery of everyone; it
-keeps its own page (`/social/b/<id>`), its maker's page (their Skribls then,
-their Gallery since step 4) and More from, so nothing is lost. The first
+shared before posts, is on no Home and was not in the Gallery of everyone
+(it is since Nov 14: "The Gallery is every skribl", below); it keeps its own
+page (`/social/b/<id>`), its maker's page (their Skribls then, their Gallery
+since step 4) and More from, so nothing is lost. The first
 visit is as it was: Skribl's own Gallery section, every public skribl (until
 the small yeses after step 4, below). Next is step 4.
 
@@ -1764,7 +1765,8 @@ known; Skribl's `describe_posts` says it (`ground`, a hex colour or nothing:
 docs/INTEGRATION.md), in the Gallery, a profile's Gallery tab and More from.
 A TILE SAYS THE NAME AS WRITTEN ("Mr. Blood"), cut with … only when it does
 not fit. THE FIRST VISIT (Home signed out) keeps its welcome, and under
-"Fresh from everyone" the Gallery of everyone's six newest, posts only, then
+"Fresh from everyone" the Gallery of everyone's six newest (posts only then;
+every skribl since, below), then
 "See the whole Gallery ›", where Skribl's own Gallery section was; with
 nothing shared, the Gallery's own words. "LIKED BY" LEAVES THE MAKER OUT
 (above, section 12). NO "MAKE YOUR OWN" ON A POST'S PAGE: Make stays in the
@@ -1773,6 +1775,43 @@ post folding away where it was; from a post's own page it still lands on
 Home with its note. And the answer to step 4's question: a mute does not
 take that person's posts out of your Likes, which are your own record of
 what you did.
+
+**The Gallery is every skribl, and the eye** (the owner, Nov 14; DECISIONS,
+"The Gallery of every skribl"). To the Gallery as built, posts only: "I
+thought gallery was only skribls (pad or flip)?", then "Yes, your picks".
+This changes the map's word for the Gallery, and for the Gallery only:
+Home stays posts. THE GALLERY OF EVERYONE (Following and Everyone, New and
+Hot, a search), THE FIRST VISIT'S SIX and A PROFILE'S GALLERY hold every
+Pad drawing and Flip the site's people shared, in a post or not: a post's
+drawing opens its post, one shown outside a post its own page
+(`/social/b/<id>`), with its length, its maker's face and whole name, and its
+hearts and comments when there are some. Never a face, a comment's drawing,
+one kept link-only, or one by somebody not on the site (Skribl's own /gallery
+keeps those). New and Hot hold both kinds in one order, Load more walks both
+by one cursor, and the search reads a post's words, a drawing's title, and
+the maker's name and @handle: two reads a page long, the site's posts and
+the rest through Skribl's new seam `shared_skribls()` (docs/INTEGRATION.md,
+"Your people's drawings beside your own posts"), merged in one order.
+THE EYE, on your own Gallery tab alone ("Yes, the eye in view"; "The stage
+is too much to show, but there should be a gallery toggle in profile
+library"): each of your tiles wears a small eye at its top right; one tap
+hides the drawing from the Gallery (the eye crossed, "Hidden", the drawing
+faded, the site's toast "Hidden from the Gallery" with Undo), tapped again it
+is back. A post's drawing by the site's own flag on the post
+(`social_posts.gallery_hidden_at`): the post stays on Home, in your Posts and
+everywhere a post is. One shown outside a post by its visibility in Skribl,
+public ("In the gallery") or link-only, as the Library's own switch changes
+it; your link-only ones are on your own Gallery tab, hidden, and their page is
+yours alone. Nobody else sees the eye, in the page or its source. AND A POST
+DELETED FROM YOUR OWN PAGE says so in the same toast, near the finger ("Yes",
+the answer to the six small yeses' question): "Your post is gone, its drawing
+with it.", no Undo, a delete is final. The toast never covers a button
+someone is pressing fast: where an eye, or the next card's ⋯, would be under
+it, it rises just above them.
+
+    /social/p/<id>/gallery          your post's drawing in the Gallery, or not
+                                    ({"gallery": true|false}, JSON)
+    /social/b/<skribl_id>/gallery   your drawing shown outside a post, the same
 
 **The four.** Simple: one thing to share, one card for it, one Gallery
 (everyone's, the people you follow, or one person's), one place for your

@@ -361,6 +361,45 @@ never comes into your list. It reads no payload, runs nothing until your
 query does, and reading it counts no play (`verify_hostseams.py`, "What is
 played most"; `verify_seam.py` holds the source).
 
+**Your people's drawings beside your own posts** (Nov 14: the Skribl site's
+Gallery holds every drawing its people shared, in a post or not, in one
+order; the owner: "I thought gallery was only skribls (pad or flip)?").
+`skribl.shared_skribls(author=None, author_prefix=None, link_only=False)`
+hands back a subquery of the skribls people shared, one row each:
+`skribl_id` (its public id), `user_id`, `title`, `created_at` and
+`visibility`. The public ones only: what an author put in the gallery, never
+unlisted, private or withheld. Narrow it to your people by the prefix their
+ids share (`author_prefix`, the site's are `site:`) or to one person
+(`author`), join it to your own people, and read it beside your own posts:
+the skribls a post of yours holds are in it too, so leave those out by your
+own rows and your list shows each once, as the post. Anything else you
+posted for your people (a profile picture, a reply's drawing) leaves out the
+same way.
+
+```python
+shared = skribl.shared_skribls(author_prefix="site:")
+drawings = (sa.select(shared.c.skribl_id, shared.c.created_at, Person)
+            .join(Person, Person.public_id == shared.c.user_id)
+            .where(~sa.exists().where(Post.skribl_id == shared.c.skribl_id))
+            .order_by(shared.c.created_at.desc(), shared.c.skribl_id.desc()).limit(25))
+```
+
+Read a page of your posts and a page of these in the same order and merge
+them by time, or `union_all` the two: either way one order, paged by your
+own cursor, and your Hot is `recent_plays()` joined to both. `title` is
+there to search by. `link_only=True`, with `author`, adds that author's
+link-only (unlisted) ones, for a page that is theirs alone, where they
+choose what is in the gallery, as Skribl's own listing shows an author
+everything they own; without `author` it raises `ValueError`, so nobody's
+link-only skribls are ever listed to everybody. Their visibility changes as
+the Library's switch changes it: `set_post_visibility(id, "public" or
+"unlisted", author_id=...)` (below, "Taking one back"). It says nothing of
+who may see a drawing beyond that: your own rules (blocks, mutes, takedowns)
+decide what is shown, and `describe_posts`, for the ones you show, applies
+your visibility policy. No payload is read; it runs nothing until your query
+does, on the posts' own indexes (`verify_hostseams.py`, "What people
+shared"; `verify_seam.py` holds the source).
+
 **A post's own page can start it** (after v330: on the Skribl site, opening a
 post plays its drawing). `SkriblInline.mount(box)` returns the box's player,
 the one already mounted if it has one, and `player.play()` starts it, at the

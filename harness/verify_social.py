@@ -32,10 +32,11 @@ what it promises, through the demo's own server:
      Reduce Motion it does not move, opening or closing.
   4. THE FIRST VISIT: Blooby's card plays in Skribl's real player, ink
      appearing over time; under Reduce Motion it rests, finished; and under
-     it "Fresh from everyone", the Gallery of everyone's newest (posts only,
-     the owner's B, Nov 14: a drawing posted through Skribl's API is no post
-     and not there; none of Skribl's own Gallery section; with nothing
-     shared, the Gallery's own words). Its tiles are verify_socialposts' 14.
+     it "Fresh from everyone", the Gallery of everyone's newest (the owner's
+     B, Nov 14: every skribl the site's people shared, so a drawing posted
+     signed out through Skribl's API, by nobody on the site, is not there;
+     none of Skribl's own Gallery section; with nothing shared, the
+     Gallery's own words). Its tiles are verify_socialposts' 14.
   5. EXPLORE IS THE GALLERY OF EVERYONE (the map's step 3): the site's own
      page, its head saying Gallery, New | Hot and the search box (16px),
      signed out no Following | Everyone (Home has none), and none of
@@ -876,10 +877,12 @@ with sync_playwright() as p:
               f"ink painted {inks}; rose on {rises} pictures" if inks
               else ("Pillow is not here (harness/requirements.txt)" if Image is None else "no card in the player to watch"))
         # UNDER IT, FRESH FROM EVERYONE (the owner's B, Nov 14): the Gallery of
-        # everyone's newest, posts only, where Skribl's own Gallery section was
-        # (every public skribl). This suite shares no post, and the drawing it
-        # just posted through Skribl's own API is no post: so the Gallery's own
-        # words for nothing there yet, and the drawing nowhere on the page.
+        # everyone's newest, every skribl the site's people shared (since the
+        # owner's "Yes, your picks", Nov 14), where Skribl's own Gallery section
+        # was (every public skribl, anybody's). This suite shares nothing as
+        # one of the site's people, and the drawing it just posted through
+        # Skribl's own API signed out is nobody's on the site: so the Gallery's
+        # own words for nothing there yet, and the drawing nowhere on the page.
         pg.wait_for_timeout(600)
         under = pg.evaluate("""(id) => { const h = document.querySelector('main .sec'), f = document.querySelector('main .fresh');
             const none = f && f.querySelector('.feed-none');
@@ -889,9 +892,10 @@ with sync_playwright() as p:
                      link: !!document.querySelector('.fresh-more'), drawing: document.documentElement.innerHTML.includes(id),
                      skribls: !!document.getElementById('skriblGallery') || document.querySelectorAll('[data-skribl-gallery]').length > 0
                               || [...document.querySelectorAll('link[rel=stylesheet]')].some(l => /gallerysection[.]css/.test(l.href)) }; }""", newest)
-        check("under it, \"Fresh from everyone\": the Gallery of everyone's newest, posts only, so the drawing just posted"
-              " through Skribl's own API (no post) is not there; none of Skribl's own Gallery section; with no post"
-              " shared yet, the Gallery's own words and no way to an empty Gallery",
+        check("under it, \"Fresh from everyone\": the Gallery of everyone's newest, every skribl the site's people shared,"
+              " so the drawing just posted signed out through Skribl's own API (nobody's on the site) is not there; none"
+              " of Skribl's own Gallery section; with nothing shared yet, the Gallery's own words and no way to an"
+              " empty Gallery",
               bool(newest) and under["heading"] == "Fresh from everyone" and under["fresh"] and under["below"]
               and not under["skribls"] and not under["drawing"] and under["tiles"] == 0 and not under["link"]
               and under["none"] == "No drawings here yet. Share one in a post, and it shows up here.", json.dumps(under))
@@ -1108,9 +1112,10 @@ with sync_playwright() as p:
         # empty state named the Pad's Post sheet's tick ("Show in the public
         # gallery") and the Library (the macro's door='app'; verify_standin's
         # 12 holds a host's). The first visit is the Gallery of everyone's
-        # newest now, posts only, every post's drawing in it ticked or not: its
-        # words for nothing there are the Gallery's own, and name no tick. Read
-        # from what the server sends.
+        # newest now, every post's drawing in it ticked or not (and, since the
+        # owner's "Yes, your picks", Nov 14, every drawing the site's people
+        # showed outside a post): its words for nothing there are the Gallery's
+        # own, and name no tick. Read from what the server sends.
         import html as _html
 
         def _fetch(url):
