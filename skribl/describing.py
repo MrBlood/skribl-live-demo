@@ -11,6 +11,14 @@ describe_posts() hands them over by public id: for each, the listing's own
 item (SkriblPost.feed_dict()), so a host's feed and Skribl's listing can
 never disagree about a drawing.
 
+AND THE GROUND IT IS DRAWN ON (Nov 14, for the Skribl site's tiles: the
+owner's phone showed a tall drawing made on the Pad's dark canvas in a tile of
+cream paper, cream bars at its sides): each item says the drawing's own
+ground, `ground`, the colour its first page is painted on as the player
+paints it (inlineplayer.js: frames[0]'s background, else the payload's own),
+so a host can lay the box around a drawing in it. A hex colour or nothing,
+never anything a page would read as more than a colour.
+
 AND WHAT IS PLAYED MOST (Nov 14, for the Skribl site's Gallery, Hot): the
 gallery's Hot is plays counted in the last seven days, from Skribl's own
 record of them; recent_plays() hands a host that count as a subquery to join
@@ -19,6 +27,7 @@ own rules, paged by its own cursor.
 
 Reads only, on the host's session: it flushes nothing and commits nothing.
 """
+import re
 from datetime import datetime, timedelta, timezone
 
 import sqlalchemy as sa
@@ -29,12 +38,41 @@ from .models import SkriblPost, SkriblView, apply_feed_filter, normalise_user_id
 #: The most ids one call reads, in one query: a page of a feed, with room.
 MAX_DESCRIBE = 200
 
+#: A ground a host may lay a box in: a hex colour, three or six digits, as the
+#: editors' swatches and colour picker write one (#0d0f14, the Pad's dark).
+_GROUND = re.compile(r"#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})")
+
+
+def _ground(raw):
+    """A drawing's ground as `describe_posts` hands it: "#rrggbb", lowercase,
+    or None for anything else (none written, a number, a name, a gradient,
+    words after the colour). A page lays it in as a value of its own CSS, so
+    nothing but a colour ever gets through."""
+    m = _GROUND.fullmatch(raw) if isinstance(raw, str) else None
+    if not m:
+        return None
+    h = m.group(1).lower()
+    return "#" + (h if len(h) == 6 else "".join(c * 2 for c in h))
+
 
 def describe_posts(public_ids, *, viewer_id=None):
     """{public_id: item} for the skribls in `public_ids` that `viewer_id` may
     see, the listing's own item for each (id, title, caption, kind, pages,
-    canvas_w, canvas_h, line, views, user_id, visibility, created_at); no
-    payload is read.
+    canvas_w, canvas_h, line, views, user_id, visibility, created_at) and its
+    `ground`: the colour the drawing is painted on, "#rrggbb", or None.
+
+    ground      as the player paints a drawing's first page (inlineplayer.js:
+                frames[0]'s background colour, else the payload's own, the
+                way a payload from before frames carries it), validated: a
+                hex colour, lowercase, six digits (a three-digit one written
+                out), and None for anything else, so a host can set it as a
+                value of its own CSS (a tile's box, around a drawing whose
+                shape is not the box's) and never meet anything but a colour.
+
+    NO PAYLOAD CROSSES. The payload is the multi-megabyte column the listing
+    defers; it is deferred here too, and the ground is read by the database
+    where it is, at its path in the JSON (SQLite's json_extract,
+    PostgreSQL's #>>), in the same one query.
 
     viewer_id   the person looking, as the host hands Skribl its current
                 user id, or None for nobody. The rule is the one every read
@@ -49,8 +87,13 @@ def describe_posts(public_ids, *, viewer_id=None):
     ids = [i for i in dict.fromkeys(public_ids or ()) if isinstance(i, str) and i][:MAX_DESCRIBE]
     if not ids:
         return {}
-    rows = session().query(SkriblPost).filter(SkriblPost.public_id.in_(ids)).all()
-    return {p.public_id: p.feed_dict() for p in rows if p.visible_to(viewer_id)}
+    pj = SkriblPost.payload_json
+    # frames[0]'s, else the top level's; an empty one is none, as the player's ||.
+    ground = sa.func.coalesce(sa.func.nullif(pj[("frames", 0, "background", "color")].as_string(), ""),
+                              pj[("background", "color")].as_string())
+    rows = (session().query(SkriblPost, ground).options(sa.orm.defer(SkriblPost.payload_json))
+            .filter(SkriblPost.public_id.in_(ids)).all())
+    return {p.public_id: dict(p.feed_dict(), ground=_ground(g)) for p, g in rows if p.visible_to(viewer_id)}
 
 
 #: The most one call to list_public_posts returns: a page of a feed, with room.

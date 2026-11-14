@@ -271,10 +271,10 @@ def person_page(person, viewer, before=None, limit=PAGE):
 
 def cards(entries, viewer):
     """What each card shows: the post (a drawing shown outside a post is a
-    post whose words are its title), its author, and its drawing's size, line and plays
-    as Skribl describes them for `viewer` (None where it cannot be had:
-    deleted or withheld since); how many comments; where it goes, and its
-    Delete."""
+    post whose words are its title), its author, and its drawing's size, line,
+    plays and ground as Skribl describes them for `viewer` (None where it
+    cannot be had: deleted or withheld since); how many comments; where it
+    goes, and its Delete."""
     from skribl import describe_posts
     from .comments import counts
     from .likes import stats
@@ -282,7 +282,10 @@ def cards(entries, viewer):
     entries = [e if isinstance(e, dict) else _entry(*e) for e in entries]
     # WHOM THIS VIEWER MUTED (mutes): their ⋯ says Unmute. Read once a request.
     muted = muted_ids(viewer)
-    drawings = describe_posts([e["post"].skribl_id for e in entries if e["kind"] == "p"],
+    # A drawing shown outside a post is asked too, in the same one read: the
+    # listing it came from says no ground (the payload's), and a tile lays
+    # its box in it as a post's does (_gallery.html plate_ground).
+    drawings = describe_posts([e["post"].skribl_id if e["kind"] == "p" else e["sk"]["id"] for e in entries],
                               viewer_id=viewer.public_id if viewer else None)
     # HOW MANY COMMENTS each card says (phase 2; a drawing's too, since every
     # drawing has comments): what its page will show this viewer, so a block
@@ -302,7 +305,7 @@ def cards(entries, viewer):
             url = url_for("social.post_page", public_id=p.public_id)
             gone = url_for("social.post_delete", public_id=p.public_id)
         else:
-            sk = e["sk"]
+            sk = dict(e["sk"], ground=(drawings.get(e["sk"]["id"]) or {}).get("ground"))
             p = _Shown(public_id="b-" + sk["id"], words=_title_words(sk.get("title")), skribl_id=sk["id"],
                        created_at=e["at"])
             url = url_for("social.bloob_page", skribl_id=sk["id"])
@@ -372,8 +375,9 @@ def bloob(skribl_id, viewer):
 
 def shown_elsewhere(skribl_id, viewer, skribl_blueprint="skribl"):
     """Skribl's own page for a drawing a gallery shows `viewer` that is
-    nobody's on the site (made in Skribl's own Pad, say: the first visit lists every
-    public skribl), or None. The site has no page for it, so its card opens
+    nobody's on the site (made in Skribl's own Pad, say: Skribl's own /gallery
+    lists every public skribl, as the site's first visit did until Nov 14), or
+    None. The site has no page for it, so its card opens
     the one it has. Public to them as Skribl describes it (the host's
     visibility policy applied), and its author not one of the site's people,
     whose drawings are bloob()'s alone."""
@@ -500,8 +504,9 @@ def register(bp, skribl_blueprint="skribl"):
         """A drawing one of the site's people showed in the gallery outside a
         post, on a page of its own: a post's page without words, its comments
         and all. EVERY CARD OPENS HERE (the owner's "I thought on card?", Nov
-        13): the first visit's newest open /b/<id> (app.py,
-        skribl.set_card_url), and so does a profile's Gallery tile for a
+        13): Skribl's Gallery cards open /b/<id> where a page of the site
+        holds them (app.py, skribl.set_card_url; the first visit's did until
+        Nov 14, none does now), and so does a profile's Gallery tile for a
         drawing shown outside a post (the map's step 4), so one address
         serves every drawing a gallery can show. A post's drawing goes to its post, for
         anybody who may see the post (comments.on_post, the post's own page's

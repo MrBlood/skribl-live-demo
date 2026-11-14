@@ -18,7 +18,7 @@ authenticator for the site's people.
      drawing's page; the blocker's Home says so; the blocker finds the
      profile saying so, with Unblock; the one blocked meets nobody; and a
      follow between them ends, both ways, and cannot begin again (follows).
-  5. AND ON SKRIBL'S OWN PAGES: its listing (/gallery's, the first visit's),
+  5. AND ON SKRIBL'S OWN PAGES: its listing (/gallery's),
      a profile's skribls, a drawing's link page, its payload and its card;
      anybody else, and the author, as before. (The site's own Gallery of
      everyone, Explore since the map's step 3, leaves a blocked person out in
@@ -426,12 +426,13 @@ def pad(who, title, vis="public", seed=0, card=False):
 
 def skribl_report(b, public_id, reason, note=None):
     """A report sent the way a signed-out visitor sends one from a Gallery
-    tile of Skribl's (the first visit's, a profile's skribls) or a drawing's
+    card of Skribl's (its own /gallery's: the site's first visit held them
+    until Nov 14, a profile's skribls until the map's step 4) or a drawing's
     link page: through Skribl's own report route, into Skribl's queue (not
     the site's). Its HTTP status."""
     ctx, pg = browser_as(b, None)
     try:
-        pg.goto(BASE + "/social/")
+        pg.goto(BASE + "/gallery")
         pg.wait_for_timeout(500)
         return pg.evaluate("""async ([id, reason, note]) => { await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
           const tok = decodeURIComponent((document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '');
@@ -793,7 +794,7 @@ with sync_playwright() as p:
         n_list = [i["id"] for i in (api(npg, "/api/skribls?limit=100")[1] or {}).get("items", [])]
         n_page = status(npg, f"/s/{ben_d}")
         close_ctx(nctx, npg)
-        check("on Skribl's own pages too: its listing (/gallery's, the first visit's) and a profile's skribls leave out the other's drawings, both"
+        check("on Skribl's own pages too: its listing (/gallery's) and a profile's skribls leave out the other's drawings, both"
               " ways, in the listing's own query (the feed filter: Skribl never has to drop and refill a page); their link"
               " page and payload are not there for them (404) and their card is the blank canvas; the author still has"
               " their own, card and all",
@@ -912,8 +913,11 @@ with sync_playwright() as p:
         joy = someone(b, "joy", "Joy Lindqvist")
         st, d1 = pad(joy, "Section 8, reported for spam", "public", 81)
         st2, d2 = pad(joy, "Section 8, reported for a child's safety", "public", 82)
+        # Skribl's Gallery section, its report sheet among its parts: on its
+        # own /gallery since the site's first visit became the Gallery's six
+        # newest (Nov 14), the last page of the site that held it.
         nctx, npg = browser_as(b, None)
-        npg.goto(BASE + "/social/")
+        npg.goto(BASE + "/gallery")
         npg.wait_for_timeout(1200)
         gal = npg.evaluate(REASONS, "#reportSheet")
         rep = npg.evaluate("""async ([a, b2]) => { await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
@@ -927,7 +931,7 @@ with sync_playwright() as p:
         lines = [ln for ln in q.stdout.splitlines() if ln.startswith("  ")]
         order = [ln.split()[0] for ln in lines if ln.strip().split()[0] in (d1, d2)]
         law = [ln for ln in lines if "CHILD'S SAFETY" in ln]
-        check("the Gallery section's own report sheet (Skribl's, on the first visit) offers A child's safety among its reasons; its route takes it; and"
+        check("the Gallery section's own report sheet (Skribl's, on its /gallery) offers A child's safety among its reasons; its route takes it; and"
               " the operator's queue lists a child's safety first, before a drawing reported more often, with a word"
               " about the law",
               ["child_safety", "A child's safety"] in gal and rep == [202, 202, 202] and q.returncode == 0

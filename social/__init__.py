@@ -11,8 +11,10 @@ the left of a desk, and three things to do there:
 
     /social/            Home. For now the first visit, for everyone: Blooby
                         draws his card, "Drawings that draw themselves", Make a
-                        skribl and Look around, and the newest public skribls
-                        under it.
+                        skribl and Look around, and under it the Gallery of
+                        everyone's six newest (since Nov 14, gallery.py; the
+                        newest public skribls, Skribl's own section, until
+                        then).
     /social/explore     Explore, the Gallery of everyone (since the map's step
                         3, gallery.py): the site's own posts as their
                         drawings, Following | Everyone, New and Hot, a search.
@@ -151,7 +153,8 @@ def hidden_authors(viewer_id):
 def muted_authors(viewer_id):
     """For the host's feed filter (docs/SOCIAL-SITE.md "Built: mutes"): the
     public ids of everybody `viewer_id` muted, which a listing of
-    everybody's leaves out (the first visit's gallery, Skribl's own /gallery) and a listing
+    everybody's leaves out (Skribl's own /gallery, as the site's first visit
+    did while it held Skribl's section, until Nov 14) and a listing
     of one person's own keeps (their page's Gallery, More from): what comes to you goes
     quiet, and what you go to stays. Never for the visibility policy: a mute
     hides no page. Empty where the site is not running."""
@@ -282,13 +285,15 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
     def home():
         """The site's Home. Signed in (piece 4): "Say something, then draw
         it...", then everyone's posts, newest first. Otherwise the first visit:
-        Blooby's card above the newest public skribls."""
+        Blooby's card above the Gallery's six newest (gallery.first_visit).
+        Without accounts there are no posts: the first visit says so."""
         if site is not None:
-            from . import posts
+            from . import gallery, posts
             page = posts.home_page(skribl_blueprint)
             if page is not None:
                 return page
-        return render_template("social/home.html", here="home")
+            return gallery.first_visit()
+        return render_template("social/home.html", here="home", fresh=[])
 
     @bp.get("/explore")
     def explore():

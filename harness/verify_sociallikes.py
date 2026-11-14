@@ -39,17 +39,21 @@ authenticator for the site's people.
      its focus back; Sign in comes back to the same page, and the heart waits,
      nothing liked for them; a drawing's page too.
   8. "LIKED BY…", THE MAKER'S ALONE: the line's words for one, two, three
-     and more, newest first, "you" first; the newest three faces; nobody else
-     is shown who; the sheet (newest first, face, name, @handle, when, the
-     moment where one was kept, "Only you can see who liked it."), a row to
-     their page; the maker's own like says so at once, the line's room
-     opening and closing.
+     and more, newest first; the newest three faces; nobody else is shown
+     who; the sheet (newest first, face, name, @handle, when, the moment
+     where one was kept, "Only you can see who liked it."), a row to their
+     page. THE LINE LEAVES THE MAKER OUT (the owner's A, Nov 14): their own
+     like changes no word and no face, and is in the sheet at once; when they
+     are the only one, no line at all, and nothing moves; the line's room
+     opening and closing when somebody else's like comes or goes, read on
+     every frame.
   9. ACTIVITY: a like is a row ("Otto liked your post", their face wearing a
      small heart, the post's small picture, to "Liked by…"); likes never
      light the bell's dot, they wait under New; grouped since you last looked,
      one row a post under Earlier too; never yourself, never the hidden; a
      drawing's own page; comments still light the dot; a row lands with
-     "Liked by…" glowing in the note's tint, read on every frame; the words.
+     "Liked by…" glowing in the note's tint, read on every frame, and with no
+     line (its maker the only one) on the post's heart; the words.
  10. DELETING TAKES THEM, IN CODE: a post, a drawing and an account, through
      the site's own routes, and with SQLite's cascade off (on a copy).
  11. THE DATA: the chain on a populated database (the table, its five
@@ -647,9 +651,10 @@ HSAMPLE = r"""([sel, ms]) => { window.__hf = []; const el = document.querySelect
     if (performance.now() - t0 < ms) requestAnimationFrame(step); };
   requestAnimationFrame(step); }"""
 
-# Every animation frame for `ms` from now: the maker's line's box and paint.
+# Every animation frame for `ms` from now: the maker's line's box and paint,
+# and where what is under it (the comments) starts.
 BSAMPLE = r"""(ms) => { window.__bf = []; const t0 = performance.now();
-  const step = () => { const a = document.querySelector('[data-like-by]'), c = document.querySelector('.post-actions');
+  const step = () => { const a = document.querySelector('[data-like-by]'), c = document.querySelector('.post-page > .comments');
     const f = { t: Math.round(performance.now() - t0), there: !!a, acts: c ? c.getBoundingClientRect().top : null };
     if (a) { const r = a.getBoundingClientRect(); f.h = r.height; f.op = +getComputedStyle(a).opacity; }
     window.__bf.push(f);
@@ -1573,7 +1578,7 @@ with sync_playwright() as p:
             stopped(7, exc)
 
     # ------------------------------------------------------------------ 8
-    if part(8, "'Liked by…', the maker's alone: its words, faces and sheet; nobody else is shown who"):
+    if part(8, "'Liked by…', the maker's alone, the others only: its words, faces and sheet; nobody else is shown who"):
         try:
             vic = someone(b, "vic", "Vic Bryn")
             likers = [someone(b, h, n) for h, n in (("wes", "Wes Abel"), ("xia", "Xia Chen"), ("yan", "Yan Dray"),
@@ -1643,32 +1648,54 @@ with sync_playwright() as p:
             tap_heart(pg, sel)
             by2 = pg.evaluate(BY)
             rows2 = [r["handle"] for r in (pg.evaluate(SHEET) or {}).get("rows", [])]
-            check("its maker's own like says so at once, 'you' first, and their row is in the sheet; taken back, gone"
-                  " again, with no reload",
-                  by1 and by1["words"] == "Liked by you, Abe and 4 others" and rows1[:1] == ["@vic"]
+            check("its maker's own like leaves the line as it was, the others only (\"Liked by Abe, Zed and 3 others\","
+                  " their faces, none of the maker's: the owner's A, Nov 14, the filled heart says it), and their row"
+                  " is in the sheet at once; taken back, their row goes and the line stays the same, with no reload",
+                  by1 and by1["words"] == "Liked by Abe, Zed and 3 others"
+                  and by1["faces"] == [f"/s/{faces[h]}/poster" for h in ("abe", "zed", "yan")] and rows1[:1] == ["@vic"]
                   and by2 and by2["words"] == "Liked by Abe, Zed and 3 others" and "@vic" not in rows2,
-                  f"{by1 and by1['words']} {rows1[:2]}; {by2 and by2['words']} {rows2[:2]}")
+                  f"{by1 and by1['words']} {by1 and by1['faces']} {rows1[:2]}; {by2 and by2['words']} {rows2[:2]}")
             go(pg, f"/social/p/{p8z}")
             none_yet = pg.evaluate(BY)
             pg.locator(sel).scroll_into_view_if_needed()
             pg.evaluate(BSAMPLE, 900)
             tap_heart(pg, sel, after=1100)
             bf = pg.evaluate("() => window.__bf")
+            alone = pg.evaluate(BY)
+            still_ = glide_of([f["acts"] for f in bf if f["acts"] is not None])
+            liked_ = pg.evaluate("(s) => document.querySelector(s).getAttribute('aria-pressed')", sel)
+            go(pg, f"/social/p/{p8z}")
+            alone_later = pg.evaluate(BY)
+            check("when its maker is the only one who liked it there is no line at all, before and after a reload, and"
+                  " their like moves nothing under it: the filled heart says it",
+                  none_yet is None and alone is None and alone_later is None and liked_ == "true"
+                  and still_["way"] == 0 and still_["frames"] == 0,
+                  f"before {none_yet}; after {alone and alone['words']}; reloaded {alone_later and alone_later['words']};"
+                  f" heart pressed {liked_}; under it {still_}")
+            # THE LINE'S ROOM: somebody else's like comes while the maker looks;
+            # their own tap (taking theirs back) answers with the line as it
+            # now stands, which opens; then theirs goes, and the maker's tap
+            # (liking again) closes it.
+            like(likers[0], ("p", p8z))
+            pg.evaluate(BSAMPLE, 900)
+            tap_heart(pg, sel, after=1100)
+            bf = pg.evaluate("() => window.__bf")
             came = pg.evaluate(BY)
             hs = [f["h"] for f in bf if f.get("there")]
             acts = glide_of([f["acts"] for f in bf if f["acts"] is not None])
-            check("where nobody has liked it its maker sees no line; their own first like brings 'Liked by you', its"
-                  " room opening over many frames (what is under it glides down, never in one frame)",
-                  none_yet is None and came and came["words"] == "Liked by you" and len(set(round(x) for x in hs)) >= 4
+            check("when somebody else's like came meanwhile, the maker's own tap brings the line, the others only"
+                  " ('Liked by Wes'), its room opening over many frames (what is under it glides down, never in one frame)",
+                  came and came["words"] == "Liked by Wes" and len(set(round(x) for x in hs)) >= 4
                   and acts["way"] >= 30 and acts["frames"] >= 4 and acts["step"] <= 0.5 * acts["way"],
-                  f"before {none_yet}; after {came and came['words']}; heights {len(set(round(x) for x in hs))}; under it {acts}")
+                  f"after {came and came['words']}; heights {len(set(round(x) for x in hs))}; under it {acts}")
+            like(likers[0], ("p", p8z), liked=False)
             pg.evaluate(BSAMPLE, 900)
             tap_heart(pg, sel, after=1100)
             bf = pg.evaluate("() => window.__bf")
             acts2 = glide_of([f["acts"] for f in bf if f["acts"] is not None])
             went = pg.evaluate(BY)
             close_ctx(ctx, pg)
-            check("taken back, the line's room closes the same way and the line is gone",
+            check("and when theirs went, the maker's tap closes the line's room the same way and the line is gone",
                   went is None and acts2["way"] >= 30 and acts2["frames"] >= 4 and acts2["step"] <= 0.5 * acts2["way"],
                   f"after {went}; under it {acts2}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
@@ -1790,6 +1817,36 @@ with sync_playwright() as p:
                   landed and faded([f["op"] for f in landed]) >= 8 and tops and spread([{"t": t} for t in tops], "t") < 0.5
                   and 0 <= tops[-1] and landed[-1]["bottom"] <= 874,
                   f"fading {faded([f['op'] for f in landed])}; moved {spread([{'t': t} for t in tops], 't')}")
+            # WITH NO LINE TO LAND ON (the owner's A, Nov 14: the line names the
+            # others, and when its maker is the only one who liked it there is
+            # none): a like row opened after that like went (Activity read a
+            # moment before) lands on the post's heart, the page's #liked then,
+            # in view where the line would be.
+            p9c = make_post(nell, "Section 9, Nell's third")
+            like(nell, ("p", p9c))
+            like(otto, ("p", p9c))
+            ctx, pg = browser_as(b, nell)
+            go(pg, "/social/activity")
+            row = pg.locator(f'a.act-row[href="/social/p/{p9c}#liked"]').first
+            like(otto, ("p", p9c), liked=False)
+            tap_to(pg, row)
+            try:
+                ready(pg)
+            except Exception:  # noqa: BLE001
+                pass
+            pg.wait_for_timeout(800)
+            hl = pg.evaluate("""() => { const t = document.querySelector(':target'), h = document.querySelector('.post-page > .post-row .lk-heart');
+              const r = h ? h.getBoundingClientRect() : null;
+              return { at: location.pathname + location.hash, heart: !!t && t === h, target: t ? (t.className || t.tagName) : null,
+                       line: !!document.querySelector('[data-like-by]'), pressed: h ? h.getAttribute('aria-pressed') : null,
+                       y: Math.round(scrollY), top: r ? Math.round(r.top) : null, bottom: r ? Math.round(r.bottom) : null, vh: innerHeight }; }""")
+            close_ctx(ctx, pg)
+            check("with no line to land on (its maker the only one who liked it, the other like gone since Activity was"
+                  " read), a like row lands on the post's heart: the page's #liked, scrolled to and in view, the filled"
+                  " heart saying it",
+                  hl["at"] == f"/social/p/{p9c}#liked" and hl["heart"] and not hl["line"] and hl["pressed"] == "true"
+                  and hl["y"] > 0 and hl["top"] is not None and 0 <= hl["top"] and hl["bottom"] <= hl["vh"],
+                  json.dumps(hl))
             ctx, pg = browser_as(b, nell, screen="desk")
             go(pg, "/social/activity")
             sub = pg.evaluate("() => document.querySelector('.act-head .page-sub').textContent")

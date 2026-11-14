@@ -882,13 +882,14 @@ with sync_playwright() as p_:
         check("and Flip's own Post sheet posts as them too (Pad and Flip move together)",
               flipped == 201 and f_author.get("id") == pid and f_author.get("username") == "priya",
               f"post {flipped}; author {f_author}")
-        # Skribl's Gallery card on the site: the first visit's, signed out, the
-        # one page of the site that still shows Skribl's own cards (Explore's
-        # were until the map's step 3, her own page's until its step 4, whose
-        # Gallery tab is the site's own tiles).
+        # A Gallery card of Skribl's own, signed out: on Skribl's /gallery, the
+        # one page that shows them since the site's first visit became the
+        # Gallery's six newest (Nov 14; Explore's were until the map's step 3,
+        # her own page's until its step 4). The site's author resolver names
+        # its people on every page of this app.
         oc = b.new_context(**DESK, extra_http_headers={"X-Forwarded-For": address()})
         g = oc.new_page()
-        g.goto(BASE + "/social/")
+        g.goto(BASE + "/gallery")
         try:
             g.wait_for_function("(t) => [...document.querySelectorAll('#skriblGallery .tile')].some(x => x.textContent.includes(t))",
                                 arg="Priya's skribl " + tag, timeout=15000)
@@ -897,7 +898,7 @@ with sync_playwright() as p_:
         card = g.evaluate("""(t) => { const tile = [...document.querySelectorAll('#skriblGallery .tile')].find(x => x.textContent.includes(t));
             return tile ? (tile.querySelector('.tauth') || tile).innerText.replace(/\\s+/g, ' ').trim() : null; }""",
                           "Priya's skribl " + tag)
-        check("and the Gallery's card on the site (the first visit's) says who drew it: their name and @handle",
+        check("and a Gallery card of Skribl's (its own /gallery's) says who drew it: their name and @handle",
               bool(card) and "Priya Raman" in card and "@priya" in card, str(card))
         oc.close()
         sign_out_here(p)

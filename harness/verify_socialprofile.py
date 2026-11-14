@@ -93,6 +93,12 @@ events with pressure, a hand's timing).
   17. THE TABS' WORDS: every word on the strip and in every tab at 4.5:1 on
       what is painted behind it, every control 44px, phone and desk, light
       and dark.
+  18. DELETE FROM YOUR OWN PAGE (the owner's "Yes", Nov 14): Delete post on a
+      card of your Posts tab keeps you on your page (never Home and its note),
+      the post gone, the page saying so in Home's own words, focus on the next
+      card's ⋯; read on every frame it fades, then its room closes and the
+      next card rises over many frames; under Reduce Motion it fades and its
+      room goes at once once unseen; the last one gone, the tab's kind words.
 
 The layers (the site imports only Skribl's documented names, and its
 templates only documented partials, the face player's now among them) stay
@@ -1463,8 +1469,8 @@ with sync_playwright() as p_:
     # ELSEWHERE, STILL. Since the map's step 3 the site's Gallery (Explore) is
     # its own, each tile with its maker's face from the site's face macro; a
     # Gallery card of Skribl's own, whose avatar gallery.js frames (faceOf),
-    # is on Skribl's /gallery (and a profile's skribls and the first visit,
-    # where a face plays or nobody is signed in). So each is read where it
+    # is on Skribl's /gallery (the site's first visit held them until Nov 14,
+    # a profile's skribls until the map's step 4). So each is read where it
     # stands: You in the bar and the Gallery's tile on the site's Gallery,
     # Skribl's card on /gallery; still, all three, and framed alike.
     if part(4, "elsewhere, still: the bar's You, the Gallery's tile and a Gallery card; the frame from sharecard.js; the empty circle"):
@@ -1712,10 +1718,12 @@ with sync_playwright() as p_:
         hers = post_skribl(mira, "Mira's card " + tag)
         his = post_skribl(theo, "Theo's card " + tag)
         mine_hidden = post_skribl(mira, "Mira's link-only " + tag, visibility=None)
-        # A Gallery card of Skribl's with everybody's in it, on the site: the first
-        # visit's (Explore's were until the map's step 3), signed out.
+        # A Gallery card of Skribl's with everybody's in it, signed out: on
+        # Skribl's own /gallery since the site's first visit became the
+        # Gallery's six newest (Nov 14; Explore's was until the map's step 3).
+        # The author resolver is the app's, so its url is on every page.
         ctx, pg = browser_as(b, None, "desk")
-        pg.goto(BASE + "/social/")
+        pg.goto(BASE + "/gallery")
         try:
             pg.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"]')",
                                  arg=his, timeout=15000)
@@ -2901,11 +2909,12 @@ with sync_playwright() as p_:
                  if t_["post"] != (kind_of.get(t_["id"]) == "p")
                  or t_["href"] != (f"/social/p/{t_['id']}" if t_["post"] else f"/social/b/{t_['id']}")
                  or t_["says"] != ("3 pages" if t_["id"] == T["flip"] else "1 sec" if t_["post"] else "2 sec")
-                 or t_["name"] != "Pia"]
+                 or t_["name"] != "Pia Rowe"]
         hidden_ = [x for x in (T["face"], T["linkonly"]) if any(x in (t_["id"] or "") or x in (t_["src"] or "") for t_ in tiles)]
         check("the Gallery: every drawing and Flip Pia shared, newest first, her posts' and the two she showed outside a"
               " post (before posts, and from the Pad between them) together; a post's tile opens its post and the others"
-              " their own page, each saying its length (\"1 sec\", \"2 sec\", a Flip \"3 pages\") and her name; her face"
+              " their own page, each saying its length (\"1 sec\", \"2 sec\", a Flip \"3 pages\") and her name as she"
+              " wrote it (\"Pia Rowe\"); her face"
               " and her link-only drawing never; a page of 24, Load more bringing the last",
               len(g1["ids"]) == 24 and g1["more"] and g2["ids"] == gal_want and not g2["more"] and not wrong
               and not hidden_ and len(drawings) == 2 and all(d_ in g2["ids"] for d_ in drawings),
@@ -3100,6 +3109,168 @@ print("PLAN " + json.dumps(out))
         small = [f"{k[0]} {k[1]} {k[2]}: {x}" for k, v in looks.items() for x in v["small"]]
         check("every link and button on them is 44px or more each way: a tab, a tile, a card's row, Load more",
               not small, "; ".join(small[:6]))
+
+    # ------------------------------------------------------------------ 18
+    # DELETE FROM YOUR OWN PAGE (the owner's "Yes", Nov 14, to #898's question):
+    # deleting a post from your profile keeps you there, the post folding away
+    # where it was, instead of landing on Home with its note; from a post's own
+    # page it still lands there (verify_socialposts 5). Read on every frame from
+    # the tap on Delete post: the card fades, then its room closes and the next
+    # card rises into its place over many frames, never in one; under Reduce
+    # Motion it fades, and its room goes only once it can't be seen.
+    if part(18, "delete from your own page: you stay, the post folds away there"):
+        mo = _people.get("delmo") or member(b, "delmo", "Mo Delaney")
+        tag = secrets.token_hex(3)
+        mos = [site_post(mo, f"Mo's post {k} {tag}", tab_drawing(seed=80 + k)) for k in range(6)]
+        made18 = all(mos)
+        DSAMPLE = """([sel, nextSel, ms]) => { window.__df = []; const c = document.querySelector(sel), n = document.querySelector(nextSel), t0 = performance.now();
+          const step = () => { window.__df.push({ t: Math.round(performance.now() - t0), there: c.isConnected,
+              op: c.isConnected ? +getComputedStyle(c).opacity : null, next: n ? Math.round(n.getBoundingClientRect().top * 10) / 10 : null,
+              y: Math.round(scrollY), at: location.pathname + location.search });
+            if (performance.now() - t0 < ms) requestAnimationFrame(step); };
+          requestAnimationFrame(step); }"""
+
+        def delete_one(pg_, pid, nxt):
+            """Delete post `pid` from its card's ⋯ on the page; the frames from the tap on Delete post."""
+            sel, nsel = f'[data-prof-list] > .post-card[data-post="{pid}"]', f'[data-prof-list] > .post-card[data-post="{nxt}"]'
+            pg_.locator(sel + " [data-post-menu]").scroll_into_view_if_needed(timeout=5000)
+            pg_.locator(sel + " [data-post-menu]").tap(timeout=5000)
+            pg_.wait_for_timeout(600)
+            pg_.locator("#postSheet [data-act=delete]").tap(timeout=5000)
+            pg_.wait_for_timeout(600)
+            pg_.evaluate(DSAMPLE, [sel, nsel, 2200])
+            pg_.locator("[data-delete-now]").tap(timeout=5000)
+            pg_.wait_for_timeout(2600)
+            return pg_.evaluate("() => window.__df")
+
+        def judged(fs):
+            """What the frames say: the fade, the room, and whether anything jumped."""
+            seen = [f for f in fs if f["there"] and f["op"] is not None]
+            ops = [f["op"] for f in seen]
+            tops = [f["next"] for f in fs if f["next"] is not None]
+            steps = [abs(b_ - a_) for a_, b_ in zip(tops, tops[1:])]
+            way = abs(tops[-1] - tops[0]) if tops else 0
+            # where the next card was while the deleted one could still be seen
+            while_seen = [f["next"] for f in fs if f["there"] and f["op"] is not None and f["op"] > 0.03]
+            return {"fading": len([o for o in ops if 0.03 < o < 0.97]), "gone": bool(fs) and not fs[-1]["there"],
+                    "way": round(way, 1), "moving": len([x for x in steps if x > 0.3]), "step": round(max(steps or [0]), 1),
+                    "still while seen": bool(while_seen) and max(while_seen) - min(while_seen) <= 0.5,
+                    "at": sorted({f["at"] for f in fs}), "scroll": sorted({f["y"] for f in fs})[:1] + sorted({f["y"] for f in fs})[-1:]}
+        SAID_INK = """() => { const rgba = s => { const m = (s.match(/[\\d.]+/g) || []).map(Number); return [m[0], m[1], m[2], m.length > 3 ? m[3] : 1]; };
+          const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+                             return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+          const ground = e => { const layers = []; for (let n = e; n; n = n.parentElement) { const b = rgba(getComputedStyle(n).backgroundColor);
+              if (b[3] > 0) { layers.push(b); if (b[3] >= 1) break; } }
+            let g = [255, 255, 255]; for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; g = [0, 1, 2].map(k => l[k] * l[3] + g[k] * (1 - l[3])); }
+            return g; };
+          const out = { read: 0, low: [], lowest: 99, words: [] };
+          document.querySelectorAll('[data-page-say], [data-prof-none]').forEach(e => {
+            if (e.hidden || !e.getClientRects().length || !e.textContent.trim()) return;
+            e.scrollIntoView({ block: 'center', behavior: 'instant' });
+            const r = e.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            if (!at || !(at === e || e.contains(at))) { out.low.push('not painted: ' + e.textContent.trim().slice(0, 24)); return; }
+            const a = lum(rgba(getComputedStyle(e).color)), b = lum(ground(e)), k = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+            out.read++; out.lowest = Math.min(out.lowest, Math.round(k * 100) / 100); out.words.push(e.textContent.trim().slice(0, 40));
+            if (k < 4.5) out.low.push(e.textContent.trim().slice(0, 24) + ' ' + k.toFixed(2)); });
+          return out; }"""
+
+        def said_read(pg_):
+            """What the page said, read where it is painted: scrolled to, against what is behind it."""
+            return pg_.evaluate(SAID_INK)
+        gone18, inks18 = {}, {}
+        ctx, pg = browser_as(b, mo, "phone", "light")
+        try:
+            pg.goto(BASE + "/social/@delmo")
+            pg.wait_for_selector(f'[data-prof-list] > .post-card[data-post="{mos[4]}"]', timeout=15000)
+            fs = delete_one(pg, mos[4], mos[3])
+            gone18["glide"] = judged(fs)
+            gone18["after"] = pg.evaluate("""(ids) => ({ at: location.pathname + location.search,
+              cards: [...document.querySelectorAll('[data-prof-list] > .post-card')].map(c => c.getAttribute('data-post')),
+              note: !!document.querySelector('.note'), said: (document.querySelector('[data-page-say]') || {}).textContent || null,
+              focus: document.activeElement ? [document.activeElement.className, (document.activeElement.closest('.post-card') || { getAttribute: () => null }).getAttribute('data-post')] : null,
+              sheet: document.getElementById('deleteSheet').hidden, inert: !!document.querySelector('#main[inert]') })""", mos)
+            inks18["phone light"] = said_read(pg)
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the rows' red
+            gone18["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, pg)
+        rows18 = db("select public_id from social_posts where public_id in (?, ?, ?, ?, ?, ?)", tuple(mos))
+        # ON A DESK, light and dark: the words read where they are painted.
+        for scheme, pid, nxt in (("light", mos[5], mos[3]), ("dark", mos[3], mos[2])):
+            ctx, pg = browser_as(b, mo, "desk", scheme)
+            try:
+                pg.goto(BASE + "/social/@delmo")
+                pg.wait_for_selector(f'[data-prof-list] > .post-card[data-post="{pid}"]', timeout=15000)
+                sel_ = f'[data-prof-list] > .post-card[data-post="{pid}"] [data-post-menu]'
+                pg.locator(sel_).scroll_into_view_if_needed(timeout=5000)
+                pg.click(sel_, timeout=5000)
+                pg.wait_for_timeout(600)
+                pg.click("#postSheet [data-act=delete]", timeout=5000)
+                pg.wait_for_timeout(600)
+                pg.click("[data-delete-now]", timeout=5000)
+                pg.wait_for_timeout(1600)
+                inks18["desk " + scheme] = dict(said_read(pg), at=urllib.parse.urlsplit(pg.url).path)
+            except Exception as exc:  # noqa: BLE001
+                inks18["desk " + scheme] = {"stopped": str(exc).splitlines()[0][:120]}
+            close_ctx(ctx, pg)
+        g = gone18.get("glide") or {}
+        a = gone18.get("after") or {}
+        check("DELETED FROM YOUR OWN PAGE, YOU STAY THERE: Delete post on a card of your Posts tab, and the page is still"
+              " yours (never Home, never its note), the post gone (its row too), the cards around it as they were, the"
+              " page saying so to a screen reader in Home's own words, and focus on the next card's ⋯",
+              made18 and "stopped" not in gone18 and g.get("at") == ["/social/@delmo"] and a.get("at") == "/social/@delmo"
+              and not a.get("note") and a.get("cards") == [mos[5], mos[3], mos[2], mos[1], mos[0]]
+              and sorted(r_[0] for r_ in rows18) == sorted([mos[0], mos[1], mos[2], mos[3], mos[5]])
+              and a.get("said") == "Your post is gone, its drawing with it." and (a.get("focus") or [None, None])[1] == mos[3]
+              and "post-more" in ((a.get("focus") or [""])[0] or "") and a.get("sheet") and not a.get("inert"),
+              f"{gone18}; rows left {rows18}")
+        check("...and it folds away there, read on every frame: it fades, the next card still while it can be seen; then"
+              " its room closes and the next card rises into its place over many frames, never in one, the page itself"
+              " never scrolling",
+              g.get("gone") and g.get("fading", 0) >= 4 and g.get("still while seen") and g.get("way", 0) >= 100
+              and g.get("moving", 0) >= 5 and g.get("step", 999) <= 0.4 * g.get("way", 0)
+              and len(set(g.get("scroll") or [0, 1])) == 1, json.dumps(g))
+        # UNDER REDUCE MOTION: it fades where it is, and the room goes at once,
+        # only once it can't be seen; the last one gone, the tab's own words.
+        ctx, pg = browser_as(b, mo, "phone", "dark", reduced=True)
+        rm = {}
+        try:
+            pg.goto(BASE + "/social/@delmo")
+            pg.wait_for_selector(f'[data-prof-list] > .post-card[data-post="{mos[1]}"]', timeout=15000)
+            rm["glide"] = judged(delete_one(pg, mos[1], mos[0]))
+            inks18["phone dark"] = said_read(pg)
+            for pid in (mos[2], mos[0]):
+                pg.locator(f'[data-prof-list] > .post-card[data-post="{pid}"] [data-post-menu]').tap(timeout=5000)
+                pg.wait_for_timeout(600)
+                pg.locator("#postSheet [data-act=delete]").tap(timeout=5000)
+                pg.wait_for_timeout(600)
+                pg.locator("[data-delete-now]").tap(timeout=5000)
+                pg.wait_for_timeout(1400)
+            rm["last"] = pg.evaluate("""() => { const n = document.querySelector('[data-prof-none]');
+              return { at: location.pathname, cards: document.querySelectorAll('[data-prof-list] > .post-card').length,
+                       words: n && !n.hidden ? n.textContent.trim() : null, op: n ? +getComputedStyle(n).opacity : null,
+                       focus: document.activeElement ? document.activeElement.className : null }; }""")
+            inks18["phone dark, the tab's words"] = said_read(pg)
+        except Exception as exc:  # noqa: BLE001
+            rm["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, pg)
+        rg = rm.get("glide") or {}
+        last = rm.get("last") or {}
+        check("...under Reduce Motion it fades where it is, nothing moving while it can be seen, and its room goes at once"
+              " once it can't (the next card put there in one step); the last one gone, you are still on your page and"
+              " the tab says its own kind words, focus on the tab",
+              "stopped" not in rm and rg.get("gone") and rg.get("fading", 0) >= 4 and rg.get("still while seen")
+              and rg.get("moving") == 1 and rg.get("way", 0) >= 100 and rg.get("at") == ["/social/@delmo"]
+              and last.get("at") == "/social/@delmo" and last.get("cards") == 0
+              and last.get("words") == "No posts yet. Say something on Home, then draw it, and your posts show up here."
+              and last.get("op") == 1 and "prof-tab" in (last.get("focus") or "")
+              and not db("select 1 from social_posts where person_id = (select id from social_people where handle_key = 'delmo')"),
+              json.dumps(rm))
+        check("...and what the page says reads at 4.5:1 or more on what is painted behind it (\"Your post is gone, its"
+              " drawing with it.\", the tab's kind words once the last is gone), a touch phone and a desk, light and"
+              " dark, the desk too staying on the page",
+              all(v.get("read", 0) >= 1 and not v.get("low") for v in inks18.values()) and len(inks18) == 5
+              and all(inks18[k].get("at") == "/social/@delmo" for k in ("desk light", "desk dark")),
+              json.dumps({k: (v.get("read"), v.get("lowest"), v.get("low"), v.get("at"), v.get("stopped")) for k, v in inks18.items()}))
 
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):

@@ -5,14 +5,16 @@
 
     gallery_tile(t)     one post, as its drawing: ONE link to the post's page
                         (where it plays with its line from the start). The
-                        drawing on its paper, whole, in the tile's 650 x 486
-                        (a 4:3 drawing's own shape, so it fills it; another
-                        shape sits whole in the middle), with a small "▶ 15
-                        sec" (a Flip, "▶ 3 pages": what the player's play
+                        drawing whole, in the tile's 650 x 486 (a 4:3
+                        drawing's own shape, so it fills it; another shape
+                        sits whole in the middle, the box around it the
+                        drawing's own ground: plate_ground), with a small "▶
+                        15 sec" (a Flip, "▶ 3 pages": what the player's play
                         button says at rest, without "drawn in"); under it
                         the maker's face (the empty circle before they draw
-                        one, never an initial) and first name, and the hearts
-                        and comments, each only when there are some. The link
+                        one, never an initial) and name as they wrote it, cut
+                        with … only when it doesn't fit, and the hearts and
+                        comments, each only when there are some. The link
                         says it all in words to a screen reader. On one
                         person's Gallery (a profile's tab, the map's step 4)
                         a drawing they showed outside a post is the same tile,
@@ -20,7 +22,9 @@
                         data-post.
     draft_tile(d)       one of your drafts (a profile's Drafts tab, yours
                         alone; the step 4 mock's A): the tile's shape, the
-                        draft's own small picture whole on the paper, "✎
+                        draft's own small picture whole on the paper (Skribl's
+                        list of drafts reads no payload, so their ground is
+                        not known: the paper, as before), "✎
                         Draft" where the ▶ sits, its title (600) and "Pad ·
                         saved 2 hours ago" under it. ONE link, to the editor
                         that made it with ?draft=<id>, the editors' own
@@ -40,6 +44,15 @@
                         (--plate-w, --plate-x, --plate-y), and the plate's own
                         rounded corner (--plate-r). More from's tile on a
                         post's page and the Gallery's tile, one rule.
+    plate_ground(sk)    the box around the plate in the drawing's own ground
+                        (the owner's "Your picks", Nov 14: a tall drawing made
+                        on the Pad's dark canvas sat in cream paper, cream bars
+                        at its sides): ` style="--plate-ground: #0d0f14"` on
+                        the box, Skribl's description's `ground`, which is a
+                        hex colour or nothing (describe_posts); nothing known,
+                        nothing said, and the box keeps the paper it had
+                        (social.css). Never cropped: the drawing stays whole.
+                        Both tiles, one rule.
 
     Import these WITH CONTEXT: they read the page's skribl_bp. #}
 {% from 'social/_post.html' import face with context %}
@@ -59,11 +72,15 @@
 --plate-a: {{ '%.4f'|format(cw / ch) }}; --plate-w: {{ '%.4f'|format(120000 / cw) }}%; --plate-x: {{ '%.4f'|format(-100 * x / cw) }}%; --plate-y: {{ '%.4f'|format(-100 * y / ch) }}%; --plate-r: {{ '%.4f'|format(1500 / cw) }}% / {{ '%.4f'|format(1500 / ch) }}%
 {%- endmacro %}
 
+{% macro plate_ground(sk) -%}
+{%- if sk and sk.ground %} style="--plate-ground: {{ sk.ground }}"{% endif -%}
+{%- endmacro %}
+
 {% macro gallery_tile(t) -%}
 <a class="gal-tile" href="{{ t.url }}" {% if t.kind == 's' %}data-drawing="{{ t.sk.id }}"{% else %}data-post="{{ t.post }}"{% endif %} data-handle="{{ t.who.handle }}" aria-label="{{ t.label }}">
-  <span class="gal-pic"><span class="gal-plate" style="{{ plate_frame(t.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=t.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
+  <span class="gal-pic"{{ plate_ground(t.sk) }}><span class="gal-plate" style="{{ plate_frame(t.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=t.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
     <span class="gal-dur">{{ ic.tri() }}{% if t.says %}<span>{{ t.says }}</span>{% endif %}</span></span>
-  <span class="gal-by">{{ face(t.who) }}<b>{{ t.first }}</b>
+  <span class="gal-by">{{ face(t.who) }}<b>{{ t.name }}</b>
     {%- if t.likes or t.comments %}<span class="gal-n">
     {%- if t.likes %}<span class="gal-likes">{{ ic.heart() }}{{ t.likes }}</span>{% endif %}
     {%- if t.comments %}<span class="gal-comments">{{ ic.comment() }}{{ t.comments }}</span>{% endif -%}

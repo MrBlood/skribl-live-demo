@@ -13,8 +13,10 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      chain, its skribl through create_post (unlisted without the tick, its
      title the first words, no caption), and the post's own page, where the
      drawing plays by itself; under Reduce Motion it rests still. With the
-     tick, the skribl is public and Skribl's listing shows it. On a desk,
-     More from shows each other drawing alone, cut out of its share card.
+     tick, the skribl is public and Skribl's listing shows it. No Make your
+     own on the page (Nov 14): the bar's and the rail's Make opens there. On
+     a desk, More from shows each other drawing alone, cut out of its share
+     card.
   4. THE FEED: everyone's posts, newest first, each card still until
      tapped, its time said in the person's own; Load more brings the next
      page in place, by a cursor that names no internal id.
@@ -52,24 +54,29 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      person's page; ⋯ and Share do their own job; a drag that selects words
      opens nothing. A touch on a phone, a click on a desk.
  12. EVERY CARD OPENS ITS POST (the owner's "I thought on card?", Nov 13):
-     Cal's tap map of Home's cards and the first visit's Skribls cards
-     (Skribl's own Gallery cards; Explore's were too until the map's step 3,
-     and a profile's until its step 4, whose Gallery tab is tiles,
-     verify_socialprofile 16), on a touch phone in light and dark: every 4px one of the
-     card's own controls or its ground, and an exact tap on every part of the
-     ground opens the card's page (a post's, a drawing's, or Skribl's own
-     for one by somebody not on the site); a finger on the drawing plays it,
-     on the name opens the person, on the ground opens the page, followed;
-     /social/b/<id>'s ways on; the line's own controls; on a desk Ctrl and
-     the middle button, a drag, the title a keyboard's link; the ⋯; and
-     Skribl's own /gallery as it was.
+     Cal's tap map of Home's cards and of Skribl's own Gallery cards where a
+     host says they open its page (Skribl's /gallery, its section given the
+     address the site's pages gave theirs, /social/b/__ID__: no page of the
+     site holds Skribl's section since the first visit became the Gallery's
+     six, Nov 14; Explore's was until the map's step 3, a profile's until its
+     step 4; how the section says it is verify_hostseams'), on a touch phone
+     in light and dark: every 4px one of the card's own controls or its
+     ground, and an exact tap on every part of the ground opens the card's
+     page (a post's, a drawing's, or Skribl's own for one by somebody not on
+     the site); a finger on the drawing plays it, on the name opens the
+     person, on the ground opens the page, followed; /social/b/<id>'s ways
+     on; the line's own controls; on a desk Ctrl and the middle button, a
+     drag, the title a keyboard's link; the ⋯; and Skribl's own /gallery,
+     with no address said, as it was.
  13. THE GALLERY OF EVERYONE (Explore; the map's step 3, the Gallery mock's
      B): posts only, every post once, a Flip's too, never a drawing outside
      a post, one kept link-only, a face or one by somebody not on the site;
      its tiles two across on a touch phone and three on a desk, each the
-     drawing on its paper in 650 x 486 with "▶ 15 sec" (what the player's
+     drawing whole in 650 x 486, the box around it the drawing's own ground
+     (a tall one on the Pad's dark in its dark, read off the paint, there,
+     on its maker's Gallery tab and in More from), with "▶ 15 sec" (what the player's
      play button says at rest, without "drawn in"; a Flip its pages), the
-     maker's face at 22px and first name, the hearts and comments only when
+     maker's face at 22px and whole name, the hearts and comments only when
      there are some; the drawing whole and alone, cut out of its share card;
      a tap anywhere on a tile opens its post (a touch, a click, the keyboard:
      every 4px of it its one link); Following only the people you follow and
@@ -79,12 +86,22 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      Load more, by a cursor that names no internal id; every word at 4.5:1
      (the ▶'s words read off the pixels under them), every control 44px,
      the box 16px: phone and desk, light and dark.
+ 14. THE FIRST VISIT, B (the owner's "Your picks", Nov 14): Home signed out
+     keeps its welcome; under "Fresh from everyone" the six newest tiles of
+     the Gallery of everyone (the first six /social/explore shows signed
+     out, read against the database), posts only (never a drawing outside a
+     post, one kept link-only, a face or one by somebody not on the site,
+     each newer than the six), none of Skribl's own Gallery section; then
+     "See the whole Gallery ›" in the small violet words, 44px, landing on
+     the Gallery; every word at 4.5:1, every control 44px, phone and desk,
+     light and dark.
 
 SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
 green as built: DECISIONS.md, "Posts at /social (phase 1, piece 4)",
 "Comments on every drawing" for 10 and 11, "Every card opens its post"
-for 12, and "Explore becomes the Gallery of everyone" for 13.
+for 12, "Explore becomes the Gallery of everyone" for 13, and "Six small
+yeses" for 14 and the rows of 3, 12 and 13 it changed.
 """
 import base64
 import json
@@ -546,6 +563,30 @@ PAD = """async ([title, vis, seed]) => {
       canvasSize: { cssWidth: 816, cssHeight: 612 }, frames: [{ strokes: pts, strokeGroups: [pts.length] }] }) });
   const j = await r.json().catch(() => ({})); return [r.status, j.id || null]; }"""
 
+# The same, on a ground and a canvas of its own: the Pad's dark is its own
+# default (section 13, the box wears the drawing's own ground).
+PAD_ON = """async ([title, ground, w, h, seed]) => {
+  await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
+  const tok = (document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '';
+  const pts = Array.from({ length: 30 }, (_, i) => ({ x: w / 2 + Math.cos((i + seed) / 4) * 90, y: 120 + i * (h - 240) / 29,
+    color: '#7c5cff', size: 8, t: i * 30, start: i === 0 }));
+  const r = await fetch('/api/skribls', { method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-Skribl-CSRF': decodeURIComponent(tok) },
+    body: JSON.stringify({ title, visibility: 'public', version: 2, schemaVersion: 2, playbackMode: 'replay',
+      canvasSize: { cssWidth: w, cssHeight: h }, frames: [{ strokes: pts, strokeGroups: [pts.length], background: { color: ground } }] }) });
+  const j = await r.json().catch(() => ({})); return [r.status, j.id || null]; }"""
+
+# A tile's box and what is painted beside its plate (the bars of a drawing
+# whose shape is not the box's), read off the paint: the box's place, and the
+# middle of each bar, in the box's own picture's pixels (2 per CSS pixel).
+BARS = """(sel) => { const t = document.querySelector(sel); if (!t) return null;
+  t.scrollIntoView({ block: 'center', behavior: 'instant' });
+  const box = t.querySelector('.gal-pic, .more-pic'), plate = t.querySelector('.gal-plate, .more-plate');
+  const d = t.querySelector('.gal-dur'); if (d) d.style.visibility = 'hidden';
+  const b = box.getBoundingClientRect(), p = plate ? plate.getBoundingClientRect() : b;
+  return { left: (p.left - b.left) / 2, right: (b.right + p.right) / 2 - b.left, y: b.height / 2,
+           bars: [Math.round(p.left - b.left), Math.round(b.right - p.right)], ground: box.getAttribute('style') }; }"""
+
 # A CARD'S WAYS IN (section 10), read off what is painted: each link's box, and
 # whether a tap anywhere in it (its middle and its four corners) lands on it,
 # not on something laid over it; where a tap on the @handle lands; and the
@@ -595,6 +636,15 @@ WAYS = """(key) => {
 # does its own job), or the card's ground, keyed by the element itself, so
 # each part of the ground can be tapped for what it does. Off the card (past
 # its round corners) is not the card's.
+# WHERE A HOST SAYS SKRIBL'S CARDS OPEN, as the site's pages said it (app.py's
+# card_url: /social/b/__ID__) on the section's root, put there as the page is
+# read, before gallery.js (deferred) reads it: what a host's page sends, which
+# verify_hostseams holds, here for gallery.js to act on (section 12).
+SITE_OPENS = """(() => { const put = () => { const r = document.getElementById('skriblGallery');
+    if (r && !r.hasAttribute('data-skribl-open')) r.setAttribute('data-skribl-open', '/social/b/__ID__'); return !!r; };
+  if (put()) return; const o = new MutationObserver(() => { if (put()) o.disconnect(); });
+  o.observe(document, { childList: true, subtree: true }); })();"""
+
 TAPMAP = """([sel, step]) => {
   const card = document.querySelector(sel);
   if (!card) return null;
@@ -791,6 +841,35 @@ with sync_playwright() as p:
               and gsk[2] == "From the gallery tick"
               and any(i["id"] == post_row(j["post"])[1] for i in listed),
               f"reduced {still}; gallery skribl {gsk}; status {st}")
+
+        # NO "MAKE YOUR OWN" ON A POST'S PAGE (the owner's "Yes, remove it", Nov
+        # 14): it was the bar's Make by another name, the same sheet. Make stays
+        # in the bar (a touch phone) and the rail (a desk), and opens its sheet
+        # there, on the post's own page.
+        makes = {}
+        for screen in ("phone", "desk"):
+            mctx, mpg = browser_as(b, mira, screen, "light")
+            try:
+                mpg.goto(BASE + url)
+                mpg.wait_for_timeout(600)
+                here_ = mpg.evaluate("""() => ({ inPage: document.querySelectorAll('main [data-make]').length,
+                  words: [...document.querySelectorAll('main button, main a')].filter(e => /make your own/i.test(e.textContent)).length,
+                  bar: [...document.querySelectorAll('nav.nav [data-make]')].filter(e => e.getClientRects().length).length })""")
+                if screen == "phone":
+                    mpg.locator("nav.nav .tab-make").tap()
+                else:
+                    mpg.locator("nav.nav .tab-make").click()
+                mpg.wait_for_timeout(700)
+                here_["sheet"] = mpg.evaluate("""() => { const w = document.getElementById('makeSheet');
+                  return !!w && !w.hidden && w.classList.contains('is-open'); }""")
+                makes[screen] = here_
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                makes[screen] = {"stopped": str(exc).splitlines()[0][:120]}
+            close_ctx(mctx, mpg)
+        check("a post's own page has no Make your own (no make button in the page, phone and desk); the bar's Make on a"
+              " touch phone and the rail's on a desk is there and opens Make's sheet on it",
+              all(makes.get(k) == {"inPage": 0, "words": 0, "bar": 1, "sheet": True} for k in ("phone", "desk")),
+              json.dumps(makes))
 
         # MORE FROM, ON A DESK: each tile the drawing alone, whole, cut out of
         # its share card, read off the paint (the card's own colours: share_card).
@@ -1599,7 +1678,7 @@ with sync_playwright() as p:
     # doing, not the page's); and a finger's tap on the drawing, the name and
     # the ground. Then /social/b/<id>'s three ways on, the line's controls, and
     # on a desk Ctrl, the middle button, a drag, a keyboard and the ⋯.
-    if part(12, "every card opens its post: the tap map of Home's and the first visit's cards"):
+    if part(12, "every card opens its post: the tap map of Home's cards and Skribl's where a host says"):
         mira = someone(b, "mira", "Mira Okafor")
         juno = someone(b, "juno", "Juno Park")
         st_g, jg = make_post(juno, "Section 12, a post shown in the gallery", gallery=True, seed=121)
@@ -1622,16 +1701,20 @@ with sync_playwright() as p:
         to_flip = f"/social/p/{f_post}"
         TILE = '#skriblGallery .tile[data-id="{}"]'
         # Each card as somebody meets it: signed in (Mira) on Home; signed out
-        # on the first visit, the one page of the site whose Gallery holds
-        # everybody's, the site's people's and not. The drawing on its own is
-        # on the first visit: Home shows posts only (section 9), and a
-        # profile's Gallery tab shows it as a tile (the map's step 4).
+        # on Skribl's own Gallery, everybody's, the site's people's and not,
+        # its section given the address the site's pages gave Skribl's cards
+        # (app.py's card_url, /social/b/__ID__) as a host's page gives it,
+        # read by gallery.js. No page of the site holds Skribl's section any
+        # more: the first visit's was the last, the Gallery's six since Nov 14
+        # (section 14). The drawing on its own is a tile on its maker's
+        # Gallery tab (verify_socialprofile 16); Home shows posts only.
+        G12 = "Skribl's /gallery, a host's address said"
         CARDS = [("Home", "/social/", f'.post-card[data-post="{g_post}"]', g_sid, to_post, mira),
                  ("Home", "/social/", f'.post-card[data-post="{f_post}"]', f_sid, to_flip, mira),
-                 ("the first visit", "/social/", TILE.format(g_sid), g_sid, to_post, None),
-                 ("the first visit", "/social/", TILE.format(f_sid), f_sid, to_flip, None),
-                 ("the first visit", "/social/", TILE.format(lone), lone, to_lone, None),
-                 ("the first visit", "/social/", TILE.format(nobodys), nobodys, to_skribl, None)]
+                 (G12, "/gallery", TILE.format(g_sid), g_sid, to_post, None),
+                 (G12, "/gallery", TILE.format(f_sid), f_sid, to_flip, None),
+                 (G12, "/gallery", TILE.format(lone), lone, to_lone, None),
+                 (G12, "/gallery", TILE.format(nobodys), nobodys, to_skribl, None)]
         # Where a finger goes on a card: the drawing's middle, the name's, and
         # the ground's: on Home's calm card the row's open space between the ⋯
         # and Open › (its line waits until played, Nov 13), a Gallery card's
@@ -1681,6 +1764,8 @@ with sync_playwright() as p:
         maps = {}
         for scheme, viewer in (("light", mira), ("dark", mira), ("light", None), ("dark", None)):
             ctx, cpg = browser_as(b, viewer, "phone", scheme)
+            if viewer is None:
+                cpg.add_init_script(SITE_OPENS)
             for surface, path, sel, sid, want, who_ in CARDS:
                 if who_ is not viewer:
                     continue
@@ -1719,8 +1804,9 @@ with sync_playwright() as p:
         dead = {r["label"]: {k: v for k, v in r.get("parts", {}).items() if v[1] != r["want"]} for r in cards12}
         dead = {k: v for k, v in dead.items() if v}
         lacking = [(r["label"], r.get("stopped")) for r in cards12 if "stopped" in r or not r.get("parts")]
-        check("THE TAP MAP: on Home's cards (a post's drawing and a Flip's) and the first visit's Skribls"
-              " cards (those, one on its own, and one by somebody not on the site), a touch phone in light and dark, every 4px is one of"
+        check("THE TAP MAP: on Home's cards (a post's drawing and a Flip's) and Skribl's Gallery cards where a host"
+              " says they open its page (those, one on its own, and one by somebody not on the site, on Skribl's"
+              " /gallery given the site's address), a touch phone in light and dark, every 4px is one of"
               " the card's own controls or its ground, and an exact tap on every part of the ground (its words, its"
               " time, its edges, the line under the drawing, the space between) opens the card's page: no part does"
               " nothing",
@@ -1829,10 +1915,11 @@ with sync_playwright() as p:
         # in a new tab and leave this page be; a drag that selects a card's words
         # opens nothing, nor does one across its ground; the title is the card's
         # link for a keyboard (Tab from ⋯ reaches it, Enter opens it). Home's
-        # card signed in (Mira); Skribl's cards where the site shows them, the
-        # first visit, signed out (a profile's Skribls until the map's step 4).
+        # card signed in (Mira); Skribl's cards signed out, on its /gallery given
+        # the site's address (the first visit's until Nov 14).
         ctx, cpg = browser_as(b, mira, "desk", "light")
         octx, opg = browser_as(b, None, "desk", "light")
+        opg.add_init_script(SITE_OPENS)
         desk = {}
 
         def newtab(press_, ctx_):
@@ -1849,7 +1936,7 @@ with sync_playwright() as p:
 
         try:
             hsel, esel = f'.post-card[data-post="{g_post}"]', TILE.format(lone)
-            for name_, ctx_, pg_, path, sel in (("home", ctx, cpg, "/social/", hsel), ("first visit", octx, opg, "/social/", esel)):
+            for name_, ctx_, pg_, path, sel in (("home", ctx, cpg, "/social/", hsel), ("gallery", octx, opg, "/gallery", esel)):
                 ready(pg_, path, sel)
                 xy = pg_.evaluate(SPOT12, [sel, "ground"])
 
@@ -1863,7 +1950,7 @@ with sync_playwright() as p:
                 desk[name_ + " middle"] = (newtab(lambda: pg_.mouse.click(*xy, button="middle"), ctx_), follow(pg_, path, 600))
             # A drag that selects a Gallery card's caption, and one across its ground.
             csel = TILE.format(g_sid)
-            ready(opg, "/social/", csel)
+            ready(opg, "/gallery", csel)
             ends = opg.evaluate("""(s) => { const c = document.querySelector(s); const w = c.querySelector('.tcap'), n = w.firstChild;
               w.scrollIntoView({ block: 'center' }); const g = document.createRange(); g.setStart(n, 0); g.setEnd(n, 1);
               const a = g.getBoundingClientRect(); g.setStart(n, n.length - 1); g.setEnd(n, n.length); const z = g.getBoundingClientRect();
@@ -1873,37 +1960,37 @@ with sync_playwright() as p:
             opg.mouse.move(ends[2], ends[3], steps=12)
             opg.mouse.up()
             opg.wait_for_timeout(300)
-            desk["select"] = (opg.evaluate("() => String(getSelection())"), follow(opg, "/social/", 1500))
-            ready(opg, "/social/", csel)
+            desk["select"] = (opg.evaluate("() => String(getSelection())"), follow(opg, "/gallery", 1500))
+            ready(opg, "/gallery", csel)
             g0 = opg.evaluate(SPOT12, [csel, "ground"])
             opg.mouse.move(g0[0], g0[1])
             opg.mouse.down()
             opg.mouse.move(g0[0] - 40, g0[1] + 2, steps=8)
             opg.mouse.up()
-            desk["drag"] = follow(opg, "/social/", 1500)
+            desk["drag"] = follow(opg, "/gallery", 1500)
             # The keyboard: from the card's ⋯, Tab reaches its title, a link, and Enter opens it.
-            ready(opg, "/social/", esel)
+            ready(opg, "/gallery", esel)
             opg.evaluate("(s) => document.querySelector(s + ' .tileMore').focus()", esel)
             opg.keyboard.press("Tab")
             desk["tab"] = opg.evaluate("""(s) => { const a = document.activeElement, c = document.querySelector(s);
               return a && c.contains(a) ? [a.tagName.toLowerCase(), a.className, a.getAttribute('href'), a.textContent.trim()] : null; }""", esel)
             opg.keyboard.press("Enter")
-            desk["enter"] = follow(opg, "/social/")
+            desk["enter"] = follow(opg, "/gallery")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is its rows' red
             desk["stopped"] = str(exc).splitlines()[0][:160]
         close_ctx(ctx, cpg)
         close_ctx(octx, opg)
         check("on a desk, Ctrl or the middle button opens the card in a new tab and this page stays: Home's card (in"
-              " its row, between the ⋯ and Open ›) and a Gallery card of Skribl's (the first visit's, at its time)",
+              " its row, between the ⋯ and Open ›) and a Gallery card of Skribl's where a host says (at its time)",
               made and all(desk.get(k) == (w, p_) for k, w, p_ in (("home ctrl", to_post, "/social/"),
                                                                   ("home middle", to_post, "/social/"),
-                                                                  ("first visit ctrl", to_lone, "/social/"),
-                                                                  ("first visit middle", to_lone, "/social/"))),
-              f"{ {k: desk.get(k) for k in ('home ctrl', 'home middle', 'first visit ctrl', 'first visit middle', 'stopped')} }")
+                                                                  ("gallery ctrl", to_lone, "/gallery"),
+                                                                  ("gallery middle", to_lone, "/gallery"))),
+              f"{ {k: desk.get(k) for k in ('home ctrl', 'home middle', 'gallery ctrl', 'gallery middle', 'stopped')} }")
         check("...pressing on a Gallery card's caption and pulling selects its words and opens nothing, and a drag"
               " across its ground opens nothing: a drag is not a tap",
               made and (desk.get("select") or ("", ""))[0].strip() == "From the gallery tick"
-              and (desk.get("select") or ("", ""))[1] == "/social/" and desk.get("drag") == "/social/",
+              and (desk.get("select") or ("", ""))[1] == "/gallery" and desk.get("drag") == "/gallery",
               f"select {desk.get('select')}; drag {desk.get('drag')}")
         check("...and for a keyboard the card's title is its link: Tab from its ⋯ reaches it, and Enter opens the"
               " card's page",
@@ -1911,30 +1998,31 @@ with sync_playwright() as p:
               and urllib.parse.urlsplit((desk.get("tab") or [None, None, ""])[2] or "").path == to_lone
               and desk.get("enter") == to_lone, f"tab {desk.get('tab')}; enter {desk.get('enter')}")
 
-        # ⋯ ON A GALLERY CARD (Skribl's, on the first visit, signed out; a
-        # profile's Skribls until the map's step 4): Open goes to the card's
-        # page, in this tab as a tap does, and Copy link and Share… give its
-        # address.
+        # ⋯ ON A GALLERY CARD where a host says (Skribl's, signed out, on its
+        # /gallery given the site's address; the first visit's until Nov 14):
+        # Open goes to the card's page, in this tab as a tap does, and Copy
+        # link and Share… give its address.
         ctx, cpg = browser_as(b, None, "phone", "light")
+        cpg.add_init_script(SITE_OPENS)
         ctx.add_init_script("Object.defineProperty(navigator, 'share', { configurable: true,"
                             " value: d => { window.__shared = d && d.url; return Promise.resolve(); } });")
         menu12 = {}
         try:
             for act in ("Copy link", "Share", "Open"):
-                ready(cpg, "/social/", TILE.format(g_sid))
+                ready(cpg, "/gallery", TILE.format(g_sid))
                 cpg.evaluate("() => { if (window.SkriblPostedUI) SkriblPostedUI.copyText = t => { window.__copied = t;"
                              " return Promise.resolve(true); }; }")
                 cpg.locator(TILE.format(g_sid) + " .tileMore").tap()
                 cpg.locator(f'.cardMenu .cmItem:has-text("{act}")').tap()
                 if act == "Open":
-                    menu12[act] = follow(cpg, "/social/")
+                    menu12[act] = follow(cpg, "/gallery")
                 else:
                     cpg.wait_for_timeout(400)
                     menu12[act] = cpg.evaluate("() => window.__copied || window.__shared || null")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
             menu12["stopped"] = str(exc).splitlines()[0][:160]
         close_ctx(ctx, cpg)
-        check("a Gallery card's ⋯ on the site: Open goes to the card's page in this tab (followed, a post's drawing its"
+        check("a Gallery card's ⋯ where a host says: Open goes to the card's page in this tab (followed, a post's drawing its"
               " post), and Copy link and Share… give the card's address",
               made and menu12.get("Open") == to_post
               and menu12.get("Copy link") == BASE + f"/social/b/{g_sid}" and menu12.get("Share") == BASE + f"/social/b/{g_sid}",
@@ -2243,13 +2331,16 @@ with sync_playwright() as p:
                       for s in geo for t in geo[s]["tiles"].values()),
               f"tiles {[geo.get('phone', {}).get('tiles', {}).get(k, {}).get('words') for k in WANT_WORDS]};"
               f" the player {player_says}; place {[(t['durL'], t['durB'], t['durH'], t['tri']) for t in geo.get('phone', {}).get('tiles', {}).values()]}")
-        check("under it the maker's face at 22px (their drawn face, or the empty circle, never an initial) and first"
-              " name (600, cut with an ellipsis, never past the tile), and the hearts and comments each only when there"
-              " are some, their icons 14px",
+        check("under it the maker's face at 22px (their drawn face, or the empty circle, never an initial) and name"
+              " as they wrote it, whole (\"Gwen Lark\", never its first word: the owner's \"Your picks\", Nov 14; 600,"
+              " cut with an ellipsis only when it doesn't fit, never past the tile; a screen reader hears it whole too),"
+              " and the hearts and comments each only when there are some, their icons 14px",
               all(t["face"][:3] == [22, 22, "50%"] and not t["face"][5] for s in geo for t in geo[s]["tiles"].values())
               and all(geo[s]["tiles"][p_a]["face"][3] and geo[s]["tiles"][p_b]["face"][4] for s in geo)
               and all(geo[s]["tiles"][k]["name"] == n_ for s in geo for k, n_ in
-                      ((p_a, "Gwen"), (p_b, "Hugo"), (p_c, "Wilhelminaconstance")))
+                      ((p_a, "Gwen Lark"), (p_b, "Hugo Bell"), (p_c, "Wilhelminaconstance Moss")))
+              and all((geo[s]["tiles"][p_a]["label"] or "").startswith("Gwen Lark: ") for s in geo)
+              and not geo["phone"]["tiles"][p_a]["cut"]
               and all(t["weight"] == "600" and t["ellipsis"] == "ellipsis nowrap" and t["inside"]
                       for s in geo for t in geo[s]["tiles"].values()) and geo["phone"]["tiles"][p_c]["cut"]
               and all(geo[s]["tiles"][k]["counts"] == v for s in geo for k, v in WANT_N.items()),
@@ -2301,6 +2392,82 @@ with sync_playwright() as p:
               and all(abs(v) <= 1.0 for v in cut[0]["fill"]) and abs(cut[1]["fill"][1]) <= 1.0
               and cut[1]["fill"][0] < -50 and abs(cut[1]["mid"]) <= 1.0,
               f"{cut}")
+
+        # THE BOX WEARS THE DRAWING'S OWN GROUND (the owner's "Your picks", Nov
+        # 14: on their phone a tall drawing made on the Pad's dark canvas sat in
+        # the tile's cream paper, cream bars at its sides). Hugo shares a tall one
+        # on the Pad's own dark (#0d0f14) as a post, and one from the Pad outside
+        # a post; each box is read off the paint in the middle of the bars beside
+        # its plate: in the Gallery, on his Gallery tab (a post's tile, and one
+        # shown outside a post: the listing it comes from says no ground, so the
+        # site asks Skribl's description for it), and in More from on his other
+        # post's page (both kinds). His tall paper one keeps its paper (#f6f2ea),
+        # and Gwen's 4:3 on paper, which fills its box, is the box it was.
+        NIGHT, NIGHT_RGB = "night" + secrets.token_hex(3), (13, 15, 20)
+        PAPER_RGB = (246, 242, 234)
+        p_n = share(hugo, f"{NIGHT} a tall one in the dark", timed(4000, 7, size=(531, 944), bg="#0d0f14"),
+                    size=(531, 944), paper=NIGHT_RGB)
+        hugo.pg.goto(BASE + "/social/")
+        _, d_n = hugo.pg.evaluate(PAD_ON, [f"{NIGHT} shown outside a post", "#0d0f14", 531, 944, 136])
+        near_ = lambda c, t: abs(c[0] - t[0]) + abs(c[1] - t[1]) + abs(c[2] - t[2]) <= 12
+
+        def bars_of(pg_, sel):
+            """The colours painted in the middle of the bars beside a tile's plate, left and right."""
+            try:
+                pg_.wait_for_selector(sel, timeout=15000)
+                at = pg_.evaluate(BARS, sel)
+                pg_.wait_for_timeout(250)
+                png = pg_.locator(sel + " :is(.gal-pic, .more-pic)").screenshot(timeout=5000) if Image else None
+                if not (at and png):
+                    return {"stopped": "no box" if not at else "no picture"}
+                im = Image.open(io.BytesIO(png)).convert("RGB")
+                k = im.size[1] / (2 * at["y"])          # the picture's pixels to one CSS pixel
+                return {"bars": at["bars"], "left": im.getpixel((int(at["left"] * k), int(at["y"] * k))),
+                        "right": im.getpixel((min(im.size[0] - 1, int(at["right"] * k)), int(at["y"] * k))),
+                        "style": at["ground"]}
+            except Exception as exc:  # noqa: BLE001 -- a box that cannot be read is the row's red
+                return {"stopped": str(exc).splitlines()[0][:120]}
+
+        def dark(got):
+            return bool(got.get("bars")) and min(got["bars"]) >= 20 and near_(got.get("left", (0, 0, 0, 1)), NIGHT_RGB) \
+                and near_(got.get("right", (0, 0, 0, 1)), NIGHT_RGB)
+        grounds = {}
+        ctx, cpg = browser_as(b, quin, "desk", "light")
+        cpg.goto(BASE + "/social/explore?q=" + urllib.parse.quote(NIGHT))
+        grounds["gallery, dark"] = bars_of(cpg, f'.gal-tile[data-post="{p_n}"]')
+        cpg.goto(BASE + "/social/explore?q=" + urllib.parse.quote(G13))
+        grounds["gallery, tall paper"] = bars_of(cpg, f'.gal-tile[data-post="{p_b}"]')
+        cpg.wait_for_selector(f'.gal-tile[data-post="{p_a}"]', timeout=15000)
+        grounds["gallery, 4:3 paper"] = cpg.evaluate("""(s) => { const pic = document.querySelector(s + ' .gal-pic');
+          return [getComputedStyle(pic).backgroundColor, pic.getAttribute('style')]; }""", f'.gal-tile[data-post="{p_a}"]')
+        cpg.goto(BASE + "/social/@galhugo/gallery")
+        grounds["his Gallery tab, a post"] = bars_of(cpg, f'.gal-tile[data-post="{p_n}"]')
+        grounds["his Gallery tab, outside a post"] = bars_of(cpg, f'.gal-tile[data-drawing="{d_n}"]')
+        cpg.goto(BASE + f"/social/p/{p_b}")
+        try:
+            cpg.wait_for_function("() => [...document.querySelectorAll('.more-plate img')].length >= 2", timeout=15000)
+        except Exception:  # noqa: BLE001 -- a tile missing is the row's red
+            pass
+        for key, sel in (("More from, a post", f'.more-tile[href="/social/p/{p_n}"]'),
+                         ("More from, outside a post", f'.more-tile[href="/social/b/{d_n}"]')):
+            grounds[key] = bars_of(cpg, sel)
+        close_ctx(ctx, cpg)
+        check("THE BOX WEARS THE DRAWING'S OWN GROUND: in the Gallery a tall drawing made on the Pad's dark sits in its own"
+              " dark, the bars beside it read off the paint (never the tile's cream); a paper drawing in the paper it had,"
+              " a tall one's bars and a 4:3's box",
+              bool(p_n) and dark(grounds["gallery, dark"])
+              and min((grounds["gallery, tall paper"] or {}).get("bars") or [0]) >= 20
+              and near_(grounds["gallery, tall paper"].get("left", (0, 0, 0)), PAPER_RGB)
+              and near_(grounds["gallery, tall paper"].get("right", (0, 0, 0)), PAPER_RGB)
+              and (grounds["gallery, 4:3 paper"] or [None])[0] == "rgb(246, 242, 234)",
+              json.dumps({k: grounds.get(k) for k in ("gallery, dark", "gallery, tall paper", "gallery, 4:3 paper")}))
+        check("...the same on its maker's Gallery tab, a post's tile and one shown outside a post (the site asks Skribl's"
+              " description for its ground: the listing says none)",
+              bool(d_n) and dark(grounds["his Gallery tab, a post"]) and dark(grounds["his Gallery tab, outside a post"]),
+              json.dumps({k: grounds.get(k) for k in ("his Gallery tab, a post", "his Gallery tab, outside a post")}))
+        check("...and in More from on a post's page, both kinds: the box around the plate its own dark",
+              dark(grounds["More from, a post"]) and dark(grounds["More from, outside a post"]),
+              json.dumps({k: grounds.get(k) for k in ("More from, a post", "More from, outside a post")}))
 
         # A TAP ANYWHERE ON A TILE OPENS ITS POST: a touch on a phone and a click
         # on a desk, on the drawing, its ▶, the face, the name, the counts, a
@@ -2516,6 +2683,136 @@ print("PLAN " + json.dumps(out))
               f"{ {' '.join(k): v for k, v in glass.items()} }")
 
     # ------------------------------------------------------------------ 8
+    # ------------------------------------------------------------------ 14
+    # THE FIRST VISIT, B (the owner's "Your picks", Nov 14): Home signed out
+    # keeps its welcome; under "Fresh from everyone" the six newest tiles of
+    # the Gallery of everyone, as /social/explore shows them signed out (posts
+    # only), then "See the whole Gallery ›" (the small violet words, 44px) to
+    # it: where Skribl's own Gallery section was, every public skribl, a
+    # drawing outside a post among them. Oda shares eight posts; then, newer
+    # than all of them, she shows a drawing in the gallery outside a post,
+    # keeps one link-only and draws her face, and somebody not on the site
+    # shows one: none of them is a post, and none is on the first visit.
+    if part(14, "the first visit: the welcome, then the Gallery's six newest and See the whole Gallery ›"):
+        F14 = "fv" + secrets.token_hex(3)
+        oda = someone(b, "fvoda", "Oda Wren")
+        oc = oda.client()
+        oc.get("/social/")
+        made14 = []
+        for i in range(8):
+            st_, j_ = oc.post_json("/social/posts", {"words": f"{F14} post {i}", "payload": drawing(seed=140 + i)})
+            made14.append(j_.get("post") if st_ == 200 and isinstance(j_, dict) else None)
+            time.sleep(0.012)
+        oda.pg.goto(BASE + "/social/")
+        _, lone14 = oda.pg.evaluate(PAD, [f"{F14} shown outside a post", "public", 141])
+        _, kept14 = oda.pg.evaluate(PAD, [f"{F14} kept link-only", "unlisted", 142])
+        fc14 = oda.client()
+        fc14.get("/social/you/edit")
+        _, fj14 = fc14.post_json("/social/you/face", {"payload": drawing(seed=143, size=(707, 707))})
+        face14 = fj14.get("face") if isinstance(fj14, dict) else None
+        nb_ctx, nb_pg = browser_as(b, None)
+        nb_pg.goto(BASE + "/skribl-pad")
+        nb_pg.wait_for_timeout(600)
+        _, nobody14 = nb_pg.evaluate(PAD, [f"{F14} nobody's", "public", 144])
+        close_ctx(nb_ctx, nb_pg)
+        not14 = {x for x in (lone14, kept14, face14, nobody14) if x}
+        made_ok = all(made14) and len(not14) == 4
+        FV = """() => { const s = document.querySelector('.fresh'), h = s && s.querySelector('h2.sec'), a = s && s.querySelector('.fresh-more a');
+          const tiles = s ? [...s.querySelectorAll('.gal-tile')] : [], cs = a ? getComputedStyle(a) : null, r = a ? a.getBoundingClientRect() : null;
+          const probe = document.createElement('span'); probe.style.color = 'var(--accent-ink)'; document.body.append(probe);
+          const accent = getComputedStyle(probe).color; probe.remove();
+          const hid = a ? [...a.querySelectorAll('[aria-hidden="true"]')].map(e => e.textContent).join('') : null;
+          return { welcome: !!document.querySelector('.hello #helloCard') && !!document.querySelector('.hello .cta [data-make]'),
+                   heading: h ? h.textContent.trim() : null,
+                   posts: tiles.map(t => t.getAttribute('data-post')), drawings: tiles.filter(t => !t.hasAttribute('data-post')).length,
+                   srcs: tiles.map(t => (t.querySelector('.gal-plate img') || { getAttribute: () => '' }).getAttribute('src')),
+                   inOrder: !!(h && a && tiles.length && (h.compareDocumentPosition(tiles[0]) & 4) && (tiles[tiles.length - 1].compareDocumentPosition(a) & 4)),
+                   link: a ? { words: a.textContent.replace(hid, '').trim(), hidden: hid, href: a.getAttribute('href'),
+                               h: Math.round(r.height * 100) / 100, ink: cs.color, accent: accent, weight: cs.fontWeight,
+                               size: parseFloat(cs.fontSize), mid: Math.round((r.left + r.width / 2) - (s.getBoundingClientRect().left + s.getBoundingClientRect().width / 2)) } : null,
+                   none: (document.querySelector('.fresh .feed-none') || {}).textContent || null,
+                   skribls: !!document.getElementById('skriblGallery') || !!document.querySelector('[data-skribl-gallery]')
+                            || [...document.querySelectorAll('link[rel=stylesheet]')].some(l => /gallerysection[.]css/.test(l.href)) }; }"""
+        firsts = {}
+        for screen in ("phone", "desk"):
+            ctx, cpg = browser_as(b, None, screen, "light")
+            cpg.goto(BASE + "/social/")
+            cpg.wait_for_timeout(700)
+            firsts[screen] = cpg.evaluate(FV)
+            close_ctx(ctx, cpg)
+        anon14 = Client()
+        st_e, text_e = anon14._req("GET", "/social/explore/more?show=everyone&sort=new")
+        try:
+            explore6 = re.findall(r'<a class="gal-tile" href="/social/p/([^"]+)"', json.loads(text_e).get("html", ""))[:6]
+        except ValueError:
+            explore6 = []
+        oracle14 = [r_[0] for r_ in db(
+            "select p.public_id from social_posts p join social_people pe on pe.id = p.person_id"
+            " join skribl_posts s on s.public_id = p.skribl_id where p.taken_down_at is null and pe.taken_down_at is null"
+            " and s.visibility in ('public', 'unlisted') order by p.created_at desc, p.public_id desc limit 6")]
+        fv_p = firsts.get("phone") or {}
+        shown14 = {re.sub(r"^.*/s/([A-Za-z0-9_-]+)/poster.*$", r"\1", x or "") for v in firsts.values() for x in v.get("srcs", [])}
+        check("THE FIRST VISIT keeps its welcome (Blooby's card, Make a skribl), and under \"Fresh from everyone\" the six"
+              " newest tiles of the Gallery of everyone: the first six /social/explore shows signed out, read against the"
+              " database itself, phone and desk; six at most though more are shared",
+              made_ok and all(v.get("welcome") and v.get("heading") == "Fresh from everyone" and v.get("inOrder")
+                              and v.get("posts") == explore6 == oracle14 for v in firsts.values())
+              and len(explore6) == 6 and explore6 == list(reversed(made14))[:6],
+              f"made {made_ok}; first visit {fv_p.get('posts')}; explore {explore6}; database {oracle14};"
+              f" Oda's newest {list(reversed(made14))[:6]}")
+        check("...posts only: never a drawing shown outside a post, one kept link-only, a face, or one by somebody not on"
+              " the site, though each is newer than the six; and nothing of Skribl's own Gallery section on the page",
+              made_ok and all(v.get("drawings") == 0 and not v.get("skribls") for v in firsts.values())
+              and not (not14 & shown14) and len(shown14) == 6,
+              f"tiles not a post's {[v.get('drawings') for v in firsts.values()]}; Skribl's section"
+              f" {[v.get('skribls') for v in firsts.values()]}; not posts shown {sorted(not14 & shown14)}")
+        lk14 = fv_p.get("link") or {}
+        went = {}
+        for screen in ("phone", "desk"):
+            ctx, cpg = browser_as(b, None, screen, "light")
+            try:
+                cpg.goto(BASE + "/social/")
+                cpg.locator(".fresh-more a").scroll_into_view_if_needed(timeout=5000)
+                with cpg.expect_navigation(timeout=15000):
+                    if screen == "phone":
+                        cpg.locator(".fresh-more a").tap()
+                    else:
+                        cpg.locator(".fresh-more a").click()
+                went[screen] = (urllib.parse.urlsplit(cpg.url).path,
+                                (cpg.locator(".page-title").text_content(timeout=5000) or "").strip())
+            except Exception as exc:  # noqa: BLE001 -- not going is the row's red
+                went[screen] = ("stopped", str(exc).splitlines()[0][:100])
+            close_ctx(ctx, cpg)
+        check("...then \"See the whole Gallery ›\" (the › hidden from a screen reader), in the small violet words"
+              " (--accent-ink, 600, 16px), centred, 44px tall, a tap on a phone and a click on a desk landing on the Gallery",
+              lk14.get("words") == "See the whole Gallery" and lk14.get("hidden") == "›" and lk14.get("href") == "/social/explore"
+              and lk14.get("ink") == lk14.get("accent") and lk14.get("weight") == "600" and lk14.get("size") == 16
+              and lk14.get("h", 0) >= 44 and abs(lk14.get("mid", 99)) <= 1
+              and all(v == ("/social/explore", "Gallery") for v in went.values()) and len(went) == 2,
+              f"{lk14}; landed {went}")
+        seen14 = {}
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                ctx, cpg = browser_as(b, None, screen, scheme, reduced=True)
+                cpg.goto(BASE + "/social/")
+                cpg.wait_for_timeout(700)
+                got = {"read": 0, "low": [], "small": [], "lowest": 99}
+                for at in ("h2.sec", ".fresh .gal-tile:nth-of-type(3)", ".fresh-more a"):
+                    cpg.evaluate("(s) => { const e = document.querySelector(s); if (e) e.scrollIntoView({ block: 'center', behavior: 'instant' }); }", at)
+                    cpg.wait_for_timeout(150)
+                    r_ = cpg.evaluate(READ, ".fresh")
+                    got["read"] += r_["read"]
+                    got["low"] += r_["low"]
+                    got["small"] += r_["small"]
+                    got["lowest"] = min(got["lowest"], r_["lowest"])
+                seen14[(screen, scheme)] = got
+                close_ctx(ctx, cpg)
+        check("...every word under \"Fresh from everyone\" reads at 4.5:1 or more on what is painted behind it (the"
+              " names, the counts, the ▶'s words, the way to the Gallery), every control 44px: phone and desk, light"
+              " and dark",
+              all(v["read"] >= 12 and not v["low"] and not v["small"] for v in seen14.values()) and len(seen14) == 4,
+              f"{ {' '.join(k): (v['read'], v['lowest'], v['low'][:2], v['small'][:2]) for k, v in seen14.items()} }")
+
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):
             ERRS.extend(f"csp: {v}" for v in who.csp())

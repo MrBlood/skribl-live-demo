@@ -38,8 +38,9 @@ authenticator for the site's people.
  10. LOAD MORE: twenty comments a page, the next in place, none twice.
  11. HOME'S CARD: how many comments beside the plays, "N comments", a way to
      them; at none the icon alone, "Comment" (the owner's yes, Nov 12).
- 12. ON A DESK: the comments beside the drawing, under Share; the icon at
-     their heading's end; the box opening right under it.
+ 12. ON A DESK: the comments beside the drawing, right under the time-and-
+     plays line (no Make your own between, since Nov 14); the icon at their
+     heading's end; the box opening right under it.
  13. THE NEW SCREENS: every word at 4.5:1 on what is painted behind it, every
      target 44px, every text field 16px: phone and desk, light and dark.
  14. A DRAWING ANSWER, IN THE BOX: Draw and Flip open Skribl's editor over
@@ -1785,7 +1786,7 @@ with sync_playwright() as p:
             stopped(11, exc)
 
     # ------------------------------------------------------------------ 12
-    if part(12, "on a desk: the comments beside the drawing, under Share"):
+    if part(12, "on a desk: the comments beside the drawing, under the time-and-plays line"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
@@ -1794,9 +1795,9 @@ with sync_playwright() as p:
             dctx, dpg = browser_as(b, juno, "desk", "light")
             open_post(dpg, post)
             WHERE = """() => { const r = s => document.querySelector(s).getBoundingClientRect();
-              const art = r('.post-art'), share = r('.post-actions'), sec = r('#comments'), box = r('[data-cm-box]'), icon = r('.cm-say');
-              return { right: Math.round(sec.left - art.right), under: Math.round(sec.top - share.bottom),
-                       left: Math.round(sec.left - share.left), width: Math.round(sec.width), box: Math.round(box.width),
+              const art = r('.post-art'), meta = r('.post-page > .post-meta'), sec = r('#comments'), box = r('[data-cm-box]'), icon = r('.cm-say');
+              return { right: Math.round(sec.left - art.right), under: Math.round(sec.top - meta.bottom),
+                       left: Math.round(sec.left - meta.left), width: Math.round(sec.width), box: Math.round(box.width),
                        boxTop: Math.round(box.top - r('.comments-head').bottom), icon: Math.round(sec.right - icon.right),
                        onscreen: icon.bottom < innerHeight }; }"""
             where = dpg.evaluate(WHERE)
@@ -1818,7 +1819,8 @@ with sync_playwright() as p:
             dpg.wait_for_timeout(200)
             answering = dpg.evaluate(NEAR_LIMIT)
             close_ctx(dctx, dpg)
-            check("on a desk the comments sit beside the drawing, under Share and Make your own, in the same column, the icon at"
+            check("on a desk the comments sit beside the drawing, right under the time-and-plays line (Make your own is off"
+                  " a post's page since Nov 14), in the same column, the icon at"
                   " the end of their heading within reach; the box opens right under the heading, as wide as the column",
                   where["right"] >= 24 and 0 < where["under"] <= 40 and where["left"] == 0 and where["width"] >= 300
                   and where["icon"] == 0 and where["onscreen"] and err is None and opened["box"] == opened["width"]

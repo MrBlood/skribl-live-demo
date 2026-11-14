@@ -551,10 +551,61 @@ with host.app_context():
           f"anyone {sorted(_anyone)}; author {sorted(_author)}; another {sorted(_other)}")
     _row = db.session.query(skribl.models.SkriblPost).filter_by(public_id=_pub.public_id).one()
     _item = _anyone.get(_pub.public_id) or {}
-    check("...each item is the listing's own (feed_dict), with no payload in it",
-          _item == _row.feed_dict() and "payload" not in _item and "payload_json" not in _item
+    check("...each item is the listing's own (feed_dict) and the drawing's ground, with no payload in it",
+          {k: v for k, v in _item.items() if k != "ground"} == _row.feed_dict() and _item.get("ground") == "#101418"
+          and "payload" not in _item and "payload_json" not in _item
           and {"canvas_w", "canvas_h", "line", "views", "title", "caption"} <= set(_item),
-          f"keys {sorted(_item)}")
+          f"keys {sorted(_item)}; ground {_item.get('ground')!r}")
+    # THE GROUND (Nov 14, the Skribl site's tiles: a tall drawing made on the
+    # Pad's dark canvas sat in a tile of cream paper): the colour the drawing
+    # is painted on, as the player paints its first page (inlineplayer.js:
+    # frames[0]'s background, else the payload's own), and nothing a page
+    # could read as more than a colour.
+    _grounds = {
+        "a frame's": payload(frames=[dict(FRAME, background={"color": "#0D0F14"})]),
+        "three digits": payload(frames=[dict(FRAME, background={"color": "#AbC"})]),
+        "the top level's": {"strokes": [], "background": {"color": "#f6f2ea"}},
+        "the frame's over the top's": payload(frames=[dict(FRAME, background={"color": "#101418"})],
+                                              background={"color": "#ffffff"}),
+        "an empty frame's, the top's": payload(frames=[dict(FRAME, background={"color": ""})],
+                                              background={"color": "#123456"}),
+        "words after a colour": payload(frames=[dict(FRAME, background={"color": "#fff; background: url(x)"})]),
+        "a rule": payload(frames=[dict(FRAME, background={"color": "red;}body{display:none"})]),
+        "a name": payload(frames=[dict(FRAME, background={"color": "red"})]),
+        "eight digits": payload(frames=[dict(FRAME, background={"color": "#0d0f14ff"})]),
+        "a number": payload(frames=[dict(FRAME, background={"color": 7})]),
+        "none": payload(frames=[{"strokes": [], "strokeGroups": []}]),
+    }
+    _gids = {k: skribl.create_post(v, author_id=72).public_id for k, v in _grounds.items()}
+    db.session.commit()
+    _seen = []
+
+    def _note(conn, cursor, statement, *rest):
+        _seen.append(statement)
+    sa.event.listen(db.engine, "before_cursor_execute", _note)
+    try:
+        _gd = skribl.describe_posts(list(_gids.values()))
+    finally:
+        sa.event.remove(db.engine, "before_cursor_execute", _note)
+    _gsaid = {k: (_gd.get(v) or {}).get("ground", "absent") for k, v in _gids.items()}
+    check("its ground is the colour the drawing's first page is painted on, as the player paints it: frames[0]'s"
+          " background, else the payload's own (an empty one is none, as the player's ||), a hex colour, lowercase,"
+          " six digits (three written out)",
+          [_gsaid[k] for k in ("a frame's", "three digits", "the top level's", "the frame's over the top's",
+                               "an empty frame's, the top's")]
+          == ["#0d0f14", "#aabbcc", "#f6f2ea", "#101418", "#123456"], str(_gsaid))
+    check("...and never anything but a colour: words after one, a rule, a name, eight digits, a number or none are"
+          " None, so a host can set it as a value of its own CSS",
+          all(_gsaid[k] is None for k in ("words after a colour", "a rule", "a name", "eight digits", "a number",
+                                         "none")), str(_gsaid))
+    _sel = [s_ for s_ in _seen if "skribl_posts" in s_]
+    check("...read by the database where it is, at its paths: describe_posts is one query that selects no payload"
+          " (deferred, as the listing's), the ground's two paths its only looks inside it",
+          len(_sel) == 1 and not re.search(r"payload_json\s+AS\s", _sel[0], re.I)
+          and len(re.findall(r"json_extract|#>>", _sel[0], re.I)) == 2,
+          f"{len(_sel)} queries; payload selected"
+          f" {bool(_sel and re.search(r'payload_json[ ]+AS[ ]', _sel[0], re.I))}; looks inside"
+          f" {len(re.findall(r'json_extract|#>>', _sel[0], re.I)) if _sel else None}")
     _many = skribl.describe_posts([_pub.public_id] * 3 + [f"x{i}" for i in range(500)])
     check("...and an empty or oversized ask reads nothing past its first 200 ids",
           skribl.describe_posts([]) == {} and skribl.describe_posts(None) == {}

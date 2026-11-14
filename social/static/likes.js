@@ -24,10 +24,13 @@
  * SocialSheet, as Make's); Sign in comes back to the same page, and nothing
  * is pressed for them.
  *
- * THE MAKER'S "Liked by…" opens who liked it in Make's own sheet. A like they
- * give or take back on their own answers with the line and the rows as they
- * now stand. Opened from a like in Activity (#liked), the line glows a moment
- * in the note's tint, as a comment does when you land on it.
+ * THE MAKER'S "Liked by…" opens who liked it in Make's own sheet. It names
+ * the others, never the maker, and with nobody else there is none (the
+ * owner's A, Nov 14: their filled heart says it). A like they give or take
+ * back on their own answers with the line and the rows as they now stand.
+ * Opened from a like in Activity (#liked), the line glows a moment in the
+ * note's tint, as a comment does when you land on it; with no line, the
+ * page lands on the heart.
  *
  * THE HEART SITS IN THE POST'S ROW, under the drawing, beside the comments
  * (the quick-patterns mock's B, Nov 13). Until then it sat at the start of the
@@ -283,7 +286,17 @@
   }) : null;
 
   /* Their own like, given or taken back: the line and the rows as they stand.
-     A line that comes or goes opens or closes its room, and fades. */
+     The line names the others, never the maker (likes.py by_line), so their
+     own tap leaves it as it was; it comes or goes only when somebody else's
+     like came or went meanwhile. A line that comes or goes opens or closes
+     its room, and fades. Where a like row lands (#liked) is the line, and
+     with no line the page's heart: it moves with the line. */
+  function landing(on) {
+    var heart = doc.querySelector('.post-page .post-row .lk-heart');
+    if (!heart) return;
+    if (on) { if (!doc.getElementById('liked')) heart.id = 'liked'; }
+    else if (heart.id === 'liked') heart.removeAttribute('id');
+  }
   function maker(j) {
     var line = doc.querySelector('[data-like-by]');
     var meta = doc.querySelector('.post-page > .post-meta');
@@ -302,10 +315,13 @@
       byOpeners.push(fresh);
       if (line) { line.parentNode.replaceChild(fresh, line); return; }
       if (!meta) return;
+      landing(false);
       meta.parentNode.insertBefore(fresh, meta.nextSibling);
       room(fresh, true);
     } else if (line) {
       byOpeners.length = 0;
+      line.removeAttribute('id');
+      landing(true);
       room(line, false);
     }
   }

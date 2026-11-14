@@ -28,8 +28,11 @@ what it promises, through the demo's own server:
      closed; it glides, read on every frame, never a jump, up and down; under
      Reduce Motion it does not move, opening or closing.
   4. THE FIRST VISIT: Blooby's card plays in Skribl's real player, ink
-     appearing over time; under Reduce Motion it rests, finished; and the
-     newest public skribls are under it (one is posted through the API).
+     appearing over time; under Reduce Motion it rests, finished; and under
+     it "Fresh from everyone", the Gallery of everyone's newest (posts only,
+     the owner's B, Nov 14: a drawing posted through Skribl's API is no post
+     and not there; none of Skribl's own Gallery section; with nothing
+     shared, the Gallery's own words). Its tiles are verify_socialposts' 14.
   5. EXPLORE IS THE GALLERY OF EVERYONE (the map's step 3): the site's own
      page, its head saying Gallery, New | Hot and the search box (16px),
      signed out no Following | Everyone (Home has none), and none of
@@ -44,10 +47,10 @@ what it promises, through the demo's own server:
      with their exceptions, since piece 3's faces); its templates reach only
      the Skribl partials docs/INTEGRATION.md documents (the face player's
      among them since piece 3); and every Skribl file it names is there.
-  9. THE EMPTY GALLERY'S WORDS: the site's Home names the tick on the Pad's
-     own Post sheet, and the Library (the site's Make opens Skribl's own
-     editors), not a host composer's; Explore, the site's own Gallery of
-     posts, says that a post puts a drawing there.
+  9. THE EMPTY GALLERY'S WORDS: Explore, the site's own Gallery of posts,
+     and the first visit under it (since Nov 14 its six newest, where
+     Skribl's own section was, whose empty words named the Pad's tick) say
+     that a post puts a drawing there, and name no tick.
 
 SOCIAL_PART=<n> runs one section (calibration). Every row was shown red by
 breaking one part of the site and green as built: DECISIONS.md, "The site's
@@ -773,7 +776,7 @@ with sync_playwright() as p:
               f" {len({round(o, 3) for o in offs})} values; under Reduce Motion {sorted({round(o, 3) for o in stilled})[:3]}")
 
     # ------------------------------------------------------------------ 4
-    if part(4, "the first visit: Blooby draws his card, the newest skribls under it"):
+    if part(4, "the first visit: Blooby draws his card, the Gallery's newest under it"):
         newest = post_public(TAG + " the newest", "Posted by verify_social, to be first under Blooby.")
         c = b.new_context(**PHONE)
         pg, trace, label, shown = first_visit(c)
@@ -806,19 +809,26 @@ with sync_playwright() as p:
               len(inks) >= 6 and inks[0] < 0.1 * max(inks) and max(inks) > 4000 and rises >= 2,
               f"ink painted {inks}; rose on {rises} pictures" if inks
               else ("Pillow is not here (harness/requirements.txt)" if Image is None else "no card in the player to watch"))
-        try:
-            pg.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"]')",
-                                 arg=newest, timeout=20000)
-        except Exception:
-            pass                           # the row below says what is there instead
-        under = pg.evaluate("""(id) => { const s = document.getElementById('skriblGallery');
-            const h = document.querySelector('main .sec'), first = s && s.querySelector('#galleryList > article.tile');
-            return { section: !!s, heading: h ? h.textContent.trim() : null, first: first ? first.getAttribute('data-id') : null,
-                     below: !!(h && s && (h.compareDocumentPosition(s) & Node.DOCUMENT_POSITION_FOLLOWING)),
-                     sections: document.querySelectorAll('[data-skribl-gallery]').length }; }""", newest)
-        check("under it, the newest public skribls: Skribl's own Gallery section, the drawing just posted first",
-              under["section"] and under["sections"] == 1 and under["first"] == newest and under["below"]
-              and under["heading"] == "Fresh from everyone", json.dumps(under))
+        # UNDER IT, FRESH FROM EVERYONE (the owner's B, Nov 14): the Gallery of
+        # everyone's newest, posts only, where Skribl's own Gallery section was
+        # (every public skribl). This suite shares no post, and the drawing it
+        # just posted through Skribl's own API is no post: so the Gallery's own
+        # words for nothing there yet, and the drawing nowhere on the page.
+        pg.wait_for_timeout(600)
+        under = pg.evaluate("""(id) => { const h = document.querySelector('main .sec'), f = document.querySelector('main .fresh');
+            const none = f && f.querySelector('.feed-none');
+            return { heading: h ? h.textContent.trim() : null, fresh: !!(f && h && f.contains(h)),
+                     below: !!(f && document.querySelector('.hello') && (document.querySelector('.hello').compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING)),
+                     tiles: f ? f.querySelectorAll('.gal-tile').length : null, none: none ? none.textContent.trim() : null,
+                     link: !!document.querySelector('.fresh-more'), drawing: document.documentElement.innerHTML.includes(id),
+                     skribls: !!document.getElementById('skriblGallery') || document.querySelectorAll('[data-skribl-gallery]').length > 0
+                              || [...document.querySelectorAll('link[rel=stylesheet]')].some(l => /gallerysection[.]css/.test(l.href)) }; }""", newest)
+        check("under it, \"Fresh from everyone\": the Gallery of everyone's newest, posts only, so the drawing just posted"
+              " through Skribl's own API (no post) is not there; none of Skribl's own Gallery section; with no post"
+              " shared yet, the Gallery's own words and no way to an empty Gallery",
+              bool(newest) and under["heading"] == "Fresh from everyone" and under["fresh"] and under["below"]
+              and not under["skribls"] and not under["drawing"] and under["tiles"] == 0 and not under["link"]
+              and under["none"] == "No drawings here yet. Share one in a post, and it shows up here.", json.dumps(under))
         c.close()
         c = b.new_context(reduced_motion="reduce", **PHONE)
         pg = c.new_page()
@@ -1027,33 +1037,30 @@ with sync_playwright() as p:
         check("every Skribl file the site names (skribl_asset) is there",
               files and not missing, f"{sorted(files)}; missing {missing}")
 
-    if part(9, "the empty Gallery names the tick the site's people see"):
-        # The site's Make opens Skribl's own Pad and Flip, so its people post
-        # from Skribl's own Post sheet: the Gallery's empty state names that
-        # sheet's tick, "Show in the public gallery", and the Library that can
-        # turn it on later, not a host composer's "Show in the Skribls
-        # gallery" (verify_standin section 12 holds a host's). The macro's
-        # `door` says which; the site passes door='app'. Read from what the
-        # server sends: the empty state's second <b> (the first is "Nothing
-        # here yet.") against the label of the tick on the Pad's Post sheet.
+    if part(9, "the empty Gallery's words: a post puts a drawing there, no tick named"):
+        # Until Nov 14 the first visit held Skribl's own Gallery section, whose
+        # empty state named the Pad's Post sheet's tick ("Show in the public
+        # gallery") and the Library (the macro's door='app'; verify_standin's
+        # 12 holds a host's). The first visit is the Gallery of everyone's
+        # newest now, posts only, every post's drawing in it ticked or not: its
+        # words for nothing there are the Gallery's own, and name no tick. Read
+        # from what the server sends.
         import html as _html
 
         def _fetch(url):
             with urllib.request.urlopen(url, timeout=20) as r:
                 return r.read().decode("utf-8", "replace")
 
-        def _empty_words(url):
-            m = re.search(r'id="galleryEmpty"[^>]*>(.*?)</p>', _fetch(url), re.S)
-            bs = re.findall(r"<b>(.*?)</b>", m.group(1), re.S) if m else []
-            return (_html.unescape(bs[1]).strip() if len(bs) > 1 else None), bool(m and "Library" in m.group(1))
-
-        pad_page = _fetch(BASE + "/")
-        tick = re.search(r'<span class="post-check-text">([^<]*)<span class="post-check-sub"', pad_page)
-        tick = _html.unescape(tick.group(1)).strip() if tick else None
-        said = {path: _empty_words(SITE + path) for path in ("/",)}
-        check("the empty Gallery on the site's Home names the tick on the Pad's Post sheet, and the Library",
-              bool(tick) and all(w == tick and lib for w, lib in said.values()),
-              f"the Pad's tick {tick!r}; " + "; ".join(f"{p}: {w!r}, Library {lib}" for p, (w, lib) in said.items()))
+        home = _fetch(SITE + "/")
+        hm = re.search(r'<section class="fresh"[^>]*>(.*?)</section>', home, re.S)
+        hnone = re.search(r'<p class="feed-none">(.*?)</p>', hm.group(1), re.S) if hm else None
+        htiles = len(re.findall(r'<a class="gal-tile"', hm.group(1))) if hm else None
+        check("the empty first visit (the site's Home, signed out, nothing shared) says what the Gallery of everyone"
+              " says, a post puts a drawing there; it names no tick, and holds no Skribl section's empty state",
+              bool(hnone) and htiles == 0
+              and _html.unescape(hnone.group(1)).strip() == "No drawings here yet. Share one in a post, and it shows up here."
+              and "galleryEmpty" not in home and "public gallery" not in home.lower(),
+              f"{(hnone.group(1) if hnone else None)!r}; tiles {htiles}; Skribl's empty state {'galleryEmpty' in home}")
         # EXPLORE, THE SITE'S OWN GALLERY OF POSTS (the map's step 3): every
         # post's drawing is in it, ticked or not, so its empty words name no
         # tick: a post puts a drawing there. Shown when it holds no tile.

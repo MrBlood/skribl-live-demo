@@ -359,6 +359,14 @@ a.post-act { text-decoration: none; }
 .cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .fine { margin: 12px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
 .sec { margin: 32px 0 14px; font-size: 20px; font-weight: 700; line-height: 1.3; }
+/* FRESH FROM EVERYONE (the owner's B, Nov 14): the Gallery's six newest, its
+   own tiles (THE GALLERY OF EVERYONE, below), then the way to the rest in the
+   small violet words, centred, 44px to a finger: the mock's own CSS. */
+.fresh-more { display: flex; justify-content: center; margin: 20px 0 8px; }
+.fresh-more a {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 14px;
+  color: var(--accent-ink); font-size: 16px; font-weight: 600; text-decoration: none;
+}
 
 /* ---- A page's head: its name and its line (the Gallery's, the rules') ---- */
 .page-head { margin: 4px 0 18px; }
@@ -373,12 +381,15 @@ a.post-act { text-decoration: none; }
  * Skribl's gallery had them (44px, beside each other, the box taking the
  * rest; a field's own ground and edge, 16px words so a phone does not
  * magnify the page). Then the tiles: two across on a phone, three on a desk.
- * A tile is one link: the drawing on its paper, whole (_gallery.html
- * plate_frame: a 4:3 drawing fills the 650 x 486, another shape sits whole
- * in its middle), its "▶ 15 sec" at the bottom left, and under it the
- * maker's face at 22px and first name, the hearts and comments at the right
- * only when there are some. A change of pick fades the tiles out and back
- * (explore.js), as Home's pill does its posts. */
+ * A tile is one link: the drawing whole (_gallery.html plate_frame: a 4:3
+ * drawing fills the 650 x 486, another shape sits whole in its middle, the
+ * box around it its own ground, --plate-ground, from plate_ground: a tall
+ * drawing made on the Pad's dark canvas sits in its dark, never in cream
+ * bars; the paper when its ground is not known), its "▶ 15 sec" at the
+ * bottom left, and under it the maker's face at 22px and name as they wrote
+ * it ("Mr. Blood", cut with … only when it doesn't fit), the hearts and
+ * comments at the right only when there are some. A change of pick fades the
+ * tiles out and back (explore.js), as Home's pill does its posts. */
 .gal-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0 0 18px; }
 .gal-bar .fo-seg { flex: none; }
 .gal-find { flex: 1 1 220px; min-width: 0; margin: 0; }
@@ -395,7 +406,8 @@ a.post-act { text-decoration: none; }
 .gal-tile { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: var(--ink); text-decoration: none; }
 .gal-pic {
   position: relative; display: grid; place-items: center; aspect-ratio: 650 / 486; overflow: hidden;
-  border-radius: 14px; background: var(--blooby-paper); box-shadow: 0 0 0 1px var(--card-line); container-type: size;
+  border-radius: 14px; background: var(--plate-ground, var(--blooby-paper)); box-shadow: 0 0 0 1px var(--card-line);
+  container-type: size;
 }
 .gal-plate {
   position: relative; overflow: hidden; aspect-ratio: var(--plate-a); border-radius: var(--plate-r);
@@ -1111,7 +1123,6 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .post-page .post-words.is-big { font-size: 20px; line-height: 1.4; }
 .post-caption { margin: 8px 0 0; color: var(--ink-2); font-size: 15px; }
 .post-meta { margin: 12px 0 0; color: var(--ink-2); font-size: 15px; }
-.post-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .comments { margin-top: 24px; }
 .comments-head { display: flex; align-items: center; margin: 0 0 10px; }
 .comments-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 20px; font-weight: 700; }
@@ -1124,10 +1135,11 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    large as the tile allows less 8px each side; the poster behind it placed so
    only the drawing shows (none of the share card's
    ground, hairline or wordmark): _gallery.html plate_frame, the Gallery's
-   tile's too. */
+   tile's too. The tile's ground is the drawing's own (plate_ground, as the
+   Gallery's tile wears it), and where that is not known, what it was. */
 .more-pic {
   display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--card-line);
-  border-radius: 14px; background: var(--draw-wait); container-type: size;
+  border-radius: 14px; background: var(--plate-ground, var(--draw-wait)); container-type: size;
 }
 .more-plate {
   position: relative; overflow: hidden; border-radius: 6px; aspect-ratio: var(--plate-a);
@@ -1374,6 +1386,9 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   cursor: pointer; scroll-margin-top: 200px;
 }
 .lk-by b { color: var(--ink); font-weight: 600; }
+/* With no line (its maker the only one who liked it: the owner's A, Nov 14),
+   a like row in Activity lands on the heart, at the line's own height. */
+.lk-heart#liked { scroll-margin-top: 200px; }
 .lk-faces { display: flex; flex: none; }
 .lk-faces .face-ring { --skribl-face-size: 26px; width: 26px; height: 26px; box-shadow: 0 0 0 2px var(--page); }
 .lk-faces .face-ring + .face-ring { margin-left: -7px; }

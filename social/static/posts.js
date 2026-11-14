@@ -27,7 +27,8 @@
  * this post and, signed in, Block @them; or on your own Delete post. Report
  * and Delete each rise as a sheet of their own: Report into the site's own
  * queue (/report, the page's token, the Gallery's reasons and "A child's
- * safety"; piece 5), Delete asked once. Block is safety.js's sheet
+ * safety"; piece 5), Delete asked once (then, on your own page, the post
+ * folds away there; anywhere else Home says it went). Block is safety.js's sheet
  * (window.SocialSafety), and afterwards Home says so. Mute asks nothing:
  * mutes.js (window.SocialMute) folds their cards away and offers Undo.
  *
@@ -230,15 +231,67 @@
     });
   }
 
+  /* DELETED FROM YOUR OWN PAGE (a profile's card: the owner's "Yes", Nov 14)
+     you stay there, and the post folds away where it was: it fades, then its
+     room closes and the next rises into its place, as a muted person's cards
+     fold on Home (mutes.js); under Reduce Motion it fades, and its room goes
+     once it can't be seen. The page says so to a screen reader in Home's own
+     words, focus goes to the next card's ⋯ (else the one before, else the
+     tab), and the last one gone leaves the tab's own kind words. From a
+     post's own page, and Home, the site's answer leads on: Home, its note. */
+  var FOLD_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+  function foldAway(card) {
+    var list = card.parentElement, panel = card.closest('[data-prof-panel]');
+    var cards = Array.prototype.slice.call(list.querySelectorAll(':scope > .post-card'));
+    var at = cards.indexOf(card), next = cards[at + 1] || cards[at - 1] || null;
+    var to = next ? next.querySelector('.post-more') : doc.querySelector('.prof-tab[aria-current="page"]');
+    if (to) to.focus({ preventScroll: true });
+    tell(pageSay, say('deleted'));
+    var gap = parseFloat(getComputedStyle(list).rowGap) || 0, still = !!(reduced && reduced.matches);
+    function gone() {
+      card.remove();
+      var none = panel && panel.querySelector('[data-prof-none]');
+      if (none && !list.querySelector('.post-card') && none.hidden) {
+        none.hidden = false;
+        if (none.animate) none.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease' });
+      }
+    }
+    if (!card.animate) { gone(); return; }
+    card.style.pointerEvents = 'none';
+    var out = card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease', fill: 'forwards' });
+    out.onfinish = function () {
+      /* Unseen it stays, whatever moving it into its room does to its fade. */
+      card.style.opacity = '0';
+      if (still) { gone(); return; }
+      /* Its room, a box of no padding of its own, closes: the card's own
+         padding would hold it open. */
+      var room = doc.createElement('div'), h = card.getBoundingClientRect().height;
+      room.style.overflow = 'hidden';
+      list.insertBefore(room, card);
+      room.appendChild(card);
+      var shut = room.animate([{ height: h + 'px', marginBottom: '0px' }, { height: '0px', marginBottom: -gap + 'px' }],
+                              { duration: 340, easing: FOLD_EASE, fill: 'forwards' });
+      shut.onfinish = function () { room.remove(); gone(); };
+    };
+  }
+
   if (deleteWrap) {
     deleteWrap.querySelector('[data-delete-now]').addEventListener('click', function (e) {
       if (!current) return;
-      var b = e.currentTarget, box = deleteWrap.querySelector('[data-delete-say]');
+      var b = e.currentTarget, box = deleteWrap.querySelector('[data-delete-say]'), was = current;
       b.disabled = true;
       tell(box, say('deleting'));
       post(current.del || deleteWrap.getAttribute('data-delete').replace('__ID__', encodeURIComponent(current.id)), {},
            { 'X-Social-CSRF': token })
         .then(function (j) {
+          var card = was.el;
+          if (j.ok && card && card.classList.contains('post-card') && card.closest('[data-profile]')) {
+            del.close(true);
+            b.disabled = false;
+            tell(box, '');
+            foldAway(card);
+            return;
+          }
           if (j.ok && j.go) { window.location.assign(j.go); return; }
           b.disabled = false;
           tell(box, why(j));
