@@ -1852,9 +1852,11 @@ starts looking weird when everything is in one everywhere... look for all of
 them across entire app. Not pill sliders but like the screenshot." EVERY
 MENU SHEET OF THE SITE, the ☰'s, a post's ⋯ (yours and somebody else's), a
 comment's ⋯ and a person's ⋯, holds its rows on ONE CARD, as the Pad's own
-menu list draws it: the rows on it with nothing of their own behind them, a
-hairline between two (`social.css`, "THE ⋯ SHEET", in the site's tokens for
-those roles). The risky rows (Report, Block, Delete, Remove from my post)
+menu list draws it: the rows on it with nothing of their own behind them, and
+between two Apple's thin line (the owner's "Apple's thin line", to the mock
+beside no lines and three lines with depth): one screen pixel, from where the
+row's words start to 16px before the card's edge, in `--row-line`
+(`social.css`, "THE ⋯ SHEET" and "THE LINE BETWEEN TWO ROWS"). The risky rows (Report, Block, Delete, Remove from my post)
 are a card of their own, 12px under the other; a comment's ⋯ holds only
 those. THERE IS NO CANCEL under a menu sheet: its grip, a tap outside it, a
 swipe down and Esc close it, as they close the Pad's menu. Report's reasons

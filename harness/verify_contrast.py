@@ -248,7 +248,7 @@ LISTS = r"""(root) => {
   const lists = [...R.querySelectorAll('.menu-list, .export-list, .sdrafts-card, .sdrafts-files, .ask-list')].filter(shown).map(l => {
     const cs = getComputedStyle(l), lr = l.getBoundingClientRect();
     let prev = null;
-      const thin = (x, c) => { if (c.borderTopWidth !== '0px') return 'border ' + c.borderTopWidth + ' ' + c.borderTopColor;
+      const thin = (x, c) => { if (c.borderTopWidth !== '0px' && c.borderTopColor !== 'rgba(0, 0, 0, 0)') return 'border ' + c.borderTopWidth + ' ' + c.borderTopColor;
         const bb = getComputedStyle(x, '::before');
         if (!bb.content || bb.content === 'none' || bb.content === 'normal' || bb.display === 'none') return 'none';
         const m = bb.transform === 'none' ? 1 : new DOMMatrix(bb.transform).d;

@@ -1262,9 +1262,11 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 :root { --hair: 1; }
 @media (min-resolution: 2dppx) { :root { --hair: 0.5; } }
 @media (min-resolution: 3dppx) { :root { --hair: 0.3334; } }
-.post-acts > :not([hidden]) ~ :not([hidden]), .post-reason + .post-reason { position: relative; }
+/* The row keeps the 1px it gave its border (now transparent), so nothing
+   moves; the line is drawn in that pixel. */
+.post-acts > :not([hidden]) ~ :not([hidden]), .post-reason + .post-reason { position: relative; border-top: 1px solid transparent; }
 .post-acts > :not([hidden]) ~ :not([hidden])::before, .post-reason + .post-reason::before {
-  content: ""; position: absolute; top: 0; left: var(--line-start, 52px); right: 16px; height: 1px;
+  content: ""; position: absolute; top: -1px; left: var(--line-start, 52px); right: 16px; height: 1px;
   background: var(--row-line); transform: scaleY(var(--hair)); transform-origin: top; pointer-events: none;
 }
 .post-reasons { --line-start: 48px; }
@@ -1279,7 +1281,9 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    it to the line under the row. The first row that shows and the last turn
    with the card's corners, so the ring does too (Sign out's form passes its
    corners to its button). */
-.post-act:focus-visible { outline-offset: -2px; }
+.post-act:focus-visible { outline-offset: -2px; position: relative; z-index: 1; }
+/* (above the rows after it: each holds its own thin line, positioned to, and
+   would paint over the ring's foot.) */
 .post-acts > :not([hidden]):not(:not([hidden]) ~ *) { border-top-left-radius: inherit; border-top-right-radius: inherit; }
 .post-acts > :not([hidden]):not(:has(~ :not([hidden]))) { border-bottom-left-radius: inherit; border-bottom-right-radius: inherit; }
 .menu-out > .post-act { border-radius: inherit; }

@@ -600,7 +600,7 @@ ONECARD = r"""(root) => {
   const lists = [...R.querySelectorAll('.post-acts, .post-reasons')].filter(shown).map(l => {
     const cs = getComputedStyle(l), lr = l.getBoundingClientRect();
     let prev = null;
-      const thin = (x, c) => { if (c.borderTopWidth !== '0px') return 'border ' + c.borderTopWidth + ' ' + c.borderTopColor;
+      const thin = (x, c) => { if (c.borderTopWidth !== '0px' && c.borderTopColor !== 'rgba(0, 0, 0, 0)') return 'border ' + c.borderTopWidth + ' ' + c.borderTopColor;
         const bb = getComputedStyle(x, '::before');
         if (!bb.content || bb.content === 'none' || bb.content === 'normal' || bb.display === 'none') return 'none';
         const m = bb.transform === 'none' ? 1 : new DOMMatrix(bb.transform).d;
@@ -3485,7 +3485,7 @@ print("PLAN " + json.dumps(out))
             check("every list of choices on the site's menu sheets is ONE CARD, as the Pad's own menu list draws it:"
                   " the card --row-bg and 16 round, its rows on it with nothing of their own behind them, as wide as the"
                   " card and touching, Apple's thin line between two that show (the owner's \"Apple's thin line\":"
-                  " its own line, no top border, in --row-line, from where the row's words start to 16px before the"
+                  " its own line, no top border to see, in --row-line, from where the row's words start to 16px before the"
                   " card's edge), each row what is painted at its middle (the ☰'s, a post's ⋯ yours and somebody"
                   " else's, a comment's ⋯, a person's ⋯ and Report's reasons; phone and desk, light and dark)",
                   read16 == 22 and not bad_card, "; ".join(bad_card)[:1400] or f"{read16} read")
