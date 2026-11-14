@@ -1650,6 +1650,37 @@ suites that held it.
 5. The ☰ on a phone, and the counts.
 6. Likes and comments on posts only; what goes, taken out.
 
+**Notes for step 2, from the session that wrote the map** (read the code
+before trusting them):
+
+- The "drawn in 5 sec" pill already exists: inlineplayer.js builds it on the
+  play button (`is-says`) whenever a box has no line. A line that waits can
+  reuse it at rest, so Skribl's new option is small: the macro's
+  `skribl_inline` gains it beside `line`, the line opens on the first play
+  and stays. inlineplayer.css ships on every page with a player, so its bytes
+  are watched (verify_inline's embed ratchet, verify_player_isolation).
+- This reverses a v322 choice, in the macro's own comment: the line was
+  "always there, so a post is the same height at rest and playing and the
+  feed never jumps". The owner chose B knowing the card grows when played;
+  the room glides open (read on every frame, red on a snap first), and under
+  Reduce Motion it is put there while what it holds can't be seen.
+- The heart is the line's `lead` today (`_post.html`, `heart()`), and
+  likes.js finds its player from the heart with `closest('.post-art')`
+  (`playerOf`): out of the line, it finds the player through its card. The
+  likes' dots stay the line's marks.
+- The ⋯ moves from a card's head into its row; the mute toast "never covers
+  the ⋯ that opened the sheet" (verify_socialmute), and a row sits near the
+  bottom of the screen more often than a head did.
+- A post's own page (`post.html`) differs from a card: the ⋯ is in the top
+  bar on a phone and in the head on a desk, Share and "Make your own" are
+  buttons under the drawing, "Liked by…" sits over them, and the drawing
+  plays by itself (`data-autoplay`). Show the owner that page with the row
+  before merging; it was agreed in words, not in a picture.
+- The suites that hold today's card: verify_sociallikes (the heart on the
+  line), verify_socialposts (the foot, the ⋯ in the head), verify_socialmute
+  and verify_socialsafety (opening the ⋯), verify_socialcomments (the count's
+  link), verify_inline (the player), verify_a11ypages, verify_docs.
+
 **The four.** Simple: one thing to share, one card, one place for your
 things. Kind: nothing anybody made is lost, Likes and Drafts stay yours
 alone, nothing covers a button. Playful: the drawing still draws itself in
