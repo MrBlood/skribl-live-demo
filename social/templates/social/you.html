@@ -3,6 +3,15 @@
     (/social/@<handle>), and this is where its gear leads, so it says
     Settings; nothing on it changed but its name.
 
+    THE THEME, FIRST (the Settings mock; the owner's "Yes to all", Nov 13):
+    Pad's own row, in Pad's words and order (Theme: System, Dark, Light, and
+    System's tip), its switch Pad's, "For Blooby, Pad and Flip" under its
+    name. The choice is Skribl's own (skribl_theme_v1): you.js reads and sets
+    it only through SkriblTheme (lib/theme.js), so the Pad and Flip follow it
+    and their switch sets the site; a choice cross-fades the page. Nothing
+    is pressed in the page as sent: the choice lives in this browser, and
+    you.js presses it.
+
     A passkey is renamed or removed in place (a details row that opens under
     it), never removed when it is the last one: an account with none could
     not be signed in to. Dates are written in UTC and shown in the person's
@@ -28,6 +37,21 @@
   {% elif note == 'name' %}<p class="note" role="status">A passkey’s name can be 1 to 40 characters. Try again?</p>
   {% elif note == 'unblocked' %}<p class="note" role="status">Unblocked. You’ll see each other’s posts and drawings again.</p>
   {% elif note == 'limited' %}<p class="note" role="status">Lots of that in a short while. Wait a little, then try again.</p>{% endif %}
+
+  <section class="panel theme-panel" aria-labelledby="themeTitle">
+    <div class="theme-row">
+      <div class="theme-words">
+        <h2 class="panel-title" id="themeTitle">Theme</h2>
+        <p class="panel-sub">For Blooby, Pad and Flip</p>
+      </div>
+      <div class="theme-switch" role="group" aria-labelledby="themeTitle" data-theme-switch>
+        <span class="theme-pill" aria-hidden="true"></span>
+        <button type="button" data-choice="system" aria-pressed="false" title="Follow the device's appearance setting">System</button>
+        <button type="button" data-choice="dark" aria-pressed="false">Dark</button>
+        <button type="button" data-choice="light" aria-pressed="false">Light</button>
+      </div>
+    </div>
+  </section>
 
   <section class="panel" aria-labelledby="keysTitle">
     <h2 class="panel-title" id="keysTitle">Your passkeys</h2>

@@ -360,8 +360,8 @@ left out: the demo never depends on it.
 A phone has a bar along the bottom (Home, Explore, Make; You comes with
 sign-in), a desk a rail down the left (the wordmark in the accent purple,
 Home, Explore, Make), and the page you are on has a pen's line under its
-name. Light and dark follow the device: the site has no switch of its own
-yet, and Skribl's own choice is kept where only Skribl's pages read it.
+name. Light and dark followed the device here; since Settings (section 14)
+the site wears Skribl's own one choice, for Blooby, Pad and Flip alike.
 
 It reaches Skribl only through the seams any host uses: the in-post player's
 and the Gallery section's macros, Skribl's signature (now documented for every
@@ -453,10 +453,10 @@ comments, no pinned skribl.
 
 | Where | What it is |
 |---|---|
-| `/social/@<handle>` | **A profile**, any case of the handle: their face, big, in a circle, drawing itself once (Skribl's face player, at 4x or quicker so it takes about four seconds; finished and still under Reduce Motion); their name, @handle and a few lines about them (plain text, 160 characters, 4 lines, nothing invisible or turned around, no links); Share; and their public skribls as Skribl's own Gallery section, newest first, New and Hot and search within them, paging by cursor. Your own adds **Edit profile**, **Draw your face** (**Redraw my face** once you have one) and the gear to Settings. Nobody by that name, never made or deleted, is one kind 404. |
+| `/social/@<handle>` | **A profile**, any case of the handle: their face, big, in a circle, drawing itself once (Skribl's face player, at 4x or quicker so it takes about four seconds; finished and still under Reduce Motion); their name, @handle and a few lines about them (plain text, 160 characters, 4 lines, nothing invisible or turned around, no links); Share; and their public skribls as Skribl's own Gallery section, newest first, New and Hot and search within them, paging by cursor. Your own adds **Edit profile**, **Draw your face** (**Redraw my face** once you have one) and **Settings**, the word with the gear (section 14). Nobody by that name, never made or deleted, is one kind 404. |
 | `/social/you/edit` | **Edit profile**: your name and a few lines about you, a form that works without a script, the server's limits said kindly under each field. |
 | `/social/you/face` | **Draw your face**: the real Pad over your profile, in its face mode (`?compose=1&face=1`, through `lib/composehost.js`: square, a face's words, no Flip), and "Use this face" sends the drawing here (JSON, the site's token). The site posts it through Skribl's `create_post`, UNLISTED, in the same transaction as your row that names it; a redraw deletes the old one through `delete_post`. |
-| `/social/you` | **Settings** now (the gear's): the account page of piece 2, its name the only change. |
+| `/social/you` | **Settings** now (the gear's): the account page of piece 2, and since section 14 the Theme first. |
 
 **You is your profile.** The bar's You and the rail's foot lead to
 `/social/@<handle>` and wear your face, still and small; before you have
@@ -1350,3 +1350,82 @@ which any host may use for a feed of the people somebody follows.
 `harness/verify_socialfollow.py` holds it through the demo's own server;
 `verify_createpost.py` holds the listing's `authors`. DECISIONS.md
 ("Following at /social") says what each check was shown red by.
+
+## 14. Built: Settings and the theme
+
+From the Settings mock and the owner's "Yes to all" (Nov 13), asked after
+"where is the theme picker and other settings?": one choice for Blooby, the
+Pad and Flip, and Settings easier to find.
+
+**The Theme row, first on Settings** (`/social/you`), its own small card
+(86px, so Your passkeys sits 102px lower): the Pad's own settings row, in its
+words and order, **Theme**, then **System**, **Dark**, **Light**, System
+keeping the Pad's tip, "Follow the device's appearance setting", and "For
+Blooby, Pad and Flip" under the row's name, so the one-choice part is said
+once, where it matters. The switch is the Pad's: 216 x 52, three 44px
+choices in equal thirds, 15px words at one weight, the one pill sliding under
+the choice in the Pad's 0.26s. Its track is the second button's dress (the
+site's control on a card); the pill and its inks are the site's one pill
+(`--pill-on-fill`, `--pill-on-ink`, `--pill-off-ink`, the Gallery's values, as
+Home's pill wears them). Nothing is pressed in the page as sent: the choice
+lives in the browser, and `you.js` presses it as the page starts, the pill
+fading in where it belongs (never sliding in).
+
+**One choice, Skribl's own.** Blooby, the Pad and Flip live at one address, so
+they keep one choice: Skribl's, under `skribl_theme_v1`. The site reads and
+sets it only through Skribl's own theme code, the documented seam
+(docs/INTEGRATION.md, "Skribl's theme on your pages"): every page includes
+Skribl's head boot (`skribl/_skribl_theme_boot.html`, inline in `<head>`,
+before the first paint, by the page's own nonce, the one inline script the
+site's policy allows) and loads `lib/theme.js`; the row calls
+`SkriblTheme.set()`. Pick Dark on Settings and the Pad opens dark, its switch
+saying Dark; pick Light in the Pad's menu and Blooby is light when you come
+back, its row saying Light. Another tab follows, and so does a page the back
+button brings back whole (`social.js`, on `pageshow`). Skribl knows nothing
+about the site. The one change in Skribl, for every host: **the boot says dark
+out loud** (`data-theme="dark"`), where dark used to be the attribute left
+off, so `social.css` can tell light, dark and nothing stamped apart. Light
+chosen is the light ramp; dark chosen is the dark ramp; nothing stamped (no
+script ran) follows the device, so the dark ramp is written twice, once for
+each way to dark, and `verify_socialsettings` holds the two copies to the
+same words. **The browser's bar** follows the choice too: both of the site's
+theme-color metas (one for a light device, one for a dark) carry both
+grounds, and Skribl's boot says the chosen one in each.
+
+**The switch is kind.** A tap cross-fades the whole page into the chosen theme
+in the site's own 0.28 seconds (a same-page view transition, the way a page
+change already fades) while the pill slides there; under Reduce Motion the
+page still fades and the pill is put there. A tap made while the page fades
+(it lands on the page itself then) is kept, and its fade waits for the first
+to end, so the page never jumps from half way. Never a flash: the next page
+opens in the chosen theme from its first frame, because the boot stamps it
+before anything paints. A browser without view transitions changes at once.
+
+**Finding Settings.** (a) The gear says **Settings**: at the top right of your
+own profile on a phone, in the Share button's dress (112 x 44 in this box's
+font), and in your row of buttons on a desk, Edit profile, your face, Share,
+then Settings (125 x 44). Nothing moves for it. (b) On a desk, **Settings in
+the rail**, above your name at its foot, on every page (215 x 52), lit like
+Home on Settings and the pages it leads to (Invites, deleting the account),
+where You stays lit too, as the mock's picture has it. A phone's bar keeps its
+four places, as it did for Activity. Not (c), a Settings row on your profile:
+it would sit above your drawings.
+
+**Signed out: nothing new.** No switch, no Settings: System follows the
+device, and the Pad's and Flip's own switch (open to everyone through Make)
+sets the one choice, so picking Dark there makes Blooby dark too.
+
+**No other settings now.** The mock's list of what could come later (the
+speed a drawing plays at, sound on, playing a post's drawing by itself, Tips
+and Help cards, the bell, who can say something on your posts, taking your
+drawings with you) waits for the owner to pick any.
+
+**Pad and Flip:** nothing visible changes in either editor. Their switch
+stays exactly as it is and now sets Blooby too; the one change is in
+Skribl's head boot, which both share, and in `lib/theme.js`, which both load:
+dark said out loud, which their stylesheets do not read.
+
+`harness/verify_socialsettings.py` holds it through the demo's own server;
+`verify_theme.py` holds the boot for any host. DECISIONS.md ("Settings: the
+theme, one choice for Blooby, Pad and Flip") says what each check was shown
+red by.

@@ -10,7 +10,9 @@
  * touch is the site's: the wordmark in the accent purple, a drawn line under
  * the page you are on, and the first visit's drawn headline.
  *
- * Light and dark follow the device. The site has no switch of its own yet.
+ * Light and dark are Skribl's one choice (Settings: System, Dark or Light),
+ * stamped on <html> by Skribl's own boot before the first paint; with nothing
+ * stamped they follow the device. THE THEME, below the light ramp.
  *
  * NOTHING HERE REACHES INTO SKRIBL'S PARTS. The Gallery section starts from
  * nothing at its own edge (gallerysection.css), and the player reads only the
@@ -88,8 +90,57 @@
   --pill-off-ink: #3f4756;
 }
 
+/* THE THEME: SKRIBL'S ONE CHOICE (Settings, after v330; the owner's "Yes to
+   all", Nov 13). System, Dark or Light, for Blooby, Pad and Flip, kept by
+   Skribl under skribl_theme_v1. Its head boot stamps data-theme on <html>
+   before the first paint, "light" or "dark" (System resolved there), and
+   lib/theme.js keeps the page with it afterwards. So: light chosen is the
+   ramp above, dark chosen is the dark ramp, and NOTHING STAMPED (a page whose
+   scripts never ran) follows the device. Two ways to dark, so the dark ramp
+   is written twice, once for each; verify_socialsettings holds the two to the
+   same declarations, word for word. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0b0d12;                /* THEME_GROUND dark */
+  --ink: #eef1f6;
+  --ink-2: #b7bfcc;
+  --accent-ink: #c1b2ff;
+  --brand: #8f74ff;
+  --focus: #c1b2ff;
+  --btn2-bg: rgba(167, 146, 255, 0.10);
+  --btn2-line: rgba(167, 146, 255, 0.26);
+  --btn2-ink: #eef1f6;
+  --nav-bg: rgba(11, 13, 18, 0.92);
+  --nav-line: rgba(255, 255, 255, 0.09);
+  --nav-ink: #b7bfcc;
+  --nav-on: #ffffff;
+  --sheet-paper: #17142a;
+  --row-bg: #231e3b;
+  --grip: rgba(255, 255, 255, 0.22);
+  --scrim: rgba(0, 0, 0, 0.5);
+  --draw-line: rgba(255, 255, 255, 0.08);
+  --draw-wait: #13161c;
+  --card: #231e3b;
+  --card-line: rgba(167, 146, 255, 0.12);
+  --card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+  --rule: rgba(167, 146, 255, 0.14);
+  --field: #17142a;
+  --field-line: rgba(167, 146, 255, 0.7);
+  --tint: rgba(124, 92, 255, 0.18);
+  --danger-ink: #ffb3c6;
+  --new-dot: var(--blooby-blush); /* his blush itself: 7.34:1 on the dark page */
+  --heart: var(--blooby-blush);   /* the same: 6.01:1 on a dark card */
+  --heart-line: var(--blooby-blush);
+  /* The dots' redder steps from his blush: 6.09:1 and 5.36:1 on the page,
+     4.99:1 and 4.39:1 on a card. --heart-paper stays: the paper is cream. */
+  --heart-2: #ff4d78;
+  --heart-3: #ff2d5f;
+  --pill-on-ink: #d4c9ff;
+  --pill-off-ink: #b7bfcc;
+}
+/* ...and the same ramp where nothing is stamped and the device is dark. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     color-scheme: dark;
     --page: #0b0d12;                /* THEME_GROUND dark */
     --ink: #eef1f6;
@@ -214,6 +265,8 @@ body {
 .nav .tab-make .ic { width: 22px; height: 22px; }
 /* You says whose it is only on a desk's rail; the bar says You. */
 .nav .tab-who { display: none; }
+/* Settings is a desk's rail's alone: a phone's bar keeps its four places. */
+.nav .tab-settings { display: none; }
 /* Before sign-in, a phone's first screen says Sign in at its top right too,
    as the approved mock does; it scrolls away with the wordmark. */
 .top-signin {
@@ -246,8 +299,11 @@ body {
   .nav .tab-make .tab-ic { width: auto; height: auto; background: none; box-shadow: none; }
   .nav .tab-make .ic { width: 22px; height: 22px; }
   /* You at the rail's foot: whose it is, name over handle; Sign in there
-     before it. */
+     before it. Settings just above it (the Settings mock's b), on every
+     page, lit like Home on Settings. */
   .nav .tab-you { margin-top: auto; }
+  .nav .tab-settings { display: flex; margin-top: auto; }
+  .nav .tab-settings + .tab-you { margin-top: 4px; }
   .nav .tab-me { min-height: 60px; }
   .nav .tab-me .tab-name { display: none; }
   .nav .tab-me .tab-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
@@ -453,6 +509,40 @@ body.focus .top { justify-content: center; }
 .key-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .key-form p { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.45; }
 .key-last { margin: 8px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+/* THE THEME ROW, first on Settings (the Settings mock; the owner's "Yes to
+   all", Nov 13): Pad's own settings row, in Pad's words and order, its
+   name and a line under it on the left and the switch on the right, 64px
+   tall, in a card of its own (86px). THE SWITCH IS PAD'S: 216 x 52, a 3px
+   inset, three 44px choices in equal thirds, 15px words at one weight, and
+   one pill that slides under the choice in Pad's 0.26s (you.js places it;
+   under Reduce Motion it is put there; the first time, it fades in where it
+   belongs and never slides in). Its track is the second button's
+   dress, the site's control on a card; the pill and its two inks are the
+   site's one pill (--pill-on-fill, --pill-on-ink, --pill-off-ink: the
+   Gallery's, value for value, as Home's pill wears them). A screen too
+   narrow for both puts the switch under the words. */
+.theme-panel { padding-block: 10px; }
+.theme-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 64px; }
+.theme-words { display: flex; flex: 1 1 76px; flex-direction: column; gap: 2px; min-width: 0; }
+.theme-words .panel-sub { font-size: 14px; line-height: 1.3; }
+.theme-switch {
+  position: relative; display: flex; flex: none; width: 216px; height: 52px; padding: 3px;
+  border: 1px solid var(--btn2-line); border-radius: 12px; background: var(--btn2-bg);
+}
+.theme-switch > button {
+  position: relative; z-index: 1; flex: 1 1 0; min-width: 44px; height: 44px; margin: 0; padding: 0 8px; border: 0;
+  border-radius: 9px; background: transparent; color: var(--pill-off-ink); font: 600 15px/1 var(--font);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color 0.2s ease;
+}
+.theme-switch > button[aria-pressed="true"] { color: var(--pill-on-ink); }
+.theme-switch > .theme-pill {
+  position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; border-radius: 9px; background: var(--pill-on-fill);
+  opacity: 0; pointer-events: none;
+  transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1), width 0.26s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
+}
+.theme-switch[data-pill] > .theme-pill { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .theme-switch > .theme-pill { transition: opacity 0.18s ease; } }
+
 /* BLOCKED (piece 5): the people you blocked, a row each, as the keys are. */
 .blocked { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 .blocked-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rule); }
@@ -509,10 +599,17 @@ body.focus .top { justify-content: center; }
 .nav .tab-you .face-blank { background: transparent; border: 1.5px dashed var(--nav-ink); }
 .nav .tab-you[aria-current="page"] .face-blank { border: 2px dashed var(--nav-on); }
 
-/* A profile's own words at the top of a phone: @handle, and the gear. */
+/* A profile's own words at the top of a phone: @handle, and Settings. THE
+   GEAR SAYS SETTINGS (the Settings mock's a): the word with the gear, in the
+   Share button's dress (the second button's), 44px tall. */
 .top-title { overflow: hidden; color: var(--ink); font-size: 17px; font-weight: 700; line-height: 1.3;
              text-overflow: ellipsis; white-space: nowrap; }
-.top-gear { margin-left: auto; margin-right: -10px; color: var(--ink); }
+.top-gear {
+  display: inline-flex; flex: none; align-items: center; gap: 6px; height: 44px; margin-left: auto; padding: 0 14px 0 11px;
+  border: 1px solid var(--btn2-line); border-radius: 999px; background: var(--btn2-bg); color: var(--btn2-ink);
+  font: 600 15px/1 var(--font); text-decoration: none; white-space: nowrap;
+}
+.top-gear .ic { width: 20px; height: 20px; }
 
 .prof { display: flex; flex-direction: column; align-items: center; padding-top: 8px; text-align: center; }
 .prof-face {
@@ -534,6 +631,7 @@ body.focus .top { justify-content: center; }
 .prof-bio { max-width: 30em; margin: 12px 0 0; color: var(--ink); font-size: 16px; line-height: 1.45;
             white-space: pre-line; overflow-wrap: anywhere; }
 .prof-acts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
+/* Settings in your own row of buttons, a desk's (a phone's is at the top). */
 .prof-acts .desk-only { display: none; }
 .prof-say { margin-top: 10px; }
 /* Somebody you blocked (piece 5): that you did, and Unblock. */
@@ -548,7 +646,7 @@ body.focus .top { justify-content: center; }
   .prof-words { align-items: flex-start; }
   .prof-name { font-size: 34px; }
   .prof-acts { justify-content: flex-start; }
-  .prof-acts .desk-only { display: inline-grid; }
+  .prof-acts .desk-only { display: inline-flex; }
   .prof-say { text-align: left; }
   /* The rail's foot: the face beside the name, at 40px. */
   .nav .tab-me .tab-ic { width: 40px; height: 40px; }
@@ -1443,11 +1541,14 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    Both pages must ask for it, and Skribl's do; a page that did not left the
    editors' half of the fade with nothing to meet it, and Chrome reported the
    aborted transition as an error. Reduced motion keeps the plain cut, as
-   Skribl's pages do. */
+   Skribl's pages do.
+   THE THEME'S CROSS-FADE (Settings) is the same fade, in the page: the
+   site's 0.28 seconds, under Reduce Motion too (a fade moves nothing), so
+   the fade's own length is said outside the motion query. */
 @media (prefers-reduced-motion: no-preference) {
   @view-transition { navigation: auto; }
-  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.28s; animation-timing-function: ease; }
 }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.28s; animation-timing-function: ease; }
 
 /* REDUCE MOTION: nothing moves. The sheet and the page behind it fade where
    they sit, which is still and never abrupt. */

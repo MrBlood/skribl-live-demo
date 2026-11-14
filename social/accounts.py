@@ -724,7 +724,8 @@ def register(bp):
     @bp.get("/you")
     @_rests()
     def you():
-        """You: your name and handle, your passkeys, signing out, deleting."""
+        """Settings: the theme (Skribl's one choice, set in the page by you.js),
+        your passkeys, who you blocked, signing out, deleting."""
         person, away = me_or_signin()
         if away:
             return away
@@ -734,7 +735,7 @@ def register(bp):
         note = request.args.get("note")
         from .reports import open_count
         from .safety import blocked_people
-        return _page("you.html", here="you", me=person, keys=keys, token=csrf_token(),
+        return _page("you.html", here="settings", me=person, keys=keys, token=csrf_token(),
                      blocked=blocked_people(person), open_reports=open_count() if person.is_admin else 0,
                      note=note if note in ("added", "renamed", "removed", "last", "name",
                                            "unblocked", "limited") else None)
@@ -858,7 +859,7 @@ def register(bp):
                                .where(Invite.created_by_id == person.id, Invite.used_at.is_(None))).scalar()
         n_posts = sess.execute(sa.select(sa.func.count()).select_from(Post)
                                .where(Post.person_id == person.id)).scalar()
-        return _page("delete.html", here="you", me=person, n_keys=n_keys, n_links=n_links,
+        return _page("delete.html", here="settings", me=person, n_keys=n_keys, n_links=n_links,
                      n_posts=n_posts, token=csrf_token(), wrong=False)
 
     @bp.post("/you/delete")
@@ -881,7 +882,7 @@ def register(bp):
                                    .where(Invite.created_by_id == person.id, Invite.used_at.is_(None))).scalar()
             n_posts = sess.execute(sa.select(sa.func.count()).select_from(Post)
                                    .where(Post.person_id == person.id)).scalar()
-            return _page("delete.html", 400, here="you", me=person, n_keys=n_keys, n_links=n_links,
+            return _page("delete.html", 400, here="settings", me=person, n_keys=n_keys, n_links=n_links,
                          n_posts=n_posts, token=csrf_token(), wrong=True)
         delete_person(site().session(), person.id)
         sign_out()

@@ -340,8 +340,11 @@ with sync_playwright() as p:
                 attr = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
                 bg = parse(page.evaluate(
                     "() => getComputedStyle(document.body).backgroundColor"))
+                # DARK IS SAID OUT LOUD (after v330, Settings at /social): the
+                # attribute is "dark", never left off, so a host page can tell a
+                # choice from nothing stamped (follow the device).
                 _ok = (attr == "light" and bg is not None and lum(bg) > 150) if want == "light" \
-                      else (attr is None and bg is not None and lum(bg) < 60)
+                      else (attr == "dark" and bg is not None and lum(bg) < 60)
                 check(f"{label}: OS {scheme}, stored {stored or 'nothing'} -> {want}",
                       _ok, f"data-theme={attr!r} body luminance {lum(bg):.0f}")
                 _mode = page.evaluate("() => window.SkriblTheme.mode()")
@@ -366,7 +369,7 @@ with sync_playwright() as p:
         page.emulate_media(color_scheme="light")
         page.wait_for_timeout(300)
         check(f"{label}: ...and an explicit dark does not",
-              page.evaluate("() => document.documentElement.getAttribute('data-theme')") is None)
+              page.evaluate("() => document.documentElement.getAttribute('data-theme')") == "dark")
         page.close()
 
         print(f"THEME [{label}] — the switch sets it, and it survives a reload")
@@ -399,6 +402,20 @@ with sync_playwright() as p:
               naked.evaluate("() => document.documentElement.getAttribute('data-theme')") == "light",
               "if this needs a deferred script, users who chose light get a "
               "black flash on every single navigation")
+        naked.close()
+        # ...AND DARK IS SAID OUT LOUD by the boot alone (after v330, Settings
+        # at /social): dark chosen on a LIGHT device, every script file blocked.
+        # A host page tells "dark" from "nothing stamped" (follow the device),
+        # so the boot must say it before anything paints, not leave it off.
+        naked = browser.new_page(viewport={"width": 1000, "height": 900}, color_scheme="light")
+        naked.add_init_script(f"try {{ localStorage.setItem('{KEY}', 'dark'); }} catch (e) {{}}")
+        naked.route(SCRIPT_FILE, lambda route: route.abort())
+        naked.goto(BASE + path, wait_until="domcontentloaded")
+        _said = naked.evaluate("() => [document.documentElement.getAttribute('data-theme'),"
+                               " getComputedStyle(document.body).backgroundColor]")
+        check(f"{label}: dark chosen on a light device is said out loud, data-theme=\"dark\", with EVERY script file blocked",
+              _said[0] == "dark" and parse(_said[1]) is not None and lum(parse(_said[1])) < 60,
+              f"data-theme={_said[0]!r}, body {_said[1]}: dark used to be the attribute left off")
         naked.close()
 
         # THE WORDMARK IS NOT A TILE. `.brand svg` carries a 34px rounded tile
@@ -739,9 +756,51 @@ with sync_playwright() as p:
           "twice for the same preference is being asked once too often")
     page.evaluate("() => window.SkriblTheme.set('dark')")
     page.wait_for_timeout(200)
-    check("...and turning it off on Flip turns it off",
-          page.evaluate("() => document.documentElement.getAttribute('data-theme')") is None
+    check("...and turning it off on Flip turns it off (dark, said out loud)",
+          page.evaluate("() => document.documentElement.getAttribute('data-theme')") == "dark"
           and page.evaluate(f"() => localStorage.getItem('{KEY}')") == "dark")
+
+    print("\nTHEME — a host's page with Skribl's boot: dark said out loud, and every theme-color meta follows")
+    # After v330 (Settings at /social): a host includes the boot partial in
+    # its own <head> (docs/INTEGRATION.md, "Skribl's theme on your pages") and
+    # may key TWO theme-color metas by media, as the site does, so the bar is
+    # the device's own until a script runs. The boot stamps "light" or "dark"
+    # and says the chosen ground in every meta that carries both grounds,
+    # whichever the device picks; a meta without them is the host's and is
+    # left alone. The boot is read off a page that renders it (the Pad), and
+    # served inside a host page at this server's origin, so the choice it
+    # reads is this origin's.
+    import urllib.request as _ur2
+    with _ur2.urlopen(BASE + "/", timeout=15) as _r:
+        _pad_html = _r.read().decode("utf-8", "replace")
+    _boot = next((b for b in re.findall(r"<script nonce=\"[^\"]*\">(.*?)</script>", _pad_html, re.S)
+                  if KEY in b and "prefers-color-scheme" in b), None)
+    check("the boot is in the Pad's page, inline, reading the key", bool(_boot), "no inline script reading the key")
+    _HOST = ('<!doctype html><html><head><meta charset="utf-8">'
+             '<meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)" data-light="#fbfcfd" data-dark="#0b0d12">'
+             '<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" data-light="#fbfcfd" data-dark="#0b0d12">'
+             '<meta name="theme-color" content="#123456" media="print">'
+             '<script>' + (_boot or "") + '</script></head><body><p>a host</p></body></html>')
+    _GROUND = {"light": "#fbfcfd", "dark": "#0b0d12"}
+    _hosted = []
+    for _os, _stored, _want in (("light", "dark", "dark"), ("dark", "light", "light"), ("light", None, "light"),
+                                ("dark", None, "dark"), ("dark", "system", "dark")):
+        _hp = browser.new_page(viewport={"width": 800, "height": 600}, color_scheme=_os)
+        if _stored:
+            _hp.add_init_script(f"try {{ localStorage.setItem('{KEY}', '{_stored}'); }} catch (e) {{}}")
+        _hp.route(BASE + "/__verify_theme_host", lambda route: route.fulfill(status=200, content_type="text/html", body=_HOST))
+        _hp.goto(BASE + "/__verify_theme_host", wait_until="domcontentloaded")
+        _st = _hp.evaluate("""() => { const ms = [...document.querySelectorAll('meta[name=theme-color]')];
+            const used = ms.find(m => !m.media || matchMedia(m.media).matches);
+            return { attr: document.documentElement.getAttribute('data-theme'), metas: ms.map(m => m.content),
+                     used: used ? used.content : null }; }""")
+        _ok = (_st["attr"] == _want and _st["metas"][:2] == [_GROUND[_want]] * 2 and _st["used"] == _GROUND[_want]
+               and _st["metas"][2] == "#123456")
+        _hosted.append((_ok, f"device {_os}, stored {_stored or 'nothing'}: {_st}"))
+        _hp.close()
+    check("a host page's boot stamps light or dark as chosen (System, or nothing, the device), and both of its"
+          " media-keyed theme-color metas say the chosen ground, whichever the device picks; its own meta is left alone",
+          all(o for o, _ in _hosted), "; ".join(w for _, w in _hosted))
 
     print("\nTHEME — the player follows the URL when it is embedded, and only then")
     # v288, the owner's call: an EMBEDDED player follows its host, and the URL
@@ -773,7 +832,7 @@ with sync_playwright() as p:
     for _q, _want, _why in (("", "light", "no parameter: follows the OS, which says light"),
                             ("?theme=light", "light", "the host said light"),
                             ("?theme=banana", "light", "an unknown value is ignored, and the OS is followed"),
-                            ("?theme=dark", None, "the host said dark on a light OS"),
+                            ("?theme=dark", "dark", "the host said dark on a light OS"),
                             ("?theme=light&x=1", "light", "the parameter is read wherever it sits")):
         pg3 = browser.new_page(viewport={"width": 1000, "height": 900}, color_scheme="light")
         pg3.goto(BASE + _player + _q, wait_until="load")
@@ -793,7 +852,7 @@ with sync_playwright() as p:
     pg3.goto(BASE + _player + "?theme=dark", wait_until="load")
     pg3.wait_for_timeout(600)
     check("player ?theme=dark overrides a stored light preference",
-          _attr(pg3) is None, f"data-theme={_attr(pg3)!r}")
+          _attr(pg3) == "dark", f"data-theme={_attr(pg3)!r}")
     pg3.goto(BASE + _player, wait_until="load")
     pg3.wait_for_timeout(600)
     check("...and without the parameter the stored preference is back",
@@ -817,7 +876,7 @@ with sync_playwright() as p:
               _attr(pg4) == "light", f"data-theme={_attr(pg4)!r} with 'dark' stored")
     pg4.evaluate("() => window.SkriblTheme.set('dark')")
     check("...and a choice made in the menu beats the URL for the rest of the page",
-          _attr(pg4) is None, f"data-theme={_attr(pg4)!r}")
+          _attr(pg4) == "dark", f"data-theme={_attr(pg4)!r}")
     pg4.close()
 
     # No flash: light lands with every script file blocked, so it was the
