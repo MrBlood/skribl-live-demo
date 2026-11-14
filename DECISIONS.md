@@ -38691,7 +38691,7 @@ every time):
 - verify_socialposts section 9, HOME SHOWS POSTS ONLY, rebuilt around the
   achievement. (1) A drawing Noor shows in the gallery from the Pad between
   two posts of hers, one Mira keeps unlisted, one by somebody not on the
-  site and the twelve Juno shows between his twenty-four posts are on
+  site and the twelve Ines shows between her twenty-four posts are on
   nobody's Home: Noor's Following and Everyone (she and Sora follow each
   other, so her own drawing would sit in her Following's first part),
   Sora's, Juno's and signed out, each walked to its end with Load more (past
@@ -38706,8 +38706,8 @@ every time):
   the Gallery; the drawing's own page a 404; her page listing nothing).
   (3) A cursor from before that names the drawing reads as its time,
   signed out to the end and Following's own (red: such a cursor read as
-  none, so Home starts again). (4) Load more walks the posts alone, Juno's
-  twenty-four in order and none of his drawings (red: drawings let back).
+  none, so Home starts again). (4) Load more walks the posts alone, Ines's
+  twenty-four in order and none of her drawings (red: drawings let back).
   (5) The drawing's own page, its ⋯ and its Delete, its words "from your
   page too" (red: the old words). The guards row as it was.
 - verify_socialposts 10: the drawing's card on Home inverted, no card there
@@ -38723,10 +38723,10 @@ every time):
   drawings let back).
 - verify_socialcomments 23 and 26: a drawing's count moved from Home's card
   to the row under it on its own page, the same count by posts.cards (red:
-  a drawing's row counting one comment more); 24: "no card on Home" for a
-  drawing deleted in the Library moved to More from on her other drawing's
-  page, read before the delete (listed) and after (not) (red: the Library
-  delete keeping the drawing).
+  a drawing's row counting one comment more, 23's two rows that read it and
+  26); 24: "no card on Home" for a drawing deleted in the Library moved to
+  More from on her other drawing's page, read before the delete (listed)
+  and after (not) (red: the Library delete keeping the drawing).
 - verify_socialmute 1: their drawing's ⋯ read on its own page instead of on
   Home's card (red: Mute left out of a drawing's ⋯); 6: Home's walk reads
   cards without data-kind, its words say posts (red: mutes left out of
@@ -38734,14 +38734,27 @@ every time):
 - verify_socialsafety 4: before the block each sees the other's post on
   Home, and not their drawing (it was both; red: drawings let back).
 
-FOUND WRONG, AND MENDED: an instrument of mine. Section 9 as first written
-walked Home on a single page when run alone (four posts, then sixteen), so
-its Load more was never crossed; it now makes twenty-four posts first, and
-the walks ask for more than twenty.
+FOUND WRONG, AND MENDED: two instruments of mine, in section 9. As first
+written it walked Home on a single page when run alone (four posts, then
+sixteen), so its Load more was never crossed; it now makes twenty-four
+posts first, and the walks ask for more than twenty. And those twenty-four
+were Juno's at first: with the sections before and after, he passed the
+site's forty posts an hour, section 12's post was refused, and its rows
+went red in the full run, which a section run alone could not see. Ines
+makes them now, and Juno posts fewer than before. The mended section was
+calibrated again (green as built; red with drawings let back).
 
 THE AFFECTED SUITES, side by side (harness/run_parallel.py), every one
-green: RESULTS. The full battery was not run; main's run after the merge
-is that.
+green: verify_socialposts 59/59, verify_socialcomments 93/93,
+verify_sociallikes 96/96, verify_socialmute 68/68, verify_socialfollow
+71/71, verify_socialsafety 38/38, verify_createpost 85/85, verify_seam
+501/501, verify_docs 144/144. verify_socialposts and verify_socialfollow
+from their second run side by side; the first was red beside the others,
+and each red is said for what it was: verify_socialposts 48/59 by the
+defect of mine above (59/59 alone, after the mend), verify_socialfollow
+70/71 by load (section 6, untouched here: the follow button's fade under
+Reduce Motion, read on every frame, went 41% in one frame; 71/71 alone).
+The full battery was not run; main's run after the merge is that.
 
 CONTRAST: no colour, token, ink or paper changed. The words that changed
 sit in the same elements: the follow sheets and the kind card are read at
