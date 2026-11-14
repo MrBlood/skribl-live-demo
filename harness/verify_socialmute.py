@@ -1361,7 +1361,7 @@ with sync_playwright() as p:
             jp1 = make_post(jay, "Section 4, Jay's first")
             jp2 = make_post(jay, "Section 4, Jay's second")
             js = make_drawing(jay, "Section 4, Jay's drawing", seed=5)
-            tok = re.compile(r'(content|value)="[A-Za-z0-9_\-]{20,}"')
+            tok = re.compile(r'(content|value|nonce)="[A-Za-z0-9_\-]{20,}"')
             jay_c, kip_c = jay.client(), kip.client()
 
             def theirs():
