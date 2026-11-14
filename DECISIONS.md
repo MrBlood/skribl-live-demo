@@ -38622,7 +38622,7 @@ WHAT CHANGED.
   which step 4 makes their Gallery) and More from: feed_page's one-person
   path, on a post's page and a drawing's, is as it was, its drawings among
   its posts (posts._drawings_before reads one person's now, through
-  Skribl's `author`, its only caller's).
+  Skribl's `author`: More from is its only caller).
 - HOME'S CARD IS A POST'S: its data-kind went (posts.js reads a card without
   one as a post's, as it always did). A drawing's own page keeps its own
   (post.html), so its ⋯ still reports it as a drawing and its Delete still

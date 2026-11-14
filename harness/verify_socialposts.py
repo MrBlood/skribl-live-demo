@@ -1122,16 +1122,19 @@ with sync_playwright() as p:
         st_g, jg = make_post(mira, "Section 9, a post shown in the gallery", gallery=True, seed=92)
         g_post = jg.get("post") if isinstance(jg, dict) else None
         g_skribl = post_row(g_post)[1] if g_post else None
-        # Juno shares twenty-four posts, a drawing shown from the Pad after every
+        # Ines shares twenty-four posts, a drawing shown from the Pad after every
         # second one (no post), so every walk below crosses a page of Home's
-        # twenty, even with this section alone.
+        # twenty, even with this section alone. Somebody of her own: the site
+        # takes forty posts an hour from one person, and Juno posts again in
+        # sections 10 to 12.
+        ines = someone(b, "ines", "Ines Varga")
         made, drawn = [], []
         for i in range(24):
-            st, j = make_post(juno, f"Interleave post {i:02d}", seed=100 + i)
+            st, j = make_post(ines, f"Interleave post {i:02d}", seed=100 + i)
             made.append(j.get("post") if isinstance(j, dict) else None)
             time.sleep(0.02)
             if i % 2:
-                st, sid = pad(juno.pg, f"Interleave drawing {i // 2:02d}", "public", 100 + i)
+                st, sid = pad(ines.pg, f"Interleave drawing {i // 2:02d}", "public", 100 + i)
                 drawn.append(sid)
                 time.sleep(0.02)
         # Noor shares a post, then a drawing from the Pad on its own, shown in
@@ -1243,7 +1246,7 @@ with sync_playwright() as p:
               f"cursor {old_cursor and old_cursor[:12]}…; signed out {carried_ids[:3]} (want {(tail9 or [])[:3]},"
               f" {len(carried_ids)} of {len(tail9 or [])}); Following's {st_f} {first_f}")
 
-        # LOAD MORE, POSTS ALONE: Juno's twenty-four posts, a drawing shown from
+        # LOAD MORE, POSTS ALONE: Ines's twenty-four posts, a drawing shown from
         # the Pad after every second one (made above), read back page by page
         # through the button.
         pg = mira.pg
@@ -1266,7 +1269,7 @@ with sync_playwright() as p:
               all(made) and all(drawn) and [x for x in got if x in made] == want and len(got) == len(set(got))
               and len(got) > 20 and not ({c["skribl"] for c in allc} & set(drawn))
               and all((c["url"] or "").startswith("/social/p/") for c in allc),
-              f"Juno's {[x for x in got if x in made][:3]} want {want[:3]}; {len(got)} cards, {len(set(got))} different;"
+              f"Ines's {[x for x in got if x in made][:3]} want {want[:3]}; {len(got)} cards, {len(set(got))} different;"
               f" drawings among them {len({c['skribl'] for c in allc} & set(drawn))}")
 
         # A drawing's own page, its ⋯, and its Delete; and another of hers from
