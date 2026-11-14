@@ -1884,8 +1884,9 @@ with sync_playwright() as p:
     if part(11, "the data: the chain on a populated database; one like a person a thing; the reads on their indexes"):
         try:
             mdb = os.path.join(TMP, "chain-likes.db")
-            # The chain's head before likes (its migration's down_revision).
-            BEFORE = "c276c1445bc1"
+            # The chain's head before likes (its migration's down_revision), and
+            # the likes' own migration.
+            BEFORE, LIKES = "c276c1445bc1", "a81c5c4dde3a"
 
             def chain(*args):
                 return subprocess.run([sys.executable, "-m", "alembic", "-c", "social/alembic.ini", *args], cwd=ROOT,
@@ -1910,7 +1911,9 @@ with sync_playwright() as p:
                         " values (10, 'P1', 1, 'hi', 'S1', ?)", (then,))
             con.commit()
             con.close()
-            up2 = chain("upgrade", "head")
+            # Up to the likes' own migration first: what it adds is read there,
+            # and what the chain added since (the map's step 4) after it.
+            up2 = chain("upgrade", LIKES)
             idx = {r[0]: r[1] for r in at("select name, sql from sqlite_master where type = 'index' and tbl_name = 'social_likes'")}
             cols = [r[1] for r in at("pragma table_info(social_likes)")]
             sql = (at("select sql from sqlite_master where name = 'social_likes'") or [[""]])[0][0] or ""
@@ -1938,6 +1941,13 @@ with sync_playwright() as p:
             check("one like a person a thing (a second is refused), and a like is on exactly one thing (both, or neither,"
                   " refused)", errs == ["kept", "UNIQUE constraint failed", "CHECK constraint failed", "CHECK constraint failed"],
                   json.dumps(errs))
+            up3 = chain("upgrade", "head")
+            idx3 = {r[0] for r in at("select name from sqlite_master where type = 'index' and tbl_name = 'social_likes'")}
+            check("...and up to the chain's head one index more: who liked, newest first (a profile's Likes tab, the map's"
+                  " step 4), the likes and every post kept",
+                  up3.returncode == 0 and idx3 == set(idx) | {"ix_social_likes_person_created"}
+                  and at("select count(*) from social_posts") == [(1,)],
+                  f"up {up3.returncode} {up3.stderr.strip().splitlines()[-1:] if up3.returncode else ''}; indexes {sorted(idx3)}")
             down = chain("downgrade", BEFORE)
             gone = at("select name from sqlite_master where tbl_name = 'social_likes'")
             check("taken back down, the chain drops the table and its indexes, every post kept",
