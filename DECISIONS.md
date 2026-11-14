@@ -39630,3 +39630,47 @@ WHAT CHANGES.
 PAD AND FLIP: nothing. This is the site's own frame (its bar, its rail, a
 profile's strip); Skribl's editors have no such line.
 
+CHECKS, each shown red by a break of its own in a throwaway copy, an
+untouched copy green as the control:
+- verify_social 2, a new row: the bar's line, read in the page on every
+  frame from its first (an init script, before the page's own), how much of
+  it is drawn by each frame's own time, and its own timing. Not all there at
+  first; it waits (its delay 100ms or more), then draws on several frames,
+  one way, no frame drawing more than its curve ever does (0.15 over, for
+  where in a frame it began), whole within 0.7s; a touch phone tapping the
+  bar's Gallery on Home (the page's own cross-fade) and a desk opening the
+  Gallery; under Reduce Motion whole from the first frame. As built: drawn
+  0.24, 0.48, 0.68, 0.81, 0.89, 0.94, 0.97 on its frames, whole at 333ms on
+  the phone and 317ms on the desk, its delay 150 and its 170. Red for the
+  line simply there, no wait, a snap (0.01s) and Reduce Motion ignored;
+  control 10/10.
+- verify_socialprofile 15, the switch judge rewritten (judge_switch): the
+  line put under Likes with no place between, drawn there on several frames
+  one way, never faster than its curve, its own length 0.17s (read off the
+  animation: on a busy box a frame's wall-clock time blurs it, the property
+  does not) and all of it within 0.7s, the copy of the line under Posts
+  fading where it was and gone; under Reduce Motion put there whole,
+  nothing fading. As built: drawn on 8 and 9 frames (0.24 to 0.997), the
+  old line through 0.78, 0.58, 0.41, 0.26, 0.13, 0.04 to gone. Red for the
+  old glide, put there whole (no draw), a slow draw (0.6s), the old line
+  just vanishing, and Reduce Motion ignored; control 8/8.
+
+AFFECTED SUITES, side by side (run_parallel -j 3): verify_social 41/41,
+verify_socialactivity 44/44, verify_socialsettings 44/44, verify_docs
+144/144; verify_socialprofile 78/78 (run again on its own, its log
+folder its own: the Gallery's helper ran the same suites at the same time
+into the runner's one shared folder, so the first count could have been
+the helper's). The full battery was not run; main's run after the merge is
+that.
+
+CONTRAST: unchanged. The line is the pen's purple it was, and no word
+moves or changes colour.
+
+THE FOUR. Playful: the line is a flick of the pen, the way a hand marks the
+page you are on. Simple: nothing to learn; the line is where it always was,
+drawn. Kind: nothing slides across the names; a page's line waits for the
+page; Reduce Motion keeps it still. Powerful: one rule for the bar and the
+rail, one for a profile's strip, both on the pen's own curve.
+
+Not tested here: WebKit (the owner's iPhone; main's WebKit smoke runs after
+the merge), SF and Segoe UI, the live site.

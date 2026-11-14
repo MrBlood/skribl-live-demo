@@ -921,12 +921,14 @@ def pen_paint(pg, st):
 #: line's middle, the panel's opacity, which tab it holds, the page's scroll,
 #: the strip's top, the frame's own time (the one it is drawn for, never when
 #: its callback happened to run), how much of the line is drawn (its path's
-#: dash: 1 when it has none), and each copy of the line that is leaving, its
-#: middle and opacity.
+#: dash: 1 when it has none), each copy of the line that is leaving, its
+#: middle and opacity, and the drawing's own length once there is one
+#: (window.__penMs).
 TABS_SAMPLE = r"""(ms) => { const s = document.querySelector('[data-prof-tabs]'), sw = document.querySelector('[data-prof-swap]');
   const pen = s.querySelector('.prof-pen'), out = window.__tabs = [], t0 = performance.now();
   const mid = e => { const r = e.getBoundingClientRect(); return Math.round((r.left + r.width / 2) * 100) / 100; };
-  (function f(frame) { const panel = sw.querySelector('[data-prof-panel]'), cs = getComputedStyle(pen.querySelector('path'));
+  (function f(frame) { const panel = sw.querySelector('[data-prof-panel]'), path = pen.querySelector('path'), cs = getComputedStyle(path);
+    const a = path.getAnimations()[0]; if (a && window.__penMs === undefined) window.__penMs = a.effect.getTiming().duration;
     out.push([mid(pen), +getComputedStyle(sw).opacity,
               panel ? panel.getAttribute('data-tab') : null, Math.round(scrollY),
               Math.round(s.getBoundingClientRect().top * 100) / 100,
@@ -942,15 +944,17 @@ TABS_SAMPLE = r"""(ms) => { const s = document.querySelector('[data-prof-tabs]')
 PEN_MS, PEN_STEEPEST = 170, 0.7 / 0.3
 
 
-def judge_switch(frames, x0, x1, reduced=False):
+def judge_switch(frames, x0, x1, reduced=False, pen_ms=None):
     """A switch, as read frame by frame (the owner's "Yes to both", Nov 14:
     the line "draw itself really fast instead of sliding"): the pen line is
     put under the new tab with no place between (never a glide), and draws
     itself there, one way, on several frames, no frame drawing more than its
     curve ever does (by each frame's own time, so a runner that stalls a frame
     reads as the stall it is; 0.15 over, for where in a frame it began), all
-    of it within 0.17s and a stalled frame's slack; a copy of the line fades
-    where it was, on frames between, and is gone. Under Reduce Motion it is
+    of it within 0.7s of its first frame however a busy runner stalls, its
+    own length 0.17s (read off the animation itself, the property a stalled
+    runner cannot blur); a copy of the line fades where it was, on frames
+    between, and is gone. Under Reduce Motion it is
     put there whole, on every frame, and nothing fades. The panel fades out,
     changes only while it can't be seen, and fades back in; the page and the
     strip do not move."""
@@ -975,7 +979,7 @@ def judge_switch(frames, x0, x1, reduced=False):
         drew = (put and moved is not None and bool(after) and after[0] <= 0.5
                 and len({round(d, 3) for d in after if 0.02 < d < 0.98}) >= 2
                 and all(st_ >= -0.01 for st_ in steps) and max(pace, default=0) <= 1.0
-                and done is not None and done - ts[moved] <= PEN_MS + 120)
+                and done is not None and done - ts[moved] <= 700 and 120 <= (pen_ms or 0) <= 250)
         lops = [o for _, (_, o) in leaving]
         faded_old = (bool(leaving) and all(abs(lx - x0) <= 0.6 for _, (lx, _) in leaving)
                      and len([o for o in lops if 0.05 < o < 0.95]) >= 1
@@ -989,6 +993,7 @@ def judge_switch(frames, x0, x1, reduced=False):
             "unseen": unseen, "faded": faded, "held": held, "places": places, "want": round(x1, 2),
             "drawn": [d for d in after if 0 < d < 1][:12], "first": after[0] if after else None,
             "pace": round(max(pace, default=0), 2), "done in": round(done - ts[moved], 1) if done is not None and moved is not None else None,
+            "its length": pen_ms,
             "leaving": [round(o, 2) for _, (_, o) in leaving][:12], "changed at": at,
             "opacity there": ops[at] if at is not None else None, "fading": [len(down), len(up)]}
 
@@ -2849,13 +2854,14 @@ with sync_playwright() as p_:
                 else:
                     pg.click('[data-prof-tabs] a[data-tab="likes"]')
                 pg.wait_for_timeout(1700)
-                glides[(screen, scheme, reduced)] = judge_switch(pg.evaluate("() => window.__tabs || []"), x0, x1, reduced)
+                glides[(screen, scheme, reduced)] = judge_switch(pg.evaluate("() => window.__tabs || []"), x0, x1, reduced,
+                                                                 pg.evaluate("() => window.__penMs === undefined ? null : window.__penMs"))
             except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
                 glides[(screen, scheme, reduced)] = {"ok": False, "stopped": str(exc).splitlines()[0][:160]}
             close_ctx(ctx, pg)
         check("the switch, read on every frame (a touch phone in light, a desk in dark): the pen line is put under Likes"
               " with no place between and draws itself there, one way, on several frames, no frame drawing more than"
-              " its curve ever does (by each frame's own time), all of it within 0.17s and a frame's slack, while the"
+              " its curve ever does (by each frame's own time), its own length 0.17s and all of it within 0.7s, while the"
               " line under Posts fades where it was and is gone; the panel fades out, changes only while it can't be"
               " seen (under 5%), and fades back in; the page doesn't scroll and the strip doesn't move",
               all(glides.get((s_, c_, False), {}).get("ok") for s_, c_ in (("phone", "light"), ("desk", "dark"))),
