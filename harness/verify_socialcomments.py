@@ -1737,7 +1737,7 @@ with sync_playwright() as p:
             stopped(10, exc)
 
     # ------------------------------------------------------------------ 11
-    if part(11, "Home's card: how many comments beside the plays, a way to them"):
+    if part(11, "Home's card: how many comments, first in its row, a way to them"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")

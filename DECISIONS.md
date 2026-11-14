@@ -38163,3 +38163,136 @@ SQLite shards too:
   without its glide's class: 7/8, that row alone) and green without it (8/8).
 
 Load, not a defect, both: no product code changed.
+
+## After v330 -- The one card: calm at rest, and one row (the map's step 2)
+
+The owner's "Yes on everything" (Nov 14) to the quick-patterns mock's B for
+the card (calm at rest) and the row's B (with "Open ›"), built as step 2 of
+the map (docs/SOCIAL-SITE.md section 16). The owner: "The posts should show
+the same as the post everywhere right? And it should not look crazy busy.
+Kind. And intuitive."
+
+WHAT CHANGED.
+
+- SKRIBL: A LINE THAT WAITS (`skribl_inline(..., line_waits=True)`;
+  docs/INTEGRATION.md, "A line that waits"). No room and nothing shown until
+  the drawing is first played; at rest the play button says what the line
+  would ("drawn in 5 sec", "3 pages"), the pill Explore's cards already wear;
+  the first play opens the line, gliding from nothing to its own height in
+  0.3s (what is under the post glides down with it), the words leave the play
+  button, and it stays open. Under Reduce Motion the room is put there while
+  nothing in it can be seen, and the line fades in. For the site's cards this
+  reverses the v322 choice in the macro's own words, "always there, so a post
+  is the same height at rest and playing and the feed never jumps": the owner
+  chose B knowing a card grows once, when somebody chooses to watch it.
+- SKRIBL: THE LINE'S LEAD IS RETIRED. The site's heart was its only user;
+  its rules paid toward the waiting line (the ratchet's rule: delete what the
+  new code replaces). verify_seam pins that nothing of it is left.
+- THE SITE, HOME'S CARD: the head says who, when and the plays ("@theo · 1h ·
+  128 plays", nothing at none); the drawing waits calm; ONE ROW under it, the
+  comments (the icon alone at none), the heart and how many, Share, the ⋯,
+  and "Open ›", the post, at the end in the small violet words, each 44px to
+  a finger. The ⋯ left the head; the old foot (▷ plays, 💬, Share) is gone.
+- THE SITE, A POST'S OWN PAGE (and a drawing's): the same row under its
+  drawing, without "Open ›"; the line there from the start (you went there to
+  watch); the row's ⋯ is the page's one (the top bar's on a phone and the
+  head's on a desk are gone); Share left the buttons under it, where "Make
+  your own" stays; the 💬 goes down to the comments.
+- likes.js finds the heart's player and its pen through the post, as the
+  heart is no longer inside the drawing's box.
+
+JUDGMENT CALLS, said so they read true:
+
+- THE 💬 ON A POST'S PAGE GOES DOWN TO THE COMMENTS (a link to #comments),
+  where "Say something" is. Opening the box at once was not built: on a desk
+  the box unfolds inside the comments, which can be far down. Asked.
+- THE ROW'S PLACE ON A POST'S PAGE is right under the drawing (and its
+  caption), before the time-and-plays line and "Liked by…", so the heart is
+  under the drawing on every page; on a desk, in the right-hand column under
+  the words, as everything but the drawing is there.
+- THE PLAYS ARE INSIDE THE TIME'S LINK, as the mock drew them: that link is at
+  least 44px wide, and a short time ("1h") left a gap before plays outside it.
+- THE WAITING LINE'S HEIGHT is read off the line itself, set to auto for one
+  read before anything is painted. The two first ways were caught by the new
+  rows: its rows' span (they shrink while it is folded: a drawing's words
+  read 30px for 43.78, so under Reduce Motion it jumped 13.78px after the
+  fade) and scrollHeight (it rounds, a 0.22px step back, and counts the tap
+  areas past the line: a Flip's read 8px too tall, an 8px step back).
+- CAUGHT BEFORE SHIPPING: the Reduce Motion rule, put in the stylesheet's
+  reduced-motion block, came before the rule it overrides with the same
+  weight, so it would have lost; it has a @media of its own after it now, and
+  verify_seam pins the order.
+
+Pad and Flip: shared. The waiting line is the in-post player's, which plays
+Pad drawings and Flips alike (a Flip's play button says its pages); the card
+and its row are the site's, the same for both. Nothing changes in either
+editor.
+
+THE CHECKS. verify_inline, "a line that waits" (nine rows, through the macro
+rendered as a host renders it, in the feed beside the same post without it,
+on a touch phone, a drawing and a Flip): the markup only when asked; at rest
+no room, nothing seen, the post ending at the drawing's foot, the play button
+saying "drawn in 4 sec" / "3 pages" and its name too; the first play gliding
+the room open on every frame (eight frames or more, none more than 30% of the
+way, never back) and the post under it gliding down; then the line's height
+its own, the words gone from the button; paused, it stays open; under Reduce
+Motion the room put there at opacity 0.05 or less, then the fade. verify_seam,
+the source: the option and its class, the lead gone, the rules, the Reduce
+Motion rule after the one it overrides, nothing of a host's named, the guide.
+The site's suites learnt the row: verify_sociallikes (the heart in the row,
+read in the middle of the screen clear of the bars; Share moving along as a
+count comes and goes, as the scrubber did; the dots on a card once it is
+played; "never late" judged by three frames of the playhead's own travel,
+about 3px when the heart took room on the line and a little more on the wider
+line now), verify_socialposts (the row's open ground between the ⋯ and Open
+›, as a 14px gap between two buttons is "near Share" to a phone's finger,
+Chrome's own touch adjustment; Open ›; the line's controls once played),
+verify_socialcomments (the 💬 first in the row) and verify_socialmute (a post
+page's one ⋯; its count in the row).
+
+EVERY NEW OR CHANGED ROW WAS SHOWN RED by a break of its own, each in a
+throwaway copy of the tree, with an unbroken copy as the control (green every
+time). verify_inline's nine: the line snapping open, never opening, the play
+button keeping its words, the height left on the line, gliding under Reduce
+Motion, always waiting, a margin left at rest, and the first way of measuring
+(its rows' span). verify_seam's five, by seven breaks: always waiting, the lead's slot left in
+the stylesheet, waiting keeping its margin, no glide for the room, the
+Reduce Motion rule before the one it overrides, the player naming a heart,
+the guide forgetting Reduce Motion. verify_sociallikes section 1: Share
+before the heart, the row's icons at 18px, the heart on a lilac ground.
+verify_socialcomments section 11: the comments after the heart.
+verify_socialposts section 11: no Open › (the section stops, its rows red).
+
+FOUND WRONG, AND MENDED, while it was built: the line's height measured by its
+rows (they shrink while folded) and by scrollHeight (it rounds, and counts the
+tap areas past the line), both caught by the new rows; the Reduce Motion rule
+losing to the rule it overrides; the plays outside the time's link leaving a
+gap after a short time; the row's 💬 and heart with round corners, which take
+no tap at their corners (verify_socialposts' landing row); and three
+instruments: the pause read after the page had scrolled to the Flip, the
+heart's edges read under the bottom bar ("in view" to the browser), and the
+heart's rise census started while the card's line was still opening.
+
+THE RATCHET (verify_inline): +543 B, the waiting line, after spending the
+line's lead (its only caller gone) and compacting what replaced it; 81,784 B
+measured, pinned at 81,787.
+
+CONTRAST, measured on the built pages by verify_sociallikes (every word on
+Home, a post's page, its sheets and Activity, phone and desk, light and dark,
+at 4.5:1 or more, the heart's marks at 3:1) and, for the row's own words, by
+the quick-patterns mock on the same tokens: the counts and icons 7.56:1 light
+and 8.59:1 dark (--ink-2 on the card), Open › 8.26:1 and 8.39:1
+(--accent-ink). No token added: the row wears the card's second ink and the
+small violet words.
+
+THE FOUR. Simple: one card, three things at rest (who, the drawing, one row),
+"Open ›" saying what it does. Kind: nothing at none ("No plays yet" is gone),
+the line glides open and never jumps, nothing covers anything. Playful: the
+drawing still draws itself the moment it is played, and the likes' dots are
+on its line when it opens. Powerful: every way into the post in one row, the
+same on Home, a post's page and a drawing's.
+
+Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
+their smoke after the merge); SF and Segoe UI (the row is laid out by flex
+and gaps, the line's height read off the line in the page's own fonts); the
+live site.
