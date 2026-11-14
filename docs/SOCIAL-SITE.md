@@ -1611,7 +1611,7 @@ first thing the owner saw of it.
 | **Home** | Posts: Following, or Everyone. |
 | **Explore: the Gallery of everyone** | Drawings and Flips as drawings, each opening its post: Following, or Everyone, with more filters to come. Home's Everyone already shows everyone's posts, so Explore shows the drawings. Since Nov 14 every drawing and Flip the site's people shared, in a post or not (below, "The Gallery is every skribl"). |
 | **A profile** | Posts · Gallery · Likes · Drafts. **Gallery** is the same Gallery with one person in it: every drawing and Flip they have shared, as drawings, each opening its post. **Likes** and **Drafts** are yours alone, on your own profile; Drafts are the drafts Skribl already keeps on your account (SkriblDraft). |
-| **Make** | One composer, the same from the bar and from Home: words, and Draw or Flip. |
+| **Make** | One composer, the same from the bar and from Home: words, and Draw or Flip. Built Nov 14 (section 17, "The composer is built"), with Yours beside Draw and Flip. |
 | **Activity, Settings** | As built. Settings from the ☰ on a phone (and the profile's button), the rail on a desk. |
 
 **The owner's decisions (Nov 13, "Yes on everything").**
@@ -1902,7 +1902,7 @@ follow step 7.
 
 1. The composer (the owner's yes, the morning of Nov 14): one Make sheet
    everywhere, words and a drawing; "Yours" posts an older drawing, its
-   conversation moving with it. Quote posts reuse it.
+   conversation moving with it. Quote posts reuse it. Built (below).
 2. Bookmarks: save a post; yours alone.
 3. Reposts, then quote posts.
 4. Mentions: an @handle in a post or a comment links to that person and
@@ -1916,3 +1916,33 @@ follow step 7.
 9. The smaller things most sites have: pin a post to your profile, edit a
    post's words (shown "edited"; the owner's yes), tags, download your data,
    and words that describe a drawing to a screen reader.
+
+**The composer is built** (part two's item 1; DECISIONS, "The composer: one
+Make, and an older drawing's conversation comes with it"). ONE MAKE,
+EVERYWHERE: for somebody signed in, Make (the bar on a phone, the rail on a
+desk) opens the composer on every page with the bar, and Home's row ("Say
+something, then draw it…", Draw and Flip, as the box looked; no Post of its
+own) opens the same sheet (`_compose.html`, `compose.js`, `compose.py`). On
+a phone it rises almost to the top and rides above the keyboard; on a desk
+it is a 600px card in the middle. Cancel at the top left, Post at the top
+right, dim until a drawing is attached; your face beside "Say something…";
+the drawing under the words, playing, with Edit drawing and Remove; Draw,
+Flip and Yours along the bottom, and the characters left (500). Draw and
+Flip open Skribl's editor over it in compose mode, as Home's did. YOURS is
+"Use one you made", the one pill Drafts | Drawings: a draft opens in the
+editor that made it, over the sheet, with the draft on its canvas
+(Skribl's `lib/composehost.js` `openDraft`, docs/INTEGRATION.md "A saved
+draft, from your own list"), and Add to post attaches it; a drawing you
+shared outside a post (link-only too) is attached as it is, and posted, it
+is the post's drawing: ONE DRAWING, ONE CONVERSATION, its hearts and
+comments moving onto the post in the same transaction, its own page
+(`/social/b/<id>`) sending people to the post, Activity naming the post at
+the times it always had (nothing new, nobody told twice). A drawing in a
+post is not offered again. Signed out, Make keeps its two doors into
+Skribl's own Pad and Flip, whose own share stays Skribl's.
+
+    /social/make/yours     "Use one you made", a page of its tiles: ?tab=drafts,
+                           or ?tab=drawings (and ?before=, Load more), as
+                           {html, next, tab} (JSON); yours alone
+    /social/posts          also {"words", "skribl": <your drawing's id>}: an
+                           older drawing as a post, its conversation with it

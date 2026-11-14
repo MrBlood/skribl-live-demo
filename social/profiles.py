@@ -159,7 +159,10 @@ def draft_tiles(me, skribl_blueprint="skribl"):
                     "thumbnail": thumb if isinstance(thumb, str) and thumb.startswith(_THUMB_KINDS) else None,
                     "url": url_for(skribl_blueprint + (".skribl_flip" if flip else ".skribl_editor"), draft=d["id"]),
                     "line": f"{editor} · saved {ago}" if ago else editor,
-                    "label": f"Keep drawing {title} in {where}" + (f", saved {ago}" if ago else "")})
+                    "label": f"Keep drawing {title} in {where}" + (f", saved {ago}" if ago else ""),
+                    # The composer's picker (compose.py): a tap opens it over
+                    # the composer, to add to the post.
+                    "pick_label": f"Use {title}, from {where}" + (f", saved {ago}" if ago else "")})
     return out
 
 

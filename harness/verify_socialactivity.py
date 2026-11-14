@@ -40,7 +40,8 @@ virtual authenticator for the site's people.
      sound off, and the post's own waits; at words the post's own plays; under
      Reduce Motion nothing plays.
   9. THE EMPTY STATE: Blooby as his Home Screen icon, "Nothing new yet", the
-     words, and Make a skribl, which opens Make's sheet.
+     words, and Make a skribl, which opens Make's sheet (the composer, since
+     Nov 14: verify_composer).
  10. WORDS AND TARGETS: every word on Activity (a list, and the empty page)
      at 4.5:1 on what is painted behind it, every target 44px, the rows 76px,
      the dots and the bell's line 3:1; a landed comment's words on the tint;
@@ -1235,9 +1236,10 @@ with sync_playwright() as p:
                 else:
                     pg.click(".act-empty .btn")
                 pg.wait_for_timeout(600)
-                got[screen]["sheet"] = pg.evaluate("() => { const m = document.getElementById('makeSheet');"
+                got[screen]["sheet"] = pg.evaluate("() => { const m = document.getElementById('composeSheet');"
                                                    " return !!m && !m.hidden && m.classList.contains('is-open')"
-                                                   " && [...m.querySelectorAll('.make-door b')].map(x => x.textContent); }")
+                                                   " && document.activeElement === m.querySelector('[data-compose-words]')"
+                                                   " && document.activeElement.getAttribute('placeholder'); }")
                 close_ctx(ctx, pg)
             want = {"icon": "apple-touch-icon.png", "title": "Nothing new yet",
                     # likes (the likes mock) and follows (the follow mock): both are in Activity too
@@ -1248,8 +1250,9 @@ with sync_playwright() as p:
                   all(got[s] and all(got[s][k] == v for k, v in want.items()) and got[s]["w"] == 64 and got[s]["h"] == 64
                       and got[s]["painted"] and got[s]["bh"] >= 52 and got[s]["lists"] == 0 for s in ("phone", "desk")),
                   json.dumps({s: {k: v for k, v in (got[s] or {}).items() if k != 'sheet'} for s in got}))
-            check("Make a skribl opens Make's own sheet, Draw and Flip in it (a tap on a phone, a click on a desk)",
-                  all(got[s]["sheet"] == ["Draw", "Flip"] for s in ("phone", "desk")),
+            check("Make a skribl opens the composer, Make's own since Nov 14, its words' field ready (a tap on a phone,"
+                  " a click on a desk)",
+                  all(got[s]["sheet"] == "Say something…" for s in ("phone", "desk")),
                   f"{got['phone']['sheet']} / {got['desk']['sheet']}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(9, exc)

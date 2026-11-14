@@ -2,14 +2,14 @@
     yes" to piece 4's choices, Nov 11). Signed out, Home is the first visit
     (home.html).
 
-    THE COMPOSER: "Say something, then draw it…", Draw and Flip. Each opens
-    Skribl's editor over Home in compose mode (lib/composehost.js through
-    social.js's SocialPadOverlay; ?gallery=1, so the author ticks "Show in
-    the Skribls gallery" in its sheet). Its Add hands the drawing back, and it
-    shows here in Skribl's in-post player, the same player the post will have
-    (skribl_inline_draft: what you see is what you post), with Edit drawing
-    and Remove. Post sends the words and the drawing; nothing is posted
-    before. A press on Post with nothing drawn says so.
+    THE ROW THAT OPENS THE COMPOSER (the owner's "Yes", Nov 14: "Home's box
+    stays as the inviting row ... and a tap opens the same sheet: one
+    composer everywhere"): your face, "Say something, then draw it…", Draw
+    and Flip, as the box always looked. A tap on the words opens the
+    composer (_compose.html, base.html's, the sheet Make opens) with its
+    field ready; Draw and Flip open it with their editor rising over it, and
+    what Add hands back is attached there. The box holds nothing itself, so
+    it has no Post: the sheet does.
 
     THE PILL (follows; the owner's "Yes to all", Nov 13): Following |
     Everyone under the composer, the Gallery's New / Hot (social/_follow.html,
@@ -32,7 +32,6 @@
 
     posts.js holds the moving parts; the words are this page's. #}
 {% extends 'social/base.html' %}
-{% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
 {% from 'social/_post.html' import post_card, post_sheets, post_words, face with context %}
 {% from 'social/_likes.html' import like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
@@ -40,7 +39,6 @@
 {% from 'social/_mute.html' import mute_parts with context %}
 {% import 'social/_icons.html' as ic %}
 
-{% block head %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endblock %}
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
 <script src="{{ social_asset('likes.js') }}" defer></script>
 <script src="{{ social_asset('follows.js') }}" defer></script>
@@ -51,29 +49,18 @@
 {% if note == 'deleted' %}<p class="note" role="status">Your post is gone, its drawing with it.</p>{% endif %}
 {% if note == 'deleted_drawing' %}<p class="note" role="status">Your drawing is gone.</p>{% endif %}
 {% if note == 'blocked' %}<p class="note" role="status">Blocked. You won’t see each other’s posts or drawings. You can unblock them in Settings.</p>{% endif %}
-<section class="composer" aria-label="Make a post" data-composer data-post-new="{{ url_for('social.post_new') }}">
+<section class="composer cmp-row" aria-label="Make a post" data-compose-row>
   <div class="composer-row">
     {{ face(me, 'composer-face') }}
-    <label class="sr" for="composeWords">Say something</label>
-    <textarea class="composer-words" id="composeWords" rows="1" maxlength="500"
-              placeholder="Say something, then draw it…" data-compose-words></textarea>
-  </div>
-  <div class="composer-draft" data-compose-draft hidden>
-    {{ skribl_inline_draft('composeDraft') }}
-    <div class="composer-draft-acts">
-      <button class="btn btn-small" type="button" data-compose-edit>{{ ic.pen() }}<span>Edit drawing</span></button>
-      <button class="btn btn-small btn-quiet-danger" type="button" data-compose-remove>{{ ic.close() }}<span>Remove</span></button>
-    </div>
+    <button class="cmp-row-say" type="button" data-compose-go="words" aria-haspopup="dialog"
+            aria-controls="composeSheet" aria-expanded="false">Say something, then draw it…</button>
   </div>
   <div class="composer-acts">
-    <button class="chip" type="button" data-compose-open="pad" aria-haspopup="dialog" aria-controls="composePad"
+    <button class="chip" type="button" data-compose-go="pad" aria-haspopup="dialog" aria-controls="composeSheet"
             aria-expanded="false">{{ ic.make_draw() }}<span>Draw</span></button>
-    <button class="chip" type="button" data-compose-open="flip" aria-haspopup="dialog" aria-controls="composeFlip"
+    <button class="chip" type="button" data-compose-go="flip" aria-haspopup="dialog" aria-controls="composeSheet"
             aria-expanded="false">{{ ic.make_flip() }}<span>Flip</span></button>
-    <span class="composer-left" data-compose-left></span>
-    <button class="btn btn-primary composer-post" type="button" data-compose-post>Post</button>
   </div>
-  <p class="say composer-say" data-compose-say role="status" hidden></p>
 </section>
 
 {{ home_pill(show) }}
@@ -92,23 +79,8 @@
 {% endblock %}
 
 {% block overlays %}
-{#  THE EDITORS, OVER HOME: the Pad, and Flip, each in a frame whose address
-    is set when it is first opened, never here (lib/composehost.js, rule 1).
-    The face's overlay's own parts (.facepad), as a face's Pad opens. #}
-<div class="facepad" id="composePad" hidden data-compose="{{ pad_compose }}">
-  <div class="facepad-scrim"></div>
-  <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Draw for your post">
-    <p class="facepad-wait">Opening the Pad…</p>
-    <iframe class="facepad-frame" title="The Pad: draw for your post"></iframe>
-  </div>
-</div>
-<div class="facepad" id="composeFlip" hidden data-compose="{{ flip_compose }}">
-  <div class="facepad-scrim"></div>
-  <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Make a flip for your post">
-    <p class="facepad-wait">Opening Flip…</p>
-    <iframe class="facepad-frame" title="Flip: make a flip book for your post"></iframe>
-  </div>
-</div>
+{#  The editors that were here, over Home, are the composer's now
+    (_compose.html, on every page). #}
 {{ post_sheets() }}
 {{ safety_sheets() }}
 {{ mute_parts() }}

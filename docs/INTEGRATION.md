@@ -865,6 +865,19 @@ Use `pad.setPayload(existing)` before the first open to re-edit the Skribl on a
 post that is already saved. For an animation, say so:
 `pad.setPayload(existing, 'flip')`.
 
+**A saved draft, from your own list.** `pad.openDraft(id)` opens the editor
+with one of the person's saved drafts on its canvas (`list_drafts()`, under
+"A person's drafts on your own page" below: call it on the handle of the
+editor that made the draft, its `kind`). It is the editors' own `?draft=<id>`
+hand-off, inside your frame: the draft comes from the account, and Add to
+post hands it back as any drawing is handed back, through the one builder,
+its card and its music cut to the loop included. That is why a draft is
+attached through its editor and never posted from its stored object: a
+draft is the editor's own serialisation, not what a post carries. Opened
+again afterwards, the frame is the one the handle loaded, so the drawing
+that was added is pushed back in (the second rule above). The Skribl site's
+composer does this from its "Use one you made" (Nov 14).
+
 **One button, both editors.** Your composer needs one Skribl button, not two.
 The Pad opens; its ⋯ menu's "Flip Mode" row, while composing, opens Flip in
 the same frame, in compose mode, and Flip's "Skribl Pad" row comes back.
@@ -1139,8 +1152,10 @@ for that person, and show the list only on a page that is theirs alone: a
 draft is its author's and nobody else's. Asked for nobody (`None`) it
 refuses, as `GET /api/drafts` answers 401.
 
-To open one, link to the editor that made it with `?draft=<id>`, the
-editors' own hand-off:
+To open one in your composer, give its id to the compose handle of the
+editor that made it, `pad.openDraft(d["id"])` ("A saved draft, from your
+own list", above). To open one on its own page, link to the editor that made
+it with `?draft=<id>`, the editors' own hand-off:
 
 ```python
 url_for("skribl.skribl_flip" if d["kind"] == "flip" else "skribl.skribl_editor", draft=d["id"])

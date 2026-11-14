@@ -187,6 +187,8 @@
    *   var over = SocialPadOverlay(wrap, { openers, onDone, onReady });
    *   over.open(back)          // back: what takes focus when it goes
    *   over.guide(file, back)   // a face's photo to trace (composehost guide)
+   *   over.openDraft(id, back) // a saved draft on its canvas (the composer's
+   *                            // Yours; composehost openDraft)
    *
    * `wrap` is the overlay (.facepad: its scrim, its sheet, its frame, and the
    * editor's address in data-compose); `openers` are marked aria-expanded. */
@@ -261,11 +263,59 @@
       pad: pad,
       open: function (back) { from = back || null; pad.open(); },
       guide: function (file, back) { from = back || null; pad.guide(file); },
+      openDraft: function (id, back) { from = back || null; wrap.classList.remove('is-ready'); pad.openDraft(id); },
       isOpen: function () { return open; }
     };
   }
 
   window.SocialPadOverlay = padOver;
+
+  /* THE ONE PILL (window.SocialPill): the tint under the chosen option of
+   * every .fo-seg on the site (Home's Following | Everyone, the Gallery's two,
+   * your lists' Followers | Following, the composer's Drafts | Drawings).
+   * Here since the composer, whose picker carries one on every page; it was
+   * follows.js's, which reads it from here now, as explore.js and compose.js
+   * do. Placed from the rendered boxes, to the hundredth of a pixel (as
+   * Skribl's lib/segslider.js places the Gallery's): the first time, and
+   * `now`, put there; after that it glides (social.css), and is put there
+   * under Reduce Motion. Until it is placed, the chosen option wears the tint
+   * itself. choose() presses an option and glides the tint to it. */
+  function place(seg, now) {
+    var pill = seg.querySelector('.fo-slider'), btn = seg.querySelector('button[aria-pressed="true"]');
+    var g = seg.getBoundingClientRect(), b = btn ? btn.getBoundingClientRect() : null;
+    if (!pill || !b || !b.width || !g.width) { seg.removeAttribute('data-pill'); return; }
+    var x = Math.round((b.left - g.left - seg.clientLeft - (parseFloat(getComputedStyle(pill).left) || 0)) * 100) / 100;
+    var w = Math.round(b.width * 100) / 100;
+    var first = now || !seg.hasAttribute('data-pill');
+    if (first) pill.style.transition = 'none';
+    pill.style.transform = 'translateX(' + x + 'px)';
+    pill.style.width = w + 'px';
+    if (first) {
+      seg.setAttribute('data-pill', '');
+      void pill.offsetWidth;
+      pill.style.transition = '';
+    }
+  }
+  function choose(seg, btn) {
+    Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+    });
+    place(seg, false);
+  }
+  window.SocialPill = { choose: choose, place: place };
+  /* Watched, so a pill in a sheet that ships hidden, a late font or a turned
+     phone still has its tint where its option is. */
+  Array.prototype.forEach.call(doc.querySelectorAll('.fo-seg'), function (seg) {
+    var wide = 0;
+    function again() {
+      var w = seg.getBoundingClientRect().width;
+      place(seg, !wide || !w);
+      wide = w;
+    }
+    if (window.ResizeObserver) new ResizeObserver(again).observe(seg);
+    again();
+    if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(again);
+  });
 
   /* TIMES, IN THE PERSON'S OWN (window.SocialWhen): every <time data-when>
    * under `root` said as the site says a time: "now", "35m", "2h", "3d", then

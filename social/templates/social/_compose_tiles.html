@@ -1,0 +1,13 @@
+{#  "USE ONE YOU MADE": a page of the composer's picker, as /make/yours sends
+    it (compose.py). Your drafts as the Drafts tab's tiles, or your drawings
+    shared outside a post as the Gallery's tiles, each the same tile as a
+    button (pick=true, _gallery.html): a tap attaches it. `items_only`: the
+    next page of drawings, its tiles alone, for Load more. Each list's own
+    words when it is empty. #}
+{% from 'social/_gallery.html' import gallery_tile, draft_tile with context %}
+{%- if items_only %}{% for t in tiles %}{{ gallery_tile(t, pick=true) }}{% endfor %}
+{%- elif tab == 'drafts' and drafts %}<div class="gal-grid cmp-grid" data-compose-grid>{% for d in drafts %}{{ draft_tile(d, pick=true) }}{% endfor %}</div>
+{%- elif tab == 'drafts' %}<p class="cmp-none">No drafts yet. In the Pad or Flip, ⋯ Save draft keeps one here for you.</p>
+{%- elif tiles %}<div class="gal-grid cmp-grid" data-compose-grid>{% for t in tiles %}{{ gallery_tile(t, pick=true) }}{% endfor %}</div>
+{%- else %}<p class="cmp-none">Nothing here yet. A drawing you share outside a post waits here, ready to post.</p>
+{%- endif %}

@@ -1079,6 +1079,80 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .composer-left { margin-left: auto; color: var(--ink-2); font-size: 14px; }
 .composer-post { min-width: 96px; }
 .composer-say { text-align: left; }
+/* HOME'S ROW (the owner's "Yes", Nov 14: "Home's box stays as the inviting
+   row ... and a tap opens the same sheet"): the box as it looked, its words
+   a button that opens the composer, dressed as the field it stands for. */
+.cmp-row-say {
+  flex: 1; min-width: 0; min-height: 44px; margin: 0; padding: 10px 0 9px; border: 0;
+  border-bottom: 1px solid var(--rule); background: transparent; color: var(--ink-2);
+  font: inherit; font-size: 17px; line-height: 1.4; text-align: left; cursor: text;
+}
+.cmp-row-say:focus-visible { border-radius: 6px; }
+
+/* ---- THE COMPOSER: ONE MAKE, EVERYWHERE (the owner's "Yes", Nov 14, to the
+ * mock beside Bluesky's new-post screen, B; _compose.html, compose.js) ------
+ * Make's own sheet (.make and .make-sheet: its paper, its 22px corners, its
+ * glide and its scrim, social.js's SocialSheet), made tall. On a phone it
+ * rises almost to the top, 5vh short of it (or clear of the status bar where
+ * a phone gives the page the whole screen), and its foot rides above the
+ * keyboard (--cmp-kb, compose.js, as a comment's sheet does). On a desk it is
+ * a 600px card in the middle of the screen, one height whatever it holds, so
+ * a drawing attached or "Use one you made" moves nothing; what does not fit
+ * scrolls inside it. In the mock's own sizes: the 64px row of Cancel and
+ * Post, your face at 40 beside the words at 18px (a phone never magnifies the
+ * page under 16), the drawing 52px in under them, and the tools on a hairline
+ * at the foot, the characters left at their end. Same role, same token:
+ * Cancel and Back are the small violet words (--accent-ink), Post the
+ * action (--fill), the tools the chips Home's box wears, the words the
+ * page's two inks. Post is dim (0.45) until a drawing is attached, an
+ * inactive control, as the mock drew it. */
+.make.cmp { bottom: var(--cmp-kb, 0px); transition: bottom 0.25s ease; }
+.cmp-sheet {
+  display: flex; flex-direction: column; max-width: 640px;
+  height: calc(100% - max(5vh, env(safe-area-inset-top) + 8px));
+}
+.cmp-view { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.cmp-view[hidden] { display: none; }
+.cmp-top { display: flex; flex: none; align-items: center; gap: 8px; height: 64px; }
+.cmp-link {
+  min-height: 44px; margin: 0 0 0 -6px; padding: 0 6px; border: 0; border-radius: 10px; background: none;
+  color: var(--accent-ink); font: 600 17px/1.2 var(--font); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.cmp-post { min-width: 76px; margin-left: auto; }
+.cmp-post[aria-disabled="true"] { opacity: 0.45; box-shadow: none; cursor: default; }
+.cmp-scroll { flex: 1; min-height: 0; margin: 0 -4px; padding: 0 4px 8px; overflow-y: auto; overscroll-behavior: contain; }
+.cmp-body { display: flex; align-items: flex-start; gap: 12px; padding-top: 6px; }
+.face-ring.cmp-face { --skribl-face-size: 40px; flex: none; width: 40px; height: 40px; }
+.cmp-words {
+  flex: 1; min-width: 0; min-height: 90px; margin: 0; padding: 8px 0; border: 0; background: none;
+  color: var(--ink); font: 18px/1.4 var(--font); resize: none; overflow: hidden; outline: none;
+}
+.cmp-words::placeholder { color: var(--ink-2); opacity: 1; }
+.cmp-att { margin: 6px 0 0 52px; }
+.cmp-att[hidden], .cmp-att .btn[hidden], .cmp-more[hidden] { display: none; }
+.cmp-say { margin: 12px 0 0 52px; text-align: left; }
+.cmp-tools {
+  display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding-top: 12px; border-top: 1px solid var(--rule);
+}
+.cmp-left { margin-left: auto; color: var(--ink-2); font-size: 14px; font-variant-numeric: tabular-nums; }
+/* "USE ONE YOU MADE" (Yours): Back where Cancel was, its title, the one pill
+   (Drafts | Drawings), and the tiles under it, two across on a phone and
+   three on a desk, scrolling inside the sheet, a ring's room kept round
+   them. A tile is the Gallery's own, a button here (_gallery.html pick). */
+.cmp-pick-title { flex: none; margin: 0 0 12px; font: 700 20px/1.3 var(--font); }
+.cmp-pill { display: flex; flex: none; width: max-content; }
+.cmp-lists { flex: 1; min-height: 0; margin: 12px -4px 0; padding: 4px 4px 8px; overflow-y: auto; overscroll-behavior: contain; }
+.cmp-list[hidden] { display: none; }
+.cmp-grid { margin-top: 0; }
+.cmp-none { margin: 20px 4px; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+.cmp-more { margin-top: 16px; }
+.cmp-pick .cmp-say { margin: 12px 4px 0; }
+button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+@media (min-width: 900px) {
+  .make.cmp { bottom: 0; }
+  .cmp-sheet { width: 600px; max-width: calc(100vw - 48px); height: min(660px, calc(100vh - 64px)); }
+}
 
 /* THE FEED: a column of cards, the mock's. */
 .feed { display: flex; flex-direction: column; gap: 16px; }

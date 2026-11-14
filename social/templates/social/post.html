@@ -43,8 +43,8 @@
 
 {% block title %}{{ who.display_name }} on Blooby{% endblock %}
 {# A drawing answer (phase 2): the Pad and Flip over the post, run by
-   Skribl's lib/composehost.js, as Home's composer; only where one can be made. #}
-{% block head %}{% if cm and cm.can %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endif %}{% endblock %}
+   Skribl's lib/composehost.js, as the composer's are; base.html loads it on
+   every page of somebody signed in, the only one who can make one. #}
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
 <script src="{{ social_asset('likes.js') }}" defer></script>
 <script src="{{ social_asset('safety.js') }}" defer></script>

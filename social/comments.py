@@ -379,6 +379,22 @@ def drop_drawing_comments(skribl_id):
     _drop(Comment.drawing_id == str(skribl_id))
 
 
+def move_drawing_comments(skribl_id, post_id):
+    """ONE DRAWING, ONE CONVERSATION (docs/SOCIAL-SITE.md section 17; the
+    owner's "Yes", Nov 14): every comment and answer on a drawing shown
+    outside a post, onto the post it is now in (posts.post_new, an older
+    drawing posted through the composer's Yours), in the same transaction as
+    the post's row. One UPDATE: each row keeps its words, its drawing, its
+    author, its time, its answers and whom it answers, and only says the post
+    instead of the drawing (both columns in one statement, so the database's
+    "exactly one" holds at every step). Its owner is the same person. What
+    Activity said of them it says of the post now, at their own times, so
+    nothing is new again and nobody is told twice. Flushes nothing."""
+    site().session().execute(
+        sa.update(Comment).where(Comment.drawing_id == str(skribl_id))
+        .values(post_id=post_id, drawing_id=None).execution_options(synchronize_session=False))
+
+
 def drop_owner_comments(person_id):
     """Every comment and answer on what a person owned, their posts and
     their drawings (accounts.delete_person, before the person): a drawing of
@@ -525,8 +541,14 @@ def register(bp):
     @_rests(json_answer=True)
     def bloob_comment_new(skribl_id):
         """A comment on a drawing shown outside a post, or an answer under one
-        of its comments."""
-        return new_comment(lambda me: on_drawing(me, skribl_id))
+        of its comments. Under the drawing's lock (posts.drawing_lock), so a
+        comment never lands on a drawing as it moves into a post."""
+        from .posts import drawing_lock
+
+        def find(me):
+            drawing_lock(skribl_id)
+            return on_drawing(me, skribl_id)
+        return new_comment(find)
 
     @bp.get("/b/<skribl_id>/comments")
     @_rests(json_answer=True)

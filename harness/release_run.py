@@ -147,6 +147,7 @@ BATCHES = [
     ["verify_socialauth.py"],              # measures — the sign-in screens' words and targets read from the paint; its own server and gunicorn
     ["verify_socialprofile.py"],           # measures — faces drawn through the real Pad, photographed drawing themselves; its own server
     ["verify_socialposts.py"],             # measures — posts drawn through the real Pad, a post's page read playing; its own server
+    ["verify_composer.py"],                # measures — the composer's glide and swap read on every frame, drawings through the real Pad; its own server
     ["verify_socialsafety.py"],            # measures — report and block's sheets read from the paint; its own server
     ["verify_socialcomments.py"],          # measures — comments read from the paint and on every frame; its own server
     ["verify_socialactivity.py"],          # measures — Activity's dot and a landed comment's glow read on every frame; its own server

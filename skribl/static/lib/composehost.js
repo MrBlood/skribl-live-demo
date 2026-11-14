@@ -9,6 +9,19 @@
  *   padButton.addEventListener('click', pad.open);
  *
  *   pad.guide(file);   // a face's only: open it with a photo to trace
+ *   pad.openDraft(id); // one of the person's saved drafts, in the editor
+ *
+ * A SAVED DRAFT, OPENED IN YOUR COMPOSER (Nov 14, the Skribl site's "Use one
+ * you made"). openDraft(id) opens the editor at its own address with
+ * ?draft=<id>, the editors' own hand-off (lib/savedrafts.js), so the draft
+ * is on the canvas when it rises, and Add to post hands it back as any
+ * drawing is handed back: through the one builder (editor_compose.js), its
+ * card and its music cut to the loop included. A draft is the editor's own
+ * object, never a post's payload, so a host cannot attach one without its
+ * editor. Whatever the frame held goes: the draft is what is being added.
+ * Give the handle of the editor that made it (a draft's `kind`, "pad" or
+ * "flip"). Opened again afterwards, the frame is the one this handle loaded,
+ * so rule 2 applies and what was added is pushed back in.
  *
  * A FACE'S PHOTO TO TRACE (after v330). In the Pad's face mode (?face=1),
  * guide(file) opens the editor and hands it a photo the host's page picked
@@ -97,6 +110,9 @@
     var open_ = false;
     /* A face's photo to trace, waiting for the editor to be ready. */
     var guideFile = null;
+    /* The address this handle last gave the frame: `src`, or a draft's
+       (openDraft). A frame holding either is this handle's own editor. */
+    var current = null;
 
     function post(type, data) {
       var msg = { type: PREFIX + type };
@@ -139,10 +155,11 @@
 
     function open() {
       open_ = true;
-      if (frame.getAttribute('src') !== src) {
+      if (!current || frame.getAttribute('src') !== current) {
         /* First open, or reopened after a clear(). `ready` will arrive and
            rule 2 does not apply yet. */
         loaded = false;
+        current = src;
         frame.setAttribute('src', src);
       } else if (loaded && payload && payloadEditor === frameEditor) {
         /* RULE 2. Already loaded, so no second `ready` is coming; push the held
@@ -170,11 +187,26 @@
       if (opts.onClose) opts.onClose();
     }
 
+    /* One of the person's saved drafts, on the canvas as the editor rises
+       (the header's A SAVED DRAFT). Nothing is held for it until Add hands
+       it back, and `ready` then pushes nothing over it. */
+    function openDraft(id) {
+      if (!id) return;
+      payload = null;
+      guideFile = null;
+      loaded = false;
+      current = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'draft=' + encodeURIComponent(String(id));
+      frame.setAttribute('src', current);
+      open_ = true;
+      if (opts.onOpen) opts.onOpen();
+    }
+
     function clear() {
       payload = null;
       guideFile = null;
       payloadEditor = frameEditor = 'pad';
       loaded = false;
+      current = null;
       /* RULE 3. Drop the editor as well as the payload, so the next open starts
          blank rather than reopening the drawing just removed. */
       frame.setAttribute('src', BLANK);
@@ -183,6 +215,7 @@
     return {
       open: open,
       guide: guide,
+      openDraft: openDraft,
       close: close,
       clear: clear,
       isOpen: function () { return open_; },
@@ -196,6 +229,7 @@
         payload = null;
         guideFile = null;
         loaded = false;
+        current = null;
       }
     };
   }

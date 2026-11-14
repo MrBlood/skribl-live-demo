@@ -3,11 +3,14 @@
 "all yes" to piece 4's choices (Nov 11).
 
     /                   Home, signed in: "Say something, then draw it...",
-                        then the pill, Following | Everyone (follows.py),
-                        and its posts, newest first. Signed out, Home is the
-                        first visit.
+                        the row that opens the composer (compose.py), then
+                        the pill, Following | Everyone (follows.py), and its
+                        posts, newest first. Signed out, Home is the first
+                        visit.
     /posts              a post: the words and the drawing the Pad or Flip
-                        handed back in compose mode (JSON).
+                        handed back in compose mode, or ONE OF YOUR OLDER
+                        DRAWINGS (the composer's Yours: {"skribl": its id}),
+                        whose hearts and comments come with it (JSON).
     /feed               the next page of the feed, for Load more, or the
                         first of Following or Everyone, for the pill (JSON).
     /p/<id>             a post's own page: its drawing plays by itself (sound
@@ -44,6 +47,18 @@ unlisted (reachable by its link, listed nowhere but here) without. Its title
 is the post's first words, its caption only what the author wrote under the
 tick ("say the post's words once", the owner, Nov 10).
 
+ONE DRAWING, ONE CONVERSATION (docs/SOCIAL-SITE.md section 17; the owner's
+"Yes", Nov 14). A post can be one of your older drawings, one you shared
+outside a post (the Pad's own share, or the eye's link-only one): the post's
+row names that skribl, so nothing is made in Skribl, and in the same
+transaction the drawing's hearts and comments move onto the post
+(comments.move_drawing_comments, likes.move_drawing_likes). Its own page,
+/b/<id>, then sends people to the post (bloob_page, as it does for every
+post's drawing), so nothing is lost and one drawing never has two
+conversations. A drawing in a post is never posted again (that will be a
+repost). One its maker hid from the Gallery (link-only) stays hidden there
+as a post (gallery_hidden_at), as the eye said.
+
 A feed reads its drawings' sizes, lines and plays through Skribl's
 describe_posts (one query a page), for the person looking: a drawing deleted
 or withheld since is simply absent, and its post still renders, the player
@@ -57,6 +72,7 @@ Every state-changing request shows the site's token and Origin and is limited
 per person (security.LIMITS) before it reads anything.
 """
 import base64
+import hashlib
 import unicodedata
 from datetime import datetime, timezone
 
@@ -422,10 +438,10 @@ def shown_elsewhere(skribl_id, viewer, skribl_blueprint="skribl"):
 
 @_rests()
 def home_page(skribl_blueprint="skribl"):
-    """Home for somebody signed in: the composer, with the editors' compose
-    addresses (?gallery=1: the author ticks "Show in the Skribls gallery" in
-    their sheet), and the first page of the feed. None for nobody signed in,
-    whose Home is the first visit."""
+    """Home for somebody signed in: the row that opens the composer (the
+    composer itself, its editors' compose addresses with them, is on every
+    page: _compose.html), and the first page of the feed. None for nobody
+    signed in, whose Home is the first visit."""
     me = current_person()
     if me is None:
         return None
@@ -435,9 +451,7 @@ def home_page(skribl_blueprint="skribl"):
     items, nxt, show = home_items(me, home_shows(me))
     note = request.args.get("note")
     return _page("feed.html", here="home", cards=home_cards(items, me), next=nxt, show=show, token=csrf_token(),
-                 note=note if note in NOTES else None,
-                 pad_compose=url_for(skribl_blueprint + ".skribl_editor", compose=1, gallery=1),
-                 flip_compose=url_for(skribl_blueprint + ".skribl_flip", compose=1, gallery=1))
+                 note=note if note in NOTES else None)
 
 
 def register(bp, skribl_blueprint="skribl"):
@@ -464,6 +478,12 @@ def register(bp, skribl_blueprint="skribl"):
         words, problem = check_words(body.get("words"))
         if problem:
             return _json_error(problem, 400)
+        if body.get("skribl") is not None:
+            # ONE OF YOUR OLDER DRAWINGS (the composer's Yours, Drawings),
+            # never beside a new one: a post holds one drawing.
+            if body.get("payload") is not None:
+                return _json_error("one_drawing", 400)
+            return _post_older(me, words, body.get("skribl"))
         payload = body.get("payload")
         if not isinstance(payload, dict):
             return _json_error("no_drawing", 400)
@@ -491,6 +511,48 @@ def register(bp, skribl_blueprint="skribl"):
                    skribl_id=made.public_id)
         sess = site().session()
         sess.add(row)
+        sess.flush()
+        return jsonify({"ok": True, "post": row.public_id,
+                        "go": url_for("social.post_page", public_id=row.public_id)})
+
+    def _post_older(me, words, skribl_id):
+        """ONE DRAWING, ONE CONVERSATION: one of `me`'s older drawings as a
+        post (the header's rule). The drawing is theirs, shared (public or
+        link-only), never a post's, a face or a comment's; taken down
+        (withheld) it is nobody's to post. In one transaction: the post's row,
+        naming that skribl, and the drawing's hearts and comments moved onto
+        it. Nothing is made in Skribl and nothing about the drawing changes
+        there: its title, caption and visibility stay its own."""
+        from skribl import describe_posts
+        from .comments import move_drawing_comments
+        from .likes import move_drawing_likes
+        from .models import Comment
+        sid = skribl_id if isinstance(skribl_id, str) else ""
+        if not (0 < len(sid) <= 32):
+            return _json_error("drawing_gone", 404)
+        sk = describe_posts([sid], viewer_id=me.public_id).get(sid)
+        sess = site().session()
+        if (not sk or str(sk.get("user_id") or "") != me.public_id
+                or sk.get("visibility") not in ("public", "unlisted")
+                or sess.execute(sa.select(Comment.id).where(Comment.skribl_id == sid).limit(1)).first() is not None
+                or sess.execute(sa.select(Person.id).where(Person.id == me.id, Person.face_id == sid)).first()
+                is not None):
+            # Somebody else's, gone, withheld, a face or a comment's drawing:
+            # as gone as one never made, saying nothing of which.
+            return _json_error("drawing_gone", 404)
+        drawing_lock(sid)
+        if sess.execute(sa.select(Post.id).where(Post.skribl_id == sid)).first() is not None:
+            # In a post already (posted a moment ago, another tab): sharing
+            # it again will be a repost, a step of its own.
+            return _json_error("drawing_posted", 409)
+        row = Post(public_id=new_public_id(8), person_id=me.id, words=words or "", skribl_id=sid,
+                   # Hidden from the Gallery by its maker (link-only): the
+                   # post's drawing stays out of it, as the eye said.
+                   gallery_hidden_at=None if sk.get("visibility") == "public" else utcnow())
+        sess.add(row)
+        sess.flush()
+        move_drawing_comments(sid, row.id)
+        move_drawing_likes(sid, row.id)
         sess.flush()
         return jsonify({"ok": True, "post": row.public_id,
                         "go": url_for("social.post_page", public_id=row.public_id)})
@@ -692,6 +754,26 @@ def register(bp, skribl_blueprint="skribl"):
         drop_drawing_likes(skribl_id)
         sess.flush()
         return jsonify({"ok": True, "go": url_for("social.home", note="deleted_drawing")})
+
+
+def drawing_lock(skribl_id):
+    """ONE POST A DRAWING, AND ITS CONVERSATION WHOLE (the composer's Yours).
+    On PostgreSQL, a transaction-scoped advisory lock keyed on the drawing,
+    held until the request commits, taken by every write about a drawing
+    shown outside a post: posting it (post_new), and a like or a comment on
+    it (likes.set_like, comments.new_comment). Two posts of one drawing at
+    once go one after the other, and the second finds it in a post; a like
+    or a comment that meets the post waits for it, then finds the drawing a
+    post's (gone), or lands first and moves with the rest. Skribl's drafts
+    take theirs the same way (skribl/drafts.py). On SQLite the file's one
+    writer never lets two such writes both go: the second waits, or is
+    refused and changes nothing."""
+    s = site().session()
+    if s.get_bind().dialect.name != "postgresql":
+        return
+    n = int.from_bytes(hashlib.sha256(("social-drawing:" + str(skribl_id)).encode()).digest()[:8], "big",
+                       signed=True)
+    s.execute(sa.text("SELECT pg_advisory_xact_lock(:n)"), {"n": n})
 
 
 def drop_post(author_public_id, row):
