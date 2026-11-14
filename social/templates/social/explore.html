@@ -42,7 +42,7 @@
 <div class="gal-swap" data-gal-swap{% if more_url %} data-more="{{ more_url }}"{% endif %} data-explore="{{ url_for('social.explore') }}">
   <div class="gal-grid" data-gal-grid>{% for t in tiles %}{{ gallery_tile(t) }}{% endfor %}</div>
   <p class="feed-none gal-none" data-gal-none="everyone"{% if tiles or q or show != 'everyone' %} hidden{% endif %}>No drawings here yet. Share one in a post, and it shows up here.</p>
-  <p class="feed-none gal-none" data-gal-none="following"{% if tiles or q or show != 'following' %} hidden{% endif %}>Nothing from the people you follow yet. Their drawings show up here as they share them.</p>
+  <p class="feed-none gal-none" data-gal-none="following"{% if tiles or q or show != 'following' %} hidden{% endif %}>Nobody you follow has shared a drawing yet. Tap Follow on someone’s page, and theirs show up here.</p>
   <p class="feed-none gal-none" data-gal-none="search"{% if tiles or not q %} hidden{% endif %}>Nothing matches that. Try part of a word or a name.</p>
   <button class="btn btn-wide feed-more" type="button" data-gal-next="{{ next or '' }}"{% if not next %} hidden{% endif %}>Load more</button>
 </div>

@@ -1768,8 +1768,8 @@ drawing made outside the site. A wrong answer (not a string, no `__ID__`, a
 script, another site's `//`, a backslash or a space) raises on the first
 page that asks, rather than leaving every card on it opening nothing.
 `verify_seam.py` and `verify_hostseams.py` hold the seam, and
-`verify_socialposts.py` (section 12) drives it on the Skribl site's
-Explore and profiles.
+`verify_socialposts.py` (section 12) drives it on the Skribl site's first
+visit and profiles.
 
 ### The file work before the first visitor (`warm_assets`)
 

@@ -2276,6 +2276,40 @@ with sync_playwright() as p:
               bool(sw.get("light reduced", {}).get("ok")) and sw["light reduced"].get("shown") == f_page,
               json.dumps({k: v for k, v in sw.get("light reduced", {}).items() if k not in ("shown", "after reload")}))
 
+        # THE READS ON THEIR INDEXES (docs/SOCIAL-SITE.md section 3, item 8:
+        # every new query's plan checked in its suite): New reads the posts by
+        # their time's own index, newest first, with no sort of its own; Hot
+        # reads the week's plays on the views' time (Skribl's index, through
+        # recent_plays), and then orders by them, as the gallery's own Hot does.
+        PROBE = r"""
+import json
+from sqlalchemy import event
+from app import app, db
+from social import gallery
+seen = []
+def keep(conn, cursor, statement, params, context, executemany):
+    if "FROM social_posts" in statement and statement.lstrip().upper().startswith("SELECT"):
+        seen.append((statement, params))
+out = {}
+with app.test_request_context("/social/explore"):
+    for sort in ("new", "hot"):
+        seen.clear()
+        event.listen(db.engine, "before_cursor_execute", keep)
+        gallery.page(None, "everyone", sort, "")
+        event.remove(db.engine, "before_cursor_execute", keep)
+        out[sort] = [r[3] for st, pr in seen[:1]
+                     for r in db.session.connection().exec_driver_sql("EXPLAIN QUERY PLAN " + st, pr).fetchall()]
+print("PLAN " + json.dumps(out))
+"""
+        pr = subprocess.run([sys.executable, "-c", PROBE], cwd=ROOT, env=ENV, capture_output=True, text=True, timeout=120)
+        plans = next((json.loads(ln[5:]) for ln in pr.stdout.splitlines() if ln.startswith("PLAN ")), {})
+        check("the Gallery's reads are on their indexes: New the posts by their time's own index, newest first, with no"
+              " sort of its own; Hot the week's plays by the views' time (through recent_plays)",
+              any("ix_social_posts_created" in x for x in plans.get("new", []))
+              and not any("TEMP B-TREE" in x for x in plans.get("new", []))
+              and any("ix_skribl_views_created" in x for x in plans.get("hot", [])),
+              f"{plans or pr.stderr[-300:]}")
+
         # EVERY WORD AT 4.5:1, EVERY CONTROL 44px, THE BOX 16px (the suite's own
         # reader), phone and desk, light and dark; and the ▶'s words read off the
         # pixels under them (its glass over Ivy's drawing, dark paper).

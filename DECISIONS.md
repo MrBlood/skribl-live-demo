@@ -38371,3 +38371,204 @@ Pad and Flip: they had this order already; nothing changes in either, and
 verify_menu now guards it. Not tested here: WebKit and Firefox (the rule is
 the HTML parser's, which they share, and main's lanes run their smoke after
 the merge); the live site.
+
+## After v330 -- Explore becomes the Gallery of everyone (the map's step 3, its first part)
+
+The owner, to the Gallery mock (https://claude.ai/artifact/LXxXHjTX9JwjK4kGYL8Vuy,
+Nov 13): "Your picks are great." Its picks: the tiles B, drawings first, two
+across on a phone and three on a desk; the bar says Gallery, Blooby's Explore
+icon kept; a tap opens the post, where it plays; Following | Everyone on top
+(Home's own pill), New, Hot and search under it as today; the hearts and
+comments only when there are some, and "▶ 15 sec" on every drawing. Built as
+the first part of the map's step 3 (docs/SOCIAL-SITE.md section 16); its
+second part, Home keeping posts only, is the next PR.
+
+WHAT CHANGED.
+
+- THE SITE LISTS IT ITSELF. /social/explore no longer borrows Skribl's Gallery
+  section (Skribl's own /gallery is as it was): `social/gallery.py` lists the
+  site's own posts as their drawings, in one query on the posts' own indexes,
+  asking Skribl only what a tile shows (describe_posts, through posts.cards)
+  and, under Hot, the plays. POSTS ONLY: a drawing shown outside a post is not
+  in it (the map's decision 2: it stays in its author's Gallery, step 4), nor a
+  face or a drawing kept link-only, none of which is a post.
+- THE HEAD says Gallery and "Everyone's drawings and Flips. Tap one to watch it
+  come alive." The bar's and the rail's name is Gallery; its address, the
+  page's name inside (here == 'explore') and Blooby holding up a bloob stay.
+- ON TOP, signed in, Following | Everyone: Home's own pill (the macro, and its
+  tint's glide in follows.js, which now lends it as window.SocialPill).
+  Following is the people you follow and you; Everyone is everybody. Signed
+  out there is none, as on Home. UNDER IT, as Skribl's gallery had them: New |
+  Hot (the one pill, with the gallery's own tips) and the search box (44px,
+  its words 16px, a field's own ground and edge). A change glides its pill,
+  fades the tiles out, puts the first page of the new pick in while they
+  cannot be seen and fades them back (explore.js); the page does not scroll;
+  the address says what is shown, so a reload, or the way back from a post,
+  opens on it.
+- THE TILES (`_gallery.html`; social.css, "THE GALLERY OF EVERYONE"), the
+  mock's CSS in the site's tokens: each ONE link to its post; the drawing whole
+  on its paper in 650 x 486; "▶ 15 sec" (a Flip "▶ 3 pages") 8px in at its
+  bottom left; the maker's face at 22px (the empty circle before they draw one,
+  never an initial) and first name (600, cut with an ellipsis); the hearts and
+  comments at the right, each only when there are some, the site's own icons at
+  14px. To a screen reader the link says it all: "Gwen: lighthouse at dusk,
+  drawn in 15 sec, 2 likes, 1 comment".
+- NEW is newest first, by Home's own cursor. HOT is plays in the last seven
+  days, most first, the newest first among equals; its cursor holds the moment
+  its first page was ranked at, so one scroll-through is one order, as the
+  gallery's own Hot. SEARCH is a post's words and its maker's name and
+  @handle. Load more, 24 a page.
+- WHO IS IN IT, as Home's lists (posts.feed_page): nobody a block hides either
+  way and nobody muted, Everyone and Following alike, in the query, so its
+  pages stay whole. Taken down is out, a post or a person, for everybody.
+- SKRIBL GAINS ONE SEAM, `recent_plays()` (skribl/describing.py;
+  docs/INTEGRATION.md, "What is played most, among your own posts"): the plays
+  counted in the last seven days, as a subquery a host joins outer to its own
+  posts, so the site's Hot is one query on its own rows and never a query of
+  Skribl's tables. Every host gets it.
+- THE SHARE-CARD CUT IS ONE RULE: More from's `more_frame` (post.html) moved to
+  `_gallery.html` as `plate_frame`, and both tiles read it (--plate-*).
+- WORDS THAT NAMED EXPLORE'S OLD GALLERY, made true: the Terms ("in your post,
+  on Home and in the Gallery, and in the Skribls gallery too if you tick it");
+  the delete sheet of a drawing shown outside a post ("from Home and from your
+  page"); and Your Reports, which called a report sent through Skribl's own
+  sheet "somebody on Explore", now says "somebody in the Skribls gallery".
+
+JUDGMENT CALLS, said so they read true:
+
+- THE MOCK'S CROP WAS RIGHT FOR A 4:3 DRAWING ALONE. Its numbers (an image
+  184.62% wide at -42.31%, -6.17%) are exactly lib/sharecard.js drawingRect()
+  for an 816 x 612 drawing, 3 card pixels in from the plate's line (650 x 486,
+  which is where the tile's shape comes from). Every drawing is cut by its own
+  size now (plate_frame, the card's own sums): a 4:3 drawing fills the tile;
+  another shape sits whole in its middle on the paper (--blooby-paper), never
+  cropped, so a tall drawing keeps its head and its feet.
+- THE GALLERY OPENS ON EVERYONE, and the pick is not kept for the account: it
+  is the Gallery of everyone, and its words say so; Home keeps its own pick
+  (Person.home_feed), untouched. The address keeps a pick for a reload and the
+  way back. Asked below whether it should be kept.
+- TAKEN DOWN IS OUT FOR ITS MAKER TOO. Home shows its maker their taken-down
+  post, with the note; a tile has no room for the note, and the public wall
+  showing it to them would look as if it were public. They still see it, with
+  the note, on Home and on its page.
+- THE ▶'S WORDS are made on the server (gallery.py duration_words, a port of
+  lib/replayline.js words()), and section 13 holds each tile's words to the
+  player's own play button at rest, on Home, for the same drawing.
+- THE ▶'S GLASS is the mock's light glass at 82% white for every drawing. The
+  player picks a dark or a light glass per drawing from a canvas read; a tile
+  is an image, and at 82% the words read 6.88:1 even over black. Its colours
+  are the player's resting pill's, named in social.css as --says-ink and
+  --says-glass (same role, same value, the site naming its own, as it named
+  --pill-on-ink): the same in both themes, as they sit on the drawing.
+- A TILE'S WHOLE BOX IS ITS LINK, square-cornered: rounded, it left page
+  pixels at each top corner outside the link (section 13's tap map found
+  them); the drawing keeps its 14px corners.
+- A TILE WITHOUT ITS DRAWING IS NO TILE: a post whose drawing Skribl no longer
+  describes (deleted or withheld since) is left out; its page says so.
+- SEARCH IS A SCAN of the posts' words and the people's names, fine at this
+  size; an index for it waits for a measurement (section 3). What today's
+  Explore search covered and this one does not: it searched Skribl's listing,
+  a public drawing's title and caption, drawings shown outside posts and by
+  people not on the site among them. Now it is the site's own: a post's words
+  (a post's drawing's title is its first words, so that is kept) and, new, the
+  maker's name and @handle. Gone: a drawing's caption (written under the
+  gallery tick), and anything that is not a post.
+- THE EDITORS' "Show in the Skribls gallery" TICK is unchanged (nothing
+  changes in the Pad or Flip): every post is in the site's Gallery now, so it
+  decides only Skribl's own /gallery and listing. Its words may want a look;
+  asked below.
+- THE SITE WITHOUT ACCOUNTS (no session) has no posts: its Explore is the page
+  with nothing in it, saying so.
+
+Pad and Flip: nothing changes in either editor. Not for Flip: there is nothing
+editor-side to share; a Flip's tile says its pages and opens its post, as a
+drawing's does, and the Gallery lists both alike.
+
+THE CHECKS, each new or changed row shown red by a break of its own in a
+throwaway copy of the tree, with an unbroken copy as the control (green every
+time but where said):
+
+- verify_socialposts section 13, THE GALLERY OF EVERYONE (fifteen rows, read
+  through the site with people of its own; Everyone and Load more against the
+  database itself): posts only (red: drawings shown outside a post let in);
+  Load more 24 a page by a cursor naming no internal id (red: a page of 20);
+  Following only the followed and you, Everyone everybody (red: the pick
+  ignored); Hot by seven days' plays, three, two, one, five of eight days ago
+  counting for nothing (red: the seam's window doubled); the search by words,
+  name and @handle (red: words alone); two columns 12 and 18px apart on a
+  touch phone, three 20 and 26px on a desk, the box 650 x 486 (red: two on a
+  desk); the ▶'s words the player's at rest, 8px in, 24px tall (red: "drawn in"
+  kept); the face 22px, never an initial, the first name cut with an ellipsis,
+  counts only when some (red: counts said at none); the drawing cut out of its
+  share card, a 4:3 filling the box and a tall one whole in its middle (red:
+  the mock's one crop for every drawing); a tap anywhere opens the post, a
+  touch, a click, Tab and Enter, every 4px its one link (red: the tile no
+  link); the pill read on every frame, light and dark (red: no fade); under
+  Reduce Motion the pill put there (red: the pill gliding under Reduce
+  Motion); the reads on their indexes (red: New ordered by the internal id;
+  Hot's week read through a function, off its index); every word at 4.5:1,
+  every control 44px, the box 16px (red: the counts in a faint ink); the ▶'s
+  words read off the pixels over a dark drawing (red: a thin glass).
+- verify_socialposts section 12: its cards of Skribl's own that were on Explore
+  are read on the first visit (signed out) and a profile, desk rows and ⋯ too
+  (red: the site's card address answering nothing); section 9's delete sheet
+  words (red: "from Explore").
+- verify_socialmute 6: the Gallery leaves out the muted, Everyone and Following,
+  New, Hot and a search, every page whole (red: mutes left out of its query).
+- verify_socialsafety 4: the blocked out of the Gallery both ways. Its first
+  break, the block left out of the Gallery's query, stayed green: the host's
+  visibility policy (app.py) also hides a blocked person's drawing from
+  describe_posts, so the tile went too. Two locks; shown red with both opened.
+  11 and 12: a taken-down post and a taken-down person out, for its maker too
+  (red: each with its query's filter and the tile's taken-down skip opened);
+  8: Skribl's report sheet read on the first visit (red: the first visit
+  without Skribl's section); 10: "somebody in the Skribls gallery" (red: "on
+  Explore").
+- verify_socialprofile 4: You in the bar, the Gallery's tile and Skribl's card
+  (on Skribl's own /gallery now) still (red: the site's face playing), framed by
+  the card's sums (red: Skribl's card a few pixels off; the face macro off),
+  Skribl's card keeping its initial (red: without it); 7: a card's name linking
+  to the profile, read on the first visit (red: no address for a person).
+- verify_socialauth 5 (red: the card naming the handle), verify_socialactivity 1
+  and verify_socialsettings 6 and 7 (red: the bar saying Explore),
+  verify_social 2 (red: the same), 5 (red: Following | Everyone signed out) and
+  9 (red: the empty Gallery naming a tick).
+- verify_hostseams, WHAT IS PLAYED MOST: recent_plays() joined to a throwaway
+  host's own table (red: the window doubled), counted as the gallery's Hot
+  counts (red: the same), as_of honoured (red: ignored), a row only for what
+  was played (red: a row for every skribl), reading only (red: a row added),
+  documented (red: out of __all__). verify_seam, the same: its source reads
+  only (red: a flush in it), names no host (red: a host's prefix), the guide
+  (red: "outer" taken out), and nothing of the site reaching Skribl's rows
+  itself (red: Skribl's model imported in gallery.py).
+
+FOUND WRONG, AND MENDED, while it was built: the tile's rounded corner (above);
+and three instruments of mine: section 13's row gap read a rounded top
+against a true bottom (18.48 for 18); verify_hostseams' listing row counted
+the plays the suite's other sections leave in the same database; and
+verify_seam's guide row found "outer" inside `outerjoin` in the sample, so
+the word taken out of the prose went unnoticed until it asked for the word.
+
+CONTRAST, measured on the built page by section 13 (every word on the
+Gallery, phone and desk, light and dark): the lowest 7.36:1 light and 8.59:1
+dark (the counts, --ink-2); the ▶'s words read off the pixels over a dark
+drawing 7.08:1, and 6.88:1 is the worst any drawing can give (black under the
+82% glass); the search box's hint, --ink-2 on --field, 7.56:1 light and
+higher dark. No token added for a role that had one; two names for the
+player's own pill values.
+
+THE FOUR. Simple: one Gallery, a wall of drawings, one tap to the post.
+Kind: nothing said at none, no initial for a face, fades and glides and never
+a jump, the muted, the blocked and the taken down quietly out, "Nothing matches
+that" when a search finds nothing. Playful: drawings first, each drawing itself
+the moment it is opened. Powerful: Following or Everyone, New or Hot, a search;
+and skribls.net gets recent_plays() the same day.
+
+Asked, for the owner: should the Gallery keep its Following | Everyone pick
+for the account, as Home does? And should the editors' tick ("Show in the
+Skribls gallery") say what it does now that every post is in the site's
+Gallery?
+
+Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run their
+smoke after the merge); SF and Segoe UI (the tiles are laid out by grid and
+flex, the ellipsis by the browser); the live site.
