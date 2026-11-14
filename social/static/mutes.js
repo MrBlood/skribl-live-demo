@@ -25,6 +25,14 @@
  * it (social.css). A card that held the focus as it folds hands it to Undo,
  * and Undo hands it back to the ⋯ the mute began from.
  *
+ * THE TOAST IS THE SITE'S (window.SocialToast): your Gallery's eye says
+ * "Hidden from the Gallery" in it, with Undo (eye.js), and a post deleted from
+ * your own page "Your post is gone, its drawing with it." (posts.js; no Undo:
+ * a delete is final). It never covers a button someone is pressing fast
+ * (WORKING-AGREEMENTS): told which (`clear`: the eyes, the cards' ⋯), it
+ * rises just above the highest of them it would cover, and goes if a scroll
+ * brings one under it.
+ *
  * KIND, NEVER JUMPY: what moves glides, a fade first and then the room, or
  * the room and then the fade; under Reduce Motion a room is put there while
  * what it holds can't be seen, and only the fades remain.
@@ -78,27 +86,90 @@
   var toast = box ? box.querySelector('.mu-toast') : null;
   var said = toast ? toast.querySelector('[data-mute-said]') : null;
   var undo = toast ? toast.querySelector('[data-mute-undo]') : null;
-  var holdT = 0, goneT = 0, onUndo = null, toUndo = false;
+  var holdT = 0, goneT = 0, againT = 0, onUndo = null, toUndo = false, clearOf = null;
+  var LIFT_GAP = 12;
+
+  /* KEPT CLEAR OF WHAT IS PRESSED FAST: the top of the highest of `sel`
+     (painted, in view) inside the band from `top` to `bottom` across `left`
+     to `right`, or null when none is. */
+  function under(sel, top, bottom, left, right) {
+    var hi = null;
+    Array.prototype.forEach.call(doc.querySelectorAll(sel), function (el) {
+      if (!el.getClientRects().length) return;
+      var r = el.getBoundingClientRect();
+      if (r.bottom <= 0 || r.top >= window.innerHeight) return;
+      if (r.bottom <= top || r.top >= bottom || r.right <= left || r.left >= right) return;
+      if (hi === null || r.top < hi) hi = r.top;
+    });
+    return hi;
+  }
+  /* Its place: its own (12px above the bar on a phone, the foot of the page
+     on a desk), or, when one of `sel` would be under it there, just above the
+     highest of them (LIFT_GAP clear), so the next press lands on what it was
+     meant for. Set while it can't be seen, so it never moves in sight. */
+  function place(sel) {
+    box.style.setProperty('--mu-lift', '0px');
+    if (!sel) return;
+    var b = box.getBoundingClientRect(), t = toast.getBoundingClientRect(), lift = 0;
+    for (var i = 0; i < 6; i++) {
+      var hi = under(sel, b.top - lift - LIFT_GAP, b.bottom - lift + LIFT_GAP, t.left, t.right);
+      if (hi === null) break;
+      lift = b.bottom - hi + LIFT_GAP;
+    }
+    box.style.setProperty('--mu-lift', Math.round(lift) + 'px');
+  }
+  /* Up, and a scroll (or a turn of the screen) brings one of them under it:
+     it goes, its words said; what it offered stays on the page (the eye
+     itself undoes). Read once a frame. */
+  var watchT = 0;
+  function watch() {
+    if (watchT) return;
+    watchT = requestAnimationFrame(function () {
+      watchT = 0;
+      if (!clearOf || toast.hidden || !toast.classList.contains('is-up')) return;
+      var r = toast.getBoundingClientRect();
+      if (under(clearOf, r.top, r.bottom, r.left, r.right) !== null) fall();
+    });
+  }
+  window.addEventListener('scroll', watch, { passive: true });
+  window.addEventListener('resize', watch);
 
   /* `text`, with Undo when `then` is given, rising `wait` ms from now (the
      rest of the sheet's going down). One already up keeps its place and
-     takes the new words. */
-  function rise(text, then, wait) {
+     takes the new words, unless its place would now cover one of `o.clear`:
+     then it goes, and rises again clear of them. `o.plain`: no eye beside
+     the words (a delete's). */
+  function rise(text, then, wait, o) {
     if (!toast) return;
+    o = o || {};
     clearTimeout(holdT);
     clearTimeout(goneT);
+    clearTimeout(againT);
     wait = Math.max(0, wait || 0);
     var up = !toast.hidden && toast.classList.contains('is-up');
+    if (up && o.clear) {
+      var r = toast.getBoundingClientRect();
+      if (under(o.clear, r.top, r.bottom, r.left, r.right) !== null) {
+        fall();
+        againT = setTimeout(function () { rise(text, then, 0, o); }, 280);
+        return;
+      }
+    }
     onUndo = then || null;
+    clearOf = o.clear || null;
+    toast.classList.toggle('is-plain', !!o.plain);
     toast.classList.remove('is-going');
     if (!up) {
       toast.classList.remove('is-up');
       toast.style.setProperty('--mu-wait', (wait / 1000).toFixed(3) + 's');
       toast.hidden = false;
-      void toast.offsetHeight;          // laid out where it starts: lower, unseen
     }
     said.textContent = text;
     undo.hidden = !then;
+    if (!up) {
+      void toast.offsetHeight;          // laid out where it starts: lower, unseen
+      place(clearOf);                   // its width is its words' (a desk's)
+    }
     toast.classList.add('is-up');
     if (then && toUndo) {
       toUndo = false;
@@ -110,6 +181,7 @@
     if (!toast || toast.hidden) return;
     clearTimeout(holdT);
     onUndo = null;
+    clearOf = null;
     var had = doc.activeElement === undo;
     toast.classList.add('is-going');
     toast.classList.remove('is-up');
@@ -126,6 +198,12 @@
       if (then) then();
     });
   }
+  /* THE SITE'S TOAST, for the rest of the site (above): rise(text, { undo,
+     wait, clear, plain }) and fall(). */
+  window.SocialToast = {
+    rise: function (text, o) { o = o || {}; rise(text, o.undo || null, o.wait || 0, o); },
+    fall: fall
+  };
 
   /* ---- A ROOM: what comes or goes, so nothing below it jumps ---------------- */
   /* Moving a node blurs whatever it holds: the focus is put back where it was. */

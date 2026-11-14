@@ -25,6 +25,14 @@ record of them; recent_plays() hands a host that count as a subquery to join
 to its own posts, so the host's Hot is one query on its own rows, with its
 own rules, paged by its own cursor.
 
+AND WHAT PEOPLE SHARED OUTSIDE A HOST'S POSTS (Nov 14, for the Skribl site's
+Gallery of every skribl: the owner's "I thought gallery was only skribls (pad
+or flip)?"): a host's gallery can list its people's skribls beside its own
+posts, in one order. shared_skribls() hands a host the shared ones as a
+subquery to read beside its own rows (each skribl's id, author, title, time
+and visibility; no payload), so the host's gallery is its own query, its own
+rules and its own cursor, and never a query of Skribl's tables.
+
 Reads only, on the host's session: it flushes nothing and commits nothing.
 """
 import re
@@ -207,3 +215,58 @@ def recent_plays(*, as_of=None):
             .where(SkriblView.created_at >= since, SkriblView.created_at <= as_of)
             .group_by(SkriblPost.public_id)
             .subquery("skribl_recent_plays"))
+
+
+def shared_skribls(*, author=None, author_prefix=None, link_only=False):
+    """The skribls people shared, as a SUBQUERY for a host to read beside its
+    own posts: a gallery of everything its people shared, in a post or not,
+    in one order (after v330, for the Skribl site's Gallery of every skribl,
+    the owner's "I thought gallery was only skribls (pad or flip)?", Nov 14).
+    One row per skribl: its public id as `skribl_id`, `user_id`, `title`,
+    `created_at` and `visibility`. No payload is read.
+
+    THE PUBLIC ONES, the gallery's own rule ("public": what the author put in
+    the gallery). Never unlisted, private or withheld, but:
+
+    link_only       with `author` alone: their link-only (unlisted) ones too,
+                    for a page that is that author's ALONE, where they choose
+                    what is in the gallery (Skribl's own listing shows an
+                    author everything they own the same way: GET
+                    /api/skribls?user_id= for its author). Without `author`
+                    it is refused (ValueError): nobody's link-only skribls are
+                    listed to everybody.
+    author          only this author's (their user id, as the host hands it).
+    author_prefix   only authors whose ids start with this (a host whose
+                    people's ids share a prefix: the site's are "site:...").
+
+    It says nothing of who may see a drawing beyond that: joined to the
+    host's own people, the host's rules (its blocks, mutes and takedowns)
+    decide what is shown, and describe_posts, for the ones it shows, applies
+    the visibility policy as every read does. A skribl the host also holds a
+    row for (a post's drawing) is in it too: a host showing both shows it
+    once, by its own rows. So is anything else the host posted for its people
+    (a face, a reply's drawing): a host leaves out what its rows say is not a
+    gallery's. It runs nothing until the host's query does and reads no
+    payload; on the posts' (visibility, created_at) and (user_id,
+    created_at) indexes:
+
+        shared = skribl.shared_skribls(author_prefix="site:")
+        rows = (sa.select(shared.c.skribl_id, shared.c.created_at, Person)
+                .join(Person, Person.public_id == shared.c.user_id)
+                .where(~sa.exists().where(Post.skribl_id == shared.c.skribl_id))
+                .order_by(shared.c.created_at.desc(), shared.c.skribl_id.desc()))
+    """
+    if link_only and author is None:
+        raise ValueError("link_only lists one author's own skribls, on a page that is theirs alone: name the author")
+    q = sa.select(SkriblPost.public_id.label("skribl_id"), SkriblPost.user_id.label("user_id"),
+                  SkriblPost.title.label("title"), SkriblPost.created_at.label("created_at"),
+                  SkriblPost.visibility.label("visibility"))
+    if link_only:
+        q = q.where(SkriblPost.visibility.in_(("public", "unlisted")))
+    else:
+        q = q.where(SkriblPost.visibility == "public")
+    if author is not None:
+        q = q.where(SkriblPost.user_id == normalise_user_id(author))
+    if author_prefix:
+        q = q.where(SkriblPost.user_id.like(_like_prefix(str(author_prefix)), escape="\\"))
+    return q.subquery("skribl_shared")

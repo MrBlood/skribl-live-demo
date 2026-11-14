@@ -19,7 +19,15 @@
                         person's Gallery (a profile's tab, the map's step 4)
                         a drawing they showed outside a post is the same tile,
                         opening its own page (/b/<id>): data-drawing, not
-                        data-post.
+                        data-post; since Nov 14 the Gallery of everyone holds
+                        them too. THE EYE (your own Gallery tab, nowhere
+                        else; the owner's "Yes, the eye in view", Nov 14):
+                        the tile and its eye side by side in one cell, the
+                        eye a button at its top right, pressed while the
+                        drawing is in the Gallery; hidden from it, the cell
+                        is-hidden (the eye crossed, "Hidden", the drawing
+                        faded) and the link says so (eye.js swaps its words
+                        between the two it carries).
     draft_tile(d)       one of your drafts (a profile's Drafts tab, yours
                         alone; the step 4 mock's A): the tile's shape, the
                         draft's own small picture whole on the paper (Skribl's
@@ -77,7 +85,9 @@
 {%- endmacro %}
 
 {% macro gallery_tile(t) -%}
-<a class="gal-tile" href="{{ t.url }}" {% if t.kind == 's' %}data-drawing="{{ t.sk.id }}"{% else %}data-post="{{ t.post }}"{% endif %} data-handle="{{ t.who.handle }}" aria-label="{{ t.label }}">
+{%- if t.eye %}<div class="gal-cell{% if t.hidden %} is-hidden{% endif %}" data-eye-cell>{% endif -%}
+<a class="gal-tile" href="{{ t.url }}" {% if t.kind == 's' %}data-drawing="{{ t.sk.id }}"{% else %}data-post="{{ t.post }}"{% endif %} data-handle="{{ t.who.handle }}" aria-label="{{ t.label }}"
+   {%- if t.eye %} data-label-shown="{{ t.shown_label }}" data-label-hidden="{{ t.hidden_label }}"{% endif %}>
   <span class="gal-pic"{{ plate_ground(t.sk) }}><span class="gal-plate" style="{{ plate_frame(t.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=t.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
     <span class="gal-dur">{{ ic.tri() }}{% if t.says %}<span>{{ t.says }}</span>{% endif %}</span></span>
   <span class="gal-by">{{ face(t.who) }}<b>{{ t.name }}</b>
@@ -86,6 +96,7 @@
     {%- if t.comments %}<span class="gal-comments">{{ ic.comment() }}{{ t.comments }}</span>{% endif -%}
     </span>{% endif %}</span>
 </a>
+{%- if t.eye %}<button class="gal-eye" type="button" data-eye="{{ t.eye }}" aria-pressed="{{ 'false' if t.hidden else 'true' }}" aria-label="In the Gallery: {{ t.what }}"><span class="gal-eye-chip"><span class="gal-eye-ics">{{ ic.eye_open() }}{{ ic.eye_shut() }}</span><span class="gal-eye-word">Hidden</span></span></button></div>{% endif %}
 {%- endmacro %}
 
 {% macro draft_tile(d) -%}

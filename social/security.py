@@ -400,6 +400,7 @@ LIMITS = {
     "follow": (60, 3600),          # follows and unfollows, per person (follows): nobody follows everyone at once
     "mute": (60, 3600),            # mutes and unmutes, per person (mutes): as follows, nobody mutes and unmutes hundreds a minute
     "home-pick": (120, 3600),      # Home's pill, Following or Everyone, kept for the account (follows)
+    "gallery": (120, 3600),        # the eye on your own Gallery tab, a drawing hidden or shown, per person: the same tap does both
 }
 _SWEEP_EVERY = 64
 

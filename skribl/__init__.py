@@ -42,7 +42,7 @@ from .creation import (CreatedPost, SkriblIdempotencyRace, SkriblRejected,
                        SkriblUnavailable, create_post)
 from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
                        set_post_visibility)
-from .describing import describe_posts, list_public_posts, recent_plays
+from .describing import describe_posts, list_public_posts, recent_plays, shared_skribls
 from .drafts import list_drafts
 from .moderation import close_reports, list_reports
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
@@ -83,6 +83,13 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            # host's own list (skribl/describing.py, docs/INTEGRATION.md
            # "What is played most, among your own posts").
            "recent_plays",
+           # ...and the skribls people shared, public ones (and on a page that
+           # is an author's alone, their link-only ones too), as a subquery a
+           # host reads beside its own posts: a gallery of everything its
+           # people shared, in a post or not, in one order
+           # (skribl/describing.py, docs/INTEGRATION.md "Your people's
+           # drawings beside your own posts").
+           "shared_skribls",
            # The report queue, for a host's own Reports page: read it, and
            # close a drawing's reports once looked at (skribl/moderation.py,
            # docs/INTEGRATION.md "Your own reports page").

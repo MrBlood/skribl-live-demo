@@ -28,7 +28,8 @@
  * and Delete each rise as a sheet of their own: Report into the site's own
  * queue (/report, the page's token, the Gallery's reasons and "A child's
  * safety"; piece 5), Delete asked once (then, on your own page, the post
- * folds away there; anywhere else Home says it went). Block is safety.js's sheet
+ * folds away there and the site's toast says it is gone; anywhere else Home
+ * says it went). Block is safety.js's sheet
  * (window.SocialSafety), and afterwards Home says so. Mute asks nothing:
  * mutes.js (window.SocialMute) folds their cards away and offers Undo.
  *
@@ -235,10 +236,14 @@
      you stay there, and the post folds away where it was: it fades, then its
      room closes and the next rises into its place, as a muted person's cards
      fold on Home (mutes.js); under Reduce Motion it fades, and its room goes
-     once it can't be seen. The page says so to a screen reader in Home's own
-     words, focus goes to the next card's ⋯ (else the one before, else the
-     tab), and the last one gone leaves the tab's own kind words. From a
-     post's own page, and Home, the site's answer leads on: Home, its note. */
+     once it can't be seen. Focus goes to the next card's ⋯ (else the one
+     before, else the tab), and the last one gone leaves the tab's own kind
+     words. Once it has folded away THE SITE'S TOAST says so, near the finger,
+     in Home's own words (the owner's "Yes", Nov 14: it said so on the tab's
+     status line at the foot of the tab), a status a screen reader hears; no
+     Undo, a delete is final, and clear of the cards' ⋯, the next delete's
+     first press (mutes.js, window.SocialToast). From a post's own page, and
+     Home, the site's answer leads on: Home, its note. */
   var FOLD_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
   function foldAway(card) {
     var list = card.parentElement, panel = card.closest('[data-prof-panel]');
@@ -246,7 +251,7 @@
     var at = cards.indexOf(card), next = cards[at + 1] || cards[at - 1] || null;
     var to = next ? next.querySelector('.post-more') : doc.querySelector('.prof-tab[aria-current="page"]');
     if (to) to.focus({ preventScroll: true });
-    tell(pageSay, say('deleted'));
+    tell(pageSay, '');
     var gap = parseFloat(getComputedStyle(list).rowGap) || 0, still = !!(reduced && reduced.matches);
     function gone() {
       card.remove();
@@ -255,6 +260,8 @@
         none.hidden = false;
         if (none.animate) none.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease' });
       }
+      if (window.SocialToast) window.SocialToast.rise(say('deleted'), { plain: true, clear: '[data-prof-list] .post-card [data-post-menu]' });
+      else tell(pageSay, say('deleted'));
     }
     if (!card.animate) { gone(); return; }
     card.style.pointerEvents = 'none';
