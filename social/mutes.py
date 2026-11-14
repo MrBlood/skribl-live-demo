@@ -12,8 +12,9 @@ MUTE IS A BREAK FROM SOMEBODY, NOT A WALL. One rule: what comes to you goes
 quiet, and what you go to stays.
 
 WHAT COMES TO YOU GOES QUIET (muted_ids, read once a request):
-  * Home, Following and Everyone: their posts and drawings (posts.feed_page,
-    in its query; a feed of one person's, More from, keeps them);
+  * Home, Following and Everyone: their posts (posts.feed_page, in its
+    query; Home is posts only since the map's step 3; a feed of one
+    person's, More from, keeps them);
   * The Gallery (Explore: gallery.py, in its own query), and Skribl's
     listings of everybody's: their drawings,
     through the feed filter the host installs (muted_authors; app.py asks it

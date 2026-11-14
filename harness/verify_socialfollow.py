@@ -40,8 +40,9 @@ mock, B (Nov 13): who follows whom is yours alone.
      back and says why; the switch read on every frame (the pill glides, the
      posts fade, change while unseen and fade back, the page doesn't scroll);
      under Reduce Motion the pill is put there and the posts fade.
-  8. FOLLOWING NEVER RUNS OUT: the people you follow and you, posts and
-     drawings, newest first, nothing else; then "You're caught up…" with its
+  8. FOLLOWING NEVER RUNS OUT: the people you follow and you, their posts
+     (never a drawing shown outside a post: Home is posts only since the
+     map's step 3), newest first, nothing else; then "You're caught up…" with its
      check and Fresh from everyone, everybody else's, nothing twice; Load more
      carries on through both; following nobody, the kind card and everyone's;
      somebody taken down is in nobody's Following (all of it walked).
@@ -574,11 +575,11 @@ PILL = r"""(sel) => { const seg = document.querySelector(sel); if (!seg || !seg.
                color: bs.color, size: bs.fontSize, weight: bs.fontWeight, pressed: b.getAttribute('aria-pressed'),
                reach: hit(0) && hit(-21) && hit(21) }; }) }; }"""
 
-# Home's feed, in order: each card (p: a post's id, s: a drawing's), and what
-# Following says between them.
+# Home's feed, in order: each card (p: and its post's id; Home is posts only
+# since the map's step 3, so a drawing shown outside a post would be a card
+# whose post is none of the site's), and what Following says between them.
 FEED = r"""() => { const f = document.querySelector('[data-feed]'); if (!f) return null;
-  return [...f.children].map(e => e.matches('.post-card') ? (e.getAttribute('data-kind') === 's' ? 's:' + e.getAttribute('data-skribl')
-                                                                                                 : 'p:' + e.getAttribute('data-post'))
+  return [...f.children].map(e => e.matches('.post-card') ? 'p:' + e.getAttribute('data-post')
     : e.matches('.fo-caught') ? 'caught' : e.matches('.fo-fresh') ? 'fresh' : e.matches('.fo-none') ? 'none' : e.tagName.toLowerCase()); }"""
 
 # What Following says between its cards: the caught-up line (its check in the
@@ -1071,11 +1072,11 @@ with sync_playwright() as p:
             pg.wait_for_timeout(700)
             s = pg.evaluate(SHEET, "unfollowSheet")
             check("a tap on Following raises a small sheet, Make's own in its paper: 'Unfollow Eli?', 'You’ll still see"
-                  " Eli’s drawings under Everyone. They aren’t told.', Keep following beside Unfollow, the big button"
+                  " Eli’s posts under Everyone. They aren’t told.', Keep following beside Unfollow, the big button"
                   " (the action), its focus on Keep following",
                   s and s["open"] and s["role"] == "dialog" and s["modal"] == "true" and s["paper"] == SHEET_PAPER["light"]
                   and s["title"] == "Unfollow Eli?"
-                  and s["lede"] == "You’ll still see Eli’s drawings under Everyone. They aren’t told."
+                  and s["lede"] == "You’ll still see Eli’s posts under Everyone. They aren’t told."
                   and [a[:2] for a in s["acts"]] == [["Keep following", False], ["Unfollow", True]]
                   and all(a[2] >= 52 for a in s["acts"]) and s["focus"] == "Keep following",
                   json.dumps(s))
@@ -1474,41 +1475,48 @@ with sync_playwright() as p:
             zed = someone(b, "zed", "Zed Ford")
             abe = someone(b, "abe", "Abe Gold")
             cas = someone(b, "cas", "Cas Hale")
-            seq = []
+            seq, drawn8 = [], []
             for who, kind, i in ((cas, "p", 0), (zed, "p", 0), (abe, "p", 0), (cas, "s", 0), (zed, "s", 0), (yan, "p", 0),
                                  (cas, "p", 1), (zed, "p", 1)):
                 if kind == "p":
                     seq.append((who.handle, "p:" + (make_post(who, f"Section 8, {who.handle}'s {i}", seed=90 + i) or "")))
                 else:
-                    seq.append((who.handle, "s:" + (make_drawing(who, f"Section 8, {who.handle}'s drawing", seed=95 + i) or "")))
+                    # A drawing shown in the gallery from the Pad, outside a post:
+                    # on nobody's Home since the map's step 3 (Home is posts only).
+                    drawn8.append(make_drawing(who, f"Section 8, {who.handle}'s drawing", seed=95 + i))
                 time.sleep(0.03)
+            SKRIBLS = "() => [...document.querySelectorAll('[data-feed] .post-card')].map(c => c.getAttribute('data-skribl'))"
             follow(yan, "zed")
             follow(yan, "abe")
             ctx, pg = browser_as(b, yan)
             go(pg, "/social/", wait=600)
             feed8 = pg.evaluate(FEED)
+            sk8 = pg.evaluate(SKRIBLS)
             ex8 = pg.evaluate(EXTRAS)
             newest = list(reversed(seq))
             circle = [k for h, k in newest if h in ("yan", "zed", "abe")]
             rest = [k for h, k in newest if h == "cas"]
             mine = [x for x in (feed8 or []) if x in circle]
-            check("Following is the people you follow and you, posts and drawings alike, newest first, nothing else"
-                  " before the line",
-                  feed8 and feed8[:len(circle)] == circle and mine == circle,
-                  f"got {feed8}; want {circle} then {rest}")
+            check("Following is the people you follow and you, their posts, newest first, nothing else before the line:"
+                  " their drawings shown outside a post are not on it (Home is posts only)",
+                  feed8 and feed8[:len(circle)] == circle and mine == circle and all(drawn8)
+                  and not (set(drawn8) & set(sk8 or [])),
+                  f"got {feed8}; want {circle} then {rest}; drawings on it {sorted(set(drawn8) & set(sk8 or []))}")
             check("then 'You’re caught up with the people you follow.' with its check drawn in our pen, then 'Fresh from"
                   " everyone' (a heading) and everybody else's, newest first, nothing twice",
                   feed8 and feed8[len(circle):len(circle) + 2] == ["caught", "fresh"]
-                  and [x for x in feed8[len(circle) + 2:] if x.startswith(("p:", "s:"))][:len(rest)] == rest
+                  and [x for x in feed8[len(circle) + 2:] if x.startswith("p:")][:len(rest)] == rest
                   and len(feed8) == len(set(feed8)) and ex8["caught"] == "You’re caught up with the people you follow."
                   and ex8["check"] and ex8["fresh"] == ["H2", "Fresh from everyone"],
                   f"{feed8}; {ex8}")
             pg.locator("[data-home-pill] button[data-show=everyone]").tap()
             pg.wait_for_timeout(1300)
             every = pg.evaluate(FEED)
-            check("Everyone is everyone's, newest first, as Home was",
-                  every and [x for x in every if x in circle + rest] == [k for _, k in newest] and "caught" not in every,
-                  f"{every}")
+            sk_every = pg.evaluate(SKRIBLS)
+            check("Everyone is everyone's posts, newest first, as Home was, none of the drawings shown outside a post",
+                  every and [x for x in every if x in circle + rest] == [k for _, k in newest] and "caught" not in every
+                  and all(drawn8) and not (set(drawn8) & set(sk_every or [])),
+                  f"{every}; drawings on it {sorted(set(drawn8) & set(sk_every or []))}")
             pick(yan, "following")
             for i in range(21):
                 make_post(zed, f"Section 8, Zed's page {i}", seed=200 + i)
@@ -1519,7 +1527,7 @@ with sync_playwright() as p:
             cut = walked.index("caught") if "caught" in walked else -1
             check("Load more carries on: a first page of twenty of theirs (its cursor Following's own), then the rest of"
                   " theirs, then the line and everybody else's, nothing twice and nothing missed",
-                  len([x for x in first_page if x.startswith(("p:", "s:"))]) == 20 and "caught" not in first_page
+                  len([x for x in first_page if x.startswith("p:")]) == 20 and "caught" not in first_page
                   and (cursor or "").startswith("f.") and cut > 20 and walked[cut + 1] == "fresh"
                   and all(x in walked[cut:] for x in rest) and all(x in walked[:cut] for x in circle)
                   and len(walked) == len(set(walked)),
@@ -1567,7 +1575,7 @@ with sync_playwright() as p:
                   " how, and Look around (to Explore), then Fresh from everyone and everyone's, their own among them",
                   lone and lone[:2] == ["none", "fresh"] and ("p:" + (dp or "")) in lone and pill_l["pressed"] == "Following"
                   and ex_l["none"] == {"title": "You’re not following anyone yet",
-                                       "words": "Tap Follow on someone’s page, and their new drawings show up here first. Until then, here’s everyone’s.",
+                                       "words": "Tap Follow on someone’s page, and their new posts show up here first. Until then, here’s everyone’s.",
                                        "btn": "Look around", "href": "/social/explore"},
                   f"{lone and lone[:4]}; {ex_l['none']}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
@@ -1697,9 +1705,9 @@ with sync_playwright() as p:
             pg.wait_for_timeout(700)
             o = pg.evaluate(SHEET, "followOutSheet")
             check("signed out, a tap on Follow raises the small sheet the heart uses, in a sheet's paper: 'Follow Sia?',"
-                  " 'Sign in, and Sia’s new drawings show first on your Home.', Not now and Sign in (the action)",
+                  " 'Sign in, and Sia’s new posts show first on your Home.', Not now and Sign in (the action)",
                   o and o["open"] and o["role"] == "dialog" and o["paper"] == SHEET_PAPER["light"] and o["title"] == "Follow Sia?"
-                  and o["lede"] == "Sign in, and Sia’s new drawings show first on your Home."
+                  and o["lede"] == "Sign in, and Sia’s new posts show first on your Home."
                   and [a[:2] for a in o["acts"]] == [["Not now", False], ["Sign in", True]],
                   json.dumps(o))
             pg.locator("#followOutSheet .post-sheet-acts [data-make-close]").tap()

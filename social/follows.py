@@ -39,8 +39,9 @@ Fresh from everyone (everybody else's, so nothing shows twice), so Home
 never runs out. Somebody who follows nobody gets a kind card ("You're not
 following anyone yet", Look around) and everyone's. One read of posts on
 their indexes (the people you follow as a subquery, never a list sent per
-card) and one of drawings through Skribl's listing (its `authors`), as
-Everyone's page reads them. Home opens on Following
+card), as Everyone's page reads them: posts only, as all of Home (the map's
+step 3; a drawing shown outside a post keeps its own page and its maker's).
+Home opens on Following
 once you follow somebody, on Everyone before that, and on your own pick
 once you make one (Person.home_feed).
 """
@@ -244,8 +245,7 @@ def home_items(me, show, before=None):
     if before and before.startswith(_REST):
         page, nxt = _rest(me, ids, before[len(_REST):] or None, PAGE)
         return page, (_REST + nxt if nxt else None), "following"
-    page, nxt = feed_page(before[len(_FOLLOWING):] if before else None, viewer=me,
-                          among=followed_ids(me), authors=[pub for _, pub in them] + [me.public_id])
+    page, nxt = feed_page(before[len(_FOLLOWING):] if before else None, viewer=me, among=followed_ids(me))
     if nxt:
         return page, _FOLLOWING + nxt, "following"
     rest, rnxt = _rest(me, ids, None, max(PAGE - len(page), _REST_MIN))

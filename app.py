@@ -528,13 +528,13 @@ def create_app():
     # WHO SEES WHOM: a block on the site (both ways, quietly), and a person an
     # admin took down, reach Skribl's own pages too, through the two seams
     # docs/INTEGRATION.md gives a host for a block list: the listings
-    # (the first visit's gallery, a profile's skribls, Home's drawings) leave out the
+    # (the first visit's gallery, a profile's skribls, More from's drawings) leave out the
     # people the site hides from the viewer, and a drawing's link page, card,
     # picture and payload are not theirs (visible_to). Anybody else is
     # decided as before: the policy says nothing (None) and Skribl's rules stand.
     # A MUTE on the site (C, quiet everywhere) leaves the people this viewer
-    # muted out of a listing of everybody's (the first visit's gallery, Home's
-    # drawings), never out of one person's own (their page's skribls, More
+    # muted out of a listing of everybody's (the first visit's gallery,
+    # Skribl's own /gallery), never out of one person's own (their page's skribls, More
     # from): Skribl tells the filter which, by `author` (docs/INTEGRATION.md,
     # "The feed does not call your policy"). The policy never hears of mutes:
     # a mute hides no page.

@@ -4,7 +4,8 @@ authenticator for the site's people. The owner's "Yes to all" on the mute
 mock (Nov 13): C, quiet everywhere, and rule 3, mute and follow kept apart.
 
   1. WHERE YOU MUTE: "Mute @them" first in the ⋯ on somebody's page, after
-     Share… and before Report and Block on their post's and drawing's ⋯, with
+     Share… and before Report and Block on their post's ⋯ (its card on Home
+     and its own page) and their drawing's (on its own page), with
      its line, "Their posts, comments and likes stop reaching you. They
      aren’t told."; a closed eye in our pen, never a speaker; the row's words
      the size and weight of Report's and Block's, starting where theirs do,
@@ -32,8 +33,9 @@ mock (Nov 13): C, quiet everywhere, and rule 3, mute and follow kept apart.
      "Theo is muted. You still follow them.", nothing changes on their side
      (their own "Followed by…"), their posts out of Following until unmute;
      unfollowing never unmutes.
-  6. HOME AND THE GALLERY: their posts and drawings leave Home, Everyone and
-     Following, in the query (every page whole, walked with Load more); the
+  6. HOME AND THE GALLERY: their posts leave Home (posts only since the
+     map's step 3), Everyone and Following, in the query (every page whole,
+     walked with Load more); the
      Gallery of everyone (Explore, since the map's step 3) leaves out their
      posts, Everyone and Following, New, Hot and a search, in its own query
      (every page whole); Skribl's own listing (its /gallery's, the first
@@ -633,12 +635,12 @@ SHOWN = r"""(id) => { const li = document.getElementById(id); if (!li) return nu
            painted: !!at && (at === w || w.contains(at)), op: +getComputedStyle(li.querySelector(':scope > .cm-main')).opacity,
            words: w.textContent.trim() }; }"""
 
-# Home's feed, in order: each card's whose and what (p: a post's id, s: a drawing's).
+# Home's feed, in order: each card's whose and what (p: its post's id; Home
+# is posts only since the map's step 3).
 FEED = r"""() => { const f = document.querySelector('[data-feed]'); if (!f) return null;
   const room = c => c.parentElement.classList.contains('mu-room') ? c.parentElement : c;
   return [...f.querySelectorAll('.post-card')].filter(c => c.getClientRects().length && room(c).getBoundingClientRect().height > 1)
-    .map(c => c.getAttribute('data-handle') + ':' + (c.getAttribute('data-kind') === 's' ? 's:' + c.getAttribute('data-skribl')
-                                                                                      : 'p:' + c.getAttribute('data-post'))); }"""
+    .map(c => c.getAttribute('data-handle') + ':p:' + c.getAttribute('data-post')); }"""
 
 # Activity's rows: who and what, each section's.
 ROWS = r"""() => [...document.querySelectorAll('.act-list')].map(ul => {
@@ -1134,17 +1136,20 @@ with sync_playwright() as p:
                 open_sheet(pg, "[data-person-menu]", "personSheet")
                 rows[(screen, "person")] = pg.evaluate(ACTS, "#personSheet")
                 go(pg, "/social/", wait=500)
-                for kind, key in (("card", f'[data-post="{bp}"]'), ("drawing", f'[data-skribl="{bs}"][data-kind="s"]')):
-                    to(pg, f".post-card{key}", 120)
-                    open_sheet(pg, f".post-card{key} [data-post-menu]", "postSheet")
-                    rows[(screen, kind)] = pg.evaluate(ACTS, "#postSheet")
-                    if kind == "card":
-                        inks[screen] = {r["name"]: ink_mid(pg, r["icon"]) for r in rows[(screen, kind)]}
-                    pg.keyboard.press("Escape")
-                    pg.wait_for_timeout(500)
+                to(pg, f'.post-card[data-post="{bp}"]', 120)
+                open_sheet(pg, f'.post-card[data-post="{bp}"] [data-post-menu]', "postSheet")
+                rows[(screen, "card")] = pg.evaluate(ACTS, "#postSheet")
+                inks[screen] = {r["name"]: ink_mid(pg, r["icon"]) for r in rows[(screen, "card")]}
+                pg.keyboard.press("Escape")
+                pg.wait_for_timeout(500)
                 go(pg, f"/social/p/{bp}")
                 open_sheet(pg, ".post-page .post-row .post-more", "postSheet")
                 rows[(screen, "page")] = pg.evaluate(ACTS, "#postSheet")
+                # Their drawing shown outside a post has its ⋯ on its own page:
+                # Home is posts only since the map's step 3.
+                go(pg, f"/social/b/{bs}")
+                open_sheet(pg, ".post-page .post-row .post-more", "postSheet")
+                rows[(screen, "drawing")] = pg.evaluate(ACTS, "#postSheet")
                 close_ctx(ctx, pg)
             names = {k: [r["name"] for r in v] for k, v in rows.items()}
             check("on somebody's page, signed in, the ⋯ says Mute @ben first, the gentlest, its line under it (“Their"
@@ -1155,8 +1160,9 @@ with sync_playwright() as p:
                       for s in ("phone", "desk")),
                   json.dumps({s: names[(s, "person")] for s in ("phone", "desk")}))
             want = ["Copy link", "Share…", "Mute @ben", "Report this post", "Block @ben"]
-            check("on their post's ⋯ (its card on Home and its own page) and their drawing's, Mute @ben comes after Copy"
-                  " link and Share…, before Report and Block, so the two danger rows stay together, with its line",
+            check("on their post's ⋯ (its card on Home and its own page) and their drawing's (on its own page), Mute @ben"
+                  " comes after Copy link and Share…, before Report and Block, so the two danger rows stay together, with"
+                  " its line",
                   all(names[(s, k)] == want and rows[(s, k)][2]["say"] == SAY
                       for s in ("phone", "desk") for k in ("card", "drawing", "page")),
                   json.dumps({f"{s} {k}": names[(s, k)] for s in ("phone", "desk") for k in ("card", "drawing", "page")}))
@@ -1501,7 +1507,7 @@ with sync_playwright() as p:
                 make_post(pia, f"Section 6, Pia's {i}", seed=20 + i)
             o_posts.append(make_post(ozz, "Section 6, Ozz's last"))
             mute(nat, "ozz")
-            card = re.compile(r'<article class="post-card" data-post="([^"]+)"[^>]*?data-handle="([^"]+)"[^>]*?data-kind="([ps])"')
+            card = re.compile(r'<article class="post-card" data-post="([^"]+)"[^>]*?data-handle="([^"]+)"')
 
             def walk(c, show):
                 """Home's `show`, walked page after page with Load more: [(handle, key)] and each page's size."""
@@ -1509,7 +1515,7 @@ with sync_playwright() as p:
                 _, j = c.get_json(f"/social/feed?show={show}")
                 seen, sizes = [], []
                 while isinstance(j, dict):
-                    got = [(h, k + ":" + pid) for pid, h, k in card.findall(j.get("html", ""))]
+                    got = [(h, "p:" + pid) for pid, h in card.findall(j.get("html", ""))]
                     seen += got
                     sizes.append(len(got))
                     if not j.get("next") or len(sizes) > 30:
@@ -1518,9 +1524,9 @@ with sync_playwright() as p:
                 return seen, sizes
             n_all, n_sizes = walk(nat.client(), "everyone")
             q_all, _ = walk(qin.client(), "everyone")
-            check("Home's Everyone leaves out every post and drawing of somebody you muted, in its query: walked to its"
-                  " end with Load more it is everybody else's in the order somebody who muted nobody sees, every page"
-                  " but the last whole",
+            check("Home's Everyone leaves out every post of somebody you muted, in its query: walked to its end with"
+                  " Load more it is everybody else's in the order somebody who muted nobody sees, every page but the last"
+                  " whole",
                   any(h == "ozz" for h, _ in q_all) and not any(h == "ozz" for h, _ in n_all)
                   and n_all == [x for x in q_all if x[0] != "ozz"] and all(n == 20 for n in n_sizes[:-1])
                   and len(n_sizes) >= 2,
