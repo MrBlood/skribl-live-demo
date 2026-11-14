@@ -33,9 +33,9 @@ mock (Nov 13): C, quiet everywhere, and rule 3, mute and follow kept apart.
      "Theo is muted. You still follow them.", nothing changes on their side
      (their own "Followed by…"), their posts out of Following until unmute;
      unfollowing never unmutes.
-  6. HOME AND THE GALLERY: their posts leave Home (posts only since the
-     map's step 3), Everyone and Following, in the query (every page whole,
-     walked with Load more); the
+  6. HOME AND THE GALLERY: their posts leave Home, Everyone and Following,
+     in the query (every page whole, walked with Load more; Home is posts
+     only since the map's step 3); the
      Gallery of everyone (Explore, since the map's step 3) leaves out their
      posts, Everyone and Following, New, Hot and a search, in its own query
      (every page whole); Skribl's own listing (its /gallery's, the first

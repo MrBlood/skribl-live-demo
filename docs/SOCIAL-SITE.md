@@ -684,9 +684,9 @@ stays, naming nobody.
 
 **A block reaches Skribl's pages** through the two seams Skribl gives every
 host for a block list (docs/INTEGRATION.md): a feed filter (the first
-visit's gallery, a profile's skribls, More from's drawings) and a visibility policy (a
-drawing's link page, payload and card; the card falls back to its blank
-canvas). A host that mounts the site installs both, asking
+visit's gallery, a profile's skribls, More from's drawings) and a visibility
+policy (a drawing's link page, payload and card; the card falls back to its
+blank canvas). A host that mounts the site installs both, asking
 `social.hidden_authors(viewer_id)` (a block either way, and since the second
 part anybody an admin took down, below), as it installs the author resolver;
 the demo's `app.py` does.
@@ -858,10 +858,11 @@ however it was made, so whatever you open has the comment box"). A drawing
 shown outside a post, made in the Pad or Flip on their own pages and shown in
 the gallery, has the same comments on its own page (`/social/b/<id>`): the
 box, answers, drawing answers, the ⋯ (its maker removes, as a post's author
-does), reports, Load more, the count in the row under it. They follow its page, which decides
-who may see it (public, its maker one of the site's people, no block either
-way, nothing taken down but to its maker: `posts.bloob`, one rule for the page
-and its comments). A block either way with its maker, the drawing taken down
+does), reports, Load more, the count in the row under it (on Home's card
+until the map's step 3). They follow its page, which decides who may see it
+(public, its maker one of the site's people, no block either way, nothing
+taken down but to its maker: `posts.bloob`, one rule for the page and its
+comments). A block either way with its maker, the drawing taken down
 (withheld) or its maker taken down, and the drawing deleted in the Library:
 its page is gone to them, and so are its comments, read, said, answered or
 reported. Its maker still sees them on a drawing taken down, with the note,
