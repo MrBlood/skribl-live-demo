@@ -701,9 +701,10 @@ CARD_GET = r"""([handle]) => {""" + TOAST_GET + r"""
                            nav: navTop() }, toastOf()); };
   return !!card && !!next; }"""
 
-# Their page's line (its room, once it has one), and the Skribls heading under it.
+# Their page's line (its room, once it has one), and what is under it: their
+# tabs (the map's step 4: the strip took the place of the Skribls heading).
 LINE_GET = r"""() => {""" + TOAST_GET + r"""
-  const head = document.getElementById('profSkribls');
+  const head = document.querySelector('[data-prof-tabs]');
   /* The line's room, or once it stands without one, the line with its margins
      (the room holds them both: a reader of the bare line reads a hop that
      isn't there). */
@@ -1397,7 +1398,7 @@ with sync_playwright() as p:
                   and st["words"] == thanks("Jay"),
                   json.dumps({"line": line, "toast": st and st["box"], "more": more}))
             check("the line's room opens on every frame (no frame more than 30% of the way, eight frames or more), then it"
-                  " fades in (no frame more than 35%), the Skribls heading moving down without going back, nothing"
+                  " fades in (no frame more than 35%), their tabs under it moving down without going back, nothing"
                   " hopping; the toast as on Home",
                   room["ok"] and tst["ok"], json.dumps({"room": room, "toast": tst}))
             check("nothing changes on their side, and nobody is told: Jay's own page, his Home and his Activity, and Kip's"
@@ -1406,7 +1407,9 @@ with sync_playwright() as p:
                   f"same: {[x == y for x, y in zip(seen_before, seen_after)]}")
             go(pg, "/social/@jay", wait=1200)
             line2 = pg.evaluate(LINE)
-            listed = pg.evaluate("(id) => !!document.querySelector('#skriblGallery [data-id=\"' + id + '\"]')", js)
+            go(pg, "/social/@jay/gallery", wait=600)
+            listed = pg.evaluate("(id) => !!document.querySelector('[data-prof-list] .gal-tile[data-drawing=\"' + id + '\"]')", js)
+            go(pg, "/social/@jay", wait=600)
             open_sheet(pg, "[data-person-menu]", "personSheet")
             acts = pg.evaluate(ACTS, "#personSheet")
             pg.keyboard.press("Escape")
@@ -1416,7 +1419,7 @@ with sync_playwright() as p:
             more_from = jp2 in c.get(f"/social/p/{jp1}")[1]
             payload = c.get_json(f"/api/skribls/{js}")[0]
             check("loaded muted, their page says so and their ⋯ says Unmute @jay first; what you go to stays: Jay's"
-                  " drawing in his page's Skribls, his post's page with More from his other post, his drawing's page,"
+                  " drawing in his page's Gallery, his post's page with More from his other post, his drawing's page,"
                   " its link page and its payload",
                   line2 and line2["words"] == "You muted Jay · Unmute" and acts and acts[0]["name"] == "Unmute @jay"
                   and listed and all(v == 200 for v in pages.values()) and more_from and payload == 200,
@@ -1430,7 +1433,7 @@ with sync_playwright() as p:
             acts3 = pg.evaluate(ACTS, "#personSheet")
             close_ctx(ctx, pg)
             check("Unmute on the line unmutes (nothing kept): the line fades, then its room closes (no frame more than 30%"
-                  " of the way), the heading moving up without going back; the toast says “Unmuted. Jay’s posts are"
+                  " of the way), their tabs moving up without going back; the toast says “Unmuted. Jay’s posts are"
                   " back.”, and the ⋯ says Mute @jay again",
                   mutes_of("ida", "jay") == [] and shut["ok"] and gone and st3 and st3["words"] == "Unmuted. Jay’s posts are back."
                   and acts3 and acts3[0]["name"] == "Mute @jay",

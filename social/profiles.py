@@ -232,7 +232,9 @@ def register(bp, skribl_blueprint="skribl"):
         and bio, and their tabs, Posts first."""
         return profile_page(handle, "posts")
 
-    @bp.get("/@<handle>/<any(gallery, likes, drafts):tab>")
+    @bp.get("/@<handle>/gallery", defaults={"tab": "gallery"})
+    @bp.get("/@<handle>/likes", defaults={"tab": "likes"})
+    @bp.get("/@<handle>/drafts", defaults={"tab": "drafts"})
     @_rests()
     def profile_tab(handle, tab):
         """A person's profile on another of its tabs, at its own address."""

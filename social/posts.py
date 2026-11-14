@@ -500,9 +500,10 @@ def register(bp, skribl_blueprint="skribl"):
         """A drawing one of the site's people showed in the gallery outside a
         post, on a page of its own: a post's page without words, its comments
         and all. EVERY CARD OPENS HERE (the owner's "I thought on card?", Nov
-        13): a profile's Skribls and the first visit's newest open
-        /b/<id> (app.py, skribl.set_card_url), so one address serves every
-        drawing a gallery can show. A post's drawing goes to its post, for
+        13): the first visit's newest open /b/<id> (app.py,
+        skribl.set_card_url), and so does a profile's Gallery tile for a
+        drawing shown outside a post (the map's step 4), so one address
+        serves every drawing a gallery can show. A post's drawing goes to its post, for
         anybody who may see the post (comments.on_post, the post's own page's
         rule), and is as gone as the post to anybody else, without naming it;
         a drawing by somebody not on the site that the gallery shows them

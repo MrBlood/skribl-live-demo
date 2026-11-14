@@ -458,7 +458,7 @@ comments, no pinned skribl.
 
 | Where | What it is |
 |---|---|
-| `/social/@<handle>` | **A profile**, any case of the handle: their face, big, in a circle, drawing itself once (Skribl's face player, at 4x or quicker so it takes about four seconds; finished and still under Reduce Motion); their name, @handle and a few lines about them (plain text, 160 characters, 4 lines, nothing invisible or turned around, no links); Share; and their public skribls as Skribl's own Gallery section, newest first, New and Hot and search within them, paging by cursor. Your own adds **Edit profile**, **Draw your face** (**Redraw my face** once you have one) and **Settings**, the word with the gear (section 14). Nobody by that name, never made or deleted, is one kind 404. |
+| `/social/@<handle>` | **A profile**, any case of the handle: their face, big, in a circle, drawing itself once (Skribl's face player, at 4x or quicker so it takes about four seconds; finished and still under Reduce Motion); their name, @handle and a few lines about them (plain text, 160 characters, 4 lines, nothing invisible or turned around, no links); Share; and their public skribls as Skribl's own Gallery section, newest first, New and Hot and search within them, paging by cursor (since the map's step 4, their tabs in its place: section 16). Your own adds **Edit profile**, **Draw your face** (**Redraw my face** once you have one) and **Settings**, the word with the gear (section 14). Nobody by that name, never made or deleted, is one kind 404. |
 | `/social/you/edit` | **Edit profile**: your name and a few lines about you, a form that works without a script, the server's limits said kindly under each field. |
 | `/social/you/face` | **Draw your face**: the real Pad over your profile, in its face mode (`?compose=1&face=1`, through `lib/composehost.js`: square, a face's words, no Flip), and "Use this face" sends the drawing here (JSON, the site's token). The site posts it through Skribl's `create_post`, UNLISTED, in the same transaction as your row that names it; a redraw deletes the old one through `delete_post`. |
 | `/social/you` | **Settings** now (the gear's): the account page of piece 2, and since section 14 the Theme first. |
@@ -497,7 +497,8 @@ whether a skribl is still there through a documented seam).
 its own person, "Nothing here yet. Your skribls show here when you tick Show
 in the public gallery as you post, or later in your Library."; to anybody
 else, "No skribls here yet." (the Gallery section's `mine`, beside
-`author`).
+`author`). Since the map's step 4 each tab says it in its own words
+(section 16).
 
 **A face from a skribl you made** (the owner's "all yes" on mock A, Nov 11).
 Change my face (Add your face before there is one, and the empty circle)
@@ -619,8 +620,9 @@ post and clicking on the player should make it play"). On Home's cards the
 line under the drawing ("Drawn in 16 sec · watching at") and the space around
 the drawing open the post too, as the rest of the card did (`posts.js`); the
 speed and its choices, the heart, the scrubber and the loop keep their own
-taps. Explore's cards, a profile's Skribls and the first visit's newest are
-Skribl's own Gallery cards, and they open where the site says, through
+taps. Explore's cards, a profile's Skribls and the first visit's newest were
+Skribl's own Gallery cards (the first visit's still are; Explore's and a
+profile's are the site's own tiles since the map's steps 3 and 4), and they open where the site says, through
 Skribl's seam for it (`skribl.set_card_url`, docs/INTEGRATION.md "Where a
 Gallery card opens"; the demo's `app.py` sets it for the site's own pages):
 `/social/b/<id>`, from anywhere on the card that is the card's own, by Home's
@@ -684,7 +686,7 @@ stays, naming nobody.
 
 **A block reaches Skribl's pages** through the two seams Skribl gives every
 host for a block list (docs/INTEGRATION.md): a feed filter (the first
-visit's gallery, a profile's skribls, More from's drawings) and a visibility
+visit's gallery, a profile's Gallery tab's and More from's drawings) and a visibility
 policy (a drawing's link page, payload and card; the card falls back to its
 blank canvas). A host that mounts the site installs both, asking
 `social.hidden_authors(viewer_id)` (a block either way, and since the second
@@ -882,8 +884,9 @@ time's link, over it, is 44px by reaching down into the room under its line
 (toward the words, which go where it goes; on a card with no words the
 drawing lies over its last 11px or so and keeps its taps there, so the
 time's own tap is 33px tall, the card's ground around it opening the post
-too). More from's tiles were whole links already; a profile shows Skribl's
-Gallery, not these cards.
+too). More from's tiles were whole links already; a profile showed Skribl's
+Gallery, not these cards, until the map's step 4 put these cards on its
+Posts and Likes.
 
 **Anywhere on a card opens its post** (the owner's addition, the same day,
 a plain yes). A tap or a click on a card's own ground opens its page, as its
@@ -1498,7 +1501,7 @@ away only while what it holds can't be seen, and the fades remain.
 **What stays.** Their page, which says "You muted Theo · Unmute" under the
 buttons to you alone (to them and to everybody else their page is exactly as
 it was, in its source too); their posts and their drawings' pages, More from
-them, their skribls on their page, a drawing's link page and its payload. The
+them, their Gallery on their page, a drawing's link page and its payload. The
 visibility policy is untouched: a mute never hides a page.
 
 **Counts and "Liked by…" stay true,** for everybody and for you: a folded
@@ -1532,7 +1535,7 @@ filter can ask which listing it is"): a filter that names `author` is told the
 one author a listing is narrowed to, or `None` for many people's. The host
 leaves out `social.muted_authors(viewer_id)` only when it is `None` (the demo's
 `app.py` does), so a mute quiets Skribl's listings of everybody's (the first
-visit's gallery, Skribl's own /gallery) and keeps their page's skribls and More
+visit's gallery, Skribl's own /gallery) and keeps their page's Gallery and More
 from. The visibility policy never hears of mutes.
 
 **Data.** One table on the site's chain (migration `4cdc4af46a77`, after
@@ -1699,13 +1702,13 @@ only"): Home's feed, Following and Everyone, signed in and out, holds posts
 alone (`posts.feed_page`; one person's, More from, keeps their drawings). A
 drawing shown in the gallery outside a post, the Pad's own or anything
 shared before posts, is on no Home and not in the Gallery of everyone; it
-keeps its own page (`/social/b/<id>`), its maker's page (their Skribls, which
-step 4 makes their Gallery) and More from, so nothing is lost. The first
+keeps its own page (`/social/b/<id>`), its maker's page (their Skribls then,
+their Gallery since step 4) and More from, so nothing is lost. The first
 visit is as it was: Skribl's own Gallery section, every public skribl. Next
 is step 4.
 
 **Step 5 is built** (DECISIONS, "The ☰ on a phone, and the counts"),
-before step 4 (a profile's tabs), which is not built yet. The ☰, drawn in our pen, sits at the
+before step 4 (a profile's tabs), built since. The ☰, drawn in our pen, sits at the
 top left of a phone's Home and Gallery and opens the site's own sheet, the
 ⋯'s (`_menu.html`): Settings, Community rules, Privacy, Your reports (an
 admin's alone: the page is nobody else's) and Sign out; signed out, the
@@ -1717,6 +1720,28 @@ zero. On your own page the counts open your lists and took the place of
 "Followed by…"; on anybody else's they are words, and the lists stay yours
 alone. Where section 13 says nobody has a count on show, this is the
 decision.
+
+**Step 4 is built** (DECISIONS, "A profile's tabs"): where a profile's
+Skribls heading and Skribl's Gallery section were, Posts · Gallery · Likes ·
+Drafts on your own page and Posts · Gallery on anybody else's, Posts first,
+the chosen tab marked with the bar's own pen line; each tab a link with its
+own address (`/social/@<handle>`, then `/gallery`, `/likes`, `/drafts`), the
+back button and a shared link landing on it, the line gliding and the panel
+fading between them (`profiles.py`, `_profile.html`, `tabs.js`). Posts and
+Likes are Home's one card; the Gallery is the Gallery of everyone's tile
+with one person in it, a drawing shown outside a post opening its own page,
+so nothing is lost; Likes and Drafts are yours alone, nothing of either on
+anybody else's page or in its source. Drafts are the ones Skribl keeps on
+your account, listed through its new seam `list_drafts()` and opened in the
+Pad or Flip with `?draft=<id>` (docs/INTEGRATION.md, "A person's drafts on
+your own page"). Next is step 6.
+
+    /social/@<handle>            Posts, which opens first
+    /social/@<handle>/gallery    the Gallery
+    /social/@<handle>/likes      Likes, yours alone (anybody else: the page)
+    /social/@<handle>/drafts     Drafts, yours alone (anybody else: the page)
+    /social/@<handle>/more       a tab's first page or its next, ?tab= and
+                                 ?before= (JSON {html, next, tab})
 
 **The four.** Simple: one thing to share, one card for it, one Gallery
 (everyone's, the people you follow, or one person's), one place for your

@@ -1270,6 +1270,101 @@ check("it reads only: nothing added, changed or deleted in the session, the view
 check("it is a documented name: recent_plays in skribl.__all__, its docstring naming as_of",
       "recent_plays" in skribl.__all__ and "as_of" in (skribl.recent_plays.__doc__ or ""))
 
+print("\nA PERSON'S DRAFTS — list_drafts(): their saved drafts, for a host's page that is theirs alone (list_drafts)")
+# The Skribl site's profile (its Drafts tab, the map's step 4, Nov 14) lists a
+# person's drafts on a page of its own, each opening in the editor that made
+# it. A host may not query Skribl's tables, so Skribl hands the list over, the
+# one its editors' Your drafts shows (skribl/drafts.py, docs/INTEGRATION.md "A
+# person's drafts on your own page"). Asked here as a host asks it: drafts
+# saved through the editors' own API by two people of a throwaway host, the
+# list read for one, and one opened at the editor's address with ?draft=<id>.
+import base64 as _b64d, struct as _std, zlib as _zld  # noqa: E401,E402
+
+
+def _thumb_png():
+    """A whole PNG, as an editor's canvas makes its draft's small picture."""
+    def chunk(t, d):
+        return _std.pack(">I", len(d)) + t + d + _std.pack(">I", _zld.crc32(t + d) & 0xffffffff)
+    rows = b"".join(b"\x00" + bytes([246, 242, 234]) * 8 for _ in range(6))
+    raw = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", _std.pack(">IIBBBBB", 8, 6, 8, 2, 0, 0, 0))
+           + chunk(b"IDAT", _zld.compress(rows)) + chunk(b"IEND", b""))
+    return "data:image/png;base64," + _b64d.b64encode(raw).decode()
+
+
+def _dpay(k):
+    return {"version": 1, "strokeGroups": [3],
+            "strokes": [{"x": 10 + i * 9 + k, "y": 20, "t": i * 30, "color": "#7c5cff", "size": 4} for i in range(3)]}
+
+
+_dann, _dann_db = host_app("drafts-ann")
+_dben, _ = host_app("drafts-ben")
+_ca, _cb = _dann.test_client(), _dben.test_client()
+_ip = {"REMOTE_ADDR": "192.0.2.91"}
+_thumb = _thumb_png()
+_first = (_ca.post("/api/drafts", json={"kind": "pad", "title": "Ann's snail", "payload": _dpay(0), "thumbnail": _thumb},
+                   environ_base=_ip).get_json() or {}).get("id")
+_flip = (_ca.post("/api/drafts", json={"kind": "flip", "title": "Ann's bike", "payload": _dpay(1), "thumbnail": _thumb},
+                  environ_base=_ip).get_json() or {}).get("id")
+_again = (_ca.put(f"/api/drafts/{_first}", json={"kind": "pad", "title": "Ann's snail", "payload": _dpay(2),
+                                                  "thumbnail": _thumb}, environ_base=_ip).get_json() or {}).get("id")
+_bens = (_cb.post("/api/drafts", json={"kind": "pad", "title": "Ben's own", "payload": _dpay(3)},
+                  environ_base=_ip).get_json() or {}).get("id")
+_dstmts = []
+
+
+def _dgrab(conn, cursor, statement, *a):
+    _dstmts.append(statement)
+
+
+with _dann.app_context():
+    _ds = _dann_db.session
+    _ds.expire_all()
+    sa.event.listen(_dann_db.engine, "before_cursor_execute", _dgrab)
+    try:
+        _listed = skribl.list_drafts("drafts-ann")
+    finally:
+        sa.event.remove(_dann_db.engine, "before_cursor_execute", _dgrab)
+    _dquiet = not (_ds.new or _ds.dirty or _ds.deleted)
+    try:
+        skribl.list_drafts(None)
+        _nobody = "listed"
+    except Exception as exc:  # noqa: BLE001 -- the refusal is the answer
+        _nobody = f"{type(exc).__name__} {getattr(exc, 'status', None)}"
+with _dann.test_request_context("/"):
+    from flask import url_for as _ud
+    _open_at = _ud("skribl.skribl_editor", draft=_first)
+    _flip_at = _ud("skribl.skribl_flip", draft=_flip)
+_page = _ca.get(_open_at)
+_page_text = _page.get_data(as_text=True)
+_own = _ca.get(f"/api/drafts/{_first}")
+_theirs = _cb.get(f"/api/drafts/{_first}")
+check("(setup) Ann's two drafts and Ben's one, saved through the editors' own API, Ann's first saved again after her"
+      " second", all((_first, _flip, _bens)) and _again == _first, f"{_first} {_flip} {_again} {_bens}")
+check("list_drafts() is a person's own drafts, newest saved first (the one saved again first), each its id, kind,"
+      " title, small picture and times, never its payload; nobody else's",
+      [(d["id"], d["kind"], d["title"]) for d in _listed] == [(_first, "pad", "Ann's snail"), (_flip, "flip", "Ann's bike")]
+      and all(set(d) == {"id", "kind", "title", "thumbnail", "sizeBytes", "createdAt", "updatedAt"} for d in _listed)
+      and all(d["thumbnail"] == _thumb for d in _listed) and _bens not in [d["id"] for d in _listed],
+      json.dumps([{k: v for k, v in d.items() if k != "thumbnail"} for d in _listed]))
+_dread = [x for x in _dstmts if "skribl_drafts" in x]
+check("...and it reads only: one read of the drafts, their payloads never selected, nothing written, the session as"
+      " it was",
+      len(_dread) == 1 and "payload_json" not in _dread[0] and _dquiet
+      and not any(x.lstrip().upper().startswith(("INSERT", "UPDATE", "DELETE")) for x in _dstmts),
+      " | ".join(_dstmts)[:300])
+check("...and asked for nobody it refuses, as the route answers 401: a page of drafts is somebody's own",
+      _nobody == "DraftRejected 401", _nobody)
+check("a draft opens at the editor that made it with ?draft=<id> (the editors' own hand-off): the Pad's address"
+      " answers with the account's drafts on and the module that opens it, the draft is its author's to load, and"
+      " anybody else's 404, the same as a missing one",
+      _open_at == f"/skribl-pad?draft={_first}" and _flip_at == f"/flip?draft={_flip}" and _page.status_code == 200
+      and "lib/savedrafts.js" in _page_text and "signedIn: true" in _page_text
+      and _own.status_code == 200 and (_own.get_json() or {}).get("payload") == _dpay(2) and _theirs.status_code == 404,
+      f"{_open_at} {_flip_at}; the Pad {_page.status_code}; Ann's {_own.status_code}, Ben asking {_theirs.status_code}")
+check("it is a documented name: list_drafts in skribl.__all__, its docstring naming ?draft=<id> and the host's page",
+      "list_drafts" in skribl.__all__ and "?draft=<id>" in (skribl.list_drafts.__doc__ or "")
+      and "host" in (skribl.list_drafts.__doc__ or ""))
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

@@ -52,9 +52,10 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      person's page; ⋯ and Share do their own job; a drag that selects words
      opens nothing. A touch on a phone, a click on a desk.
  12. EVERY CARD OPENS ITS POST (the owner's "I thought on card?", Nov 13):
-     Cal's tap map of Home's cards and the first visit's and a profile's
-     Skribls cards (Skribl's own Gallery cards; Explore's were too until the
-     map's step 3), on a touch phone in light and dark: every 4px one of the
+     Cal's tap map of Home's cards and the first visit's Skribls cards
+     (Skribl's own Gallery cards; Explore's were too until the map's step 3,
+     and a profile's until its step 4, whose Gallery tab is tiles,
+     verify_socialprofile 16), on a touch phone in light and dark: every 4px one of the
      card's own controls or its ground, and an exact tap on every part of the
      ground opens the card's page (a post's, a drawing's, or Skribl's own
      for one by somebody not on the site); a finger on the drawing plays it,
@@ -1188,7 +1189,8 @@ with sync_playwright() as p:
 
         # ...AND NOTHING IS LOST: not in the Gallery of everyone either (posts
         # only, section 13), while it keeps its own page and its maker's page
-        # (her Skribls: Skribl's own Gallery section, which its script fills).
+        # (her Gallery tab since the map's step 4, where it is a tile opening
+        # its own page; verify_socialprofile section 16 holds the tab).
         gal9 = {}
         for name, cl, show in (("signed out", Client(), "everyone"), ("Sora's Everyone", sora.client(), "everyone"),
                                ("Sora's Following", sora.client(), "following")):
@@ -1202,8 +1204,9 @@ with sync_playwright() as p:
         for name, who_ in (("signed out", None), ("Sora", sora)):
             ctx, cpg = browser_as(b, who_)
             try:
-                cpg.goto(BASE + "/social/@noor")
-                cpg.wait_for_function("(s) => !!document.querySelector(s)", arg=f'#skriblGallery .tile[data-id="{lone}"]',
+                cpg.goto(BASE + "/social/@noor/gallery")
+                cpg.wait_for_function("(s) => !!document.querySelector(s)",
+                                      arg=f'[data-prof-list] .gal-tile[data-drawing="{lone}"][href="/social/b/{lone}"]',
                                       timeout=12000)
                 listed9[name] = True
             except Exception:  # noqa: BLE001 -- not listed is the row's red
@@ -1213,7 +1216,7 @@ with sync_playwright() as p:
         post_there = [k for k, h in gal9.items() if f'href="/social/p/{p_after}"' in h]
         check("...nor in the Gallery of everyone (signed out, and a follower's Everyone and Following), where the post"
               " after it is; and nothing is lost: it keeps its own page (/social/b/<id>), signed in and out, and its"
-              " maker's page lists it among her Skribls, signed in and out",
+              " maker's Gallery holds it, a tile opening that page, signed in and out",
               made9 and not in_gal and len(post_there) == 3
               and all(st_ == 200 and f'data-skribl="{lone}"' in html_ and 'data-kind="s"' in html_
                       for st_, html_ in own9.values())
@@ -1582,19 +1585,21 @@ with sync_playwright() as p:
     # card?"). The rule said yes to on Nov 12, "anywhere on the card should open
     # the post and clicking on the player should make it play", on every card
     # the site shows: Home's (a post's; since the map's step 3 Home shows
-    # posts only), and the first visit's and a profile's Skribls, which are
-    # Skribl's own Gallery cards
-    # opening where the site says (skribl.set_card_url, app.py), with on the
-    # first visit one by somebody not on the site. (Explore's were Skribl's
-    # cards too until the map's step 3; the Gallery of everyone's tiles are
-    # one link each, section 13.) Cal's tap map as rows: every 4px of each card,
+    # posts only), and the first visit's Skribls, which are Skribl's own
+    # Gallery cards opening where the site says (skribl.set_card_url,
+    # app.py), with one by somebody not on the site. (Explore's were Skribl's
+    # cards too until the map's step 3, and a profile's until its step 4; the
+    # Gallery of everyone's tiles are one link each, section 13, and a
+    # profile's Gallery tab is those tiles, verify_socialprofile section 16.)
+    # The first visit, signed out, is where the site still shows Skribl's
+    # own cards, so the desk's rows and the ⋯ are read there. Cal's tap map as rows: every 4px of each card,
     # light and dark, on a touch phone (TAPMAP); an EXACT tap on every part of
     # its ground, followed to where it lands (exact: a phone's own targeting
     # moves a tap that lands near a control onto it, which is the phone's
     # doing, not the page's); and a finger's tap on the drawing, the name and
     # the ground. Then /social/b/<id>'s three ways on, the line's controls, and
     # on a desk Ctrl, the middle button, a drag, a keyboard and the ⋯.
-    if part(12, "every card opens its post: the tap map of Home's, the first visit's and a profile's cards"):
+    if part(12, "every card opens its post: the tap map of Home's and the first visit's cards"):
         mira = someone(b, "mira", "Mira Okafor")
         juno = someone(b, "juno", "Juno Park")
         st_g, jg = make_post(juno, "Section 12, a post shown in the gallery", gallery=True, seed=121)
@@ -1616,19 +1621,17 @@ with sync_playwright() as p:
         to_post, to_lone, to_skribl = f"/social/p/{g_post}", f"/social/b/{lone}", f"/s/{nobodys}"
         to_flip = f"/social/p/{f_post}"
         TILE = '#skriblGallery .tile[data-id="{}"]'
-        # Each card as somebody meets it: signed in (Mira) on Home and a
-        # profile; signed out on the first visit, the one page of the site
-        # whose Gallery holds everybody's, the site's people's and not. The
-        # drawing on its own is on the first visit and the profile: Home shows
-        # posts only (section 9).
+        # Each card as somebody meets it: signed in (Mira) on Home; signed out
+        # on the first visit, the one page of the site whose Gallery holds
+        # everybody's, the site's people's and not. The drawing on its own is
+        # on the first visit: Home shows posts only (section 9), and a
+        # profile's Gallery tab shows it as a tile (the map's step 4).
         CARDS = [("Home", "/social/", f'.post-card[data-post="{g_post}"]', g_sid, to_post, mira),
                  ("Home", "/social/", f'.post-card[data-post="{f_post}"]', f_sid, to_flip, mira),
                  ("the first visit", "/social/", TILE.format(g_sid), g_sid, to_post, None),
                  ("the first visit", "/social/", TILE.format(f_sid), f_sid, to_flip, None),
                  ("the first visit", "/social/", TILE.format(lone), lone, to_lone, None),
-                 ("the first visit", "/social/", TILE.format(nobodys), nobodys, to_skribl, None),
-                 ("a profile", "/social/@juno", TILE.format(g_sid), g_sid, to_post, mira),
-                 ("a profile", "/social/@juno", TILE.format(lone), lone, to_lone, mira)]
+                 ("the first visit", "/social/", TILE.format(nobodys), nobodys, to_skribl, None)]
         # Where a finger goes on a card: the drawing's middle, the name's, and
         # the ground's: on Home's calm card the row's open space between the ⋯
         # and Open › (its line waits until played, Nov 13), a Gallery card's
@@ -1716,8 +1719,8 @@ with sync_playwright() as p:
         dead = {r["label"]: {k: v for k, v in r.get("parts", {}).items() if v[1] != r["want"]} for r in cards12}
         dead = {k: v for k, v in dead.items() if v}
         lacking = [(r["label"], r.get("stopped")) for r in cards12 if "stopped" in r or not r.get("parts")]
-        check("THE TAP MAP: on Home's cards (a post's drawing and a Flip's) and the first visit's and a profile's Skribls"
-              " cards (those, one on its own, and on the first visit one by somebody not on the site), a touch phone in light and dark, every 4px is one of"
+        check("THE TAP MAP: on Home's cards (a post's drawing and a Flip's) and the first visit's Skribls"
+              " cards (those, one on its own, and one by somebody not on the site), a touch phone in light and dark, every 4px is one of"
               " the card's own controls or its ground, and an exact tap on every part of the ground (its words, its"
               " time, its edges, the line under the drawing, the space between) opens the card's page: no part does"
               " nothing",
@@ -1825,13 +1828,16 @@ with sync_playwright() as p:
         # ON A DESK: Ctrl (as ⌘ is on a Mac) and the middle button open the card
         # in a new tab and leave this page be; a drag that selects a card's words
         # opens nothing, nor does one across its ground; the title is the card's
-        # link for a keyboard (Tab from ⋯ reaches it, Enter opens it).
+        # link for a keyboard (Tab from ⋯ reaches it, Enter opens it). Home's
+        # card signed in (Mira); Skribl's cards where the site shows them, the
+        # first visit, signed out (a profile's Skribls until the map's step 4).
         ctx, cpg = browser_as(b, mira, "desk", "light")
+        octx, opg = browser_as(b, None, "desk", "light")
         desk = {}
 
-        def newtab(press_):
+        def newtab(press_, ctx_):
             try:
-                with ctx.expect_page(timeout=5000) as info:
+                with ctx_.expect_page(timeout=5000) as info:
                     press_()
                 tab = info.value
                 tab.wait_for_load_state("load", timeout=15000)
@@ -1843,60 +1849,61 @@ with sync_playwright() as p:
 
         try:
             hsel, esel = f'.post-card[data-post="{g_post}"]', TILE.format(lone)
-            for name_, path, sel in (("home", "/social/", hsel), ("profile", "/social/@juno", esel)):
-                ready(cpg, path, sel)
-                xy = cpg.evaluate(SPOT12, [sel, "ground"])
+            for name_, ctx_, pg_, path, sel in (("home", ctx, cpg, "/social/", hsel), ("first visit", octx, opg, "/social/", esel)):
+                ready(pg_, path, sel)
+                xy = pg_.evaluate(SPOT12, [sel, "ground"])
 
                 def ctrl_click():
-                    cpg.keyboard.down("Control")
-                    cpg.mouse.click(*xy)
-                    cpg.keyboard.up("Control")
-                desk[name_ + " ctrl"] = (newtab(ctrl_click), follow(cpg, path, 600))
-                ready(cpg, path, sel)
-                xy = cpg.evaluate(SPOT12, [sel, "ground"])
-                desk[name_ + " middle"] = (newtab(lambda: cpg.mouse.click(*xy, button="middle")), follow(cpg, path, 600))
+                    pg_.keyboard.down("Control")
+                    pg_.mouse.click(*xy)
+                    pg_.keyboard.up("Control")
+                desk[name_ + " ctrl"] = (newtab(ctrl_click, ctx_), follow(pg_, path, 600))
+                ready(pg_, path, sel)
+                xy = pg_.evaluate(SPOT12, [sel, "ground"])
+                desk[name_ + " middle"] = (newtab(lambda: pg_.mouse.click(*xy, button="middle"), ctx_), follow(pg_, path, 600))
             # A drag that selects a Gallery card's caption, and one across its ground.
             csel = TILE.format(g_sid)
-            ready(cpg, "/social/@juno", csel)
-            ends = cpg.evaluate("""(s) => { const c = document.querySelector(s); const w = c.querySelector('.tcap'), n = w.firstChild;
+            ready(opg, "/social/", csel)
+            ends = opg.evaluate("""(s) => { const c = document.querySelector(s); const w = c.querySelector('.tcap'), n = w.firstChild;
               w.scrollIntoView({ block: 'center' }); const g = document.createRange(); g.setStart(n, 0); g.setEnd(n, 1);
               const a = g.getBoundingClientRect(); g.setStart(n, n.length - 1); g.setEnd(n, n.length); const z = g.getBoundingClientRect();
               return [a.left + 1, a.top + a.height / 2, z.right - 1, z.top + z.height / 2]; }""", csel)
-            cpg.mouse.move(ends[0], ends[1])
-            cpg.mouse.down()
-            cpg.mouse.move(ends[2], ends[3], steps=12)
-            cpg.mouse.up()
-            cpg.wait_for_timeout(300)
-            desk["select"] = (cpg.evaluate("() => String(getSelection())"), follow(cpg, "/social/@juno", 1500))
-            ready(cpg, "/social/@juno", csel)
-            g0 = cpg.evaluate(SPOT12, [csel, "ground"])
-            cpg.mouse.move(g0[0], g0[1])
-            cpg.mouse.down()
-            cpg.mouse.move(g0[0] - 40, g0[1] + 2, steps=8)
-            cpg.mouse.up()
-            desk["drag"] = follow(cpg, "/social/@juno", 1500)
+            opg.mouse.move(ends[0], ends[1])
+            opg.mouse.down()
+            opg.mouse.move(ends[2], ends[3], steps=12)
+            opg.mouse.up()
+            opg.wait_for_timeout(300)
+            desk["select"] = (opg.evaluate("() => String(getSelection())"), follow(opg, "/social/", 1500))
+            ready(opg, "/social/", csel)
+            g0 = opg.evaluate(SPOT12, [csel, "ground"])
+            opg.mouse.move(g0[0], g0[1])
+            opg.mouse.down()
+            opg.mouse.move(g0[0] - 40, g0[1] + 2, steps=8)
+            opg.mouse.up()
+            desk["drag"] = follow(opg, "/social/", 1500)
             # The keyboard: from the card's ⋯, Tab reaches its title, a link, and Enter opens it.
-            ready(cpg, "/social/@juno", esel)
-            cpg.evaluate("(s) => document.querySelector(s + ' .tileMore').focus()", esel)
-            cpg.keyboard.press("Tab")
-            desk["tab"] = cpg.evaluate("""(s) => { const a = document.activeElement, c = document.querySelector(s);
+            ready(opg, "/social/", esel)
+            opg.evaluate("(s) => document.querySelector(s + ' .tileMore').focus()", esel)
+            opg.keyboard.press("Tab")
+            desk["tab"] = opg.evaluate("""(s) => { const a = document.activeElement, c = document.querySelector(s);
               return a && c.contains(a) ? [a.tagName.toLowerCase(), a.className, a.getAttribute('href'), a.textContent.trim()] : null; }""", esel)
-            cpg.keyboard.press("Enter")
-            desk["enter"] = follow(cpg, "/social/@juno")
+            opg.keyboard.press("Enter")
+            desk["enter"] = follow(opg, "/social/")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is its rows' red
             desk["stopped"] = str(exc).splitlines()[0][:160]
         close_ctx(ctx, cpg)
+        close_ctx(octx, opg)
         check("on a desk, Ctrl or the middle button opens the card in a new tab and this page stays: Home's card (in"
-              " its row, between the ⋯ and Open ›) and a Gallery card of Skribl's (a profile's Skribls, at its time)",
+              " its row, between the ⋯ and Open ›) and a Gallery card of Skribl's (the first visit's, at its time)",
               made and all(desk.get(k) == (w, p_) for k, w, p_ in (("home ctrl", to_post, "/social/"),
                                                                   ("home middle", to_post, "/social/"),
-                                                                  ("profile ctrl", to_lone, "/social/@juno"),
-                                                                  ("profile middle", to_lone, "/social/@juno"))),
-              f"{ {k: desk.get(k) for k in ('home ctrl', 'home middle', 'profile ctrl', 'profile middle', 'stopped')} }")
+                                                                  ("first visit ctrl", to_lone, "/social/"),
+                                                                  ("first visit middle", to_lone, "/social/"))),
+              f"{ {k: desk.get(k) for k in ('home ctrl', 'home middle', 'first visit ctrl', 'first visit middle', 'stopped')} }")
         check("...pressing on a Gallery card's caption and pulling selects its words and opens nothing, and a drag"
               " across its ground opens nothing: a drag is not a tap",
               made and (desk.get("select") or ("", ""))[0].strip() == "From the gallery tick"
-              and (desk.get("select") or ("", ""))[1] == "/social/@juno" and desk.get("drag") == "/social/@juno",
+              and (desk.get("select") or ("", ""))[1] == "/social/" and desk.get("drag") == "/social/",
               f"select {desk.get('select')}; drag {desk.get('drag')}")
         check("...and for a keyboard the card's title is its link: Tab from its ⋯ reaches it, and Enter opens the"
               " card's page",
@@ -1904,22 +1911,23 @@ with sync_playwright() as p:
               and urllib.parse.urlsplit((desk.get("tab") or [None, None, ""])[2] or "").path == to_lone
               and desk.get("enter") == to_lone, f"tab {desk.get('tab')}; enter {desk.get('enter')}")
 
-        # ⋯ ON A GALLERY CARD (Skribl's, on a profile's Skribls): Open goes to the
-        # card's page, in this tab as a tap does, and Copy link and Share… give
-        # its address.
-        ctx, cpg = browser_as(b, mira, "phone", "light")
+        # ⋯ ON A GALLERY CARD (Skribl's, on the first visit, signed out; a
+        # profile's Skribls until the map's step 4): Open goes to the card's
+        # page, in this tab as a tap does, and Copy link and Share… give its
+        # address.
+        ctx, cpg = browser_as(b, None, "phone", "light")
         ctx.add_init_script("Object.defineProperty(navigator, 'share', { configurable: true,"
                             " value: d => { window.__shared = d && d.url; return Promise.resolve(); } });")
         menu12 = {}
         try:
             for act in ("Copy link", "Share", "Open"):
-                ready(cpg, "/social/@juno", TILE.format(g_sid))
+                ready(cpg, "/social/", TILE.format(g_sid))
                 cpg.evaluate("() => { if (window.SkriblPostedUI) SkriblPostedUI.copyText = t => { window.__copied = t;"
                              " return Promise.resolve(true); }; }")
                 cpg.locator(TILE.format(g_sid) + " .tileMore").tap()
                 cpg.locator(f'.cardMenu .cmItem:has-text("{act}")').tap()
                 if act == "Open":
-                    menu12[act] = follow(cpg, "/social/@juno")
+                    menu12[act] = follow(cpg, "/social/")
                 else:
                     cpg.wait_for_timeout(400)
                     menu12[act] = cpg.evaluate("() => window.__copied || window.__shared || null")
