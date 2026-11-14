@@ -1663,6 +1663,11 @@ suites that held it.
    Drafts tabs mocked first, with step 3's tiles).
 5. The ☰ on a phone, and the counts.
 6. Likes and comments on posts only; what goes, taken out.
+7. Add to Home Screen (the owner, Nov 14, after the map): a way to put
+   Blooby on a phone's Home Screen, so it opens full screen like an app.
+   Mocked first, once steps 3 to 6 are in. (The owner also noted that in
+   Bluesky a speech bubble with dots means direct messages: our 💬 is the
+   plain bubble, as Bluesky's replies are, and stays so.)
 
 **Notes for step 2, from the session that wrote the map** (read the code
 before trusting them):
