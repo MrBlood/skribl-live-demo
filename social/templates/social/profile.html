@@ -28,6 +28,11 @@
     are your drafts as tiles, each opening the Pad or Flip to keep drawing.
     Likes and Drafts are yours alone: nothing of either is on anybody else's
     page or in its source. Their face is in none of it: it is unlisted.
+    THE EYE (the owner's "Yes, the eye in view", Nov 14): on your own Gallery
+    tab each tile has one, to hide the drawing from the Gallery or show it
+    again, the site's toast saying so with Undo (eye.js, its words below);
+    nothing of it is on anybody else's page or in its source. A post deleted
+    from your own page folds away there, and the toast says it is gone.
 
     DRAW YOUR FACE opens the real Pad over the page, in its face mode
     (?compose=1&face=1), through lib/composehost.js; what it hands back is
@@ -71,7 +76,8 @@
 {% if me and not blocked_them %}<script src="{{ social_asset('mutes.js') }}" defer></script>{% endif %}
 {% if not blocked_them %}<script src="{{ social_asset('posts.js') }}" defer></script>
 <script src="{{ social_asset('likes.js') }}" defer></script>
-<script src="{{ social_asset('tabs.js') }}" defer></script>{% endif %}{% endblock %}
+<script src="{{ social_asset('tabs.js') }}" defer></script>{% endif %}
+{% if mine %}<script src="{{ social_asset('eye.js') }}" defer></script>{% endif %}{% endblock %}
 
 {% block top %}
   <span class="top-title">@{{ who.handle }}</span>
@@ -168,6 +174,19 @@
   <span data-word="not_photo">That one isn’t a photo the Pad can use. Try a JPG or PNG?</span>
 </div>
 {% if not blocked_them %}{{ post_words() }}{{ tab_words() }}{% endif %}
+{#  THE EYE'S WORDS (eye.js), your own page alone, as the eye is: in the
+    site's toast. "Hidden from the Gallery" and Undo, the tile-eye mock's. #}
+{% if mine %}<div class="words" data-eye-words hidden>
+  <span data-word="eye_hidden">Hidden from the Gallery</span>
+  <span data-word="eye_back">Back in the Gallery</span>
+  <span data-word="eye_stale">This page went stale. Reload it, then try again.</span>
+  <span data-word="eye_limited">Lots of that in a short while. Wait a little, then try again.</span>
+  <span data-word="eye_signed_out">You’ve been signed out. Sign in again, then try again.</span>
+  <span data-word="eye_gone">That one isn’t here anymore. Reload the page to see what’s new.</span>
+  <span data-word="eye_taken_down">That one was taken down, so it stays out of the Gallery.</span>
+  <span data-word="eye_network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="eye_failed">That didn’t go through. Try again?</span>
+</div>{% endif %}
 {% endblock %}
 
 {% block overlays %}{% if mine %}

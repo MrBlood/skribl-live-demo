@@ -14,8 +14,9 @@ events with pressure, a hand's timing).
 
    1. A PROFILE: name, @handle and bio (its line breaks kept); on its
       Gallery tab that person's drawings shown outside a post, public only,
-      newest first, each opening its own page, to visitors and to the person
-      alike, Load more paging within them, and nothing of Skribl's Gallery
+      newest first, each opening its own page, to visitors (and to the person
+      their link-only one too, hidden, with the eye: section 19), Load more
+      paging within them, and nothing of Skribl's Gallery
       section any more (the map's step 4); any case of the handle; a kind 404
       for nobody; You leads to your own profile, and somebody else's marks
       no place in the bar; the gear leads to Settings; an empty profile in
@@ -96,10 +97,22 @@ events with pressure, a hand's timing).
       and dark.
   18. DELETE FROM YOUR OWN PAGE (the owner's "Yes", Nov 14): Delete post on a
       card of your Posts tab keeps you on your page (never Home and its note),
-      the post gone, the page saying so in Home's own words, focus on the next
-      card's ⋯; read on every frame it fades, then its room closes and the
-      next card rises over many frames; under Reduce Motion it fades and its
-      room goes at once once unseen; the last one gone, the tab's kind words.
+      the post gone, focus on the next card's ⋯, and Home's own words in the
+      site's toast near the finger (the owner's second "Yes", Nov 14), no
+      Undo, never over the next card's ⋯; read on every frame it fades, then
+      its room closes and the next card rises over many frames; under Reduce
+      Motion it fades and its room goes at once once unseen; the last one
+      gone, the tab's kind words.
+  19. THE EYE ON YOUR OWN GALLERY TAB (the owner's "Yes, the eye in view",
+      Nov 14): each of your tiles, and nobody else's, wears an eye at its top
+      right (painted, 44px, 13px in, on the ▶'s glass); one tap hides the
+      drawing from the Gallery (crossed, "Hidden", faded to 55%, the site's
+      toast with Undo), a post's by the site's flag (the post stays on Home
+      and in your Posts), one outside a post by its visibility in Skribl; end
+      to end both kinds, through a reload; the toast never over an eye; read
+      on every frame, and under Reduce Motion; its ink at 4.5:1 off the
+      pixels; its guards; every tap counting when pressed fast. Nothing of it
+      on anybody else's page or in its source.
 
 The layers (the site imports only Skribl's documented names, and its
 templates only documented partials, the face player's now among them) stay
@@ -107,7 +120,8 @@ verify_social's, section 8.
 
 SOCIALPROFILE_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
-green as built: DECISIONS.md, "Profiles with drawn faces at /social".
+green as built: DECISIONS.md, "Profiles with drawn faces at /social", and
+"The Gallery of every skribl" for 1, 18 and 19.
 """
 import base64
 import io
@@ -454,11 +468,12 @@ def member(b, handle, name, **kw):
     return p
 
 
-def post_skribl(who, title, visibility="public", base=None):
+def post_skribl(who, title, visibility="public", base=None, ground="#f6f2ea"):
     """One drawing through Skribl's own API as `who` (Skribl is told who is
     signed in to the site: CSRF is on), or as nobody. `base` is the picture
     it began on, a data URL, where the Pad keeps one (its frame's
-    baseSnapshot)."""
+    baseSnapshot); `ground`, the colour it is drawn on (the Pad's dark is
+    #0d0f14)."""
     ctx = who.ctx if who else None
     if ctx is None:
         jar = CookieJar()
@@ -473,7 +488,7 @@ def post_skribl(who, title, visibility="public", base=None):
             "color": "#7c5cff", "size": 6 + (i % 5), "t": i * 40, "start": i == 0} for i in range(60)]
     body = {"title": title, "caption": "", "version": 2, "schemaVersion": 2, "playbackMode": "replay",
             "canvasSize": {"cssWidth": 816, "cssHeight": 612},
-            "frames": [{"strokes": pts, "strokeGroups": [len(pts)], "background": {"color": "#f6f2ea"}}]}
+            "frames": [{"strokes": pts, "strokeGroups": [len(pts)], "background": {"color": ground}}]}
     if base:
         body["frames"][0]["baseSnapshot"] = base
     if visibility:
@@ -1009,13 +1024,91 @@ ONELINK = r"""(sel) => { const t = document.querySelector(sel); if (!t) return n
 #: What a tab's panel holds, in order: each card's post, each tile's post or
 #: drawing, each draft's id; and whether Load more is there.
 PANEL = r"""() => { const p = document.querySelector('[data-prof-panel]'); if (!p) return null;
-  const items = [...p.querySelectorAll('[data-prof-list] > *')];
+  const items = [...p.querySelectorAll('[data-prof-list] > *')].map(e => e.matches('.gal-cell') ? e.querySelector('.gal-tile') : e);
   const more = p.querySelector('[data-prof-next]'), none = p.querySelector('[data-prof-none]');
   const c = document.querySelector('[data-prof-tabs] a[aria-current]');
   return { tab: p.getAttribute('data-tab'), chosen: c ? c.getAttribute('data-tab') : null,
     ids: items.map(e => e.getAttribute('data-post') || e.getAttribute('data-drawing') || e.getAttribute('data-draft')),
     more: !!more && !more.hidden, none: none && !none.hidden ? none.innerText.replace(/\s+/g, ' ').trim() : null,
     at: location.pathname }; }"""
+
+# THE SITE'S TOAST (mutes.js, window.SocialToast; section 18's delete and
+# section 19's eye): up and saying `w`.
+TOAST_UP = """(w) => { const t = document.querySelector('.mu-toast');
+  return !!t && !t.hidden && t.classList.contains('is-up') && t.querySelector('[data-mute-said]').textContent === w; }"""
+
+# Where the toast is, and whether it covers any of `sel` in view: by its box,
+# and by what is painted at each one's middle with the toast made
+# hit-testable (its words take no tap, so elementFromPoint would look through
+# them as a tap does); how far it rose above its own place (--mu-lift).
+CLEAR_OF = """(sel) => { const t = document.querySelector('.mu-toast'), box = document.querySelector('.mu-toasts');
+  const r = t.getBoundingClientRect(); t.style.pointerEvents = 'auto';
+  const out = { toast: [Math.round(r.top), Math.round(r.bottom), Math.round(r.left), Math.round(r.right)], vh: innerHeight,
+    lifted: parseFloat(getComputedStyle(box).getPropertyValue('--mu-lift')) || 0, under: [], covered: [], seen: 0,
+    words: t.querySelector('[data-mute-said]').textContent };
+  document.querySelectorAll(sel).forEach(e => { if (!e.getClientRects().length) return; const q = e.getBoundingClientRect();
+    if (q.bottom <= 0 || q.top >= innerHeight) return; out.seen++;
+    if (q.bottom > r.top && q.top < r.bottom && q.right > r.left && q.left < r.right) out.under.push(Math.round(q.top));
+    const at = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
+    if (at && at.closest('.mu-toast')) out.covered.push(Math.round(q.top)); });
+  t.style.pointerEvents = '';
+  return out; }"""
+
+# Section 19's eyes: each of the tab's cells, scrolled to, as it looks.
+EYES19 = r"""() => [...document.querySelectorAll('[data-prof-list] > .gal-cell')].map(c => {
+  c.scrollIntoView({ block: 'center', behavior: 'instant' });
+  const a = c.querySelector('.gal-tile'), e = c.querySelector('.gal-eye'), chip = e && e.querySelector('.gal-eye-chip');
+  const pic = a.querySelector('.gal-pic').getBoundingClientRect(), er = e ? e.getBoundingClientRect() : null, cr = chip ? chip.getBoundingClientRect() : null;
+  const at = er ? document.elementFromPoint(er.left + er.width / 2, er.top + er.height / 2) : null;
+  const w = c.querySelector('.gal-eye-word'), shut = c.querySelector('.ic-eye-shut'), open = c.querySelector('.ic-eye-open');
+  const r1 = x => Math.round(x * 10) / 10;
+  return { id: a.getAttribute('data-post') || a.getAttribute('data-drawing'), hidden: c.classList.contains('is-hidden'),
+    pressed: e ? e.getAttribute('aria-pressed') : null, name: e ? e.getAttribute('aria-label') : null, label: a.getAttribute('aria-label'),
+    eye: er ? [r1(er.width), r1(er.height)] : null,
+    chip: cr ? [r1(cr.height), r1(pic.right - cr.right), r1(cr.top - pic.top), r1(cr.width)] : null,
+    painted: !!(at && e && (at === e || e.contains(at))),
+    word: w ? [w.textContent.trim(), +getComputedStyle(w).opacity] : null,
+    icons: [open ? +getComputedStyle(open).opacity : null, shut ? +getComputedStyle(shut).opacity : null],
+    plate: +getComputedStyle(a.querySelector('.gal-plate')).opacity,
+    glass: chip ? getComputedStyle(chip).backgroundColor : null, ink: e ? getComputedStyle(e).color : null }; })"""
+
+# One cell, as it looks now, and the toast.
+ONE_EYE = r"""(s) => { const c = document.querySelector(s); if (!c) return null;
+  const a = c.querySelector('.gal-tile'), e = c.querySelector('.gal-eye'), w = c.querySelector('.gal-eye-word');
+  const t = document.querySelector('.mu-toast'), up = !!t && !t.hidden && t.classList.contains('is-up');
+  return { hidden: c.classList.contains('is-hidden'), pressed: e.getAttribute('aria-pressed'), label: a.getAttribute('aria-label'),
+    plate: +getComputedStyle(a.querySelector('.gal-plate')).opacity, word: [w.textContent.trim(), +getComputedStyle(w).opacity],
+    toast: up ? { words: t.querySelector('[data-mute-said]').textContent, undo: !t.querySelector('[data-mute-undo]').hidden,
+                  icon: getComputedStyle(t.querySelector('.ic')).display !== 'none' } : null }; }"""
+
+# A cell's eye chip's width and its drawing's fade, on every frame from now.
+EFRAMES = """([s, ms]) => { window.__ef = []; const c = document.querySelector(s), chip = c.querySelector('.gal-eye-chip'), pl = c.querySelector('.gal-plate'), t0 = performance.now();
+  const step = () => { window.__ef.push({ t: Math.round(performance.now() - t0), w: Math.round(chip.getBoundingClientRect().width * 10) / 10,
+                                          op: +getComputedStyle(pl).opacity });
+    if (performance.now() - t0 < ms) requestAnimationFrame(step); };
+  requestAnimationFrame(step); }"""
+
+# The toast's words and its Undo, read on what is painted behind them (the
+# toast made hit-testable to ask what is painted there).
+READ_TOAST = """() => { const rgba = s => { const m = (s.match(/[\\d.]+/g) || []).map(Number); return [m[0], m[1], m[2], m.length > 3 ? m[3] : 1]; };
+  const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+                     return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+  const ground = e => { const layers = []; for (let n = e; n; n = n.parentElement) { const b = rgba(getComputedStyle(n).backgroundColor);
+      if (b[3] > 0) { layers.push(b); if (b[3] >= 1) break; } }
+    let g = [255, 255, 255]; for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; g = [0, 1, 2].map(k => l[k] * l[3] + g[k] * (1 - l[3])); }
+    return g; };
+  const t = document.querySelector('.mu-toast'), out = { read: 0, low: [], lowest: 99 };
+  if (!t) return out;
+  t.style.pointerEvents = 'auto';
+  t.querySelectorAll('.mu-toast-words, .mu-undo').forEach(e => {
+    if (e.hidden || !e.getClientRects().length || !e.textContent.trim()) return;
+    const r = e.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    if (!at || !(at === e || e.contains(at))) { out.low.push('not painted: ' + e.textContent.trim()); return; }
+    const a = lum(rgba(getComputedStyle(e).color)), b = lum(ground(e)), k = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    out.read++; out.lowest = Math.min(out.lowest, Math.round(k * 100) / 100);
+    if (k < 4.5) out.low.push(e.textContent.trim() + ' ' + k.toFixed(2)); });
+  t.style.pointerEvents = '';
+  return out; }"""
 
 _TABS = {}
 
@@ -1137,6 +1230,8 @@ with sync_playwright() as p_:
                          sections: document.querySelectorAll('[data-skribl-gallery], #skriblGallery, #profSkribls').length,
                          chosen: (document.querySelector('[data-prof-tabs] a[aria-current]') || {}).textContent || null,
                          tiles: tiles.map(a => a.getAttribute('data-drawing') || a.getAttribute('data-post')),
+                         hidden: tiles.map(a => !!a.closest('.gal-cell.is-hidden')),
+                         eyes: document.querySelectorAll('[data-eye]').length,
                          hrefs: tiles.map(a => a.getAttribute('href')),
                          canonical: (document.querySelector('link[rel=canonical]') || {}).href || null,
                          title: document.title }; }""")
@@ -1156,8 +1251,16 @@ with sync_playwright() as p_:
               f"bio saved {st_bio}; seen by Juno {seen_by_juno}; by nobody {seen_by_nobody}; ids: newer {newer},"
               f" older {older}, link-only {hidden}, Juno's {theirs}")
         own = profile_view(mira.pg, "mira")
-        check("on your own profile's Gallery you see what your visitors see: your public drawings, not the link-only one",
-              own["tiles"] == [newer, older], f"{own['tiles']}; link-only {hidden}")
+        # ON YOUR OWN GALLERY, YOUR LINK-ONLY ONE TOO (the eye, the owner's "Yes,
+        # the eye in view", Nov 14): hidden from the Gallery, faded with the
+        # crossed eye, yours alone; your visitors see the public ones (above).
+        check("on your own profile's Gallery you see your public drawings, and your link-only one, hidden from the"
+              " Gallery (faded, with the crossed eye: yours alone, since Nov 14), each with its eye; your visitors see"
+              " the public ones, and no eye",
+              own["tiles"] == [hidden, newer, older] and own["hidden"] == [True, False, False] and own["eyes"] == 3
+              and seen_by_juno["eyes"] == 0 and seen_by_nobody["eyes"] == 0,
+              f"{own['tiles']} hidden {own['hidden']}, eyes {own['eyes']}; link-only {hidden}; visitors' eyes"
+              f" {seen_by_juno['eyes']}, {seen_by_nobody['eyes']}")
         # AN EMPTY PROFILE IN ITS OWN WORDS, TAB BY TAB (the owner's yes, Nov
         # 10, kept through the map's step 4): to its own person, what puts
         # something there; to anybody else, signed in or not, only that there
@@ -3188,15 +3291,21 @@ print("PLAN " + json.dumps(out))
               if (b[3] > 0) { layers.push(b); if (b[3] >= 1) break; } }
             let g = [255, 255, 255]; for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; g = [0, 1, 2].map(k => l[k] * l[3] + g[k] * (1 - l[3])); }
             return g; };
-          const out = { read: 0, low: [], lowest: 99, words: [] };
-          document.querySelectorAll('[data-page-say], [data-prof-none]').forEach(e => {
+          const out = { read: 0, low: [], lowest: 99, words: [], toast: 0 };
+          /* THE SITE'S TOAST says it now (the owner's "Yes", Nov 14): its words
+             take no tap, so they are made hit-testable to ask what is painted. */
+          const toast = document.querySelector('.mu-toast.is-up');
+          if (toast) toast.style.pointerEvents = 'auto';
+          document.querySelectorAll('[data-page-say], [data-prof-none], .mu-toast.is-up .mu-toast-words').forEach(e => {
             if (e.hidden || !e.getClientRects().length || !e.textContent.trim()) return;
-            e.scrollIntoView({ block: 'center', behavior: 'instant' });
+            if (!e.closest('.mu-toast')) e.scrollIntoView({ block: 'center', behavior: 'instant' });
             const r = e.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
             if (!at || !(at === e || e.contains(at))) { out.low.push('not painted: ' + e.textContent.trim().slice(0, 24)); return; }
             const a = lum(rgba(getComputedStyle(e).color)), b = lum(ground(e)), k = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
             out.read++; out.lowest = Math.min(out.lowest, Math.round(k * 100) / 100); out.words.push(e.textContent.trim().slice(0, 40));
+            if (e.closest('.mu-toast')) out.toast++;
             if (k < 4.5) out.low.push(e.textContent.trim().slice(0, 24) + ' ' + k.toFixed(2)); });
+          if (toast) toast.style.pointerEvents = '';
           return out; }"""
 
         def said_read(pg_):
@@ -3209,11 +3318,16 @@ print("PLAN " + json.dumps(out))
             pg.wait_for_selector(f'[data-prof-list] > .post-card[data-post="{mos[4]}"]', timeout=15000)
             fs = delete_one(pg, mos[4], mos[3])
             gone18["glide"] = judged(fs)
-            gone18["after"] = pg.evaluate("""(ids) => ({ at: location.pathname + location.search,
+            gone18["after"] = pg.evaluate("""(ids) => { const t = document.querySelector('.mu-toast'), up = !!t && !t.hidden && t.classList.contains('is-up');
+              const r = up ? t.getBoundingClientRect() : null, bar = document.querySelector('nav.nav'), br = bar ? bar.getBoundingClientRect() : null;
+              return { at: location.pathname + location.search,
               cards: [...document.querySelectorAll('[data-prof-list] > .post-card')].map(c => c.getAttribute('data-post')),
               note: !!document.querySelector('.note'), said: (document.querySelector('[data-page-say]') || {}).textContent || null,
+              toast: up ? { words: t.querySelector('[data-mute-said]').textContent, undo: !t.querySelector('[data-mute-undo]').hidden,
+                            eye: getComputedStyle(t.querySelector('.ic')).display !== 'none', top: Math.round(r.top), bottom: Math.round(r.bottom),
+                            vh: innerHeight, bar: br ? Math.round(br.top) : null } : null,
               focus: document.activeElement ? [document.activeElement.className, (document.activeElement.closest('.post-card') || { getAttribute: () => null }).getAttribute('data-post')] : null,
-              sheet: document.getElementById('deleteSheet').hidden, inert: !!document.querySelector('#main[inert]') })""", mos)
+              sheet: document.getElementById('deleteSheet').hidden, inert: !!document.querySelector('#main[inert]') }; }""", mos)
             inks18["phone light"] = said_read(pg)
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the rows' red
             gone18["stopped"] = str(exc).splitlines()[0][:160]
@@ -3239,13 +3353,20 @@ print("PLAN " + json.dumps(out))
             close_ctx(ctx, pg)
         g = gone18.get("glide") or {}
         a = gone18.get("after") or {}
+        ts18 = a.get("toast") or {}
         check("DELETED FROM YOUR OWN PAGE, YOU STAY THERE: Delete post on a card of your Posts tab, and the page is still"
-              " yours (never Home, never its note), the post gone (its row too), the cards around it as they were, the"
-              " page saying so to a screen reader in Home's own words, and focus on the next card's ⋯",
+              " yours (never Home, never its note), the post gone (its row too), the cards around it as they were, and"
+              " focus on the next card's ⋯; ITS WORDS IN THE SITE'S TOAST (the owner's \"Yes\", Nov 14), near the"
+              " finger: \"Your post is gone, its drawing with it.\" (Home's own words, a status a screen reader hears),"
+              " no Undo (a delete is final) and no eye, in view above the bar in the screen's lower half; the tab's"
+              " status line says nothing",
               made18 and "stopped" not in gone18 and g.get("at") == ["/social/@delmo"] and a.get("at") == "/social/@delmo"
               and not a.get("note") and a.get("cards") == [mos[5], mos[3], mos[2], mos[1], mos[0]]
               and sorted(r_[0] for r_ in rows18) == sorted([mos[0], mos[1], mos[2], mos[3], mos[5]])
-              and a.get("said") == "Your post is gone, its drawing with it." and (a.get("focus") or [None, None])[1] == mos[3]
+              and not (a.get("said") or "").strip() and ts18.get("words") == "Your post is gone, its drawing with it."
+              and ts18.get("undo") is False and ts18.get("eye") is False and ts18.get("bar") is not None
+              and ts18.get("bottom", 9999) <= ts18["bar"] - 8 and ts18.get("top", -1) >= ts18.get("vh", 0) / 2
+              and (a.get("focus") or [None, None])[1] == mos[3]
               and "post-more" in ((a.get("focus") or [""])[0] or "") and a.get("sheet") and not a.get("inert"),
               f"{gone18}; rows left {rows18}")
         check("...and it folds away there, read on every frame: it fades, the next card still while it can be seen; then"
@@ -3291,11 +3412,441 @@ print("PLAN " + json.dumps(out))
               and not db("select 1 from social_posts where person_id = (select id from social_people where handle_key = 'delmo')"),
               json.dumps(rm))
         check("...and what the page says reads at 4.5:1 or more on what is painted behind it (\"Your post is gone, its"
-              " drawing with it.\", the tab's kind words once the last is gone), a touch phone and a desk, light and"
-              " dark, the desk too staying on the page",
+              " drawing with it.\" in the site's toast, the tab's kind words once the last is gone), a touch phone and a"
+              " desk, light and dark, the desk too staying on the page",
               all(v.get("read", 0) >= 1 and not v.get("low") for v in inks18.values()) and len(inks18) == 5
+              and all(inks18[k].get("toast", 0) >= 1 for k in ("phone light", "desk light", "desk dark", "phone dark"))
               and all(inks18[k].get("at") == "/social/@delmo" for k in ("desk light", "desk dark")),
-              json.dumps({k: (v.get("read"), v.get("lowest"), v.get("low"), v.get("at"), v.get("stopped")) for k, v in inks18.items()}))
+              json.dumps({k: (v.get("read"), v.get("toast"), v.get("lowest"), v.get("low"), v.get("at"), v.get("stopped"))
+                          for k, v in inks18.items()}))
+
+        # NEVER OVER A BUTTON SOMEONE IS PRESSING FAST (WORKING-AGREEMENTS: a
+        # toast never covers a button someone is pressing fast). A delete's next
+        # press is the next card's ⋯, and the next card rises into the place of
+        # the one deleted. Kit deletes a post whose ⋯ sits where the toast would
+        # rise (its middle 105px above the screen's foot, a touch phone): the
+        # toast rises just above it instead, and every ⋯ in view takes its own
+        # tap (what is painted at its middle, the toast made hit-testable).
+        kit = _people.get("delkit") or member(b, "delkit", "Kit Arden")
+        kits = [site_post(kit, f"Kit's post {k} {tag}", tab_drawing(seed=90 + k)) for k in range(4)]
+        clear18 = {}
+        ctx, pg = browser_as(b, kit, "phone", "light")
+        try:
+            pg.goto(BASE + "/social/@delkit")
+            msel = f'[data-prof-list] > .post-card[data-post="{kits[2]}"] [data-post-menu]'
+            pg.wait_for_selector(msel, timeout=15000)
+            pg.evaluate("""(s) => { const m = document.querySelector(s).getBoundingClientRect();
+                window.scrollBy(0, (m.top + m.height / 2) - (innerHeight - 105)); }""", msel)
+            pg.wait_for_timeout(300)
+            clear18["menu"] = pg.evaluate("(s) => Math.round(document.querySelector(s).getBoundingClientRect().top + 22)", msel)
+            pg.locator(msel).tap(timeout=5000)
+            pg.wait_for_timeout(600)
+            pg.locator("#postSheet [data-act=delete]").tap(timeout=5000)
+            pg.wait_for_timeout(600)
+            pg.locator("[data-delete-now]").tap(timeout=5000)
+            pg.wait_for_function(TOAST_UP, arg="Your post is gone, its drawing with it.", timeout=8000)
+            pg.wait_for_timeout(450)
+            clear18.update(pg.evaluate(CLEAR_OF, "[data-prof-list] .post-card [data-post-menu]"))
+            clear18["next"] = pg.evaluate("""(id) => { const m = document.querySelector('[data-prof-list] > .post-card[data-post="' + id + '"] [data-post-menu]');
+                return m ? Math.round(m.getBoundingClientRect().top + 22) : null; }""", kits[1])
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            clear18["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, pg)
+        check("...and NEVER OVER A BUTTON SOMEONE IS PRESSING FAST: a post deleted whose ⋯ sat where the toast rises"
+              " (just above the bar, a touch phone), the next card's ⋯ rising into its place, and the toast rises just"
+              " above it instead; every ⋯ in view takes its own tap (what is painted at its middle), the toast in view",
+              all(kits) and "stopped" not in clear18 and abs(clear18.get("menu", 0) - (clear18.get("vh", 0) - 105)) <= 2
+              and abs((clear18.get("next") or 0) - clear18.get("menu", -99)) <= 2
+              and clear18.get("lifted", 0) > 0 and clear18.get("seen", 0) >= 1 and not clear18.get("under")
+              and not clear18.get("covered") and clear18.get("toast", [-1])[0] >= 0,
+              json.dumps(clear18))
+
+    # ------------------------------------------------------------------ 19
+    # THE EYE, IN VIEW, ON YOUR OWN GALLERY TAB (the owner's "Yes, the eye in
+    # view", Nov 14; the tile-eye mock). Eli shares three posts and a drawing
+    # outside a post, keeps one link-only (on the Pad's dark), draws a face and
+    # answers Noa's post with a drawing. Her own Gallery tab holds the five,
+    # each with an eye at its top right (the link-only one hidden: crossed,
+    # "Hidden", faded), never the face or the answer's drawing; one tap hides
+    # a drawing from the Gallery and the site's toast says so with Undo; a
+    # post's by the site's flag (the post stays on Home and her Posts), one
+    # outside a post by its visibility in Skribl. Nobody else sees the eye.
+    if part(19, "the eye on your own Gallery tab: hide a drawing from the Gallery, show it again"):
+        eli = _people.get("eyeeli") or member(b, "eyeeli", "Eli Marsh")
+        noa = _people.get("eyenoa") or member(b, "eyenoa", "Noa Vance")
+        tag = secrets.token_hex(3)
+        n1 = site_post(noa, f"Noa's {tag}", tab_drawing(seed=190))
+        p1 = site_post(eli, f"Eli's first {tag}", tab_drawing(seed=191))
+        d1 = post_skribl(eli, f"Eli's drawing {tag}")
+        p2 = site_post(eli, f"Eli's second {tag}", tab_drawing(seed=192))
+        l1 = post_skribl(eli, f"Eli's link-only {tag}", visibility=None, ground="#0d0f14")
+        p3 = site_post(eli, f"Eli's third {tag}", tab_drawing(seed=193))
+        face19 = post_skribl(eli, f"Eli's face {tag}", visibility=None)
+        db("update social_people set face_id = ?, face_w = 816, face_h = 612 where handle_key = 'eyeeli'", (face19,), write=True)
+        ec = eli.client()
+        ec.get(f"/social/p/{n1}")
+        _, jc = ec.post_json(f"/social/p/{n1}/comments", {"words": f"Eli's answer {tag}", "payload": tab_drawing(seed=194)})
+        answer19 = (db("select skribl_id from social_comments where public_id = ?",
+                       ((jc or {}).get("comment") if isinstance(jc, dict) else "",)) or [(None,)])[0][0]
+        made19 = all([n1, p1, d1, p2, l1, p3, face19, answer19])
+        skr = {k: (db("select skribl_id from social_posts where public_id = ?", (v,)) or [(None,)])[0][0]
+               for k, v in (("p1", p1), ("p2", p2), ("p3", p3))}
+        GAL = "/social/@eyeeli/gallery"
+        own_ids = [p3, l1, p2, d1, p1]
+
+        def flag(pid):
+            return (db("select gallery_hidden_at from social_posts where public_id = ?", (pid,)) or [("gone",)])[0][0]
+
+        def vis(sid):
+            return (db("select visibility from skribl_posts where public_id = ?", (sid,)) or [("gone",)])[0][0]
+
+        def cell(key, kind="post"):
+            return f'[data-prof-list] > .gal-cell:has(.gal-tile[data-{kind}="{key}"])'
+
+        def where(key, href):
+            """Where a drawing is shown: the Gallery of everyone (signed out, by the section's word), the first
+            visit, Noa's view of Eli's Gallery, Home's Everyone signed out, Eli's own Posts."""
+            anon = Client()
+            anon.get("/social/")
+
+            def html_of(cl, path):
+                try:
+                    return json.loads(cl._req("GET", path)[2]).get("html") or ""
+                except ValueError:
+                    return ""
+            out = {}
+            out["gallery"] = f'href="{href}"' in html_of(anon, "/social/explore/more?show=everyone&sort=new&q=" + urllib.parse.quote(tag))
+            out["first visit"] = f'href="{href}"' in anon.get("/social/")[2]
+            out["Noa's view"] = f'href="{href}"' in noa.client().get(GAL)[2]
+            if href.startswith("/social/p/"):
+                out["home"] = f'data-post="{key}"' in html_of(anon, "/social/feed?show=everyone")
+                out["her posts"] = f'data-post="{key}"' in html_of(eli.client(), "/social/@eyeeli/more?tab=posts")
+            return out
+
+        # 1. THE EYE ON EACH OF HER TILES, AND THEIRS ALONE.
+        looks19 = {}
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                ctx, pg = browser_as(b, eli, screen, scheme)
+                try:
+                    pg.goto(BASE + GAL)
+                    pg.wait_for_selector("[data-prof-list] > .gal-cell", timeout=15000)
+                    pg.wait_for_timeout(300)
+                    looks19[(screen, scheme)] = pg.evaluate(EYES19)
+                except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                    looks19[(screen, scheme)] = [{"stopped": str(exc).splitlines()[0][:120]}]
+                close_ctx(ctx, pg)
+        bad19 = []
+        for k, tiles in looks19.items():
+            if [x.get("id") for x in tiles] != own_ids:
+                bad19.append(f"{k}: tiles {[x.get('id') for x in tiles]}")
+                continue
+            for x in tiles:
+                hid = x["id"] == l1
+                good = (x["hidden"] == hid and x["pressed"] == ("false" if hid else "true") and x["painted"]
+                        and x["eye"][1] == 44 and x["eye"][0] >= 44 and (hid or x["eye"][0] == 44)
+                        and x["chip"][:3] == [30, 13, 13] and (hid or x["chip"][3] == 30)
+                        and x["word"] == ["Hidden", 1 if hid else 0] and x["icons"] == ([0, 1] if hid else [1, 0])
+                        and x["plate"] == (0.55 if hid else 1) and x["glass"] == "rgba(255, 255, 255, 0.82)"
+                        and x["ink"] == "rgb(58, 36, 168)" and (x["name"] or "").startswith("In the Gallery: ")
+                        and (x["label"] or "").endswith(", hidden from the Gallery") == hid)
+                if not good:
+                    bad19.append(f"{k}: {x}")
+        check("THE EYE ON YOUR OWN TILES: on Eli's own Gallery tab each tile, her posts' and the drawings she showed"
+              " outside a post, the link-only one too, has its eye at the top right on the ▶'s glass, painted, 44px to a"
+              " finger, its chip 30px and 13px in; open in the Gallery, pressed; the link-only one hidden from it: the eye"
+              " crossed, \"Hidden\" beside it, the drawing faded to 55%, its link saying so; never her face or her"
+              " answer's drawing: a touch phone and a desk, light and dark",
+              made19 and len(looks19) == 4 and not bad19,
+              f"made {made19}; {bad19[:3]}")
+
+        # 2. NOBODY ELSE SEES IT, IN THE PAGE OR ITS SOURCE.
+        marks = ("data-eye", "gal-eye", "eye.js", "data-eye-words", "Hidden from the Gallery", "data-label-hidden")
+        seen19 = {}
+        for who, name in ((noa, "Noa"), (None, "signed out")):
+            cl = who.client() if who else Client()
+            st_, _, html_ = cl.get(GAL)
+            st2, _, json_ = cl._req("GET", "/social/@eyeeli/more?tab=gallery")
+            seen19[name] = {"status": [st_, st2], "marks": [m for m in marks if m in html_ or m in json_],
+                            "tiles": [x for _, x in re.findall(r'<a class="gal-tile" href="/social/([pb])/([^"]+)"', html_)]}
+        own_html = eli.client().get(GAL)[2]
+        check("...and nobody else sees it, in the page or its source: Noa's view and nobody's hold no eye, no eye's"
+              " words, no eye.js, in the page or the tab's own JSON, and not her link-only drawing; her own page has"
+              " them all",
+              all(v["status"] == [200, 200] and not v["marks"] and v["tiles"] == [p3, p2, d1, p1] for v in seen19.values())
+              and all(m in own_html for m in marks), json.dumps(seen19))
+
+        # 3. A POST'S DRAWING, HIDDEN AND SHOWN AGAIN, END TO END (a touch phone).
+        post19 = {}
+        ctx, pg = browser_as(b, eli, "phone", "light")
+        try:
+            pg.goto(BASE + GAL)
+            pg.wait_for_selector(cell(p2), timeout=15000)
+            post19["before"] = where(p2, f"/social/p/{p2}")
+            pg.locator(cell(p2) + " .gal-eye").tap()
+            pg.wait_for_function(TOAST_UP, arg="Hidden from the Gallery", timeout=8000)
+            pg.wait_for_timeout(350)
+            post19["hidden"] = pg.evaluate(ONE_EYE, cell(p2))
+            post19["flag"] = flag(p2) is not None
+            post19["then"] = where(p2, f"/social/p/{p2}")
+            pg.locator(".mu-toast [data-mute-undo]").tap()
+            pg.wait_for_function(TOAST_UP, arg="Back in the Gallery", timeout=8000)
+            pg.wait_for_timeout(350)
+            post19["undone"] = pg.evaluate(ONE_EYE, cell(p2))
+            post19["flag after"] = flag(p2)
+            post19["after"] = where(p2, f"/social/p/{p2}")
+            pg.locator(cell(p2) + " .gal-eye").tap()
+            pg.wait_for_function(TOAST_UP, arg="Hidden from the Gallery", timeout=8000)
+            pg.reload()
+            pg.wait_for_selector(cell(p2), timeout=15000)
+            pg.wait_for_timeout(300)
+            post19["reloaded"] = pg.evaluate(ONE_EYE, cell(p2))
+            pg.locator(cell(p2) + " .gal-eye").tap()
+            pg.wait_for_function(TOAST_UP, arg="Back in the Gallery", timeout=8000)
+            post19["shown again"] = flag(p2)
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            post19["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, pg)
+        h_, u_, r_ = post19.get("hidden") or {}, post19.get("undone") or {}, post19.get("reloaded") or {}
+        everywhere = {"gallery": True, "first visit": True, "Noa's view": True, "home": True, "her posts": True}
+        check("A POST'S DRAWING, HIDDEN FROM THE GALLERY AND SHOWN AGAIN, end to end on a touch phone: one tap, and the eye"
+              " crosses and says \"Hidden\", the drawing fades to 55%, the site's own toast says \"Hidden from the"
+              " Gallery\" with Undo (its closed eye beside the words); the post's flag set, the drawing out of the Gallery"
+              " of everyone, the first visit and Noa's view of her Gallery, while the post stays on Home and in her Posts;"
+              " Undo brings it all back (\"Back in the Gallery\"); hidden, it stays hidden through a reload",
+              made19 and "stopped" not in post19 and post19.get("before") == everywhere
+              and h_.get("hidden") is True and h_.get("pressed") == "false" and h_.get("plate") == 0.55
+              and h_.get("word") == ["Hidden", 1] and (h_.get("label") or "").endswith(", hidden from the Gallery")
+              and (h_.get("toast") or {}).get("undo") is True and (h_.get("toast") or {}).get("icon") is True
+              and post19.get("flag") is True
+              and post19.get("then") == {"gallery": False, "first visit": False, "Noa's view": False, "home": True, "her posts": True}
+              and u_.get("hidden") is False and u_.get("pressed") == "true" and u_.get("plate") == 1
+              and (u_.get("toast") or {}).get("undo") is False and post19.get("flag after") is None
+              and post19.get("after") == everywhere
+              and r_.get("hidden") is True and r_.get("plate") == 0.55 and post19.get("shown again") is None,
+              json.dumps(post19))
+
+        # 4. A DRAWING SHOWN OUTSIDE A POST, AND ONE KEPT LINK-ONLY (a desk, dark).
+        draw19 = {}
+        ctx, pg = browser_as(b, eli, "desk", "dark")
+        try:
+            pg.goto(BASE + GAL)
+            pg.wait_for_selector(cell(d1, "drawing"), timeout=15000)
+            draw19["before"] = (vis(d1), where(d1, f"/social/b/{d1}"))
+            pg.click(cell(d1, "drawing") + " .gal-eye")
+            pg.wait_for_function(TOAST_UP, arg="Hidden from the Gallery", timeout=8000)
+            draw19["hidden"] = (vis(d1), where(d1, f"/social/b/{d1}"))
+            draw19["its page"] = {"Noa": noa.client().get(f"/social/b/{d1}")[0], "nobody": Client().get(f"/social/b/{d1}")[0],
+                                  "Eli": eli.client().get(f"/social/b/{d1}")[0]}
+            pg.reload()
+            pg.wait_for_selector(cell(d1, "drawing"), timeout=15000)
+            pg.wait_for_timeout(300)
+            draw19["reloaded"] = pg.evaluate(ONE_EYE, cell(d1, "drawing"))
+            pg.click(cell(d1, "drawing") + " .gal-eye")
+            pg.wait_for_function(TOAST_UP, arg="Back in the Gallery", timeout=8000)
+            draw19["shown"] = (vis(d1), where(d1, f"/social/b/{d1}"))
+            # The toast goes before the next tap, so its words are the next one's.
+            pg.wait_for_function("() => document.querySelector('.mu-toast').hidden", timeout=8000)
+            pg.click(cell(l1, "drawing") + " .gal-eye")
+            pg.wait_for_function(TOAST_UP, arg="Back in the Gallery", timeout=8000)
+            draw19["link-only shown"] = (vis(l1), where(l1, f"/social/b/{l1}"))
+            pg.wait_for_timeout(400)
+            pg.click(cell(l1, "drawing") + " .gal-eye")
+            pg.wait_for_function(TOAST_UP, arg="Hidden from the Gallery", timeout=8000)
+            draw19["link-only again"] = vis(l1)
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            draw19["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, pg)
+        out_ = {"gallery": False, "first visit": False, "Noa's view": False}
+        in_ = {"gallery": True, "first visit": True, "Noa's view": True}
+        check("A DRAWING SHOWN OUTSIDE A POST, its eye its visibility in Skribl (a desk, dark): hidden, it is link-only"
+              " (unlisted), out of the Gallery of everyone, the first visit and Noa's view, its own page hers alone (a"
+              " kind 404 to Noa and to nobody); still on her own tab through a reload, hidden; shown, public and back"
+              " everywhere; and a drawing kept link-only from the first shows the same way, and hides again",
+              made19 and "stopped" not in draw19 and draw19.get("before") == ("public", in_)
+              and draw19.get("hidden") == ("unlisted", out_)
+              and draw19.get("its page") == {"Noa": 404, "nobody": 404, "Eli": 200}
+              and (draw19.get("reloaded") or {}).get("hidden") is True and draw19.get("shown") == ("public", in_)
+              and draw19.get("link-only shown") == ("public", in_) and draw19.get("link-only again") == "unlisted",
+              json.dumps(draw19))
+
+        # 5. THE TOAST NEVER COVERS AN EYE: one where the toast would rise.
+        cov19 = {}
+        ctx, pg = browser_as(b, eli, "phone", "light")
+        try:
+            pg.goto(BASE + GAL)
+            pg.wait_for_selector(cell(p1) + " .gal-eye", timeout=15000)
+            # The lowest eye the page can bring to where the toast's middle
+            # would be (105px above the screen's foot), the page scrolled to it.
+            esel = None
+            for key, kind in ((p1, "post"), (d1, "drawing"), (p2, "post")):
+                s_ = cell(key, kind) + " .gal-eye"
+                pg.evaluate("""(s) => { const m = document.querySelector(s).getBoundingClientRect();
+                    window.scrollBy(0, (m.top + m.height / 2) - (innerHeight - 105)); }""", s_)
+                pg.wait_for_timeout(250)
+                at_ = pg.evaluate("(s) => Math.round(document.querySelector(s).getBoundingClientRect().top + 22)", s_)
+                if abs(at_ - (pg.evaluate("() => innerHeight") - 105)) <= 2:
+                    esel, cov19["eye"], cov19["which"] = s_, at_, key
+                    break
+            if esel is None:
+                raise RuntimeError("no eye could be brought where the toast rises")
+            pg.locator(esel).tap()
+            pg.wait_for_function(TOAST_UP, arg="Hidden from the Gallery", timeout=8000)
+            pg.wait_for_timeout(450)
+            cov19.update(pg.evaluate(CLEAR_OF, "[data-eye-cell] [data-eye]"))
+            pg.evaluate("() => window.scrollBy(0, 40)")
+            pg.wait_for_timeout(500)
+            cov19["after a scroll"] = pg.evaluate("() => { const t = document.querySelector('.mu-toast'); return t.hidden || !t.classList.contains('is-up'); }")
+            pg.locator(esel).tap()
+            pg.wait_for_function(TOAST_UP, arg="Back in the Gallery", timeout=8000)
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            cov19["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, pg)
+        check("THE TOAST NEVER COVERS AN EYE (WORKING-AGREEMENTS): tapped where the toast would rise (just above the bar,"
+              " a touch phone), it rises just above the eye instead, every eye in view taking its own tap (what is"
+              " painted at its middle, the toast made hit-testable), the toast in view; and a scroll that brings an eye"
+              " under it takes it away",
+              "stopped" not in cov19 and abs(cov19.get("eye", 0) - (cov19.get("vh", 0) - 105)) <= 2
+              and cov19.get("lifted", 0) > 0 and cov19.get("seen", 0) >= 2 and not cov19.get("under")
+              and not cov19.get("covered") and cov19.get("toast", [-1])[0] >= 0 and cov19.get("after a scroll") is True,
+              json.dumps(cov19))
+
+        # 6. KIND, NEVER JUMPY: read on every frame from the tap.
+        frames19 = {}
+        for reduced in (False, True):
+            ctx, pg = browser_as(b, eli, "phone", "light", reduced=reduced)
+            try:
+                pg.goto(BASE + GAL)
+                pg.wait_for_selector(cell(p1), timeout=15000)
+                pg.locator(cell(p1)).scroll_into_view_if_needed(timeout=5000)
+                pg.wait_for_timeout(300)
+                pg.evaluate(EFRAMES, [cell(p1), 900])
+                pg.locator(cell(p1) + " .gal-eye").tap()
+                pg.wait_for_timeout(1100)
+                fs = pg.evaluate("() => window.__ef")
+                pg.wait_for_function(TOAST_UP, arg="Hidden from the Gallery", timeout=8000)
+                pg.locator(cell(p1) + " .gal-eye").tap()
+                pg.wait_for_function(TOAST_UP, arg="Back in the Gallery", timeout=8000)
+                ws, ops = [f["w"] for f in fs], [f["op"] for f in fs]
+                steps = [abs(z - a) for a, z in zip(ws, ws[1:])]
+                way = (ws[-1] - ws[0]) if ws else 0
+                frames19["reduced" if reduced else "moving"] = {
+                    "way": round(way, 1), "moving": len([s for s in steps if s > 0.3]), "step": round(max(steps or [0]), 1),
+                    "fading": len([o for o in ops if 0.57 < o < 0.98]), "fstep": round(max([abs(z - a) for a, z in zip(ops, ops[1:])] or [0]), 3),
+                    "end": [ws[-1] if ws else None, ops[-1] if ops else None]}
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                frames19["reduced" if reduced else "moving"] = {"stopped": str(exc).splitlines()[0][:160]}
+            close_ctx(ctx, pg)
+        mv, rd = frames19.get("moving") or {}, frames19.get("reduced") or {}
+        check("KIND, NEVER JUMPY, read on every frame from the tap: the eye's chip opens to \"Hidden\" over many frames"
+              " (none more than 40% of its way) and the drawing fades over many (none more than a fifth of the way at"
+              " once); under Reduce Motion the chip takes its size at once and the drawing still fades",
+              mv.get("way", 0) >= 30 and mv.get("moving", 0) >= 6 and mv.get("step", 99) <= 0.4 * mv.get("way", 0)
+              and mv.get("fading", 0) >= 4 and mv.get("fstep", 1) <= 0.2 and (mv.get("end") or [0, 0])[1] == 0.55
+              and rd.get("way", 0) >= 30 and rd.get("moving") == 1 and rd.get("fading", 0) >= 4
+              and rd.get("fstep", 1) <= 0.2 and (rd.get("end") or [0, 0])[1] == 0.55,
+              json.dumps(frames19))
+
+        # 7. THE EYE'S INK ON ITS GLASS, READ OFF THE PIXELS UNDER IT (over the
+        # Pad's dark, her link-only drawing, and over paper), and the toast's
+        # words on what is painted behind them: phone and desk, light and dark.
+        INK19 = (58, 36, 168)
+
+        def lum19(c):
+            v = [x / 255 for x in c[:3]]
+            v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+            return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+        glass19, toast19 = {}, {}
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                ctx, pg = browser_as(b, eli, screen, scheme, reduced=True)
+                try:
+                    pg.goto(BASE + GAL)
+                    for key, kind in ((l1, "drawing"), (p3, "post")):
+                        chip = cell(key, kind) + " .gal-eye-chip"
+                        pg.locator(chip).scroll_into_view_if_needed(timeout=5000)
+                        pg.evaluate("(s) => document.querySelectorAll(s + ' .gal-eye-ics, ' + s + ' .gal-eye-word').forEach(e => e.style.visibility = 'hidden')", chip)
+                        pg.wait_for_timeout(150)
+                        im = Image.open(io.BytesIO(pg.locator(chip).screenshot(timeout=5000))).convert("RGB") if Image else None
+                        pg.evaluate("(s) => document.querySelectorAll(s + ' .gal-eye-ics, ' + s + ' .gal-eye-word').forEach(e => e.style.visibility = '')", chip)
+                        if im is None:
+                            glass19[(screen, scheme, kind)] = "Pillow is not here"
+                            continue
+                        W, H = im.size
+                        px = [im.getpixel((x, y)) for x in range(int(W * 0.25), int(W * 0.75)) for y in range(int(H * 0.3), int(H * 0.7))]
+                        glass19[(screen, scheme, kind)] = round(min((max(lum19(c), lum19(INK19)) + 0.05) / (min(lum19(c), lum19(INK19)) + 0.05) for c in px), 2)
+                    pg.locator(cell(p3) + " .gal-eye").click()
+                    pg.wait_for_function(TOAST_UP, arg="Hidden from the Gallery", timeout=8000)
+                    pg.wait_for_timeout(300)
+                    toast19[(screen, scheme)] = pg.evaluate(READ_TOAST)
+                    pg.locator(".mu-toast [data-mute-undo]").click()
+                    pg.wait_for_function(TOAST_UP, arg="Back in the Gallery", timeout=8000)
+                except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                    glass19[(screen, scheme, "stopped")] = str(exc).splitlines()[0][:120]
+                close_ctx(ctx, pg)
+        check("the eye's ink reads at 4.5:1 or more off the pixels of its glass, over the Pad's dark and over paper, and"
+              " the toast's words (\"Hidden from the Gallery\", Undo) on what is painted behind them: a touch phone and a"
+              " desk, light and dark",
+              len(glass19) == 8 and all(isinstance(v, float) and v >= 4.5 for v in glass19.values())
+              and len(toast19) == 4 and all(v.get("read", 0) >= 2 and not v.get("low") for v in toast19.values()),
+              json.dumps({"glass": {" ".join(k): v for k, v in glass19.items()},
+                          "toast": {" ".join(k): (v.get("read"), v.get("lowest"), v.get("low")) for k, v in toast19.items()}}))
+
+        # 8. ITS GUARDS: yours alone, signed in, the page's token, a true or false.
+        gc = eli.client()
+        gc.get(GAL)
+        nc = noa.client()
+        nc.get("/social/")
+        anon = Client()
+        anon.get(GAL)
+        db("update social_posts set taken_down_at = '2026-11-14 12:00:00.000000' where public_id = ?", (p3,), write=True)
+        guards19 = {
+            "no token": gc.post_json(f"/social/p/{p1}/gallery", {"gallery": False}, token=False)[0],
+            "signed out": anon.post_json(f"/social/p/{p1}/gallery", {"gallery": False})[0],
+            "somebody else's post": nc.post_json(f"/social/p/{p1}/gallery", {"gallery": False})[0],
+            "somebody else's drawing": nc.post_json(f"/social/b/{d1}/gallery", {"gallery": False})[0],
+            "her face": gc.post_json(f"/social/b/{face19}/gallery", {"gallery": True})[0],
+            "her answer's drawing": gc.post_json(f"/social/b/{answer19}/gallery", {"gallery": True})[0],
+            "a post's drawing as a drawing": gc.post_json(f"/social/b/{skr.get('p1')}/gallery", {"gallery": False})[0],
+            "no true or false": gc.post_json(f"/social/p/{p1}/gallery", {"shown": False})[0],
+            "words": gc.post_json(f"/social/p/{p1}/gallery", {"gallery": "no"})[0],
+            "taken down": gc.post_json(f"/social/p/{p3}/gallery", {"gallery": False})[0]}
+        db("update social_posts set taken_down_at = NULL where public_id = ?", (p3,), write=True)
+        kept19 = [flag(p1), flag(p3), vis(d1), vis(face19), vis(answer19), vis(skr.get("p1"))]
+        check("its guards: the page's token (403), signed in (401), yours alone (somebody else's post or drawing: 404), never"
+              " a face, a comment's drawing or a post's drawing by itself (404), a true or false (400), never what was"
+              " taken down (404); none of them changing anything",
+              guards19 == {"no token": 403, "signed out": 401, "somebody else's post": 404, "somebody else's drawing": 404,
+                           "her face": 404, "her answer's drawing": 404, "a post's drawing as a drawing": 404,
+                           "no true or false": 400, "words": 400, "taken down": 404}
+              and kept19 == [None, None, "public", "unlisted", "unlisted", "unlisted"],
+              f"{guards19}; kept {kept19}")
+
+        # 9. PRESSED FAST: every tap counts, and the site ends where the last
+        # one left it (two taps hard after each other: shown; three: hidden).
+        fast19 = {}
+        ctx, pg = browser_as(b, eli, "phone", "light")
+        try:
+            pg.goto(BASE + GAL)
+            pg.wait_for_selector(cell(p1), timeout=15000)
+            pg.locator(cell(p1)).scroll_into_view_if_needed(timeout=5000)
+            xy = pg.evaluate("(s) => { const r = document.querySelector(s).getBoundingClientRect(); return [r.right - 22, r.top + 22]; }",
+                             cell(p1) + " .gal-eye")
+            for n_taps in (2, 3):
+                for _ in range(n_taps):
+                    pg.touchscreen.tap(*xy)
+                pg.wait_for_timeout(1800)
+                fast19[n_taps] = {"hidden": pg.evaluate("(s) => document.querySelector(s).classList.contains('is-hidden')", cell(p1)),
+                                  "flag": flag(p1) is not None}
+            pg.touchscreen.tap(*xy)
+            pg.wait_for_timeout(1500)
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            fast19["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, pg)
+        check("PRESSED FAST, every tap counts: two taps hard after each other leave it in the Gallery, as it was, and three"
+              " hide it, the page and the site agreeing",
+              fast19.get(2) == {"hidden": False, "flag": False} and fast19.get(3) == {"hidden": True, "flag": True},
+              json.dumps(fast19))
 
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):

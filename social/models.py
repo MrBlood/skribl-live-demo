@@ -271,6 +271,13 @@ class Post(SocialBase):
     #: author, who sees it with the note; its skribl withheld in Skribl. A
     #: copy is kept: nothing is deleted by it.
     taken_down_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+    #: HIDDEN FROM THE GALLERY by its maker (the eye on their own Gallery tab,
+    #: the owner's "Yes, the eye in view", Nov 14): when. Its drawing leaves
+    #: the Gallery of everyone, the first visit and their Gallery as anybody
+    #: else sees it; the post stays on Home, in their Posts and everywhere a
+    #: post is. None: in the Gallery. The site's own: Skribl's visibility of
+    #: the drawing is untouched (gallery.py).
+    gallery_hidden_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         sa.Index("ix_social_posts_public_id", "public_id", unique=True),

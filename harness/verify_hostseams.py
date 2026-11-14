@@ -1365,6 +1365,106 @@ check("it is a documented name: list_drafts in skribl.__all__, its docstring nam
       "list_drafts" in skribl.__all__ and "?draft=<id>" in (skribl.list_drafts.__doc__ or "")
       and "host" in (skribl.list_drafts.__doc__ or ""))
 
+print("\nWHAT PEOPLE SHARED — shared_skribls(): everything a host's people shared, beside its own posts (shared_skribls)")
+# The Skribl site's Gallery (Nov 14, the owner's "I thought gallery was only
+# skribls (pad or flip)?") lists every drawing its people shared, in a post or
+# not, in one order. A host may not query Skribl's tables, so Skribl hands the
+# shared ones over as a subquery the host reads beside its own rows
+# (skribl/describing.py, docs/INTEGRATION.md "Your people's drawings beside
+# your own posts"). Asked here as a host asks it: skribls of three authors of
+# a throwaway host, two sharing its people's prefix, in every visibility; a
+# table of the host's own posts holding one of them; one order of both.
+_sa_ids = {}
+for _who, _rows in (("host:ann", (("ann-public-1", "public"), ("ann-link", "unlisted"), ("ann-private", "private"))),
+                    ("host:bob", (("bob-waves", "public"), ("bob-withheld", "public"))),
+                    ("host:ann", (("ann-public-2", "public"),)),
+                    ("other:cy", (("cy-public", "public"),))):
+    _app, _ = host_app(_who)
+    _cl = _app.test_client()
+    for _title, _vis in _rows:
+        _sa_ids[_title] = (_cl.post("/api/skribls", json=body(_title, visibility=_vis)).get_json() or {}).get("id")
+_sa_app, _sa_db = host_app("host:ann")
+_sa_stmts = []
+
+
+def _sa_grab(conn, cursor, statement, *a):
+    _sa_stmts.append(statement)
+
+
+with _sa_app.app_context():
+    _s = _sa_db.session
+    skribl.set_post_visibility(_sa_ids["bob-withheld"], "withheld", require_author=False)
+    _s.commit()
+    _sa_host = sa.Table("host_shared_posts", sa.MetaData(), sa.Column("id", sa.Integer, primary_key=True),
+                        sa.Column("skribl_id", sa.String(32)), sa.Column("made_at", sa.DateTime(timezone=True)))
+    _sa_host.create(bind=_s.get_bind(), checkfirst=True)
+    # The host's own post holds ann-public-2, made when the skribl was.
+    _a2 = skribl.describe_posts([_sa_ids["ann-public-2"]])[_sa_ids["ann-public-2"]]
+    _s.execute(_sa_host.insert(), [{"skribl_id": _sa_ids["ann-public-2"],
+                                    "made_at": _dt.fromisoformat(_a2["created_at"])}])
+    _s.commit()
+    _s.expire_all()
+    sa.event.listen(_sa_db.engine, "before_cursor_execute", _sa_grab)
+    try:
+        def _rows(sub, *where):
+            return [tuple(r) for r in _s.execute(sa.select(sub.c.skribl_id, sub.c.user_id, sub.c.title, sub.c.visibility)
+                                                 .where(*where).order_by(sub.c.created_at)).all()]
+        _everyone = skribl.shared_skribls()
+        _cols = [c.name for c in _everyone.c]
+        _all = _rows(_everyone, _everyone.c.skribl_id.in_([v for v in _sa_ids.values() if v]))
+        _pre = skribl.shared_skribls(author_prefix="host:")
+        _prefixed = _rows(_pre, _pre.c.skribl_id.in_([v for v in _sa_ids.values() if v]))
+        _one = skribl.shared_skribls(author="host:bob")
+        _bobs = _rows(_one, _one.c.skribl_id.in_([v for v in _sa_ids.values() if v]))
+        _own = skribl.shared_skribls(author="host:ann", link_only=True)
+        _anns = _rows(_own, _own.c.skribl_id.in_([v for v in _sa_ids.values() if v]))
+        _found = _rows(_pre, _pre.c.title.ilike("%waves%"))
+        # ONE ORDER: the host's own posts and the shared skribls no post of its
+        # own holds, newest first, by time.
+        _merged = [r[0] for r in _s.execute(sa.union_all(
+            sa.select(_pre.c.skribl_id, _pre.c.created_at.label("at"))
+            .where(_pre.c.skribl_id.notin_(sa.select(_sa_host.c.skribl_id)),
+                   _pre.c.skribl_id.in_([v for v in _sa_ids.values() if v])),
+            sa.select(_sa_host.c.skribl_id, _sa_host.c.made_at.label("at"))).order_by(sa.desc("at"))).all()]
+        _sa_quiet = not (_s.new or _s.dirty or _s.deleted)
+    finally:
+        sa.event.remove(_sa_db.engine, "before_cursor_execute", _sa_grab)
+    try:
+        skribl.shared_skribls(link_only=True)
+        _sa_nobody = "listed"
+    except ValueError as exc:
+        _sa_nobody = f"ValueError {exc}"
+_I = _sa_ids
+check("(setup) seven skribls in a throwaway host by three authors, two of them its people's (host:), in every"
+      " visibility, one withheld by an operator; a table of the host's own posts holding one of them",
+      all(_I.values()) and len(set(_I.values())) == 7, json.dumps(_I))
+check("shared_skribls() is a subquery a host reads beside its own rows: its columns skribl_id, user_id, title,"
+      " created_at and visibility, and the public ones alone (never unlisted, private or withheld)",
+      _cols == ["skribl_id", "user_id", "title", "created_at", "visibility"]
+      and _all == [(_I["ann-public-1"], "host:ann", "ann-public-1", "public"), (_I["bob-waves"], "host:bob", "bob-waves", "public"),
+                   (_I["ann-public-2"], "host:ann", "ann-public-2", "public"), (_I["cy-public"], "other:cy", "cy-public", "public")],
+      f"columns {_cols}; listed {[r[2] for r in _all]}")
+check("...narrowed to the host's people by their ids' prefix (author_prefix), or to one author's (author)",
+      [r[2] for r in _prefixed] == ["ann-public-1", "bob-waves", "ann-public-2"] and [r[2] for r in _bobs] == ["bob-waves"],
+      f"prefixed {[r[2] for r in _prefixed]}; one author's {[r[2] for r in _bobs]}")
+check("link_only, with an author, adds that author's link-only ones, for a page that is theirs alone (never private,"
+      " withheld or anybody else's); without an author it is refused, so nobody's link-only skribls are listed to"
+      " everybody",
+      [(r[2], r[3]) for r in _anns] == [("ann-public-1", "public"), ("ann-link", "unlisted"), ("ann-public-2", "public")]
+      and _sa_nobody.startswith("ValueError"), f"{[(r[2], r[3]) for r in _anns]}; without an author: {_sa_nobody}")
+check("a host searches it by title, and reads it beside its own posts in one order: the shared ones no post of its own"
+      " holds and its own posts, newest first, the skribl a post holds once",
+      [r[2] for r in _found] == ["bob-waves"]
+      and _merged == [_I["ann-public-2"], _I["bob-waves"], _I["ann-public-1"]],
+      f"by title {[r[2] for r in _found]}; one order {[{v: k for k, v in _I.items()}.get(x, x) for x in _merged]}")
+check("it reads only: nothing added, changed or deleted in the session, nothing written, and no payload ever selected",
+      _sa_quiet and _sa_stmts and not any(x.lstrip().upper().startswith(("INSERT", "UPDATE", "DELETE")) for x in _sa_stmts)
+      and not any("payload_json" in x for x in _sa_stmts),
+      f"quiet {_sa_quiet}; {len(_sa_stmts)} statements; payload in {[x[:80] for x in _sa_stmts if 'payload_json' in x]}")
+check("it is a documented name: shared_skribls in skribl.__all__, its docstring naming link_only and the host's own rows",
+      "shared_skribls" in skribl.__all__ and "link_only" in (skribl.shared_skribls.__doc__ or "")
+      and "SUBQUERY" in (skribl.shared_skribls.__doc__ or ""))
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

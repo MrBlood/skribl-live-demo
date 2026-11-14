@@ -22,9 +22,14 @@ owner's "Yes" to its mock, Nov 14): Posts · Gallery · Likes · Drafts on your
 own page, Posts · Gallery on anybody else's, Posts opening first.
   Posts     their posts as Home's one card, newest first (posts.person_page).
   Gallery   every drawing and Flip they shared, as the Gallery's tiles: a
-            post's opens its post, one shown outside a post (before posts)
-            its own page (gallery.person_page). A face and a drawing kept
-            link-only never.
+            post's opens its post, one shown outside a post its own page
+            (gallery.person_page). A face never; a drawing kept link-only,
+            and a post's drawing its maker hid from the Gallery, only on
+            their own page, faded, with THE EYE (the owner's "Yes, the eye
+            in view", Nov 14): each of your tiles has one at its top right,
+            to hide it from the Gallery or show it again (posts.py's
+            /p/<id>/gallery and /b/<id>/gallery; eye.js). Nobody else sees
+            it, in the page or its source.
   Likes     yours alone: the posts you liked, newest liked first, as cards
             (likes.liked_page).
   Drafts    yours alone: the drafts Skribl keeps on your account, as tiles,
@@ -170,7 +175,8 @@ def tab_view(who, me, mine, tab, before=None, skribl_blueprint="skribl"):
         out["cards"] = posts.cards(entries, me) if entries else []
     elif tab == "gallery":
         entries, out["next"] = gallery.person_page(who, me, before)
-        out["tiles"] = gallery.tiles(entries, me)
+        # THE EYE on each tile, your own page alone (gallery.tiles).
+        out["tiles"] = gallery.tiles(entries, me, eye=mine)
     elif tab == "likes" and mine:
         entries, out["next"] = likes.liked_page(me, before)
         out["cards"] = posts.cards(entries, me) if entries else []

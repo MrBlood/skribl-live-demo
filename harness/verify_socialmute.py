@@ -1562,13 +1562,14 @@ with sync_playwright() as p:
             # Following alike, New, Hot and a search, in its own query, so every
             # page but the last is whole; walked with Load more against Qin's.
             def gallery(c, show, sort="new", q=""):
-                """The Gallery walked with Load more: [(handle, post)] and each page's size."""
+                """The Gallery walked with Load more: [(handle, post or drawing)] and each page's size (every
+                skribl since Nov 14: a drawing shown outside a post is a tile too)."""
                 qs = f"show={show}&sort={sort}" + ("&q=" + urllib.parse.quote(q) if q else "")
                 c.get("/social/explore")
                 _, j = c.get_json("/social/explore/more?" + qs)
                 seen, sizes = [], []
                 while isinstance(j, dict):
-                    got = re.findall(r'<a class="gal-tile" href="/social/p/([^"]+)"[^>]*data-handle="([^"]+)"', j.get("html", ""))
+                    got = re.findall(r'<a class="gal-tile" href="/social/[pb]/([^"]+)"[^>]*data-handle="([^"]+)"', j.get("html", ""))
                     seen += [(h, pid) for pid, h in got]
                     sizes.append(len(got))
                     if not j.get("next") or len(sizes) > 30:
@@ -1585,9 +1586,10 @@ with sync_playwright() as p:
             ok_q = all(any(h == "ozz" for h, _ in g[("qin",) + k][0]) for k in
                        (("everyone", "new", ""), ("everyone", "hot", ""), ("everyone", "new", "Section 6")))
             n_new, q_new = g[("nat", "everyone", "new", "")], g[("qin", "everyone", "new", "")]
-            check("the Gallery of everyone (Explore) leaves out every post of somebody you muted, in its own query:"
-                  " Everyone and Following (though Nat follows them), New, Hot and a search alike; walked to its end it"
-                  " is everybody else's in the order somebody who muted nobody sees, every page but the last whole",
+            check("the Gallery of everyone (Explore) leaves out every post of somebody you muted, and every drawing they"
+                  " showed outside a post (every skribl, since Nov 14), in its own reads: Everyone and Following (though"
+                  " Nat follows them), New, Hot and a search alike; walked to its end it is everybody else's in the order"
+                  " somebody who muted nobody sees, every page but the last whole",
                   ok_g and ok_q and n_new[0] == [x for x in q_new[0] if x[0] != "ozz"]
                   and all(n == 24 for n in n_new[1][:-1]) and len(n_new[1]) >= 2
                   and any(h == "pia" for h, _ in g[("nat", "following", "new", "")][0]),
@@ -2022,8 +2024,12 @@ with sync_playwright() as p:
                   and at("select handle from social_people order by id") == [("ann",), ("bob",)],
                   f"down {down.returncode}, left {gone}, stamped {stamp_down}; up {up3.returncode}: {sorted(back_again)}")
             pg_url = "postgresql://nobody:nothing@localhost/none"
-            ddl_up = chain("upgrade", f"{BEFORE}:head", "--sql", url=pg_url)
-            ddl_down = chain("downgrade", f"head:{BEFORE}", "--sql", url=pg_url)
+            # The mutes' own migration, read at its own revision: the chain's
+            # head has grown since (the eye's column on social_posts, Nov 14,
+            # an ALTER TABLE of its own), as #898 read the likes' at theirs.
+            MUTES = "4cdc4af46a77"
+            ddl_up = chain("upgrade", f"{BEFORE}:{MUTES}", "--sql", url=pg_url)
+            ddl_down = chain("downgrade", f"{MUTES}:{BEFORE}", "--sql", url=pg_url)
             u, d = ddl_up.stdout, ddl_down.stdout
             want_up = ["CREATE TABLE social_mutes", "id BIGSERIAL NOT NULL", "muter_id BIGINT NOT NULL",
                        "muted_id BIGINT NOT NULL", "created_at TIMESTAMP WITH TIME ZONE NOT NULL",

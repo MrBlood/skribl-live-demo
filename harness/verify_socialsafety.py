@@ -452,7 +452,8 @@ def home(pg):
 def gallery_of(c, sort="new", key="handle"):
     """The Gallery of everyone (Explore) walked to its end with Load more, as
     `c` (a Client) sees it: each tile's maker's handle, or its post (key
-    "post"), in order."""
+    "post"; a drawing shown outside a post by its skribl, since the Gallery is
+    every skribl, Nov 14), in order."""
     out, nxt = [], None
     for _ in range(40):
         _, text = c._req("GET", "/social/explore/more?sort=" + sort + ("&before=" + urllib.parse.quote(nxt) if nxt else ""))
@@ -460,7 +461,7 @@ def gallery_of(c, sort="new", key="handle"):
             j = json.loads(text)
         except ValueError:
             break
-        for pid, h in re.findall(r'<a class="gal-tile" href="/social/p/([^"]+)"[^>]*data-handle="([^"]+)"', j.get("html", "")):
+        for pid, h in re.findall(r'<a class="gal-tile" href="/social/[pb]/([^"]+)"[^>]*data-handle="([^"]+)"', j.get("html", "")):
             out.append(h if key == "handle" else pid)
         nxt = j.get("next")
         if not nxt:
@@ -727,8 +728,9 @@ with sync_playwright() as p:
               f"before {before}; after {after}; pages {pages}; title {nobody!r}")
         gal = {"ada": gallery_of(ada.client()), "ben": gallery_of(ben.client()), "ada hot": gallery_of(ada.client(), "hot"),
                "ben hot": gallery_of(ben.client(), "hot"), "signed out": gallery_of(Client())}
-        check("...and the Gallery of everyone (Explore) leaves the other out, both ways, New and Hot alike, in its own"
-              " query, while somebody else sees both",
+        check("...and the Gallery of everyone (Explore) leaves the other out, their posts and their drawings shown"
+              " outside a post (every skribl, since Nov 14), both ways, New and Hot alike, in its own reads, while"
+              " somebody else sees both",
               "ben" not in gal["ada"] and "ada" not in gal["ben"] and "ben" not in gal["ada hot"]
               and "ada" not in gal["ben hot"] and {"ada", "ben"} <= set(gal["signed out"]),
               json.dumps({k: [v.count("ada"), v.count("ben"), len(v)] for k, v in gal.items()}))
@@ -1211,7 +1213,8 @@ with sync_playwright() as p:
                          "signed out: listing": False, "signed out: link page": 404}, f"{others}")
         z_gal = {"ora": "zoe" in gallery_of(ora.client()), "ora hot": "zoe" in gallery_of(ora.client(), "hot"),
                  "signed out": "zoe" in gallery_of(Client()), "zoe": "zoe" in gallery_of(zoe.client())}
-        check("...and nothing of theirs is in the Gallery of everyone (Explore), for anybody, them too, New and Hot alike",
+        check("...and nothing of theirs is in the Gallery of everyone (Explore), their post nor their drawing shown"
+              " outside a post, for anybody, them too, New and Hot alike",
               bool(zoe_post) and z_before and z_gal == {"ora": False, "ora hot": False, "signed out": False, "zoe": False},
               f"before {z_before}; after {z_gal}")
         check("they can still sign in and see their own, with the note, and nothing new is shared from the account"

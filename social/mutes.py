@@ -15,8 +15,9 @@ WHAT COMES TO YOU GOES QUIET (muted_ids, read once a request):
   * Home, Following and Everyone: their posts (posts.feed_page, in its
     query; Home is posts only since the map's step 3; a feed of one
     person's, More from, keeps them);
-  * The Gallery (Explore: gallery.py, in its own query), and Skribl's
-    listings of everybody's: their drawings,
+  * The Gallery (Explore: gallery.py, in both its reads: their posts and
+    the drawings they showed outside one), and Skribl's listings of
+    everybody's: their drawings,
     through the feed filter the host installs (muted_authors; app.py asks it
     only for a listing of everybody's, never for one person's own: Skribl
     tells the filter which, docs/INTEGRATION.md);

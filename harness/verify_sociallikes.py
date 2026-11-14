@@ -57,7 +57,8 @@ authenticator for the site's people.
  10. DELETING TAKES THEM, IN CODE: a post, a drawing and an account, through
      the site's own routes, and with SQLite's cascade off (on a copy).
  11. THE DATA: the chain on a populated database (the table, its five
-     indexes, its CHECK; back down); one like a person a thing, on exactly
+     indexes, its CHECK; at its head the posts' eye column, Nov 14; back
+     down); one like a person a thing, on exactly
      one thing; the reads on their indexes (SQLite's own plan); Home's feed
      one grouped read, its cards all posts (a drawing shown outside a post
      is not on Home since the map's step 3).
@@ -2005,11 +2006,22 @@ with sync_playwright() as p:
                   up3.returncode == 0 and idx3 == set(idx) | {"ix_social_likes_person_created"}
                   and at("select count(*) from social_posts") == [(1,)],
                   f"up {up3.returncode} {up3.stderr.strip().splitlines()[-1:] if up3.returncode else ''}; indexes {sorted(idx3)}")
+            # THE EYE (Nov 14): the head's posts carry the site's flag for a
+            # drawing hidden from the Gallery; a post there before is in it.
+            post_cols3 = [r[1] for r in at("pragma table_info(social_posts)")]
+            hid3 = at("select public_id, gallery_hidden_at from social_posts") if "gallery_hidden_at" in post_cols3 else None
+            check("...and its posts gain the eye's column (gallery_hidden_at, the eye on your own Gallery tab), every post"
+                  " kept and in the Gallery (none hidden)",
+                  up3.returncode == 0 and post_cols3[-1:] == ["gallery_hidden_at"] and hid3 == [("P1", None)],
+                  f"columns {post_cols3}; {hid3}")
             down = chain("downgrade", BEFORE)
             gone = at("select name from sqlite_master where tbl_name = 'social_likes'")
-            check("taken back down, the chain drops the table and its indexes, every post kept",
-                  down.returncode == 0 and gone == [] and at("select public_id from social_posts") == [("P1",)],
-                  f"down {down.returncode} {down.stderr.strip().splitlines()[-1:] if down.returncode else ''}; left {gone}")
+            post_cols4 = [r[1] for r in at("pragma table_info(social_posts)")]
+            check("taken back down, the chain drops the table and its indexes, and the eye's column, every post kept",
+                  down.returncode == 0 and gone == [] and at("select public_id from social_posts") == [("P1",)]
+                  and "gallery_hidden_at" not in post_cols4,
+                  f"down {down.returncode} {down.stderr.strip().splitlines()[-1:] if down.returncode else ''}; left {gone};"
+                  f" posts' columns {post_cols4}")
             out = locals().get("PROBED") or {}
             if not out:
                 ova = someone(b, "ova", "Ova Ruhr")

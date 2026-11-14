@@ -21,6 +21,15 @@
                         drawing goes on to its post, and one by somebody not
                         on the site to Skribl's own page for it.
     /b/<skribl_id>/delete  your own such drawing, gone, its comments with it.
+    /p/<id>/gallery, /b/<skribl_id>/gallery
+                        THE EYE on your own Gallery tab (the owner's "Yes, the
+                        eye in view", Nov 14): your post's drawing, or your
+                        drawing shown outside a post, in the Gallery or
+                        hidden from it (JSON {"gallery": true|false}). A
+                        post's by the site's own flag on it (the post stays
+                        on Home and in your Posts); a drawing's by its
+                        visibility in Skribl, public or link-only, through
+                        set_post_visibility as its author.
 
 ON HOME'S CARDS (the owner's yes, Nov 12): the words and the time each open
 the card's own page; the face, the name and the @handle the person's; the
@@ -40,8 +49,9 @@ describe_posts (one query a page), for the person looking: a drawing deleted
 or withheld since is simply absent, and its post still renders, the player
 saying the drawing is not here anymore.
 
-THROUGH SKRIBL'S SEAMS ONLY: create_post, delete_post, describe_posts and
-their exceptions (documented names, verify_social section 8), the in-post
+THROUGH SKRIBL'S SEAMS ONLY: create_post, delete_post, set_post_visibility,
+describe_posts and their exceptions (documented names, verify_social section
+8), the in-post
 player's macros, the editors' addresses with their documented compose flags.
 Every state-changing request shows the site's token and Origin and is limited
 per person (security.LIMITS) before it reads anything.
@@ -55,7 +65,7 @@ from flask import current_app, jsonify, redirect, render_template, request, url_
 
 from .accounts import _hidden_in, _json_error, _page, _rests, profile_url
 from .safety import between
-from .models import PERSON_PREFIX, WORDS_MAX, Person, Post, as_utc, new_public_id
+from .models import PERSON_PREFIX, WORDS_MAX, Person, Post, as_utc, new_public_id, utcnow
 from .security import csrf_token, current_person, origin_ok, over, public_origin, site, token_ok
 
 #: The most a post may weigh on its way here: the editor's whole payload (a
@@ -305,11 +315,18 @@ def cards(entries, viewer):
             url = url_for("social.post_page", public_id=p.public_id)
             gone = url_for("social.post_delete", public_id=p.public_id)
         else:
-            sk = dict(e["sk"], ground=(drawings.get(e["sk"]["id"]) or {}).get("ground"))
-            p = _Shown(public_id="b-" + sk["id"], words=_title_words(sk.get("title")), skribl_id=sk["id"],
+            # A drawing shown outside a post: as Skribl describes it now (its
+            # ground too). The Gallery's read names its id and visibility
+            # alone (gallery._read), so one Skribl no longer describes is no
+            # card there; the listing's own item (More from's) stays as read.
+            sid = e["sk"]["id"]
+            got = drawings.get(sid)
+            sk = (dict(e["sk"], **got) if got is not None
+                  else dict(e["sk"], ground=None) if "title" in e["sk"] else None)
+            p = _Shown(public_id="b-" + sid, words=_title_words((sk or {}).get("title")), skribl_id=sid,
                        created_at=e["at"])
-            url = url_for("social.bloob_page", skribl_id=sk["id"])
-            gone = url_for("social.bloob_delete", skribl_id=sk["id"])
+            url = url_for("social.bloob_page", skribl_id=sid)
+            gone = url_for("social.bloob_delete", skribl_id=sid)
         # TAKEN DOWN (piece 5): only its maker is ever shown it, with the note.
         down = (getattr(p, "taken_down_at", None) is not None or (sk or {}).get("visibility") == "withheld"
                 or getattr(who, "taken_down_at", None) is not None)
@@ -354,22 +371,32 @@ def bloob(skribl_id, viewer):
     visibility policy hides); it is public, or taken down (withheld) and
     theirs; its author is one of the site's people; no block stands between
     them either way; and its author is not taken down, unless it is them.
-    Whether it is a post's drawing (whose page is the post's) is the
-    caller's to ask first."""
+    HIDDEN FROM THE GALLERY by its maker (the eye on their own Gallery tab:
+    link-only, unlisted, since Nov 14) it is its maker's alone, as their
+    Gallery shows it to them: never a face or a comment's drawing, which are
+    unlisted too and no page's. Whether it is a post's drawing (whose page is
+    the post's) is the caller's to ask first."""
     from skribl import describe_posts
     sid = str(skribl_id or "")
     if not sid:
         return None
     sk = describe_posts([sid], viewer_id=viewer.public_id if viewer else None).get(sid)
     author = str((sk or {}).get("user_id") or "")
-    # Its maker still sees one taken down (withheld), with the note.
-    shown = (sk or {}).get("visibility") == "public" or (
-        (sk or {}).get("visibility") == "withheld" and viewer is not None and author == viewer.public_id)
+    theirs = viewer is not None and author == viewer.public_id
+    # Its maker still sees one taken down (withheld), with the note, and one
+    # they hid from the Gallery.
+    vis = (sk or {}).get("visibility")
+    shown = vis == "public" or (vis in ("withheld", "unlisted") and theirs)
     if not (sk and shown and author.startswith(PERSON_PREFIX)):
         return None
-    who = site().session().execute(sa.select(Person).where(Person.public_id == author)).scalar_one_or_none()
+    sess = site().session()
+    who = sess.execute(sa.select(Person).where(Person.public_id == author)).scalar_one_or_none()
     if who is None or between(viewer, who) or (who.taken_down_at is not None and (viewer is None or viewer.id != who.id)):
         return None
+    if vis == "unlisted":
+        from .models import Comment
+        if who.face_id == sid or sess.execute(sa.select(Comment.id).where(Comment.skribl_id == sid).limit(1)).first():
+            return None
     return sk, who
 
 
@@ -569,6 +596,71 @@ def register(bp, skribl_blueprint="skribl"):
         drop_post(me.public_id, row)
         sess.flush()
         return jsonify({"ok": True, "go": url_for("social.home", note="deleted")})
+
+    def _eye_asked():
+        """(me, in the Gallery or not), or the refusal: the eye's guards, as
+        every change's (the token and Origin, signed in, the limit), and a
+        body that says {"gallery": true} or false."""
+        if not origin_ok() or not token_ok():
+            return None, None, _json_error("stale", 403)
+        me = current_person()
+        if me is None:
+            return None, None, _json_error("signed_out", 401)
+        if over("gallery", "person|" + me.public_id):
+            return None, None, _json_error("limited", 429)
+        body = request.get_json(silent=True)
+        want = body.get("gallery") if isinstance(body, dict) else None
+        if not isinstance(want, bool):
+            return None, None, _json_error("bad", 400)
+        return me, want, None
+
+    @bp.post("/p/<public_id>/gallery")
+    @_rests(json_answer=True)
+    def post_gallery(public_id):
+        """THE EYE on your own post's tile (your own Gallery tab; the owner's
+        "Yes, the eye in view", Nov 14): its drawing in the Gallery, or hidden
+        from it ({"gallery": false}). The site's own flag on the post
+        (gallery_hidden_at): the post stays on Home, in your Posts and
+        everywhere a post is, and its drawing's visibility in Skribl is as
+        you posted it. Yours alone; one taken down is nobody's to change."""
+        me, want, refusal = _eye_asked()
+        if refusal is not None:
+            return refusal
+        sess = site().session()
+        row = sess.execute(sa.select(Post).where(Post.public_id == public_id)).scalar_one_or_none()
+        if row is None or row.person_id != me.id or row.taken_down_at is not None:
+            return _json_error("gone", 404)
+        row.gallery_hidden_at = None if want else (row.gallery_hidden_at or utcnow())
+        sess.flush()
+        return jsonify({"ok": True, "gallery": want})
+
+    @bp.post("/b/<skribl_id>/gallery")
+    @_rests(json_answer=True)
+    def bloob_gallery(skribl_id):
+        """THE EYE on your own drawing shown outside a post: its Skribl
+        visibility, public ("In the gallery") or unlisted ("Link only"),
+        through Skribl's set_post_visibility as its author, as the Library's
+        own switch changes it. Never a post's drawing (its post's eye says),
+        a face or a comment's drawing; somebody else's is SkriblNotFound, and
+        one Skribl withheld can't be changed by its author."""
+        me, want, refusal = _eye_asked()
+        if refusal is not None:
+            return refusal
+        from skribl import SkriblNotFound, SkriblRefused, set_post_visibility
+        from .models import Comment
+        sess = site().session()
+        if (sess.execute(sa.select(Post.id).where(Post.skribl_id == skribl_id)).first() is not None
+                or sess.execute(sa.select(Comment.id).where(Comment.skribl_id == skribl_id).limit(1)).first() is not None
+                or sess.execute(sa.select(Person.id).where(Person.face_id == skribl_id)).first() is not None):
+            return _json_error("gone", 404)
+        try:
+            set_post_visibility(skribl_id, "public" if want else "unlisted", author_id=me.public_id)
+        except SkriblNotFound:
+            return _json_error("gone", 404)
+        except SkriblRefused:
+            return _json_error("taken_down", 403)
+        sess.flush()
+        return jsonify({"ok": True, "gallery": want})
 
     @bp.post("/b/<skribl_id>/delete")
     @_rests(json_answer=True)

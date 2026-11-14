@@ -895,8 +895,11 @@ def _skribl_rows_named(path):
             and isinstance(n.body[0].value.value, str)}
     out = []
     for n in ast.walk(tree):
+        # Skribl's documented exceptions are names a host catches, not its rows
+        # (SkriblRefused since the eye, Nov 14: a withheld drawing's visibility).
         if isinstance(n, ast.Name) and re.fullmatch(r"Skribl[A-Z]\w*", n.id) and n.id not in ("SkriblRejected",
-                                                                                          "SkriblUnavailable", "SkriblNotFound"):
+                                                                                          "SkriblUnavailable", "SkriblNotFound",
+                                                                                          "SkriblRefused"):
             out.append(n.id)
         elif isinstance(n, ast.ImportFrom) and (n.module or "").startswith("skribl.models"):
             out.append("from " + n.module)
@@ -960,6 +963,49 @@ check("the site goes through the seam alone: its profile's Drafts lists them wit
       " drafts itself (their model, their table)",
       "from skribl import list_drafts" in _prof_code and "list_drafts(me.public_id)" in _prof_code
       and 'draft=d["id"]' in _prof_code and '".skribl_flip"' in _prof_code and '".skribl_editor"' in _prof_code
+      and not any(v for v in _site_rows.values()), f"{ {k: v for k, v in _site_rows.items() if v} }")
+
+# ---------------------------------------------------------------------------
+print("\nWHAT PEOPLE SHARED — shared_skribls, a host's gallery of everything its people shared")
+# docs/INTEGRATION.md, "Your people's drawings beside your own posts" (Nov 14,
+# the Skribl site's Gallery of every skribl: the owner's "I thought gallery was
+# only skribls (pad or flip)?"): the shared skribls as a subquery a host reads
+# beside its own posts, in one order, never a query of Skribl's tables; its
+# author's link-only ones too, on a page that is theirs alone. Pinned as
+# source here; verify_hostseams asks it in a throwaway host, and
+# verify_socialposts section 13 lists the site's Gallery by it.
+_ss_fn = next((n for n in ast.parse(_desc).body if isinstance(n, ast.FunctionDef) and n.name == "shared_skribls"), None)
+_ss_code = ast.unparse(ast.Module(body=_ss_fn.body[1:], type_ignores=[])) if _ss_fn else ""
+check("shared_skribls is exported (skribl.__all__, from describing.py) and reads only: one subquery of the posts'"
+      " id, author, title, time and visibility, the public ones (an author's link-only ones too only with link_only and"
+      " that author, refused without one), no payload, running nothing (no session, no execute, nothing added,"
+      " deleted or flushed)",
+      '"shared_skribls"' in _init and "from .describing import describe_posts, list_public_posts, recent_plays, shared_skribls" in _init
+      and bool(_ss_fn) and [a.arg for a in _ss_fn.args.kwonlyargs] == ["author", "author_prefix", "link_only"]
+      and "if link_only and author is None:" in _ss_code and "raise ValueError(" in _ss_code
+      and "SkriblPost.visibility == 'public'" in _ss_code and "SkriblPost.visibility.in_(('public', 'unlisted'))" in _ss_code
+      and ".subquery('skribl_shared')" in _ss_code
+      and all(f"label('{c}')" in _ss_code for c in ("skribl_id", "user_id", "title", "created_at", "visibility"))
+      and "payload" not in _ss_code
+      and not re.search(r"session\(|\.execute\(|\.add\(|\.delete\(|\.flush\(|\.commit\(", _ss_code), _ss_code[:240])
+check("it is general: nothing in it names a host or a host's rows",
+      bool(_ss_code) and not re.search(r"social|blooby|site:|Person|(?<!Skribl)Post\b", _ss_code), _ss_code[:120])
+_sg = re.search(r"\*\*Your people's drawings beside your own posts\*\*(.*?)\n\*\*", _guide, re.S)
+_sgw = " ".join(_sg.group(1).split()) if _sg else ""
+check("docs/INTEGRATION.md documents it: a subquery of skribl_id, user_id, title, created_at and visibility, the public"
+      " ones, link_only for an author's page that is theirs alone (refused without the author), the skribl a post holds"
+      " shown once by the host's own rows, and no payload read",
+      bool(_sg) and all(w in _sgw for w in ("skribl.shared_skribls(", "skribl_id", "user_id", "title", "created_at",
+                                            "visibility", "public", "link_only", "theirs alone", "ValueError", "once",
+                                            "No payload")), _sgw[:200] or "no such paragraph")
+_posts_code = source.read_py(ROOT / "social" / "posts.py")
+check("the site goes through the seam alone: its Gallery reads the shared skribls with shared_skribls, its people's by"
+      " the prefix and one person's by their id (their link-only ones on their own page alone), and its eye changes a"
+      " drawing's visibility with set_post_visibility as its author; no module of social/ reaches Skribl's rows itself",
+      "from skribl import shared_skribls" in _gal_code and "shared_skribls(author_prefix=PERSON_PREFIX)" in _gal_code
+      and "shared_skribls(author=person.public_id, link_only=mine)" in _gal_code
+      and "mine = viewer is not None and viewer.id == person.id" in _gal_code
+      and 'set_post_visibility(skribl_id, "public" if want else "unlisted", author_id=me.public_id)' in _posts_code
       and not any(v for v in _site_rows.values()), f"{ {k: v for k, v in _site_rows.items() if v} }")
 
 bad = [r for r in results if not r[0]]

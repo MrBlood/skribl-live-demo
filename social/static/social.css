@@ -444,6 +444,45 @@ a.post-act { text-decoration: none; }
   .gal-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 20px; }
 }
 
+/* ---- THE EYE, on your own Gallery tab (the owner's "Yes, the eye in view",
+   Nov 14; the tile-eye mock's own CSS, in the site's tokens) ---------------
+ * Each of your tiles, and nobody else's, wears a small eye at its top right
+ * on the ▶'s own glass (--says-glass, --says-ink): a 30px chip, 13px in, in a
+ * button 44px to a finger. The tile and its eye sit side by side in one cell
+ * (a link holds no button). One tap hides the drawing from the Gallery: the
+ * eye crosses, the chip opens leftward to say "Hidden", and the drawing
+ * fades to 55% (its box and its ▶ as they were); the site's toast says so,
+ * with Undo (mutes.js, window.SocialToast). Tapped again, it is back. The
+ * word glides open and shut and everything else fades; under Reduce Motion
+ * the chip takes its size at once and only the fades remain. */
+.gal-cell { position: relative; min-width: 0; }
+.gal-eye {
+  position: absolute; z-index: 1; top: 6px; right: 6px;
+  display: flex; align-items: center; justify-content: flex-end;
+  min-width: 44px; height: 44px; margin: 0; padding: 0 7px; border: 0; border-radius: 22px;
+  background: none; color: var(--says-ink); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.gal-eye-chip {
+  display: inline-flex; align-items: center; height: 30px; padding: 0 7px; border-radius: 15px;
+  background: var(--says-glass); box-shadow: 0 1px 4px rgba(10, 6, 30, 0.12);
+  font: 600 12px/1 var(--font); white-space: nowrap;
+}
+.gal-eye-ics { position: relative; flex: none; width: 16px; height: 16px; }
+.gal-eye-ics .ic { position: absolute; inset: 0; width: 16px; height: 16px; stroke-width: 2.2; transition: opacity 0.2s ease; }
+.gal-eye-ics .ic-eye-shut { opacity: 0; transform: scale(0.875); }
+.gal-eye-word {
+  display: inline-block; overflow: hidden; max-width: 0; margin-left: 0; opacity: 0;
+  transition: max-width 0.24s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.24s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+.gal-cell.is-hidden .gal-eye-word { max-width: 64px; margin-left: 4px; opacity: 1; }
+.gal-cell.is-hidden .ic-eye-open { opacity: 0; }
+.gal-cell.is-hidden .ic-eye-shut { opacity: 1; }
+.gal-cell .gal-plate { transition: opacity 0.2s ease; }
+.gal-cell.is-hidden .gal-plate { opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) {
+  .gal-eye-word { transition: opacity 0.2s ease; }
+}
+
 /* ---- MAKE: the sheet with two doors --------------------------------------- */
 /* It glides up from the bottom of a phone; on a desk it is a card in the
    middle of the screen that rises a little as it fades in. Nothing behind it
@@ -1667,9 +1706,15 @@ button.fo-n {
    rail. It comes once the sheet has gone (--mu-wait, mutes.js: 0.3s from the
    tap) and stays seven seconds, the Pad's own time for an Undo. ONLY UNDO
    TAKES A TAP: a tap on its words reaches the page under it. Reduce Motion:
-   it fades where it sits. */
+   it fades where it sits. THE SITE'S TOAST (window.SocialToast): your
+   Gallery's eye and a delete on your own page say what happened in it too,
+   and it NEVER COVERS A BUTTON SOMEONE IS PRESSING FAST: where one of those
+   (the eyes, the cards' ⋯) would be under it, it rises just above the
+   highest of them (--mu-lift, set by mutes.js before it can be seen). A
+   delete's says no eye (.is-plain). */
 .mu-toasts {
-  position: fixed; z-index: 50; left: 0; right: 0; bottom: calc(77px + env(safe-area-inset-bottom, 0px));
+  position: fixed; z-index: 50; left: 0; right: 0;
+  bottom: calc(77px + env(safe-area-inset-bottom, 0px) + var(--mu-lift, 0px));
   display: flex; justify-content: center; pointer-events: none;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
@@ -1683,6 +1728,7 @@ button.fo-n {
 .mu-toast.is-up { opacity: 1; transform: none; }
 .mu-toast.is-up .mu-undo { pointer-events: auto; }
 .mu-toast .ic { width: 20px; height: 20px; color: var(--accent-ink); }
+.mu-toast.is-plain .ic { display: none; }
 .mu-toast-words { flex: 1; min-width: 0; }
 .mu-toast .mu-undo { flex: none; min-height: 44px; padding: 0 16px; }
 .mu-toast .mu-undo[hidden] { display: none; }
@@ -1697,7 +1743,7 @@ button.fo-n {
 }
 .mu-toast.is-going { opacity: 0; }
 @media (min-width: 900px) {
-  .mu-toasts { left: 248px; bottom: 28px; }
+  .mu-toasts { left: 248px; bottom: calc(28px + var(--mu-lift, 0px)); }
   .mu-toast { width: auto; }
 }
 

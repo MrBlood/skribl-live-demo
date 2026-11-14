@@ -131,7 +131,9 @@ class On:
 
     @property
     def down(self):
-        """Taken down (it, or its author): there for its author alone."""
+        """Taken down (it, or its author), or a drawing its maker hid from the
+        Gallery (link-only, the eye on their own Gallery tab, Nov 14): there
+        for its author alone, taking nothing new."""
         if self.owner.taken_down_at is not None:
             return True
         if self.post is not None:
@@ -170,7 +172,7 @@ def on_post(viewer, public_id=None, post_id=None):
 
 def on_drawing(viewer, skribl_id):
     """A drawing shown outside a post, as its page shows it to `viewer`
-    (posts.bloob), or None: gone, not public (kept unlisted or private, or
+    (posts.bloob), or None: gone, not public (kept private, or link-only or
     taken down and not theirs), not by one of the site's people, a block
     either way, or a post's drawing, whose comments are its post's."""
     from .posts import bloob
