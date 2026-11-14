@@ -1634,10 +1634,15 @@ first thing the owner saw of it.
      This replaces the Nov 13 B, "no counts, ever".
 5. **The Gallery of everyone** (the owner's addition, the same evening):
    Explore becomes it, with Following | Everyone, and more filters later.
-   Asked, with defaults, before it is built: the bar says "Gallery" (the
-   word the profile's tab uses), with Blooby's icon kept; its tiles, what a
-   tile shows (the post's hearts and comments?) and what a tap does, mocked
-   first, with the profile's Gallery tab.
+   Mocked (https://claude.ai/artifact/LXxXHjTX9JwjK4kGYL8Vuy) and answered,
+   the owner: "Your picks are great": the tiles are B, DRAWINGS FIRST, a grid
+   of the drawings themselves, two across on a phone and three on a desk,
+   each the drawing on its paper with a small "▶ 15 sec" (a Flip's pages),
+   the maker's face and first name under it, and the hearts and comments
+   only when there are some; THE BAR SAYS "GALLERY", Blooby's Explore icon
+   kept; A TAP OPENS THE POST, where it plays with its line from the start;
+   FOLLOWING | EVERYONE on top (Home's own pill), New, Hot and search under it
+   as today. A profile's Gallery tab is this grid with one person in it.
 
 **What stays.** The three layers (section 1). Section 8's item 9: our own
 build, not a copy of skribls.net; it is skribls.net's shape that is taken.
@@ -1699,6 +1704,27 @@ before trusting them):
   line), verify_socialposts (the foot, the ⋯ in the head), verify_socialmute
   and verify_socialsafety (opening the ⋯), verify_socialcomments (the count's
   link), verify_inline (the player), verify_a11ypages, verify_docs.
+
+**Notes for step 3, read the code before trusting them:**
+
+- Home's Everyone already holds every drawing: `posts.feed_page` gives the
+  posts and the drawings shown outside a post (`_posts_before`,
+  `_drawings_before`), and `posts.cards` what each card needs (the drawing's
+  `sk` with its line, the likes, the comments). So the Gallery can be that
+  feed drawn as tiles, its Following the same `among`/`authors` Home's
+  Following passes (follows.home_items), and Home leaves the drawings out.
+- New is that feed's order. Hot and search are the open part: today they
+  are Skribl's listing (`list_public_posts`, sort hot = plays counted in the
+  last seven days, `skribl_views`), which lists public drawings only, while
+  a post's drawing is unlisted. The site reaches Skribl only through its
+  public seams (section 1; verify_seam holds it), so the way is a general
+  seam on Skribl's listing for a host's own drawings, not a query of
+  Skribl's tables from the site; a face, or a drawing kept link-only, must
+  never come into the Gallery.
+- Explore's own suites today: verify_socialposts section 12 (every card
+  opens its post: Explore's cards are Skribl's Gallery tiles opening through
+  `set_card_url`), verify_socialmute (Explore leaves the muted out, through
+  the feed filter's `author`), verify_social (the frame), verify_hostseams.
 
 **The four.** Simple: one thing to share, one card for it, one Gallery
 (everyone's, the people you follow, or one person's), one place for your
