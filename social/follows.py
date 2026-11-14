@@ -1,23 +1,28 @@
 """Following people (phase 2, follows; docs/SOCIAL-SITE.md "Built: follows"),
-from the follow mock and the owner's "Yes to all" (Nov 13): B, yours alone.
+from the follow mock and the owner's "Yes to all" (Nov 13): B, yours alone;
+and the counts, from the quick-patterns mock's A (the owner's "Yes on
+everything", Nov 13, the map's step 5), which replaced B's "no counts, ever".
 
     /@<handle>/follow   POST {following}: follow them, or not (JSON: {ok,
-                        following}); a yes or a no, never "toggle", so a
-                        retry cannot flip it twice
+                        following, counts}: counts is their page's counts as
+                        it shows them to you, follow_counts' own markup); a
+                        yes or a no, never "toggle", so a retry cannot flip
+                        it twice
     /home/show          POST {show}: what Home opens on, "following" or
                         "everyone", kept for the account (JSON)
 
-B, YOURS ALONE. On somebody else's page there is only Follow, or Following:
-no count and no list, for anybody. Your own page says who, in names, the
-twin of "Liked by…": "Followed by Mira, Theo and 2 others" with their drawn
-faces, or before anybody follows you "You follow Mira and Juno"; with
-nobody either way there is no line, so nothing ever says zero. The line
-opens the lists (Followers | Following, newest first, with when), and
-nobody but you is ever sent them, not in the page and not in its source.
+COUNTS ON EVERY PROFILE (counts()): under the @handle, "3 followers · 2
+following"; "New here" while nobody follows them yet, never "0 followers";
+a following count only when it isn't zero. THE LISTS STAY YOURS ALONE: on
+your own page the counts open them (Followers | Following, newest first,
+with when; they took the place of "Followed by…"), and on anybody else's
+the counts are words, not links: nobody but you is ever sent your lists,
+not in the page and not in its source.
 
 COUNTED BY THE VIEWER, as likes are: anybody hidden from you (a block
-either way, or taken down: safety.hidden_ids) is in no line, no count and
-no list, and in nobody's Following.
+either way, or taken down: safety.hidden_ids) is in no count and no list,
+and in nobody's Following. A mute changes no number (mutes.py): somebody
+you muted who follows them is counted, as their like is.
 
 WHO MAY FOLLOW: somebody signed in and not taken down, anybody else who is
 there for them (not taken down, no block either way), never themselves; the
@@ -46,7 +51,7 @@ once you follow somebody, on Everyone before that, and on your own pick
 once you make one (Person.home_feed).
 """
 import sqlalchemy as sa
-from flask import jsonify, request
+from flask import jsonify, render_template, request
 
 from .accounts import _json_error, _rests
 from .models import HOME_FEEDS, Follow, Person, utcnow
@@ -120,30 +125,34 @@ def how_many(me, which):
     return int(site().session().execute(_people(me, which, sa.func.count())).scalar() or 0)
 
 
-def line(me):
-    """Your own page's line, the twin of "Liked by…": who follows you
-    ("followers"), or before anybody does, whom you follow ("following");
-    None with nobody either way. Every name up to three, else two and how
-    many more; the newest three faces. {"which", "names", "more", "faces"}."""
-    for which in ("followers", "following"):
-        n = how_many(me, which)
-        if not n:
-            continue
-        faces = [p for _, p in people(me, which, limit=3)]
-        names = [p.display_name.split(" ")[0] for p in faces]
-        shown = names[:3] if n <= 3 else names[:2]
-        return {"which": which, "names": shown, "more": max(0, n - len(shown)), "faces": faces}
-    return None
+def counts(viewer, who):
+    """A profile's counts as `viewer` is shown them (None: signed out):
+    {"followers": how many follow `who`, "following": how many they follow}.
+    COUNTED BY THE VIEWER, as a like's count is: nobody hidden from the
+    viewer (a block either way, or taken down: safety.hidden_ids) is
+    counted; a mute changes no number. On your own page they are your lists'
+    lengths (how_many). One read, both counts on the follows' own indexes."""
+    hid = sorted(hidden_ids(viewer))
+
+    def n(mine, other):
+        q = sa.select(sa.func.count()).select_from(Follow).where(mine == who.id, _on())
+        if hid:
+            q = q.where(other.notin_(hid))
+        return q.scalar_subquery()
+    row = site().session().execute(sa.select(n(Follow.followed_id, Follow.follower_id),
+                                             n(Follow.follower_id, Follow.followed_id))).one()
+    return {"followers": int(row[0] or 0), "following": int(row[1] or 0)}
 
 
-def for_owner(me):
-    """What your own page shows of follows, and nobody else's: the line, and
-    both lists for the sheet it opens. None for nobody signed in."""
-    if me is None:
+def for_owner(me, n):
+    """What your own page shows of follows, and nobody else's: both lists,
+    for the sheet its counts open (`n`, counts()'s for you), on the tab of
+    the first count it shows. None for nobody signed in, and with nobody
+    either way, when no count opens anything."""
+    if me is None or not (n["followers"] or n["following"]):
         return None
-    ln = line(me)
-    return {"line": ln, "followers": people(me, "followers"), "following": people(me, "following"),
-            "tab": ln["which"] if ln else "followers"}
+    return {"followers": people(me, "followers"), "following": people(me, "following"),
+            "tab": "followers" if n["followers"] else "following"}
 
 
 def of_me(me, hidden, limit=ACTIVITY_READ):
@@ -309,7 +318,10 @@ def register(bp):
             sess.execute(sa.update(Follow).where(pair, _on()).values(ended_at=utcnow())
                          .execution_options(synchronize_session=False))
         sess.flush()
-        return jsonify({"ok": True, "following": is_following(me, who)})
+        # THE COUNTS FOLLOW THE TAP: their page's counts as it shows them to
+        # you, in its own markup (follows.js puts them in while unseen).
+        return jsonify({"ok": True, "following": is_following(me, who),
+                        "counts": render_template("social/_follow_counts.html", n=counts(me, who), mine=False)})
 
     @bp.post("/home/show")
     @_rests(json_answer=True)

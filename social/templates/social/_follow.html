@@ -1,5 +1,6 @@
 {#  FOLLOWS, THE PARTS (phase 2; the follow mock and the owner's "Yes to all",
-    B, Nov 13). follows.py says the rules; follows.js moves them; social.css,
+    B, Nov 13; the counts, the quick-patterns mock's A, "Yes on everything",
+    Nov 13). follows.py says the rules; follows.js moves them; social.css,
     "FOLLOWING", dresses them.
 
     follow_button(who, following)   first in the row on somebody else's page:
@@ -10,15 +11,19 @@
                         nothing beside it moves. Signed out it raises the
                         small sheet that says how; following, a tap raises
                         "Unfollow Theo?".
-    followed_line(fl)   your own page alone: "Followed by Mira, Theo and 2
-                        others", their faces (or before anybody follows you,
-                        "You follow Mira and Juno"), the twin of "Liked by…";
-                        it opens the lists. No line with nobody either way.
+    follow_counts(n, mine)   every profile, under the @handle: "3 followers ·
+                        2 following" (n: follows.counts, counted for the
+                        viewer); "New here" while nobody follows them yet,
+                        never "0 followers"; a following count only when it
+                        isn't zero. On your own page each count opens your
+                        lists (they took the place of "Followed by…"); on
+                        anybody else's they are words, not links.
     follow_sheets(who, fl, mine)   "Unfollow Theo?" (somebody else's page,
                         signed in), "Follow Theo?" (signed out), and the lists
-                        (your own page): Make's sheet with the one pill,
-                        Followers | Following, newest first, with when; and
-                        follows.js's words (follow_words(), Home's too).
+                        (your own page, when a count opens them): Make's
+                        sheet with the one pill, Followers | Following,
+                        newest first, with when; and follows.js's words
+                        (follow_words(), Home's too).
     home_pill(show)     Home's pill under the composer: Following | Everyone,
                         the Gallery's New / Hot, value for value.
     gallery_show_pill(show), gallery_sort_pill(sort)   the Gallery's two:
@@ -44,12 +49,21 @@
 </button>
 {%- endmacro %}
 
-{% macro followed_line(fl) -%}
-{%- set l = fl.line -%}
-<button class="lk-by fo-by" type="button" data-follows-open="{{ l.which }}" aria-haspopup="dialog" aria-controls="followsSheet" aria-expanded="false">
-  <span class="lk-faces" aria-hidden="true">{% for p in l.faces %}{{ face(p) }}{% endfor %}</span>
-  <span class="lk-by-words">{{ 'Followed by' if l.which == 'followers' else 'You follow' }} {% for n in l.names %}{% if not loop.first %}{{ ' and ' if loop.last and not l.more else ', ' }}{% endif %}<b>{{ n }}</b>{% endfor %}{% if l.more %} and {{ l.more }} {{ 'other' if l.more == 1 else 'others' }}{% endif %}</span>
-</button>
+{#  THE COUNTS: a number in the first ink and its word in the second, a dot
+    between the two counts. A count on your own page is a button 44px tall
+    that opens your lists on its own list; anywhere else, the same words in a
+    span. "New here" is the small violet words, and never opens anything. #}
+{% macro _count(k, word, which, mine) -%}
+{%- if mine %}<button class="fo-n" type="button" data-follows-open="{{ which }}" aria-haspopup="dialog" aria-controls="followsSheet" aria-expanded="false"><b>{{ k }}</b> {{ word }}</button>
+{%- else %}<span class="fo-n"><b>{{ k }}</b> {{ word }}</span>{% endif -%}
+{%- endmacro %}
+
+{% macro follow_counts(n, mine) -%}
+<p class="fo-counts{% if mine %} is-mine{% endif %}" data-follow-counts>
+  {%- if n.followers %}{{ _count(n.followers, 'follower' if n.followers == 1 else 'followers', 'followers', mine) }}
+  {%- else %}<span class="fo-new">New here</span>{% endif %}
+  {%- if n.following %} <span class="fo-dot" aria-hidden="true">·</span> {{ _count(n.following, 'following', 'following', mine) }}{% endif -%}
+</p>
 {%- endmacro %}
 
 {% macro _rows(rows, which) -%}
@@ -71,11 +85,12 @@
 
 {% macro follow_sheets(who, fl, mine) -%}
 {%- set first = who.display_name.split(' ')[0] -%}
-{% if mine and fl and fl.line %}
-{#  WHO FOLLOWS YOU, AND WHOM YOU FOLLOW: yours alone. Make's own sheet
-    (social.js), the one pill, the people on one card, newest first, with
-    when; both lists in one place, so the sheet keeps its height as the pill
-    moves between them. A row opens their page; that's where you unfollow. #}
+{% if mine and fl %}
+{#  WHO FOLLOWS YOU, AND WHOM YOU FOLLOW: yours alone, opened by your
+    counts. Make's own sheet (social.js), the one pill, the people on one
+    card, newest first, with when; both lists in one place, so the sheet
+    keeps its height as the pill moves between them. A row opens their page;
+    that's where you unfollow. #}
 <div class="make post-sheet lk-sheet fo-sheet" id="followsSheet" hidden>
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="followsTitle">

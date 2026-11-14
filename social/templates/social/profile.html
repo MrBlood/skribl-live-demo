@@ -1,8 +1,9 @@
 {#  A PERSON'S PROFILE (phase 1, piece 3): /social/@<handle>. The approved
-    mock A (the owner's "all yes", Nov 10), without its numbers: no follower
-    or following counts, ever (the owner's B, Nov 13: who follows whom is
-    the person's own, below), and no totals of plays (a count is kept, never
-    counted when a page is read: none is kept yet).
+    mock A (the owner's "all yes", Nov 10), with its follower and following
+    counts since the quick-patterns mock's A (the owner's "Yes on
+    everything", Nov 13, which replaced the Nov 13 B, "no counts, ever"),
+    below; and no totals of plays (a count is kept, never counted when a
+    page is read: none is kept yet).
 
     THEIR FACE, BIG, DRAWING ITSELF ONCE: Skribl's face player
     (skribl_face, play='once': 4x, or quicker for a long one, still under
@@ -27,10 +28,14 @@
     drawing itself. profile.js holds the moving parts; the words are here.
 
     FOLLOWS (B, yours alone; the owner's "Yes to all", Nov 13): Follow first
-    in the row on somebody else's page (Following once tapped), and nothing
-    else of follows there for anybody; on your own, under the buttons, who
-    follows you ("Followed by…") or whom you follow, opening the lists, for
-    your eyes alone (social/_follow.html; follows.js).
+    in the row on somebody else's page (Following once tapped). THE COUNTS
+    (the quick-patterns mock's A, Nov 13) under the @handle on every profile:
+    "3 followers · 2 following", "New here" while nobody follows them yet,
+    a following count only when it isn't zero, counted for whoever looks.
+    On your own page they open your lists, for your eyes alone (they took
+    the place of "Followed by…"); on anybody else's they are words, and
+    nothing else of follows is there (social/_follow.html; follows.js). None
+    on somebody you blocked, whose page shows nothing of theirs.
 
     MUTE (mutes; the owner's "Yes to all", C, Nov 13): signed in, somebody
     else's ⋯ says Mute @them first (Unmute @them once muted); nothing asked
@@ -44,7 +49,7 @@
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
 {% import 'social/_icons.html' as ic %}
 {% from 'social/_safety.html' import person_sheet, safety_sheets with context %}
-{% from 'social/_follow.html' import follow_button, followed_line, follow_sheets with context %}
+{% from 'social/_follow.html' import follow_button, follow_counts, follow_sheets with context %}
 {% from 'social/_mute.html' import mute_line, mute_parts with context %}
 
 {% block title %}{{ who.display_name }} (@{{ who.handle }}) · Blooby{% endblock %}
@@ -99,6 +104,7 @@
       </form>
       <p class="say prof-say" data-safety-say role="status" hidden></p>
       {% else %}
+      {{ follow_counts(fo_n, mine) }}
       {% if who.bio %}<p class="prof-bio">{{ who.bio }}</p>{% endif %}
       <div class="prof-acts">
         {% if not mine %}{{ follow_button(who, following) }}{% endif %}
@@ -111,7 +117,6 @@
         {% else %}<button class="icon-btn boxed" type="button" data-person-menu aria-haspopup="dialog" aria-controls="personSheet"
                 aria-expanded="false" aria-label="More for {{ who.display_name }}" title="More">{{ ic.dots() }}</button>{% endif %}
       </div>
-      {% if mine and fl and fl.line %}{{ followed_line(fl) }}{% endif %}
       {% if me and not mine %}{{ mute_line(who, muted) }}{% endif %}
       <p class="say prof-say" data-say role="status" hidden></p>
       <p class="sr" data-follow-said role="status"></p>

@@ -1,0 +1,5 @@
+{#  A profile's counts again, after a follow or an unfollow on it (follows.py,
+    follow): the same markup the page renders, counted for whoever tapped.
+    Never your own page's (you don't follow yourself), so they are words. #}
+{% from 'social/_follow.html' import follow_counts with context %}
+{{- follow_counts(n, mine) -}}

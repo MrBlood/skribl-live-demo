@@ -1,0 +1,46 @@
+{#  THE ☰'S SHEET, a phone's (the quick-patterns mock; the owner's "Yes on
+    everything", Nov 13, the map's step 5): the ☰ at the top left of Home
+    and the Gallery opens it (base.html). It is the site's own sheet, the
+    ⋯'s (Make's, social.js), rising from the bottom, a row a card, the mock's
+    order. A desk has no ☰ (its rail already has Settings), so it never
+    opens there.
+
+    Signed in, its title is your name, then: Settings, Community rules,
+    Privacy, Your reports (an admin's alone, as Settings shows it: the page
+    is nobody else's) and Sign out (a form with the page's token, as
+    Settings' Sign out is). No Help row until there is a Help page.
+
+    SIGNED OUT, the same ☰ in the same place, and in it what a visitor can
+    use: Sign in, Community rules and Privacy, so the rules and what is kept
+    can be read before anybody is invited. Its title is the site's name.
+
+    A row picked goes there, and the sheet goes down as it does (social.js),
+    so the page the back button brings back has it closed. The words are
+    here; social.js says nothing. #}
+{% import 'social/_icons.html' as ic %}
+<div class="make post-sheet menu-sheet" id="siteMenu" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="siteMenuTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="siteMenuTitle">{{ me.display_name if me else 'Blooby' }}</h2>
+    <div class="post-acts">
+      {% if me %}
+      <a class="post-act" href="{{ url_for('social.you') }}">{{ ic.gear() }}<span>Settings</span></a>
+      {% else %}
+      <a class="post-act" href="{{ url_for('social.signin') }}">{{ ic.person() }}<span>Sign in</span></a>
+      {% endif %}
+      <a class="post-act" href="{{ url_for('social.rules') }}">{{ ic.rules() }}<span>Community rules</span></a>
+      <a class="post-act" href="{{ url_for('social.privacy') }}">{{ ic.lock() }}<span>Privacy</span></a>
+      {% if me and me.is_admin %}
+      <a class="post-act" href="{{ url_for('social.reports') }}">{{ ic.flag() }}<span>Your reports</span></a>
+      {% endif %}
+      {% if me %}
+      <form class="menu-out" method="post" action="{{ url_for('social.signout') }}">
+        <input type="hidden" name="csrf" value="{{ token }}">
+        <button class="post-act" type="submit">{{ ic.sign_out() }}<span>Sign out</span></button>
+      </form>
+      {% endif %}
+    </div>
+    <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
+  </div>
+</div>
