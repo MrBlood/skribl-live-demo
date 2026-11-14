@@ -8620,6 +8620,10 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .sdrafts-card { --line-start: 92px; }
 .export-list { --line-start: 64px; }
 .ask-list { --line-start: 14px; }
+/* A row in focus hides its own line: the ring is its edge there, and the line,
+   drawn later, would cover the ring's top (the GIF's line is its group's). */
+:is(.menu-list > .menu-item, .sdrafts-files > .menu-item, .ask-list > .ask-row, .export-list > .export-opt):focus-visible::before,
+.sdrafts-row:has(> .sdrafts-open:focus-visible)::before, .export-list > .export-opt-group:has(> .export-opt:focus-visible)::before { display: none; }
 /* A desk's sheet pads a menu row 12px (min-width 641px, .menu-sheet above). */
 @media (min-width: 641px) { .menu-sheet:not(.export-sheet) .menu-list { --line-start: 48px; --line-end: 12px; } }
 /* EVERY CHOICE ON THE PAPER IS A WHITE CARD (owner, after v324: the sheets

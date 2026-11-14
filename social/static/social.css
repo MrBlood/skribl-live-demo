@@ -1270,6 +1270,10 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
   background: var(--row-line); transform: scaleY(var(--hair)); transform-origin: top; pointer-events: none;
 }
 .post-reasons { --line-start: 48px; }
+/* A row in focus hides its own line: the ring is its edge there (as a phone's
+   own lists drop the line beside a pressed row), and the line, drawn later,
+   would cover the ring's top. Sign out's line is its form's. */
+.post-acts > :focus-visible::before, .post-acts > :has(> .post-act:focus-visible)::before { display: none; }
 .post-act {
   display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 0 16px; border: 0;
   border-radius: 0; background: none; color: var(--ink); font: inherit; font-size: 17px;
