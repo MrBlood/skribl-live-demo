@@ -38597,3 +38597,206 @@ Gallery?
 Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run their
 smoke after the merge); SF and Segoe UI (the tiles are laid out by grid and
 flex, the ellipsis by the browser); the live site.
+
+## After v330 -- Home shows posts only (the map's step 3, its second part)
+
+The owner's decisions on the map (docs/SOCIAL-SITE.md section 16; Nov 13,
+"Yes on everything"): every share is a post, words optional, and "Drawings
+already shared without a post stay in their author's Gallery, so nothing is
+lost: the Gallery shows them, and Home shows posts from then on." Step 3's
+first part (#894) made the Gallery of everyone posts only. This is its
+second: Home. Built Nov 14.
+
+WHAT CHANGED.
+
+- HOME IS POSTS. Home's feed, Following and Everyone, signed in and out (the
+  page as it opens, the pill and Load more), holds posts and nothing else.
+  posts.feed_page stopped merging Skribl's listing of the site's people's
+  drawings into it, and follows.home_items stopped asking that listing for
+  the drawings of the people you follow (its `authors`): one read of posts,
+  as before, and none of Skribl's listing.
+- NOTHING IS LOST. A drawing shown in the gallery outside a post (the Pad's
+  own "Show in the Skribls gallery", or anything shared before posts) keeps
+  its own page (/social/b/<id>: its comments, likes, ⋯ and Delete as they
+  were), its maker's page (their Skribls, Skribl's own Gallery section,
+  which step 4 makes their Gallery) and More from: feed_page's one-person
+  path, on a post's page and a drawing's, is as it was, its drawings among
+  its posts (posts._drawings_before reads one person's now, through
+  Skribl's `author`: More from is its only caller).
+- HOME'S CARD IS A POST'S: its data-kind went (posts.js reads a card without
+  one as a post's, as it always did). A drawing's own page keeps its own
+  (post.html), so its ⋯ still reports it as a drawing and its Delete still
+  says the drawing's words.
+- A CURSOR FROM BEFORE. Home's cursor names the last card a page showed, so
+  a page opened before this and ending on a drawing carries one that names
+  it (s, then its skribl's address). It is read as its time: every post at a
+  drawing's very moment came after it (p < s), so Load more from it brings
+  the posts at and before that moment, the post shared just before the
+  drawing first, none missed and none twice; Following's own cursors (f. and
+  e.) carry one the same way.
+- THE WORDS that promised drawings on Home, made true, as the map says Home
+  is posts:
+  - the unfollow sheet: "You’ll still see Theo’s posts under Everyone. They
+    aren’t told." (was "drawings");
+  - the signed-out follow sheet: "Sign in, and Theo’s new posts show first
+    on your Home." (was "new drawings");
+  - Following's kind card: "Tap Follow on someone’s page, and their new
+    posts show up here first. Until then, here’s everyone’s." (was "new
+    drawings");
+  - the delete sheet of a drawing shown outside a post: "The drawing goes
+    for good, from your page too. This can’t be undone." (was "from Home and
+    from your page").
+  The comments that described Home's drawings were made true too (app.py,
+  social/__init__.py, mutes.py, follows.py, posts.py), and so were
+  Skribl's list_public_posts docstring and docs/INTEGRATION.md's two notes
+  on why the listing was made: the seam stays, for every host; the site
+  reads one person's, for More from. docs/SOCIAL-SITE.md says step 3 is
+  built and corrects its lines that put drawings on Home; START-HERE's
+  invariants for posts, likes, follows and mutes say posts.
+
+JUDGMENT CALLS, said so they read true:
+
+- ONLY HOME'S PATH. feed_page serves Home and More from (one person's, on a
+  post's page and a drawing's). More from is what you went to, a drawing's
+  own page was to stay as it was, and nothing may be lost, so it keeps the
+  drawings.
+- READ AS ITS TIME, NOT ENDED. The Gallery ends a list on a cursor it cannot
+  read. Home can read a drawing's cursor (the posts after it are exactly the
+  posts at and before its moment), and ending the list would leave an open
+  page without the rest of the posts.
+- THE FIRST VISIT IS AS IT WAS. Signed out, Home is the first visit:
+  Blooby's card above Skribl's own Gallery section, every public skribl on
+  this Skribl (a drawing shown outside a post among them, and drawings by
+  people not on the site), an approved page of its own (Nov 10), not Home's
+  feed. Making it posts is a design change, so it is asked below. "Signed
+  out" in this entry is Home's feed as a signed-out request is sent it (the
+  pill's and Load more's pages).
+- "POSTS", NOT "DRAWINGS", in the follow words: a post is a drawing with
+  words (maybe none), so "posts" loses no drawing and promises none that
+  Home will not show.
+- THE DRAWING'S DELETE WORDS name where else people meet it: its own page is
+  where you are, and your page is the rest.
+- HOME'S LIKES ARE ONE READ NOW: likes.stats reads once for each kind it is
+  asked, and Home asks one kind.
+
+Pad and Flip: nothing changes in either editor. Not for Flip: there is
+nothing editor-side; a Flip shared as a post is on Home as before, and one
+shown in the gallery outside a post keeps its page, its maker's page and
+More from, as a drawing does.
+
+THE CHECKS, each new or changed row shown red by a break of its own in a
+throwaway copy of the tree, with an unbroken copy as the control (green
+every time):
+
+- verify_socialposts section 9, HOME SHOWS POSTS ONLY, rebuilt around the
+  achievement. (1) A drawing Noor shows in the gallery from the Pad between
+  two posts of hers, one Mira keeps unlisted, one by somebody not on the
+  site and the twelve Ines shows between her twenty-four posts are on
+  nobody's Home: Noor's Following and Everyone (she and Sora follow each
+  other, so her own drawing would sit in her Following's first part),
+  Sora's, Juno's and signed out, each walked to its end with Load more (past
+  a page of twenty, even with the section alone), every card a post of the
+  site's own table, signed out the database's own list of posts, each once,
+  newest first; the posts shared the same minute on every one of them, and
+  on her Home as it opens (red: drawings let back into Home, main's
+  posts.py, follows.py and card). (2) Nor in the Gallery of everyone,
+  signed out and Sora's Everyone and Following, where the post after it
+  is; while it keeps its own page, signed in and out, and her page's
+  Skribls, signed in and out (red, each its own break: drawings let into
+  the Gallery; the drawing's own page a 404; her page listing nothing).
+  (3) A cursor from before that names the drawing reads as its time,
+  signed out to the end and Following's own (red: such a cursor read as
+  none, so Home starts again). (4) Load more walks the posts alone, Ines's
+  twenty-four in order and none of her drawings (red: drawings let back).
+  (5) The drawing's own page, its ⋯ and its Delete, its words "from your
+  page too" (red: the old words). The guards row as it was.
+- verify_socialposts 10: the drawing's card on Home inverted, no card there
+  on any screen (red: drawings let back). 12: the tap map's Home card for
+  the drawing on its own went; the same drawing is still mapped on the
+  first visit and a profile (a card fewer, nothing new to calibrate).
+- verify_socialfollow 8: Following and Everyone are posts, Cas's and Zed's
+  drawings shown from the Pad on neither (red: drawings let back, three
+  rows); 2, 8 and 10: the sheets' and the kind card's words (red: the old
+  words, three rows).
+- verify_sociallikes 11: Home's cards' likes in one grouped read, every card
+  a post, Ova's drawing not among them (was two reads, one a kind; red:
+  drawings let back).
+- verify_socialcomments 23 and 26: a drawing's count moved from Home's card
+  to the row under it on its own page, the same count by posts.cards (red:
+  a drawing's row counting one comment more, 23's two rows that read it and
+  26); 24: "no card on Home" for a drawing deleted in the Library moved to
+  More from on her other drawing's page, read before the delete (listed)
+  and after (not) (red: the Library delete keeping the drawing).
+- verify_socialmute 1: their drawing's ⋯ read on its own page instead of on
+  Home's card (red: Mute left out of a drawing's ⋯); 6: Home's walk reads
+  cards without data-kind, its words say posts (red: mutes left out of
+  Home's query).
+- verify_socialsafety 4: before the block each sees the other's post on
+  Home, and not their drawing (it was both; red: drawings let back).
+
+FOUND WRONG, AND MENDED: two instruments of mine, in section 9. As first
+written it walked Home on a single page when run alone (four posts, then
+sixteen), so its Load more was never crossed; it now makes twenty-four
+posts first, and the walks ask for more than twenty. And those twenty-four
+were Juno's at first: with the sections before and after, he passed the
+site's forty posts an hour, section 12's post was refused, and its rows
+went red in the full run, which a section run alone could not see. Ines
+makes them now, and Juno posts fewer than before. The mended section was
+calibrated again (green as built; red with drawings let back).
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py), every one
+green: verify_socialposts 59/59, verify_socialcomments 93/93,
+verify_sociallikes 96/96, verify_socialmute 68/68, verify_socialfollow
+71/71, verify_socialsafety 38/38, verify_createpost 85/85, verify_seam
+501/501, verify_docs 144/144. verify_socialposts and verify_socialfollow
+from their second run side by side; the first was red beside the others,
+and each red is said for what it was: verify_socialposts 48/59 by the
+defect of mine above (59/59 alone, after the mend), verify_socialfollow
+70/71 by load (section 6, untouched here: the follow button's fade under
+Reduce Motion, read on every frame, went 41% in one frame; 71/71 alone).
+The full battery was not run; main's run after the merge is that.
+
+CONTRAST: no colour, token, ink or paper changed. The words that changed
+sit in the same elements: the follow sheets and the kind card are read at
+4.5:1 by verify_socialfollow 13 (phone and desk, light and dark), in the
+run above; the drawing's delete line is the delete sheet's .post-lede, the
+report sheet's ink on the same paper (verify_socialposts 7 reads that one).
+
+THE FOUR. Simple: Home is posts, the one thing people share, and a drawing
+shown outside a post has one place to be met, its own, with its maker's.
+Kind: nothing anybody made is lost, a page opened before carries on where
+it was, and no word promises what Home will not show. Playful: every card
+on Home still draws itself. Powerful: Following and Everyone stay whole,
+one read, Load more to the end; skribls.net gets the same.
+
+Asked, for the owner: the first visit (Home, signed out) still shows
+Skribl's own Gallery section, every public skribl, drawings shown outside a
+post among them. Should it become the site's own posts, as Home and the
+Gallery are now? That would be mocked first.
+
+Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
+their smoke after the merge); SF and Segoe UI (no layout changed: the words
+wrap in the same boxes); the live site.
+
+## After v330 -- Main red after #894: one stalled turn on a busy runner
+
+Main's run after #894 (the Gallery of everyone) was red on one PostgreSQL
+shard, one row of a suite #894 did not touch: verify_padrepeat's "Play goes
+round, round after round ... no frame held at a turn", the turns [22, 21,
+125]ms at a 17ms frame, the same suite green on its SQLite shard. Its judge
+allowed every turn max(50ms, three frames) of wall time, so one stall of a
+runner busy with other suites read as the Pad holding a frame.
+
+A hold the Pad makes is at every turn (the round's restart, editor_draw.js
+replayAgain, is the same each time); a busy runner stalls one now and then.
+So `lap_ok` judges the middle turn by the three frames, and lets no turn
+pass a gross 150ms (nine frames). Shown in throwaway copies, the Pad's
+restart broken in editor_draw.js, PADREPEAT_PART=round: every turn held
+120ms, red ([141, 130, 134]); one turn held 120ms, the CI case, green
+([22, 143, 17]), and red under the old judge ([25, 144, 17]); one turn held
+300ms, red ([24, 324, 22]); as built, green ([25, 23, 37]). The whole suite
+alone, 25/25.
+
+What it gives up: a hold the Pad made at one turn in three, under 150ms,
+would now pass; nothing in the Pad's restart differs from turn to turn, and
+the old judge would have read every busy runner's stall as one.

@@ -1,8 +1,11 @@
 {#  A POST, AS THE FEED AND ITS OWN PAGE SHOW IT (piece 4; the approved mocks,
     and the owner's "all yes" to piece 4's choices, Nov 11).
 
-    post_card(c)      one post in the feed: its author's face and name,
-                      @handle, when (posts.js says it in the person's own
+    post_card(c)      one post on Home, which shows posts and nothing else
+                      (the map's step 3: a drawing shown outside a post has
+                      its own page, post.html, and no card here): its
+                      author's face and name, @handle, when (posts.js says
+                      it in the person's own
                       time) and its plays, none said at none; its words; the
                       drawing in Skribl's in-post player, still until tapped,
                       its line waiting until the first play (the calm card,
@@ -97,7 +100,7 @@
 {%- set p = c.post %}{% set who = c.who -%}
 <article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id }}"
          data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
-         {%- if c.muted %} data-muted{% endif %} data-kind="{{ c.kind }}" aria-labelledby="pn-{{ p.public_id }}">
+         {%- if c.muted %} data-muted{% endif %} aria-labelledby="pn-{{ p.public_id }}">
   <header class="post-head">
     <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
     {#- Their page, the size of a finger: the name's link lies under the name and
@@ -170,7 +173,7 @@
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="deleteTitle">Delete this post?</h2>
     <p class="post-lede" data-lede-p>Its words and its drawing go for good. This can’t be undone.</p>
-    <p class="post-lede" data-lede-s hidden>The drawing goes for good, from Home and from your page. This can’t be undone.</p>
+    <p class="post-lede" data-lede-s hidden>The drawing goes for good, from your page too. This can’t be undone.</p>
     <p class="say post-say" data-delete-say role="status" hidden></p>
     <div class="post-sheet-acts">
       <button class="btn btn-big" type="button" data-make-close>Keep it</button>

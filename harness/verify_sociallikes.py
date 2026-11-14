@@ -55,7 +55,8 @@ authenticator for the site's people.
  11. THE DATA: the chain on a populated database (the table, its five
      indexes, its CHECK; back down); one like a person a thing, on exactly
      one thing; the reads on their indexes (SQLite's own plan); Home's feed
-     one grouped read a kind.
+     one grouped read, its cards all posts (a drawing shown outside a post
+     is not on Home since the map's step 3).
  12. WORDS AND MARKS: every word on Home, a post's page with "Liked by…", its
      sheet, the signed-out sheet and Activity with likes at 4.5:1 on what is
      painted behind it, every target 44px, no field under 16px, phone (touch)
@@ -1975,9 +1976,10 @@ with sync_playwright() as p:
                   and any("ix_social_likes_owner_created (owner_id=? AND created_at<?)" in s for s in plans.get("activity", []))
                   and not any(s.startswith("SCAN social_likes") for v in plans.values() for s in v),
                   json.dumps(plans or out.get("err"))[:600])
-            check("Home's feed asks for its cards' likes once a kind, their moments for the dots with them: a page of"
-                  " posts and drawings, two grouped reads, cards with dots among them",
-                  out.get("reads") == ["SELECT", "SELECT"] and (out.get("cards") or 0) >= 5 and out.get("kinds") == ["b", "p"]
+            check("Home's feed asks for its cards' likes in one grouped read, their moments for the dots with it: a page"
+                  " of posts, Ova's drawing shown from the Pad not among them (Home is posts only), cards with dots"
+                  " among them",
+                  out.get("reads") == ["SELECT"] and (out.get("cards") or 0) >= 5 and out.get("kinds") == ["p"]
                   and (out.get("marked") or 0) >= 1,
                   json.dumps({k: out.get(k) for k in ("reads", "cards", "kinds", "marked", "err")})[:400])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop

@@ -71,7 +71,8 @@ def list_public_posts(*, author=None, author_prefix=None, authors=None, before=N
     """(items, more): the public skribls a gallery would list, newest first,
     as the listing's own items (SkriblPost.feed_dict), for a host's feed of
     its own people's drawings (after v330, for the Skribl site's Home, which
-    shows every drawing its people show, made in its post box or not).
+    showed every drawing its people showed until its map's step 3 made Home
+    posts only; the site still reads one person's, for More from).
 
     author          only this author's (their user id, as the host hands it).
     author_prefix   only authors whose ids start with this (a host whose

@@ -133,7 +133,8 @@ def plays_text(n):
 def _cursor(entry):
     """Where a page of the feed ended: its time and which card, in a form
     that names no internal id. A post's card is p<its address>, a drawing
-    shown outside a post s<its skribl's address>."""
+    shown outside a post s<its skribl's address> (More from's; a Home page
+    opened before Home kept posts only can still hold one)."""
     at = as_utc(entry["at"])
     raw = f"{int(at.timestamp() * 1_000_000)}.{entry['key']}"
     return base64.urlsafe_b64encode(raw.encode()).rstrip(b"=").decode()
@@ -159,7 +160,9 @@ def _entry(post, who):
 def _posts_before(at, limit, person=None, hidden=frozenset(), viewer=None, among=None):
     """A page of posts (and their authors) older than `at`, newest first:
     (rows, more). Every post at the very time of a drawing's card comes after
-    it (p < s), so a drawing's cursor keeps them all. Nobody in `hidden` (a
+    it (p < s), so a drawing's cursor keeps them all: read as its time, the
+    posts after it come next, none missed and none twice (a Home page opened
+    before Home kept posts only may still ask with one). Nobody in `hidden` (a
     block either way, or taken down: safety.hidden_ids) is in it, nor a post
     taken down, but to its own author (`viewer`), who sees it with the note.
     `among` (follows: Home's Following), a subquery of people's ids: only
@@ -185,27 +188,20 @@ def _posts_before(at, limit, person=None, hidden=frozenset(), viewer=None, among
     return rows[:limit], len(rows) > limit
 
 
-def _drawings_before(at, limit, viewer, person=None, hidden=frozenset(), authors=None):
-    """A page of the drawings the site's people (or one of them) showed in
-    Skribl's gallery and not in a post, older than `at`, newest first, each
-    with its author: (entries, more). Through Skribl's list_public_posts,
+def _drawings_before(at, limit, viewer, person, hidden=frozenset()):
+    """A page of the drawings one person showed in Skribl's gallery and not in
+    a post (More from), older than `at`, newest first, each with its author:
+    (entries, more). Through Skribl's list_public_posts, narrowed to them,
     whose feed filter leaves out the people a block hides (the host installs
     it: app.py); nobody in `hidden` is let through here either, whatever
-    the host installed. `authors` (follows: Home's Following), people's
-    public ids: only theirs (Skribl's `authors`, which takes any number)."""
+    the host installed. Home has none of these since the map's step 3."""
     from skribl import list_public_posts
     before = None
     if at is not None:
         when, key = at
         before = (when, key[1:] if key.startswith("s") else "")
-    if authors is not None:
-        who_kw = {"authors": authors}
-    elif person is not None:
-        who_kw = {"author": person.public_id}
-    else:
-        who_kw = {"author_prefix": PERSON_PREFIX}
-    items, more = list_public_posts(before=before, limit=limit,
-                                    viewer_id=viewer.public_id if viewer is not None else None, **who_kw)
+    items, more = list_public_posts(before=before, limit=limit, author=person.public_id,
+                                    viewer_id=viewer.public_id if viewer is not None else None)
     if not items:
         return [], more
     sess = site().session()
@@ -219,15 +215,23 @@ def _drawings_before(at, limit, viewer, person=None, hidden=frozenset(), authors
             and authors[i["user_id"]].id not in hidden], more
 
 
-def feed_page(before=None, limit=PAGE, viewer=None, person=None, among=None, authors=None):
-    """A page of Home's feed: everyone's posts and the drawings the site's
-    people showed in the gallery outside a post (made with Make, or the Pad
-    on its own), newest first, after `before` (a cursor); or one person's
-    (More from); or, with `among` and `authors` (follows: Home's Following),
-    the people somebody follows and theirs: their ids as a subquery for the
-    posts, and their public ids for the drawings (follows.home_items).
-    (entries, next cursor or None). A drawing that is a post's shows once,
-    as the post.
+def feed_page(before=None, limit=PAGE, viewer=None, person=None, among=None):
+    """A page of a feed, newest first, after `before` (a cursor): (entries,
+    next cursor or None).
+
+    HOME'S (no `person`) IS POSTS ONLY (the map's step 3; the owner's "Yes
+    on everything", Nov 13: every share is a post, and Home shows posts):
+    everyone's, or with `among` (follows: Home's Following) the people
+    somebody follows and theirs, their ids as a subquery
+    (follows.home_items). A drawing shown in the gallery outside a post (the
+    Pad's own, or anything shared before posts) is on its own page
+    (/b/<id>), its maker's page and More from, never on Home. A cursor from
+    a Home page opened before may name one: it is read as its time
+    (_posts_before).
+
+    ONE PERSON'S (`person`: More from, on a post's or a drawing's page) is
+    their posts and the drawings they showed in the gallery outside a post,
+    newest first; a drawing that is a post's shows once, as the post.
 
     MUTES (C, quiet everywhere): a feed of everybody's (Home, Following and
     Everyone alike) leaves out the people the viewer muted, in its query, so
@@ -239,11 +243,13 @@ def feed_page(before=None, limit=PAGE, viewer=None, person=None, among=None, aut
     hidden = hidden_ids(viewer)
     if person is None:
         hidden = hidden | muted_ids(viewer)
-    posts, more_p = _posts_before(at, limit, person, hidden, viewer, among)
-    drawings, more_s = _drawings_before(at, limit, viewer, person, hidden, authors)
-    out = sorted([_entry(p, who) for p, who in posts] + drawings, key=lambda e: (e["at"], e["key"]), reverse=True)
+    posts, more = _posts_before(at, limit, person, hidden, viewer, among)
+    out = [_entry(p, who) for p, who in posts]
+    if person is not None:
+        drawings, more_s = _drawings_before(at, limit, viewer, person, hidden)
+        out = sorted(out + drawings, key=lambda e: (e["at"], e["key"]), reverse=True)
+        more = len(out) > limit or more or more_s
     page = out[:limit]
-    more = len(out) > limit or more_p or more_s
     return page, (_cursor(page[-1]) if more and page else None)
 
 

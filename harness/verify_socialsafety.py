@@ -715,9 +715,10 @@ with sync_playwright() as p:
                  "ben at ada's drawing": status(ben.pg, f"/social/b/{ada_d}"),
                  "ben at ada's profile": status(ben.pg, "/social/@ada")}
         nobody = ben.pg.evaluate("() => document.title")
-        check("then neither sees the other on Home, posts and drawings alike, nor their post's page or drawing's page"
-              " (gone, as a deleted one is); to the one blocked, the blocker's profile is nobody's",
-              before == (2, 2) and "ben" not in after["ada's home"] and "ada" not in after["ben's home"]
+        check("then neither sees the other on Home (before, each sees the other's post there, and not their drawing"
+              " shown outside a post: Home is posts only), nor their post's page or drawing's page (gone, as a deleted"
+              " one is); to the one blocked, the blocker's profile is nobody's",
+              before == (1, 1) and "ben" not in after["ada's home"] and "ada" not in after["ben's home"]
               and pages == {"ada at ben's post": 404, "ada at ben's drawing": 404, "ben at ada's post": 404,
                             "ben at ada's drawing": 404, "ben at ada's profile": 404}
               and nobody.startswith("Nobody here"),

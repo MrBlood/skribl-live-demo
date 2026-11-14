@@ -67,8 +67,8 @@ never light the bell's dot.
 
 PHASE 2, MUTES (mutes.py; the mute mock, the owner's "Yes to all", C, Nov
 13). "Mute @theo" in the ⋯ on their page and on their posts: nothing asked
-first, a toast with Undo. What comes to you goes quiet (their posts and
-drawings leave Home and Explore, their comments fold to a line with Show,
+first, a toast with Undo. What comes to you goes quiet (their posts leave
+Home and the Gallery, their comments fold to a line with Show,
 they leave Activity); what you go to stays (their page, which says "You
 muted Theo · Unmute" to you alone, and their posts). Nobody is told, no
 number changes, and a mute never touches a follow. Settings lists them.
@@ -147,7 +147,7 @@ def hidden_authors(viewer_id):
 def muted_authors(viewer_id):
     """For the host's feed filter (docs/SOCIAL-SITE.md "Built: mutes"): the
     public ids of everybody `viewer_id` muted, which a listing of
-    everybody's leaves out (the first visit's gallery, Home's drawings) and a listing
+    everybody's leaves out (the first visit's gallery, Skribl's own /gallery) and a listing
     of one person's own keeps (their page's skribls): what comes to you goes
     quiet, and what you go to stays. Never for the visibility policy: a mute
     hides no page. Empty where the site is not running."""

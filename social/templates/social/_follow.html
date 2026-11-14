@@ -98,7 +98,7 @@
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="unfollowTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="unfollowTitle">Unfollow {{ first }}?</h2>
-    <p class="post-lede">You’ll still see {{ first }}’s drawings under Everyone. They aren’t told.</p>
+    <p class="post-lede">You’ll still see {{ first }}’s posts under Everyone. They aren’t told.</p>
     <div class="post-sheet-acts">
       <button class="btn btn-big" type="button" data-make-close>Keep following</button>
       <button class="btn btn-primary btn-big" type="button" data-unfollow>Unfollow</button>
@@ -114,7 +114,7 @@
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="followOutTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="followOutTitle">Follow {{ first }}?</h2>
-    <p class="post-lede">Sign in, and {{ first }}’s new drawings show first on your Home.</p>
+    <p class="post-lede">Sign in, and {{ first }}’s new posts show first on your Home.</p>
     <div class="post-sheet-acts">
       <button class="btn btn-big" type="button" data-make-close>Not now</button>
       <a class="btn btn-primary btn-big" href="{{ signin_here }}">Sign in</a>
@@ -169,7 +169,7 @@
 {%- if kind == 'none' %}
 <section class="fo-none" aria-labelledby="foNoneTitle">
   <h2 id="foNoneTitle">You’re not following anyone yet</h2>
-  <p>Tap Follow on someone’s page, and their new drawings show up here first. Until then, here’s everyone’s.</p>
+  <p>Tap Follow on someone’s page, and their new posts show up here first. Until then, here’s everyone’s.</p>
   <a class="btn" href="{{ url_for('social.explore') }}">Look around</a>
 </section>
 {%- elif kind == 'caught' %}

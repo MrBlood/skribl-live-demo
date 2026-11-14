@@ -69,10 +69,13 @@ a post (made in the Pad, shown in the gallery: /social/b/<id>) has them too.
  23. BLOCKS AND TAKEDOWNS: a block between commenters, or either way with the
      drawing's maker; a person, the drawing, or its maker taken down.
  24. THE DRAWING DELETED: through the site its comments go, in code; in the
-     Library its page goes, and its comments with it.
+     Library its page goes, and its comments with it, and its tile in More
+     from its maker.
  25. THE ACCOUNT DELETED: every comment on its drawings, and its own on
      others', in code (shown with the database's cascade off).
- 26. REPORTED AND TAKEN DOWN on a drawing; Home's card counts its comments.
+ 26. REPORTED AND TAKEN DOWN on a drawing; the row under it on its own page
+     counts its comments (Home's card did until the map's step 3: Home is
+     posts only).
  27. THE CHAIN on a populated database: on a post or a drawing, exactly one;
      and back down.
  28. THE NEW SCREENS on a drawing's page: words at 4.5:1, targets 44px, text
@@ -534,15 +537,20 @@ def skribl_there(*sids):
     return [bool(db("select 1 from skribl_posts where public_id = ?", (s or "",))) for s in sids]
 
 
-def card_count(pg, sid):
-    """Home's card for a drawing, as `pg` sees it: its comments' link, or None."""
-    pg.goto(BASE + "/social/")
-    pg.wait_for_timeout(600)
-    return pg.evaluate("""(sid) => { const c = document.querySelector('.post-card[data-skribl="' + sid + '"]');
-      if (!c) return null; const n = c.querySelector('.post-count'); if (!n) return { none: true };
-      const r = n.getBoundingClientRect();
-      return { label: n.getAttribute('aria-label'), text: n.textContent.trim(), icon: !!n.querySelector('svg'),
-               href: new URL(n.href).pathname + new URL(n.href).hash, w: r.width, h: r.height }; }""", sid)
+# The row under a drawing on its own page, as the page shows it: its comments'
+# link (the count, by posts.cards: what Home's card for it said until the
+# map's step 3, when Home became posts only), or None.
+ROW_COUNT = """(sid) => { const c = document.querySelector('.post-page[data-skribl="' + sid + '"]');
+  if (!c) return null; const n = c.querySelector(':scope > .post-row .post-count'); if (!n) return { none: true };
+  const r = n.getBoundingClientRect();
+  return { label: n.getAttribute('aria-label'), text: n.textContent.trim(), icon: !!n.querySelector('svg'),
+           href: new URL(n.href).pathname + new URL(n.href).hash, w: r.width, h: r.height }; }"""
+
+
+def row_count(pg, sid):
+    """The row under a drawing on its own page, as `pg` sees it (ROW_COUNT)."""
+    open_drawing(pg, sid)
+    return pg.evaluate(ROW_COUNT, sid)
 
 
 # The section as the page shows it: each comment, and the answers under it.
@@ -2448,7 +2456,7 @@ with sync_playwright() as p:
             def seen_by(who):
                 open_drawing(who.pg, sid)
                 sec = who.pg.evaluate(SECTION)
-                card = card_count(who.pg, sid)
+                card = who.pg.evaluate(ROW_COUNT, sid)
                 return {"count": sec["count"], "card": (card or {}).get("label"),
                         "shown": sorted([c["words"] for c in sec["list"]] + [a["words"] for c in sec["list"] for a in c["answers"]])}
 
@@ -2466,7 +2474,8 @@ with sync_playwright() as p:
             all4 = sorted(["Section 23, Ben's", "Section 23, Cyd's", "Section 23, Ben under Cyd", "Section 23, Cyd under Ben"])
             bens = {"count": "1", "card": "1 comment", "shown": ["Section 23, Ben's"]}
             check("on a drawing, a block either way hides the other's comments and every answer under them: neither shown"
-                  " nor counted, on the drawing's page and on its card on Home",
+                  " nor counted, on the drawing's page, its section and the row under it (its card on Home until the"
+                  " map's step 3)",
                   before == {"count": "4", "card": "4 comments", "shown": all4} and dee_blocked == bens
                   and dee_by_cyd == bens,
                   f"before {before}; dee blocked cyd {dee_blocked}; cyd blocked dee {dee_by_cyd}")
@@ -2569,6 +2578,11 @@ with sync_playwright() as p:
                   f" somebody else's try {not_hers}, kept {still}")
             lib = make_drawing(nia, "Section 24, deleted in the Library", seed=244)
             lib_c = said_on(oz, lib, "Section 24, on it")
+            # MORE FROM HER (one person's: her posts and drawings) lists it on her
+            # other drawing's page before, and never after: the site's own
+            # listing of her drawings, where Home's card for it was until the
+            # map's step 3 made Home posts only.
+            listed_before = f'href="/social/b/{lib}"' in oz.client().get(f"/social/b/{kept}")[1]
             nia.pg.goto(BASE + "/social/")
             st = nia.pg.evaluate(LIBRARY_DELETE, lib)
             asked = {"page, oz": status(oz.pg, f"/social/b/{lib}"), "page, nia": status(nia.pg, f"/social/b/{lib}")}
@@ -2578,13 +2592,14 @@ with sync_playwright() as p:
             asked["comment"] = c.post_json(f"/social/b/{lib}/comments", {"words": "hi"})[0]
             asked["answer"] = c.post_json(f"/social/b/{lib}/comments", {"words": "hi", "answer_to": lib_c})[0]
             asked["report"] = c.post_json("/social/report", {"kind": "comment", "target": lib_c, "reason": "spam"})[0]
-            asked["home"] = card_count(oz.pg, lib)
+            asked["more from"] = f'href="/social/b/{lib}"' in oz.client().get(f"/social/b/{kept}")[1]
             check("a drawing deleted in the Library, outside the site: its page is a kind 404 for everybody, its maker too,"
-                  " and its comments go with it: none read (Load more), said, answered or reported, and no card on Home",
-                  bool(lib_c) and st == 204
+                  " and its comments go with it: none read (Load more), said, answered or reported; and More from her,"
+                  " on her other drawing's page, lists it before and not after",
+                  bool(lib_c) and st == 204 and listed_before
                   and asked == {"page, oz": 404, "page, nia": 404, "more": 404, "comment": 404, "answer": 404,
-                                "report": 404, "home": None},
-                  f"Library delete {st}; {asked}")
+                                "report": 404, "more from": False},
+                  f"Library delete {st}; listed before {listed_before}; {asked}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(24, exc)
 
@@ -2705,11 +2720,12 @@ with sync_playwright() as p:
                   and db("select count(*) from social_comments where public_id = ?", (theo_c or "",))[0][0] == 1,
                   f"mira sees {[c['id'] for c in others['list']]} ({others['count']}); theo's own {mine.get('down')!r}"
                   f" ({his['count']}); reports {state}")
-            home = card_count(mira.pg, sid) or {}
-            none = card_count(mira.pg, bare) or {}
-            check("Home's card for a drawing counts its comments as its page does (the one taken down not counted): the"
-                  " icon and the number, \"2 comments\", a way to them on the drawing's page, 44px; a drawing with none,"
-                  " the icon alone, named \"Comment\"",
+            home = row_count(mira.pg, sid) or {}
+            none = row_count(mira.pg, bare) or {}
+            check("the row under a drawing on its own page counts its comments as its section does (the one taken down"
+                  " not counted): the icon and the number, \"2 comments\", a way to them (#comments), 44px; a drawing"
+                  " with none, the icon alone, named \"Comment\" (Home's card said so until the map's step 3: Home is"
+                  " posts only)",
                   home.get("label") == "2 comments" and home.get("text") == "2" and home.get("icon")
                   and home.get("href") == f"/social/b/{sid}#comments" and home.get("w", 0) >= 44 and home.get("h", 0) >= 44
                   and none.get("label") == "Comment" and none.get("text") == "" and none.get("icon")

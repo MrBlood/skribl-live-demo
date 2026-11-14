@@ -31,15 +31,21 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      every target 44px, every text field 16px: phone and desk, light and
      dark.
   8. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
-  9. EVERY DRAWING THE SITE'S PEOPLE SHOW: Home holds the drawings they
-     posted from the Pad on its own page (Make) and showed in the gallery,
-     among the posts, newest first, once each; not one kept unlisted, nor
-     one by somebody not on the site; Load more walks both; a drawing's own
-     page, its ⋯ and its Delete, and their guards.
+  9. HOME SHOWS POSTS ONLY (the map's step 3): a drawing shown in the
+     gallery from the Pad outside a post, one kept unlisted and one by
+     somebody not on the site are on nobody's Home (its maker's Following
+     and Everyone, a follower's, somebody else's, signed out; each walked
+     with Load more, every card a post, signed out read against the
+     database itself), nor in the Gallery, while the drawing keeps its own
+     page and its maker's; the posts shared the same minute are there; a
+     cursor from before that names a drawing reads as its time; Load more
+     walks the posts alone; a drawing's own page, its ⋯ and its Delete, and
+     their guards.
  10. A CARD'S WAYS IN (the owner's yes, Nov 12): its words and its time each a
      link to its page, a tap landing on them across 44px; the face, the name
      and the @handle the person's; the 💬 even at none; nothing moved. Phone
-     and desk, light and dark.
+     and desk, light and dark. A drawing shown outside a post has no card on
+     Home (section 9).
  11. ANYWHERE ON A CARD opens its post (the same yes): its ground, its words,
      the 💬 at its comments; the drawing plays and pauses and stays, even at
      its edge under the time; the face, the name and the @handle open the
@@ -1058,22 +1064,50 @@ with sync_playwright() as p:
               f" each {[(' '.join(k), v['read']) for k, v in seen.items()]}")
 
     # ------------------------------------------------------------------ 9
-    if part(9, "Home holds every drawing the site's people show: posts, and drawings from the Pad outside a post"):
+    # HOME SHOWS POSTS ONLY (the map's step 3, its second part; the owner's
+    # decision 2, Nov 13: "Drawings already shared without a post stay in their
+    # author's Gallery, so nothing is lost: the Gallery shows them, and Home
+    # shows posts from then on"). Until then Home held every drawing the site's
+    # people showed in the gallery, posts or not; these rows held that, and
+    # now hold its opposite, and what was kept: the drawing's own page, its
+    # maker's page, More from, its ⋯ and its Delete.
+    if part(9, "Home shows posts only: a drawing shown outside a post keeps its own page and its maker's, never Home"):
+        from datetime import datetime, timezone
         mira = someone(b, "mira", "Mira Okafor")
         juno = someone(b, "juno", "Juno Park")
-        CARDS = """() => [...document.querySelectorAll('.post-card')].map(c => ({ kind: c.getAttribute('data-kind'),
-          id: c.getAttribute('data-post'), skribl: c.getAttribute('data-skribl'),
-          words: ((c.querySelector('.post-words') || {}).textContent || ''), url: c.getAttribute('data-url') }))"""
+        CARDS = """() => [...document.querySelectorAll('.post-card')].map(c => ({ id: c.getAttribute('data-post'),
+          skribl: c.getAttribute('data-skribl'), url: c.getAttribute('data-url'),
+          words: ((c.querySelector('.post-words') || {}).textContent || '') }))"""
+        # A card as Home's JSON hands it over (Load more, the pill): its post and its drawing.
+        CARD9 = re.compile(r'<article class="post-card" data-post="([^"]+)"[^>]*?data-skribl="([^"]+)"')
 
         def pad(who_pg, title, vis="public", seed=0):
             who_pg.goto(BASE + "/social/")
             return who_pg.evaluate(PAD, [title, vis, seed])
 
-        def home_cards(pg_):
-            pg_.goto(BASE + "/social/")
-            pg_.wait_for_timeout(700)
-            return pg_.evaluate(CARDS)
+        def home_walk(cl, show="everyone", before=None):
+            """Home's `show` as `cl` is sent it (the pill's first page, or Load
+            more's from `before`), walked to its end with Load more: [(post, its
+            drawing)] in order, or None where a page did not answer."""
+            path = "/social/feed?" + ("before=" + urllib.parse.quote(before) if before else "show=" + show)
+            seen = []
+            for _ in range(80):
+                st_, text = cl._req("GET", path)
+                try:
+                    j = json.loads(text)
+                except ValueError:
+                    return None
+                if st_ != 200 or not isinstance(j, dict):
+                    return None
+                seen += CARD9.findall(j.get("html") or "")
+                if not j.get("next"):
+                    return seen
+                path = "/social/feed?before=" + urllib.parse.quote(j["next"])
+            return seen
 
+        # What Mira shows: a post, a drawing from the Pad shown in the gallery
+        # (no post), one kept unlisted, and a post with the gallery tick;
+        # somebody not on the site shows one from Skribl's own Pad.
         st1, j1 = make_post(mira, "Section 9, a post", seed=91)
         time.sleep(0.02)
         st_s, shown = pad(mira.pg, "Section 9, shown from the Pad", "public", 1)
@@ -1088,34 +1122,137 @@ with sync_playwright() as p:
         st_g, jg = make_post(mira, "Section 9, a post shown in the gallery", gallery=True, seed=92)
         g_post = jg.get("post") if isinstance(jg, dict) else None
         g_skribl = post_row(g_post)[1] if g_post else None
-        top = home_cards(juno.pg)[:3]
-        seen_ids = [c["skribl"] for c in home_cards(juno.pg)]
-        check("Home holds a drawing one of the site's people showed from the Pad, outside a post: newest first among"
-              " the posts, its title for its words, with a page of its own; not one kept unlisted, nor one by somebody not on"
-              " the site; and a post shown in the gallery shows once, as the post",
-              [st_s, st_u, st_n] == [201, 201, 201]
-              and [c["kind"] for c in top] == ["p", "s", "p"] and top[0]["id"] == g_post
-              and top[1]["skribl"] == shown and top[1]["words"] == "Section 9, shown from the Pad"
-              and top[1]["url"] == f"/social/b/{shown}"
-              and top[2]["id"] == (j1.get("post") if isinstance(j1, dict) else None)
-              and kept not in seen_ids and nobodys not in seen_ids and seen_ids.count(g_skribl) == 1,
-              f"top {top}; unlisted on Home {kept in seen_ids}; nobody's {nobodys in seen_ids};"
-              f" the gallery post's drawing {seen_ids.count(g_skribl)}x")
+        # Ines shares twenty-four posts, a drawing shown from the Pad after every
+        # second one (no post), so every walk below crosses a page of Home's
+        # twenty, even with this section alone. Somebody of her own: the site
+        # takes forty posts an hour from one person, and Juno posts again in
+        # sections 10 to 12.
+        ines = someone(b, "ines", "Ines Varga")
+        made, drawn = [], []
+        for i in range(24):
+            st, j = make_post(ines, f"Interleave post {i:02d}", seed=100 + i)
+            made.append(j.get("post") if isinstance(j, dict) else None)
+            time.sleep(0.02)
+            if i % 2:
+                st, sid = pad(ines.pg, f"Interleave drawing {i // 2:02d}", "public", 100 + i)
+                drawn.append(sid)
+                time.sleep(0.02)
+        # Noor shares a post, then a drawing from the Pad on its own, shown in
+        # the gallery (no post), then a post again, the same minute. Sora
+        # follows her and she follows Sora, so each one's Following holds the
+        # other's and their own (the read that asked Skribl for their drawings).
+        noor = someone(b, "noor", "Noor Haddad")
+        sora = someone(b, "sora", "Sora Lind")
+        follows9 = []
+        for x, y in ((sora, "noor"), (noor, "sora")):
+            fc = x.client()
+            fc.get(f"/social/@{y}")
+            follows9.append(fc.post_json(f"/social/@{y}/follow", {"following": True})[0])
+        st_pb, jb = make_post(noor, "Section 9, Noor's post before", seed=93)
+        p_before = jb.get("post") if isinstance(jb, dict) else None
+        time.sleep(0.02)
+        st_l, lone = pad(noor.pg, "Section 9, Noor's drawing from the Pad", "public", 4)
+        time.sleep(0.02)
+        st_pa, jpa = make_post(noor, "Section 9, Noor's post after", seed=94)
+        p_after = jpa.get("post") if isinstance(jpa, dict) else None
+        made9 = ([st_s, st_u, st_n, st_l] == [201] * 4 and follows9 == [200, 200] and all(made) and all(drawn)
+                 and all([j1.get("post") if isinstance(j1, dict) else None, g_post, p_before, p_after]))
+        not_posts = {shown, kept, nobodys, lone, *drawn}
+        posts9 = {r[0] for r in db("select public_id from social_posts")}
+        oracle9 = [r[0] for r in db(
+            "select p.public_id from social_posts p join social_people pe on pe.id = p.person_id"
+            " where p.taken_down_at is null and pe.taken_down_at is null order by p.created_at desc, p.public_id desc")]
+        walks = {"Noor's Following": home_walk(noor.client(), "following"),
+                 "Noor's Everyone": home_walk(noor.client(), "everyone"),
+                 "Sora's Following": home_walk(sora.client(), "following"),
+                 "Sora's Everyone": home_walk(sora.client(), "everyone"),
+                 "Juno's Everyone": home_walk(juno.client(), "everyone"),
+                 "signed out": home_walk(Client(), "everyone")}
+        st_h, noor_home = noor.client().get("/social/")
+        bad9 = {k: [x for x in (v or []) if x[0] not in posts9 or x[1] in not_posts] for k, v in walks.items()}
+        out_walk = [x[0] for x in walks["signed out"] or []]
+        check("HOME SHOWS POSTS ONLY: a drawing shown in the gallery from the Pad outside a post is on nobody's Home,"
+              " nor one kept unlisted or one by somebody not on the site: its maker's Following and Everyone, a"
+              " follower's, somebody else's and signed out, each walked to its end with Load more, every card a post"
+              " (signed out every post once, newest first, read against the database itself, so a post shown in the"
+              " gallery shows once, as the post); the posts its maker shared the same minute are on every one of"
+              " them, and on her Home as it opens",
+              made9 and all(v is not None for v in walks.values()) and not any(bad9.values())
+              and out_walk == oracle9 and out_walk.count(g_post) == 1 and len(out_walk) > 20
+              and all({p_before, p_after} <= {x[0] for x in v} for v in walks.values() if v is not None)
+              and st_h == 200 and lone not in noor_home and f'data-post="{p_after}"' in noor_home,
+              f"made {made9}; cards {[(k, len(v) if v is not None else None) for k, v in walks.items()]}; not a post"
+              f" or not one: {[(k, v[:2]) for k, v in bad9.items() if v]}; signed out is the database's"
+              f" {out_walk == oracle9} ({len(out_walk)} of {len(oracle9)}); her Home {st_h}, the drawing on it"
+              f" {lone in noor_home}")
 
-        # Load more across both: twelve posts and twelve drawings, one after
-        # the other, read back page by page through the button.
-        made = []
-        for i in range(12):
-            st, j = make_post(juno, f"Interleave post {i:02d}", seed=100 + i)
-            made.append(("p", j.get("post") if isinstance(j, dict) else None))
-            time.sleep(0.02)
-            st, sid = pad(juno.pg, f"Interleave drawing {i:02d}", "public", 100 + i)
-            made.append(("s", sid))
-            time.sleep(0.02)
+        # ...AND NOTHING IS LOST: not in the Gallery of everyone either (posts
+        # only, section 13), while it keeps its own page and its maker's page
+        # (her Skribls: Skribl's own Gallery section, which its script fills).
+        gal9 = {}
+        for name, cl, show in (("signed out", Client(), "everyone"), ("Sora's Everyone", sora.client(), "everyone"),
+                               ("Sora's Following", sora.client(), "following")):
+            st_, text = cl._req("GET", "/social/explore/more?sort=new&show=" + show)
+            try:
+                gal9[name] = json.loads(text).get("html") or ""
+            except (ValueError, AttributeError):
+                gal9[name] = ""
+        own9 = {"signed out": Client().get(f"/social/b/{lone}"), "Sora": sora.client().get(f"/social/b/{lone}")}
+        listed9 = {}
+        for name, who_ in (("signed out", None), ("Sora", sora)):
+            ctx, cpg = browser_as(b, who_)
+            try:
+                cpg.goto(BASE + "/social/@noor")
+                cpg.wait_for_function("(s) => !!document.querySelector(s)", arg=f'#skriblGallery .tile[data-id="{lone}"]',
+                                      timeout=12000)
+                listed9[name] = True
+            except Exception:  # noqa: BLE001 -- not listed is the row's red
+                listed9[name] = False
+            close_ctx(ctx, cpg)
+        in_gal = [k for k, h in gal9.items() if f"/s/{lone}/poster" in h]
+        post_there = [k for k, h in gal9.items() if f'href="/social/p/{p_after}"' in h]
+        check("...nor in the Gallery of everyone (signed out, and a follower's Everyone and Following), where the post"
+              " after it is; and nothing is lost: it keeps its own page (/social/b/<id>), signed in and out, and its"
+              " maker's page lists it among her Skribls, signed in and out",
+              made9 and not in_gal and len(post_there) == 3
+              and all(st_ == 200 and f'data-skribl="{lone}"' in html_ and 'data-kind="s"' in html_
+                      for st_, html_ in own9.values())
+              and listed9 == {"signed out": True, "Sora": True},
+              f"in the Gallery {in_gal}, the post there {post_there}; its page {[(k, v[0]) for k, v in own9.items()]};"
+              f" her page lists it {listed9}")
+
+        # A HOME PAGE OPENED BEFORE may hold a cursor that names a drawing:
+        # Home's cursor names the last card shown (posts._cursor), and a page
+        # could end on a drawing (s, then its skribl's address). Read as its
+        # time, the posts after it come next.
+        when9 = (db("select created_at from skribl_posts where public_id = ?", (lone,)) or [(None,)])[0][0]
+        old_cursor = None
+        if when9:
+            at9 = datetime.fromisoformat(str(when9)).replace(tzinfo=timezone.utc)
+            old_cursor = base64.urlsafe_b64encode(f"{int(at9.timestamp() * 1_000_000)}.s{lone}".encode()).rstrip(b"=").decode()
+        carried = home_walk(Client(), before=old_cursor) if old_cursor else None
+        st_f, text_f = sora.client()._req("GET", "/social/feed?before=" + urllib.parse.quote("f." + (old_cursor or "")))
+        try:
+            first_f = [x[0] for x in CARD9.findall(json.loads(text_f).get("html") or "")][:1]
+        except (ValueError, AttributeError):
+            first_f = None
+        tail9 = oracle9[oracle9.index(p_before):] if p_before in oracle9 else None
+        carried_ids = [x[0] for x in carried or []]
+        check("A HOME CURSOR FROM BEFORE THAT NAMES A DRAWING (a page opened before Home kept posts only could end on"
+              " one) reads as its time: Load more from it brings the posts after it, the post shared just before the"
+              " drawing first, none missed and none twice, never the first page again; Following's own the same",
+              made9 and carried is not None and tail9 is not None and carried_ids == tail9 and len(carried_ids) > 20
+              and st_f == 200 and first_f == [p_before],
+              f"cursor {old_cursor and old_cursor[:12]}…; signed out {carried_ids[:3]} (want {(tail9 or [])[:3]},"
+              f" {len(carried_ids)} of {len(tail9 or [])}); Following's {st_f} {first_f}")
+
+        # LOAD MORE, POSTS ALONE: Ines's twenty-four posts, a drawing shown from
+        # the Pad after every second one (made above), read back page by page
+        # through the button.
         pg = mira.pg
         pg.goto(BASE + "/social/")
         pg.wait_for_timeout(800)
-        for _ in range(8):
+        for _ in range(12):
             nxt = pg.evaluate("() => { const b = document.querySelector('[data-feed-next]'); return !!b && !b.hidden; }")
             if not nxt:
                 break
@@ -1124,15 +1261,19 @@ with sync_playwright() as p:
             pg.wait_for_function("(n) => document.querySelectorAll('.post-card').length > n", arg=n0, timeout=15000)
             pg.wait_for_timeout(300)
         allc = pg.evaluate(CARDS)
-        got = [("p", c["id"]) if c["kind"] == "p" else ("s", c["skribl"]) for c in allc]
+        got = [c["id"] for c in allc]
         want = list(reversed(made))
-        order_ok = got[:len(want)] == want
-        check("Load more walks the posts and the drawings together, newest first, none twice and none missed",
-              order_ok and len(got) == len(set(got)) and all(m in got for m in made),
-              f"first {got[:6]} want {want[:6]}; {len(got)} cards, {len(set(got))} different")
+        check("Load more walks the posts alone, newest first, none twice and none missed: twenty-four posts with a"
+              " drawing shown from the Pad after every second one, read back page by page through the button, are the"
+              " twenty-four posts in order and none of the drawings",
+              all(made) and all(drawn) and [x for x in got if x in made] == want and len(got) == len(set(got))
+              and len(got) > 20 and not ({c["skribl"] for c in allc} & set(drawn))
+              and all((c["url"] or "").startswith("/social/p/") for c in allc),
+              f"Ines's {[x for x in got if x in made][:3]} want {want[:3]}; {len(got)} cards, {len(set(got))} different;"
+              f" drawings among them {len({c['skribl'] for c in allc} & set(drawn))}")
 
         # A drawing's own page, its ⋯, and its Delete; and another of hers from
-        # the Pad, untitled, for More from.
+        # the Pad, untitled, for More from (one person's: posts and drawings).
         st_a, another = pad(mira.pg, "", "public", 5)
         jp = juno.pg
         jp.goto(BASE + f"/social/b/{shown}")
@@ -1170,8 +1311,8 @@ with sync_playwright() as p:
         gone = skribl_row(shown) is None
         check("a drawing's own page plays it by itself, its title for its words, with More from its author's"
               " posts and drawings (one untitled, said as a drawing); its ⋯ says Report to anybody else and Delete"
-              " post to its author, asked once in the drawing's own words, and then it is gone (Home says so); a"
-              " post's drawing's page is the post's",
+              " post to its author, asked once in the drawing's own words (it goes from her page too: Home never had"
+              " it), and then it is gone (Home says so); a post's drawing's page is the post's",
               page["at"] == f"/social/b/{shown}" and page["kind"] == "s"
               and page["words"].strip() == "Section 9, shown from the Pad"
               and playing[:1] == ["playing"]
@@ -1180,7 +1321,7 @@ with sync_playwright() as p:
               and theirs == ["Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
               and landed == f"/social/p/{g_post}"
               and mine == ["Copy link", "Share…", "Delete post"] and ask.get("open") and "stopped" not in ask
-              and ask.get("lede") == ["The drawing goes for good, from Home and from your page. This can’t be undone."]
+              and ask.get("lede") == ["The drawing goes for good, from your page too. This can’t be undone."]
               and after["url"] == "/social/?note=deleted_drawing" and after["note"] == "Your drawing is gone." and gone,
               f"page {page}; players {playing}; theirs {theirs}; a post's drawing lands {landed}; mine {mine};"
               f" ask {ask}; after {after}; gone {gone}")
@@ -1211,8 +1352,9 @@ with sync_playwright() as p:
     # its time; the 💬 shows even at zero"). The name and @handle keep going to
     # the person's page, as everywhere else; the words and the time each open
     # the card's own page. Read on Home, phone and desk, light and dark, off
-    # what is painted (a tap's landing), on a post with words, one without,
-    # and a drawing shown outside a post.
+    # what is painted (a tap's landing), on a post with words and one without;
+    # a drawing shown outside a post, which had a card here until the map's
+    # step 3, has none (Home shows posts only: section 9).
     if part(10, "a card opens its page from its words and its time; the face, name and @handle open the person's; the 💬 at none"):
         mira = someone(b, "mira", "Mira Okafor")
         juno = someone(b, "juno", "Juno Park")
@@ -1225,7 +1367,7 @@ with sync_playwright() as p:
         mc = mira.client()
         mc.get(f"/social/p/{worded}")
         commented = mc.post_json(f"/social/p/{worded}/comments", {"words": "Section 10, one comment"})[0]
-        want_page = {worded: f"/social/p/{worded}", bare: f"/social/p/{bare}", shown: f"/social/b/{shown}"}
+        want_page = {worded: f"/social/p/{worded}", bare: f"/social/p/{bare}"}
         seen = {}
         for screen in ("phone", "desk"):
             for scheme in ("light", "dark"):
@@ -1236,8 +1378,12 @@ with sync_playwright() as p:
                     seen[(screen, scheme, key)] = cpg.evaluate(WAYS, key or "")
                 close_ctx(ctx, cpg)
         bad_open, bad_person, bad_count, bad_still = [], [], [], []
+        # The drawing shown outside a post: no card on Home, on any screen.
+        drawn_cards = [f"{s}/{sc}" for (s, sc, key), w in seen.items() if key == shown and w is not None]
         for (screen, scheme, key), w in seen.items():
-            tag = f"{screen}/{scheme} {'worded' if key == worded else 'bare' if key == bare else 'drawing'}"
+            if key == shown:
+                continue
+            tag = f"{screen}/{scheme} {'worded' if key == worded else 'bare'}"
             if not w:
                 bad_open.append(f"{tag}: no card")
                 continue
@@ -1268,11 +1414,12 @@ with sync_playwright() as p:
                 bad_still.append(f"{tag}: on the @handle's line {w['sameLine']}, the header {w['headH']}px, words"
                                  f" {w['wordsGap']}, drawing {w['artGap']}")
         made = bool(worded and bare and shown and st_s == 201 and commented == 200)
-        check("a card's words and its time each open its own page (a post's, or a drawing's), each a link a tap lands on"
-              " anywhere in its 44px or more (on a card with no words, the time's down to the drawing, which keeps its"
-              " own taps): a post with words, one without, and a drawing shown outside a post; phone and desk, light"
-              " and dark",
-              made and len(seen) == 12 and not bad_open, f"made {made}; {len(seen)} read; {bad_open[:4]}")
+        check("a card's words and its time each open its post's page, each a link a tap lands on anywhere in its 44px"
+              " or more (on a card with no words, the time's down to the drawing, which keeps its own taps): a post"
+              " with words and one without, phone and desk, light and dark; a drawing shown outside a post has no"
+              " card there (Home shows posts only)",
+              made and len(seen) == 12 and not bad_open and not drawn_cards,
+              f"made {made}; {len(seen)} read; {bad_open[:4]}; the drawing's card on Home {drawn_cards}")
         check("the face, the name and the @handle still open the person's page: the name's link 44px, painted under the"
               " @handle too, so a tap on the @handle lands on it",
               made and not bad_person, f"{bad_person[:4]}")
@@ -1434,8 +1581,9 @@ with sync_playwright() as p:
     # where you click or touch to go to post view? It's not clear. I thought on
     # card?"). The rule said yes to on Nov 12, "anywhere on the card should open
     # the post and clicking on the player should make it play", on every card
-    # the site shows: Home's (a post, and a drawing on its own), and the first
-    # visit's and a profile's Skribls, which are Skribl's own Gallery cards
+    # the site shows: Home's (a post's; since the map's step 3 Home shows
+    # posts only), and the first visit's and a profile's Skribls, which are
+    # Skribl's own Gallery cards
     # opening where the site says (skribl.set_card_url, app.py), with on the
     # first visit one by somebody not on the site. (Explore's were Skribl's
     # cards too until the map's step 3; the Gallery of everyone's tiles are
@@ -1470,10 +1618,11 @@ with sync_playwright() as p:
         TILE = '#skriblGallery .tile[data-id="{}"]'
         # Each card as somebody meets it: signed in (Mira) on Home and a
         # profile; signed out on the first visit, the one page of the site
-        # whose Gallery holds everybody's, the site's people's and not.
+        # whose Gallery holds everybody's, the site's people's and not. The
+        # drawing on its own is on the first visit and the profile: Home shows
+        # posts only (section 9).
         CARDS = [("Home", "/social/", f'.post-card[data-post="{g_post}"]', g_sid, to_post, mira),
                  ("Home", "/social/", f'.post-card[data-post="{f_post}"]', f_sid, to_flip, mira),
-                 ("Home", "/social/", f'.post-card[data-skribl="{lone}"]', lone, to_lone, mira),
                  ("the first visit", "/social/", TILE.format(g_sid), g_sid, to_post, None),
                  ("the first visit", "/social/", TILE.format(f_sid), f_sid, to_flip, None),
                  ("the first visit", "/social/", TILE.format(lone), lone, to_lone, None),
@@ -1567,8 +1716,8 @@ with sync_playwright() as p:
         dead = {r["label"]: {k: v for k, v in r.get("parts", {}).items() if v[1] != r["want"]} for r in cards12}
         dead = {k: v for k, v in dead.items() if v}
         lacking = [(r["label"], r.get("stopped")) for r in cards12 if "stopped" in r or not r.get("parts")]
-        check("THE TAP MAP: on Home's cards, the first visit's and a profile's Skribls cards (a post's drawing, a Flip's,"
-              " one on its own, and on the first visit one by somebody not on the site), a touch phone in light and dark, every 4px is one of"
+        check("THE TAP MAP: on Home's cards (a post's drawing and a Flip's) and the first visit's and a profile's Skribls"
+              " cards (those, one on its own, and on the first visit one by somebody not on the site), a touch phone in light and dark, every 4px is one of"
               " the card's own controls or its ground, and an exact tap on every part of the ground (its words, its"
               " time, its edges, the line under the drawing, the space between) opens the card's page: no part does"
               " nothing",
