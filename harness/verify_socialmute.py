@@ -31,8 +31,9 @@ mock (Nov 13): C, quiet everywhere, and rule 3, mute and follow kept apart.
      and More from all still there.
   5. RULE 3: a mute never touches a follow: still following, the toast says
      "Theo is muted. You still follow them.", nothing changes on their side
-     (their own "Followed by…"), their posts out of Following until unmute;
-     unfollowing never unmutes.
+     (their own counts, "1 follower", and their own list of who follows
+     them), their posts out of Following until unmute; unfollowing never
+     unmutes.
   6. HOME AND THE GALLERY: their posts leave Home, Everyone and Following,
      in the query (every page whole, walked with Load more; Home is posts
      only since the map's step 3); the
@@ -51,7 +52,8 @@ mock (Nov 13): C, quiet everywhere, and rule 3, mute and follow kept apart.
   8. ACTIVITY GOES QUIET: their comments, answers, likes and follows leave
      it; a group says the rest; they never light the bell's dot (somebody
      else's comment does); unmute, and every row is back.
-  9. COUNTS AND "LIKED BY…" STAY TRUE, for you too.
+  9. COUNTS AND "LIKED BY…" STAY TRUE, for you too (a follow's counts too,
+     since the map's step 5: a muted follower still counted).
  10. SETTINGS: Muted just above Blocked, the Blocked panel's rows, newest
      first, its words; with nobody, its own; Unmute (a form) comes back to
      Settings saying so; somebody muted and then blocked is under Blocked
@@ -1472,10 +1474,12 @@ with sync_playwright() as p:
                   and mutes_of("lee", "mox") == [("lee", "mox")],
                   json.dumps({"toast": st and st["words"], "follow": follows_of("lee", "mox"), "button": btn}))
             st_m, own = mox.client().get("/social/@mox")
-            m = re.search(r'class="lk-by-words">([^<]*<b>[^<]*</b>[^<]*)', own)
-            check("nothing changes on Mox's side: his own page still says “Followed by Lee”",
-                  st_m == 200 and m and re.sub(r"<[^>]+>", "", m.group(1)).strip() == "Followed by Lee",
-                  m.group(1) if m else own[:0])
+            m = re.search(r"data-follow-counts>(.*?)</p>", own, re.S)
+            said = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", m.group(1))).strip() if m else None
+            lst = re.search(r'data-list="followers"[^>]*>(.*?)</ul>', own, re.S)
+            listed = re.findall(r'<span>(@[a-z0-9_]+)</span>', lst.group(1)) if lst else None
+            check("nothing changes on Mox's side: his own page still says “1 follower”, and his list of who follows him"
+                  " names Lee", st_m == 200 and said == "1 follower" and listed == ["@lee"], f"{said!r}; listed {listed}")
             c = lee.client()
             c.get("/social/")
             _, f1 = c.get_json("/social/feed?show=following")
@@ -1770,15 +1774,21 @@ with sync_playwright() as p:
             go(pg, f"/social/p/{xp}", wait=600)
             by = pg.evaluate("() => { const a = document.querySelector('[data-like-by]'); return a ? a.textContent.replace(/\\s+/g, ' ').trim() : null; }")
             go(pg, "/social/@xia")
-            fby = pg.evaluate("() => { const a = document.querySelector('[data-follows-open]'); return a ? a.textContent.replace(/\\s+/g, ' ').trim() : null; }")
+            fby = pg.evaluate("() => { const a = document.querySelector('[data-follow-counts]'); return a ? a.textContent.replace(/\\s+/g, ' ').trim() : null; }")
+            # A count that is not there (nobody counted) reads as this row's red.
+            if pg.locator("[data-follows-open=followers]").count():
+                pg.locator("[data-follows-open=followers]").tap()
+                pg.wait_for_timeout(800)
+            fwho = pg.evaluate("() => [...document.querySelectorAll('#followsSheet [data-list=followers] .lk-who span')].map(s => s.textContent.trim())")
             close_ctx(ctx, pg)
             unmute(xia, "yan")
             check("counts stay true for you too: Home's card for a post they liked and said something on says 1 like and 1"
                   " comment, and its page the same (their comment folded, and counted)",
                   card == {"likes": "1", "comments": "1 comment"} and page == {"likes": "1", "comments": "1", "folded": 1},
                   json.dumps({"card": card, "page": page}))
-            check("“Liked by…” and “Followed by…” on your own name them: a mute changes what reaches you, never a number",
-                  by and "Yan" in by and fby and "Yan" in fby, f"liked by {by!r}; followed by {fby!r}")
+            check("“Liked by…” on your own names them, and your counts count them (“1 follower”, your Followers list"
+                  " naming them): a mute changes what reaches you, never a number",
+                  by and "Yan" in by and fby == "1 follower" and fwho == ["@yan"], f"liked by {by!r}; counts {fby!r}, followers {fwho}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(9, exc)
 

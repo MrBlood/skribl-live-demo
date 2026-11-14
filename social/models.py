@@ -428,8 +428,8 @@ class Follow(SocialBase):
 
     Indexed both ways, newest first: whom a person follows (their Following
     list, and Home's Following, through the pair), and who follows a person
-    (their Followers list, their "Followed by…" line, and Activity's "followed
-    you", since you last looked and before)."""
+    (their Followers list, the counts on their page, and Activity's
+    "followed you", since you last looked and before)."""
     __tablename__ = "social_follows"
 
     id = sa.Column(BigId, primary_key=True)

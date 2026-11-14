@@ -280,6 +280,16 @@ body {
   display: flex; align-items: center; min-height: 44px; margin-left: auto; padding: 0 4px;
   color: var(--accent-ink); font-size: 16px; font-weight: 600; text-decoration: none;
 }
+/* THE ☰ ON A PHONE (the quick-patterns mock; the owner's "Yes on everything",
+   Nov 13): at the top left of Home and the Gallery, before the wordmark, its
+   44px reaching 10px past the top's edge, as the bell's does at the right and
+   as the mock placed it; the top's ink, as the bell's (an .icon-btn alone
+   would wear the second ink). It is the top's, so a desk, which has no top, has
+   none. Its sheet is the ⋯'s (.post-sheet, its rows .post-act): a row there
+   is a link, or Sign out's form, dressed as the ⋯'s buttons are. */
+.top > .top-menu { margin-left: -10px; margin-right: 2px; color: var(--ink); }
+a.post-act { text-decoration: none; }
+.menu-out { margin: 0; }
 
 /* ---- the frame on a desk: THE RAIL -------------------------------------- */
 @media (min-width: 900px) {
@@ -1443,12 +1453,12 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 
 /* ---- FOLLOWING (phase 2, follows; the follow mock and the owner's "Yes to
    all", B, Nov 13), in the mock's own sizes. Follow first in the row on a
-   person's page; your own page's "Followed by…", the twin of "Liked by…" (its
-   own classes, .lk-by and .lk-faces); the lists in Make's sheet (.lk-list,
-   .lk-row: the people on one card); Home's pill and what Following says
-   between its cards; Activity's small Follow. SAME ROLE, SAME TOKEN: an
-   action is --fill with white on it, the second button --btn2-*, a sheet
-   --sheet-paper, a choice the one pill. ---- */
+   person's page; the counts under every profile's @handle (the quick-patterns
+   mock's A, Nov 13); the lists in Make's sheet (.lk-list, .lk-row: the people
+   on one card); Home's pill and what Following says between its cards;
+   Activity's small Follow. SAME ROLE, SAME TOKEN: an action is --fill with
+   white on it, the second button --btn2-*, a sheet --sheet-paper, a choice
+   the one pill, small violet words --accent-ink. ---- */
 /* THE BUTTON. Follow is the action (--fill, its drop), a plus in our pen;
    Following is the second button, its check in our pen. Both words sit in
    one grid cell, so the button is as wide as the wider in any font and
@@ -1479,9 +1489,27 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   .fo-btn:not(.is-following):hover { filter: brightness(1.08); }
   .fo-btn.is-following:hover { border-color: var(--brand); }
 }
-/* YOUR OWN PAGE'S LINE, under the buttons, where "Liked by…" sits under a
-   post's line: their faces and "Followed by Mira, Theo and 2 others". */
-.prof-acts + .fo-by { margin-top: 8px; }
+/* THE COUNTS (the quick-patterns mock's A, in its own sizes), under the
+   @handle: each number in the first ink, its word in the second, a dot
+   between the two, 6px apart; "New here" in the small violet words. Centred
+   on a phone, as the words above them are; from the left on a desk. On your
+   own page each count is a button 44px tall, to a finger, that opens your
+   lists; elsewhere the same words, not a way anywhere. A change (a follow, an
+   unfollow) fades them out, puts the new words in unseen and fades them back
+   (follows.js), as Home's posts change; under Reduce Motion the same fade,
+   which moves nothing. */
+.fo-counts {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; margin: 6px 0 0;
+  color: var(--ink-2); font-size: 15px; line-height: 1.45; transition: opacity 0.2s ease;
+}
+.fo-counts.is-out { opacity: 0; transition-duration: 0.14s; }
+.fo-counts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+button.fo-n {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: 0; padding: 0; border: 0;
+  background: none; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.fo-new { color: var(--accent-ink); font-weight: 600; }
+@media (min-width: 900px) { .fo-counts { justify-content: flex-start; } }
 /* THE ONE PILL: the Gallery's New / Hot (gallerysection.css .seg-track, as
    the site's pages wear it), value for value: 44px, every option 36px to see
    and 44px to a finger, the tint sliding under the chosen one (follows.js

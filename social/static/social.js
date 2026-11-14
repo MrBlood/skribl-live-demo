@@ -1,6 +1,7 @@
-/* The site's sheets: MAKE'S (social/templates/social/_make.html), and every
- * other sheet the site raises the same way (Your face, on your own profile:
- * profile.js, through window.SocialSheet below).
+/* The site's sheets: MAKE'S (social/templates/social/_make.html), the ☰'S
+ * on a phone's Home and Gallery (_menu.html, below), and every other sheet
+ * the site raises the same way (Your face, on your own profile: profile.js,
+ * through window.SocialSheet below).
  *
  * Make is a choice, not a page: a small sheet with two doors, Draw (Skribl's
  * Pad) and Flip (Skribl's Flip), raised by the bar's Make on a phone, the
@@ -311,6 +312,28 @@
     var a = e.target && e.target.closest ? e.target.closest('a[data-activity]') : null;
     if (a) a.classList.add('is-seen');
   });
+
+  /* THE ☰ ON A PHONE (the quick-patterns mock; the owner's "Yes on
+     everything", Nov 13): the site's own sheet (_menu.html), the ⋯'s, rising
+     from the bottom, focus on its first row. A row picked (a link, or Sign
+     out's form) goes, and the sheet goes down as it does, so the page the
+     back button brings back has it closed. Esc, a tap outside it, its grip,
+     Cancel and a swipe down close it, giving the ☰ its focus back. */
+  var siteMenu = doc.getElementById('siteMenu');
+  var menuBtn = doc.querySelector('[data-site-menu]');
+  if (siteMenu && menuBtn) {
+    var menuApi = sheetFor(siteMenu, {
+      openers: [menuBtn], doorCloses: false,
+      first: function () { return siteMenu.querySelector('.post-act'); }
+    });
+    menuBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      menuApi.open(menuBtn);
+    });
+    siteMenu.addEventListener('click', function (e) {
+      if (e.target.closest('a.post-act, button.post-act[type="submit"]')) menuApi.close(true);
+    });
+  }
 
   var make = doc.getElementById('makeSheet');
   if (!make) return;

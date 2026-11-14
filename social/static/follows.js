@@ -12,9 +12,15 @@
  * is told either way. SIGNED OUT, Follow raises the small sheet that says
  * how; Sign in comes back to the same page, and nothing is pressed for them.
  *
- * YOUR OWN PAGE: "Followed by…" (or "You follow…") opens who follows you and
- * whom you follow, the one pill between them; opened at #followers or
- * #following (a follow row in Activity), it rises on that list.
+ * THE COUNTS FOLLOW THE TAP (the quick-patterns mock's A): the site's answer
+ * to a follow brings the page's counts as it now shows them to you ("New
+ * here" becomes "1 follower"); they fade out, change while they can't be
+ * seen, and fade back (social.css, .fo-counts.is-out), so nothing beside
+ * them jumps as the words change width.
+ *
+ * YOUR OWN PAGE: each count opens who follows you and whom you follow, on its
+ * own list, the one pill between them; opened at #followers or #following
+ * (a follow row in Activity), the sheet rises on that list.
  *
  * HOME'S PILL, Following | Everyone: a tap glides the pill to it, keeps the
  * pick for the account (/home/show), fades the posts out, puts the other
@@ -122,6 +128,34 @@
     said.hidden = !text;
   }
   var btn = doc.querySelector('[data-follow]');
+  var counts = doc.querySelector('[data-follow-counts]');
+  var pending = null, fading = false;
+  /* The page's counts again, from the site's answer (follows.py: its own
+     markup, counted for you): out, changed while unseen, and back. One fade
+     at a time; it puts in the latest answer. */
+  function recount(html) {
+    if (!counts || typeof html !== 'string') return;
+    var t = doc.createElement('template');
+    t.innerHTML = html;
+    var next = t.content.querySelector('[data-follow-counts]');
+    if (!next) return;
+    pending = next.innerHTML;
+    if (fading) return;
+    if (pending === counts.innerHTML) { pending = null; return; }
+    fading = true;
+    var timer = 0;
+    var gone = function (e) {
+      if (e && (e.target !== counts || e.propertyName !== 'opacity')) return;
+      counts.removeEventListener('transitionend', gone);
+      clearTimeout(timer);
+      if (pending !== null) counts.innerHTML = pending;
+      pending = null;
+      requestAnimationFrame(function () { counts.classList.remove('is-out'); fading = false; });
+    };
+    counts.addEventListener('transitionend', gone);
+    timer = setTimeout(gone, 260);
+    counts.classList.add('is-out');
+  }
   var unWrap = doc.getElementById('unfollowSheet');
   var un = btn && unWrap && window.SocialSheet ? window.SocialSheet(unWrap, {
     openers: [btn], doorCloses: false,
@@ -160,6 +194,7 @@
           st.sure = !!j.following;
           if (st.on !== want) { send(); return; }
           if (st.on !== st.sure) { st.on = st.sure; show(st.on, true); }
+          recount(j.counts);
           if (heard) heard.textContent = st.sure ? say('fo_now_following', { name: btn.getAttribute('data-name') || '' }) : '';
           return;
         }
@@ -207,7 +242,11 @@
   /* ---- your own page: who follows you, and whom you follow -------------------- */
   var lists = doc.getElementById('followsSheet');
   if (lists && window.SocialSheet) {
-    var opener = doc.querySelector('[data-follows-open]');
+    /* Your counts: "3 followers" opens Followers, "2 following" Following. */
+    var openers = Array.prototype.slice.call(doc.querySelectorAll('[data-follows-open]'));
+    var openerFor = function (key) {
+      return openers.filter(function (o) { return o.getAttribute('data-follows-open') === key; })[0] || openers[0] || null;
+    };
     var seg = lists.querySelector('.fo-seg');
     /* When each followed, in your own time ("8m", "2d"): social.js's. */
     if (window.SocialWhen) window.SocialWhen(lists);
@@ -220,17 +259,17 @@
       });
     };
     var sheet = window.SocialSheet(lists, {
-      openers: opener ? [opener] : [], doorCloses: false, ownTouch: '.lk-list',
+      openers: openers, doorCloses: false, ownTouch: '.lk-list',
       first: function () { return seg.querySelector('button[aria-pressed="true"]'); },
       onOpen: function () { place(seg, true); }
     });
-    if (opener) {
+    openers.forEach(function (opener) {
       opener.addEventListener('click', function (e) {
         e.preventDefault();
         tab(opener.getAttribute('data-follows-open'));
         sheet.open(opener);
       });
-    }
+    });
     seg.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-tab]');
       if (b && b.getAttribute('aria-pressed') !== 'true') tab(b.getAttribute('data-tab'));
@@ -241,7 +280,7 @@
       var hash = (window.location.hash || '').slice(1);
       if (hash !== 'followers' && hash !== 'following') return;
       tab(hash);
-      if (!sheet.isOpen()) sheet.open(opener);
+      if (!sheet.isOpen()) sheet.open(openerFor(hash));
     };
     landed();
     window.addEventListener('hashchange', landed);

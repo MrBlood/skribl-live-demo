@@ -38800,3 +38800,211 @@ alone, 25/25.
 What it gives up: a hold the Pad made at one turn in three, under 150ms,
 would now pass; nothing in the Pad's restart differs from turn to turn, and
 the old judge would have read every busy runner's stall as one.
+
+## After v330 -- The ☰ on a phone, and the counts (the map's step 5)
+
+The owner, to the quick-patterns mock (https://claude.ai/artifact/S7171kFpfXxiLUzPLJJYwY,
+Nov 13): "Yes on everything". Its defaults for these two: "☰ on a phone: yes,
+as a sheet from the bottom. No Help row until there's a Help page. Your
+profile keeps its Settings button." And "Counts: A. Counts on every profile,
+'New here' instead of zero, the lists yours alone. On your page the counts
+replace 'Followed by…'." That A replaces the earlier Nov 13 B, "no counts,
+ever". Built Nov 14 as the map's step 5 (docs/SOCIAL-SITE.md section 16),
+before step 4, a profile's tabs, which is not built yet.
+
+WHAT CHANGED.
+
+- THE ☰ ON A PHONE (base.html, `_menu.html`, social.js, social.css "THE ☰ ON
+  A PHONE"): at the top left of Home and the Gallery, first in the top, the
+  wordmark 2px after it, drawn in our pen as the mock drew it (three strokes,
+  a hair off true, the last one shorter: `_icons.html` menu()), in the top's
+  ink, the bell's at the other end; 44px, its box reaching 10px past the
+  top's edge, where the mock put it. Named Menu, it opens a dialog. A desk
+  has none: the top is a phone's, and the rail already has Settings; no other
+  page has one.
+- ITS SHEET IS THE SITE'S OWN, the ⋯'s (Make's sheet, `.post-sheet`, its rows
+  `.post-act`, a row a card): titled with your name, then Settings, Community
+  rules, Privacy, Your reports and Sign out, the mock's order without Help.
+  It rises from the bottom and goes down as the site's sheets do (social.js
+  SocialSheet): focus on its first row, the page behind inert, and Esc, a
+  tap outside, its grip, Cancel and a swipe down closing it, giving the ☰
+  its focus back (Esc, a tap outside and Cancel are read for it below; the
+  grip and the swipe are the one controller's, read on Make's sheet); under
+  Reduce Motion it fades where it rests. A row picked opens
+  what it says, and the sheet goes down as it does, so the page the back
+  button brings back has it closed (Make's doors do the same). Three new
+  icons in the pen for the rows that had none (Community rules, a page with
+  its lines; Privacy, a padlock; Sign out, a door and the way out), the
+  mock's own strokes; Settings keeps the gear and Your reports the flag.
+- SIGN OUT is a form with the page's token, as Settings' is, so the Gallery's
+  page now carries the token when somebody is signed in (gallery.py); it
+  signs out at once, as Settings' does.
+- COUNTS ON EVERY PROFILE (`follows.counts`, `_follow.html` follow_counts,
+  social.css "THE COUNTS"): under the @handle, "3 followers · 2 following";
+  "New here" while nobody follows them yet, never "0 followers"; a following
+  count only when it isn't zero ("New here · 2 following", "1 follower").
+  Each number in the first ink (600), its word in the second, a dot between,
+  "New here" in the small violet words; 15px, 6px under the handle; centred
+  on a phone, from the left on a desk; the mock's own CSS.
+- THE LISTS STAY YOURS ALONE. On anybody else's page the counts are words, and
+  nothing of who follows whom is in the page or its source. On your own page
+  each count is a button 44px tall that opens your lists on its own list
+  ("3 followers" Followers, "2 following" Following), and they took the
+  place of "Followed by…", which went (follows.line, the followed_line macro
+  and its rule). "New here" opens nothing, on your own page too; with nobody
+  either way there are no lists in the page, as before.
+- THE COUNTS FOLLOW A TAP: the follow route's answer carries the counts as
+  the page shows them to whoever tapped, rendered by the same macro
+  (`_follow_counts.html`), and follows.js fades the old ones out, puts the
+  new ones in while they can't be seen and fades them back, as Home's posts
+  change; under Reduce Motion the same fade. Nothing beside them moves.
+- THE WORDS that said there were no counts were made true: profile.html's,
+  follows.py's, _follow.html's, profiles.py's, models.py's, mutes.py's
+  ("their follow in the counts and the lists") and social/__init__.py's;
+  docs/SOCIAL-SITE.md section 16 says step 5 is built, and section 15's mute
+  line names the counts; START-HERE's rows for the profile and follows say
+  the counts, and a row of its own, after Settings', says the ☰.
+
+WHAT HIDES WHOM IN A COUNT, read from follows.py and safety.py and followed
+as they are: a count is COUNTED BY WHOEVER LOOKS, as a like's count and a
+comment's are (likes.stats, comments): anybody `safety.hidden_ids(viewer)`
+hides from the viewer, a block either way and anybody taken down, is in
+neither count; to nobody signed in, only the taken down. A MUTE CHANGES NO
+NUMBER (mutes.py: "a mute changes what reaches you, never a number"), so a
+follower you muted is counted, as their like is. A block ends a follow both
+ways for good (follows.end_between), so two people a block stands between
+are never in each other's counts anyway; the viewer's rule is about the
+third person: Oli, who blocked Kip, does not count Kip among Kim's
+followers, while everybody else does. On your own page the counts are your
+lists' lengths (the same rule, how_many). Like a like's count, that means
+two people can see two numbers, the difference somebody hidden from one of
+them; the follow counts reveal nothing a like's count does not already.
+Nothing on the page of somebody you blocked: it shows nothing of theirs, so
+no counts either.
+
+JUDGMENT CALLS, said so they read true:
+
+- SIGNED OUT, THE SAME ☰ (the mock was signed in): in the same place on
+  Home and the Gallery, its sheet titled Blooby, with what a visitor can
+  use: Sign in, Community rules and Privacy. A signed-out phone had no way to
+  the rules or to what the site keeps (Join links them, and Join needs an
+  invite; Settings is the account's), so this is the kind way to read them
+  before anybody is invited. Sign in stays at the top right as well.
+- YOUR REPORTS IS AN ADMIN'S ALONE: the mock's Mira was the site's admin, and
+  /social/reports is the 404 a missing page gives to anybody else (Invites'
+  rule; Settings shows its Reports panel to admins only). A row that led to
+  a 404 would not be kind.
+- THE ☰'S INK IS THE TOP'S, --ink, the bell's, as the mock drew it (its
+  button carried `color: var(--ink)`): an `.icon-btn` alone would have worn
+  the second ink, the bar's, and been lighter than the bell beside it. Same
+  role as the bell, same token.
+- THE COUNTS FOLLOW THE TAP (not in the mock, whose pictures were still): a
+  page that said "New here" beside "Following" would read wrong. The server
+  counts them, for whoever tapped, so the rule is said once.
+- THE COUNTS SIT BEFORE THE BIO, right under the @handle, where the mock put
+  them (its people had no bio).
+- PLAIN NUMBERS, "1234 followers", as a like's count and a comment's are
+  written.
+- AS BUILT, PIXEL FOR PIXEL THE MOCK'S: photographed in Chromium at 2x on a
+  copy of the mock's own database, the counts (everything but the face,
+  which draws itself) and the ☰ with its sheet (the sheet less its Help row)
+  are the mock's photographs to the pixel, light and dark, phone and desk.
+
+Pad and Flip: nothing changes in either editor; they have their own ☰ menu
+already. Not for Flip: there is nothing editor-side.
+
+THE CHECKS, each new or changed row shown red by a break of its own in a
+throwaway copy of the tree, with an unbroken copy as the control (green
+every time):
+
+- verify_socialsettings 10, THE ☰ ON A PHONE (new, eleven rows; the errors
+  section is 11 now): where it is, painted, 44px every way, first in the top
+  at 6px, its middle on the top's, Menu, a dialog, three strokes (14.7, 14.5
+  and 11.1 long), the top's ink, signed in and out, light and dark (red: the
+  ☰ in the second ink; three strokes the same length); a desk none, and no
+  other page on a phone (red: the ☰ on every page); its sheet signed in, on
+  Home and the Gallery, the rows, Sign out's form with the page's own token,
+  focus on Settings, the page behind inert (red: the Gallery's page without
+  its token); an admin's Your reports and nobody else's, where the page is a
+  404 (red: Your reports for everybody signed in); signed out, Blooby, Sign
+  in, Community rules and Privacy (red: no Sign in row); each row lands on
+  its page, and the sheet goes down as a row opens, read with the navigation
+  held (red: Privacy's row to the Terms; a row picked leaving the sheet up);
+  Sign out signs out, from Home and the Gallery (red: the token sent under
+  another name); Esc, a tap outside and Cancel give the ☰ its focus back
+  (red: the sheet opened without its opener); it rises, read on every frame,
+  21 places, the biggest step 20% of the way, and goes down in 16 (red: no
+  glide); under Reduce Motion it fades where it rests (red: gliding under
+  Reduce Motion); every word at 4.5:1 and every row 44px, an admin's and
+  signed out, light and dark (red: the title in a faint ink). Section 6's
+  name lost its "not c": the ☰ is (c).
+- verify_socialfollow 4, rebuilt as COUNTS ON EVERY PROFILE (seven rows): the
+  words for none, one and many of each, the same signed in and out (red:
+  "0 followers" where nobody follows; a following count at zero); words,
+  not links, on anybody else's page, none of who in its source (red: the
+  counts buttons on everybody's page); under the @handle, 6px, 15px, centred
+  on a phone and from the left on a desk, the inks (red: the number in the
+  second ink); on your own page two 44px buttons, each opening its own list,
+  Esc giving it focus back, "Followed by…" gone (red: the buttons 30px
+  tall); "New here" never a way anywhere (red: "New here" a way to your
+  lists); counted by whoever looks, a block either way out, a mute changing
+  no number (red: counted by the owner instead; the muted left out); the
+  taken down in nobody's counts or lists (red: the taken down counted).
+- verify_socialfollow 5: your followers' count opens the lists (red: the
+  counts opening nothing). 6, two new rows: the counts follow the tap, read
+  on every frame, changed once and only while unseen, a fade of eight frames
+  out and eleven back, nothing moving (red: the counts never following the
+  tap; changing in sight, the fade taken out); under Reduce Motion the same
+  fade (red: a cut under Reduce Motion). 12: a profile's counts one read, on
+  the follows' indexes both ways (red: the count read through a function,
+  off its index). 13: every word at 4.5:1 on somebody's page with its counts
+  and on your own (red: the counts' words in a faint ink).
+- verify_socialmute 5: nothing changes on Mox's side, "1 follower", his list
+  naming Lee (red: a mute ending the follow); 9: a muted follower still
+  counted, "1 follower", the list naming them (red: the muted left out of
+  the counts).
+
+FOUND WRONG, AND MENDED: the ☰ first came out in the second ink, lighter
+than the bell (`.icon-btn` comes later in social.css than the ☰'s own rule,
+which the bell's escapes by coming later still); photographing it beside the
+mock's picture showed it, and the rule now names the top. Three instruments
+of mine: verify_socialfollow 5 tapped `[data-follows-open]`, which names two
+counts now (Playwright refuses an ambiguous tap), so it taps the followers'
+count; and a break that took a count away left verify_socialfollow 4 and
+verify_socialmute 9 waiting on a tap until their sections stopped, a red of
+the section rather than of the row, so a tap on a count that is not there
+reads as its row's red now (tap_if), shown again by a break that leaves your
+own counts words.
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py), every one
+green on its first run: verify_socialsettings 44/44, verify_socialfollow
+74/74, verify_socialmute 68/68, verify_socialprofile 55/55,
+verify_socialactivity 44/44, verify_social 40/40, verify_socialauth 64/64,
+verify_socialposts 59/59, verify_sociallikes 96/96, verify_socialcomments
+93/93, verify_socialsafety 38/38, verify_docs 144/144. The full battery was
+not run; main's run after the merge is that.
+
+CONTRAST, measured on the built pages (and the same as the mock measured):
+the counts' numbers 17.47:1 light and 17.17:1 dark, their words and the dot
+7.36:1 and 10.49:1, "New here" 8.04:1 and 10.25:1; the ☰ as a mark 17.47:1
+and 17.17:1; on its sheet the title (your name, the sheet's own --ink-2 on
+--menu-paper) 6.74:1 and 9.69:1, the rows 17.95:1 and 14.05:1, their icons
+7.56:1 and 8.59:1. No colour or token added: the counts and the ☰ wear the
+inks the handle, the name and the bell already wear, and the sheet is the
+⋯'s.
+
+THE FOUR. Simple: the ☰ holds the rest of the site, in the same place for
+everybody; a profile reads at a glance, "New here" in place of a zero. Kind:
+never "0 followers"; who follows whom stays each person's own; a visitor
+can read the rules and what is kept before anybody invites them; nothing
+covers a button. Playful: the ☰ drawn in our pen, its last stroke shorter;
+the counts fade as you follow. Powerful: Settings, the rules, privacy,
+reports and Sign out one tap from Home on a phone.
+
+Asked, for the owner: signed out, the ☰ holds Sign in, Community rules and
+Privacy (the mock showed it signed in only). Is that what a visitor should
+find there?
+
+Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
+their smoke after the merge); SF and Segoe UI (the counts wrap and centre by
+flex, the ☰ is a drawn mark); the live site.

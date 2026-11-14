@@ -54,7 +54,16 @@
     rail's foot, on every page, lit like Home on Settings and the pages it
     leads to (Invites, deleting the account), where You stays lit too, as
     the mock's picture has it. A phone's bar keeps its four places, as it
-    did for Activity: there Settings is the word on your profile.
+    did for Activity: there Settings is the word on your profile, and a row
+    of the ☰'s sheet.
+
+    THE ☰ ON A PHONE (the quick-patterns mock; the owner's "Yes on
+    everything", Nov 13, the map's step 5): drawn in our pen, at the top left
+    of Home and the Gallery, beside the wordmark, in the top's ink, as the
+    bell at its other end. It opens the site's own sheet (_menu.html):
+    Settings, Community rules, Privacy, Your reports (an admin's) and Sign
+    out; signed out, Sign in, Community rules and Privacy. A desk has none:
+    the top is a phone's alone, and the rail already holds Settings.
 
     ONE SCRIPT IN THE PAGE, SKRIBL'S THEME BOOT. The site's own policy
     (social/__init__.py, site_csp) is script-src 'self' and this page's own
@@ -100,6 +109,9 @@
    verify_a11y fails). #}
 <header class="top">
   {% block top %}
+  {% if accounts and not hide_nav and here in ('home', 'explore') %}
+  <button class="icon-btn top-menu" type="button" data-site-menu aria-haspopup="dialog" aria-controls="siteMenu"
+          aria-expanded="false" aria-label="Menu" title="Menu">{{ ic.menu() }}</button>{% endif %}
   <a class="brand" href="{{ url_for('social.home') }}" aria-label="Blooby, home">{% include 'social/_blooby_mark.html' %}</a>
   {% if accounts and not me and not hide_nav %}<a class="top-signin" href="{{ url_for('social.signin') }}">Sign in</a>{% endif %}
   {% if accounts and me and not hide_nav and here in ('home', 'explore') %}{% set dot = activity_dot() %}
@@ -143,6 +155,7 @@
    sits outside #main: opening one makes #main inert, and a sheet inside it
    would go inert with it. #}
 {% if not hide_nav %}{% include 'social/_make.html' %}{% endif %}
+{% if accounts and not hide_nav and here in ('home', 'explore') %}{% include 'social/_menu.html' %}{% endif %}
 {% block overlays %}{% endblock %}
 </body>
 </html>

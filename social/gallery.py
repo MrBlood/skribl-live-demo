@@ -44,7 +44,7 @@ from flask import jsonify, render_template, request, url_for
 
 from .accounts import _rests
 from .models import Person, Post, as_utc
-from .security import current_person, site
+from .security import csrf_token, current_person, site
 
 #: A page of tiles: twelve rows of two on a phone, eight of three on a desk.
 PAGE = 24
@@ -231,8 +231,11 @@ def explore_page():
     me = current_person()
     show, sort, q = wants(request.args, me)
     entries, nxt = page(me, show, sort, q)
+    # The page's token, signed in, for the ☰'s Sign out (_menu.html), a form
+    # as Settings' is.
     return render_template("social/explore.html", here="explore", tiles=tiles(entries, me), next=nxt,
-                           show=show, sort=sort, q=q, more_url=url_for("social.explore_more"))
+                           show=show, sort=sort, q=q, more_url=url_for("social.explore_more"),
+                           token=csrf_token() if me is not None else None)
 
 
 def register(bp):

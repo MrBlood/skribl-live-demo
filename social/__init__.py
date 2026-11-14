@@ -59,8 +59,10 @@ drawing was when it was tapped, through Skribl's playhead seam. Likes wait in
 Activity; they never light the bell's dot.
 
 PHASE 2, FOLLOWS (follows.py; the follow mock, the owner's "Yes to all", B,
-Nov 13). Follow on a person's page, Following once tapped; who follows you
-and whom you follow is yours alone ("Followed by…" on your own page). Home's
+Nov 13). Follow on a person's page, Following once tapped; every profile
+says how many ("3 followers · 2 following", or "New here"; the map's step
+5), and who follows you and whom you follow is yours alone (your own page's
+counts open the lists). Home's
 pill, Following | Everyone: the people you follow and you, newest first,
 then everyone's, so Home never runs out. Follows wait in Activity; they
 never light the bell's dot.

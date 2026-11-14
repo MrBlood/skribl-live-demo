@@ -3,10 +3,12 @@ build order item 3, the owner's "all yes" on the phase 1 mocks).
 
     /@<handle>      a person's profile: their drawn face, big, drawing itself
                     once (Skribl's face player, 4x, still under Reduce
-                    Motion), their name, @handle and a few lines about them,
-                    and their public skribls as Skribl's own Gallery, newest
-                    first. Handles are case-insensitive; nobody by that name
-                    (never made, or deleted) is one kind not-found.
+                    Motion), their name, @handle, their counts ("3 followers
+                    · 2 following", or "New here"; follows.counts) and a few
+                    lines about them, and their public skribls as Skribl's
+                    own Gallery, newest first. Handles are case-insensitive;
+                    nobody by that name (never made, or deleted) is one kind
+                    not-found.
     /you/edit       Edit profile: your name and a few lines about you.
     /you/face       Draw your face: the drawing the Pad hands back in its face
                     mode (?compose=1&face=1, through lib/composehost.js on your
@@ -85,10 +87,13 @@ def register(bp, skribl_blueprint="skribl"):
             # A block they made, or a takedown: nobody's, to anybody else.
             return _page("nobody.html", 404, here="nobody", handle=who.handle)
         note = request.args.get("note") if mine else None
-        # FOLLOWS (B, yours alone): on somebody else's page only whether you
-        # follow them; on your own, who follows you and whom you follow, for
-        # your eyes and nobody else's.
-        from .follows import for_owner, is_following
+        # FOLLOWS: the counts on every profile, counted for whoever looks
+        # (the quick-patterns mock's A), none on somebody you blocked, whose
+        # page shows nothing of theirs; on somebody else's page whether you
+        # follow them; on your own, who follows you and whom you follow, the
+        # lists your counts open, for your eyes and nobody else's.
+        from .follows import counts, for_owner, is_following
+        fo_n = counts(me, who) if not blocked_them else None
         # MUTES (C): their page is what you go to, so it stays; to you alone it
         # says "You muted Theo · Unmute", and its ⋯ says Unmute.
         from .mutes import i_muted
@@ -99,7 +104,7 @@ def register(bp, skribl_blueprint="skribl"):
                      blocked_them=blocked_them,
                      following=not mine and not blocked_them and is_following(me, who),
                      muted=not mine and not blocked_them and i_muted(me, who),
-                     fl=for_owner(me) if mine else None,
+                     fo_n=fo_n, fl=for_owner(me, fo_n) if mine else None,
                      signin_here=url_for("social.signin", next=profile_url(who.handle)),
                      share_url=public_origin() + profile_url(who.handle),
                      token=csrf_token(),

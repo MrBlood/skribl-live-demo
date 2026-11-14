@@ -33,7 +33,8 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
   6. FINDING SETTINGS: (a) the gear says Settings, at the top of your own
      profile on a phone and in your row of buttons on a desk; (b) on a desk,
      Settings in the rail above you on every page, lit on Settings and the
-     pages it leads to; a phone's bar keeps its four places; not (c).
+     pages it leads to; a phone's bar keeps its four places; (c), the ☰ on a
+     phone, came with the map's step 5, and is section 10.
   7. SIGNED OUT, NOTHING NEW: no switch and no Settings anywhere; the device
      decides; the Pad's own switch (through Make) sets the one choice.
   8. THE DARK RAMP, WRITTEN TWICE, IS ONE: social.css's two copies (dark
@@ -42,7 +43,20 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
   9. WORDS AND MARKS: every word on every changed screen at 4.5:1 on what is
      painted behind it (the pill's chosen word on its tint), every target 44px
      to a finger, no field under 16px; phone (touch) and desk, light and dark.
- 10. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
+ 10. THE ☰ ON A PHONE (the quick-patterns mock; the owner's "Yes on
+     everything", Nov 13, the map's step 5): at the top left of Home and the
+     Gallery on a touch phone, first in the top, painted, 44px every way,
+     named Menu, three strokes in our pen, the last shorter, in the top's ink;
+     a desk has none, nor any other page; it opens the site's own sheet, the
+     ⋯'s, titled with your name: Settings, Community rules, Privacy, Your
+     reports (an admin's alone) and Sign out (a form with the page's token, on
+     the Gallery too), no Help; signed out, titled Blooby, Sign in, Community
+     rules and Privacy; each row opens what it says, the sheet going down as
+     it does; Sign out signs out; Esc, a tap outside and Cancel close it,
+     focus back on the ☰; it rises and goes down read on every frame, and
+     under Reduce Motion fades where it rests; every word at 4.5:1, every row
+     44px, light and dark.
+ 11. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALSETTINGS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
@@ -61,6 +75,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -511,6 +526,80 @@ GEAR = r"""() => { const at = (e) => { const r = e.getBoundingClientRect(); cons
              : e.matches('a[href$="/social/you"]') ? 'settings' : e.matches('.fo-btn') ? 'follow' : e.matches('[data-person-menu]') ? 'more' : '?' })),
            inMain: inMain.length, title: title ? title.getBoundingClientRect().right : null,
            faceTop: face ? Math.round(face.getBoundingClientRect().top * 100) / 100 : null }; }"""
+
+# THE ☰ ON A PHONE (the quick-patterns mock; the owner's "Yes on everything",
+# Nov 13): its box, its paint and its reach (a press at its middle and 21px
+# every way lands on it), where it stands in the top (first, its left edge,
+# the wordmark after it, its middle on the top's), what it says to a screen
+# reader, its pen (each stroke's length), its ink against the ink the top
+# names (--ink, the bell's), and that ink as a mark against what is painted
+# behind it.
+MENU = r"""() => { const b = document.querySelector('[data-site-menu]'); if (!b || !b.getClientRects().length) return null;
+  const rgba = s => { const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
+    return m.length >= 3 ? [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1] : null; };
+  const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+                     return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+  const layers = []; for (let n = b; n; n = n.parentElement) { const c = rgba(getComputedStyle(n).backgroundColor);
+    if (c && c[3] > 0) { layers.push(c); if (c[3] >= 1) break; } }
+  let g = [255, 255, 255]; for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; g = [0, 1, 2].map(k => l[k] * l[3] + g[k] * (1 - l[3])); }
+  const fg = rgba(getComputedStyle(b).color), col = [0, 1, 2].map(k => fg[k] * fg[3] + g[k] * (1 - fg[3]));
+  const x = lum(col), y = lum(g), k = Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100;
+  const r = b.getBoundingClientRect(), mx = r.left + r.width / 2, my = r.top + r.height / 2;
+  const hit = (dx, dy) => { const e = document.elementFromPoint(mx + dx, my + dy); return !!e && (e === b || b.contains(e)); };
+  const top = document.querySelector('header.top'), tr = top.getBoundingClientRect(), brand = top.querySelector('.brand').getBoundingClientRect();
+  const probe = document.createElement('span'); probe.style.color = 'var(--ink)'; top.appendChild(probe);
+  const ink = getComputedStyle(probe).color; probe.remove();
+  const bell = top.querySelector('.top-bell'), svg = b.querySelector('svg');
+  return { x: Math.round(r.left * 100) / 100, w: Math.round(r.width * 100) / 100, h: Math.round(r.height * 100) / 100,
+    mid: Math.round((my - (tr.top + tr.height / 2)) * 10) / 10, painted: hit(0, 0), reach: hit(0, -21) && hit(0, 21) && hit(-21, 0) && hit(21, 0),
+    first: top.firstElementChild === b, gap: Math.round((brand.left - r.right) * 100) / 100,
+    label: b.getAttribute('aria-label'), popup: b.getAttribute('aria-haspopup'), controls: b.getAttribute('aria-controls'),
+    expanded: b.getAttribute('aria-expanded'), pen: !!svg && svg.classList.contains('pen-ic'),
+    lengths: svg ? [...svg.querySelectorAll('path')].map(p => Math.round(p.getTotalLength() * 10) / 10) : [],
+    color: getComputedStyle(b).color, ink, bell: bell ? getComputedStyle(bell).color : null, k }; }"""
+
+# Its sheet: open or not, what it is (the ⋯'s: .make.post-sheet), its title,
+# its paper, its rows in order (words, where each goes, a form's action,
+# method and token, its height and icon), where focus is, and the page behind.
+MSHEET = r"""() => { const w = document.getElementById('siteMenu'); if (!w) return null;
+  const s = w.querySelector('.make-sheet'), t = w.querySelector('.make-title'), a = document.activeElement, r = s.getBoundingClientRect();
+  const btn = document.querySelector('[data-site-menu]'), meta = document.querySelector('meta[name="social-csrf"]');
+  return { open: !w.hidden && w.classList.contains('is-open'), hidden: w.hidden, sheet: w.matches('.make.post-sheet'),
+    role: s.getAttribute('role'), modal: s.getAttribute('aria-modal'), labelled: !!t && s.getAttribute('aria-labelledby') === t.id,
+    title: t ? t.textContent.trim() : null, paper: getComputedStyle(s).backgroundColor,
+    rows: [...w.querySelectorAll('.post-acts .post-act')].map(e => { const q = e.getBoundingClientRect();
+      return { words: e.textContent.trim(), href: e.tagName === 'A' ? new URL(e.href).pathname : null,
+        form: e.form ? { action: new URL(e.form.action).pathname, method: e.form.method,
+                         token: (e.form.querySelector('input[name="csrf"]') || {}).value || '' } : null,
+        h: Math.round(q.height * 100) / 100, icon: !!e.querySelector('svg.ic'), bg: getComputedStyle(e).backgroundColor }; }),
+    focus: a && s.contains(a) ? a.textContent.trim() : null, onMenu: !!a && a === btn,
+    expanded: btn ? btn.getAttribute('aria-expanded') : null,
+    inert: ['body > .top', 'body > .nav', '#main'].map(q => document.querySelector(q).hasAttribute('inert')),
+    top: Math.round(r.top * 10) / 10, token: meta ? meta.content : null }; }"""
+
+# Every animation frame for `ms` from a press (`how`: a selector to click, or
+# Escape): the sheet's top, its opacity, and whether it is hidden.
+MGLIDE = r"""([how, ms]) => new Promise(res => { const w = document.getElementById('siteMenu'), s = w.querySelector('.make-sheet'), out = [];
+  const t0 = performance.now();
+  if (how === 'Escape') document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  else document.querySelector(how).click();
+  (function f() { const r = s.getBoundingClientRect();
+    out.push([Math.round(r.top * 10) / 10, +getComputedStyle(s).opacity, w.hidden]);
+    if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); })"""
+
+
+def glide(frames, rest, start):
+    """The tops of the frames read (verify_social's judge of Make's sheet): did
+    it start where it rests closed, end where it rests open, move on many
+    frames, one way, and never jump?"""
+    tops = [f[0] for f in frames]
+    travel = abs(start - rest)
+    steps = [b_ - a_ for a_, b_ in zip(tops, tops[1:])]
+    big = max((abs(s) for s in steps), default=0)
+    way = [s for s in steps if s != 0]
+    one_way = all(s < 0 for s in way) if start > rest else all(s > 0 for s in way)
+    return {"from": tops[0] if tops else None, "to": tops[-1] if tops else None, "positions": len(set(tops)),
+            "biggest step": round(big, 1), "travel": round(travel, 1), "one way": one_way}
 
 
 def colour(css):
@@ -971,7 +1060,7 @@ with sync_playwright() as p:
             stopped(5, exc)
 
     # ------------------------------------------------------------------ 6
-    if part(6, "finding Settings: the gear says Settings; on a desk, Settings in the rail; a phone's bar keeps four; not c"):
+    if part(6, "finding Settings: the gear says Settings; on a desk, Settings in the rail; a phone's bar keeps four (c: 10)"):
         try:
             nico = someone(b, "nico", "Nico Reyes")
             mira = someone(b, "mira", "Mira Okafor")
@@ -1181,7 +1270,260 @@ with sync_playwright() as p:
             stopped(9, exc)
 
     # ------------------------------------------------------------------ 10
-    if part(10, "no page errors, no console errors and no CSP violations"):
+    if part(10, "the ☰ on a phone: Home and the Gallery; the site's own sheet and its rows; signed out; a desk has none"):
+        try:
+            # The site's admin is whoever joined first: section 1's when the
+            # whole suite runs, Ona when this section runs alone.
+            ona = someone(b, "ona", "Ona Pike")
+            pax = someone(b, "pax", "Pax Quill")
+            admins = {h for (h,) in db("select handle from social_people where is_admin = 1")}
+            admin = next(p_ for h, p_ in _people.items() if h in admins)
+            plain = pax if "pax" not in admins else ona
+            name_of = {h: n for h, n in db("select handle, display_name from social_people")}
+            PAPER = {"light": "rgb(243, 240, 255)", "dark": "rgb(23, 20, 42)"}       # --sheet-paper
+            ROWBG = {"light": "rgb(255, 255, 255)", "dark": "rgb(35, 30, 59)"}       # --row-bg
+
+            # (a) where it is, light and dark, signed in and out, Home and the Gallery
+            seen = {}
+            for scheme in ("light", "dark"):
+                for who in (plain, None):
+                    ctx, pg = browser_as(b, who, "phone", scheme, theme=None)
+                    for path in ("/social/", "/social/explore"):
+                        go(pg, path)
+                        seen[(scheme, who.handle if who else "nobody", path)] = pg.evaluate(MENU)
+                    close_ctx(ctx, pg)
+            bad = []
+            for k, m in seen.items():
+                if not (m and m["painted"] and m["reach"] and m["w"] == 44 and m["h"] == 44 and m["x"] == 6 and m["first"]
+                        and m["gap"] == 2 and abs(m["mid"]) <= 0.5 and m["label"] == "Menu" and m["popup"] == "dialog"
+                        and m["controls"] == "siteMenu" and m["expanded"] == "false" and m["pen"] and len(m["lengths"]) == 3
+                        and m["lengths"][2] < 0.85 * min(m["lengths"][:2]) and same_colour(m["color"], m["ink"])
+                        and (m["bell"] is None or same_colour(m["color"], m["bell"])) and m["k"] >= 3):
+                    bad.append(f"{k}: {json.dumps(m)}")
+            check("on a touch phone Home and the Gallery have the ☰ at the top left, first in the top, the wordmark 2px"
+                  " after it: painted where it stands, 44px to a finger every way, its box reaching 10px past the top's"
+                  " edge as the mock placed it, its middle on the top's; named Menu, opening a dialog; drawn in our pen,"
+                  " three strokes, the last one shorter; in the top's ink (the bell's), 3:1 or more as a mark; signed in"
+                  " and signed out, light and dark", not bad and len(seen) == 8, "; ".join(bad)[:1200] or f"{len(seen)} read")
+            print("    the ☰'s strokes and ink:", json.dumps({f"{k[0]} {k[1]} {k[2]}": [m and m["lengths"], m and m["k"]]
+                                                          for k, m in list(seen.items())[:2]}))
+
+            # (b) a desk has none; a phone's other pages have none
+            none = {}
+            for screen in ("phone", "desk"):
+                ctx, pg = browser_as(b, plain, screen, "light", theme=None)
+                paths = (("/social/", "/social/explore") if screen == "desk" else
+                         (f"/social/@{plain.handle}", "/social/activity", "/social/you", "/social/rules"))
+                for path in paths:
+                    go(pg, path)
+                    none[(screen, path)] = pg.evaluate("() => { const b = document.querySelector('[data-site-menu]');"
+                                                       " return b ? b.getClientRects().length : 'none'; }")
+                close_ctx(ctx, pg)
+            check("a desk has none (on Home and the Gallery nothing of it is painted: the top is a phone's, and the rail"
+                  " already has Settings), and on a phone it is Home's and the Gallery's alone: not on your profile,"
+                  " Activity, Settings or the rules",
+                  all(v == 0 for (s_, _), v in none.items() if s_ == "desk")
+                  and all(v == "none" for (s_, _), v in none.items() if s_ == "phone") and len(none) == 6,
+                  json.dumps({f"{k[0]} {k[1]}": v for k, v in none.items()}))
+
+            # (c) its sheet, signed in, on Home and the Gallery
+            sheets = {}
+            for path in ("/social/", "/social/explore"):
+                ctx, pg = browser_as(b, plain, "phone", "light", theme=None)
+                go(pg, path)
+                press(pg, "[data-site-menu]")
+                pg.wait_for_timeout(700)
+                sheets[path] = pg.evaluate(MSHEET)
+                close_ctx(ctx, pg)
+            want = [["Settings", "/social/you"], ["Community rules", "/social/rules"], ["Privacy", "/social/privacy"]]
+            bad = []
+            for path, s1 in sheets.items():
+                if not (s1 and s1["open"] and s1["sheet"] and s1["role"] == "dialog" and s1["modal"] == "true" and s1["labelled"]
+                        and s1["title"] == name_of[plain.handle] and same_colour(s1["paper"], PAPER["light"])
+                        and [[r["words"], r["href"]] for r in s1["rows"]][:3] == want and len(s1["rows"]) == 4
+                        and s1["rows"][3]["words"] == "Sign out" and s1["token"]
+                        and s1["rows"][3]["form"] == {"action": "/social/signout", "method": "post", "token": s1["token"]}
+                        and all(r["h"] >= 56 and r["icon"] and same_colour(r["bg"], ROWBG["light"]) for r in s1["rows"])
+                        and s1["focus"] == "Settings" and all(s1["inert"]) and s1["expanded"] == "true"):
+                    bad.append(f"{path}: {json.dumps(s1)}")
+            check("signed in, it opens the site's own sheet, the ⋯'s (Make's sheet in its paper, a modal dialog named by"
+                  " its title, your name): Settings, Community rules, Privacy and Sign out (a form posting to the"
+                  " sign-out with the page's own token, the Gallery's too), a row a card 56px tall with its icon, no Help;"
+                  " focus on Settings, the page behind inert, the ☰ marked open; on Home and on the Gallery",
+                  not bad and len(sheets) == 2, "; ".join(bad)[:1200])
+
+            # (d) an admin's has Your reports; nobody else's
+            ctx, pg = browser_as(b, admin, "phone", "light", theme=None)
+            go(pg, "/social/")
+            press(pg, "[data-site-menu]")
+            pg.wait_for_timeout(700)
+            sa_ = pg.evaluate(MSHEET)
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, plain, "phone", "light", theme=None)
+            not_theirs = pg.goto(BASE + "/social/reports").status
+            close_ctx(ctx, pg)
+            check("an admin's has Your reports between Privacy and Sign out, to the reports (Settings shows them the"
+                  " same); nobody else's does, where that page is the 404 a missing page gives",
+                  sa_ and [[r["words"], r["href"]] for r in sa_["rows"]] == want + [["Your reports", "/social/reports"], ["Sign out", None]]
+                  and sa_["title"] == name_of[admin.handle] and all(r["words"] != "Your reports" for r in sheets["/social/"]["rows"])
+                  and not_theirs == 404,
+                  f"{json.dumps(sa_ and [[r['words'], r['href']] for r in sa_['rows']])}; the reports for somebody else {not_theirs}")
+
+            # (e) signed out
+            outs = {}
+            for path in ("/social/", "/social/explore"):
+                ctx, pg = browser_as(b, None, "phone", "light", theme=None)
+                go(pg, path)
+                press(pg, "[data-site-menu]")
+                pg.wait_for_timeout(700)
+                outs[path] = pg.evaluate(MSHEET)
+                close_ctx(ctx, pg)
+            check("signed out, the same ☰ opens the same sheet titled Blooby, with what a visitor can use: Sign in,"
+                  " Community rules and Privacy (no Settings, no Sign out); focus on Sign in",
+                  all(o and o["open"] and o["title"] == "Blooby" and [[r["words"], r["href"]] for r in o["rows"]]
+                      == [["Sign in", "/social/signin"], ["Community rules", "/social/rules"], ["Privacy", "/social/privacy"]]
+                      and o["focus"] == "Sign in" and all(r["h"] >= 56 and r["icon"] for r in o["rows"]) for o in outs.values())
+                  and len(outs) == 2, json.dumps({k: v and [[r["words"], r["href"]] for r in v["rows"]] for k, v in outs.items()}))
+
+            # (f) each row opens what it says; the sheet goes down as it goes
+            landed, held = {}, {}
+            for who, words, path in ((plain, "Settings", "/social/"), (plain, "Community rules", "/social/explore"),
+                                     (plain, "Privacy", "/social/"), (admin, "Your reports", "/social/"),
+                                     (None, "Sign in", "/social/explore")):
+                ctx, pg = browser_as(b, who, "phone", "light", theme=None)
+                go(pg, path)
+                press(pg, "[data-site-menu]")
+                pg.wait_for_timeout(600)
+                row = pg.locator("#siteMenu .post-act", has_text=words).first
+                try:
+                    with pg.expect_navigation(timeout=15000):
+                        row.tap(timeout=5000)
+                    pg.wait_for_timeout(300)
+                    landed[words] = [urllib.parse.urlparse(pg.url).path,
+                                     pg.evaluate("() => { const h = document.querySelector('h1'); return h ? h.textContent.trim() : null; }")]
+                except Exception as exc:  # noqa: BLE001
+                    landed[words] = str(exc).splitlines()[0][:80]
+                if words == "Privacy":
+                    go(pg, path)
+                    press(pg, "[data-site-menu]")
+                    pg.wait_for_timeout(600)
+                    pg.evaluate("""() => new Promise(res => {
+                        const hold = e => { if (e.target.closest('#siteMenu .post-act')) e.preventDefault(); };
+                        document.addEventListener('click', hold, true);
+                        const a = [...document.querySelectorAll('#siteMenu a.post-act')].find(x => x.textContent.trim() === 'Privacy');
+                        if (a) a.click();
+                        setTimeout(() => { document.removeEventListener('click', hold, true); res(); }, 700); })""")
+                    held = pg.evaluate(MSHEET)
+                close_ctx(ctx, pg)
+            check("each row opens what it says: Settings, the Community rules, Privacy, an admin's Your reports and,"
+                  " signed out, Sign in; and the sheet goes down as a row opens (read with the navigation held), so the"
+                  " page the back button brings back has it closed",
+                  landed == {"Settings": ["/social/you", "Settings"], "Community rules": ["/social/rules", "Community rules"],
+                             "Privacy": ["/social/privacy", "Privacy"], "Your reports": ["/social/reports", "Reports"],
+                             "Sign in": ["/social/signin", "Sign in to Blooby"]}
+                  and held and held["hidden"] and not held["open"] and not any(held["inert"]),
+                  f"landed {json.dumps(landed)}; a row picked, the sheet hidden {held and held['hidden']}")
+
+            # (g) Sign out signs out, from Home and from the Gallery
+            gone = {}
+            for path in ("/social/", "/social/explore"):
+                ctx, pg = browser_as(b, plain, "phone", "light", theme=None)
+                go(pg, path)
+                press(pg, "[data-site-menu]")
+                pg.wait_for_timeout(600)
+                try:
+                    with pg.expect_navigation(timeout=15000):
+                        pg.locator("#siteMenu button.post-act").tap(timeout=5000)
+                    pg.wait_for_timeout(300)
+                    at = urllib.parse.urlparse(pg.url)
+                    note = pg.evaluate("() => (document.querySelector('.note') || {}).textContent || null")
+                    go(pg, "/social/")
+                    after = pg.evaluate("() => ({ first: !!document.querySelector('.hello'), signin: !!document.querySelector('.top-signin'),"
+                                        " title: (document.querySelector('#siteMenu .make-title') || {}).textContent || null })")
+                    gone[path] = [at.path + "?" + at.query, note, after]
+                except Exception as exc:  # noqa: BLE001
+                    gone[path] = str(exc).splitlines()[0][:80]
+                close_ctx(ctx, pg)
+            check("Sign out signs out (the form, with the page's token), from Home and from the Gallery: Sign in says"
+                  " “You’re signed out. See you soon.”, and Home is the first visit again, its ☰'s sheet titled Blooby",
+                  all(v == ["/social/signin?out=1", "You’re signed out. See you soon.", {"first": True, "signin": True, "title": "Blooby"}]
+                      for v in gone.values()) and len(gone) == 2, json.dumps(gone))
+
+            # (h) Esc, a tap outside, Cancel: closed, focus back on the ☰
+            closed = {}
+            for how in ("Escape", "outside", "Cancel"):
+                ctx, pg = browser_as(b, plain, "phone", "light", theme=None)
+                go(pg, "/social/")
+                press(pg, "[data-site-menu]")
+                pg.wait_for_timeout(700)
+                if how == "Escape":
+                    pg.keyboard.press("Escape")
+                elif how == "outside":
+                    pg.touchscreen.tap(200, 140)
+                else:
+                    press(pg, "#siteMenu .make-cancel")
+                pg.wait_for_timeout(700)
+                s2 = pg.evaluate(MSHEET)
+                closed[how] = s2 and [s2["hidden"], s2["onMenu"], s2["expanded"], any(s2["inert"])]
+                close_ctx(ctx, pg)
+            check("Esc, a tap outside it and Cancel each close it, giving the ☰ its focus back, marked closed, nothing"
+                  " behind it inert", all(v == [True, True, "false", False] for v in closed.values()) and len(closed) == 3,
+                  json.dumps(closed))
+
+            # (i) it rises, read on every frame; under Reduce Motion it fades where it rests
+            rises = {}
+            for scheme in ("light", "dark"):
+                ctx, pg = browser_as(b, plain, "phone", scheme, theme=None)
+                go(pg, "/social/")
+                up = pg.evaluate(MGLIDE, ["[data-site-menu]", 900])
+                rest = pg.evaluate(MSHEET)["top"]
+                down = pg.evaluate(MGLIDE, ["Escape", 900])
+                rises[scheme] = {"up": glide(up, rest, 874), "down": glide([f for f in down if not f[2]], 874, rest), "rest": rest}
+                close_ctx(ctx, pg)
+            check("it rises from below the screen to where it rests, read on every frame: eight places or more, one way,"
+                  " never more than 30% of the way in a frame; and goes back down the same way, quicker (six places,"
+                  " 35%), as Make's sheet does (light and dark)",
+                  all(v["up"]["from"] >= 873 and abs(v["up"]["to"] - v["rest"]) <= 0.5 and v["up"]["positions"] >= 8
+                      and v["up"]["one way"] and v["up"]["biggest step"] <= 0.3 * v["up"]["travel"] and v["up"]["travel"] > 100
+                      and v["down"]["positions"] >= 6 and v["down"]["one way"]
+                      and v["down"]["biggest step"] <= 0.35 * v["down"]["travel"] for v in rises.values()) and len(rises) == 2,
+                  json.dumps(rises))
+            ctx, pg = browser_as(b, plain, "phone", "light", reduced=True, theme=None)
+            go(pg, "/social/")
+            up = pg.evaluate(MGLIDE, ["[data-site-menu]", 700])
+            still = pg.evaluate(MSHEET)
+            down = pg.evaluate(MGLIDE, ["Escape", 700])
+            close_ctx(ctx, pg)
+            tops_up = sorted({f[0] for f in up if f[1] > 0.02})
+            tops_down = sorted({f[0] for f in down if not f[2] and f[1] > 0.02})
+            fades = (len({round(f[1], 2) for f in up}), len({round(f[1], 2) for f in down if not f[2]}))
+            check("under Reduce Motion it does not move: it fades in where it rests and fades out there, every frame",
+                  still and still["open"] and tops_up == [still["top"]] and tops_down == [still["top"]] and up[-1][1] >= 0.99
+                  and min(fades) >= 3, f"tops while seen, opening {tops_up[:4]}, closing {tops_down[:4]}; rests at"
+                  f" {still and still['top']}; opacities {fades}")
+
+            # (j) its words, light and dark, signed in (an admin's, every row) and out
+            looks = {}
+            for scheme in ("light", "dark"):
+                for who in (admin, None):
+                    ctx, pg = browser_as(b, who, "phone", scheme, theme=None)
+                    go(pg, "/social/explore")
+                    press(pg, "[data-site-menu]")
+                    pg.wait_for_timeout(800)
+                    looks[(scheme, who.handle if who else "nobody")] = pg.evaluate(READ, "#siteMenu")
+                    close_ctx(ctx, pg)
+            low = [f"{k}: {x}" for k, v in looks.items() for x in v["low"]]
+            small = [f"{k}: {x}" for k, v in looks.items() for x in v["small"]]
+            print("    the ☰'s sheet, the lowest word:", json.dumps({f"{k[0]} {k[1]}": v["lowest"] for k, v in looks.items()}))
+            check("every word on its sheet (the title, every row, Cancel) reads at 4.5:1 or more on what is painted behind"
+                  " it, and every row is 44px or more to a finger: light and dark, an admin's and signed out",
+                  all(v["read"] >= 5 for v in looks.values()) and not low and not small and len(looks) == 4,
+                  f"read {[(k, v['read']) for k, v in looks.items()]}; low {low[:4]}; small {small[:4]}")
+        except Exception as exc:  # noqa: BLE001
+            stopped(10, exc)
+
+    # ------------------------------------------------------------------ 11
+    if part(11, "no page errors, no console errors and no CSP violations"):
         nico = someone(b, "nico", "Nico Reyes")
         for screen, _ in SCREENS:
             for scheme in ("light", "dark"):
