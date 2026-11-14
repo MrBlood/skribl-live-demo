@@ -800,7 +800,9 @@ with sync_playwright() as p:
         pg.wait_for_timeout(700)
         sheet = pg.evaluate("""() => ({ open: document.getElementById('composeSheet').classList.contains('is-open'),
           field: document.activeElement === document.querySelector('#composeSheet [data-compose-words]') })""")
-        pg.click("#composeSheet [data-compose-post]", force=True)
+        # The button's own click: a sheet that never opened is this row's red,
+        # not a stop at a hidden button.
+        pg.evaluate("() => document.querySelector('#composeSheet [data-compose-post]').click()")
         pg.wait_for_timeout(300)
         said = pg.evaluate("() => document.querySelector('#composeSheet [data-compose-say]').textContent")
         nctx, npg = browser_as(b, None)

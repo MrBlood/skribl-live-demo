@@ -40,8 +40,9 @@
  * page at a time with Load more. A draft opens in the editor that made it,
  * over the composer, with the draft on its canvas (composehost's openDraft:
  * a draft is the editor's own work, and only the editor builds what a post
- * carries); Add to post brings it back attached. A drawing is attached at
- * once, as it is.
+ * carries); closing the editor is back in the picker, and Add to post brings
+ * it back attached, the words in place under the editor as it goes. A
+ * drawing is attached at once, as it is.
  *
  * The words are the page's ([data-compose-said]): this file says nothing of
  * its own.

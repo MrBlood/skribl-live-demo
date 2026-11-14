@@ -6,6 +6,9 @@
  * Make is a choice, not a page: a small sheet with two doors, Draw (Skribl's
  * Pad) and Flip (Skribl's Flip), raised by the bar's Make on a phone, the
  * rail's on a desk, and Home's "Make a skribl". The owner's yes, Nov 10.
+ * That is Make for somebody signed out (and on a site without accounts);
+ * signed in, Make is the composer since Nov 14 (compose.js, _compose.html),
+ * which is this same sheet made tall, and its two doors are its tools.
  *
  * KIND, NEVER JUMPY. The sheet glides up from the bottom of a phone and back
  * down when it goes (social.css; a desk's card rises a little and fades);
