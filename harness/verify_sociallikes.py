@@ -2,7 +2,7 @@
 likes"), through the demo's own server, with Chromium's virtual
 authenticator for the site's people.
 
-  1. THE HEART AND THE COUNT, WHERE THEY ARE (Nov 14, the quick-patterns
+  1. THE HEART AND THE COUNT, WHERE THEY ARE (Nov 13, the quick-patterns
      mock's B; until then the owner's way 3, at the start of the drawing's
      line): in the row under the drawing, on Home's cards and on a post's page
      and a drawing's, after the comments and before Share, the ⋯ and (on a
@@ -509,7 +509,7 @@ HEART = r"""(sel) => { const el = document.querySelector(sel); if (!el || !el.ge
     inkColor: cs('.ht-ink') ? cs('.ht-ink').stroke : null, fillColor: cs('.ht-fill') ? cs('.ht-fill').fill : null,
     like: el.getAttribute('data-like'), out: el.hasAttribute('data-like-out'), color: getComputedStyle(el).color }; }"""
 
-# THE ROW under a post (Nov 14, the quick-patterns mock's B), in `sel`: what
+# THE ROW under a post (Nov 13, the quick-patterns mock's B), in `sel`: what
 # it shows, in order; the heart's box beside the comments' (their ink, their
 # middle, the 14px between), its ground, its icon's size, and whether a press
 # lands on it at each edge; whether any heart is left on the drawing's line.
@@ -2116,7 +2116,7 @@ with sync_playwright() as p:
                     page_px = dot_pixels(pg, ".post-page > .post-art")
                     go(pg, "/social/")
                     # On a card the line waits until the drawing is played
-                    # (the calm card, Nov 14): played and paused, it is open.
+                    # (the calm card, Nov 13): played and paused, it is open.
                     pg.locator(card(p14) + " .skribl-inline").scroll_into_view_if_needed()
                     pg.evaluate("(s) => SkriblInline.mount(document.querySelector(s))[0].toggle()", card(p14) + " .post-art")
                     pg.wait_for_timeout(800)
@@ -2445,7 +2445,7 @@ with sync_playwright() as p:
             # dot, and on its first frame the playhead is at that dot or just
             # past it: by three frames of the playhead's travel at 16x, worked
             # out from this line's width and the piece's length (about 3px when
-            # the heart took room on the line; the line is wider since Nov 14).
+            # the heart took room on the line; the line is wider since Nov 13).
             # Not by the events: a host can send one again, late. (The busy
             # piece's last like is 3% before its end, so no heart is born as the
             # playhead comes round.)

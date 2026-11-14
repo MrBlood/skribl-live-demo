@@ -1842,7 +1842,7 @@ with sync_playwright() as sp:
     #   elements, and no test for a Flip before its pages come (its line has
     #   no length to put a moment on): 2,807 B down to 2,300. 81,241 B
     #   measured.
-    # RAISED (the owner's "Yes on everything", Nov 14: the calm card, the
+    # RAISED (the owner's "Yes on everything", Nov 13: the calm card, the
     #   quick-patterns mock's B), for one named cost: +543 B -- a line that
     #   WAITS (skribl_inline line_waits=True; docs/INTEGRATION.md, "A line
     #   that waits"), a GENERAL seam: no room and nothing shown until the
@@ -2471,7 +2471,7 @@ with sync_playwright() as sp:
     check("no page errors on the post", not _perrs, "; ".join(_perrs[:2]))
     _pp.close()
 
-    # A LINE THAT WAITS (docs/INTEGRATION.md, "A line that waits"; Nov 14, the
+    # A LINE THAT WAITS (docs/INTEGRATION.md, "A line that waits"; Nov 13, the
     # Skribl site's calm card, the owner's B). skribl_inline(...,
     # line_waits=True) keeps the line out of sight and out of the layout until
     # the drawing is first played: at rest the play button says what the line

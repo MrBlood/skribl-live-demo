@@ -16,6 +16,9 @@ box has neither, so say so rather than guess about Safari, Edge, SF or Segoe.
 **Time is Mountain Time.** Say times as the owner lives them: MDT in summer
 (UTC−6), MST in winter (UTC−7) — "merges around 10:30 PM", not "04:30 UTC".
 UTC only where CI or GitHub needs it, and then beside the local time.
+Dates too: this box's clock and the session's date are UTC, already tomorrow
+from 5 PM MST (6 PM MDT), so a note written in the evening carries the owner's
+date (`TZ=America/Denver date`). The Nov 13 evening was first written "Nov 14".
 
 **Every pull request description ends**
 

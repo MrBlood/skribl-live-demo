@@ -4,7 +4,7 @@
 section 8.** Nothing here is built yet except where it says "have", and phase
 1's first piece, the frame, which section 9 describes.
 
-**The map since Nov 14 is section 16**: a post is the one thing people
+**The map since Nov 13 is section 16**: a post is the one thing people
 share. Where an earlier section says otherwise (Home holding every drawing,
 what Explore and a profile show, no follower counts), section 16 is the
 decision.
@@ -1079,7 +1079,7 @@ everyone sees how many, and who liked it is only ever the maker's to see.
                                     given or taken back
     /social/b/<skribl_id>/like      the same, on a drawing shown outside a post
 
-**Since Nov 14 the heart is in the row under the drawing** (section 16,
+**Since Nov 13 the heart is in the row under the drawing** (section 16,
 step 2: after the comments, before Share and the ⋯), and Skribl's line has no
 lead any more; what follows is the heart as it was first built.
 
@@ -1558,7 +1558,7 @@ check was shown red by.
 
 ## 16. The map: a post is the one thing people share
 
-The owner, Nov 14, after Explore's card turned out to be a different card
+The owner, Nov 13, after Explore's card turned out to be a different card
 from Home's: "I'm starting to think we should do the social site like
 skribls.net. It's a social site already that we were going to drop skribl
 into as a feature, like GIF, add image, add video, poll... we can have the
@@ -1590,7 +1590,7 @@ first thing the owner saw of it.
 | **Make** | One composer, the same from the bar and from Home: words, and Draw or Flip. |
 | **Activity, Settings** | As built. Settings from the ☰ on a phone (and the profile's button), the rail on a desk. |
 
-**The owner's decisions (Nov 14, "Yes on everything").**
+**The owner's decisions (Nov 13, "Yes on everything").**
 
 1. **Every share is a post** (words optional). Your Gallery collects every
    drawing you have shared, each opening its post. This replaces the Nov 11
@@ -1631,7 +1631,7 @@ first thing the owner saw of it.
      here" while nobody follows them yet, a following count only when it is
      not zero. The lists of who follows whom stay yours alone, opened by the
      counts on your own page, where they take the place of "Followed by…".
-     This replaces the Nov 13 B, "no counts, ever".
+     This replaces the earlier Nov 13 B, "no counts, ever".
 5. **The Gallery of everyone** (the owner's addition, the same evening):
    Explore becomes it, with Following | Everyone, and more filters later.
    Mocked (https://claude.ai/artifact/LXxXHjTX9JwjK4kGYL8Vuy) and answered,
@@ -1668,7 +1668,7 @@ suites that held it.
    Drafts tabs mocked first, with step 3's tiles).
 5. The ☰ on a phone, and the counts.
 6. Likes and comments on posts only; what goes, taken out.
-7. Add to Home Screen (the owner, Nov 14, after the map): a way to put
+7. Add to Home Screen (the owner, Nov 13, after the map): a way to put
    Blooby on a phone's Home Screen, so it opens full screen like an app.
    Mocked first, once steps 3 to 6 are in. (The owner also noted that in
    Bluesky a speech bubble with dots means direct messages: our 💬 is the

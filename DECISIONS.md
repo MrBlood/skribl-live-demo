@@ -38096,7 +38096,7 @@ full battery was not run here; main's run after the merge is.
 
 ## After v330 -- The map: a post is the one thing people share
 
-The owner, Nov 14, looking at Explore on the phone ("Why does EXPLORE show
+The owner, Nov 13, looking at Explore on the phone ("Why does EXPLORE show
 with no stats or hearts? ... The posts should show the same as the post
 everywhere right? And it should not look crazy busy. Kind. And intuitive."),
 then: "I'm starting to think we should do the social site like skribls.net.
@@ -38166,7 +38166,7 @@ Load, not a defect, both: no product code changed.
 
 ## After v330 -- The one card: calm at rest, and one row (the map's step 2)
 
-The owner's "Yes on everything" (Nov 14) to the quick-patterns mock's B for
+The owner's "Yes on everything" (Nov 13) to the quick-patterns mock's B for
 the card (calm at rest) and the row's B (with "Open ›"), built as step 2 of
 the map (docs/SOCIAL-SITE.md section 16). The owner: "The posts should show
 the same as the post everywhere right? And it should not look crazy busy.

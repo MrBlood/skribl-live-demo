@@ -1467,7 +1467,7 @@ with sync_playwright() as p:
                  ("a profile", "/social/@juno", TILE.format(lone), lone, to_lone)]
         # Where a finger goes on a card: the drawing's middle, the name's, and
         # the ground's: on Home's calm card the row's open space between the ⋯
-        # and Open › (its line waits until played, Nov 14), a Gallery card's
+        # and Open › (its line waits until played, Nov 13), a Gallery card's
         # time; scrolled to the screen's middle first.
         SPOT12 = """([sel, what]) => { const c = document.querySelector(sel); if (!c) return null;
           const text = (root, needle) => { if (!root) return null; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -1621,7 +1621,7 @@ with sync_playwright() as p:
             sel = f'.post-card[data-post="{g_post}"]'
             ready(cpg, "/social/", sel)
             # A card's line waits until its drawing is first played (the calm
-            # card, Nov 14): played and paused, it is open, as for a person.
+            # card, Nov 13): played and paused, it is open, as for a person.
             cpg.evaluate("(s) => SkriblInline.mount(document.querySelector(s + ' .post-art'))[0].toggle()", sel)
             cpg.wait_for_function("(s) => !document.querySelector(s + ' .skribl-inline-line').className.match(/is-(waiting|opening)/)",
                                   arg=sel, timeout=8000)

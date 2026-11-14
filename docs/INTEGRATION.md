@@ -180,7 +180,7 @@ Without it the line says what it can until the drawing arrives. A surface
 with a transport of its own passes `line=False` and keeps the 16:9 box with
 mute and loop on it.
 
-**A line that waits** (Nov 14: the Skribl site's calm card). Pass
+**A line that waits** (Nov 13: the Skribl site's calm card). Pass
 `line_waits=True` and the line under the drawing takes no room and shows
 nothing until the drawing is first played: at rest the play button says what
 the line would ("drawn in 5 sec", "12 pages"), as a card with no line does, so

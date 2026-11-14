@@ -30,7 +30,7 @@
  * in the note's tint, as a comment does when you land on it.
  *
  * THE HEART SITS IN THE POST'S ROW, under the drawing, beside the comments
- * (the quick-patterns mock's B, Nov 14). Until then it sat at the start of the
+ * (the quick-patterns mock's B, Nov 13). Until then it sat at the start of the
  * drawing's own line (the owner's way 3); the dots stay on the line.
  *
  * KIND, NEVER JUMPY: the heart draws or fades (social.css, "LIKES"); a count
@@ -164,7 +164,7 @@
   }
 
   /* The player of this heart's post (Skribl's, mounted once): the heart is
-     in the post's row, under the drawing (Nov 14). */
+     in the post's row, under the drawing (Nov 13). */
   function playerOf(b) {
     var host = b.closest('.post-card, .post-page'), art = host && host.querySelector('.post-art');
     return art && window.SkriblInline ? window.SkriblInline.mount(art)[0] || null : null;

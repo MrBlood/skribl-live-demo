@@ -606,7 +606,7 @@ check("the site reads where a drawing's playhead is through playhead() alone, ne
 
 # ---------------------------------------------------------------------------
 print("\nA LINE THAT WAITS — no room and nothing shown until the drawing is first played")
-# docs/INTEGRATION.md, "A line that waits" (Nov 14, the Skribl site's calm
+# docs/INTEGRATION.md, "A line that waits" (Nov 13, the Skribl site's calm
 # card, the owner's B): skribl_inline(..., line_waits=True) keeps the line out
 # of sight and out of the layout at rest, the play button saying what the
 # line would, and the first play opens it, gliding, for good. It took the
