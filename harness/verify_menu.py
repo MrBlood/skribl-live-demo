@@ -28,6 +28,10 @@ below holds a promise the new menu made, on the Pad and on Flip:
      and every card's edge shows against it, light and dark. On B as first
      mocked, How it works' lilac fill met the lilac sheet with no line between
      (owner's screenshot); read from the pixels on each side of the edge.
+ 10. A FIRST VISIT FADES TOO: on the Pad, Flip and a drawing's page, with
+     nothing cached and every stylesheet held back, the sheet that asks for
+     the cross-fade has loaded when <body> starts, where Chrome decides
+     whether the page fades (the theme boot, inline, after the stylesheets).
 
 Visible means painted: elementFromPoint inside the thing, not its rect.
 """
@@ -451,6 +455,35 @@ with sync_playwright() as p:
 
     check("Pad and Flip show the same menu, tile for tile and row for row",
           orders.get("Pad") and orders.get("Pad") == orders.get("Flip"), f"Pad {orders.get('Pad')}, Flip {orders.get('Flip')}")
+
+    # 10. A FIRST VISIT FADES TOO (after #892's full run, "Transition was
+    # aborted because of invalid state. ViewTransition opt-in disabled" on a
+    # drawing's page). Chrome decides whether an arriving page fades when its
+    # parser reaches <body>, from the stylesheets loaded by then; on a first
+    # visit the one that asks (@view-transition) has loaded only if the parser
+    # waited for it, at the theme boot after it. Read at <body> on the Pad,
+    # Flip and a drawing's page (the page somebody is sent), each a first
+    # visit with every stylesheet held back (browsing.fade_at_body).
+    c = b.new_context(**PHONE)
+    q = c.new_page()
+    browsing.goto(q, BASE, "/skribl-pad")
+    made = q.evaluate("""async () => {
+      await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
+      const tok = (document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '';
+      const pts = Array.from({ length: 20 }, (_, i) => ({ x: 300 + i * 8, y: 300 + Math.sin(i / 3) * 60,
+        color: '#7c5cff', size: 8, t: i * 30, start: i === 0 }));
+      const r = await fetch('/api/skribls', { method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-Skribl-CSRF': decodeURIComponent(tok) },
+        body: JSON.stringify({ title: 'A first visit', visibility: 'unlisted', version: 2, schemaVersion: 2,
+          playbackMode: 'replay', canvasSize: { cssWidth: 816, cssHeight: 612 },
+          frames: [{ strokes: pts, strokeGroups: [pts.length] }] }) });
+      const j = await r.json().catch(() => ({})); return j.id || null; }""")
+    c.close()
+    for label, path in (("the Pad", "/skribl-pad"), ("Flip", "/flip"), ("a drawing's page", f"/s/{made}" if made else None)):
+        at = browsing.fade_at_body(b, BASE, path, **PHONE) if path else None
+        check(f"{label}: a first visit fades in too: the stylesheet asking for the cross-fade has loaded when <body>"
+              " starts, where Chrome decides it (nothing cached, every stylesheet held back 300ms)",
+              bool(at) and at.get("ask") is True, f"at <body>: {at}; the drawing made: {made}")
     b.close()
 
 bad = [r for r in results if not r[0]]

@@ -22,7 +22,9 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
   4. THE NEXT PAGE, NEVER A FLASH: Dark chosen on a light device (and Light on
      a dark one), every one of the next pages' first frames in the choice; the
      browser's bar (both theme-color metas, whichever the device picks) the
-     chosen ground before any deferred script.
+     chosen ground before any deferred script; and a first visit (nothing
+     cached) has social.css, which asks for the cross-fade, loaded when <body>
+     starts, where Chrome decides whether the page fades.
   5. THE SWITCH CROSS-FADES, read on every 1/60 s frame on the transitions'
      own clock: the page fades from one theme to the other in the site's
      0.28s, never back, never a flash, the pill gliding there (phone and
@@ -63,6 +65,7 @@ import urllib.request
 from pathlib import Path
 
 from assertions import make_check
+import browsing
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "harness"))
@@ -890,6 +893,15 @@ with sync_playwright() as p:
                   " desk)", all(o for o, _ in frames), "; ".join(w for o, w in frames if not o)[:1500] or f"{len(frames)} pages")
             check("the browser's bar says the chosen ground before any deferred script has run: both theme-color metas,"
                   " whichever the device picks", all(o for o, _ in bars), "; ".join(w for o, w in bars if not o)[:1500] or f"{len(bars)} pages")
+            # A FIRST VISIT FADES TOO (after #892's full run): base.html puts
+            # Skribl's theme boot after social.css, so the parser waits for
+            # the sheet that asks for the cross-fade before <body>, where
+            # Chrome decides whether an arriving page fades
+            # (browsing.fade_at_body: nothing cached, every stylesheet held).
+            firsts = [(p_, browsing.fade_at_body(b, BASE, p_, **PHONE)) for p_ in ("/social/", "/social/explore")]
+            check("a first visit fades in too: social.css, which asks for the cross-fade, has loaded when <body>"
+                  " starts, where Chrome decides it (Home and Explore, nothing cached, every stylesheet held back"
+                  " 300ms)", all(a and a.get("ask") is True for _, a in firsts), f"at <body>: {firsts}")
         except Exception as exc:  # noqa: BLE001
             stopped(4, exc)
 

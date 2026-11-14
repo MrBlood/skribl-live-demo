@@ -21,17 +21,23 @@
   <meta name="twitter:description" content="{{ og_description }}">
   {% if og_image %}<meta name="twitter:image" content="{{ og_image }}">{% endif %}
 
-  {# The theme boot, so an embedding host's ?theme=light lands before first
-     paint. The light ramp itself reaches player.css through css_live.json
-     (":root[data-theme=\"light\"]" is listed as live for the player). #}
   {% include 'skribl/_skribl_app_identity.html' %}
-  {% include 'skribl/_skribl_theme_boot.html' %}
   <!-- player.css, NOT styles.css: a derived strict subset of the rules a
        player page can actually match. styles.css dwarfs what a shared link can
        match — measure both rather than trusting a figure here; this comment
        said 123 KB long after styles.css had grown past twice that. Regenerate with harness/tools/cssgraph.py;
        verify_cssplit.py fails if this file and styles.css disagree. -->
   <link rel="stylesheet" href="{{ skribl_asset('player.css') }}">
+  {# The theme boot, so an embedding host's ?theme=light lands before first
+     paint. The light ramp itself reaches player.css through css_live.json
+     (":root[data-theme=\"light\"]" is listed as live for the player).
+     AFTER player.css, as on the Pad and Flip: a parser waits at an inline
+     script for the stylesheets above it, so player.css, which asks for the
+     cross-fade, has loaded when <body> starts. That is when Chrome decides
+     whether an arriving page fades; with the boot first, a first visit (an
+     empty cache) could arrive with a cut, and Chrome reported the dropped
+     fade as an error on the page (main after #889, #892's full run). #}
+  {% include 'skribl/_skribl_theme_boot.html' %}
 </head>
 <body class="player-mode{% if skribl_home %} has-home{% endif %}">
   {#- THE WAY BACK to the site this Skribl sits in (the owner's yes on the

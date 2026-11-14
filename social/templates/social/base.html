@@ -69,7 +69,6 @@
    data-dark, so it holds no colour of its own). #}
 <meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)" data-light="#fbfcfd" data-dark="#0b0d12">
 <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" data-light="#fbfcfd" data-dark="#0b0d12">
-{% include 'skribl/_skribl_theme_boot.html' %}
 <title>{% block title %}Blooby{% endblock %}</title>
 {% if token %}<meta name="social-csrf" content="{{ token }}">{% endif %}
 <link rel="icon" type="image/png" sizes="192x192" href="{{ skribl_asset('icon-192.png') }}">
@@ -78,6 +77,12 @@
 {{ skribl_face_assets() }}
 {% block head %}{% endblock %}
 <link rel="stylesheet" href="{{ social_asset('social.css') }}">
+{# Skribl's theme boot AFTER the stylesheets, as on Skribl's pages: a parser
+   waits at an inline script for the stylesheets above it, so social.css,
+   which asks for the cross-fade, has loaded when <body> starts, which is when
+   Chrome decides whether an arriving page fades (docs/INTEGRATION.md, "Put
+   it after your stylesheets"). Still before the first paint. #}
+{% include 'skribl/_skribl_theme_boot.html' %}
 <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
 <script src="{{ social_asset('social.js') }}" defer></script>
 {% block scripts %}{% endblock %}
