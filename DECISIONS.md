@@ -38273,6 +38273,32 @@ instruments: the pause read after the page had scrolled to the Flip, the
 heart's edges read under the bottom bar ("in view" to the browser), and the
 heart's rise census started while the card's line was still opening.
 
+THE DISPATCHED FULL RUN (harness.yml on this branch: both databases, the
+MP4, WebKit and Firefox) passed fifteen of its sixteen lanes. The sixteenth,
+a PostgreSQL shard, was red on one row: verify_socialposts' page errors,
+"Transition was aborted because of invalid state. ViewTransition opt-in
+disabled" on /s/<id>, word for word main's red after #889, before this PR.
+Not the tests, and not this PR: Chrome decides an arriving page's
+cross-fade when its parser reaches <body> (ViewTransitionSupplement::
+WillInsertBody, in Chrome's words "probably a bit of a heavy hammer",
+crbug 1463966) and checks it at the first frame. On a first visit
+player.css, the last thing in the player's head, is still on its way at
+<body>, so the fade reads as not asked for; unless something brings the
+styles up to date before the first frame, Chrome drops the fade (a cut
+where a fade belongs) and reports it. Reproduced here: first visits by a
+tap with player.css held back 150ms, 1 in 12 dropped; none at 0ms or 400ms.
+#890's mend (section 12's `follow` waiting 400ms after the load, not 150ms)
+rested on a wrong diagnosis, that going on to the next page mid-fade made
+Chrome report it: leaving mid-fade, 10 times of 10, reported nothing. A
+first attempt here, waiting for the fade's own end, rested on the same
+diagnosis and was taken back out. The fix, a first visit's fade made
+certain on Skribl's pages, is the next PR, shown red and green there.
+
+DATES. This entry and the map's were first written "Nov 14", this box's
+date in UTC; it was Nov 13 where the owner lives. Corrected in all 27
+places (comments and docs), and WORKING-AGREEMENTS' time rule now says
+dates too.
+
 THE RATCHET (verify_inline): +543 B, the waiting line, after spending the
 line's lead (its only caller gone) and compacting what replaced it; 81,784 B
 measured, pinned at 81,787.
