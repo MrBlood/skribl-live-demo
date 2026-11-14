@@ -41,8 +41,14 @@
   'use strict';
   var doc = document;
   var WORDS = {};
-  Array.prototype.forEach.call(doc.querySelectorAll('[data-word]'), function (w) {
-    WORDS[w.getAttribute('data-word')] = w.textContent;
+  /* Every word on the page (the ⋯ reads Block's and Mute's), then the
+     posts' own over them ([data-post-words]): a profile holds your face's
+     words too, some by the same names ("failed", "stale"), and each file
+     says its own. */
+  ['[data-word]', '[data-post-words] [data-word]'].forEach(function (sel) {
+    Array.prototype.forEach.call(doc.querySelectorAll(sel), function (w) {
+      WORDS[w.getAttribute('data-word')] = w.textContent;
+    });
   });
   function say(key, vars) {
     var s = WORDS[key] || '';

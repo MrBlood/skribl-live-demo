@@ -253,6 +253,22 @@ def feed_page(before=None, limit=PAGE, viewer=None, person=None, among=None):
     return page, (_cursor(page[-1]) if more and page else None)
 
 
+def person_page(person, viewer, before=None, limit=PAGE):
+    """A page of one person's posts, newest first, for their profile's Posts
+    tab (the map's step 4): (entries, next cursor or None). Posts only (their
+    drawings shown outside a post are their Gallery's), Home's own cursor and
+    its rules for one person's: nobody a block hides either way, nothing
+    taken down but to its own author, who sees it with the note; a mute
+    leaves it as it is (their page is what the viewer went to)."""
+    from .safety import hidden_ids
+    at = _uncursor(before) if before else None
+    if before and at is None:
+        return [], None
+    rows, more = _posts_before(at, limit, person, hidden_ids(viewer), viewer)
+    page = [_entry(p, who) for p, who in rows]
+    return page, (_cursor(page[-1]) if more and page else None)
+
+
 def cards(entries, viewer):
     """What each card shows: the post (a drawing shown outside a post is a
     post whose words are its title), its author, and its drawing's size, line and plays
@@ -484,9 +500,10 @@ def register(bp, skribl_blueprint="skribl"):
         """A drawing one of the site's people showed in the gallery outside a
         post, on a page of its own: a post's page without words, its comments
         and all. EVERY CARD OPENS HERE (the owner's "I thought on card?", Nov
-        13): a profile's Skribls and the first visit's newest open
-        /b/<id> (app.py, skribl.set_card_url), so one address serves every
-        drawing a gallery can show. A post's drawing goes to its post, for
+        13): the first visit's newest open /b/<id> (app.py,
+        skribl.set_card_url), and so does a profile's Gallery tile for a
+        drawing shown outside a post (the map's step 4), so one address
+        serves every drawing a gallery can show. A post's drawing goes to its post, for
         anybody who may see the post (comments.on_post, the post's own page's
         rule), and is as gone as the post to anybody else, without naming it;
         a drawing by somebody not on the site that the gallery shows them

@@ -39008,3 +39008,295 @@ find there?
 Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
 their smoke after the merge); SF and Segoe UI (the counts wrap and centre by
 flex, the ☰ is a drawn mark); the live site.
+
+## After v330 -- A profile's tabs: Posts · Gallery · Likes · Drafts (the map's step 4)
+
+The owner, to the step 4 mock (Nov 14): "Yes". Its pictures put a strip of
+tabs where the profile's "Skribls" heading and Skribl's Gallery section were,
+in the bar's own pen underline (the quick-patterns mock's B): Posts, Gallery,
+Likes and Drafts (option A, tiles) on Mira's own page, and Theo's page as
+Mira sees it, Posts · Gallery. Built Nov 14 as the map's step 4
+(docs/SOCIAL-SITE.md section 16); step 6 is next.
+
+WHAT CHANGED.
+
+- THE TABS (profile.html, `_profile.html`, `profiles.py`, `tabs.js`;
+  social.css "A PROFILE'S TABS"): Posts · Gallery · Likes · Drafts on your
+  own page, Posts · Gallery on anybody else's and signed out, Posts first. A
+  strip of 48px tabs, each an equal share, the screen's width on a phone
+  (past the column's 16px) and the column's on a desk, the page's rule under
+  it; the chosen tab in the first ink with the bar's own pen line under it
+  (`ic.underline()`, 44 x 8, 4px off the tab's foot, the pen's purple), the
+  others in the second ink: the mock's CSS, value for value.
+- EACH TAB IS A LINK WITH ITS OWN ADDRESS: `/social/@<handle>` (Posts), then
+  `/gallery`, `/likes`, `/drafts`. A tap stays on the page: the pen line
+  glides under the tab (its place is the tab's, `--at` of `--n`, written on
+  the strip, so it is right before any script runs), the tab takes the first
+  ink, the panel fades out, the tab's first page goes in while it can't be
+  seen (`/@<handle>/more`, JSON, as the Gallery's `/explore/more`), and fades
+  back; then the address is the tab's, so the back button and forward move
+  between tabs, and a reload or a shared link opens on the tab. Under Reduce
+  Motion the line is put there and the panel still only fades. Load more in
+  every tab that pages. Without the script each tab is a page of its own.
+- POSTS: their posts as Home's one card (the same macro: the card Home
+  shows the same viewer, byte for byte), newest first, twenty a page, Load
+  more, by Home's own cursor and its rules for one person's
+  (`posts.person_page`). Posts only: their drawings shown outside a post are
+  the Gallery's.
+- GALLERY: every drawing and Flip they shared, as the Gallery of everyone's
+  tile (`gallery_tile`), twenty-four a page: their posts' drawings, each
+  opening its post, and the drawings they showed in Skribl's gallery outside
+  a post (before posts, or from the Pad since), each opening its own page
+  (`/social/b/<id>`), saying its length ("▶ 7 sec", a Flip "▶ 3 pages") as
+  any tile, newest first, together (`gallery.person_page`, read as More
+  from reads one person's). Nothing is lost. A face and a drawing kept
+  link-only are no post and not public, so never there. A tile names a post
+  only when it is one (`data-post`, else `data-drawing`); the maker's name
+  under it stays: the one tile everywhere.
+- LIKES, YOURS ALONE: the posts you liked, newest liked first, as cards,
+  Load more (`likes.liked_page`), read on a new index of the likes, who
+  liked, newest first (`ix_social_likes_person_created`, migration
+  `e3fc16c00d16`). Its cursor names the like's moment and the post's address,
+  never an internal id. Posts only: a like on a drawing shown outside a post
+  is not a post's (the map's step 6 takes those).
+- DRAFTS, YOURS ALONE (the mock's A): the drafts Skribl keeps on your
+  account, newest saved first, as tiles of the Gallery's shape: the draft's
+  own small picture whole on the paper, "✎ Draft" where the ▶ sits (a pen at
+  work, `ic.draft()`, the mock's own line), its title (600) and "Pad · saved
+  2 hours ago" (or "Flip ·") under it in the second ink. A tap opens it in the
+  Pad (or Flip) to keep drawing: the tile is one link to the editor that made
+  it with `?draft=<id>`, the editors' own hand-off, which opens it as their
+  Your drafts and the Library's Open do (the id dropped from the address once
+  read, work on the canvas asked about in one line before anything replaces
+  it, Save updating that draft).
+- SKRIBL GAINS ONE SEAM, `list_drafts()` (skribl/drafts.py, `skribl.__all__`;
+  docs/INTEGRATION.md "A person's drafts on your own page"): the list the
+  editors' Your drafts and the Library show, by the id a host hands Skribl
+  for the person, newest saved first, no payload read, reading only; nobody
+  (`None`) refused, as `GET /api/drafts` answers 401. The guide shows how to
+  open one (the editor's address with `?draft=<id>`) and says to show the list
+  only on a page that is the person's alone. Every host gets it; the site
+  never reads Skribl's tables.
+- EVERY EMPTY TAB SAYS SO KINDLY, and what happens next:
+  - Posts, yours: "No posts yet. Say something on Home, then draw it, and your
+    posts show up here." Anybody else's: "No posts from Theo yet. When Theo
+    shares one, it shows up here."
+  - Gallery, yours: "No drawings here yet. Share one in a post, and it shows up
+    here." (the Gallery of everyone's own words). Anybody else's: "No drawings
+    from Theo yet. When Theo shares one, it shows up here."
+  - Likes: "Nothing liked yet. Tap the heart on a post you love, and it’s kept
+    here. Only you can see your likes."
+  - Drafts: "No drafts yet. To finish a drawing later, open ⋯ in the Pad or
+    Flip and tap Save. It waits here for you."
+  To a screen reader the strip is "Your page" (or "Theo’s page"), each panel
+  has its heading ("Posts", "Drawings and Flips", "Posts you liked", "Your
+  drafts"), and a draft's tile says "Keep drawing The bike, half done in
+  Flip, saved 2 hours ago".
+- THE CARDS BRING THEIR OWN PARTS: the ⋯, Report, Delete, the heart's
+  signed-out sheet, Block and Mute (posts.js, likes.js, safety.js, mutes.js
+  and their sheets) are on every profile now, your own included, where Likes
+  holds other people's posts. A profile holds the cards' words and your
+  face's, some by the same names ("failed", "stale"), so posts.js and
+  profile.js each read their own block over the page's (`[data-post-words]`,
+  `[data-profile-words]`).
+- WORDS THAT NAMED A PROFILE'S SKRIBLS, made true: the headers of
+  profiles.py and social/__init__.py, posts.py's bloob_page, safety.py, and
+  app.py's notes on the feed filter and the card's address. Skribl's own
+  cards are on the site's first visit alone now. docs/SOCIAL-SITE.md section
+  16 says step 4 is built and names its addresses, and its older lines that
+  put Skribl's Gallery on a profile say since when it is the tabs;
+  START-HERE's profile row, and a row of its own for the tabs.
+
+WHAT HIDES WHAT, read from safety.py, mutes.py and the profile's own rules,
+and kept as they were. Somebody who blocked you, or anybody taken down, is
+nobody's page (the kind 404), their tabs' JSON too. Somebody you blocked: their
+page says so with Unblock and shows nothing of theirs, no tabs. On any page,
+nobody a block hides either way and nothing taken down is in a tab: its
+maker sees their own taken-down post on Posts with its note, as on Home,
+and not in their Gallery, as the Gallery of everyone. A MUTE HIDES NOTHING
+ON THE PAGE YOU WENT TO (mutes.py, "what you go to stays"): their Posts and
+Gallery stay, and your Likes keep the posts of somebody you muted (asked
+below). Muting from a card's ⋯ on a profile folds nothing away (cards fold
+on Home alone) and opens the line on their own page. Counts, the ☰ and
+Follow are as built (#897).
+
+JUDGMENT CALLS, said so they read true:
+
+- THE ADDRESSES: Posts is the profile's own address, which opens first; the
+  other tabs sit under it (three routes, each named in the docs). Somebody
+  else at your `/likes` or `/drafts`, signed out too, lands on your page
+  (302): the address says nothing of what is there, and the page they meet
+  is the one anybody may see. The tabs' JSON answers them 404, empty, and is
+  never kept by a cache.
+- THE LINE GLIDES, on the one pill's own curve and time (0.42s), as the
+  Gallery's pick glides its tint; the mock's pictures were still. A tab come
+  back to before its neighbour arrived replaces the address rather than
+  adding a second entry for the back button.
+- THE PAGE HOLDS STILL OVER A SWITCH: the panel keeps its height while the new
+  one fades in, then keeps only the room that holds the page where it is (a
+  short tab under a page scrolled to its strip would otherwise jump it up).
+  The Gallery's pick lets go of all of it; here a tab can be very short.
+- "saved 2 hours ago", not "2 hr ago": the brief's example said "2 hr"; the
+  drafts' one vocabulary, which the editors' Your drafts and the Library say
+  (lib/posted.js ago(): "just now", "4 min ago", "2 hours ago", "last week"),
+  is said here too, ported as `profiles.saved_ago`. The mock's picture said
+  "4 min ago", the same in both.
+- A DRAWING SHOWN OUTSIDE A POST KEEPS ITS COUNTS ON ITS TILE, only when there
+  are some, as every tile; the mock's copy of a post's tile dropped them.
+  Step 6 takes those likes and comments away; until then the one tile says
+  what it has.
+- YOUR LIKES KEEP SOMEBODY YOU MUTED: they are what you did, and your own
+  page is somewhere you go (mutes.py). Asked below.
+- DELETE, FROM YOUR POSTS, lands on Home with its note, as it does from a
+  post's own page (the route's own answer). Asked below.
+- A DRAFT OPENS ON THE PAD'S OWN PAGE (or Flip's), as Make's Draw and the
+  Library's Open do; the way back is the browser's.
+- A DRAFT'S PICTURE IS SHOWN ONLY AS WHAT SKRIBL CHECKS ON A SAVE, a JPEG, PNG
+  or WebP data URL; anything else shows the paper alone.
+- THE LIVE DEMO'S DRAFTS TAB STAYS EMPTY while SKRIBL_CSRF_PROTECT is off
+  there (read Nov 10): Skribl is not told who is signed in, so the Pad keeps
+  drafts in the browser, the same note app.py says of posting from the Pad.
+
+Pad and Flip: nothing changes in either editor; a draft opened from your
+profile lands in them as their own Your drafts and the Library's Open land
+one (`?draft=<id>`). Shared with Flip, nothing for later: a Flip draft opens
+in Flip, says "Flip ·" on its tile, and a Flip's posts are on Posts and the
+Gallery as a drawing's are, its tile saying its pages.
+
+THE CHECKS, each new or changed row shown red by a break of its own in a
+throwaway copy of the tree, with an unbroken copy as the control (green
+every time):
+
+- verify_socialprofile 15, A PROFILE'S TABS, THE STRIP (new, eight rows, on
+  Pia's page from her browser, Kai's and nobody's): the strip, its order,
+  painted, 48px, the screen's width on a touch phone and the column's on a
+  desk, light and dark (red: tabs 40px tall; every tab on everybody's page);
+  the chosen tab's first ink and the pen line under it, 44 x 8, read off the
+  paint (red: the line in the second ink; the chosen tab in the second ink);
+  Likes and Drafts yours alone, in the page and its source, their addresses
+  a 302 to the page and their JSON a 404 (red: every tab on everybody's
+  page; a tab's JSON for anybody; no redirect off somebody's Likes); each
+  tab its own address, the back button and forward, a reload, a tile and
+  back (red: no pushState; the back button unheard; the server ignoring the
+  tab); a shared link (red: the server ignoring the tab); the switch on
+  every frame, the line no faster than its curve by each frame's own time,
+  the panel changing only unseen, the page still (red: the line not gliding;
+  the panel changed in sight); under Reduce Motion the line put there (red:
+  gliding under Reduce Motion).
+- verify_socialprofile 16, WHAT EACH TAB HOLDS (new, nine rows, read against
+  the order the database made them in): Posts as Home's card for the same
+  viewer, newest first, Load more mounted and timed (red: Posts holding
+  drawings shown outside a post; Load more ignoring its cursor; Load more
+  neither mounted nor timed); the Gallery, posts' and drawings' tiles
+  together, their lengths, no face or link-only (red: posts only; a
+  drawing's tile opening a post's page); each tile one link to a finger,
+  every 6px, a tap landing right (red: the tile no link to a finger); Likes
+  newest liked first, Load more, no blocked person's (red: in the order
+  posted; a block kept); a like taken back, a post taken down, a mute
+  changing nothing (red: a mute emptying Likes; a post taken down kept);
+  Drafts as tiles, newest saved first, each to its editor with ?draft= (red:
+  newest made first; no ?draft=); a tap opening the Pad and Flip with that
+  draft, its name and its drawing (red: no ?draft=); the reads on their
+  indexes (red: the likes' new index gone); every empty tab's words (red:
+  the words hidden).
+- verify_socialprofile 17, THE TABS' WORDS (new, two rows): every word at
+  4.5:1 on what is painted behind it, phone and desk, light and dark (red: a
+  draft's line in a faint solid ink); every control 44px (red: tabs 40px
+  tall).
+- verify_socialprofile 1, MOVED from Skribl's section to the Gallery tab,
+  keeping what each held: their public drawings, newest first, each opening
+  its own page, the same for you as for visitors (red, both: the Gallery
+  posts only); an empty profile's own words, now tab by tab (red: the
+  Gallery's words changed); Load more within theirs (red: Load more
+  ignoring its cursor). Its reader counts the player's line among Skribl's
+  parts, as every other social suite's does.
+- verify_seam, A PERSON'S DRAFTS (new, five rows): exported and reading only
+  (red: out of `__all__`; a flush in it), naming no host (red: a host's name
+  in it), the editors' hand-off (red: ?draft= kept in the address), the guide
+  (red: "theirs alone" taken out), the site through the seam alone (red:
+  `skribl.drafts` imported in profiles.py).
+- verify_hostseams, A PERSON'S DRAFTS (new, six rows, a throwaway host): one
+  person's, newest saved first, no payload (red: newest made first;
+  everybody's listed), reading only (red: the payloads read), nobody refused
+  (red: nobody listed), opened at the editor's address and nobody else's to
+  load (red: somebody else's draft opened), documented (red: its docstring
+  silent on ?draft=).
+- verify_socialposts 9, MOVED: the drawing shown outside a post is a tile on
+  its maker's Gallery, opening its page (red: her Gallery posts only). 12,
+  MOVED to the first visit, where Skribl's cards still are: the tap map less
+  a profile's cards, Ctrl and the middle button, a drag and a selection, the
+  keyboard, the ⋯ (red: no card address on the site's pages; a drag or a
+  selection opening the card; the card's title no link).
+- verify_socialmute 4, MOVED: the mute line's room read against the tabs
+  under it, opening and closing (red: the room put there; shut at once), and
+  his drawing on his Gallery (red: his Gallery posts only). 1 and 12,
+  RESTATED: your own page holds Home's cards now, so the rows hold what they
+  meant, no Mute of yourself on it (red: your own post's ⋯ offering Mute;
+  your own page offering Mute of you).
+- verify_socialsafety 4, INVERTED: a blocked person's page holds no tabs, no
+  card, no tile (red: a blocked person's tabs shown). verify_socialauth 5,
+  MOVED to the first visit (red: the site's people unnamed on a card); 14,
+  the chain builds the new index and no drift (red: the chain without it).
+  verify_sociallikes 11, CHANGED: the likes' own migration read at its own
+  revision (its five indexes), and a row of its own for the chain's head,
+  one index more (red: the head without it).
+
+FOUND WRONG, AND MENDED: three instruments of mine, and three rows the tabs
+outgrew. The switch's row first read a step as a share of the way, and a
+runner busy with two other suites stalled a frame into a 32% step: it now
+holds each frame to the fastest the line's curve ever goes, by the frame's
+own time (the one its glide is drawn for), so a stall reads as a stall and a
+jump is eight times over. The new 44px row went red on the player's line
+under a card (Skribl's own controls, held by Skribl's suites): the suite's
+reader now counts the line among Skribl's parts, as the other social suites'
+do. And verify_socialposts 12's /gallery row called the new-tab helper
+without the browser it now takes, until the first run said so. The rows:
+two of verify_socialmute read "your own page has none of it" and went red as
+the tabs put Home's cards on it (restated, above); verify_sociallikes 11 read
+the chain at its head, where social_likes has the new index too (it reads
+the likes' migration at its own revision now). One limit found and left: the
+suite's reader (verify_socialauth's, copied) reads a word's colour as solid,
+so a first break in a see-through ink stayed green; the row was shown red
+with a faint solid one. No word on the site wears a see-through ink.
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py), on the tree
+as committed: verify_socialprofile 74/74, verify_socialposts 59/59,
+verify_socialmute 68/68, verify_socialcomments 93/93, verify_socialfollow
+74/74, verify_socialsafety 38/38, verify_socialauth 64/64,
+verify_socialactivity 44/44, verify_socialsettings 44/44, verify_social
+40/40, verify_seam 506/506, verify_hostseams 128/128, verify_docs 144/144;
+verify_sociallikes 94/96 beside the others and 97/97 alone, each red said
+for what it was: section 11's chain row was a defect (the row outgrown,
+above), mended before its run alone, which counts its new row too; the
+other was load (section 6's count that comes, its row moving along: one
+frame carried 8.6 of its 11.7px with two suites beside it; likes.js and
+the row are untouched here). The full battery was not run; main's run after
+the merge is that.
+
+CONTRAST, measured on the built tabs with the mock's own reader, the same as
+the mock measured: the chosen tab 17.47:1 light and 17.17:1 dark, the others
+7.36:1 and 10.49:1; a draft's title 17.47:1 and 17.17:1, its line 7.36:1 and
+10.49:1, its "Draft" 10.31:1 (the ▶'s glass, both themes); a tile's name
+17.47:1 and 17.17:1; every tab's empty words 7.36:1 and 10.49:1. No colour or
+token added: every role wears the token it had (the inks, --brand,
+--says-ink on --says-glass, --rule).
+
+THE FOUR. Simple: one strip, four places, each where you would look, with an
+address of its own; one card and one tile everywhere. Kind: nothing anybody
+made is lost (a drawing shown before posts is in its maker's Gallery, a
+draft is one tap from the Pad), your likes and drafts are yours alone, an
+empty tab says what happens next, the page never jumps. Playful: the pen line
+glides under the tab you pick, and your Gallery is your drawings as
+drawings. Powerful: Load more to the end of any tab, the back button between
+them, and skribls.net gets list_drafts() the same day.
+
+Asked, for the owner: your Likes keep the posts of somebody you muted (what
+you go to stays): is that right, or should a mute quiet them there too? And
+deleting a post from your own page lands on Home with its note, as from a
+post's page: should it stay on your page instead? (The live demo's Drafts
+tab stays empty until SKRIBL_CSRF_PROTECT=1, as posting from the Pad does.)
+
+Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
+their smoke after the merge); SF and Segoe UI (the strip is a grid of equal
+shares, its words centred by the grid and the pen line placed by the tab's
+share, not by a word's width); the live site.

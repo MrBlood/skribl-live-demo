@@ -42,6 +42,11 @@ with when and the moment, if one was kept (for_maker()). A like the maker
 gives or takes back on their own answers with both again, so the line never
 says "you" after they have taken theirs back.
 
+WHAT YOU LIKED IS YOURS ALONE TOO (the map's step 4): your own profile's
+Likes tab lists the posts you liked, newest liked first (liked_page()), and
+nobody else's page has the tab, nor anything of it in the page or its
+source (profiles.py).
+
 DELETING IS REAL, AND SAID IN CODE, as comments' is: a post goes with its
 likes (posts.drop_post), a drawing deleted through the site with its likes
 (posts.bloob_delete), an account with its own likes and every like on what it
@@ -50,11 +55,14 @@ owned (accounts.delete_person). The ON DELETE CASCADEs are the net.
 Every state-changing request shows the site's token and Origin and is limited
 per person (security.LIMITS, "like") before it reads anything (security.over).
 """
+import base64
+from datetime import datetime, timezone
+
 import sqlalchemy as sa
 from flask import jsonify, render_template, request
 
 from .accounts import _json_error, _rests
-from .models import Like, Person
+from .models import Like, Person, Post, as_utc
 from .safety import hidden_ids
 from .security import current_person, origin_ok, over, site, token_ok
 
@@ -190,6 +198,65 @@ def for_maker(on, viewer):
     rows = who(on, viewer)
     got = stat_on(on, viewer)
     return {"rows": rows, "line": by_line(rows, viewer, got["n"], got["mine"]), "moment": moment}
+
+
+#: A page of your Likes (your profile's tab), as many as a page of Home.
+LIKED_PAGE = 20
+
+
+def _liked_cursor(when, post_public_id):
+    """Where a page of your Likes ended: the like's moment and the post's
+    address, in a form that names no internal id."""
+    raw = f"{int(as_utc(when).timestamp() * 1_000_000)}.{post_public_id}"
+    return base64.urlsafe_b64encode(raw.encode()).rstrip(b"=").decode()
+
+
+def _liked_uncursor(text):
+    """(moment, the post's address) from _liked_cursor, or None."""
+    try:
+        raw = base64.urlsafe_b64decode((text or "") + "=" * (-len(text or "") % 4)).decode()
+        us, pid = raw.split(".", 1)
+        if not (pid and len(pid) <= 24):
+            return None
+        return datetime.fromtimestamp(int(us) / 1_000_000, tz=timezone.utc), pid
+    except (ValueError, TypeError, UnicodeDecodeError, OverflowError, OSError):
+        return None
+
+
+def liked_page(me, before=None, limit=LIKED_PAGE):
+    """YOUR LIKES (your profile's Likes tab, the map's step 4; yours alone,
+    on your own page and nobody else's): the posts you liked, newest liked
+    first, as (entries, next cursor or None), each entry a post's, as
+    posts.cards() reads one. Posts only: likes are about posts (a like on a
+    drawing shown outside a post goes with the map's step 6). Nobody a block
+    hides either way and nobody taken down (safety.hidden_ids), nothing
+    taken down but your own post, which you see with its note, as on Home.
+    A mute leaves it where it is: your likes are what you did, and what you
+    go to stays (mutes.py). One read, on your likes' own index, newest first
+    (ix_social_likes_person_created); the cursor names the like's moment and
+    the post's address, and one that cannot be read ends the list."""
+    from .posts import _entry
+    if me is None:
+        return [], None
+    at = _liked_uncursor(before) if before else None
+    if before and at is None:
+        return [], None
+    q = (sa.select(Like.created_at, Post, Person).join(Post, Post.id == Like.post_id)
+         .join(Person, Person.id == Post.person_id)
+         .where(Like.person_id == me.id)
+         .where(sa.or_(Post.taken_down_at.is_(None), Post.person_id == me.id))
+         .order_by(Like.created_at.desc(), Post.public_id.desc()).limit(limit + 1))
+    hidden = sorted(hidden_ids(me))
+    if hidden:
+        q = q.where(Post.person_id.notin_(hidden))
+    if at:
+        when, pid = at
+        q = q.where(sa.or_(Like.created_at < when, sa.and_(Like.created_at == when, Post.public_id < pid)))
+    rows = site().session().execute(q).all()
+    more = len(rows) > limit
+    rows = rows[:limit]
+    entries = [_entry(post, who) for _, post, who in rows]
+    return entries, (_liked_cursor(rows[-1][0], rows[-1][1].public_id) if more and rows else None)
 
 
 def _at(raw):

@@ -31,7 +31,8 @@ Without a session it is the frame alone, as in piece 1.
 PHASE 1, PIECE 3: PROFILES WITH DRAWN FACES (profiles.py). /@<handle> is a
 person's profile: their face, a skribl they drew of themselves in the Pad's
 face mode, drawing itself once (Skribl's face player), their name, handle and
-bio, and their public skribls as Skribl's own Gallery section. You is your
+bio, and their tabs since the map's step 4: Posts · Gallery, and on your own
+page Likes · Drafts, yours alone (profiles.py). You is your
 own profile, with Edit profile, Draw your face (Redraw my face) and the gear
 to the account page (/you, Settings). A face is a skribl the site posts,
 unlisted, through Skribl's create_post in the same transaction as the row
@@ -88,9 +89,10 @@ purpose, as skribls.net would be).
 IT REACHES SKRIBL ONLY THROUGH THE SEAMS ANY HOST USES (docs/INTEGRATION.md):
 the in-post player's macros, the Gallery section's macros, the face player's
 macros, Skribl's signature, the skribl_asset() global init_skribl adds, url_for
-of Skribl's pages (the Pad's with its documented compose flags), and from the
-package only documented names: create_post and delete_post with their
-exceptions (piece 3, a face). Skribl never imports it. Anything the site needs
+of Skribl's pages (the Pad's with its documented compose flags, and the
+editors' with ?draft=<id>), and from the package only documented names:
+create_post and delete_post with their exceptions (piece 3, a face), and
+since, describe_posts, list_public_posts, recent_plays and list_drafts. Skribl never imports it. Anything the site needs
 from Skribl, every host gets (docs/SOCIAL-SITE.md, section 1). verify_social
 section 8 reads both directions, and the Skribl templates and files the site
 names.
@@ -150,7 +152,7 @@ def muted_authors(viewer_id):
     """For the host's feed filter (docs/SOCIAL-SITE.md "Built: mutes"): the
     public ids of everybody `viewer_id` muted, which a listing of
     everybody's leaves out (the first visit's gallery, Skribl's own /gallery) and a listing
-    of one person's own keeps (their page's skribls): what comes to you goes
+    of one person's own keeps (their page's Gallery, More from): what comes to you goes
     quiet, and what you go to stays. Never for the visibility policy: a mute
     hides no page. Empty where the site is not running."""
     if not has_app_context() or "social" not in current_app.extensions:

@@ -405,6 +405,8 @@ class Like(SocialBase):
         sa.Index("ix_social_likes_drawing_created", "drawing_id", "created_at"),
         #: Whose, newest first: Activity's likes on what you made.
         sa.Index("ix_social_likes_owner_created", "owner_id", "created_at"),
+        #: Who liked, newest first: your profile's Likes tab (the map's step 4).
+        sa.Index("ix_social_likes_person_created", "person_id", "created_at"),
     )
 
 

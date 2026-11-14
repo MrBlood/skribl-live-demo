@@ -387,8 +387,8 @@ a.post-act { text-decoration: none; }
   background: var(--field); color: var(--ink); font: 16px/1.3 var(--font);
 }
 .gal-find input::placeholder { color: var(--ink-2); opacity: 1; }
-.gal-swap { overflow-anchor: none; transition: opacity 0.2s ease; }
-.gal-swap.is-out { opacity: 0; transition-duration: 0.14s; }
+.gal-swap, .prof-swap { overflow-anchor: none; transition: opacity 0.2s ease; }
+.gal-swap.is-out, .prof-swap.is-out { opacity: 0; transition-duration: 0.14s; }
 .gal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; margin-top: 4px; }
 /* The tile's whole box is its link, square-cornered on purpose: a finger on
    the page's ground just past the drawing's rounded corner still opens it. */
@@ -713,7 +713,6 @@ body.focus .top { justify-content: center; }
 .prof-blocked { max-width: 30em; margin: 14px auto 0; padding: 10px 14px; border-radius: 12px; background: var(--tint);
                 color: var(--ink); font-size: 15px; line-height: 1.45; }
 .prof-unblock { display: flex; justify-content: center; margin: 14px 0 0; }
-.prof-page .sec { margin-top: 28px; }
 @media (min-width: 900px) {
   .prof { flex-direction: row; align-items: center; gap: 32px; padding-top: 4px; text-align: left; }
   .prof-face { --skribl-face-size: 168px; width: 168px; height: 168px; margin: 0; }
@@ -731,6 +730,47 @@ body.focus .top { justify-content: center; }
   .face-ask:hover { border-color: var(--brand); }
   .icon-btn.boxed:hover { border-color: var(--brand); }
 }
+
+/* ---- A PROFILE'S TABS (the map's step 4) -----------------------------------
+ * The step 4 mock (the owner's "Yes", Nov 14), its strip the quick-patterns
+ * mock's B, where the "Skribls" heading was: Posts · Gallery · Likes ·
+ * Drafts on your own page, Posts · Gallery on anybody else's, each tab 48px
+ * tall and an equal share of the strip, full width on a phone (past the
+ * column's 16px) and the column's on a desk, the page's rule under it. The
+ * chosen tab in the first ink with the bar's own pen line under it (the mark
+ * under the page you are on: 44 x 8, 4px off the tab's foot, the pen's
+ * purple), the others in the second ink. The line's place is the chosen
+ * tab's (--at of --n, written on the strip), so it is there before a script
+ * runs; tabs.js changes --at and it glides, put there under Reduce Motion.
+ * The panel under it fades as the Gallery's tiles do (.gal-swap). */
+.prof-tabs {
+  position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+  margin: 24px -16px 14px; border-bottom: 1px solid var(--rule);
+}
+.prof-tab {
+  display: grid; place-items: center; height: 48px; padding: 0 4px; color: var(--ink-2);
+  font: 600 16px/1.2 var(--font); text-decoration: none; transition: color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.prof-tab[aria-current="page"] { color: var(--ink); }
+.prof-pen {
+  position: absolute; bottom: 4px; left: calc(100% * (var(--at, 0) + 0.5) / var(--n, 1) - 22px);
+  width: 44px; height: 8px; color: var(--brand); pointer-events: none;
+  transition: left 0.42s cubic-bezier(0.4, 0, 0.2, 1.1);
+}
+.prof-pen .pen-line { display: block; width: 100%; height: 100%; }
+@media (prefers-reduced-motion: reduce) { .prof-pen { transition: none; } }
+@media (min-width: 900px) { .prof-tabs { margin: 24px 0 14px; } }
+@media (hover: hover) { .prof-tab:hover { color: var(--ink); } }
+/* A DRAFT'S TILE (your Drafts, the mock's A): the Gallery's tile, its
+   drawing the draft's own small picture whole on the paper, "✎ Draft" where
+   the ▶ sits, and under it its title (600) over "Pad · saved 2 hours ago"
+   in the second ink. */
+.gal-tile.is-draft .gal-thumb { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
+.gal-tile.is-draft .gal-by { flex-direction: column; align-items: flex-start; gap: 2px; }
+.gal-tile.is-draft .gal-by b { max-width: 100%; }
+.gal-when { color: var(--ink-2); font-size: 13px; font-weight: 400; }
+.gal-dur .ic-draft { width: 11px; height: 11px; }
 
 /* Edit profile's bio: a text field that grows by hand. */
 .field textarea {

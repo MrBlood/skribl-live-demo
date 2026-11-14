@@ -18,9 +18,16 @@
     top. Share, on every profile. THE GEAR SAYS SETTINGS (the Settings
     mock's a): the word with the gear, in both places, so nothing moves.
 
-    THEIR SKRIBLS: Skribl's own Gallery section, that author's public ones
-    only (the section's `author`), newest first, paging by the listing's own
-    cursor. Their face is not among them: it is unlisted.
+    THEIR TABS (the map's step 4; the owner's "Yes" to its mock, Nov 14),
+    where the "Skribls" heading and Skribl's Gallery section were: Posts ·
+    Gallery · Likes · Drafts on your own page, Posts · Gallery on anybody
+    else's, Posts first (social/_profile.html; profiles.py says what each
+    holds, tabs.js moves them). Each tab has its own address. Posts and Likes
+    are Home's one card, with its ⋯, heart and row (posts.js, likes.js); the
+    Gallery is the Gallery of everyone's tile with one person in it; Drafts
+    are your drafts as tiles, each opening the Pad or Flip to keep drawing.
+    Likes and Drafts are yours alone: nothing of either is on anybody else's
+    page or in its source. Their face is in none of it: it is unlisted.
 
     DRAW YOUR FACE opens the real Pad over the page, in its face mode
     (?compose=1&face=1), through lib/composehost.js; what it hands back is
@@ -44,23 +51,27 @@
     closing as you unmute; the toast rises with Undo (social/_mute.html;
     mutes.js). Nothing of it is on the page for anybody else. #}
 {% extends 'social/base.html' %}
-{% from 'skribl/_skribl_gallery_section.html' import skribl_gallery_assets, skribl_gallery_section %}
 {% from 'skribl/_skribl_face.html' import skribl_face_maker_assets, skribl_face_maker %}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
 {% import 'social/_icons.html' as ic %}
 {% from 'social/_safety.html' import person_sheet, safety_sheets with context %}
 {% from 'social/_follow.html' import follow_button, follow_counts, follow_sheets with context %}
 {% from 'social/_mute.html' import mute_line, mute_parts with context %}
+{% from 'social/_post.html' import post_sheets, post_words with context %}
+{% from 'social/_likes.html' import like_sheets with context %}
+{% from 'social/_profile.html' import profile_tabs, tab_panel, tab_words with context %}
 
 {% block title %}{{ who.display_name }} (@{{ who.handle }}) · Blooby{% endblock %}
-{% block head %}<link rel="canonical" href="{{ share_url }}">
-{{ skribl_gallery_assets() }}
+{% block head %}<link rel="canonical" href="{{ canonical or share_url }}">
 {% if mine %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>
 {{ skribl_face_maker_assets() }}{% endif %}{% endblock %}
 {% block scripts %}<script src="{{ social_asset('profile.js') }}" defer></script>
 <script src="{{ social_asset('follows.js') }}" defer></script>
-{% if not mine %}<script src="{{ social_asset('safety.js') }}" defer></script>{% endif %}
-{% if me and not mine and not blocked_them %}<script src="{{ social_asset('mutes.js') }}" defer></script>{% endif %}{% endblock %}
+<script src="{{ social_asset('safety.js') }}" defer></script>
+{% if me and not blocked_them %}<script src="{{ social_asset('mutes.js') }}" defer></script>{% endif %}
+{% if not blocked_them %}<script src="{{ social_asset('posts.js') }}" defer></script>
+<script src="{{ social_asset('likes.js') }}" defer></script>
+<script src="{{ social_asset('tabs.js') }}" defer></script>{% endif %}{% endblock %}
 
 {% block top %}
   <span class="top-title">@{{ who.handle }}</span>
@@ -125,14 +136,17 @@
   </section>
 
   {% if not blocked_them %}
-  <h2 class="sec" id="profSkribls">Skribls</h2>
-  {{ skribl_gallery_section(bp=skribl_bp, door='app', author=who.public_id, mine=mine) }}
+  {{ profile_tabs(tabs, tab, 'Your page' if mine else who.display_name.split(' ')[0] ~ '’s page') }}
+  <div class="prof-swap" data-prof-swap data-more="{{ url_for('social.profile_more', handle=who.handle) }}">
+    {{ tab_panel(p, who, mine) }}
+  </div>
+  <p class="say" data-page-say role="status" hidden></p>
   {% endif %}
 </div>
 
 {#  WHAT profile.js SAYS, in one place (docs/SOCIAL-SITE.md: words live in one
     place per page). Kind, never blaming; each says what to do next. #}
-<div class="words" hidden>
+<div class="words" data-profile-words hidden>
   <span data-word="saving">Keeping your face…</span>
   <span data-word="failed">Your face didn’t save. Try again?</span>
   <span data-word="limited">Lots of faces in a short while. Wait a little, then try again.</span>
@@ -153,6 +167,7 @@
   <span data-word="open_failed">That one didn’t open. Try again?</span>
   <span data-word="not_photo">That one isn’t a photo the Pad can use. Try a JPG or PNG?</span>
 </div>
+{% if not blocked_them %}{{ post_words() }}{{ tab_words() }}{% endif %}
 {% endblock %}
 
 {% block overlays %}{% if mine %}
@@ -267,4 +282,9 @@
 </div>
 {{ skribl_face_maker() }}
 {{ follow_sheets(who, fl, true) }}
-{% else %}{{ person_sheet(who, muted, not blocked_them) }}{{ safety_sheets() }}{% if not blocked_them %}{{ follow_sheets(who, none, false) }}{% endif %}{% if me and not blocked_them %}{{ mute_parts() }}{% endif %}{% endif %}{% endblock %}
+{% else %}{{ person_sheet(who, muted, not blocked_them) }}{% if not blocked_them %}{{ follow_sheets(who, none, false) }}{% endif %}{% endif %}
+{#  THE CARDS' OWN SHEETS (Posts and Likes: Home's one card): its ⋯, Report
+    and Delete (_post.html), signed out the heart's "Like this drawing?"
+    (_likes.html), Block (_safety.html) and Mute (_mute.html), on your own
+    page too, where Likes holds other people's posts. #}
+{{ safety_sheets() }}{% if not blocked_them %}{{ post_sheets() }}{{ like_sheets(none, {'who': who}) }}{% if me %}{{ mute_parts() }}{% endif %}{% endif %}{% endblock %}
