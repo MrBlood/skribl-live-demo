@@ -61,6 +61,13 @@ a drawing deleted in the Library or no longer public). These are
 comments.seen's rules, read for many comments at once: what a row links to
 is on its page. A comment deleted or removed is not there to read.
 
+NOR ANYBODY YOU MUTED (mutes; the owner's C, quiet everywhere): their
+comments, answers, likes and follows leave it, and never light the dot. A
+group they were in says the rest ("Juno and Mira liked your post"). Only
+their own: an answer by somebody else under their comment, or on their post,
+is a row as ever (the page shows it, theirs folded above it). Nothing is
+deleted: unmute them and every row is back, as it is all read each time.
+
 THE DOT (dot()): whether anything is said that is new since they last
 looked (comments and answers, never likes or follows), by the same rules,
 asked once a request by a page with the bar or the rail (the
@@ -111,12 +118,14 @@ FOLLOW_DAY = timedelta(hours=24)
 
 # ---- what may be a row ---------------------------------------------------------
 
-def _query(me, hidden, which, since=None, limit=READ):
+def _query(me, hidden, which, since=None, limit=READ, quiet=frozenset()):
     """The comments that may be `me`'s rows, newest first: `which` (on what
     they own, or answering them), not theirs, nobody hidden from them, none
     taken down, an answer only under a comment shown to them, on a post
     shown to them (theirs, or nobody hidden's and not taken down); after
-    `since`, when given. Whether a drawing's own page is there is Skribl's to
+    `since`, when given; nobody in `quiet` (the people they muted: only the
+    comment's own author, since theirs is still shown, folded, and their
+    page still opens). Whether a drawing's own page is there is Skribl's to
     say (_page_there). Rows: (comment, its author, the post's address, the
     post's skribl), the last two None for a comment on a drawing."""
     c, par = Comment, sa.orm.aliased(Comment)
@@ -126,6 +135,8 @@ def _query(me, hidden, which, since=None, limit=READ):
          .outerjoin(par, par.id == c.parent_id)
          .outerjoin(Post, Post.id == c.post_id)
          .where(which, c.person_id != me.id, c.taken_down_at.is_(None)))
+    if quiet:
+        q = q.where(c.person_id.notin_(sorted(quiet)))
     # The comment an answer sits under, as its page shows it: not taken down
     # (but to its own author), nobody hidden's.
     under = sa.or_(par.taken_down_at.is_(None), par.person_id == me.id)
@@ -142,13 +153,13 @@ def _query(me, hidden, which, since=None, limit=READ):
     return q.order_by(c.created_at.desc(), c.id.desc()).limit(limit)
 
 
-def _read(me, hidden, since=None, limit=READ):
+def _read(me, hidden, since=None, limit=READ, quiet=frozenset()):
     """Both kinds, newest first, each once (an answer to you on your own post
     is both): [(comment, author, post address, post skribl)]."""
     sess = site().session()
     got = {}
     for which in (Comment.owner_id == me.id, Comment.to_person_id == me.id):
-        for row in sess.execute(_query(me, hidden, which, since, limit)).all():
+        for row in sess.execute(_query(me, hidden, which, since, limit, quiet)).all():
             got.setdefault(row[0].id, tuple(row))
     return sorted(got.values(), key=lambda r: (as_utc(r[0].created_at), r[0].id), reverse=True)[:limit]
 
@@ -279,8 +290,9 @@ def dot(me):
     """Whether anything is new for `me` since they last looked: Activity's
     own rules, a handful of rows at most; Skribl is asked only when every new
     one is on a drawing."""
+    from .mutes import muted_ids
     since = as_utc(me.activity_seen_at) if getattr(me, "activity_seen_at", None) else None
-    rows = _read(me, hidden_ids(me), since, DOT_READ)
+    rows = _read(me, hidden_ids(me), since, DOT_READ, quiet=muted_ids(me))
     if any(c.drawing_id is None for c, *_ in rows):
         return True
     drawings = [c.drawing_id for c, *_ in rows]
@@ -362,10 +374,13 @@ def listing(me, skribl_blueprint="skribl"):
     "when" (the newest comment's, like's or follow's), "words" (that
     comment's), "people" (newest first, each once; a like row's newest two),
     "names" (their first names), "n" (how many people), "href", "pic"}."""
+    from .mutes import muted_ids
     since = as_utc(me.activity_seen_at) if getattr(me, "activity_seen_at", None) else None
     hidden = hidden_ids(me)
-    items = _read(me, hidden)
-    liked = _likes(me, hidden, since)
+    # NOBODY YOU MUTED (mutes): their comments, answers, likes and follows.
+    quiet = muted_ids(me)
+    items = _read(me, hidden, quiet=quiet)
+    liked = _likes(me, hidden | quiet, since)
     drawings = [r[0].drawing_id for r in items if r[0].drawing_id] + [g["drawing_id"] for g in liked if g["drawing_id"]]
     pics = {r[0].id: (r[0].skribl_id or r[3] or r[0].drawing_id) for r in items}
     sk = _described(me, drawings + list(pics.values()) + [g["skribl_id"] for g in liked])
@@ -409,7 +424,7 @@ def listing(me, skribl_blueprint="skribl"):
     # FOLLOWS: since you last looked one row, before a row a day; they open
     # their page, or several, who follows you.
     from .accounts import profile_url
-    for row in _follows(me, hidden, since, profile_url(me.handle)):
+    for row in _follows(me, hidden | quiet, since, profile_url(me.handle)):
         sections[0 if row["new"] else 1].append(row)
     for rows in sections:
         rows.sort(key=lambda r: as_utc(r["when"]), reverse=True)

@@ -14,6 +14,7 @@ app.py does exactly the same thing with the only SQLAlchemy instance in the tree
 `SkriblBase.metadata` is exported so a host can create or migrate these tables
 with its own tooling (Alembic included) without importing Flask.
 """
+import inspect
 import json
 import os
 import weakref
@@ -244,6 +245,17 @@ def set_feed_filter(fn, app=None):
     filter already applied, and must return a query. Raising is not caught:
     a broken feed filter should fail loudly, not fall back to showing
     everything.
+
+    WHICH LISTING IT IS (after v330, for a host's mute). A filter that names
+    an `author` parameter, `fn(query, viewer_id, author=None)`, is also told
+    the one author the listing is narrowed to: the author of a profile's
+    listing (GET /api/skribls?user_id=, a Gallery section's `author`) or of
+    list_public_posts(author=), and None for a listing of many people's (the
+    gallery, a search, list_public_posts with `authors` or `author_prefix`).
+    A host leaves somebody out of the second and not the first: what comes
+    to the viewer goes quiet, and the page they went to stays (the Skribl
+    site's mute). A filter written for two arguments is called as before
+    (apply_feed_filter).
     """
     if fn is not None and not callable(fn):
         raise TypeError("feed filter must be callable or None")
@@ -264,6 +276,30 @@ def feed_filter():
     except (ImportError, RuntimeError):
         pass
     return _FEED_FILTER
+
+
+def _names_author(fn):
+    """Whether a feed filter names an `author` parameter (set_feed_filter,
+    "WHICH LISTING IT IS"): by its signature, never by trying a call."""
+    try:
+        p = inspect.signature(fn).parameters.get("author")
+    except (TypeError, ValueError):
+        return False
+    return p is not None and p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)
+
+
+def apply_feed_filter(query, viewer_id, author=None):
+    """`query` through the host's feed filter, or as it is with none
+    installed: `fn(query, viewer_id)`, and to a filter that names it, the
+    listing's one author too (`author=`; None for a listing of many
+    people's). Every listing asks through here, so each tells the filter the
+    same thing."""
+    fn = feed_filter()
+    if fn is None:
+        return query
+    if _names_author(fn):
+        return fn(query, viewer_id, author=author)
+    return fn(query, viewer_id)
 
 
 #: A host-supplied author serialiser. Skribl knows a user_id and nothing else.

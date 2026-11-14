@@ -15,6 +15,15 @@
                           the person's own time: "40m", "2h"), its words, its
                           drawing (Skribl's in-post player, still until
                           tapped), Answer and its ⋯; its answers under it.
+                          SOMEBODY YOU MUTED (mutes; the owner's C): their
+                          comment or answer is one quiet line in its place,
+                          in Activity's own voice, "Someone you muted said
+                          something. Show" ("… answered." for an answer),
+                          the eye where their face was; the whole line is the
+                          button, and Show opens it for that visit
+                          (comments.js), the comment hidden for real until
+                          then (no tap and no screen reader reaches it). The
+                          answers under it, by others, stay as they are.
     comment_box()         Home's composer, as the mock styled it (.cm-box):
                           your face, the words, Draw and Flip, Post; a drawing
                           waits in it, in the in-post player the comment will
@@ -56,7 +65,10 @@
 
 {% macro comment(it, can, post_mine) -%}
 {%- set c = it.c %}{% set who = it.who -%}
-<li class="cm" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if me and me.id == c.person_id %} data-mine{% endif %}>
+<li class="cm{% if it.quiet %} is-quiet{% endif %}" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if me and me.id == c.person_id %} data-mine{% endif %}>
+  {%- if it.quiet %}
+  <button class="cm-fold-line" type="button" data-cm-show><span class="cm-fold-ic">{{ ic.eye_closed() }}</span><span class="cm-fold-words">{{ 'Someone you muted answered.' if c.parent_id else 'Someone you muted said something.' }} <span class="cm-show">Show</span></span></button>
+  {%- endif %}
   {{ face(who) }}
   <div class="cm-main">
     <div class="cm-head"><b class="cm-name">{{ who.display_name }}</b><time class="cm-when" datetime="{{ when_iso(c.created_at) }}" data-when="ago">{{ when_day(c.created_at) }}</time></div>

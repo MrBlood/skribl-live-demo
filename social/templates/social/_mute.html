@@ -1,0 +1,67 @@
+{#  MUTE, THE PARTS (phase 2, mutes; the mute mock and the owner's "Yes to all",
+    C, quiet everywhere, Nov 13). mutes.py says the rules; mutes.js moves
+    them; social.css, "MUTE", dresses them.
+
+    mute_row(handle, muted, where)   the row in a ⋯ sheet, the sheet's own row
+                        (.post-act) with a second line, as Make's doors have:
+                        the closed eye in our pen, "Mute @theo" and under it
+                        "Their posts, comments and likes stop reaching you.
+                        They aren’t told."; muted, "Unmute @theo" and
+                        "Everything comes back, just as it was." On someone's
+                        page it comes first (`where` "person": _safety.html);
+                        on their posts and drawings after Share…, before
+                        Report and Block (`where` "post": _post.html, which
+                        posts.js fills for the post whose ⋯ was pressed).
+                        Signed in alone, and never on your own.
+    mute_line(who, shown)   their page, to you alone: "You muted Theo ·
+                        Unmute", under the buttons (`shown`: muted as the page
+                        loads); and a template of it, so a mute made on the
+                        page opens it there, gliding.
+    mute_parts()        the toast (the eye, its words, Undo), and mutes.js's
+                        words: the page's, so the script says nothing of its
+                        own.
+
+    Import these WITH CONTEXT: they read the page's me. #}
+{% import 'social/_icons.html' as ic %}
+
+{% macro mute_row(handle, muted=false, where='person') -%}
+<button class="post-act mu-act" type="button"{% if where == 'person' %} data-safety="mute"{% else %} data-act="mute" data-theirs{% endif %}
+        data-muted="{{ 'true' if muted else 'false' }}">{{ ic.eye_closed() }}<span class="mu-words"><b data-mute-name>{{ ('Unmute' if muted else 'Mute') ~ (' @' ~ handle if handle) }}</b><span class="mu-say" data-mute-say>{{ 'Everything comes back, just as it was.' if muted else 'Their posts, comments and likes stop reaching you. They aren’t told.' }}</span></span></button>
+{%- endmacro %}
+
+{% macro _line(who) -%}
+<p class="mu-line" data-mute-line>{{ ic.eye_closed() }} <span class="mu-line-words">You muted {{ who.display_name.split(' ')[0] }}</span> <span class="mu-dot" aria-hidden="true">·</span> <button class="mu-unmute" type="button" data-mute-unmute aria-label="Unmute @{{ who.handle }}">Unmute</button></p>
+{%- endmacro %}
+
+{% macro mute_line(who, shown) -%}
+{% if shown %}{{ _line(who) }}{% endif %}
+<template data-mute-line-tpl>{{ _line(who) }}</template>
+{%- endmacro %}
+
+{#  THE TOAST, once a mute is made: "Theo is muted. They aren’t told." (or,
+    following them, "Theo is muted. You still follow them."), and Undo, for
+    seven seconds, the Pad's own time for an Undo. Above the bar on a phone,
+    at the foot of the page on a desk, clear of the rail. Only Undo takes a
+    tap: a tap on its words reaches the page under it. It is a status, so a
+    screen reader hears it as it comes. #}
+{% macro mute_parts() -%}
+<div class="mu-toasts" data-mute-toasts role="status" data-mute="{{ url_for('social.mute', handle='__H__') }}"
+     data-unmute="{{ url_for('social.unmute', handle='__H__') }}">
+  <div class="mu-toast" hidden>{{ ic.eye_closed() }}<span class="mu-toast-words" data-mute-said></span><button class="btn mu-undo" type="button" data-mute-undo hidden>Undo</button></div>
+</div>
+<div class="words" data-mute-words hidden>
+  <span data-word="mu_mute">Mute @{handle}</span>
+  <span data-word="mu_unmute">Unmute @{handle}</span>
+  <span data-word="mu_say">Their posts, comments and likes stop reaching you. They aren’t told.</span>
+  <span data-word="mu_say_un">Everything comes back, just as it was.</span>
+  <span data-word="mu_muted">{first} is muted. They aren’t told.</span>
+  <span data-word="mu_muted_following">{first} is muted. You still follow them.</span>
+  <span data-word="mu_back">Unmuted. {first}’s posts are back.</span>
+  <span data-word="mu_stale">This page went stale. Reload it, then try again.</span>
+  <span data-word="mu_limited">Lots of that in a short while. Wait a little, then try again.</span>
+  <span data-word="mu_signed_out">You’ve been signed out. Sign in again, then try again.</span>
+  <span data-word="mu_gone">They aren’t here anymore. Reload the page to see what’s new.</span>
+  <span data-word="mu_network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="mu_failed">That didn’t go through. Try again?</span>
+</div>
+{%- endmacro %}

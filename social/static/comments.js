@@ -46,6 +46,15 @@
  *
  * LOAD MORE brings the next page of comments in place.
  *
+ * SOMEBODY YOU MUTED (mutes; the owner's C): their comment or answer is one
+ * quiet line in its place, "Someone you muted said something. Show"
+ * (_comments.html), its room the line's height, the comment hidden for real
+ * under it. Show opens it for this visit: the line fades, the room opens to
+ * the comment's own height while what is under it moves down, and the
+ * comment fades in; never both more than half there at once. Under Reduce
+ * Motion the room is put there while neither can be seen, and the fades
+ * remain. The line's words wrap in a narrow column, and its room follows.
+ *
  * OPENED AT A COMMENT (#c-<id>, a row in Activity; notifications): it glows
  * a moment in the note's tint, and a drawing answer draws itself once (below).
  *
@@ -112,7 +121,72 @@
   function settle(el) {
     if (window.SocialWhen) window.SocialWhen(el);
     if (window.SkriblInline) window.SkriblInline.mount(el);
+    fitQuiet(el);
   }
+
+  /* ---- SOMEBODY YOU MUTED: one quiet line, and Show -------------------------- */
+  /* The fold's room is its line's height, which grows when its words wrap. */
+  function fitQuiet(el) {
+    var all = el.matches && el.matches('.cm.is-quiet') ? [el] : [];
+    Array.prototype.forEach.call(el.querySelectorAll ? el.querySelectorAll('.cm.is-quiet') : [], function (li) { all.push(li); });
+    all.forEach(function (li) {
+      var f = li.querySelector(':scope > .cm-fold-line');
+      if (f) li.style.setProperty('--cm-fold-h', Math.ceil(f.getBoundingClientRect().height) + 'px');
+    });
+  }
+  var refit = 0;
+  window.addEventListener('resize', function () {
+    cancelAnimationFrame(refit);
+    refit = requestAnimationFrame(function () { fitQuiet(root); });
+  });
+  var EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+  /* SHOW: the line fades (0.16s), the room opens to the comment's own height
+     (0.34s from 0.06s) and the comment fades in (from 0.18s). Once open, the
+     line goes and the comment is a comment again; the focus, if it was on
+     the line, goes to the comment's first control. */
+  function show(li) {
+    var f = li.querySelector(':scope > .cm-fold-line');
+    var main = li.querySelector(':scope > .cm-main'), face = li.querySelector(':scope > .face-ring');
+    if (!f || !main || li.hasAttribute('data-showing')) return;
+    li.setAttribute('data-showing', '');
+    var had = doc.activeElement === f;
+    var was = main.getBoundingClientRect().height;
+    main.style.height = 'auto';
+    var h = main.getBoundingClientRect().height;
+    main.style.height = was + 'px';
+    void main.offsetHeight;
+    var rm = still(), fade = rm ? 'opacity 0.22s ease 0.16s' : 'opacity 0.24s ease 0.18s';
+    main.style.transition = (rm ? 'height 0s linear 0.16s' : 'height 0.34s ' + EASE + ' 0.06s') + ', ' + fade;
+    if (face) face.style.transition = fade;
+    f.style.transition = 'opacity 0.16s ease';
+    main.style.height = h + 'px';
+    f.style.opacity = '0';
+    f.style.pointerEvents = 'none';
+    [face, main].forEach(function (x) { if (x) { x.style.visibility = 'visible'; x.style.opacity = '1'; } });
+    var done = false, t = 0;
+    function end() {
+      if (done) return;
+      done = true;
+      clearTimeout(t);
+      main.removeEventListener('transitionend', on);
+      if (f.parentNode) f.parentNode.removeChild(f);
+      li.classList.remove('is-quiet');
+      li.removeAttribute('data-showing');
+      li.style.removeProperty('--cm-fold-h');
+      [face, main].forEach(function (x) {
+        if (!x) return;
+        ['height', 'transition', 'visibility', 'opacity'].forEach(function (k) { x.style.removeProperty(k); });
+      });
+      if (had) {
+        var next = main.querySelector('.cm-acts button');
+        if (next) next.focus({ preventScroll: true });
+      }
+    }
+    function on(e) { if (e.target === main && e.propertyName === 'opacity') end(); }
+    main.addEventListener('transitionend', on);
+    t = setTimeout(end, 800);
+  }
+  fitQuiet(root);
 
   var reduced = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   function still() { return !!(reduced && reduced.matches); }
@@ -635,6 +709,12 @@
   var current = null, opener = null;
 
   root.addEventListener('click', function (e) {
+    var q = e.target.closest('[data-cm-show]');
+    if (q) {
+      e.preventDefault();
+      show(q.closest('.cm'));
+      return;
+    }
     var a = e.target.closest('[data-cm-answer]');
     if (a && box) {
       e.preventDefault();

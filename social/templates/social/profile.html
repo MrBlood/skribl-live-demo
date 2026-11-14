@@ -30,7 +30,14 @@
     in the row on somebody else's page (Following once tapped), and nothing
     else of follows there for anybody; on your own, under the buttons, who
     follows you ("Followed by…") or whom you follow, opening the lists, for
-    your eyes alone (social/_follow.html; follows.js). #}
+    your eyes alone (social/_follow.html; follows.js).
+
+    MUTE (mutes; the owner's "Yes to all", C, Nov 13): signed in, somebody
+    else's ⋯ says Mute @them first (Unmute @them once muted); nothing asked
+    first. Their page is what you go to, so it stays, and to you alone it says
+    "You muted Theo · Unmute" under the buttons, opening there as you mute and
+    closing as you unmute; the toast rises with Undo (social/_mute.html;
+    mutes.js). Nothing of it is on the page for anybody else. #}
 {% extends 'social/base.html' %}
 {% from 'skribl/_skribl_gallery_section.html' import skribl_gallery_assets, skribl_gallery_section %}
 {% from 'skribl/_skribl_face.html' import skribl_face_maker_assets, skribl_face_maker %}
@@ -38,6 +45,7 @@
 {% import 'social/_icons.html' as ic %}
 {% from 'social/_safety.html' import person_sheet, safety_sheets with context %}
 {% from 'social/_follow.html' import follow_button, followed_line, follow_sheets with context %}
+{% from 'social/_mute.html' import mute_line, mute_parts with context %}
 
 {% block title %}{{ who.display_name }} (@{{ who.handle }}) · Blooby{% endblock %}
 {% block head %}<link rel="canonical" href="{{ share_url }}">
@@ -46,7 +54,8 @@
 {{ skribl_face_maker_assets() }}{% endif %}{% endblock %}
 {% block scripts %}<script src="{{ social_asset('profile.js') }}" defer></script>
 <script src="{{ social_asset('follows.js') }}" defer></script>
-{% if not mine %}<script src="{{ social_asset('safety.js') }}" defer></script>{% endif %}{% endblock %}
+{% if not mine %}<script src="{{ social_asset('safety.js') }}" defer></script>{% endif %}
+{% if me and not mine and not blocked_them %}<script src="{{ social_asset('mutes.js') }}" defer></script>{% endif %}{% endblock %}
 
 {% block top %}
   <span class="top-title">@{{ who.handle }}</span>
@@ -54,7 +63,7 @@
 {% endblock %}
 
 {% block main %}
-<div class="prof-page" data-profile data-handle="{{ who.handle }}" data-share-url="{{ share_url }}"
+<div class="prof-page" data-profile data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}" data-share-url="{{ share_url }}"
      data-share-title="{{ who.display_name }} (@{{ who.handle }}) on Blooby">
   {% if mine and who.taken_down_at %}<p class="prof-down" role="note">Your profile was taken down: it broke the rules. Only you can see it, and what you made.</p>{% endif %}
   {% if note == 'saved' %}<p class="note" role="status">Saved. This is your profile as everyone sees it.</p>
@@ -103,6 +112,7 @@
                 aria-expanded="false" aria-label="More for {{ who.display_name }}" title="More">{{ ic.dots() }}</button>{% endif %}
       </div>
       {% if mine and fl and fl.line %}{{ followed_line(fl) }}{% endif %}
+      {% if me and not mine %}{{ mute_line(who, muted) }}{% endif %}
       <p class="say prof-say" data-say role="status" hidden></p>
       <p class="sr" data-follow-said role="status"></p>
       {% endif %}
@@ -252,4 +262,4 @@
 </div>
 {{ skribl_face_maker() }}
 {{ follow_sheets(who, fl, true) }}
-{% else %}{{ person_sheet(who) }}{{ safety_sheets() }}{% if not blocked_them %}{{ follow_sheets(who, none, false) }}{% endif %}{% endif %}{% endblock %}
+{% else %}{{ person_sheet(who, muted, not blocked_them) }}{{ safety_sheets() }}{% if not blocked_them %}{{ follow_sheets(who, none, false) }}{% endif %}{% if me and not blocked_them %}{{ mute_parts() }}{% endif %}{% endif %}{% endblock %}

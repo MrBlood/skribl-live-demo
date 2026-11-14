@@ -1,7 +1,9 @@
 {#  SAFETY'S SHEETS (piece 5; the owner's "all yes" on the Safety mock, Nov 12),
     raised by safety.js through social.js's SocialSheet, as Make's are:
 
-      a person's ⋯       Report @them, and signed in Block @them (a profile)
+      a person's ⋯       signed in, Mute @them first, the gentlest (mutes:
+                         _mute.html; Unmute @them once muted); then Report
+                         @them, and signed in Block @them (a profile)
       Report @them       a person's own reasons, a note, Send report
       Block @them?       asked once: both ways, quietly, undone in Settings
 
@@ -9,14 +11,18 @@
     sheet is about is filled in as it opens, from the words here: nothing in
     safety.js says anything of its own. #}
 {% import 'social/_icons.html' as ic %}
+{% from 'social/_mute.html' import mute_row %}
 
-{% macro person_sheet(who) -%}
-<div class="make post-sheet" id="personSheet" hidden data-handle="{{ who.handle }}">
+{#  `can_mute`: signed in, and no block standing between you (muting waits
+    for an unblock, as the route says). #}
+{% macro person_sheet(who, muted=false, can_mute=true) -%}
+<div class="make post-sheet" id="personSheet" hidden data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}">
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="personSheetTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="personSheetTitle">@{{ who.handle }}</h2>
     <div class="post-acts">
+      {% if me and can_mute %}{{ mute_row(who.handle, muted, 'person') }}{% endif %}
       <button class="post-act is-danger" type="button" data-safety="report-person">{{ ic.flag() }}<span>Report @{{ who.handle }}</span></button>
       {% if me %}<button class="post-act is-danger" type="button" data-safety="block">{{ ic.block() }}<span>Block @{{ who.handle }}</span></button>{% endif %}
     </div>

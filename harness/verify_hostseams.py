@@ -449,6 +449,31 @@ try:
 except TypeError as exc:
     check("a non-callable filter is refused at configuration time", True, str(exc))
 
+# WHICH LISTING IT IS (after v330, for a host's mute: the Skribl site's). A
+# filter that names `author` is told the one author a listing is narrowed to
+# (a profile's, ?user_id=), and None for everybody's (the gallery); one
+# written for two arguments is called as before (every app above is one).
+_told = []
+
+
+def quiets(q, viewer, author=None):
+    _told.append(author)
+    return q.filter(SkriblPost.user_id != str(BLOCKED)) if author is None else q
+
+
+app_m, _ = host_app(18, feed_filter=quiets)
+c_m = app_m.test_client()
+_everybody = [i["id"] for i in c_m.get("/api/skribls?limit=100").get_json()["items"]]
+_told_all = list(_told)
+_told.clear()
+_theirs = [i["id"] for i in c_m.get(f"/api/skribls?limit=100&visibility=public&user_id={BLOCKED}").get_json()["items"]]
+check("a filter that names `author` is told the one author a listing is narrowed to: None for everybody's (the"
+      " gallery), that author for theirs (a profile's), so a host leaves somebody out of the first and keeps them"
+      " on the second (a mute)",
+      _told_all == [None] and _told == [str(BLOCKED)] and not set(ids) & set(_everybody) and set(ids) <= set(_theirs),
+      f"told {_told_all} then {_told}; theirs in everybody's {len(set(ids) & set(_everybody))}, on their own"
+      f" {len(set(ids) & set(_theirs))} of {len(ids)}")
+
 
 print("\nEXT-P1-13 — the help drawer describes the ownership model in force")
 # The "Your Skribls" tip (named "Your Skribl Library" since v314) described the browser-held model unconditionally:

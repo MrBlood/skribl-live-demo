@@ -34,7 +34,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
 __all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
-           "Comment", "Like", "Follow", "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES",
+           "Comment", "Like", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES",
            "WORDS_MAX", "REPORT_KINDS", "REPORT_STATES", "REPORT_NOTE_MAX", "HOME_FEEDS",
            "new_person_id", "new_public_id", "as_utc", "utcnow", "attach_to_metadata"]
 
@@ -451,6 +451,50 @@ class Follow(SocialBase):
         sa.Index("ix_social_follows_follower_created", "follower_id", "created_at"),
         #: Who follows a person, newest first.
         sa.Index("ix_social_follows_followed_created", "followed_id", "created_at"),
+    )
+
+
+class Mute(SocialBase):
+    """One person muting another (phase 2, mutes; the owner's "Yes to all" on
+    the mute mock, C, quiet everywhere, Nov 13): what the muted person makes
+    stops reaching the one who muted them (their posts and drawings leave
+    Home and Explore, their comments fold to a line with Show, their likes,
+    comments and follows leave Activity), while their page and their posts
+    stay open to them (mutes.py). ONE WAY AND QUIET: nothing changes for the
+    person muted, and they are never told; who muted whom is only ever the
+    muter's to see (Settings, Muted).
+
+    One row a pair (unique), and nobody mutes themselves
+    (ck_social_mutes_not_self). Unmuting deletes the row: nothing about a
+    mute is kept once it is lifted, and nothing it quieted was ever deleted
+    (Activity and the comments are read each time), so all of it comes back.
+    It never touches a follow, either way (the owner's rule 3), and a block
+    leaves it standing: lift the block and they are still muted, as it was.
+
+    Indexed by whose and when, newest first (Settings' list), by the pair
+    (the once-a-request read of whom a person muted, and one row a pair), and
+    by whom (deleting an account, both ways, and the cascade's own net).
+    Deleting an account takes its rows both ways, in code (accounts.
+    delete_person); the ON DELETE CASCADEs are the net under that."""
+    __tablename__ = "social_mutes"
+
+    id = sa.Column(BigId, primary_key=True)
+    #: Who muted.
+    muter_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: Whom.
+    muted_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: When.
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (
+        #: Nobody mutes themselves.
+        sa.CheckConstraint("muter_id <> muted_id", name="ck_social_mutes_not_self"),
+        #: One row a pair; whom a person muted, read once a request.
+        sa.Index("ix_social_mutes_pair", "muter_id", "muted_id", unique=True),
+        #: Whom a person muted, newest first (Settings).
+        sa.Index("ix_social_mutes_muter_created", "muter_id", "created_at"),
+        #: Who muted a person (deleting an account, both ways).
+        sa.Index("ix_social_mutes_muted_id", "muted_id"),
     )
 
 

@@ -1,5 +1,6 @@
 {#  SETTINGS, the account (phase 1, piece 2; /social/you): your passkeys,
-    signing out, and deleting the account. Since piece 3 You is your profile
+    who you muted (mutes) and blocked (piece 5), signing out, and deleting
+    the account. Since piece 3 You is your profile
     (/social/@<handle>), and this is where its gear leads, so it says
     Settings; nothing on it changed but its name.
 
@@ -35,6 +36,7 @@
   {% elif note == 'removed' %}<p class="note" role="status">That passkey is removed. It won’t sign you in anymore.</p>
   {% elif note == 'last' %}<p class="note" role="status">That’s your only passkey, so it stays. Add another first.</p>
   {% elif note == 'name' %}<p class="note" role="status">A passkey’s name can be 1 to 40 characters. Try again?</p>
+  {% elif note == 'unmuted' %}<p class="note" role="status">Unmuted. Everything comes back, just as it was.</p>
   {% elif note == 'unblocked' %}<p class="note" role="status">Unblocked. You’ll see each other’s posts and drawings again.</p>
   {% elif note == 'limited' %}<p class="note" role="status">Lots of that in a short while. Wait a little, then try again.</p>{% endif %}
 
@@ -111,6 +113,32 @@
     <a class="btn btn-wide" href="{{ url_for('social.invites') }}">{{ ic.link() }}<span>Invites and sign-in links</span></a>
   </section>
   {% endif %}
+
+  {#  MUTED (mutes; the owner's "Yes to all", Nov 13), just above Blocked, in
+      the Blocked panel's own rows: the people you muted, newest first, each
+      with Unmute (a form: it comes back here). Nobody a block either way or
+      a takedown hides is listed: somebody you muted and then blocked is
+      under Blocked, and back here once unblocked. Nobody is told. #}
+  <section class="panel" aria-labelledby="mutedTitle">
+    <h2 class="panel-title" id="mutedTitle">Muted</h2>
+    {% if muted %}
+    <p class="panel-sub">You see less of them. They aren’t told, and nothing changes for them.</p>
+    <ul class="blocked mu-list">
+      {% for m in muted %}
+      <li class="blocked-row">
+        {{ face(m, 'blocked-face') }}
+        <span class="blocked-who"><b>{{ m.display_name }}</b><span>@{{ m.handle }}</span></span>
+        <form method="post" action="{{ url_for('social.unmute', handle=m.handle) }}">
+          <input type="hidden" name="csrf" value="{{ token }}">
+          <button class="btn btn-small" type="submit" aria-label="Unmute @{{ m.handle }}">Unmute</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="panel-sub">Nobody. If you mute someone, they’re listed here, and you can unmute them.</p>
+    {% endif %}
+  </section>
 
   {#  BLOCKED (piece 5): the people you blocked, newest first, each with
       Unblock (a form: it comes back here). Nobody is told either way. #}

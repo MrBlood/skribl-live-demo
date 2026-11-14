@@ -15,7 +15,7 @@ Reads only, on the host's session: it flushes nothing and commits nothing.
 """
 import sqlalchemy as sa
 
-from .models import SkriblPost, feed_filter, normalise_user_id, session
+from .models import SkriblPost, apply_feed_filter, normalise_user_id, session
 
 #: The most ids one call reads, in one query: a page of a feed, with room.
 MAX_DESCRIBE = 200
@@ -78,7 +78,9 @@ def list_public_posts(*, author=None, author_prefix=None, authors=None, before=N
                     at that very time.
     limit           how many, at most MAX_LIST.
     viewer_id       the person looking, for the host's own visibility policy
-                    and feed filter, as the gallery's listing asks them.
+                    and feed filter, as the gallery's listing asks them. A
+                    filter that names `author` is told `author` (None for
+                    `authors` or `author_prefix`): set_feed_filter.
 
     The rule is the gallery's: public only, the host's feed_filter and
     visibility policy applied, no payload read. `more` says whether there
@@ -113,9 +115,9 @@ def list_public_posts(*, author=None, author_prefix=None, authors=None, before=N
         when, pid = before
         q = q.filter(sa.or_(SkriblPost.created_at < when,
                             sa.and_(SkriblPost.created_at == when, SkriblPost.public_id < (pid or ""))))
-    ff = feed_filter()
-    if ff is not None:
-        q = ff(q, viewer_id)
+    # The filter is told the one author this listing is narrowed to (`author`),
+    # or None for many people's (`authors`, `author_prefix`, or everybody's).
+    q = apply_feed_filter(q, viewer_id, author=normalise_user_id(author) if author is not None else None)
     rows = q.order_by(SkriblPost.created_at.desc(), SkriblPost.public_id.desc()).limit(limit + 1).all()
     more = len(rows) > limit
     return [p.feed_dict() for p in rows[:limit] if p.visible_to(viewer_id)], more

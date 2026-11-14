@@ -1,8 +1,9 @@
 /* Safety (piece 5; the owner's "all yes" on the Safety mock, Nov 12): the
  * sheets in social/_safety.html, raised through social.js's SocialSheet.
  *
- * A PERSON'S ⋯ (somebody else's profile): Report @them, and signed in Block
- * @them. REPORT @THEM sends a person's own reasons and a note to the site's
+ * A PERSON'S ⋯ (somebody else's profile): signed in, Mute @them first (or
+ * Unmute @them; mutes.js does it, nothing asked), then Report @them, and
+ * signed in Block @them. REPORT @THEM sends a person's own reasons and a note to the site's
  * queue (/report) and says thanks; nothing is taken down by it. BLOCK
  * @THEM? is asked once; once blocked, their profile says so (it reloads),
  * or from a post's ⋯ (posts.js, through window.SocialSafety.block) Home
@@ -152,6 +153,16 @@
     }
     var a = e.target.closest('[data-safety]');
     if (!a || !person || !person.wrap.contains(a)) return;
+    if (a.getAttribute('data-safety') === 'mute') {
+      /* Nothing asked first: the sheet goes down, its focus back on the ⋯. */
+      person.ctl.close();
+      if (window.SocialMute) {
+        window.SocialMute.act({ handle: person.wrap.getAttribute('data-handle') || '',
+                                first: person.wrap.getAttribute('data-first') || '',
+                                muted: a.getAttribute('data-muted') === 'true', opener: opener });
+      }
+      return;
+    }
     person.ctl.close(true);
     if (a.getAttribute('data-safety') === 'report-person') openReport(opener);
     else if (a.getAttribute('data-safety') === 'block') openBlock(handle, opener);
