@@ -3121,7 +3121,7 @@ print("PLAN " + json.dumps(out))
     if part(18, "delete from your own page: you stay, the post folds away there"):
         mo = _people.get("delmo") or member(b, "delmo", "Mo Delaney")
         tag = secrets.token_hex(3)
-        mos = [site_post(mo, f"Mo's post {k} {tag}", tab_drawing(seed=80 + k)) for k in range(4)]
+        mos = [site_post(mo, f"Mo's post {k} {tag}", tab_drawing(seed=80 + k)) for k in range(6)]
         made18 = all(mos)
         DSAMPLE = """([sel, nextSel, ms]) => { window.__df = []; const c = document.querySelector(sel), n = document.querySelector(nextSel), t0 = performance.now();
           const step = () => { window.__df.push({ t: Math.round(performance.now() - t0), there: c.isConnected,
@@ -3156,31 +3156,71 @@ print("PLAN " + json.dumps(out))
                     "way": round(way, 1), "moving": len([x for x in steps if x > 0.3]), "step": round(max(steps or [0]), 1),
                     "still while seen": bool(while_seen) and max(while_seen) - min(while_seen) <= 0.5,
                     "at": sorted({f["at"] for f in fs}), "scroll": sorted({f["y"] for f in fs})[:1] + sorted({f["y"] for f in fs})[-1:]}
-        gone18 = {}
+        SAID_INK = """() => { const rgba = s => { const m = (s.match(/[\\d.]+/g) || []).map(Number); return [m[0], m[1], m[2], m.length > 3 ? m[3] : 1]; };
+          const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+                             return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+          const ground = e => { const layers = []; for (let n = e; n; n = n.parentElement) { const b = rgba(getComputedStyle(n).backgroundColor);
+              if (b[3] > 0) { layers.push(b); if (b[3] >= 1) break; } }
+            let g = [255, 255, 255]; for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; g = [0, 1, 2].map(k => l[k] * l[3] + g[k] * (1 - l[3])); }
+            return g; };
+          const out = { read: 0, low: [], lowest: 99, words: [] };
+          document.querySelectorAll('[data-page-say], [data-prof-none]').forEach(e => {
+            if (e.hidden || !e.getClientRects().length || !e.textContent.trim()) return;
+            e.scrollIntoView({ block: 'center', behavior: 'instant' });
+            const r = e.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            if (!at || !(at === e || e.contains(at))) { out.low.push('not painted: ' + e.textContent.trim().slice(0, 24)); return; }
+            const a = lum(rgba(getComputedStyle(e).color)), b = lum(ground(e)), k = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+            out.read++; out.lowest = Math.min(out.lowest, Math.round(k * 100) / 100); out.words.push(e.textContent.trim().slice(0, 40));
+            if (k < 4.5) out.low.push(e.textContent.trim().slice(0, 24) + ' ' + k.toFixed(2)); });
+          return out; }"""
+
+        def said_read(pg_):
+            """What the page said, read where it is painted: scrolled to, against what is behind it."""
+            return pg_.evaluate(SAID_INK)
+        gone18, inks18 = {}, {}
         ctx, pg = browser_as(b, mo, "phone", "light")
         try:
             pg.goto(BASE + "/social/@delmo")
-            pg.wait_for_selector(f'[data-prof-list] > .post-card[data-post="{mos[2]}"]', timeout=15000)
-            fs = delete_one(pg, mos[2], mos[1])
+            pg.wait_for_selector(f'[data-prof-list] > .post-card[data-post="{mos[4]}"]', timeout=15000)
+            fs = delete_one(pg, mos[4], mos[3])
             gone18["glide"] = judged(fs)
             gone18["after"] = pg.evaluate("""(ids) => ({ at: location.pathname + location.search,
               cards: [...document.querySelectorAll('[data-prof-list] > .post-card')].map(c => c.getAttribute('data-post')),
               note: !!document.querySelector('.note'), said: (document.querySelector('[data-page-say]') || {}).textContent || null,
               focus: document.activeElement ? [document.activeElement.className, (document.activeElement.closest('.post-card') || { getAttribute: () => null }).getAttribute('data-post')] : null,
               sheet: document.getElementById('deleteSheet').hidden, inert: !!document.querySelector('#main[inert]') })""", mos)
+            inks18["phone light"] = said_read(pg)
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the rows' red
             gone18["stopped"] = str(exc).splitlines()[0][:160]
         close_ctx(ctx, pg)
-        rows18 = db("select public_id from social_posts where public_id in (?, ?, ?, ?)", tuple(mos))
+        rows18 = db("select public_id from social_posts where public_id in (?, ?, ?, ?, ?, ?)", tuple(mos))
+        # ON A DESK, light and dark: the words read where they are painted.
+        for scheme, pid, nxt in (("light", mos[5], mos[3]), ("dark", mos[3], mos[2])):
+            ctx, pg = browser_as(b, mo, "desk", scheme)
+            try:
+                pg.goto(BASE + "/social/@delmo")
+                pg.wait_for_selector(f'[data-prof-list] > .post-card[data-post="{pid}"]', timeout=15000)
+                sel_ = f'[data-prof-list] > .post-card[data-post="{pid}"] [data-post-menu]'
+                pg.locator(sel_).scroll_into_view_if_needed(timeout=5000)
+                pg.click(sel_, timeout=5000)
+                pg.wait_for_timeout(600)
+                pg.click("#postSheet [data-act=delete]", timeout=5000)
+                pg.wait_for_timeout(600)
+                pg.click("[data-delete-now]", timeout=5000)
+                pg.wait_for_timeout(1600)
+                inks18["desk " + scheme] = dict(said_read(pg), at=urllib.parse.urlsplit(pg.url).path)
+            except Exception as exc:  # noqa: BLE001
+                inks18["desk " + scheme] = {"stopped": str(exc).splitlines()[0][:120]}
+            close_ctx(ctx, pg)
         g = gone18.get("glide") or {}
         a = gone18.get("after") or {}
         check("DELETED FROM YOUR OWN PAGE, YOU STAY THERE: Delete post on a card of your Posts tab, and the page is still"
               " yours (never Home, never its note), the post gone (its row too), the cards around it as they were, the"
               " page saying so to a screen reader in Home's own words, and focus on the next card's ⋯",
               made18 and "stopped" not in gone18 and g.get("at") == ["/social/@delmo"] and a.get("at") == "/social/@delmo"
-              and not a.get("note") and a.get("cards") == [mos[3], mos[1], mos[0]]
-              and sorted(r_[0] for r_ in rows18) == sorted([mos[0], mos[1], mos[3]])
-              and a.get("said") == "Your post is gone, its drawing with it." and (a.get("focus") or [None, None])[1] == mos[1]
+              and not a.get("note") and a.get("cards") == [mos[5], mos[3], mos[2], mos[1], mos[0]]
+              and sorted(r_[0] for r_ in rows18) == sorted([mos[0], mos[1], mos[2], mos[3], mos[5]])
+              and a.get("said") == "Your post is gone, its drawing with it." and (a.get("focus") or [None, None])[1] == mos[3]
               and "post-more" in ((a.get("focus") or [""])[0] or "") and a.get("sheet") and not a.get("inert"),
               f"{gone18}; rows left {rows18}")
         check("...and it folds away there, read on every frame: it fades, the next card still while it can be seen; then"
@@ -3197,7 +3237,8 @@ print("PLAN " + json.dumps(out))
             pg.goto(BASE + "/social/@delmo")
             pg.wait_for_selector(f'[data-prof-list] > .post-card[data-post="{mos[1]}"]', timeout=15000)
             rm["glide"] = judged(delete_one(pg, mos[1], mos[0]))
-            for pid in (mos[3], mos[0]):
+            inks18["phone dark"] = said_read(pg)
+            for pid in (mos[2], mos[0]):
                 pg.locator(f'[data-prof-list] > .post-card[data-post="{pid}"] [data-post-menu]').tap(timeout=5000)
                 pg.wait_for_timeout(600)
                 pg.locator("#postSheet [data-act=delete]").tap(timeout=5000)
@@ -3208,6 +3249,7 @@ print("PLAN " + json.dumps(out))
               return { at: location.pathname, cards: document.querySelectorAll('[data-prof-list] > .post-card').length,
                        words: n && !n.hidden ? n.textContent.trim() : null, op: n ? +getComputedStyle(n).opacity : null,
                        focus: document.activeElement ? document.activeElement.className : null }; }""")
+            inks18["phone dark, the tab's words"] = said_read(pg)
         except Exception as exc:  # noqa: BLE001
             rm["stopped"] = str(exc).splitlines()[0][:160]
         close_ctx(ctx, pg)
@@ -3223,6 +3265,12 @@ print("PLAN " + json.dumps(out))
               and last.get("op") == 1 and "prof-tab" in (last.get("focus") or "")
               and not db("select 1 from social_posts where person_id = (select id from social_people where handle_key = 'delmo')"),
               json.dumps(rm))
+        check("...and what the page says reads at 4.5:1 or more on what is painted behind it (\"Your post is gone, its"
+              " drawing with it.\", the tab's kind words once the last is gone), a touch phone and a desk, light and"
+              " dark, the desk too staying on the page",
+              all(v.get("read", 0) >= 1 and not v.get("low") for v in inks18.values()) and len(inks18) == 5
+              and all(inks18[k].get("at") == "/social/@delmo" for k in ("desk light", "desk dark")),
+              json.dumps({k: (v.get("read"), v.get("lowest"), v.get("low"), v.get("at"), v.get("stopped")) for k, v in inks18.items()}))
 
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):
