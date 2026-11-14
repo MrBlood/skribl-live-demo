@@ -38138,3 +38138,28 @@ skribl/static/poster-blank.svg); anything drawn in the Pad or Flip has one.
 Pad and Flip: nothing changes in either editor. One option on the in-post
 player that both share, a seam the site turns on: a post's line waits until
 it is played.
+
+## After v330 -- Main red after #889: two instruments that read a busy runner as a fault
+
+Main's run after #889 (Mute) was red on two PostgreSQL shards, each one row
+of a suite the dispatched run on the same tree had passed whole, and the
+SQLite shards too:
+
+- verify_socialposts, "no page errors": Chrome reported "Transition was
+  aborted because of invalid state" on Skribl's own page for a drawing
+  (/s/<id>). Both pages ask for the cross-fade (@view-transition), so nothing
+  was missing: section 12's `follow` waited 150ms after a page arrived and
+  then went on to the next, inside the fade's 0.28s, and Chrome cut the fade
+  short and said so. It waits 400ms now, as a person's next tap would; a real
+  page error is still the row's red.
+- verify_socialprofile, "Use one you made glides the sheet": the heights
+  read [357] to [616], and the rest of the line was cut short in the run's
+  summary (the proxy here refuses the full log). Here it reads 16 heights, the
+  biggest step 62px of 259. The row judged a step as a share of the way with
+  no clock, so a frame a busy runner dropped read as a jump; it judges each
+  step over the display frames it spans now, as Mute's and Following's rows
+  do, and asks that the change take a glide's time (150ms or more), so a snap
+  is a snap however the frames fell. Shown red by the snap itself (profile.js
+  without its glide's class: 7/8, that row alone) and green without it (8/8).
+
+Load, not a defect, both: no product code changed.
