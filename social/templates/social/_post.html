@@ -2,22 +2,26 @@
     and the owner's "all yes" to piece 4's choices, Nov 11).
 
     post_card(c)      one post in the feed: its author's face and name,
-                      @handle and when (posts.js says it in the person's own
-                      time), its ⋯, its words, the drawing in Skribl's in-post
-                      player (still until tapped, as every feed's), and its
-                      plays, how many comments (phase 2: the comments mock's
-                      4, "N comments", a way to them) and Share. EASY TO OPEN
+                      @handle, when (posts.js says it in the person's own
+                      time) and its plays, none said at none; its words; the
+                      drawing in Skribl's in-post player, still until tapped,
+                      its line waiting until the first play (the calm card,
+                      the owner's B, Nov 14: the play button says "drawn in
+                      5 sec" until then); and ONE ROW (the quick-patterns
+                      mock's B): how many comments (a way to them, the icon
+                      alone at none), the heart and how many, Share, the ⋯,
+                      and "Open ›", the post, at the end. EASY TO OPEN
                       (the owner's yes, Nov 12): its words and its time are
                       each a link to its own page, and the comments' icon is
                       there even at none ("Comment"); the face, the name and
                       the @handle still go to the person's page. A tap
                       anywhere else on the card opens its page too (posts.js,
                       "ANYWHERE ON A CARD"), but on the drawing, which plays.
-    heart(c)          the like's heart and how many (likes, phase 2; the
-                      owner's way 3, "Yes"): a pill at the start of the line
-                      under the drawing, on Home's card and on a post's or a
-                      drawing's page alike, given to the player as its line's
-                      lead (Skribl's seam: docs/INTEGRATION.md). It stays
+    heart(c)          the like's heart and how many (likes, phase 2), in the
+                      row under the drawing (Nov 14; the owner's way 3 had it
+                      at the start of the drawing's line, as the line's lead,
+                      a seam Skribl no longer has), on Home's card and on a
+                      post's or a drawing's page alike. It stays
                       empty until THIS viewer likes it; the count is
                       everyone's, inside the pill, none at zero. Signed out, a
                       tap raises the small sheet that says how (_likes.html,
@@ -51,11 +55,14 @@
 <span class="face-ring{{ ' ' ~ cls if cls }}{% if not who.face_id %} is-blank{% endif %}">{% if who.face_id %}{{ skribl_face(who.face_id, canvas_w=who.face_w, canvas_h=who.face_h, bp=skribl_bp) }}{% else %}<span class="face-blank" aria-hidden="true"></span>{% endif %}</span>
 {%- endmacro %}
 
-{% macro player(c) -%}
-{%- set p = c.post %}{% set sk = c.sk %}{% set lead = heart(c) if not c.down else none -%}
+{#  The drawing in Skribl's player. On a card its line waits until the first
+    play (`line_waits`, Skribl's seam); a post's own page passes waits=false,
+    as you went there to watch. #}
+{% macro player(c, waits=true) -%}
+{%- set p = c.post %}{% set sk = c.sk -%}
 {%- set marks = c.likes.marks if not c.down else none -%}
-{%- if sk and sk.canvas_w %}{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, lead=lead, marks=marks) }}
-{%- else %}{{ skribl_inline(p.skribl_id, bp=skribl_bp, lead=lead, marks=marks) }}{% endif %}
+{%- if sk and sk.canvas_w %}{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, line_waits=waits, marks=marks) }}
+{%- else %}{{ skribl_inline(p.skribl_id, bp=skribl_bp, line_waits=waits, marks=marks) }}{% endif %}
 {%- endmacro %}
 
 {#  THE DOTS (likes, part 2): the drawing's moments, counted by this viewer,
@@ -71,6 +78,21 @@
         aria-pressed="{{ 'true' if mine else 'false' }}" aria-label="{{ 'Liked' if mine else 'Like' }}{% if n %}, {{ n }} {{ 'like' if n == 1 else 'likes' }}{% endif %}">{{ ic.heart() }}{% if n %}<span class="lk-n">{{ n }}</span>{% endif %}</button>
 {%- endmacro %}
 
+{#  THE ROW under every post (the quick-patterns mock's B; the owner's "Yes
+    on everything", Nov 14): the comments, even at none (the icon alone,
+    "Comment", a way to the box), the heart and how many, Share, the ⋯, and
+    on a card "Open ›", the post, at the end. Each 44px to a finger. #}
+{% macro post_row(c, open=true) -%}
+<footer class="post-row">
+  <a class="post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d comment%s' % (c.comments, '' if c.comments == 1 else 's')) if c.comments else 'Comment' }}">{{ ic.comment() }}{% if c.comments %}<span>{{ c.comments }}</span>{% endif %}</a>
+  {% if not c.down %}{{ heart(c) }}{% endif %}
+  <button class="icon-btn post-share" type="button" data-post-share aria-label="Share this post">{{ ic.share() }}</button>
+  <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
+          aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
+  {% if open %}<a class="post-open" href="{{ c.url }}">Open<span class="sr"> the post</span><span class="post-open-go" aria-hidden="true">›</span></a>{% endif %}
+</footer>
+{%- endmacro %}
+
 {% macro post_card(c) -%}
 {%- set p = c.post %}{% set who = c.who -%}
 <article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id }}"
@@ -83,21 +105,14 @@
         own, to the post's page, over it (social.css, "EASY TO OPEN"). #}
     <div class="post-who">
       <a class="post-name" id="pn-{{ p.public_id }}" href="{{ c.profile }}">{{ who.display_name }}</a>
-      <span class="post-sub">@{{ who.handle }} · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(p.created_at) }}" data-when="ago">{{ when_day(p.created_at) }}</time></a></span>
+      <span class="post-sub">@{{ who.handle }} · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(p.created_at) }}" data-when="ago">{{ when_day(p.created_at) }}</time>{% if c.plays %}<span class="post-plays-n"> · {{ c.plays }}</span>{% endif %}</a></span>
     </div>
-    <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
-            aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
   </header>
   {% if c.down and c.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
   {#- The words are a link that drags as words: pressed and pulled, they select (posts.js opens nothing then). #}
   {% if p.words %}<a class="post-words" href="{{ c.url }}" draggable="false">{{ p.words }}</a>{% endif %}
   <div class="post-art">{{ player(c) }}</div>
-  <footer class="post-foot">
-    {% if c.sk %}<a class="post-plays" href="{{ c.url }}">{{ ic.play() }}<span>{{ c.plays or 'No plays yet' }}</span></a>{% else %}<span></span>{% endif %}
-    {#- The comments, even at none: the icon alone, "Comment", a way to the box. #}
-    <a class="post-plays post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d comment%s' % (c.comments, '' if c.comments == 1 else 's')) if c.comments else 'Comment' }}">{{ ic.comment() }}{% if c.comments %}<span>{{ c.comments }}</span>{% endif %}</a>
-    <button class="icon-btn post-share" type="button" data-post-share aria-label="Share this post">{{ ic.share() }}</button>
-  </footer>
+  {{ post_row(c) }}
 </article>
 {%- endmacro %}
 

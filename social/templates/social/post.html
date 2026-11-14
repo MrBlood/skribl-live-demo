@@ -6,24 +6,27 @@
     The drawing plays by itself once it is here (posts.js, through the in-post
     player's own play(): docs/INTEGRATION.md, "A post's own page can start
     it"), sound off until the viewer turns it on, and rests still under
-    Reduce Motion. Its author, its words, when, its plays, Share and Make your
-    own; its comments (phase 2: _comments.html, comments.py), on a desk beside
-    the drawing under Share; on a desk, More from its author beside it. A
+    Reduce Motion, its line there from the start (you went there to watch).
+    Its author, its words, the row every post has (_post.html post_row: the
+    comments, a way down to them here, the heart, Share and the ⋯, the one ⋯
+    on the page; not Open ›, as this is the post), when and its plays, and
+    Make your own; its comments (phase 2: _comments.html, comments.py), on a
+    desk beside the drawing; on a desk, More from its author beside it. A
     drawing shown outside a post (/social/b/<id>) is this page too, its
     comments and all (the owner's yes, Nov 12: "whatever you open has the
-    comment box"). Its ⋯ is the feed's.
+    comment box"). Its ⋯ is the feed's sheet.
 
-    LIKES (phase 2; the likes mock, "I like d.", and way 3): the heart and how
-    many at the start of the line under the drawing (_post.html, heart(), the
-    player's lead), and for its maker alone "Liked by…" under the
-    time-and-plays line, opening who (_likes.html).
+    LIKES (phase 2; the likes mock, "I like d."): the heart and how many in
+    the row under the drawing (_post.html, heart(); Nov 14, it sat at the
+    start of the drawing's line until then), and for its maker alone "Liked
+    by…" under the time-and-plays line, opening who (_likes.html).
 
     MUTE (mutes; the owner's C): signed in, the ⋯ says Mute @them after
     Share… (Unmute once muted), and the toast says so; a post's own page is
     what you went to, so it stays as it is. Somebody you muted has their
     comments folded to one line with Show (_comments.html). #}
 {% extends 'social/base.html' %}
-{% from 'social/_post.html' import post_sheets, post_words, face, player with context %}
+{% from 'social/_post.html' import post_sheets, post_words, face, player, post_row with context %}
 {% from 'social/_likes.html' import liked_by, like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% from 'social/_comments.html' import comments_section, comment_sheets with context %}
@@ -66,8 +69,6 @@
 {% block top %}
   <a class="icon-btn top-back" href="{{ url_for('social.home') }}" aria-label="Back to Home">{{ ic.back() }}</a>
   <span class="top-title">Post</span>
-  <button class="icon-btn post-more" type="button" data-post-menu data-for="post" aria-haspopup="dialog"
-          aria-controls="postSheet" aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
 {% endblock %}
 
 {% block main %}
@@ -80,18 +81,16 @@
       <b class="post-name" id="postWho">{{ who.display_name }}</b>
       <span class="post-sub">@{{ who.handle }}</span>
     </a>
-    <button class="icon-btn post-more desk-only" type="button" data-post-menu aria-haspopup="dialog"
-            aria-controls="postSheet" aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
   </header>
   {% if card.down and card.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
   {% if p.words %}<p class="post-words is-big">{{ p.words }}</p>{% endif %}
-  <div class="post-art">{{ player(card) }}
+  <div class="post-art">{{ player(card, waits=false) }}
     {% if card.sk and card.sk.caption %}<p class="post-caption">{{ card.sk.caption }}</p>{% endif %}
   </div>
+  {{ post_row(card, open=false) }}
   <p class="post-meta"><time datetime="{{ when_iso(p.created_at) }}" data-when="at">{{ when_day(p.created_at) }}</time>{% if card.plays %} · {{ card.plays }}{% endif %}</p>
   {% if lk and lk.line %}{{ liked_by(lk) }}{% endif %}
   <div class="post-actions">
-    <button class="btn" type="button" data-post-share>{{ ic.share() }}<span>Share</span></button>
     <button class="btn" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet"
             aria-expanded="false">{{ ic.pen() }}<span>Make your own</span></button>
   </div>

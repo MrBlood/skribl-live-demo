@@ -605,26 +605,27 @@ check("the site reads where a drawing's playhead is through playhead() alone, ne
       len(_site_js) >= 5 and not _peek and _reads, f"peeking: {_peek}; reading the seam: {_reads}")
 
 # ---------------------------------------------------------------------------
-print("\nTHE LINE'S LEAD — one control of a host's at the start of the line")
-# docs/INTEGRATION.md, "A control at the line's start" (after v330, the
-# owner's way 3 for the Skribl site's like): skribl_inline(..., lead=markup)
-# puts one control of the host's first in the line under the drawing, before
-# the scrubber, which gives it room; the player dresses it as its loop button
-# (32px, the loop's ground, ink, hover and focus ring) with a 44px tap area.
-# General: nothing of Skribl's names what a host puts there. Pinned as source
-# here; the player's own suite (verify_inline.py, "a host's control at the
-# line's start") renders it, lays it out and presses it, on a drawing and a Flip.
+print("\nA LINE THAT WAITS — no room and nothing shown until the drawing is first played")
+# docs/INTEGRATION.md, "A line that waits" (Nov 14, the Skribl site's calm
+# card, the owner's B): skribl_inline(..., line_waits=True) keeps the line out
+# of sight and out of the layout at rest, the play button saying what the
+# line would, and the first play opens it, gliding, for good. It took the
+# place of the line's lead (after v330, the site's heart, now in the site's
+# own row), whose rules paid for it. Pinned as source here; the player's own
+# suite (verify_inline.py, "a line that waits") opens it and reads every
+# frame, on a drawing and a Flip.
 _macro = (_layout.TEMPLATES_DIR / "_skribl_inline_player.html").read_text(encoding="utf-8")
 _macro_code = re.sub(r"\{#.*?#\}", "", _macro, flags=re.S)
 _sig = re.search(r"\{%\s*macro\s+skribl_inline\((.*?)\)\s*-?%\}", _macro_code, re.S)
-_row = re.search(r'<div class="skribl-inline-row">\s*(.*?)<div class="skribl-inline-scrub"', _macro_code, re.S)
-check("skribl_inline() takes lead (none unless given) and puts it first in the line's row, before the scrubber,"
-      " in its own slot, only when given",
-      bool(_sig) and re.search(r"\blead=None\b", _sig.group(1)) is not None and bool(_row)
-      and re.fullmatch(r'\{%-?\s*if lead\s*%\}\s*<div class="skribl-inline-lead">\{\{ lead \}\}</div>\s*\{%-?\s*endif\s*%\}\s*',
-                       _row.group(1)) is not None,
-      (_row.group(1).strip()[:160] if _row else "no row in the macro") + f"; signature {(_sig.group(1)[-60:] if _sig else None)}")
-_css = re.sub(r"/\*.*?\*/", "", (_layout.STATIC_DIR / "inlineplayer.css").read_text(encoding="utf-8"), flags=re.S)
+_css_raw = (_layout.STATIC_DIR / "inlineplayer.css").read_text(encoding="utf-8")
+_css = re.sub(r"/\*.*?\*/", "", _css_raw, flags=re.S)
+check("skribl_inline() takes line_waits (false unless given) and only then marks its line is-waiting; the line's"
+      " lead is gone from the macro and the stylesheet, nothing of it left to pay for",
+      bool(_sig) and re.search(r"\bline_waits=false\b", _sig.group(1)) is not None
+      and re.search(r'<div class="skribl-inline-line is-muted is-silent\{% if line_waits %\} is-waiting\{% endif %\}">',
+                    _macro_code) is not None
+      and "lead" not in _sig.group(1) and "skribl-inline-lead" not in _macro_code and "skribl-inline-lead" not in _css,
+      f"signature {(_sig.group(1)[-80:] if _sig else None)}")
 
 
 def _sels(text):
@@ -655,40 +656,32 @@ def _decl(sels):
     return next((d for ss, d in _rules if ss == sels), {})
 
 
-_lead, _slot = _decl([".skribl-inline-lead>*"]), _decl([".skribl-inline-lead"])
-_tap, _scrub = _decl([".skribl-inline-lead>*::after"]), _decl([".skribl-inline-scrub"])
-_loop_box = _decl([".skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop)"])
-_ground = _with(".skribl-inline-line .skribl-inline-loop", "background")
-_hover = [ss for ss, d in _rules if any(s.startswith(".skribl-inline-line :is(") and ".skribl-inline-loop" in s
-                                        and s.endswith(":hover") for s in ss)]
-_ring = _with(".skribl-inline-loop:focus-visible", "outline")
-_inset = [float(v.replace("px", "")) for v in _tap.get("inset", "").split()]
-_up, _side, _down = (_inset + [0, 0, 0])[:3] if len(_inset) == 3 else (0, 0, 0)
-check("the player dresses it as its loop button: the loop's height (32px), in the very rules that give the loop its"
-      " ground and ink, its hover and its focus ring",
-      _lead.get("height") == _loop_box.get("height") == "32px" and _lead.get("min-width") == "32px"
-      and len(_ground) == 1 and ".skribl-inline-lead>*" in _ground[0] and _decl(_ground[0]).get("color") == "inherit"
-      and len(_hover) == 1 and any(".skribl-inline-lead>*" in s for s in _hover[0])
-      and len(_ring) == 1 and ".skribl-inline-lead>:focus-visible" in _ring[0],
-      f"lead {_lead.get('height')} (the loop's {_loop_box.get('height')}); ground {_ground}; hover {_hover};"
-      f" ring {_ring}")
-check("its tap area is 44px tall, up to the drawing (10px) and only 2px down, 6px either side; the slot never"
-      " shrinks, so the scrubber gives it the room",
-      _tap.get("content") in ("''", '""') and _tap.get("position") == "absolute" and _lead.get("position") == "relative"
-      and (_up, _side, _down) == (-10, -6, -2) and 32 - _up - _down == 44 and _slot.get("flex") == "none"
-      and _scrub.get("flex") == "1",
-      f"tap {_tap}; slot {_slot}; the scrubber's flex {_scrub.get('flex')}")
+_wait = {k.strip(): v.strip() for k, v in _decl([".skribl-inline-line.is-waiting"]).items()}
+check("at rest a waiting line has no room and shows nothing: no height, no top margin, nothing seen, nothing"
+      " spilling",
+      _wait == {"height": "0", "margin-top": "0", "opacity": "0", "overflow": "hidden"}, str(_wait))
+_open = re.search(r"\.skribl-inline-line\.is-opening\{([^{}]*)\}", _css)
+_rm = re.search(r"@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{\s*\.skribl-inline-line\.is-opening\s*\{\s*"
+                r"transition:\s*opacity[^;}]*\}\s*\}", _css)
+_tr = re.search(r"transition:([^;}]*)", _open.group(1)).group(1) if _open else ""
+check("opening, its room and its top margin glide over the same time and it fades in after them; under Reduce"
+      " Motion only the fade, in a rule that comes after the one it overrides (same weight, so the later wins)",
+      bool(_open) and "height .3s" in _tr and "margin-top .3s" in _tr and re.search(r"opacity \.\d+s( \w+)? \.\d+s", _tr)
+      and "overflow:hidden" in _open.group(1) and bool(_rm) and _rm.start() > _open.start(),
+      f"opening {(_open.group(1) if _open else None)}; reduced {(_rm.group(0) if _rm else None)};"
+      f" order {(_rm.start() if _rm else None)} after {(_open.start() if _open else None)}")
 _skribl_parts = {"the macro": _macro_code, "inlineplayer.css": _css,
                  "inlineplayer.js": strip_comments((_layout.STATIC_DIR / "inlineplayer.js").read_text(encoding="utf-8"))}
 _knows = sorted(f"{k}: {m.group(0)}" for k, v in _skribl_parts.items()
                 for m in re.finditer(r"\b(?:lk-[\w-]+|likes?|heart|social)\b", v, re.I))
-check("it is general: nothing of the player's (its markup, its stylesheet, its script) names what a host puts there",
+check("it is general: nothing of the player's (its markup, its stylesheet, its script) names a host's card or what"
+      " a host puts on it",
       not _knows, "; ".join(_knows[:4]))
-_lg = re.search(r"\*\*A control at the line's start\*\*(.*?)\n\n", _guide, re.S)
-check("docs/INTEGRATION.md documents it: lead=, one control, before the scrubber, in the loop button's dress, and"
-      " that a click on the line stops at the line",
-      bool(_lg) and "lead=" in _lg.group(1) and "scrubber" in _lg.group(1) and "loop" in _lg.group(1)
-      and "stops at the line" in _lg.group(1), (_lg.group(1)[:140] if _lg else "no such section"))
+_lg = re.search(r"\*\*A line that waits\*\*(.*?)```", _guide, re.S)
+check("docs/INTEGRATION.md documents it: line_waits=, with line_info for the play button's words, opening on the"
+      " first play and staying, and what Reduce Motion keeps",
+      bool(_lg) and "line_waits=True" in _lg.group(1) and "line_info" in _lg.group(1) and "first play" in _lg.group(1)
+      and "stays" in _lg.group(1) and "Reduce Motion" in _lg.group(1), (_lg.group(1)[:140] if _lg else "no such section"))
 
 # ---------------------------------------------------------------------------
 print("\nMARKS ON THE LINE — a host's moments, as dots where the line puts them")

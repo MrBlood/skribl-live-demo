@@ -162,7 +162,7 @@
   <div class="skribl-inline-err" hidden></div>
 {%- endmacro %}
 
-{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None, lead=None, marks=None) -%}
+{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None, line_waits=false, marks=None) -%}
 {# is-muted and is-silent are the pre-script truth: sound is off by default, and
    nothing yet knows whether this Skribl has any. inlineplayer.js clears
    is-silent when the payload turns out to carry a loop.
@@ -188,17 +188,16 @@
    line=false leaves the line out, for a surface with a transport of its own
    (the gallery's cards).
 
-   `lead` (after v330: the Skribl site's like) is ONE CONTROL OF THE HOST'S
-   at the start of the line, before the scrubber: markup (another macro's
-   output, or Markup; a plain string is escaped like any text). The player
-   sets it in the line's own button dress, the loop button's at the other end
-   (32px tall, its ground, ink, hover and focus ring, a 44px tap area that
-   reaches up to the drawing and only 2px down), and the scrubber gives it
-   room; nothing else on the line moves. Rendered here, so it holds its place
-   from the first paint; it shows when the line does, and steps away with it
-   while a drawing can't be shown. line=false has no line, so no lead. What
-   it does is the host's: Skribl never knows. A click on the line stops at
-   the line, so listen on the control itself (or while capturing).
+   `line_waits` (Nov 14: the Skribl site's calm card, the owner's B) keeps
+   the line out of sight AND out of the layout until the drawing is first
+   played: at rest the play button says what the line would ("drawn in 5
+   sec", "12 pages"), as a card with no line does, and the post is that much
+   shorter; the first play opens the line, gliding from nothing to its own
+   height, and it stays. So unlike the line above, the post grows once, when
+   somebody chooses to watch. Under Reduce Motion the room is there before
+   anything in it is seen, and only the fade is left. Rendered here, so a
+   waiting line takes no room from the first paint. line=false has no line,
+   so nothing waits.
 
    `marks` (after v330: the Skribl site's likes, each where it was given) is
    a host's MOMENTS ON THE DRAWING'S OWN CLOCK, a list of {"ms": ..., "n": ...}
@@ -250,11 +249,8 @@
     It stays invisible until the script does (is-on) -- a scrubber that cannot
     scrub is not something to show. #}
 {%- if line %}
-<div class="skribl-inline-line is-muted is-silent">
+<div class="skribl-inline-line is-muted is-silent{% if line_waits %} is-waiting{% endif %}">
   <div class="skribl-inline-row">
-{%- if lead %}
-    <div class="skribl-inline-lead">{{ lead }}</div>
-{%- endif %}
     <div class="skribl-inline-scrub" aria-label="Scrub"></div>
 {{ _skribl_inline_controls() }}
   </div>

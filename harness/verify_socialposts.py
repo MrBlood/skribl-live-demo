@@ -1290,7 +1290,7 @@ with sync_playwright() as p:
               const g = document.createRange(); g.setStart(n, i); g.setEnd(n, i + needle.length); return g.getBoundingClientRect(); } }
             return null; };
           let xy;
-          if (what === 'ground') { const f = R('.post-foot'), n = R('.post-count'), s = R('.post-share');
+          if (what === 'ground') { const f = R('.post-row'), n = R('.post-row .lk-heart'), s = R('.post-share');
             xy = [(n.right + s.left) / 2, f.top + f.height / 2]; }
           else if (what === 'words') xy = mid(text(c.querySelector('.post-words'), 'a card'));
           else if (what === 'drawing') xy = mid(R('.post-art .skribl-inline'));
@@ -1298,7 +1298,8 @@ with sync_playwright() as p:
             xy = [t.left + t.width / 2, a.top + 4]; }
           else if (what === 'name') xy = mid(text(c.querySelector('.post-head'), c.querySelector('.post-name').textContent));
           else if (what === 'handle') xy = mid(text(c.querySelector('.post-head'), '@' + c.dataset.handle));
-          else xy = mid(R({ face: '.post-face', more: '.post-more', share: '.post-share', count: '.post-count' }[what]));
+          else xy = mid(R({ face: '.post-face', more: '.post-more', share: '.post-share', count: '.post-count',
+                            open: '.post-open' }[what]));
           const e = document.elementFromPoint(xy[0], xy[1]);
           return { xy, on: e ? (e.closest('.post-art') ? 'drawing' : e.closest('a, button') ? e.closest('a, button').className : 'card') : null }; }"""
         PLAYER = """(sid) => { const p = (window.SkriblInline ? SkriblInline.players() : []).find(x => x.state().id === sid);
@@ -1335,7 +1336,7 @@ with sync_playwright() as p:
 
             r = res[screen] = {}
             try:
-                for what in ("ground", "words", "count"):
+                for what in ("ground", "words", "count", "open"):
                     home()
                     on = press(card, what)
                     r[what] = (on, landed())
@@ -1386,10 +1387,13 @@ with sync_playwright() as p:
             close_ctx(ctx, cpg)
         page, people = f"/social/p/{card}", "/social/@juno"
         ok_open = all(r.get("ground") == ("card", page) and r.get("words", (None, None))[1] == page
-                      and r.get("count", (None, None))[1] == page + "#comments" for r in res.values())
-        check("a tap anywhere on a card's own ground (here between the 💬 and Share) opens its page, as a tap on its"
-              " words does, and the 💬 opens it at its comments: a touch on a phone, a click on a desk",
-              bool(card) and ok_open, f"{ {s: {k: r.get(k) for k in ('ground', 'words', 'count', 'stopped')} for s, r in res.items()} }")
+                      and r.get("count", (None, None))[1] == page + "#comments"
+                      and r.get("open") == ("post-open", page) for r in res.values())
+        check("a tap anywhere on a card's own ground (here in the row, between the heart and Share) opens its page, as"
+              " a tap on its words does and Open › at the row's end; the 💬 opens it at its comments: a touch on a"
+              " phone, a click on a desk",
+              bool(card) and ok_open,
+              f"{ {s: {k: r.get(k) for k in ('ground', 'words', 'count', 'open', 'stopped')} for s, r in res.items()} }")
         want_drawing = (("drawing", "playing", "/social/"), ("drawing", "paused", "/social/"))
         check("a tap on the drawing plays it and a second pauses it, and the page stays, even at its top edge under the"
               " time on a card with no words: the drawing never opens the post; phone and desk",

@@ -785,6 +785,10 @@
      * scrubber, the words and -- off the drawing now -- mute and loop. */
     var line = el.nextElementSibling;
     if (!line || !line.classList.contains('skribl-inline-line')) line = null;
+    /* A LINE THAT WAITS (skribl_inline line_waits=...): no room and nothing
+     * shown at rest, the play button saying what the line would, as a card
+     * with no line does; the first play opens it (openLine) and it stays. */
+    var waits = !!line && line.classList.contains('is-waiting');
     function q(sel) { return el.querySelector(sel) || (line && line.querySelector(sel)); }
     var muteBtn = q('.skribl-inline-mute');
     var loopBtn = q('.skribl-inline-loop');
@@ -1468,9 +1472,31 @@
      * pages' review). */
     function look(on) {
       if (size) canvas.hidden = false;
+      if (on && waits) openLine();
       el.classList.toggle('is-playing', on);
       el.classList.toggle('is-paused', !on);
       if (label && !failed) el.setAttribute('aria-label', on ? label.replace(/^Play/, 'Pause') : label);
+    }
+
+    /* THE WAITING LINE OPENS, once: the play button's words go (the line says
+     * them now), and its room glides open from nothing to its own height,
+     * measured, so the words may wrap in any font; then the height is the
+     * line's own again. Under Reduce Motion only the fade is left
+     * (inlineplayer.css), so the room is there before anything in it is
+     * seen. */
+    function openLine() {
+      var s = line.style, c = line.classList, h;
+      waits = false;
+      if (says) { label = label.replace(', ' + says, ''); says = ''; playEl.removeChild(playEl.lastChild); mark('is-says', false); }
+      /* Its own height, read with nothing holding it in before anything is
+       * painted: not scrollHeight, which rounds and counts the tap areas that
+       * reach past the line (a Flip's read 8px tall). It ends at the first of
+       * the room or the fade, the fade alone under Reduce Motion. */
+      s.height = 'auto'; h = line.getBoundingClientRect().height; s.height = '0px';
+      c.add('is-opening'); c.remove('is-waiting'); void line.offsetWidth; s.height = h + 'px';
+      line.addEventListener('transitionend', function end(e) {
+        if (e.target == line && /^(height|opacity)$/.test(e.propertyName)) { line.removeEventListener('transitionend', end); s.height = ''; c.remove('is-opening'); }
+      });
     }
 
     /* ---- the line ------------------------------------------------------- */
@@ -2026,9 +2052,10 @@
      * bars under the thumb do not change at the first tap. */
     try { info = JSON.parse(el.getAttribute('data-skribl-line') || 'null'); } catch (e) { info = null; }
     if (!info || typeof info !== 'object') info = null;
-    /* No line under it (the Gallery's cards): the play button says it, and so
-     * does its name, which the words in the pill are not part of. */
-    var says = !line && RL && info && playEl && (info.pages > 1 ? info.pages + ' pages' : info.drawn > 0 ? 'drawn in ' + RL.words(info.drawn) : '');
+    /* No line under it (the Gallery's cards), or one that waits: the play
+     * button says it, and so does its name, which the words in the pill are
+     * not part of. */
+    var says = (!line || waits) && RL && info && playEl && (info.pages > 1 ? info.pages + ' pages' : info.drawn > 0 ? 'drawn in ' + RL.words(info.drawn) : '');
     if (says) {
       playEl.insertAdjacentHTML('beforeend', '<span>' + says + '</span>');
       mark('is-says', true);
@@ -2043,6 +2070,7 @@
      * drawing too narrow for the words keeps the time, measured on the real
      * pill so it follows the fonts. */
     function fitSays() {
+      if (!says) return;
       var sp = playEl.lastChild, w = playEl.parentNode.clientWidth - 24;
       if (w <= 0) return;
       sp.textContent = says;

@@ -180,37 +180,32 @@ Without it the line says what it can until the drawing arrives. A surface
 with a transport of its own passes `line=False` and keeps the 16:9 box with
 mute and loop on it.
 
-**A control at the line's start** (after v330: the Skribl site's like sits
-there). Pass `lead=` ONE control of yours, as markup (another macro's output;
-a plain string is escaped like any other text), and it goes first in the line
-under the drawing, before the scrubber, dressed as the loop button at the
-line's other end: the loop's ground and the line's ink, its hover and its
-focus ring, 32px tall and a pill as wide as what it holds. Its tap area is
-44px tall, reaching up to the drawing and only 2px down, toward the words
-under the line. The scrubber gives it the room; nothing else on the line
-moves, and the post is the same height with it or without. A click on the
-line stops at the line (a post that is a link must not navigate on a scrub),
-so listen on the control itself, or on the document while capturing. A card
-that opens its post from anywhere on it hears the line the same way: the
-words under the drawing ("Drawn in 15 sec · watching at") take no taps of
-their own, so a tap there lands on the line, and is the card's; the speed
-and its choices (a `role="group"`), the scrubber, mute, loop and your lead
-keep theirs (the Skribl site's Home does this: `social/static/posts.js`).
+**A line that waits** (Nov 14: the Skribl site's calm card). Pass
+`line_waits=True` and the line under the drawing takes no room and shows
+nothing until the drawing is first played: at rest the play button says what
+the line would ("drawn in 5 sec", "12 pages"), as a card with no line does, so
+a feed of posts at rest is calmer and shorter. It needs `line_info`, which
+holds those numbers. The first play opens the line, gliding from nothing to
+its own height (what is under the post glides down with it), and it stays
+open. Under Reduce Motion the room is there before anything in it is seen,
+and the line only fades in. It is rendered with the post, so a waiting line
+takes no room from the first paint. A Pad drawing and a Flip wait alike; with
+`line=False` there is no line, so nothing waits. `verify_inline.py` reads it
+opening frame by frame; `verify_seam.py` holds the source.
 
 ```jinja
-{% macro like(post) %}<button type="button" class="like" aria-pressed="false">♡ {{ post.likes }}</button>{% endmacro %}
 {{ skribl_inline(post.skribl_id, canvas_w=post.canvas_w, canvas_h=post.canvas_h,
-                 line_info=post.line, lead=like(post)) }}
+                 line_info=post.line, line_waits=True) }}
 ```
 
-It is rendered with the post, so it holds its place from the first paint;
-like the rest of the line it shows once the player's script has started it,
-and steps away with the line while a drawing can't be shown. With
-`line=False` there is no line, so no lead. What it does is yours: Skribl never
-reads it, and a Pad drawing and a Flip carry it alike. A control there can ask
-where the drawing is as it is pressed ("Where the playhead is", below).
-`verify_inline.py` lays it out and presses it; `verify_seam.py` holds the
-dress.
+**A tap on the line is the line's.** A click on the line stops at the line (a
+post that is a link must not navigate on a scrub), so a control of yours near
+it listens on itself, or on the document while capturing. A card that opens
+its post from anywhere on it hears the line the same way: the words under the
+drawing ("Drawn in 15 sec · watching at") take no taps of their own, so a tap
+there lands on the line, and is the card's; the speed and its choices (a
+`role="group"`), the scrubber, mute and loop keep theirs (the Skribl site's
+Home does this: `social/static/posts.js`).
 
 **Reading them on your server** (after v330). A host that keeps its own posts
 stores a skribl's public id on each; `skribl.describe_posts(ids,

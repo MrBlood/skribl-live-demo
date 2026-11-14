@@ -1750,21 +1750,24 @@ with sync_playwright() as p:
             pg.goto(BASE + "/social/")
             pg.wait_for_timeout(600)
             CARD = """(id) => { const c = document.querySelector('.post-card[data-post="' + id + '"]'); if (!c) return null;
-              const n = c.querySelector('.post-count'), pl = c.querySelector('.post-plays:not(.post-count)');
-              if (!n) return { none: true };
+              const n = c.querySelector('.post-count'), row = c.querySelector('.post-row'), pl = n && n.nextElementSibling;
+              if (!n || !pl) return { none: true };
               const r = n.getBoundingClientRect(), p = pl.getBoundingClientRect();
               return { label: n.getAttribute('aria-label'), text: n.textContent.trim(), icon: !!n.querySelector('svg'),
-                       href: new URL(n.href).pathname + new URL(n.href).hash, beside: Math.round(r.left - p.right),
+                       href: new URL(n.href).pathname + new URL(n.href).hash, first: row.firstElementChild === n,
+                       next: pl.classList.contains('lk-heart'), beside: Math.round(p.left - r.right),
                        middle: Math.abs((r.top + r.height / 2) - (p.top + p.height / 2)) < 1, w: r.width, h: r.height }; }"""
             got = pg.evaluate(CARD, post)
             none = pg.evaluate(CARD, bare) or {}
             # EVEN AT NONE (the owner's yes, Nov 12: "the 💬 shows even at zero"):
             # the icon alone, named Comment, the same way in, where the number goes.
-            check("Home's card says how many comments beside the plays (the comment icon and the number, \"3 comments\"),"
-                  " a way to them on the post's page, 44px; a post with none shows the icon alone, no number, named"
-                  " \"Comment\", the same way in at the same place",
+            check("Home's card says how many comments first in the row under the drawing (the comment icon and the"
+                  " number, \"3 comments\"), 14px before the heart and on its middle, a way to them on the post's page,"
+                  " 44px; a post with none shows the icon alone, no number, named \"Comment\", the same way in at the"
+                  " same place",
                   got is not None and got.get("label") == "3 comments" and got.get("text") == "3" and got.get("icon")
-                  and got.get("href") == f"/social/p/{post}#comments" and 10 <= got.get("beside", 0) <= 18
+                  and got.get("first") and got.get("next")
+                  and got.get("href") == f"/social/p/{post}#comments" and got.get("beside") == 14
                   and got.get("middle") and got.get("w", 0) >= 44 and got.get("h", 0) >= 44
                   and none.get("label") == "Comment" and none.get("text") == "" and none.get("icon")
                   and none.get("href") == f"/social/p/{bare}#comments" and none.get("beside") == got.get("beside")
@@ -1872,10 +1875,10 @@ with sync_playwright() as p:
                     seen[(screen, scheme, "report")] = cpg.evaluate(READ, "#commentReportSheet")
                     cpg.goto(BASE + "/social/")
                     cpg.wait_for_timeout(600)
-                    cpg.evaluate("(id) => { const c = document.querySelector('.post-card[data-post=\"' + id + '\"] .post-foot');"
+                    cpg.evaluate("(id) => { const c = document.querySelector('.post-card[data-post=\"' + id + '\"] .post-row');"
                                  " c && c.scrollIntoView({ block: 'center' }); }", post)
                     cpg.wait_for_timeout(300)
-                    seen[(screen, scheme, "home's card")] = cpg.evaluate(READ, f".post-card[data-post='{post}'] .post-foot")
+                    seen[(screen, scheme, "home's card")] = cpg.evaluate(READ, f".post-card[data-post='{post}'] .post-row")
                     close_ctx(cctx, cpg)
                     nctx, npg = browser_as(b, None, screen=screen, scheme=scheme)
                     open_post(npg, post)

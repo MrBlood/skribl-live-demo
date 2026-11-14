@@ -1079,6 +1079,10 @@ everyone sees how many, and who liked it is only ever the maker's to see.
                                     given or taken back
     /social/b/<skribl_id>/like      the same, on a drawing shown outside a post
 
+**Since Nov 14 the heart is in the row under the drawing** (section 16,
+step 2: after the comments, before Share and the ⋯), and Skribl's line has no
+lead any more; what follows is the heart as it was first built.
+
 **The heart.** Drawn in our pen, one line round from the notch at the top (the
 mock's own path), in a pill at the start of the line under the drawing (the
 owner's way 3, "Yes", after "I don't even see the heart to like on many
