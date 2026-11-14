@@ -380,10 +380,9 @@ body {
 .gal-swap { overflow-anchor: none; transition: opacity 0.2s ease; }
 .gal-swap.is-out { opacity: 0; transition-duration: 0.14s; }
 .gal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; margin-top: 4px; }
-.gal-tile {
-  display: flex; flex-direction: column; gap: 8px; min-width: 0; border-radius: 14px;
-  color: var(--ink); text-decoration: none;
-}
+/* The tile's whole box is its link, square-cornered on purpose: a finger on
+   the page's ground just past the drawing's rounded corner still opens it. */
+.gal-tile { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: var(--ink); text-decoration: none; }
 .gal-pic {
   position: relative; display: grid; place-items: center; aspect-ratio: 650 / 486; overflow: hidden;
   border-radius: 14px; background: var(--blooby-paper); box-shadow: 0 0 0 1px var(--card-line); container-type: size;

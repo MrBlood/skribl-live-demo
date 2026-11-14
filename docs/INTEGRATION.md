@@ -308,6 +308,33 @@ names `author` is told which listing this is: `author`'s own (the one author
 it is narrowed to), or `None` for many people's (`authors`, `author_prefix`).
 See "A filter can ask which listing it is", below.
 
+**What is played most, among your own posts** (Nov 14: the Skribl site's
+Gallery of everyone, its Hot). The gallery ranks Hot by plays in the last
+seven days, counted in Skribl's own table; your feed can rank your own posts
+the same way without reading that table. `skribl.recent_plays(as_of=None)`
+hands back a subquery, one row per skribl played in the last seven days up
+to `as_of` (now, unsaid): `skribl_id`, its public id, and `plays`, how many,
+counted as the gallery counts them (one play per client per post per UTC
+day). Join it outer to your own posts on the column where you keep a skribl's
+public id, read a missing count as 0, and order by it: your Hot is one query
+on your own rows, with your own rules and your own cursor.
+
+```python
+plays = skribl.recent_plays(as_of=moment)
+hot = sa.func.coalesce(plays.c.plays, 0)
+rows = db.session.execute(sa.select(Post, hot.label("hot"))
+                          .outerjoin(plays, plays.c.skribl_id == Post.skribl_id)
+                          .order_by(hot.desc(), Post.created_at.desc()).limit(20)).all()
+```
+
+Hold one `as_of` for a whole scroll-through (put it in your cursor), as the
+gallery's own Hot does, so a drawing that climbs while somebody scrolls is
+neither shown twice nor skipped. It says nothing of who may see a drawing:
+your rows' own rules decide what is shown, and a skribl you hold no row for
+never comes into your list. It reads no payload, runs nothing until your
+query does, and reading it counts no play (`verify_hostseams.py`, "What is
+played most"; `verify_seam.py` holds the source).
+
 **A post's own page can start it** (after v330: on the Skribl site, opening a
 post plays its drawing). `SkriblInline.mount(box)` returns the box's player,
 the one already mounted if it has one, and `player.play()` starts it, at the

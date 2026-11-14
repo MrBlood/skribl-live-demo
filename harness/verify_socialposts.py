@@ -46,21 +46,38 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      person's page; ⋯ and Share do their own job; a drag that selects words
      opens nothing. A touch on a phone, a click on a desk.
  12. EVERY CARD OPENS ITS POST (the owner's "I thought on card?", Nov 13):
-     Cal's tap map of Home's cards and Explore's and a profile's Skribls
-     cards, on a touch phone in light and dark: every 4px one of the card's
-     own controls or its ground, and an exact tap on every part of the
+     Cal's tap map of Home's cards and the first visit's and a profile's
+     Skribls cards (Skribl's own Gallery cards; Explore's were too until the
+     map's step 3), on a touch phone in light and dark: every 4px one of the
+     card's own controls or its ground, and an exact tap on every part of the
      ground opens the card's page (a post's, a drawing's, or Skribl's own
      for one by somebody not on the site); a finger on the drawing plays it,
      on the name opens the person, on the ground opens the page, followed;
      /social/b/<id>'s ways on; the line's own controls; on a desk Ctrl and
      the middle button, a drag, the title a keyboard's link; the ⋯; and
      Skribl's own /gallery as it was.
+ 13. THE GALLERY OF EVERYONE (Explore; the map's step 3, the Gallery mock's
+     B): posts only, every post once, a Flip's too, never a drawing outside
+     a post, one kept link-only, a face or one by somebody not on the site;
+     its tiles two across on a touch phone and three on a desk, each the
+     drawing on its paper in 650 x 486 with "▶ 15 sec" (what the player's
+     play button says at rest, without "drawn in"; a Flip its pages), the
+     maker's face at 22px and first name, the hearts and comments only when
+     there are some; the drawing whole and alone, cut out of its share card;
+     a tap anywhere on a tile opens its post (a touch, a click, the keyboard:
+     every 4px of it its one link); Following only the people you follow and
+     you, Everyone everybody, the pill gliding and the tiles fading, read on
+     every frame, the address saying which; Hot plays in the last seven
+     days, most first; a search by the words, the name and the @handle;
+     Load more, by a cursor that names no internal id; every word at 4.5:1
+     (the ▶'s words read off the pixels under them), every control 44px,
+     the box 16px: phone and desk, light and dark.
 
 SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
 green as built: DECISIONS.md, "Posts at /social (phase 1, piece 4)",
-"Comments on every drawing" for 10 and 11, and "Every card opens its post"
-for 12.
+"Comments on every drawing" for 10 and 11, "Every card opens its post"
+for 12, and "Explore becomes the Gallery of everyone" for 13.
 """
 import base64
 import json
@@ -1163,7 +1180,7 @@ with sync_playwright() as p:
               and theirs == ["Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
               and landed == f"/social/p/{g_post}"
               and mine == ["Copy link", "Share…", "Delete post"] and ask.get("open") and "stopped" not in ask
-              and ask.get("lede") == ["The drawing goes for good, from Home and from Explore. This can’t be undone."]
+              and ask.get("lede") == ["The drawing goes for good, from Home and from your page. This can’t be undone."]
               and after["url"] == "/social/?note=deleted_drawing" and after["note"] == "Your drawing is gone." and gone,
               f"page {page}; players {playing}; theirs {theirs}; a post's drawing lands {landed}; mine {mine};"
               f" ask {ask}; after {after}; gone {gone}")
@@ -1417,17 +1434,19 @@ with sync_playwright() as p:
     # where you click or touch to go to post view? It's not clear. I thought on
     # card?"). The rule said yes to on Nov 12, "anywhere on the card should open
     # the post and clicking on the player should make it play", on every card
-    # the site shows: Home's (a post, and a drawing on its own), and Explore's
-    # and a profile's Skribls, which are Skribl's own Gallery cards opening where
-    # the site says (skribl.set_card_url, app.py), with on Explore one by
-    # somebody not on the site. Cal's tap map as rows: every 4px of each card,
+    # the site shows: Home's (a post, and a drawing on its own), and the first
+    # visit's and a profile's Skribls, which are Skribl's own Gallery cards
+    # opening where the site says (skribl.set_card_url, app.py), with on the
+    # first visit one by somebody not on the site. (Explore's were Skribl's
+    # cards too until the map's step 3; the Gallery of everyone's tiles are
+    # one link each, section 13.) Cal's tap map as rows: every 4px of each card,
     # light and dark, on a touch phone (TAPMAP); an EXACT tap on every part of
     # its ground, followed to where it lands (exact: a phone's own targeting
     # moves a tap that lands near a control onto it, which is the phone's
     # doing, not the page's); and a finger's tap on the drawing, the name and
     # the ground. Then /social/b/<id>'s three ways on, the line's controls, and
     # on a desk Ctrl, the middle button, a drag, a keyboard and the ⋯.
-    if part(12, "every card opens its post: the tap map of Home's, Explore's and a profile's cards"):
+    if part(12, "every card opens its post: the tap map of Home's, the first visit's and a profile's cards"):
         mira = someone(b, "mira", "Mira Okafor")
         juno = someone(b, "juno", "Juno Park")
         st_g, jg = make_post(juno, "Section 12, a post shown in the gallery", gallery=True, seed=121)
@@ -1449,15 +1468,18 @@ with sync_playwright() as p:
         to_post, to_lone, to_skribl = f"/social/p/{g_post}", f"/social/b/{lone}", f"/s/{nobodys}"
         to_flip = f"/social/p/{f_post}"
         TILE = '#skriblGallery .tile[data-id="{}"]'
-        CARDS = [("Home", "/social/", f'.post-card[data-post="{g_post}"]', g_sid, to_post),
-                 ("Home", "/social/", f'.post-card[data-post="{f_post}"]', f_sid, to_flip),
-                 ("Home", "/social/", f'.post-card[data-skribl="{lone}"]', lone, to_lone),
-                 ("Explore", "/social/explore", TILE.format(g_sid), g_sid, to_post),
-                 ("Explore", "/social/explore", TILE.format(f_sid), f_sid, to_flip),
-                 ("Explore", "/social/explore", TILE.format(lone), lone, to_lone),
-                 ("Explore", "/social/explore", TILE.format(nobodys), nobodys, to_skribl),
-                 ("a profile", "/social/@juno", TILE.format(g_sid), g_sid, to_post),
-                 ("a profile", "/social/@juno", TILE.format(lone), lone, to_lone)]
+        # Each card as somebody meets it: signed in (Mira) on Home and a
+        # profile; signed out on the first visit, the one page of the site
+        # whose Gallery holds everybody's, the site's people's and not.
+        CARDS = [("Home", "/social/", f'.post-card[data-post="{g_post}"]', g_sid, to_post, mira),
+                 ("Home", "/social/", f'.post-card[data-post="{f_post}"]', f_sid, to_flip, mira),
+                 ("Home", "/social/", f'.post-card[data-skribl="{lone}"]', lone, to_lone, mira),
+                 ("the first visit", "/social/", TILE.format(g_sid), g_sid, to_post, None),
+                 ("the first visit", "/social/", TILE.format(f_sid), f_sid, to_flip, None),
+                 ("the first visit", "/social/", TILE.format(lone), lone, to_lone, None),
+                 ("the first visit", "/social/", TILE.format(nobodys), nobodys, to_skribl, None),
+                 ("a profile", "/social/@juno", TILE.format(g_sid), g_sid, to_post, mira),
+                 ("a profile", "/social/@juno", TILE.format(lone), lone, to_lone, mira)]
         # Where a finger goes on a card: the drawing's middle, the name's, and
         # the ground's: on Home's calm card the row's open space between the ⋯
         # and Open › (its line waits until played, Nov 13), a Gallery card's
@@ -1505,9 +1527,11 @@ with sync_playwright() as p:
             return u.path + ("#" + u.fragment if u.fragment else "")
 
         maps = {}
-        for scheme in ("light", "dark"):
-            ctx, cpg = browser_as(b, mira, "phone", scheme)
-            for surface, path, sel, sid, want in CARDS:
+        for scheme, viewer in (("light", mira), ("dark", mira), ("light", None), ("dark", None)):
+            ctx, cpg = browser_as(b, viewer, "phone", scheme)
+            for surface, path, sel, sid, want, who_ in CARDS:
+                if who_ is not viewer:
+                    continue
                 got = maps[(scheme, surface, sel)] = {"want": want, "path": path,
                                                      "label": f"{surface} ({scheme}), the card for {want}"}
                 try:
@@ -1543,8 +1567,8 @@ with sync_playwright() as p:
         dead = {r["label"]: {k: v for k, v in r.get("parts", {}).items() if v[1] != r["want"]} for r in cards12}
         dead = {k: v for k, v in dead.items() if v}
         lacking = [(r["label"], r.get("stopped")) for r in cards12 if "stopped" in r or not r.get("parts")]
-        check("THE TAP MAP: on Home's cards, Explore's and a profile's Skribls cards (a post's drawing, a Flip's, one on"
-              " its own, and on Explore one by somebody not on the site), a touch phone in light and dark, every 4px is one of"
+        check("THE TAP MAP: on Home's cards, the first visit's and a profile's Skribls cards (a post's drawing, a Flip's,"
+              " one on its own, and on the first visit one by somebody not on the site), a touch phone in light and dark, every 4px is one of"
               " the card's own controls or its ground, and an exact tap on every part of the ground (its words, its"
               " time, its edges, the line under the drawing, the space between) opens the card's page: no part does"
               " nothing",
@@ -1670,7 +1694,7 @@ with sync_playwright() as p:
 
         try:
             hsel, esel = f'.post-card[data-post="{g_post}"]', TILE.format(lone)
-            for name_, path, sel in (("home", "/social/", hsel), ("explore", "/social/explore", esel)):
+            for name_, path, sel in (("home", "/social/", hsel), ("profile", "/social/@juno", esel)):
                 ready(cpg, path, sel)
                 xy = cpg.evaluate(SPOT12, [sel, "ground"])
 
@@ -1684,7 +1708,7 @@ with sync_playwright() as p:
                 desk[name_ + " middle"] = (newtab(lambda: cpg.mouse.click(*xy, button="middle")), follow(cpg, path, 600))
             # A drag that selects a Gallery card's caption, and one across its ground.
             csel = TILE.format(g_sid)
-            ready(cpg, "/social/explore", csel)
+            ready(cpg, "/social/@juno", csel)
             ends = cpg.evaluate("""(s) => { const c = document.querySelector(s); const w = c.querySelector('.tcap'), n = w.firstChild;
               w.scrollIntoView({ block: 'center' }); const g = document.createRange(); g.setStart(n, 0); g.setEnd(n, 1);
               const a = g.getBoundingClientRect(); g.setStart(n, n.length - 1); g.setEnd(n, n.length); const z = g.getBoundingClientRect();
@@ -1694,36 +1718,36 @@ with sync_playwright() as p:
             cpg.mouse.move(ends[2], ends[3], steps=12)
             cpg.mouse.up()
             cpg.wait_for_timeout(300)
-            desk["select"] = (cpg.evaluate("() => String(getSelection())"), follow(cpg, "/social/explore", 1500))
-            ready(cpg, "/social/explore", csel)
+            desk["select"] = (cpg.evaluate("() => String(getSelection())"), follow(cpg, "/social/@juno", 1500))
+            ready(cpg, "/social/@juno", csel)
             g0 = cpg.evaluate(SPOT12, [csel, "ground"])
             cpg.mouse.move(g0[0], g0[1])
             cpg.mouse.down()
             cpg.mouse.move(g0[0] - 40, g0[1] + 2, steps=8)
             cpg.mouse.up()
-            desk["drag"] = follow(cpg, "/social/explore", 1500)
+            desk["drag"] = follow(cpg, "/social/@juno", 1500)
             # The keyboard: from the card's ⋯, Tab reaches its title, a link, and Enter opens it.
-            ready(cpg, "/social/explore", esel)
+            ready(cpg, "/social/@juno", esel)
             cpg.evaluate("(s) => document.querySelector(s + ' .tileMore').focus()", esel)
             cpg.keyboard.press("Tab")
             desk["tab"] = cpg.evaluate("""(s) => { const a = document.activeElement, c = document.querySelector(s);
               return a && c.contains(a) ? [a.tagName.toLowerCase(), a.className, a.getAttribute('href'), a.textContent.trim()] : null; }""", esel)
             cpg.keyboard.press("Enter")
-            desk["enter"] = follow(cpg, "/social/explore")
+            desk["enter"] = follow(cpg, "/social/@juno")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is its rows' red
             desk["stopped"] = str(exc).splitlines()[0][:160]
         close_ctx(ctx, cpg)
         check("on a desk, Ctrl or the middle button opens the card in a new tab and this page stays: Home's card (in"
-              " its row, between the ⋯ and Open ›) and a Gallery card (at its time)",
+              " its row, between the ⋯ and Open ›) and a Gallery card of Skribl's (a profile's Skribls, at its time)",
               made and all(desk.get(k) == (w, p_) for k, w, p_ in (("home ctrl", to_post, "/social/"),
                                                                   ("home middle", to_post, "/social/"),
-                                                                  ("explore ctrl", to_lone, "/social/explore"),
-                                                                  ("explore middle", to_lone, "/social/explore"))),
-              f"{ {k: desk.get(k) for k in ('home ctrl', 'home middle', 'explore ctrl', 'explore middle', 'stopped')} }")
+                                                                  ("profile ctrl", to_lone, "/social/@juno"),
+                                                                  ("profile middle", to_lone, "/social/@juno"))),
+              f"{ {k: desk.get(k) for k in ('home ctrl', 'home middle', 'profile ctrl', 'profile middle', 'stopped')} }")
         check("...pressing on a Gallery card's caption and pulling selects its words and opens nothing, and a drag"
               " across its ground opens nothing: a drag is not a tap",
               made and (desk.get("select") or ("", ""))[0].strip() == "From the gallery tick"
-              and (desk.get("select") or ("", ""))[1] == "/social/explore" and desk.get("drag") == "/social/explore",
+              and (desk.get("select") or ("", ""))[1] == "/social/@juno" and desk.get("drag") == "/social/@juno",
               f"select {desk.get('select')}; drag {desk.get('drag')}")
         check("...and for a keyboard the card's title is its link: Tab from its ⋯ reaches it, and Enter opens the"
               " card's page",
@@ -1731,21 +1755,22 @@ with sync_playwright() as p:
               and urllib.parse.urlsplit((desk.get("tab") or [None, None, ""])[2] or "").path == to_lone
               and desk.get("enter") == to_lone, f"tab {desk.get('tab')}; enter {desk.get('enter')}")
 
-        # ⋯ ON A GALLERY CARD: Open goes to the card's page, in this tab as a tap
-        # does, and Copy link and Share… give its address.
+        # ⋯ ON A GALLERY CARD (Skribl's, on a profile's Skribls): Open goes to the
+        # card's page, in this tab as a tap does, and Copy link and Share… give
+        # its address.
         ctx, cpg = browser_as(b, mira, "phone", "light")
         ctx.add_init_script("Object.defineProperty(navigator, 'share', { configurable: true,"
                             " value: d => { window.__shared = d && d.url; return Promise.resolve(); } });")
         menu12 = {}
         try:
             for act in ("Copy link", "Share", "Open"):
-                ready(cpg, "/social/explore", TILE.format(g_sid))
+                ready(cpg, "/social/@juno", TILE.format(g_sid))
                 cpg.evaluate("() => { if (window.SkriblPostedUI) SkriblPostedUI.copyText = t => { window.__copied = t;"
                              " return Promise.resolve(true); }; }")
                 cpg.locator(TILE.format(g_sid) + " .tileMore").tap()
                 cpg.locator(f'.cardMenu .cmItem:has-text("{act}")').tap()
                 if act == "Open":
-                    menu12[act] = follow(cpg, "/social/explore")
+                    menu12[act] = follow(cpg, "/social/@juno")
                 else:
                     cpg.wait_for_timeout(400)
                     menu12[act] = cpg.evaluate("() => window.__copied || window.__shared || null")
@@ -1781,6 +1806,523 @@ with sync_playwright() as p:
               " ground opens nothing, and ⋯ → Open opens the player's page in a new tab",
               made and own.get("root") is False and own.get("title") == "div" and own.get("ground") == "/gallery"
               and own.get("open") == (f"/s/{lone}", "/gallery"), f"{own}")
+
+    # ------------------------------------------------------------------ 13
+    # THE GALLERY OF EVERYONE (the map's step 3; the Gallery mock's B and the
+    # owner's "Your picks are great", Nov 13): Explore lists the site's own
+    # posts as their drawings, each tile one link to its post, Following |
+    # Everyone on top (Home's own pill), New, Hot and a search under it.
+    # Quin looks (following Gwen alone, muting and blocking nobody); Gwen,
+    # Hugo and Ivy share. Every post here says one word nothing else in the
+    # suite says (G13), so a search on it is this section's own posts
+    # whatever the sections before it made; Everyone and Load more are read
+    # against the database itself.
+    if part(13, "the Gallery of everyone: posts as drawings, two across and three, a tap opens its post"):
+        from datetime import datetime, timedelta, timezone
+        G13 = "gal" + secrets.token_hex(3)
+        gwen = someone(b, "galgwen", "Gwen Lark")
+        hugo = someone(b, "galhugo", "Hugo Bell")
+        ivy = someone(b, "galivy", "Wilhelminaconstance Moss")
+        quin = someone(b, "galquin", "Quin Hale")
+        DARK_PAPER = (16, 20, 24)
+
+        def timed(ms, seed=0, flip=False, size=(816, 612), bg="#f6f2ea", n=40):
+            """A drawing drawn over `ms` (its points' own times), or a Flip of
+            three pages: what the line says before it is played."""
+            step = ms / (n - 1)
+            pts = [{"x": round(size[0] / 2 + math.cos((i + seed) / 9) * (30 + i * 3), 1),
+                    "y": round(size[1] / 2 + math.sin((i + seed) / 9) * (30 + i * 3), 1),
+                    "color": "#7c5cff", "size": 6 + (i % 4), "t": round(i * step), "start": i == 0} for i in range(n)]
+            body = {"version": 2, "schemaVersion": 2, "playbackMode": "flip" if flip else "replay",
+                    "canvasSize": {"cssWidth": size[0], "cssHeight": size[1]},
+                    "frames": [{"strokes": pts, "strokeGroups": [n], "background": {"color": bg}}]}
+            if flip:
+                body["fps"] = 12
+                body["frames"] += [{"strokes": [dict(p, x=p["x"] + 20 * k) for p in pts], "strokeGroups": [n],
+                                    "background": {"color": bg}} for k in (1, 2)]
+            return body
+
+        def card_of(w, h, paper=None):
+            """share_card(), its drawing's paper dark when asked (the ▶'s words over a dark drawing)."""
+            if Image is None:
+                return None
+            if paper is None:
+                return share_card(w, h)
+            x, y, dw, dh = plate_of(w, h)
+            im = Image.new("RGB", (1200, 630), CARD_GROUND)
+            d = ImageDraw.Draw(im)
+            d.rectangle([0, 546, 1199, 629], fill=CARD_FOOT)
+            d.rectangle([x, y, x + dw - 1, y + dh - 1], fill=paper, outline=CARD_LINE, width=3)
+            buf = io.BytesIO()
+            im.save(buf, "PNG")
+            return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+        clients = {}
+
+        def share(who, words, body, size=(816, 612), paper=None):
+            """A post as the composer sends one, its share card the colours share_card() paints."""
+            c = clients.get(who.handle)
+            if c is None:
+                c = clients[who.handle] = who.client()
+                c.get("/social/")
+            body["thumbnail"] = card_of(*size, paper=paper)
+            st, j = c.post_json("/social/posts", {"words": words, "payload": body})
+            time.sleep(0.012)
+            return (j.get("post") if st == 200 and isinstance(j, dict) else None)
+
+        def wdb(sql, args=()):
+            con = sqlite3.connect(DB, timeout=10)
+            try:
+                con.execute(sql, args)
+                con.commit()
+            finally:
+                con.close()
+
+        # What is shared: some of Ivy's first (two pages of the Gallery at
+        # least), then a 4:3 drawing of 15 seconds, a Flip of three pages, a
+        # tall one of four minutes, one on a dark paper of an hour and five
+        # minutes, Quin's own and Gwen's newest, all on the first page.
+        fill = [share(ivy, f"{G13} filler {i:02d}", timed(2000 + i, 10 + i)) for i in range(24)]
+        p_a = share(gwen, f"{G13} lighthouse at dusk", timed(15015, 1))
+        p_flip = share(gwen, f"{G13} a flip of three", timed(3000, 2, flip=True))
+        p_b = share(hugo, f"{G13} a tall one", timed(240000, 3, size=(531, 944)), size=(531, 944))
+        p_c = share(ivy, f"{G13} under a dark sky", timed(3900000, 4, bg="#101418"), paper=DARK_PAPER)
+        p_q = share(quin, f"{G13} Quin's own", timed(5000, 5))
+        p_g2 = share(gwen, f"{G13} Gwen's newest", timed(7000, 6))
+        made13 = all([p_a, p_flip, p_b, p_c, p_q, p_g2] + fill)
+        sid = {k: (post_row(v) or (None, None))[1] for k, v in
+               (("a", p_a), ("flip", p_flip), ("b", p_b), ("c", p_c), ("q", p_q), ("g2", p_g2)) if v}
+        # NOT POSTS: a drawing Gwen showed in the gallery outside a post (the
+        # Pad on its own), one she kept link-only, her face, and one by somebody
+        # not on the site. None of them is ever a tile.
+        gwen.pg.goto(BASE + "/social/")
+        _, lone13 = gwen.pg.evaluate(PAD, [f"{G13} shown outside a post", "public", 131])
+        _, kept13 = gwen.pg.evaluate(PAD, [f"{G13} kept link-only", "unlisted", 132])
+        fc = gwen.client()
+        fc.get("/social/you/edit")
+        _, fj = fc.post_json("/social/you/face", {"payload": drawing(seed=133, size=(707, 707))})
+        face13 = fj.get("face") if isinstance(fj, dict) else None
+        nb_ctx, nb_pg = browser_as(b, None)
+        nb_pg.goto(BASE + "/skribl-pad")
+        nb_pg.wait_for_timeout(600)
+        _, nobody13 = nb_pg.evaluate(PAD, [f"{G13} nobody's", "public", 134])
+        close_ctx(nb_ctx, nb_pg)
+        # Likes and comments: Gwen's 4:3 has two hearts and one comment; Ivy's
+        # dark one a comment and no heart; Hugo's tall one neither.
+        for who, post_id, like, say_ in ((quin, p_a, True, None), (hugo, p_a, True, "Lovely light"),
+                                         (gwen, p_c, False, "So dark, so good")):
+            c = who.client()
+            c.get(f"/social/p/{post_id}")
+            if like:
+                c.post_json(f"/social/p/{post_id}/like", {"liked": True})
+            if say_:
+                c.post_json(f"/social/p/{post_id}/comments", {"words": say_})
+        qc = quin.client()
+        qc.get("/social/@galgwen")
+        followed = qc.post_json("/social/@galgwen/follow", {"following": True})[0]
+        # PLAYS: Gwen's 4:3 played by three this week, Hugo's by two, Ivy's dark
+        # one by one this week and by five eight days ago (outside the window).
+        for key, n in (("a", 3), ("b", 2), ("c", 1)):
+            for _ in range(n):
+                urllib.request.urlopen(urllib.request.Request(BASE + f"/api/skribls/{sid.get(key)}",
+                                                              headers={"X-Forwarded-For": address()}), timeout=30).read()
+        old = (datetime.now(timezone.utc) - timedelta(days=8))
+        c_row = db("select id from skribl_posts where public_id = ?", (sid.get("c"),))
+        for k in range(5):
+            wdb("insert into skribl_views (post_id, viewer_hash, day, created_at) values (?, ?, ?, ?)",
+                (c_row[0][0], f"gal13-old-{k}", old.strftime("%Y-%m-%d"), old.strftime("%Y-%m-%d %H:%M:%S.%f")))
+
+        def getj(cl, path):
+            st_, text = cl._req("GET", path)
+            try:
+                return st_, json.loads(text)
+            except ValueError:
+                return st_, None
+
+        def walk(cl, show="everyone", sort="new", q=""):
+            """The Gallery walked to its end with Load more: (posts, their drawings' skribls, page sizes, cursors)."""
+            qs = "&".join(x for x in (f"show={show}", f"sort={sort}", "q=" + urllib.parse.quote(q) if q else "") if x)
+            posts, sids, sizes, cursors = [], [], [], []
+            st_, j = getj(cl, "/social/explore/more?" + qs)
+            while isinstance(j, dict):
+                got = re.findall(r'<a class="gal-tile" href="/social/p/([^"]+)"', j.get("html", ""))
+                posts += got
+                sids += re.findall(r'class="gal-plate"[^>]*><img src="[^"]*/s/([A-Za-z0-9_-]+)/poster"', j.get("html", ""))
+                sizes.append(len(got))
+                if not j.get("next") or len(sizes) > 40:
+                    break
+                cursors.append(j["next"])
+                st_, j = getj(cl, "/social/explore/more?" + qs + "&before=" + urllib.parse.quote(j["next"]))
+            return posts, sids, sizes, cursors
+
+        oracle = [r[0] for r in db(
+            "select p.public_id from social_posts p join social_people pe on pe.id = p.person_id"
+            " join skribl_posts s on s.public_id = p.skribl_id where p.taken_down_at is null and pe.taken_down_at is null"
+            " and s.visibility in ('public', 'unlisted') order by p.created_at desc, p.public_id desc")]
+        anon = Client()
+        anon.get("/social/explore")
+        q_cl = quin.client()
+        q_cl.get("/social/explore")
+        a_posts, a_sids, a_sizes, a_curs = walk(anon)
+        q_posts, q_sids, q_sizes, q_curs = walk(q_cl)
+        not_posts = {lone13, kept13, face13, nobody13}
+        mine13 = [p_g2, p_q, p_c, p_b, p_flip, p_a] + fill[::-1]
+        check("THE GALLERY IS POSTS ONLY: walked to its end (signed out, and signed in) it is every post, once each,"
+              " newest first, a Flip's too, read against the database itself; never a drawing shown outside a post,"
+              " one kept link-only, a face, or one by somebody not on the site",
+              made13 and bool(lone13 and kept13 and face13 and nobody13) and a_posts == oracle and q_posts == oracle
+              and all(m in oracle for m in mine13) and [x for x in oracle if x in mine13] == mine13
+              and not (not_posts & set(a_sids)) and not (not_posts & set(q_sids))
+              and len(a_sids) == len(a_posts) and set(a_sids) >= {sid.get("a"), sid.get("flip"), sid.get("b")},
+              f"made {made13}; signed out {len(a_posts)} of {len(oracle)} (same {a_posts == oracle}), signed in"
+              f" {len(q_posts)} (same {q_posts == oracle}); not posts among them"
+              f" {sorted(x for x in not_posts & (set(a_sids) | set(q_sids)) if x)}")
+        new_cur = re.compile(r"\d{16}\.p[A-Za-z0-9_-]{11}")
+
+        def raw_of(cur, hot=False):
+            try:
+                body = cur[2:] if hot else cur
+                return base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)).decode()
+            except Exception:  # noqa: BLE001 -- unreadable is the row's red
+                return ""
+        check("Load more walks it a page of 24 at a time, every page whole but the last, by a cursor that names a"
+              " time and a post's public id, never an internal id",
+              len(a_sizes) >= 2 and all(n == 24 for n in a_sizes[:-1]) and 0 < a_sizes[-1] <= 24
+              and all(new_cur.fullmatch(raw_of(c)) for c in a_curs),
+              f"pages {a_sizes}; cursors {[raw_of(c) for c in a_curs[:2]]}")
+
+        # FOLLOWING | EVERYONE: Following is the people Quin follows (Gwen) and
+        # Quin; Everyone everybody (here, the section's own, by its word).
+        f_posts, _, _, _ = walk(q_cl, "following")
+        e_posts, _, _, _ = walk(q_cl, "everyone", q=G13)
+        gwen_quin = [x for x in oracle if x in (p_a, p_flip, p_q, p_g2)
+                     or (post_row(x) or ("", "", ""))[2] in ("galgwen", "galquin")]
+        check("Following holds only the people you follow and your own (Quin follows Gwen: hers and Quin's, newest"
+              " first); Everyone holds everybody's",
+              followed == 200 and f_posts == gwen_quin and set(f_posts) >= {p_a, p_flip, p_q, p_g2}
+              and e_posts == mine13,
+              f"follow {followed}; following {len(f_posts)} (want {len(gwen_quin)}), Hugo's or Ivy's among them"
+              f" {[x for x in f_posts if x in (p_b, p_c)]}; everyone {len(e_posts)} of {len(mine13)}")
+
+        # HOT: plays in the last seven days, most first, newest first among equals.
+        h_posts, _, h_sizes, h_curs = walk(q_cl, "everyone", "hot", G13)
+        zero = [x for x in mine13 if x not in (p_a, p_b, p_c)]
+        hot_cur = re.compile(r"\d+\|\d{16}\|[A-Za-z0-9_-]{11}\|\d{16}")
+        check("Hot is plays in the last seven days, most first: three this week, then two, then one (five eight days"
+              " ago count for nothing), then the rest newest first; Load more keeps its order, by a cursor that holds"
+              " the moment it was ranked at and names no internal id",
+              h_posts == [p_a, p_b, p_c] + zero and len(h_sizes) >= 2
+              and all(c.startswith("h.") and hot_cur.fullmatch(raw_of(c, hot=True)) for c in h_curs),
+              f"first {[{p_a: 'a3', p_b: 'b2', p_c: 'c1'}.get(x, x) for x in h_posts[:5]]}; pages {h_sizes};"
+              f" cursors {[raw_of(c, hot=True) for c in h_curs[:1]]}")
+
+        # SEARCH: the post's words, the maker's name and @handle; nothing else.
+        found = {q: walk(q_cl, "everyone", "new", q)[0] for q in
+                 ("lighthouse at dusk", "Hugo Bell", "galivy", "@galivy", "WILHELMINACONSTANCE", "zz" + G13)}
+        ivy_all = [x for x in mine13 if x in fill or x == p_c]
+        check("a search finds a post by its words, and its maker by name or @handle (any case), and nothing else;"
+              " a search that finds nothing finds nothing",
+              found["lighthouse at dusk"] == [p_a] and found["Hugo Bell"] == [p_b]
+              and found["galivy"] == ivy_all and found["@galivy"] == ivy_all
+              and found["WILHELMINACONSTANCE"] == ivy_all and found["zz" + G13] == [],
+              json.dumps({k: len(v) for k, v in found.items()}) + f"; Ivy's {len(ivy_all)}")
+
+        # THE TILES, ON A TOUCH PHONE AND A DESK (light): two across and three,
+        # the drawing's box 650 x 486, its ▶ and words at the bottom left, the
+        # face 22px, the first name, the counts only when there are some.
+        GEO = """(ids) => { const out = {}; const all = [...document.querySelectorAll('.gal-tile')];
+          const rows = {}; all.slice(0, 6).forEach(a => { const r = a.getBoundingClientRect(); (rows[Math.round(r.top)] = rows[Math.round(r.top)] || []).push(r); });
+          const tops = Object.keys(rows).map(Number).sort((x, y) => x - y);
+          const first = (rows[tops[0]] || []).sort((x, y) => x.left - y.left), second = rows[tops[1]] || [];
+          out.columns = first.length;
+          out.colGap = first.length > 1 ? Math.round((first[1].left - first[0].right) * 10) / 10 : null;
+          out.rowGap = second.length ? Math.round((second[0].top - first[0].bottom) * 10) / 10 : null;
+          out.tiles = {};
+          ids.forEach(id => { const a = document.querySelector('.gal-tile[data-post="' + id + '"]'); if (!a) return;
+            const pic = a.querySelector('.gal-pic').getBoundingClientRect(), dur = a.querySelector('.gal-dur'), d = dur.getBoundingClientRect();
+            const ring = a.querySelector('.gal-by .face-ring'), f = ring.getBoundingClientRect(), nm = a.querySelector('.gal-by b'), ns = getComputedStyle(nm);
+            const n = a.querySelector('.gal-n'), tri = dur.querySelector('svg').getBoundingClientRect(), r = a.getBoundingClientRect();
+            out.tiles[id] = { ratio: Math.round(pic.width / pic.height * 10000) / 10000, durL: Math.round((d.left - pic.left) * 10) / 10,
+              durB: Math.round((pic.bottom - d.bottom) * 10) / 10, durH: Math.round(d.height * 10) / 10, tri: Math.round(tri.width * 10) / 10,
+              words: (dur.querySelector('span') || { textContent: '' }).textContent.trim(),
+              face: [Math.round(f.width * 10) / 10, Math.round(f.height * 10) / 10, getComputedStyle(ring).borderRadius,
+                     !!ring.querySelector('img'), !!ring.querySelector('.face-blank'), ring.textContent.trim()],
+              name: nm.textContent, weight: ns.fontWeight, ellipsis: ns.textOverflow + ' ' + ns.whiteSpace,
+              cut: nm.scrollWidth > nm.clientWidth + 0.5, inside: nm.getBoundingClientRect().right <= r.right + 0.5,
+              counts: n ? [...n.children].map(s => [s.className, s.textContent.trim(), Math.round(s.querySelector('svg').getBoundingClientRect().width)]) : null,
+              link: a.tagName.toLowerCase() + ' ' + a.getAttribute('href'), label: a.getAttribute('aria-label') }; });
+          return out; }"""
+        geo = {}
+        for screen in ("phone", "desk"):
+            ctx, cpg = browser_as(b, quin, screen, "light")
+            cpg.goto(BASE + "/social/explore?q=" + urllib.parse.quote(G13))
+            cpg.wait_for_timeout(700)
+            geo[screen] = cpg.evaluate(GEO, [p_a, p_flip, p_b, p_c])
+            close_ctx(ctx, cpg)
+        WANT_WORDS = {p_a: "15 sec", p_flip: "3 pages", p_b: "4 min", p_c: "1 hr 5 min"}
+        WANT_N = {p_a: [["gal-likes", "2", 14], ["gal-comments", "1", 14]], p_flip: None, p_b: None,
+                  p_c: [["gal-comments", "1", 14]]}
+        cols = {s: (geo[s].get("columns"), geo[s].get("colGap"), geo[s].get("rowGap")) for s in geo}
+        check("the tiles are two across on a touch phone (12px apart, rows 18px apart) and three on a desk (20px and"
+              " 26px), each one link to its post, the drawing's box 650 x 486",
+              cols.get("phone") == (2, 12, 18) and cols.get("desk") == (3, 20, 26)
+              and all(abs(t["ratio"] - 650 / 486) <= 0.003 and t["link"].startswith("a /social/p/")
+                      for s in geo for t in geo[s]["tiles"].values()) and all(len(geo[s]["tiles"]) == 4 for s in geo),
+              f"{cols}; ratios {[t['ratio'] for t in geo.get('phone', {}).get('tiles', {}).values()]}")
+        # What the player's own play button says at rest, on Home (Hugo follows
+        # nobody: Everyone), for the same drawings.
+        ctx, cpg = browser_as(b, hugo, "phone", "light")
+        cpg.goto(BASE + "/social/")
+        cpg.wait_for_timeout(1200)
+        player_says = cpg.evaluate("""(ids) => Object.fromEntries(ids.map(id => { const c = document.querySelector('.post-card[data-post="' + id + '"]');
+          const s = c && c.querySelector('.skribl-inline-play span'); return [id, s ? s.textContent.trim() : null]; }))""",
+                                   [p_a, p_flip, p_b, p_c])
+        close_ctx(ctx, cpg)
+        bare = {k: (v[9:] if (v or "").startswith("drawn in ") else v) for k, v in player_says.items()}
+        check("each tile's ▶ says what the player's play button says at rest, without \"drawn in\" (15 sec, 4 min,"
+              " 1 hr 5 min; a Flip its pages), 8px in from the box's bottom left, 24px tall, its ▶ 9px",
+              all(geo[s]["tiles"].get(k, {}).get("words") == w == bare.get(k) for s in geo for k, w in WANT_WORDS.items())
+              and all(t["durL"] == 8 and t["durB"] == 8 and t["durH"] == 24 and t["tri"] == 9
+                      for s in geo for t in geo[s]["tiles"].values()),
+              f"tiles {[geo.get('phone', {}).get('tiles', {}).get(k, {}).get('words') for k in WANT_WORDS]};"
+              f" the player {player_says}; place {[(t['durL'], t['durB'], t['durH'], t['tri']) for t in geo.get('phone', {}).get('tiles', {}).values()]}")
+        check("under it the maker's face at 22px (their drawn face, or the empty circle, never an initial) and first"
+              " name (600, cut with an ellipsis, never past the tile), and the hearts and comments each only when there"
+              " are some, their icons 14px",
+              all(t["face"][:3] == [22, 22, "50%"] and not t["face"][5] for s in geo for t in geo[s]["tiles"].values())
+              and all(geo[s]["tiles"][p_a]["face"][3] and geo[s]["tiles"][p_b]["face"][4] for s in geo)
+              and all(geo[s]["tiles"][k]["name"] == n_ for s in geo for k, n_ in
+                      ((p_a, "Gwen"), (p_b, "Hugo"), (p_c, "Wilhelminaconstance")))
+              and all(t["weight"] == "600" and t["ellipsis"] == "ellipsis nowrap" and t["inside"]
+                      for s in geo for t in geo[s]["tiles"].values()) and geo["phone"]["tiles"][p_c]["cut"]
+              and all(geo[s]["tiles"][k]["counts"] == v for s in geo for k, v in WANT_N.items()),
+              f"{ {k: (t['face'], t['name'], t['cut'], t['counts']) for k, t in geo.get('phone', {}).get('tiles', {}).items()} }")
+
+        # THE DRAWING ON ITS PAPER: whole and alone, cut out of its share card
+        # (the card's colours: share_card), a 4:3 filling the box, a tall one
+        # its height and centred; read off the paint, on a desk.
+        cut = []
+        ctx, cpg = browser_as(b, quin, "desk", "light")
+        cpg.goto(BASE + "/social/explore?q=" + urllib.parse.quote(G13))
+        for key, size in ((p_a, (816, 612)), (p_b, (531, 944))):
+            sel = f'.gal-tile[data-post="{key}"]'
+            try:
+                cpg.locator(sel).scroll_into_view_if_needed(timeout=5000)
+                cpg.wait_for_function("(s) => { const i = document.querySelector(s + ' .gal-plate img'); return i && i.complete && i.naturalWidth > 0; }",
+                                      arg=sel, timeout=15000)
+                cpg.wait_for_timeout(200)
+                box = cpg.evaluate("""(s) => { const t = document.querySelector(s), pic = t.querySelector('.gal-pic').getBoundingClientRect();
+                  const pl = t.querySelector('.gal-plate'), p = pl.getBoundingClientRect(), r = pl.querySelector('img').getBoundingClientRect(), k = r.width / 1200;
+                  return { at: [(p.left - r.left) / k, (p.top - r.top) / k, p.width / k, p.height / k],
+                           fill: [p.width - pic.width, p.height - pic.height], mid: (p.left + p.right) / 2 - (pic.left + pic.right) / 2 }; }""", sel)
+                cpg.evaluate("(s) => { document.querySelector(s + ' .gal-dur').style.visibility = 'hidden'; }", sel)
+                png = cpg.locator(sel + " .gal-pic").screenshot(timeout=5000) if Image else None
+                cpg.evaluate("(s) => { document.querySelector(s + ' .gal-dur').style.visibility = ''; }", sel)
+            except Exception as exc:  # noqa: BLE001 -- a tile that cannot be read is the row's red
+                cut.append({"stopped": str(exc).splitlines()[0][:120]})
+                continue
+            card, marks = None, None
+            if png:
+                im = Image.open(io.BytesIO(png)).convert("RGB")
+                W, H = im.size
+                near = lambda c, t: abs(c[0] - t[0]) + abs(c[1] - t[1]) + abs(c[2] - t[2]) < 120
+                card, marks = 0, [0, 0, 0, 0]
+                for n_, c in enumerate(im.getdata()):
+                    if near(c, CARD_GROUND) or near(c, CARD_FOOT) or near(c, CARD_LINE):
+                        card += 1
+                    elif near(c, CARD_MARK):
+                        marks[(2 if n_ // W >= H / 2 else 0) + (1 if n_ % W >= W / 2 else 0)] += 1
+            x, y, dw, dh = plate_of(*size)
+            cut.append({"tile": "4:3" if key == p_a else "tall", "card": card, "marks": marks, "want": [x + 3, y + 3, dw - 6, dh - 6],
+                        "at": [round(v, 1) for v in box["at"]], "fill": [round(v, 2) for v in box["fill"]], "mid": round(box["mid"], 2)})
+        close_ctx(ctx, cpg)
+        check("each tile is the drawing on its paper, whole and alone, cut out of its share card: none of the card's own"
+              " ground, wordmark strip or plate line painted, the drawing's four corners painted, its plate 3 card pixels"
+              " in from the line; a 4:3 drawing fills the box, a tall one is its height and in its middle",
+              len(cut) == 2 and all(t.get("card") == 0 and t.get("marks") and min(t["marks"]) >= 20
+                                    and all(abs(a - w) <= 1.0 for a, w in zip(t["at"], t["want"])) for t in cut)
+              and all(abs(v) <= 1.0 for v in cut[0]["fill"]) and abs(cut[1]["fill"][1]) <= 1.0
+              and cut[1]["fill"][0] < -50 and abs(cut[1]["mid"]) <= 1.0,
+              f"{cut}")
+
+        # A TAP ANYWHERE ON A TILE OPENS ITS POST: a touch on a phone and a click
+        # on a desk, on the drawing, its ▶, the face, the name, the counts, a
+        # corner and the room between the drawing and the name; every 4px of it
+        # is its one link; and the keyboard, from the search box, Tab and Enter.
+        SPOTS = """(s) => { const t = document.querySelector(s); if (!t) return null;
+          t.scrollIntoView({ block: 'center', behavior: 'instant' });
+          const mid = e => { const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+          const pic = t.querySelector('.gal-pic').getBoundingClientRect(), by = t.querySelector('.gal-by').getBoundingClientRect();
+          return { drawing: mid(t.querySelector('.gal-plate')), play: mid(t.querySelector('.gal-dur')), face: mid(t.querySelector('.gal-by .face-ring')),
+                   name: mid(t.querySelector('.gal-by b')), counts: mid(t.querySelector('.gal-n')), corner: [pic.right - 4, pic.top + 4],
+                   between: [pic.left + pic.width / 2, (pic.bottom + by.top) / 2] }; }"""
+        tsel = f'.gal-tile[data-post="{p_a}"]'
+        taps, tmaps = {}, {}
+        for screen in ("phone", "desk"):
+            ctx, cpg = browser_as(b, quin, screen, "light")
+            try:
+                for spot in ("drawing", "play", "face", "name", "counts", "corner", "between"):
+                    cpg.goto(BASE + "/social/explore?q=" + urllib.parse.quote(G13))
+                    cpg.wait_for_selector(tsel, timeout=10000)
+                    xy = cpg.evaluate(SPOTS, tsel)[spot]
+                    if screen == "phone":
+                        cpg.touchscreen.tap(*xy)
+                    else:
+                        cpg.mouse.click(*xy)
+                    try:
+                        cpg.wait_for_url(lambda u: "/social/p/" in u, timeout=5000)
+                    except Exception:  # noqa: BLE001 -- staying is the row's red
+                        pass
+                    taps[(screen, spot)] = urllib.parse.urlsplit(cpg.url).path
+                cpg.goto(BASE + "/social/explore?q=" + urllib.parse.quote(G13))
+                cpg.wait_for_selector(tsel, timeout=10000)
+                tmaps[screen] = (cpg.evaluate(TAPMAP, [tsel, 4]) or {}).get("keys")
+                if screen == "desk":
+                    cpg.goto(BASE + "/social/explore?q=" + urllib.parse.quote(G13))
+                    cpg.wait_for_selector(tsel, timeout=10000)
+                    cpg.focus("[data-gal-q]")
+                    cpg.keyboard.press("Tab")
+                    focus = cpg.evaluate("() => { const a = document.activeElement; return a ? [a.className, a.getAttribute('href')] : null; }")
+                    cpg.keyboard.press("Enter")
+                    try:
+                        cpg.wait_for_url(lambda u: "/social/p/" in u, timeout=5000)
+                    except Exception:  # noqa: BLE001 -- staying is the row's red
+                        pass
+                    taps[("desk", "keyboard")] = (focus, urllib.parse.urlsplit(cpg.url).path)
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                taps[(screen, "stopped")] = str(exc).splitlines()[0][:160]
+            close_ctx(ctx, cpg)
+        first_tile = walk(q_cl, "everyone", "new", G13)[0][:1]
+        check("a tap anywhere on a tile opens its post: a touch on a phone and a click on a desk, on the drawing, its ▶,"
+              " the face, the name, the counts, a corner and the room between the drawing and the name; every 4px of"
+              " the tile is its one link; and from the search box Tab reaches the first tile and Enter opens it",
+              all(taps.get((s, k)) == f"/social/p/{p_a}" for s in ("phone", "desk")
+                  for k in ("drawing", "play", "face", "name", "counts", "corner", "between"))
+              and all(m and set(m) == {"own|a.gal-tile"} for m in tmaps.values()) and len(tmaps) == 2
+              and taps.get(("desk", "keyboard")) == (["gal-tile", f"/social/p/{first_tile[0]}"],
+                                                     f"/social/p/{first_tile[0]}") if first_tile else False,
+              f"taps { {f'{s} {k}': v for (s, k), v in taps.items() if v != f'/social/p/{p_a}'} }; maps {tmaps}")
+
+        # THE PILL: a tap on Following, read on every frame (light and dark, and
+        # under Reduce Motion): the tint glides and starts before the tiles
+        # change, the tiles fade and change only while they can't be seen, and
+        # the page doesn't scroll; the address says Following, and a reload
+        # opens on it.
+        GFRAMES = r"""([ms]) => { window.__gf = []; const seg = document.querySelector('[data-gal-show]'), sl = seg.querySelector('.fo-slider');
+          const swap = document.querySelector('[data-gal-swap]'), grid = document.querySelector('[data-gal-grid]'), t0 = performance.now();
+          const sig = () => [...grid.children].slice(0, 4).map(e => e.getAttribute('data-post')).join('|') + '#' + grid.children.length;
+          const step = () => { const r = sl.getBoundingClientRect();
+            window.__gf.push({ t: Math.round(performance.now() - t0), x: r.left, op: +getComputedStyle(swap).opacity, sig: sig(), y: window.scrollY });
+            if (performance.now() - t0 < ms) requestAnimationFrame(step); };
+          requestAnimationFrame(step); }"""
+        FRAME = 1000 / 60
+
+        def spans_of(ts):
+            return [max(1.0, round((z - a) / FRAME)) for a, z in zip(ts, ts[1:])]
+
+        def judge(fs, reduced):
+            if len(fs) < 2:
+                return {"ok": False, "frames": len(fs)}
+            ts, xs, ops = [f["t"] for f in fs], [f["x"] for f in fs], [f["op"] for f in fs]
+            sp = spans_of(ts)
+            way = abs(xs[-1] - xs[0]) if fs else 0
+            glides = len([1 for a, z in zip(xs, xs[1:]) if way and abs(z - a) / way > 0.005])
+            gstep = round(max([abs(z - a) / n / way for a, z, n in zip(xs, xs[1:], sp)] or [0]), 3) if way else 0
+            fstep = round(max([abs(z - a) / n for a, z, n in zip(ops, ops[1:], sp)] or [0]), 3)
+            fading = len([1 for a, z in zip(ops, ops[1:]) if abs(z - a) > 0.005])
+            change = next((i for i in range(1, len(fs)) if fs[i]["sig"] != fs[i - 1]["sig"]), None)
+            started = change is not None and any(abs(fs[j]["x"] - fs[0]["x"]) > 0.3 for j in range(change + 1))
+            out = {"glides": glides, "gstep": gstep, "way": round(way, 1), "fstep": fstep, "fading": fading,
+                   "seen_at_change": fs[change]["op"] if change is not None else None, "started": started,
+                   "scrolled": round(max(abs(f["y"] - fs[0]["y"]) for f in fs), 2) if fs else None,
+                   "back": fs[-1]["op"] if fs else None}
+            ok = (change is not None and out["seen_at_change"] <= 0.05 and fstep <= 0.35 and fading >= 8
+                  and out["scrolled"] == 0 and out["back"] > 0.99 and way > 10)
+            ok = ok and (glides <= 1 if reduced else (glides >= 8 and gstep <= 0.30 and started))
+            out["ok"] = ok
+            return out
+        sw = {}
+        for scheme, reduced in (("light", False), ("dark", False), ("light", True)):
+            tag = scheme + (" reduced" if reduced else "")
+            ctx, cpg = browser_as(b, quin, "phone", scheme, reduced=reduced)
+            try:
+                cpg.goto(BASE + "/social/explore")
+                cpg.wait_for_selector("[data-gal-show][data-pill]", timeout=10000)
+                cpg.wait_for_timeout(400)
+                cpg.evaluate(GFRAMES, [1500])
+                cpg.locator("[data-gal-show] button[data-show=following]").tap()
+                cpg.wait_for_timeout(1900)
+                got = judge(cpg.evaluate("() => window.__gf"), reduced)
+                got["url"] = urllib.parse.urlsplit(cpg.url).query
+                got["shown"] = cpg.evaluate("() => [...document.querySelectorAll('.gal-tile')].map(a => a.dataset.post)")[:30]
+                cpg.reload()
+                cpg.wait_for_timeout(700)
+                got["after reload"] = cpg.evaluate("""() => [(document.querySelector('[data-gal-show] button[aria-pressed="true"]') || {}).textContent,
+                  [...document.querySelectorAll('.gal-tile')].map(a => a.dataset.post).slice(0, 30)]""")
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                got = {"ok": False, "stopped": str(exc).splitlines()[0][:160]}
+            sw[tag] = got
+            close_ctx(ctx, cpg)
+        f_page = f_posts[:24]
+        check("a tap on Following, read on every frame from the tap (light and dark): the pill glides (eight frames or"
+              " more, none more than 30% of the way) and starts before the tiles change; the tiles fade (none more than"
+              " 35%), change only while they can't be seen (0.05 or less) and fade back; the page doesn't scroll; the"
+              " address says Following and a reload opens on it",
+              all(sw.get(t, {}).get("ok") and sw[t].get("url") == "show=following" and sw[t].get("shown") == f_page
+                  and sw[t].get("after reload") == ["Following", f_page] for t in ("light", "dark")),
+              json.dumps({t: {k: v for k, v in sw.get(t, {}).items() if k not in ("shown", "after reload")} for t in sw}))
+        check("under Reduce Motion the pill is put there, as the site's pills are, and the tiles only fade, changing"
+              " while unseen",
+              bool(sw.get("light reduced", {}).get("ok")) and sw["light reduced"].get("shown") == f_page,
+              json.dumps({k: v for k, v in sw.get("light reduced", {}).items() if k not in ("shown", "after reload")}))
+
+        # EVERY WORD AT 4.5:1, EVERY CONTROL 44px, THE BOX 16px (the suite's own
+        # reader), phone and desk, light and dark; and the ▶'s words read off the
+        # pixels under them (its glass over Ivy's drawing, dark paper).
+        seen13, glass = {}, {}
+        INK = (0x3a, 0x24, 0xa8)
+
+        def lum(c):
+            v = [x / 255 for x in c[:3]]
+            v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+            return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                ctx, cpg = browser_as(b, quin, screen, scheme, reduced=True)
+                cpg.goto(BASE + "/social/explore?q=" + urllib.parse.quote(G13))
+                cpg.wait_for_timeout(700)
+                seen13[(screen, scheme)] = cpg.evaluate(READ, "main")
+                dsel = f'.gal-tile[data-post="{p_c}"]'
+                try:
+                    cpg.locator(dsel).scroll_into_view_if_needed(timeout=5000)
+                    cpg.wait_for_function("(s) => { const i = document.querySelector(s + ' .gal-plate img'); return i && i.complete && i.naturalWidth > 0; }",
+                                          arg=dsel, timeout=15000)
+                    cpg.wait_for_timeout(200)
+                    box = cpg.evaluate("""(s) => { const d = document.querySelector(s + ' .gal-dur'), w = d.querySelector('span');
+                      const a = d.getBoundingClientRect(), r = w.getBoundingClientRect(); w.style.color = 'transparent';
+                      return [r.left - a.left, r.top - a.top, r.width, r.height, getComputedStyle(w).color]; }""", dsel)
+                    png = cpg.locator(dsel + " .gal-dur").screenshot(timeout=5000)
+                    im = Image.open(io.BytesIO(png)).convert("RGB")
+                    px = [im.getpixel((int(box[0] + i), int(box[1] + j))) for i in range(int(box[2])) for j in range(int(box[3]))
+                          if int(box[0] + i) < im.size[0] and int(box[1] + j) < im.size[1]]
+                    ink = lum(INK)
+                    glass[(screen, scheme)] = round(min((max(lum(p), ink) + 0.05) / (min(lum(p), ink) + 0.05) for p in px), 2) if px else None
+                except Exception as exc:  # noqa: BLE001 -- a picture that cannot be read is the row's red
+                    glass[(screen, scheme)] = str(exc).splitlines()[0][:100]
+                close_ctx(ctx, cpg)
+        low = [f"{' '.join(k)}: {x}" for k, v in seen13.items() for x in v["low"]]
+        small = [f"{' '.join(k)}: {x}" for k, v in seen13.items() for x in v["small"]]
+        fields = [f"{' '.join(k)}: {x}" for k, v in seen13.items() for x in v["fields"]]
+        check("every word on the Gallery reads at 4.5:1 or more on what is painted behind it (the head, the pills, the"
+              " box's words, the names and counts), every control is 44px or more each way and the search box 16px:"
+              " phone and desk, light and dark",
+              all(v["read"] >= 12 for v in seen13.values()) and not low and not small and not fields and len(seen13) == 4,
+              f"read {[(' '.join(k), v['read'], v['lowest']) for k, v in seen13.items()]}; under 4.5: {low[:4]};"
+              f" small: {small[:4]}; fields: {fields[:3]}")
+        check("...and a tile's ▶ words read 4.5:1 or more off the pixels under them, its glass over a dark drawing:"
+              " phone and desk, light and dark",
+              len(glass) == 4 and all(isinstance(v, float) and v >= 4.5 for v in glass.values()),
+              f"{ {' '.join(k): v for k, v in glass.items()} }")
 
     # ------------------------------------------------------------------ 8
     if part(8, "no page errors, no console errors, no CSP violations"):
