@@ -39674,3 +39674,309 @@ rail, one for a profile's strip, both on the pen's own curve.
 
 Not tested here: WebKit (the owner's iPhone; main's WebKit smoke runs after
 the merge), SF and Segoe UI, the live site.
+
+## After v330 -- The Gallery of every skribl, and its eye
+
+The owner's yeses of Nov 14 (Mountain Time, the morning). To the Gallery as
+#894 built it, posts only: "I thought gallery was only skribls (pad or
+flip)?", the map's own first words ("the gallery which is just the skribls
+(not post)"), then "Yes, your picks" to making it every skribl; "Yes, the eye
+in view" to the tile-eye mock ("The eye, in view" and "One hidden, its
+Undo", beside "now", phone and desk, light and dark), after "The stage is
+too much to show, but there should be a gallery toggle in profile library";
+and "Yes" to #899's question, a delete on your own page saying so nearer the
+finger. More from keeping each drawing on its own ground was #899's, already
+built. Built Nov 14.
+
+WHAT CHANGED.
+
+- THE GALLERY IS EVERY SKRIBL (`social/gallery.py`). The Gallery of everyone
+  (Following and Everyone, New and Hot, a search), the first visit's six and
+  a profile's Gallery tab hold every Pad drawing and Flip the site's people
+  shared, in a post or not: a post's drawing opens its post, one shown outside
+  a post its own page (`/social/b/<id>`), the one tile with its length, its
+  maker's face and whole name, and its hearts and comments when there are
+  some. Never a face, a comment's drawing, one kept link-only, or one by
+  nobody on the site (Skribl's own /gallery keeps those, the 27 old ones by
+  nobody among them). Home stays posts.
+- TWO READS, ONE ORDER. The site's own posts, on their indexes, as before;
+  and the drawings shown outside a post through Skribl's new seam, each read
+  a page long in the same order (New: time, then a drawing before the posts
+  of its moment, then the address, Home's own; Hot: the week's plays, through
+  `recent_plays()` for both), merged into one page and paged by one cursor
+  that names a post's address or a drawing's, never an internal id (Hot's
+  holds the moment it ranked at, as before). The search reads a post's words,
+  a drawing's title (Skribl's stand-in for none, "Untitled Skribl", is no
+  words), and the maker's name and @handle. Blocks, mutes and takedowns are in
+  both reads, as they were in the one, so a page stays whole.
+- SKRIBL GAINS ONE SEAM, `shared_skribls()` (skribl/describing.py,
+  `skribl.__all__`; docs/INTEGRATION.md, "Your people's drawings beside your
+  own posts"): the shared skribls as a subquery a host reads beside its own
+  posts (`skribl_id`, `user_id`, `title`, `created_at`, `visibility`), the
+  public ones; by an author's ids' prefix or one author; with `link_only` and
+  that author, their link-only ones too, for a page that is theirs alone
+  (refused without one, `ValueError`). No payload read, nothing run until the
+  host's query runs; every host gets it. The site never reads Skribl's tables.
+- THE EYE, ON YOUR OWN GALLERY TAB ALONE (`_gallery.html` `gallery_tile`,
+  `eye.js`, social.css "THE EYE"; the mock's CSS, value for value): each of
+  your tiles wears an eye at its top right, a 30px chip on the ▶'s own glass
+  (`--says-glass`, `--says-ink`), 13px in, in a button 44px to a finger,
+  pressed while the drawing is in the Gallery. One tap: the eye crosses, the
+  chip opens leftward to say "Hidden", the drawing fades to 55% (its box and
+  its ▶ as they were), and once the site says yes its own toast says "Hidden
+  from the Gallery" with Undo; tapped again, or Undo, it is back ("Back in
+  the Gallery"). The tile and its eye sit side by side in one cell (a link
+  holds no button); the link's words say "hidden from the Gallery" while it
+  is. Nobody else sees it, in the page or its source: the eye, its script and
+  its words are rendered on your own page alone.
+  - A POST'S DRAWING is hidden by the site's own flag on the post
+    (`social_posts.gallery_hidden_at`, migration `9b1e6c3d5a72`, nullable, no
+    index: the Gallery filters on it beside the indexes it reads, as on
+    `taken_down_at`): out of the Gallery of everyone, the first visit and
+    your Gallery as anybody else sees it; the post stays on Home, in your
+    Posts and everywhere a post is. `/social/p/<id>/gallery`.
+  - A DRAWING SHOWN OUTSIDE A POST is hidden by its visibility in Skribl,
+    public ("In the gallery") or link-only, through `set_post_visibility` as
+    its author, as the Library's own switch changes it.
+    `/social/b/<skribl_id>/gallery`; never a post's drawing, a face or a
+    comment's drawing (404).
+  - PRESSED FAST, EVERY TAP COUNTS: the tile shows the newest wish at once,
+    one change goes to the site at a time, and the newest wish goes next if it
+    differs, so the site ends where the last tap left it. A refusal puts the
+    tile back and the toast says why, kindly. Token and Origin, signed in, 120
+    an hour (`security.LIMITS` "gallery").
+- THE SITE'S TOAST IS SHARED (`mutes.js`, `window.SocialToast`): Mute's own,
+  now said by the eye and by a delete on your own page too. IT NEVER COVERS A
+  BUTTON SOMEONE IS PRESSING FAST: told which (the eyes; the cards' ⋯), it
+  rises in its own place unless one of them would be under it there, and then
+  just above the highest of them, 12px clear (`--mu-lift`, set while it cannot
+  be seen, so it never moves in sight); and a scroll that brings one under it
+  takes it away (what it offered stays on the page: the eye itself undoes).
+  A delete's says no eye (`.is-plain`).
+- DELETE FROM YOUR OWN PAGE, ITS WORDS IN THE TOAST (`posts.js`): once the
+  post has folded away, "Your post is gone, its drawing with it." (Home's
+  own words) in the site's toast near the finger, a status a screen reader
+  hears; no Undo, a delete is final; clear of the next card's ⋯, the next
+  delete's first press. The tab's status line says nothing of it now.
+- WORDS THAT DESCRIBED THE GALLERY AS POSTS ONLY, made true: social/gallery.py,
+  posts.py, profiles.py, mutes.py, app.py's note on the feed filter,
+  explore.html, home.html, profile.html, _gallery.html; docs/SOCIAL-SITE.md
+  (the map's table, step 3's paragraph, the six small yeses, and a paragraph
+  of its own, "The Gallery is every skribl, and the eye", with the eye's two
+  addresses); START-HERE's rows for the Gallery of everyone, a profile's tabs
+  and mutes.
+
+JUDGMENT CALLS, said so they read true:
+
+- THE MAP'S WORD CHANGES FOR THE GALLERY ALONE. Home, Following and
+  Everyone stay posts (#896): a drawing shown outside a post is on no Home.
+- A HIDDEN POST'S DRAWING STAYS IN SKRIBL'S OWN /GALLERY if its maker ticked
+  "Show in the Skribls gallery": the eye is the site's Gallery's (the brief:
+  a site-side flag on the post), and Skribl's visibility of a post's drawing
+  is what the editors' tick decided. Asked below.
+- YOUR LINK-ONLY DRAWINGS ARE ON YOUR OWN GALLERY TAB, hidden. For a drawing
+  outside a post the eye is its Skribl visibility, so a drawing you hid and
+  one you shared link-only from the Pad are the same thing, and the tab shows
+  both, faded, to you alone ("it covers every skribl you made"). Never a
+  private one (revoked: the eye would make it reachable again), a face or a
+  comment's drawing. Asked below.
+- A DRAWING YOU HID HAS ITS OWN PAGE FOR YOU ALONE (`posts.bloob`): its tile
+  opens it; to anybody else it is the kind 404 the site always gave a
+  link-only drawing (Skribl's own link, /s/<id>, still plays for anybody who
+  has it: link-only). Its comments and likes are kept, and back when it is;
+  while it is hidden its page takes none new (a page for its maker alone, as
+  one taken down is: `comments.On.down`).
+- THE HIDDEN PILL KEEPS THE EYE'S RIGHT EDGE, 13px in, growing leftward, so
+  the eye opens into the word in place; the mock's picture had the pill 6px
+  in, a hand-placed stand-in.
+- "BACK IN THE GALLERY" when it is shown again, by the eye or Undo: the
+  mock showed only the hiding; the toast said "Hidden from the Gallery" until
+  then, which would no longer be true. Mute's own Undo says it the same way
+  ("Unmuted. Theo's posts are back.").
+- THE TOAST'S ICON: the site's toast carries Mute's closed eye, which reads
+  for "Hidden from the Gallery" too; a delete's has none.
+- THE TOAST NEAR THE FINGER is the site's toast in its own place (12px above
+  the bar on a phone, the foot of the column on a desk), lifted only to keep
+  clear of what is pressed fast; a toast following the finger round the page
+  would be a new look, not mocked.
+- THE PILL'S WORD GLIDES (max-width, 0.24s), a small layout glide, as the
+  site's rooms glide their height; under Reduce Motion it takes its size at
+  once while its word fades.
+
+Pad and Flip: nothing changes in either editor. `shared_skribls()` is
+Skribl's and reads only. Not for Flip: there is nothing editor-side; a Flip
+is in the Gallery and has its eye as a drawing does, its tile saying its
+pages.
+
+THE CHECKS, each new or changed row shown red by a break of its own in a
+throwaway copy of the tree, with an unbroken copy as the control (green
+every time but where said):
+
+- verify_socialposts 13, THE GALLERY OF EVERY SKRIBL (five rows changed,
+  one restated; Ivy shows a drawing from the Pad among her posts, the 24th
+  newest of the section's own, and Gwen's drawing shown outside a post gets
+  two plays): every post and every drawing the site's people showed outside a
+  post, once each, newest first in one order, read against the database's
+  own union of both, a post's tile opening its post and a drawing's its own
+  page, never one kept link-only, a face or one by nobody (red: the drawings'
+  read emptied, posts only); Load more a page of 24 by a cursor naming a
+  post's or a drawing's address, a page ending on Ivy's drawing going on from
+  it (red: the next cursor named from the page's last post); Following holds
+  the drawings of the people you follow (red: Following applied to the posts'
+  read alone); Hot ranks both kinds in one order, the drawing with two plays
+  before the post with two (red: a drawing's plays never joined); the search
+  finds a drawing by its title, never one kept link-only (red: no title
+  searched); the reads on their indexes, the drawings' on Skribl's
+  (visibility, time) through shared_skribls, sorting no more than one
+  moment's (red: their order read through a function, off the index). The
+  keyboard row now follows the first tile wherever it opens.
+- verify_socialposts 14, THE FIRST VISIT (two rows changed): the six newest
+  of both kinds, Oda's drawing shown outside a post first, opening its own
+  page; never one kept link-only, her face or one by nobody (red: the first
+  visit's tiles posts only).
+- verify_socialposts 9 (two rows changed): the drawing shown outside a post
+  is in the Gallery of everyone, signed out and a follower's Everyone and
+  Following, a tile opening its own page (red: the drawings' read emptied);
+  a drawing's page is a kind 404 for one kept link-only to anybody but its
+  maker, whose own it is (red: its maker's own a 404 too, as before).
+- verify_socialprofile 19, THE EYE (new, nine rows; Eli shares three posts,
+  a drawing outside a post and one kept link-only on the Pad's dark, draws a
+  face and answers Noa with a drawing): the eye on each of her tiles, painted,
+  44px, its chip 30px and 13px in, its two states and words, the fade, never
+  her face or her answer's drawing, a touch phone and a desk, light and dark
+  (red: the eye 16px in); nobody else sees it, in the page, its source or the
+  tab's JSON (red: eye.js on everybody's page); a post's drawing hidden and
+  shown end to end, the toast and Undo, out of the Gallery of everyone, the
+  first visit and Noa's view while on Home and in her Posts, through a reload
+  (red: a hidden post kept in the Gallery); a drawing outside a post and one
+  kept link-only from the first, its visibility in Skribl, its own page hers
+  alone (red: her hidden drawing's page a 404 to her); the toast never over
+  an eye, lifted above one where it would rise, gone when a scroll brings one
+  under it (red: the toast never lifted; a scroll never taking it); read on
+  every frame, the chip's word gliding and the fade, under Reduce Motion the
+  chip at once (red: the word snapping open; gliding under Reduce Motion);
+  the eye's ink on its glass off the pixels, 7.03:1 over the Pad's dark and
+  10.34:1 over paper, and the toast's words (red: a thin glass); its guards
+  (red: anybody's post); pressed fast, every tap counting (red: a tap while
+  the last was on its way ignored).
+- verify_socialprofile 18 (two rows changed, one new): Delete from your own
+  page says so in the site's toast near the finger, no Undo and no eye, the
+  tab's status line silent; its words at 4.5:1 read in the toast (red, both:
+  back on the status line; the 4.5:1 row alone: a faint ink in the toast);
+  and a delete whose next card's ⋯ rises where the
+  toast would rise lifts the toast above it, every ⋯ in view taking its own
+  tap (red: the toast never lifted).
+- verify_socialprofile 1 (one row restated): your own Gallery shows your
+  link-only drawing too, hidden, with the eye; visitors see the public ones
+  and no eye (red: your own Gallery your visitors').
+- verify_socialmute 6 and verify_socialsafety 4 and 12 (their Gallery walks
+  read both kinds now, three rows restated): a muted person's drawings out
+  of the Gallery (red: mutes left out of the drawings' read); a blocked
+  person's both ways (red: the drawings' read without the site's rules and
+  the host's visibility policy opened: two locks, as #894 found for posts),
+  and a taken-down person's (red: the drawings' read without the site's rules
+  and the tile's own taken-down skip opened).
+- verify_seam, WHAT PEOPLE SHARED (new, four rows): exported and reading only
+  (red: a flush in it), naming no host (red: a host's prefix in it), the
+  guide (red: "theirs alone" taken out), the site through the seam alone
+  (red: Skribl's model imported in gallery.py; and, since the instrument now
+  lets the site name SkriblRefused, a model's name in posts.py still red).
+- verify_hostseams, WHAT PEOPLE SHARED (new, seven rows, a throwaway host):
+  its columns and the public ones alone (red: link-only listed too); by a
+  prefix or one author (red: the author ignored); link_only with an author
+  only (red: no refusal without one); a title to search and one order beside
+  a host's own posts (red: the title read from the caption); reading only, no
+  payload (red: the payload selected); documented (red: out of __all__).
+- verify_socialauth 14 (two new rows) and verify_sociallikes 11 (one new,
+  one restated): the chain builds social_posts.gallery_hidden_at, on an empty
+  file and on a database with a post in it, which stays in the Gallery, and
+  takes it away going down (red: the chain without the column, which
+  `alembic check` reads as drift too); and its PostgreSQL DDL, read offline,
+  is one plain ALTER TABLE, nullable with no default, so a deploy rewrites no
+  row (red: the column not null, with a default).
+- verify_socialmute 13 (one row restated): the mutes' own DDL read at its own
+  revision (red: their pair index not unique).
+- verify_social 4 (words only): the drawing posted signed out through
+  Skribl's API is out of the first visit because it is nobody's on the site
+  (it said "posts only"); its logic is as it was.
+
+FOUND WRONG, AND MENDED: five instruments of mine, one of the suite's own,
+five rows the change outgrew, and one defect. Section 19's `where()` looked
+for a tile's address in the JSON answers as they come, quotes escaped, so a
+drawing was never "in" anything (it reads their html now); its drawing row
+waited for a toast that already said "Back in the Gallery" (the drawing shown
+just before), so it read the database before the second change was in (it
+waits for the toast to go first); its toast row asked for an eye where the
+page could not scroll one (it brings the lowest eye that can be brought
+there); its guards' signed-out client took no token from the first visit (a
+profile gives everybody one). And section 18's 4.5:1 row, first written,
+stayed green with the words put back on the status line, which it read as
+readily: it now asks that the toast's words were among those read.
+verify_seam's own reader took SkriblRefused, one of Skribl's documented
+exceptions, for one of its rows, the site naming it for the first time (it is
+allowed now beside its three siblings; a model's name is still red, shown).
+The rows outgrown: verify_socialmute 6 and verify_socialsafety 4 and 12
+walked the Gallery's post tiles alone (they read both kinds now);
+verify_socialposts 9's page guard asked its maker's own link-only drawing for
+a 404; and verify_socialmute 13 read the mutes' PostgreSQL DDL from before
+mutes to the chain's head, which now holds the eye's ALTER TABLE (it reads the
+mutes' own migration at its own revision, as #898 read the likes'). The
+defect, found by the side-by-side run: the site catches SkriblRefused, a name
+in skribl.__all__ that docs/INTEGRATION.md never named, and verify_social 8
+holds the site to names the guide documents (the guide says what it means
+now). One limit found and said: a copy of the tree for calibration has no
+.git, so verify_seam's compile row reads no files there and is red in every
+copy, the control's too; it is green on the tree.
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py, its logs in a
+folder of its own: a first run shared the default folder with another
+session's and was stopped), on the tree as committed: verify_socialposts
+67/67, verify_socialprofile 88/88, verify_socialcomments 93/93,
+verify_sociallikes 100/100, verify_socialfollow 74/74, verify_socialsafety
+38/38, verify_socialactivity 44/44, verify_createpost 88/88, verify_hostseams
+135/135; then, after the two mends that run found (above), side by side again:
+verify_socialmute 68/68, verify_socialauth 66/66, verify_social 40/40,
+verify_seam 510/510, verify_docs 144/144. Each red said for what it was, both
+defects and neither load: verify_socialmute 67/68 beside the others (its
+section 13; 68/68 alone, the file mended by then, and again side by side);
+verify_social 39/40, beside the others and alone (its section 8).
+verify_socialsettings was not run: it reads the bar, the ☰ and the theme on
+these pages, none of which changed. The full battery was not run; main's run
+after the merge is that.
+
+CONTRAST, measured on the built pages, light and dark, a touch phone and a
+desk: every word at 4.5:1 or more on what is painted behind it. The eye's ink
+on its glass, read off the pixels with the eye and its word made see-through:
+7.03:1 over the Pad's dark (her link-only drawing on #0d0f14) and 10.34:1 over
+paper, phone and desk, light and dark (the glass is the ▶'s, the same in both
+themes, and the ▶'s words read 7.08:1 over a dark drawing in #894). The
+toast's words: "Hidden from the Gallery" and Undo 17.95:1 light and 11.86:1
+dark; "Your post is gone, its drawing with it." 17.95:1 light and 14.05:1
+dark. The Gallery of everyone, drawings outside a post among its tiles: every
+word 7.13:1 or more, light and dark (the ▶'s words on their glass over a dark
+drawing's own ground; off the pixels 7.08:1, as #899 measured); the first
+visit 8.04:1 light and 10.25:1 dark (the way to the Gallery, as before). A
+profile's tabs, with the eye on your own Gallery ("Hidden" on its glass among
+them): 382 words read, the lowest 7.36:1 (somebody else's Posts, as before).
+No colour or token added: the eye wears the ▶'s glass and ink (--says-glass,
+--says-ink), the toast its own, and the fade is the drawing's opacity.
+
+THE FOUR. Simple: one Gallery of everything people drew, and one eye on your
+own tiles that says what it does. Kind: nothing anybody made is left out of
+their own Gallery, a hidden drawing stays yours and comes back in one tap,
+every tap counts, no toast covers what your thumb is pressing, and nothing
+jumps. Playful: the eye opens into "Hidden" and the drawing fades with it.
+Powerful: Following, Everyone, New, Hot, a search by a drawing's title, Load
+more through both kinds; and skribls.net gets `shared_skribls()` the same
+day.
+
+Asked, for the owner: a post's drawing hidden from the Gallery stays in
+Skribl's own /gallery when its maker ticked "Show in the Skribls gallery":
+should hiding it take it out of that one too? And your own Gallery tab shows
+your link-only drawings (shared from the Pad without the tick), hidden, with
+the eye to show them: is that right, or should it show only what was once
+in the Gallery?
+
+Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
+their smoke after the merge); SF and Segoe UI (the chip's word is one line
+in its own box, the toast's place is measured, not tuned); the live site.
