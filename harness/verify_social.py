@@ -115,7 +115,13 @@ APP = r"""
 import json, sys
 {prelude}
 from flask import url_for
-from app import app
+from app import app, db
+# The tables every server of the demo has (bootstrap.sh and run_harness.sh
+# make them; a deploy runs the site's chain): the Gallery of everyone (the
+# map's step 3) reads the site's own posts, and without its tables the site
+# rests (503), kindly, as each of its pages that reads them does.
+with app.app_context():
+    db.create_all()
 c = app.test_client()
 with app.test_request_context():
     pad, flip = url_for("skribl.skribl_editor"), url_for("skribl.skribl_flip")

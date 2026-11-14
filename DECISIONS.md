@@ -38432,7 +38432,8 @@ WHAT CHANGED.
   on Home and in the Gallery, and in the Skribls gallery too if you tick it");
   the delete sheet of a drawing shown outside a post ("from Home and from your
   page"); and Your Reports, which called a report sent through Skribl's own
-  sheet "somebody on Explore", now says "somebody in the Skribls gallery".
+  sheet "somebody on Explore" (wherever it was sent: a Gallery card or a
+  drawing's link page), now says "somebody through Skribl's own report".
 
 JUDGMENT CALLS, said so they read true:
 
@@ -38522,8 +38523,9 @@ time but where said):
   11 and 12: a taken-down post and a taken-down person out, for its maker too
   (red: each with its query's filter and the tile's taken-down skip opened);
   8: Skribl's report sheet read on the first visit (red: the first visit
-  without Skribl's section); 10: "somebody in the Skribls gallery" (red: "on
-  Explore").
+  without Skribl's section); 10: "somebody through Skribl's own report" (red:
+  "on Explore"), and verify_socialcomments' card of a drawing answer reported
+  on its link page, which said "on Explore" too.
 - verify_socialprofile 4: You in the bar, the Gallery's tile and Skribl's card
   (on Skribl's own /gallery now) still (red: the site's face playing), framed by
   the card's sums (red: Skribl's card a few pixels off; the face macro off),
@@ -38531,8 +38533,10 @@ time but where said):
   to the profile, read on the first visit (red: no address for a person).
 - verify_socialauth 5 (red: the card naming the handle), verify_socialactivity 1
   and verify_socialsettings 6 and 7 (red: the bar saying Explore),
-  verify_social 2 (red: the same), 5 (red: Following | Everyone signed out) and
-  9 (red: the empty Gallery naming a tick).
+  verify_social 1 (its probe of the demo's app builds the site's tables now;
+  red: Explore not answering), 2 (red: the bar saying Explore), 5 (red:
+  Following | Everyone signed out) and 9 (red: the empty Gallery naming a
+  tick).
 - verify_hostseams, WHAT IS PLAYED MOST: recent_plays() joined to a throwaway
   host's own table (red: the window doubled), counted as the gallery's Hot
   counts (red: the same), as_of honoured (red: ignored), a row only for what
@@ -38551,6 +38555,24 @@ ends of the week on the index; verify_hostseams' listing row counted the
 plays the suite's other sections leave in the same database; and
 verify_seam's guide row found "outer" inside `outerjoin` in the sample, so
 the word taken out of the prose went unnoticed until it asked for the word.
+The side-by-side run found two more that the plan had missed: verify_social's
+probe of the demo's app, on an empty database, met the site's resting page
+(503) at Explore, which reads the site's own tables now (the probe builds
+them, as every server of the demo has them); and verify_socialcomments pinned
+"somebody on Explore" for a report sent from a drawing's link page, wrong
+before this change too, which is why the words now name Skribl's own report
+and not a place.
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py), every one green:
+verify_socialposts 57/57, verify_sociallikes 96/96, verify_socialcomments
+93/93, verify_socialfollow 71/71, verify_socialmute 68/68,
+verify_socialauth 64/64, verify_socialprofile 55/55, verify_socialactivity
+44/44, verify_social 40/40, verify_socialsafety 38/38,
+verify_socialsettings 33/33, verify_seam 501/501, verify_hostseams 122/122,
+verify_createpost 85/85, verify_docs 144/144 (verify_social,
+verify_socialcomments and verify_socialsafety from their second run, after
+the two findings above). The full battery was not run; main's run after the
+merge is that.
 
 CONTRAST, measured on the built page by section 13 (every word on the
 Gallery, phone and desk, light and dark): the lowest 7.36:1 light and 8.59:1

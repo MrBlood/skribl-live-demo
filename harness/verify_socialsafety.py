@@ -1044,7 +1044,7 @@ with sync_playwright() as p:
               f"sent {sent}; signed out {anon}; not an admin {not_admin}; panel {panel!r}")
         want0 = {"kind": "drawing", "child": True, "tag": "A child’s safety", "why": ["Spam or misleading"],
                  "meta": "2 reports", "who": "Lee Varga @lee · a drawing", "notes": ["Somebody wrote: From a Gallery card"],
-                 "by": "Reported by Ora Quinn, somebody in the Skribls gallery", "veiled": 1, "words": ["Hidden until you open it."],
+                 "by": "Reported by Ora Quinn, somebody through Skribl's own report", "veiled": 1, "words": ["Hidden until you open it."],
                  "link": False, "keep": False, "open": True}
         LAW = ("Look before anything else. Taking it down hides it at once and keeps a copy; the lawyer will say what"
                " the law asks of you next.")

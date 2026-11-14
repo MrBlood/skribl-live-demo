@@ -2179,7 +2179,7 @@ with sync_playwright() as p:
                   st == 200 and on_link == 202 and not others
                   and card == {"cards": 1, "kind": "comment", "pic": True, "words": ["A drawing"],
                                "why": ["Abusive or hateful", "Spam or misleading"],
-                               "by": "Reported by Kim Ito, somebody on Explore"},
+                               "by": "Reported by Kim Ito, somebody through Skribl's own report"},
                   f"posted {st}; link page report {on_link}; card {card}; a drawing card too {others}")
             with apg.expect_navigation(timeout=15000):
                 apg.click(f"[data-rep][data-target='{cid}'] form[action$=down] button")

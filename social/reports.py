@@ -69,7 +69,7 @@ def queue():
     Each card: kind, target, who (the person it is about, or None), what
     (the post or drawing, or None), reasons [(words, count)], count, notes
     [(who wrote it or None, the note)], reporters (names, or "somebody signed
-    out" / "somebody in the Skribls gallery"), child, latest."""
+    out" / "somebody through Skribl's own report"), child, latest."""
     from skribl import describe_posts, list_reports
     sess = site().session()
     cards = {}
@@ -102,7 +102,7 @@ def queue():
         for reason, n in grp["reasons"].items():
             c["reasons"][reason] = c["reasons"].get(reason, 0) + n
         c["count"] += grp["count"]
-        c["reporters"] += ["somebody in the Skribls gallery"] * grp["count"]
+        c["reporters"] += ["somebody through Skribl's own report"] * grp["count"]
         c["notes"] += [(None, n) for n in grp["notes"]]
         c["child"] = c["child"] or grp["child_safety"]
         from datetime import datetime
