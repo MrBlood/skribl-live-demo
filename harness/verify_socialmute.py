@@ -2024,8 +2024,12 @@ with sync_playwright() as p:
                   and at("select handle from social_people order by id") == [("ann",), ("bob",)],
                   f"down {down.returncode}, left {gone}, stamped {stamp_down}; up {up3.returncode}: {sorted(back_again)}")
             pg_url = "postgresql://nobody:nothing@localhost/none"
-            ddl_up = chain("upgrade", f"{BEFORE}:head", "--sql", url=pg_url)
-            ddl_down = chain("downgrade", f"head:{BEFORE}", "--sql", url=pg_url)
+            # The mutes' own migration, read at its own revision: the chain's
+            # head has grown since (the eye's column on social_posts, Nov 14,
+            # an ALTER TABLE of its own), as #898 read the likes' at theirs.
+            MUTES = "4cdc4af46a77"
+            ddl_up = chain("upgrade", f"{BEFORE}:{MUTES}", "--sql", url=pg_url)
+            ddl_down = chain("downgrade", f"{MUTES}:{BEFORE}", "--sql", url=pg_url)
             u, d = ddl_up.stdout, ddl_down.stdout
             want_up = ["CREATE TABLE social_mutes", "id BIGSERIAL NOT NULL", "muter_id BIGINT NOT NULL",
                        "muted_id BIGINT NOT NULL", "created_at TIMESTAMP WITH TIME ZONE NOT NULL",

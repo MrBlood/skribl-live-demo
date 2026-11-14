@@ -37,8 +37,9 @@ keys and user verification on, as Face ID or Windows Hello would be.
   13. THE COOKIE: HttpOnly, SameSite=Lax, path /, Secure over HTTPS, 30 days,
       signed.
   14. THE SITE'S OWN MIGRATION CHAIN: empty to head on SQLite with its own
-      version table (its posts with the eye's column since Nov 14), Skribl's
-      chain untouched in either order, no drift;
+      version table (its posts with the eye's column since Nov 14, one plain
+      ALTER TABLE on PostgreSQL, read offline), Skribl's chain untouched in
+      either order, no drift;
       gunicorn (as Render starts it) runs it, and one that fails is logged
       and the demo serves on.
   15. THE NEW SCREENS: every word at 4.5:1 on what is painted behind it,
@@ -1397,6 +1398,29 @@ with sync_playwright() as p_:
         check("...its posts with the eye's column: social_posts.gallery_hidden_at, a time, nullable (a post's drawing"
               " hidden from the Gallery by its maker; none, in it)",
               post_cols.get("gallery_hidden_at") == ("DATETIME", 0), f"{post_cols}")
+        # ...AND ITS POSTGRESQL DDL, READ OFFLINE (the live site's database):
+        # its own migration, one plain ALTER TABLE adding the column, nullable,
+        # with no default, so a deploy rewrites no row and waits on nothing;
+        # and dropping it going down.
+        def offline(*args):
+            return subprocess.run([sys.executable, "-m", "alembic", "-c", "social/alembic.ini", *args, "--sql"], cwd=ROOT,
+                                  env=dict(os.environ, DATABASE_URL="postgresql://nobody:nothing@localhost/none"),
+                                  capture_output=True, text=True, timeout=180)
+
+        def statements(sql):
+            """The statements a migration's offline SQL runs, its comments, its
+            transaction and the chain's own stamp aside."""
+            code = "\n".join(ln for ln in sql.splitlines() if not ln.strip().startswith("--"))
+            return [" ".join(s.split()) for s in code.split(";") if s.strip()
+                    and not re.match(r"\s*(BEGIN|COMMIT|UPDATE social_alembic_version)\b", s)]
+        eye_up, eye_down = offline("upgrade", "e3fc16c00d16:9b1e6c3d5a72"), offline("downgrade", "9b1e6c3d5a72:e3fc16c00d16")
+        su, sd = statements(eye_up.stdout), statements(eye_down.stdout)
+        check("...its PostgreSQL DDL, read offline, is one plain ALTER TABLE: the column added nullable with no default"
+              " (no row rewritten, nothing held), and dropped going down; nothing else",
+              eye_up.returncode == 0 and eye_down.returncode == 0
+              and su == ["ALTER TABLE social_posts ADD COLUMN gallery_hidden_at TIMESTAMP WITH TIME ZONE"]
+              and sd == ["ALTER TABLE social_posts DROP COLUMN gallery_hidden_at"],
+              f"up {eye_up.returncode} {su}; down {eye_down.returncode} {sd}")
         d2 = os.path.join(TMP, "chain-both-a.db")
         a1, a2 = alembic(d2, "upgrade", "head", ini=False), alembic(d2, "upgrade", "head")
         d3 = os.path.join(TMP, "chain-both-b.db")

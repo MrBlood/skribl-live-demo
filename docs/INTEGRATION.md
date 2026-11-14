@@ -1162,6 +1162,14 @@ the same exception with the same message, on purpose: anything else is an
 oracle for which public ids are real and who owns them. Answer 404 for both.
 Do not translate one of them into a 403 — that puts the disclosure back.
 
+**`SkriblRefused` means the change itself cannot be made**, and says so in its
+`message`: a visibility outside the accepted set (checked before any lookup,
+so it reveals nothing), or an author changing who may see a skribl the site
+withheld (only an operator, `require_author=False`, sets or lifts
+`"withheld"`). The Skribl site's eye on a person's own Gallery, which moves a
+drawing between `"public"` and `"unlisted"` as its author, answers it as the
+drawing having been taken down.
+
 **`author_id=None` is refused, not privileged.** It means "nobody is signed
 in", so identity alone authorises nothing. A management command that genuinely
 must remove any post passes `require_author=False` — in code, once, the same
