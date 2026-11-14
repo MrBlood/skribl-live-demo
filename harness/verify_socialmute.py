@@ -1562,13 +1562,14 @@ with sync_playwright() as p:
             # Following alike, New, Hot and a search, in its own query, so every
             # page but the last is whole; walked with Load more against Qin's.
             def gallery(c, show, sort="new", q=""):
-                """The Gallery walked with Load more: [(handle, post)] and each page's size."""
+                """The Gallery walked with Load more: [(handle, post or drawing)] and each page's size (every
+                skribl since Nov 14: a drawing shown outside a post is a tile too)."""
                 qs = f"show={show}&sort={sort}" + ("&q=" + urllib.parse.quote(q) if q else "")
                 c.get("/social/explore")
                 _, j = c.get_json("/social/explore/more?" + qs)
                 seen, sizes = [], []
                 while isinstance(j, dict):
-                    got = re.findall(r'<a class="gal-tile" href="/social/p/([^"]+)"[^>]*data-handle="([^"]+)"', j.get("html", ""))
+                    got = re.findall(r'<a class="gal-tile" href="/social/[pb]/([^"]+)"[^>]*data-handle="([^"]+)"', j.get("html", ""))
                     seen += [(h, pid) for pid, h in got]
                     sizes.append(len(got))
                     if not j.get("next") or len(sizes) > 30:
@@ -1585,9 +1586,10 @@ with sync_playwright() as p:
             ok_q = all(any(h == "ozz" for h, _ in g[("qin",) + k][0]) for k in
                        (("everyone", "new", ""), ("everyone", "hot", ""), ("everyone", "new", "Section 6")))
             n_new, q_new = g[("nat", "everyone", "new", "")], g[("qin", "everyone", "new", "")]
-            check("the Gallery of everyone (Explore) leaves out every post of somebody you muted, in its own query:"
-                  " Everyone and Following (though Nat follows them), New, Hot and a search alike; walked to its end it"
-                  " is everybody else's in the order somebody who muted nobody sees, every page but the last whole",
+            check("the Gallery of everyone (Explore) leaves out every post of somebody you muted, and every drawing they"
+                  " showed outside a post (every skribl, since Nov 14), in its own reads: Everyone and Following (though"
+                  " Nat follows them), New, Hot and a search alike; walked to its end it is everybody else's in the order"
+                  " somebody who muted nobody sees, every page but the last whole",
                   ok_g and ok_q and n_new[0] == [x for x in q_new[0] if x[0] != "ozz"]
                   and all(n == 24 for n in n_new[1][:-1]) and len(n_new[1]) >= 2
                   and any(h == "pia" for h, _ in g[("nat", "following", "new", "")][0]),

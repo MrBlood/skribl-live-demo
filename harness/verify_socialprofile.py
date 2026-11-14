@@ -3291,7 +3291,7 @@ print("PLAN " + json.dumps(out))
               if (b[3] > 0) { layers.push(b); if (b[3] >= 1) break; } }
             let g = [255, 255, 255]; for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; g = [0, 1, 2].map(k => l[k] * l[3] + g[k] * (1 - l[3])); }
             return g; };
-          const out = { read: 0, low: [], lowest: 99, words: [] };
+          const out = { read: 0, low: [], lowest: 99, words: [], toast: 0 };
           /* THE SITE'S TOAST says it now (the owner's "Yes", Nov 14): its words
              take no tap, so they are made hit-testable to ask what is painted. */
           const toast = document.querySelector('.mu-toast.is-up');
@@ -3303,6 +3303,7 @@ print("PLAN " + json.dumps(out))
             if (!at || !(at === e || e.contains(at))) { out.low.push('not painted: ' + e.textContent.trim().slice(0, 24)); return; }
             const a = lum(rgba(getComputedStyle(e).color)), b = lum(ground(e)), k = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
             out.read++; out.lowest = Math.min(out.lowest, Math.round(k * 100) / 100); out.words.push(e.textContent.trim().slice(0, 40));
+            if (e.closest('.mu-toast')) out.toast++;
             if (k < 4.5) out.low.push(e.textContent.trim().slice(0, 24) + ' ' + k.toFixed(2)); });
           if (toast) toast.style.pointerEvents = '';
           return out; }"""
@@ -3414,8 +3415,10 @@ print("PLAN " + json.dumps(out))
               " drawing with it.\" in the site's toast, the tab's kind words once the last is gone), a touch phone and a"
               " desk, light and dark, the desk too staying on the page",
               all(v.get("read", 0) >= 1 and not v.get("low") for v in inks18.values()) and len(inks18) == 5
+              and all(inks18[k].get("toast", 0) >= 1 for k in ("phone light", "desk light", "desk dark", "phone dark"))
               and all(inks18[k].get("at") == "/social/@delmo" for k in ("desk light", "desk dark")),
-              json.dumps({k: (v.get("read"), v.get("lowest"), v.get("low"), v.get("at"), v.get("stopped")) for k, v in inks18.items()}))
+              json.dumps({k: (v.get("read"), v.get("toast"), v.get("lowest"), v.get("low"), v.get("at"), v.get("stopped"))
+                          for k, v in inks18.items()}))
 
         # NEVER OVER A BUTTON SOMEONE IS PRESSING FAST (WORKING-AGREEMENTS: a
         # toast never covers a button someone is pressing fast). A delete's next
