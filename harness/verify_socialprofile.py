@@ -911,37 +911,51 @@ def pen_paint(pg, st):
 
 #: The strip and its panel on every animation frame from now, for `ms`, kept
 #: in the page (window.__tabs) for reading after a person's tap: the pen
-#: line's middle, the panel's opacity, which tab it holds, the page's scroll
-#: and the strip's top.
+#: line's middle, the panel's opacity, which tab it holds, the page's scroll,
+#: the strip's top and the frame's own time (the one its glide is drawn for,
+#: never when its callback happened to run).
 TABS_SAMPLE = r"""(ms) => { const s = document.querySelector('[data-prof-tabs]'), sw = document.querySelector('[data-prof-swap]');
   const pen = s.querySelector('.prof-pen'), out = window.__tabs = [], t0 = performance.now();
-  (function f() { const p = pen.getBoundingClientRect(), panel = sw.querySelector('[data-prof-panel]');
+  (function f(frame) { const p = pen.getBoundingClientRect(), panel = sw.querySelector('[data-prof-panel]');
     out.push([Math.round((p.left + p.width / 2) * 100) / 100, +getComputedStyle(sw).opacity,
               panel ? panel.getAttribute('data-tab') : null, Math.round(scrollY),
-              Math.round(s.getBoundingClientRect().top * 100) / 100]);
+              Math.round(s.getBoundingClientRect().top * 100) / 100,
+              Math.round(((frame === undefined ? performance.now() : frame) - t0) * 10) / 10]);
     if (performance.now() - t0 < ms) requestAnimationFrame(f); })(); }"""
+
+
+#: The pen line's glide (social.css .prof-pen): 0.42s on the one pill's curve,
+#: whose steepest is 2.91 times its average speed.
+PEN_MS, PEN_STEEPEST = 420, 2.91
 
 
 def judge_switch(frames, x0, x1, reduced=False):
     """A switch, as read frame by frame: the pen line glides one way from
-    `x0` to `x1` on many frames (no step past 30% of the way, a settle past
-    the end under 5%), or under Reduce Motion is put there; the panel fades
-    out, changes only while it can't be seen, and fades back in; the page and
-    the strip do not move."""
+    `x0` to `x1` on many frames, no frame moving it faster than its curve
+    ever goes (by each frame's own time, so a runner that stalls a frame
+    reads as the stall it is, never as a jump; a quarter over, for where in
+    a frame the glide began; a jump is eight times over in one frame, and
+    twice over even in a frame stalled 60ms; a settle past the end under
+    5%), or under Reduce Motion is put there; the panel fades out,
+    changes only while it can't be seen, and fades back in; the page and the
+    strip do not move."""
     if not frames:
         return {"ok": False, "why": "no frames"}
     xs, ops, tabs = [f[0] for f in frames], [f[1] for f in frames], [f[2] for f in frames]
+    ts = [f[5] for f in frames]
     at = next((i for i, t in enumerate(tabs) if t != tabs[0]), None)
     travel = x1 - x0
     sign = 1 if travel >= 0 else -1
     steps = [z - a for a, z in zip(xs, xs[1:])]
     places = len({round(x, 1) for x in xs})
+    # How fast each frame moved it, as a share of the fastest its curve goes.
+    pace = [abs(st_) / (abs(travel) * PEN_STEEPEST * max(dt, 1.0) / PEN_MS + 1.0) if travel else 0
+            for st_, dt in zip(steps, [z - a for a, z in zip(ts, ts[1:])])]
     if reduced:
         glide = abs(xs[-1] - x1) <= 0.6 and places <= 2
     else:
-        glide = (abs(xs[-1] - x1) <= 0.6 and places >= 8 and abs(travel) > 1
-                 and all(s_ * sign >= -0.05 * abs(travel) for s_ in steps)
-                 and max(abs(s_) for s_ in steps) <= 0.3 * abs(travel)
+        glide = (abs(xs[-1] - x1) <= 0.6 and places >= 6 and abs(travel) > 1
+                 and all(s_ * sign >= -0.05 * abs(travel) for s_ in steps) and max(pace, default=0) <= 1.25
                  and max((x - x1) * sign for x in xs) <= 0.05 * abs(travel))
     down = [o for o in ops[:at] if 0.05 < o < 0.95] if at else []
     up = [o for o in ops[at:] if 0.05 < o < 0.95] if at is not None else []
@@ -950,7 +964,8 @@ def judge_switch(frames, x0, x1, reduced=False):
     held = len({f[3] for f in frames}) == 1 and len({f[4] for f in frames}) == 1
     return {"ok": bool(glide and unseen and faded and held), "glide": glide, "unseen": unseen, "faded": faded,
             "held": held, "places": places, "from": xs[0], "to": xs[-1], "want": round(x1, 2),
-            "biggest": round(max((abs(s_) for s_ in steps), default=0), 2), "changed at": at,
+            "biggest": round(max((abs(s_) for s_ in steps), default=0), 2), "pace": round(max(pace, default=0), 2),
+            "changed at": at,
             "opacity there": ops[at] if at is not None else None, "fading": [len(down), len(up)]}
 
 
@@ -2813,9 +2828,9 @@ with sync_playwright() as p_:
                 glides[(screen, scheme, reduced)] = {"ok": False, "stopped": str(exc).splitlines()[0][:160]}
             close_ctx(ctx, pg)
         check("the switch, read on every frame (a touch phone in light, a desk in dark): the pen line glides from Posts to"
-              " Likes, one way, on many frames (no step past 30% of the way, a settle past it under 5%), ending under"
-              " Likes; the panel fades out, changes only while it can't be seen (under 5%), and fades back in; the page"
-              " doesn't scroll and the strip doesn't move",
+              " Likes, one way, on many frames, no frame moving it faster than its curve ever goes (by each frame's own"
+              " time), a settle past it under 5%, ending under Likes; the panel fades out, changes only while it can't"
+              " be seen (under 5%), and fades back in; the page doesn't scroll and the strip doesn't move",
               all(glides.get((s_, c_, False), {}).get("ok") for s_, c_ in (("phone", "light"), ("desk", "dark"))),
               json.dumps({f"{k[0]} {k[1]}": v for k, v in glides.items() if not k[2]}))
         check("under Reduce Motion the pen line is put there, no frame between, and the panel still only fades, changing"

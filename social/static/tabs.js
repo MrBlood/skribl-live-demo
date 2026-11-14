@@ -121,7 +121,12 @@
       swap.style.minHeight = swap.offsetHeight + 'px';
       swap.innerHTML = j.html || '';
       settle(swap);
-      if (push && window.history && history.pushState) history.pushState({ profTab: key }, '', a.href);
+      /* A tab come back to before its neighbour arrived is where the address
+         already is: no second entry for the back button to step through. */
+      if (push && window.history && history.pushState) {
+        if (a.pathname.toLowerCase() === window.location.pathname.toLowerCase()) history.replaceState({ profTab: key }, '', a.href);
+        else history.pushState({ profTab: key }, '', a.href);
+      }
       if (window.scrollY !== y) window.scrollTo(0, y);
       requestAnimationFrame(function () {
         if (n !== turn) return;

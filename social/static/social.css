@@ -769,7 +769,7 @@ body.focus .top { justify-content: center; }
 .gal-tile.is-draft .gal-thumb { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
 .gal-tile.is-draft .gal-by { flex-direction: column; align-items: flex-start; gap: 2px; }
 .gal-tile.is-draft .gal-by b { max-width: 100%; }
-.gal-when { color: var(--ink-2); font-size: 13px; font-weight: 400; line-height: 1.35; }
+.gal-when { color: var(--ink-2); font-size: 13px; font-weight: 400; }
 .gal-dur .ic-draft { width: 11px; height: 11px; }
 
 /* Edit profile's bio: a text field that grows by hand. */

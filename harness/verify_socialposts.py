@@ -1955,7 +1955,7 @@ with sync_playwright() as p:
             own["ground"] = follow(cpg, "/gallery", 1500)
             ready(cpg, "/gallery", gsel)
             cpg.locator(gsel + " .tileMore").tap()
-            own["open"] = (newtab(lambda: cpg.locator('.cardMenu .cmItem:has-text("Open")').tap()), follow(cpg, "/gallery", 600))
+            own["open"] = (newtab(lambda: cpg.locator('.cardMenu .cmItem:has-text("Open")').tap(), ctx), follow(cpg, "/gallery", 600))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
             own["stopped"] = str(exc).splitlines()[0][:160]
         close_ctx(ctx, cpg)
