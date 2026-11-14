@@ -88,6 +88,13 @@
   --pill-on-fill: rgba(124, 92, 255, 0.22);
   --pill-on-ink: #3f27a8;
   --pill-off-ink: #3f4756;
+  /* A GALLERY TILE'S "▶ 15 sec" (the map's step 3, the Gallery mock's B),
+     on the drawing, which wears no theme, so the same in both: the in-post
+     player's own words at rest (inlineplayer.css .is-says, #3a24a8), on its
+     light glass made solid enough to need no blur (82% white). 6.9:1 or
+     more on any drawing under it, black included; 10.3:1 on the paper. */
+  --says-ink: #3a24a8;
+  --says-glass: rgba(255, 255, 255, 0.82);
 }
 
 /* THE THEME: SKRIBL'S ONE CHOICE (Settings, after v330; the owner's "Yes to
@@ -343,11 +350,69 @@ body {
 .fine { margin: 12px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
 .sec { margin: 32px 0 14px; font-size: 20px; font-weight: 700; line-height: 1.3; }
 
-/* ---- Explore -------------------------------------------------------------- */
+/* ---- A page's head: its name and its line (the Gallery's, the rules') ---- */
 .page-head { margin: 4px 0 18px; }
 .page-title { margin: 0 0 4px; font: 700 26px/1.2 var(--font); letter-spacing: -0.015em; }
 .page-sub { margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
 @media (min-width: 900px) { .page-title { font-size: 30px; } }
+
+/* ---- THE GALLERY OF EVERYONE (Explore; the map's step 3) -------------------
+ * The Gallery mock's B, "drawings first", and the owner's "Your picks are
+ * great" (Nov 13), in the site's own tokens. On top, signed in, Home's own
+ * pill (.fo-home); under it New | Hot, the one pill, and the search box as
+ * Skribl's gallery had them (44px, beside each other, the box taking the
+ * rest; a field's own ground and edge, 16px words so a phone does not
+ * magnify the page). Then the tiles: two across on a phone, three on a desk.
+ * A tile is one link: the drawing on its paper, whole (_gallery.html
+ * plate_frame: a 4:3 drawing fills the 650 x 486, another shape sits whole
+ * in its middle), its "▶ 15 sec" at the bottom left, and under it the
+ * maker's face at 22px and first name, the hearts and comments at the right
+ * only when there are some. A change of pick fades the tiles out and back
+ * (explore.js), as Home's pill does its posts. */
+.gal-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0 0 18px; }
+.gal-bar .fo-seg { flex: none; }
+.gal-find { flex: 1 1 220px; min-width: 0; margin: 0; }
+.gal-find input {
+  width: 100%; min-height: 44px; margin: 0; padding: 0 16px; border: 1px solid var(--field-line); border-radius: 12px;
+  background: var(--field); color: var(--ink); font: 16px/1.3 var(--font);
+}
+.gal-find input::placeholder { color: var(--ink-2); opacity: 1; }
+.gal-swap { overflow-anchor: none; transition: opacity 0.2s ease; }
+.gal-swap.is-out { opacity: 0; transition-duration: 0.14s; }
+.gal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; margin-top: 4px; }
+/* The tile's whole box is its link, square-cornered on purpose: a finger on
+   the page's ground just past the drawing's rounded corner still opens it. */
+.gal-tile { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: var(--ink); text-decoration: none; }
+.gal-pic {
+  position: relative; display: grid; place-items: center; aspect-ratio: 650 / 486; overflow: hidden;
+  border-radius: 14px; background: var(--blooby-paper); box-shadow: 0 0 0 1px var(--card-line); container-type: size;
+}
+.gal-plate {
+  position: relative; overflow: hidden; aspect-ratio: var(--plate-a); border-radius: var(--plate-r);
+  width: min(100cqw, 100cqh * var(--plate-a));
+}
+.gal-plate img {
+  position: absolute; left: var(--plate-x); top: var(--plate-y);
+  display: block; width: var(--plate-w); max-width: none; height: auto;
+}
+.gal-dur {
+  position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px;
+  height: 24px; padding: 0 9px 0 7px; border-radius: 12px; background: var(--says-glass);
+  color: var(--says-ink); font: 600 12px/1 var(--font); box-shadow: 0 1px 4px rgba(10, 6, 30, 0.12);
+}
+.gal-dur .ic-tri { width: 9px; height: 9px; }
+.gal-by { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 14px; line-height: 1.3; }
+.gal-by .face-ring { --skribl-face-size: 22px; width: 22px; height: 22px; }
+.gal-by b { min-width: 0; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.gal-n {
+  display: inline-flex; flex: none; align-items: center; gap: 8px; margin-left: auto;
+  color: var(--ink-2); font-size: 13px; font-variant-numeric: tabular-nums;
+}
+.gal-n > span { display: inline-flex; align-items: center; gap: 3px; }
+.gal-n .ic { width: 14px; height: 14px; }
+@media (min-width: 900px) {
+  .gal-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 20px; }
+}
 
 /* ---- MAKE: the sheet with two doors --------------------------------------- */
 /* It glides up from the bottom of a phone; on a desk it is a card in the
@@ -1007,19 +1072,20 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .more-tile { display: flex; flex-direction: column; gap: 4px; min-width: 0; color: var(--ink); text-decoration: none; }
 /* The drawing whole, in its own shape, on the tile's ground: the plate as
    large as the tile allows less 8px each side; the poster behind it placed so
-   only the drawing shows (post.html more_frame: none of the share card's
-   ground, hairline or wordmark). */
+   only the drawing shows (none of the share card's
+   ground, hairline or wordmark): _gallery.html plate_frame, the Gallery's
+   tile's too. */
 .more-pic {
   display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--card-line);
   border-radius: 14px; background: var(--draw-wait); container-type: size;
 }
 .more-plate {
-  position: relative; overflow: hidden; border-radius: 6px; aspect-ratio: var(--more-a);
-  width: min(100cqw - 16px, (100cqh - 16px) * var(--more-a));
+  position: relative; overflow: hidden; border-radius: 6px; aspect-ratio: var(--plate-a);
+  width: min(100cqw - 16px, (100cqh - 16px) * var(--plate-a));
 }
 .more-plate img {
-  position: absolute; left: var(--more-x); top: var(--more-y);
-  display: block; width: var(--more-w); max-width: none; height: auto;
+  position: absolute; left: var(--plate-x); top: var(--plate-y);
+  display: block; width: var(--plate-w); max-width: none; height: auto;
 }
 .more-words { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
 .more-plays { color: var(--ink-2); font-size: 14px; }

@@ -203,6 +203,12 @@
 {{ _svg('<path d="M8.5 6.5v11l9-5.5z" fill="currentColor"/>') }}
 {%- endmacro %}
 
+{# A Gallery tile's ▶ (the map's step 3), small: a triangle that fills its
+   box, as the mock drew it, so at 9px it still reads as play. #}
+{% macro tri() -%}
+<svg class="ic ic-tri" viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M2 1.2v7.6L8.6 5z" fill="currentColor"/></svg>
+{%- endmacro %}
+
 {% macro comment() -%}
 {{ _svg('<path d="M12 4.5c4.4 0 8 3 8 6.8s-3.6 6.8-8 6.8c-1 0-2-.2-2.9-.5L4.5 19.5l1.2-3.6C4.6 14.7 4 13.1 4 11.3 4 7.5 7.6 4.5 12 4.5z"/>') }}
 {%- endmacro %}

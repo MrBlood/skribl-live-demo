@@ -1679,26 +1679,16 @@ row"): the row under every card, the line that waits (`line_waits`), the
 heart in the row and the post page's one ⋯. The notes written for it
 before it was built are in this file's history.
 
-**Notes for step 3, read the code before trusting them:**
-
-- Home's Everyone already holds every drawing: `posts.feed_page` gives the
-  posts and the drawings shown outside a post (`_posts_before`,
-  `_drawings_before`), and `posts.cards` what each card needs (the drawing's
-  `sk` with its line, the likes, the comments). So the Gallery can be that
-  feed drawn as tiles, its Following the same `among`/`authors` Home's
-  Following passes (follows.home_items), and Home leaves the drawings out.
-- New is that feed's order. Hot and search are the open part: today they
-  are Skribl's listing (`list_public_posts`, sort hot = plays counted in the
-  last seven days, `skribl_views`), which lists public drawings only, while
-  a post's drawing is unlisted. The site reaches Skribl only through its
-  public seams (section 1; verify_seam holds it), so the way is a general
-  seam on Skribl's listing for a host's own drawings, not a query of
-  Skribl's tables from the site; a face, or a drawing kept link-only, must
-  never come into the Gallery.
-- Explore's own suites today: verify_socialposts section 12 (every card
-  opens its post: Explore's cards are Skribl's Gallery tiles opening through
-  `set_card_url`), verify_socialmute (Explore leaves the muted out, through
-  the feed filter's `author`), verify_social (the frame), verify_hostseams.
+**Step 3's first part is built** (DECISIONS, "Explore becomes the Gallery
+of everyone"): Explore lists the site's own posts as their drawings
+(`social/gallery.py`: the page at `/social/explore`, and a page of its tiles
+at `/social/explore/more`, JSON, for Load more and a new pick), the tiles the
+mock's B, Following | Everyone on top,
+New, Hot and search under it, and the bar says Gallery. Its Hot is Skribl's
+new seam, `recent_plays()` (docs/INTEGRATION.md, "What is played most, among
+your own posts"). Next is step 3's second part: Home keeps posts only, and
+the drawings shown outside a post stay in their author's Gallery (step 4).
+The notes written for it before it was built are in this file's history.
 
 **The four.** Simple: one thing to share, one card for it, one Gallery
 (everyone's, the people you follow, or one person's), one place for your

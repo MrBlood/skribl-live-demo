@@ -883,7 +883,9 @@ with sync_playwright() as p_:
               flipped == 201 and f_author.get("id") == pid and f_author.get("username") == "priya",
               f"post {flipped}; author {f_author}")
         g = p.ctx.new_page()
-        g.goto(BASE + "/social/explore")
+        # Skribl's Gallery card on the site: her own page's skribls (Explore's
+        # cards were Skribl's until the map's step 3; its tiles are the site's).
+        g.goto(BASE + "/social/@priya")
         try:
             g.wait_for_function("(t) => [...document.querySelectorAll('#skriblGallery .tile')].some(x => x.textContent.includes(t))",
                                 arg="Priya's skribl " + tag, timeout=15000)
@@ -892,7 +894,7 @@ with sync_playwright() as p_:
         card = g.evaluate("""(t) => { const tile = [...document.querySelectorAll('#skriblGallery .tile')].find(x => x.textContent.includes(t));
             return tile ? (tile.querySelector('.tauth') || tile).innerText.replace(/\\s+/g, ' ').trim() : null; }""",
                           "Priya's skribl " + tag)
-        check("and the Gallery's card on the site's Explore says who drew it: their name and @handle",
+        check("and the Gallery's card on the site (their own page's skribls) says who drew it: their name and @handle",
               bool(card) and "Priya Raman" in card and "@priya" in card, str(card))
         g.close()
         sign_out_here(p)

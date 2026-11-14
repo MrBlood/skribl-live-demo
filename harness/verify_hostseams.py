@@ -1199,6 +1199,77 @@ except TypeError as exc:
 check("it is a documented name: set_card_url in skribl.__all__, and init_skribl takes card_url",
       "set_card_url" in skribl.__all__ and callable(getattr(skribl, "set_card_url", None)))
 
+print("\nWHAT IS PLAYED MOST — recent_plays(): the gallery's Hot, for a host's own list (recent_plays)")
+# The Skribl site's Gallery (the map's step 3, Nov 14) lists the site's OWN
+# posts, ranked Hot by plays in the last seven days: the gallery's Hot, which
+# Skribl counts in skribl_views. A host may not query Skribl's tables, so
+# Skribl hands the count over as a subquery the host joins to its own rows
+# (skribl/describing.py, docs/INTEGRATION.md "What is played most, among your
+# own posts"). Asked here as a host asks it: a table of the host's own, one
+# query joining the two, against plays put in the views table at known times.
+from datetime import datetime as _dt, timedelta as _td, timezone as _tz  # noqa: E402
+from skribl.models import SkriblView  # noqa: E402
+
+_hp_app, _hp_db = host_app("plays-host")
+_hp = _hp_app.test_client()
+_hids = [(_hp.post("/api/skribls", json=body(f"played-{k}")).get_json() or {}).get("id") for k in range(5)]
+with _hp_app.app_context():
+    _s = _hp_db.session
+    _rowid = {p: _s.execute(sa.select(SkriblPost.id).where(SkriblPost.public_id == p)).scalar() for p in _hids}
+    _now = _dt.now(_tz.utc)
+
+    def _played(p, days_ago, n):
+        """n plays of skribl p, `days_ago` days ago, each a client of its own."""
+        for k in range(n):
+            at = _now - _td(days=days_ago, minutes=k)
+            _s.add(SkriblView(post_id=_rowid[p], viewer_hash=f"{p}-{days_ago}-{k}", day=at.strftime("%Y-%m-%d"), created_at=at))
+    _played(_hids[0], 1, 3)          # three plays this week
+    _played(_hids[1], 2, 1)          # one this week ...
+    _played(_hids[1], 8, 5)          # ... and five eight days ago, outside the window
+    _played(_hids[2], 6, 2)          # two, six days ago: inside it
+    _s.commit()                      # _hids[3] and _hids[4]: never played
+    _host = sa.Table("host_feed_rows", sa.MetaData(), sa.Column("id", sa.Integer, primary_key=True),
+                     sa.Column("skribl_id", sa.String(32)), sa.Column("made", sa.Integer))
+    _host.create(bind=_s.get_bind(), checkfirst=True)
+    # The host's own rows: every skribl but _hids[4], which this host never posted.
+    _s.execute(_host.insert(), [{"skribl_id": p, "made": k} for k, p in enumerate(_hids[:4])])
+    _s.commit()
+    _views_before = _s.execute(sa.select(sa.func.count(SkriblView.id))).scalar()
+
+    def _ranked(as_of=None):
+        plays = skribl.recent_plays(as_of=as_of) if as_of else skribl.recent_plays()
+        hot = sa.func.coalesce(plays.c.plays, 0)
+        return [tuple(r) for r in _s.execute(sa.select(_host.c.skribl_id, hot).outerjoin(plays, plays.c.skribl_id == _host.c.skribl_id)
+                                             .order_by(hot.desc(), _host.c.made.desc())).all()]
+    _now_rank = _ranked()
+    _then_rank = _ranked(_now - _td(days=7, hours=12))
+    _plain = skribl.recent_plays()
+    _all = {r[0]: r[1] for r in _s.execute(sa.select(_plain.c.skribl_id, _plain.c.plays)).all()}
+    _quiet = not (_s.new or _s.dirty or _s.deleted)
+    _views_after = _s.execute(sa.select(sa.func.count(SkriblView.id))).scalar()
+_listed = {i["id"]: i.get("views_recent") for i in (_hp.get("/api/skribls?sort=hot&limit=50").get_json() or {}).get("items", [])}
+check("(setup) five skribls in a throwaway host, plays put in the views table at known times, and a table of the"
+      " host's own naming four of them", all(_hids) and len(set(_hids)) == 5, str(_hids))
+check("recent_plays() is a subquery a host joins to its own rows: plays in the last seven days, most first (three, two,"
+      " one), five eight days ago counting for nothing, a skribl nobody played 0 (joined outer), the host's own"
+      " order breaking a tie",
+      _now_rank == [(_hids[0], 3), (_hids[2], 2), (_hids[1], 1), (_hids[3], 0)], f"{_now_rank}")
+check("...counted as the gallery's own Hot counts them (GET /api/skribls?sort=hot's views_recent), skribl for skribl",
+      all(_listed.get(p) == n for p, n in ((_hids[0], 3), (_hids[1], 1), (_hids[2], 2), (_hids[3], 0))),
+      f"the gallery {[_listed.get(p) for p in _hids]}")
+check("as_of holds the window's end where a host puts it (a scroll-through's moment): seven and a half days ago, the"
+      " five plays of eight days ago are the window's, and this week's are not",
+      _then_rank[0] == (_hids[1], 5) and all(n == 0 for _, n in _then_rank[1:]), f"{_then_rank}")
+_mine = {p: n for p, n in _all.items() if p in _hids}      # the suite's other sections share the database
+check("it lists only what was played (a row per skribl that has a play in the window, never a 0), and a skribl the"
+      " host holds no row for never comes into the host's list",
+      _mine == {_hids[0]: 3, _hids[1]: 1, _hids[2]: 2} and min(_all.values() or [0]) >= 1
+      and _hids[4] not in [p for p, _ in _now_rank], f"{_mine}; every row {sorted(_all.values())}")
+check("it reads only: nothing added, changed or deleted in the session, the views table as it was",
+      _quiet and _views_before == _views_after, f"quiet {_quiet}; views {_views_before} -> {_views_after}")
+check("it is a documented name: recent_plays in skribl.__all__, its docstring naming as_of",
+      "recent_plays" in skribl.__all__ and "as_of" in (skribl.recent_plays.__doc__ or ""))
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

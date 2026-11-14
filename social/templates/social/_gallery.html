@@ -1,0 +1,66 @@
+{#  THE GALLERY OF EVERYONE, ITS PARTS (the map's step 3; the Gallery mock's
+    B, "drawings first", and the owner's "Your picks are great", Nov 13).
+    gallery.py says who is in it and in what order; explore.js moves it;
+    social.css, "THE GALLERY OF EVERYONE", dresses it.
+
+    gallery_tile(t)     one post, as its drawing: ONE link to the post's page
+                        (where it plays with its line from the start). The
+                        drawing on its paper, whole, in the tile's 650 x 486
+                        (a 4:3 drawing's own shape, so it fills it; another
+                        shape sits whole in the middle), with a small "▶ 15
+                        sec" (a Flip, "▶ 3 pages": what the player's play
+                        button says at rest, without "drawn in"); under it
+                        the maker's face (the empty circle before they draw
+                        one, never an initial) and first name, and the hearts
+                        and comments, each only when there are some. The link
+                        says it all in words to a screen reader.
+    plate_frame(sk)     a drawing cut out of its poster: the share card, the
+                        drawing on a plate on the card's own ground over a
+                        strip with the wordmark, which "reads as an advert
+                        twenty times down a timeline" (lib/sharecard.js). The
+                        plate as lib/sharecard.js drawingRect() places it
+                        (the card 1200 x 630, its area 1092 x 492, the footer
+                        84; its Math.round as x + 0.5 floored), 3 card pixels
+                        in from the plate's hairline, as Skribl's face macro
+                        frames its square: the drawing's shape (--plate-a),
+                        where the poster sits behind it as shares of the plate
+                        (--plate-w, --plate-x, --plate-y), and the plate's own
+                        rounded corner (--plate-r). More from's tile on a
+                        post's page and the Gallery's tile, one rule.
+
+    Import these WITH CONTEXT: they read the page's skribl_bp. #}
+{% from 'social/_post.html' import face with context %}
+{% import 'social/_icons.html' as ic %}
+
+{% macro plate_frame(sk) -%}
+{%- set w = (sk.canvas_w or 0)|int -%}
+{%- set h = (sk.canvas_h or 0)|int -%}
+{%- if not (w > 0 and h > 0 and w <= 8192 and h <= 8192) %}{% set w = 1092 %}{% set h = 492 %}{% endif -%}
+{%- set sc = [1092 / w, 492 / h]|min -%}
+{%- set dw = (w * sc + 0.5)|round(0, 'floor')|int -%}
+{%- set dh = (h * sc + 0.5)|round(0, 'floor')|int -%}
+{%- if [dw, dh]|min < 13 %}{% set dw = 1092 %}{% set dh = 492 %}{% endif -%}
+{%- set x = ((1200 - dw) / 2 + 0.5)|round(0, 'floor')|int + 3 -%}
+{%- set y = ((546 - dh) / 2 + 0.5)|round(0, 'floor')|int + 3 -%}
+{%- set cw = dw - 6 -%}{%- set ch = dh - 6 -%}
+--plate-a: {{ '%.4f'|format(cw / ch) }}; --plate-w: {{ '%.4f'|format(120000 / cw) }}%; --plate-x: {{ '%.4f'|format(-100 * x / cw) }}%; --plate-y: {{ '%.4f'|format(-100 * y / ch) }}%; --plate-r: {{ '%.4f'|format(1500 / cw) }}% / {{ '%.4f'|format(1500 / ch) }}%
+{%- endmacro %}
+
+{% macro gallery_tile(t) -%}
+<a class="gal-tile" href="{{ t.url }}" data-post="{{ t.post }}" data-handle="{{ t.who.handle }}" aria-label="{{ t.label }}">
+  <span class="gal-pic"><span class="gal-plate" style="{{ plate_frame(t.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=t.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
+    <span class="gal-dur">{{ ic.tri() }}{% if t.says %}<span>{{ t.says }}</span>{% endif %}</span></span>
+  <span class="gal-by">{{ face(t.who) }}<b>{{ t.first }}</b>
+    {%- if t.likes or t.comments %}<span class="gal-n">
+    {%- if t.likes %}<span class="gal-likes">{{ ic.heart() }}{{ t.likes }}</span>{% endif %}
+    {%- if t.comments %}<span class="gal-comments">{{ ic.comment() }}{{ t.comments }}</span>{% endif -%}
+    </span>{% endif %}</span>
+</a>
+{%- endmacro %}
+
+{#  What explore.js says ([data-gal-words]): the page's words. #}
+{% macro gallery_words() -%}
+<div class="words" data-gal-words hidden>
+  <span data-word="network">That didn’t reach us. Check your connection and try again.</span>
+</div>
+{%- endmacro %}

@@ -22,6 +22,10 @@
  * back; the page doesn't scroll. Load more then carries on from that page
  * (posts.js: its cursor says which).
  *
+ * THE GALLERY'S PILLS (Following | Everyone and New | Hot) are the one pill
+ * too: their tint is placed and glided here, and explore.js presses them
+ * through window.SocialPill and says what they show.
+ *
  * KIND, NEVER JUMPY: nothing moves but the pill's tint, which glides; the
  * rest fades or draws (social.css, "FOLLOWING"). Under Reduce Motion the
  * tint is put there and the rest only fades.
@@ -92,6 +96,9 @@
     });
     place(seg, false);
   }
+  /* The one pill for another page's own (the Gallery's two: explore.js):
+     choose() presses an option and glides the tint to it. */
+  window.SocialPill = { choose: choose, place: place };
   /* Watched, so a pill in a sheet that ships hidden, a late font or a turned
      phone still has its tint where its option is. */
   Array.prototype.forEach.call(doc.querySelectorAll('.fo-seg'), function (seg) {

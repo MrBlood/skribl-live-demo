@@ -1,17 +1,51 @@
-{#  EXPLORE: Skribl's own Gallery, in the site's frame. The section as
-    /gallery and the stand-in's Skribls page hold it: New and Hot, the search
-    box, the cards with who drew each and when, the ⋯ with Report, Load more.
-    Two macros and nothing else; the site adds a heading and a line. #}
-{% extends 'social/base.html' %}
-{% from 'skribl/_skribl_gallery_section.html' import skribl_gallery_assets, skribl_gallery_section %}
+{#  EXPLORE, THE GALLERY OF EVERYONE (the map's step 3, docs/SOCIAL-SITE.md
+    section 16; the Gallery mock's B and the owner's "Your picks are great",
+    Nov 13). The site lists it itself, from its own posts (gallery.py): every
+    drawing and Flip shared in a post, as drawings, each tile one link to its
+    post. The bar calls it Gallery; its address and Blooby's icon stay.
 
-{% block title %}Explore · Blooby{% endblock %}
-{% block head %}{{ skribl_gallery_assets() }}{% endblock %}
+    ON TOP, signed in, Following | Everyone: Home's own pill (signed out
+    there is none, as on Home), opening on Everyone, as the page's words say.
+    UNDER IT, as Skribl's gallery had them: New | Hot (plays in the last seven
+    days) and the search box (a post's words, its maker's name and @handle).
+    A change glides its pill, fades the tiles, puts the new first page in
+    while they can't be seen and fades them back; the page doesn't scroll,
+    and its address says what is shown (explore.js).
+
+    THE TILES: two across on a phone, three on a desk (_gallery.html,
+    gallery_tile). Load more brings the next page in place. Nothing found says
+    so kindly, in its own words for each way of looking. #}
+{% extends 'social/base.html' %}
+{% from 'social/_gallery.html' import gallery_tile, gallery_words with context %}
+{% from 'social/_follow.html' import gallery_show_pill, gallery_sort_pill with context %}
+
+{% block title %}Gallery · Blooby{% endblock %}
+{% block scripts %}<script src="{{ social_asset('follows.js') }}" defer></script>
+<script src="{{ social_asset('explore.js') }}" defer></script>{% endblock %}
 
 {% block main %}
 <div class="page-head">
-  <h1 class="page-title">Explore</h1>
-  <p class="page-sub">Skribls people chose to show. Tap one to watch it come alive.</p>
+  <h1 class="page-title">Gallery</h1>
+  <p class="page-sub">Everyone’s drawings and Flips. Tap one to watch it come alive.</p>
 </div>
-{{ skribl_gallery_section(bp=skribl_bp, door='app') }}
+{% if me %}{{ gallery_show_pill(show) }}{% endif %}
+<div class="gal-bar">
+  {{ gallery_sort_pill(sort) }}
+  <form class="gal-find" role="search" action="{{ url_for('social.explore') }}" method="get" data-gal-find>
+    {% if show != 'everyone' %}<input type="hidden" name="show" value="{{ show }}">{% endif %}
+    {%- if sort != 'new' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+    <input type="search" name="q" value="{{ q }}" placeholder="Search words and names" aria-label="Search the Gallery"
+           autocomplete="off" maxlength="80" data-gal-q>
+  </form>
+</div>
+<h2 class="sr">Drawings</h2>
+<div class="gal-swap" data-gal-swap{% if more_url %} data-more="{{ more_url }}"{% endif %} data-explore="{{ url_for('social.explore') }}">
+  <div class="gal-grid" data-gal-grid>{% for t in tiles %}{{ gallery_tile(t) }}{% endfor %}</div>
+  <p class="feed-none gal-none" data-gal-none="everyone"{% if tiles or q or show != 'everyone' %} hidden{% endif %}>No drawings here yet. Share one in a post, and it shows up here.</p>
+  <p class="feed-none gal-none" data-gal-none="following"{% if tiles or q or show != 'following' %} hidden{% endif %}>Nobody you follow has shared a drawing yet. Tap Follow on someone’s page, and theirs show up here.</p>
+  <p class="feed-none gal-none" data-gal-none="search"{% if tiles or not q %} hidden{% endif %}>Nothing matches that. Try part of a word or a name.</p>
+  <button class="btn btn-wide feed-more" type="button" data-gal-next="{{ next or '' }}"{% if not next %} hidden{% endif %}>Load more</button>
+</div>
+<p class="say" data-gal-say role="status" hidden></p>
+{{ gallery_words() }}
 {% endblock %}

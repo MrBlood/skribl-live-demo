@@ -854,6 +854,68 @@ check("the site goes through the seam alone: app.py installs it for the site's o
       "skribl.set_card_url(where, app=app)" in _app and 'if request.blueprint != "social":' in _app
       and 'url_for("social.bloob_page", skribl_id="__ID__")' in _app and not _site_writes, f"{_site_writes}")
 
+# ---------------------------------------------------------------------------
+print("\nWHAT IS PLAYED MOST — recent_plays, the gallery's Hot for a host's own list")
+# docs/INTEGRATION.md, "What is played most, among your own posts" (Nov 14,
+# the Skribl site's Gallery of everyone, the map's step 3): plays in the last
+# seven days, as a subquery a host joins to its own posts, so its Hot is one
+# query on its own rows and never a query of Skribl's tables. Pinned as source
+# here; verify_hostseams joins it in a throwaway host, and verify_socialposts
+# section 13 ranks the site's Gallery by it.
+_desc = (ROOT / "skribl" / "describing.py").read_text(encoding="utf-8")
+_rp_fn = next((n for n in ast.parse(_desc).body if isinstance(n, ast.FunctionDef) and n.name == "recent_plays"), None)
+_rp_code = ast.unparse(ast.Module(body=_rp_fn.body[1:], type_ignores=[])) if _rp_fn else ""
+check("recent_plays is exported (skribl.__all__, from describing.py) and reads only: one subquery of the views in"
+      " HOT_DAYS up to as_of, by public id (skribl_id) with their count (plays), running nothing (no session, no"
+      " execute, nothing added, deleted or flushed)",
+      '"recent_plays"' in _init and "from .describing import describe_posts, list_public_posts, recent_plays" in _init
+      and bool(_rp_fn) and [a.arg for a in _rp_fn.args.kwonlyargs] == ["as_of"]
+      and "timedelta(days=HOT_DAYS)" in _rp_code and ".subquery(" in _rp_code
+      and "label('skribl_id')" in _rp_code and "label('plays')" in _rp_code
+      and "SkriblView.created_at >= since" in _rp_code and "SkriblView.created_at <= as_of" in _rp_code
+      and not re.search(r"session\(|\.execute\(|\.add\(|\.delete\(|\.flush\(|\.commit\(", _rp_code), _rp_code[:220])
+check("it is general: nothing in it names a host or a host's rows",
+      bool(_rp_code) and not re.search(r"social|blooby|Person|(?<!Skribl)Post\b", _rp_code), _rp_code[:120])
+_rg = re.search(r"\*\*What is played most, among your own posts\*\*(.*?)\n\*\*", _guide, re.S)
+check("docs/INTEGRATION.md documents it: a subquery joined outer to your own posts, skribl_id and plays, the last seven"
+      " days, as_of held for a scroll-through, and that reading it counts nothing",
+      bool(_rg) and all(w in _rg.group(1) for w in ("recent_plays(", "skribl_id", "plays", "as_of", "seven days", "counts no play"))
+      and re.search(r"\bouter\b", _rg.group(1)) is not None,          # the word, not outerjoin in the sample
+      (_rg.group(1)[:160] if _rg else "no such paragraph"))
+
+
+def _skribl_rows_named(path):
+    """Where a module of the site reaches Skribl's rows itself: Skribl's
+    models by name, their module imported, or one of Skribl's tables named in
+    a string of code (SQL), docstrings aside."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    docs = {id(n.body[0].value) for n in ast.walk(tree)
+            if isinstance(n, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and n.body
+            and isinstance(n.body[0], ast.Expr) and isinstance(n.body[0].value, ast.Constant)
+            and isinstance(n.body[0].value.value, str)}
+    out = []
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Name) and re.fullmatch(r"Skribl[A-Z]\w*", n.id) and n.id not in ("SkriblRejected",
+                                                                                          "SkriblUnavailable", "SkriblNotFound"):
+            out.append(n.id)
+        elif isinstance(n, ast.ImportFrom) and (n.module or "").startswith("skribl.models"):
+            out.append("from " + n.module)
+        elif isinstance(n, ast.Attribute) and n.attr == "models" and isinstance(n.value, ast.Name) and n.value.id == "skribl":
+            out.append("skribl.models")
+        elif (isinstance(n, ast.Constant) and isinstance(n.value, str) and id(n) not in docs
+              and re.search(r"\bskribl_(views|posts|reports|post_media|drafts|rate_events|idempotency)\b", n.value)):
+            out.append(repr(n.value[:40]))
+    return out
+
+
+_site_rows = {str(f.relative_to(ROOT)): _skribl_rows_named(f) for f in sorted((ROOT / "social").rglob("*.py"))}
+_gal_code = source.read_py(ROOT / "social" / "gallery.py")
+check("the site goes through the seam alone: no module of social/ reaches Skribl's rows itself (its models, their"
+      " module, its tables in SQL), and the Gallery's Hot is recent_plays(), joined outer to the site's own posts",
+      len(_site_rows) >= 10 and not any(_site_rows.values()) and "from skribl import recent_plays" in _gal_code
+      and "recent_plays(as_of=as_of)" in _gal_code and "outerjoin(plays, plays.c.skribl_id == Post.skribl_id)" in _gal_code,
+      f"{ {k: v for k, v in _site_rows.items() if v} }")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

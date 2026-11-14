@@ -13,7 +13,9 @@ the left of a desk, and three things to do there:
                         draws his card, "Drawings that draw themselves", Make a
                         skribl and Look around, and the newest public skribls
                         under it.
-    /social/explore     Explore: Skribl's own Gallery, New and Hot.
+    /social/explore     Explore, the Gallery of everyone (since the map's step
+                        3, gallery.py): the site's own posts as their
+                        drawings, Following | Everyone, New and Hot, a search.
     Make                a small sheet with two doors, Draw into Skribl's Pad
                         and Flip into Skribl's Flip, from the bar, the rail or
                         Home's button. It is not a page.
@@ -145,7 +147,7 @@ def hidden_authors(viewer_id):
 def muted_authors(viewer_id):
     """For the host's feed filter (docs/SOCIAL-SITE.md "Built: mutes"): the
     public ids of everybody `viewer_id` muted, which a listing of
-    everybody's leaves out (Explore's gallery, Home's drawings) and a listing
+    everybody's leaves out (the first visit's gallery, Home's drawings) and a listing
     of one person's own keeps (their page's skribls): what comes to you goes
     quiet, and what you go to stays. Never for the visibility policy: a mute
     hides no page. Empty where the site is not running."""
@@ -286,12 +288,19 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
 
     @bp.get("/explore")
     def explore():
-        """Explore: Skribl's own Gallery section, in the site's frame."""
-        return render_template("social/explore.html", here="explore")
+        """Explore, the Gallery of everyone (gallery.py): the site's own posts
+        as their drawings. Without accounts there are no posts: its page, empty."""
+        if site is not None:
+            from . import gallery
+            return gallery.explore_page()
+        return render_template("social/explore.html", here="explore", tiles=[], next=None,
+                               show="everyone", sort="new", q="", more_url=None)
 
     if site is not None:
-        from . import accounts, activity, comments, follows, likes, mutes, posts, profiles, reports, rules, safety
+        from . import (accounts, activity, comments, follows, gallery, likes, mutes, posts, profiles, reports,
+                       rules, safety)
         accounts.register(bp)
+        gallery.register(bp)
         profiles.register(bp, skribl_blueprint)
         posts.register(bp, skribl_blueprint)
         comments.register(bp)

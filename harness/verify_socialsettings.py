@@ -1055,8 +1055,8 @@ with sync_playwright() as p:
                   " to Settings), lit like Home where it leads (Settings, Invites, deleting the account: the page's"
                   " mark, its name bold, the pen's line under it) and only there, You lit there too",
                   not bad and len(rails) == 2 * len(pages), "; ".join(bad)[:1600] or f"{len(rails)} rails read")
-            check("a phone's bar keeps its four places (Home, Explore, Make, You) on every one of those pages: no"
-                  " Settings in it", all(v == ["Home", "Explore", "Make", "You"] for v in bars.values()) and len(bars) == len(pages),
+            check("a phone's bar keeps its four places (Home, Gallery, Make, You) on every one of those pages: no"
+                  " Settings in it", all(v == ["Home", "Gallery", "Make", "You"] for v in bars.values()) and len(bars) == len(pages),
                   json.dumps(bars))
         except Exception as exc:  # noqa: BLE001
             stopped(6, exc)
@@ -1075,12 +1075,12 @@ with sync_playwright() as p:
                             settings: [...document.querySelectorAll('a[href$="/social/you"]')].filter(a => a.getClientRects().length).length,
                             places: [...document.querySelectorAll('nav.nav > a, nav.nav > button')].filter(e => e.getClientRects().length && !e.classList.contains('brand'))
                                      .map(e => (e.querySelector('.tab-name') || e).textContent.trim()) })""")
-                        outs.append((not seen["switch"] and seen["settings"] == 0 and seen["places"] == ["Home", "Explore", "Make", "Sign in"]
+                        outs.append((not seen["switch"] and seen["settings"] == 0 and seen["places"] == ["Home", "Gallery", "Make", "Sign in"]
                                      and st["stamp"] == scheme and st["page"] == PAGE_RGB[scheme],
                                      f"{screen} {scheme} {path}: {seen}, {st['stamp']} {st['page']}"))
                     close_ctx(ctx, pg)
             check("signed out the site shows nothing new: no Theme switch and no way to Settings anywhere, the bar and"
-                  " the rail as they were (Home, Explore, Make, Sign in), and the device decides",
+                  " the rail as they were (Home, Gallery, Make, Sign in), and the device decides",
                   all(o for o, _ in outs), "; ".join(w for o, w in outs if not o) or f"{len(outs)} pages")
             ctx, pg = browser_as(b, None, "phone", "light", theme=None)
             go(pg, "/social/")

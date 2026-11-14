@@ -32,11 +32,14 @@ mock (Nov 13): C, quiet everywhere, and rule 3, mute and follow kept apart.
      "Theo is muted. You still follow them.", nothing changes on their side
      (their own "Followed by…"), their posts out of Following until unmute;
      unfollowing never unmutes.
-  6. HOME AND EXPLORE: their posts and drawings leave Home, Everyone and
-     Following, in the query (every page whole, walked with Load more);
-     Explore's listing (New, Hot, a search) leaves out their drawings; their
-     page's listing, their drawing's page, its link page and its payload stay
-     open: a mute hides no page.
+  6. HOME AND THE GALLERY: their posts and drawings leave Home, Everyone and
+     Following, in the query (every page whole, walked with Load more); the
+     Gallery of everyone (Explore, since the map's step 3) leaves out their
+     posts, Everyone and Following, New, Hot and a search, in its own query
+     (every page whole); Skribl's own listing (its /gallery's, the first
+     visit's) leaves out their drawings; their page's listing, their
+     drawing's page, its link page and its payload stay open: a mute hides
+     no page.
   7. THE FOLD: their comment or answer is one quiet line, "Someone you
      muted said something. Show" ("… answered."), the eye where their face
      was and the words where names start; hidden for real; the answers under
@@ -1486,7 +1489,7 @@ with sync_playwright() as p:
             stopped(5, exc)
 
     # ------------------------------------------------------------------ 6
-    if part(6, "Home and Explore: their posts and drawings leave, in the query; Explore's listing; what you go to stays open"):
+    if part(6, "Home and the Gallery: their posts and drawings leave, in the query; Skribl's listing; what you go to stays open"):
         try:
             nat = someone(b, "nat", "Nat Quinn")
             ozz = someone(b, "ozz", "Ozz Ray")
@@ -1532,13 +1535,49 @@ with sync_playwright() as p:
                   f"{len(f_all)} cards over {f_sizes}; Ozz's {sum(h == 'ozz' for h, _ in f_all)}, Pia's"
                   f" {sum(h == 'pia' for h, _ in f_all)}")
 
+            # THE GALLERY OF EVERYONE (Explore): their posts out of Everyone and
+            # Following alike, New, Hot and a search, in its own query, so every
+            # page but the last is whole; walked with Load more against Qin's.
+            def gallery(c, show, sort="new", q=""):
+                """The Gallery walked with Load more: [(handle, post)] and each page's size."""
+                qs = f"show={show}&sort={sort}" + ("&q=" + urllib.parse.quote(q) if q else "")
+                c.get("/social/explore")
+                _, j = c.get_json("/social/explore/more?" + qs)
+                seen, sizes = [], []
+                while isinstance(j, dict):
+                    got = re.findall(r'<a class="gal-tile" href="/social/p/([^"]+)"[^>]*data-handle="([^"]+)"', j.get("html", ""))
+                    seen += [(h, pid) for pid, h in got]
+                    sizes.append(len(got))
+                    if not j.get("next") or len(sizes) > 30:
+                        break
+                    _, j = c.get_json("/social/explore/more?" + qs + "&before=" + urllib.parse.quote(j["next"]))
+                return seen, sizes
+            for i in range(3):      # past a page of the Gallery's 24 for Nat, with this section alone
+                make_post(pia, f"Section 6, Pia's more {i}", seed=50 + i)
+            g = {(who, show, sort, q): gallery(cl, show, sort, q) for who, cl in (("nat", nat.client()), ("qin", qin.client()))
+                 for show, sort, q in (("everyone", "new", ""), ("everyone", "hot", ""), ("everyone", "new", "Section 6"),
+                                       ("following", "new", ""))}
+            ok_g = all(not any(h == "ozz" for h, _ in g[("nat",) + k][0]) for k in
+                       (("everyone", "new", ""), ("everyone", "hot", ""), ("everyone", "new", "Section 6"), ("following", "new", "")))
+            ok_q = all(any(h == "ozz" for h, _ in g[("qin",) + k][0]) for k in
+                       (("everyone", "new", ""), ("everyone", "hot", ""), ("everyone", "new", "Section 6")))
+            n_new, q_new = g[("nat", "everyone", "new", "")], g[("qin", "everyone", "new", "")]
+            check("the Gallery of everyone (Explore) leaves out every post of somebody you muted, in its own query:"
+                  " Everyone and Following (though Nat follows them), New, Hot and a search alike; walked to its end it"
+                  " is everybody else's in the order somebody who muted nobody sees, every page but the last whole",
+                  ok_g and ok_q and n_new[0] == [x for x in q_new[0] if x[0] != "ozz"]
+                  and all(n == 24 for n in n_new[1][:-1]) and len(n_new[1]) >= 2
+                  and any(h == "pia" for h, _ in g[("nat", "following", "new", "")][0]),
+                  json.dumps({f"{k[0]} {k[1]} {k[2]} {k[3] or '-'}": [len(v[0]), sum(h == "ozz" for h, _ in v[0]), v[1]]
+                              for k, v in g.items()}))
+
             def listing(c, query):
                 st, j = c.get_json("/api/skribls?limit=100" + query)
                 return st, [i["id"] for i in (j.get("items") if isinstance(j, dict) else [])]
             nc, qc = nat.client(), qin.client()
             got = {q: (listing(nc, q), listing(qc, q)) for q in ("", "&sort=hot", "&q=" + urllib.parse.quote("ozz drawing"))}
-            check("Explore's listing (Skribl's own, through the feed filter the host installs) leaves out their drawings,"
-                  " New, Hot and a search alike, for Nat alone: Qin, who muted nobody, sees them",
+            check("Skribl's own listing (its /gallery's and the first visit's, through the feed filter the host installs)"
+                  " leaves out their drawings, New, Hot and a search alike, for Nat alone: Qin, who muted nobody, sees them",
                   all(st == 200 and not set(o_draws) & set(ids) for (st, ids), _ in got.values())
                   and all(set(o_draws) <= set(ids) for _, (_, ids) in got.values()),
                   json.dumps({q or "new": [len(set(o_draws) & set(a[1])), len(set(o_draws) & set(b_[1]))]

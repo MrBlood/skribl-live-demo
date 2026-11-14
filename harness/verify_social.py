@@ -13,8 +13,9 @@ what it promises, through the demo's own server:
      and left out, the demo's own pages answering either way. At the top of
      its own domain (SKRIBL_SOCIAL_HOME_HOSTS) it opens the site's Home,
      while the demo's name keeps the Pad.
-  2. THE BAR AND THE RAIL: on a touch phone the bar holds Home, Explore,
-     Make and Sign in (You once signed in, piece 2: verify_socialauth), and
+  2. THE BAR AND THE RAIL: on a touch phone the bar holds Home, Gallery
+     (Explore's place, its name since the map's step 3), Make and Sign in
+     (You once signed in, piece 2: verify_socialauth), and
      on a desk the rail holds the wordmark and the same four; the
      page you are on carries the pen's line (painted, not merely there);
      every target is 44px or more; nothing of the frame covers the page; and
@@ -29,7 +30,10 @@ what it promises, through the demo's own server:
   4. THE FIRST VISIT: Blooby's card plays in Skribl's real player, ink
      appearing over time; under Reduce Motion it rests, finished; and the
      newest public skribls are under it (one is posted through the API).
-  5. EXPLORE holds Skribl's own Gallery section, and a card in it plays.
+  5. EXPLORE IS THE GALLERY OF EVERYONE (the map's step 3): the site's own
+     page, its head saying Gallery, New | Hot and the search box (16px),
+     signed out no Following | Everyone (Home has none), and none of
+     Skribl's Gallery section (its tiles are verify_socialposts' 13).
   6. EVERY WORD OF THE SITE'S OWN reads at 4.5:1 or more on what is painted
      behind it: phone and desk, light and dark, the Make sheet included.
   7. NO PAGE ERRORS AND NO CSP ERRORS on the site's pages, Make and the
@@ -40,9 +44,10 @@ what it promises, through the demo's own server:
      with their exceptions, since piece 3's faces); its templates reach only
      the Skribl partials docs/INTEGRATION.md documents (the face player's
      among them since piece 3); and every Skribl file it names is there.
-  9. THE EMPTY GALLERY'S WORDS: the site's Home and Explore name the tick on
-     the Pad's own Post sheet, and the Library (the site's Make opens
-     Skribl's own editors), not a host composer's.
+  9. THE EMPTY GALLERY'S WORDS: the site's Home names the tick on the Pad's
+     own Post sheet, and the Library (the site's Make opens Skribl's own
+     editors), not a host composer's; Explore, the site's own Gallery of
+     posts, says that a post puts a drawing there.
 
 SOCIAL_PART=<n> runs one section (calibration). Every row was shown red by
 breaking one part of the site and green as built: DECISIONS.md, "The site's
@@ -110,7 +115,13 @@ APP = r"""
 import json, sys
 {prelude}
 from flask import url_for
-from app import app
+from app import app, db
+# The tables every server of the demo has (bootstrap.sh and run_harness.sh
+# make them; a deploy runs the site's chain): the Gallery of everyone (the
+# map's step 3) reads the site's own posts, and without its tables the site
+# rests (503), kindly, as each of its pages that reads them does.
+with app.app_context():
+    db.create_all()
 c = app.test_client()
 with app.test_request_context():
     pad, flip = url_for("skribl.skribl_editor"), url_for("skribl.skribl_flip")
@@ -377,9 +388,10 @@ with sync_playwright() as p:
     if part(2, "the bar on a phone, the rail on a desk"):
         seen, twice, drawn = {}, {}, {}
         # Home drawn in our pen (the owner's "all yes" after v330), filled on
-        # its own page; Explore is Blooby holding up a bloob (the owner's pick,
-        # Nov 12), drawn in the bar's colour away and lit up in his colours on
-        # Explore: his body's paint read, and his purple against the bar.
+        # its own page; the Gallery's icon is Explore's, Blooby holding up a
+        # bloob (the owner's pick, Nov 12; kept when the bar came to say
+        # Gallery), drawn in the bar's colour away and lit up in his colours
+        # on his own page: his body's paint read, and his purple against the bar.
         DRAWN = r"""() => { const rgba = s => (s.match(/[\d.]+/g) || []).map(Number);
           const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
             return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
@@ -411,7 +423,7 @@ with sync_playwright() as p:
                 pg.wait_for_timeout(500)
                 items = pg.evaluate(BAR)
                 pens = {name: pg.evaluate(PEN, f'nav.nav a[href$="{href}"] .pen-line')
-                        for name, href in (("Home", "/social/"), ("Explore", "/social/explore"))}
+                        for name, href in (("Home", "/social/"), ("Gallery", "/social/explore"))}
                 top = pg.evaluate("() => { const a = document.querySelector('body > .top .brand'); if (!a || !a.getClientRects().length) return null;"
                                   " const r = a.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }")
                 seen[(screen, page)] = (items, pens, top)
@@ -436,12 +448,12 @@ with sync_playwright() as p:
         ph, dk = names("phone", "home"), names("desk", "home")
         # Signed out, You's place says Sign in (piece 2, as the approved mock
         # has it); You itself, signed in, is verify_socialauth's to hold.
-        check("on a touch phone the bar holds Home, Explore, Make and Sign in, and nothing else (You's place,"
+        check("on a touch phone the bar holds Home, Gallery, Make and Sign in, and nothing else (You's place,"
               " before sign-in)",
-              ph == ["Home", "Explore", "Make", "Sign in"] and seen[("phone", "home")][2] is not None,
+              ph == ["Home", "Gallery", "Make", "Sign in"] and seen[("phone", "home")][2] is not None,
               f"the bar {ph}; the wordmark at the top {seen[('phone', 'home')][2]}")
-        check("on a desk the rail holds the wordmark, Home, Explore, Make and Sign in, and nothing else",
-              dk == ["Blooby, home", "Home", "Explore", "Make", "Sign in"] and seen[("desk", "home")][2] is None,
+        check("on a desk the rail holds the wordmark, Home, Gallery, Make and Sign in, and nothing else",
+              dk == ["Blooby, home", "Home", "Gallery", "Make", "Sign in"] and seen[("desk", "home")][2] is None,
               f"the rail {dk}; the phone's wordmark {seen[('desk', 'home')][2]}")
         # THE WORDMARK IS blooby. (the owner, Nov 12: the name, then "i
         # actually like the blooby blush period"): the word in the site's
@@ -493,14 +505,14 @@ with sync_playwright() as p:
               "; ".join(f"{k[0]} {k[1]}: {json.dumps(m)}" for k, (m, _) in mark.items())[:1600])
         marks = []
         for screen in ("phone", "desk"):
-            for page, here in (("home", "Home"), ("explore", "Explore")):
+            for page, here in (("home", "Home"), ("explore", "Gallery")):
                 items, pens, _ = seen[(screen, page)]
                 cur = [i["name"] for i in items if i["current"] == "page"]
                 lines = {n: v["painted"] for n, v in pens.items()}
                 ok = cur == [here] and lines[here] and not any(v for n, v in lines.items() if n != here)
                 marks.append((ok, f"{screen} {page}: current {cur}, pen's line painted {lines}"))
         check("the page you are on is marked, and only it: aria-current and the pen's line painted under its name"
-              " (phone and desk, Home and Explore)", all(m[0] for m in marks), "; ".join(m[1] for m in marks))
+              " (phone and desk, Home and the Gallery)", all(m[0] for m in marks), "; ".join(m[1] for m in marks))
         small = [f"{s} {i['name']} {i['w']}x{i['h']}" for s in ("phone", "desk") for pg_ in ("home", "explore")
                  for i in seen[(s, pg_)][0] if i["w"] < 44 or i["h"] < 44]
         top = seen[("phone", "home")][2]
@@ -522,9 +534,9 @@ with sync_playwright() as p:
         pens_ok = [f"{s} {pg_}: {v}" for (s, pg_), v in drawn.items()
                    if not (v["Home"]["pen"] and v["Explore"]["pen"] and v["Explore"].get("blooby")
                            and v["Home"]["filled"] == (pg_ == "home") and blooby_ok(v["Explore"], pg_ == "explore"))]
-        check("Home is drawn in our pen and fills on its own page; Explore is Blooby holding up a bloob, drawn in the"
-              " bar's colour away and lit up in his colours on Explore (his purple the wordmark's, 3:1 or more on the"
-              " bar): phone and desk, and the dark bar",
+        check("Home is drawn in our pen and fills on its own page; the Gallery's icon is Explore's, Blooby holding up a"
+              " bloob, drawn in the bar's colour away and lit up in his colours on his own page (his purple the"
+              " wordmark's, 3:1 or more on the bar): phone and desk, and the dark bar",
               len(drawn) == 6 and not pens_ok,
               f"wrong: {pens_ok}; read {json.dumps({f'{k[0]} {k[1]}': v for k, v in drawn.items()})[:300]}")
         dup = {f"{s} {pg_}": v for (s, pg_), v in twice.items() if v}
@@ -831,40 +843,38 @@ with sync_playwright() as p:
         c.close()
 
     # ------------------------------------------------------------------ 5
-    if part(5, "Explore holds Skribl's own Gallery, and a card plays"):
-        sid = post_public(TAG + " to explore", "Posted by verify_social, to be played on Explore.")
+    # EXPLORE IS THE GALLERY OF EVERYONE (the map's step 3; the Gallery mock's
+    # B, "Your picks are great"): the site lists it itself, from its own
+    # posts, so Skribl's Gallery section is no longer on it. Signed out, as
+    # Home signed out, there is no Following | Everyone; New | Hot and the
+    # search box are under the head as Skribl's gallery had them. Its tiles,
+    # their order and a tap on one are verify_socialposts' (section 13).
+    if part(5, "Explore is the Gallery of everyone: the site's own page, its head, New | Hot and the search box"):
         c = b.new_context(**PHONE)
         pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(f"explore: {e}"))
         pg.goto(SITE + "/explore")
-        try:
-            pg.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"]')",
-                                 arg=sid, timeout=20000)
-        except Exception:
-            pass                           # the rows below say what is there instead
-        sec = pg.evaluate("""() => { const s = document.getElementById('skriblGallery');
-            return { section: !!s && s.hasAttribute('data-skribl-gallery'), sorts: [...(s ? s.querySelectorAll('[data-sort]') : [])].map(t => t.textContent.trim()),
-                     search: !!document.getElementById('galleryQ'), sheet: !!document.getElementById('reportSheet'),
-                     title: (document.querySelector('.page-title') || {}).textContent }; }""")
-        check("Explore holds Skribl's own Gallery section: New and Hot, the search box, the report sheet",
-              sec["section"] and sec["sorts"] == ["New", "Hot"] and sec["search"] and sec["sheet"]
-              and sec["title"] == "Explore", json.dumps(sec))
-        box = f'#galleryList > article.tile[data-id="{sid}"] [data-skribl-inline]'
-        try:
-            pg.click(box, timeout=5000)
-        except Exception:
-            pass                           # no card to press: the row below reads nothing playing
-        reads = []
-        for _ in range(4):
-            pg.wait_for_timeout(450)
-            reads.append(pg.evaluate("""(sel) => { const e = document.querySelector(sel), p = e && e._skriblInline, c = e && e.querySelector('canvas');
-                if (!p || !c || c.hidden || !c.width) return null; const s = p.state();
-                const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0;
-                for (let i = 0; i < d.length; i += 16) if (d[i] > 90 && d[i + 2] > 180) n++;
-                return { state: s.state, at: Math.round(s.elapsedMs), ink: n }; }""", box))
-        ok = all(reads) and all(r["state"] == "playing" for r in reads[:2]) and reads[1]["at"] > reads[0]["at"] \
-            and max(r["ink"] for r in reads) > reads[0]["ink"]
-        check("a card there plays when tapped: its clock runs and its ink comes in", ok, json.dumps(reads))
+        pg.wait_for_timeout(600)
+        sec = pg.evaluate("""() => { const q = document.querySelector('[data-gal-q]'), r = q && q.getBoundingClientRect();
+            const sort = document.querySelector('[data-gal-sort]');
+            return { title: document.title, head: (document.querySelector('.page-title') || {}).textContent,
+                     sub: (document.querySelector('.page-sub') || {}).textContent,
+                     skribls: !!document.getElementById('skriblGallery') || !!document.querySelector('[data-skribl-gallery]')
+                              || [...document.querySelectorAll('link[rel=stylesheet]')].some(l => /gallerysection[.]css/.test(l.href)),
+                     show: !!document.querySelector('[data-gal-show]'),
+                     sorts: sort ? [...sort.querySelectorAll('button')].map(b => [b.textContent.trim(), b.getAttribute('aria-pressed'), b.title]) : null,
+                     box: q ? [q.type, q.getAttribute('aria-label'), q.placeholder, parseFloat(getComputedStyle(q).fontSize), Math.round(r.height)] : null,
+                     grid: !!document.querySelector('[data-gal-grid]') }; }""")
+        check("Explore is the Gallery of everyone, the site's own page: its head says Gallery and \"Everyone's drawings"
+              " and Flips. Tap one to watch it come alive.\"; signed out, no Following | Everyone (as Home has none);"
+              " New | Hot under it (New pressed, their tips Skribl's gallery's) and the search box (16px or more, 44px"
+              " tall); and nothing of Skribl's Gallery section on it",
+              sec["title"] == "Gallery · Blooby" and sec["head"] == "Gallery"
+              and sec["sub"] == "Everyone’s drawings and Flips. Tap one to watch it come alive."
+              and not sec["skribls"] and not sec["show"] and sec["grid"]
+              and sec["sorts"] == [["New", "true", "Newest first"], ["Hot", "false", "Most played in the last seven days"]]
+              and bool(sec["box"]) and sec["box"][:3] == ["search", "Search the Gallery", "Search words and names"]
+              and sec["box"][3] >= 16 and sec["box"][4] >= 44, json.dumps(sec))
         c.close()
 
     # ------------------------------------------------------------------ 6
@@ -1040,11 +1050,21 @@ with sync_playwright() as p:
         pad_page = _fetch(BASE + "/")
         tick = re.search(r'<span class="post-check-text">([^<]*)<span class="post-check-sub"', pad_page)
         tick = _html.unescape(tick.group(1)).strip() if tick else None
-        said = {path: _empty_words(SITE + path) for path in ("/", "/explore")}
-        check("the empty Gallery on the site's Home and Explore names the tick on the Pad's Post sheet,"
-              " and the Library",
+        said = {path: _empty_words(SITE + path) for path in ("/",)}
+        check("the empty Gallery on the site's Home names the tick on the Pad's Post sheet, and the Library",
               bool(tick) and all(w == tick and lib for w, lib in said.values()),
               f"the Pad's tick {tick!r}; " + "; ".join(f"{p}: {w!r}, Library {lib}" for p, (w, lib) in said.items()))
+        # EXPLORE, THE SITE'S OWN GALLERY OF POSTS (the map's step 3): every
+        # post's drawing is in it, ticked or not, so its empty words name no
+        # tick: a post puts a drawing there. Shown when it holds no tile.
+        page = _fetch(SITE + "/explore")
+        m = re.search(r'<p class="feed-none gal-none" data-gal-none="everyone"( hidden)?>(.*?)</p>', page, re.S)
+        tiles = len(re.findall(r'<a class="gal-tile"', page))
+        check("the empty Gallery of everyone (Explore) says a post puts a drawing there, and names no tick; shown"
+              " when it holds no tile",
+              bool(m) and _html.unescape(m.group(2)).strip() == "No drawings here yet. Share one in a post, and it shows up here."
+              and "gallery" not in m.group(2).lower() and bool(m.group(1)) == (tiles > 0),
+              f"{(m.group(2) if m else None)!r}; hidden {bool(m and m.group(1))}; tiles {tiles}")
 
     check("no page errors on the site's pages", not errs, "; ".join(errs[:2]))
     b.close()

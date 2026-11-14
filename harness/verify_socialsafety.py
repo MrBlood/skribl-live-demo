@@ -18,9 +18,11 @@ authenticator for the site's people.
      drawing's page; the blocker's Home says so; the blocker finds the
      profile saying so, with Unblock; the one blocked meets nobody; and a
      follow between them ends, both ways, and cannot begin again (follows).
-  5. AND ON SKRIBL'S OWN PAGES: Explore's listing, a profile's skribls, a
-     drawing's link page, its payload and its card; anybody else, and the
-     author, as before.
+  5. AND ON SKRIBL'S OWN PAGES: its listing (/gallery's, the first visit's),
+     a profile's skribls, a drawing's link page, its payload and its card;
+     anybody else, and the author, as before. (The site's own Gallery of
+     everyone, Explore since the map's step 3, leaves a blocked person out in
+     its own query: section 4; a post or a person taken down: 11 and 12.)
   6. UNBLOCK: Settings lists the people you blocked, newest first, each with
      Unblock, which comes back saying so; only the blocker lifts a block.
   7. BLOCK GUARDS, and deleting an account: its blocks go, the reports that
@@ -422,13 +424,14 @@ def pad(who, title, vis="public", seed=0, card=False):
     return who.pg.evaluate(PAD, [title, vis, seed, card])
 
 
-def explore_report(b, public_id, reason, note=None):
-    """A report sent the way a signed-out visitor sends one from Explore's
-    tiles or a drawing's link page: through Skribl's own report route, into
-    Skribl's queue (not the site's). Its HTTP status."""
+def skribl_report(b, public_id, reason, note=None):
+    """A report sent the way a signed-out visitor sends one from a Gallery
+    tile of Skribl's (the first visit's, a profile's skribls) or a drawing's
+    link page: through Skribl's own report route, into Skribl's queue (not
+    the site's). Its HTTP status."""
     ctx, pg = browser_as(b, None)
     try:
-        pg.goto(BASE + "/social/explore")
+        pg.goto(BASE + "/social/")
         pg.wait_for_timeout(500)
         return pg.evaluate("""async ([id, reason, note]) => { await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
           const tok = decodeURIComponent((document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '');
@@ -443,6 +446,25 @@ def home(pg):
     pg.goto(BASE + "/social/")
     pg.wait_for_timeout(600)
     return pg.evaluate(CARDS)
+
+
+def gallery_of(c, sort="new", key="handle"):
+    """The Gallery of everyone (Explore) walked to its end with Load more, as
+    `c` (a Client) sees it: each tile's maker's handle, or its post (key
+    "post"), in order."""
+    out, nxt = [], None
+    for _ in range(40):
+        _, text = c._req("GET", "/social/explore/more?sort=" + sort + ("&before=" + urllib.parse.quote(nxt) if nxt else ""))
+        try:
+            j = json.loads(text)
+        except ValueError:
+            break
+        for pid, h in re.findall(r'<a class="gal-tile" href="/social/p/([^"]+)"[^>]*data-handle="([^"]+)"', j.get("html", "")):
+            out.append(h if key == "handle" else pid)
+        nxt = j.get("next")
+        if not nxt:
+            break
+    return out
 
 
 def on_home(pg, post):
@@ -700,6 +722,13 @@ with sync_playwright() as p:
                             "ben at ada's drawing": 404, "ben at ada's profile": 404}
               and nobody.startswith("Nobody here"),
               f"before {before}; after {after}; pages {pages}; title {nobody!r}")
+        gal = {"ada": gallery_of(ada.client()), "ben": gallery_of(ben.client()), "ada hot": gallery_of(ada.client(), "hot"),
+               "ben hot": gallery_of(ben.client(), "hot"), "signed out": gallery_of(Client())}
+        check("...and the Gallery of everyone (Explore) leaves the other out, both ways, New and Hot alike, in its own"
+              " query, while somebody else sees both",
+              "ben" not in gal["ada"] and "ada" not in gal["ben"] and "ben" not in gal["ada hot"]
+              and "ada" not in gal["ben hot"] and {"ada", "ben"} <= set(gal["signed out"]),
+              json.dumps({k: [v.count("ada"), v.count("ben"), len(v)] for k, v in gal.items()}))
         cyd = someone(b, "cyd", "Cyd Mbeki")
         st5, j5 = make_post(ben, "Section 4, Ben again", seed=45)
         cpg = cyd.pg
@@ -762,7 +791,7 @@ with sync_playwright() as p:
         n_list = [i["id"] for i in (api(npg, "/api/skribls?limit=100")[1] or {}).get("items", [])]
         n_page = status(npg, f"/s/{ben_d}")
         close_ctx(nctx, npg)
-        check("on Skribl's own pages too: Explore's listing and a profile's skribls leave out the other's drawings, both"
+        check("on Skribl's own pages too: its listing (/gallery's, the first visit's) and a profile's skribls leave out the other's drawings, both"
               " ways, in the listing's own query (the feed filter: Skribl never has to drop and refill a page); their link"
               " page and payload are not there for them (404) and their card is the blank canvas; the author still has"
               " their own, card and all",
@@ -882,7 +911,7 @@ with sync_playwright() as p:
         st, d1 = pad(joy, "Section 8, reported for spam", "public", 81)
         st2, d2 = pad(joy, "Section 8, reported for a child's safety", "public", 82)
         nctx, npg = browser_as(b, None)
-        npg.goto(BASE + "/social/explore")
+        npg.goto(BASE + "/social/")
         npg.wait_for_timeout(1200)
         gal = npg.evaluate(REASONS, "#reportSheet")
         rep = npg.evaluate("""async ([a, b2]) => { await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
@@ -896,7 +925,7 @@ with sync_playwright() as p:
         lines = [ln for ln in q.stdout.splitlines() if ln.startswith("  ")]
         order = [ln.split()[0] for ln in lines if ln.strip().split()[0] in (d1, d2)]
         law = [ln for ln in lines if "CHILD'S SAFETY" in ln]
-        check("Explore's own report sheet (Skribl's) offers A child's safety among its reasons; its route takes it; and"
+        check("the Gallery section's own report sheet (Skribl's, on the first visit) offers A child's safety among its reasons; its route takes it; and"
               " the operator's queue lists a child's safety first, before a drawing reported more often, with a word"
               " about the law",
               ["child_safety", "A child's safety"] in gal and rep == [202, 202, 202] and q.returncode == 0
@@ -977,7 +1006,7 @@ with sync_playwright() as p:
         # The oldest first: a child's safety must lead the page for its reason,
         # not for being the newest.
         sent = [oc.post_json("/social/report", {"kind": "drawing", "target": lee_d, "reason": "child_safety"})[0]]
-        sent.append(explore_report(b, lee_d, "spam", "From Explore"))
+        sent.append(skribl_report(b, lee_d, "spam", "From a Gallery card"))
         nc = Client()
         nc.get(f"/social/p/{lee_post}")         # a post's page carries the page's token for anybody
         sent.append(nc.post_json("/social/report", {"kind": "post", "target": lee_post, "reason": "abuse"})[0])
@@ -1014,8 +1043,8 @@ with sync_playwright() as p:
               and panel == "3 open. You run this site, so reports come to you.",
               f"sent {sent}; signed out {anon}; not an admin {not_admin}; panel {panel!r}")
         want0 = {"kind": "drawing", "child": True, "tag": "A child’s safety", "why": ["Spam or misleading"],
-                 "meta": "2 reports", "who": "Lee Varga @lee · a drawing", "notes": ["Somebody wrote: From Explore"],
-                 "by": "Reported by Ora Quinn, somebody on Explore", "veiled": 1, "words": ["Hidden until you open it."],
+                 "meta": "2 reports", "who": "Lee Varga @lee · a drawing", "notes": ["Somebody wrote: From a Gallery card"],
+                 "by": "Reported by Ora Quinn, somebody through Skribl's own report", "veiled": 1, "words": ["Hidden until you open it."],
                  "link": False, "keep": False, "open": True}
         LAW = ("Look before anything else. Taking it down hides it at once and keeps a copy; the lawyer will say what"
                " the law asks of you next.")
@@ -1054,7 +1083,7 @@ with sync_playwright() as p:
         oc.post_json("/social/report", {"kind": "post", "target": lee_post, "reason": "abuse"})
         oc.post_json("/social/report", {"kind": "person", "target": "lee", "reason": "fake"})
         oc.post_json("/social/report", {"kind": "drawing", "target": lee_d, "reason": "child_safety"})
-        on_explore = [explore_report(b, lee_sk, "abuse"), explore_report(b, lee_d, "spam")]
+        on_skribl = [skribl_report(b, lee_sk, "abuse"), skribl_report(b, lee_d, "spam")]
         pg = mira.pg
 
         def skribl_states(public_id):
@@ -1079,6 +1108,7 @@ with sync_playwright() as p:
               kept == "Kept. Its reports are closed." and kept_rows and all(r == ("kept", 1) for r in kept_rows)
               and status(ora.pg, "/social/@lee") == 200, f"said {kept!r}; rows {kept_rows}")
         before = on_home(ora.pg, lee_post)
+        gal_before = lee_post in gallery_of(ora.client(), key="post")
         down = answer("post", lee_post, "down")
         rows = db("select state from social_reports where kind = 'post' and target = ?", (lee_post,))
         seen = {"on ora's home before": before, "on ora's home": on_home(ora.pg, lee_post),
@@ -1086,7 +1116,7 @@ with sync_playwright() as p:
                 "ora at its drawing's link": status(ora.pg, f"/s/{lee_sk}"),
                 "kept": bool(db("select 1 from social_posts where public_id = ?", (lee_post,))),
                 "withheld": db("select visibility from skribl_posts where public_id = ?", (lee_sk,))[0][0],
-                "explore's report": skribl_states(lee_sk)}
+                "skribl's report": skribl_states(lee_sk)}
         lpg = lee.pg
         lpg.goto(BASE + "/social/")
         lpg.wait_for_timeout(600)
@@ -1101,8 +1131,16 @@ with sync_playwright() as p:
               down == "Taken down. It’s hidden for everybody, and a copy is kept." and rows == [("taken_down",)]
               and seen == {"on ora's home before": True, "on ora's home": False, "ora at the post": 404,
                            "ora at its drawing's link": 404, "kept": True, "withheld": "withheld",
-                           "explore's report": [("closed",)]} and lee_home == NOTE and lee_page == NOTE,
+                           "skribl's report": [("closed",)]} and lee_home == NOTE and lee_page == NOTE,
               f"said {down!r}; rows {rows}; {seen}; lee's home {lee_home!r}; page {lee_page!r}")
+        gal_after = {"ora": lee_post in gallery_of(ora.client(), key="post"),
+                     "ora hot": lee_post in gallery_of(ora.client(), "hot", key="post"),
+                     "signed out": lee_post in gallery_of(Client(), key="post"),
+                     "lee": lee_post in gallery_of(lee.client(), key="post")}
+        check("...and it leaves the Gallery of everyone (Explore), for everybody, its maker too (the Gallery is the"
+              " site's public wall: they see it, with the note, on Home and its page), New and Hot alike",
+              gal_before and gal_after == {"ora": False, "ora hot": False, "signed out": False, "lee": False},
+              f"before {gal_before}; after {gal_after}")
         dn = answer("drawing", lee_d, "down")
         sk_rows = skribl_states(lee_d)
         left = pg.evaluate("(ts) => ts.filter(t => document.querySelector('[data-rep][data-target=\"' + t + '\"]'))",
@@ -1111,13 +1149,13 @@ with sync_playwright() as p:
         lpg.wait_for_timeout(500)
         lee_d_page = lpg.evaluate("() => (document.querySelector('.post-down') || {}).textContent || ''")
         check("a drawing reported for a child's safety, opened and taken down, is withheld in Skribl and gone for everybody"
-              " else; its maker sees the note on its page; what Explore reported is closed with it, and nothing answered"
+              " else; its maker sees the note on its page; what Skribl's report took (a Gallery card's) is closed with it, and nothing answered"
               " stays on Your Reports",
               dn.startswith("Taken down.") and db("select visibility from skribl_posts where public_id = ?", (lee_d,))[0][0] == "withheld"
               and status(ora.pg, f"/social/b/{lee_d}") == 404 and lee_d_page == NOTE
               and db("select state from social_reports where target = ?", (lee_d,)) == [("taken_down",)]
-              and sk_rows == [("closed",)] and on_explore == [202, 202] and left == [],
-              f"said {dn!r}; Explore's reports {on_explore}, now {sk_rows}; still on Your Reports {left};"
+              and sk_rows == [("closed",)] and on_skribl == [202, 202] and left == [],
+              f"said {dn!r}; Skribl's reports {on_skribl}, now {sk_rows}; still on Your Reports {left};"
               f" page {lee_d_page!r}")
         mc = mira.client()
         mc.get("/social/reports")
@@ -1136,6 +1174,7 @@ with sync_playwright() as p:
         st, j = make_post(zoe, "Section 12, Zoe's post", seed=121)
         zoe_post = j.get("post")
         st_d, zoe_d = pad(zoe, "Section 12, Zoe's drawing", "public", 122)
+        z_before = "zoe" in gallery_of(ora.client())
         oc = ora.client()
         oc.get("/social/")
         oc.post_json("/social/report", {"kind": "person", "target": "zoe", "reason": "fake"})
@@ -1164,6 +1203,11 @@ with sync_playwright() as p:
               " Skribl's, signed in or out",
               others == {"ora: profile": 404, "ora: post": 404, "ora: drawing": 404, "ora: home": False,
                          "signed out: listing": False, "signed out: link page": 404}, f"{others}")
+        z_gal = {"ora": "zoe" in gallery_of(ora.client()), "ora hot": "zoe" in gallery_of(ora.client(), "hot"),
+                 "signed out": "zoe" in gallery_of(Client()), "zoe": "zoe" in gallery_of(zoe.client())}
+        check("...and nothing of theirs is in the Gallery of everyone (Explore), for anybody, them too, New and Hot alike",
+              bool(zoe_post) and z_before and z_gal == {"ora": False, "ora hot": False, "signed out": False, "zoe": False},
+              f"before {z_before}; after {z_gal}")
         check("they can still sign in and see their own, with the note, and nothing new is shared from the account"
               " (refused kindly, in its own words)",
               own == "Your profile was taken down: it broke the rules. Only you can see it, and what you made."

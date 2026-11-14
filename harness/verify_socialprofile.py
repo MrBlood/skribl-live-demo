@@ -28,10 +28,11 @@ events with pressure, a hand's timing).
       empty circle, ink over time, at about 4x, then it rests, finished,
       fetched once and never looped; under Reduce Motion it is finished at
       once and nothing is fetched.
-   4. ELSEWHERE, STILL: the bar's You and a Gallery card wear the face as a
-      picture (no player, no fetch, the same paint a while later), framed by
-      lib/sharecard.js drawingRect's own sums; before a face is drawn, an
-      empty circle, never a stock silhouette.
+   4. ELSEWHERE, STILL: the bar's You, the Gallery's tile (the site's
+      Gallery of everyone) and a Gallery card of Skribl's own (its /gallery)
+      wear the face as a picture (no player, no fetch, the same paint a while
+      later), framed by lib/sharecard.js drawingRect's own sums; before a face
+      is drawn, an empty circle, never a stock silhouette.
    5. REDRAW replaces it: a new unlisted face, the old one deleted (Skribl's
       delete_post), its link and its picture gone.
    6. EDIT PROFILE: CSRF and Origin required; a name's and a bio's limits and
@@ -1159,42 +1160,53 @@ with sync_playwright() as p_:
               f"ink at 0.3 s {early}, at 3 s {late} (the drawn face's most {top}); fetched {len(rfetched)}; {rcls}")
 
     # ------------------------------------------------------------------ 4
-    if part(4, "elsewhere, still: the bar's You and a Gallery card; the frame from sharecard.js; the empty circle"):
+    # ELSEWHERE, STILL. Since the map's step 3 the site's Gallery (Explore) is
+    # its own, each tile with its maker's face from the site's face macro; a
+    # Gallery card of Skribl's own, whose avatar gallery.js frames (faceOf),
+    # is on Skribl's /gallery (and a profile's skribls and the first visit,
+    # where a face plays or nobody is signed in). So each is read where it
+    # stands: You in the bar and the Gallery's tile on the site's Gallery,
+    # Skribl's card on /gallery; still, all three, and framed alike.
+    if part(4, "elsewhere, still: the bar's You, the Gallery's tile and a Gallery card; the frame from sharecard.js; the empty circle"):
         theo = _people.get("theo") or member(b, "theo", "Theo Lind")
         face = person_row("theo")[3] or give_face(b, theo)
         mine = post_skribl(theo, "Theo's card " + secrets.token_hex(3))
+        tc = theo.client()
+        tc.get("/social/")
+        pst, pj = tc.post_json("/social/posts", {"words": "Theo's tile", "payload": {
+            "version": 2, "schemaVersion": 2, "playbackMode": "replay", "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+            "frames": [{"strokes": [{"x": 300 + k * 9, "y": 300, "color": "#7c5cff", "size": 8, "t": k * 40, "start": k == 0}
+                                    for k in range(12)], "strokeGroups": [12], "background": {"color": "#f6f2ea"}}]}})
+        tile_post = pj.get("post") if isinstance(pj, dict) else None
         ctx, pg = browser_as(b, theo)
         fetched = []
         pg.on("request", lambda r: fetched.append(r.url) if r.url.split("?")[0].endswith(f"/api/skribls/{face}") else None)
-        pg.goto(BASE + "/social/explore")
-        try:
-            pg.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"] .tavatar img')",
-                                 arg=mine, timeout=15000)
-        except Exception:
-            pass
-        pg.wait_for_timeout(500)
         card_sel = f'#galleryList > article.tile[data-id="{mine}"] .tavatar'
+        tile_sel = f'.gal-tile[data-post="{tile_post}"] .gal-by .skribl-face'
         you_sel = "nav.nav .tab-you .skribl-face"
         # BOTH PICTURES COME BEFORE THEY ARE READ: the card brought into view
         # (its picture loads lazily), then each image loaded and decoded, and
         # whether they were is part of the row (a still face that never came
         # is a broken face, not a face standing still).
-        try:
-            pg.locator(card_sel).first.scroll_into_view_if_needed(timeout=5000)
-            pg.wait_for_function(PAINTED, arg=[card_sel, you_sel], timeout=15000)
-            pg.evaluate(DECODED, [card_sel, you_sel])
-        except Exception:
-            pass
-        painted = pg.evaluate(PAINTED, [card_sel, you_sel])
-        pics = [(shot(pg, card_sel), shot(pg, you_sel))]
-        pg.wait_for_timeout(2500)
-        pics.append((shot(pg, card_sel), shot(pg, you_sel)))
-        where = pg.evaluate("""([cs, ys]) => { const c = document.querySelector(cs), y = document.querySelector(ys);
-            const ci = c && c.querySelector('img'), yi = y && y.querySelector('img');
-            return { card: ci && ci.getAttribute('src'), cardStyle: ci && ci.getAttribute('style'),
-                     you: yi && yi.getAttribute('src'), youPlay: y && y.getAttribute('data-play'), youStyle: y && y.getAttribute('style'),
-                     players: document.querySelectorAll('.skribl-face-draw').length }; }""", [card_sel, you_sel])
-        same = all(a and z and a == z for a, z in zip(pics[0], pics[1]))
+        painted, pics, where = {}, {}, {}
+        for page_, sels in (("/gallery", [card_sel]), ("/social/explore", [tile_sel, you_sel])):
+            pg.goto(BASE + page_)
+            try:
+                pg.wait_for_function("(s) => !!document.querySelector(s + ' img')", arg=sels[0], timeout=15000)
+                pg.locator(sels[0]).first.scroll_into_view_if_needed(timeout=5000)
+                pg.wait_for_function(PAINTED, arg=sels, timeout=15000)
+                pg.evaluate(DECODED, sels)
+            except Exception:
+                pass
+            pg.wait_for_timeout(500)
+            painted[page_] = pg.evaluate(PAINTED, sels)
+            first = [shot(pg, x) for x in sels]
+            pg.wait_for_timeout(2500)
+            pics[page_] = (first, [shot(pg, x) for x in sels])
+            where[page_] = pg.evaluate("""(sels) => sels.map(s => { const e = document.querySelector(s), i = e && e.querySelector('img');
+                return { src: i && i.getAttribute('src'), play: e && (e.getAttribute('data-play') || (e.closest('[data-play]') || {getAttribute: () => null}).getAttribute('data-play')),
+                         players: document.querySelectorAll('.skribl-face-draw').length }; })""", sels)
+        same = all(a and z and a == z for pg_ in pics for a, z in zip(*pics[pg_]))
         # SOMETHING DRAWN SHOWS, read off the paint. At this phone's one device
         # pixel to a CSS pixel the bar's 28px face and the card's 34px circle
         # read 36 and 34 inked samples here (Nov 11), and on main's run after
@@ -1202,39 +1214,50 @@ with sync_playwright() as p_:
         # measurement's own edge: with the bar's face 4px smaller (24), that
         # line went red in main's own words (the same paint True, inked
         # False). An empty or broken circle reads 0 (the face hidden, or its
-        # picture never coming: red both), so the line is 10.
-        inks = [ink(x) if x else None for x in pics[1]]
+        # picture never coming: red both), so the line is 10. The Gallery's
+        # tile wears it at 22px: the same line.
+        inks = [ink(x) if x else None for pg_ in pics for x in pics[pg_][1]]
         inked = Image is not None and all(v is not None and v > 10 for v in inks)
+        srcs = [w["src"] for pg_ in where for w in where[pg_]]
         # What failed comes first in the detail: a run's summary keeps only
         # its first 300 characters (run_harness.sh).
-        check("elsewhere the face is a picture, still: You in the bar and the Gallery card's avatar wear it (its own"
-              " poster), with no player, no fetch of the drawing, and the same paint seconds later",
-              where["card"] == f"/s/{face}/poster" and where["you"] == f"/s/{face}/poster" and where["youPlay"] == "still"
-              and where["players"] == 0 and not fetched and same and painted and inked,
-              f"ink card {inks[0]}, You {inks[1]} (over 10); painted {painted}; the same paint {same};"
-              f" fetched {len(fetched)}; { {k: where[k] for k in ('card', 'you', 'youPlay', 'players')} }")
+        check("elsewhere the face is a picture, still: You in the bar, the Gallery's tile (the site's face macro) and a"
+              " Gallery card's avatar of Skribl's (gallery.js) wear it (its own poster), with no player, no fetch of the"
+              " drawing, and the same paint seconds later",
+              bool(tile_post) and srcs == [f"/s/{face}/poster"] * 3 and where["/social/explore"][1]["play"] == "still"
+              and where["/social/explore"][0]["play"] == "still"
+              and all(w["players"] == 0 for pg_ in where for w in where[pg_]) and not fetched and same
+              and all(painted.values()) and inked,
+              f"ink card, tile, You {inks} (over 10); painted {painted}; the same paint {same}; fetched {len(fetched)};"
+              f" srcs {srcs}; {where}")
         sizes = [(707, 707), (816, 612), (450, 800)]
         want = pg.evaluate(FRAME_JS, [SHARECARD, sizes])
         got = []
         for (w, h), exp in zip(sizes, want):
             db("update social_people set face_w = ?, face_h = ? where handle_key = 'theo'", (w, h), write=True)
-            pg.goto(BASE + "/social/explore")
-            try:
-                pg.wait_for_function("(s) => !!document.querySelector(s + ' img')", arg=card_sel, timeout=15000)
-            except Exception:
-                pass
-            got.append(pg.evaluate("""([cs, ys]) => ({ card: (document.querySelector(cs + ' img') || {}).getAttribute ?
-                document.querySelector(cs + ' img').getAttribute('style') : null,
-                you: (document.querySelector(ys) || {}).getAttribute ? document.querySelector(ys).getAttribute('style') : null })""",
-                                   [card_sel, you_sel]))
+            row = {}
+            for page_, key, sel in (("/gallery", "card", card_sel), ("/social/explore", "tile", tile_sel),
+                                    ("/social/explore", "you", you_sel)):
+                if pg.url.split("?")[0] != BASE + page_:
+                    pg.goto(BASE + page_)
+                try:
+                    pg.wait_for_function("(s) => !!document.querySelector(s + ' img')", arg=sel, timeout=15000)
+                except Exception:
+                    pass
+                row[key] = pg.evaluate("""([s, k]) => { const e = document.querySelector(s); if (!e) return null;
+                    return k === 'card' ? (e.querySelector('img') || { getAttribute: () => null }).getAttribute('style')
+                                        : e.getAttribute('style'); }""", [sel, key])
+            got.append(row)
+            pg.goto("about:blank")
         db("update social_people set face_w = 707, face_h = 707 where handle_key = 'theo'", write=True)
         close_ctx(ctx, pg)
-        rows = [(s, e, frame_of(g["you"]), frame_of(g["card"])) for s, e, g in zip(sizes, want, got)]
+        rows = [(s_, e, frame_of(g["you"]), frame_of(g["tile"]), frame_of(g["card"])) for s_, e, g in zip(sizes, want, got)]
         check("its frame is the drawing's middle square in the share card, 3 card pixels in, by lib/sharecard.js"
-              " drawingRect()'s own sums: in the face macro (You) and on the Gallery card, for a square, a 4:3 and a"
-              " tall drawing",
-              len(rows) == 3 and all(same_frame(m, e) and same_frame(c, e) for _, e, m, c in rows),
-              "; ".join(f"{s}: want {({k: round(v, 3) for k, v in e.items()})}, macro {m}, card {c}" for s, e, m, c in rows))
+              " drawingRect()'s own sums: in the face macro (You, and the Gallery's tile) and on Skribl's Gallery card,"
+              " for a square, a 4:3 and a tall drawing",
+              len(rows) == 3 and all(same_frame(m, e) and same_frame(t, e) and same_frame(c, e) for _, e, m, t, c in rows),
+              "; ".join(f"{s_}: want {({k: round(v, 3) for k, v in e.items()})}, macro {m}, tile {t}, card {c}"
+                        for s_, e, m, t, c in rows))
         juno = _people.get("juno") or member(b, "juno", "Juno Park")
         jcard = post_skribl(juno, "Juno's card " + secrets.token_hex(3))
         juno.pg.goto(BASE + "/social/@juno")
@@ -1247,7 +1270,7 @@ with sync_playwright() as p_:
         opg.wait_for_timeout(400)
         other = opg.evaluate("""() => { const f = document.querySelector('.prof-face');
             return { words: f && f.innerText.trim(), img: !!(f && f.querySelector('img, svg')), blank: !!(f && f.querySelector('.face-blank')) }; }""")
-        opg.goto(BASE + "/social/explore")
+        opg.goto(BASE + "/gallery")
         try:
             opg.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"] .tavatar')",
                                   arg=jcard, timeout=15000)
@@ -1389,8 +1412,10 @@ with sync_playwright() as p_:
         hers = post_skribl(mira, "Mira's card " + tag)
         his = post_skribl(theo, "Theo's card " + tag)
         mine_hidden = post_skribl(mira, "Mira's link-only " + tag, visibility=None)
+        # A Gallery card of Skribl's with everybody's in it, on the site: the first
+        # visit's (Explore's were until the map's step 3), signed out.
         ctx, pg = browser_as(b, None, "desk")
-        pg.goto(BASE + "/social/explore")
+        pg.goto(BASE + "/social/")
         try:
             pg.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"]')",
                                  arg=his, timeout=15000)
