@@ -17,7 +17,11 @@ cream paper, cream bars at its sides): each item says the drawing's own
 ground, `ground`, the colour its first page is painted on as the player
 paints it (inlineplayer.js: frames[0]'s background, else the payload's own),
 so a host can lay the box around a drawing in it. A hex colour or nothing,
-never anything a page would read as more than a colour.
+never anything a page would read as more than a colour. AND WHETHER IT IS ON
+A PICTURE (Nov 14, the owner's "Yes to both, build them"): `on_photo`, so a
+host can show a photo drawing's own picture at its sides. Both are columns
+written at post time; a post from before them is read from the drawing until
+`python -m skribl.backfill_ground` fills them in.
 
 AND WHAT IS PLAYED MOST (Nov 14, for the Skribl site's Gallery, Hot): the
 gallery's Hot is plays counted in the last seven days, from Skribl's own
@@ -35,39 +39,26 @@ rules and its own cursor, and never a query of Skribl's tables.
 
 Reads only, on the host's session: it flushes nothing and commits nothing.
 """
-import re
 from datetime import datetime, timedelta, timezone
 
 import sqlalchemy as sa
 
 from .core import HOT_DAYS
 from .models import SkriblPost, SkriblView, apply_feed_filter, normalise_user_id, session
+# The one spelling of a ground a page may use, the rule creation.py writes the
+# column by (validation.py, beside the payload's other columns).
+from .validation import _ground
 
 #: The most ids one call reads, in one query: a page of a feed, with room.
 MAX_DESCRIBE = 200
-
-#: A ground a host may lay a box in: a hex colour, three or six digits, as the
-#: editors' swatches and colour picker write one (#0d0f14, the Pad's dark).
-_GROUND = re.compile(r"#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})")
-
-
-def _ground(raw):
-    """A drawing's ground as `describe_posts` hands it: "#rrggbb", lowercase,
-    or None for anything else (none written, a number, a name, a gradient,
-    words after the colour). A page lays it in as a value of its own CSS, so
-    nothing but a colour ever gets through."""
-    m = _GROUND.fullmatch(raw) if isinstance(raw, str) else None
-    if not m:
-        return None
-    h = m.group(1).lower()
-    return "#" + (h if len(h) == 6 else "".join(c * 2 for c in h))
 
 
 def describe_posts(public_ids, *, viewer_id=None):
     """{public_id: item} for the skribls in `public_ids` that `viewer_id` may
     see, the listing's own item for each (id, title, caption, kind, pages,
-    canvas_w, canvas_h, line, views, user_id, visibility, created_at) and its
-    `ground`: the colour the drawing is painted on, "#rrggbb", or None.
+    canvas_w, canvas_h, line, views, user_id, visibility, created_at), its
+    `ground`: the colour the drawing is painted on, "#rrggbb", or None, and
+    `on_photo`: whether it is made on a picture, True or False.
 
     ground      as the player paints a drawing's first page (inlineplayer.js:
                 frames[0]'s background colour, else the payload's own, the
@@ -76,11 +67,23 @@ def describe_posts(public_ids, *, viewer_id=None):
                 out), and None for anything else, so a host can set it as a
                 value of its own CSS (a tile's box, around a drawing whose
                 shape is not the box's) and never meet anything but a colour.
+    on_photo    whether the player lays a picture under the drawing: the
+                first page's photo, or the picture the Pad began on (its
+                base snapshot), a page's or the payload's own. A host shows
+                the drawing's own picture at its sides (the Skribl site's
+                tiles: a copy of the plate, blurred, behind it).
 
-    NO PAYLOAD CROSSES. The payload is the multi-megabyte column the listing
-    defers; it is deferred here too, and the ground is read by the database
-    where it is, at its path in the JSON (SQLite's json_extract,
-    PostgreSQL's #>>), in the same one query.
+    NO PAYLOAD CROSSES, AND FOR A POST MADE SINCE THE COLUMNS NONE IS READ.
+    Both are columns, written at post time by the player's own rules
+    (validation._payload_ground, _payload_on_photo). Only where a column is
+    NULL, a post from before them, does the database read that one from the
+    drawing, at its paths in the JSON (SQLite's json_extract, PostgreSQL's
+    #>>), inside a CASE, so a row with its column never parses its payload
+    (on PostgreSQL the payload is plain `json`, and every path read re-parses
+    the whole drawing); the picture's paths in the player's order, in a
+    coalesce that stops at the first one there. `python -m
+    skribl.backfill_ground` fills the columns in. The payload is deferred, as
+    the listing's is, and it is all one query.
 
     viewer_id   the person looking, as the host hands Skribl its current
                 user id, or None for nobody. The rule is the one every read
@@ -96,12 +99,26 @@ def describe_posts(public_ids, *, viewer_id=None):
     if not ids:
         return {}
     pj = SkriblPost.payload_json
-    # frames[0]'s, else the top level's; an empty one is none, as the player's ||.
-    ground = sa.func.coalesce(sa.func.nullif(pj[("frames", 0, "background", "color")].as_string(), ""),
-                              pj[("background", "color")].as_string())
-    rows = (session().query(SkriblPost, ground).options(sa.orm.defer(SkriblPost.payload_json))
+
+    def at(*path):
+        # A path's text, an empty one read as none, as the player's || does.
+        return sa.func.nullif(pj[path].as_string(), "")
+    # THE COLUMNS, AND THE DRAWING ONLY WHERE ONE IS NULL (a post from before
+    # them, until backfill_ground reaches it): a CASE, which evaluates its
+    # branch only for the rows that take it. The ground as #899 read it,
+    # frames[0]'s, else the top level's; the picture, the first of the
+    # player's four places that is there.
+    ground = sa.case((SkriblPost.ground.is_(None),
+                      sa.func.coalesce(at("frames", 0, "background", "color"), pj[("background", "color")].as_string())),
+                     else_=SkriblPost.ground)
+    on_photo = sa.case((SkriblPost.on_photo.is_(None),
+                        sa.func.coalesce(at("frames", 0, "photo", "data"), at("frames", 0, "baseSnapshot"),
+                                         at("photo", "data"), at("baseSnapshot")).is_not(None)),
+                       else_=SkriblPost.on_photo)
+    rows = (session().query(SkriblPost, ground, on_photo).options(sa.orm.defer(SkriblPost.payload_json))
             .filter(SkriblPost.public_id.in_(ids)).all())
-    return {p.public_id: dict(p.feed_dict(), ground=_ground(g)) for p, g in rows if p.visible_to(viewer_id)}
+    return {p.public_id: dict(p.feed_dict(), ground=_ground(g), on_photo=bool(o))
+            for p, g, o in rows if p.visible_to(viewer_id)}
 
 
 #: The most one call to list_public_posts returns: a page of a feed, with room.

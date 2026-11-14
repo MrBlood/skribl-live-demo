@@ -101,14 +101,26 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      "See the whole Gallery ›" in the small violet words, 44px, landing on
      the Gallery; every word at 4.5:1, every control 44px, phone and desk,
      light and dark.
+ 15. A DRAWING ON A PICTURE KEEPS ITS PICTURE AT ITS SIDES (C+, the owner's
+     "Yes to both, build them", Nov 14): a drawing made on a photo, or on the
+     picture the Pad began on, a post's or one shown outside a post, shows that
+     picture at its sides, blurred (read off the paint beside the plate: its
+     colours, never its ground, no hard step), in the Gallery, on its maker's
+     Gallery tab, in More from and on the first visit; a plain drawing keeps
+     its strips in its own ground, with no copy behind it; every tile's ▶,
+     and on your own Gallery tab its eye, is what is painted along its middle
+     (elementFromPoint), phone and desk, light and dark; their words and the
+     eye at 4.5:1 off the pixels over a picture; and hidden with the eye, the
+     picture at its sides fades with the drawing.
 
 SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
 green as built: DECISIONS.md, "Posts at /social (phase 1, piece 4)",
 "Comments on every drawing" for 10 and 11, "Every card opens its post"
 for 12, "Explore becomes the Gallery of everyone" for 13, "Six small
-yeses" for 14 and the rows of 3, 12 and 13 it changed, and "The Gallery of
-every skribl" for the rows of 9, 13 and 14 it changed.
+yeses" for 14 and the rows of 3, 12 and 13 it changed, "The Gallery of
+every skribl" for the rows of 9, 13 and 14 it changed, and "A drawing on a
+photo keeps its photo at its sides" for 15.
 """
 import base64
 import json
@@ -2910,6 +2922,311 @@ print("PLAN " + json.dumps(out))
               " and dark",
               all(v["read"] >= 12 and not v["low"] and not v["small"] for v in seen14.values()) and len(seen14) == 4,
               f"{ {' '.join(k): (v['read'], v['lowest'], v['low'][:2], v['small'][:2]) for k, v in seen14.items()} }")
+
+    # ------------------------------------------------------------------ 15
+    # A DRAWING ON A PICTURE KEEPS ITS PICTURE AT ITS SIDES (C+, the owner's
+    # "Yes to both, build them", Nov 14, after "will the player not show the
+    # strips on the side?"): a tile of a drawing made on a photo, or on the
+    # picture the Pad began on, shows that picture at its sides, a copy of its
+    # plate behind it, blurred; a plain drawing keeps its strips in its own
+    # ground (#899). And the first C+ mock lifted the drawing over the "▶ 3 sec"
+    # with a z-index: the ▶, and on your own Gallery tab the eye, stay what is
+    # painted on top of every tile. Sol shares a paper drawing and a plain one
+    # on the Pad's dark as posts, shows one made on the picture the Pad began
+    # on outside a post, then posts one made on a photo; their share cards'
+    # plates are painted so the reading is unambiguous: the picture warm over
+    # its top half and cool under it, a hard edge across its middle (sharp on
+    # the plate, soft at the sides), the plain one's bold purple lines across
+    # its whole width (what a blurred copy would bring to its sides as a haze).
+    if part(15, "a drawing on a picture keeps its picture at its sides; every tile's ▶ and eye stay on top"):
+        T15 = "pic" + secrets.token_hex(3)
+        sol = someone(b, "fillsol", "Sol Reyes")
+        noa = someone(b, "fillnoa", "Noa Park")
+        ORANGE, BLUE, DARK15, PAPER15 = (232, 120, 64), (40, 110, 200), (13, 15, 20), (246, 242, 234)
+        PURPLE15, INK15 = (124, 92, 255), (0x3a, 0x24, 0xa8)
+        dist = lambda c, t: sum(abs(x - y) for x, y in zip(c[:3], t[:3]))
+
+        def png15(color):
+            im = Image.new("RGB", (8, 8), color)
+            buf = io.BytesIO()
+            im.save(buf, "PNG")
+            return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+        def card15(w, h, paint):
+            """A share card whose drawing's plate `paint` paints (share_card's own colours around it)."""
+            x, y, dw, dh = plate_of(w, h)
+            im = Image.new("RGB", (1200, 630), CARD_GROUND)
+            d = ImageDraw.Draw(im)
+            d.rectangle([0, 546, 1199, 629], fill=CARD_FOOT)
+            paint(d, x, y, dw, dh)
+            d.rectangle([x, y, x + dw - 1, y + dh - 1], outline=CARD_LINE, width=3)
+            buf = io.BytesIO()
+            im.save(buf, "PNG")
+            return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+        def on_picture(d, x, y, dw, dh):
+            d.rectangle([x, y, x + dw - 1, y + dh // 2 - 1], fill=ORANGE)
+            d.rectangle([x, y + dh // 2, x + dw - 1, y + dh - 1], fill=BLUE)
+            for k in (1, 2, 3):                 # the drawing, in its middle, away from its sides
+                cx, cy = x + dw // 2, y + k * dh // 4
+                d.ellipse([cx - 22, cy - 22, cx + 22, cy + 22], outline=(255, 255, 255), width=6)
+
+        def plain_lines(d, x, y, dw, dh):
+            d.rectangle([x, y, x + dw - 1, y + dh - 1], fill=DARK15)
+            for k in range(1, 7):
+                d.rectangle([x, y + k * dh // 7 - 14, x + dw - 1, y + k * dh // 7 + 14], fill=PURPLE15)
+
+        def paper_marks(d, x, y, dw, dh):
+            d.rectangle([x, y, x + dw - 1, y + dh - 1], fill=PAPER15)
+            d.ellipse([x + dw // 3, y + dh // 3, x + 2 * dw // 3, y + 2 * dh // 3], outline=PURPLE15, width=12)
+
+        def body15(size, bg, seed, **page):
+            pts = [{"x": round(size[0] / 2 + math.cos((i + seed) / 5) * 60, 1),
+                    "y": round(size[1] / 2 + math.sin((i + seed) / 5) * 60, 1),
+                    "color": "#7c5cff", "size": 6, "t": i * 40, "start": i == 0} for i in range(30)]
+            return {"version": 2, "schemaVersion": 2, "playbackMode": "replay",
+                    "canvasSize": {"cssWidth": size[0], "cssHeight": size[1]},
+                    "frames": [dict({"strokes": pts, "strokeGroups": [30], "background": {"color": bg}}, **page)]}
+        c15 = sol.client()
+        c15.get("/social/")
+
+        def share15(words, body):
+            st_, j_ = c15.post_json("/social/posts", {"words": words, "payload": body})
+            time.sleep(0.012)
+            return j_.get("post") if st_ == 200 and isinstance(j_, dict) else None
+        TALL = (531, 944)
+        p_four = share15(f"{T15} on paper", dict(body15((816, 612), "#f6f2ea", 1), thumbnail=card15(816, 612, paper_marks)))
+        p_plain = share15(f"{T15} plain, in the dark", dict(body15(TALL, "#0d0f14", 2), thumbnail=card15(*TALL, plain_lines)))
+        sol.pg.goto(BASE + "/social/")
+        _, d_snap = sol.pg.evaluate("""async (body) => {
+          await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
+          const tok = (document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '';
+          const r = await fetch('/api/skribls', { method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-Skribl-CSRF': decodeURIComponent(tok) }, body: JSON.stringify(body) });
+          const j = await r.json().catch(() => ({})); return [r.status, j.id || null]; }""",
+            dict(body15(TALL, "#f6f2ea", 3, baseSnapshot=png15(ORANGE)), title=f"{T15} on the picture it began on",
+                 visibility="public", thumbnail=card15(*TALL, on_picture)))
+        time.sleep(0.012)
+        p_photo = share15(f"{T15} on a photo", dict(body15(TALL, "#0d0f14", 4, photo={"data": png15(BLUE), "fit": "cover"}),
+                                                    thumbnail=card15(*TALL, on_picture)))
+        sk15 = {"four": (post_row(p_four) or (None, None))[1], "plain": (post_row(p_plain) or (None, None))[1],
+                "snap": d_snap, "photo": (post_row(p_photo) or (None, None))[1]}
+        cols15 = {k: tuple(db("select ground, on_photo from skribl_posts where public_id = ?", (v,))[0]) if v else None
+                  for k, v in sk15.items()}
+        check("(setup) Sol shares a paper drawing and a plain one on the Pad's dark as posts, shows one made on the"
+              " picture the Pad began on outside a post (Skribl's own API, as the Pad posts), then posts one made on a"
+              " photo; Skribl writes each one's ground and whether it is on a picture as it is posted",
+              all(sk15.values()) and cols15 == {"four": ("#f6f2ea", 0), "plain": ("#0d0f14", 0), "snap": ("#f6f2ea", 1),
+                                                 "photo": ("#0d0f14", 1)},
+              f"{sk15}; columns {cols15}")
+
+        # WHAT IS PAINTED AT A BOX'S SIDES, read off its own picture (the ▶ and
+        # the eye made invisible first): the middle of each bar beside the
+        # plate, a fifth of the way down and four fifths, and a column down
+        # each bar and one just inside the plate's edge, where the picture's
+        # hard edge crosses (the steepest step between neighbouring pixels).
+        FILLREAD = """(sel) => { const t = document.querySelector(sel); if (!t) return null;
+          t.scrollIntoView({ block: 'center', behavior: 'instant' });
+          const box = t.querySelector('.gal-pic, .more-pic'), plate = t.querySelector('.gal-plate, .more-plate'), cell = t.closest('.gal-cell');
+          [t.querySelector('.gal-dur'), cell && cell.querySelector('.gal-eye')].forEach(e => { if (e) e.style.visibility = 'hidden'; });
+          [...t.querySelectorAll('img')].forEach(i => { i.loading = 'eager'; });
+          const b = box.getBoundingClientRect(), p = plate.getBoundingClientRect();
+          return { w: b.width, h: b.height, pl: p.left - b.left, pr: p.right - b.left, pt: p.top - b.top, pb: p.bottom - b.top,
+                   fill: !!box.querySelector(':scope > .plate-fill'), ground: box.getAttribute('style') }; }"""
+        IMGS15 = """(sel) => { const t = document.querySelector(sel); return !!t && [...t.querySelectorAll('img')].every(i => i.complete && i.naturalWidth > 0); }"""
+        SHOW15 = """(sel) => { const t = document.querySelector(sel), cell = t && t.closest('.gal-cell');
+          [t && t.querySelector('.gal-dur'), cell && cell.querySelector('.gal-eye')].forEach(e => { if (e) e.style.visibility = ''; }); }"""
+
+        def sides(pg_, sel):
+            try:
+                pg_.wait_for_selector(sel, timeout=15000)
+                g = pg_.evaluate(FILLREAD, sel)
+                pg_.wait_for_function(IMGS15, arg=sel, timeout=15000)
+                pg_.evaluate("(s) => Promise.all([...document.querySelector(s).querySelectorAll('img')].map(i => i.decode().catch(() => null)))", sel)
+                pg_.wait_for_timeout(250)
+                shot = pg_.locator(sel + " :is(.gal-pic, .more-pic)").screenshot(timeout=5000)
+                pg_.evaluate(SHOW15, sel)
+            except Exception as exc:  # noqa: BLE001 -- a box that cannot be read is the row's red
+                return {"stopped": str(exc).splitlines()[0][:120]}
+            im = Image.open(io.BytesIO(shot)).convert("RGB")
+            k = im.size[1] / g["h"]
+
+            def px(x, y):
+                return im.getpixel((min(im.size[0] - 1, int(x * k)), min(im.size[1] - 1, int(y * k))))
+            xl, xr = g["pl"] / 2, (g["w"] + g["pr"]) / 2
+            y0, y1 = max(g["pt"] + 2, g["h"] * 0.15), min(g["pb"] - 2, g["h"] * 0.85)
+
+            def steepest(x):
+                c = [px(x, y) for y in range(int(y0), int(y1))]
+                return max((dist(p_, q_) for p_, q_ in zip(c, c[1:])), default=0)
+            return {"fill": g["fill"], "bars": [round(g["pl"]), round(g["w"] - g["pr"])],
+                    "lt": px(xl, g["h"] * 0.2), "lb": px(xl, g["h"] * 0.8), "rt": px(xr, g["h"] * 0.2),
+                    "rb": px(xr, g["h"] * 0.8), "lm": px(xl, g["h"] / 2), "rm": px(xr, g["h"] / 2),
+                    "soft": max(steepest(xl), steepest(xr)), "sharp": steepest(g["pl"] + 4), "ground": g["ground"]}
+
+        def pictured(r, ground):
+            """Its sides its picture's colours (warm above, cool below, never its ground), blurred (no step
+            between neighbouring pixels a hard edge would make, where the plate beside it shows one)."""
+            return (not r.get("stopped") and r["fill"] and min(r["bars"]) >= 20
+                    and all(dist(r[k_], ground) >= 150 for k_ in ("lt", "lb", "rt", "rb"))
+                    and all(dist(r[k_], ORANGE) <= 110 for k_ in ("lt", "rt"))
+                    and all(dist(r[k_], BLUE) <= 110 for k_ in ("lb", "rb")) and r["soft"] <= 30 and r["sharp"] >= 100)
+
+        def plain15(r, ground):
+            """Its strips its own ground, painted, and no copy of its plate behind it."""
+            return (not r.get("stopped") and not r["fill"] and min(r["bars"]) >= 20
+                    and dist(r["lm"], ground) <= 12 and dist(r["rm"], ground) <= 12)
+        TILE = {"photo": f'.gal-tile[data-post="{p_photo}"]', "snap": f'.gal-tile[data-drawing="{d_snap}"]',
+                "plain": f'.gal-tile[data-post="{p_plain}"]'}
+        MORE = {"photo": f'.more-tile[href="/social/p/{p_photo}"]', "snap": f'.more-tile[href="/social/b/{d_snap}"]',
+                "plain": f'.more-tile[href="/social/p/{p_plain}"]'}
+        GROUND15 = {"photo": DARK15, "snap": PAPER15, "plain": DARK15}
+        read15 = {}
+        for screen in ("phone", "desk"):
+            for where, who, path, sels in (("the Gallery", noa, "/social/explore?q=" + urllib.parse.quote(T15), TILE),
+                                           ("Sol's Gallery tab", noa, "/social/@fillsol/gallery", TILE),
+                                           ("More from", noa, f"/social/p/{p_four}", MORE),
+                                           ("the first visit", None, "/social/", TILE)):
+                ctx, cpg = browser_as(b, who, screen, "light")
+                cpg.goto(BASE + path)
+                cpg.wait_for_timeout(600)
+                for key, sel in sels.items():
+                    read15[(where, screen, key)] = sides(cpg, sel)
+                close_ctx(ctx, cpg)
+        WHERE15 = ("the Gallery", "Sol's Gallery tab", "More from", "the first visit")
+        short = lambda r: {k_: v for k_, v in r.items() if k_ in ("stopped", "fill", "bars", "lt", "lb", "soft", "sharp", "lm")}
+        check("A DRAWING ON A PICTURE KEEPS ITS PICTURE AT ITS SIDES: beside its plate the box is painted in its"
+              " picture's own colours (warm above, cool below), blurred (no hard step where the plate shows one),"
+              " never its ground: a post's made on a photo and a drawing shown outside a post made on the picture the"
+              " Pad began on, in the Gallery, on its maker's Gallery tab, in More from and on the first visit, a touch"
+              " phone and a desk",
+              len(read15) == 24 and all(pictured(read15[(w, s, k_)], GROUND15[k_]) for w in WHERE15
+                                        for s in ("phone", "desk") for k_ in ("photo", "snap")),
+              json.dumps({f"{w}, {s}, {k_}": short(read15.get((w, s, k_), {})) for w in WHERE15 for s in ("phone", "desk")
+                          for k_ in ("photo", "snap") if not pictured(read15.get((w, s, k_), {"stopped": "?"}), GROUND15[k_])})[:900])
+        check("...and only on a picture: a plain drawing's strips stay its own ground, with no copy of its plate behind"
+              " it (on a line drawing the blur is a coloured haze), everywhere the same",
+              all(plain15(read15.get((w, s, "plain"), {"stopped": "?"}), DARK15) for w in WHERE15 for s in ("phone", "desk")),
+              json.dumps({f"{w}, {s}": short(read15.get((w, s, "plain"), {})) for w in WHERE15 for s in ("phone", "desk")
+                          if not plain15(read15.get((w, s, "plain"), {"stopped": "?"}), DARK15)})[:700])
+
+        # EVERY TILE'S ▶ IS WHAT IS PAINTED ON TOP, and on your own Gallery tab
+        # its eye: what is painted along the middle of each ▶ (every 2px of it
+        # but its round ends), and of each eye's chip, is that ▶, that chip;
+        # never the drawing or its copy. More from's tiles have no ▶.
+        ONTOP = """(root) => { const out = [];
+          for (const t of document.querySelectorAll(root + ' .gal-tile')) {
+            t.scrollIntoView({ block: 'center', behavior: 'instant' });
+            const probe = (el, inset) => { if (!el) return ['none']; const r = el.getBoundingClientRect(), y = r.top + r.height / 2, miss = [];
+              for (let x = r.left + inset; x <= r.right - inset; x += 2) { const e = document.elementFromPoint(x, y);
+                if (!(e && el.contains(e))) miss.push(Math.round(x - r.left) + ' ' + (e ? (e.getAttribute('class') || e.tagName) : 'nothing')); }
+              return miss; };
+            const cell = t.closest('.gal-cell');
+            out.push({ id: t.getAttribute('data-post') || t.getAttribute('data-drawing'), fill: !!t.querySelector('.plate-fill'),
+                       dur: probe(t.querySelector('.gal-dur'), 10), eye: cell ? probe(cell.querySelector('.gal-eye-chip'), 7) : null }); }
+          return out; }"""
+        top15 = {}
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                for where, who, path, root in (("the Gallery", noa, "/social/explore?q=" + urllib.parse.quote(T15), "[data-gal-grid]"),
+                                               ("Sol's Gallery tab", noa, "/social/@fillsol/gallery", "[data-prof-list]"),
+                                               ("her own Gallery tab", sol, "/social/@fillsol/gallery", "[data-prof-list]"),
+                                               ("the first visit", None, "/social/", "[data-fresh]")):
+                    ctx, cpg = browser_as(b, who, screen, scheme)
+                    cpg.goto(BASE + path)
+                    cpg.wait_for_timeout(600)
+                    try:
+                        top15[(where, screen, scheme)] = cpg.evaluate(ONTOP, root)
+                    except Exception as exc:  # noqa: BLE001 -- a page that cannot be read is the row's red
+                        top15[(where, screen, scheme)] = [{"stopped": str(exc).splitlines()[0][:100]}]
+                    close_ctx(ctx, cpg)
+        missed = {f"{' '.join(k)} {t.get('id')}": (t.get("dur") or [])[:3] + (t.get("eye") or [])[:3]
+                  for k, v in top15.items() for t in v if t.get("stopped") or t.get("dur") or t.get("eye")}
+        photos_seen = {k: sum(1 for t in v if t.get("fill")) for k, v in top15.items()}
+        check("EVERY TILE'S ▶ IS PAINTED ON TOP, and on your own Gallery tab its eye: along the middle of each ▶ (and"
+              " each eye's chip) what is painted is the ▶ (the chip), never the drawing or its picture behind it, on"
+              " every tile: the Gallery, a profile's Gallery tab, its maker's own with the eye, the first visit; a touch"
+              " phone and a desk, light and dark (More from's tiles have no ▶)",
+              len(top15) == 16 and not missed and all(len(v) >= 4 for v in top15.values())
+              and all(n == 2 for n in photos_seen.values())
+              and all(t.get("eye") == [] for k, v in top15.items() if k[0] == "her own Gallery tab" for t in v),
+              f"missed {json.dumps(missed)[:600]}; tiles {[len(v) for v in top15.values()]}; on a picture {list(photos_seen.values())}")
+
+        # THE ▶'S WORDS AND THE EYE ON THEIR GLASS OVER A PICTURE, read off the
+        # pixels (the words and the eye made see-through): the glass is the
+        # ▶'s own over every drawing, and here the picture is under it.
+        glass15 = {}
+
+        def lum15(c):
+            v = [x / 255 for x in c[:3]]
+            v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+            return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+        def worst(png_, box):
+            im = Image.open(io.BytesIO(png_)).convert("RGB")
+            px_ = [im.getpixel((int(box[0] + i), int(box[1] + j))) for i in range(int(box[2])) for j in range(int(box[3]))
+                   if int(box[0] + i) < im.size[0] and int(box[1] + j) < im.size[1]]
+            ink = lum15(INK15)
+            return round(min((max(lum15(p_), ink) + 0.05) / (min(lum15(p_), ink) + 0.05) for p_ in px_), 2) if px_ else None
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                ctx, cpg = browser_as(b, sol, screen, scheme)
+                cpg.goto(BASE + "/social/@fillsol/gallery")
+                sel = TILE["photo"]
+                try:
+                    cpg.locator(sel).scroll_into_view_if_needed(timeout=5000)
+                    cpg.wait_for_function(IMGS15, arg=sel, timeout=15000)
+                    cpg.wait_for_timeout(250)
+                    box = cpg.evaluate("""(s) => { const d = document.querySelector(s + ' .gal-dur'), w = d.querySelector('span');
+                      const a = d.getBoundingClientRect(), r = w.getBoundingClientRect(); w.style.color = 'transparent';
+                      return [r.left - a.left, r.top - a.top, r.width, r.height]; }""", sel)
+                    words_ = worst(cpg.locator(sel + " .gal-dur").screenshot(timeout=5000), box)
+                    ebox = cpg.evaluate("""(s) => { const c = document.querySelector(s).closest('.gal-cell').querySelector('.gal-eye-chip');
+                      const ic = c.querySelector('.gal-eye-ics'), a = c.getBoundingClientRect(), r = ic.getBoundingClientRect();
+                      ic.style.visibility = 'hidden'; return [r.left - a.left, r.top - a.top, r.width, r.height]; }""", sel)
+                    chip = cpg.locator(f".gal-cell:has({sel}) .gal-eye-chip")
+                    glass15[(screen, scheme)] = (words_, worst(chip.screenshot(timeout=5000), ebox))
+                except Exception as exc:  # noqa: BLE001 -- a picture that cannot be read is the row's red
+                    glass15[(screen, scheme)] = (str(exc).splitlines()[0][:100], None)
+                close_ctx(ctx, cpg)
+        check("...and the ▶'s words and the eye read 4.5:1 or more off the pixels under them, their glass over a"
+              " drawing's picture: a touch phone and a desk, light and dark (no colour or token added)",
+              len(glass15) == 4 and all(isinstance(w, float) and isinstance(e, float) and w >= 4.5 and e >= 4.5
+                                        for w, e in glass15.values()),
+              f"{ {' '.join(k): v for k, v in glass15.items()} }")
+
+        # A HIDDEN ONE FADES WITH ITS PICTURE (your own Gallery tab, the eye):
+        # the copy behind the drawing fades to 55% with it, so a hidden drawing
+        # on a picture reads hidden as every other does; read off the paint
+        # beside the plate, then shown again.
+        ctx, cpg = browser_as(b, sol, "phone", "light")
+        cpg.goto(BASE + "/social/@fillsol/gallery")
+        cpg.wait_for_timeout(600)
+        sel, cellsel = TILE["photo"], f'.gal-cell:has({TILE["photo"]})'
+        fade15 = {"shown": sides(cpg, sel)}
+        try:
+            cpg.click(cellsel + " .gal-eye")
+            cpg.wait_for_function("(s) => { const c = document.querySelector(s); return c && c.classList.contains('is-hidden') && c.__eyeBusy === false; }",
+                                  arg=cellsel, timeout=15000)
+            cpg.wait_for_timeout(450)
+            fade15["opacity"] = cpg.evaluate("""(s) => { const c = document.querySelector(s);
+              return [+getComputedStyle(c.querySelector('.plate-fill > span')).opacity, +getComputedStyle(c.querySelector('.gal-plate')).opacity]; }""", cellsel)
+            fade15["hidden"] = sides(cpg, sel)
+            cpg.click(cellsel + " .gal-eye")
+            cpg.wait_for_function("(s) => { const c = document.querySelector(s); return c && !c.classList.contains('is-hidden') && c.__eyeBusy === false; }",
+                                  arg=cellsel, timeout=15000)
+        except Exception as exc:  # noqa: BLE001 -- an eye that cannot be pressed is the row's red
+            fade15["stopped"] = str(exc).splitlines()[0][:120]
+        close_ctx(ctx, cpg)
+        sh, hd = fade15.get("shown") or {}, fade15.get("hidden") or {}
+        still = db("select gallery_hidden_at from social_posts where public_id = ?", (p_photo,))
+        check("...and on your own Gallery tab a hidden drawing on a picture fades with its picture: the copy behind it"
+              " at 55% with the drawing, the sides read off the paint nearer the box's own ground; shown again, back",
+              not fade15.get("stopped") and fade15.get("opacity") == [0.55, 0.55] and pictured(sh, DARK15)
+              and not hd.get("stopped") and all(dist(hd[k_], DARK15) < 0.75 * dist(sh[k_], DARK15) for k_ in ("lt", "lb", "rt", "rb"))
+              and bool(still) and still[0][0] is None,
+              f"{fade15.get('stopped') or ''} opacity {fade15.get('opacity')}; shown {short(sh)}; hidden {short(hd)};"
+              f" in the Gallery again {bool(still) and still[0][0] is None}")
 
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):

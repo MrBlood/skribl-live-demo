@@ -421,9 +421,29 @@ a.post-act { text-decoration: none; }
   position: relative; overflow: hidden; aspect-ratio: var(--plate-a); border-radius: var(--plate-r);
   width: min(100cqw, 100cqh * var(--plate-a));
 }
-.gal-plate img {
+.gal-plate img, .plate-fill img {
   position: absolute; left: var(--plate-x); top: var(--plate-y);
   display: block; width: var(--plate-w); max-width: none; height: auto;
+}
+/* A DRAWING ON A PICTURE KEEPS ITS PICTURE AT ITS SIDES (the owner's "Yes to
+ * both, build them", Nov 14; the pick's mock, value for value). Where the
+ * drawing is made on a photo, or on the picture the Pad began on (Skribl's
+ * description says `on_photo`), _gallery.html plate_fill lays a second copy of
+ * the plate in the box, scaled to cover it a quarter over, blurred 16px, a
+ * little more saturated and at 0.9: the box's sides show the drawing's own
+ * picture, softly, never a band of paper. Only on a picture: on a plain
+ * drawing the blur is a coloured haze, and its strips stay its own ground
+ * (plate_ground). The copy comes BEFORE the plate and nothing here has a
+ * z-index, so the sharp plate paints over it and the ▶ over both (the first
+ * mock lifted the plate with a z-index, and the ▶ went under it). The
+ * Gallery's tile and More from's, one rule; no colour or token of its own. */
+.plate-fill {
+  position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden;
+  filter: blur(16px) saturate(1.1); opacity: 0.9;
+}
+.plate-fill > span {
+  position: relative; overflow: hidden; aspect-ratio: var(--plate-a);
+  width: calc(1.25 * max(100cqw, 100cqh * var(--plate-a)));
 }
 .gal-dur {
   position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px;
@@ -477,8 +497,10 @@ a.post-act { text-decoration: none; }
 .gal-cell.is-hidden .gal-eye-word { max-width: 64px; margin-left: 4px; opacity: 1; }
 .gal-cell.is-hidden .ic-eye-open { opacity: 0; }
 .gal-cell.is-hidden .ic-eye-shut { opacity: 1; }
-.gal-cell .gal-plate { transition: opacity 0.2s ease; }
-.gal-cell.is-hidden .gal-plate { opacity: 0.55; }
+.gal-cell .gal-plate, .gal-cell .plate-fill > span { transition: opacity 0.2s ease; }
+/* The drawing fades, and on a picture its picture at its sides with it (the
+   copy behind it, plate_fill), so a hidden one reads hidden on every tile. */
+.gal-cell.is-hidden .gal-plate, .gal-cell.is-hidden .plate-fill > span { opacity: 0.55; }
 @media (prefers-reduced-motion: reduce) {
   .gal-eye-word { transition: opacity 0.2s ease; }
 }
@@ -1192,9 +1214,10 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    only the drawing shows (none of the share card's
    ground, hairline or wordmark): _gallery.html plate_frame, the Gallery's
    tile's too. The tile's ground is the drawing's own (plate_ground, as the
-   Gallery's tile wears it), and where that is not known, what it was. */
+   Gallery's tile wears it), and where that is not known, what it was; a
+   drawing on a picture with its picture at its sides (plate_fill, above). */
 .more-pic {
-  display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--card-line);
+  position: relative; display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--card-line);
   border-radius: 14px; background: var(--plate-ground, var(--draw-wait)); container-type: size;
 }
 .more-plate {

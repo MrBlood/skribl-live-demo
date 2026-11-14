@@ -551,11 +551,13 @@ with host.app_context():
           f"anyone {sorted(_anyone)}; author {sorted(_author)}; another {sorted(_other)}")
     _row = db.session.query(skribl.models.SkriblPost).filter_by(public_id=_pub.public_id).one()
     _item = _anyone.get(_pub.public_id) or {}
-    check("...each item is the listing's own (feed_dict) and the drawing's ground, with no payload in it",
-          {k: v for k, v in _item.items() if k != "ground"} == _row.feed_dict() and _item.get("ground") == "#101418"
+    check("...each item is the listing's own (feed_dict), the drawing's ground and whether it is on a picture,"
+          " with no payload in it",
+          {k: v for k, v in _item.items() if k not in ("ground", "on_photo")} == _row.feed_dict()
+          and _item.get("ground") == "#101418" and _item.get("on_photo") is False
           and "payload" not in _item and "payload_json" not in _item
           and {"canvas_w", "canvas_h", "line", "views", "title", "caption"} <= set(_item),
-          f"keys {sorted(_item)}; ground {_item.get('ground')!r}")
+          f"keys {sorted(_item)}; ground {_item.get('ground')!r}; on_photo {_item.get('on_photo')!r}")
     # THE GROUND (Nov 14, the Skribl site's tiles: a tall drawing made on the
     # Pad's dark canvas sat in a tile of cream paper): the colour the drawing
     # is painted on, as the player paints its first page (inlineplayer.js:
@@ -599,13 +601,23 @@ with host.app_context():
           all(_gsaid[k] is None for k in ("words after a colour", "a rule", "a name", "eight digits", "a number",
                                          "none")), str(_gsaid))
     _sel = [s_ for s_ in _seen if "skribl_posts" in s_]
-    check("...read by the database where it is, at its paths: describe_posts is one query that selects no payload"
-          " (deferred, as the listing's), the ground's two paths its only looks inside it",
+    # WHERE THE LOOKS INSIDE SIT (after v330: the ground and the picture are
+    # columns, written at post time): every look into the payload is in the
+    # branch a CASE takes only when that column is NULL, a post from before
+    # the columns; read off the statement's own CASE ... THEN ... ELSE.
+    _cases = {c: re.findall(r"CASE WHEN \(skribl_posts\.%s IS NULL\) THEN (.*?) ELSE skribl_posts\.%s END" % (c, c),
+                            _sel[0] if _sel else "", re.S) for c in ("ground", "on_photo")}
+    _looks = len(re.findall(r"json_extract|#>>", _sel[0], re.I)) if _sel else None
+    _guarded = {c: sum(len(re.findall(r"json_extract|#>>", b, re.I)) for b in v) for c, v in _cases.items()}
+    check("...read in one query that selects no payload (deferred, as the listing's): the ground and the picture"
+          " from their columns, and the drawing only in the branch a CASE takes where a column is NULL (a post from"
+          " before them): the ground's two paths there, the picture's four",
           len(_sel) == 1 and not re.search(r"payload_json\s+AS\s", _sel[0], re.I)
-          and len(re.findall(r"json_extract|#>>", _sel[0], re.I)) == 2,
+          and len(_cases["ground"]) == 1 and len(_cases["on_photo"]) == 1
+          and _guarded == {"ground": 2, "on_photo": 4} and _looks == 6,
           f"{len(_sel)} queries; payload selected"
-          f" {bool(_sel and re.search(r'payload_json[ ]+AS[ ]', _sel[0], re.I))}; looks inside"
-          f" {len(re.findall(r'json_extract|#>>', _sel[0], re.I)) if _sel else None}")
+          f" {bool(_sel and re.search(r'payload_json[ ]+AS[ ]', _sel[0], re.I))}; looks inside {_looks},"
+          f" in a column's NULL branch {_guarded}")
     _many = skribl.describe_posts([_pub.public_id] * 3 + [f"x{i}" for i in range(500)])
     check("...and an empty or oversized ask reads nothing past its first 200 ids",
           skribl.describe_posts([]) == {} and skribl.describe_posts(None) == {}
@@ -733,6 +745,77 @@ with host.app_context():
           and [i["id"] for i in _cy] == [_fol[3][2]] and _two_args == ["someone"]
           and [i["id"] for i in _still] == [_fol[3][2]],
           f"told {_plain}; two-argument {_two_args}; cy's own {[i['title'] for i in _cy]}")
+
+print("\n13 — WHAT THE DRAWING IS PAINTED ON: two columns, written at post time")
+# After v330 (the owner's "Yes to both, build them", Nov 14): a host's tile
+# lays the box around a drawing in its own ground, and a drawing made on a
+# picture keeps that picture at its sides. describe_posts read both out of the
+# payload on every page (on PostgreSQL every path read re-parses the whole
+# drawing), so create_post writes them once, as two small columns, by the
+# player's own rules (inlineplayer.js adopt(): the first page's colour, else
+# the payload's own; its photo, else a base snapshot, the page's or the
+# payload's), and the Pad and Flip both post through it.
+_PNG = ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNg+M8AAAMBAQAY3Y20"
+        "AAAAAElFTkSuQmCC")
+_painted = {
+    # name: (payload, the column's ground, on a picture)
+    "a Pad drawing on the Pad's dark": (payload(frames=[dict(FRAME, background={"color": "#0D0F14"})]), "#0d0f14", False),
+    "a drawing on a photo": (payload(frames=[dict(FRAME, background={"color": "#f6f2ea"}, photo={"data": _PNG})]),
+                             "#f6f2ea", True),
+    "on the picture the Pad began on (its page's)": (payload(frames=[{"strokes": [], "strokeGroups": [],
+                                                                      "baseSnapshot": _PNG}]), "", True),
+    "the payload's own base snapshot beside its pages": (payload(frames=[dict(FRAME, background={"color": "#AbC"})],
+                                                                 baseSnapshot=_PNG), "#aabbcc", True),
+    "a Flip, a photo under its first page": (payload(playbackMode="flip", fps=12, frames=[
+        dict(FRAME, background={"color": "#123456"}, photo={"data": _PNG}), dict(FRAME, background={"color": "#654321"})]),
+        "#123456", True),
+    "a Flip, a photo under its second page alone": (payload(playbackMode="flip", fps=12, frames=[
+        dict(FRAME, background={"color": "#fff"}), dict(FRAME, photo={"data": _PNG})]), "#ffffff", False),
+    "a frameless payload from before pages, on a photo": ({"strokes": [], "background": {"color": "#ABCDEF"},
+                                                          "photo": {"data": _PNG}}, "#abcdef", True),
+    "a frameless payload, plain": ({"strokes": [], "background": {"color": "#f6f2ea"}}, "#f6f2ea", False),
+    "the first page's colour over the payload's": (payload(frames=[dict(FRAME, background={"color": "#101418"})],
+                                                           background={"color": "#ffffff"}), "#101418", False),
+    "an empty first-page colour, the payload's": (payload(frames=[dict(FRAME, background={"color": ""})],
+                                                          background={"color": "#123456"}), "#123456", False),
+    "a photo with no picture in it": (payload(frames=[dict(FRAME, photo={"fit": "cover"})]), "#101418", False),
+    "a bad ground: a name": (payload(frames=[dict(FRAME, background={"color": "red"})]), "", False),
+    "a bad ground: words after a colour": (payload(frames=[dict(FRAME, background={"color": "#fff; x: url(y)"})]), "", False),
+    "a bad ground: eight digits": (payload(frames=[dict(FRAME, background={"color": "#0d0f14ff"})]), "", False),
+    "a bad ground: a number": (payload(frames=[dict(FRAME, background={"color": 7})]), "", False),
+}
+with host.app_context():
+    _pids = {k: skribl.create_post(v[0], author_id=130).public_id for k, v in _painted.items()}
+    db.session.commit()
+    _cols = {k: tuple(db.session.execute(sa.text("SELECT ground, on_photo FROM skribl_posts WHERE public_id = :p"),
+                                         {"p": v}).one()) for k, v in _pids.items()}
+_wrong = {k: (_cols[k], v[1:]) for k, v in _painted.items()
+          if _cols[k][0] != v[1] or _cols[k][1] is None or bool(_cols[k][1]) != v[2]}
+check("create_post writes both columns at post time, by the player's own rules: `ground` the first page's colour,"
+      " else the payload's own (an empty one passed over, as the player's ||), lowercase, six digits; `on_photo` the"
+      " first page's photo, else a base snapshot, the page's or the payload's (a Pad drawing, a photo drawing, a base"
+      " snapshot, a Flip's first page and never its second, a payload from before pages)",
+      not _wrong, "; ".join(f"{k}: wrote {w}, wants {x}" for k, (w, x) in _wrong.items())[:600])
+check("...and a ground no page could use is \"\", an answer and never NULL (a name, words after a colour, eight"
+      " digits, a number), as False is an answer: NULL is kept for a post from before the columns",
+      all(_cols[k] == ("", 0) for k in _painted if k.startswith("a bad ground"))
+      and all(v[0] is not None and v[1] is not None for v in _cols.values()),
+      str({k: _cols[k] for k in _painted if k.startswith("a bad ground")}))
+# THE ENDPOINT THE PAD AND FLIP POST THROUGH (POST /api/skribls) is create_post
+# too (section 2): the same two columns from the same payloads.
+with host.app_context():
+    # The route flushes and the host commits (a route never commits the shared
+    # session), so it is asked inside the host's own context, as section 2 asks.
+    _ep = host.test_client()
+    _epids = {k: (_ep.post("/api/skribls", json=dict(_painted[k][0], visibility="public")).get_json() or {}).get("id")
+              for k in ("a drawing on a photo", "a Flip, a photo under its first page", "a Pad drawing on the Pad's dark")}
+    _epcols = {k: tuple(db.session.execute(sa.text("SELECT ground, on_photo FROM skribl_posts WHERE public_id = :p"),
+                                           {"p": v}).one()) if v else None for k, v in _epids.items()}
+    db.session.commit()
+check("...and the endpoint the Pad and Flip post through writes the same two, from the same payloads (it is"
+      " create_post: one place for both editors)",
+      all(_epcols[k] is not None and _epcols[k][0] == _painted[k][1] and bool(_epcols[k][1]) == _painted[k][2]
+          for k in _epids), str(_epcols))
 
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)

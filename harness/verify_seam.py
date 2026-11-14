@@ -1008,6 +1008,93 @@ check("the site goes through the seam alone: its Gallery reads the shared skribl
       and 'set_post_visibility(skribl_id, "public" if want else "unlisted", author_id=me.public_id)' in _posts_code
       and not any(v for v in _site_rows.values()), f"{ {k: v for k, v in _site_rows.items() if v} }")
 
+# ---------------------------------------------------------------------------
+print("\nWHAT A DRAWING IS PAINTED ON — describe_posts' ground and on_photo, from two columns")
+# docs/INTEGRATION.md, "The ground a drawing is painted on" (after v330, the
+# owner's "Yes to both, build them", Nov 14): a host's tile lays the box
+# around a drawing in its own ground, and a drawing made on a picture keeps
+# that picture at its sides. Both are columns written at post time; on
+# PostgreSQL the payload is plain `json` and every path read re-parses the
+# whole drawing, so describe_posts looks into the payload ONLY for a row whose
+# column is NULL (a post from before the columns). Pinned here as the
+# mechanism, read off the function's own syntax tree: every look into the
+# payload sits where only a NULL column takes it, in a CASE whose condition
+# is that column being NULL and whose other branch is the column (or, as
+# good, a coalesce that tries the column first). verify_hostseams proves it
+# in a throwaway host (a column that disagrees with the drawing answers; a
+# row with its columns is described with its payload unreadable), and
+# verify_createpost section 13 the writing.
+_dp_fn = next((n for n in ast.parse(_desc).body if isinstance(n, ast.FunctionDef) and n.name == "describe_posts"), None)
+
+
+def _post_col(node):
+    """'ground' for SkriblPost.ground, else None."""
+    return (node.attr if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
+            and node.value.id == "SkriblPost" else None)
+
+
+_dp_guarded, _dp_looks, _dp_helpers = {}, [], set()
+if _dp_fn:
+    # A look into the payload: a subscript of the payload column (or of `pj`,
+    # its name in the function), or a call of a helper of the function's own
+    # that makes one.
+    _payload_names = {"pj"}
+    _is_look = lambda n: isinstance(n, ast.Subscript) and (
+        (isinstance(n.value, ast.Name) and n.value.id in _payload_names)
+        or (isinstance(n.value, ast.Attribute) and n.value.attr == "payload_json"))
+    _dp_helpers = {f.name for f in ast.walk(_dp_fn) if isinstance(f, ast.FunctionDef) and f is not _dp_fn
+                   and any(_is_look(x) for x in ast.walk(f))}
+    _in_helper = {id(x) for f in ast.walk(_dp_fn) if isinstance(f, ast.FunctionDef) and f.name in _dp_helpers
+                  for x in ast.walk(f)}
+    for n in ast.walk(_dp_fn):
+        if not (isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)):
+            continue
+        if n.func.attr == "case" and n.args and isinstance(n.args[0], ast.Tuple) and len(n.args[0].elts) == 2:
+            cond, then = n.args[0].elts
+            col = (_post_col(cond.func.value) if isinstance(cond, ast.Call) and isinstance(cond.func, ast.Attribute)
+                   and cond.func.attr == "is_" and len(cond.args) == 1 and isinstance(cond.args[0], ast.Constant)
+                   and cond.args[0].value is None else None)
+            other = next((k.value for k in n.keywords if k.arg == "else_"), None)
+            if col and _post_col(other) == col:
+                _dp_guarded.setdefault(col, set()).update(id(x) for x in ast.walk(then))
+        elif n.func.attr == "coalesce" and n.args and _post_col(n.args[0]):
+            _dp_guarded.setdefault(_post_col(n.args[0]), set()).update(id(x) for a in n.args[1:] for x in ast.walk(a))
+    _dp_looks = [n for n in ast.walk(_dp_fn) if id(n) not in _in_helper and (
+        _is_look(n) or (isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in _dp_helpers))]
+_dp_loose = [ast.unparse(n) for n in _dp_looks if not any(id(n) in g for g in _dp_guarded.values())]
+_dp_code = ast.unparse(ast.Module(body=_dp_fn.body[1:], type_ignores=[])) if _dp_fn else ""
+check("describe_posts reads `ground` and `on_photo` from their columns and looks into the payload only where the"
+      " column is NULL (a post from before them): every look sits in that column's NULL branch, read off the syntax"
+      " tree; the payload deferred, the ground through validation's one rule, on_photo a bool",
+      bool(_dp_fn) and set(_dp_guarded) == {"ground", "on_photo"} and len(_dp_looks) >= 6 and not _dp_loose
+      and "defer(SkriblPost.payload_json)" in _dp_code and "ground=_ground(" in _dp_code and "on_photo=bool(" in _dp_code
+      and "from .validation import _ground" in _desc
+      and not re.search(r"\.add\(|\.delete\(|\.flush\(|\.commit\(|\.execute\(", _dp_code),
+      f"guarded {sorted(_dp_guarded)}; {len(_dp_looks)} looks, outside a column's NULL branch: {_dp_loose[:3]}")
+check("it is general: nothing in it names a host or a host's rows",
+      bool(_dp_code) and not re.search(r"social|blooby|site:|Person|(?<!Skribl)Post\b", _dp_code),
+      _dp_code[:120])
+_pg = re.search(r"\*\*The ground a drawing is painted on\*\*(.*?)\n\*\*", _guide, re.S)
+_pgw = " ".join(_pg.group(1).split()) if _pg else ""
+_bg = re.search(r"\*\*Filling in the ground and the picture[^*]*\*\*(.*?)\n\*\*", _guide, re.S)
+_bgw = " ".join(_bg.group(1).split()) if _bg else ""
+check("docs/INTEGRATION.md documents it: `on_photo` beside `ground`, both columns written at post time, a NULL read"
+      " from the drawing until `python -m skribl.backfill_ground` fills it in; and the command beside the other two,"
+      " a dry run by default, --write, and that nothing breaks without it",
+      bool(_pg) and all(w in _pgw for w in ("`on_photo`", "`ground`", "columns", "post time", "NULL",
+                                            "python -m skribl.backfill_ground"))
+      and bool(_bg) and all(w in _bgw for w in ("python -m skribl.backfill_ground", "--write", "dry run",
+                                                "`ground IS NULL", "nothing breaks")),
+      (_pgw[:160] or "no ground paragraph") + " | " + (_bgw[:120] or "no backfill paragraph"))
+_gal_tpl = (ROOT / "social" / "templates" / "social" / "_gallery.html").read_text(encoding="utf-8")
+_post_tpl = (ROOT / "social" / "templates" / "social" / "post.html").read_text(encoding="utf-8")
+_fill_m = re.search(r"\{% macro plate_fill\(sk\) -%\}(.*?)\{%- endmacro %\}", _gal_tpl, re.S)
+check("the site's tiles take it from the seam: plate_fill asks Skribl's description (`sk.on_photo`), the Gallery's"
+      " tile and More from's call it, and no module of social/ reaches Skribl's rows itself",
+      bool(_fill_m) and "sk.on_photo" in _fill_m.group(1) and "{{ plate_fill(t.sk) }}" in _gal_tpl
+      and "{{ plate_fill(m.sk) }}" in _post_tpl and not any(v for v in _site_rows.values()),
+      (_fill_m.group(1)[:120] if _fill_m else "no plate_fill macro"))
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

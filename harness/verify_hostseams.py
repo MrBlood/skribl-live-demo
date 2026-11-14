@@ -1465,6 +1465,103 @@ check("it is a documented name: shared_skribls in skribl.__all__, its docstring 
       "shared_skribls" in skribl.__all__ and "link_only" in (skribl.shared_skribls.__doc__ or "")
       and "SUBQUERY" in (skribl.shared_skribls.__doc__ or ""))
 
+print("\nWHAT A DRAWING IS PAINTED ON — describe_posts reads two columns, the drawing only where one is NULL (ground, on_photo)")
+# After v330 (the owner's "Yes to both, build them", Nov 14): a host's tile
+# lays the box around a drawing in its own ground, and a drawing made on a
+# picture keeps that picture at its sides. Skribl writes both as columns at
+# post time (`ground`, `on_photo`), and describe_posts reads the columns; a
+# post from before them (a NULL) is read from its drawing until `python -m
+# skribl.backfill_ground` fills it in. Asked here as a host asks it: three
+# skribls posted through a throwaway host's endpoint, their columns then set
+# to say something the drawing does not, then to NULL, one at a time.
+_PNG = ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNg+M8AAAMBAQAY3Y20"
+        "AAAAAElFTkSuQmCC")
+_gp_app, _gp_db = host_app("paint-host")
+_gp = _gp_app.test_client()
+
+
+def _painted_body(title, page, **top):
+    return dict({"title": title, "visibility": "public",
+                 "frames": [dict({"strokes": [], "strokeGroups": []}, **page)]}, **top)
+
+
+_gpid = {k: (_gp.post("/api/skribls", json=b_).get_json() or {}).get("id") for k, b_ in (
+    ("photo", _painted_body("on a photo", {"background": {"color": "#0d0f14"}, "photo": {"data": _PNG}})),
+    ("plain", _painted_body("plain, on the Pad's dark", {"background": {"color": "#0D0F14"}})),
+    ("snap", _painted_body("on the picture the Pad began on", {"background": {"color": "#f6f2ea"}}, baseSnapshot=_PNG)))}
+_GP_KEYS = ("photo", "plain", "snap")
+with _gp_app.app_context():
+    _s = _gp_db.session
+
+    def _gp_cols():
+        return {k: tuple(_s.execute(sa.text("SELECT ground, on_photo FROM skribl_posts WHERE public_id = :p"),
+                                    {"p": _gpid[k]}).one()) for k in _GP_KEYS}
+
+    def _gp_set(k, **cols):
+        _s.execute(sa.text("UPDATE skribl_posts SET " + ", ".join(f"{c} = :{c}" for c in cols) + " WHERE public_id = :p"),
+                   dict(cols, p=_gpid[k]))
+        _s.commit()
+        _s.expire_all()
+
+    def _gp_told():
+        d = skribl.describe_posts([_gpid[k] for k in _GP_KEYS])
+        return {k: (d[_gpid[k]]["ground"], d[_gpid[k]]["on_photo"]) for k in _GP_KEYS if _gpid[k] in d}
+    _gp_posted, _gp_first = _gp_cols(), _gp_told()
+    # The columns say something the drawing does not.
+    _gp_set("photo", ground="#123456", on_photo=False)
+    _gp_set("plain", ground="", on_photo=True)
+    _gp_set("snap", ground="#abcdef", on_photo=False)
+    _gp_disagree = _gp_told()
+    # NULL: posts from before the columns.
+    for _k in _GP_KEYS:
+        _gp_set(_k, ground=None, on_photo=None)
+    _gp_null = _gp_told()
+    # One NULL and the other kept: each column on its own.
+    _gp_set("photo", ground=None, on_photo=False)
+    _gp_set("plain", ground="#222222", on_photo=None)
+    _gp_each = _gp_told()
+    # A ROW WITH ITS COLUMNS NEVER READS ITS DRAWING: its payload made
+    # unreadable (SQLite's json_extract raises on it), it is described from its
+    # columns all the same; the same row with a column NULL, which has to read
+    # it, cannot be described (the instrument, shown red on the tree).
+    for _k in _GP_KEYS:
+        _gp_set(_k, ground="#0d0f14", on_photo=True)
+    _good_payload = _s.execute(sa.text("SELECT payload_json FROM skribl_posts WHERE public_id = :p"),
+                               {"p": _gpid["photo"]}).scalar()
+    _gp_set("photo", payload_json="not json {")
+    try:
+        _gp_unread = _gp_told()
+    except Exception as exc:  # noqa: BLE001 -- a read of the drawing is this row's red
+        _s.rollback()
+        _gp_unread = f"{type(exc).__name__}: {str(exc).splitlines()[0][:100]}"
+    _gp_set("photo", ground=None)
+    try:
+        _gp_must_read = repr(_gp_told())
+    except Exception as exc:  # noqa: BLE001 -- the instrument's red: this one has to read the drawing
+        _s.rollback()
+        _gp_must_read = f"raised {type(exc).__name__}"
+    _gp_set("photo", payload_json=_good_payload if isinstance(_good_payload, str) else json.dumps(_good_payload),
+            ground="#0d0f14", on_photo=True)
+check("(setup) three skribls posted through a throwaway host's endpoint (on a photo, plain on the Pad's dark, on the"
+      " picture the Pad began on), their columns written as posted, and described so",
+      all(_gpid.values()) and _gp_posted == {"photo": ("#0d0f14", 1), "plain": ("#0d0f14", 0), "snap": ("#f6f2ea", 1)}
+      and _gp_first == {"photo": ("#0d0f14", True), "plain": ("#0d0f14", False), "snap": ("#f6f2ea", True)},
+      f"{_gpid}; columns {_gp_posted}; described {_gp_first}")
+check("describe_posts answers from the columns: where a column says one thing and the drawing another, the column"
+      " (\"\" no ground, None to a host; False and True as written)",
+      _gp_disagree == {"photo": ("#123456", False), "plain": (None, True), "snap": ("#abcdef", False)},
+      f"{_gp_disagree}")
+check("...and where a column is NULL (a post from before them), from the drawing, as the player paints it: each"
+      " column on its own (the ground from the drawing beside a picture kept, and the other way round)",
+      _gp_null == {"photo": ("#0d0f14", True), "plain": ("#0d0f14", False), "snap": ("#f6f2ea", True)}
+      and _gp_each == {"photo": ("#0d0f14", False), "plain": ("#222222", False), "snap": ("#f6f2ea", True)},
+      f"NULL {_gp_null}; one NULL {_gp_each}")
+check("...and a row with its columns never reads its drawing: its payload made unreadable, it is described from its"
+      " columns all the same, where the same row with a column NULL cannot be (it has to read it)",
+      _gp_unread == {"photo": ("#0d0f14", True), "plain": ("#0d0f14", True), "snap": ("#0d0f14", True)}
+      and _gp_must_read.startswith("raised"),
+      f"columns set: {_gp_unread}; a column NULL: {_gp_must_read}")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

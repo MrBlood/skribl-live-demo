@@ -61,6 +61,16 @@
                         nothing said, and the box keeps the paper it had
                         (social.css). Never cropped: the drawing stays whole.
                         Both tiles, one rule.
+    plate_fill(sk)      a drawing on a picture keeps its picture at its sides
+                        (the owner's "Yes to both, build them", Nov 14): where
+                        Skribl's description says `on_photo` (a photo, or the
+                        picture the Pad began on), a second copy of the plate,
+                        hidden from a screen reader, BEFORE the plate in the
+                        box, which social.css scales to cover the box and
+                        blurs; nothing has a z-index, so the plate paints over
+                        it and the ▶ (and the eye) over both. A drawing on a
+                        plain ground has none: its strips are its ground
+                        (plate_ground). Both tiles, one rule.
 
     Import these WITH CONTEXT: they read the page's skribl_bp. #}
 {% from 'social/_post.html' import face with context %}
@@ -84,11 +94,15 @@
 {%- if sk and sk.ground %} style="--plate-ground: {{ sk.ground }}"{% endif -%}
 {%- endmacro %}
 
+{% macro plate_fill(sk) -%}
+{%- if sk and sk.on_photo %}<span class="plate-fill" aria-hidden="true"><span style="{{ plate_frame(sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=sk.id) }}" alt="" loading="lazy" decoding="async"></span></span>{% endif -%}
+{%- endmacro %}
+
 {% macro gallery_tile(t) -%}
 {%- if t.eye %}<div class="gal-cell{% if t.hidden %} is-hidden{% endif %}" data-eye-cell>{% endif -%}
 <a class="gal-tile" href="{{ t.url }}" {% if t.kind == 's' %}data-drawing="{{ t.sk.id }}"{% else %}data-post="{{ t.post }}"{% endif %} data-handle="{{ t.who.handle }}" aria-label="{{ t.label }}"
    {%- if t.eye %} data-label-shown="{{ t.shown_label }}" data-label-hidden="{{ t.hidden_label }}"{% endif %}>
-  <span class="gal-pic"{{ plate_ground(t.sk) }}><span class="gal-plate" style="{{ plate_frame(t.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=t.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
+  <span class="gal-pic"{{ plate_ground(t.sk) }}>{{ plate_fill(t.sk) }}<span class="gal-plate" style="{{ plate_frame(t.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=t.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
     <span class="gal-dur">{{ ic.tri() }}{% if t.says %}<span>{{ t.says }}</span>{% endif %}</span></span>
   <span class="gal-by">{{ face(t.who) }}<b>{{ t.name }}</b>
     {%- if t.likes or t.comments %}<span class="gal-n">

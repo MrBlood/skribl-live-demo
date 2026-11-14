@@ -793,6 +793,206 @@ check("...and a second run fills nothing and skips every row it already did",
       f"second run looked at {_seen10} and filled {_filled10} \u2014 the work queue "
       f"is `canvas_w IS NULL`, so what is done stays done")
 
+print("\nMIGRATIONS — after v330, the ground and the picture: columns only, and the backfill is a command")
+# A host's tile lays the box around a drawing in its own ground, and a drawing
+# made on a picture keeps that picture at its sides (the owner's "Yes to both,
+# build them", Nov 14). describe_posts read both out of the payload on every
+# page; they are columns now, written at post time, and a post from before
+# them is read from its drawing until `python -m skribl.backfill_ground` fills
+# it in. v309's lesson holds: the revision adds the columns and nothing else,
+# asserted on its parsed upgrade(), and the data work is the command, driven
+# here on SQLite against the payload shapes a gallery holds, hostile ones in
+# a run with fillable ones behind them, and as a real command (a dry run, an
+# interrupted run resumed, --limit, the exit codes). verify_postgres drives
+# its PostgreSQL extraction against the same shapes.
+_gp_path = (ROOT / "skribl" / "migrations" / "versions" / "d622ae38b444_after_v330_post_ground_and_photo.py")
+_gp_up = next((n for n in ast.parse(_gp_path.read_text(encoding="utf-8")).body
+               if isinstance(n, ast.FunctionDef) and n.name == "upgrade"), None)
+_gp_calls = [n.func.attr for n in ast.walk(_gp_up)
+             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)] if _gp_up else []
+_gp_added = [n.args[1].args[0].value for n in ast.walk(_gp_up) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and n.func.attr == "add_column" and len(n.args) == 2 and isinstance(n.args[1], ast.Call)
+             and n.args[1].args and isinstance(n.args[1].args[0], ast.Constant)] if _gp_up else []
+check("the ground's revision only adds its two columns, nullable — it runs no data statement and reads no payload",
+      _gp_up is not None and set(_gp_calls) <= {"add_column", "Column", "String", "Boolean"}
+      and sorted(_gp_added) == ["ground", "on_photo"] and not {"execute", "get_bind"} & set(_gp_calls)
+      and all(any(k.arg == "nullable" and isinstance(k.value, ast.Constant) and k.value.value is True
+                  for k in n.keywords) for n in ast.walk(_gp_up) if isinstance(n, ast.Call)
+              and isinstance(n.func, ast.Attribute) and n.func.attr == "Column"),
+      f"calls {_gp_calls}; columns {_gp_added} — anything more here gates gunicorn on every deploy")
+
+from skribl import backfill_ground as _bg                          # noqa: E402
+from skribl.validation import _payload_ground as _pyground, _payload_on_photo as _pyphoto  # noqa: E402
+
+# Each shape, and the player's own answer for it (inlineplayer.js adopt():
+# the first page's colour, else the payload's own; the first page's photo,
+# else a base snapshot, the page's or the payload's; framesOf's "a first
+# page" only when `frames` is a list with something in it). A big picture,
+# so a backfill that sent it would be seen sending it.
+_PIC = "data:image/png;base64," + "A" * 120000
+_GSHAPES = [
+    ("a Pad drawing on the Pad's dark", {"frames": [{"background": {"color": "#0D0F14"}}]}, ("#0d0f14", False)),
+    ("a page on a photo", {"frames": [{"background": {"color": "#fff"}, "photo": {"data": _PIC}}]}, ("#ffffff", True)),
+    ("a page on the picture it began on", {"frames": [{"baseSnapshot": _PIC}]}, ("", True)),
+    ("the payload's own snapshot beside pages", {"frames": [{"background": {"color": "#123"}}], "baseSnapshot": _PIC},
+     ("#112233", True)),
+    ("from before pages, on a photo", {"background": {"color": "#ABC"}, "photo": {"data": _PIC}}, ("#aabbcc", True)),
+    ("from before pages, plain", {"background": {"color": "#f6f2ea"}, "strokes": []}, ("#f6f2ea", False)),
+    # A RUN OF HOSTILE ONES, longer than a batch.
+    ("a photo on the second page alone", {"frames": [{"background": {"color": "#000000"}}, {"photo": {"data": _PIC}}]},
+     ("#000000", False)),
+    ("a top-level photo beside pages", {"frames": [{}], "photo": {"data": _PIC}}, ("", False)),
+    ("no pages in the list, a top photo", {"frames": [], "photo": {"data": _PIC}, "background": {"color": "#010203"}},
+     ("#010203", True)),
+    ("pages an object", {"frames": {"0": {"photo": {"data": _PIC}}}, "background": {"color": "#0a0b0c"}},
+     ("#0a0b0c", False)),
+    ("a first page that is words", {"frames": ["a page"], "baseSnapshot": _PIC}, ("", True)),
+    ("a first page that is null", {"frames": [None], "background": {"color": "#111"}}, ("#111111", False)),
+    ("an empty photo", {"frames": [{"photo": {"data": ""}}]}, ("", False)),
+    ("a photo that is words", {"frames": [{"photo": "data:image/png;base64,AAAA"}]}, ("", False)),
+    ("a photo of 0", {"frames": [{"photo": {"data": 0}}]}, ("", False)),
+    ("a photo of true", {"frames": [{"photo": {"data": True}}]}, ("", True)),
+    ("an empty first-page colour", {"frames": [{"background": {"color": ""}}], "background": {"color": "#456"}},
+     ("#445566", False)),
+    ("a false first-page colour", {"frames": [{"background": {"color": False}}], "background": {"color": "#456"}},
+     ("#445566", False)),
+    ("a name for a colour", {"frames": [{"background": {"color": "red"}}], "background": {"color": "#456"}}, ("", False)),
+    ("a long string for a colour", {"frames": [{"background": {"color": "#0d0f14; background: url(" + "x" * 200 + ")"}}]},
+     ("", False)),
+    ("a number for a colour", {"frames": [{"background": {"color": 7}}]}, ("", False)),
+    ("an object for a colour", {"frames": [{"background": {"color": {"a": 1}}}], "background": {"color": "#456"}},
+     ("", False)),
+    ("a payload that is a list", [1, 2, 3], ("", False)),
+    ("a payload that is words", "a string", ("", False)),
+    # FILLABLE, AND BEHIND ALL OF THAT.
+    ("a square one on a photo", {"frames": [{"background": {"color": "#fafafa"}, "photo": {"data": _PIC}}]},
+     ("#fafafa", True)),
+    ("a plain one, last", {"frames": [{"background": {"color": "#0d0f14"}}]}, ("#0d0f14", False)),
+]
+_GRAW = [("not JSON at all", "not json {", ("", False)), ("a NULL payload", None, ("", False))]
+_eng_g = sa.create_engine("sqlite://")
+with _eng_g.begin() as c:
+    c.exec_driver_sql("CREATE TABLE skribl_posts (id INTEGER PRIMARY KEY, payload_json TEXT, ground VARCHAR(7), on_photo BOOLEAN)")
+    for _lbl, _pl, _want in _GSHAPES:
+        c.exec_driver_sql("INSERT INTO skribl_posts (payload_json) VALUES (?)", (json.dumps(_pl),))
+    for _lbl, _raw, _want in _GRAW:
+        c.exec_driver_sql("INSERT INTO skribl_posts (payload_json) VALUES (?)", (_raw,))
+    # A host that wrote a column itself keeps it; a row with both is no work.
+    c.exec_driver_sql("INSERT INTO skribl_posts (payload_json, ground) VALUES (?, '#999999')",
+                      (json.dumps({"frames": [{"background": {"color": "#000000"}, "photo": {"data": _PIC}}]}),))
+    c.exec_driver_sql("INSERT INTO skribl_posts (payload_json, ground, on_photo) VALUES (?, '#abcdef', 0)",
+                      (json.dumps({"frames": [{"background": {"color": "#000000"}, "photo": {"data": _PIC}}]}),))
+_n_g = len(_GSHAPES) + len(_GRAW) + 1          # the rows the queue holds: the last is no work
+_sess_g = _Session9(_eng_g)
+_cols_g = lambda: [tuple(r) for r in _sess_g.execute(sa.text("SELECT ground, on_photo FROM skribl_posts ORDER BY id")).fetchall()]
+# WHAT CROSSES THE WIRE: every value the extraction sends is short, a picture
+# of 120,000 characters among them (read first, while every row is queued).
+_wire = _sess_g.execute(sa.text(_bg._extract_sql("sqlite")), {"n": 1000, "last": 0}).fetchall()
+_sess_g.rollback()
+_longest = max((len(str(v)) for r in _wire for v in r[1:] if v is not None), default=0)
+# A DRY RUN WRITES NOTHING, and still pages to the end.
+_dry_g = _bg.run(_sess_g, batch=3, write=False, out=_io9.StringIO())
+_sess_g.rollback()
+_after_dry = _cols_g()
+_seen_g, _filled_g, _failed_g = _bg.run(_sess_g, batch=3, write=True, out=_io9.StringIO())
+_got_g = _cols_g()
+_rows_g = [(lbl, want, (_pyground(pl), _pyphoto(pl)), got) for (lbl, pl, want), got in zip(_GSHAPES, _got_g)]
+_rows_g += [(lbl, want, (_pyground(None), _pyphoto(None)), got) for (lbl, _r, want), got in zip(_GRAW, _got_g[len(_GSHAPES):])]
+_bad_g = [r for r in _rows_g if not (r[1] == r[2] and r[3][0] == r[1][0] and r[3][1] is not None and bool(r[3][1]) == r[1][1])]
+check("a dry run writes nothing, and still looks at every row in the queue, page after page",
+      _dry_g == (_n_g, _n_g, 0) and all(g is None for g, p in _after_dry[:-2]) and all(p is None for g, p in _after_dry[:-1]),
+      f"dry run {_dry_g}; columns after it {_after_dry[:4]}...")
+check("SQLite: --write fills both columns as the player would paint them and as create_post writes them, on every"
+      " shape (pages or none, a picture on the second page, a top-level photo beside pages, pages an object, a first"
+      " page that is words or null, an empty, false or named colour, a payload that is not one)",
+      not _bad_g and not _failed_g,
+      "; ".join(f"{lbl}: player {w}, rule {r}, written {g}" for lbl, w, r, g in _bad_g)[:600]
+      or f"{len(_rows_g)} shapes agree, {_failed_g} failed batches")
+check("...and it looked at every row in the queue, the ones behind the hostile run too, never one with both columns",
+      _seen_g == _n_g and _filled_g == _n_g and _got_g[len(_GSHAPES) - 2] == ("#fafafa", 1)
+      and _got_g[len(_GSHAPES) - 1] == ("#0d0f14", 0),
+      f"{_seen_g} of {_n_g} looked at, {_filled_g} filled; tail {_got_g[len(_GSHAPES) - 2:len(_GSHAPES)]}")
+check("...a column a host wrote itself is kept (only a NULL is filled), and a row with both is left as it was",
+      _got_g[-2] == ("#999999", 1) and _got_g[-1] == ("#abcdef", 0), f"{_got_g[-2:]}")
+check("...and only a few characters of each picture cross the wire, never the payload (a picture of 120,000"
+      " characters among them)",
+      _longest <= _bg.CUT and "SELECT id, payload_json" not in _bg._extract_sql("sqlite") and len(_wire) == _n_g,
+      f"the longest value sent is {_longest} characters; {len(_wire)} rows")
+_again_g = _bg.run(_sess_g, batch=3, write=True, out=_io9.StringIO())
+check("...and a second run finds nothing to do: the queue is the rows where a column is NULL",
+      _again_g == (0, 0, 0), f"second run {_again_g}")
+_sess_g.close()
+
+# AS A COMMAND, as a host runs it: a throwaway app on a database at head.
+_gdir = tempfile.mkdtemp()
+_gdb = os.path.join(_gdir, "ground.db")
+alembic(_gdb, "upgrade", "head")
+_gcon = sqlite3.connect(_gdb)
+for _i in range(7):
+    _gcon.execute("insert into skribl_posts (public_id,user_id,title,payload_json,has_audio,created_at,visibility)"
+                  " values (?,1,?,?,0,?,'public')",
+                  (f"bg{_i}", f"g{_i}", json.dumps({"frames": [{"background": {"color": "#0d0f14"},
+                                                                 **({"photo": {"data": _PIC}} if _i % 2 else {})}]}),
+                   datetime.now().isoformat()))
+_gcon.commit()
+_gcon.close()
+_gold = os.path.join(_gdir, "old.db")
+alembic(_gold, "upgrade", "a7d2c4e9b153")        # the revision before the columns
+with open(os.path.join(_gdir, "groundhost.py"), "w") as _fh:
+    _fh.write("import os\nfrom flask import Flask\nfrom flask_sqlalchemy import SQLAlchemy\nimport skribl\n"
+              "app = Flask('groundhost')\napp.config['SQLALCHEMY_DATABASE_URI'] = os.environ['GROUND_DB']\n"
+              "app.config['SECRET_KEY'] = 'groundhost'\ndb = SQLAlchemy()\ndb.init_app(app)\n"
+              "skribl.init_skribl(app, session=lambda: db.session, current_user_id=lambda: None, csrf=False)\n")
+
+
+def _ground_cmd(*args, db=_gdb):
+    env = dict(os.environ, GROUND_DB=f"sqlite:///{db}",
+               PYTHONPATH=_gdir + os.pathsep + str(ROOT) + os.pathsep + os.environ.get("PYTHONPATH", ""))
+    p = subprocess.run([sys.executable, "-m", "skribl.backfill_ground", "--app", "groundhost:app", *args],
+                       cwd=ROOT, env=env, capture_output=True, text=True)
+    return p.returncode, (p.stdout.strip().splitlines() or [""])[-1], p.stderr.strip()
+
+
+def _ground_nulls(db=_gdb):
+    c = sqlite3.connect(db)
+    try:
+        return c.execute("select count(*) from skribl_posts where ground is null or on_photo is null").fetchone()[0]
+    finally:
+        c.close()
+
+
+_c_dry = _ground_cmd()
+_n_dry = _ground_nulls()
+_c_cut = _ground_cmd("--write", "--limit", "3", "--batch", "2")
+_n_cut = _ground_nulls()
+_c_rest = _ground_cmd("--write")
+_n_rest = _ground_nulls()
+_c_done = _ground_cmd("--write")
+_gcon = sqlite3.connect(_gdb)
+_g_after = _gcon.execute("select ground, on_photo from skribl_posts order by id").fetchall()
+_gcon.close()
+check("python -m skribl.backfill_ground: a dry run by default (exit 0, saying so, nothing written); --limit stops"
+      " after that many rows, committed; run again it carries on from there and finishes; a third run has nothing"
+      " to do",
+      _c_dry[0] == 0 and "7 looked at, 7 would fill" in _c_dry[1] and "dry run" in _c_dry[1] and _n_dry == 7
+      and _c_cut[0] == 0 and _c_cut[1].startswith("3 looked at, 3 filled") and _n_cut == 4
+      and _c_rest[0] == 0 and _c_rest[1].startswith("4 looked at, 4 filled") and _n_rest == 0
+      and _c_done[0] == 0 and _c_done[1].startswith("0 looked at, 0 filled")
+      and _g_after == [("#0d0f14", _i % 2) for _i in range(7)],
+      f"dry {_c_dry[:2]} ({_n_dry} NULL); --limit 3 {_c_cut[:2]} ({_n_cut} NULL); again {_c_rest[:2]} ({_n_rest} NULL);"
+      f" once more {_c_done[:2]}; {_g_after}")
+_c_batch0 = _ground_cmd("--batch", "0")
+_c_noapp = subprocess.run([sys.executable, "-m", "skribl.backfill_ground", "--app", "no_such_module:app"],
+                          cwd=ROOT, capture_output=True, text=True)
+_c_old = _ground_cmd("--write", db=_gold)
+check("...and its exit codes say what happened: 2 it could not run (a batch of 0, an --app that is not there), one"
+      " line on stderr; 1 it ran and a batch failed (a database whose columns are not there yet), the last line"
+      " saying so",
+      _c_batch0[0] == 2 and "--batch" in _c_batch0[2] and _c_noapp.returncode == 2
+      and "Traceback" not in _c_noapp.stderr and _c_old[0] == 1 and "FAILED" in _c_old[1],
+      f"batch 0: {_c_batch0[0]} {_c_batch0[2][:80]!r}; no app: {_c_noapp.returncode}; before the columns: {_c_old[:2]}")
+shutil.rmtree(_gdir, ignore_errors=True)
+
 print("\nA '%' IN DATABASE_URL — migrations run, and the URL is not printed (v321 preflight, PF-021)")
 # alembic's Config is a ConfigParser: a '%' in the URL (a percent-encoded
 # password) raised an interpolation error carrying the WHOLE URL, password and

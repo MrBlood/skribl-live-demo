@@ -688,6 +688,25 @@ class SkriblPost(SkriblBase):
     # and a post from before this column has none until skribl/backfill_line.py
     # reaches it. The line then says what it can without it.
     line_json = Column(Text, nullable=True)
+    # WHAT THE DRAWING IS PAINTED ON (after v330, Nov 14), for the same reason
+    # and on the same terms: a host's tile lays the box around a drawing in its
+    # own ground, and a drawing made on a picture keeps that picture at its
+    # sides (describe_posts). Both were read out of the payload by the database
+    # on every page of a feed, and on PostgreSQL every path read re-parses the
+    # whole drawing (measured: 80-260 ms a page for the ground's two reads,
+    # 310-425 ms with the picture's). Written once at post time from the
+    # payload by the player's own rules (validation._payload_ground and
+    # _payload_on_photo).
+    #
+    # `ground` is "#rrggbb", or "" when the drawing has none a page could use.
+    # `on_photo` is whether the player lays a picture under it (the first
+    # page's photo, or the picture the Pad began on).
+    #
+    # NULLABLE, and null means "not read yet": a post from before these columns
+    # is read from its drawing by describe_posts until skribl/backfill_ground.py
+    # reaches it. "" is an answer (no ground), and so is False.
+    ground = Column(String(7), nullable=True)
+    on_photo = Column(Boolean, nullable=True)
 
     @property
     def line(self):

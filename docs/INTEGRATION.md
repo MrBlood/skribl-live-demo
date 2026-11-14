@@ -211,9 +211,9 @@ Home does this: `social/static/posts.js`).
 stores a skribl's public id on each; `skribl.describe_posts(ids,
 viewer_id=...)` hands back, by public id, the listing's own item for each
 (`id`, `title`, `caption`, `kind`, `pages`, `canvas_w`, `canvas_h`, `line`,
-`views`, `user_id`, `visibility`, `created_at`) and its `ground`, so a page
-of your feed reads its drawings' sizes, lines, plays and grounds in one
-query without importing Skribl's models:
+`views`, `user_id`, `visibility`, `created_at`), its `ground` and its
+`on_photo`, so a page of your feed reads its drawings' sizes, lines, plays,
+grounds and pictures in one query without importing Skribl's models:
 
 ```python
 drawings = skribl.describe_posts([p.skribl_id for p in posts], viewer_id=me_id)
@@ -248,11 +248,32 @@ box's, with your own paper where it is `None`:
 .tile-box { background: var(--plate-ground, var(--your-paper)); }
 ```
 
-No payload crosses for it: the payload is deferred, as the listing's is, and
-the ground is read by the database where it is, at its path in the JSON
-(SQLite's `json_extract`, PostgreSQL's `#>>`), in the same one query
-(`verify_createpost.py`, section 11, holds the colours it takes and refuses,
-and the query that selects no payload).
+And whether it is on a picture (after v330, the owner's "Yes to both, build
+them", Nov 14): `on_photo` is `True` when the player lays a picture under the
+drawing, its first page's photo or the picture the Pad began on (a base
+snapshot, the page's or the payload's own), and `False` otherwise. The Skribl
+site shows a photo drawing's own picture at its sides with it: a second copy
+of the poster's plate behind the plate, scaled to cover the box and blurred
+(`social/templates/social/_gallery.html`, `plate_fill`). Only for a picture: on
+a plain drawing the blur is a coloured haze, and its own ground is the better
+box.
+
+Both are columns, written once at post time by the player's own rules
+(`create_post`, so the Pad, Flip and your own form alike), and read with the
+rest of the item, the payload deferred as the listing's is: for a post made
+since the columns no payload is read at all. A post from before them has
+`NULL` there, and for it the database reads that one from the drawing, at its
+paths in the JSON (SQLite's `json_extract`, PostgreSQL's `#>>`), in a branch
+of a CASE only a `NULL` takes, in the same one query, until
+`python -m skribl.backfill_ground` fills it in (Maintenance jobs, below). On
+PostgreSQL the payload is plain `json`, and every path read re-parses the
+whole drawing: measured on 24 drawings of 0.7 MB to 4.7 MB, the ground's two
+reads cost 80-260 ms a page and the picture's four more 310-425 ms, which is
+why they are columns. `verify_createpost.py` sections 11 and 13 hold the
+colours it takes and refuses, the columns written at post time and the one
+query; `verify_hostseams.py` ("What a drawing is painted on") that a column
+answers where it disagrees with the drawing, that a `NULL` reads the drawing,
+and that a row with its columns is described with its payload unreadable.
 
 **What it costs and when.** `skribl_inline_assets()` pulls
 `inlineplayer.css`, `inlineplayer.js`, and the shared rule modules
@@ -300,8 +321,9 @@ the site made Home posts only; it still reads one person's, for More from).
 `skribl.list_public_posts(author=..., author_prefix=..., before=..., limit=...,
 viewer_id=...)` hands back `(items, more)`: the public skribls a gallery would
 list, newest first, as the listing's own items (the keys `describe_posts`
-hands back but its `ground`: ask `describe_posts` for the ones you show, as
-the Skribl site does for a drawing shown outside a post), by one author or
+hands back but its `ground` and `on_photo`: ask `describe_posts` for the ones
+you show, as the Skribl site does for a drawing shown outside a post), by one
+author or
 by a prefix your people's ids share (the site's are `site:...`), a page at a
 time:
 
@@ -2191,6 +2213,24 @@ reclaims nothing tells you which. Call `storage.sweep_orphans_report()` directly
 if you would rather schedule it in-process.
 
 This is not a daemon and does not schedule itself; cadence is your cron's job.
+
+**Filling in the ground and the picture on posts written before them** (after
+v330). `describe_posts` reads two small columns, `ground` and `on_photo`,
+which posts carry from the moment they are made; a post from before them has
+`NULL` there, and `describe_posts` reads that one from its drawing on every
+page that shows it, where on PostgreSQL every path read re-parses the whole
+drawing. This fills them in, on the terms of the two commands below -- a dry
+run by default, small batches committed as it goes (25 rows, as the line's,
+since the database reads each payload whole to reach inside it), "rows where
+`ground IS NULL` or `on_photo IS NULL`" as the queue, the same exit codes --
+and only the colours and the first few characters of each picture cross the
+wire. A column you wrote yourself is kept. Run it whenever you like, or not
+at all: nothing breaks without it, and a tile looks as it did.
+
+```bash
+python -m skribl.backfill_ground --app yourapp:create_app           # rehearse
+python -m skribl.backfill_ground --app yourapp:create_app --write   # fill them in
+```
 
 **Filling in the line on posts written before v322.** The line under a post
 reads one small column, `line_json`, which posts carry from v322. Older Pad posts

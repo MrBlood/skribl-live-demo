@@ -1813,6 +1813,27 @@ it, it rises just above them.
                                     ({"gallery": true|false}, JSON)
     /social/b/<skribl_id>/gallery   your drawing shown outside a post, the same
 
+**A drawing on a photo keeps its photo at its sides** (the owner, Nov 14,
+"Yes to both, build them"; DECISIONS, "A drawing on a photo keeps its photo
+at its sides"). Asked on their phone, on a profile's Gallery tab: "will the
+player not show the strips on the side?" A TILE OF A DRAWING MADE ON A
+PICTURE, a photo or the picture the Pad began on, shows that picture at its
+sides: a second copy of the drawing's plate behind it (`_gallery.html`
+`plate_fill`), scaled to cover the box a quarter over, blurred 16px, a little
+more saturated and at 0.9, so a photo is never framed in cream or dark bars.
+A drawing on a plain ground keeps its strips in its own ground, as before: on
+a line drawing the blur is a coloured haze. The ▶ and, on your own Gallery
+tab, the eye stay on top of every tile (the copy comes first in the box and
+nothing has a z-index; the first mock lifted the drawing over the ▶ and the
+owner saw it). Every tile that frames a plate: the Gallery, a profile's
+Gallery tab, the first visit's six and More from. Hidden with the eye, the
+picture at its sides fades with the drawing. Skribl says which drawings are
+on a picture (`describe_posts` `on_photo`), from a column written at post
+time beside the ground's (docs/INTEGRATION.md, "The ground a drawing is
+painted on"); a drawing from before the columns is read from the drawing
+until `python -m skribl.backfill_ground --write` is run, which is optional:
+nothing breaks without it.
+
 **The four.** Simple: one thing to share, one card for it, one Gallery
 (everyone's, the people you follow, or one person's), one place for your
 things. Kind: nothing anybody made is lost, Likes and Drafts stay yours

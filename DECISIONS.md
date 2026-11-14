@@ -39980,3 +39980,244 @@ in the Gallery?
 Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
 their smoke after the merge); SF and Segoe UI (the chip's word is one line
 in its own box, the toast's place is measured, not tuned); the live site.
+
+## After v330 -- A drawing on a photo keeps its photo at its sides
+
+The owner, Nov 14 (Mountain Time), on their phone, on a profile's Gallery
+tab: "will the player not show the strips on the side?" Mocked beside "now"
+(#899's strips in the drawing's own ground): A, each tile its drawing's own
+shape (offered for later, not decided); B, fill and cut (out); C, #899's
+strips as they are; C+, those strips, and a drawing on a photo with its photo
+at its sides. Then "Show me only your picks so I'm clear what they look
+like", and to the pick's mock, about 10:25 AM: "Yes to both, build them".
+The first C+ mock had lifted the drawing over the "▶ 3 sec" with a z-index,
+and the owner saw it: the ▶ stays on top of every tile. Built Nov 14.
+
+WHAT CHANGED.
+
+- A DRAWING ON A PICTURE KEEPS ITS PICTURE AT ITS SIDES (`_gallery.html`
+  `plate_fill`, social.css): where the drawing is made on a photo, or on the
+  picture the Pad began on, a second copy of its plate goes FIRST in the box,
+  hidden from a screen reader, scaled to cover the box a quarter over,
+  blurred 16px, saturate 1.1, at 0.9 (the pick's mock, value for value: its
+  FILL). Nothing has a z-index, so the sharp plate paints over the copy, and
+  the ▶, and on your own Gallery tab the eye, over both. Every tile that
+  frames a plate: the Gallery of everyone, a profile's Gallery tab, the first
+  visit's six, and More from on a post's page (its box now places the copy:
+  `position: relative`). The copy asks for the plate's own poster, so it
+  costs no second fetch. A drawing on a plain ground keeps its strips in its
+  own ground (#899): on a line drawing the blur is a coloured haze (mock D,
+  not picked).
+- SKRIBL SAYS WHICH: `on_photo` in `describe_posts`' items (docs/INTEGRATION.md,
+  "The ground a drawing is painted on"), True when the player lays a picture
+  under the drawing: the first page's photo, else a base snapshot, the
+  page's or the payload's own (inlineplayer.js adopt() and framesOf). Every
+  host gets it.
+- TWO COLUMNS, NOT A LOOK AT THE PAYLOAD (skribl/models.py; revision
+  d622ae38b444, columns only, nullable, NULL being "not read yet"): `ground`
+  ("#rrggbb", or "" for none a page could use) and `on_photo`. On PostgreSQL
+  the payload is plain `json`, and every path read re-parses the whole
+  drawing. Measured on PG 16, 24 drawings of 0.7 MB to 4.7 MB: #899's two
+  ground reads cost 80-260 ms a page of the Gallery, four more for the
+  picture 310-425 ms, and one `::jsonb` cast a row 1.2-1.7 s. So `create_post`
+  writes both at post time, by the player's own rules
+  (`validation._payload_ground` and `_payload_on_photo`, beside the row's
+  other payload columns; `_ground`, the one spelling of a colour a page may
+  use, moved there from describing.py, which imports it), and `describe_posts`
+  reads the columns. Only where a column is NULL, a post from before them,
+  does the database read that one from the drawing, in the branch of a CASE
+  only a NULL takes: the ground as #899 read it, the picture's four places in
+  the player's order in a coalesce that stops at the first one there. A page
+  of new drawings reads no payload at all.
+- `python -m skribl.backfill_ground` (skribl/backfill_ground.py;
+  docs/INTEGRATION.md, beside the other two): backfill_canvas's shape and exit
+  codes, a dry run by default, `--write`, `--batch` (25, as the line's) and
+  `--limit`; "rows where `ground` or `on_photo` IS NULL" is the queue, paged
+  by id and committed a batch at a time, so it carries on where it stopped.
+  The database sends the two colours, whether `frames` holds a first page,
+  and the first 24 characters of each picture's place, never the picture;
+  Python decides, with the rules creation.py writes with, on a stand-in
+  payload of those values. A column a host wrote itself is kept.
+- WORDS: docs/INTEGRATION.md (the describe paragraph, the ground's paragraph
+  and the command), docs/SOCIAL-SITE.md (a paragraph of its own after the
+  eye's), START-HERE (the Gallery of everyone's row says where the ground
+  comes from now, and a row of its own for this, its enforcers named).
+
+JUDGMENT CALLS, said so they read true:
+
+- HIDDEN WITH THE EYE, THE PICTURE FADES WITH THE DRAWING. The eye fades the
+  drawing to 55% (its box and its ▶ as they were); on a photo tile the copy
+  behind it is the drawing's own picture, and left at full strength the sides
+  stayed vivid while the faded plate read as softened, not hidden
+  (photographed both ways, phone, light and dark). So the copy fades with it.
+  Asked below.
+- THE BACKFILL'S QUEUE IS EITHER COLUMN NULL, not `ground IS NULL` alone (the
+  brief's words): create_post writes the two together, so for every post
+  Skribl made it is the same set; a host that wrote one column itself gets
+  the other filled and its own kept.
+- THE FALLBACK READS THE PLAYER'S FOUR PLACES IN ONE COALESCE, the payload's
+  own photo among them, which the player reads only for a payload from before
+  pages. A payload with pages and a top-level photo but none on its first
+  page (neither editor writes one) reads as on a picture until the backfill
+  writes what the player paints; the backfill asks whether `frames` holds a
+  first page (on PostgreSQL its type first: `#>` reads a key "0" of an object
+  as one), so the column is exact.
+- A PICTURE THAT WILL NOT LOAD IS STILL THE DRAWING'S PICTURE: `on_photo` is
+  the player's own test (a value JavaScript calls true at one of the four
+  places), and the player tries it too.
+- MORE FROM HAS NO ▶, so nothing there needs keeping on top; its copy fills
+  the 8px around the plate and sits behind it, as in the Gallery.
+- THE REVISION'S FILE SAYS `after_v330`: no version is claimed before a seal.
+
+Pad and Flip: nothing changes in either editor. Shared: both post through
+`create_post`, which writes the two columns for both, in one place; a Flip
+whose first page is on a photo gets the copy too, as the player lays its
+underlay. Not for Flip: there is nothing editor-side.
+
+THE CHECKS, each new or changed row shown red by a break of its own in a
+throwaway copy of the tree, with an unbroken copy as the control (green every
+time; verify_seam's compile row is red in every copy, the control's too, as
+a copy has no .git, and green on the tree):
+
+- verify_createpost 13, WHAT THE DRAWING IS PAINTED ON (new, three rows):
+  create_post writes both columns by the player's rules on fifteen payloads:
+  a Pad drawing on the Pad's dark, a photo drawing, the picture the Pad began
+  on, the payload's own snapshot beside pages, a Flip's photo under its first
+  page and never its second, payloads from before pages, the first page's
+  colour over the payload's, an empty one passed over, a photo with no
+  picture in it, four bad grounds (red: the columns not written; any page's
+  photo counted, a Flip's second; the payload's colour before the first
+  page's; an empty colour taken, no ||); a ground no page could use is "",
+  never NULL (red: the columns not written); the endpoint the Pad and Flip
+  post through writes the same two (red: the same). Section 11, two rows
+  restated: each item the listing's own, its ground and its on_photo (red:
+  the item without on_photo); one query selecting no payload, the drawing's
+  six paths each in the branch a CASE takes only when its column is NULL
+  (red: the drawing read always, as #899 read it).
+- verify_hostseams, WHAT A DRAWING IS PAINTED ON (new, four rows; three
+  skribls through a throwaway host's endpoint): the columns as posted; a
+  column that says one thing where the drawing says another answers (red:
+  the columns ignored, #899's read); a NULL column reads the drawing, each
+  column on its own (red: no fallback, the columns alone; the picture's
+  fallback reading the photo alone, the base snapshot missed); a row with its
+  columns is described with its payload made unreadable, where the same row
+  with a column NULL cannot be (red: the columns ignored; no fallback, whose
+  NULL row then has nothing to fail on).
+- verify_seam, WHAT A DRAWING IS PAINTED ON (new, four rows): describe_posts'
+  syntax tree, every look into the payload in the branch only its column's
+  NULL takes (or a coalesce that tries the column first), the payload
+  deferred, the ground through validation's rule, on_photo a bool (red: the
+  ground read from the drawing outside a CASE); naming no host; the guide's
+  words (red: the ground's paragraph not naming the command); the site's
+  plate_fill asking `sk.on_photo`, called by both tiles (red: plate_fill
+  asking the ground).
+- verify_migrations (new, nine rows): the revision adds two nullable columns
+  and nothing else (red: an UPDATE in its upgrade(); the released-revision
+  rows went red with it, as they should). On SQLite, 28 payload shapes,
+  hostile ones in a run longer than a batch and fillable ones behind them: a
+  dry run writes nothing and pages to the end (red: a dry run that writes);
+  --write agrees with the player and with create_post on every shape (red:
+  every payload read as having pages); it looks at every row in the queue
+  and never one with both columns (red: the dry run that writes); a host's
+  own column kept (red: the UPDATE without COALESCE); only a few characters
+  of a 120,000-character picture cross the wire (red: the picture sent
+  whole); a second run finds nothing. As a real command against a throwaway
+  host: a dry run by default, --limit 3 and then a run that finishes, a third
+  with nothing to do (red: --limit ignored; the dry run that writes); exit 2
+  for a batch of 0 and an --app that is not there, exit 1 for a database
+  from before the columns (red: a failed batch read as success).
+- verify_postgres (new, four rows; CI's postgres job, NOT RUN HERE): the
+  backfill's PostgreSQL extraction on 27 shapes in a schema of its own,
+  `frames` as an object read as no pages, as the player reads it; a few
+  characters on the wire; and describe_posts through a throwaway host on
+  PostgreSQL, a column answering where it disagrees and a NULL read from the
+  drawing with #>> inside the CASE. Its Python was run here with SQLite
+  standing in (four green); its SQL waits for CI.
+- verify_sweepjob (two rows extended): `python -m skribl.backfill_ground`
+  resolves --app given the app object and the factory, through sweep's one
+  resolver (red: a resolver of its own).
+- verify_txcontract: its census of every module reads
+  skribl/backfill_ground.py, which commits only the session it is handed, as
+  backfill_canvas does, so it needs no exemption (one row more; red: a
+  commit on the shared session in its main()).
+- verify_socialposts 15, A DRAWING ON A PICTURE KEEPS ITS PICTURE AT ITS SIDES
+  (new, six rows; Sol shares a paper drawing and a plain one on the Pad's
+  dark as posts, shows one made on the picture the Pad began on outside a
+  post, then posts one on a photo; their cards' plates warm over cool with a
+  hard edge across the middle, the plain one's bold purple lines across its
+  whole width): the columns as posted through the site and the Pad's API;
+  read off the paint beside the plate, the photo drawing's and the snapshot
+  drawing's sides are their picture's colours, blurred (the steepest step
+  between neighbouring pixels at most 30, where the plate beside them shows
+  100 or more), never their ground, in the Gallery, Sol's Gallery tab, More
+  from and the first visit, a touch phone and a desk (red: no copy laid; the
+  copy raised over everything); a plain drawing's strips its ground and no
+  copy behind it (red: the copy on every tile); along every tile's ▶, and on
+  her own tab every eye's chip, what is painted every 2px of its middle is
+  the ▶ (the chip), on sixteen pages: four surfaces, phone and desk, light
+  and dark (red: the plate raised over the ▶ with a z-index, the first mock's
+  mistake; the copy raised over everything; and, by the row's count of tiles
+  on a picture, no copy and the copy on every tile); the ▶'s words and the
+  eye at 4.5:1 or more off the pixels over a picture (red: a thin glass);
+  hidden with the eye, the copy at 55% with the drawing and the sides nearer
+  the ground, then shown again and back in the Gallery (red: the copy left
+  vivid).
+
+FOUND WRONG, AND MENDED: two instruments of mine, and two rows the change
+outgrew. verify_migrations' dry-run row first crashed the suite on its break
+instead of going red: it read the wire after the dry run, from a queue the
+broken dry run had emptied (max() of nothing). It reads the wire first now,
+with a default, and that break is red on its own rows. verify_createpost
+13's endpoint row first asked the endpoint outside the host's own context,
+where the route's flushed row was not there to read (a route never commits;
+the host does): it asks inside the context, as section 2 does. The rows
+outgrown were verify_createpost 11's item census (the item has on_photo
+too) and its query row (the ground's two paths its only looks inside: six
+now, each in a NULL branch).
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py, its logs in a
+folder of its own), on the tree as committed: verify_socialposts 73/73, verify_socialprofile 88/88,
+verify_socialcomments 93/93, verify_sociallikes 100/100, verify_socialmute
+68/68, verify_socialsafety 38/38, verify_socialactivity 44/44,
+verify_socialauth 66/66, verify_social 41/41, verify_createpost 91/91,
+verify_hostseams 139/139, verify_seam 515/515, verify_migrations 86/86,
+verify_sweepjob 68/68, verify_txcontract 103/103, verify_docs 144/144 (and
+again with this entry in); verify_socialfollow 73/74 beside the others and
+74/74 alone, its red load, not a defect: a row this change does not touch
+(Follow's fade under Reduce Motion, read on every frame, caught in fewer
+frames on a busy box). Not run: verify_postgres (no PostgreSQL in this
+container; CI's dispatched run is that), verify_socialsettings (it reads the
+bar, the ☰ and the theme on these pages, none of which changed) and
+verify_contrast (it reads Skribl's own sheets, the Pad and Flip: none
+changed). The full battery was not run; main's run after the merge is that.
+
+CONTRAST: no colour or token added. The copy is the drawing's own picture,
+and the ▶ and the eye keep their glass (`--says-glass`) and ink
+(`--says-ink`): over a drawing's picture, read off the pixels, the ▶'s words
+7.87:1 and the eye 8.28:1, phone and desk, light and dark
+(verify_socialposts 15); over any picture the glass cannot let them fall
+under 6.8:1 (it over pure black). Every other word on a tile is where it
+was.
+
+THE FOUR. Simple: a photo looks like a photo on every tile, with nothing new
+to learn. Kind: a photo is never framed in cream or dark bars, and the ▶
+and the eye stay on top, where the thumb goes. Playful: the picture spills
+softly past the drawing's edges, the way the owner picked. Powerful:
+skribls.net gets `on_photo` from describe_posts the same day, and a page of
+new drawings reads no payload at all (#899's ground read cost 80-260 ms a
+page on PostgreSQL for big drawings, measured).
+
+THE OWNER'S LIVE SITE: drawings posted before this read their ground and
+their picture from the drawing, as they do now, until `python -m
+skribl.backfill_ground --write` is run on Render (without --write it says
+how many it would fill). It is optional: nothing breaks without it.
+
+Asked, for the owner: hidden with the eye, a photo drawing's picture at its
+sides fades with the drawing, so it reads hidden as every other tile does:
+is that right?
+
+Not tested here: PostgreSQL (CI's dispatched run: verify_postgres's four
+rows, the revision migrating there, posting through it); WebKit (the owner's
+iPhone) and Firefox (main's lanes run their smoke after the merge); SF and
+Segoe UI (nothing here is type); the live site, and the backfill against the
+owner's own drawings.
