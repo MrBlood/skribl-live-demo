@@ -211,9 +211,9 @@ Home does this: `social/static/posts.js`).
 stores a skribl's public id on each; `skribl.describe_posts(ids,
 viewer_id=...)` hands back, by public id, the listing's own item for each
 (`id`, `title`, `caption`, `kind`, `pages`, `canvas_w`, `canvas_h`, `line`,
-`views`, `user_id`, `visibility`, `created_at`), so a page of your feed reads
-its drawings' sizes, lines and plays in one query without importing Skribl's
-models:
+`views`, `user_id`, `visibility`, `created_at`) and its `ground`, so a page
+of your feed reads its drawings' sizes, lines, plays and grounds in one
+query without importing Skribl's models:
 
 ```python
 drawings = skribl.describe_posts([p.skribl_id for p in posts], viewer_id=me_id)
@@ -228,8 +228,31 @@ drawings = skribl.describe_posts([p.skribl_id for p in posts], viewer_id=me_id)
 rule is the one every read of a skribl follows (public and unlisted for
 anyone, anything else for its author alone). A skribl deleted, withheld or
 private to somebody else is simply absent, and its box still renders: the
-player says the drawing is not here anymore. It reads no payload, flushes
-nothing and takes at most 200 ids a call (`verify_createpost.py`, section 11).
+player says the drawing is not here anymore. It flushes nothing and takes at
+most 200 ids a call (`verify_createpost.py`, section 11).
+
+**The ground a drawing is painted on** (Nov 14, for the Skribl site's tiles:
+a tall drawing made on the Pad's dark canvas sat in a tile of cream paper,
+cream bars at its sides). `ground` is that colour, as the player paints the
+drawing's first page (`frames[0]`'s background, else the payload's own):
+`"#0d0f14"`, a hex colour, lowercase, six digits (a three-digit one written
+out), or `None` for anything else (none written, a name, a number, words
+after a colour). Nothing but a colour ever comes through, so you can set it
+as a value of your own CSS, the box around a drawing whose shape is not the
+box's, with your own paper where it is `None`:
+
+```jinja
+<span class="tile-box"{% if sk.ground %} style="--plate-ground: {{ sk.ground }}"{% endif %}>
+```
+```css
+.tile-box { background: var(--plate-ground, var(--your-paper)); }
+```
+
+No payload crosses for it: the payload is deferred, as the listing's is, and
+the ground is read by the database where it is, at its path in the JSON
+(SQLite's `json_extract`, PostgreSQL's `#>>`), in the same one query
+(`verify_createpost.py`, section 11, holds the colours it takes and refuses,
+and the query that selects no payload).
 
 **What it costs and when.** `skribl_inline_assets()` pulls
 `inlineplayer.css`, `inlineplayer.js`, and the shared rule modules
@@ -276,9 +299,11 @@ showed every drawing its people showed, made in its post box or not, until
 the site made Home posts only; it still reads one person's, for More from).
 `skribl.list_public_posts(author=..., author_prefix=..., before=..., limit=...,
 viewer_id=...)` hands back `(items, more)`: the public skribls a gallery would
-list, newest first, as the listing's own items (the same keys as
-`describe_posts`), by one author or by a prefix your people's ids share (the
-site's are `site:...`), a page at a time:
+list, newest first, as the listing's own items (the keys `describe_posts`
+hands back but its `ground`: ask `describe_posts` for the ones you show, as
+the Skribl site does for a drawing shown outside a post), by one author or
+by a prefix your people's ids share (the site's are `site:...`), a page at a
+time:
 
 ```python
 items, more = skribl.list_public_posts(author_prefix="site:", limit=20, viewer_id=me_id)

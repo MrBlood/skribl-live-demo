@@ -621,8 +621,9 @@ line under the drawing ("Drawn in 16 sec · watching at") and the space around
 the drawing open the post too, as the rest of the card did (`posts.js`); the
 speed and its choices, the heart, the scrubber and the loop keep their own
 taps. Explore's cards, a profile's Skribls and the first visit's newest were
-Skribl's own Gallery cards (the first visit's still are; Explore's and a
-profile's are the site's own tiles since the map's steps 3 and 4), and they open where the site says, through
+Skribl's own Gallery cards (none is on the site's pages now: Explore's and a
+profile's are the site's own tiles since the map's steps 3 and 4, and the
+first visit's are the Gallery's six newest since Nov 14), and they open where the site says, through
 Skribl's seam for it (`skribl.set_card_url`, docs/INTEGRATION.md "Where a
 Gallery card opens"; the demo's `app.py` sets it for the site's own pages):
 `/social/b/<id>`, from anywhere on the card that is the card's own, by Home's
@@ -631,13 +632,17 @@ serves every card: `/social/b/<id>` takes a post's drawing on to its post for
 anybody who may see it (and is as gone as the post to anybody else, naming
 nothing), and sends a drawing by somebody not on the site, which has no page
 here, to Skribl's own page for it. Skribl's own `/gallery` is as it was.
-`harness/verify_socialposts.py` section 12 holds it: Cal's tap map as rows.
+`harness/verify_socialposts.py` section 12 holds it: Cal's tap map as rows,
+read since Nov 14 on Skribl's `/gallery` given the address the site's pages
+gave (no page of the site holds Skribl's section now).
 
 **A post's own page** plays its drawing by itself, at the author's speed,
 sound off until the viewer turns it on, and never under Reduce Motion (the
 player's own `play()`: docs/INTEGRATION.md, "A post's own page can start
 it"). Its author, its words, when (in the person's own time), its plays,
-Share and Make your own; Comments' place kept ("Comments open soon"; since
+Share (and Make your own until Nov 14, when it came off: the owner's "Yes,
+remove it", as it was the bar's Make by another name, which stays in the bar
+and the rail); Comments' place kept ("Comments open soon"; since
 phase 2 the comments themselves, section 10); on a desk, the drawing on the
 left and More from its author beside it, each tile the drawing alone, cut out
 of its share card as Skribl's face macro does.
@@ -1196,13 +1201,18 @@ on the drawing where one is rising pauses it, as ever.
 
 **"Liked by…", the maker's alone.** On their own post's or drawing's page,
 under the time-and-plays line: the newest three faces and "Liked by Mira, Ada
-and 3 others" (all the names up to three, "you" first when one is yours),
-newest first. It opens the sheet of who, Make's own sheet in its paper with
+and 3 others" (all the names up to three), newest first: the others, never
+the maker (the owner's A, Nov 14, "It's not really necessary to say liked by
+you because the filled heart" does; until then "you" came first when one was
+theirs), and when the maker is the only one, no line at all. It opens the
+sheet of who, Make's own sheet in its paper with
 the people on one card: each one's face, name, @handle and when, and under
 when the moment their heart landed ("0:06") where one was kept, newest first,
-each a way to their page, and "Only you can see who liked it." Nobody else is
-sent any of it. The maker's own like, given or taken back, brings the line
-and the rows up to date at once, the line's room opening or closing.
+each a way to their page, the maker's own among them, and "Only you can see
+who liked it." Nobody else is sent any of it. The maker's own like, given or
+taken back, brings the rows up to date at once; the line comes or goes only
+when somebody else's like came or went meanwhile, its room opening or
+closing.
 
 **In Activity** a like is a row like a comment's, its face wearing a small
 liked heart: "Mira liked your post", when, and the post's small picture.
@@ -1210,7 +1220,8 @@ Several since you last looked on one post are one row, the newest face in
 front ("Mira and 4 others liked your post"); a like says no words, so under
 Earlier likes stay one row a post as well. A like row opens the post at
 "Liked by…" (`#liked`), which glows a moment in the note's tint and fades, as
-a landed comment does. **Likes never light the bell's dot:** a like needs no
+a landed comment does; with no line there (the other like gone since, its
+maker the only one), it lands on the post's heart. **Likes never light the bell's dot:** a like needs no
 answer, so it waits under New, with its own dot. You never see yourself;
 nobody hidden is in a row. Activity's line says "Who liked your posts or said
 something on them, and who answered you.", and with nothing yet, "When
@@ -1646,7 +1657,8 @@ first thing the owner saw of it.
    the owner: "Your picks are great": the tiles are B, DRAWINGS FIRST, a grid
    of the drawings themselves, two across on a phone and three on a desk,
    each the drawing on its paper with a small "▶ 15 sec" (a Flip's pages),
-   the maker's face and first name under it, and the hearts and comments
+   the maker's face and first name under it (their whole name since Nov 14,
+   "Your picks"), and the hearts and comments
    only when there are some; THE BAR SAYS "GALLERY", Blooby's Explore icon
    kept; A TAP OPENS THE POST, where it plays with its line from the start;
    FOLLOWING | EVERYONE on top (Home's own pill), New, Hot and search under it
@@ -1704,8 +1716,8 @@ drawing shown in the gallery outside a post, the Pad's own or anything
 shared before posts, is on no Home and not in the Gallery of everyone; it
 keeps its own page (`/social/b/<id>`), its maker's page (their Skribls then,
 their Gallery since step 4) and More from, so nothing is lost. The first
-visit is as it was: Skribl's own Gallery section, every public skribl. Next
-is step 4.
+visit is as it was: Skribl's own Gallery section, every public skribl (until
+the small yeses after step 4, below). Next is step 4.
 
 **Step 5 is built** (DECISIONS, "The ☰ on a phone, and the counts"),
 before step 4 (a profile's tabs), built since. The ☰, drawn in our pen, sits at the
@@ -1742,6 +1754,24 @@ your own page"). Next is step 6.
     /social/@<handle>/drafts     Drafts, yours alone (anybody else: the page)
     /social/@<handle>/more       a tab's first page or its next, ?tab= and
                                  ?before= (JSON {html, next, tab})
+
+**Six small yeses after step 4** (the owner, Nov 14; DECISIONS, "Six small
+yeses"). A TILE WEARS ITS DRAWING'S OWN GROUND: the box around a drawing whose
+shape is not the tile's is the colour the drawing is painted on, the Pad's
+dark for a drawing made on it, never cream bars; the paper where it is not
+known; Skribl's `describe_posts` says it (`ground`, a hex colour or nothing:
+docs/INTEGRATION.md), in the Gallery, a profile's Gallery tab and More from.
+A TILE SAYS THE NAME AS WRITTEN ("Mr. Blood"), cut with … only when it does
+not fit. THE FIRST VISIT (Home signed out) keeps its welcome, and under
+"Fresh from everyone" the Gallery of everyone's six newest, posts only, then
+"See the whole Gallery ›", where Skribl's own Gallery section was; with
+nothing shared, the Gallery's own words. "LIKED BY" LEAVES THE MAKER OUT
+(above, section 12). NO "MAKE YOUR OWN" ON A POST'S PAGE: Make stays in the
+bar and the rail. DELETING A POST FROM YOUR OWN PAGE keeps you there, the
+post folding away where it was; from a post's own page it still lands on
+Home with its note. And the answer to step 4's question: a mute does not
+take that person's posts out of your Likes, which are your own record of
+what you did.
 
 **The four.** Simple: one thing to share, one card for it, one Gallery
 (everyone's, the people you follow, or one person's), one place for your

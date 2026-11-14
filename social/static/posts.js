@@ -260,6 +260,8 @@
     card.style.pointerEvents = 'none';
     var out = card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease', fill: 'forwards' });
     out.onfinish = function () {
+      /* Unseen it stays, whatever moving it into its room does to its fade. */
+      card.style.opacity = '0';
       if (still) { gone(); return; }
       /* Its room, a box of no padding of its own, closes: the card's own
          padding would hold it open. */

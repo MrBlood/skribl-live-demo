@@ -1599,7 +1599,7 @@ with sync_playwright() as p:
                 return st, [i["id"] for i in (j.get("items") if isinstance(j, dict) else [])]
             nc, qc = nat.client(), qin.client()
             got = {q: (listing(nc, q), listing(qc, q)) for q in ("", "&sort=hot", "&q=" + urllib.parse.quote("ozz drawing"))}
-            check("Skribl's own listing (its /gallery's and the first visit's, through the feed filter the host installs)"
+            check("Skribl's own listing (its /gallery's, through the feed filter the host installs)"
                   " leaves out their drawings, New, Hot and a search alike, for Nat alone: Qin, who muted nobody, sees them",
                   all(st == 200 and not set(o_draws) & set(ids) for (st, ids), _ in got.values())
                   and all(set(o_draws) <= set(ids) for _, (_, ids) in got.values()),
