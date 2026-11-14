@@ -38777,3 +38777,26 @@ Gallery are now? That would be mocked first.
 Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
 their smoke after the merge); SF and Segoe UI (no layout changed: the words
 wrap in the same boxes); the live site.
+
+## After v330 -- Main red after #894: one stalled turn on a busy runner
+
+Main's run after #894 (the Gallery of everyone) was red on one PostgreSQL
+shard, one row of a suite #894 did not touch: verify_padrepeat's "Play goes
+round, round after round ... no frame held at a turn", the turns [22, 21,
+125]ms at a 17ms frame, the same suite green on its SQLite shard. Its judge
+allowed every turn max(50ms, three frames) of wall time, so one stall of a
+runner busy with other suites read as the Pad holding a frame.
+
+A hold the Pad makes is at every turn (the round's restart, editor_draw.js
+replayAgain, is the same each time); a busy runner stalls one now and then.
+So `lap_ok` judges the middle turn by the three frames, and lets no turn
+pass a gross 150ms (nine frames). Shown in throwaway copies, the Pad's
+restart broken in editor_draw.js, PADREPEAT_PART=round: every turn held
+120ms, red ([141, 130, 134]); one turn held 120ms, the CI case, green
+([22, 143, 17]), and red under the old judge ([25, 144, 17]); one turn held
+300ms, red ([24, 324, 22]); as built, green ([25, 23, 37]). The whole suite
+alone, 25/25.
+
+What it gives up: a hold the Pad made at one turn in three, under 150ms,
+would now pass; nothing in the Pad's restart differs from turn to turn, and
+the old judge would have read every busy runner's stall as one.
