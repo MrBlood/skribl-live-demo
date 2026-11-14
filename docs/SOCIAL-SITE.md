@@ -4,7 +4,7 @@
 section 8.** Nothing here is built yet except where it says "have", and phase
 1's first piece, the frame, which section 9 describes.
 
-**The map since Nov 14 is section 16**: a post is the one thing people
+**The map since Nov 13 is section 16**: a post is the one thing people
 share. Where an earlier section says otherwise (Home holding every drawing,
 what Explore and a profile show, no follower counts), section 16 is the
 decision.
@@ -1079,6 +1079,10 @@ everyone sees how many, and who liked it is only ever the maker's to see.
                                     given or taken back
     /social/b/<skribl_id>/like      the same, on a drawing shown outside a post
 
+**Since Nov 13 the heart is in the row under the drawing** (section 16,
+step 2: after the comments, before Share and the ⋯), and Skribl's line has no
+lead any more; what follows is the heart as it was first built.
+
 **The heart.** Drawn in our pen, one line round from the notch at the top (the
 mock's own path), in a pill at the start of the line under the drawing (the
 owner's way 3, "Yes", after "I don't even see the heart to like on many
@@ -1554,7 +1558,7 @@ check was shown red by.
 
 ## 16. The map: a post is the one thing people share
 
-The owner, Nov 14, after Explore's card turned out to be a different card
+The owner, Nov 13, after Explore's card turned out to be a different card
 from Home's: "I'm starting to think we should do the social site like
 skribls.net. It's a social site already that we were going to drop skribl
 into as a feature, like GIF, add image, add video, poll... we can have the
@@ -1586,7 +1590,7 @@ first thing the owner saw of it.
 | **Make** | One composer, the same from the bar and from Home: words, and Draw or Flip. |
 | **Activity, Settings** | As built. Settings from the ☰ on a phone (and the profile's button), the rail on a desk. |
 
-**The owner's decisions (Nov 14, "Yes on everything").**
+**The owner's decisions (Nov 13, "Yes on everything").**
 
 1. **Every share is a post** (words optional). Your Gallery collects every
    drawing you have shared, each opening its post. This replaces the Nov 11
@@ -1627,13 +1631,18 @@ first thing the owner saw of it.
      here" while nobody follows them yet, a following count only when it is
      not zero. The lists of who follows whom stay yours alone, opened by the
      counts on your own page, where they take the place of "Followed by…".
-     This replaces the Nov 13 B, "no counts, ever".
+     This replaces the earlier Nov 13 B, "no counts, ever".
 5. **The Gallery of everyone** (the owner's addition, the same evening):
    Explore becomes it, with Following | Everyone, and more filters later.
-   Asked, with defaults, before it is built: the bar says "Gallery" (the
-   word the profile's tab uses), with Blooby's icon kept; its tiles, what a
-   tile shows (the post's hearts and comments?) and what a tap does, mocked
-   first, with the profile's Gallery tab.
+   Mocked (https://claude.ai/artifact/LXxXHjTX9JwjK4kGYL8Vuy) and answered,
+   the owner: "Your picks are great": the tiles are B, DRAWINGS FIRST, a grid
+   of the drawings themselves, two across on a phone and three on a desk,
+   each the drawing on its paper with a small "▶ 15 sec" (a Flip's pages),
+   the maker's face and first name under it, and the hearts and comments
+   only when there are some; THE BAR SAYS "GALLERY", Blooby's Explore icon
+   kept; A TAP OPENS THE POST, where it plays with its line from the start;
+   FOLLOWING | EVERYONE on top (Home's own pill), New, Hot and search under it
+   as today. A profile's Gallery tab is this grid with one person in it.
 
 **What stays.** The three layers (section 1). Section 8's item 9: our own
 build, not a copy of skribls.net; it is skribls.net's shape that is taken.
@@ -1659,37 +1668,37 @@ suites that held it.
    Drafts tabs mocked first, with step 3's tiles).
 5. The ☰ on a phone, and the counts.
 6. Likes and comments on posts only; what goes, taken out.
+7. Add to Home Screen (the owner, Nov 13, after the map): a way to put
+   Blooby on a phone's Home Screen, so it opens full screen like an app.
+   Mocked first, once steps 3 to 6 are in. (The owner also noted that in
+   Bluesky a speech bubble with dots means direct messages: our 💬 is the
+   plain bubble, as Bluesky's replies are, and stays so.)
 
-**Notes for step 2, from the session that wrote the map** (read the code
-before trusting them):
+**Step 2 is built** (#892; DECISIONS, "The one card: calm at rest, and one
+row"): the row under every card, the line that waits (`line_waits`), the
+heart in the row and the post page's one ⋯. The notes written for it
+before it was built are in this file's history.
 
-- The "drawn in 5 sec" pill already exists: inlineplayer.js builds it on the
-  play button (`is-says`) whenever a box has no line. A line that waits can
-  reuse it at rest, so Skribl's new option is small: the macro's
-  `skribl_inline` gains it beside `line`, the line opens on the first play
-  and stays. inlineplayer.css ships on every page with a player, so its bytes
-  are watched (verify_inline's embed ratchet, verify_player_isolation).
-- This reverses a v322 choice, in the macro's own comment: the line was
-  "always there, so a post is the same height at rest and playing and the
-  feed never jumps". The owner chose B knowing the card grows when played;
-  the room glides open (read on every frame, red on a snap first), and under
-  Reduce Motion it is put there while what it holds can't be seen.
-- The heart is the line's `lead` today (`_post.html`, `heart()`), and
-  likes.js finds its player from the heart with `closest('.post-art')`
-  (`playerOf`): out of the line, it finds the player through its card. The
-  likes' dots stay the line's marks.
-- The ⋯ moves from a card's head into its row; the mute toast "never covers
-  the ⋯ that opened the sheet" (verify_socialmute), and a row sits near the
-  bottom of the screen more often than a head did.
-- A post's own page (`post.html`) differs from a card: the ⋯ is in the top
-  bar on a phone and in the head on a desk, Share and "Make your own" are
-  buttons under the drawing, "Liked by…" sits over them, and the drawing
-  plays by itself (`data-autoplay`). Show the owner that page with the row
-  before merging; it was agreed in words, not in a picture.
-- The suites that hold today's card: verify_sociallikes (the heart on the
-  line), verify_socialposts (the foot, the ⋯ in the head), verify_socialmute
-  and verify_socialsafety (opening the ⋯), verify_socialcomments (the count's
-  link), verify_inline (the player), verify_a11ypages, verify_docs.
+**Notes for step 3, read the code before trusting them:**
+
+- Home's Everyone already holds every drawing: `posts.feed_page` gives the
+  posts and the drawings shown outside a post (`_posts_before`,
+  `_drawings_before`), and `posts.cards` what each card needs (the drawing's
+  `sk` with its line, the likes, the comments). So the Gallery can be that
+  feed drawn as tiles, its Following the same `among`/`authors` Home's
+  Following passes (follows.home_items), and Home leaves the drawings out.
+- New is that feed's order. Hot and search are the open part: today they
+  are Skribl's listing (`list_public_posts`, sort hot = plays counted in the
+  last seven days, `skribl_views`), which lists public drawings only, while
+  a post's drawing is unlisted. The site reaches Skribl only through its
+  public seams (section 1; verify_seam holds it), so the way is a general
+  seam on Skribl's listing for a host's own drawings, not a query of
+  Skribl's tables from the site; a face, or a drawing kept link-only, must
+  never come into the Gallery.
+- Explore's own suites today: verify_socialposts section 12 (every card
+  opens its post: Explore's cards are Skribl's Gallery tiles opening through
+  `set_card_url`), verify_socialmute (Explore leaves the muted out, through
+  the feed filter's `author`), verify_social (the frame), verify_hostseams.
 
 **The four.** Simple: one thing to share, one card for it, one Gallery
 (everyone's, the people you follow, or one person's), one place for your

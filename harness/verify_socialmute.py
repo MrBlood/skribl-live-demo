@@ -1140,7 +1140,7 @@ with sync_playwright() as p:
                     pg.keyboard.press("Escape")
                     pg.wait_for_timeout(500)
                 go(pg, f"/social/p/{bp}")
-                open_sheet(pg, ".top .post-more" if screen == "phone" else ".post-head .post-more", "postSheet")
+                open_sheet(pg, ".post-page .post-row .post-more", "postSheet")
                 rows[(screen, "page")] = pg.evaluate(ACTS, "#postSheet")
                 close_ctx(ctx, pg)
             names = {k: [r["name"] for r in v] for k, v in rows.items()}
@@ -1183,7 +1183,7 @@ with sync_playwright() as p:
             open_sheet(pg, "[data-person-menu]", "personSheet")
             mp = pg.evaluate(ACTS, "#personSheet")
             go(pg, f"/social/p/{bp}")
-            open_sheet(pg, ".top .post-more", "postSheet")
+            open_sheet(pg, ".post-page .post-row .post-more", "postSheet")
             mq = pg.evaluate(ACTS, "#postSheet")
             close_ctx(ctx, pg)
             unmute(ann, "ben")
@@ -1205,7 +1205,7 @@ with sync_playwright() as p:
             open_sheet(pg, "[data-person-menu]", "personSheet")
             out_person = [r["name"] for r in pg.evaluate(ACTS, "#personSheet")]
             go(pg, f"/social/p/{bp}")
-            open_sheet(pg, ".top .post-more", "postSheet")
+            open_sheet(pg, ".post-page .post-row .post-more", "postSheet")
             out_post = [r["name"] for r in pg.evaluate(ACTS, "#postSheet")]
             close_ctx(ctx, pg)
             check("never on your own post (Copy link, Share…, Delete post) nor your own page (no ⋯ at all); never"
@@ -1719,7 +1719,7 @@ with sync_playwright() as p:
                                " const n = c.querySelector('.lk-n'); return { likes: n ? n.textContent.trim() : '0',"
                                " comments: c.querySelector('.post-count').getAttribute('aria-label') }; }", zp)
             go(pg, f"/social/p/{zp}", wait=600)
-            page = pg.evaluate("() => { const n = document.querySelector('.post-art .lk-n');"
+            page = pg.evaluate("() => { const n = document.querySelector('.post-page .post-row .lk-n');"
                                " return { likes: n ? n.textContent.trim() : '0', comments: (document.querySelector('[data-cm-count]') || {}).textContent,"
                                " folded: document.querySelectorAll('.cm.is-quiet').length }; }")
             go(pg, f"/social/p/{xp}", wait=600)

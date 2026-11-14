@@ -937,13 +937,24 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   .post-card { cursor: pointer; }
 }
 .post-art { margin-top: 12px; }
-.post-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
-.post-plays {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--ink-2); font-size: 15px;
-  text-decoration: none;
+/* THE ROW under every post (the quick-patterns mock's B; the owner's "Yes on
+   everything", Nov 13): the comments, the heart, Share, the ⋯ and, on a
+   card, "Open ›" at the end, in the small violet words. Each 44px to a
+   finger, its icon 20px, 14px apart; the row starts 10px out, so the first
+   icon sits where the words above it start. */
+.post-row { display: flex; align-items: center; gap: 14px; margin: 2px -10px 0; }
+.post-row .post-count, .post-row .lk-heart {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px;
+  border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 15px;
+  text-decoration: none; cursor: pointer;
 }
-.post-plays .ic { width: 16px; height: 16px; }
-.post-foot .post-share { margin-right: -8px; }
+.post-row .ic { width: 20px; height: 20px; }
+.post-row .icon-btn { color: var(--ink-2); }
+.post-open {
+  display: inline-flex; align-items: center; gap: 2px; min-height: 44px; margin-left: auto; padding: 0 10px;
+  color: var(--accent-ink); font-size: 15px; font-weight: 600; text-decoration: none;
+}
+.post-open-go { font-size: 18px; line-height: 1; transform: translateY(-1px); }
 .feed-none { margin: 24px 4px; color: var(--ink-2); text-align: center; }
 .feed-more { margin-top: 16px; }
 .feed-more[hidden] { display: none; }
@@ -980,7 +991,6 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 /* A POST'S OWN PAGE: one column on a phone, the mock's; on a desk the
    drawing on the left and everything else beside it. */
 .top-back { margin-left: -10px; }
-.top .post-more { margin-left: auto; margin-right: -10px; }
 .post-page { display: grid; grid-template-columns: minmax(0, 1fr); padding-top: 4px; }
 .post-page .post-head .face-ring { --skribl-face-size: 48px; width: 48px; height: 48px; }
 .post-page .post-words.is-big { font-size: 20px; line-height: 1.4; }
@@ -1013,12 +1023,10 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 }
 .more-words { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
 .more-plays { color: var(--ink-2); font-size: 14px; }
-.post-page .desk-only { display: none; }
 @media (min-width: 900px) {
   .post-page { grid-template-columns: minmax(0, 1fr) 340px; column-gap: 40px; align-items: start; }
   .post-page > .post-art { grid-column: 1; grid-row: 1 / span 8; margin-top: 0; }
   .post-page > :not(.post-art) { grid-column: 2; }
-  .post-page .desk-only { display: inline-grid; }
 }
 
 /* COMMENTS (phase 2; the comments mock, and the owner's "all yes on both",
@@ -1171,8 +1179,6 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   .cm-fold.is-open .cm-box, .cm-first-fold.is-open .cm-first { transition: opacity 0.2s ease; }
   .cm.is-growing { transition: opacity 0.2s ease; }
 }
-/* Home's card: how many comments, beside the plays (the mock's 4), a way to them. */
-.post-foot .post-count { min-width: 44px; margin-left: 14px; margin-right: auto; }
 
 /* A COMMENT OPENED FROM ACTIVITY (#c-<id>; notifications) glows a moment in
    the note's tint, the comment alone and not the answers under it (its own
@@ -1219,16 +1225,10 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   .ic-heart .ht-ink { stroke-dasharray: none; }
   .lk-anim .ht-ink, .lk-anim .ht-fill, .lk-anim .ht-line { transition: opacity 0.2s ease; }
 }
-/* Its count inside it, in the line's own words' size; at zero just the
-   heart, a 32px circle. THE HEART KEEPS ONE PLACE, 7px in, the circle's, with
-   a count or without, and the pill's insides start there: so a count that
-   comes or goes grows or shrinks the pill around a heart that never moves
-   (likes.js, grow()). The mock's pill to the pixel (49px with "4"), its heart
-   1px further in. (.post-art: the site's own class, so this outranks the
-   player's dress without naming a part of Skribl's.) */
-.post-art .lk-heart { justify-content: flex-start; gap: 5px; padding: 0 10px 0 7px; font-size: 14px; }
-.post-art .lk-heart.is-zero { padding: 0 7px; }
-.lk-heart .ic { width: 18px; height: 18px; }
+/* In the row its count sits beside it (.post-row, above). THE HEART KEEPS
+   ONE PLACE, 10px in, with a count or without, so a count that comes or goes
+   grows or shrinks the button around a heart that never moves (likes.js,
+   grow()). */
 .lk-n { font-variant-numeric: tabular-nums; }
 .lk-heart.is-liked .ic-heart .ht-ink { stroke: var(--heart-line); }
 /* THE DOTS ON THE LINE (likes, part 2; "Just put a smaller dot (same color as

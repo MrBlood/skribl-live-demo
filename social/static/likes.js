@@ -29,15 +29,15 @@
  * now stand. Opened from a like in Activity (#liked), the line glows a moment
  * in the note's tint, as a comment does when you land on it.
  *
- * THE HEART SITS ON THE DRAWING'S OWN LINE (the owner's way 3), at its start:
- * the player's lead (Skribl's seam, docs/INTEGRATION.md), which Skribl dresses
- * as its loop button and makes room for.
+ * THE HEART SITS IN THE POST'S ROW, under the drawing, beside the comments
+ * (the quick-patterns mock's B, Nov 13). Until then it sat at the start of the
+ * drawing's own line (the owner's way 3); the dots stay on the line.
  *
  * KIND, NEVER JUMPY: the heart draws or fades (social.css, "LIKES"); a count
- * that comes or goes fades, and the pill grows or shrinks round the heart,
- * which keeps its place (social.css), the scrubber beside it giving up or
- * taking back its room a frame at a time, as the line of who opens and
- * closes. Under Reduce Motion nothing moves: things fade where they sit.
+ * that comes or goes fades, and the button grows or shrinks round the heart,
+ * which keeps its place (social.css), what follows it in the row moving along
+ * a frame at a time, as the line of who opens and closes. Under Reduce Motion
+ * nothing moves: things fade where they sit.
  *
  * The words are the page's ([data-like-words]): this file says nothing of
  * its own.
@@ -89,9 +89,9 @@
 
   /* ---- what moves, glides ------------------------------------------------- */
   /* `change` makes the heart wider or narrower (a count that comes or goes):
-     it grows or shrinks from where it was to where it is, and the line's
-     scrubber beside it gives up or takes back its room as it does, a frame at
-     a time (nothing under Reduce Motion). */
+     it grows or shrinks from where it was to where it is, and what follows it
+     in the row moves along as it does, a frame at a time (nothing under
+     Reduce Motion). */
   function grow(b, change) {
     var w0 = b.getBoundingClientRect().width;
     /* One still going ends where it is (w0): measured without it, so the
@@ -163,9 +163,10 @@
     return b._lk;
   }
 
-  /* The player whose line this heart is on (Skribl's, mounted once). */
+  /* The player of this heart's post (Skribl's, mounted once): the heart is
+     in the post's row, under the drawing (Nov 13). */
   function playerOf(b) {
-    var art = b.closest('.post-art');
+    var host = b.closest('.post-card, .post-page'), art = host && host.querySelector('.post-art');
     return art && window.SkriblInline ? window.SkriblInline.mount(art)[0] || null : null;
   }
   /* Where the drawing is, on its own replay clock, if it is playing: the
@@ -216,7 +217,8 @@
   var rising = 0, lastRise = -1e9;
   doc.addEventListener('skribl:mark', function (e) {
     var dot = e.target, art = dot && dot.closest ? dot.closest('.post-art') : null;
-    var pen = art && art.querySelector('.lk-heart .ic-heart'), now = performance.now();
+    var host = art && art.closest('.post-card, .post-page');
+    var pen = host && host.querySelector('.lk-heart .ic-heart'), now = performance.now();
     if (!pen || !pen.animate || rising >= 3 || now - lastRise < 330) return;
     var r = dot.getBoundingClientRect(), a = art.getBoundingClientRect(), el = doc.createElement('span'), go;
     el.style.left = (r.left + r.width / 2 - a.left) + 'px';

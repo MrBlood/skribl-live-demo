@@ -245,8 +245,7 @@
 }
 
 .skribl-inline-mute:focus-visible,
-.skribl-inline-loop:focus-visible,
-.skribl-inline-lead>:focus-visible {
+.skribl-inline-loop:focus-visible {
   outline: 2px solid var(--accent, #7c5cff);
   outline-offset: 1px;
 }
@@ -335,6 +334,10 @@
 /* THE LINE under a post (v322). Why: inlineplayer.js. */
 .skribl-inline-line{position:relative;display:flex;flex-direction:column;gap:6px;margin:10px 0 0;font-size:14px;line-height:1.4;visibility:hidden;-webkit-tap-highlight-color:transparent}
 .skribl-inline-line.is-on{visibility:visible}
+/* A LINE THAT WAITS (line_waits=...) has no room until the first play. */
+.skribl-inline-line.is-waiting{height:0;margin-top:0;opacity:0;overflow:hidden}
+.skribl-inline-line.is-opening{overflow:hidden;transition:height .3s,margin-top .3s,opacity .2s .1s}
+@media (prefers-reduced-motion:reduce){.skribl-inline-line.is-opening{transition:opacity .2s}}
 .skribl-inline-row{display:flex;align-items:center;gap:4px}
 .skribl-inline-scrub{position:relative;flex:1;height:18px;border-radius:9px;color:var(--accent,#7c5cff);background:color-mix(in srgb,var(--accent,#7c5cff) 10%,transparent);touch-action:none;cursor:pointer}
 .skribl-inline-scrub::after{content:'';position:absolute;left:0;right:0;top:-13px;bottom:-13px}
@@ -358,7 +361,7 @@
    whole line (258px in the example host's feed). */
 .skribl-inline-line{container-type:inline-size}
 @container (width<240px){.skribl-inline-say :is(.rl-text>:not(.rl-drawn),.rl-drawn>.rl-m:last-child){display:none}}
-.skribl-inline-say .rl-speed,.skribl-inline-line .skribl-inline-loop,.skribl-inline-lead>*{color:inherit;background:color-mix(in srgb,var(--accent,#7c5cff) 18%,transparent)}
+.skribl-inline-say .rl-speed,.skribl-inline-line .skribl-inline-loop{color:inherit;background:color-mix(in srgb,var(--accent,#7c5cff) 18%,transparent)}
 .skribl-inline-say .rl-speed{position:relative;display:inline-flex;align-items:center;gap:3px;margin-left:2px;padding:3px 9px 3px 11px;border:0;border-radius:999px;font:inherit;font-weight:650;font-variant-numeric:tabular-nums;cursor:pointer}
 .skribl-inline-say .rl-speed::before{content:'';position:absolute;inset:-10px -3px}
 .skribl-inline-say .rl-speed svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
@@ -377,18 +380,7 @@
 .skribl-inline-line .skribl-inline-mute,.skribl-inline-line.is-noloop .skribl-inline-loop{color:inherit;background:none}
 .skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop)::before{inset:-6px}
 .skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop[aria-pressed="false"]) svg{opacity:.62}
-@media (hover:hover){.skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop,.skribl-inline-lead>*):hover{background:color-mix(in srgb,var(--accent,#7c5cff) 22%,transparent)}}
-/* A HOST'S CONTROL AT THE LINE'S START (skribl_inline lead=..., after v330:
-   the Skribl site's like, the owner's way 3). In the loop button's dress at
-   the line's other end: its ground and ink (the rule with the speed's, above),
-   its focus ring and its hover, 32px tall, a pill as wide as what it holds.
-   Its tap area 44px tall: 10px up, to the drawing's edge (the line's top
-   margin), and only 2px down, toward the words under the line, whose speed
-   has a tap area of its own reaching 10px up (.rl-speed::before); 6px either
-   side. The slot never shrinks: the scrubber gives it the room. */
-.skribl-inline-lead{flex:none;margin-right:6px}
-.skribl-inline-lead>*{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;min-width:32px;height:32px;padding:0 8px;border:0;border-radius:999px;font:inherit;font-weight:600;text-decoration:none;cursor:pointer}
-.skribl-inline-lead>*::after{content:'';position:absolute;inset:-10px -6px -2px}
+@media (hover:hover){.skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop):hover{background:color-mix(in srgb,var(--accent,#7c5cff) 22%,transparent)}}
 /* MARKS ON THE LINE (skribl_inline marks=..., player.marks(): a host's
    moments). A 5px dot each, over the scrubber, in the middle of the 17px
    between it and the drawing, never taking a tap (the scrubber's reach is
