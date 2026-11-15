@@ -492,8 +492,11 @@ def _seen(png, ground):
 # ================================================================== THE SITE'S
 # BLOOBY. AT BLOOBY.APP (the owner's yes, Nov 12: "On blooby.app, Draw and
 # Flip say 'blooby.' too, at the top and in the first-open hello where the
-# blush dot drops, splats and becomes the period. The Skribl demo, and
-# skribls.net if they take Pad and Flip, keep 'skribl'."). The demo's app
+# blush dot drops ... and becomes the period. The Skribl demo, and
+# skribls.net if they take Pad and Flip, keep 'skribl'."; and Nov 15, of the
+# Blooby app's splash: "Fall the same way and compress then pop back the
+# exact same way" as skribl's i-dot, so the period bounces on skribl's own
+# pages, without the wink, where it splatted from Nov 12). The demo's app
 # hands Skribl the site's brand through Skribl's seam (skribl/brand.py) at the
 # addresses SKRIBL_SOCIAL_HOME_HOSTS names (app.py, _site_brand), so this part
 # boots the demo's own app with that set, on a port of its own, and reads the
@@ -508,17 +511,21 @@ SITE_HOST = "blooby.localhost"
 SITE_CSS_TEXT = open(os.path.join(ROOT, "social", "static", "social.css"), encoding="utf-8").read()
 PURPLE = make_hello._token(SITE_CSS_TEXT, "brand")          # the site's purple: the word
 BLUSH = make_hello._token(SITE_CSS_TEXT, "blooby-blush")    # Blooby's blush: the period
-REST_PAGES = 3
+REST_PAGES = 3      # read again off the site's drawing below: its trailing pages at rest
 
 
-def site_pages(d):
-    """The period's pages after the word, in the mark's own units from where
-    it rests (the skew taken out, as make_hello lays them): for each page,
-    its strokes as (x, y, w, h), x and y the middle of the stroke's ink, w and
-    h its ink's width and height (the pen's included), biggest first."""
+def site_pages(d, look=None):
+    """The dot's pages after the word (the period's, for the site's look), in
+    the mark's own units from where it rests (the skew taken out, as
+    make_hello lays them): for each page, its strokes as (x, y, w, h), x and y
+    the middle of the stroke's ink, w and h its ink's width and height (the
+    pen's included), biggest first; and the canvas pixels to one of the
+    mark's units, so a fall can be read in canvas widths as make_hello lays
+    it."""
+    look = look or SITE
     cs = d["canvasSize"]
-    _, s, back = make_hello.placer(cs["cssWidth"], cs["cssHeight"], look=SITE, back=True)
-    rest = make_hello.cubic(make_hello.mark(SITE)[1], 6)
+    _, s, back = make_hello.placer(cs["cssWidth"], cs["cssHeight"], look=look, back=True)
+    rest = make_hello.cubic(make_hello.mark(look)[1], 6)
     rx, ry = sum(q[0] for q in rest) / len(rest), sum(q[1] for q in rest) / len(rest)
     out = []
     for f in d["frames"][1:]:
@@ -539,40 +546,40 @@ def site_pages(d):
             page.append((round((x0 + x1) / 2 - rx, 2), round((y0 + y1) / 2 - ry, 2),
                          round(x1 - x0 + pen, 2), round(y1 - y0 + pen, 2)))
         out.append(sorted(page, key=lambda t: -t[2] * t[3]))
-    return out
+    return out, s / cs["cssWidth"]
 
 
-def landing_b(pages):
-    """Landing B, read off its pages ([] when it reads right, else what is
-    wrong): it falls twice, high then nearer, stretched along the fall; lands
-    as a splat on the line with three drops thrown up; spreads, the drops
-    flying out; pulls in as they fall back; gathers to one stroke still a
-    little wide; rounds up a touch; and rests as the period, round and on its
-    place, for the last three."""
+def bounce_as_skribl(site, skribl):
+    """The period's pages read against skribl's i-dot's own ([] when they are
+    the same, else what is not): one dot on each; the same height above its
+    rest on each page, in canvas widths, as make_hello lays the fall (within
+    FALL), and the same width and height, in the mark's units (within SIZE):
+    stretched as it falls, squashed as it lands, popped back, settled; where
+    skribl's dot winks, the period at rest, as it is either side of the wink;
+    and at rest for the last ones, on its place."""
+    (sp, sk_s), (kp, kk_s) = site, skribl
+    FALL, SIZE = 0.004, 0.35
     bad = []
-    if len(pages) != 7 + REST_PAGES:
-        return [f"{len(pages)} pages after the word, where landing B has {7 + REST_PAGES}"]
-    one = lambda k: len(pages[k]) == 1
-    main = lambda k: pages[k][0]
-    drops = lambda k: pages[k][1:]
-    spread = lambda k: sum(math.hypot(x, y) for x, y, _, _ in drops(k)) / max(1, len(drops(k)))
-    if not (one(0) and one(1) and main(0)[1] < -18 and -16 < main(1)[1] < -6
-            and main(0)[3] > 1.4 * main(0)[2] and main(1)[3] > 1.4 * main(1)[2]):
-        bad.append(f"the fall {pages[:2]}")
-    if not all(len(pages[k]) == 4 and main(k)[2] > 2.5 * main(k)[3] and abs(main(k)[1]) < 1.2
-               and all(y < 0.6 for _, y, _, _ in drops(k)) for k in (2, 3, 4)):
-        bad.append(f"the splat, three drops above it {pages[2:5]}")
-    elif not (main(3)[2] > main(2)[2] > main(4)[2] and spread(3) > spread(2) > spread(4)
-              and max(abs(y) for _, y, _, _ in drops(4)) < max(abs(y) for _, y, _, _ in drops(2))):
-        bad.append(f"spread, then pulled in {[(main(k)[2], round(spread(k), 2)) for k in (2, 3, 4)]}")
-    if not (one(5) and 1.2 < main(5)[2] / main(5)[3] < 2.5 and abs(main(5)[1]) < 0.6):
-        bad.append(f"gathered {pages[5]}")
-    if not (one(6) and main(6)[3] > main(6)[2] and main(6)[1] < 0):
-        bad.append(f"rounded up {pages[6]}")
-    if not all(one(k) and 0.8 <= main(k)[2] / main(k)[3] <= 1.25 and math.hypot(*main(k)[:2]) <= NEAR
-               and pages[k] == pages[-1] for k in range(7, 7 + REST_PAGES)):
-        bad.append(f"at rest {pages[7:]}")
+    if len(sp) != len(kp) or len(sp) != len(make_hello.DOT_PAGES):
+        return [f"{len(sp)} pages after the word, where skribl's dot has {len(kp)}"]
+    rest = sp[-1][0] if sp[-1] else None
+    for k, (a, b) in enumerate(zip(sp, kp)):
+        if len(a) != 1 or len(b) != 1:
+            bad.append(f"page {k}: {len(a)} strokes")
+            continue
+        (ax, ay, aw, ah), (_, by, bw, bh) = a[0], b[0]
+        if k in make_hello.WINK:
+            if (round(ay, 1), round(aw, 1), round(ah, 1)) != (round(rest[1], 1), round(rest[2], 1), round(rest[3], 1)):
+                bad.append(f"page {k}: not at rest where skribl's dot winks {a[0]}")
+            continue
+        if abs(ay * sk_s - by * kk_s) > FALL or abs(aw - bw) > SIZE or abs(ah - bh) > SIZE:
+            bad.append(f"page {k}: {round(ay * sk_s, 3)} high, {aw} x {ah}, where skribl's is {round(by * kk_s, 3)} high, {bw} x {bh}")
+    if rest is None or abs(rest[0]) > NEAR or abs(rest[1]) > NEAR or not 0.8 <= rest[2] / rest[3] <= 1.25:
+        bad.append(f"at rest {sp[-1]}")
     return bad
+
+
+SKRIBL_JSON = os.path.join(ROOT, "skribl", "static", "brand", "hello.json")
 
 
 print("\nTHE SITE'S HELLO — before any browser")
@@ -585,12 +592,14 @@ _inks = [sorted({q["color"] for q in f["strokes"]}) for f in SITE_HELLO["frames"
 check(f"its word is the site's purple ({PURPLE}) and its period Blooby's blush ({BLUSH}), both read from the "
       "site's own tokens (social.css), one colour each",
       _inks[0] == [PURPLE] and all(k == [BLUSH] for k in _inks[1:]), f"the inks, page by page: {_inks}")
-SITE_PAGES = site_pages(SITE_HELLO)
-_b = landing_b(SITE_PAGES)
-check("landing B, read off the drawing's own pages: the period falls twice, stretched along the fall; lands as "
-      "a splat on the line, three drops thrown up; spreads; pulls in as they fall back; gathers; rounds up a "
-      "touch; and rests as the period, round and on its place, for the last three", not _b,
-      "; ".join(_b) or f"{len(SITE_PAGES)} pages")
+SITE_READ = site_pages(SITE_HELLO)
+SITE_PAGES = SITE_READ[0]
+_b = bounce_as_skribl(SITE_READ, site_pages(json.load(open(SKRIBL_JSON)), make_hello.SKRIBL))
+check("the period falls as skribl's i-dot does, read off both drawings' own pages: page for page the same height "
+      "above its rest (in canvas widths) and the same size (stretched as it falls, squashed as it lands, popped "
+      "back, settled); at rest where skribl's winks; and at rest, round and on its place, at the end", not _b,
+      "; ".join(_b[:4]) or f"{len(SITE_PAGES)} pages")
+REST_PAGES = next((n for n in range(len(SITE_PAGES), 0, -1) if all(p == SITE_PAGES[-1] for p in SITE_PAGES[-n:])), 1)
 SITE_UNDER = SITE_HELLO.get("under") == {"page": 0, "from": 1, "to": len(SITE_HELLO["frames"]) - 1}
 check("...the word stays under every page of it, and nothing else is on them (the drawing has no ground)",
       SITE_UNDER and all(f.get("background") is None for f in SITE_HELLO["frames"]),
@@ -1037,7 +1046,7 @@ def _site_rows(bb, at_site, at_other):
           "rising) through the middle on several frames", ok,
           json.dumps(parts) + (f"; taken {takes} times, a frame having frozen it" if takes > 1 else ""))
 
-    # WHERE IT LANDS, AND THE SPLAT, as the screen paints them: held on each
+    # WHERE IT LANDS, AND THE BOUNCE, as the screen paints them: held on each
     # page (the player's seek), read off the canvas's own pixels.
     c = bb.new_context(**PHONE)
     c.add_init_script(FORCE)
@@ -1051,7 +1060,7 @@ def _site_rows(bb, at_site, at_other):
     place, s_unit = make_hello.placer(SITE_HELLO["canvasSize"]["cssWidth"], SITE_HELLO["canvasSize"]["cssHeight"], look=SITE)
     rest = make_hello.cubic(make_hello.mark(SITE)[1], 6)
     want = place((sum(q_[0] for q_ in rest) / len(rest), sum(q_[1] for q_ in rest) / len(rest)))
-    for name, page in (("splat", 3), ("spread", 4), ("gathered", 6), ("rest", None)):
+    for name, page in (("falls", 1), ("squashed", 3), ("popped", 4), ("rest", None)):
         got_ = q.evaluate(SEEK, H + (page - 0.5) * 1000 / 12 if page else 1e9) if ms is not None else None
         if not got_:
             looks[name] = None
@@ -1062,19 +1071,23 @@ def _site_rows(bb, at_site, at_other):
         main_ = ps[0] if ps else None
         looks[name] = None if not main_ else {
             "pieces": len(ps), "wide": round((main_[4] - main_[2] + 1) / (main_[5] - main_[3] + 1), 2),
-            "off": round(math.hypot((main_[2] + main_[4]) / 2 / k - want[0], (main_[3] + main_[5]) / 2 / k - want[1]) / s_unit, 3)}
+            "off": round(math.hypot((main_[2] + main_[4]) / 2 / k - want[0], (main_[3] + main_[5]) / 2 / k - want[1]) / s_unit, 3),
+            "up": round((want[1] - (main_[3] + main_[5]) / 2 / k) / s_unit, 3)}
     c.close()
     L = looks
     check(f"...the period lands where the period sits: at rest, one round dot on the mark's period, within {NEAR} of "
           "the mark's units (read off the canvas's pixels)",
           L.get("rest") is not None and L["rest"]["pieces"] == 1 and 0.8 <= L["rest"]["wide"] <= 1.25
           and L["rest"]["off"] <= NEAR, str(L.get("rest")))
-    check("...and it splats a little and reforms, as the screen paints it: on landing a splat with three drops, "
-          "flatter still as it spreads, then gathered to one",
-          all(L.get(k_) is not None for k_ in ("splat", "spread", "gathered"))
-          and L["splat"]["pieces"] == 4 and L["splat"]["wide"] > 2.5 and L["spread"]["pieces"] == 4
-          and L["spread"]["wide"] > L["splat"]["wide"] and L["gathered"]["pieces"] == 1 and L["gathered"]["wide"] > 1.2,
-          str({k_: L.get(k_) for k_ in ("splat", "spread", "gathered")}))
+    check("...and it falls, squashes and pops back, as the screen paints it: one dot each time, taller than wide "
+          "high above its place as it falls, wider than tall on its place as it lands, and above it again, round, "
+          "as it pops back",
+          all(L.get(k_) is not None for k_ in ("falls", "squashed", "popped"))
+          and all(L[k_]["pieces"] == 1 for k_ in ("falls", "squashed", "popped"))
+          and L["falls"]["wide"] < 0.8 and L["falls"]["up"] > 2.0
+          and L["squashed"]["wide"] > 1.4 and abs(L["squashed"]["up"]) < 0.6
+          and 0.7 <= L["popped"]["wide"] <= 1.2 and L["popped"]["up"] > 0.2,
+          str({k_: L.get(k_) for k_ in ("falls", "squashed", "popped")}))
 
     # ONCE, BY ITS OWN KEY: somebody who met Skribl's hello (its key set in
     # this browser) still meets the site's, a tap skips it, and the next
