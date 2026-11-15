@@ -1260,10 +1260,14 @@ with sync_playwright() as p:
         # ⋯ 5, Report 10), so a reader that missed a screen says so. It was a
         # total of 150 once, met only with the sections before it run first.
         FLOOR = {"home": 6, "post": 10, "menu": 4, "report": 8}
+        # A post's page on a phone reads 7 this section alone since the phone's bar went to its icons alone
+        # (Nov 15), their names for VoiceOver: the bar's words are a desk's alone now.
+        FLOOR_PHONE = dict(FLOOR, post=6)
         check("every word on Home's composer and feed, a post's page, its ⋯ and Report reads at 4.5:1 or more on"
               " what is painted behind it, every control is 44px or more each way, every text field 16px: phone and"
               " desk, light and dark",
-              all(v["read"] >= FLOOR[k[2]] for k, v in seen.items()) and not low and not small and not fields,
+              all(v["read"] >= (FLOOR_PHONE if k[0] == "phone" else FLOOR)[k[2]] for k, v in seen.items())
+              and not low and not small and not fields,
               f"{reads} read, the lowest {lowest}; under 4.5: {low[:4]}; small: {small[:4]}; fields: {fields[:3]};"
               f" each {[(' '.join(k), v['read']) for k, v in seen.items()]}")
 

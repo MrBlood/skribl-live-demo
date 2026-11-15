@@ -1766,9 +1766,11 @@ with sync_playwright() as p_:
         jcard = post_skribl(juno, "Juno's card " + secrets.token_hex(3))
         juno.pg.goto(BASE + "/social/@juno")
         juno.pg.wait_for_timeout(400)
+        # You's pen line (the page you're on) sits inside its icon since the phone's bar went to its icons
+        # alone (Nov 15): a line under the circle, not a picture in it, so it is no stock silhouette.
         own = juno.pg.evaluate("""() => { const f = document.querySelector('.prof-face'), y = document.querySelector('nav.nav .tab-you .tab-ic');
             return { words: f && f.innerText.trim(), img: !!(f && f.querySelector('img')), svg: !!(f && f.querySelector('svg:not(.ic)')),
-                     you: y && y.innerHTML.includes('face-blank'), youImg: !!(y && y.querySelector('img, svg')) }; }""")
+                     you: y && y.innerHTML.includes('face-blank'), youImg: !!(y && y.querySelector('img, svg:not(.pen-line)')) }; }""")
         octx, opg = browser_as(b, theo)
         opg.goto(BASE + "/social/@juno")
         opg.wait_for_timeout(400)
@@ -2213,10 +2215,11 @@ with sync_playwright() as p_:
             return { prof: box('.prof-face'), face: box('.prof-face .skribl-face'), you: box('nav.nav .tab-you .face-ring') }; }""")
         pf, ff, yf = ring["prof"], ring["face"], ring["you"]
         check("the profile's own circle is untouched by the sheet's styles: on a phone its face sits in a 112px circle,"
-              " round and centred on it, and You's in the bar is a 28px one",
+              " round and centred on it, and You's in the bar is a 29px one (its 1.5px ring round it: 32 across, as"
+              " Make's purple, the owner's G of Nov 15)",
               bool(pf and ff and yf) and (pf["w"], pf["h"]) == (112, 112) and abs(ff["w"] - ff["h"]) < 0.5
               and 96 <= ff["w"] <= 112 and abs(ff["cx"] - pf["cx"]) < 1 and abs(ff["cy"] - pf["cy"]) < 1
-              and (yf["w"], yf["h"]) == (28, 28), json.dumps(ring))
+              and (yf["w"], yf["h"]) == (29, 29), json.dumps(ring))
 
         # ITS FACE NEVER AMONG THEM, and Change my face now.
         open_face_sheet(pg)
