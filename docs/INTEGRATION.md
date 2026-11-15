@@ -309,11 +309,12 @@ Either way there are two buttons, beside the scrubber or on the drawing:
 
 - **Mute**, **page-wide**, and sound starts off (muted): sound is environmental, so
   unmuting one post unmutes the feed for that session (`sessionStorage`).
-- **Loop**, on by default and **per post**: repeating is a property of the
-  drawing in front of you, not a statement about the next one. Turning it off
-  leaves the drawing on its last frame — and stops the music with it, in the
-  same call, so a finished drawing can never be left with a loop playing under
-  it.
+- **Loop**, off to start (the owner, Nov 15) and **per post**: repeating is a
+  property of the drawing in front of you, not a statement about the next one.
+  Off, the replay plays once and rests on its last frame — and stops the music
+  with it, in the same call, so a finished drawing can never be left with a
+  loop playing under it. A Flip's forever stretch is its animation and plays on
+  either way.
 
 **A feed of your own people's drawings** (after v330: the Skribl site's Home
 showed every drawing its people showed, made in its post box or not, until

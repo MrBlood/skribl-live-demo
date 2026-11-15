@@ -3938,9 +3938,10 @@ function showPlayerError(msg, canRetry) {
   let elapsedBase = 0;   // ms elapsed before the current run segment
   let segStart = 0;      // performance.now() at the current segment's start
   let idx = 0;           // next timeline index to draw
-  // ON, like every other player of a Skribl: a few seconds of drawing that
-  // stops after one pass reads as broken. The button ships lit to match.
-  let loop = true;
+  // OFF to start, like every other player of a Skribl since Nov 15 (the
+  // owner: "Start with it off by default"): it plays once and rests on the
+  // finished drawing; the button ships unlit to match, and turns it on.
+  let loop = false;
   let strokeComp = null; // wet/dry stroke compositor for low-opacity replay (flag-gated)
   let muted = false;
   let _fade = null;      // the controls stepping back in full screen (below)

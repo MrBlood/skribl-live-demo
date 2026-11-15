@@ -535,9 +535,19 @@ with sync_playwright() as sp:
         return { present: !!btn, pressed: btn && btn.getAttribute('aria-pressed'),
                  noloop: el.classList.contains('is-noloop') }; }""", id_m)
     check("a post carries a loop control", loop_state["present"], json.dumps(loop_state))
-    check("and it starts on, which is what a post did before it existed",
-          loop_state["pressed"] == "true" and loop_state["noloop"] is False,
+    check("and it starts OFF (the owner, Nov 15: \"Start with it off by default\"): the replay plays once",
+          loop_state["pressed"] == "false" and loop_state["noloop"] is True,
           json.dumps(loop_state))
+    _LOOP_READ = """(id) => {
+        const el = document.querySelector('[data-skribl-id="' + id + '"]');
+        return { noloop: el.classList.contains('is-noloop'),
+                 pressed: (""" + _LOOP_BTN + """)(id).getAttribute('aria-pressed') }; }"""
+    # ONE PRESS TURNS IT ON, and the control says so at once.
+    pg.evaluate("(id) => (" + _LOOP_BTN + ")(id).click()", id_m)
+    lit_click = pg.evaluate(_LOOP_READ, id_m)
+    check("one press turns it on, and the control reports the state it just changed to",
+          lit_click["noloop"] is False and lit_click["pressed"] == "true",
+          json.dumps(lit_click))
     # LIT LOOP KEEPS ITS ICON ON A HOST THAT NAMES ITS OWN ACCENT. The chip
     # once took its ink and edge from --accent over a see-through ground;
     # skribls.net defines --accent, and on its light page the chip read as a
@@ -583,6 +593,13 @@ with sync_playwright() as sp:
           host_look["dark"]["ratio"] >= 3 and host_look["light"]["ratio"] >= 3,
           json.dumps(host_look))
 
+    # A SECOND PRESS PUTS IT BACK OFF, as it starts, for the replay below.
+    pg.evaluate("(id) => (" + _LOOP_BTN + ")(id).click()", id_m)
+    after_click = pg.evaluate(_LOOP_READ, id_m)
+    check("the control reports the state it just changed to",
+          after_click["noloop"] is True and after_click["pressed"] == "false",
+          json.dumps(after_click))
+
     # The audio fixture, played and unmuted, so there is something to stop.
     pg.evaluate("() => window.SkriblInline.setSoundOn(true)")
     pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_m)
@@ -596,20 +613,14 @@ with sync_playwright() as sp:
           f"analyser peak {playing_peak} — measured on the audio graph, not "
           f"inferred from a node existing")
 
-    # TURN THE LOOP OFF and let the replay run past its end. (_LOOP_BTN finds
-    # it in the line under a post, or in a box without one.)
-    pg.evaluate("(id) => (" + _LOOP_BTN + ")(id).click()", id_m)
-    after_click = pg.evaluate("""(id) => {
-        const el = document.querySelector('[data-skribl-id="' + id + '"]');
-        return { noloop: el.classList.contains('is-noloop'),
-                 pressed: (""" + _LOOP_BTN + """)(id).getAttribute('aria-pressed') }; }""", id_m)
-    check("the control reports the state it just changed to",
-          after_click["noloop"] is True and after_click["pressed"] == "false",
-          json.dumps(after_click))
-
-    pg.wait_for_function(
-        "(id) => window.SkriblInline.find(id).state().state !== 'playing'",
-        arg=id_m, timeout=20000)
+    # THE LOOP LEFT OFF, as it starts: the replay runs past its end. (_LOOP_BTN
+    # finds it in the line under a post, or in a box without one.)
+    try:
+        pg.wait_for_function(
+            "(id) => window.SkriblInline.find(id).state().state !== 'playing'",
+            arg=id_m, timeout=20000)
+    except PWTimeout:
+        pass   # still going round: the row below says so
     ended = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_m)
     check("with the loop off the replay stops instead of going round",
           ended["state"] != "playing"

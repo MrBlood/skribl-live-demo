@@ -2094,23 +2094,24 @@ with sync_playwright() as sp:
 
     # ---- MORE, LOOP AND THE CLOCK (the players' one-family pass) ----------
     # A fresh load, because everything above has pressed things. Loop ships
-    # ON, as on every other player of a Skribl; the clock under the track
-    # reads the drawing's length before anything plays.
+    # OFF, as on every other player of a Skribl since Nov 15 (the owner:
+    # "Start with it off by default"); the clock under the track reads the
+    # drawing's length before anything plays.
     pg.goto(link, wait_until="load")
     pg.wait_for_timeout(1200)
     _rest = pg.evaluate("""() => { const l = document.getElementById('playerLoopBtn');
         return { pressed: l.getAttribute('aria-pressed'), lit: l.classList.contains('active'),
                  at: document.getElementById('playerAt').textContent,
                  dur: document.getElementById('playerDur').textContent }; }""")
-    # One press must turn it OFF. The markup ships lit; only the press proves
-    # the player's own state agrees with it -- a lit button over `loop = false`
-    # would read "on" here and stay "on" when pressed.
+    # One press must turn it ON. The markup ships unlit; only the press proves
+    # the player's own state agrees with it -- an unlit button over `loop =
+    # true` would read "off" here and stay "off" when pressed.
     pg.click("#playerLoopBtn")
     pg.wait_for_timeout(120)
     _rest["afterPress"] = pg.evaluate("() => document.getElementById('playerLoopBtn').getAttribute('aria-pressed')")
     pg.click("#playerLoopBtn")
-    check("Loop is ON when the link opens, the button says so, and one press turns it off",
-          _rest["pressed"] == "true" and _rest["lit"] and _rest["afterPress"] == "false", str(_rest))
+    check("Loop is OFF when the link opens (the owner, Nov 15), the button says so, and one press turns it on",
+          _rest["pressed"] == "false" and not _rest["lit"] and _rest["afterPress"] == "true", str(_rest))
     check("the clock under the track shows 0:00 and the drawing's length at rest",
           _rest["at"] == "0:00" and _rest["dur"] not in ("", "0:00"), str(_rest))
     pg.click("#playerPlayBtn")

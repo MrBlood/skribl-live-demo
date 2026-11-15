@@ -2042,10 +2042,10 @@ with sync_playwright() as p:
         close_ctx(ctx, cpg)
         check("...and on Home, once its drawing is played (the line waits until then), the line's own controls keep"
               " their taps: the speed opens its choices (a tap between two"
-              " of them opens nothing and leaves them open) and takes one (2×), the loop stops repeating, and the page"
-              " stays",
+              " of them opens nothing and leaves them open) and takes one (2×), the loop (off to start since Nov 15)"
+              " starts repeating, and the page stays",
               made and line.get("chips") == "true" and line.get("between") == (True, "/social/", "true")
-              and line.get("speed", "").startswith("2") and line.get("loop") == "false"
+              and line.get("speed", "").startswith("2") and line.get("loop") == "true"
               and line.get("at") == "/social/", f"{line}")
 
         # ON A DESK: Ctrl (as ⌘ is on a Mac) and the middle button open the card
