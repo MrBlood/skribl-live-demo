@@ -250,13 +250,17 @@ body {
    ITS ICONS ALONE, ONE SIZE (the owner, Nov 15: "Can all icons look the same
    size - bigger", "show me if you take the words off?", then "I like g"): no
    words under them (each place's name is still there for a screen reader,
-   and on a desk's rail), and every icon fills one 28px square as the eye
-   measures it: the house and Blooby drawn to it (their boxes 35.2px and
-   34.7px, the line drawings reaching 27 to 28 of them), Make's purple and
-   your face round and 32 across (a circle is drawn about a seventh bigger to
-   look as big as a square's corners make a drawing look). The page you are
-   on: the pen's line under its icon; Home filled; Blooby lit up in his
-   colours, his black line kept; your face's ring the words' colour. */
+   and on a desk's rail), and every icon as big as the next as the eye
+   measures it: Make's purple and your face round and 32 across, and the
+   line drawings beside them at 92% of the 28px square they first filled
+   (the owner, on their phone, with the bars at life size: "Home and gallery
+   (unselected) look a little big", then "I like your 92%"), the house 25 x
+   24 of ink and Blooby 23 x 26. The page you are on: the pen's line under
+   its icon; Home filled; Blooby lit up in his colours, his black line kept;
+   your face's ring the words' colour. ON THE DARK BAR, LIT, BLOOBY IS DRAWN
+   AT 96% (the owner: "the black disappears and it looks smaller"): his black
+   line is lost to the dark ground, so what shows is his purple and his card,
+   and they are given back the size the line took. */
 .nav {
   position: fixed; z-index: 30; left: 0; right: 0; bottom: 0;
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: stretch;
@@ -272,9 +276,15 @@ body {
   text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .nav .tab-ic { position: relative; display: grid; place-items: center; height: 36px; }
-.nav .tab .ic { width: 35.2px; height: 35.2px; }
-.nav .tab .ic-blooby { width: 34.7px; height: 34.7px; }
-.nav .tab-you .ic { width: 37.9px; height: 37.9px; }    /* Sign in's person, drawn smaller in its box: to the same 28 */
+.nav .tab .ic { width: 32.4px; height: 32.4px; }                 /* 92% of 35.2 */
+.nav .tab .ic-blooby { width: var(--bar-blooby, 31.9px); height: var(--bar-blooby, 31.9px); }   /* 92% of 34.7 */
+.nav .tab-you .ic { width: 34.9px; height: 34.9px; }    /* Sign in's person, drawn smaller in its box: 92% of 37.9 */
+/* Lit on the dark bar: 96% of 34.7. A variable, so a desk's rail, which
+   names its own size below, keeps it. */
+:root[data-theme="dark"] .nav .tab .ic-blooby.is-lit { --bar-blooby: 33.3px; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .nav .tab .ic-blooby.is-lit { --bar-blooby: 33.3px; }
+}
 .nav .tab-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .nav .tab[aria-current="page"] { color: var(--nav-on); }
 .nav .tab[aria-current="page"] .tab-name { font-weight: 700; }

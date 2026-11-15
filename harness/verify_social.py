@@ -524,12 +524,18 @@ with sync_playwright() as p:
         # THE BAR'S ICONS ALONE, ONE SIZE (the owner, Nov 15: "Can all icons look the same size - bigger", "show me
         # if you take the words off?", then "I like g"): on a touch phone no word painted under them (each place's
         # name its accessible name, as a screen reader says it); each icon's own paint read off the screen at twice
-        # its size: the line drawings (Home, the Gallery, Sign in) reaching 26.5 to 29.5px, Make's purple round and
-        # 31 to 33 across; the pen's line centred under the page's icon. A desk's rail keeps its words and its sizes.
+        # its size: the line drawings (Home, the Gallery, Sign in) at 92% of the square they first filled, reaching
+        # 24.5 to 26.8px ("Home and gallery (unselected) look a little big", then "I like your 92%"), Make's purple
+        # round and 31 to 33 across; lit on the dark bar, where his black line is lost to the ground (1.2:1 there,
+        # which this instrument's threshold still counts as paint), Blooby drawn at 96%, his box read, 33.3px against
+        # the others' 31.9 ("the black disappears and it looks smaller"); the pen's line centred under the page's
+        # icon. A desk's rail keeps its words and its sizes.
         ICONS = r"""() => [...document.querySelectorAll('nav.nav > .tab')].filter(e => e.getClientRects().length).map(e => {
             const r = e.querySelector('.tab-ic').getBoundingClientRect(), nr = e.querySelector('.tab-name').getBoundingClientRect();
             const pl = [...e.querySelectorAll('.pen-line')].find(l => l.getBoundingClientRect().width > 10), pr = pl && pl.getBoundingClientRect();
+            const ic = e.querySelector('.tab-ic > svg');
             return { name: e.querySelector('.tab-name').firstChild.textContent.trim(), box: [r.x - 5, r.y, r.right + 5, r.bottom],
+                     icw: ic ? Math.round(ic.getBoundingClientRect().width * 10) / 10 : null,
                      word: [Math.round(nr.width), Math.round(nr.height)],
                      pen: pr ? { dx: Math.round((pr.x + pr.width / 2) - (r.x + r.width / 2)), gap: Math.round(pr.top - r.bottom), w: Math.round(pr.width) } : null }; })"""
 
@@ -543,7 +549,7 @@ with sync_playwright() as p:
                         xs.append(x)
                         ys.append(y)
             return [round((max(xs) - min(xs) + 1) / k, 1), round((max(ys) - min(ys) + 1) / k, 1)] if xs else None
-        alone, sizes, said = {}, {}, {}
+        alone, sizes, said, drawn_at = {}, {}, {}, {}
         for screen, ctx_ in (("phone", PHONE), ("desk", DESK)):
             for scheme in ("light", "dark"):
                 c = b.new_context(color_scheme=scheme, **dict(ctx_, device_scale_factor=2))
@@ -556,6 +562,7 @@ with sync_playwright() as p:
                     alone[(screen, scheme, page)] = {i["name"]: {"word": i["word"], "pen": i["pen"]} for i in items}
                     if screen == "phone":
                         sizes[(scheme, page)] = {i["name"]: icon_ink(png, i["box"]) for i in items}
+                        drawn_at[(scheme, page)] = {i["name"]: i["icw"] for i in items}
                         said[(scheme, page)] = {n: pg.get_by_role(r, name=n, exact=True).count()
                                                 for n, r in (("Home", "link"), ("Gallery", "link"), ("Make", "button"), ("Sign in", "link"))}
                 c.close()
@@ -569,12 +576,18 @@ with sync_playwright() as p:
                                     "said": {f"{k[0]} {k[1]}": v for k, v in said.items()}})[:700])
         def one_size(d):
             lines = [d[n] for n in ("Home", "Gallery", "Sign in")]
-            return all(v and 26.5 <= max(v) <= 29.5 for v in lines) and bool(d["Make"]) and 31 <= d["Make"][0] <= 33
+            return all(v and 24.5 <= max(v) <= 26.8 for v in lines) and bool(d["Make"]) and 31 <= d["Make"][0] <= 33
         check("...and every icon looks one size, read off its paint: the line drawings (Home, the Gallery's Blooby, Sign in)"
-              " reaching 26.5 to 29.5px and Make's purple round, 31 to 33 across (a circle drawn a seventh bigger), light"
-              " and dark, Home and the Gallery",
+              " at 92%, reaching 24.5 to 26.8px, and Make's purple round, 31 to 33 across (a circle drawn a seventh"
+              " bigger), light and dark, Home and the Gallery",
               len(sizes) == 4 and all(one_size(d) for d in sizes.values()),
               json.dumps({f"{k[0]} {k[1]}": v for k, v in sizes.items()}))
+        blooby_at = {f"{k[0]} {k[1]}": v.get("Gallery") for k, v in drawn_at.items()}
+        check("...and Blooby lit on the dark bar, his black line lost to it, is drawn at 96% (his box 33.3px), and at 92%"
+              " (31.9px) lit on the light bar and unlit on either",
+              len(blooby_at) == 4 and all(v is not None and abs(v - (33.3 if k == "dark explore" else 31.9)) <= 0.15
+                                          for k, v in blooby_at.items()),
+              json.dumps(blooby_at))
         pens_at = {f"{k[1]} {k[2]}": [v["pen"] for v in d.values() if v["pen"]] for k, d in alone.items() if k[0] == "phone"}
         check("...the pen's line under the page's icon on a phone: centred under it, 28 to 32px wide, just below it",
               all(len(v) == 1 and abs(v[0]["dx"]) <= 1 and 28 <= v[0]["w"] <= 32 and 0 <= v[0]["gap"] <= 4 for v in pens_at.values()),
