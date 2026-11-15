@@ -78,7 +78,7 @@
     ONE SCRIPT IN THE PAGE, SKRIBL'S THEME BOOT. The site's own policy
     (social/__init__.py, site_csp) is script-src 'self' and this page's own
     nonce, which only the boot carries: every other script here is a file. #}
-{% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets %}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets, skribl_inline_draft %}
 {% from 'skribl/_skribl_face.html' import skribl_face_assets, skribl_face %}
 {% import 'social/_icons.html' as ic %}
 {% set composing = accounts and me and not hide_nav %}
@@ -118,14 +118,28 @@
    Chrome decides whether an arriving page fades (docs/INTEGRATION.md, "Put
    it after your stylesheets"). Still before the first paint. #}
 {% include 'skribl/_skribl_theme_boot.html' %}
+{# THE BLOOBY APP'S SPLASH (the owner, Nov 15), decided here before the first
+   paint, right after the theme boot it reads the browser's bar from: a file,
+   so the page keeps its one inline script. splash.js plays it. #}
+<script src="{{ social_asset('splash-boot.js') }}"></script>
 <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
 {% if composing %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endif %}
 <script src="{{ social_asset('social.js') }}" defer></script>
+<script src="{{ social_asset('splash.js') }}" defer></script>
 {% if composing %}<script src="{{ social_asset('mentions.js') }}" defer></script>
 <script src="{{ social_asset('compose.js') }}" defer></script>{% endif %}
 {% block scripts %}{% endblock %}
 </head>
 <body{% if hide_nav %} class="focus"{% endif %}>
+{# THE BLOOBY APP'S SPLASH (the owner, Nov 15: "make a splash screen load
+   first and show blooby", on the dark ground "with no stars"): over the page
+   while <html> is-splashing (splash-boot.js: the Home Screen app, once a
+   launch), and nothing at all otherwise (social.css, THE SPLASH). "blooby."
+   writing itself and its blush falling as skribl's i-dot does, played by
+   Skribl's own player as a draft (splash.js). #}
+<div class="splash" id="bloobySplash" role="img" aria-label="Blooby" data-splash="{{ social_asset('brand/blooby-splash.json') }}">
+  <div class="splash-word">{{ skribl_inline_draft('splashBox', controls=false, progress=false, plain=true, shaped=false) }}</div>
+</div>
 {# Two wordmarks, one shown at a time: the phone's at the top of the page,
    the desk's at the top of the rail. Both are blooby. (social/_blooby_mark.html:
    the site's purple, the period Blooby's blush), drawn without a gradient,

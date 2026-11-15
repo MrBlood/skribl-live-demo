@@ -312,6 +312,31 @@ body {
 .top > .top-menu { margin-left: -10px; margin-right: 2px; color: var(--ink); }
 a.post-act { text-decoration: none; }
 .menu-out { margin: 0; }
+/* THE BLOOBY APP'S SPLASH (the owner, Nov 15, with Bluesky's: "make a splash
+   screen load first and show blooby", then "Do it on the dark background. I
+   like that with no stars"). Nothing at all unless <html> is-splashing
+   (splash-boot.js: the Home Screen app, once a launch); then over everything,
+   the night ground: the site's dark ground at the top, the colour the app
+   opens on (the manifest's), deepening to a deep purple at the foot, no
+   stars; "blooby." in the icon's lilac with its blush period, 82% of the
+   screen wide at most, a touch above the middle. It fades as it goes
+   (is-leaving), an opacity alone, so Reduce Motion fades it too; nothing
+   under it scrolls while it shows. Skribl's player is a draft here: no frame,
+   no ground, no chip, no Play. */
+:root { --splash-top: #0f1218; --splash-mid: #17143a; --splash-foot: #2e2178; }
+.splash { display: none; }
+html.is-splashing .splash {
+  position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
+  background: linear-gradient(180deg, var(--splash-top) 0%, var(--splash-mid) 50%, var(--splash-foot) 100%);
+  opacity: 1; transition: opacity 0.45s ease;
+}
+html.is-splashing .splash.is-leaving { opacity: 0; }
+html.is-splashing body { overflow: hidden; }
+.splash-word { width: min(82vw, 330px); margin-top: -30px; }
+.splash .skribl-inline { aspect-ratio: 9 / 16; width: 100%; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.splash .skribl-inline-dur, .splash .skribl-inline-play, .splash .skribl-inline-veil, .splash .skribl-inline-prog,
+.splash .skribl-inline-err { display: none; }
+
 /* THE STEPS TO THE HOME SCREEN (the Home Screen mock; the owner, Nov 15),
    the ☰'s Add to Home Screen opens them (_homescreen.html): the ☰'s own
    sheet, and in it nothing new to the site. What you will get, as a Home

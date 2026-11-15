@@ -28,23 +28,30 @@ A Flip, drawn through the real Flip editor with real pen input, on 9:16:
 
 THE SITE'S HELLO, --site (the owner's yes, Nov 12: on blooby.app "Draw and
 Flip say 'blooby.' too, at the top and in the first-open hello where the blush
-dot drops, splats and becomes the period"; landing B of the mock, "it splats a
-little"). The same tool with the site's look, not a copy of it: the word's and
-the period's paths read from the site's mark (social/_blooby_mark.html, drawn
-at the skribl mark's metrics), the word in the site's purple and the period in
-Blooby's blush, both read from the site's tokens (social.css --brand, its
-first and light value, and --blooby-blush), and B's pages in place of the
-bounce and the wink. The word is one colour, so the pen lays it down as the
-one stroke it is. The period's pages, in the mark's own units about where it
-rests, before the skew (so it falls along the writing's lean, as the mock's
-did): stretched as it falls, twice; it lands as a splat with three drops
-thrown up, which spread, then fall back as the splat pulls in; it gathers,
-rounds up a touch, and rests as the period for the last three. The site keeps
-it as its own file, and app.py hands it to Skribl's editors at blooby.app
-(skribl/brand.py):
+dot drops ... and becomes the period"). The same tool with the site's look,
+not a copy of it: the word's and the period's paths read from the site's mark
+(social/_blooby_mark.html, drawn at the skribl mark's metrics), the word in
+the site's purple and the period in Blooby's blush, both read from the site's
+tokens (social.css --brand, its first and light value, and --blooby-blush).
+The word is one colour, so the pen lays it down as the one stroke it is. THE
+PERIOD FALLS AS SKRIBL'S DOT DOES (the owner, Nov 15: "Fall the same way and
+compress then pop back the exact same way"; it splatted from Nov 12, landing
+B): skribl's own pages, stretched as it falls, squashed as it lands, the
+bounce, at rest, without the wink (its three pages at rest: a period is not an
+eye). The site keeps it as its own file, and app.py hands it to Skribl's
+editors at blooby.app (skribl/brand.py):
 
     python3 harness/tools/make_hello.py OUTDIR --site
     cp OUTDIR/blooby-hello.json social/static/brand/blooby-hello.json
+
+THE BLOOBY APP'S SPLASH, --splash (the owner, Nov 15: "make a splash screen
+load first and show blooby", on the dark ground "with no stars"): the site's
+hello again, the word in the icon's lilac (harness/tools/blooby.py ICON_TILE)
+for the splash's night ground, the period in the blush; social/static/
+splash.js plays it as the Home Screen app opens:
+
+    python3 harness/tools/make_hello.py OUTDIR --splash
+    cp OUTDIR/blooby-splash.json social/static/brand/blooby-splash.json
 
 Needs the local server (SKRIBL_BASE). The payload carries no background colour:
 the ground is the page's own (lib/hello.js), in either theme.
@@ -78,24 +85,6 @@ FPS = 12                                         # the dot's thirteen pages are 
 DOT_PAGES = ((-0.20, 0.80, 1.35), (-0.09, 0.85, 1.25), (0.0, 1.38, 0.70), (-0.045, 0.95, 1.10),
              (-0.018, 1.0, 1.0), (0.0, 1.14, 0.88), (0.0, 1.0, 1.0), (0.0, 1.0, 1.0),
              (0.003, 1.22, 0.55), (0.006, 1.5, 0.2), (0.002, 1.18, 0.62), (0.0, 1.0, 1.0), (0.0, 1.0, 1.0))
-# THE SITE'S PERIOD, LANDING B ("it splats a little"), page by page as the
-# mock drew it: each a list of strokes ((x, y), (x, y) or None, pen), in the
-# mark's own units from where the period rests, before the skew; None is a
-# drop, a dot of that pen. Falling twice, stretched along the fall; the splat
-# with three drops thrown up; spread; pulled in, the drops falling back;
-# gathered; rounded up a touch; and at rest, the period, for the last three.
-_REST = [((-0.15, 0.0), (0.15, 0.0), 2.9)]
-SPLAT_PAGES = (
-    [((0.0, -25.0), (0.0, -23.4), 2.5)],
-    [((0.0, -12.6), (0.0, -9.8), 2.4)],
-    [((-2.6, 0.75), (2.6, 0.75), 1.4), ((-4.1, -1.3), None, 0.95), ((0.1, -2.5), None, 0.85), ((4.2, -1.1), None, 0.95)],
-    [((-2.9, 0.8), (2.9, 0.8), 1.25), ((-5.1, -0.9), None, 0.8), ((0.2, -3.3), None, 0.75), ((5.2, -0.6), None, 0.8)],
-    [((-1.7, 0.55), (1.7, 0.55), 1.9), ((-3.3, 0.3), None, 0.8), ((0.1, -1.6), None, 0.8), ((3.4, 0.4), None, 0.8)],
-    [((-0.7, 0.2), (0.7, 0.2), 2.5)],
-    [((0.0, -0.6), (0.0, -0.15), 2.75)],
-    _REST, _REST, _REST)
-
-
 def _token(css, name):
     """A token's first value in a stylesheet (the light one, where a dark
     block sets it again)."""
@@ -107,14 +96,18 @@ def sweep(t):
     return "#%02x%02x%02x" % tuple(round(a + (b - a) * t) for a, b in zip(A, B))
 
 
-# THE TWO LOOKS. Skribl's hello writes the header's own mark in its sweep, in
+# THE LOOKS. Skribl's hello writes the header's own mark in its sweep, in
 # PIECES so the ink carries the gradient, and its dot bounces and winks; the
 # site's writes its own mark, the word one colour and so one stroke, and its
-# period splats. Everything else (the pen, the fit, the timing, the way the
-# drawing is made) is the one tool's.
+# period bounces the same way, without the wink; the splash's is the site's
+# with the word in the icon's lilac. Everything else (the pen, the fit, the
+# timing, the dot's pages, the way the drawing is made) is the one tool's.
 SKRIBL = {"name": "hello.json", "mark": MARK,
           "word": r'<path class="st" d="([^"]+)"', "dot": r'<path class="st dot" d="([^"]+)"',
-          "ink": sweep, "dot_ink": None, "pieces": PIECES, "pages": "bounce"}
+          "ink": sweep, "dot_ink": None, "pieces": PIECES, "wink": True}
+#: The wink's pages (DOT_PAGES' ninth to eleventh): a look without the wink
+#: holds them at rest, so the drawing keeps skribl's length and timing.
+WINK = range(8, 11)
 
 
 def site_look():
@@ -123,7 +116,14 @@ def site_look():
     return {"name": "blooby-hello.json", "mark": SITE_MARK,
             "word": r'<g transform="skewX\(-?[\d.]+\)"><path d="([^"]+)"',
             "dot": r'<path class="brand-period"[^>]*? d="([^"]+)"',
-            "ink": lambda t: word, "dot_ink": blush, "pieces": 1, "pages": "splat"}
+            "ink": lambda t: word, "dot_ink": blush, "pieces": 1, "wink": False}
+
+
+def splash_look():
+    """The Blooby app's splash: the site's look, the word in the icon's lilac
+    (blooby.py's ICON_TILE, read from its source) for the splash's night ground."""
+    tile = re.search(r'^ICON_TILE = "(#[0-9a-fA-F]{6})"', (HERE / "blooby.py").read_text(encoding="utf-8"), re.M).group(1).lower()
+    return dict(site_look(), name="blooby-splash.json", ink=lambda t: tile)
 
 
 def mark(look=SKRIBL):
@@ -246,16 +246,6 @@ def blob(page, logical, cx, cy, w, h, color):
     line(page, logical, a, b, min(w, h), color)
 
 
-def splat(page, logical, place, s, rest, strokes, color):
-    """One of the site's period pages: each stroke placed from where the
-    period rests (`rest`, in the mark's units), skewed and scaled as the mark
-    is; a drop is a dot of its pen (a tenth of a unit long)."""
-    for a, b, pen in strokes:
-        b = b if b is not None else (a[0] + 0.1, a[1])
-        line(page, logical, place((rest[0] + a[0], rest[1] + a[1])),
-             place((rest[0] + b[0], rest[1] + b[1])), pen * s, color)
-
-
 def build(out_dir, browser, look=SKRIBL):
     ctx = browser.new_context(viewport={"width": 1100, "height": 1500})
     page = ctx.new_page()
@@ -277,23 +267,14 @@ def build(out_dir, browser, look=SKRIBL):
 
     # Page 0: the word, without its dot: Flip brings the dot in.
     write(page, logical, word, ts, pen, ink=look["ink"], pieces=look["pieces"])
-    if look["pages"] == "splat":
-        # Where the period rests, in the mark's own units: the middle of its
-        # stroke (as the dot's below), so the last page sits on the mark's.
-        dd = cubic(mark(look)[1], 6)
-        rest = (sum(p[0] for p in dd) / len(dd), sum(p[1] for p in dd) / len(dd))
-        place, _ = placer(cw, ch, look=look)
-        for strokes in SPLAT_PAGES:
-            page.evaluate("() => addFrame(false)")
-            page.wait_for_timeout(60)
-            splat(page, logical, place, s, rest, strokes, look["dot_ink"])
-    else:
-        dcx, dcy = sum(p[0] for p in dot) / len(dot), sum(p[1] for p in dot) / len(dot)
-        dot_d = 3.0 * s                              # the dot as the mark paints it: a short curl of the same pen
-        for dy, w, h in DOT_PAGES:
-            page.evaluate("() => addFrame(false)")
-            page.wait_for_timeout(60)
-            blob(page, logical, dcx, dcy + dy * cw, dot_d * w, dot_d * h, look["dot_ink"] or sweep(dot_t))
+    dcx, dcy = sum(p[0] for p in dot) / len(dot), sum(p[1] for p in dot) / len(dot)
+    dot_d = 3.0 * s                              # the dot as the mark paints it: a short curl of the same pen
+    for k, (dy, w, h) in enumerate(DOT_PAGES):
+        if k in WINK and not look["wink"]:
+            dy, w, h = 0.0, 1.0, 1.0             # without the wink: at rest, as skribl's dot is either side of it
+        page.evaluate("() => addFrame(false)")
+        page.wait_for_timeout(60)
+        blob(page, logical, dcx, dcy + dy * cw, dot_d * w, dot_d * h, look["dot_ink"] or sweep(dot_t))
     total = page.evaluate("() => frames.length")
     under = {"page": 0, "from": 1, "to": total - 1}
     # The word's page as the hand wrote it, fitted into WORD_MS: the pieces
@@ -325,12 +306,12 @@ def build(out_dir, browser, look=SKRIBL):
 
 if __name__ == "__main__":
     from playwright.sync_api import sync_playwright
-    args = [a for a in sys.argv[1:] if a != "--site"]
+    args = [a for a in sys.argv[1:] if a not in ("--site", "--splash")]
     out = args[0] if args else None
     if not out:
         raise SystemExit(__doc__)
     pathlib.Path(out).mkdir(parents=True, exist_ok=True)
     with sync_playwright() as pw:
         b = pw.chromium.launch()
-        build(out, b, site_look() if "--site" in sys.argv[1:] else SKRIBL)
+        build(out, b, site_look() if "--site" in sys.argv[1:] else splash_look() if "--splash" in sys.argv[1:] else SKRIBL)
         b.close()
