@@ -1693,6 +1693,11 @@ with sync_playwright() as p:
                                       capture_output=True, text=True, timeout=180)
             heads = subprocess.run([sys.executable, "-m", "alembic", "-c", "social/alembic.ini", "heads"], cwd=ROOT,
                                    capture_output=True, text=True, timeout=60).stdout.split()
+            # The reposts' own revision, after the bookmarks', on the chain (the
+            # mentions' follows it since Nov 15: the chain is read at the
+            # reposts' revision, what it stamps there, never at its head).
+            hist = subprocess.run([sys.executable, "-m", "alembic", "-c", "social/alembic.ini", "history", "-r",
+                                   "224902330f2a:3e7b508ff939"], cwd=ROOT, capture_output=True, text=True, timeout=60).stdout
             chain = os.path.join(TMP, "chain.db")
             want_idx_all = {"ix_social_reposts_person_post", "ix_social_reposts_person_created", "ix_social_reposts_post_id",
                             "ix_social_reposts_owner_created", "ix_social_posts_quoted_post_id",
@@ -1708,7 +1713,7 @@ with sync_playwright() as p:
             con.execute("insert into social_likes (post_id, owner_id, person_id, created_at) values (1, 1, 1, '2026-11-03 10:00:00.000000')")
             con.commit()
             con.close()
-            a2 = alembic(chain, "upgrade", "head")
+            a2 = alembic(chain, "upgrade", "3e7b508ff939")
             con = sqlite3.connect(chain)
             cols = {r[1]: (r[2], r[3]) for r in con.execute("pragma table_info(social_posts)")}
             rows = con.execute("select public_id, skribl_id, is_quote, quoted_post_id, quoted_drawing_id, quoted_owner_id"
@@ -1752,11 +1757,13 @@ with sync_playwright() as p:
             gone = not con.execute("select 1 from sqlite_master where name = 'social_reposts'").fetchone()
             con.close()
             want_idx = want_idx_all
-            check("the chain on a populated database: one head (3e7b508ff939, after the bookmarks'); up, every post"
+            check("the chain on a populated database: one head, the reposts' revision on it (3e7b508ff939, after the"
+                  " bookmarks'), read at it; up, every post"
                   " kept as it was (its drawing, none a quote), the table social_reposts (person, post, owner, when)"
                   " with its four indexes, the posts' four columns with their three indexes and both CHECKs, skribl_id"
                   " no longer required; nothing else touched",
-                  heads == ["3e7b508ff939", "(head)"] and a1.returncode == 0 and a2.returncode == 0
+                  len(heads) == 2 and heads[1] == "(head)" and "224902330f2a -> 3e7b508ff939" in hist
+                  and a1.returncode == 0 and a2.returncode == 0
                   and rows == [(f"post{i:07d}", f"sk{i}", 0, None, None, None) for i in range(3)] and likes == 1
                   and want_idx <= idx and cols.get("skribl_id") == ("VARCHAR(32)", 0) and cols.get("is_quote", ("", 0))[1] == 1
                   and "ck_social_posts_drawn_or_quote" in sql and "ck_social_posts_quotes_one" in sql
