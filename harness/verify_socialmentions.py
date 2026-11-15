@@ -1189,7 +1189,7 @@ with sync_playwright() as p:
                  peek: peek ? peek.textContent : null, peekLinks: peek ? peek.querySelectorAll('a').length : 0,
                  isNew: a.classList.contains('is-new'), pic: pic ? pic.getAttribute('style') || '' : '',
                  badge: at ? { text: at.textContent, color: getComputedStyle(at).color, weight: getComputedStyle(at).fontWeight,
-                               disc: getComputedStyle(disc).backgroundColor } : null }; }) }; })"""
+                               disc: disc ? getComputedStyle(disc).backgroundColor : null } : null }; }) }; })"""
     BELL = "() => { const b = document.querySelector('.top-bell'); return b ? b.getAttribute('aria-label') : null; }"
     FILL = """() => { const e = document.createElement('i'); e.style.color = 'var(--fill)'; document.body.append(e);
       const v = getComputedStyle(e).color; e.remove(); return v; }"""
@@ -1547,8 +1547,11 @@ with app.app_context():
             # THE READS, on their indexes; and Home's cards asking once.
             mira = list_people()
             pia = someone(b, "pia", "Pia Lund")
-            for i in range(22):
-                post(pia, f"Section 9, Pia's {i}, for @mira and @pip", seed=900 + i)
+            p9 = [post(pia, f"Section 9, Pia's {i}, for @mira and @pip", seed=900 + i) for i in range(22)]
+            # A comment of the section's own, so the comments' read has one to
+            # read whatever ran before it (run alone, the section had none, and
+            # its read sent nothing to plan: the control's first red).
+            comment(mira, ("p", p9[0]), "Section 9, @pia and @pip, for the comments' read")
             cookie = "; ".join(f"{c_['name']}={c_['value']}" for c_ in mira.ctx.cookies(BASE))
             out = subprocess.run([sys.executable, "-c", READS, "mira", cookie], cwd=ROOT, env=ENV, capture_output=True,
                                  text=True, timeout=180)

@@ -337,8 +337,9 @@ def _mentions(me, hidden, since=None, limit=READ, quiet=frozenset()):
     if hid:
         under = sa.and_(under, par.person_id.notin_(hid))
         there = sa.and_(there, c.owner_id.notin_(hid))
-    in_post = sa.and_(m.post_id.isnot(None), mp.taken_down_at.is_(None))
-    in_comment = sa.and_(m.comment_id.isnot(None), c.taken_down_at.is_(None),
+    # What it is in must be there (a mention outliving it is nobody's row).
+    in_post = sa.and_(m.post_id.isnot(None), mp.id.isnot(None), mp.taken_down_at.is_(None))
+    in_comment = sa.and_(m.comment_id.isnot(None), c.id.isnot(None), c.taken_down_at.is_(None),
                          sa.or_(c.parent_id.is_(None), under), sa.or_(c.owner_id == me.id, there))
     q = q.where(sa.or_(in_post, in_comment))
     if since is not None:
