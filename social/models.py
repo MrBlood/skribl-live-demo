@@ -34,7 +34,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
 __all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
-           "Comment", "Like", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES",
+           "Comment", "Like", "Bookmark", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES",
            "WORDS_MAX", "REPORT_KINDS", "REPORT_STATES", "REPORT_NOTE_MAX", "HOME_FEEDS",
            "new_person_id", "new_public_id", "as_utc", "utcnow", "attach_to_metadata"]
 
@@ -414,6 +414,56 @@ class Like(SocialBase):
         sa.Index("ix_social_likes_owner_created", "owner_id", "created_at"),
         #: Who liked, newest first: your profile's Likes tab (the map's step 4).
         sa.Index("ix_social_likes_person_created", "person_id", "created_at"),
+    )
+
+
+class Bookmark(SocialBase):
+    """A bookmark (the map, part two, item 2; the owner's "All yes" on the
+    bookmarks mock, Nov 14): one person keeping a post, or a drawing shown
+    outside a post, to come back to, once; "Remove bookmark" takes it away,
+    and the row goes. Shaped as a like is: on a post (post_id) or a drawing
+    (drawing_id, the skribl's own public id), exactly one
+    (ck_social_bookmarks_on_one), and owner_id is whose that post or drawing
+    is, kept on the row so a block and deleting an account never ask Skribl.
+    A person keeps a thing once: the two unique indexes (an id is empty on
+    the other kind, and empties never collide).
+
+    YOURS ALONE, AND NOBODY IS TOLD (bookmarks.py): your own page's
+    Bookmarks tab reads them, newest first, by the person's own index; no
+    page counts them, and Activity never reads them.
+
+    DELETING IS REAL AND SAID IN CODE (bookmarks.py, from posts.drop_post,
+    posts.bloob_delete and accounts.delete_person): a post or a drawing goes
+    with its bookmarks, an account with its own and every bookmark on what it
+    owned. The ON DELETE CASCADEs are the net under that, as for likes."""
+    __tablename__ = "social_bookmarks"
+
+    id = sa.Column(BigId, primary_key=True)
+    #: The post it keeps, or None for one on a drawing shown outside a post.
+    post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=True)
+    #: The drawing it keeps (shown outside a post), by its skribl's public id.
+    drawing_id = sa.Column(sa.String(32), nullable=True)
+    #: Whose the post or the drawing is (its maker).
+    owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: Who kept it.
+    person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (
+        #: On a post or on a drawing: exactly one.
+        sa.CheckConstraint("(post_id IS NOT NULL AND drawing_id IS NULL) OR (post_id IS NULL AND drawing_id IS NOT NULL)",
+                           name="ck_social_bookmarks_on_one"),
+        #: Once a person, once a thing.
+        sa.Index("ix_social_bookmarks_person_post", "person_id", "post_id", unique=True),
+        sa.Index("ix_social_bookmarks_person_drawing", "person_id", "drawing_id", unique=True),
+        #: Yours, newest first: your own page's Bookmarks tab.
+        sa.Index("ix_social_bookmarks_person_created", "person_id", "created_at"),
+        #: A thing's: deleting a post or a drawing, and a drawing's moving
+        #: into a post, take its bookmarks by these.
+        sa.Index("ix_social_bookmarks_post_id", "post_id"),
+        sa.Index("ix_social_bookmarks_drawing_id", "drawing_id"),
+        #: Whose: deleting an account takes every bookmark on what it owned.
+        sa.Index("ix_social_bookmarks_owner_id", "owner_id"),
     )
 
 

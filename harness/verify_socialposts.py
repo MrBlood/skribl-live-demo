@@ -1107,10 +1107,11 @@ with sync_playwright() as p:
         jp.wait_for_timeout(1200)
         thanks = jp.evaluate("() => document.querySelector('[data-report-say]').textContent")
         reported = db("select reason, note from social_reports where kind = 'post' and target = ?", (pid,))
-        check("your own post's ⋯ says Copy link, Share…, Delete post; Copy link gives the link (or says it to copy"
-              " by hand); somebody else's says Copy link, Share…, Mute @them (mutes), Report this post",
-              mine == ["Copy link", "Share…", "Delete post"]
-              and theirs == ["Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
+        check("your own post's ⋯ says Bookmark (bookmarks), Copy link, Share…, Delete post; Copy link gives the link"
+              " (or says it to copy by hand); somebody else's says Bookmark, Copy link, Share…, Mute @them (mutes),"
+              " Report this post",
+              mine == ["Bookmark", "Copy link", "Share…", "Delete post"]
+              and theirs == ["Bookmark", "Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
               and (copied == "Link copied." or copied.startswith("Here’s the link to copy: " + BASE + f"/social/p/{pid}")),
               f"mine {mine}; theirs {theirs}; copied {copied!r}")
         check("Report this post rises as a sheet of its own with the Gallery's reasons and A child's safety, sends"
@@ -1516,9 +1517,9 @@ with sync_playwright() as p:
               and playing[:1] == ["playing"]
               and [f"/social/b/{another}", "A drawing"] in page["more"]
               and [f"/social/p/{g_post}", "Section 9, a post shown in the gallery"] in page["more"]
-              and theirs == ["Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
+              and theirs == ["Bookmark", "Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
               and landed == f"/social/p/{g_post}"
-              and mine == ["Copy link", "Share…", "Delete post"] and ask.get("open") and "stopped" not in ask
+              and mine == ["Bookmark", "Copy link", "Share…", "Delete post"] and ask.get("open") and "stopped" not in ask
               and ask.get("lede") == ["The drawing goes for good, from your page too. This can’t be undone."]
               and after["url"] == "/social/?note=deleted_drawing" and after["note"] == "Your drawing is gone." and gone,
               f"page {page}; players {playing}; theirs {theirs}; a post's drawing lands {landed}; mine {mine};"
@@ -3350,8 +3351,8 @@ print("PLAN " + json.dumps(out))
                         ("a person's ⋯", "/social/@ben", ("[data-person-menu]",), "personSheet", True, False),
                         ("Report's reasons", f"/social/p/{theirs16}",
                          (".post-page .post-row [data-post-menu]", "#postSheet [data-act=report]"), "reportSheet", False, False))
-            WANT16 = {"your post's ⋯": [["Copy link", "Share…"], ["Delete post"]],
-                      "their post's ⋯": [["Copy link", "Share…", "Mute @ben"], ["Report this post", "Block @ben"]],
+            WANT16 = {"your post's ⋯": [["Bookmark", "Copy link", "Share…"], ["Delete post"]],
+                      "their post's ⋯": [["Bookmark", "Copy link", "Share…", "Mute @ben"], ["Report this post", "Block @ben"]],
                       "a comment's ⋯": [["Remove from my post", "Report comment"]],
                       "a person's ⋯": [["Mute @ben"], ["Report @ben", "Block @ben"]],
                       "Report's reasons": [["Spam or misleading", "Abusive or hateful", "Copies someone else’s work",

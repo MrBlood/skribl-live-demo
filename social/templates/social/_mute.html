@@ -17,9 +17,9 @@
                         Unmute", under the buttons (`shown`: muted as the page
                         loads); and a template of it, so a mute made on the
                         page opens it there, gliding.
-    mute_parts()        the toast (the eye, its words, Undo), and mutes.js's
-                        words: the page's, so the script says nothing of its
-                        own.
+    mute_parts()        the toast (the eye, or a bookmark's ribbon; its words,
+                        Undo), and mutes.js's words: the page's, so the script
+                        says nothing of its own.
 
     Import these WITH CONTEXT: they read the page's me. #}
 {% import 'social/_icons.html' as ic %}
@@ -47,7 +47,7 @@
 {% macro mute_parts() -%}
 <div class="mu-toasts" data-mute-toasts role="status" data-mute="{{ url_for('social.mute', handle='__H__') }}"
      data-unmute="{{ url_for('social.unmute', handle='__H__') }}">
-  <div class="mu-toast" hidden>{{ ic.eye_closed() }}<span class="mu-toast-words" data-mute-said></span><button class="btn mu-undo" type="button" data-mute-undo hidden>Undo</button></div>
+  <div class="mu-toast" hidden>{{ ic.eye_closed() }}{{ ic.ribbon() }}<span class="mu-toast-words" data-mute-said></span><button class="btn mu-undo" type="button" data-mute-undo hidden>Undo</button></div>
 </div>
 <div class="words" data-mute-words hidden>
   <span data-word="mu_mute">Mute @{handle}</span>

@@ -80,6 +80,12 @@ they leave Activity); what you go to stays (their page, which says "You
 muted Theo · Unmute" to you alone, and their posts). Nobody is told, no
 number changes, and a mute never touches a follow. Settings lists them.
 
+BOOKMARKS (bookmarks.py; the map, part two, item 2: the bookmarks mock, the
+owner's "All yes", Nov 14). "Bookmark" at the top of a post's or a drawing's
+⋯, "Remove bookmark" once kept, the site's toast with Undo; your own page's
+Bookmarks tab keeps them, newest first. Yours alone: nobody is told, and
+there is no count anywhere.
+
 ONE SKRIBL, SHARED, PEOPLE TOO. The host hands Skribl the site's signed-in
 person as its current user (current_user_id() below) and names them with
 describe_author(), so a drawing made in the Pad while signed in is theirs.
@@ -308,8 +314,8 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
                                show="everyone", sort="new", q="", more_url=None)
 
     if site is not None:
-        from . import (accounts, activity, comments, compose, follows, gallery, likes, mutes, posts, profiles,
-                       reports, rules, safety)
+        from . import (accounts, activity, bookmarks, comments, compose, follows, gallery, likes, mutes, posts,
+                       profiles, reports, rules, safety)
         accounts.register(bp)
         gallery.register(bp)
         profiles.register(bp, skribl_blueprint)
@@ -317,6 +323,7 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         compose.register(bp, skribl_blueprint)
         comments.register(bp)
         likes.register(bp)
+        bookmarks.register(bp)
         follows.register(bp)
         mutes.register(bp)
         activity.register(bp, skribl_blueprint)

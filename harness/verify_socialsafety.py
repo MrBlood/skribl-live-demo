@@ -602,10 +602,10 @@ with sync_playwright() as p:
         pg.wait_for_timeout(1200)
         drow = db("select kind, about_id, reason from social_reports where target = ?", (shown,))
         sk_queue = db("select count(*) from skribl_reports")[0][0]
-        check("somebody else's post's ⋯ says Copy link, Share…, Mute @them (mutes), Report this post and Block @them;"
+        check("somebody else's post's ⋯ says Bookmark (bookmarks), Copy link, Share…, Mute @them (mutes), Report this post and Block @them;"
               " Report sends the Gallery's reasons and A child's safety, in order, into the site's own queue (the post,"
               " whose it is, the reason, the note, who sent it), and says thanks; Skribl's own queue is not asked",
-              st == 200 and acts == ["Copy link", "Share…", "Mute @juno", "Report this post", "Block @juno"]
+              st == 200 and acts == ["Bookmark", "Copy link", "Share…", "Mute @juno", "Report this post", "Block @juno"]
               and reasons == POST_REASONS and said == THANKS
               and prow == [("post", jid, "child_safety", "Not something for here", mid)] and sk_queue == 0,
               f"post {st}; sheet {acts}; reasons {reasons}; said {said!r}; row {prow}; Skribl's queue {sk_queue}")
@@ -752,7 +752,7 @@ with sync_playwright() as p:
         cafter = cpg.evaluate("""() => ({ url: location.pathname + location.search, note: (document.querySelector('.note') || {}).textContent,
           cards: [...document.querySelectorAll('.post-card')].map(c => c.getAttribute('data-handle')) })""")
         check("from a post's ⋯ on Home: Block @them, asked once; then Home says so and holds nothing of theirs",
-              cacts == ["Copy link", "Share…", "Mute @ben", "Report this post", "Block @ben"] and ctitle == "Block @ben?"
+              cacts == ["Bookmark", "Copy link", "Share…", "Mute @ben", "Report this post", "Block @ben"] and ctitle == "Block @ben?"
               and cafter["url"] == "/social/?note=blocked"
               and cafter["note"] == "Blocked. You won’t see each other’s posts or drawings. You can unblock them in Settings."
               and "ben" not in cafter["cards"],

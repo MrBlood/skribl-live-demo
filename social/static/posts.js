@@ -14,7 +14,9 @@
  * Activity (#c-<id>), comments.js says whether it plays: a drawing answer
  * there draws itself instead.
  *
- * THE ⋯ SHEET (social.js's SocialSheet, as Make's): Copy link, Share…,
+ * THE ⋯ SHEET (social.js's SocialSheet, as Make's): Bookmark first (Remove
+ * bookmark once it is yours: the card says which; none on what is taken
+ * down), Copy link, Share…,
  * signed in Mute @them (Unmute @them once muted: the card says which), Report
  * this post and, signed in, Block @them; or on your own Delete post. Report
  * and Delete each rise as a sheet of their own: Report into the site's own
@@ -24,6 +26,20 @@
  * says it went). Block is safety.js's sheet
  * (window.SocialSafety), and afterwards Home says so. Mute asks nothing:
  * mutes.js (window.SocialMute) folds their cards away and offers Undo.
+ *
+ * BOOKMARK asks nothing either (the bookmarks mock's A, the owner's "All
+ * yes", Nov 14): a tap keeps the post for you (or takes it away), the sheet
+ * goes down, every place on the page that shows it says so at once (its
+ * data-marked: the next ⋯ says Remove bookmark), the site is told
+ * (/p/<id>/bookmark, /b/<id>/bookmark, the page's token), and the site's
+ * toast says "Bookmarked. It’s on your page, under Bookmarks." (or "Removed
+ * from your bookmarks.") beside the ribbon, with Undo, clear of every ⋯ on
+ * the page, the next press (mutes.js, window.SocialToast). Undo puts it back
+ * as it was and says so, with no Undo of its own, the focus back on the ⋯.
+ * One request at a time a post; taps made meanwhile are where it ends up. A
+ * refusal puts it back and the toast says why, kindly. Signed out, the row
+ * raises a small sheet that says how ("Bookmark this post?", the heart's
+ * own), and nothing is kept. Nobody is told, and nothing counts them.
  *
  * TIMES are said in the person's own time: "35m" in the feed, "Nov 10 at
  * 8:20 PM" on a post's page (social.js's SocialWhen, with this page's
@@ -110,7 +126,8 @@
              skribl: p.getAttribute('data-skribl'), mine: p.hasAttribute('data-mine'),
              del: p.getAttribute('data-del'), kind: p.getAttribute('data-kind') || 'p',
              handle: p.getAttribute('data-handle') || '', first: p.getAttribute('data-first') || '',
-             muted: p.hasAttribute('data-muted') };
+             muted: p.hasAttribute('data-muted'), markable: p.hasAttribute('data-markable'),
+             marked: p.hasAttribute('data-marked') };
   }
 
   /* ---- the ⋯ sheet, and Report and Delete -------------------------------- */
@@ -139,6 +156,14 @@
       Array.prototype.forEach.call(menuWrap.querySelectorAll('[data-theirs]'), function (b) { b.hidden = current.mine; });
       var who = menuWrap.querySelector('[data-block-who]');
       if (who) who.textContent = say('block_who', { handle: current.handle });
+      /* BOOKMARK (bookmarks): Bookmark, or Remove bookmark with its ribbon
+         filled, as the card says; none on what is taken down. */
+      var bm = menuWrap.querySelector('[data-act="bookmark"]');
+      if (bm) {
+        bm.hidden = !current.markable;
+        bm.classList.toggle('is-marked', current.marked);
+        bm.querySelector('[data-bm-words]').textContent = say(current.marked ? 'bm_remove' : 'bm_add');
+      }
       /* MUTE (mutes): Mute @them, or Unmute @them, as the card says. */
       var mu = menuWrap.querySelector('[data-act="mute"]');
       if (mu) {
@@ -164,6 +189,17 @@
       var act = a.getAttribute('data-act'), box = menuWrap.querySelector('[data-post-say]');
       if (act === 'copy') copy(current.url, box);
       else if (act === 'share') share(current.url, box);
+      else if (act === 'bookmark') {
+        if (markOut) {
+          /* Signed out: the small sheet that says how. */
+          menu.close(true);
+          markOut.open(opener);
+        } else if (menuWrap.hasAttribute('data-bookmark-p')) {
+          /* Nothing asked first: the sheet goes down, focus back on the ⋯. */
+          menu.close();
+          markAct(current, !current.marked, opener, false);
+        }
+      }
       else if (act === 'report' && report) {
         menu.close(true);
         resetReport();
@@ -183,6 +219,71 @@
         deleteWrap.querySelector('[data-lede-s]').hidden = current.kind !== 's';
         del.open(opener);
       }
+    });
+  }
+
+  /* ---- BOOKMARKS ----------------------------------------------------------- */
+  var markOutWrap = doc.getElementById('bookmarkOutSheet');
+  var markOut = markOutWrap && window.SocialSheet ? window.SocialSheet(markOutWrap, {
+    doorCloses: false, first: function () { return markOutWrap.querySelector('.post-sheet-acts [data-make-close]'); }
+  }) : null;
+  /* The toast waits for the sheet to go (0.3s from the tap, as Mute's), and
+     keeps clear of every ⋯ on the page: the next press. */
+  var MARK_WAIT = 300, MENUS = '[data-post-menu]';
+  function markUrl(p) {
+    var tpl = menuWrap.getAttribute(p.kind === 's' ? 'data-bookmark-s' : 'data-bookmark-p') || '';
+    return tpl.replace('__ID__', encodeURIComponent(p.kind === 's' ? p.skribl : p.id));
+  }
+  /* Every place on the page that shows the post (its card, its own page)
+     says whether it is yours, so the next ⋯ says it. */
+  function markShow(p, on) {
+    Array.prototype.forEach.call(doc.querySelectorAll('.post-card[data-post], .post-page[data-post]'), function (el) {
+      if (el.getAttribute('data-post') !== p.id) return;
+      if (on) el.setAttribute('data-marked', ''); else el.removeAttribute('data-marked');
+    });
+  }
+  function markWhy(j) {
+    if (j && j.error && WORDS['bm_' + j.error]) return say('bm_' + j.error);
+    if (j && j.status === 429) return say('bm_limited');
+    if (j && j.status === 401) return say('bm_signed_out');
+    if (j && j.status === 403) return say('bm_stale');
+    if (j && j.status === 404) return say('bm_gone');
+    return say('bm_failed');
+  }
+  function markSay(text, undo, wait) {
+    if (window.SocialToast) window.SocialToast.rise(text, { undo: undo || null, wait: wait, clear: MENUS, icon: 'mark' });
+    else tell(pageSay, text);
+  }
+  /* `want`: kept (true) or taken away. One request at a time a post: what is
+     asked meanwhile is where it ends up. `undoing`: an Undo, which says what
+     happened with no Undo of its own and gives the ⋯ its focus back. */
+  var marks = {};
+  function markAct(p, want, opener, undoing) {
+    var key = p.kind + ':' + p.id, st = marks[key] || (marks[key] = { busy: false });
+    st.want = want;
+    st.p = p;
+    st.opener = opener;
+    st.undoing = !!undoing;
+    markShow(p, want);
+    if (!st.busy) markSend(st, Date.now());
+  }
+  function markSend(st, t0) {
+    var want = st.want, p = st.p;
+    st.busy = true;
+    post(markUrl(p), { bookmarked: want }, { 'X-Social-CSRF': token }).then(function (j) {
+      st.busy = false;
+      if (j.ok && st.want !== want) { markSend(st, t0); return; }
+      var wait = Math.max(0, MARK_WAIT - (Date.now() - t0));
+      if (j.ok) {
+        markSay(say(want ? 'bm_added' : 'bm_removed'), st.undoing ? null : function () {
+          if (st.opener && st.opener.isConnected) st.opener.focus({ preventScroll: true });
+          markAct(p, !want, st.opener, true);
+        }, wait);
+        return;
+      }
+      st.want = !want;
+      markShow(p, !want);
+      markSay(markWhy(j), null, wait);
     });
   }
 

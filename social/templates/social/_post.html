@@ -34,21 +34,27 @@
                       line's marks, which it draws (a small dot a like, a
                       step redder where they double); the hearts that rise
                       from them are likes.js's. Nothing taken down has any.
-    post_sheets()     the ⋯ sheet ("This post": Copy link, Share…, and signed
-                      in Mute @them (mutes: _mute.html, after Share… so the
-                      two danger rows stay together), Report this post and
-                      Block @them, or on your own Delete post), the report
+    post_sheets()     the ⋯ sheet ("This post": Bookmark first (bookmarks:
+                      "Remove bookmark" once it is yours, its ribbon filled;
+                      none on what is taken down), Copy link, Share…, and
+                      signed in Mute @them (mutes: _mute.html, after Share…
+                      so the two danger rows stay together), Report this post
+                      and Block @them, or on your own Delete post), the report
                       sheet (the Gallery's own reasons and words, into
-                      Skribl's report queue) and the delete sheet (it asks
-                      once). One of each a page; posts.js fills them for the
-                      post whose ⋯ was pressed, and social.js moves them.
+                      Skribl's report queue), the delete sheet (it asks
+                      once), and signed out the small sheet Bookmark raises
+                      ("Bookmark this post?", the heart's own shape). One of
+                      each a page; posts.js fills them for the post whose ⋯
+                      was pressed, and social.js moves them.
     post_words()      what posts.js says ([data-word]): this page's words.
 
     `c` is posts.cards()'s: the post, its author, its drawing as Skribl
     describes it (None when it cannot be had: the player then says the
     drawing is not here anymore), its plays said, its address, its author's
-    page, and whether it is yours. Import these WITH CONTEXT: they read the
-    page's skribl_bp, when_iso and when_day. #}
+    page, whether it is yours, whether it can be bookmarked (`markable`:
+    not taken down, nor a drawing kept link-only) and whether it is the
+    viewer's bookmark (`marked`, theirs alone: data-marked, never a count). Import these WITH
+    CONTEXT: they read the page's skribl_bp, when_iso and when_day. #}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline %}
 {% from 'skribl/_skribl_face.html' import skribl_face %}
 {% import 'social/_icons.html' as ic %}
@@ -101,9 +107,9 @@
 
 {% macro post_card(c) -%}
 {%- set p = c.post %}{% set who = c.who -%}
-<article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id }}"
+<article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id }}" data-kind="{{ c.kind }}"
          data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
-         {%- if c.muted %} data-muted{% endif %} aria-labelledby="pn-{{ p.public_id }}">
+         {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %} aria-labelledby="pn-{{ p.public_id }}">
   <header class="post-head">
     <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
     {#- Their page, the size of a finger: the name's link lies under the name and
@@ -128,12 +134,18 @@
     "B, equal lines", Nov 14); posts.js shows the rows for whose post it is,
     and each card always holds one. No Cancel: its grip, a tap outside it, a
     swipe down and Esc close it, as on the Pad's menu. #}
-<div class="make post-sheet" id="postSheet" hidden>
+<div class="make post-sheet" id="postSheet" hidden{% if me %} data-bookmark-p="{{ url_for('social.bookmark_post', public_id='__ID__') }}"
+     data-bookmark-s="{{ url_for('social.bookmark_drawing', skribl_id='__ID__') }}"{% endif %}>
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="postSheetTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="postSheetTitle">This post</h2>
     <div class="post-acts">
+      {#- BOOKMARK, first (the bookmarks mock's A): its ribbon in our pen in the
+          row's ink; once the post is yours to come back to, "Remove bookmark"
+          and the ribbon filled (posts.js says which, from the card's
+          data-marked). Signed out it raises the sheet below. #}
+      <button class="post-act bm-act" type="button" data-act="bookmark"{% if not me %} aria-haspopup="dialog" aria-controls="bookmarkOutSheet"{% endif %}>{{ ic.ribbon() }}<span data-bm-words>Bookmark</span></button>
       <button class="post-act" type="button" data-act="copy">{{ ic.link() }}<span>Copy link</span></button>
       <button class="post-act" type="button" data-act="share">{{ ic.share() }}<span>Share…</span></button>
       {% if me %}{{ mute_row('', false, 'post') }}{% endif %}
@@ -174,6 +186,24 @@
   </form>
 </div>
 
+{% if not me %}
+{#  SIGNED OUT, BOOKMARK raises this (the heart's own small sheet, _likes.html
+    likeOutSheet): it says how, and Sign in comes back to this page. Nothing
+    is kept for them. #}
+<div class="make post-sheet bm-out" id="bookmarkOutSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="bookmarkOutTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="bookmarkOutTitle">Bookmark this post?</h2>
+    <p class="post-lede">Sign in, and it’s kept for you on your page, where only you can see it.</p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Not now</button>
+      <a class="btn btn-primary btn-big" href="{{ signin_here or url_for('social.signin') }}">Sign in</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {#  DELETE POST, asked once: what goes, and that it is for good. #}
 <div class="make post-sheet" id="deleteSheet" hidden data-delete="{{ url_for('social.post_delete', public_id='__ID__') }}">
   <div class="make-scrim" data-make-close></div>
@@ -202,6 +232,17 @@
   <span data-word="taken_down">Your account was taken down, so nothing new can be shared from it.</span>
   <span data-word="network">That didn’t reach us. Check your connection and try again.</span>
   <span data-word="failed">That didn’t go through. Try again?</span>
+  <span data-word="bm_add">Bookmark</span>
+  <span data-word="bm_remove">Remove bookmark</span>
+  <span data-word="bm_added">Bookmarked. It’s on your page, under Bookmarks.</span>
+  <span data-word="bm_removed">Removed from your bookmarks.</span>
+  <span data-word="bm_stale">This page went stale. Reload it, then try again.</span>
+  <span data-word="bm_limited">Lots of that in a short while. Wait a little, then try again.</span>
+  <span data-word="bm_signed_out">You’ve been signed out. Sign in again, then try again.</span>
+  <span data-word="bm_taken_down">Your account was taken down, so nothing new can be kept on it.</span>
+  <span data-word="bm_gone">That isn’t here anymore. Reload the page to see what’s new.</span>
+  <span data-word="bm_network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="bm_failed">That didn’t go through. Try again?</span>
   <span data-word="copied">Link copied.</span>
   <span data-word="copy_by_hand">Here’s the link to copy: {url}</span>
   <span data-word="sending">Sending…</span>

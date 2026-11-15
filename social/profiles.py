@@ -8,18 +8,19 @@ build order item 3, the owner's "all yes" on the phase 1 mocks).
                     lines about them, and their tabs, Posts first. Handles
                     are case-insensitive; nobody by that name (never made,
                     or deleted) is one kind not-found.
-    /@<handle>/gallery, /likes, /drafts
+    /@<handle>/gallery, /likes, /bookmarks, /drafts
                     the same page on another tab: each tab is a link with
                     its own address, so the back button and a shared link
-                    land on it. Likes and Drafts are the owner's alone:
-                    anybody else is sent to the person's page.
+                    land on it. Likes, Bookmarks and Drafts are the owner's
+                    alone: anybody else is sent to the person's page.
     /@<handle>/more a tab's first page, or its next (?tab=, ?before=), as
                     its cards or tiles (JSON {html, next, tab}), for the
                     switch and Load more (tabs.js).
 
 A PROFILE'S TABS (the map's step 4, docs/SOCIAL-SITE.md section 16; the
-owner's "Yes" to its mock, Nov 14): Posts · Gallery · Likes · Drafts on your
-own page, Posts · Gallery on anybody else's, Posts opening first.
+owner's "Yes" to its mock, Nov 14): Posts · Gallery · Likes · Bookmarks ·
+Drafts on your own page (Bookmarks since the map's part two, the owner's "All
+yes", Nov 14), Posts · Gallery on anybody else's, Posts opening first.
   Posts     their posts as Home's one card, newest first (posts.person_page).
   Gallery   every drawing and Flip they shared, as the Gallery's tiles: a
             post's opens its post, one shown outside a post its own page
@@ -32,6 +33,8 @@ own page, Posts · Gallery on anybody else's, Posts opening first.
             it, in the page or its source.
   Likes     yours alone: the posts you liked, newest liked first, as cards
             (likes.liked_page).
+  Bookmarks yours alone: the posts and the drawings you kept, newest kept
+            first, as cards (bookmarks.marked_page).
   Drafts    yours alone: the drafts Skribl keeps on your account, as tiles,
             each opening the editor that made it with ?draft=<id>, the
             editors' own hand-off (Skribl's list_drafts, docs/INTEGRATION.md
@@ -75,11 +78,11 @@ from .safety import between, i_blocked
 from .security import csrf_token, current_person, origin_ok, over, public_origin, site, token_ok
 
 #: A profile's tabs, in their order (the map's step 4): Posts opens first;
-#: the last two, Likes and Drafts, are yours alone (tabs_for).
-TABS = ("posts", "gallery", "likes", "drafts")
+#: the last three, Likes, Bookmarks and Drafts, are yours alone (tabs_for).
+TABS = ("posts", "gallery", "likes", "bookmarks", "drafts")
 
 #: What each tab is called.
-TAB_NAMES = {"posts": "Posts", "gallery": "Gallery", "likes": "Likes", "drafts": "Drafts"}
+TAB_NAMES = {"posts": "Posts", "gallery": "Gallery", "likes": "Likes", "bookmarks": "Bookmarks", "drafts": "Drafts"}
 
 #: A draft's own small picture, as Skribl keeps it (a raster data: URL it
 #: checked when it was saved); anything else is shown as no picture.
@@ -88,7 +91,7 @@ _THUMB_KINDS = ("data:image/jpeg;base64,", "data:image/png;base64,", "data:image
 
 def tabs_for(mine):
     """The tabs a profile shows: everybody's two, and on your own page the
-    two that are yours alone, on nobody else's page nor in its source."""
+    three that are yours alone, on nobody else's page nor in its source."""
     return TABS if mine else TABS[:2]
 
 
@@ -168,10 +171,10 @@ def draft_tiles(me, skribl_blueprint="skribl"):
 
 def tab_view(who, me, mine, tab, before=None, skribl_blueprint="skribl"):
     """What a tab shows `me` on `who`'s page, a page at a time: {"tab",
-    "cards" (Posts, Likes), "tiles" (Gallery), "drafts" (Drafts), "next" (the
-    cursor of the page after, or None)}. Likes and Drafts are asked only on
-    your own page (the caller's to see)."""
-    from . import gallery, likes, posts
+    "cards" (Posts, Likes, Bookmarks), "tiles" (Gallery), "drafts" (Drafts),
+    "next" (the cursor of the page after, or None)}. Likes, Bookmarks and
+    Drafts are asked only on your own page (the caller's to see)."""
+    from . import bookmarks, gallery, likes, posts
     out = {"tab": tab, "cards": [], "tiles": [], "drafts": [], "next": None}
     if tab == "posts":
         entries, out["next"] = posts.person_page(who, me, before)
@@ -182,6 +185,9 @@ def tab_view(who, me, mine, tab, before=None, skribl_blueprint="skribl"):
         out["tiles"] = gallery.tiles(entries, me, eye=mine)
     elif tab == "likes" and mine:
         entries, out["next"] = likes.liked_page(me, before)
+        out["cards"] = posts.cards(entries, me) if entries else []
+    elif tab == "bookmarks" and mine:
+        entries, out["next"] = bookmarks.marked_page(me, before)
         out["cards"] = posts.cards(entries, me) if entries else []
     elif tab == "drafts" and mine and not before:
         out["drafts"] = draft_tiles(me, skribl_blueprint)
@@ -242,6 +248,7 @@ def register(bp, skribl_blueprint="skribl"):
 
     @bp.get("/@<handle>/gallery", defaults={"tab": "gallery"})
     @bp.get("/@<handle>/likes", defaults={"tab": "likes"})
+    @bp.get("/@<handle>/bookmarks", defaults={"tab": "bookmarks"})
     @bp.get("/@<handle>/drafts", defaults={"tab": "drafts"})
     @_rests()
     def profile_tab(handle, tab):
@@ -253,8 +260,8 @@ def register(bp, skribl_blueprint="skribl"):
     def profile_more(handle):
         """A tab's first page (a switch), or its next (?before=, Load more):
         {html, next, tab}. The page's own rules: nothing for anybody a
-        refusal or a block stands for, and Likes and Drafts the owner's
-        alone."""
+        refusal or a block stands for, and Likes, Bookmarks and Drafts the
+        owner's alone."""
         who, me, mine, blocked_them, refusal = whose(handle)
         tab = request.args.get("tab")
         if refusal is not None or blocked_them or tab not in tabs_for(mine):
@@ -265,7 +272,7 @@ def register(bp, skribl_blueprint="skribl"):
         view = tab_view(who, me, mine, tab, before, skribl_blueprint)
         html = render_template("social/_profile_panel.html", p=view, who=who, mine=mine, items_only=bool(before))
         resp = jsonify({"html": html, "next": view["next"], "tab": tab})
-        # One person's own (Likes, Drafts), and the viewer's view of anybody:
+        # One person's own (Likes, Bookmarks, Drafts), and the viewer's view of anybody:
         # no cache keeps it.
         resp.headers["Cache-Control"] = "private, no-store"
         return resp
@@ -275,8 +282,9 @@ def register(bp, skribl_blueprint="skribl"):
         if refusal is not None:
             return refusal
         if tab not in tabs_for(mine):
-            # LIKES AND DRAFTS ARE YOURS ALONE: anybody else (signed out too)
-            # is sent to the person's page, which shows neither.
+            # LIKES, BOOKMARKS AND DRAFTS ARE YOURS ALONE: anybody else
+            # (signed out too) is sent to the person's page, which shows none
+            # of them.
             return redirect(profile_url(who.handle), 302)
         note = request.args.get("note") if mine else None
         # FOLLOWS: the counts on every profile, counted for whoever looks

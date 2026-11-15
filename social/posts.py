@@ -51,8 +51,9 @@ ONE DRAWING, ONE CONVERSATION (docs/SOCIAL-SITE.md section 17; the owner's
 "Yes", Nov 14). A post can be one of your older drawings, one you shared
 outside a post (the Pad's own share, or the eye's link-only one): the post's
 row names that skribl, so nothing is made in Skribl, and in the same
-transaction the drawing's hearts and comments move onto the post
-(comments.move_drawing_comments, likes.move_drawing_likes). Its own page,
+transaction the drawing's hearts, comments and bookmarks move onto the post
+(comments.move_drawing_comments, likes.move_drawing_likes,
+bookmarks.move_drawing_bookmarks). Its own page,
 /b/<id>, then sends people to the post (bloob_page, as it does for every
 post's drawing), so nothing is lost and one drawing never has two
 conversations. A drawing in a post is never posted again (that will be a
@@ -323,6 +324,11 @@ def cards(entries, viewer):
     # card's at once, by the same rules (nobody hidden counted).
     liked = stats(viewer, posts=[e["post"].id for e in entries if e["kind"] == "p"],
                   drawings=[e["sk"]["id"] for e in entries if e["kind"] == "s"])
+    # WHICH ARE THIS VIEWER'S BOOKMARKS (bookmarks): their ⋯ says Remove
+    # bookmark. Theirs alone, and never how many: one read a kind.
+    from .bookmarks import marked
+    kept = marked(viewer, posts=[e["post"].id for e in entries if e["kind"] == "p"],
+                  drawings=[e["sk"]["id"] for e in entries if e["kind"] == "s"])
     out = []
     for e in entries:
         who = e["who"]
@@ -356,6 +362,12 @@ def cards(entries, viewer):
                     "like": (url_for("social.like_post", public_id=p.public_id) if e["kind"] == "p"
                              else url_for("social.like_drawing", skribl_id=p.skribl_id)),
                     "url": url, "delete": gone,
+                    # BOOKMARK in its ⋯ where one can be kept (bookmarks.py:
+                    # what is open to everybody, as a like): never on what is
+                    # taken down, nor a drawing kept link-only, which its maker
+                    # alone sees.
+                    "markable": not down and (e["kind"] == "p" or (sk or {}).get("visibility") == "public"),
+                    "marked": key in kept,
                     "profile": profile_url(who.handle),
                     "mine": viewer is not None and viewer.id == who.id,
                     "muted": who.id in muted})
@@ -520,10 +532,11 @@ def register(bp, skribl_blueprint="skribl"):
         post (the header's rule). The drawing is theirs, shared (public or
         link-only), never a post's, a face or a comment's; taken down
         (withheld) it is nobody's to post. In one transaction: the post's row,
-        naming that skribl, and the drawing's hearts and comments moved onto
-        it. Nothing is made in Skribl and nothing about the drawing changes
+        naming that skribl, and the drawing's hearts, comments and bookmarks
+        moved onto it. Nothing is made in Skribl and nothing about the drawing changes
         there: its title, caption and visibility stay its own."""
         from skribl import describe_posts
+        from .bookmarks import move_drawing_bookmarks
         from .comments import move_drawing_comments
         from .likes import move_drawing_likes
         from .models import Comment
@@ -553,6 +566,7 @@ def register(bp, skribl_blueprint="skribl"):
         sess.flush()
         move_drawing_comments(sid, row.id)
         move_drawing_likes(sid, row.id)
+        move_drawing_bookmarks(sid, row.id)
         sess.flush()
         return jsonify({"ok": True, "post": row.public_id,
                         "go": url_for("social.post_page", public_id=row.public_id)})
@@ -746,12 +760,15 @@ def register(bp, skribl_blueprint="skribl"):
             delete_post(skribl_id, author_id=me.public_id)
         except SkriblNotFound:
             return _json_error("gone", 404)
-        # ITS COMMENTS AND LIKES GO WITH IT, in code (phase 2): only once
-        # delete_post has said it was theirs, since a refused delete still commits.
+        # ITS COMMENTS, LIKES AND BOOKMARKS GO WITH IT, in code (phase 2,
+        # bookmarks): only once delete_post has said it was theirs, since a
+        # refused delete still commits.
+        from .bookmarks import drop_drawing_bookmarks
         from .comments import drop_drawing_comments
         from .likes import drop_drawing_likes
         drop_drawing_comments(skribl_id)
         drop_drawing_likes(skribl_id)
+        drop_drawing_bookmarks(skribl_id)
         sess.flush()
         return jsonify({"ok": True, "go": url_for("social.home", note="deleted_drawing")})
 
@@ -777,15 +794,18 @@ def drawing_lock(skribl_id):
 
 
 def drop_post(author_public_id, row):
-    """A post's comments and answers and its likes (phase 2, said here and not
-    left to a cascade), its drawing (Skribl's delete_post, as its author) and
-    its row. A drawing already gone is no reason to keep the words. Flushes
-    nothing: the caller does, with whatever else goes in the same transaction."""
+    """A post's comments and answers, its likes and its bookmarks (phase 2 and
+    bookmarks, said here and not left to a cascade), its drawing (Skribl's
+    delete_post, as its author) and its row. A drawing already gone is no
+    reason to keep the words. Flushes nothing: the caller does, with whatever
+    else goes in the same transaction."""
     from skribl import SkriblNotFound, delete_post
+    from .bookmarks import drop_post_bookmarks
     from .comments import drop_post_comments
     from .likes import drop_post_likes
     drop_post_comments(row.id)
     drop_post_likes(row.id)
+    drop_post_bookmarks(row.id)
     try:
         delete_post(row.skribl_id, author_id=author_public_id)
     except SkriblNotFound:

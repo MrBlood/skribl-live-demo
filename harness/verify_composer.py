@@ -42,10 +42,11 @@ Skribl's real Pad.
      nobody and a list it does not have.
   6. ONE DRAWING, ONE CONVERSATION: an older drawing posted through Yours is
      the post's drawing (nothing new made in Skribl); its hearts (their
-     moments kept), its comments and their answers move onto the post, their
-     times kept, in the same transaction as the post (a failure at the move
-     leaves no post and nothing moved); its old page sends everybody to the
-     post, and its old like and comment addresses take nothing new; the
+     moments kept), its comments and their answers, and its bookmarks
+     (bookmarks, Nov 14) move onto the post, their times kept, in the same
+     transaction as the post (a failure at the move leaves no post and
+     nothing moved); its old page sends everybody to the post, and its old
+     like, comment and bookmark addresses take nothing new; the
      Gallery shows it once, as the post, with the conversation's counts;
      Activity's row for a comment already seen opens the post, and the dot
      stays dark; one hidden from the Gallery stays hidden. Guards: somebody
@@ -1095,6 +1096,10 @@ with sync_playwright() as p:
             eli.pg.wait_for_timeout(300)
             a_st = eli.api("POST", f"/social/b/{sid}/comments", {"words": "Same!", "answer_to": (c_j or {}).get("comment")})[0]
             e_like = eli.api("POST", f"/social/b/{sid}/like", {"liked": True})[0]
+            # ITS BOOKMARKS (bookmarks, Nov 14): Dee's and Eli's, kept on the drawing.
+            marks_st = [dee.api("POST", f"/social/b/{sid}/bookmark", {"bookmarked": True})[0],
+                        eli.api("POST", f"/social/b/{sid}/bookmark", {"bookmarked": True})[0]]
+            before_marks = db("select id, person_id, created_at, owner_id from social_bookmarks where drawing_id = ? order by id", (sid,))
             before_likes = db("select id, person_id, at_ms, created_at, owner_id from social_likes where drawing_id = ? order by id", (sid,))
             before_cms = db("select id, person_id, parent_id, words, created_at, owner_id from social_comments where drawing_id = ? order by id", (sid,))
             # Cy has seen Activity since: the dot is dark.
@@ -1116,17 +1121,21 @@ with sync_playwright() as p:
             post_id = row[0][0] if row else None
             after_likes = db("select id, person_id, at_ms, created_at, owner_id from social_likes where post_id = ? order by id", (post_id,))
             after_cms = db("select id, person_id, parent_id, words, created_at, owner_id from social_comments where post_id = ? order by id", (post_id,))
-            left_on = db("select (select count(*) from social_likes where drawing_id = ?) + (select count(*) from social_comments where drawing_id = ?)", (sid, sid))[0][0]
+            after_marks = db("select id, person_id, created_at, owner_id from social_bookmarks where post_id = ? order by id", (post_id,))
+            left_on = db("select (select count(*) from social_likes where drawing_id = ?) + (select count(*) from social_comments where drawing_id = ?)"
+                         " + (select count(*) from social_bookmarks where drawing_id = ?)", (sid, sid, sid))[0][0]
             check("an older drawing posted through Yours is the post's drawing, nothing new made in Skribl; its two hearts (the"
-                  " moment 0:00.9 kept), its comment and the answer under it are the post's now, each its person, its time,"
-                  " its owner and its answer as they were, and none is left on the drawing",
+                  " moment 0:00.9 kept), its comment and the answer under it, and its two bookmarks are the post's now, each"
+                  " its person, its time, its owner and its answer as they were, and none is left on the drawing",
                   url.startswith("/social/p/") and row and row[0][1] == sid and row[0][2] == "A slow snail for a slow Saturday."
                   and db("select count(*) from skribl_posts")[0][0] == skribls_before
                   and like_st == 200 and e_like == 200 and c_st == 200 and a_st == 200
                   and len(before_likes) == 2 and after_likes == before_likes
-                  and len(before_cms) == 2 and after_cms == before_cms and left_on == 0,
+                  and len(before_cms) == 2 and after_cms == before_cms
+                  and marks_st == [200, 200] and len(before_marks) == 2 and after_marks == before_marks and left_on == 0,
                   f"url {url}; row {row}; skribls {skribls_before} -> {db('select count(*) from skribl_posts')[0][0]};"
-                  f" likes {before_likes} -> {after_likes}; comments {len(before_cms)} -> {len(after_cms)}; left {left_on}")
+                  f" likes {before_likes} -> {after_likes}; comments {len(before_cms)} -> {len(after_cms)};"
+                  f" bookmarks {marks_st} {before_marks} -> {after_marks}; left {left_on}")
             page = pg.evaluate("""() => ({ said: [...document.querySelectorAll('[data-comments] .cm-words')].map(w => w.textContent.trim()),
               count: (document.getElementById('commentsTitle') || {}).innerText })""")
             close_ctx(ctx, pg)
@@ -1144,12 +1153,14 @@ with sync_playwright() as p:
                 except urllib.error.HTTPError as e:
                     old[who_.handle if who_ else "nobody"] = [e.code, e.headers.get("Location")]
             refused = [dee.api("POST", f"/social/b/{sid}/like", {"liked": False})[0],
-                       dee.api("POST", f"/social/b/{sid}/comments", {"words": "Late"})[0]]
+                       dee.api("POST", f"/social/b/{sid}/comments", {"words": "Late"})[0],
+                       dee.api("POST", f"/social/b/{sid}/bookmark", {"bookmarked": True})[0]]
             check("the post's page holds the conversation (Dee's comment, Eli's answer, 2 comments); the drawing's old page sends"
-                  " Dee and nobody signed in to the post (a redirect), and its old like and comment addresses take nothing new",
+                  " Dee and nobody signed in to the post (a redirect), and its old like, comment and bookmark addresses take"
+                  " nothing new",
                   "Love the shell." in page["said"] and "Same!" in page["said"] and (page["count"] or "").strip().startswith("Comments")
                   and "2" in (page["count"] or "")
-                  and all(v and v[0] in (302, 303) and v[1] and v[1].endswith(url) for v in old.values()) and refused == [404, 404],
+                  and all(v and v[0] in (302, 303) and v[1] and v[1].endswith(url) for v in old.values()) and refused == [404, 404, 404],
                   f"page {page}; old page {old}; old addresses {refused}")
             tile = urllib.request.urlopen(BASE + "/social/explore", timeout=20).read().decode()
             tiles_of = re.findall(r'<a class="gal-tile" href="([^"]+)"[^>]*aria-label="([^"]*)"', tile)
@@ -1182,18 +1193,21 @@ with sync_playwright() as p:
             dee.pg.wait_for_timeout(300)
             dee.api("POST", f"/social/b/{sid3}/like", {"liked": True})
             dee.api("POST", f"/social/b/{sid3}/comments", {"words": "Wait for it"})
+            dee.api("POST", f"/social/b/{sid3}/bookmark", {"bookmarked": True})
             db("create trigger composer_no_move before update on social_likes begin select raise(abort, 'no move'); end")
             try:
                 st3, j3 = cy.api("POST", "/social/posts", {"words": "Half?", "skribl": sid3})
             finally:
                 db("drop trigger composer_no_move")
             stayed = db("select (select count(*) from social_posts where skribl_id = ?), (select count(*) from social_likes where drawing_id = ?),"
-                        " (select count(*) from social_comments where drawing_id = ?)", (sid3, sid3, sid3))[0]
+                        " (select count(*) from social_comments where drawing_id = ?), (select count(*) from social_bookmarks where drawing_id = ?)",
+                        (sid3, sid3, sid3, sid3))[0]
             st4, j4 = cy.api("POST", "/social/posts", {"words": "Whole", "skribl": sid3})
-            moved = db("select (select count(*) from social_likes where drawing_id = ?), (select count(*) from social_comments where drawing_id = ?)", (sid3, sid3))[0]
+            moved = db("select (select count(*) from social_likes where drawing_id = ?), (select count(*) from social_comments where drawing_id = ?),"
+                       " (select count(*) from social_bookmarks where drawing_id = ?)", (sid3, sid3, sid3))[0]
             check("in the same transaction as the post: a move refused by the database leaves no post and nothing moved (the"
-                  " comment still on the drawing); asked again it all goes, together",
-                  st3 >= 500 and stayed == (0, 1, 1) and st4 == 200 and moved == (0, 0),
+                  " comment and the bookmark still on the drawing); asked again it all goes, together",
+                  st3 >= 500 and stayed == (0, 1, 1, 1) and st4 == 200 and moved == (0, 0, 0),
                   f"refused {st3} {j3}; then post, likes, comments {stayed}; again {st4}, left on the drawing {moved}")
             # Guards.
             st_post, j_post = cy.api("POST", "/social/posts", {"words": "", "skribl": sid})

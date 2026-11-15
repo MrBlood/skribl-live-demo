@@ -1163,11 +1163,11 @@ with sync_playwright() as p:
                       and rows[(s, "person")][0]["say"] == SAY and rows[(s, "person")][0]["muted"] == "false"
                       for s in ("phone", "desk")),
                   json.dumps({s: names[(s, "person")] for s in ("phone", "desk")}))
-            want = ["Copy link", "Share…", "Mute @ben", "Report this post", "Block @ben"]
+            want = ["Bookmark", "Copy link", "Share…", "Mute @ben", "Report this post", "Block @ben"]
             check("on their post's ⋯ (its card on Home and its own page) and their drawing's (on its own page), Mute @ben"
-                  " comes after Copy link and Share…, before Report and Block, so the two danger rows stay together, with"
-                  " its line",
-                  all(names[(s, k)] == want and rows[(s, k)][2]["say"] == SAY
+                  " comes after Bookmark (bookmarks), Copy link and Share…, before Report and Block, so the two danger"
+                  " rows stay together, with its line",
+                  all(names[(s, k)] == want and rows[(s, k)][3]["say"] == SAY
                       for s in ("phone", "desk") for k in ("card", "drawing", "page")),
                   json.dumps({f"{s} {k}": names[(s, k)] for s in ("phone", "desk") for k in ("card", "drawing", "page")}))
             eyes = [r for v in rows.values() for r in v if r["mute"]]
@@ -1203,8 +1203,8 @@ with sync_playwright() as p:
             UN = "Everything comes back, just as it was."
             check("muted, their page's ⋯ and their post's say Unmute @ben, “Everything comes back, just as it was.”",
                   mp and mp[0]["name"] == "Unmute @ben" and mp[0]["say"] == UN and mp[0]["muted"] == "true"
-                  and len(mq) == 5 and mq[2]["name"] == "Unmute @ben" and mq[2]["say"] == UN,
-                  json.dumps([(r["name"], r["say"]) for r in (mp or [])[:1] + (mq or [])[2:3]]))
+                  and len(mq) == 6 and mq[3]["name"] == "Unmute @ben" and mq[3]["say"] == UN,
+                  json.dumps([(r["name"], r["say"]) for r in (mp or [])[:1] + (mq or [])[3:4]]))
             ctx, pg = browser_as(b, ann)
             go(pg, "/social/", wait=500)
             to(pg, f'.post-card[data-post="{ap}"]', 120)
@@ -1229,12 +1229,12 @@ with sync_playwright() as p:
             open_sheet(pg, ".post-page .post-row .post-more", "postSheet")
             out_post = [r["name"] for r in pg.evaluate(ACTS, "#postSheet")]
             close_ctx(ctx, pg)
-            check("never on your own post (Copy link, Share…, Delete post), on Home or your own page's Posts, nor of you"
-                  " on your own page (no ⋯ of yours, no Mute @ann in it); never signed out (a person's ⋯ says Report"
-                  " @ben alone, a post's Copy link, Share…, Report this post)",
-                  own_card == ["Copy link", "Share…", "Delete post"] and not own_page["more"] and not own_page["self"]
-                  and own_page.get("card") == ["Copy link", "Share…", "Delete post"]
-                  and out_person == ["Report @ben"] and out_post == ["Copy link", "Share…", "Report this post"],
+            check("never on your own post (Bookmark, Copy link, Share…, Delete post), on Home or your own page's Posts,"
+                  " nor of you on your own page (no ⋯ of yours, no Mute @ann in it); never signed out (a person's ⋯ says"
+                  " Report @ben alone, a post's Bookmark, Copy link, Share…, Report this post)",
+                  own_card == ["Bookmark", "Copy link", "Share…", "Delete post"] and not own_page["more"] and not own_page["self"]
+                  and own_page.get("card") == ["Bookmark", "Copy link", "Share…", "Delete post"]
+                  and out_person == ["Report @ben"] and out_post == ["Bookmark", "Copy link", "Share…", "Report this post"],
                   f"own card {own_card}; own page {own_page}; signed out {out_person} / {out_post}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(1, exc)
@@ -1961,6 +1961,10 @@ with sync_playwright() as p:
         try:
             mdb = os.path.join(TMP, "chain-mutes.db")
             BEFORE = "1757a4385be8"      # the chain's head before mutes (its migration's down_revision)
+            # The mutes' own migration, read at its own revision: the chain's
+            # head has grown since (the eye's column, Nov 14; the bookmarks'
+            # table, Nov 14), as sociallikes 11 reads the likes' at theirs.
+            MUTES = "4cdc4af46a77"
 
             def chain(*args, url=None):
                 return subprocess.run([sys.executable, "-m", "alembic", "-c", "social/alembic.ini", *args], cwd=ROOT,
@@ -1984,7 +1988,7 @@ with sync_playwright() as p:
             con.commit()
             con.close()
             tables0 = {r[0] for r in at("select name from sqlite_master where type = 'table'")}
-            up2 = chain("upgrade", "head")
+            up2 = chain("upgrade", MUTES)
             idx = {r[0]: r[1] for r in at("select name, sql from sqlite_master where type = 'index' and tbl_name = 'social_mutes'")}
             cols = [r[1] for r in at("pragma table_info(social_mutes)")]
             sql = (at("select sql from sqlite_master where name = 'social_mutes'") or [[""]])[0][0] or ""
@@ -2025,10 +2029,8 @@ with sync_playwright() as p:
                   and at("select handle from social_people order by id") == [("ann",), ("bob",)],
                   f"down {down.returncode}, left {gone}, stamped {stamp_down}; up {up3.returncode}: {sorted(back_again)}")
             pg_url = "postgresql://nobody:nothing@localhost/none"
-            # The mutes' own migration, read at its own revision: the chain's
-            # head has grown since (the eye's column on social_posts, Nov 14,
-            # an ALTER TABLE of its own), as #898 read the likes' at theirs.
-            MUTES = "4cdc4af46a77"
+            # Its PostgreSQL DDL at its own revision too (above), as #898 read
+            # the likes' at theirs.
             ddl_up = chain("upgrade", f"{BEFORE}:{MUTES}", "--sql", url=pg_url)
             ddl_down = chain("downgrade", f"{MUTES}:{BEFORE}", "--sql", url=pg_url)
             u, d = ddl_up.stdout, ddl_down.stdout

@@ -26,9 +26,11 @@
  * and Undo hands it back to the ⋯ the mute began from.
  *
  * THE TOAST IS THE SITE'S (window.SocialToast): your Gallery's eye says
- * "Hidden from the Gallery" in it, with Undo (eye.js), and a post deleted from
+ * "Hidden from the Gallery" in it, with Undo (eye.js), a post deleted from
  * your own page "Your post is gone, its drawing with it." (posts.js; no Undo:
- * a delete is final). It never covers a button someone is pressing fast
+ * a delete is final), and a bookmark "Bookmarked. It’s on your page, under
+ * Bookmarks." with Undo, beside the ribbon (posts.js, `icon: 'mark'`). It
+ * never covers a button someone is pressing fast
  * (WORKING-AGREEMENTS): told which (`clear`: the eyes, the cards' ⋯), it
  * rises just above the highest of them it would cover, and goes if a scroll
  * brings one under it.
@@ -138,7 +140,8 @@
      rest of the sheet's going down). One already up keeps its place and
      takes the new words, unless its place would now cover one of `o.clear`:
      then it goes, and rises again clear of them. `o.plain`: no eye beside
-     the words (a delete's). */
+     the words (a delete's); `o.icon` 'mark': the ribbon in its place (a
+     bookmark's). */
   function rise(text, then, wait, o) {
     if (!toast) return;
     o = o || {};
@@ -158,6 +161,7 @@
     onUndo = then || null;
     clearOf = o.clear || null;
     toast.classList.toggle('is-plain', !!o.plain);
+    toast.classList.toggle('is-mark', o.icon === 'mark');
     toast.classList.remove('is-going');
     if (!up) {
       toast.classList.remove('is-up');
@@ -199,7 +203,7 @@
     });
   }
   /* THE SITE'S TOAST, for the rest of the site (above): rise(text, { undo,
-     wait, clear, plain }) and fall(). */
+     wait, clear, plain, icon }) and fall(). */
   window.SocialToast = {
     rise: function (text, o) { o = o || {}; rise(text, o.undo || null, o.wait || 0, o); },
     fall: fall

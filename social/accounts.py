@@ -301,8 +301,9 @@ def delete_person(sess, person_id):
     here, never left to a cascade), and their blocks, both ways (piece 5); a
     report that names them stays, naming nobody, and an answer to them by
     somebody who stays answers nobody (notifications); their likes, and every
-    like on what they owned (likes); their follows, both ways (follows);
-    their mutes, both ways (mutes). Flushes; the request commits.
+    like on what they owned (likes); their bookmarks, and every bookmark on
+    what they owned (bookmarks); their follows, both ways (follows); their
+    mutes, both ways (mutes). Flushes; the request commits.
     (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
     for a host to take an author's drawings away in one go: they stay, and
     the confirm page says so.)"""
@@ -322,6 +323,11 @@ def delete_person(sess, person_id):
     from .likes import drop_owner_likes, drop_person_likes
     drop_owner_likes(person_id)
     drop_person_likes(person_id)
+    # Their bookmarks, and every bookmark on what they owned (bookmarks: said
+    # here too, never left to the cascade).
+    from .bookmarks import drop_owner_bookmarks, drop_person_bookmarks
+    drop_owner_bookmarks(person_id)
+    drop_person_bookmarks(person_id)
     # Their follows, both ways: whom they followed and who followed them
     # (follows: said here too, never left to the cascade).
     from .follows import drop_person_follows

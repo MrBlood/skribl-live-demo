@@ -829,30 +829,51 @@ body.focus .top { justify-content: center; }
 /* ---- A PROFILE'S TABS (the map's step 4) -----------------------------------
  * The step 4 mock (the owner's "Yes", Nov 14), its strip the quick-patterns
  * mock's B, where the "Skribls" heading was: Posts · Gallery · Likes ·
- * Drafts on your own page, Posts · Gallery on anybody else's, each tab 48px
- * tall and an equal share of the strip, full width on a phone (past the
- * column's 16px) and the column's on a desk, the page's rule under it. The
- * chosen tab in the first ink with the bar's own pen line under it (the mark
- * under the page you are on: 44 x 8, 4px off the tab's foot, the pen's
- * purple), the others in the second ink. The line's place is the chosen
- * tab's (--at of --n, written on the strip), so it is there before a script
- * runs. A tap (tabs.js changes --at) puts it under the new tab at once and
- * it draws itself there, as the bar's does, while the one it left fades where
- * it was; under Reduce Motion it is simply put there.
+ * Bookmarks · Drafts on your own page, Posts · Gallery on anybody else's,
+ * each tab 48px tall, full width on a phone (past the column's 16px) and the
+ * column's on a desk, the page's rule under it. The chosen tab in the first
+ * ink with the bar's own pen line under it (the mark under the page you are
+ * on: 44 x 8, 4px off the tab's foot, the pen's purple), the others in the
+ * second ink. THE LINE IS THE CHOSEN TAB'S OWN (bookmarks, Nov 14): drawn
+ * inside it, at its middle, so it is there before a script runs, whatever
+ * the tab's width. A tap (tabs.js moves it into the new tab) puts it under
+ * the new tab at once and it draws itself there, as the bar's does, while
+ * the one it left fades where it was; under Reduce Motion it is simply put
+ * there.
+ * Each tab an equal share of the strip, but your own page's five on a phone
+ * (below, "SIZED TO THEIR WORDS").
  * The panel under it fades as the Gallery's tiles do (.gal-swap). */
 .prof-tabs {
   position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
   margin: 24px -16px 14px; border-bottom: 1px solid var(--rule);
 }
 .prof-tab {
-  display: grid; place-items: center; height: 48px; padding: 0 4px; color: var(--ink-2);
-  font: 600 16px/1.2 var(--font); text-decoration: none; transition: color 0.2s ease;
+  position: relative; display: grid; place-items: center; height: 48px; padding: 0 4px; color: var(--ink-2);
+  font: 600 16px/1.2 var(--font); text-decoration: none; white-space: nowrap; transition: color 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
 .prof-tab[aria-current="page"] { color: var(--ink); }
 .prof-pen {
-  position: absolute; bottom: 4px; left: calc(100% * (var(--at, 0) + 0.5) / var(--n, 1) - 22px);
+  position: absolute; bottom: 4px; left: calc(50% - 22px);
   width: 44px; height: 8px; color: var(--brand); pointer-events: none;
+}
+/* SIZED TO THEIR WORDS (the bookmarks mock, the owner's "All yes", Nov 14):
+   your own page's five tabs on a phone, where "Bookmarks" is wider than a
+   fifth of the screen. Each tab is its word and 8px either side, and what the
+   strip has over is shared out equally between them, so the room between two
+   words is the same everywhere (about 24px at 402 in this box's faces, the
+   outer words about 16px in). Short of room, a wider face or a narrower
+   phone takes it from the edges first (the 4px at each end gives, down to
+   nothing, a thousand times as readily), and only then from the words' own
+   8px, never from past the screen: a strip wider than a phone would have it
+   draw the whole page smaller. Under 360px a size down. */
+@media (max-width: 899.98px) {
+  .prof-tabs.is-words { display: flex; }
+  .prof-tabs.is-words::before, .prof-tabs.is-words::after { content: ""; flex: 0 1000 4px; }
+  .prof-tabs.is-words .prof-tab { flex: 1 1 auto; min-width: 0; padding: 0 8px; }
+}
+@media (max-width: 359.98px) {
+  .prof-tabs.is-words .prof-tab { padding: 0 5px; font-size: 15px; }
 }
 .prof-pen .pen-line { display: block; width: 100%; height: 100%; }
 /* A tap: the line draws itself under its tab in 0.17s, at once (no page to
@@ -1307,6 +1328,14 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .menu-out > .post-act { border-radius: inherit; }
 .post-act .ic { width: 22px; height: 22px; color: var(--ink-2); }
 .post-act.is-danger, .post-act.is-danger .ic { color: var(--danger-ink); }
+/* BOOKMARKS (the bookmarks mock, the owner's "All yes", Nov 14): the ribbon
+   in our pen in the row's own icon ink, its inside empty; once the post is
+   yours to come back to ("Remove bookmark") it is filled in the small violet
+   ink, --accent-ink (8.26:1 on the card light, 8.39:1 dark; the action's
+   purple, --fill, was 2.99:1 on the dark card), the words staying the row's. */
+.post-act .ic-mark .bm-fill { fill: none; }
+.post-act.is-marked .ic-mark { color: var(--accent-ink); }
+.post-act.is-marked .ic-mark .bm-fill { fill: currentColor; }
 .post-say { margin: 10px 4px 0; }
 .post-lede { margin: 0 4px 14px; color: var(--ink); font-size: 15px; line-height: 1.45; }
 .post-reasons {
@@ -1637,7 +1666,7 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .lk-mark { width: 5px; height: 5px; border-radius: 50%; background: var(--heart); }
 .lk-note { margin: 12px 4px 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
 /* SIGNED OUT: Make's sheet, small, saying how. */
-.lk-out .post-sheet-acts a.btn { text-decoration: none; }
+.lk-out .post-sheet-acts a.btn, .bm-out .post-sheet-acts a.btn { text-decoration: none; }
 
 /* ---- ACTIVITY (phase 2, notifications; the notifications mock and the
    owner's "all yes", Nov 12), in the mock's own sizes. A bell drawn in our
@@ -1884,6 +1913,9 @@ button.fo-n {
 .mu-toast.is-up .mu-undo { pointer-events: auto; }
 .mu-toast .ic { width: 20px; height: 20px; color: var(--accent-ink); }
 .mu-toast.is-plain .ic { display: none; }
+/* A bookmark's says it with the ribbon (.is-mark), not the eye. */
+.mu-toast .ic-mark, .mu-toast.is-mark .ic:not(.ic-mark) { display: none; }
+.mu-toast.is-mark .ic-mark { display: block; flex: none; }
 .mu-toast-words { flex: 1; min-width: 0; }
 .mu-toast .mu-undo { flex: none; min-height: 44px; padding: 0 16px; }
 .mu-toast .mu-undo[hidden] { display: none; }

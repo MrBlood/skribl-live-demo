@@ -1611,7 +1611,7 @@ first thing the owner saw of it.
 | **A post** | The one thing people share: words, and one thing attached, a drawing or a Flip (words optional). Likes, comments, Activity, mutes and reports are about posts. |
 | **Home** | Posts: Following, or Everyone. |
 | **Explore: the Gallery of everyone** | Drawings and Flips as drawings, each opening its post: Following, or Everyone, with more filters to come. Home's Everyone already shows everyone's posts, so Explore shows the drawings. Since Nov 14 every drawing and Flip the site's people shared, in a post or not (below, "The Gallery is every skribl"). |
-| **A profile** | Posts · Gallery · Likes · Drafts. **Gallery** is the same Gallery with one person in it: every drawing and Flip they have shared, as drawings, each opening its post. **Likes** and **Drafts** are yours alone, on your own profile; Drafts are the drafts Skribl already keeps on your account (SkriblDraft). |
+| **A profile** | Posts · Gallery · Likes · Drafts (and Bookmarks between Likes and Drafts since part two: section 17). **Gallery** is the same Gallery with one person in it: every drawing and Flip they have shared, as drawings, each opening its post. **Likes** and **Drafts** are yours alone, on your own profile; Drafts are the drafts Skribl already keeps on your account (SkriblDraft). |
 | **Make** | One composer, the same from the bar and from Home: words, and Draw or Flip. Built Nov 14 (section 17, "The composer is built"), with Yours beside Draw and Flip. |
 | **Activity, Settings** | As built. Settings from the ☰ on a phone (and the profile's button), the rail on a desk. |
 
@@ -1906,7 +1906,7 @@ follow step 7.
 1. The composer (the owner's yes, the morning of Nov 14): one Make sheet
    everywhere, words and a drawing; "Yours" posts an older drawing, its
    conversation moving with it. Quote posts reuse it. Built (below).
-2. Bookmarks: save a post; yours alone.
+2. Bookmarks: save a post; yours alone. Built (below).
 3. Reposts, then quote posts.
 4. Mentions: an @handle in a post or a comment links to that person and
    tells them.
@@ -1962,3 +1962,45 @@ both to styles.css).
                            {html, next, tab} (JSON); yours alone
     /social/posts          also {"words", "skribl": <your drawing's id>}: an
                            older drawing as a post, its conversation with it
+
+**Bookmarks are built** (part two's item 2; DECISIONS, "Bookmarks"; the
+owner's "All yes", Nov 14, to the mock's A, the fifth tab, and nobody told).
+IN THE ⋯: "Bookmark" first in the ⋯ sheet's first card, on every post and on
+a drawing shown outside a post (its own page's ⋯ is the same sheet), your own
+too; its ribbon drawn in our pen (`_icons.html` `ribbon`) in the row's ink.
+Once kept the row reads "Remove bookmark" and the ribbon is filled in the
+small violet ink (--accent-ink, 8.26:1 on the card light, 8.39:1 dark; the
+action's purple, --fill, was 2.99:1 on the dark card). None on what is taken
+down or a drawing kept link-only, as the heart. The row under a post is
+unchanged. A tap keeps it (or takes it away), the sheet goes down, and the
+site's toast says "Bookmarked. It’s on your page, under Bookmarks." (or
+"Removed from your bookmarks.") beside the ribbon, with Undo, clear of every
+⋯ on the page (`SocialToast` `clear`); Undo puts it back and says so, with no
+Undo of its own. Signed out, Bookmark raises the heart's small sheet,
+"Bookmark this post?" ("Sign in, and it’s kept for you on your page, where
+only you can see it.", Not now | Sign in, back to the page), and nothing is
+kept. YOURS ALONE: a fifth tab on your own page, Posts · Gallery · Likes ·
+Bookmarks · Drafts, never on anybody else's page or in its source (its
+address sends anybody else to your page, as Likes'), listing what you kept as
+Home's cards, newest kept first, Load more (`bookmarks.marked_page`). Hidden
+from it, never deleted: a block either way, anybody taken down, a post taken
+down (your own shows with its note, as on Home), a drawing its own page no
+longer shows you (made link-only, deleted in Skribl). Somebody you muted
+stays: you chose it. On a phone your own five tabs are SIZED TO THEIR WORDS
+("Bookmarks" is wider than a fifth of a phone: about 24px between words,
+16px at the edges; short of room the edges give first, then the tabs, never
+past the screen); a desk keeps
+equal columns; the pen's line is the chosen tab's own (drawn inside it), so
+it is under it before any script runs, and tabs.js moves it on a tap. NOBODY
+IS TOLD: no Activity row, no dot, no count anywhere; a page says only
+whether one is the viewer's own (`data-marked`, theirs alone). One drawing,
+one conversation: an older drawing posted through Yours takes its bookmarks
+onto the post with its hearts and comments. Deleting a post, a drawing (on
+the site) or an account takes its bookmarks, in code. The table is
+`social_bookmarks` (a migration of the table and its indexes alone). Pad and
+Flip: nothing changes in either.
+
+    /social/p/<id>/bookmark         POST {bookmarked}: your bookmark on a post,
+                                    kept or taken away ({ok, bookmarked})
+    /social/b/<skribl_id>/bookmark  the same, on a drawing shown outside a post
+    /social/@<handle>/bookmarks     Bookmarks, yours alone (anybody else: the page)

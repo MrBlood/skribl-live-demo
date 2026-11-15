@@ -59,7 +59,7 @@
 {% block main %}
 <article class="post-page" data-post="{{ p.public_id }}" data-url="{{ card.url }}" data-skribl="{{ p.skribl_id }}"
          data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if card.mine %} data-mine data-del="{{ card.delete }}"{% endif %}
-         {%- if card.muted %} data-muted{% endif %} data-kind="{{ card.kind }}" data-autoplay aria-labelledby="postWho">
+         {%- if card.muted %} data-muted{% endif %}{% if card.markable %} data-markable{% endif %}{% if card.marked %} data-marked{% endif %} data-kind="{{ card.kind }}" data-autoplay aria-labelledby="postWho">
   <header class="post-head">
     <a class="post-face" href="{{ card.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
     <a class="post-who" href="{{ card.profile }}">
