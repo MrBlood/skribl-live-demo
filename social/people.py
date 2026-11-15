@@ -237,7 +237,8 @@ def _uncursor(text):
         group, handle, key = raw.split("|", 2)
     except (ValueError, TypeError, UnicodeDecodeError):
         return None
-    if group not in ("f", "e") or not _HANDLE_KEY.fullmatch(handle) or not key or fold(key) != key:
+    # A key is folded (a key cut at WORD_MAX may end with its space).
+    if group not in ("f", "e") or not _HANDLE_KEY.fullmatch(handle) or not key or fold(key) != key.rstrip(" "):
         return None
     return group, key, handle
 

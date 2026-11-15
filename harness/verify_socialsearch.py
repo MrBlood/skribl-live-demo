@@ -568,9 +568,12 @@ LAYOUT = r"""() => { const s = document.querySelector('[data-gal-swap]'); if (!s
 # A PERSON'S ROW, as it is laid out and painted: its height, the face, the
 # name's and the @handle's sizes, weights and inks (against the page's own
 # tokens, probed), Follow's size (and its width with the other word), and
-# whether each is painted where it stands.
+# whether each is painted where it stands. The PAGE is scrolled to the row,
+# never the row into view: scrollIntoView scrolls every box around it, even
+# one that clips it, and so un-clipped a row (the calibration's first red
+# that stayed green).
 ROW = r"""(i) => { const li = document.querySelectorAll('.fp-row')[i]; if (!li) return null;
-  li.scrollIntoView({ block: 'center' });
+  scrollTo(0, Math.max(0, li.getBoundingClientRect().top + scrollY - innerHeight / 2));
   const probe = c => { const e = document.createElement('i'); e.style.color = c; document.body.append(e);
     const v = getComputedStyle(e).color; e.remove(); return v; };
   const r = li.getBoundingClientRect(), a = li.querySelector('.fp-who'), f = li.querySelector('.face-ring');
@@ -647,7 +650,7 @@ READ = r"""(sel) => {
 # A word's own ink against what it sits on, the mock's way (fp_mock.py's
 # CONTRAST): its colour against the first painted ground up its parents.
 CALC = r"""(sel) => { const el = document.querySelector(sel); if (!el) return null;
-  el.scrollIntoView({ block: 'center' });
+  scrollTo(0, Math.max(0, el.getBoundingClientRect().top + scrollY - innerHeight / 2));
   const rgb = s => s.match(/[\d.]+/g).slice(0, 3).map(Number);
   const lum = c => { const v = c.map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
@@ -795,26 +798,34 @@ with sync_playwright() as p:
             fo["path"] = urllib.parse.urlparse(pg.url).path + "?" + urllib.parse.urlparse(pg.url).query
             fo["db"] = db("select count(*) from social_follows f join social_people a on a.id = f.follower_id join social_people"
                           " o on o.id = f.followed_id where a.handle_key = 'mira' and o.handle_key = 'pam' and f.ended_at is null")[0][0]
-            press(pg, btn)
-            pg.wait_for_timeout(600)
-            fo["sheet"] = pg.evaluate("""() => { const w = document.getElementById('unfollowSheet');
-              return w ? [w.classList.contains('is-open'), (w.querySelector('.make-title') || {}).textContent, (w.querySelector('.post-lede') || {}).textContent] : null; }""")
-            press(pg, "#unfollowSheet [data-unfollow]")
-            pg.wait_for_timeout(900)
-            fo["back"] = pg.evaluate("() => { const b = document.querySelectorAll('.fp-row')[1].querySelector('.fo-btn'); return [b.classList.contains('is-following'), b.getAttribute('aria-label')]; }")
-            fo["db2"] = db("select count(*) from social_follows f join social_people a on a.id = f.follower_id join social_people"
-                           " o on o.id = f.followed_id where a.handle_key = 'mira' and o.handle_key = 'pam' and f.ended_at is null")[0][0]
-            close_ctx(ctx, pg)
+            # Each row read where its steps end, so a tap that reaches the wrong
+            # Follow is this row's red, not a later step's stop.
             check("a tap on Follow follows them and the page stays: Pam's button turns to Following (\"Following Pam"
                   " Lee\"), the others as they were, the site keeps it, the address the same",
                   before == 0 and fo["db"] == 1 and fo["path"] == "/social/explore?q=pa"
                   and fo["after"] == [["@theo", True, "Following Theo Park"], ["@pam", True, "Following Pam Lee"],
                                       ["@patti", False, "Follow Patti Sun"]], json.dumps(fo))
+            try:
+                if pg.evaluate("() => !!document.querySelector('#unfollowSheet.is-open')"):
+                    pg.keyboard.press("Escape")
+                    pg.wait_for_timeout(500)
+                press(pg, btn)
+                pg.wait_for_timeout(600)
+                fo["sheet"] = pg.evaluate("""() => { const w = document.getElementById('unfollowSheet');
+                  return w ? [w.classList.contains('is-open'), (w.querySelector('.make-title') || {}).textContent, (w.querySelector('.post-lede') || {}).textContent] : null; }""")
+                press(pg, "#unfollowSheet [data-unfollow]")
+                pg.wait_for_timeout(900)
+                fo["back"] = pg.evaluate("() => { const b = document.querySelectorAll('.fp-row')[1].querySelector('.fo-btn'); return [b.classList.contains('is-following'), b.getAttribute('aria-label')]; }")
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is this row's own red
+                fo["stopped"] = str(exc).splitlines()[0][:160]
+            fo["db2"] = db("select count(*) from social_follows f join social_people a on a.id = f.follower_id join social_people"
+                           " o on o.id = f.followed_id where a.handle_key = 'mira' and o.handle_key = 'pam' and f.ended_at is null")[0][0]
+            close_ctx(ctx, pg)
             check("a tap on Following asks once, the sheet naming the row's person (\"Unfollow Pam?\", \"You’ll still"
                   " see Pam’s posts under Everyone. They aren’t told.\"), and Unfollow ends it, the button back to Follow",
-                  fo["sheet"] and fo["sheet"][0] and fo["sheet"][1] == "Unfollow Pam?"
+                  fo.get("sheet") and fo["sheet"][0] and fo["sheet"][1] == "Unfollow Pam?"
                   and fo["sheet"][2] == "You’ll still see Pam’s posts under Everyone. They aren’t told."
-                  and fo["back"] == [False, "Follow Pam Lee"] and fo["db2"] == 0, json.dumps(fo))
+                  and fo.get("back") == [False, "Follow Pam Lee"] and fo["db2"] == 0, json.dumps(fo))
             # SIGNED OUT: a search typed in the box, then Follow.
             ctx, pg = browser_as(b, None, "phone", "light")
             go(pg, "/social/explore", wait=400)
@@ -900,14 +911,17 @@ with sync_playwright() as p:
             tops0 = pg.evaluate("() => [...document.querySelectorAll('.fp-row')].map(li => Math.round(li.getBoundingClientRect().top + scrollY))")
             y0 = pg.evaluate("() => scrollY")
             pg.click("[data-gal-next]")
-            pg.wait_for_function("() => document.querySelectorAll('.fp-row').length > 20", timeout=8000)
+            try:
+                pg.wait_for_function("() => document.querySelectorAll('.fp-row').length > 20", timeout=8000)
+            except Exception:  # noqa: BLE001 -- rows that never come after the twenty are this row's own red
+                pass
             pg.wait_for_timeout(400)
             tops1 = pg.evaluate("() => [...document.querySelectorAll('.fp-row')].map(li => Math.round(li.getBoundingClientRect().top + scrollY))")
             after = pg.evaluate(LAYOUT)
             y1 = pg.evaluate("() => scrollY")
             check("Load more brings the next rows in place: the twenty already there do not move, the page stays where"
                   " it was, the two more follow them, and the button goes (there are no more)",
-                  tops1[:20] == tops0 and len(tops1) == 22 and tops1[20] > tops0[-1] and y1 == y0
+                  tops1[:20] == tops0 and len(tops1) == 22 and len(tops0) == 20 and tops1[20] > tops0[-1] and y1 == y0
                   and after["more"] is False and [r[0] for r in after["rows"]][20:] == ["@kiwitwb", "@kiwifan"],
                   json.dumps({"same": tops1[:20] == tops0, "n": len(tops1), "more": after["more"], "y": [y0, y1],
                               "tops": [tops0[-1:], tops1[19:]], "last": [r[0] for r in after["rows"]][18:]}))
