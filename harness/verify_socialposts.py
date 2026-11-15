@@ -3502,8 +3502,9 @@ print("PLAN " + json.dumps(out))
             except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
                 px3 = [f"stopped: {str(exc).splitlines()[0][:120]}"]
             ctx.close()
-            check("...and that line is one screen pixel on a 3x phone, the owner's (the ☰'s four lines)",
-                  len(px3) == 4 and all(isinstance(v, (int, float)) and abs(v - 1) <= 0.05 for v in px3), f"{px3}")
+            check("...and that line is one screen pixel on a 3x phone, the owner's (the ☰'s lines: three, or four"
+                  " for an admin, whose ☰ holds Your reports)",
+                  len(px3) >= 3 and all(isinstance(v, (int, float)) and abs(v - 1) <= 0.05 for v in px3), f"{px3}")
             check("the risky rows (Report, Block, Delete, Remove) are a card of their own, 12px under the other, its"
                   " rows the risky ones alone: your post's Copy link, Share… | Delete post; somebody else's Copy link,"
                   " Share…, Mute | Report, Block; a comment's ⋯ only its risky card; a person's Mute | Report, Block;"

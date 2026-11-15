@@ -196,8 +196,6 @@
   --menu-card:       #231e3b;
   --menu-card-line:  rgba(167, 146, 255, 0.12);
   --menu-card-rule:  rgba(167, 146, 255, 0.12);
-  --row-line:        rgba(255, 255, 255, 0.16);
-  --hair: 1;
   --menu-card-drop:  0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
   /* A SELECTED OPTION IS A TINT, AN ACTION IS SOLID. The same purple used to
      mean both, so a drawer carried five or six purple slabs and nothing said
@@ -359,8 +357,6 @@
      editors (styles.css "Replay auto-hide", flip.css). Mocked with the owner. */
   --drawer-rest: 0.4;
 }
-@media (min-resolution: 2dppx) { :root { --hair: 0.5; }}
-@media (min-resolution: 3dppx) { :root { --hair: 0.3334; }}
 
 * { box-sizing: border-box; }
 
@@ -2339,7 +2335,6 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   --menu-card:               #ffffff;
   --menu-card-line:          rgba(124, 92, 255, 0.34);
   --menu-card-rule:          rgba(80, 60, 170, 0.10);
-  --row-line:                rgba(20, 10, 60, 0.16);
   --menu-card-drop:          0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
   /* AA on what is actually painted behind it: #5b3be6 was 4.37:1 on the tint
      over the drawers' track, under the unselected label's 4.99. One step
