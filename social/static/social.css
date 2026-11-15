@@ -41,6 +41,7 @@
   --nav-line: rgba(20, 23, 29, 0.08);
   --nav-ink: #4b5563;
   --nav-on: #14171d;
+  --bar-blooby-lit: 31.9px;         /* Blooby lit in the phone's bar: as unlit on the light bar (THE BAR) */
   --nav-hover: rgba(124, 92, 255, 0.08);
   --sheet-paper: #f3f0ff;           /* --menu-paper */
   --row-bg: #ffffff;                /* --menu-card */
@@ -122,6 +123,7 @@
   --nav-line: rgba(255, 255, 255, 0.09);
   --nav-ink: #b7bfcc;
   --nav-on: #ffffff;
+  --bar-blooby-lit: 33.3px;
   --sheet-paper: #17142a;
   --row-bg: #231e3b;
   --grip: rgba(255, 255, 255, 0.22);
@@ -164,6 +166,7 @@
     --nav-line: rgba(255, 255, 255, 0.09);
     --nav-ink: #b7bfcc;
     --nav-on: #ffffff;
+    --bar-blooby-lit: 33.3px;
     --sheet-paper: #17142a;
     --row-bg: #231e3b;
     --grip: rgba(255, 255, 255, 0.22);
@@ -279,12 +282,10 @@ body {
 .nav .tab .ic { width: 32.4px; height: 32.4px; }                 /* 92% of 35.2 */
 .nav .tab .ic-blooby { width: var(--bar-blooby, 31.9px); height: var(--bar-blooby, 31.9px); }   /* 92% of 34.7 */
 .nav .tab-you .ic { width: 34.9px; height: 34.9px; }    /* Sign in's person, drawn smaller in its box: 92% of 37.9 */
-/* Lit on the dark bar: 96% of 34.7. A variable, so a desk's rail, which
-   names its own size below, keeps it. */
-:root[data-theme="dark"] .nav .tab .ic-blooby.is-lit { --bar-blooby: 33.3px; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .nav .tab .ic-blooby.is-lit { --bar-blooby: 33.3px; }
-}
+/* Lit, his size is the theme's (--bar-blooby-lit: 96% of 34.7 on the dark
+   bar, said in both dark copies as every dark value is; 92% on the light). A
+   variable, so a desk's rail, which names its own size below, keeps it. */
+.nav .tab .ic-blooby.is-lit { --bar-blooby: var(--bar-blooby-lit); }
 .nav .tab-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .nav .tab[aria-current="page"] { color: var(--nav-on); }
 .nav .tab[aria-current="page"] .tab-name { font-weight: 700; }
@@ -2047,6 +2048,9 @@ button.fo-n {
   display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: 0; padding: 0; border: 0;
   background: none; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
+/* A count that has gone to zero on your own page, hidden in place (follows.js),
+   as the page draws a zero: nothing. */
+.fo-counts [hidden] { display: none; }
 .fo-new { color: var(--accent-ink); font-weight: 600; }
 @media (min-width: 900px) { .fo-counts { justify-content: flex-start; } }
 /* THE ONE PILL: the Gallery's New / Hot (gallerysection.css .seg-track, as
@@ -2108,6 +2112,15 @@ button.fo-n {
 }
 .fo-lists > .fo-list.is-on { opacity: 1; visibility: visible; transition: opacity 0.2s ease 0.14s, visibility 0s linear 0.14s; }
 .fo-empty { padding: 16px 0; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+/* A ROW OF THE LISTS (the owner's "A", Nov 15): the person, a way to their
+   page, then their page's Follow button (.fo-btn), as search's People rows
+   wear it; the card's rule between rows is the row's now, so it runs under
+   the button too. The when sits after the @handle, so the name keeps its
+   room on a phone. */
+.fo-list > .fo-row { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--rule); }
+.fo-list > .fo-row:first-child { border-top: 0; }
+.fo-row > .lk-row { flex: 1; min-width: 0; border-top: 0; }
+.fo-row > .fo-btn { flex: none; }
 /* ACTIVITY: a follow's face wears a small Follow, the action's purple and a
    white plus in our pen, on the ground's own circle; no picture. */
 .fo-badge > .fo-disc { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--fill); color: var(--on-fill); }

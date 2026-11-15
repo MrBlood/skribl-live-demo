@@ -151,12 +151,30 @@ def counts(viewer, who):
 def for_owner(me, n):
     """What your own page shows of follows, and nobody else's: both lists,
     for the sheet its counts open (`n`, counts()'s for you), on the tab of
-    the first count it shows. None for nobody signed in, and with nobody
-    either way, when no count opens anything."""
+    the first count it shows, and which of your followers you follow back
+    (each row wears the Follow button: the owner's "A", Nov 15). None for
+    nobody signed in, and with nobody either way, when no count opens
+    anything."""
     if me is None or not (n["followers"] or n["following"]):
         return None
-    return {"followers": people(me, "followers"), "following": people(me, "following"),
+    followers = people(me, "followers")
+    return {"followers": followers, "following": people(me, "following"),
+            "back": following_ids(me, [p.id for _f, p in followers]),
             "tab": "followers" if n["followers"] else "following"}
+
+
+def following_ids(me, ids):
+    """Which of `ids` `me` follows now: one read, on the follows' own index."""
+    if me is None or not ids:
+        return set()
+    q = sa.select(Follow.followed_id).where(Follow.follower_id == me.id, Follow.followed_id.in_(list(ids)), _on())
+    return {row[0] for row in site().session().execute(q).all()}
+
+
+def own_counts(me):
+    """Your own page's counts, as it shows them (your lists' lengths): what a
+    follow or an unfollow from your own sheet changes there."""
+    return {"followers": how_many(me, "followers"), "following": how_many(me, "following")}
 
 
 def of_me(me, hidden, limit=ACTIVITY_READ):
@@ -326,9 +344,12 @@ def register(bp):
                          .execution_options(synchronize_session=False))
         sess.flush()
         # THE COUNTS FOLLOW THE TAP: their page's counts as it shows them to
-        # you, in its own markup (follows.js puts them in while unseen).
+        # you, in its own markup (follows.js puts them in while unseen); and
+        # yours, for a tap on your own page (a row of your follows sheet),
+        # where the counts on the page are your own.
         return jsonify({"ok": True, "following": is_following(me, who),
-                        "counts": render_template("social/_follow_counts.html", n=counts(me, who), mine=False)})
+                        "counts": render_template("social/_follow_counts.html", n=counts(me, who), mine=False),
+                        "mine": own_counts(me)})
 
     @bp.post("/home/show")
     @_rests(json_answer=True)

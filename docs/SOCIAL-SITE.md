@@ -1304,8 +1304,13 @@ and how many more, newest first), or before anybody follows you "You follow
 Mira and Juno"; with nobody either way there is no line, so nothing ever says
 zero. The line opens Make's own sheet in its paper with the one pill,
 Followers | Following, each list newest first with when (in your own time),
-the people on one card, each a way to their page (where you unfollow), and
-"Only you can see who follows you, and who you follow." Both lists sit in one
+the people on one card, each a way to their page, and
+"Only you can see who follows you, and who you follow." Each row wears the
+Follow button their page wears (the owner's "A", Nov 15): Following on whom
+you follow, a tap asking "Unfollow Theo?" over the lists, and the row staying
+with Follow on it, so a slip is one tap back; Follow on a follower you don't
+follow back. The when sits after the @handle; your page's counts change with
+the tap, your own, never theirs. Both lists sit in one
 place in the sheet, so it keeps its height as the pill moves between them. It
 lists the newest 200 of each; the line's count is exact. Opened at
 `#followers` or `#following` (a follow row in Activity), the sheet rises on

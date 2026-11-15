@@ -43556,3 +43556,106 @@ does it); verify_contrast (no colour or token changed).
 
 NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell: on
 the Gallery in dark, Blooby lit looks as big as Home beside him.
+
+## After v330 -- Unfollow from your own lists: each row wears the Follow button
+
+The owner, Nov 15 (Mountain Time), about 2:10 PM: "You should be able to
+unfollow from your profile page when you click followers. You should[n't]
+have to go to their page to unfollow. Make sense?" The mock (now; A, each
+row wearing their page's Follow button, asking once; B, the same without
+asking, Undo after), light and dark, a phone and a desk; about 2:50 PM: "A".
+
+WHAT CHANGED:
+
+- EACH ROW OF YOUR LISTS (_follow.html, the follows sheet): the person, a way
+  to their page (face, name, "@handle · when", the when moved beside the
+  @handle to make the button's room), then the Follow button their page
+  wears (follow_button): Following on whom you follow; Follow on a follower
+  you don't follow back (follows.for_owner says which, one read). The card's
+  rule between rows is the row's now, so it runs under the button too.
+- FOLLOWING ASKS ONCE, OVER THE LISTS: "Unfollow Theo?", the sheet their
+  page raises, is on your own page too (one macro for both). Unfollow ends
+  the follow; the row stays, its button saying Follow, so a slip is one tap
+  back. Follow on a row follows at once, as everywhere.
+- YOUR COUNTS, NEVER THEIRS: the follow answer carries your own page's
+  counts too (follows.own_counts); on your own page follows.js changes the
+  numbers in place (the counts' own fade), so their buttons stay the ones
+  that open the lists, and a following count that reaches zero hides, as
+  the page draws a zero. Before, a tap there would have put the other
+  person's counts on your page.
+- ONE PERSON, ONE STATE (follows.js): somebody who follows you and whom you
+  follow is in both lists, each row with a button of its own; whatever one
+  shows, the other shows too, so a tap on either does what it says. Found by
+  the new check: unfollowed in Following, Rik still said Following in
+  Followers, and a tap there asked again instead of following.
+- ONE SHEET OVER ANOTHER (social.js, SocialSheet, every sheet's): the sheets
+  open, in the order they rose. Esc and Tab are the top one's alone, and once
+  (a key the top sheet used is not the next one's: found by the check, Esc
+  closed the ask and then the lists under it); the page behind stays out of
+  reach until the last sheet has gone.
+
+PAD AND FLIP: unchanged (the site's sheet alone).
+
+CONTRAST: no colour changed (the one new token, main's fix below, is a
+size); the button is their page's (Following 17.95:1 light, 11.86 dark on
+its row; Follow white on the action's purple, 5.33:1, as every action
+button).
+
+ALSO, MAIN GREEN AGAIN (social.css, the bar): #923 drew Blooby lit on the
+dark bar at 96% in a second dark media query, and verify_socialsettings
+holds social.css to one (the dark ramp said twice, word for word: once for
+the theme chosen, once for the device's when none is), so main's run after
+#923 was red on that row, on both databases (issue #924). The size is a
+theme token now, --bar-blooby-lit (31.9px in the light ramp, 33.3px in both
+dark copies), which the bar's rule reads: the sizes #923 merged, one media
+query again. #923 had not run verify_socialsettings; a change to the site's
+dark theme runs it beside the bar's suites.
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy,
+with an untouched copy green beside it: verify_socialfollow 5 (control
+10/10), five new rows: the rows' buttons and "@handle · when" (red: no
+button on the rows; followers you follow back shown as Follow); the ask
+over the lists, the unfollow kept, the lists and the row staying, the twin
+row in step, the page behind out of reach (red: no Unfollow sheet on your
+own page, the section stopping; a person's two buttons out of step); your
+counts your own (red: their counts on your page); Follow again, and Esc
+taking the ask alone (red: Esc closing every sheet up); a row's person
+opening their page.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3): the sixteen that
+use the site's sheets, since every sheet's controller changed.
+verify_socialfollow 79/79, verify_socialcomments 96/96, verify_socialprofile
+93/93, verify_composer 38/38, verify_social 45/45, verify_socialapp 55/55,
+verify_socialreposts 50/50, verify_socialmentions 50/50,
+verify_socialbookmarks 37/37, verify_socialposts 81/81, verify_socialsearch
+32/32, verify_sociallikes 100/100, verify_docs 144/144, verify_a11y 444/444.
+Two red there, neither from load. verify_socialmute 66/68, beside the others
+and alone: its two readers of who follows you read the rows' old markup (the
+instrument, not the site); they read the row's handle now, each shown red by
+a break of its own (who muted me, then who I muted, dropped from my
+followers list), the untouched copy 68/68. verify_socialsettings 44/45
+beside the others, 45/45 alone: main's red from #923 (above), its fix
+landing during the run. On the final tree, side by side: verify_social
+45/45, verify_socialsettings 45/45, verify_socialfollow 79/79;
+verify_docs 144/144. NOT RUN: the full battery (main's run after the merge
+does it); verify_contrast (it reads Skribl's sheets and editors, not the
+site's; the button's ratios are above).
+
+NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell:
+your page, your counts, Following: each row has its button.
+
+OPEN, FOR THE NEXT SESSION (the owner, about 4:00 PM, ending this one: "Clean
+up for a nice fresh new session"):
+
+- Skribl's own Public gallery (/gallery, from the Pad's menu) still stands on
+  the Library's old ground (#fbfcfd, #0b0d12); the Library moved to the Pad's
+  in #922. Its twin by design: ask the owner whether it follows.
+- The app's top edge (#919) keeps iOS 26's glass off the site's pages; the
+  Pad and Flip, opened inside the Blooby app, were not looked at for it.
+- The owner, Nov 15: "I want everything to be beautiful and feel crisp and
+  luxurious." A polish pass, mocked first, is the next project they asked for.
+- The demo people on the live site (Mira, Juno, Theo; Rook and Pip mended):
+  their passkeys lived in that session alone. To act as them again, the owner
+  makes a sign-in link per person (Settings, Invites and sign-in links), and
+  the demo-people tool (saved by the pull request after this one) takes it
+  from there.
