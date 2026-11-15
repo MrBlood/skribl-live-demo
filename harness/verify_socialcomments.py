@@ -849,7 +849,8 @@ KEYBOARD = """(() => { const t = new EventTarget(); let h = null, off = 0, scale
     get offsetTop() { return off; }, get offsetLeft() { return 0; }, get scale() { return scale; },
     addEventListener: (...a) => t.addEventListener(...a), removeEventListener: (...a) => t.removeEventListener(...a) };
   Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => vv });
-  window.__keyboard = (px, zoom) => { scale = zoom || 1; h = innerHeight - px; off = 0; t.dispatchEvent(new Event('resize')); }; })();"""
+  window.__keyboard = (px, zoom) => { scale = zoom || 1; h = innerHeight - px; off = 0; t.dispatchEvent(new Event('resize')); };
+  window.__keyboardQuiet = (px) => { h = innerHeight - px; }; })();"""
 
 # Press Post in the open box and read on every frame, until `ms`: the old first
 # comment's name (painted), the new comment's top, opacity and glow (the landing's
@@ -3009,6 +3010,47 @@ with sync_playwright() as p:
                   " is no keyboard (a stand-in visual viewport: this box has no phone keyboard)",
                   abs(on_kb["bottom"] - on_kb["floor"]) <= 1 and on_kb["field"] < on_kb["floor"] and off_kb == 874 and zoomed == 874,
                   f"on a 336px keyboard {on_kb}; after {off_kb}; zoomed {zoomed}")
+            # A keyboard that passes through a size and says nothing once it rests (the owner's iPhone, Nov 14).
+            qctx, qpg = browser_as(b, theo)
+            qpg.add_init_script(KEYBOARD)
+            open_post(qpg, post)
+            open_box(qpg)
+            qpg.evaluate("() => window.__keyboard(780)")
+            qpg.wait_for_timeout(450)
+            passing = qpg.evaluate("""() => { const w = document.querySelector('#commentBoxSheet'), r = w.querySelector('.make-sheet').getBoundingClientRect(),
+              scrim = w.querySelector('.make-scrim');
+              return [0.4, 0.7, 0.98].map(f => { const y = Math.round(innerHeight * f); return y > r.bottom + 2 ? document.elementFromPoint(innerWidth / 2, y) === scrim : true; }); }""")
+            qpg.evaluate("() => window.__keyboardQuiet(336)")
+            qpg.wait_for_timeout(2400)
+            rests = qpg.evaluate("""() => { const s = document.querySelector('#commentBoxSheet .make-sheet').getBoundingClientRect(),
+              w = document.querySelector('[data-cm-words]').getBoundingClientRect();
+              return { bottom: Math.round(s.bottom), field: Math.round(w.bottom), floor: innerHeight - 336 }; }""")
+            qpg.evaluate("() => window.__keyboard(0)")
+            close_ctx(qctx, qpg)
+            check("a keyboard that passes through a size and says nothing once it rests: the page under the sheet is dimmed to"
+                  " the screen's foot meanwhile, and then, with no word from the keyboard, the sheet rides above where it"
+                  " rests (the owner's iPhone, Nov 14; stood in)",
+                  all(passing) and abs(rests["bottom"] - rests["floor"]) <= 1 and rests["field"] < rests["floor"],
+                  f"passing through 780px, dimmed below at 40/70/98%: {passing}; at rest on 336px: {rests}")
+            # Chrome on an iPhone: the page itself shrinks for the keyboard after the visual viewport did, saying
+            # nothing; the keyboard is not to be taken off twice (read after the second reading's timers).
+            qctx, qpg = browser_as(b, theo)
+            qpg.add_init_script(KEYBOARD)
+            open_post(qpg, post)
+            open_box(qpg)
+            qpg.evaluate("() => window.__keyboard(336)")
+            qpg.wait_for_timeout(2600)
+            qpg.set_viewport_size({"width": 402, "height": 874 - 336})
+            qpg.wait_for_timeout(700)
+            chrome = qpg.evaluate("""() => { const s = document.querySelector('#commentBoxSheet .make-sheet').getBoundingClientRect(),
+              w = document.querySelector('[data-cm-words]').getBoundingClientRect();
+              return { bottom: Math.round(s.bottom), field: Math.round(w.bottom), top: Math.round(w.top), floor: innerHeight }; }""")
+            close_ctx(qctx, qpg)
+            check("Chrome on an iPhone, where the page itself shrinks for the keyboard after the visual viewport did, saying"
+                  " nothing: the keyboard is taken off once, the sheet's foot on it and its field in view (the owner's"
+                  " screenshots, Nov 14; stood in)",
+                  abs(chrome["bottom"] - chrome["floor"]) <= 1 and 0 <= chrome["top"] and chrome["field"] < chrome["floor"],
+                  f"page shrunk to {chrome['floor']}: {chrome}")
             # Draw over the sheet: the Pad rises above it and goes; the page behind stays inert under the sheet.
             dctx, dpg = browser_as(b, theo)
             open_post(dpg, post)

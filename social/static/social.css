@@ -1110,8 +1110,15 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
  * page's two inks. Post is dim (0.45) until a drawing is attached, an
  * inactive control, as the mock drew it. */
 .make.cmp { bottom: var(--cmp-kb, 0px); transition: bottom 0.25s ease; }
+/* WHATEVER A KEYBOARD SAYS ON THE WAY (the owner's iPhone, Nov 14: a size a
+   keyboard passed through left the sheet a sliver, its rows drawn over Home
+   and the page under it undimmed, until a touch): the scrim reaches the
+   screen's foot under a lifted sheet (the keyboard covers it at rest), and
+   nothing of the sheet is drawn outside its paper. social.js's
+   SocialKeyboard reads the keyboard again until it rests. */
+.make.cmp > .make-scrim, .cm-sheet > .make-scrim { bottom: -100vh; }
 .cmp-sheet {
-  display: flex; flex-direction: column; max-width: 640px;
+  display: flex; flex-direction: column; max-width: 640px; overflow: hidden;
   height: calc(100% - max(5vh, env(safe-area-inset-top) + 8px));
 }
 .cmp-view { display: flex; flex: 1; flex-direction: column; min-height: 0; }

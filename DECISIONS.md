@@ -40854,3 +40854,77 @@ untouched copy green beside them:
   its four reds the rows that filter always leaves empty (the gallery's tick
   box and the drawers' edge, light and dark), the same in every copy.
 
+## After v330 -- The composer on a phone's keyboard: read again until it rests
+
+The owner, Nov 14 (6:17 PM), on their iPhone in Chrome, two minutes after
+the composer merged: Home, then Make, showed the composer half drawn over
+Home (Cancel and Post where they belong, the tools a third of the way down
+the screen over Home's own box, the page under it undimmed, the bar above
+the keyboard), and "any touch on screen" put it right.
+
+WHAT HAPPENED, as the screenshots measure it: the sheet's paper was a
+sliver at the top (about 18px) and its rows overflowed it, drawn over the
+page; the scrim ended where the sheet did, so the page below was undimmed.
+THE KEYBOARD WAS TAKEN OFF TWICE. Chrome on an iPhone shrinks the page
+itself for the keyboard (the bar sat on the keyboard in the second
+screenshot), after the visual viewport has shrunk and without a word from
+the visual viewport. The composer read the keyboard (--cmp-kb, the layout
+viewport's height less the visual viewport's) in between, when only the
+visual viewport had shrunk, and lifted itself by the keyboard's height;
+then the page shrank by it too, and nothing listened for that. The sliver
+is the arithmetic: the page's height less the keyboard, less 5vh at the
+top. A touch made the visual viewport speak, the keyboard was read again
+(nothing, the page having shrunk), and it was right. A comment's sheet
+reads the keyboard the same way (comments.js) and had the same hole.
+
+WHAT CHANGES (a bug fix; nothing looks different once the keyboard rests):
+- ONE READER, SHARED: social.js's SocialKeyboard(wrap, name, isOpen), used
+  by the composer and a comment's sheet in place of their two copies. It
+  reads the keyboard as before, now ALSO WHEN THE PAGE ITSELF CHANGES SIZE
+  (the window's resize, which is what Chrome's shrinking says), and READS IT
+  AGAIN UNTIL IT RESTS: after anything that could move it (the visual
+  viewport, the layout viewport, a field in the sheet taking or losing
+  focus, the sheet opening) it reads on every frame for a second and a half,
+  and by timers (250ms, 700ms, 2s) in case frames are held while a keyboard
+  moves.
+- WHATEVER A KEYBOARD SAYS ON THE WAY, nothing is drawn over the page: the
+  scrim reaches the screen's foot under a lifted sheet (bottom: -100vh, so
+  it needs no glide of its own), and the composer's sheet keeps its rows on
+  its paper (overflow: hidden).
+
+PAD AND FLIP: nothing changes in either editor; this is the site's sheet.
+
+THE CHECKS, each shown red by a break of its own in a throwaway copy, an
+untouched copy green beside them (verify_composer part 3, verify_socialcomments
+part 30). The keyboard stand-in (the suites' own: this box has no phone
+keyboard) gains a keyboard that rests without a word: it reports 780px (a
+size passed through), then 336px, saying nothing.
+- CHROME ON AN IPHONE, stood in as it happened: the stand-in keyboard
+  (336px) shrinks the visual viewport, and 2.6s later (after the second
+  reading's timers, so the page's own change is what is heard) the page
+  itself shrinks by the keyboard (the viewport resized to 538). The
+  composer's foot is then on the keyboard (538), its words and tools in
+  view; a comment's sheet's too. Red for: no ear for the page's own resize
+  (the composer's foot at 202: the keyboard taken off twice, the owner's
+  screenshot), the old reader (the visual viewport's events alone). The
+  composer's control 4/4 with this row.
+- A KEYBOARD THAT RESTS WITHOUT A WORD: the stand-in reports 780px (a size
+  passed through), then 336px, saying nothing.
+  The composer: while the sheet is that sliver (44 to 94), the page under
+  it is the scrim at 40%, 70% and 98% of the screen, and none of its parts
+  is painted outside its paper; then, with no word from the keyboard, its
+  foot is at the keyboard (538), its top where it was (44). Red for: no
+  reading again (its foot stayed at 94, as on the owner's phone), the scrim
+  stopping at the sheet (the page undimmed at all three), the rows drawn
+  outside the paper (the field, Draw, Flip, Yours and 500 over the page).
+  The control 3/3.
+- A comment's sheet: the page under it dimmed meanwhile, and its foot at
+  the keyboard once it rests (538). Red for: no reading again (its foot
+  stayed at 94, its field off the top), the scrim stopping at the sheet.
+  The control 5/5 (the composer's own break, rows outside its paper, leaves
+  it green: a comment's sheet is as tall as what it holds).
+
+NOT TESTED HERE: an iPhone's keyboard, Safari or Chrome on iOS (WebKit);
+the stand-in reproduces the screenshots' three symptoms, not the phone. The
+one-glance tell on the live site: Make opens straight to the composer with
+its tools just above the keyboard, no touch needed.

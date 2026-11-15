@@ -331,24 +331,12 @@
   if (box) named();
 
   /* ---- a phone: the sheet --------------------------------------------------- */
-  /* ON A PHONE'S KEYBOARD the sheet rides above it: the keyboard is what the
-     visual viewport lost at the bottom of the layout viewport the sheet is
-     fixed to (iPhone's Safari shrinks only the visual one). A pinch's zoom is
-     not a keyboard, so only at a scale of 1. NOT SEEN HERE: this box has no
-     phone keyboard; the suite stands one in for the visual viewport. */
-  function lift() {
-    if (!sheetWrap) return;
-    var vv = window.visualViewport, kb = 0;
-    if (vv && sheet && sheet.isOpen() && Math.abs((vv.scale || 1) - 1) < 0.01) {
-      kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-    }
-    if (kb) sheetWrap.style.setProperty('--cm-kb', kb + 'px');
-    else sheetWrap.style.removeProperty('--cm-kb');
-  }
-  if (sheetWrap && window.visualViewport) {
-    window.visualViewport.addEventListener('resize', lift);
-    window.visualViewport.addEventListener('scroll', lift);
-  }
+  /* ON A PHONE'S KEYBOARD the sheet rides above it: social.js's
+     SocialKeyboard reads it (--cm-kb), and reads it again until it rests, as
+     the composer's does (compose.js). */
+  var keyboard = sheet && window.SocialKeyboard
+    ? window.SocialKeyboard(sheetWrap, 'cm-kb', function () { return sheet.isOpen(); }) : null;
+  function lift() { if (keyboard) keyboard.watch(); }
 
   /* The sheet, for a new comment (`li` none) or an answer to `li`; `btns`
      are marked as what opened it, the first takes focus back after. */
