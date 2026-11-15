@@ -465,7 +465,25 @@ KEYBOARD = """(() => { const t = new EventTarget(); let h = null, off = 0, scale
     get offsetTop() { return off; }, get offsetLeft() { return 0; }, get scale() { return scale; },
     addEventListener: (...a) => t.addEventListener(...a), removeEventListener: (...a) => t.removeEventListener(...a) };
   Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => vv });
-  window.__keyboard = (px, zoom) => { scale = zoom || 1; h = innerHeight - px; off = 0; t.dispatchEvent(new Event('resize')); }; })();"""
+  window.__keyboard = (px, zoom) => { scale = zoom || 1; h = innerHeight - px; off = 0; t.dispatchEvent(new Event('resize')); };
+  window.__keyboardQuiet = (px) => { h = innerHeight - px; }; })();"""
+
+# WHILE A KEYBOARD PASSES THROUGH A SIZE (the owner's iPhone, Nov 14: a size
+# the keyboard only passed through left the sheet a sliver, its rows drawn
+# over the page and the page under it undimmed, until a touch): what is
+# painted, read while the sheet is that sliver. Below the sheet, at three
+# heights across the screen, the dimmed page (the scrim), never the page
+# itself; and none of the sheet's parts painted outside its paper (each
+# part's middle, where it lies outside the sheet's box, is not the sheet's).
+PASSING = """(sel) => { const w = document.querySelector(sel), s = w.querySelector('.make-sheet'), r = s.getBoundingClientRect(),
+  scrim = w.querySelector('.make-scrim');
+  const below = [0.4, 0.7, 0.98].map(f => { const y = Math.round(innerHeight * f); return y > r.bottom + 2 ? document.elementFromPoint(innerWidth / 2, y) : scrim; });
+  const out = [...s.querySelectorAll('button, textarea, .cmp-left')].filter(e => e.getClientRects().length).map(e => {
+    const q = e.getBoundingClientRect(), x = q.left + q.width / 2, y = q.top + q.height / 2;
+    if (y >= r.top && y <= r.bottom && x >= r.left && x <= r.right) return null;
+    if (y < 0 || y > innerHeight) return null;
+    const at = document.elementFromPoint(x, y); return at && s.contains(at) ? (e.textContent.trim() || e.tagName).slice(0, 20) : null; }).filter(Boolean);
+  return { sheet: [Math.round(r.top), Math.round(r.bottom)], dimmed: below.map(e => e === scrim), outside: out }; }"""
 
 # THE SHEET'S PARTS, where they are and whether they are what is painted
 # there (elementFromPoint at their middle).
@@ -756,6 +774,26 @@ with sync_playwright() as p:
                   abs(on_kb["bottom"] - on_kb["floor"]) <= 1 and on_kb["tools"] <= on_kb["floor"] and on_kb["field"] < on_kb["floor"]
                   and abs(on_kb["top"] - 44) <= 1 and off_kb == 874 and zoomed == 874,
                   f"on a 336px keyboard {on_kb}; after {off_kb}; zoomed {zoomed}")
+            # A keyboard that passes through a size and says nothing once it rests (the owner's iPhone, Nov 14).
+            kctx, kpg = browser_as(b, mira, init=KEYBOARD)
+            go(kpg, "/social/explore")
+            open_composer(kpg)
+            kpg.evaluate("() => window.__keyboard(780)")
+            kpg.wait_for_timeout(450)
+            passing = kpg.evaluate(PASSING, "#composeSheet")
+            kpg.evaluate("() => window.__keyboardQuiet(336)")
+            kpg.wait_for_timeout(2400)
+            rests = kpg.evaluate("""() => { const s = document.querySelector('#composeSheet .make-sheet').getBoundingClientRect(),
+              t = document.querySelector('#composeSheet .cmp-tools').getBoundingClientRect();
+              return { bottom: Math.round(s.bottom), top: Math.round(s.top), tools: Math.round(t.bottom), floor: innerHeight - 336 }; }""")
+            close_ctx(kctx, kpg)
+            check("a keyboard that passes through a size and says nothing once it rests: while the sheet is a sliver, the page"
+                  " under it is dimmed to the screen's foot and nothing of the sheet is painted outside its paper; then, with"
+                  " no word from the keyboard, the sheet rides above where it rests, its top where it was (the owner's iPhone,"
+                  " Nov 14; stood in)",
+                  all(passing["dimmed"]) and not passing["outside"]
+                  and abs(rests["bottom"] - rests["floor"]) <= 1 and rests["tools"] <= rests["floor"] and abs(rests["top"] - 44) <= 1,
+                  f"passing through 780px: {passing}; at rest on 336px: {rests}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(3, exc)
 

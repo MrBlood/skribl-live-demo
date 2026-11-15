@@ -33,6 +33,8 @@
  *
  * AND THE EDITOR OVER THE PAGE (window.SocialPadOverlay, below): the Pad or
  * Flip in compose mode for your face (profile.js) and for a post (posts.js).
+ * AND A PHONE'S KEYBOARD (window.SocialKeyboard, below): a sheet whose words
+ * take one rides above it (the composer, a comment's sheet).
  *
  * ONE CONTROLLER, EVERY SHEET: window.SocialSheet(wrap, options) gives a
  * `.make`-shaped sheet these moving parts and returns { open, close, isOpen }.
@@ -174,6 +176,64 @@
   }
 
   window.SocialSheet = sheetFor;
+
+  /* A PHONE'S KEYBOARD (window.SocialKeyboard): a sheet whose words take a
+   * keyboard rides above it, the composer (compose.js) and a comment's sheet
+   * (comments.js) alike. The keyboard is what the visual viewport lost at
+   * the bottom of the layout viewport the sheet is fixed to (iPhone's Safari
+   * shrinks only the visual one), less any way the visual viewport has been
+   * moved down; a pinch's zoom is not a keyboard, so only at a scale of 1.
+   *
+   * READ AGAIN UNTIL IT RESTS (the owner's iPhone, Nov 14: the composer
+   * opened with its foot halfway up the screen and its words drawn over
+   * Home, until a touch put it right). While a keyboard comes or goes, a
+   * phone can report a size it is only passing through, then say nothing
+   * more once it rests. So whenever anything could move it (the visual or
+   * the layout viewport changing, a field in the sheet taking or losing
+   * focus, the sheet opening), the keyboard is read on every frame for the
+   * next second and a half, and by timers in case frames are held meanwhile,
+   * and the sheet rides above what it rests at. NOT SEEN HERE: this box has
+   * no phone keyboard; the suites stand one in for the visual viewport, and
+   * a keyboard that says nothing once it rests is among them.
+   *
+   * SocialKeyboard(wrap, name, isOpen) keeps --<name> on wrap (the
+   * keyboard, in px; none without one) and returns { watch, read }. */
+  var REREAD_MS = 1500;
+  function keyboardFor(wrap, name, isOpen) {
+    var vv = window.visualViewport, raf = 0, until = 0, said = -1, late = [];
+    function read() {
+      var kb = 0;
+      if (vv && isOpen() && Math.abs((vv.scale || 1) - 1) < 0.01) {
+        kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+      }
+      if (kb === said) return;
+      said = kb;
+      if (kb) wrap.style.setProperty('--' + name, kb + 'px');
+      else wrap.style.removeProperty('--' + name);
+    }
+    function frame() {
+      raf = 0;
+      read();
+      if (Date.now() < until) raf = requestAnimationFrame(frame);
+    }
+    function watch() {
+      read();
+      until = Date.now() + REREAD_MS;
+      if (!raf) raf = requestAnimationFrame(frame);
+      while (late.length) clearTimeout(late.pop());
+      [250, 700, REREAD_MS + 500].forEach(function (ms) { late.push(setTimeout(read, ms)); });
+    }
+    if (vv) {
+      vv.addEventListener('resize', watch);
+      vv.addEventListener('scroll', watch);
+    }
+    window.addEventListener('resize', watch);
+    wrap.addEventListener('focusin', watch);
+    wrap.addEventListener('focusout', watch);
+    return { watch: watch, read: read };
+  }
+
+  window.SocialKeyboard = keyboardFor;
 
   /* THE EDITOR, OVER THE PAGE: Skribl's Pad or Flip in compose mode, in a
    * frame over the page, for your face (profile.js) and for a post (posts.js).

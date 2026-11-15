@@ -1925,8 +1925,11 @@ EVERYWHERE: for somebody signed in, Make (the bar on a phone, the rail on a
 desk) opens the composer on every page with the bar, and Home's row ("Say
 something, then draw it…", Draw and Flip, as the box looked; no Post of its
 own) opens the same sheet (`_compose.html`, `compose.js`, `compose.py`). On
-a phone it rises almost to the top and rides above the keyboard; on a desk
-it is a 600px card in the middle. Cancel at the top left, Post at the top
+a phone it rises almost to the top and rides above the keyboard (social.js's
+SocialKeyboard, which a comment's sheet shares: it reads the keyboard again
+until it rests, since a phone can report a size the keyboard only passes
+through and then say nothing; the owner's iPhone, Nov 14); on a desk it is
+a 600px card in the middle. Cancel at the top left, Post at the top
 right, dim until a drawing is attached; your face beside "Say something…";
 the drawing under the words, playing, with Edit drawing and Remove; Draw,
 Flip and Yours along the bottom, and the characters left (500). Draw and
