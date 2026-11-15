@@ -312,6 +312,38 @@ body {
 .top > .top-menu { margin-left: -10px; margin-right: 2px; color: var(--ink); }
 a.post-act { text-decoration: none; }
 .menu-out { margin: 0; }
+/* THE STEPS TO THE HOME SCREEN (the Home Screen mock; the owner, Nov 15),
+   the ☰'s Add to Home Screen opens them (_homescreen.html): the ☰'s own
+   sheet, and in it nothing new to the site. What you will get, as a Home
+   Screen shows it: Blooby's icon (60px, an app's corners) by his name in the
+   first ink and its line in the second. The steps on the rows' card
+   (--row-bg), 56px each as a row is, the menus' thin line between them from
+   where the words start; each step's number on the tint in the small violet
+   words, as a chosen pill wears them. The note in the second ink, then the
+   site's one action, Got it. */
+.home-steps-app { display: flex; gap: 14px; align-items: center; margin: 0 4px 14px; }
+.home-steps-app img { width: 60px; height: 60px; border-radius: 14px; flex: none; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }
+.home-steps-app b { display: block; color: var(--ink); font-size: 17px; font-weight: 600; line-height: 1.3; }
+.home-steps-app span { display: block; color: var(--ink-2); font-size: 15px; line-height: 1.35; }
+.home-steps-list { margin: 0 0 14px; padding: 2px 0; list-style: none; overflow: hidden; border-radius: 16px; background: var(--row-bg); }
+.home-steps-list li {
+  position: relative; display: flex; align-items: center; gap: 14px; box-sizing: border-box; min-height: 56px;
+  padding: 6px 16px; color: var(--ink); font-size: 17px; line-height: 1.3;
+}
+.home-steps-list li + li::before {
+  content: ""; position: absolute; top: 0; left: 56px; right: 16px; height: 1px;
+  background: var(--row-line); transform: scaleY(var(--hair)); transform-origin: top; pointer-events: none;
+}
+.home-steps-list i {
+  display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--tint); color: var(--accent-ink); font-size: 14px; font-style: normal; font-weight: 700;
+}
+.home-steps-list b { font-weight: 650; }
+.home-steps-share { width: 17px; height: 17px; vertical-align: -3px; }
+/* "More", for a screen reader: Safari's own name for its ⋯. */
+.home-steps-say { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.home-steps-note { margin: 0 4px 16px; color: var(--ink-2); font-size: 15px; line-height: 1.4; }
+.home-steps .btn-primary { justify-content: center; width: 100%; min-height: 50px; font-size: 17px; }
 
 /* ---- the frame on a desk: THE RAIL -------------------------------------- */
 @media (min-width: 900px) {
@@ -1784,7 +1816,7 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
   width: 52px; height: 52px; border-radius: 10px; border: 1px solid var(--card-line); background-color: var(--draw-wait);
   background-repeat: no-repeat;
 }
-/* NOTHING YET: Blooby as his Home Screen icon in small (the sign-in pages' own), and a way to make something. */
+/* NOTHING YET: Blooby as his Home Screen icon in small (the sign-in pages' own: blooby.app's icon, the site's Home Screen app's), and a way to make something. */
 .act-empty { display: flex; flex-direction: column; align-items: center; max-width: 360px; margin: 56px auto 0; text-align: center; }
 .act-empty .si-icon { margin: 0 0 18px; }
 .act-empty-title { margin: 0 0 8px; font: 700 24px/1.2 var(--font); letter-spacing: -0.01em; }

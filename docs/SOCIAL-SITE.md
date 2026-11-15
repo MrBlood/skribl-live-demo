@@ -1702,7 +1702,8 @@ conversation.
    conversation; section 17.)
 7. Add to Home Screen (the owner, Nov 13, after the map): a way to put
    Blooby on a phone's Home Screen, so it opens full screen like an app.
-   Mocked first, once steps 3 to 6 are in. (The owner also noted that in
+   Mocked first, once steps 3 to 6 are in. Built Nov 15 (below, "Add to
+   Home Screen is built"). (The owner also noted that in
    Bluesky a speech bubble with dots means direct messages: our 💬 is the
    plain bubble, as Bluesky's replies are, and stays so.)
 
@@ -1913,7 +1914,8 @@ follow step 7.
 5. Finding people: search by name or @handle.
 6. Open sign-up, with what it needs to stay kind (limits for new accounts,
    the admins' tools); the owner's rules asked when it is mocked.
-7. Add to Home Screen (part one's step 7), then push notifications.
+7. Add to Home Screen (part one's step 7), then push notifications. Add to
+   Home Screen built (below).
 8. Direct messages: one to one, a drawing as easily as words, who may
    message you, and a requests inbox.
 9. The smaller things most sites have: pin a post to your profile, edit a
@@ -2116,3 +2118,30 @@ account takes its mentions, in code. Pad and Flip: nothing changes in either
                                     the list under an @: {people: [{handle,
                                     name, face}]}, four at most; signed in
                                     (401 otherwise), 600 an hour
+
+**Add to Home Screen is built** (part one's step 7, part two's item 7;
+DECISIONS, "Blooby on the Home Screen"; the owner, Nov 15: "Let's do the home
+icon so I can get full screen on my iPhone", then "All yes" to the mock).
+THE SITE'S OWN APP: every page of the site's links the site's own manifest
+(`/social/manifest.webmanifest`, a route so its URLs follow the mount
+points): Blooby, opening on Home, standalone (full screen, no browser bar),
+the site's dark ground; its scope the folder the site and Skribl's pages
+share, so the Pad, Flip and the Library a post or Make opens stay inside
+the app. THE ICON IS BLOOBY.APP'S (the owner's pick, Nov 13: waving Blooby
+on the lilac, no star, 82% tall; filed in `docs/brand/`), drawn from his
+strokes by `harness/tools/blooby.py site-icon` into the site's own files
+(`social/static/blooby-icon-*.png`): the touch icon, the page icon, the
+manifest's, and Blooby in small on the sign-in pages, the kind pages and
+Activity's empty state. Skribl's pages keep Skribl's manifest and icons
+(Skribl, Blooby on the white star, opening the Pad). HOW YOU ADD IT: on an
+iPhone or an iPad in Safari, the ☰ on Home and the Gallery has Add to Home
+Screen right under Settings (Sign in, signed out); it lets the ☰ go down and
+the steps rise (the site's own sheet: the icon and its name as the Home
+Screen shows them, iOS 26's three steps, "It may ask you to sign in once
+there, with your passkey", Got it). On Android the row shows once Chrome
+offers its own install, and asks Chrome. A desk sees neither. FROM THE HOME
+SCREEN the same row says Reload, as there is no browser bar to reload with.
+The Pad's and Flip's own steps say iOS 26's too.
+
+    /social/manifest.webmanifest    the site's web app manifest (Blooby,
+                                    opening on Home)

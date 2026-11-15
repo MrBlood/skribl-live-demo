@@ -466,6 +466,64 @@
     siteMenu.addEventListener('click', function (e) {
       if (e.target.closest('a.post-act, button.post-act[type="submit"]')) menuApi.close(true);
     });
+    homeScreen(siteMenu, menuApi, menuBtn);
+  }
+
+  /* BLOOBY ON THE HOME SCREEN (the owner, Nov 15: "Let's do the home icon so
+     I can get full screen on my iPhone"). The ☰'s two rows start hidden
+     (_menu.html), and this says which one this phone gets, if either:
+       - opened from the Home Screen (navigator.standalone, or the standalone
+         display the site's manifest asks for): Reload, as there is no browser
+         bar to reload with;
+       - an iPhone or an iPad in a browser tab (iPadOS says it is a Mac, so a
+         Mac with a touch screen counts): Add to Home Screen, which lets the ☰
+         go down and the steps rise (_homescreen.html), giving the ☰ its
+         focus back when they close;
+       - anywhere Chrome offers its own install (beforeinstallprompt, as on
+         Android): Add to Home Screen, which asks Chrome; gone once installed;
+       - a desk, or a browser that offers nothing: neither. */
+  function homeScreen(menu, menuApi, menuBtn) {
+    var add = doc.getElementById('siteAddHome');
+    var reload = doc.getElementById('siteReload');
+    var steps = doc.getElementById('homeSteps');
+    if (!add || !reload) return;
+    var nav = window.navigator;
+    var installed = nav.standalone === true;
+    try { installed = installed || window.matchMedia('(display-mode: standalone)').matches; } catch (e) { /* none */ }
+    if (installed) {
+      reload.hidden = false;
+      reload.addEventListener('click', function () {
+        menuApi.close(true);
+        window.location.reload();
+      });
+      return;
+    }
+    var apple = /iP(hone|od|ad)/.test(nav.userAgent || '') || (nav.platform === 'MacIntel' && nav.maxTouchPoints > 1);
+    if (apple && steps) {
+      var stepsApi = sheetFor(steps, { first: function () { return steps.querySelector('.btn-primary'); } });
+      add.hidden = false;
+      add.addEventListener('click', function () {
+        menuApi.close(true);
+        var icon = steps.querySelector('img');
+        if (icon) icon.loading = 'eager';
+        stepsApi.open(menuBtn);
+      });
+      return;
+    }
+    var offer = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      offer = e;
+      add.hidden = false;
+    });
+    window.addEventListener('appinstalled', function () { offer = null; add.hidden = true; });
+    add.addEventListener('click', function () {
+      if (!offer) return;
+      menuApi.close(true);
+      offer.prompt();
+      offer = null;
+      add.hidden = true;
+    });
   }
 
   var make = doc.getElementById('makeSheet');

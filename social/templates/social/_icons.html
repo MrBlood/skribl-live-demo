@@ -196,6 +196,20 @@
          'M 8.6,10.9 C 8.4,7.6 9.6,5.0 12.0,5.0 C 14.4,5.0 15.6,7.4 15.4,10.9', 'M 12.0,14.4 L 12.0,16.2']) }}
 {%- endmacro %}
 
+{# Add to Home Screen, the ☰'s row (the owner, Nov 15): an app's rounded
+   square with a plus in it, as the Pad's own row draws it, in our pen. #}
+{% macro add_home() -%}
+{{ _pen(['M 5.1,4.7 C 9.4,4.5 14.6,4.5 18.9,4.8 C 19.3,9.4 19.3,14.6 19.0,19.1 C 14.6,19.4 9.4,19.4 5.0,19.2 C 4.7,14.6 4.7,9.4 5.1,4.7 Z',
+         'M 12.0,8.3 L 12.1,15.7', 'M 8.3,12.0 L 15.7,12.1']) }}
+{%- endmacro %}
+
+{# Reload, the same row from the Home Screen: a circle nearly closed, its
+   arrow at the top right. #}
+{% macro reload() -%}
+{{ _pen(['M 19.4,12.4 C 19.2,16.5 15.9,19.7 11.8,19.6 C 7.7,19.5 4.4,16.1 4.5,12.0 C 4.6,7.9 8.0,4.5 12.1,4.5 C 14.6,4.6 16.7,5.8 18.1,7.7',
+         'M 18.7,3.9 L 18.4,7.9 L 14.5,7.7']) }}
+{%- endmacro %}
+
 {% macro sign_out() -%}
 {{ _pen(['M 13.6,4.4 C 11.0,4.3 7.6,4.4 5.4,4.5 L 5.5,19.5 C 7.7,19.6 11.0,19.6 13.6,19.5',
          'M 10.0,12.0 C 13.4,11.9 16.8,12.1 19.6,12.0', 'M 16.4,8.6 L 19.8,12.0 L 16.4,15.4']) }}
