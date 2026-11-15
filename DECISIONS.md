@@ -42334,7 +42334,13 @@ shared with another change's runs (load about 14 to 20 on four cores):
     dropped under the load); verify_socialprofile 91/93 beside, 93/93 alone
     (the photo under the Pad not loaded in time, and the row that reads its
     words over it: the reposts' run saw the same two).
-{{COUNTS}}
+- THEN, ON THE TREE AS COMMITTED (a7045549, this entry in it; after the
+  read that asks what said a mention is there, section 9's own comment and
+  section 5 read row by row): side by side, verify_socialmentions 50/50,
+  verify_socialactivity 46/46, verify_socialreposts 49/49 (mended),
+  verify_socialmute 68/68, verify_socialfollow 75/75, verify_sociallikes
+  100/100, verify_docs 144/144: seven suites ok in 6.8 minutes. And
+  verify_socialmentions alone, 50/50 in 106 seconds.
 - NOT RUN: the full battery (main's run after the merge does it); PostgreSQL
   (CI's postgres job; the migration's DDL read offline here); Firefox and
   WebKit (main's lanes); verify_player_isolation and cssgraph (styles.css is
