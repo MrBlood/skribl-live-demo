@@ -2,6 +2,6 @@
     deleted, or that could never be one. One kind card for all of them, so
     the page says nothing about which, and nothing is anybody's fault. #}
 {% extends 'social/base.html' %}
-{% from 'social/_kind.html' import card %}
+{% from 'social/_kind.html' import card with context %}
 {% block title %}Nobody here · Blooby{% endblock %}
 {% block main %}{{ card("Nobody here by that name", ("There’s no one on Blooby at @" ~ handle ~ "." if handle else "There’s no one on Blooby at that address.") ~ " Check the spelling, or look around for someone’s drawings.") }}{% endblock %}

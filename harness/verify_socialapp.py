@@ -17,7 +17,8 @@ Chromium's virtual authenticator for the site's people.
      files read pixel by pixel against the filed pictures (docs/brand/
      blooby-app-icon-*.png), the lilac at every corner, no star, his ink 0.82
      of the side; blooby.py names the fill and the files. The sign-in page,
-     joining, recovery, a kind page and Activity's empty state show it.
+     joining, recovery, two kind pages (nobody there, a post not there) and
+     Activity's empty state show it.
   4. WHO SEES WHICH ROW: an iPhone in a tab, Add to Home Screen in the ☰
      right under Settings (Sign in, signed out); an iPad that says it is a
      Mac, the same; opened from the Home Screen (navigator.standalone, or the
@@ -495,6 +496,7 @@ with sync_playwright() as pw:
             seen = {}
             for who, name, path in ((None, "sign in", "/social/signin"), (None, "joining", "/social/join"),
                                     (None, "recovery", "/social/recover"), (None, "nobody there", "/social/@nosuch_person"),
+                                    (None, "a post not there", "/social/p/abcdefghijk"),
                                     (fresh, "Activity, nothing yet", "/social/activity")):
                 ctx, pg = browser_as(b, who)
                 pg.goto(BASE + path)
@@ -503,8 +505,8 @@ with sync_playwright() as pw:
                   const r = i.getBoundingClientRect(), c = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
                   return { src: i.getAttribute('src'), w: Math.round(r.width), nat: i.naturalWidth, painted: c === i }; }""")
                 close_ctx(ctx, pg)
-            check("where the site shows Blooby in small (sign in, joining, recovery, a kind page, Activity's nothing yet) it is"
-                  " this icon, 64px, loaded and painted",
+            check("where the site shows Blooby in small (sign in, joining, recovery, two kind pages, Activity's nothing yet)"
+                  " it is this icon, 64px, loaded and painted (each kind page imports its card with the page's context)",
                   all(v and v["src"].startswith("/social/static/blooby-icon-180.png") and v["w"] == 64 and v["nat"] == 180
                       and v["painted"] for v in seen.values()), json.dumps(seen))
         except Exception as exc:  # noqa: BLE001
@@ -723,11 +725,12 @@ with sync_playwright() as pw:
                            banner: sub ? seen(sub) : null }; }""")
                 close_ctx(ctx, pg)
             check("the Pad's and Flip's steps say iOS 26's: ⋯ in Safari's bar, then Share; Scroll down and tap Add to Home"
-                  " Screen; Keep Open as Web App on, and tap Add (\"More\" for a screen reader); the banner's line the same",
+                  " Screen; Keep Open as Web App on, and tap Add (\"More\" for a screen reader); the Pad's banner the same"
+                  " (Flip has none)",
                   all(v["steps"] == ["Tap ⋯ in Safari’s bar, then Share", "Scroll down and tap Add to Home Screen",
                                      "Keep Open as Web App on, and tap Add"]
-                      and v["more"] == "More" and v["dots"] == "⋯"
-                      and v["banner"] == "Tap ⋯, then Share, then Add to Home Screen" for v in said.values()), json.dumps(said))
+                      and v["more"] == "More" and v["dots"] == "⋯" for v in said.values())
+                  and said["the Pad"]["banner"] == "Tap ⋯, then Share, then Add to Home Screen", json.dumps(said))
         except Exception as exc:  # noqa: BLE001
             stopped(7, exc)
 
