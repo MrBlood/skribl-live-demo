@@ -41929,9 +41929,46 @@ copy, green on an untouched copy:
   finished replay rests, and sample a quarter across (red still with every
   photo letterboxed: the cover row, 220/222); verify_viewedges'
   Flip-at-its-end row pressed Loop to turn it off, and only restarts now.
+- AND BY CI'S FULL RUN ON THIS BRANCH, ten more suites whose rows read a
+  replay as still going round, each mended the same way and shown: where a
+  scenario IS a repeating drawing, repeat is pressed on first (verify_fullfade's
+  laps, control 70/70, the link page's old default 62/70; verify_flipbeat's
+  posted rounds on the song, control 17/17, without it 8/17;
+  verify_replayspeed's Song choice through three picks; verify_gallery's bar
+  fade and churn probe, a PLAYING card watched for seconds; verify_audio's
+  five seconds of sampling); where a row asked a short drawing to be still
+  playing, it reads playing or played (verify_socialposts 9, a drawing's own
+  page, control 6/6, red never playing by itself 5/6; verify_composer 4 and 5, the
+  sheet's player after Draw's Add and after Yours (4 found here, by the
+  mentions' suites run on top of this change; CI had caught it still
+  playing), controls 5/5 and 6/6, red never playing 4/5 and 4/6; verify_galib's pill,
+  control 176/176, red never tapped 174/176; verify_gallery's play on a
+  card); and where a row pressed Loop to turn it off, it no longer presses
+  (verify_library, control 247/247, the Library's old default 246/247). And
+  verify_ux V207 reads the link player's Repeat out at rest and lit, the one
+  pill's tint, once pressed (control 487/487, the old default 486/487). The
+  red for verify_replayspeed, verify_gallery and verify_audio is CI's own run
+  before their mends (its sqlite 3/6, 5/6 and 4/6), the green CI's after.
 
 THE AFFECTED SUITES:
-{{COUNTS}}
+- Side by side here (run_parallel -j 3): verify_docs 144/144,
+  verify_framecache 23/23, verify_audiostate 33/33, verify_audiosession
+  41/41; verify_fullfade 68/70 and verify_socialposts 80/81 there, alone too,
+  before their mends above (each green in its proof since: 70/70, and 6/6 and
+  11/11 for the two sections).
+- The proofs' controls, each a whole suite unless a part is named:
+  verify_inline 222/222, verify_viewedges 19/19, verify_player_isolation
+  85/85, verify_library 247/247, verify_galib 176/176, verify_ux 487/487,
+  verify_fullfade 70/70; verify_socialposts 12 11/11 and 9 6/6,
+  verify_composer 5 6/6, verify_flipbeat's posted 17/17.
+- The full harness on this branch: run 43714087677 on 1addee7c went red
+  only on its sqlite and PostgreSQL 5/6 and 6/6, for verify_composer 4's
+  Draw row (above) and verify_gallery's churn probe, which had turned repeat
+  on just inside its window and read the bar's one redraw for it (it waits
+  400ms for the bar now); both mended after it, verify_composer 38/38 and
+  verify_gallery 232/232 here. The final run, 43718749294 on 275c2def,
+  every lane green, MP4, Firefox and WebKit too. It changes a default many
+  suites play through, so the full battery is CI's run, not this box's.
 
 NOT TESTED HERE: WebKit, so the owner's iPhone; the live site. The
 one-glance tell: a post's ⟲ under the drawing is unlit when the page opens,
