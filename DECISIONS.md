@@ -43368,3 +43368,66 @@ surfaces, and its word is read by verify_socialapp 8).
 NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell:
 open Blooby from the Home Screen after closing it, and "blooby." sits just
 under Blooby's stage.
+
+## After v330 -- The phone's bar: its icons alone, every one the same size
+
+The owner, Nov 15 (Mountain Time), about 10:50 AM, with screenshots from the
+Home Screen app: "the bottom row icons size, home changes, gallery is small
+and looks smaller when selected". Measured: Home's house 20.7 x 19.7px,
+the Gallery's Blooby 18.7 x 21 (lit up on the dark bar his black line,
+1.2:1 there, vanished and he read 17 x 18), Make a 52 x 32 pill, your face
+28 with its ring. Then, mock by mock: "I like now, the gallery icon looks
+cool in color, like Kilroy was here. Let's just improve what we have now.
+Can all icons look the same size - bigger. Gallery needs to be bigger so
+you can see it"; "I like him with black outline. He looks weird without it,
+kinda blobish. Maybe show me if you take the words off? Can they be
+bigger?"; "I'm not sure. Think about it. What looks best and has all the
+icons looking exactly the same size?" (the answer: every icon filling one
+28px square, Make a 28px circle); "Make and you look smaller" (a circle
+looks smaller than the square a drawing's corners reach: drawn a seventh
+bigger, 32); "I like g".
+
+WHAT CHANGED (social.css, THE BAR; base.html):
+
+- NO WORDS UNDER THE ICONS on a phone: each place's name is still its
+  accessible name (visually hidden, as a screen reader reads it). A desk's
+  rail keeps its words, its icons' sizes and its pen's line under the name.
+- EVERY ICON ONE SIZE as the eye measures it, read off the paint at twice
+  its size: the house drawn in a 35.2px box (27.5 x 26.5 of ink), Blooby in
+  34.7 (25.5 x 28), Sign in's person in 37.9 (it is drawn smaller in its
+  box: to the same 28); Make's purple a 32px circle, its pen 19px; your
+  face 29px with its 1.5px ring, 32 across. The icons' box 36px tall; the
+  bar 64px as before.
+- THE PEN'S LINE under the page's icon on a phone (30px, centred, 2px
+  below), drawn as before (it waits while the page fades in, then draws
+  itself); a copy under the name serves the desk's rail.
+- KEPT, as the owner asked: Home fills on its own page; Blooby lights up in
+  his colours on the Gallery, his black line kept.
+
+PAD AND FLIP: unchanged (the site's bar alone).
+
+CONTRAST: no colour or token changed; the icons' ink is as it was (10.5:1
+dark and 7.3:1 light, the page's own 19.4 and 17.4).
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy,
+with an untouched copy green beside it:
+
+- verify_social 2 (control 13/13): three new rows. The bar is its icons
+  alone on a phone, each name still its accessible name, a desk's rail
+  keeping its words (red: the words back on a phone; the rail losing its
+  words). Every icon one size, read off the paint at twice its size: the
+  line drawings 26.5 to 29.5px, Make 31 to 33 across (red: Blooby small
+  again; Make's pill again; Sign in's person left small). The pen's line
+  centred under the page's icon (red: the line not under the icon, which
+  reds the marked-page row and the drawing-itself row too). The marked-page
+  row and the drawing-itself row read the pen's line that is painted (under
+  the icon on a phone, the name on a desk).
+- verify_socialprofile 11 (control 8/8): You's circle in the bar is 29px,
+  its ring round it (red: your face back to 28).
+
+THE AFFECTED SUITES, side by side: [COUNTS]
+
+NOT TESTED HERE: an iPhone (WebKit): the icons' sizes in Safari's own
+rendering, SF and Segoe UI (the bar holds no words now); the live site. The
+one-glance tell: the bar along the bottom shows four icons, no words, all
+the same size, the pen's line under the page you are on.

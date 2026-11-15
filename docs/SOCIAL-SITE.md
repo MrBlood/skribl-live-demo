@@ -368,7 +368,12 @@ left out: the demo never depends on it.
 A phone has a bar along the bottom (Home, Explore, Make; You comes with
 sign-in), a desk a rail down the left (the wordmark in the accent purple,
 Home, Explore, Make), and the page you are on has a pen's line under its
-name. Light and dark followed the device here; since Settings (section 14)
+name. SINCE NOV 15 (the owner's G: "Can all icons look the same size -
+bigger", then "I like g") the phone's bar is its icons alone, no words under
+them (each place's name still its accessible name), every icon filling one
+28px square as the eye measures it (the house and Blooby drawn to it, Make's
+purple and your face round and 32 across), and the pen's line under the
+page's icon; the desk's rail keeps its words. Light and dark followed the device here; since Settings (section 14)
 the site wears Skribl's own one choice, for Blooby, Pad and Flip alike.
 
 It reaches Skribl only through the seams any host uses: the in-post player's

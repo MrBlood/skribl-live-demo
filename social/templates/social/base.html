@@ -176,12 +176,12 @@
 <nav class="nav" aria-label="Main">
   <a class="brand" href="{{ url_for('social.home') }}" aria-label="Blooby, home">{% include 'social/_blooby_mark.html' %}</a>
   <a class="tab" href="{{ url_for('social.home') }}"{% if here == 'home' %} aria-current="page"{% endif %}>
-    <span class="tab-ic">{{ ic.home(here == 'home') }}</span><span class="tab-name">Home{% if here == 'home' %}{{ ic.underline() }}{% endif %}</span></a>
+    <span class="tab-ic">{{ ic.home(here == 'home') }}{% if here == 'home' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Home{% if here == 'home' %}{{ ic.underline() }}{% endif %}</span></a>
   <a class="tab" href="{{ url_for('social.explore') }}"{% if here == 'explore' %} aria-current="page"{% endif %}>
-    <span class="tab-ic">{{ ic.explore(here == 'explore') }}</span><span class="tab-name">Gallery{% if here == 'explore' %}{{ ic.underline() }}{% endif %}</span></a>
+    <span class="tab-ic">{{ ic.explore(here == 'explore') }}{% if here == 'explore' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Gallery{% if here == 'explore' %}{{ ic.underline() }}{% endif %}</span></a>
   {% if accounts and me %}{% set dot = activity_dot() %}
   <a class="tab tab-activity" href="{{ url_for('social.activity') }}" data-activity{% if here == 'activity' %} aria-current="page"{% endif %}{% if dot == 'new' %} aria-label="Activity, something new"{% endif %}>
-    <span class="tab-ic">{{ ic.bell(here == 'activity', dot) }}</span><span class="tab-name">Activity{% if here == 'activity' %}{{ ic.underline() }}{% endif %}</span></a>
+    <span class="tab-ic">{{ ic.bell(here == 'activity', dot) }}{% if here == 'activity' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Activity{% if here == 'activity' %}{{ ic.underline() }}{% endif %}</span></a>
   {% endif %}
   <button class="tab tab-make" type="button" data-make aria-haspopup="dialog" aria-controls="{{ 'composeSheet' if composing else 'makeSheet' }}" aria-expanded="false">
     <span class="tab-ic">{{ ic.pen() }}</span><span class="tab-name">Make</span></button>
@@ -189,12 +189,12 @@
   {# Settings, a desk's rail only (hidden in a phone's bar), above You. #}
   {% set at_settings = here in ('settings', 'invites') %}
   <a class="tab tab-settings" href="{{ url_for('social.you') }}"{% if at_settings %} aria-current="page"{% endif %}>
-    <span class="tab-ic">{{ ic.gear() }}</span><span class="tab-name">Settings{% if at_settings %}{{ ic.underline() }}{% endif %}</span></a>
+    <span class="tab-ic">{{ ic.gear() }}{% if at_settings %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Settings{% if at_settings %}{{ ic.underline() }}{% endif %}</span></a>
   {# The desk's rail says whose You it is; the phone's bar says You. Your
      face, still, where the icon would be; the empty circle before it. #}
   {% set at_you = here in ('you', 'settings', 'invites') %}
   <a class="tab tab-you tab-me" href="{{ url_for('social.profile', handle=me.handle) }}"{% if at_you %} aria-current="page"{% endif %}>
-    <span class="tab-ic"><span class="face-ring{% if not me.face_id %} is-blank{% endif %}">{% if me.face_id %}{{ skribl_face(me.face_id, canvas_w=me.face_w, canvas_h=me.face_h, bp=skribl_bp) }}{% else %}<span class="face-blank" aria-hidden="true"></span>{% endif %}</span></span><span class="tab-name">You{% if at_you %}{{ ic.underline() }}{% endif %}</span><span class="tab-who"><b>{{ me.display_name }}{% if at_you %}{{ ic.underline() }}{% endif %}</b><small>@{{ me.handle }}</small></span></a>
+    <span class="tab-ic"><span class="face-ring{% if not me.face_id %} is-blank{% endif %}">{% if me.face_id %}{{ skribl_face(me.face_id, canvas_w=me.face_w, canvas_h=me.face_h, bp=skribl_bp) }}{% else %}<span class="face-blank" aria-hidden="true"></span>{% endif %}</span>{% if at_you %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">You{% if at_you %}{{ ic.underline() }}{% endif %}</span><span class="tab-who"><b>{{ me.display_name }}{% if at_you %}{{ ic.underline() }}{% endif %}</b><small>@{{ me.handle }}</small></span></a>
   {% elif accounts %}
   <a class="tab tab-you" href="{{ url_for('social.signin') }}">
     <span class="tab-ic">{{ ic.person() }}</span><span class="tab-name">Sign in</span></a>

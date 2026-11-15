@@ -179,7 +179,7 @@ def post_public(title, caption):
 # ---- what the page paints, read in the page ----------------------------------
 # PAINTED, NOT PLACED (WORKING-AGREEMENTS): an element counts as shown where
 # document.elementFromPoint finds it, or something inside it.
-PEN = """(sel) => { const s = document.querySelector(sel); if (!s) return { painted: false, hits: 0 };
+PEN = """(sel) => { const s = [...document.querySelectorAll(sel)].find(x => x.getBoundingClientRect().width > 10); if (!s) return { painted: false, hits: 0 };
   const r = s.getBoundingClientRect(); if (!r.width || !r.height) return { painted: false, hits: 0 };
   let hits = 0;
   for (let i = 1; i < 10; i++) for (let j = 1; j < 10; j++) {
@@ -518,8 +518,67 @@ with sync_playwright() as p:
                 lines = {n: v["painted"] for n, v in pens.items()}
                 ok = cur == [here] and lines[here] and not any(v for n, v in lines.items() if n != here)
                 marks.append((ok, f"{screen} {page}: current {cur}, pen's line painted {lines}"))
-        check("the page you are on is marked, and only it: aria-current and the pen's line painted under its name"
-              " (phone and desk, Home and the Gallery)", all(m[0] for m in marks), "; ".join(m[1] for m in marks))
+        check("the page you are on is marked, and only it: aria-current and the pen's line painted, under its icon on a"
+              " phone and under its name on a desk (Home and the Gallery)", all(m[0] for m in marks), "; ".join(m[1] for m in marks))
+
+        # THE BAR'S ICONS ALONE, ONE SIZE (the owner, Nov 15: "Can all icons look the same size - bigger", "show me
+        # if you take the words off?", then "I like g"): on a touch phone no word painted under them (each place's
+        # name its accessible name, as a screen reader says it); each icon's own paint read off the screen at twice
+        # its size: the line drawings (Home, the Gallery, Sign in) reaching 26.5 to 29.5px, Make's purple round and
+        # 31 to 33 across; the pen's line centred under the page's icon. A desk's rail keeps its words and its sizes.
+        ICONS = r"""() => [...document.querySelectorAll('nav.nav > .tab')].filter(e => e.getClientRects().length).map(e => {
+            const r = e.querySelector('.tab-ic').getBoundingClientRect(), nr = e.querySelector('.tab-name').getBoundingClientRect();
+            const pl = [...e.querySelectorAll('.pen-line')].find(l => l.getBoundingClientRect().width > 10), pr = pl && pl.getBoundingClientRect();
+            return { name: e.querySelector('.tab-name').firstChild.textContent.trim(), box: [r.x - 5, r.y, r.right + 5, r.bottom],
+                     word: [Math.round(nr.width), Math.round(nr.height)],
+                     pen: pr ? { dx: Math.round((pr.x + pr.width / 2) - (r.x + r.width / 2)), gap: Math.round(pr.top - r.bottom), w: Math.round(pr.width) } : null }; })"""
+
+        def icon_ink(png, box, k=2):
+            im = Image.open(io.BytesIO(png)).convert("RGB")
+            cr = im.crop(tuple(round(v * k) for v in box))
+            bg, px, xs, ys = cr.getpixel((1, 1)), cr.load(), [], []
+            for y in range(cr.height):
+                for x in range(cr.width):
+                    if sum(abs(a - c) for a, c in zip(px[x, y], bg)) > 60:
+                        xs.append(x)
+                        ys.append(y)
+            return [round((max(xs) - min(xs) + 1) / k, 1), round((max(ys) - min(ys) + 1) / k, 1)] if xs else None
+        alone, sizes, said = {}, {}, {}
+        for screen, ctx_ in (("phone", PHONE), ("desk", DESK)):
+            for scheme in ("light", "dark"):
+                c = b.new_context(color_scheme=scheme, **dict(ctx_, device_scale_factor=2))
+                pg = c.new_page()
+                for page in ("home", "explore"):
+                    pg.goto(SITE + ("/" if page == "home" else "/explore"))
+                    pg.wait_for_timeout(700)
+                    items = pg.evaluate(ICONS)
+                    png = pg.screenshot()
+                    alone[(screen, scheme, page)] = {i["name"]: {"word": i["word"], "pen": i["pen"]} for i in items}
+                    if screen == "phone":
+                        sizes[(scheme, page)] = {i["name"]: icon_ink(png, i["box"]) for i in items}
+                        said[(scheme, page)] = {n: pg.get_by_role(r, name=n, exact=True).count()
+                                                for n, r in (("Home", "link"), ("Gallery", "link"), ("Make", "button"), ("Sign in", "link"))}
+                c.close()
+        words_ok = all(all(v["word"][0] <= 1 and v["word"][1] <= 1 for v in alone[("phone", s_, p_)].values())
+                       for s_ in ("light", "dark") for p_ in ("home", "explore")) \
+            and all(all(v["word"][0] >= 30 for n, v in alone[("desk", s_, p_)].items()) for s_ in ("light", "dark") for p_ in ("home", "explore")) \
+            and all(all(n >= 1 for n in v.values()) for v in said.values())
+        check("on a touch phone the bar is its icons alone: no word painted under them, each place's name still its"
+              " accessible name (Home, Gallery, Make, Sign in, as a screen reader says them); a desk's rail keeps its words",
+              words_ok, json.dumps({"phone": {f"{k[1]} {k[2]}": {n: v["word"] for n, v in d.items()} for k, d in alone.items() if k[0] == "phone"},
+                                    "said": {f"{k[0]} {k[1]}": v for k, v in said.items()}})[:700])
+        def one_size(d):
+            lines = [d[n] for n in ("Home", "Gallery", "Sign in")]
+            return all(v and 26.5 <= max(v) <= 29.5 for v in lines) and bool(d["Make"]) and 31 <= d["Make"][0] <= 33
+        check("...and every icon looks one size, read off its paint: the line drawings (Home, the Gallery's Blooby, Sign in)"
+              " reaching 26.5 to 29.5px and Make's purple round, 31 to 33 across (a circle drawn a seventh bigger), light"
+              " and dark, Home and the Gallery",
+              len(sizes) == 4 and all(one_size(d) for d in sizes.values()),
+              json.dumps({f"{k[0]} {k[1]}": v for k, v in sizes.items()}))
+        pens_at = {f"{k[1]} {k[2]}": [v["pen"] for v in d.values() if v["pen"]] for k, d in alone.items() if k[0] == "phone"}
+        check("...the pen's line under the page's icon on a phone: centred under it, 28 to 32px wide, just below it",
+              all(len(v) == 1 and abs(v[0]["dx"]) <= 1 and 28 <= v[0]["w"] <= 32 and 0 <= v[0]["gap"] <= 4 for v in pens_at.values()),
+              json.dumps(pens_at))
         small = [f"{s} {i['name']} {i['w']}x{i['h']}" for s in ("phone", "desk") for pg_ in ("home", "explore")
                  for i in seen[(s, pg_)][0] if i["w"] < 44 or i["h"] < 44]
         top = seen[("phone", "home")][2]
@@ -564,7 +623,7 @@ with sync_playwright() as p:
         # A touch phone taps the bar's Gallery on Home (the page's own
         # cross-fade); a desk opens the Gallery; Reduce Motion on a phone.
         PEN_DRAWS = r"""(() => { const out = window.__penDraw = [], t0 = performance.now();
-          (function f(frame) { const p = document.querySelector('nav.nav .tab[aria-current] .tab-name .pen-line path');
+          (function f(frame) { const l = [...document.querySelectorAll('nav.nav .tab[aria-current] .pen-line')].find(x => x.getBoundingClientRect().width > 10), p = l && l.querySelector('path');
             if (p) { const cs = getComputedStyle(p), a = p.getAnimations()[0];
               if (!window.__penTiming) window.__penTiming = a ? { delay: a.effect.getTiming().delay, ms: a.effect.getTiming().duration } : {};
               out.push([Math.round(((frame === undefined ? performance.now() : frame) - t0) * 10) / 10,
