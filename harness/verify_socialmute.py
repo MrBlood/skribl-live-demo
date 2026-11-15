@@ -1491,7 +1491,7 @@ with sync_playwright() as p:
             m = re.search(r"data-follow-counts>(.*?)</p>", own, re.S)
             said = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", m.group(1))).strip() if m else None
             lst = re.search(r'data-list="followers"[^>]*>(.*?)</ul>', own, re.S)
-            listed = re.findall(r'<span>(@[a-z0-9_]+)</span>', lst.group(1)) if lst else None
+            listed = re.findall(r'<span class="fo-handle">(@[a-z0-9_]+)</span>', lst.group(1)) if lst else None
             check("nothing changes on Mox's side: his own page still says “1 follower”, and his list of who follows him"
                   " names Lee", st_m == 200 and said == "1 follower" and listed == ["@lee"], f"{said!r}; listed {listed}")
             c = lee.client()
@@ -1795,7 +1795,7 @@ with sync_playwright() as p:
             if pg.locator("[data-follows-open=followers]").count():
                 pg.locator("[data-follows-open=followers]").tap()
                 pg.wait_for_timeout(800)
-            fwho = pg.evaluate("() => [...document.querySelectorAll('#followsSheet [data-list=followers] .lk-who span')].map(s => s.textContent.trim())")
+            fwho = pg.evaluate("() => [...document.querySelectorAll('#followsSheet [data-list=followers] .lk-who .fo-handle')].map(s => s.textContent.trim())")
             close_ctx(ctx, pg)
             unmute(xia, "yan")
             check("counts stay true for you too: Home's card for a post they liked and said something on says 1 like and 1"
