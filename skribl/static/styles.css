@@ -173,8 +173,6 @@
   --menu-card:       #231e3b;
   --menu-card-line:  rgba(167, 146, 255, 0.12);
   --menu-card-rule:  rgba(167, 146, 255, 0.12);
-  --row-line:        rgba(255, 255, 255, 0.16);
-  --hair: 1;
   --menu-card-drop:  0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
   /* A SELECTED OPTION IS A TINT, AN ACTION IS SOLID. The same purple used to
      mean both, so a drawer carried five or six purple slabs and nothing said
@@ -336,8 +334,6 @@
      editors (styles.css "Replay auto-hide", flip.css). Mocked with the owner. */
   --drawer-rest: 0.4;
 }
-@media (min-resolution: 2dppx) { :root { --hair: 0.5; } }
-@media (min-resolution: 3dppx) { :root { --hair: 0.3334; } }
 
 * { box-sizing: border-box; }
 
@@ -8608,10 +8604,23 @@ body.stroking .toolbar, body.stroking .flip-tools {
    --hair is set beside the tokens. */
 :is(.menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden]), .sdrafts-files > .menu-item + .menu-item,
     .sdrafts-card > .sdrafts-row + .sdrafts-row, .export-list > :not([hidden]) ~ :not([hidden]),
-    .ask-list > .ask-row + .ask-row) { border-top: 1px solid transparent; position: relative; }
+    .ask-list > .ask-row + .ask-row, .tune-row + .tune-row) {
+  border-top: 1px solid transparent; position: relative;
+  /* The line's own two values, here and not among the page's tokens, so the
+     player's stylesheet (which keeps every root token) never carries them:
+     the text's own colour at 16% (white over dark, ink over light), and one
+     screen pixel. */
+  --row-line: color-mix(in srgb, var(--text-primary) 16%, transparent); --hair: 1;
+}
+@media (min-resolution: 2dppx) { :is(.menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden]), .sdrafts-files > .menu-item + .menu-item,
+    .sdrafts-card > .sdrafts-row + .sdrafts-row, .export-list > :not([hidden]) ~ :not([hidden]),
+    .ask-list > .ask-row + .ask-row, .tune-row + .tune-row) { --hair: 0.5; } }
+@media (min-resolution: 3dppx) { :is(.menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden]), .sdrafts-files > .menu-item + .menu-item,
+    .sdrafts-card > .sdrafts-row + .sdrafts-row, .export-list > :not([hidden]) ~ :not([hidden]),
+    .ask-list > .ask-row + .ask-row, .tune-row + .tune-row) { --hair: 0.3334; } }
 :is(.menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden]), .sdrafts-files > .menu-item + .menu-item,
     .sdrafts-card > .sdrafts-row + .sdrafts-row, .export-list > :not([hidden]) ~ :not([hidden]),
-    .ask-list > .ask-row + .ask-row)::before {
+    .ask-list > .ask-row + .ask-row, .tune-row + .tune-row)::before {
   content: ""; position: absolute; top: -1px; left: var(--line-start, 50px); right: var(--line-end, 14px); height: 1px;
   background: var(--row-line); transform: scaleY(var(--hair)); transform-origin: top; pointer-events: none;
 }
@@ -8620,6 +8629,9 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .sdrafts-card { --line-start: 92px; }
 .export-list { --line-start: 64px; }
 .ask-list { --line-start: 14px; }
+/* Tune's rows are a list on the paper whose rule is the menu's (an earlier
+   decision; verify_contrast holds it): their line runs the row's width. */
+.tune-row { --line-start: 0px; --line-end: 0px; }
 /* A row in focus hides its own line: the ring is its edge there, and the line,
    drawn later, would cover the ring's top (the GIF's line is its group's). */
 :is(.menu-list > .menu-item, .sdrafts-files > .menu-item, .ask-list > .ask-row, .export-list > .export-opt):focus-visible::before,
@@ -9348,7 +9360,6 @@ body.replaying .media-card { pointer-events: none; }
   --menu-card:               #ffffff;
   --menu-card-line:          rgba(124, 92, 255, 0.34);
   --menu-card-rule:          rgba(80, 60, 170, 0.10);
-  --row-line:                rgba(20, 10, 60, 0.16);
   --menu-card-drop:          0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
   /* AA on what is actually painted behind it: #5b3be6 was 4.37:1 on the tint
      over the drawers' track, under the unselected label's 4.99. One step
