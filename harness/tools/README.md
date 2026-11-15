@@ -48,6 +48,29 @@ Flip's ball fresh through the real Flip (`flipworks.bounce_splat`, by
 bounce three times by its own loop, then the splat, to `hint-ball.json`.
 `make_handwords.py ball` redraws the ball alone.
 
+## The site's demo people
+
+`demo_people.py` makes people on the site (/social) the way a person does,
+for a demo the owner can look around in. Each comes in on a link from the
+owner's Settings (an invite to join, or a sign-in link for someone already
+there) with a passkey of their own from Chromium's virtual authenticator,
+draws a face in the face sheet's Pad, and posts drawings performed in the
+composer's Pad or Flip with this pipeline's pen (`artdraw.py`,
+`artworks.py`, `flipworks.py`), so the editor makes each drawing's still
+picture as it posts. A drawing posted straight to the API has none, and its
+tile and player start on a blank canvas. Follows, likes, comments, reposts,
+quotes, mentions and bookmarks then go through the site's own endpoints as
+each person.
+
+Its docstring has the usage. Rehearse on a local site first
+(`harness/bootstrap.sh`; the links from `flask social invite` and `flask
+social recover HANDLE`). The file it writes as it goes holds each person's
+passkey and cookies, a key to their accounts, so it lives in a scratch
+folder and never in the repository; without it, they come back in only on
+new sign-in links. `--check` reads a site and changes nothing: every post
+made shows its drawing's own picture, every face is set, and the old blank
+drawings are gone.
+
 ## Measurement
 
 `cssgraph.py` emits `player.css` (run it after any `styles.css` change — the
