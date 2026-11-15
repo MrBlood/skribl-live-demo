@@ -334,10 +334,12 @@ a.post-act { text-decoration: none; }
    - BLOOBY, a strip of his seven jump poses drawn by the real Pad
      (brand/blooby-splash-jump.webp, blooby.py splash-jump), one frame shown;
      splash.js steps through them and lifts him. His shadow lies on the pool.
-   - "blooby." at the foot, the site's hello (brand/blooby-hello.json): the
-     word in the site's purple and its blush period falling as skribl's
-     i-dot does, by Skribl's player as a draft (no frame, ground, chip or
-     Play).
+   - "blooby." UNDER THE STAGE, its middle at 70% of the splash (the owner,
+     Nov 15, of 83%, 76% and 70%: "70"; at 83% it sat low, 77px above the
+     phone's foot, far from the stage), the site's hello (brand/
+     blooby-hello.json): the word in the site's purple and its blush period
+     falling as skribl's i-dot does, by Skribl's player as a draft (no
+     frame, ground, chip or Play).
 
    ITS UNIT, --u, is a pixel of the owner's phone (874 tall), smaller on a
    shorter screen, so the whole show keeps its proportions and his jump stays
@@ -381,7 +383,7 @@ html.is-splashing body { overflow: hidden; }
 .splash.is-still .splash-jump img { transform: translateX(-85.7143%); }   /* his last pose, arms up */
 .splash-word {
   position: absolute; left: 50%; width: calc(280 * var(--u)); margin-left: calc(-140 * var(--u));
-  top: calc(83% - 280 * var(--u) * 16 / 9 * 0.46);
+  top: calc(70% - 280 * var(--u) * 16 / 9 * 0.46);
 }
 .splash .skribl-inline { aspect-ratio: 9 / 16; width: 100%; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .splash .skribl-inline-dur, .splash .skribl-inline-play, .splash .skribl-inline-veil, .splash .skribl-inline-prog,

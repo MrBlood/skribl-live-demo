@@ -2149,7 +2149,7 @@ a deep purple), where a still spotlight of the icon's lilac comes up on
 Blooby, who jumps with his hands thrown up (the Posted! card's seven poses,
 drawn by the real Pad without the badge, the last just him with his arms up)
 and lands back in its pool, while "blooby." in the site's purple writes itself
-at the foot the first time and its blush period falls, squashes and pops back
+under the stage (its middle at 70% of the screen) the first time and its blush period falls, squashes and pops back
 as skribl's i-dot does; later launches have the word already there; then it
 fades into the page (`splash-boot.js` decides before the first paint and asks
 for the show's two pictures, `splash.js` plays it, the word with Skribl's
