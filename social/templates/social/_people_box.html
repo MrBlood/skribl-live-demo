@@ -1,0 +1,4 @@
+{#  The Gallery's People section for a new pick, as /explore/more sends it
+    (gallery.py; finding people). #}
+{% from 'social/_people.html' import people_box with context %}
+{{ people_box(people, people_more, q) }}

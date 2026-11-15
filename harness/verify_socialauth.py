@@ -1361,6 +1361,7 @@ with sync_playwright() as p_:
                 "social_bookmarks",                      # bookmarks: the map, part two
                 "social_reposts",                        # reposts: the map, part two
                 "social_mentions",                       # mentions: the map, part two
+                "social_people_words",                   # finding people: the map, part two
                 "social_follows",                        # follows: phase 2
                 "social_mutes"}                          # mutes: phase 2
         want_idx = {"ix_social_people_public_id", "ix_social_people_handle_key", "ix_social_people_user_handle",
@@ -1401,11 +1402,13 @@ with sync_playwright() as p_:
                     "ix_social_mentions_person_post", "ix_social_mentions_person_comment",
                     "ix_social_mentions_person_created", "ix_social_mentions_post_id", "ix_social_mentions_comment_id",
                     "ix_social_mentions_by_id", "ix_social_mentions_owner_id", "ix_social_people_name_key",
+                    # finding people: every way in order, then whose; a person's own, once each
+                    "ix_social_people_words_key", "ix_social_people_words_person",
                     # follows: one row a pair, and newest first both ways
                     "ix_social_follows_pair", "ix_social_follows_follower_created", "ix_social_follows_followed_created",
                     # mutes: one row a pair, whose newest first, and whom
                     "ix_social_mutes_pair", "ix_social_mutes_muter_created", "ix_social_mutes_muted_id"}
-        check("on an empty SQLite file the site's chain builds its fifteen tables with every index, stamps its own"
+        check("on an empty SQLite file the site's chain builds its sixteen tables with every index, stamps its own"
               " version table (social_alembic_version) at its head, and touches nothing of Skribl's",
               r1.returncode == 0 and names == want | {"social_alembic_version"} and want_idx <= idx
               and stamps == {"social_alembic_version": [heads]},
@@ -1526,6 +1529,27 @@ with sync_playwright() as p_:
               and md[-1] == "DROP TABLE social_mentions" and len(md) == 9
               and all(s.startswith("DROP INDEX ix_social_") for s in md[:-1]),
               f"up {mn_up.returncode} {made_mn}; down {mn_down.returncode} {md}")
+        # ...AND FINDING PEOPLE'S (the owner's "All yes", Nov 15): a new table of
+        # the ways people are found and its two indexes, the key in the "C"
+        # collation (a search's range exact, in byte order, as on SQLite); no
+        # row of any table read or written (the people already there are given
+        # theirs in code, people.fill: the deploy's row below), no table there
+        # altered; and all of it dropped going down.
+        fp_up, fp_down = offline("upgrade", "6dc6c4054756:e8f5594cb16f"), offline("downgrade", "e8f5594cb16f:6dc6c4054756")
+        fu, fd = statements(fp_up.stdout), statements(fp_down.stdout)
+        made_fp = [s.split(" (")[0] for s in fu]
+        check("...and finding people's PostgreSQL DDL, read offline, is the new table (its key in the \"C\" collation)"
+              " and its two indexes: no row of any table read or written, no table there altered; and all of it dropped"
+              " going down",
+              fp_up.returncode == 0 and fp_down.returncode == 0
+              and made_fp == ["CREATE TABLE social_people_words",
+                              "CREATE INDEX ix_social_people_words_key ON social_people_words",
+                              "CREATE UNIQUE INDEX ix_social_people_words_person ON social_people_words"]
+              and 'word_key VARCHAR(64) COLLATE "C" NOT NULL' in fu[0]
+              and not any(s.split()[0] in ("INSERT", "UPDATE", "DELETE", "SELECT", "ALTER") for s in fu + fd)
+              and fd == ["DROP INDEX ix_social_people_words_person", "DROP INDEX ix_social_people_words_key",
+                         "DROP TABLE social_people_words"],
+              f"up {fp_up.returncode} {made_fp} {fu[:1]}; down {fp_down.returncode} {fd}")
         d2 = os.path.join(TMP, "chain-both-a.db")
         a1, a2 = alembic(d2, "upgrade", "head", ini=False), alembic(d2, "upgrade", "head")
         d3 = os.path.join(TMP, "chain-both-b.db")
@@ -1600,6 +1624,16 @@ with sync_playwright() as p_:
                     g.kill()
 
         d5 = os.path.join(TMP, "deploy-ok.db")
+        # A SITE WITH PEOPLE ALREADY (finding people): the chain as it stood
+        # before finding people, and somebody who joined then, with no ways of
+        # being found yet.
+        pre5 = alembic(d5, "upgrade", "6dc6c4054756")
+        con = sqlite3.connect(d5)
+        con.execute("insert into social_people (public_id, handle, handle_key, display_name, user_handle, is_admin,"
+                    " session_gen, age_confirmed_at, created_at) values ('site:adaold', 'adaold', 'adaold', 'Ada Old', x'01',"
+                    " 0, 1, '2026-11-01 10:00:00.000000', '2026-11-01 10:00:00.000000')")
+        con.commit()
+        con.close()
         got_ok, log_ok = gunicorn(d5)
         n5, _, s5 = tables(d5)
         check("gunicorn, started as Render starts it (`gunicorn app:app`, its conf read by name), brings the site's"
@@ -1609,6 +1643,17 @@ with sync_playwright() as p_:
               and got_ok.get("/skribl-pad") == 200 and got_ok.get("/social/signin") == 200
               and (got_ok.get("options") or (0,))[0] == 200,
               f"served {got_ok}; stamps {s5}; log: {[l for l in log_ok.splitlines() if 'social:' in l][:2]}")
+        con = sqlite3.connect(d5)
+        ways5 = sorted(r[0] for r in con.execute("select w.word_key from social_people_words w join social_people p on"
+                                                 " p.id = w.person_id where p.handle_key = 'adaold'"))
+        con.close()
+        said5 = [ln for ln in log_ok.splitlines() if "ways of being found" in ln]
+        check("...and, right after the chain and before any worker, it gives the people already there their ways of"
+              " being found (finding people: `flask social words --write`): Ada Old, there before it, has hers (\"ada"
+              " old\", \"old\", her @adaold), and the log says so",
+              pre5.returncode == 0 and ways5 == ["ada old", "adaold", "old"] and len(said5) == 1
+              and "words: 1 person given their ways of being found; 0 left" in said5[0],
+              f"pre {pre5.returncode}; ways {ways5}; said {said5}")
         d6 = os.path.join(TMP, "deploy-bad.db")
         con = sqlite3.connect(d6)
         con.execute("create table social_alembic_version (version_num varchar(32) not null primary key)")

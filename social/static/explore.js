@@ -18,6 +18,14 @@
  * the moment its first page was ranked at, so one scroll-through is one
  * order).
  *
+ * PEOPLE TOO (finding people; the owner's "All yes", Nov 15): a search's
+ * first page brings its People section ([data-fp-box], gallery.py's
+ * {people}), put in with the tiles while they can't be seen, so it comes and
+ * goes with them; the pills change the drawings alone. SEE ALL is the same
+ * page asked for the people alone ([data-who="people"]): its search and its
+ * Load more bring rows instead of tiles, by the people's own cursor, and an
+ * emptied box keeps the rows it has (nothing to find).
+ *
  * KIND, NEVER JUMPY: nothing moves but the pill's tint, which glides, and
  * the tiles, which fade (social.css, .gal-swap). Under Reduce Motion the tint
  * is put there and the tiles still only fade. Only the newest answer is
@@ -39,13 +47,15 @@
     WORDS[w.getAttribute('data-word')] = w.textContent;
   });
   var page = swap.getAttribute('data-explore');
+  var who = swap.getAttribute('data-who') || '';
+  var box = swap.querySelector('[data-fp-box]');
   var grid = swap.querySelector('[data-gal-grid]');
   var more = swap.querySelector('[data-gal-next]');
   var nones = swap.querySelectorAll('[data-gal-none]');
   var said = doc.querySelector('[data-gal-say]');
   var segs = { show: doc.querySelector('[data-gal-show]'), sort: doc.querySelector('[data-gal-sort]') };
   var find = doc.querySelector('[data-gal-find]');
-  var box = doc.querySelector('[data-gal-q]');
+  var qBox = doc.querySelector('[data-gal-q]');
   var Pill = window.SocialPill;
 
   function pressed(key, dflt) {
@@ -55,7 +65,7 @@
   function tidy(words) { return String(words || '').replace(/\s+/g, ' ').trim().slice(0, 80); }
   /* What the tiles show, and what the person has picked since (the same
      until a pick is asked for and comes back). */
-  var shown = { show: pressed('show', 'everyone'), sort: pressed('sort', 'new'), q: box ? tidy(box.defaultValue) : '' };
+  var shown = { show: pressed('show', 'everyone'), sort: pressed('sort', 'new'), q: qBox ? tidy(qBox.defaultValue) : '' };
   var want = { show: shown.show, sort: shown.sort, q: shown.q };
   var turn = 0;
 
@@ -69,6 +79,7 @@
     if (s.show !== 'everyone') p.push('show=' + encodeURIComponent(s.show));
     if (s.sort !== 'new') p.push('sort=' + encodeURIComponent(s.sort));
     if (s.q) p.push('q=' + encodeURIComponent(s.q));
+    if (who) p.push('who=' + encodeURIComponent(who));
     if (before) p.push('before=' + encodeURIComponent(before));
     return p.length ? '?' + p.join('&') : '';
   }
@@ -76,9 +87,11 @@
     return fetch(url + query(s, before), { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); });
   }
-  /* Nothing to show says why, in its own words for the way of looking. */
+  /* Nothing to show says why, in its own words for the way of looking (a
+     search that found people but no drawings says so of the drawings). */
   function empties() {
-    var key = grid.children.length ? '' : (shown.q ? 'search' : shown.show);
+    var key = grid.children.length ? '' : who ? who
+      : !shown.q ? shown.show : (box && box.querySelector('.fp-row') ? 'search-people' : 'search');
     Array.prototype.forEach.call(nones, function (n) { n.hidden = n.getAttribute('data-gal-none') !== key; });
   }
   /* The tiles fade out (social.css, .gal-swap.is-out); this waits for them
@@ -119,6 +132,7 @@
       /* Changed while they can't be seen, the page held at its height and
          its place, then faded back. */
       swap.style.minHeight = swap.offsetHeight + 'px';
+      if (box) box.innerHTML = j.people || '';
       grid.innerHTML = j.html || '';
       shown = s;
       more.setAttribute('data-gal-next', j.next || '');
@@ -152,17 +166,17 @@
     });
   });
 
-  if (find && box) {
+  if (find && qBox) {
     var qTimer = 0;
     var search = function () {
-      var words = tidy(box.value);
-      if (words === want.q) return;
+      var words = tidy(qBox.value);
+      if (words === want.q || (who && !words)) return;
       want.q = words;
       load();
     };
     find.addEventListener('submit', function (e) { e.preventDefault(); clearTimeout(qTimer); search(); });
-    box.addEventListener('input', function () { clearTimeout(qTimer); qTimer = setTimeout(search, 350); });
-    if (tidy(box.value) !== shown.q) search();
+    qBox.addEventListener('input', function () { clearTimeout(qTimer); qTimer = setTimeout(search, 350); });
+    if (tidy(qBox.value) !== shown.q) search();
   }
 
   more.addEventListener('click', function () {

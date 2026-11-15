@@ -33,8 +33,9 @@ from datetime import datetime, timezone
 import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
-__all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
+__all__ = ["SocialBase", "Person", "PersonWord", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
            "Comment", "Like", "Bookmark", "Repost", "Mention", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX",
+           "WORD_MAX",
            "BIO_MAX",
            "BIO_LINES",
            "WORDS_MAX", "REPORT_KINDS", "REPORT_STATES", "REPORT_NOTE_MAX", "HOME_FEEDS",
@@ -158,8 +159,58 @@ class Person(SocialBase):
 
 #: THEIR NAME IN SMALL LETTERS (mentions: the list under an @, "anybody whose
 #: name starts with it"): an index of an expression, so it sits outside the
-#: class, where the column can be named.
+#: class, where the column can be named. Since finding people (PersonWord,
+#: below) it is read for an @ alone, the list's first rows by name.
 sa.Index("ix_social_people_name_key", sa.func.lower(Person.display_name))
+
+#: How long a way of finding somebody is kept (PersonWord.word_key): a name is
+#: 40 characters at most, and folding it (people.fold) seldom makes it longer.
+WORD_MAX = 64
+
+#: A way of finding somebody, as people.fold makes it: in byte order on both
+#: engines. SQLite compares text byte by byte (its BINARY collation), and on
+#: PostgreSQL the column is in the "C" collation, so there too a search's
+#: range (every key from what was typed to the next letter after it) holds
+#: exactly the keys that start with it, never one more or one less, whatever
+#: language the database itself sorts in.
+WordKey = sa.String(WORD_MAX).with_variant(sa.String(WORD_MAX, collation="C"), "postgresql")
+
+
+class PersonWord(SocialBase):
+    """A way somebody is found (finding people: the map, part two, item 5;
+    the owner's "All yes" on the finding-people mock, Nov 15): their name
+    from each of its words on ("theo park", "park"), and their @handle
+    ("theo_p"), each folded (people.fold: small letters, accents put aside,
+    anything that is not a letter or a digit one space). A search, and the
+    list under an @, read the keys that start with what was typed, on
+    ix_social_people_words_key; so "pa" finds Theo Park by the start of his
+    last name, and "ar" finds nobody by the middle of it.
+
+    WRITTEN IN CODE WHENEVER A NAME IS SET (people.write_words): joining
+    (accounts.py) and Edit profile (profiles.py), in the same transaction as
+    the name, the old keys taken away first, so a name changed is found by its
+    new words and never its old. Nothing else sets a name or a handle. The
+    people who were here before this table are filled in code, never by a
+    migration (people.fill: `flask social words`, which gunicorn.conf.py runs
+    once each start, after the site's chain).
+
+    DELETING IS REAL AND SAID IN CODE (accounts.delete_person); the ON DELETE
+    CASCADE is the net under it."""
+    __tablename__ = "social_people_words"
+
+    id = sa.Column(BigId, primary_key=True)
+    #: Whose way it is.
+    person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: The way, folded: a name from one of its words on, or the @handle.
+    word_key = sa.Column(WordKey, nullable=False)
+
+    __table_args__ = (
+        #: A search: every key from what was typed on, in order, then who.
+        sa.Index("ix_social_people_words_key", "word_key", "person_id"),
+        #: A person's own: written again with their name, read through your
+        #: follows (the people you follow first), and once a person a key.
+        sa.Index("ix_social_people_words_person", "person_id", "word_key", unique=True),
+    )
 
 
 class Passkey(SocialBase):

@@ -355,6 +355,10 @@ def register(bp, skribl_blueprint="skribl"):
                          form_bio=raw_bio if isinstance(raw_bio, str) else "", errors=errors,
                          token=csrf_token())
         row.display_name, row.bio = name, bio
+        # The ways they are found (finding people), written again with the
+        # name: its new words find them, and its old ones never again.
+        from .people import write_words
+        write_words(row)
         sess.flush()
         return redirect(profile_url(row.handle) + "?note=saved", 303)
 

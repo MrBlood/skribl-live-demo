@@ -306,7 +306,8 @@ def delete_person(sess, person_id):
     owned, the quotes of what they owned letting go of it, each saying it is
     gone (reposts); every mention of them and every one they wrote, the words
     that named them staying, plain (mentions); their follows, both ways
-    (follows); their mutes, both ways (mutes). Flushes; the request commits.
+    (follows); their mutes, both ways (mutes); the ways they were found
+    (finding people). Flushes; the request commits.
     (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
     for a host to take an author's drawings away in one go: they stay, and
     the confirm page says so.)"""
@@ -349,6 +350,10 @@ def delete_person(sess, person_id):
     # here too, never left to the cascade).
     from .mutes import drop_person_mutes
     drop_person_mutes(person_id)
+    # The ways they were found (finding people: said here too, never left to
+    # the cascade).
+    from .people import drop_person_words
+    drop_person_words(person_id)
     # Answers to them, by people who stay, stay too, answering nobody now
     # (notifications: Activity's "answered your comment" reads whom).
     from .models import Comment
@@ -624,6 +629,9 @@ def register(bp):
             with sess.begin_nested():
                 sess.add(person)
                 sess.flush()
+                # The ways they are found (finding people), with the name.
+                from .people import write_words
+                write_words(person)
                 if first:
                     # The first invite, spent: a used row with its hash, which
                     # a second person racing for it cannot also write.

@@ -25,7 +25,8 @@ people.
      line (8px), placed over what is there (nothing moves), the mock's card
      and rows (52px, the face 36, the name 17px 600, the @handle 15px); the
      people you follow first, then anybody by name; narrowing as you type;
-     any word of a followed person's name; nobody a block hides either way,
+     any word of anybody's name (the ways the Gallery's search finds people
+     by, since finding people); nobody a block hides either way,
      nobody taken down, never yourself; four at most; a tap puts "@handle "
      in, the field keeping its focus; the keyboard's arrows, Enter, Tab and
      Esc (the sheet staying); a listbox and its options to a screen reader;
@@ -48,10 +49,11 @@ people.
   8. DELETING, IN CODE: a post, a comment (its answers' too), a drawing on the
      site, an account (of it, by it, on what it owned); with SQLite's cascade
      off on a copy; and a drawing's comments moving into a post keep theirs.
-  9. THE DATA: the chain on a populated database (the table, its seven
-     indexes and its CHECK, the names' index; nothing else touched, no row
-     written; back down); once a person a post or a comment; the reads on
-     their indexes (SQLite's own plan); a page of Home's cards asks once.
+  9. THE DATA: the chain on a populated database, read at the mentions' own
+     revision (the table, its seven indexes and its CHECK, the names' index;
+     nothing else touched, no row written; back down); once a person a post
+     or a comment; the reads on their indexes (SQLite's own plan); a page of
+     Home's cards asks once.
  10. CONTRAST AND TARGETS, read off the paint: the mention on the card and on
      a comment's ground, phone and desk, light and dark (the mock's 8.26 /
      8.39 and 7.75 / 9.89); every word of the list (its highlighted row too)
@@ -541,6 +543,15 @@ def ensure_row(handle, name):
     return got[0][0] if got else person_row(handle, name)
 
 
+def fill_words():
+    """The ways of being found (finding people) for anybody written straight
+    into the table, as the site gives them to the people who were there
+    before it: `flask social words --write`. (exit code, what it said)."""
+    out = subprocess.run([sys.executable, "-m", "flask", "--app", "app", "social", "words", "--write"],
+                         cwd=ROOT, env=ENV, capture_output=True, text=True, timeout=180)
+    return out.returncode, (out.stdout.strip().splitlines() or [""])[-1]
+
+
 # ---- the census of words and targets (verify_sociallikes' READ) -----------------
 # Every word under `sel` at 4.5:1 on what is painted behind it; every target
 # 44px, but a mention: a link inside words (WCAG 2.5.8's inline exception),
@@ -906,12 +917,16 @@ with sync_playwright() as p:
         Mira follows Theo Park and Pip; strangers whose names or handles start
         with v (five, so four show), one a block hides each way and one taken
         down; Paz Ruiz, whose name sorts before Theo Park's; Bo Lund, whose
-        handle (rainbo) starts with what his name does not."""
+        handle (rainbo) starts with what his name does not; Vera Quill, a
+        stranger whose later word is found (finding people)."""
         mira = someone(b, "mira", "Mira Lopez")
         for h, n in (("theo", "Theo Park"), ("pip", "Pip"), ("valerie", "Val"), ("veev", "Vee"), ("vera", "Vera Quill"),
                      ("vexx", "Vex"), ("victran", "Vic Tran"), ("vikstone", "Vik Stone"), ("violane", "Vio Lane"),
                      ("vinmoss", "Vin Moss"), ("pazr", "Paz Ruiz"), ("rainbo", "Bo Lund")):
             ensure_row(h, n)
+        # Written straight in, they are found once the site's fill gives them
+        # their ways (finding people), as the people who were there before it.
+        fill_words()
         follow(mira, "theo")
         follow(mira, "pip")
         block(mira, "vikstone")
@@ -989,13 +1004,16 @@ with sync_playwright() as p:
                   json.dumps(f))
             # NARROWING, AND WHO IS NEVER IN IT.
             seen = {}
-            for words in ("@pa", "@v", "@ve", "@ver", "@vi", "@rai", "@mi"):
+            for words in ("@pa", "@v", "@ve", "@ver", "@vi", "@rai", "@mi", "@qu"):
                 got = typed(pg, words, open_=words != "@mi")
                 seen[words] = handles((got or {}).get("rows")) if got and got["open"] else []
             check("as you type it narrows: \"@pa\" Theo Park first (any word of a name you follow), then Paz Ruiz;"
-                  " \"@v\" four of five; \"@ve\" three; \"@ver\" one; a handle's start (\"@rai\", Bo Lund)",
+                  " \"@v\" four of five; \"@ve\" three; \"@ver\" one; a handle's start (\"@rai\", Bo Lund); and"
+                  " anybody's later word, as the Gallery's search finds people (\"@qu\", Vera Quill, whom Mira does not"
+                  " follow)",
                   seen["@pa"] == ["@theo", "@pazr"] and seen["@v"] == ["@valerie", "@veev", "@vera", "@vexx"]
-                  and seen["@ve"] == ["@veev", "@vera", "@vexx"] and seen["@ver"] == ["@vera"] and seen["@rai"] == ["@rainbo"],
+                  and seen["@ve"] == ["@veev", "@vera", "@vexx"] and seen["@ver"] == ["@vera"] and seen["@rai"] == ["@rainbo"]
+                  and seen["@qu"] == ["@vera"],
                   json.dumps(seen))
             check("nobody a block hides, either way (Vik Stone, whom Mira blocked; Vio Lane, who blocked her),"
                   " nobody taken down (Vin Moss), never herself (\"@mi\": nobody, the list shut)",
@@ -1501,7 +1519,12 @@ with app.app_context():
                         " (1, 'comment0001', 1, 1, 2, 'And @one back', '2026-11-02 11:00:00.000000')")
             con.commit()
             con.close()
-            a2 = alembic(chain, "upgrade", "head")
+            # The mentions' own revision, after the reposts', on the chain (finding
+            # people's follows it since Nov 15: the chain is read at the mentions'
+            # revision, what it stamps there, never at its head).
+            hist = subprocess.run([sys.executable, "-m", "alembic", "-c", "social/alembic.ini", "history", "-r",
+                                   "3e7b508ff939:6dc6c4054756"], cwd=ROOT, capture_output=True, text=True, timeout=60).stdout
+            a2 = alembic(chain, "upgrade", "6dc6c4054756")
             con = sqlite3.connect(chain)
             cols = [r[1] for r in con.execute("pragma table_info(social_mentions)")]
             idx = {r[0] for r in con.execute("select name from sqlite_master where type='index' and tbl_name = 'social_mentions'")}
@@ -1533,11 +1556,13 @@ with app.app_context():
                     and not con.execute("select 1 from sqlite_master where name = 'ix_social_people_name_key'").fetchone())
             back = (con.execute("select words from social_posts").fetchall(), con.execute("select words from social_comments").fetchall())
             con.close()
-            check("the chain on a populated database: one head (6dc6c4054756, after the reposts'); up, the table"
+            check("the chain on a populated database: one head, the mentions' revision on it (6dc6c4054756, after the"
+                  " reposts'), read at it; up, the table"
                   " social_mentions (who, by whom, in a post or a comment, whose, as typed, when) with its CHECK and its"
                   " seven indexes, and the names' index on social_people; no row written (old words with an @ in them"
                   " stay words), every post and comment as it was",
-                  heads == ["6dc6c4054756", "(head)"] and a1.returncode == 0 and a2.returncode == 0
+                  len(heads) == 2 and heads[1] == "(head)" and "3e7b508ff939 -> 6dc6c4054756" in hist
+                  and a1.returncode == 0 and a2.returncode == 0
                   and cols == ["id", "person_id", "by_id", "post_id", "comment_id", "owner_id", "typed", "created_at"]
                   and want_idx <= idx and bool(name_idx) and "lower(display_name)" in name_idx[0]
                   and "ck_social_mentions_on_one" in sql and rows == 0 and stamp_ == [("6dc6c4054756",)]
@@ -1566,12 +1591,14 @@ with app.app_context():
                   "the comments' links": ["ix_social_mentions_comment_id"],
                   "activity's mentions": ["ix_social_mentions_person_created"],
                   "the list, an @ alone": ["ix_social_follows_", "ix_social_people_handle_key", "ix_social_people_name_key"],
-                  "the list, @v": ["ix_social_follows_", "ix_social_people_handle_key", "ix_social_people_name_key"]}
+                  "the list, @v": ["ix_social_follows_", "ix_social_people_words_person", "ix_social_people_words_key"]}
             missing = {k: [ix for ix in v if not any(ix in line for line in plans.get(k, []))] for k, v in on.items()}
-            scans = {k: [line for line in v if re.match(r"SCAN (social_mentions|social_people)\b", line)] for k, v in plans.items()}
+            scans = {k: [line for line in v if re.match(r"SCAN (social_mentions|social_people|social_people_words)\b", line)]
+                     for k, v in plans.items()}
             check("the reads on their indexes (SQLite's own plan): the links in a page's cards and in its comments, a"
-                  " post's and a comment's own; Activity's on the person's own, newest first; the list's on your"
-                  " follows, the handles' own and the names', never a scan of the people or the mentions",
+                  " post's and a comment's own; Activity's on the person's own, newest first; the list's for an @ alone"
+                  " on your follows, the handles' own and the names'; with letters, on your follows and their ways, and"
+                  " everybody's ways (finding people's); never a scan of the people, their ways or the mentions",
                   plans and not any(missing.values()) and not any(scans.values()),
                   json.dumps({"missing": missing, "scans": scans, "plans": plans})[:900])
             check("a page of Home's cards (twenty, every one naming somebody) reads their mentions once, and shows them",

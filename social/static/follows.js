@@ -11,6 +11,10 @@
  * button back to Follow and tells the site; Keep following keeps it. Nobody
  * is told either way. SIGNED OUT, Follow raises the small sheet that says
  * how; Sign in comes back to the same page, and nothing is pressed for them.
+ * EVERY FOLLOW ON A PAGE works so, each its own (a person's page has one;
+ * the Gallery's People, finding people, one a row, rows that a search or
+ * Load more brings later too), and one sheet serves them all, saying the
+ * name of the one tapped.
  *
  * THE COUNTS FOLLOW THE TAP (the quick-patterns mock's A): the site's answer
  * to a follow brings the page's counts as it now shows them to you ("New
@@ -83,14 +87,19 @@
   var choose = window.SocialPill.choose, place = window.SocialPill.place;
 
   /* ---- Follow, then Following ------------------------------------------------ */
-  var said = doc.querySelector('[data-say]');
-  var heard = doc.querySelector('[data-follow-said]');
+  /* EVERY FOLLOW ON THE PAGE (a person's page has one; the Gallery's People,
+     finding people, one a row, rows that come later with a search or Load
+     more too): each keeps its own state, and a tap reaches it wherever it
+     sits (one listener, on the page). ONE SHEET FOR THEM ALL: "Unfollow
+     Theo?" says the name of the button that raised it ([data-fo-first]),
+     and is that button's alone while it is up. */
   function tell(text) {
+    var said = doc.querySelector('[data-say]');
     if (!said) return;
     said.textContent = text || '';
     said.hidden = !text;
   }
-  var btn = doc.querySelector('[data-follow]');
+  var heard = doc.querySelector('[data-follow-said]');
   var counts = doc.querySelector('[data-follow-counts]');
   var pending = null, fading = false;
   /* The page's counts again, from the site's answer (follows.py: its own
@@ -119,15 +128,35 @@
     timer = setTimeout(gone, 260);
     counts.classList.add('is-out');
   }
+  /* The name of the person a sheet is about, from the button that raised it;
+     and Sign in coming back to this page as its address is now (the
+     Gallery's search changes its address as it goes). */
+  function about(wrap, b) {
+    var first = b.getAttribute('data-first') || '';
+    Array.prototype.forEach.call(wrap.querySelectorAll('[data-fo-first]'), function (s) { s.textContent = first; });
+    var signin = wrap.querySelector('[data-fo-signin]');
+    if (signin) signin.href = signin.getAttribute('data-fo-signin') + '?next=' +
+      encodeURIComponent(window.location.pathname + window.location.search);
+  }
   var unWrap = doc.getElementById('unfollowSheet');
-  var un = btn && unWrap && window.SocialSheet ? window.SocialSheet(unWrap, {
-    openers: [btn], doorCloses: false,
+  var unFrom = [];           /* the button the sheet is up for, alone */
+  var un = unWrap && window.SocialSheet ? window.SocialSheet(unWrap, {
+    openers: unFrom, doorCloses: false,
     first: function () { return unWrap.querySelector('.post-sheet-acts [data-make-close]'); }
   }) : null;
+  /* Each button's own: following as the page shows it, as the site last
+     said, and whether its answer is on the way. */
+  function state(btn) {
+    if (!btn._fo) {
+      var on = btn.classList.contains('is-following');
+      btn._fo = { on: on, sure: on, busy: false };
+    }
+    return btn._fo;
+  }
   /* What the button shows: following or not (a change fades, and following
      draws the check: .fo-anim; unfollowing fades it, nothing un-drawing:
      .fo-fade), its name, and whether a tap raises a sheet. */
-  function show(on, moving) {
+  function show(btn, on, moving) {
     var name = btn.getAttribute('data-name') || '';
     if (btn.classList.contains('is-following') !== on) {
       btn.classList.remove('fo-anim', 'fo-fade');
@@ -145,61 +174,78 @@
       btn.removeAttribute('aria-expanded');
     }
   }
-  if (btn) {
-    var st = { on: btn.classList.contains('is-following'), sure: btn.classList.contains('is-following'), busy: false };
-    var send = function () {
-      if (st.busy) return;      /* its answer sends again if a tap changed what they want */
-      st.busy = true;
-      var want = st.on;
-      post(btn.getAttribute('data-follow'), { following: want }).then(function (j) {
-        st.busy = false;
-        if (j.ok) {
-          st.sure = !!j.following;
-          if (st.on !== want) { send(); return; }
-          if (st.on !== st.sure) { st.on = st.sure; show(st.on, true); }
-          recount(j.counts);
-          if (heard) heard.textContent = st.sure ? say('fo_now_following', { name: btn.getAttribute('data-name') || '' }) : '';
-          return;
-        }
-        st.on = st.sure;
-        show(st.on, true);
-        tell(why(j));
-      });
-    };
-    btn.addEventListener('click', function (e) {
-      e.preventDefault();
-      if (st.on) {
-        if (un) un.open(btn);
+  function send(btn) {
+    var st = state(btn);
+    if (st.busy) return;      /* its answer sends again if a tap changed what they want */
+    st.busy = true;
+    var want = st.on;
+    post(btn.getAttribute('data-follow'), { following: want }).then(function (j) {
+      st.busy = false;
+      if (j.ok) {
+        st.sure = !!j.following;
+        if (st.on !== want) { send(btn); return; }
+        if (st.on !== st.sure) { st.on = st.sure; show(btn, st.on, true); }
+        recount(j.counts);
+        if (heard) heard.textContent = st.sure ? say('fo_now_following', { name: btn.getAttribute('data-name') || '' }) : '';
         return;
       }
-      st.on = true;
-      tell('');
-      show(true, true);
-      send();
+      st.on = st.sure;
+      show(btn, st.on, true);
+      tell(why(j));
     });
-    var go = unWrap && unWrap.querySelector('[data-unfollow]');
-    if (go) {
-      go.addEventListener('click', function () {
-        if (un) un.close();
-        if (!st.on) return;
-        st.on = false;
-        tell('');
-        show(false, true);
-        if (heard) heard.textContent = '';
-        send();
-      });
+  }
+  doc.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-follow]');
+    if (!btn) return;
+    e.preventDefault();
+    var st = state(btn);
+    if (st.on) {
+      if (un) {
+        about(unWrap, btn);
+        unFrom.length = 0;
+        unFrom.push(btn);
+        un.open(btn);
+      }
+      return;
     }
+    st.on = true;
+    tell('');
+    show(btn, true, true);
+    send(btn);
+  });
+  var go = unWrap && unWrap.querySelector('[data-unfollow]');
+  if (go) {
+    go.addEventListener('click', function () {
+      var btn = unFrom[0];
+      if (un) un.close();
+      if (!btn) return;
+      var st = state(btn);
+      if (!st.on) return;
+      st.on = false;
+      tell('');
+      show(btn, false, true);
+      if (heard) heard.textContent = '';
+      send(btn);
+    });
   }
 
   /* ---- signed out --------------------------------------------------------------- */
   var outWrap = doc.getElementById('followOutSheet');
-  var outBtn = doc.querySelector('[data-follow-out]');
-  if (outWrap && outBtn && window.SocialSheet) {
+  var outFrom = [];
+  if (outWrap && window.SocialSheet) {
     var out = window.SocialSheet(outWrap, {
-      openers: [outBtn], doorCloses: false,
+      openers: outFrom, doorCloses: false,
       first: function () { return outWrap.querySelector('.post-sheet-acts [data-make-close]'); }
     });
-    outBtn.addEventListener('click', function (e) { e.preventDefault(); out.open(outBtn); });
+    doc.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-follow-out]');
+      if (!b) return;
+      e.preventDefault();
+      about(outWrap, b);
+      outFrom.length = 0;
+      outFrom.push(b);
+      out.open(b);
+    });
   }
 
   /* ---- your own page: who follows you, and whom you follow -------------------- */

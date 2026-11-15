@@ -32,6 +32,15 @@ sign-in rests (a kind 503 on its pages) until the tables are there, while
 the Pad, Flip and the rest of the demo serve as before. SKRIBL_SOCIAL=0, or a
 package without social/, skips it.
 
+AND THE WAYS OF FINDING ITS PEOPLE, RIGHT AFTER (finding people, Nov 15): once
+the chain is at its head, `flask social words --write` (social/people.py,
+fill) gives anybody who has no ways of being found yet theirs (the people who
+joined before finding people), in batches, before any worker takes a visitor;
+when there is nobody to give them to, it asks once and is done. The same
+care: a fill that fails or hangs is logged and the server starts anyway; the
+people it did not reach are found by nobody's search until the next start, or
+the command by hand, writes theirs.
+
 THE STAND-IN BESIDE THE DEMO, AFTER IT AND IN THE BACKGROUND. app.py mounts
 examples/host_app at /host: a second Flask app with a Skribl of its own, so
 caches of its own that start empty, and the first open of its Pad paid what
@@ -89,11 +98,31 @@ def _site_chain(log):
     said = _blank_addresses((done.stderr or "") + (done.stdout or ""))
     if done.returncode == 0:
         log.info("social: the site's tables are up to date (social_alembic_version at head)")
+        _site_words(log, here)
     else:
         last = " | ".join(line.strip() for line in said.strip().splitlines()[-4:])
         log.error("social: the site's tables could not be brought up to date (alembic exited %d); "
                   "the demo serves on, and the site's sign-in rests until they are: %s",
                   done.returncode, last[-600:])
+
+
+def _site_words(log, here):
+    """The ways of finding the site's people, for anybody who has none yet
+    (the docstring's AND THE WAYS paragraph). Never raises."""
+    try:
+        done = subprocess.run([sys.executable, "-m", "flask", "--app", "app", "social", "words", "--write"],
+                              cwd=here, capture_output=True, text=True, timeout=_SITE_CHAIN_SECONDS)
+    except subprocess.TimeoutExpired:
+        log.error("social: giving people their ways of being found took over %d s and was left; the next "
+                  "start, or `flask social words --write`, carries on", _SITE_CHAIN_SECONDS)
+        return
+    said = _blank_addresses((done.stderr or "") + (done.stdout or ""))
+    last = " | ".join(line.strip() for line in said.strip().splitlines()[-2:])
+    if done.returncode == 0:
+        log.info("social: %s", last[-300:])
+    else:
+        log.error("social: people's ways of being found were not all written (exit %d); the next start, or "
+                  "`flask social words --write`, carries on: %s", done.returncode, last[-600:])
 
 
 def _blank_addresses(text):

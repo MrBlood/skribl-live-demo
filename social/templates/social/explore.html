@@ -17,38 +17,76 @@
 
     THE TILES: two across on a phone, three on a desk (_gallery.html,
     gallery_tile). Load more brings the next page in place. Nothing found says
-    so kindly, in its own words for each way of looking. #}
+    so kindly, in its own words for each way of looking.
+
+    AND PEOPLE (finding people, the map's part two, item 5; the finding-people
+    mock and the owner's "All yes", Nov 15): the box says "Search people and
+    drawings", and with a search the People section comes first, up to three
+    people whose name (any word of it) or @handle starts with it, the people
+    you follow first, each with Follow as on their page, then "See all" when
+    there are more; then Drawings, the tiles as before (people.py,
+    _people.html). It is in the part that fades, so it comes and goes with
+    the tiles; the pills change the drawings alone. SEE ALL is this page asked
+    for the people alone (?who=people): "People", the box, twenty rows and
+    Load more, no pills (nothing here they would change); the back button
+    goes back to the Gallery as it was left. #}
 {% extends 'social/base.html' %}
 {% from 'social/_gallery.html' import gallery_tile, gallery_words with context %}
-{% from 'social/_follow.html' import gallery_show_pill, gallery_sort_pill with context %}
+{% from 'social/_follow.html' import gallery_show_pill, gallery_sort_pill, follow_sheets with context %}
+{% from 'social/_people.html' import people_box, people_rows with context %}
 
-{% block title %}Gallery · Blooby{% endblock %}
+{% block title %}{% if who %}People{% else %}Gallery{% endif %} · Blooby{% endblock %}
 {% block scripts %}<script src="{{ social_asset('follows.js') }}" defer></script>
 <script src="{{ social_asset('explore.js') }}" defer></script>{% endblock %}
 
 {% block main %}
+{% if who %}
+<div class="page-head">
+  <h1 class="page-title">People</h1>
+</div>
+{% else %}
 <div class="page-head">
   <h1 class="page-title">Gallery</h1>
   <p class="page-sub">Everyone’s drawings and Flips. Tap one to watch it come alive.</p>
 </div>
 {% if me %}{{ gallery_show_pill(show) }}{% endif %}
+{% endif %}
+{#  What a screen reader hears when a Follow takes (follows.js), ABOVE what
+    changes: after it, it was where the browser held the page still from (its
+    scroll anchor), and Load more's rows moved the page by what they added. #}
+<p class="sr" data-follow-said role="status"></p>
 <div class="gal-bar">
-  {{ gallery_sort_pill(sort) }}
+  {% if not who %}{{ gallery_sort_pill(sort) }}{% endif %}
   <form class="gal-find" role="search" action="{{ url_for('social.explore') }}" method="get" data-gal-find>
     {% if show != 'everyone' %}<input type="hidden" name="show" value="{{ show }}">{% endif %}
     {%- if sort != 'new' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
-    <input type="search" name="q" value="{{ q }}" placeholder="Search words and names" aria-label="Search the Gallery"
+    {%- if who %}<input type="hidden" name="who" value="{{ who }}">{% endif %}
+    <input type="search" name="q" value="{{ q }}" placeholder="Search people and drawings" aria-label="Search people and drawings"
            autocomplete="off" maxlength="80" data-gal-q>
   </form>
 </div>
-<h2 class="sr">Drawings</h2>
+{% if who %}
+<div class="gal-swap" data-gal-swap data-who="{{ who }}"{% if more_url %} data-more="{{ more_url }}"{% endif %} data-explore="{{ url_for('social.explore') }}">
+  <ul class="fp-list" data-gal-grid aria-label="People">{{ people_rows(people) }}</ul>
+  <p class="feed-none gal-none" data-gal-none="people"{% if people %} hidden{% endif %}>Nobody by that name yet. Try the start of a name or an @handle.</p>
+  <p class="say fp-say" data-say role="status" hidden></p>
+  <button class="btn btn-wide feed-more" type="button" data-gal-next="{{ next or '' }}"{% if not next %} hidden{% endif %}>Load more</button>
+</div>
+{% else %}
 <div class="gal-swap" data-gal-swap{% if more_url %} data-more="{{ more_url }}"{% endif %} data-explore="{{ url_for('social.explore') }}">
+  <div class="fp-box" data-fp-box>{{ people_box(people, people_more, q) }}</div>
   <div class="gal-grid" data-gal-grid>{% for t in tiles %}{{ gallery_tile(t) }}{% endfor %}</div>
   <p class="feed-none gal-none" data-gal-none="everyone"{% if tiles or q or show != 'everyone' %} hidden{% endif %}>No drawings here yet. Share one in a post, and it shows up here.</p>
   <p class="feed-none gal-none" data-gal-none="following"{% if tiles or q or show != 'following' %} hidden{% endif %}>Nobody you follow has shared a drawing yet. Tap Follow on someone’s page, and theirs show up here.</p>
-  <p class="feed-none gal-none" data-gal-none="search"{% if tiles or not q %} hidden{% endif %}>Nothing matches that. Try part of a word or a name.</p>
+  <p class="feed-none gal-none" data-gal-none="search"{% if tiles or not q or people %} hidden{% endif %}>Nothing matches that. Try part of a word or a name.</p>
+  <p class="feed-none gal-none" data-gal-none="search-people"{% if tiles or not q or not people %} hidden{% endif %}>No drawings match that.</p>
   <button class="btn btn-wide feed-more" type="button" data-gal-next="{{ next or '' }}"{% if not next %} hidden{% endif %}>Load more</button>
 </div>
+{% endif %}
 <p class="say" data-gal-say role="status" hidden></p>
 {{ gallery_words() }}
 {% endblock %}
+
+{#  FOLLOW, ON THIS PAGE TOO (finding people): the sheets a Follow raises, as
+    on a person's page, the name the button's own (follows.js puts it in). #}
+{% block overlays %}{% if accounts %}{{ follow_sheets(none, none, false, true) }}{% endif %}{% endblock %}

@@ -1,0 +1,49 @@
+{#  FINDING PEOPLE, THE PARTS (the map, part two, item 5; the finding-people
+    mock and the owner's "All yes", Nov 15). people.py says who is found and
+    in what order; follows.js moves Follow; explore.js the search and Load
+    more; social.css, "FINDING PEOPLE", dresses them in the mock's own sizes.
+
+    person_row(r)       one person found: their face (44px), their name (17px
+                        600, the first ink) and their @handle (15px, the
+                        second), one link to their page from the row's start
+                        to Follow, 64px tall; then Follow exactly as on their
+                        page (_follow.html follow_button: Follow, Following,
+                        asked once to unfollow; signed out, the sheet that
+                        says how). Your own row has none, as your own page
+                        has none.
+    people_rows(people) the rows alone (See all's Load more).
+    people_box(people, more, q)   the Gallery's People section, with a search
+                        that finds somebody: "People", up to three rows, "See
+                        all" when there are more (the people alone, the same
+                        page asked ?who=people), then the "Drawings" heading
+                        over the tiles. Finding nobody, only the drawings'
+                        heading, for a screen reader, as before.
+
+    Import these WITH CONTEXT: the rows read the page's me and skribl_bp. #}
+{% from 'social/_post.html' import face with context %}
+{% from 'social/_follow.html' import follow_button with context %}
+
+{% macro person_row(r) -%}
+<li class="fp-row"><a class="fp-who" href="{{ url_for('social.profile', handle=r.who.handle) }}">{{ face(r.who) }}<span class="fp-words"><b>{{ r.who.display_name }}</b><span>@{{ r.who.handle }}</span></span></a>
+{%- if not r.mine %}{{ follow_button(r.who, r.following) }}{% endif %}</li>
+{%- endmacro %}
+
+{% macro people_rows(people) -%}
+{%- for r in people %}{{ person_row(r) }}{% endfor -%}
+{%- endmacro %}
+
+{% macro people_box(people, more, q) -%}
+{%- if people %}
+<section class="fp-people" aria-labelledby="fpPeople">
+  <h2 class="fp-sec" id="fpPeople">People</h2>
+  <ul class="fp-list">{{ people_rows(people) }}</ul>
+  {%- if more %}
+  <p class="fp-all"><a href="{{ url_for('social.explore', q=q, who='people') }}">See all<span class="sr"> people</span><span aria-hidden="true">›</span></a></p>
+  {%- endif %}
+  <p class="say fp-say" data-say role="status" hidden></p>
+</section>
+<h2 class="fp-sec">Drawings</h2>
+{%- else %}
+<h2 class="sr">Drawings</h2>
+{%- endif %}
+{%- endmacro %}
