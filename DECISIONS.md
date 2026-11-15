@@ -41588,12 +41588,15 @@ PART), green on an untouched copy, the control:
     reposts and quotes, 15px, none at zero (red: a count at zero); lit in
     --accent-ink once yours, the row's ink otherwise (red: never lit); THREE
     COUNTS IN THE HUNDREDS (120, 140, 130, written straight into the tables) on
-    a 402px touch phone, light and dark, in this box's face, Inter and DejaVu
-    Sans, read off the paint: every part's ink inside the card (and its own
-    box, but in DejaVu Sans, where a count runs 1 to 4px into the room beside
-    it), 25px or more of ground between two parts' ink, Open › whole, every
-    part 44px, nothing past the screen (red: the counted three never giving,
-    flex-shrink 0: Open ›'s ink running to 397 where the card ends at 385).
+    a 402px touch phone, light and dark, in the page's own face, in DejaVu
+    Sans, and in Inter, Liberation Sans and FreeSans where the box has them,
+    read off the paint: every part's ink inside the card (and its own box, but
+    in DejaVu Sans, and in the page's own face where it is drawn in DejaVu
+    Sans, as on CI's Linux: there a count runs 1 to 4px into the room beside
+    it), 8px or more of ground between two parts' ink (25px and more as
+    built), Open › whole, every part 44px, nothing past the screen (red: the
+    counted three never giving, flex-shrink 0: Open ›'s ink running to 397
+    where the card ends at 385).
   - 2, THE SHEET: "Repost", one card, Repost and Quote with their second
     lines; once yours Undo repost; a drawing's, Quote alone; the ⋯'s sheet
     staying down; phone (light) and desk (dark) (red: other words for
@@ -41796,8 +41799,26 @@ a folder of their own):
   post it lands on must be a new one, and Make is asked on the same page once
   the quote was put away with Cancel, where a quote kept by mistake would
   show; a fresh page never holds one); verify_docs 144/144 with this entry.
+- AFTER CI'S MEND (FOUND WRONG, below): verify_socialreposts 49/49 and
+  verify_docs 144/144.
 - NOT RUN: the full battery (main's run after the merge does it);
   PostgreSQL (CI's postgres job); Firefox and WebKit (main's lanes).
+
+FOUND WRONG, AND MENDED, by CI's first full run on this branch (sqlite 1/6 and
+postgresql 1/6, 48/49 each): section 1's hundreds row went red there, green
+here. CI's Linux has no Inter, so the page's own face (system-ui) is DejaVu
+Sans there, and the row held "the page's own" to the strict rule by its name,
+where DejaVu Sans itself may run a count 1 or 2px into the room beside it (at
+85, 159 and 234: inside the card, 25px and more between two parts). The row
+reads the face drawn now: the page's own is held as DejaVu Sans where it
+measures as DejaVu Sans; and it reads Liberation Sans and FreeSans too
+(Arial's and Helvetica's widths, both in the page's own stack), which CI has,
+so the strict rule runs on CI as well. Shown with CI's fonts here (this box's
+fontconfig with Inter refused): the old row red, the new green, the new red
+with the counted three never giving (Open ›'s ink to 397, 392 and 391 where
+the card ends at 385); with this box's fonts the new green, and red with that
+break. Nothing on the page changed: in no face was anything painted past the
+card.
 
 JUDGMENT CALLS (where the mock and the plan did not say, the option closest
 to them and to likes' and bookmarks' ways):
@@ -41849,9 +41870,9 @@ which light in the small violet ink. Powerful: reposts, quotes of words, of
 a drawing, or both, and the original's author told.
 
 NOT TESTED HERE: WebKit, so the owner's iPhone (the sheet, the row and the
-composer as Safari draws them); SF and Segoe UI (the row read in this box's
-face, Inter and DejaVu Sans, which straddle them; nothing was nudged to a
-face); Firefox (main's lanes after the merge); PostgreSQL (the migration's DDL
+composer as Safari draws them); SF and Segoe UI (the row read in the page's
+own face, Inter, Liberation Sans, FreeSans and DejaVu Sans, which straddle
+them; nothing was nudged to a face); Firefox (main's lanes after the merge); PostgreSQL (the migration's DDL
 read offline only, its NOT VALID constraints included; CI's postgres job runs
 it); the live site. The one-glance tell on the live site: the row under a
 post has the two arrows where Share was.

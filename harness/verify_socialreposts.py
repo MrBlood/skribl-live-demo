@@ -9,7 +9,8 @@ authenticator for the site's people.
      link in the ⋯); the repost 44px, the mock's arrows at 20px in the row's
      ink, how many reposts and quotes beside them, none at zero; lit in the
      small violet ink once yours; three counts in the hundreds fitting a 402px
-     touch phone, read off the paint, in the page's face and in DejaVu Sans.
+     touch phone, read off the paint, in the page's face, in DejaVu Sans, and in
+     Inter, Liberation Sans and FreeSans where the box has them.
   2. THE SHEET: a tap raises #repostSheet, the ⋯'s shape, one card: Repost
      ("Show it to the people who follow you") and Quote ("Repost it with your
      own words, or a drawing"), the arrows and the bar's Make pencil; once
@@ -707,8 +708,11 @@ def ratio(a, b):
 
 #: The faces the row is read in besides the page's own: DejaVu Sans is wider
 #: than any face the app is drawn in on a device, and the one CI draws in
-#: (system-ui on Linux); Inter has SF's widths, near the owner's iPhone.
-FACES = ["DejaVu Sans", "Inter"]
+#: (system-ui on Linux); Inter has SF's widths, near the owner's iPhone;
+#: Liberation Sans and FreeSans have Arial's and Helvetica's (the page's own
+#: stack names both), and CI has them where it has no Inter. A face the box
+#: has not got is left out, so its fallback is not read twice.
+FACES = ["DejaVu Sans", "Inter", "Liberation Sans", "FreeSans"]
 FACE = """(f) => { let s = document.getElementById('rpFace');
   if (!s) { s = document.createElement('style'); s.id = 'rpFace'; document.head.appendChild(s); }
   s.textContent = f ? '.post-row, .post-row * { font-family: "' + f + '", sans-serif !important; }' : ''; }"""
@@ -918,26 +922,33 @@ with sync_playwright() as p:
             # THREE COUNTS IN THE HUNDREDS on a 402px touch phone, read off the paint.
             h1 = make_post(pia, "Section 1, a busy one")
             pile_on(h1, 120, 130, 140)
-            fit = {}
+            fit, wide = {}, {}
             for scheme in ("light", "dark"):
                 ctx, pg = browser_as(b, kai, screen="phone", scheme=scheme)
                 go(pg, "/social/", wait=500)
                 to(pg, card(h1) + " .post-row", 300)
                 faces = ["the page's own"] + pg.evaluate("""(faces) => faces.filter((f) => { const x = document.createElement('canvas').getContext('2d'), t = '120 130 140 Open';
                   x.font = '15px monospace'; const a = x.measureText(t).width; x.font = '15px "' + f + '", monospace'; return Math.abs(x.measureText(t).width - a) > 0.5; })""", FACES)
+                # THE PAGE'S OWN FACE IS DEJAVU SANS where the system's face is
+                # (CI's Linux): it is read by the face drawn, not by its name.
+                own_wide = pg.evaluate("""() => { const x = document.createElement('canvas').getContext('2d'), t = '120 130 140 Open';
+                  x.font = '15px ' + getComputedStyle(document.querySelector('.post-row')).fontFamily; const a = x.measureText(t).width;
+                  x.font = '15px "DejaVu Sans"'; return Math.abs(x.measureText(t).width - a) < 0.5; }""")
                 for f in faces:
                     pg.evaluate(FACE, None if f == "the page's own" else f)
                     pg.wait_for_timeout(250)
                     fit[(scheme, f)] = row_paint(pg, card(h1))
+                    wide[(scheme, f)] = f == "DejaVu Sans" or (f == "the page's own" and own_wide)
                 pg.evaluate(FACE, None)
                 close_ctx(ctx, pg)
             check("three counts in the hundreds (120 comments, 140 reposts, 130 hearts) fit a 402px touch phone, read off"
-                  " the paint, light and dark, in the page's own face, Inter and DejaVu Sans: every part's ink inside the"
-                  " card (in its own box, but in DejaVu Sans), 8px or more of ground between two parts' ink, Open ›"
-                  " whole, every part 44px, nothing past the screen",
-                  len(fit) >= 4 and all(fits(v, own_box=k[1] != "DejaVu Sans") for k, v in fit.items())
+                  " the paint, light and dark, in the page's own face and in DejaVu Sans, Inter, Liberation Sans and"
+                  " FreeSans where the box has them: every part's ink inside the card (in its own box, but in DejaVu"
+                  " Sans, the page's own face too where it is drawn in that), 8px or more of ground between two parts'"
+                  " ink, Open › whole, every part 44px, nothing past the screen",
+                  len(fit) >= 4 and all(fits(v, own_box=not wide[k]) for k, v in fit.items())
                   and all([q["n"] for q in v["parts"][:3]] == ["120", "140", "130"] for v in fit.values() if v),
-                  json.dumps({" ".join(k): v and {"gaps": [round(bb["ink"][0] - a["ink"][1], 1) for a, bb in zip(v["parts"], v["parts"][1:])
+                  json.dumps({" ".join(k): v and {"wide": wide[k], "gaps": [round(bb["ink"][0] - a["ink"][1], 1) for a, bb in zip(v["parts"], v["parts"][1:])
                                                           if a["ink"] and bb["ink"]],
                                                  "open": v["parts"][-1]["ink"], "card": v["card"], "stray": v["stray"],
                                                  "w": [q["w"] for q in v["parts"]]} for k, v in fit.items()})[:900])
