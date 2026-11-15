@@ -485,6 +485,12 @@ PASSING = """(sel) => { const w = document.querySelector(sel), s = w.querySelect
     const at = document.elementFromPoint(x, y); return at && s.contains(at) ? (e.textContent.trim() || e.tagName).slice(0, 20) : null; }).filter(Boolean);
   return { sheet: [Math.round(r.top), Math.round(r.bottom)], dimmed: below.map(e => e === scrim), outside: out }; }"""
 
+# ITS FOOT ON EVERY FRAME (no hop): the sheet's bottom and the page's height,
+# read on every frame for 1.2s from now, into window.__feet.
+FOOT_WATCH = """(sel) => { const s = document.querySelector(sel + ' .make-sheet'), t0 = performance.now(); window.__feet = [];
+  (function f() { window.__feet.push([Math.round(performance.now() - t0), Math.round(s.getBoundingClientRect().bottom), innerHeight]);
+    if (performance.now() - t0 < 1200) requestAnimationFrame(f); })(); }"""
+
 # THE SHEET'S PARTS, where they are and whether they are what is painted
 # there (elementFromPoint at their middle).
 PARTS = """() => { const s = document.querySelector('#composeSheet .make-sheet'), r = s.getBoundingClientRect();
@@ -815,6 +821,25 @@ with sync_playwright() as p:
                   abs(chrome["bottom"] - chrome["floor"]) <= 1 and chrome["tools"] <= chrome["floor"] and chrome["field"] < chrome["tools"]
                   and chrome["top"] < 60,
                   f"page shrunk to {chrome['floor']}: {chrome}")
+            # NO HOP ON THE WAY: Chrome shrinking the page a moment after the visual viewport, the sheet's foot read
+            # on every frame never rises above the keyboard (the page's own change is taken at once, not glided to).
+            kctx, kpg = browser_as(b, mira, init=KEYBOARD)
+            go(kpg, "/social/explore")
+            open_composer(kpg)
+            kpg.wait_for_timeout(2600)
+            kpg.evaluate(FOOT_WATCH, "#composeSheet")
+            kpg.evaluate("() => window.__keyboard(336)")
+            kpg.wait_for_timeout(60)
+            kpg.set_viewport_size({"width": 402, "height": 874 - 336})
+            kpg.wait_for_timeout(1300)
+            feet = kpg.evaluate("() => window.__feet")
+            close_ctx(kctx, kpg)
+            line = 874 - 336
+            above = [f for f in feet if f[1] < line - 2]
+            check("no hop on the way: Chrome shrinking the page a moment after the visual viewport, the sheet's foot, read on"
+                  " every frame, never rises above the keyboard and rests on it (stood in)",
+                  len(feet) >= 30 and not above and feet and abs(feet[-1][1] - line) <= 1,
+                  f"{len(feet)} frames; above the keyboard's line ({line}): {above[:6]}; last {feet[-1:] if feet else None}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(3, exc)
 

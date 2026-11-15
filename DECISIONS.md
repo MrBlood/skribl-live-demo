@@ -40928,3 +40928,36 @@ NOT TESTED HERE: an iPhone's keyboard, Safari or Chrome on iOS (WebKit);
 the stand-in reproduces the screenshots' three symptoms, not the phone. The
 one-glance tell on the live site: Make opens straight to the composer with
 its tools just above the keyboard, no touch needed.
+
+## After v330 -- No hop: a page that shrinks with the keyboard is taken at once
+
+Found on the way to the keyboard fix above, by its arithmetic (not seen on
+a phone). The composer's and a comment's sheet glide to the keyboard (their
+bottom, 0.25s), which is kind over a page that keeps its size (iPhone's
+Safari: the keyboard rises, the sheet's foot glides up with it). But
+Chrome on an iPhone shrinks the page itself a moment after the visual
+viewport, and the sheet's fixed box moves with the page at once: a glide
+then lags behind it, and the sheet's foot would hop up above the keyboard
+and back down to it (read on every frame here, the page shrinking 60ms
+after the visual viewport: 99px above the keyboard at its highest, over
+about 50ms).
+
+WHAT CHANGES: SocialKeyboard notes the page's own height on every reading;
+when the page itself has changed size, the new reading is taken at once
+(.kb-now, no transition for that change), so the foot stays on the
+keyboard. Over a page that keeps its size the glide is as it was.
+
+PAD AND FLIP: nothing changes in either editor.
+
+THE CHECK, shown red by a break of its own in a throwaway copy, an
+untouched copy green beside it (verify_composer part 3, verify_socialcomments
+part 30): the stand-in keyboard (336px) shrinks the visual viewport, and
+60ms later the page shrinks by it; the sheet's foot, read on every frame
+for 1.2s, is never above the keyboard's line (538) and rests on it (the
+composer's control 67 frames, none above). Red for: glided to even when the
+page itself changed size (the composer's foot at 439, 474, 513, 531; a
+comment's sheet's 149px above at its highest). The controls: 5/5 and 7/7
+in the two parts.
+
+NOT TESTED HERE: an iPhone; the stand-in plays Chrome's order of events as
+the owner's screenshots show it.
