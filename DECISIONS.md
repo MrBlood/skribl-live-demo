@@ -42909,8 +42909,12 @@ a folder of their own):
 - verify_socialsearch alone, at the later commits (0db5c006, the back row
   typed; bca31f1d, the instruments mended and the cursor's cut key):
   32/32 each; 53 seconds alone the first time.
-- THEN, ON THE TREE AS COMMITTED (this entry in it): running as this is
-  committed; the commit after it writes what they said.
+- THEN, ON THE TREE AS COMMITTED (76882fe0, this entry in it; after the
+  instruments mended and the cursor's cut key): side by side,
+  verify_socialsearch 32/32, verify_socialmentions 50/50, verify_socialauth
+  71/71, verify_docs 144/144, verify_social 41/41, verify_socialfollow 75/75
+  (green beside the others this time): six suites ok in 6.5 minutes. And
+  verify_socialsearch alone, 32/32 in 55 seconds.
 - NOT RUN: the full battery (main's run after the merge does it);
   PostgreSQL (CI's postgres job does not run the site's chain: the
   migration's DDL was read offline here, its "C" collation included, and
