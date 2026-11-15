@@ -26,6 +26,8 @@
   function gone() { art.hidden = true; }
   if (!box || !window.SkriblInline || !window.fetch) { gone(); return; }
   var still = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  /* Not under the Blooby app's splash (splash.js): it starts as that goes. */
+  var after = window.BloobySplash ? window.BloobySplash.after : function (fn) { fn(); };
 
   /* The box is the control, as a posted skribl's is: named, and reachable by
      the keyboard. The player turns "Play ..." into "Pause ..." while it plays. */
@@ -45,7 +47,7 @@
          it does not have. */
       var tries = 0;
       (function start() {
-        if (player.state().loaded) { player.play(); return; }
+        if (player.state().loaded) { after(function () { player.play(); }); return; }
         if (++tries < 120) window.requestAnimationFrame(start);
       })();
     })

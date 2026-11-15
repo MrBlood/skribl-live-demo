@@ -14,9 +14,12 @@
  * (localStorage), when the word writes itself; after that only the blush
  * falls. A browser tab never shows it. Storage that throws shows nothing.
  *
- * THE BROWSER'S BAR in the splash's ground while it shows (both theme-color
- * metas, their colour kept to put back: splash.js puts it back as it goes).
- * And never longer than LONGEST, whatever becomes of splash.js.
+ * THE BROWSER'S BAR in the splash's ground while it shows: both theme-color
+ * metas say it, and so do the grounds they carry for the theme to stamp
+ * (data-light, data-dark), so Skribl's lib/theme.js, which stamps them as
+ * the page loads, says it too; the grounds are kept (data-splash-light,
+ * data-splash-dark) and splash.js puts them back as it goes. And never longer
+ * than LONGEST, whatever becomes of splash.js.
  *
  * Automation asks for it (window.__bloobySplashForce, before the page loads),
  * as Skribl's hello is asked for: every suite's browser is a tab. */
@@ -35,10 +38,14 @@
   try { first = !window.localStorage.getItem('blooby.splash.v1'); } catch (e) { /* first, then */ }
   root.classList.add('is-splashing');
   if (first) root.classList.add('is-splash-first');
+  var NIGHT = '#0f1218';
   var metas = document.querySelectorAll('meta[name="theme-color"]');
   for (var i = 0; i < metas.length; i++) {
-    metas[i].setAttribute('data-splash-was', metas[i].getAttribute('content'));
-    metas[i].setAttribute('content', '#0f1218');
+    metas[i].setAttribute('data-splash-light', metas[i].getAttribute('data-light') || '');
+    metas[i].setAttribute('data-splash-dark', metas[i].getAttribute('data-dark') || '');
+    metas[i].setAttribute('data-light', NIGHT);
+    metas[i].setAttribute('data-dark', NIGHT);
+    metas[i].setAttribute('content', NIGHT);
   }
   window.setTimeout(function () {
     if (window.BloobySplash) window.BloobySplash.leave();

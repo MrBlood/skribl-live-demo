@@ -19,12 +19,25 @@
  * under Reduce Motion the finished word, still, a moment, then the fade; and
  * it never holds up a page: the drawing not here within LATE, or the player
  * not there at all, and it fades at once (splash-boot.js lets it go at 6 s
- * whatever happens here). It puts the browser's bar back as it goes. */
+ * whatever happens here). It puts the browser's bar back as it goes.
+ *
+ * NOTHING ELSE PLAYS UNDER IT: one drawing plays at a time, and a drawing a
+ * page starts by itself (Home's first visit, a post's own page, a drawing
+ * answer landed on) would stop the splash's, unseen under it. Each asks
+ * BloobySplash.after(fn), which runs fn at once without a splash, or as the
+ * splash has gone. */
 (function () {
   'use strict';
   var LATE = 1500, REST = 250, STILL = 700, FADE = 480;
   var root = document.documentElement;
-  if (!root.classList.contains('is-splashing')) return;
+  var waiting = [];
+  var showing = root.classList.contains('is-splashing');
+  window.BloobySplash = {
+    showing: function () { return showing; },
+    after: function (fn) { if (showing) waiting.push(fn); else fn(); },
+    leave: function () { leave(); }
+  };
+  if (!showing) return;
   var el = document.getElementById('bloobySplash');
   var box = document.getElementById('splashBox');
   var first = root.classList.contains('is-splash-first');
@@ -41,14 +54,22 @@
     window.setTimeout(function () {
       root.classList.remove('is-splashing', 'is-splash-first');
       if (el) el.classList.remove('is-leaving');
-      var metas = document.querySelectorAll('meta[name="theme-color"][data-splash-was]');
+      // The bar's grounds back, and its colour the theme's, as lib/theme.js stamps it.
+      var mode = root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      var metas = document.querySelectorAll('meta[name="theme-color"][data-splash-light]');
       for (var i = 0; i < metas.length; i++) {
-        metas[i].setAttribute('content', metas[i].getAttribute('data-splash-was'));
-        metas[i].removeAttribute('data-splash-was');
+        var m = metas[i];
+        m.setAttribute('data-light', m.getAttribute('data-splash-light'));
+        m.setAttribute('data-dark', m.getAttribute('data-splash-dark'));
+        m.removeAttribute('data-splash-light');
+        m.removeAttribute('data-splash-dark');
+        if (m.getAttribute('data-' + mode)) m.setAttribute('content', m.getAttribute('data-' + mode));
       }
+      showing = false;
+      var run = waiting.splice(0);
+      for (var j = 0; j < run.length; j++) run[j]();
     }, el ? FADE : 0);
   }
-  window.BloobySplash = { leave: leave };
 
   if (!el || !box || !window.SkriblInline || !window.fetch) { leave(); return; }
   el.addEventListener('pointerdown', leave);
