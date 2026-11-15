@@ -43295,6 +43295,14 @@ with an untouched copy green beside it (control 4/4):
   The rows read the paint, a red block scrolled under the top, not the
   strip's style.
 
+FOUND WRONG, AND MENDED: two of the splash's rows (verify_socialapp 8) read
+<html>'s classes as empty once the splash had gone, and in the app they say
+is-app now; the first side-by-side run had them red (52/54), a real red of
+this change, not load. They ask that the splash's own marks are gone, and
+that the app's next page is is-app and nothing more (red: the splash leaving
+is-splashing on; every page splashing; the app never saying so; control
+16/16).
+
 JUDGMENT CALLS:
 
 - A STRIP, NOT A STICKY HEADER: the header scrolls away, as the owner's
@@ -43308,7 +43316,15 @@ THE FOUR. Kind: the words at the top are crisp again, and nothing moves.
 Simple: nothing to see. Powerful: the app looks like an app at its top.
 Playful: the wordmark keeps its hand-drawn line where the blur softened it.
 
-THE AFFECTED SUITES, side by side: [COUNTS]
+THE AFFECTED SUITES, side by side: on e0799e2e (the box to itself but for a few
+mock pages): verify_social 41/41, verify_hostseams 139/139, verify_seam
+515/515, verify_docs 144/144, verify_socialsettings 45/45,
+verify_socialactivity 46/46, verify_a11y 444/444: seven ok in 7.9 minutes.
+verify_socialapp 52/54 beside them, a real red of this change (the two
+splash rows above), 54/54 alone once mended (30814672); run_parallel calls
+it intermittent because it re-ran it after the mend had landed. NOT RUN:
+the full battery (main's run after the merge does it); verify_contrast (no
+colour or token added); Firefox and WebKit (main's lanes).
 
 NOT TESTED HERE: an iPhone (WebKit): whether iOS 26 keeps its glass off
 (the reason for all of it), the top's colour, and whether an app added
