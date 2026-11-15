@@ -807,7 +807,8 @@ def spread(fs, key):
     return round(max(vals) - min(vals), 2) if vals else 0
 
 
-LIGHT_PAGE, DARK_PAGE = "rgb(251, 252, 253)", "rgb(11, 13, 18)"
+# The page's own colour, the editors' ground since the owner's "Yes, A", Nov 14 (verify_socialsettings holds it to styles.css).
+LIGHT_PAGE, DARK_PAGE = "rgb(246, 248, 250)", "rgb(15, 18, 24)"
 SHEET_PAPER = {"light": "rgb(243, 240, 255)", "dark": "rgb(23, 20, 42)"}
 ROW_BG = {"light": "rgb(255, 255, 255)", "dark": "rgb(35, 30, 59)"}
 HEART_INK = {"light": "rgb(230, 74, 120)", "dark": "rgb(255, 111, 145)"}

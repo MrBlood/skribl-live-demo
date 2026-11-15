@@ -176,8 +176,11 @@ PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=1, is_m
 DESK = dict(viewport={"width": 1280, "height": 860}, device_scale_factor=1)
 SCREENS = (("phone", PHONE), ("desk", DESK))
 KEY = "skribl_theme_v1"
-GROUND = {"light": "#fbfcfd", "dark": "#0b0d12"}            # skribl.core.THEME_GROUND
-PAGE_RGB = {"light": "rgb(251, 252, 253)", "dark": "rgb(11, 13, 18)"}
+# THE SITE'S GROUND IS PAD'S (the owner's "Yes, A", Nov 14): the editors' column's
+# surface (styles.css --surface-raised), which section 8 reads off styles.css and
+# holds these to; the browser's bar wears it too.
+GROUND = {"light": "#f6f8fa", "dark": "#0f1218"}
+PAGE_RGB = {"light": "rgb(246, 248, 250)", "dark": "rgb(15, 18, 24)"}
 ERRS = []
 WATCH = ("document.addEventListener('securitypolicyviolation', e => "
          "(window.__csp = window.__csp || []).push(e.violatedDirective + ' ' + e.blockedURI));")
@@ -1268,6 +1271,42 @@ with sync_playwright() as p:
                   and darks[0]["color-scheme"] == "dark" and lights[0]["color-scheme"] == "light",
                   "; ".join(f"{k}: {sorted(n for n in v if v[n] != (darks if k.startswith(('dark', 'nothing stamped, dark')) else lights)[0][n])[:4]}"
                             for k, v in ways.items()))
+            # THE PAGE IS PAD'S: the editors' column surface and its glow, read off styles.css; on the site, the
+            # token, the body's glow (its colour, its stops, its place), and what is painted: the top of the
+            # page lit purple, the ground beside the posts the token itself.
+            sk = re.sub(r"/\*.*?\*/", "", (ROOT / "skribl" / "static" / "styles.css").read_text(encoding="utf-8"), flags=re.S)
+            raised = re.findall(r"--surface-raised:\s*(#[0-9a-fA-F]{6})", sk)
+            app = re.search(r"^\.app\s*\{(.*?)\n\}", sk, re.S | re.M)
+            glow = re.search(r"radial-gradient\(([^,]*?) at 50% -6%,\s*(rgba\([^)]*\))\s*0%,\s*transparent 55%\)", app.group(1)) if app else None
+            norm = lambda t: re.sub(r"\s+", "", t or "").replace("0.10)", "0.1)").replace("transparent", "rgba(0,0,0,0)")
+            painted = {}
+            for scheme in ("light", "dark"):
+                ctx, pg = browser_as(b, nico, "phone", scheme, theme=scheme)
+                go(pg, "/social/", wait=700)
+                st = pg.evaluate("() => ({ token: getComputedStyle(document.documentElement).getPropertyValue('--page').trim(),"
+                                 " image: getComputedStyle(document.body).backgroundImage, color: getComputedStyle(document.body).backgroundColor,"
+                                 " top: (document.elementFromPoint(innerWidth / 2, 2) || {}).tagName,"
+                                 " side: (document.elementFromPoint(2, innerHeight - 140) || {}).tagName })")
+                from PIL import Image
+                im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+                top, side = im.getpixel((201, 2)), im.getpixel((2, 874 - 140))
+                close_ctx(ctx, pg)
+                painted[scheme] = dict(st, top_px=top, side_px=side,
+                                       lit=(top[2] - top[1]) - (side[2] - side[1]))
+            want = {"dark": raised[0] if raised else None, "light": raised[1] if len(raised) > 1 else None}
+            check("the page is Pad's (the owner's \"Yes, A\", Nov 14): the site's ground is the editors' column surface"
+                  " (styles.css --surface-raised), light and dark, value for value, and the browser's bar wears it; the"
+                  " editors' glow is on the page (its colour and its stops, at the top) and painted: the top of the page lit"
+                  " purple, the ground beside the posts the ground itself",
+                  len(raised) == 2 and glow is not None
+                  and all(painted[t]["token"].lower() == (want[t] or "").lower() == GROUND[t] for t in ("light", "dark"))
+                  and all(norm(glow.group(2)) in norm(painted[t]["image"]) and "at50%-6%" in norm(painted[t]["image"])
+                          and "rgba(0,0,0,0)55%" in norm(painted[t]["image"]) for t in ("light", "dark"))
+                  and all(painted[t]["top"] in ("BODY", "HTML", "HEADER") and painted[t]["side"] in ("BODY", "HTML", "MAIN", "DIV")
+                          and painted[t]["lit"] >= 5
+                          and all(abs(a - b_) <= 1 for a, b_ in zip(painted[t]["side_px"], [int(GROUND[t][i:i + 2], 16) for i in (1, 3, 5)]))
+                          for t in ("light", "dark")),
+                  json.dumps({"editors": {"raised": raised, "glow": glow.groups() if glow else None}, "site": painted})[:1500])
         except Exception as exc:  # noqa: BLE001
             stopped(8, exc)
 
