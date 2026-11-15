@@ -143,6 +143,18 @@
          'M 8.2,12.2 C 9.2,13.0 10.2,14.0 11.0,15.2 C 13.4,11.4 16.2,8.4 20.4,5.6']) }}
 {%- endmacro %}
 
+{# BOOKMARKS (the bookmarks mock; the owner's "All yes", Nov 14), in the pen: a
+   ribbon, the mock's own line, one stroke from its top right, across, down
+   the left side, into the notch at its foot and up again, its top a touch
+   uneven, as a hand draws one; its ink centred in its box (6.4 to 17.6
+   across, 4.1 to 19.7 down). Two copies of the line: the inside (.bm-fill),
+   filled in the small violet ink once the thing is yours (social.css,
+   "BOOKMARKS"), and the line itself, in its row's ink. #}
+{% macro ribbon() -%}
+{%- set d = 'M 16.9,4.3 C 13.7,4.1 10.4,4.2 7.3,4.3 C 6.7,4.3 6.4,4.7 6.4,5.3 C 6.5,10.1 6.4,14.9 6.5,19.6 C 8.3,18.2 10.2,16.8 12.0,15.5 C 13.9,16.8 15.7,18.2 17.6,19.7 C 17.5,14.9 17.6,10.1 17.6,5.2 C 17.6,4.6 17.4,4.3 16.9,4.3' -%}
+<svg class="ic pen-ic ic-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path class="bm-fill" d="{{ d }}" stroke="none"/><path pathLength="1" d="{{ d }}"/></svg>
+{%- endmacro %}
+
 {# MUTE (the mute mock; the owner's "Yes to all", Nov 13), in the pen: a
    closed eye, the lid and three lashes as a hand draws them, its ink centred
    in its box (3.4 to 20.6 across, 7.6 to 16.4 down). Never a speaker: a

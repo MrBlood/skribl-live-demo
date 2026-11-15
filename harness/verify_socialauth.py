@@ -38,8 +38,9 @@ keys and user verification on, as Face ID or Windows Hello would be.
       signed.
   14. THE SITE'S OWN MIGRATION CHAIN: empty to head on SQLite with its own
       version table (its posts with the eye's column since Nov 14, one plain
-      ALTER TABLE on PostgreSQL, read offline), Skribl's chain untouched in
-      either order, no drift;
+      ALTER TABLE on PostgreSQL, read offline; its bookmarks since Nov 14, a
+      table and its indexes alone, read offline too), Skribl's chain
+      untouched in either order, no drift;
       gunicorn (as Render starts it) runs it, and one that fails is logged
       and the demo serves on.
   15. THE NEW SCREENS: every word at 4.5:1 on what is painted behind it,
@@ -1355,6 +1356,7 @@ with sync_playwright() as p_:
                 "social_blocks", "social_reports",       # report and block: piece 5
                 "social_comments",                       # comments: phase 2
                 "social_likes",                          # likes: phase 2
+                "social_bookmarks",                      # bookmarks: the map, part two
                 "social_follows",                        # follows: phase 2
                 "social_mutes"}                          # mutes: phase 2
         want_idx = {"ix_social_people_public_id", "ix_social_people_handle_key", "ix_social_people_user_handle",
@@ -1380,11 +1382,15 @@ with sync_playwright() as p_:
                     # and who liked, newest first (a profile's Likes tab, the map's step 4)
                     "ix_social_likes_person_post", "ix_social_likes_person_drawing", "ix_social_likes_post_created",
                     "ix_social_likes_drawing_created", "ix_social_likes_owner_created", "ix_social_likes_person_created",
+                    # bookmarks: once a person a thing, yours newest first, a post's, a drawing's, whose
+                    "ix_social_bookmarks_person_post", "ix_social_bookmarks_person_drawing",
+                    "ix_social_bookmarks_person_created", "ix_social_bookmarks_post_id", "ix_social_bookmarks_drawing_id",
+                    "ix_social_bookmarks_owner_id",
                     # follows: one row a pair, and newest first both ways
                     "ix_social_follows_pair", "ix_social_follows_follower_created", "ix_social_follows_followed_created",
                     # mutes: one row a pair, whose newest first, and whom
                     "ix_social_mutes_pair", "ix_social_mutes_muter_created", "ix_social_mutes_muted_id"}
-        check("on an empty SQLite file the site's chain builds its twelve tables with every index, stamps its own"
+        check("on an empty SQLite file the site's chain builds its thirteen tables with every index, stamps its own"
               " version table (social_alembic_version) at its head, and touches nothing of Skribl's",
               r1.returncode == 0 and names == want | {"social_alembic_version"} and want_idx <= idx
               and stamps == {"social_alembic_version": [heads]},
@@ -1421,6 +1427,24 @@ with sync_playwright() as p_:
               and su == ["ALTER TABLE social_posts ADD COLUMN gallery_hidden_at TIMESTAMP WITH TIME ZONE"]
               and sd == ["ALTER TABLE social_posts DROP COLUMN gallery_hidden_at"],
               f"up {eye_up.returncode} {su}; down {eye_down.returncode} {sd}")
+        # ...AND THE BOOKMARKS' (the owner's "All yes", Nov 14): a table and its
+        # indexes, nothing else read or written, so a deploy waits on no data
+        # (the house lesson, v309); and dropped going down.
+        bm_up, bm_down = offline("upgrade", "9b1e6c3d5a72:224902330f2a"), offline("downgrade", "224902330f2a:9b1e6c3d5a72")
+        bu, bd = statements(bm_up.stdout), statements(bm_down.stdout)
+        made = [s.split(" (")[0] for s in bu]
+        check("...and its bookmarks' PostgreSQL DDL, read offline, is the table and its six indexes alone (no row of any"
+              " table read or written, nothing to wait on), and they are dropped going down",
+              bm_up.returncode == 0 and bm_down.returncode == 0
+              and made == ["CREATE TABLE social_bookmarks", "CREATE UNIQUE INDEX ix_social_bookmarks_person_post ON social_bookmarks",
+                           "CREATE UNIQUE INDEX ix_social_bookmarks_person_drawing ON social_bookmarks",
+                           "CREATE INDEX ix_social_bookmarks_person_created ON social_bookmarks",
+                           "CREATE INDEX ix_social_bookmarks_post_id ON social_bookmarks",
+                           "CREATE INDEX ix_social_bookmarks_drawing_id ON social_bookmarks",
+                           "CREATE INDEX ix_social_bookmarks_owner_id ON social_bookmarks"]
+              and len(bd) == 7 and bd[-1] == "DROP TABLE social_bookmarks"
+              and all(s.startswith("DROP INDEX ix_social_bookmarks_") for s in bd[:-1]),
+              f"up {bm_up.returncode} {made}; down {bm_down.returncode} {bd}")
         d2 = os.path.join(TMP, "chain-both-a.db")
         a1, a2 = alembic(d2, "upgrade", "head", ini=False), alembic(d2, "upgrade", "head")
         d3 = os.path.join(TMP, "chain-both-b.db")

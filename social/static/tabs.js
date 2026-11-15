@@ -1,13 +1,16 @@
 /* A profile's tabs (the map's step 4, docs/SOCIAL-SITE.md section 16; the
- * owner's "Yes" to its mock, Nov 14): Posts · Gallery · Likes · Drafts on
- * your own page, Posts · Gallery on anybody else's (social/_profile.html).
- * profiles.py says what each holds and for whom.
+ * owner's "Yes" to its mock, Nov 14): Posts · Gallery · Likes · Bookmarks ·
+ * Drafts on your own page, Posts · Gallery on anybody else's
+ * (social/_profile.html). profiles.py says what each holds and for whom.
  *
  * EACH TAB IS A LINK WITH ITS OWN ADDRESS. A tap stays on the page: the
  * pen's line draws itself under the tab, the one it left fading where it was
- * (social.css places it by the tab's place, --at, and draws it: .is-drawn,
- * .is-leaving), the tab takes the first ink, the panel fades out, the tab's first
- * page goes in while it can't be seen (/@<handle>/more), and fades back;
+ * (the line is the chosen tab's own, drawn inside it: this file moves it into
+ * the new tab, and social.css draws it there: .is-drawn, .is-leaving; so it
+ * sits under a tab of any width, your own page's five being sized to their
+ * words on a phone), the tab takes the first ink, the panel fades out, the
+ * tab's first page goes in while it can't be seen (/@<handle>/more), and
+ * fades back;
  * then the address is the tab's own (history.pushState), so the back button
  * comes back to the tab before, and a reload or a shared link opens on it.
  * With Ctrl, ⌘ or Shift, or the middle button, a tab opens as a link does;
@@ -59,33 +62,31 @@
   }
   function chosen() { return keyOf(strip.querySelector('a[aria-current]')); }
 
-  /* The strip says `key`: its ink, and the pen's place. When the place
-     changes, a copy of the line fades where it was and the line draws itself
-     at its new place (social.css: .is-leaving, .is-drawn); under Reduce
-     Motion it is simply put there. */
+  /* The strip says `key`: its ink, and the pen's place, which is inside the
+     chosen tab. When it moves, a copy of the line fades where it was (in the
+     tab it left) and the line draws itself in its new tab (social.css:
+     .is-leaving, .is-drawn); under Reduce Motion it is simply put there. */
   var pen = strip.querySelector('.prof-pen');
   var still = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   function mark(key) {
-    var to = -1;
-    tabs.forEach(function (a, i) { if (keyOf(a) === key) to = i; });
-    var moves = to >= 0 && String(to) !== strip.style.getPropertyValue('--at').trim();
-    var drawn = moves && pen && !(still && still.matches);
-    if (drawn) {
+    var to = tabNamed(key);
+    var from = pen ? pen.parentNode : null;
+    var moves = !!to && !!pen && from !== to;
+    var drawn = moves && !(still && still.matches);
+    if (drawn && from) {
       var left = pen.cloneNode(true);
       left.classList.remove('is-drawn');
       left.classList.add('is-leaving');
-      left.style.left = getComputedStyle(pen).left;
-      strip.appendChild(left);
+      from.appendChild(left);
       var gone = function () { if (left.parentNode) left.parentNode.removeChild(left); };
       left.addEventListener('animationend', gone);
       setTimeout(gone, 400);
     }
-    tabs.forEach(function (a, i) {
-      if (i === to) {
-        a.setAttribute('aria-current', 'page');
-        strip.style.setProperty('--at', String(i));
-      } else a.removeAttribute('aria-current');
+    tabs.forEach(function (a) {
+      if (a === to) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
     });
+    if (moves) to.appendChild(pen);
     if (drawn) {
       pen.classList.remove('is-drawn');
       void pen.getBoundingClientRect();   /* so it starts again, every time */
