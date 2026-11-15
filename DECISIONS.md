@@ -43548,7 +43548,11 @@ the eye loses, so the first version of the row, asking what shows of him,
 read his whole outline and was red on the control; the row reads the
 property the fix governs instead.
 
-THE AFFECTED SUITES, side by side: [COUNTS]
+THE AFFECTED SUITES, side by side (run_parallel -j 3, on 885aaf00), six ok
+in 6.6 minutes: verify_social 45/45, verify_socialprofile 93/93,
+verify_socialactivity 46/46, verify_socialapp 55/55, verify_a11y 444/444,
+verify_docs 144/144. NOT RUN: the full battery (main's run after the merge
+does it); verify_contrast (no colour or token changed).
 
 NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell: on
 the Gallery in dark, Blooby lit looks as big as Home beside him.
