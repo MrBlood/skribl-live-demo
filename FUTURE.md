@@ -2196,6 +2196,33 @@ icons in the pen (your line across a blank page; onion skin, as Flip shows
 it), each drawing itself once as the sheet rises (DECISIONS, "Make's sheet,
 side by side and drawn in our pen").
 
+## 6al. blooby.app's own Home Screen icon (owner, Nov 13: "All yes") — CHOSEN AND FILED, built next
+
+Waving Blooby on his own, on today's lilac, with no star, 82% of the icon
+tall (DECISIONS, "blooby.app's own Home Screen icon, chosen and filed"). The
+pictures are filed as they were picked: `docs/brand/blooby-app-icon-1024.png`,
+and the sizes a Home Screen asks for, `docs/brand/blooby-app-icon-512.png`,
+`docs/brand/blooby-app-icon-192.png` and `docs/brand/blooby-app-icon-180.png`.
+blooby.app gets this icon and the name Blooby under it; the demo keeps the
+name Skribl and today's icon, Blooby waving on the white star.
+
+TO BUILD IT IN (the owner: the next session):
+- `harness/tools/blooby.py` makes it from his strokes, as it makes today's
+  icon, so it can be made again: the same lilac (icon_ground) and soft
+  shadow (ICON_SHADOW), no star, his unpainted spots white, his height 0.82
+  of the side, placed halfway between centring his box and centring his body
+  (his raised arm would pull him off the middle). The filed pictures are
+  what it must look like.
+- The site's pages (`social/templates/social/base.html`) give the Home
+  Screen the name Blooby and this icon: its own touch icon and page icon,
+  and a manifest of the site's own (Blooby, opening at the site's Home).
+  Skribl's pages keep Skribl's manifest and icons. On blooby.app the Pad and
+  Flip are Skribl's pages, so they say Skribl to a Home Screen unless a host
+  can name it there; Skribl never needs a host, so its default stays its own.
+- A check that reads the new icon's pixels, as verify_identity reads
+  today's: the lilac at its corners, no star, his ink 0.82 of the side.
+- Not tested here: how iOS shows a website's icon on a real iPhone.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
