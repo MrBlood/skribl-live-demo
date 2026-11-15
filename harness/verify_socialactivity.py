@@ -40,7 +40,8 @@ virtual authenticator for the site's people.
   8. THE DRAW-ONCE: a drawing answer opened from Activity draws itself once,
      sound off, and the post's own waits; at words the post's own plays; under
      Reduce Motion nothing plays.
-  9. THE EMPTY STATE: Blooby as his Home Screen icon, "Nothing new yet", the
+  9. THE EMPTY STATE: Blooby as his Home Screen icon (the site's own,
+     blooby.app's, since Nov 15), "Nothing new yet", the
      words, and Make a skribl, which opens Make's sheet (the composer, since
      Nov 14: verify_composer).
  10. WORDS AND TARGETS: every word on Activity (a list, and the empty page)
@@ -1297,7 +1298,8 @@ with sync_playwright() as p:
                                                    " && document.activeElement === m.querySelector('[data-compose-words]')"
                                                    " && document.activeElement.getAttribute('placeholder'); }")
                 close_ctx(ctx, pg)
-            want = {"icon": "apple-touch-icon.png", "title": "Nothing new yet",
+            # blooby.app's own icon, the site's Home Screen app's (the owner's "All yes", Nov 15; verify_socialapp 3)
+            want = {"icon": "blooby-icon-180.png", "title": "Nothing new yet",
                     # likes (the likes mock), follows (the follow mock), reposts (the reposts
                     # mock) and mentions (the mentions mock): each is in Activity too
                     "words": "When someone follows you, likes or reposts your post, says something on it, answers you or mentions you, you’ll see it here.",
