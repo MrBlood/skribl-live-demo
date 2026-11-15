@@ -34,6 +34,14 @@
       {% else %}
       <a class="post-act" href="{{ url_for('social.signin') }}">{{ ic.person() }}<span>Sign in</span></a>
       {% endif %}
+      {# BLOOBY ON THE HOME SCREEN (the owner, Nov 15), one row in the second
+         place, signed in or out, and BOTH HIDDEN until social.js knows this
+         phone: Add to Home Screen in a browser tab on an iPhone or an iPad
+         (it opens the steps, _homescreen.html) or where Chrome offers its own
+         install (it asks Chrome); Reload once opened from the Home Screen,
+         where there is no browser bar to reload with. Anywhere else, neither. #}
+      <button class="post-act" type="button" id="siteAddHome" hidden>{{ ic.add_home() }}<span>Add to Home Screen</span></button>
+      <button class="post-act" type="button" id="siteReload" hidden>{{ ic.reload() }}<span>Reload</span></button>
       <a class="post-act" href="{{ url_for('social.rules') }}">{{ ic.rules() }}<span>Community rules</span></a>
       <a class="post-act" href="{{ url_for('social.privacy') }}">{{ ic.lock() }}<span>Privacy</span></a>
       {% if me and me.is_admin %}
@@ -48,3 +56,4 @@
     </div>
   </div>
 </div>
+{% include 'social/_homescreen.html' %}

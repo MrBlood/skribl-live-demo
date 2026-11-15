@@ -41,8 +41,10 @@
     it (the rail's Activity is lit on a desk).
 
     NOTHING YET: Blooby as his Home Screen icon in small (the sign-in pages'
-    own, which brings its lilac in both themes), "Nothing new yet", and Make
-    a skribl, Make's own sheet, as Home's first visit says it.
+    own, which brings its lilac in both themes; blooby.app's own icon since
+    the owner's "All yes", Nov 15, as the site's Home Screen app wears it),
+    "Nothing new yet", and Make a skribl, Make's own sheet, as Home's first
+    visit says it.
 
     Times are said by posts.js (its words: post_words()). #}
 {% extends 'social/base.html' %}
@@ -98,7 +100,7 @@
   {% endif %}
   {% if not fresh and not earlier %}
   <section class="act-empty" aria-labelledby="actEmptyTitle">
-    <img class="si-icon" src="{{ skribl_asset('apple-touch-icon.png') }}" alt="" width="64" height="64">
+    <img class="si-icon" src="{{ social_asset('blooby-icon-180.png') }}" alt="" width="64" height="64">
     <h2 class="act-empty-title" id="actEmptyTitle">Nothing new yet</h2>
     <p class="act-empty-words">When someone follows you, likes or reposts your post, says something on it, answers you or mentions you, you’ll see it here.</p>
     <button class="btn btn-primary btn-big" type="button" data-make aria-haspopup="dialog" aria-controls="composeSheet"

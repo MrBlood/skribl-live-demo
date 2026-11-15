@@ -135,7 +135,7 @@ import os
 import secrets
 
 from flask import (Blueprint, abort, current_app, g, has_app_context, has_request_context,
-                   render_template, request, url_for)
+                   jsonify, render_template, request, url_for)
 
 from .models import PERSON_PREFIX, attach_to_metadata
 
@@ -191,6 +191,25 @@ def muted_authors(viewer_id):
 #: site's pages use: skribl_asset for the player's and the Gallery's files,
 #: skribl_csrf and skribl_report for the Gallery's report sheet.
 _SKRIBL_GLOBALS = ("skribl_asset", "skribl_csrf", "skribl_report")
+
+#: The site's ground in each theme (the editors' column's, since the owner's
+#: "Yes, A", Nov 14). base.html's theme-color metas say it to the browser's
+#: own bar, and the Home Screen app's manifest says the dark one.
+SITE_GROUND = {"light": "#f6f8fa", "dark": "#0f1218"}
+
+
+def shared_folder(*urls):
+    """The deepest folder all of URLS sit in: "/social/" and "/skribl-pad"
+    share "/", and "/app/social/" and "/app/flip" share "/app/". A URL's last
+    part is its page, never a folder of its own ("/social/" is the folder
+    "/social/"; "/flip" is a page in "/")."""
+    parts = [u.split("?", 1)[0].split("/")[:-1] for u in urls]
+    common = []
+    for segs in zip(*parts):
+        if any(s != segs[0] for s in segs):
+            break
+        common.append(segs[0])
+    return "/".join(common) + "/"
 
 #: THE SITE'S OWN POLICY, ON ITS OWN PAGES (docs/INTEGRATION.md, "Your site's
 #: security headers": Skribl's pages carry Skribl's, and a host's pages keep
@@ -319,6 +338,40 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             return gallery.first_visit()
         return render_template("social/home.html", here="home", fresh=[])
 
+    # BLOOBY ON THE HOME SCREEN (the owner, Nov 15: "Let's do the home icon so
+    # I can get full screen on my iPhone"; the map's step 7). The manifest
+    # every page of the site's links (base.html): a route, as Skribl's own is
+    # (skribl/routes.py, skribl_manifest), so its URLs follow both mount
+    # points through url_for. It opens on Home. Its scope is the folder the
+    # site and Skribl's pages share, so the Pad, Flip and the Library that a
+    # post or Make opens stay inside the app, full screen, rather than in a
+    # browser's sheet over it. The icon is blooby.app's own (the owner's pick,
+    # Nov 13; harness/tools/blooby.py site-icon draws it into the site's
+    # static files). Skribl's manifest and icons stay Skribl's: added from the
+    # Pad, the app is Skribl, on the white star, and opens the Pad.
+    @bp.get("/manifest.webmanifest")
+    def manifest():
+        """The site's web app manifest: Blooby, opening on Home, full screen."""
+        home_url = url_for("social.home")
+        skribl_pages = [url_for(skribl_blueprint + e)
+                        for e in (".skribl_editor", ".skribl_flip", ".skribl_library")]
+        resp = jsonify({
+            "id": home_url,
+            "name": "Blooby",
+            "short_name": "Blooby",
+            "start_url": home_url,
+            "scope": shared_folder(home_url, *skribl_pages),
+            "display": "standalone",
+            "background_color": SITE_GROUND["dark"],
+            "theme_color": SITE_GROUND["dark"],
+            "icons": [
+                {"src": social_asset("blooby-icon-192.png"), "sizes": "192x192", "type": "image/png"},
+                {"src": social_asset("blooby-icon-512.png"), "sizes": "512x512", "type": "image/png"},
+            ],
+        })
+        resp.mimetype = "application/manifest+json"
+        return resp
+
     @bp.get("/explore")
     def explore():
         """Explore, the Gallery of everyone (gallery.py): the site's own posts
@@ -382,6 +435,8 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
                # Make's two doors, Skribl's own pages, from its own routes.
                "pad_url": url_for(skribl_blueprint + ".skribl_editor"),
                "flip_url": url_for(skribl_blueprint + ".skribl_flip"),
+               # The browser's bar in the page's ground (base.html).
+               "site_ground": SITE_GROUND,
                "accounts": site is not None,
                "me": None}
         if site is not None:

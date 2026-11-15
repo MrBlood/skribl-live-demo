@@ -92,13 +92,22 @@
    the owner's "Yes, A", Nov 14), keyed as Skribl's pages key theirs: the
    device's own until a script runs, then the chosen theme's in both (the
    boot below reads data-light and data-dark, so it holds no colour of its
-   own). #}
-<meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)" data-light="#f6f8fa" data-dark="#0f1218">
-<meta name="theme-color" content="#0f1218" media="(prefers-color-scheme: dark)" data-light="#f6f8fa" data-dark="#0f1218">
+   own). The two grounds live in one place, social.SITE_GROUND, which the
+   Home Screen app's manifest says too. #}
+<meta name="theme-color" content="{{ site_ground.light }}" media="(prefers-color-scheme: light)" data-light="{{ site_ground.light }}" data-dark="{{ site_ground.dark }}">
+<meta name="theme-color" content="{{ site_ground.dark }}" media="(prefers-color-scheme: dark)" data-light="{{ site_ground.light }}" data-dark="{{ site_ground.dark }}">
 <title>{% block title %}Blooby{% endblock %}</title>
 {% if token %}<meta name="social-csrf" content="{{ token }}">{% endif %}
-<link rel="icon" type="image/png" sizes="192x192" href="{{ skribl_asset('icon-192.png') }}">
-<link rel="apple-touch-icon" sizes="180x180" href="{{ skribl_asset('apple-touch-icon.png') }}">
+{# BLOOBY ON THE HOME SCREEN (the owner, Nov 15): the site's own icon, his
+   name and its own manifest (social/__init__.py, manifest): Blooby, opening
+   on Home, full screen, with Skribl's Pad, Flip and Library inside it. The
+   icon is blooby.app's (the owner's pick, Nov 13; DECISIONS, "blooby.app's
+   own Home Screen icon, chosen and filed"): waving Blooby on the lilac, no
+   star, drawn by `harness/tools/blooby.py site-icon`. Skribl's pages keep
+   Skribl's icon and manifest (_skribl_app_identity.html). #}
+<link rel="icon" type="image/png" sizes="192x192" href="{{ social_asset('blooby-icon-192.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ social_asset('blooby-icon-180.png') }}">
+<link rel="manifest" href="{{ url_for('social.manifest') }}">
 {{ skribl_inline_assets() }}
 {{ skribl_face_assets() }}
 {% block head %}{% endblock %}

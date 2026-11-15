@@ -1,0 +1,37 @@
+{#  THE STEPS TO THE HOME SCREEN (the Home Screen mock; the owner, Nov 15:
+    "Let's do the home icon so I can get full screen on my iPhone"). An
+    iPhone never offers to add a website itself: Safari's Share sheet does,
+    and almost nobody finds it there unprompted. The ☰'s Add to Home Screen
+    (_menu.html) opens these steps on an iPhone or an iPad in a browser tab
+    (social.js); Android's Chrome is asked for its own install instead, and a
+    desk never sees the row.
+
+    THE SITE'S OWN SHEET (SocialSheet), the ☰'s paper and grip, rising as
+    it does: its title in the sheets' quiet words, then what you will get,
+    the site's icon (blooby.app's, base.html) and his name as the Home
+    Screen shows them, then the three steps on the rows' card with the
+    menus' thin line between them, then the one thing worth knowing first (a
+    Home Screen app keeps its own sign-in, apart from Safari's) and Got it.
+
+    THE STEPS ARE iOS 26's: Share sits behind Safari's ⋯ there, and "Open
+    as Web App" is a switch, on to start, in Add to Home Screen. A screen
+    reader hears "More" for the ⋯, as Safari names the button. Not tested on
+    an iPhone here (no WebKit in this box). #}
+<div class="make post-sheet menu-sheet home-steps" id="homeSteps" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="homeStepsTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="homeStepsTitle">Add to Home Screen</h2>
+    <div class="home-steps-app">
+      <img src="{{ social_asset('blooby-icon-180.png') }}" loading="lazy" alt="" width="60" height="60">
+      <div><b>Blooby</b><span>Opens full screen, like an app</span></div>
+    </div>
+    <ol class="home-steps-list" role="list">
+      <li><i aria-hidden="true">1</i><span>Tap <b><span aria-hidden="true">⋯</span><span class="home-steps-say">More</span></b> in Safari&rsquo;s bar, then <svg class="home-steps-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg> <b>Share</b></span></li>
+      <li><i aria-hidden="true">2</i><span>Scroll down and tap <b>Add to Home Screen</b></span></li>
+      <li><i aria-hidden="true">3</i><span>Keep <b>Open as Web App</b> on, and tap <b>Add</b></span></li>
+    </ol>
+    <p class="home-steps-note">Open it from your Home Screen. It may ask you to sign in once there, with your passkey.</p>
+    <button class="btn btn-primary" type="button" data-make-close>Got it</button>
+  </div>
+</div>

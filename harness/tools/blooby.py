@@ -3,6 +3,7 @@
 
     python3 harness/tools/blooby.py card OUTDIR
     python3 harness/tools/blooby.py icon skribl/static [MASTER.png]
+    python3 harness/tools/blooby.py site-icon social/static [MASTER.png]
     python3 harness/tools/blooby.py badge skribl/static/brand [POSE]
     python3 harness/tools/blooby.py jump skribl/static/brand
 
@@ -544,6 +545,18 @@ ICON_SHADOW = (0.012, 0.014, 0.22, (92, 66, 196))      # blur, drop, strength, a
 # itself keeps its cropped star; only the badge shows the whole one.
 BADGE_STAR_R = 0.49
 BADGE_FILL = 0.70
+# BLOOBY.APP'S OWN ICON (the owner, Nov 13, "I like the last round one that is
+# 82% tall"; DECISIONS, "blooby.app's own Home Screen icon, chosen and filed";
+# FUTURE.md 6al). The site's, not Skribl's: Skribl's pages keep the icon above.
+# Waving Blooby on his own on the same lilac, NO STAR, 0.82 of the side tall.
+# Up and down he is centred by his box. Across, he sits halfway between
+# centring his box and centring his weight (his ink and all it closes in), so
+# his raised arm does not pull him off the middle. His unpainted spots stay
+# white, as they are on the star, and his shadow is the icon's (ICON_SHADOW).
+# The pictures the owner picked are filed in docs/brand/blooby-app-icon-*.png;
+# verify_socialapp reads the site's files against them.
+SITE_ICON_FILL = 0.82
+SITE_ICON_SIZES = {"blooby-icon-512.png": 512, "blooby-icon-192.png": 192, "blooby-icon-180.png": 180}
 BADGE_SIDE = 384           # about 3x the ~110 CSS px it shows at on a desk
 BADGE_RADIUS = 0.2237      # iOS's icon corner, as a share of the side
 
@@ -683,6 +696,56 @@ def draw_icons(out, base="http://127.0.0.1:5001", master=None):
     return [out / n for n in ICON_SIZES]
 
 
+def _weight_x(mask):
+    """Across, where the weight of MASK sits (its mean column, every other pixel read)."""
+    w, h = mask.size
+    px, sx, n = mask.load(), 0, 0
+    for y in range(0, h, 2):
+        for x in range(0, w, 2):
+            if px[x, y] > 127:
+                sx += x
+                n += 1
+    return sx / n if n else w / 2
+
+
+def site_icon_compose(him, side=ICON_MASTER, fill=SITE_ICON_FILL):
+    """blooby.app's icon at `side`, from his drawing `him` (RGBA, cropped to his
+    ink): the lilac, white where his marker did not reach, his shadow, and him,
+    no star (SITE_ICON_FILL above has the owner's pick and where he stands)."""
+    from PIL import Image, ImageChops, ImageFilter
+    tile = icon_ground(1024).resize((side, side), Image.BICUBIC).convert("RGBA")
+    h = round(side * fill)
+    w = round(him.width * h / him.height)
+    him = him.resize((w, h), Image.LANCZOS)
+    inside = _enclosed(him.getchannel("A"))
+    by_box, by_weight = (side - w) / 2, side / 2 - _weight_x(inside)
+    at = (round((by_box + by_weight) / 2), round((side - h) / 2))
+    body = Image.new("L", (side, side), 0)
+    body.paste(inside, at)
+    tile.paste(Image.new("RGBA", (side, side), (255, 255, 255, 255)), (0, 0), body)
+    blur, drop, strength, col = ICON_SHADOW
+    shade = Image.new("L", (side, side), 0)
+    shade.paste(body.filter(ImageFilter.GaussianBlur(side * blur)), (0, round(side * drop)))
+    shade = ImageChops.multiply(shade.point(lambda v: round(v * strength)), ImageChops.invert(body))
+    tile.alpha_composite(Image.merge("RGBA", tuple(Image.new("L", (side, side), v) for v in col) + (shade,)))
+    tile.alpha_composite(him, at)
+    return tile.convert("RGB")
+
+
+def draw_site_icons(out, base="http://127.0.0.1:5001", master=None):
+    """Draw Blooby, compose blooby.app's icon and write the site's three files
+    (SITE_ICON_SIZES), each reduced from that one picture; `master`, if given,
+    is where the full-size picture goes. Needs the local server."""
+    from PIL import Image
+    out = pathlib.Path(out)
+    tile = site_icon_compose(draw_him(base))
+    if master:
+        tile.save(master, optimize=True)
+    for name, px in SITE_ICON_SIZES.items():
+        tile.resize((px, px), Image.LANCZOS).save(out / name, optimize=True)
+    return [out / n for n in SITE_ICON_SIZES]
+
+
 def badge_compose(him, side=BADGE_SIDE):
     """The badge at `side`: the icon with the whole star (BADGE_STAR_R,
     BADGE_FILL), composed four times larger and reduced, its corners rounded
@@ -812,14 +875,17 @@ def draw_jump(out, base="http://127.0.0.1:5001"):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (3, 4) or sys.argv[1] not in ("card", "icon", "badge", "jump") \
-            or (len(sys.argv) == 4 and sys.argv[1] not in ("icon", "badge")):
+    if len(sys.argv) not in (3, 4) or sys.argv[1] not in ("card", "icon", "site-icon", "badge", "jump") \
+            or (len(sys.argv) == 4 and sys.argv[1] not in ("icon", "site-icon", "badge")):
         raise SystemExit(__doc__.split("\n\n")[1])
     if sys.argv[1] == "jump":
         print("wrote", draw_jump(sys.argv[2]))
         raise SystemExit(0)
     if sys.argv[1] == "icon":
         print("wrote", ", ".join(str(x) for x in draw_icons(sys.argv[2], master=(sys.argv[3:] or [None])[0])))
+        raise SystemExit(0)
+    if sys.argv[1] == "site-icon":
+        print("wrote", ", ".join(str(x) for x in draw_site_icons(sys.argv[2], master=(sys.argv[3:] or [None])[0])))
         raise SystemExit(0)
     if sys.argv[1] == "badge":
         print("wrote", draw_badge(sys.argv[2], name=(sys.argv[3:] or ["wave"])[0]))

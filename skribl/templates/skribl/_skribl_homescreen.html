@@ -11,6 +11,10 @@
      * banner() -- a one-time card above the tools on the Pad, gone for good
                    once closed, opened, or drawn under.
    steps() is the sheet both open: three steps and the icon you will get.
+   The steps are iOS 26's (the owner, Nov 15, with the site's own): Share
+   sits behind Safari's ⋯ there, and "Open as Web App" is a switch, on to
+   start, in Add to Home Screen; a screen reader hears "More" for the ⋯, as
+   Safari names it. The site's steps say the same (social's _homescreen.html).
    None of it renders in compose mode, where the editor is a host's overlay.
    The two icons are loading="lazy": both start hidden, and a hidden image
    still downloads, so the icon (26 KB) took bandwidth from a slow phone's
@@ -43,7 +47,7 @@
   <button type="button" class="hs-banner-open" id="homeScreenBannerOpen">
     <img src="{{ skribl_asset('icon-192.png') }}" loading="lazy" alt="" width="40" height="40">
     <span class="hs-banner-text"><b>Keep Skribl on your Home Screen</b>
-      <span class="hs-banner-sub">Tap {{ share_glyph() }} Share, then Add to Home Screen</span></span>
+      <span class="hs-banner-sub">Tap <span aria-hidden="true">⋯</span><span class="vis-hidden">More</span>, then {{ share_glyph() }} Share, then Add to Home Screen</span></span>
   </button>
   <button type="button" class="hs-banner-x" id="homeScreenBannerClose" aria-label="Not now" title="Not now">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -60,9 +64,9 @@
         <p>It opens full screen, like an app.</p></div>
     </div>
     <ol class="hs-list">
-      <li>Tap {{ share_glyph() }} <b>Share</b> in Safari&rsquo;s toolbar</li>
+      <li>Tap <b><span aria-hidden="true">⋯</span><span class="vis-hidden">More</span></b> in Safari&rsquo;s bar, then {{ share_glyph() }} <b>Share</b></li>
       <li>Scroll down and tap <b>Add to Home Screen</b></li>
-      <li>Tap <b>Add</b></li>
+      <li>Keep <b>Open as Web App</b> on, and tap <b>Add</b></li>
     </ol>
     <button type="button" class="btn hs-done" id="homeScreenDone">Got it</button>
   </div>
