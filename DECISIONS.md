@@ -40900,8 +40900,10 @@ size passed through), then 336px, saying nothing.
   outside the paper (the field, Draw, Flip, Yours and 500 over the page).
   The control 3/3.
 - A comment's sheet: the page under it dimmed meanwhile, and its foot at
-  the keyboard once it rests. Red for: no reading again, the scrim stopping
-  at the sheet.
+  the keyboard once it rests (538). Red for: no reading again (its foot
+  stayed at 94, its field off the top), the scrim stopping at the sheet.
+  The control 5/5 (the composer's own break, rows outside its paper, leaves
+  it green: a comment's sheet is as tall as what it holds).
 
 NOT TESTED HERE: an iPhone's keyboard, Safari or Chrome on iOS (WebKit);
 the stand-in reproduces the screenshots' three symptoms, not the phone. The
