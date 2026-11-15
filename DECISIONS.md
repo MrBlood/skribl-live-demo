@@ -43359,7 +43359,11 @@ word at the word's own height now, not at a fixed 83%.
 
 PAD AND FLIP: unchanged.
 
-THE AFFECTED SUITES: [COUNTS]
+THE AFFECTED SUITES, side by side, on 5b57e000: verify_socialapp 55/55,
+verify_hello 50/50, verify_social 41/41, verify_docs 144/144: four ok in 2.4
+minutes. NOT RUN: the full battery (main's run after the merge does it);
+verify_contrast (no colour or token changed; the splash is not one of its
+surfaces, and its word is read by verify_socialapp 8).
 
 NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell:
 open Blooby from the Home Screen after closing it, and "blooby." sits just
