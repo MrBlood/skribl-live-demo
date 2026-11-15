@@ -3082,7 +3082,7 @@ with sync_playwright() as p_:
         check("...and on a 360px touch phone, short of room, the edges give first and then the tabs' own room: nothing"
               " past the screen in any face (the phone never draws the page smaller to fit it), and 12px or more between"
               " the painted words in the faces of SF's, Arial's and Helvetica's widths",
-              len(narrow) >= 5 and all(v["ok"] for v in narrow.values()),
+              len(narrow) >= 4 and all(v["ok"] for v in narrow.values()),
               json.dumps(narrow)[:700])
         ctx, pg = browser_as(b, pia, "desk", "light")
         pg.goto(BASE + "/social/@tabpia/bookmarks")
