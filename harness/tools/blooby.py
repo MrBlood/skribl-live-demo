@@ -6,6 +6,7 @@
     python3 harness/tools/blooby.py site-icon social/static [MASTER.png]
     python3 harness/tools/blooby.py badge skribl/static/brand [POSE]
     python3 harness/tools/blooby.py jump skribl/static/brand
+    python3 harness/tools/blooby.py splash-jump social/static/brand
 
 Blooby is built from his own Flip drawing (flipworks.wave: the marker fill, the
 two-sided outline, the feet, the ground), so every pose keeps the hand he was
@@ -874,12 +875,67 @@ def draw_jump(out, base="http://127.0.0.1:5001"):
     return path
 
 
+# THE BLOOBY APP'S SPLASH JUMP (the owner, Nov 15: "Doesn't blooby jump?
+# Throwing his hands up?", then "I like the idea of blooby jumping without
+# badge", and of the last frame "lose the little motion lines on the last frame
+# by his hand balls so it's just blooby with just arms up"). The Posted! card's
+# seven poses, each drawn by the real Pad as above, without the badge: on a
+# clear ground, at one place and one scale (one box around every pose's ink, so
+# each frame keeps its place and only he moves), the settled pose without the
+# cheer's four sparks. The splash lifts him further and lays his shadow on its
+# own light (social.css and splash.js, THE SPLASH).
+SPLASH_JUMP_FRAME = 540      # 3x the 180 CSS px a frame shows at on the owner's phone
+SPLASH_JUMP_PAD = 6          # canvas px of clear ground around every pose's ink (24 of the drawing at 4x)
+
+
+def splash_jump_poses():
+    """jump_poses(), the last without the cheer's sparks (its last four strokes)."""
+    poses = jump_poses()
+    name, strokes, sx, sy, lift, ms = poses[-1]
+    return poses[:-1] + [(name, strokes[:-4], sx, sy, lift, ms)]
+
+
+def splash_jump_compose(raws):
+    """The strip from the poses' whole-canvas drawings `raws`: each cropped to
+    the box around every pose's ink and SPLASH_JUMP_PAD more, side by side,
+    each SPLASH_JUMP_FRAME wide, on a clear ground."""
+    from PIL import Image
+    px = raws[0].width / JUMP_CANVAS_W
+    boxes = [_ink_box(r) for r in raws]
+    pad = round(SPLASH_JUMP_PAD * px)
+    x0, y0 = min(b[0] for b in boxes) - pad, min(b[1] for b in boxes) - pad
+    x1, y1 = max(b[2] for b in boxes) + pad, max(b[3] for b in boxes) + pad
+    fw = SPLASH_JUMP_FRAME
+    fh = round((y1 - y0) * fw / (x1 - x0))
+    strip = Image.new("RGBA", (fw * len(raws), fh), (0, 0, 0, 0))
+    for i, r in enumerate(raws):
+        strip.alpha_composite(r.crop((x0, y0, x1, y1)).resize((fw, fh), Image.LANCZOS), (i * fw, 0))
+    return strip
+
+
+def draw_splash_jump(out, base="http://127.0.0.1:5001"):
+    """Draw the splash's seven poses and write OUT/blooby-splash-jump.webp,
+    the strip splash.js steps through. Needs the local server."""
+    from playwright.sync_api import sync_playwright
+    poses = splash_jump_poses()
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        raws = [_pad_draws(b, base, 4, _posed(st, sx, sy, lift)) for _, st, sx, sy, lift, _ in poses]
+        b.close()
+    path = pathlib.Path(out) / "blooby-splash-jump.webp"
+    splash_jump_compose(raws).save(path, "WEBP", quality=85, method=6)   # its outline (the alpha) kept whole
+    return path
+
+
 if __name__ == "__main__":
-    if len(sys.argv) not in (3, 4) or sys.argv[1] not in ("card", "icon", "site-icon", "badge", "jump") \
+    if len(sys.argv) not in (3, 4) or sys.argv[1] not in ("card", "icon", "site-icon", "badge", "jump", "splash-jump") \
             or (len(sys.argv) == 4 and sys.argv[1] not in ("icon", "site-icon", "badge")):
         raise SystemExit(__doc__.split("\n\n")[1])
     if sys.argv[1] == "jump":
         print("wrote", draw_jump(sys.argv[2]))
+        raise SystemExit(0)
+    if sys.argv[1] == "splash-jump":
+        print("wrote", draw_splash_jump(sys.argv[2]))
         raise SystemExit(0)
     if sys.argv[1] == "icon":
         print("wrote", ", ".join(str(x) for x in draw_icons(sys.argv[2], master=(sys.argv[3:] or [None])[0])))

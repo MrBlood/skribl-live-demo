@@ -874,7 +874,9 @@
   function drawOnce(art) {
     if (still() || !window.SkriblInline) return;
     var players = window.SkriblInline.mount(art);
-    if (players && players[0] && players[0].play) players[0].play();
+    /* Not under the Blooby app's splash (splash.js): it draws as that goes. */
+    var after = window.BloobySplash ? window.BloobySplash.after : function (fn) { fn(); };
+    if (players && players[0] && players[0].play) after(function () { players[0].play(); });
   }
   function landed(li, brought) {
     if (brought) li.scrollIntoView({ block: 'center', behavior: still() ? 'auto' : 'smooth' });

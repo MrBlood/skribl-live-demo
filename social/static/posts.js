@@ -659,7 +659,9 @@
     if (!page || (reduced && reduced.matches) || !window.SkriblInline) return;
     /* The post's own drawing alone: a comment's waits for a tap (phase 2). */
     var players = window.SkriblInline.mount(page.querySelector('.post-art') || page);
-    if (players && players[0] && players[0].play) players[0].play();
+    /* Not under the Blooby app's splash (splash.js): it plays as that goes. */
+    var after = window.BloobySplash ? window.BloobySplash.after : function (fn) { fn(); };
+    if (players && players[0] && players[0].play) after(function () { players[0].play(); });
   }
   /* OPENED AT A COMMENT (#c-<id>: a row in Activity, notifications), the
      comment decides (comments.js, window.SocialPlayOwn): a drawing answer

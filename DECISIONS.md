@@ -43030,3 +43030,222 @@ after the merge); PostgreSQL (the migration's DDL read offline only, its
 planner not run; the fill at start not run against PostgreSQL); the live
 site, and the fill against the owner's own people. The one-glance tell on the
 live site: search "pa" in the Gallery and people come first.
+
+## After v330 -- The Blooby app's splash: Blooby jumps in a stage spotlight, "blooby." writes itself at the foot
+
+The owner, Nov 15 (Mountain Time), about 9:31 AM, with a picture of Bluesky
+opening (its butterfly on a dark sky): "Can you make a splash screen load
+first and show blooby. Just like the skribl with the dotted i falling down.
+[Instead] have the blush. Fall the same way and compress then pop back the
+exact same way. Kinda the same way Bluesky loads". Then, mock by mock:
+
+- About 9:45 AM, three looks at rest beside "now" (A the icon's lilac, B the
+  theme's own ground, C a night like Bluesky's with faint stars). "Do it on
+  the dark background. I like that with no stars", with the mock's defaults
+  (no wink; each fresh open of the Home Screen app, never a tab; the whole
+  hello the first time, after that the word already there; a tap skips it;
+  the Pad's and Flip's hello at blooby.app falling the same way).
+- About 9:55 AM: "Maybe blooby should raise his arms like the posted! Card
+  while blooby draws on bottom, like how blueskys butterfly is in middle and
+  it says Bluesky toward bottom? Also, does accent purple work for word?" The
+  mock at 10:06: the layout, the word in the accent (3.4:1 where it sits, a
+  large word: the bar for large text is 3:1), the dark theme's purple (4.3)
+  or the lilac (8.8).
+- About 10:08 AM: "Doesn't blooby jump? Throwing his hands up?" The mock at
+  10:12: the Posted! card's seven poses with a real lift (96px), his badge
+  leaping (J1) or Blooby alone (J2).
+- About 10:22 AM: "I like the idea of blooby jumping without badge but you
+  can't see his black outline. What are some ways to remedy that? Like a
+  spotlight of lilac? Do you have any ideas?" The mock at 10:33, measured
+  (his outline's ink against what is painted just outside him, at every
+  pose): now 1.05 to 1.07:1; A, a follow-spot rising with him, 6.1 to 8.5
+  (3.9 at its faintest); B, a still stage spotlight, a beam from above and a
+  pool where he stands, 5.9 to 8.1 (5.6); C, a soft lilac rim, about 2:1
+  (strong enough, it is the white-edged sticker he was turned down in).
+- About 10:40 AM: "All yes, B with the stage spotlight. Maybe lose the
+  little motion lines on the last frame by his hand balls so it's just
+  blooby with just arms up." All yes: the word in the accent purple; about
+  2.7 s the first time, about 1.5 s after.
+
+WHAT CHANGED.
+
+- THE SPLASH, the Home Screen app's alone, once a launch. `splash-boot.js`,
+  in the head right after Skribl's theme boot (a file, so the page keeps its
+  one inline script), decides before the first paint: opened from the Home
+  Screen (navigator.standalone, or the standalone display) and not yet this
+  launch (sessionStorage, which the app keeps from page to page and loses
+  when it is closed), <html> is-splashing, and is-splash-first the first time
+  ever (localStorage). A browser tab never shows it; storage that throws
+  shows nothing. For a splash, it asks for the show's two pictures at once
+  (a preload of each, the addresses on its own tag). `splash.js` plays it
+  and lets it go.
+- THE NIGHT GROUND (social.css, "THE SPLASH"): the site's dark ground
+  (#0f1218, the colour the app opens on, the manifest's) deepening to a deep
+  purple at the foot (--splash-top, --splash-mid, --splash-foot), no stars;
+  the browser's bar the night too while it shows.
+- THE SHOW, which comes up together once both its pictures are here (is-on,
+  0.4 s, an opacity): THE STAGE SPOTLIGHT, still, in the icon's lilac
+  (--splash-light, blooby.py's ICON_TILE): a beam from above, clear at the
+  top and brightest at the floor, softened at its edges, and a bright pool
+  where he stands. BLOOBY, his seven jump poses in one strip
+  (`brand/blooby-splash-jump.webp`, `blooby.py splash-jump`: the Posted!
+  card's poses, each drawn by the real Pad without the badge, on a clear
+  ground at one place and one scale; the last without the cheer's four
+  sparks, as the owner asked). Once the light is up, he jumps: the poses at
+  1.4x the Posted! card's times, each reached in nine tenths of its time,
+  lifted 96px at the top and squashed as he crouches and lands, his shadow
+  smaller and fainter the higher he is; he ends with his arms up. "blooby."
+  AT THE FOOT, the site's hello (`brand/blooby-hello.json`, the word in the
+  site's purple, its blush period falling as skribl's i-dot does), by
+  Skribl's player as a draft: the first time ever it writes itself as the
+  light comes up and the blush falls once it is written (about 2.7 s); after
+  that the word is there and the blush falls as he jumps (about 1.6 s). Then
+  a moment's rest, and the splash fades into the page.
+- ITS UNIT is a pixel of the owner's phone (874 tall), smaller on a shorter
+  screen (--u), so the show keeps its proportions and his jump stays on the
+  screen in a landscape phone or a short window.
+- THE LILAC DRAWING OF ITS OWN IS GONE (`blooby-splash.json`, `make_hello.py
+  --splash`): the word is the site's hello. `make_hello.py` keeps a look per
+  drawing (skribl's with its wink, the site's without).
+- THE SITE'S HELLO FALLS AS SKRIBL'S DOT DOES: `blooby-hello.json` (the
+  Pad's and Flip's first-open hello at blooby.app, and the splash's word) is
+  drawn again, its period on skribl's own pages (stretched as it falls,
+  squashed as it lands, popped back, settled), the wink's three pages at
+  rest; it splatted from Nov 12. make_hello.py lost the splat.
+- KIND: a tap, a click or a key lets it go at once, fading; under Reduce
+  Motion the show comes up still (Blooby in his last pose, the word whole),
+  a moment, then the fade; either picture not here within 1.5 s, or the
+  player not there, and it fades at once (splash-boot.js lets it go at 6 s
+  whatever happens); nothing under it scrolls; the page's own drawings wait
+  for it (Home's first visit drawing Blooby's card, a post's own page, a
+  drawing answer landed on: `BloobySplash.after`), as one drawing plays at a
+  time and one started under it would stop it unseen; the browser's bar put
+  back as it goes.
+
+PAD AND FLIP: their first-open hello at blooby.app falls as the splash's
+word does (shared: one tool, one way of falling); Skribl's own hello, its
+i-dot and its wink, is unchanged. Nothing else of the editors changed.
+
+CONTRAST, read off the paint (a 402px touch phone, and a desk): his outline
+against the light at each of his seven poses, 5.9 to 8.2:1 for nearly all
+of it, 5.0 at its faintest (the desk at the top of his jump 5.9, 5.5); the
+word (the site's purple, a large word) 3.36:1 and its period 5.52:1 against
+the ground beside them. Nothing else on it is read: it holds no words.
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy,
+with an untouched copy green beside it (control 16/16):
+
+- verify_socialapp 8, REWRITTEN (sixteen rows; control 16/16, and 16/16
+  again on the final instrument):
+  - its pictures, the site's hello and his strip, the head asking for the
+    same two (red: the head asking for another; the old lilac drawing in the
+    hello's place, which reds the word's row too);
+  - his strip, the last pose one shape (red: the top of his jump, sparks and
+    all, in its place);
+  - never in a tab, the strip never downloaded there (red: the img given
+    its src in the markup);
+  - over the page from the first paint, the night, the bar's night, no
+    stars beside the light (red: the bar left in the page's ground; the light
+    across the whole width);
+  - the stage spotlight: the icon's lilac, still, coming up gently, and only
+    once both pictures are here (red four ways: the show cut in; the show up
+    before its pictures, green at first, below; the light white; the beam
+    moving with him);
+  - his outline against the light at every pose, phone and desk (red: no
+    light, 1.03:1; a dim light, 1.9:1);
+  - his jump read on every frame: the floor, the top, the poses in order,
+    his shadow, the glide (red four ways: the jump snapping from pose to
+    pose; the poses backwards; his shadow left still; a jump of 60px);
+  - the word first, then the blush (red: the first launch from the dot);
+  - the fade, the bar back, seen and this launch's (red: the splash cut
+    out, which reds the tap's fade too; the bar not put back);
+  - once a launch (red: every page splashes);
+  - a later launch, the word there, he jumps, quick (red: the word written
+    again; the lower jump reds it too);
+  - a tap (red: a tap doing nothing);
+  - Reduce Motion still (red: Reduce Motion not asked);
+  - never held for a picture (red: a strip that does not come waited for);
+  - the page's drawing waits (red: Home's card played under it);
+  - the word and its period off the paint (red: a lighter foot under the
+    word, the word 1.9:1).
+- verify_socialapp 4 and 5: the app's ☰ rows open with the splash already
+  had this launch (SPLASHED): they are about the ☰, and section 8 reads the
+  splash.
+- verify_hello, the site's part (control 22/22, the first build): its
+  period read against skribl's i-dot's own pages, page for page, the same
+  height above its rest in canvas widths and the same size, at rest where
+  skribl's winks (red: the splat put back, 20/22; the wink kept, 20/22, its
+  glide row too); on the screen it falls tall, lands wide and pops back round
+  (red: the splat); the glide reads the trailing pages at rest as one look,
+  however many.
+
+FOUND WRONG, AND MENDED:
+
+- AN INSTRUMENT OF MINE: the spotlight row read the show's coming up from
+  the page's load, and by then his strip had come anyway, so a show that
+  came up before its pictures passed (the break above). The moment is caught
+  as it happens now, from before the page's scripts run, and red on it.
+- THE SPLASH'S FILMS SHOWED A QUARTER OF THE SCREEN: every film of the mocks
+  until the light's was recorded at twice the page's size, and Playwright's
+  video does not scale a page up, so the page sat in the top-left quarter
+  with grey around it; the owner was told, and the light's films fill it.
+- THE SPLASH STOPPED UNDER ITSELF: Home's first visit starts Blooby's card by
+  itself, and one drawing plays at a time, so a later launch's splash stopped
+  at its start (the first probe; the word never came). The page's own
+  drawings wait for it now.
+- THE BAR WENT BACK EARLY: Skribl's lib/theme.js stamps the theme-color
+  metas from their grounds as the page loads, after the boot had set the
+  night: the boot gives the grounds the night too.
+- TWO INSTRUMENTS OF MINE: the first-paint row read the bar after
+  lib/theme.js had stamped it again, so a boot that never set it passed; and
+  the fade rows counted frames under full opacity, so a cut passed. The bar
+  is read as the page is parsed, before any deferred script; a fade needs
+  frames between 5% and 95%.
+
+JUDGMENT CALLS:
+
+- ONLY THE APP, never a tab: a splash is how an app opens; a web page that
+  covered itself would only hold people up. A tab never downloads his strip
+  either: the markup names it, splash.js fetches it.
+- ONCE A LAUNCH, by sessionStorage: not between pages, not coming back from
+  another app, and an app iOS closed in the background and opens again is a
+  new launch (not tested on an iPhone here).
+- THE SHOW WAITS FOR BOTH PICTURES and comes up together: Blooby popping in
+  after the word, or the word after him, would be a jump; until then the
+  night, and never longer than 1.5 s.
+- THE LIGHT COMES UP WITH HIM, not on him already standing in the dark: the
+  film showed him on the night for a moment first, but his strip is only
+  sure to be here once it has come, and the light is what lets him be seen.
+- HIS MOTION IS THE MOCK'S, frame for frame: each pose drawn with the Posted!
+  card's own squash and lift, then lifted 96px more and squashed again on
+  the night (splash.js POSES), as the film the owner said yes to.
+- A FILE IN THE HEAD, not inline, as before.
+- THE NIGHT'S PURPLES AND THE LIGHT ARE NEW TOKENS (--splash-mid,
+  --splash-foot, --splash-light): a new role, the owner's picks; the top is
+  the site's own dark ground and the light is the icon's lilac.
+
+THE FOUR. Playful: the lights come up and Blooby takes the stage, leaping
+with his hands thrown up and landing in the pool, while his name writes
+itself. Simple: one light, one jump, one word. Kind: quick after the first
+time, a tap skips it, still under Reduce Motion, never between pages, never
+holding up a page. Powerful: the app opens like an app, with its own face.
+
+THE AFFECTED SUITES, side by side: on the tree as committed (b1e6dbe9; the bar's
+mocks rendered a few pages beside part of it): verify_socialapp 51/51,
+verify_hello 50/50, verify_seam 515/515, verify_hostseams 139/139,
+verify_social 41/41, verify_socialactivity 46/46, verify_socialsettings
+45/45, verify_socialcomments 96/96, verify_socialposts 81/81, verify_docs
+144/144, verify_icons 60/60, verify_socialprofile 93/93, verify_a11y
+444/444, verify_contrast 645/645: fourteen ok in 37.3 minutes. NOT RUN: the
+full battery (main's run after the merge does it); PostgreSQL (no
+migration); Firefox and WebKit (main's lanes); verify_player_isolation and
+cssgraph (styles.css untouched: the site's CSS is social.css).
+
+NOT TESTED HERE: an iPhone (WebKit): the moment iOS shows before the page
+(its blank screen in the manifest's colour, the dark ground, which the splash
+continues), whether iOS's bar follows theme-color in the app, whether an app
+iOS closed in the background keeps its sessionStorage, the animations' frame
+rate and how quickly the two pictures come over a phone's network; SF and
+Segoe UI (it holds no words); the live site. The one-glance tell: close
+Blooby from the app switcher, open it from the Home Screen, and the light
+comes up on Blooby jumping, with "blooby." at the foot.

@@ -692,7 +692,8 @@ def _site_brand(app):
     Nov 12: "On blooby.app, Draw and Flip say 'blooby.' too, at the top and in
     the first-open hello where the blush dot drops, splats and becomes the
     period. The Skribl demo, and skribls.net if they take Pad and Flip, keep
-    'skribl'."). Through the seam Skribl gives any host for this
+    'skribl'."; since Nov 15 the blush falls and pops back as skribl's i-dot
+    does, as on the Blooby app's splash: make_hello.py). Through the seam Skribl gives any host for this
     (skribl.set_brand_resolver, docs/INTEGRATION.md): at an address
     SKRIBL_SOCIAL_HOME_HOSTS names, the Pad and Flip wear the site's wordmark
     (social/_blooby_mark.html) in place of skribl's, named Blooby, and their
