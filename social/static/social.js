@@ -53,6 +53,12 @@
 
   function shown(el) { return !!el && el.getClientRects().length > 0; }
 
+  /* ONE SHEET OVER ANOTHER (the owner's "A", Nov 15: "Unfollow Theo?" over
+     your follows sheet): the sheets open, in the order they rose. Esc and Tab
+     are the top one's alone, and the page behind stays out of reach until
+     the last one has gone. */
+  var OPEN = [];
+
   function sheetFor(wrap, o) {
     o = o || {};
     var sheet = wrap.querySelector('.make-sheet');
@@ -60,6 +66,7 @@
     var openers = o.openers || [];
     var behind = [doc.querySelector('body > .top'), doc.querySelector('body > .nav'), doc.getElementById('main')];
     var isOpen = false, from = null, timer = 0, drag = null;
+    var self = {};
 
     function mark(on) {
       for (var i = 0; i < openers.length; i++) {
@@ -67,13 +74,14 @@
       }
       for (var j = 0; j < behind.length; j++) {
         if (!behind[j]) continue;
-        if (on) behind[j].setAttribute('inert', ''); else behind[j].removeAttribute('inert');
+        if (on) behind[j].setAttribute('inert', ''); else if (!OPEN.length) behind[j].removeAttribute('inert');
       }
     }
 
     function open(opener) {
       if (isOpen) return;
       isOpen = true;
+      OPEN.push(self);
       from = opener || null;
       clearTimeout(timer);
       wrap.classList.remove('is-closing', 'is-dragging');
@@ -104,6 +112,7 @@
     function close(quiet) {
       if (!isOpen) return;
       isOpen = false;
+      if (OPEN.indexOf(self) >= 0) OPEN.splice(OPEN.indexOf(self), 1);
       drag = null;
       wrap.classList.add('is-closing');
       wrap.classList.remove('is-open', 'is-dragging');
@@ -128,7 +137,7 @@
     });
 
     doc.addEventListener('keydown', function (e) {
-      if (!isOpen) return;
+      if (!isOpen || OPEN[OPEN.length - 1] !== self) return;
       if (e.key === 'Escape') { e.preventDefault(); close(); return; }
       if (e.key !== 'Tab') return;
       var stops = Array.prototype.filter.call(
@@ -172,7 +181,11 @@
     sheet.addEventListener('touchend', function (e) { letGo(e, false); });
     sheet.addEventListener('touchcancel', function (e) { letGo(e, true); });
 
-    return { open: open, close: close, isOpen: function () { return isOpen; }, sheet: sheet };
+    self.open = open;
+    self.close = close;
+    self.isOpen = function () { return isOpen; };
+    self.sheet = sheet;
+    return self;
   }
 
   window.SocialSheet = sheetFor;

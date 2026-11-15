@@ -595,7 +595,7 @@ LISTS = r"""() => { const w = document.getElementById('followsSheet'); if (!w) r
   const list = k => { const ul = w.querySelector('[data-list="' + k + '"]'); const cs = getComputedStyle(ul);
     return { shown: cs.visibility === 'visible' && +cs.opacity > 0.99, card: cs.backgroundColor,
       rows: [...ul.querySelectorAll('.lk-row')].map(a => ({ name: a.querySelector('.lk-who b').textContent.trim(),
-        handle: a.querySelector('.lk-who span').textContent.trim(), href: new URL(a.href).pathname,
+        handle: (a.querySelector('.fo-handle') || a.querySelector('.lk-who span')).textContent.trim(), href: new URL(a.href).pathname,
         when: (a.querySelector('time') || {}).textContent || null, iso: (a.querySelector('time') || {}).dateTime || null })),
       empty: (ul.querySelector('.fo-empty') || {}).textContent || null }; };
   return { open: w.classList.contains('is-open') && !w.hidden, paper: getComputedStyle(s).backgroundColor,
@@ -1481,9 +1481,80 @@ with sync_playwright() as p:
                   " no frame more than 35%), and the sheet keeps its place and height; under Reduce Motion the pill is"
                   " put there and the lists only fade",
                   all(v["ok"] for v in seen.values()) and len(seen) == 4, json.dumps(seen))
+            # UNFOLLOW FROM YOUR OWN LISTS (the owner's "A", Nov 15): each row wears their page's Follow
+            # button; a tap on Following asks once, over the lists; the row stays, its button saying Follow.
+            ROWBTN = r"""() => { const w = document.getElementById('followsSheet');
+              const rows = k => [...w.querySelectorAll('[data-list="' + k + '"] > .fo-row')].map(li => {
+                const b = li.querySelector(':scope > .fo-btn'), r = b && b.getBoundingClientRect(), s = li.querySelector('.lk-who > span');
+                return { handle: (li.querySelector('.fo-handle') || {}).textContent || null, line: s ? s.textContent.replace(/\s+/g, ' ').trim() : null,
+                         on: b ? b.classList.contains('is-following') : null, to: b ? b.getAttribute('data-follow') : null,
+                         size: r ? [Math.round(r.width), Math.round(r.height)] : null }; });
+              const c = document.querySelector('[data-follow-counts]');
+              return { followers: rows('followers'), following: rows('following'),
+                       counts: c ? c.innerText.replace(/\s+/g, ' ').trim() : null,
+                       lists: w.classList.contains('is-open'), un: (document.getElementById('unfollowSheet') || {classList: {contains: () => false}}).classList.contains('is-open'),
+                       title: (document.getElementById('unfollowTitle') || {}).textContent || null,
+                       inert: document.getElementById('main').hasAttribute('inert') }; }"""
+            go(pg, "/social/@pia")
+            pg.locator("[data-follows-open=followers]").tap()
+            pg.wait_for_timeout(800)
+            r0 = pg.evaluate(ROWBTN)
+            fo_ok = [(r["handle"], r["on"]) for r in r0["followers"]] == [("@sol", False), ("@rik", True), ("@qua", False)]
+            fg_ok = [(r["handle"], r["on"]) for r in r0["following"]] == [("@rik", True)]
+            check("each row of your lists wears their page's Follow button, 44px or more: Following on whom you follow,"
+                  " Follow on a follower you don't follow back; the when beside the @handle ('@sol · now')",
+                  fo_ok and fg_ok and all(r["size"] and r["size"][1] >= 44 and r["size"][0] >= 44 for r in r0["followers"] + r0["following"])
+                  and all(r["to"] == f"/social/{r['handle']}/follow" for r in r0["followers"] + r0["following"])
+                  and r0["followers"][0]["line"] == "@sol · now",
+                  json.dumps({k: r0[k] for k in ("followers", "following")}))
+            pg.locator("#followsSheet .fo-seg button[data-tab=following]").tap()
+            pg.wait_for_timeout(700)
+            pg.locator("#followsSheet [data-list=following] > .fo-row > .fo-btn").first.tap()
+            pg.wait_for_timeout(800)
+            asked = pg.evaluate(ROWBTN)
+            pg.locator("#unfollowSheet [data-unfollow]").tap()
+            pg.wait_for_timeout(1300)
+            after = pg.evaluate(ROWBTN)
+            ended = [r for r in follows_of("pia") if r[1] == "rik"]
+            pg.keyboard.press("Escape")       # nothing over the lists now: Esc closes them
+            pg.wait_for_timeout(600)
+            gone = pg.evaluate(ROWBTN)
+            check("a tap on Following asks \"Unfollow Rik?\" over the lists, both up; Unfollow ends the follow (kept, its"
+                  " end said), and the lists stay up, the row too, its button saying Follow; the page behind out of reach"
+                  " until the lists go",
+                  asked["un"] and asked["lists"] and (asked["title"] or "").replace("\u00a0", " ") == "Unfollow Rik?"
+                  and ended and ended[-1][3] is not None and not after["un"] and after["lists"] and after["inert"]
+                  and [(r["handle"], r["on"]) for r in after["following"]] == [("@rik", False)]
+                  and not gone["lists"] and not gone["inert"],
+                  json.dumps({"asked": {k: asked[k] for k in ("un", "lists", "title")}, "ended": bool(ended and ended[-1][3]),
+                              "after": {k: after[k] for k in ("un", "lists", "inert", "following")}, "gone": {k: gone[k] for k in ("lists", "inert")}}))
+            check("your page's counts change with the tap, your own (Pia follows nobody now: her following count goes, as"
+                  " the page draws a zero), never Rik's",
+                  after["counts"] == "3 followers", f"before {r0['counts']!r}, after {after['counts']!r}")
+            pg.locator("[data-follows-open=followers]").tap()
+            pg.wait_for_timeout(800)
+            pg.locator("#followsSheet [data-list=followers] > .fo-row > .fo-btn").nth(1).tap()   # Rik's: Follow, at once
+            pg.wait_for_timeout(1300)
+            back = pg.evaluate(ROWBTN)
+            pg.locator("#followsSheet .fo-seg button[data-tab=following]").tap()
+            pg.wait_for_timeout(500)
+            pg.locator("#followsSheet [data-list=following] > .fo-row > .fo-btn").first.tap()
+            pg.wait_for_timeout(800)
+            pg.keyboard.press("Escape")       # the ask over the lists: Esc takes the ask alone
+            pg.wait_for_timeout(700)
+            esc = pg.evaluate(ROWBTN)
+            check("Follow on a row follows again at once, and your count comes back (\"3 followers · 1 following\"); with"
+                  " the ask over the lists, Esc takes the ask alone, the lists staying up",
+                  [(r["handle"], r["on"]) for r in back["followers"]][1] == ("@rik", True)
+                  and back["counts"] == "3 followers · 1 following" and [r[1] for r in follows_of("pia") if r[3] is None] == ["rik"]
+                  and not esc["un"] and esc["lists"] and esc["inert"],
+                  json.dumps({"back": back["counts"], "esc": {k: esc[k] for k in ("un", "lists", "inert")}}))
+            go(pg, "/social/@pia")
+            pg.locator("[data-follows-open=following]").tap()
+            pg.wait_for_timeout(800)
             tap_to(pg, pg.locator("#followsSheet [data-list=following] .lk-row").first)
             landed = urllib.parse.urlparse(pg.url).path
-            check("a row opens their page (where you unfollow, too)", landed == "/social/@rik", landed)
+            check("a row's person opens their page", landed == "/social/@rik", landed)
             go(pg, "/social/@pia#followers", wait=900)
             at_f = pg.evaluate(LISTS)
             go(pg, "/social/")

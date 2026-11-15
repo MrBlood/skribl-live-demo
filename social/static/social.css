@@ -2108,6 +2108,15 @@ button.fo-n {
 }
 .fo-lists > .fo-list.is-on { opacity: 1; visibility: visible; transition: opacity 0.2s ease 0.14s, visibility 0s linear 0.14s; }
 .fo-empty { padding: 16px 0; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+/* A ROW OF THE LISTS (the owner's "A", Nov 15): the person, a way to their
+   page, then their page's Follow button (.fo-btn), as search's People rows
+   wear it; the card's rule between rows is the row's now, so it runs under
+   the button too. The when sits after the @handle, so the name keeps its
+   room on a phone. */
+.fo-list > .fo-row { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--rule); }
+.fo-list > .fo-row:first-child { border-top: 0; }
+.fo-row > .lk-row { flex: 1; min-width: 0; border-top: 0; }
+.fo-row > .fo-btn { flex: none; }
 /* ACTIVITY: a follow's face wears a small Follow, the action's purple and a
    white plus in our pen, on the ground's own circle; no picture. */
 .fo-badge > .fo-disc { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--fill); color: var(--on-fill); }

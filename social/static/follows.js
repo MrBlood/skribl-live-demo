@@ -128,6 +128,37 @@
     timer = setTimeout(gone, 260);
     counts.classList.add('is-out');
   }
+  /* YOUR OWN PAGE'S COUNTS, after a follow or an unfollow from a row of your
+     follows sheet (the owner's "A", Nov 15): the site's answer carries them
+     (j.mine, your lists' lengths), and the numbers change in place while the
+     counts are out, the same fade, so the buttons that open the lists stay
+     the ones they are. A following count only while it isn't zero, as the
+     page draws it. Somebody else's counts never land on yours. */
+  var ownPage = !!(counts && counts.querySelector('[data-follows-open]'));
+  function ownRecount(n) {
+    if (!counts || !n) return;
+    var cells = {}, changed = false;
+    ['followers', 'following'].forEach(function (k) {
+      var b = counts.querySelector('[data-follows-open="' + k + '"] b');
+      if (b) { cells[k] = b; if (b.textContent !== String(n[k])) changed = true; }
+    });
+    if (!changed || fading) return;
+    fading = true;
+    var timer = 0;
+    var gone = function (e) {
+      if (e && (e.target !== counts || e.propertyName !== 'opacity')) return;
+      counts.removeEventListener('transitionend', gone);
+      clearTimeout(timer);
+      Object.keys(cells).forEach(function (k) { cells[k].textContent = String(n[k]); });
+      var fol = counts.querySelector('[data-follows-open="following"]'), dot = counts.querySelector('.fo-dot');
+      if (fol) fol.hidden = !n.following;
+      if (dot) dot.hidden = !n.following;
+      requestAnimationFrame(function () { counts.classList.remove('is-out'); fading = false; });
+    };
+    counts.addEventListener('transitionend', gone);
+    timer = setTimeout(gone, 260);
+    counts.classList.add('is-out');
+  }
   /* The name of the person a sheet is about, from the button that raised it;
      and Sign in coming back to this page as its address is now (the
      Gallery's search changes its address as it goes). */
@@ -185,7 +216,7 @@
         st.sure = !!j.following;
         if (st.on !== want) { send(btn); return; }
         if (st.on !== st.sure) { st.on = st.sure; show(btn, st.on, true); }
-        recount(j.counts);
+        if (ownPage) ownRecount(j.mine); else recount(j.counts);
         if (heard) heard.textContent = st.sure ? say('fo_now_following', { name: btn.getAttribute('data-name') || '' }) : '';
         return;
       }
