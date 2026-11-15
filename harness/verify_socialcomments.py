@@ -3051,6 +3051,27 @@ with sync_playwright() as p:
                   " screenshots, Nov 14; stood in)",
                   abs(chrome["bottom"] - chrome["floor"]) <= 1 and 0 <= chrome["top"] and chrome["field"] < chrome["floor"],
                   f"page shrunk to {chrome['floor']}: {chrome}")
+            # No hop on the way: the sheet's foot, read on every frame, never above the keyboard.
+            qctx, qpg = browser_as(b, theo)
+            qpg.add_init_script(KEYBOARD)
+            open_post(qpg, post)
+            open_box(qpg)
+            qpg.wait_for_timeout(2600)
+            qpg.evaluate("""() => { const s = document.querySelector('#commentBoxSheet .make-sheet'), t0 = performance.now(); window.__feet = [];
+              (function f() { window.__feet.push([Math.round(performance.now() - t0), Math.round(s.getBoundingClientRect().bottom), innerHeight]);
+                if (performance.now() - t0 < 1200) requestAnimationFrame(f); })(); }""")
+            qpg.evaluate("() => window.__keyboard(336)")
+            qpg.wait_for_timeout(60)
+            qpg.set_viewport_size({"width": 402, "height": 874 - 336})
+            qpg.wait_for_timeout(1300)
+            feet = qpg.evaluate("() => window.__feet")
+            close_ctx(qctx, qpg)
+            line = 874 - 336
+            above = [f for f in feet if f[1] < line - 2]
+            check("no hop on the way: Chrome shrinking the page a moment after the visual viewport, the sheet's foot, read on"
+                  " every frame, never rises above the keyboard and rests on it (stood in)",
+                  len(feet) >= 30 and not above and feet and abs(feet[-1][1] - line) <= 1,
+                  f"{len(feet)} frames; above the keyboard's line ({line}): {above[:6]}; last {feet[-1:] if feet else None}")
             # Draw over the sheet: the Pad rises above it and goes; the page behind stays inert under the sheet.
             dctx, dpg = browser_as(b, theo)
             open_post(dpg, post)

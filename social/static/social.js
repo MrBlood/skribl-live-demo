@@ -196,20 +196,37 @@
    * no phone keyboard; the suites stand one in for the visual viewport, and
    * a keyboard that says nothing once it rests is among them.
    *
+   * When the page itself changes size with the keyboard (Chrome on an
+   * iPhone), the sheet takes the new reading at once rather than gliding
+   * to it, so it never hops above the keyboard on the way.
+   *
    * SocialKeyboard(wrap, name, isOpen) keeps --<name> on wrap (the
    * keyboard, in px; none without one) and returns { watch, read }. */
   var REREAD_MS = 1500;
   function keyboardFor(wrap, name, isOpen) {
-    var vv = window.visualViewport, raf = 0, until = 0, said = -1, late = [];
+    var vv = window.visualViewport, raf = 0, until = 0, said = -1, late = [], page = window.innerHeight;
     function read() {
-      var kb = 0;
+      var kb = 0, now = window.innerHeight, moved = now !== page;
+      page = now;
       if (vv && isOpen() && Math.abs((vv.scale || 1) - 1) < 0.01) {
-        kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+        kb = Math.max(0, Math.round(now - vv.height - vv.offsetTop));
       }
       if (kb === said) return;
       said = kb;
+      /* THE PAGE ITSELF CHANGED SIZE (Chrome on an iPhone shrinks it for the
+         keyboard): the sheet's fixed box has moved with it already, so the
+         new reading is taken at once (.kb-now), not glided to, or the sheet
+         would hop up above the keyboard and back down to it. Over a page
+         that keeps its size, the sheet glides with the keyboard (social.css). */
+      if (moved) wrap.classList.add('kb-now');
       if (kb) wrap.style.setProperty('--' + name, kb + 'px');
       else wrap.style.removeProperty('--' + name);
+      if (moved) {
+        void wrap.offsetHeight;
+        var done = function () { wrap.classList.remove('kb-now'); };
+        requestAnimationFrame(done);
+        setTimeout(done, 100);
+      }
     }
     function frame() {
       raf = 0;

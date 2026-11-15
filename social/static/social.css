@@ -1117,6 +1117,10 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    nothing of the sheet is drawn outside its paper. social.js's
    SocialKeyboard reads the keyboard again until it rests. */
 .make.cmp > .make-scrim, .cm-sheet > .make-scrim { bottom: -100vh; }
+/* The page itself changed size with the keyboard (Chrome on an iPhone): the
+   sheet's box moved with the page, so it takes the keyboard's new reading at
+   once, never hopping above the keyboard (SocialKeyboard's .kb-now). */
+.make.cmp.kb-now, .cm-sheet.kb-now { transition: none; }
 .cmp-sheet {
   display: flex; flex-direction: column; max-width: 640px; overflow: hidden;
   height: calc(100% - max(5vh, env(safe-area-inset-top) + 8px));
