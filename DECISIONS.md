@@ -43230,7 +43230,16 @@ itself. Simple: one light, one jump, one word. Kind: quick after the first
 time, a tap skips it, still under Reduce Motion, never between pages, never
 holding up a page. Powerful: the app opens like an app, with its own face.
 
-THE AFFECTED SUITES, side by side: [COUNTS]
+THE AFFECTED SUITES, side by side: on the tree as committed (b1e6dbe9; the bar's
+mocks rendered a few pages beside part of it): verify_socialapp 51/51,
+verify_hello 50/50, verify_seam 515/515, verify_hostseams 139/139,
+verify_social 41/41, verify_socialactivity 46/46, verify_socialsettings
+45/45, verify_socialcomments 96/96, verify_socialposts 81/81, verify_docs
+144/144, verify_icons 60/60, verify_socialprofile 93/93, verify_a11y
+444/444, verify_contrast 645/645: fourteen ok in 37.3 minutes. NOT RUN: the
+full battery (main's run after the merge does it); PostgreSQL (no
+migration); Firefox and WebKit (main's lanes); verify_player_isolation and
+cssgraph (styles.css untouched: the site's CSS is social.css).
 
 NOT TESTED HERE: an iPhone (WebKit): the moment iOS shows before the page
 (its blank screen in the manifest's colour, the dark ground, which the splash
