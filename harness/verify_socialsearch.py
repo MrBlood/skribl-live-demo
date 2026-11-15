@@ -876,7 +876,10 @@ with sync_playwright() as p:
             w = world(b)
             mira = w["mira"]
             ctx, pg = browser_as(b, mira, "desk", "light")
-            go(pg, "/social/explore?q=kiwi", wait=500)
+            # The search typed into the Gallery's box, as a person types it: its
+            # address follows it (replaced, not a new step back).
+            go(pg, "/social/explore", wait=500)
+            search_box(pg, "kiwi")
             first = pg.evaluate(LAYOUT)
             with pg.expect_navigation(timeout=8000):
                 pg.click(".fp-all a")
@@ -913,8 +916,8 @@ with sync_playwright() as p:
             ready(pg)
             pg.wait_for_timeout(500)
             back = pg.evaluate(LAYOUT)
-            check("the back button goes back to the Gallery's search as it was: ?q=kiwi, the box holding it, People"
-                  " (Kiwi 07 first) and then Drawings",
+            check("the back button goes back to the Gallery's search as it was left, typed: ?q=kiwi, the box holding"
+                  " it, People (Kiwi 07 first) and then Drawings",
                   back and back["path"] == "/social/explore?q=kiwi" and back["box"][5] == "kiwi"
                   and [r[0] for r in back["rows"]] == ["@kiwi07", "@kk2", "@kiwi01"] and back["heads"][1][:2] == ["Drawings", "seen"],
                   json.dumps(back and {k: back[k] for k in ("path", "rows", "heads")}))
