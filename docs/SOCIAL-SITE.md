@@ -2143,15 +2143,21 @@ offers its own install, and asks Chrome. A desk sees neither. FROM THE HOME
 SCREEN the same row says Reload, as there is no browser bar to reload with.
 The Pad's and Flip's own steps say iOS 26's too. THE SPLASH (the owner, Nov 15,
 with Bluesky's: "make a splash screen load first and show blooby", on the dark
-ground "with no stars"): the app, once a launch, opens on the night ground
-(the site's dark ground deepening to a deep purple), where "blooby." in the
-icon's lilac writes itself the first time and its blush period falls,
-squashes and pops back as skribl's i-dot does; later launches show only the
-blush falling; then it fades into the page (`splash-boot.js` decides before
-the first paint, `splash.js` plays it with Skribl's player; a tap skips it,
-Reduce Motion keeps it still, a drawing that does not come never holds the
-page, and the page's own drawings wait for it). The Pad's and Flip's hello at
-blooby.app falls the same way now.
+ground "with no stars", then "All yes, B with the stage spotlight"): the app,
+once a launch, opens on the night ground (the site's dark ground deepening to
+a deep purple), where a still spotlight of the icon's lilac comes up on
+Blooby, who jumps with his hands thrown up (the Posted! card's seven poses,
+drawn by the real Pad without the badge, the last just him with his arms up)
+and lands back in its pool, while "blooby." in the site's purple writes itself
+at the foot the first time and its blush period falls, squashes and pops back
+as skribl's i-dot does; later launches have the word already there; then it
+fades into the page (`splash-boot.js` decides before the first paint and asks
+for the show's two pictures, `splash.js` plays it, the word with Skribl's
+player; a tap skips it, Reduce Motion keeps it still, a picture that does not
+come never holds the page, and the page's own drawings wait for it). The
+light is what lets his dark outline show (5:1 and more at every pose; 1.1:1 on
+the night alone). The Pad's and Flip's hello at blooby.app falls the same way
+now.
 
     /social/manifest.webmanifest    the site's web app manifest (Blooby,
                                     opening on Home)

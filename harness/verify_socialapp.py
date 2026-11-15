@@ -868,6 +868,13 @@ with sync_playwright() as pw:
               requestAnimationFrame(step); return first; }"""
             # Read as the page is parsed, before any deferred script runs (Skribl's lib/theme.js among them, which
             # stamps the bar again): what the first paint shows is the head's own work.
+            # The moment the show comes up, caught as it happens (from before the page's scripts run): are both its
+            # pictures here then? The trace starts too late to see it: by the page's load the strip has come anyway.
+            ON_AT = ("new MutationObserver((ms, ob) => { for (const m of ms) { const el = m.target; if (el.id !== 'bloobySplash' "
+                     "|| !el.classList.contains('is-on')) continue; const im = el.querySelector('.splash-jump img'); "
+                     "const p = (window.SkriblInline && SkriblInline.players ? SkriblInline.players() : []).find(x => x.el && x.el.id === 'splashBox'); "
+                     "window.__onAt = { pic: !!im && im.complete && im.naturalWidth > 0, word: !!p && p.state().loaded }; ob.disconnect(); return; } })"
+                     ".observe(document, { subtree: true, attributes: true, attributeFilter: ['class'] });")
             FIRST_PAINT = "document.addEventListener('readystatechange', () => { if (document.readyState !== 'interactive') return; const el = document.getElementById('bloobySplash'); window.__dcl = { cls: document.documentElement.className, shown: el && getComputedStyle(el).display, bar: (document.querySelector('meta[name=theme-color]') || {}).content }; });"
             INK = """([word, blush]) => { const c = document.querySelector('#bloobySplash canvas'); if (!c) return null;
               const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const hx = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -876,7 +883,7 @@ with sync_playwright() as pw:
                 const d = (a) => Math.abs(x[i] - a[0]) + Math.abs(x[i + 1] - a[1]) + Math.abs(x[i + 2] - a[2]);
                 if (d(T) < 60) w++; else if (d(B) < 60) p++; }
               return [w, p]; }"""
-            ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE, FIRST_PAINT))
+            ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE, FIRST_PAINT, ON_AT))
             pg.goto(BASE + "/social/")
             pg.evaluate(WATCH_SPLASH)
             # the word's moments, from when the show comes up (once its pictures are here)
@@ -892,6 +899,7 @@ with sync_playwright() as pw:
             after = pg.evaluate("""() => ({ cls: document.documentElement.className, bar: document.querySelector('meta[name=theme-color]').content,
               seen: localStorage.getItem('blooby.splash.v1'), launch: sessionStorage.getItem('blooby.splash.launch') })""")
             dcl = pg.evaluate("() => window.__dcl")
+            on_at = pg.evaluate("() => window.__onAt || null")
             light_css = pg.evaluate("""() => { const el = document.getElementById('bloobySplash');
               return getComputedStyle(el).getPropertyValue('--splash-light').trim(); }""")
             pg.goto(BASE + "/social/explore")
@@ -918,15 +926,14 @@ with sync_playwright() as pw:
             up = [f["show"] for f in shown if f["on"]]
             rise = [o for o in up if 0.05 < o < 0.95]
             rsteps = [c - a for a, c in zip(up, up[1:])]
-            onset = next((f for f in shown if f["show"] > 0.01), None)
             lights = {f["light"] for f in shown if f["show"] > 0.99 and f["o"] > 0.99}
             check("the stage spotlight: in the icon's lilac (blooby.py's ICON_TILE), still while he jumps (the beam and the "
                   "pool where they were on every frame), coming up with him and the word on several frames (none more "
                   "than a third at once), and only once his strip and the word's drawing are here",
                   tuple(int(v) for v in light_css.split()) == hx(tile) and len(lights) == 1 and len(rise) >= 4
-                  and max(rsteps or [1]) <= 0.34 and bool(onset) and onset["pic"],
+                  and max(rsteps or [1]) <= 0.34 and on_at == {"pic": True, "word": True},
                   json.dumps({"light": light_css, "tile": tile, "places": len(lights), "rise": len(rise),
-                              "step": round(max(rsteps or [1]), 2), "onset": onset and {k: onset[k] for k in ("t", "pic")}}))
+                              "step": round(max(rsteps or [1]), 2), "up with": on_at}))
 
             # HIS JUMP, read on every frame: he leaves the floor and lands, his poses in order, his shadow with him;
             # it glides: no frame moves him faster than the jump is drawn to (1.8 px a ms at its fastest).
