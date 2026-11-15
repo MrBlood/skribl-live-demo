@@ -1328,23 +1328,38 @@ with sync_playwright() as p:
                   " deleted; the rest as ever (Theo's repost of Juno's, in the people you follow)",
                   not ({n3, b3, k3, g3} & set(ids)) and all(c[1] is None and c[2] == "fresh" for c in feed if c[0] == m3)
                   and [c[1:] for c in feed if c[0] == o3] == [["Theo Park reposted", "following"]], json.dumps(feed[:14]))
-            # LOAD MORE: posts and reposts under one cursor, none twice, none missed.
+            # LOAD MORE: posts and reposts under one cursor, none twice, none missed,
+            # and two reposts at the very same moment across the page's end (Home's
+            # order at one moment: a repost's place by its post's address).
+            from datetime import datetime, timedelta, timezone
             lou = someone(b, "lou", "Lou Park")
-            follow(lou, "mira")
-            own, shared = [], []
-            for i in range(12):
-                pm = make_post(mira, f"Section 5, Mira's {i}")
-                stamp(pm, 100000 + i * 600)
-                own.append(pm)
-                pj = make_post(juno, f"Section 5, Juno's {i}, for Mira to repost")
-                stamp(pj, 200000 + i * 600)
-                repost(mira, pj)
-                stamp_repost(pj, "mira", 100000 + i * 600 + 300)
-                shared.append(pj)
+            max_ = someone(b, "max", "Max Ruiz")
+            follow(lou, "max")
+            now_ = datetime.now(timezone.utc)
+
+            def at_(k):
+                return (now_ - timedelta(seconds=100000 + k * 600)).strftime("%Y-%m-%d %H:%M:%S.%f")
+            seq = []
+            for k in range(1, 27):
+                if k in (20, 21) or (k < 20 and k % 2 == 0):
+                    pj = make_post(juno, f"Section 5, Juno's {k}, for Max to repost")
+                    db_write("update social_posts set created_at = ? where public_id = ?", (at_(300 + k), pj))
+                    repost(max_, pj)
+                    seq.append(["r", pj, at_(20) if k in (20, 21) else at_(k)])
+                    db_write("update social_reposts set created_at = ? where post_id = (select id from social_posts where"
+                             " public_id = ?) and person_id = (select id from social_people where handle_key = 'max')",
+                             (seq[-1][2], pj))
+                else:
+                    pm = make_post(max_, f"Section 5, Max's {k}")
+                    seq.append(["p", pm, at_(k)])
+                    db_write("update social_posts set created_at = ? where public_id = ?", (at_(k), pm))
+            tie = sorted([x[1] for x in seq[19:21]], reverse=True)
+            want_order = [x[1] for x in seq[:19]] + tie + [x[1] for x in seq[21:]]
+            shared = [x[1] for x in seq if x[0] == "r"]
             PAGES = r"""async () => { const out = []; let next = null, n = 0;
               const read = (html) => { const box = document.createElement('div'); box.innerHTML = html;
-                return [...box.children].map(c => c.classList.contains('post-card') ? [c.getAttribute('data-post'), !!c.querySelector('.rp-by')]
-                                                   : ['-' + (c.className || c.tagName)]); };
+                return [...box.children].map(c => c.classList.contains('post-card') ? [c.getAttribute('data-post'),
+                  (c.querySelector(':scope > .rp-by') || {}).textContent || null] : ['~' + (c.className || c.tagName)]); };
               out.push(read(document.querySelector('[data-feed]').innerHTML));
               next = document.querySelector('[data-feed-next]').getAttribute('data-feed-next');
               while (next && n++ < 6) { const r = await fetch('/social/feed?before=' + encodeURIComponent(next), { credentials: 'same-origin' });
@@ -1355,16 +1370,17 @@ with sync_playwright() as p:
             pages = pg.evaluate(PAGES)
             close_ctx(ctx, pg)
             flat = [x for pg_ in pages for x in pg_]
-            cut = next((i for i, x in enumerate(flat) if x[0].startswith("-") and "caught" in x[0]), len(flat))
-            follow_part = [x for x in flat[:cut] if not x[0].startswith("-")]
-            want_order = [x for pair in zip(own, shared) for x in pair]
-            ours = [x for x in follow_part if x[0] in set(want_order)]
+            cut = next((i for i, x in enumerate(flat) if x[0] == "~fo-caught"), len(flat))
+            follow_part = [x for x in flat[:cut] if not x[0].startswith("~")]
             ids_f = [x[0] for x in follow_part]
-            check("Load more: Lou's Following, Mira's twelve posts and twelve reposts, newest first under one cursor,"
-                  " over two pages, none twice and none missed, each repost with its line",
-                  len(pages) >= 2 and [x[0] for x in ours] == want_order and len(ids_f) == len(set(ids_f))
-                  and all(x[1] == (x[0] in shared) for x in ours) and len(pages[0]) - sum(1 for x in pages[0] if x[0].startswith("-")) <= 20,
-                  json.dumps({"pages": [len(x) for x in pages], "got": [x[0][:4] for x in ours]})[:600])
+            first = [x for x in pages[0] if not x[0].startswith("~")] if pages else []
+            check("Load more: Lou's Following, Max's fifteen posts and eleven reposts, newest first under one cursor, a page"
+                  " of twenty then the rest, none twice and none missed, each repost with its line; two reposts at the"
+                  " very same moment across the page's end, one each side",
+                  len(pages) >= 2 and ids_f == want_order and len(first) == 20 and first[-1][0] == tie[0]
+                  and all((x[1] or "").strip() == ("Max Ruiz reposted" if x[0] in shared else "") for x in follow_part),
+                  json.dumps({"pages": [len(x) for x in pages], "tie": [t_[:4] for t_ in tie],
+                              "got": [x[0][:4] for x in follow_part], "want": [w[:4] for w in want_order]})[:900])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(5, exc)
 
@@ -1468,26 +1484,28 @@ with sync_playwright() as p:
                   " inside it, one link to her post: her name and @handle, her words, her drawing as the Gallery's still"
                   " picture painted (its poster loaded, the drawing's own purple on the screen), its ▶ saying \"drawn"
                   " in\"",
-                  st == 200 and g and g["tag"] == "A" and g["href"] == f"/social/p/{j7}" and g["name"] == "Juno"
-                  and (g["sub"] or "").startswith("@juno") and g["words"] == "My first one here!" and not g["art"]
-                  and g["img"] and g["img"][0] and g["img"][1] > 0 and (g["dur"] or "").startswith("drawn in ")
-                  and g["ownWords"] == "The way the tree leans into the hill. Look at this one."
+                  st == 200 and g and g.get("tag") == "A" and g.get("href") == f"/social/p/{j7}" and g.get("name") == "Juno"
+                  and (g.get("sub") or "").startswith("@juno") and g.get("words") == "My first one here!" and not g.get("art")
+                  and g.get("img") and g["img"][0] and g["img"][1] > 0 and (g.get("dur") or "").startswith("drawn in ")
+                  and g.get("ownWords") == "The way the tree leans into the hill. Look at this one."
                   and painted and painted["colours"] > 20 and painted["purple"] > 30,
                   json.dumps([g, painted])[:700])
             gl = got["long"]
-            check("its words two lines at most: a long post's are cut at two", gl and gl["lines"] is not None
-                  and gl["lines"] <= 2.05 and gl["clamped"], json.dumps(gl)[:300])
+            check("its words two lines at most: a long post's are cut at two", gl and gl.get("lines") is not None
+                  and gl["lines"] <= 2.05 and gl.get("clamped"), json.dumps(gl)[:300])
             gd, gs = got["drawing"], got["of a drawing"]
             check("a quote with a drawing of its own: the drawing first, playing in Skribl's player, then the original"
                   " small; a quote of a drawing shown outside a post: small, one link to its own page",
-                  gd and gd["art"] and gd["artBefore"] and gd["href"] == f"/social/p/{j7}"
-                  and gs and gs["href"] == f"/social/b/{d7}" and gs["img"] and gs["img"][1] > 0,
+                  gd and gd.get("art") and gd.get("artBefore") and gd.get("href") == f"/social/p/{j7}"
+                  and gs and gs.get("href") == f"/social/b/{d7}" and gs.get("img") and gs["img"][1] > 0,
                   json.dumps([gd, gs])[:600])
             # A TAP OPENS THE ORIGINAL.
-            to(pg, card(q7) + " .qt-card", 160)
-            with pg.expect_navigation(timeout=8000):
-                press(pg, card(q7) + " .qt-card .qt-words")
-            landed = urllib.parse.urlparse(pg.url).path
+            landed = None
+            if pg.evaluate("(s) => !!document.querySelector(s)", card(q7) + " .qt-card .qt-words"):
+                to(pg, card(q7) + " .qt-card", 160)
+                with pg.expect_navigation(timeout=8000):
+                    press(pg, card(q7) + " .qt-card .qt-words")
+                landed = urllib.parse.urlparse(pg.url).path
             close_ctx(ctx, pg)
             check("a tap on the small card opens the original's page (not the quote's)", landed == f"/social/p/{j7}", landed)
             # THE ORIGINAL'S COUNT: reposts and quotes.

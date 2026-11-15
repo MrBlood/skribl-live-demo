@@ -2019,7 +2019,9 @@ with sync_playwright() as p:
             hid3 = at("select public_id, gallery_hidden_at from social_posts") if "gallery_hidden_at" in post_cols3 else None
             check("...and its posts gain the eye's column (gallery_hidden_at, the eye on your own Gallery tab), every post"
                   " kept and in the Gallery (none hidden)",
-                  up3.returncode == 0 and post_cols3[-1:] == ["gallery_hidden_at"] and hid3 == [("P1", None)],
+                  # (the eye's column after taken_down_at; the reposts' columns, Nov 14, after it)
+                  up3.returncode == 0 and "gallery_hidden_at" in post_cols3
+                  and post_cols3[post_cols3.index("gallery_hidden_at") - 1] == "taken_down_at" and hid3 == [("P1", None)],
                   f"columns {post_cols3}; {hid3}")
             down = chain("downgrade", BEFORE)
             gone = at("select name from sqlite_master where tbl_name = 'social_likes'")
