@@ -1474,14 +1474,18 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 }
 .rp-by .ic { flex: none; width: 16px; height: 16px; margin-left: 14px; margin-right: 6px; }
 /* A QUOTE (reposts): the original small inside the post, one link (the
-   mock's sizes): the card's own line and an 18px corner round it, its
-   author's name (700) and "@handle · when" in the second ink, its words two
-   lines at most, and its drawing as the Gallery's still picture with its ▶
-   saying "drawn in", at its foot's middle as the in-post player's at rest.
-   Gone, "This post is gone." in the second ink, nothing to open. */
+   mock's sizes): a card, the card's own colour under the card's own line and
+   an 18px corner round it, its author's name (700) and "@handle · when" in
+   the second ink, its words two lines at most, and its drawing as the
+   Gallery's still picture with its ▶ saying "drawn in", at its foot's middle
+   as the in-post player's at rest. Gone, "This post is gone." in the second
+   ink, nothing to open. A CARD, NOT AN OUTLINE (the owner's "Yes to B", Nov
+   15): on a post's own page it sat on the page's ground with only its line,
+   which nearly vanished in dark; inside a post's card on Home it is the card's
+   colour on the card's colour, as it was. */
 .qt-card {
   display: block; margin-top: 12px; padding: 12px; border: 1px solid var(--card-line); border-radius: 18px;
-  color: inherit; text-decoration: none;
+  background: var(--card); color: inherit; text-decoration: none;
 }
 .post-card .qt-card { position: relative; z-index: 1; }
 .qt-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

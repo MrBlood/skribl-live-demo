@@ -2203,6 +2203,14 @@ with sync_playwright() as _spt:
                      " if (r) r.click(); }")
         _pt.wait_for_timeout(600)
         _seen_t[_mode] = _pt.evaluate(_THEME_SWEEP)
+    # The editors' ground as the Pad itself resolves it, in each theme (the
+    # Library's ground is the Pad's since Nov 15).
+    _pad_ground = {}
+    for _mode in ("dark", "light"):
+        _pt.evaluate("(m) => localStorage.setItem('skribl_theme_v1', m)", _mode)
+        browsing.goto(_pt, BASE, "/skribl-pad")
+        _pad_ground[_mode] = _pt.evaluate(
+            "() => getComputedStyle(document.documentElement).getPropertyValue('--surface-raised').trim().toLowerCase()")
     _L, _D = _seen_t["light"], _seen_t["dark"]
     check("light: a light preference stored by an editor is light here too",
           _L["attr"] == "light" and lum_ok(_L["body"], light=True),
@@ -2210,9 +2218,22 @@ with sync_playwright() as _spt:
     check("dark: and a dark one is still the page it always was (said out loud: data-theme=\"dark\")",
           _D["attr"] == "dark" and lum_ok(_D["body"], light=False),
           f"data-theme={_D['attr']!r}, body {_D['body']}")
-    check("light: the browser chrome follows the page (theme-color is the ground)",
-          _L["meta"].lower() == _hex(_L["body"]),
-          f"meta {_L['meta']} vs body {_hex(_L['body'])}")
+    # THE PAD'S GROUND (the owner, Nov 15, "Yes to ... the Library"): the page
+    # stood on Skribl's identity ground, a breath lighter in light and darker in
+    # dark than the Pad it opens from. The browser's bar keeps that identity
+    # ground (core.THEME_GROUND, as every Skribl page's, verify_identity), as the
+    # Pad's does: it still follows the page into light, which is what SK312-001
+    # asked of it.
+    check("the Library's ground is the Pad's, the editors' own (styles.css --surface-raised as the Pad resolves"
+          " it), light and dark",
+          bool(_pad_ground.get("light")) and _hex(_L["body"]) == _pad_ground["light"]
+          and bool(_pad_ground.get("dark")) and _hex(_D["body"]) == _pad_ground["dark"],
+          f"light {_hex(_L['body'])} vs the Pad's {_pad_ground.get('light')}; dark {_hex(_D['body'])} vs the Pad's"
+          f" {_pad_ground.get('dark')}")
+    from skribl.core import THEME_GROUND as _TG
+    check("light: the browser chrome follows the page into light (theme-color is Skribl's light ground, as on the Pad)",
+          _L["meta"].lower() == _TG["light"],
+          f"meta {_L['meta']} vs {_TG['light']}")
     check("light: no chrome surface is still painting a dark ground",
           not _L["darkSurfaces"], "; ".join(_L["darkSurfaces"][:5]))
     check("the sweep measured the page, not an empty one",

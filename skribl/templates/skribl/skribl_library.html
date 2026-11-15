@@ -58,7 +58,11 @@
        follows the chrome theme. */
     :root {
       color-scheme: dark;
-      --base: {{ skribl_theme_ground.dark }};
+      /* The page's ground is the editors' own, Pad's and Flip's column
+         (styles.css --surface-raised), so the Library and the Pad are one
+         ground (the owner, Nov 15). The browser's bar keeps Skribl's own
+         (core.THEME_GROUND, the app's identity), as the Pad's does. */
+      --base: #0f1218;
       --raised: #0f1218;
       --panel: #13161c;
       --control: #171b23;
@@ -104,12 +108,13 @@
       --ground-glow-b: rgba(91,140,255,0.07);
     }
     /* The light ramp. Neutrals are the gallery's values where the gallery has
-       the token, so the two pages read as one product side by side; the
-       accent family is unchanged except --accent-tint, which is TEXT here (the
-       handle, a lit toggle, a link) and needs a dark ink on a light ground. */
+       the token, so the two pages read as one product side by side (all but
+       the ground, the editors' since Nov 15, above); the accent family is
+       unchanged except --accent-tint, which is TEXT here (the handle, a lit
+       toggle, a link) and needs a dark ink on a light ground. */
     :root[data-theme="light"] {
       color-scheme: light;
-      --base: {{ skribl_theme_ground.light }};
+      --base: #f6f8fa;   /* the editors' ground (styles.css --surface-raised) */
       --raised: #ffffff;
       --panel: #ffffff;
       --control: #f1f3f7;
