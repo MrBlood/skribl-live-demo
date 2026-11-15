@@ -3348,6 +3348,9 @@ _CHURN = r"""async (ms) => {
     if (!pl) return { missing: true };
     pl.setLoop && pl.setLoop(true);   // a PLAYING card, for the whole measure (repeat starts off since Nov 15)
     if (pl.state().state !== 'playing') pl.play && pl.play();
+    // ...and the bar shown that once (its Repeat lit) BEFORE the measure: a
+    // control redrawn for a real change is no churn; one redrawn per frame is.
+    await new Promise(r => setTimeout(r, 400));
     const seen = { controls: 0, records: 0 };
     const mo = new MutationObserver(list => {
         seen.records += list.length;
