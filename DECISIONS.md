@@ -43596,9 +43596,20 @@ WHAT CHANGED:
 
 PAD AND FLIP: unchanged (the site's sheet alone).
 
-CONTRAST: no colour or token changed; the button is their page's
-(Following 17.95:1 light, 11.86 dark on its row; Follow white on the
-action's purple, 5.33:1, as every action button).
+CONTRAST: no colour changed (the one new token, main's fix below, is a
+size); the button is their page's (Following 17.95:1 light, 11.86 dark on
+its row; Follow white on the action's purple, 5.33:1, as every action
+button).
+
+ALSO, MAIN GREEN AGAIN (social.css, the bar): #923 drew Blooby lit on the
+dark bar at 96% in a second dark media query, and verify_socialsettings
+holds social.css to one (the dark ramp said twice, word for word: once for
+the theme chosen, once for the device's when none is), so main's run after
+#923 was red on that row, on both databases (issue #924). The size is a
+theme token now, --bar-blooby-lit (31.9px in the light ramp, 33.3px in both
+dark copies), which the bar's rule reads: the sizes #923 merged, one media
+query again. #923 had not run verify_socialsettings; a change to the site's
+dark theme runs it beside the bar's suites.
 
 THE CHECKS, each row shown red by a break of its own in a throwaway copy,
 with an untouched copy green beside it: verify_socialfollow 5 (control
@@ -43611,7 +43622,24 @@ counts your own (red: their counts on your page); Follow again, and Esc
 taking the ask alone (red: Esc closing every sheet up); a row's person
 opening their page.
 
-THE AFFECTED SUITES, side by side: [COUNTS]
+THE AFFECTED SUITES, side by side (run_parallel -j 3): the sixteen that
+use the site's sheets, since every sheet's controller changed.
+verify_socialfollow 79/79, verify_socialcomments 96/96, verify_socialprofile
+93/93, verify_composer 38/38, verify_social 45/45, verify_socialapp 55/55,
+verify_socialreposts 50/50, verify_socialmentions 50/50,
+verify_socialbookmarks 37/37, verify_socialposts 81/81, verify_socialsearch
+32/32, verify_sociallikes 100/100, verify_docs 144/144, verify_a11y 444/444.
+Two red there, neither from load. verify_socialmute 66/68, beside the others
+and alone: its two readers of who follows you read the rows' old markup (the
+instrument, not the site); they read the row's handle now, each shown red by
+a break of its own (who muted me, then who I muted, dropped from my
+followers list), the untouched copy 68/68. verify_socialsettings 44/45
+beside the others, 45/45 alone: main's red from #923 (above), its fix
+landing during the run. On the final tree, side by side: verify_social
+45/45, verify_socialsettings 45/45, verify_socialfollow 79/79;
+verify_docs 144/144. NOT RUN: the full battery (main's run after the merge
+does it); verify_contrast (it reads Skribl's sheets and editors, not the
+site's; the button's ratios are above).
 
 NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell:
 your page, your counts, Following: each row has its button.
