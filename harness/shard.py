@@ -73,6 +73,8 @@ MEASURED = {
     "verify_songoff.py": 70,
     # The local runs, Nov 6.
     "verify_emptytake.py": 60, "verify_drawerfit.py": 40,
+    # The local run, Nov 14, beside two others.
+    "verify_composer.py": 170,
 }
 SMALL = 11          # every other suite: the rest averaged 11 seconds
 

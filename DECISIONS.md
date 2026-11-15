@@ -40444,3 +40444,328 @@ download your data, words that describe a drawing to a screen reader). Step
 piece is mocked first and asked for before it is built.
 
 Docs only: no code, no check. verify_docs run on the final tree.
+
+## After v330 -- The composer: one Make, and an older drawing's conversation comes with it
+
+The owner, Nov 14 (Mountain Time). About 8 AM, after the small PR: "Yes", to
+the composer drawn beside their own screenshot of Bluesky's new-post screen,
+and to its B, one "Yours" in the tools (no Drafts at the top right): Make in
+the bar opens the composer sheet on any page, Home's box stays as the
+inviting row and opens the same sheet, every share from Make is a post. About
+2:45 PM, "Yes" to one drawing, one conversation (docs/SOCIAL-SITE.md section
+17): posting an older drawing through Yours moves its hearts and comments
+onto the new post, and its old page sends people to the post, so nothing is
+lost and there are never two conversations. And #903's "B" for the sheets:
+a list of choices is one card; the composer, a form, keeps Cancel and Post at
+the top. Built Nov 14.
+
+WHAT CHANGED.
+
+- ONE MAKE, EVERYWHERE (`base.html`, `_compose.html`, `compose.js`). For
+  somebody signed in every page with the bar or the rail carries the
+  composer and no two-door sheet; Make in the bar (a phone) and the rail (a
+  desk) opens it, and so does Activity's "Make a skribl". It is Make's own
+  sheet (`.make`, social.js's SocialSheet) made tall: on a phone it rises to
+  5vh from the top (or clear of the status bar where a phone gives the page
+  the whole screen) and its foot rides above the keyboard, as a comment's
+  sheet does; on a desk it is a 600px card in the middle, one height
+  (660px at most) whatever it holds. It glides as Make's does; under Reduce
+  Motion it fades where it sits.
+- THE SHEET, the mock's own sizes: Cancel at the top left (the small violet
+  words) and Post at the top right (the action's purple), dim (0.45) until a
+  drawing is attached; your face (40px) beside "Say something…" (18px,
+  focused as the sheet opens, so a phone's keyboard comes with it); under
+  the words the drawing attached, PLAYING in Skribl's in-post player (never
+  under Reduce Motion), with Edit drawing and Remove; along the bottom
+  Draw, Flip and Yours (Yours' four tiles drawn in our pen, beside Draw's
+  and Flip's), and the characters left at their end, 500 to start. No reply
+  settings and no language: the mock's answer.
+- HOME'S ROW (`feed.html`): the box as it looked (your face, "Say something,
+  then draw it…", Draw and Flip), now a door: its words open the composer
+  with the field ready, its Draw and Flip open it with that editor rising
+  over it. It lost its Post, which the sheet has.
+- DRAW AND FLIP open Skribl's editor over the sheet in compose mode with the
+  gallery's choice (`?compose=1&gallery=1`), as Home's did: Add hands the
+  drawing back into the sheet's player; Edit drawing reopens it with the
+  drawing put back; Remove lets the frame go. The two editors' frames moved
+  from Home to `_compose.html`, and Skribl's `lib/composehost.js` is loaded
+  by `base.html` on every page of somebody signed in (feed.html,
+  post.html and profile.html each loaded it for themselves).
+- YOURS, "USE ONE YOU MADE": Back where Cancel was, the title, the one pill
+  Drafts | Drawings (Drafts first, as the mock), and a list of tiles that
+  scrolls inside the sheet; the words fade out before it fades in, and
+  back, the sheet's box the same on every frame. Each list is asked for the
+  first time it shows (`/social/make/yours`, `compose.py`): DRAFTS are your
+  drafts (Skribl's `list_drafts`, the Drafts tab's tiles), DRAWINGS your
+  drawings shared outside a post as the Gallery's tiles
+  (`gallery.loose_page`: your Gallery tab's read, link-only ones too,
+  never a post's drawing, a face, a comment's drawing or anybody else's; 24
+  a page, Load more). The tiles are the Gallery's own macros with
+  `pick=true`: a button, not a link (`_gallery.html`). A DRAFT picked opens
+  in the editor that made it, over the sheet, with the draft on its canvas;
+  closing it is back in the picker, and Add to post attaches it. A DRAWING
+  picked is attached as it is, the words fading back with it under them.
+- A SKRIBL SEAM: `lib/composehost.js` `openDraft(id)`, the editors' own
+  `?draft=<id>` hand-off inside a host's compose frame
+  (docs/INTEGRATION.md, "A saved draft, from your own list"); the handle now
+  remembers the address it last gave the frame, so a frame it loaded with a
+  draft is still its own and the next open pushes back what was added (rule
+  2) rather than loading the editor again. A plain open is as it was.
+  `social.js`'s overlay passes it on (`over.openDraft`).
+- ONE DRAWING, ONE CONVERSATION (`posts.post_new`, `{"words", "skribl"}`):
+  an older drawing posted is the post's drawing (the row names that skribl;
+  nothing is made in Skribl, and its title, caption and visibility stay its
+  own). In the same transaction its likes and its comments with their
+  answers move onto the post (`likes.move_drawing_likes`,
+  `comments.move_drawing_comments`: one UPDATE each, `post_id` set and
+  `drawing_id` emptied in one statement, so the database's "exactly one"
+  holds; each keeps its person, its moment on the drawing's clock, its time,
+  its owner and whom it answers). Its own page, `/social/b/<id>`, already
+  sent people to a post's drawing's post, so it now does for this one; its
+  old like and comment addresses take nothing new (the drawing is a
+  post's). One its maker hid from the Gallery (link-only) stays hidden there
+  as a post (`gallery_hidden_at`, as the eye said). Refused: somebody
+  else's, gone, withheld, a face or a comment's drawing (all "drawing_gone",
+  404, saying nothing of which); one already in a post ("drawing_posted",
+  409: sharing it again will be a repost); a drawing beside a new one
+  ("one_drawing", 400).
+- ONE POST A DRAWING, AND ITS CONVERSATION WHOLE (`posts.drawing_lock`): on
+  PostgreSQL a transaction-scoped advisory lock keyed on the drawing, taken
+  by posting it and by a like or a comment on it, so two posts of one
+  drawing go one after the other (the second finds it in a post) and a like
+  or comment never lands on a drawing mid-move. On SQLite the file's one
+  writer never lets two such writes both go. No column, no index, no
+  migration.
+- THE ONE PILL MOVED to `social.js` (window.SocialPill, placed, glided and
+  watched), since the composer's picker carries one on every page;
+  `follows.js` and `explore.js` read it from there. The code is follows.js's
+  as it was.
+- `/social/` pages of somebody signed in all carry the page's token (the
+  composer's Post sends it): the context processor sets it, and a page
+  that passes its own still wins.
+
+NOTIFICATIONS ACTIVITY ALREADY SENT: nothing to change, by design. Activity
+keeps no rows of its own; it is worked out from the comments and likes each
+time. Once they are the post's, Activity's rows for them name the post and
+open it (`/social/p/<id>#c-…`, `#liked`), at the times they always had: the
+bell's dot does not light again and nobody is told twice. A report about the
+drawing stays the report it was (it names the skribl, which is the post's
+drawing now; taking it down withholds the drawing, and so hides the post,
+as for any post).
+
+PAD AND FLIP: shared, and nothing in either editor changed. Both open in the
+composer in compose mode, as they opened over Home; a draft opens in the
+editor that made it (a Flip draft in Flip, through the Flip frame's handle);
+`openDraft` is the host's side of the editors' own `?draft=` hand-off, one
+module for both. The Pad's and Flip's own posting on their own pages
+(Skribl's own share) stays Skribl's alone, untouched.
+
+CONTRAST (measured on the built pages, the site's reader: the ink over the
+grounds under it; light / dark, phone and desk the same): Cancel and Back
+7.36 / 9.47; the words 16 / 15.85; "Say something…" 6.74 / 9.69; the count
+6.74 / 9.69; Post 5.33 (white on the action's purple, as every action
+button); Draw, Flip and Yours 6.38 / 7.75; "Use one you made" 16 / 15.85;
+the pill's chosen option 10.16 / 10.3 and the other 9.35 / 8.59; a draft
+tile's title 16 / 15.85 and its line 6.74 / 9.69; Remove 11 / 9.16. The
+mock's own figures (Cancel 7.36 / 9.47, the words 16 / 15.85, the count 6.74
+/ 9.69, Post 5.33), value for value. Post dim (0.45) is an inactive control,
+which WCAG 1.4.3 exempts, as the mock drew it; it is still a button, and a
+press says what is missing. No colour and no token added: same role, same
+token (the sheet `--sheet-paper`, Cancel `--accent-ink`, Post `--fill`, the
+tools the chips Home's box wore, the words the two inks, the hairline over
+the tools `--rule`, the scrim `--scrim`).
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy of
+the tree (a parallel runner of its own, a copy and a folder for each break),
+and green on an untouched copy, the control (the whole new suite, 31/31):
+
+- verify_composer, NEW (eight sections; COMPOSER_PART for calibration; a
+  section that cannot go on is a red row of its own, never a stop):
+  - 1, ONE MAKE, EVERYWHERE. Every page with the bar (Home, the Gallery,
+    Activity, your page, a post's page, Settings) carries the composer, and
+    Make opens it, a modal dialog, the field focused, the page behind inert,
+    phone and desk (red: the composer for nobody, `base.html`; Make not wired
+    to it, `compose.js`). Where it rests: 43.7px from a phone's top, the
+    whole width, to the bottom; a 600px card in a desk's middle (red: the
+    phone's sheet the whole height; the desk's card 560px). Home's row opens
+    the same sheet, its words with the field focused and its Draw with the
+    Pad rising over it, and it has no Post (red: Home's Draw opening no
+    editor). Signed out, Make's two doors and no composer in the page or its
+    source (red: no two doors for nobody).
+  - 2, IT GLIDES, read on every frame. Up from below the screen, one way, 21
+    positions, no step past 30% of the travel (red: no transition as it
+    opens); Cancel back down the same way, focus on Make, the page no longer
+    inert (red: the close in one frame); a desk's card rising 28px at most as
+    it fades in (red: the card without its transition); Yours and Back, the
+    sheet's box the same on every frame, the words fading out on several
+    frames before the picker fades in on several, never both seen (red: the
+    swap without its fades, `compose.js`); under Reduce Motion it never
+    moves, it fades, and Yours is the same fades (red: the reduce block's
+    transform taken out, so it glides).
+  - 3, THE SHEET: Cancel top left and Post top right on its line, Post dim
+    (0.45) until a drawing, a press saying what is missing and sending
+    nothing; the face (40) beside "Say something…" (18px, 500 at most); Draw,
+    Flip, Yours and "500 characters left" at the foot, 467 after 33 typed;
+    phone and desk, light and dark (red, each alone: Post not dim; the count
+    not counting; the field at 15px; the dim Post saying nothing; Yours
+    before Draw). On a 336px keyboard (stood in) the sheet's foot rides on it,
+    the tools and the field above it, its top where it was; back down with
+    it; a pinch's zoom no keyboard (red: no ride).
+  - 4, DRAW AND FLIP, the real Pad and a real pen (artdraw): Add hands the
+    drawing back, PLAYING, Post lit, focus on Edit drawing (red: the drawing
+    not played); with one attached a tool says so and opens nothing, Edit
+    reopens the Pad with a load message, Remove lets the frame go (red:
+    Remove keeping the frame; a second tool opening, whose editor covers the
+    sheet, so the section's own row says it could not go on); Flip with the
+    gallery's choice
+    (red: Flip without it); Post makes the post and lands on it (red: Post
+    sending no drawing); under Reduce Motion it stays still (red: playing
+    under Reduce Motion).
+  - 5, YOURS: the title, the one pill with Drafts pressed, your drafts newest
+    first as buttons, focus on Back (red: the pill with Drawings first;
+    focus left on Yours); Drawings, your 26 drawings shared outside a post
+    (link-only among them), 24 then Load more, never your post's drawing,
+    your face, your drawing answer or Ben's (red: link-only left out,
+    `gallery.py`; a post's drawing offered; the tiles as links,
+    `_compose_tiles.html`); a drawing attached as it is, playing, no Edit,
+    Remove focused (red: Edit on an older drawing); a draft opened in the Pad
+    with its 52 points, closing back to the picker (red: openDraft opening a
+    blank editor, `lib/composehost.js`); Add to post attaching it playing,
+    the words back (red: the picker kept after Add); `/make/yours` 401 to
+    nobody, 400 to a list it lacks, Ben's alone to Ben (red: any list read as
+    drawings, `compose.py`).
+  - 6, ONE DRAWING, ONE CONVERSATION: the post names the drawing and Skribl
+    makes nothing; two likes (one with its moment), a comment and its answer
+    on the post with every column as it was (red: the likes left behind;
+    the comments left behind, `posts.py`); its page holds them, the old page
+    a 302 to the post for Dee and for nobody, the old like and comment
+    addresses 404 (red: the old page not sending people on); the Gallery
+    once, as the post, "2 likes, 2 comments" (red: the drawing offered
+    beside its post); Activity's rows open the post, none the old page, the
+    bell dark (red: the comments made new as they move, `comments.py`); the
+    link-only one hidden as a post (red: posted shown); a move refused (a
+    trigger on the likes) leaves no post and nothing moved, and asked again
+    it all goes (red: the post committed before the moves); the guards, each
+    its own answer (red: somebody else's drawing taken; a drawing posted
+    twice).
+  - 7, EVERY WORD at 4.5:1 on what is painted, 44px, 16px: empty, words and
+    a drawing, Drafts, Drawings; phone and desk, light and dark, 108 words,
+    the lowest 5.33 (red: Cancel in a faint ink; Back and Cancel 30px tall; a
+    draft's line faint in the picker).
+  - 8, NO PAGE ERRORS (red: a page error thrown after the composer starts).
+- verify_socialposts 1 to 3, CHANGED to the row and the sheet (the composer
+  itself is verify_composer's): Home's row, its words opening the composer,
+  no Post, the dim Post's words (red: Home's row wired to nothing; the dim
+  Post's words changed); Home's Draw opens the Pad over the composer with
+  the gallery's choice, Edit and Remove, Flip the same (red: the Pad without
+  the gallery's choice; Remove keeping the frame; Flip without it); a
+  post's page has no Make your own and the bar's Make opens the composer
+  there (red: the bar's Make wired to nothing, Home's row still wired).
+- verify_socialfollow 7, CHANGED: Home's pill under Home's row, over the posts
+  (red: the pill moved over the row).
+- verify_socialactivity 9, CHANGED: Make a skribl opens the composer, its
+  field ready (red: the button without its data-make).
+- verify_socialsettings 2, CHANGED: Dark on Settings reaches the Pad and Flip
+  through Make as a person goes, the composer's Draw and Flip, each in its
+  frame (red: the composer's tools wired to nothing).
+
+FOUND WRONG, AND MENDED, before any row was green: a finished fade held the
+words' view at nothing ('forwards'), so coming back from Yours showed an
+empty sheet (photographed, then the fade let go once its view is hidden);
+Load more and Edit drawing showed while hidden (`.btn` sets its own
+display; `[hidden]` is said for them). And three instruments of mine: the
+new suite stopped at a covered click when a break opened a second editor
+(each section now ends in a red row of its own); verify_socialposts 1
+stopped at a press on a sheet that never opened (the button's own click
+now); and the picker's helper assumed Drafts (the picker keeps the list last
+shown, so the helper presses the one it wants).
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py, -j 3, its logs
+in a folder of its own), on the tree as committed: verify_composer 31/31,
+verify_social 41/41, verify_socialauth 66/66, verify_socialposts 78/79
+beside the others and 79/79 alone (the Gallery's Reduce Motion fade read one
+step of 0.382 where 0.35 is the most: a late frame under load, as the alone
+run says), verify_socialprofile 87/88 beside the others and 88/88 alone (the
+face Pad's photo guide's words not yet laid out in the dark browser when they
+were read: no box at all, under load), verify_socialcomments 93/93,
+verify_sociallikes 100/100, verify_socialactivity 44/44, verify_socialfollow
+74/74, verify_socialsettings 44/44, verify_socialmute 68/68,
+verify_socialsafety 38/38, verify_compose 88/88, verify_clouddrafts 116/116,
+verify_example 59/59, verify_standin 22/22, verify_identity 135/135,
+verify_hostseams 139/139, verify_seam 515/515, verify_txcontract 103/103,
+verify_contrast 645/645, verify_a11y 444/444, verify_a11ypages 162/162,
+verify_pointerpad 55/55, verify_layout 257/257, verify_sizeclass 89/89, and
+verify_ux 486/487 beside the others and 487/487 alone (the editors' own Post
+sheet's caption box easing open read no frame between on Flip, under load;
+nothing in this change loads there; the runner re-runs only suites tagged as
+measuring, so it was run alone by hand): 27 suites in 63 minutes, three
+INTERMITTENT and each load, not a defect. Then verify_jsstrip 35/35, since
+`lib/composehost.js` is a file it strips and serves, and verify_docs 144/144
+(and again with this entry in). An earlier side-by-side run of four suites'
+edited sections had verify_socialfollow 7 red beside them (a fade step in
+dark) and green alone; it was green in the run above. styles.css is
+untouched, so cssgraph was not re-emitted and verify_player_isolation was not
+run. No migration. The full battery was not run; main's run after the merge
+is that.
+
+JUDGMENT CALLS (the brief's three questions first, each decided the way it
+leaned and the agreements allow):
+
+- SIGNED OUT, MAKE KEEPS ITS TWO DOORS into Skribl's own Pad and Flip (as
+  nobody, Skribl's own share), and the page holds no composer: there is
+  nobody to post as, and the first visit's "No account needed to look, or to
+  make one" stays true. A site without accounts is the same.
+- MAKE'S DRAW AND FLIP DOORS ARE GONE for somebody signed in: Make is the
+  composer, and Draw and Flip are its tools.
+- THE PAD'S OWN POSTING STAYS SKRIBL'S ALONE: nothing in the editors
+  changed. A drawing shared that way is a drawing shown outside a post,
+  which Yours can post later, its conversation with it.
+- A DRAFT IS ATTACHED THROUGH ITS EDITOR: picking one opens the Pad or Flip
+  over the composer with the draft on its canvas, and Add to post (one tap)
+  attaches it. A draft is the editor's own object, and only the editor
+  builds what a post carries (its card, its music cut to the loop); a
+  composer that posted the stored draft would make a second, quietly
+  different kind of post (editor_compose.js, "one builder"). A drawing
+  already shared is attached at once.
+- AN OLDER DRAWING IS POSTED AS IT IS: no Edit drawing on it. An edit would
+  be a new drawing, and its conversation would stay behind with the old one.
+- WITH A DRAWING ATTACHED THE TOOLS STAY IN VIEW, as the mock drew them, and
+  a tap on one says "A post holds one drawing. Remove this one to use
+  another." rather than dimming them.
+- POST IS DIM AND STILL A BUTTON (`aria-disabled`): a press says what is
+  missing ("Draw something first, or pick one you made."), as the editors'
+  Add does in compose mode (a disabled button cannot say why).
+- CANCEL KEEPS WHAT IS IN THE COMPOSER for as long as the page is open (a
+  tap outside, Esc and a swipe down too): the next Make shows it again.
+  Nothing is lost by putting it away; leaving the page is leaving it.
+- HOME'S BOX KEEPS ITS LOOK and loses its Post: the sheet has the one Post.
+- A DRAWING HIDDEN FROM THE GALLERY STAYS HIDDEN AS A POST
+  (`gallery_hidden_at`), as its maker's eye said; the eye on their Gallery
+  tab shows it again.
+- THE PICKER REMEMBERS the list last shown while the page is open, and opens
+  on Drafts the first time.
+- THE COUNT SAYS THE NUMBER ALONE (500), as the mock, with "characters
+  left" for a screen reader.
+- NO MIGRATION: a drawing is in one post by the lock above and the check
+  under it, not by a unique index (one would be a migration, and every
+  post's own skribl is unique already).
+
+THE FOUR. Simple: one Make, the same sheet everywhere, and one thing to
+share; Yours finds what you already made. Kind: nothing is lost (Cancel
+keeps what you wrote, an older drawing brings its hearts and comments, its
+old page sends people on), and a press on something that cannot happen yet
+says why. Playful: the drawing plays the moment it is attached, in the
+player the post will have. Powerful: a quote post can open the same sheet,
+and the editors' own drafts arrive through one Skribl seam any host can use.
+
+NOT TESTED HERE: WebKit, so the owner's iPhone (the keyboard coming up as
+the field takes focus while the sheet glides, and the sheet riding above it,
+stood in here by a stand-in visual viewport, are Safari's to show; the sheet
+clear of the status bar where a phone gives the page the whole screen);
+Firefox (main's lanes after the merge); SF and Segoe UI (sizes and places
+were read in this box's fonts; nothing was nudged to them); PostgreSQL (the
+drawing's advisory lock is PostgreSQL's alone and no suite here drives two
+posts of one drawing at once there; no migration, so CI's postgres job is
+the only place it runs); the live site. A Flip draft picked from Yours was
+probed by hand, not by a suite (it opened in Flip with its two pages, and
+Add to post attached it playing).
