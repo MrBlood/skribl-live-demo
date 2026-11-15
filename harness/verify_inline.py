@@ -2102,7 +2102,11 @@ with sync_playwright() as sp:
                 const c = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-canvas');
                 if (!c || c.width <= 300) return null;
                 const x = c.getContext('2d');
-                const at = (fy) => { const d = x.getImageData(Math.round(c.width * 0.5),
+                /* A quarter across, clear of the fixture's one stroke: it runs
+                   corner to corner through the centre, and a replay that rests
+                   on its finished drawing (repeat off to start, Nov 15) leaves
+                   it there, where a repeating one was mostly between passes. */
+                const at = (fy) => { const d = x.getImageData(Math.round(c.width * 0.25),
                                                               Math.round(c.height * fy), 1, 1).data;
                                      return [d[0], d[1], d[2]]; };
                 return {size: [c.width, c.height], top: at(0.06), mid: at(0.5), bot: at(0.94)};
@@ -3137,10 +3141,15 @@ if _spw:
         _bb = _pb.bounding_box()
         _pg.mouse.click(_bb["x"] + _bb["width"] / 2, _bb["y"] + _bb["height"] / 2)
         _pg.wait_for_timeout(900)
-        _tap = _pg.evaluate("""(id) => ({ nav: window.__cardNav,
-            cls: document.querySelector('.skribl-inline[data-skribl-id="' + id + '"]').className })""", _plain)
+        # STARTED, read from the player: playing, loading, or (repeat off to
+        # start since Nov 15) already played through to its end and resting.
+        _tap = _pg.evaluate("""(id) => { const box = document.querySelector('.skribl-inline[data-skribl-id="' + id + '"]');
+            const p = box._skriblInline, s = p && p.state();
+            return { nav: window.__cardNav, cls: box.className,
+                     played: !!s && s.elapsedMs > 0, state: s && s.state }; }""", _plain)
         check("the tap starts the drawing and never reaches the post's own link",
-              _tap["nav"] == 0 and ("is-playing" in _tap["cls"] or "is-loading" in _tap["cls"]), str(_tap))
+              _tap["nav"] == 0 and ("is-playing" in _tap["cls"] or "is-loading" in _tap["cls"] or _tap["played"]),
+              str(_tap))
 
         # POSTS ADDED AFTER LOAD (v316). skribls.net's infinite scroll appends
         # server-rendered posts to the feed; the player mounts once, at load, so
@@ -3164,11 +3173,14 @@ if _spw:
         _lbb = _lb.bounding_box()
         _pg.mouse.click(_lbb["x"] + _lbb["width"] / 2, _lbb["y"] + _lbb["height"] / 2)
         _pg.wait_for_timeout(900)
-        _lcls = _pg.evaluate("() => document.getElementById('lateSkribl').className")
+        _late = _pg.evaluate("""() => { const box = document.getElementById('lateSkribl'),
+            p = box._skriblInline, s = p && p.state();
+            return { cls: box.className, played: !!s && s.elapsedMs > 0 }; }""")
+        _lcls = _late["cls"]
         check("mount() picks up the new box once, and calling it twice adds nothing more",
               _unmounted == _before and _after == _before + 1, f"before {_before}, inserted {_unmounted}, after two mounts {_after}")
         check("...and the late post plays when tapped",
-              "is-playing" in _lcls or "is-loading" in _lcls, _lcls)
+              "is-playing" in _lcls or "is-loading" in _lcls or _late["played"], str(_late))
         _b.close()
 
 

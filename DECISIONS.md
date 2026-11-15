@@ -41876,3 +41876,45 @@ them; nothing was nudged to a face); Firefox (main's lanes after the merge); Pos
 read offline only, its NOT VALID constraints included; CI's postgres job runs
 it); the live site. The one-glance tell on the live site: the row under a
 post has the two arrows where Share was.
+
+## After v330 -- Repeat starts off on every replay, Pad and Flip alike
+
+The owner, Nov 15 (Mountain Time), about 1:45 AM, with "All yes" to the
+mentions and finding-people mocks: "don't automatically start with loop on.
+Start with it off by default." Until now a post repeated by default ("posts
+keep repeating as now", the Pad's Repeat page), while the Pad's own Repeat
+started off. Asked whether posted Flips should keep going round, as Flip's
+own Play does, the owner: "Both off by default."
+
+WHAT CHANGED. The repeat control on every replay of a Skribl starts off:
+a post's ⟲ in the line under the drawing (inlineplayer.js `looping`, and
+its macro's button, which now ships unlit: aria-pressed false, "Repeat",
+"Plays once"), so Home's cards, a post's and a drawing's page, the
+composer's preview, a quote's own drawing, Skribl's own feed and gallery
+cards and their full-screen band; the link page's Loop (app.js `loop`,
+_skribl_player_controls.html); and the Library's stage (library.js,
+skribl_library.html). A replay plays once and rests on the finished
+drawing, a Flip on its last page, and the music stops with it (the same
+call as before); a press repeats that one drawing, and a press on a replay
+sitting finished starts it again, as it always did. A Flip's forever
+stretch is its animation and plays on either way: frame() wraps inside the
+stretch whatever the switch says. Callers that set it themselves keep what
+they set: the help cards' examples loop on purpose; the post sheet's card,
+hello, faces and hand words play once. The Pad's own Repeat (off to start,
+remembered) and Flip's Play (always round) are unchanged.
+
+PAD AND FLIP: shared. One player for both, so both change together.
+
+CONTRAST: nothing new. The unlit control is the state it already had when
+turned off; lit Loop's contrast row in verify_inline now lights it first.
+
+THE CHECKS, each shown red by the old default (on) put back in a throwaway
+copy, green on an untouched copy:
+{{CAL}}
+
+THE AFFECTED SUITES:
+{{COUNTS}}
+
+NOT TESTED HERE: WebKit, so the owner's iPhone; the live site. The
+one-glance tell: a post's ⟲ under the drawing is unlit when the page opens,
+and the drawing stops when it is done.

@@ -348,9 +348,9 @@ with sync_playwright() as p:
     # new Function, so the stage is named outright there.
     ON_STAGE = "document.querySelector('.stageCanvasWrap .skribl-inline')._skriblInline"
     # As a person does it: the drawing starts on its own when its row is
-    # picked; Loop off, then Restart, and watch it to its end.
+    # picked; Loop is off to start (since Nov 15), so Restart, and watch it to
+    # its end.
     pg.wait_for_function(f"() => {{ const p = {ON_STAGE}; return p && p.state().state === 'playing'; }}", timeout=15000)
-    pg.click("#btnLoop")
     pg.click("#btnRestart")
     try:
         pg.wait_for_function(f"() => {{ const s = {ON_STAGE}.state(); return s.state !== 'playing' && s.elapsedMs >= s.totalMs; }}",
