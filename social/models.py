@@ -34,7 +34,8 @@ import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
 __all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
-           "Comment", "Like", "Bookmark", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES",
+           "Comment", "Like", "Bookmark", "Repost", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX", "BIO_MAX",
+           "BIO_LINES",
            "WORDS_MAX", "REPORT_KINDS", "REPORT_STATES", "REPORT_NOTE_MAX", "HOME_FEEDS",
            "new_person_id", "new_public_id", "as_utc", "utcnow", "attach_to_metadata"]
 
@@ -257,7 +258,20 @@ class Post(SocialBase):
     only its public id; the words are the site's. Deleting a post deletes
     both, in one transaction (Skribl's delete_post); so does deleting the
     account. The feed reads newest first, and a person's own newest first
-    ("More from"), each by an index of its own."""
+    ("More from"), each by an index of its own.
+
+    A QUOTE POST (the map, part two, item 3; the owner's "All yes" on the
+    reposts mock, Nov 14) is a post that shows another one small inside it:
+    a post (quoted_post_id) or a drawing shown outside a post
+    (quoted_drawing_id, the skribl's own public id), at most one of the two,
+    and whose it is (quoted_owner_id: Activity's "Rook quoted your post", and
+    deleting an account, never ask Skribl). Its words, its own drawing, or
+    both: a quote of words alone has no skribl of its own (skribl_id is then
+    None, and only a quote may be without one: ck_social_posts_drawn_or_quote).
+    A QUOTE OUTLIVES WHAT IT QUOTES: is_quote is kept for good, while the
+    links go when the original does (ON DELETE SET NULL, said in code first:
+    reposts.py), so its small card can still say "This post is gone.", kindly.
+    """
     __tablename__ = "social_posts"
 
     id = sa.Column(BigId, primary_key=True)
@@ -265,7 +279,8 @@ class Post(SocialBase):
     person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
     #: Plain text as typed, tidied (posts.check_words); may be empty.
     words = sa.Column(sa.String(WORDS_MAX), nullable=False, default="", server_default="")
-    skribl_id = sa.Column(sa.String(32), nullable=False)
+    #: The post's drawing, Skribl's; None only for a quote of words alone.
+    skribl_id = sa.Column(sa.String(32), nullable=True)
     created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
     #: TAKEN DOWN by an admin (piece 5): when. Hidden from everybody but its
     #: author, who sees it with the note; its skribl withheld in Skribl. A
@@ -278,12 +293,36 @@ class Post(SocialBase):
     #: post is. None: in the Gallery. The site's own: Skribl's visibility of
     #: the drawing is untouched (gallery.py).
     gallery_hidden_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+    #: A QUOTE POST (above): whether it is one, for good, whatever became of
+    #: what it quotes.
+    is_quote = sa.Column(sa.Boolean(), nullable=False, default=False, server_default=sa.false())
+    #: The post it quotes, while that post is there.
+    quoted_post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="SET NULL",
+                                                    name="fk_social_posts_quoted_post_id"), nullable=True)
+    #: The drawing shown outside a post it quotes (its skribl's public id),
+    #: while it is one: posted through the composer's Yours, it is the post's
+    #: (quoted_post_id), as its hearts and comments are.
+    quoted_drawing_id = sa.Column(sa.String(32), nullable=True)
+    #: Whose the post or the drawing it quotes is (its maker).
+    quoted_owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="SET NULL",
+                                                     name="fk_social_posts_quoted_owner_id"), nullable=True)
 
     __table_args__ = (
+        #: A drawing, or a quote (whose words may be all it has).
+        sa.CheckConstraint("skribl_id IS NOT NULL OR is_quote", name="ck_social_posts_drawn_or_quote"),
+        #: A quote shows one thing small: a post, or a drawing.
+        sa.CheckConstraint("quoted_post_id IS NULL OR quoted_drawing_id IS NULL", name="ck_social_posts_quotes_one"),
         sa.Index("ix_social_posts_public_id", "public_id", unique=True),
         sa.Index("ix_social_posts_created", "created_at", "public_id"),
         sa.Index("ix_social_posts_person_created", "person_id", "created_at"),
         sa.Index("ix_social_posts_skribl_id", "skribl_id"),
+        #: A post's quotes: its count, and its going (the links set to none).
+        sa.Index("ix_social_posts_quoted_post_id", "quoted_post_id"),
+        #: A drawing's quotes: its count, and its moving into a post.
+        sa.Index("ix_social_posts_quoted_drawing_id", "quoted_drawing_id"),
+        #: Quotes of what a person made, newest first: Activity, and deleting
+        #: an account.
+        sa.Index("ix_social_posts_quoted_owner_created", "quoted_owner_id", "created_at"),
     )
 
 
@@ -464,6 +503,48 @@ class Bookmark(SocialBase):
         sa.Index("ix_social_bookmarks_drawing_id", "drawing_id"),
         #: Whose: deleting an account takes every bookmark on what it owned.
         sa.Index("ix_social_bookmarks_owner_id", "owner_id"),
+    )
+
+
+class Repost(SocialBase):
+    """A repost (the map, part two, item 3; the owner's "All yes" on the
+    reposts mock, Nov 14): one person showing a post (somebody's, or their
+    own) to the people who follow them, once; "Undo repost" takes it away,
+    and the row goes. ONE DRAWING, ONE CONVERSATION: a repost is no post of
+    its own. It shows the original, on Home's Following for the people who
+    follow the reposter and on the reposter's Posts tab, with "Mira Lopez
+    reposted" at the top of the original's own card, its hearts and comments
+    the original's (reposts.py). A drawing shown outside a post is reposted
+    by nobody (only its maker posts it); it can be quoted.
+
+    owner_id is whose the post is (its author), kept on the row so a block,
+    Activity ("Mira reposted your post") and deleting an account never ask
+    anything else. A person reposts a post once (the unique pair).
+
+    DELETING IS REAL AND SAID IN CODE (reposts.py, from posts.drop_post and
+    accounts.delete_person): a post goes with its reposts, an account with
+    its own and every repost of what it owned. The ON DELETE CASCADEs are
+    the net under that, as for likes."""
+    __tablename__ = "social_reposts"
+
+    id = sa.Column(BigId, primary_key=True)
+    #: Who reposted it.
+    person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: The post reposted (the original).
+    post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=False)
+    #: Whose the post is (its author).
+    owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (
+        #: Once a person, once a post.
+        sa.Index("ix_social_reposts_person_post", "person_id", "post_id", unique=True),
+        #: A person's, newest first: their Posts tab, and Home's Following.
+        sa.Index("ix_social_reposts_person_created", "person_id", "created_at"),
+        #: A post's: its count, and its going.
+        sa.Index("ix_social_reposts_post_id", "post_id"),
+        #: Whose, newest first: Activity's reposts of what you made.
+        sa.Index("ix_social_reposts_owner_created", "owner_id", "created_at"),
     )
 
 

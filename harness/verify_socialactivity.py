@@ -877,6 +877,40 @@ with sync_playwright() as p:
                   all(pics[cid] and poster(want[cid][2]) in pics[cid] for cid in want)
                   and all(rows[cid]["pw"] == 52 and rows[cid]["ph"] == 52 for cid in want if cid in rows),
                   json.dumps(pics))
+            # REPOSTS AND QUOTES (the reposts mock, the owner's "All yes", Nov 14):
+            # "Eli reposted your post", to the post; "Gus quoted your post", his
+            # words under it, to his quote; each face wearing the repost arrows;
+            # Undo repost takes its row away.
+            ivy = someone(b, "ivy", "Ivy Cole")
+            ip = make_post(ivy, "Section 3, Ivy's", seed=38)
+
+            def as_(who, path, body):
+                c = who.client()
+                c.get("/social/")
+                return c.post_json(path, body)
+            st_r = as_(eli, f"/social/p/{ip}/repost", {"reposted": True})[0]
+            st_q, jq = as_(gus, "/social/posts", {"words": "Gus on Ivy's", "quote": ip})
+            qp = jq.get("post") if isinstance(jq, dict) else None
+            BADGED = "() => [...document.querySelectorAll('.act-row')].map(a => !!a.querySelector('.act-badge.rp-badge svg'))"
+            ctx, pg = browser_as(b, ivy)
+            go(pg, "/social/activity")
+            got = [r for s in pg.evaluate(ROWS) for r in s["rows"]]
+            badges = pg.evaluate(BADGED)
+            close_ctx(ctx, pg)
+            as_(eli, f"/social/p/{ip}/repost", {"reposted": False})
+            ctx, pg = browser_as(b, ivy)
+            go(pg, "/social/activity")
+            after = [r["say"] for s in pg.evaluate(ROWS) for r in s["rows"]]
+            close_ctx(ctx, pg)
+            mine_r = [(r["say"], r["href"], r["peek"], poster(skribl_of(ip)) in (r["pic"] or "")) for r in got]
+            check("a repost and a quote of your post are rows of their own: \"Eli reposted your post\" to the post (its"
+                  " picture), \"Gus quoted your post\" to his quote, his words under it in quotes, each face wearing"
+                  " the repost arrows; Undo repost takes its row away",
+                  st_r == 200 and st_q == 200 and sorted(mine_r) == sorted([
+                      ("Eli reposted your post", f"/social/p/{ip}", None, True),
+                      ("Gus quoted your post", f"/social/p/{qp}", "“Gus on Ivy's”", True)])
+                  and badges == [True, True] and after == ["Gus quoted your post"],
+                  json.dumps([mine_r, badges, after]))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(3, exc)
 
@@ -1243,8 +1277,9 @@ with sync_playwright() as p:
                                                    " && document.activeElement.getAttribute('placeholder'); }")
                 close_ctx(ctx, pg)
             want = {"icon": "apple-touch-icon.png", "title": "Nothing new yet",
-                    # likes (the likes mock) and follows (the follow mock): both are in Activity too
-                    "words": "When someone follows you, likes your post, says something on it, or answers you, you’ll see it here.",
+                    # likes (the likes mock), follows (the follow mock) and reposts (the reposts
+                    # mock): each is in Activity too
+                    "words": "When someone follows you, likes or reposts your post, says something on it, or answers you, you’ll see it here.",
                     "button": "Make a skribl"}
             check("with nothing yet: Blooby as his Home Screen icon (64px, painted), \"Nothing new yet\", the words, and"
                   " Make a skribl (52px); no New, no Earlier; phone and desk",

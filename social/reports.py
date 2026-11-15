@@ -117,7 +117,7 @@ def queue():
     posts = {p.public_id: (p, who) for p, who in sess.execute(
         sa.select(Post, Person).join(Person, Person.id == Post.person_id)
         .where(Post.public_id.in_([c["target"] for c in cards.values() if c["kind"] == "post"]))).all()}
-    skribls += [p.skribl_id for p, _ in posts.values()]
+    skribls += [p.skribl_id for p, _ in posts.values() if p.skribl_id]
     said = {cm.public_id: (cm, who, post) for cm, who, post in sess.execute(
         sa.select(Comment, Person, Post).join(Person, Person.id == Comment.person_id)
         .outerjoin(Post, Post.id == Comment.post_id)
@@ -136,7 +136,8 @@ def queue():
         elif c["kind"] == "post":
             p, who = posts.get(c["target"], (None, None))
             c["who"], c["what"] = who, p
-            c["poster"] = url_for(site_bp() + ".skribl_poster", public_id=p.skribl_id) if p else None
+            # A quote of words alone (reposts) has no drawing: its words, and whose.
+            c["poster"] = url_for(site_bp() + ".skribl_poster", public_id=p.skribl_id) if p and p.skribl_id else None
             c["url"] = url_for("social.post_page", public_id=p.public_id) if p else None
         elif c["kind"] == "comment":
             # A COMMENT'S CARD (phase 2): its words, whose it is, and a link to
@@ -199,8 +200,11 @@ def answer(kind, target, me, down):
         if down:
             if p.taken_down_at is None:
                 p.taken_down_at = now
-            _withhold(p.skribl_id)
-        close_reports(p.skribl_id)
+            if p.skribl_id:
+                _withhold(p.skribl_id)
+        if p.skribl_id:
+            # (A quote of words alone has no drawing to withhold, nor reports in Skribl.)
+            close_reports(p.skribl_id)
     elif kind == "drawing":
         if down:
             _withhold(target)

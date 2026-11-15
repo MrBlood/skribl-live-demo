@@ -55,6 +55,13 @@ Skribl's real Pad.
   7. EVERY WORD AT 4.5:1 on what is painted behind it, every control 44px,
      every text field 16px: the composer empty, with words and a drawing,
      and Yours' Drafts and Drawings, phone and desk, light and dark.
+  9. A QUOTE (reposts; the owner's "All yes", Nov 14): the repost sheet's
+     Quote opens the composer with the post small under the words (no link
+     there), "Add your words, or draw something…", the words' field focused;
+     Post dim until there are words (a press says what is missing and sends
+     nothing), then awake; Post sends the words and the quote and lands on the
+     new post, a quote of words alone; a drawing shown outside a post quoted
+     the same way; Make opens the sheet without the quote.
   8. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 COMPOSER_PART=<n>[,<m>] runs those sections only (calibration); a section
@@ -1278,6 +1285,99 @@ with sync_playwright() as p:
                   f" {json.dumps(bad)[:900]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(7, exc)
+
+    # ------------------------------------------------------------------ 9
+    if part(9, "a quote: the repost sheet's Quote opens the composer with the post small; Post wakes with words, sends it"):
+        try:
+            quinn = someone(b, "quinn", "Quinn Ash")
+            rae = someone(b, "rae", "Rae Bloom")
+            st, made = quinn.api("POST", "/social/posts", {"words": "Quinn's to be quoted", "payload": drawing(seed=91)})
+            qp = (made or {}).get("post")
+            qsid = quinn.skribl("Quinn's drawing, outside a post", seed=92)
+            OPEN = """() => { const w = document.getElementById('composeSheet'), q = w.querySelector('[data-compose-quote]');
+              const c = q.querySelector('.qt-card'), words = w.querySelector('[data-compose-words]'), post = w.querySelector('[data-compose-post]');
+              return { open: w.classList.contains('is-open') && !w.hidden, focus: document.activeElement === words,
+                placeholder: words.getAttribute('placeholder'), shown: !q.hidden, tag: c ? c.tagName : null,
+                href: c ? c.getAttribute('href') : null, name: c ? (c.querySelector('.qt-name') || {}).textContent : null,
+                words: c ? (c.querySelector('.qt-words') || {}).textContent : null, pic: !!(c && c.querySelector('.qt-pic img')),
+                belowWords: !!c && c.getBoundingClientRect().top >= words.getBoundingClientRect().bottom - 1,
+                dim: post.getAttribute('aria-disabled'), say: (w.querySelector('[data-compose-say]') || {}).textContent || '',
+                quoted: window.SocialComposer.quoted() }; }"""
+            got = {}
+            for screen in ("phone", "desk"):
+                ctx, pg = browser_as(b, rae, screen=screen, scheme="light" if screen == "phone" else "dark")
+                sent = []
+                pg.on("request", lambda r: sent.append(r.post_data) if r.method == "POST" and r.url.endswith("/social/posts") else None)
+                go(pg, f"/social/p/{qp}", wait=900)
+                tap(pg, ".post-page > .post-row .rp-btn", screen)
+                pg.wait_for_timeout(700)
+                tap(pg, '#repostSheet [data-rp="quote"]', screen)
+                pg.wait_for_timeout(1200)
+                got[(screen, "opened")] = pg.evaluate(OPEN)
+                tap(pg, "#composeSheet [data-compose-post]", screen)
+                pg.wait_for_timeout(500)
+                got[(screen, "pressed dim")] = dict(pg.evaluate(OPEN), sent=len(sent))
+                pg.fill("#composeWords", f"Rae's words on Quinn's, {screen}")
+                pg.wait_for_timeout(200)
+                got[(screen, "with words")] = pg.evaluate(OPEN)
+                if screen == "phone":
+                    with pg.expect_navigation(timeout=15000):
+                        tap(pg, "#composeSheet [data-compose-post]", screen)
+                    pg.wait_for_timeout(500)
+                    got[(screen, "posted")] = {"at": pg.url.replace(BASE, ""), "sent": [json.loads(s_) for s_ in sent if s_]}
+                    go(pg, "/social/", wait=800)
+                    open_composer(pg, screen)
+                    got[(screen, "make")] = pg.evaluate(OPEN)
+                close_ctx(ctx, pg)
+            o, d, w = got[("phone", "opened")], got[("phone", "pressed dim")], got[("phone", "with words")]
+            check("the repost sheet's Quote opens the composer with the post small under the words (Quinn's name, words"
+                  " and drawing, no link there), the words' field focused, \"Add your words, or draw something…\", Post"
+                  " dim; a press on it says what is missing and sends nothing; words wake it (phone and desk)",
+                  all(got[(s, "opened")]["open"] and got[(s, "opened")]["focus"] and got[(s, "opened")]["shown"]
+                      and got[(s, "opened")]["placeholder"] == "Add your words, or draw something…"
+                      and got[(s, "opened")]["tag"] == "DIV" and got[(s, "opened")]["href"] is None
+                      and got[(s, "opened")]["name"] == "Quinn Ash" and got[(s, "opened")]["words"] == "Quinn's to be quoted"
+                      and got[(s, "opened")]["pic"] and got[(s, "opened")]["belowWords"] and got[(s, "opened")]["dim"] == "true"
+                      and got[(s, "opened")]["quoted"] == {"kind": "p", "id": qp}
+                      and got[(s, "pressed dim")]["say"] == "Add your words, or a drawing, first." and got[(s, "pressed dim")]["sent"] == 0
+                      and got[(s, "with words")]["dim"] == "false" for s in ("phone", "desk")),
+                  json.dumps({" ".join(k): v for k, v in got.items() if k[1] != "posted"})[:900])
+            posted = got.get(("phone", "posted")) or {}
+            new = (posted.get("at") or "").rsplit("/", 1)[-1]
+            row = db("select s.is_quote, o.public_id, s.skribl_id, s.words from social_posts s left join social_posts o"
+                     " on o.id = s.quoted_post_id where s.public_id = ?", (new,))
+            check("Post sends the words and the quote ({words, quote}) and lands on the new post: a quote of words alone"
+                  " (no drawing of its own), quoting Quinn's",
+                  posted.get("sent") and posted["sent"][-1] == {"words": "Rae's words on Quinn's, phone", "quote": qp}
+                  and posted["at"].startswith("/social/p/") and row == [(1, qp, None, "Rae's words on Quinn's, phone")],
+                  json.dumps([posted, row]))
+            mk = got.get(("phone", "make")) or {}
+            check("Make opens the composer without the quote: \"Say something…\", nothing small under the words",
+                  mk.get("open") and not mk.get("shown") and mk.get("placeholder") == "Say something…" and mk.get("quoted") is None,
+                  json.dumps(mk))
+            # A DRAWING SHOWN OUTSIDE A POST: Quote alone, sending quote_drawing.
+            ctx, pg = browser_as(b, rae)
+            sent = []
+            pg.on("request", lambda r: sent.append(r.post_data) if r.method == "POST" and r.url.endswith("/social/posts") else None)
+            go(pg, f"/social/b/{qsid}", wait=900)
+            tap(pg, ".post-page > .post-row .rp-btn", "phone")
+            pg.wait_for_timeout(700)
+            rows_ = pg.evaluate("() => [...document.querySelectorAll('#repostSheet .post-act')].filter(b => !b.hidden).map(b => b.getAttribute('data-rp'))")
+            tap(pg, '#repostSheet [data-rp="quote"]', "phone")
+            pg.wait_for_timeout(1200)
+            od = pg.evaluate(OPEN)
+            pg.fill("#composeWords", "Rae on Quinn's drawing")
+            with pg.expect_navigation(timeout=15000):
+                tap(pg, "#composeSheet [data-compose-post]", "phone")
+            close_ctx(ctx, pg)
+            sent_d = [json.loads(s_) for s_ in sent if s_]
+            check("a drawing shown outside a post: its sheet has Quote alone; the composer shows it small and Post sends"
+                  " {words, quote_drawing}",
+                  rows_ == ["quote"] and od["quoted"] == {"kind": "s", "id": qsid} and od["name"] == "Quinn Ash"
+                  and sent_d and sent_d[-1] == {"words": "Rae on Quinn's drawing", "quote_drawing": qsid},
+                  json.dumps([rows_, od, sent_d])[:600])
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(9, exc)
 
     # ------------------------------------------------------------------ 8
     if part(8, "no page errors, no console errors, no CSP violations"):

@@ -1047,6 +1047,13 @@ with sync_playwright() as p:
           name: c.querySelector('.post-name').textContent, href: c.querySelector('.post-name').getAttribute('href'),
           when: c.querySelector('time').textContent, words: (c.querySelector('.post-words') || {}).textContent }))""")
         idle = pg.evaluate(STATE)
+        # THE ROW under every card (the reposts mock, the owner's "All yes", Nov 14):
+        # the 💬, the repost (nothing reposted: no count, "Repost"), the heart, the ⋯
+        # and Open ›; Share is in the ⋯.
+        rows4 = pg.evaluate("""() => [...document.querySelectorAll('.post-card .post-row')].map(r => [...r.children].map(e =>
+          e.classList.contains('post-count') ? 'comment' : e.classList.contains('rp-btn') ? 'repost:' + e.getAttribute('aria-label')
+          : e.classList.contains('lk-heart') ? 'heart' : e.classList.contains('post-share') ? 'share'
+          : e.classList.contains('post-more') ? 'more' : e.classList.contains('post-open') ? 'open' : e.className).join(' '))""")
         cursor = pg.evaluate("() => document.querySelector('[data-feed-next]').getAttribute('data-feed-next')")
         try:
             raw = base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4)).decode()
@@ -1066,6 +1073,9 @@ with sync_playwright() as p:
               and all(c["when"] in ("now",) or c["when"].endswith("m") for c in first)
               and idle and all(s != "playing" for s in idle),
               f"{len(first)} cards; first {first[:2]}; idle {set(idle)}")
+        check("the row under every card: the 💬, the repost (\"Repost\", none reposted), the heart, the ⋯ and Open ›;"
+              " Share in the ⋯, not the row",
+              rows4 and set(rows4) == {"comment repost:Repost heart more open"}, json.dumps(sorted(set(rows4 or []))))
         check("Load more brings the rest in place, each player mounted, and goes away at the end; its cursor names"
               " a time and the card (p and a post's public id, or s and a drawing's), never an internal id",
               after["n"] == total and total > 20 and after["more"] and after["mounted"]
@@ -1666,7 +1676,7 @@ with sync_playwright() as p:
             xy = [t.left + t.width / 2, a.top + 4]; }
           else if (what === 'name') xy = mid(text(c.querySelector('.post-head'), c.querySelector('.post-name').textContent));
           else if (what === 'handle') xy = mid(text(c.querySelector('.post-head'), '@' + c.dataset.handle));
-          else xy = mid(R({ face: '.post-face', more: '.post-more', share: '.post-share', count: '.post-count',
+          else xy = mid(R({ face: '.post-face', more: '.post-more', repost: '.post-row .rp-btn', count: '.post-count',
                             open: '.post-open' }[what]));
           const e = document.elementFromPoint(xy[0], xy[1]);
           return { xy, on: e ? (e.closest('.post-art') ? 'drawing' : e.closest('a, button') ? e.closest('a, button').className : 'card') : null }; }"""
@@ -1731,10 +1741,15 @@ with sync_playwright() as p:
                     pass
                 r["more"] = (cpg.evaluate("() => document.getElementById('postSheet').classList.contains('is-open')"),
                              landed(1500))
+                # THE REPOST (the reposts mock, Nov 14: where Share was; Share is in the ⋯).
                 home()
-                press(card, "share")
-                cpg.wait_for_timeout(600)
-                r["share"] = (cpg.evaluate("() => window.__shared || null"), landed(1500))
+                press(card, "repost")
+                try:
+                    cpg.wait_for_function("() => document.getElementById('repostSheet').classList.contains('is-open')", timeout=5000)
+                except Exception:  # noqa: BLE001 -- not opening is the row's red
+                    pass
+                r["repost"] = (cpg.evaluate("() => document.getElementById('repostSheet').classList.contains('is-open')"),
+                               landed(1500))
                 if not touch:
                     # A DRAG THAT SELECTS WORDS opens nothing: pressed on the words'
                     # first letter and let go on their last.
@@ -1771,10 +1786,10 @@ with sync_playwright() as p:
         check("a tap on the face, the name or the @handle opens the person's page, never the post: phone and desk",
               all(r.get(k, (None, None))[1] == people for r in res.values() for k in ("face", "name", "handle")),
               f"{ {s: {k: r.get(k) for k in ('face', 'name', 'handle')} for s, r in res.items()} }")
-        check("⋯ and Share do their own job and the page stays: ⋯ opens its sheet, Share the device's share sheet with"
-              " the post's link: phone and desk",
-              all(r.get("more") == (True, "/social/") and r.get("share") == (BASE + page, "/social/") for r in res.values()),
-              f"{ {s: {k: r.get(k) for k in ('more', 'share')} for s, r in res.items()} }")
+        check("⋯ and the repost do their own job and the page stays: ⋯ opens its sheet, the repost its own (Share is in"
+              " the ⋯ since the reposts mock): phone and desk",
+              all(r.get("more") == (True, "/social/") and r.get("repost") == (True, "/social/") for r in res.values()),
+              f"{ {s: {k: r.get(k) for k in ('more', 'repost')} for s, r in res.items()} }")
         sel = res.get("desk", {}).get("select") or ("", None)
         check("pressing on a card's words and pulling selects them and opens nothing: a click that ends a selection is not"
               " a tap (desk)",

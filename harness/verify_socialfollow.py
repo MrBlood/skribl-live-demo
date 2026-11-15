@@ -1753,6 +1753,33 @@ with sync_playwright() as p:
                                        "words": "Tap Follow on someone’s page, and their new posts show up here first. Until then, here’s everyone’s.",
                                        "btn": "Look around", "href": "/social/explore"},
                   f"{lone and lone[:4]}; {ex_l['none']}")
+            # THEIR REPOSTS TOO (the reposts mock, the owner's "All yes", Nov 14): a
+            # repost by somebody you follow is on Following, the original's own
+            # card with "Zed Ford reposted" at its top, before the line; Everyone
+            # is posts only, the post there as its own, no line.
+            cp = make_post(cas, "Section 8, Cas's, which Zed reposts", seed=230)
+            zc = zed.client()
+            zc.get(f"/social/p/{cp}")
+            st_r, _ = zc.post_json(f"/social/p/{cp}/repost", {"reposted": True})
+            BY = """(post) => { let part = 'following'; const out = [];
+              [...document.querySelector('[data-feed]').children].forEach(c => {
+                if (c.classList.contains('fo-caught')) part = 'fresh';
+                else if (c.classList.contains('post-card') && c.getAttribute('data-post') === post) {
+                  const by = c.querySelector(':scope > .rp-by');
+                  out.push([part, by ? by.textContent.trim() : null, c.getAttribute('data-handle')]); } });
+              return out; }"""
+            ctx, pg = browser_as(b, yan)
+            go(pg, "/social/", wait=600)
+            on_f = pg.evaluate(BY, cp)
+            pg.locator("[data-home-pill] button[data-show=everyone]").tap()
+            pg.wait_for_timeout(1300)
+            on_e = pg.evaluate(BY, cp)
+            close_ctx(ctx, pg)
+            pick(yan, "following")
+            check("a repost by somebody you follow is on Following, once, the original's own card (Cas's) with \"Zed"
+                  " Ford reposted\" at its top, before the line; Everyone is posts only (Cas's post as hers, no line)",
+                  st_r == 200 and on_f == [["following", "Zed Ford reposted", "cas"]] and on_e == [["following", None, "cas"]],
+                  json.dumps([on_f, on_e]))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(8, exc)
 
@@ -1860,11 +1887,12 @@ with sync_playwright() as p:
             go(qpg, "/social/activity")
             empty = qpg.evaluate("() => (document.querySelector('.act-empty-words') || {}).textContent || null")
             close_ctx(qctx, qpg)
-            check("Activity's words say follows: 'Who followed you, liked your posts or said something on them, and who"
-                  " answered you.', and with nothing yet 'When someone follows you, likes your post, says something on it,"
-                  " or answers you, you’ll see it here.'",
-                  sub == "Who followed you, liked your posts or said something on them, and who answered you."
-                  and empty == "When someone follows you, likes your post, says something on it, or answers you, you’ll see it here.",
+            # (Since reposts, the reposts mock, Nov 14, the same lines say reposts too.)
+            check("Activity's words say follows: 'Who followed you, liked or reposted your posts or said something on"
+                  " them, and who answered you.', and with nothing yet 'When someone follows you, likes or reposts your"
+                  " post, says something on it, or answers you, you’ll see it here.'",
+                  sub == "Who followed you, liked or reposted your posts or said something on them, and who answered you."
+                  and empty == "When someone follows you, likes or reposts your post, says something on it, or answers you, you’ll see it here.",
                   f"{sub!r}; {empty!r}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(9, exc)

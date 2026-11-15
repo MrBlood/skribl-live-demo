@@ -155,6 +155,15 @@
 <svg class="ic pen-ic ic-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path class="bm-fill" d="{{ d }}" stroke="none"/><path pathLength="1" d="{{ d }}"/></svg>
 {%- endmacro %}
 
+{# REPOSTS (the reposts mock; the owner's "All yes", Nov 14): the two arrows
+   going round, the mock's own lines, in the row's line style (as the
+   comments' bubble and Share beside it), its ink centred in its box (4.5 to
+   19.5 across, 3 to 21 down). In the row under a post, the repost sheet's
+   Repost row, a repost's "Mira Lopez reposted" line and Activity's badge. #}
+{% macro repost() -%}
+{{ _svg('<path d="M16.5 3l3 3-3 3"/><path d="M4.5 11.5V10a4 4 0 0 1 4-4h11"/><path d="M7.5 21l-3-3 3-3"/><path d="M19.5 12.5V14a4 4 0 0 1-4 4h-11"/>') }}
+{%- endmacro %}
+
 {# MUTE (the mute mock; the owner's "Yes to all", Nov 13), in the pen: a
    closed eye, the lid and three lashes as a hand draws them, its ink centred
    in its box (3.4 to 20.6 across, 7.6 to 16.4 down). Never a speaker: a

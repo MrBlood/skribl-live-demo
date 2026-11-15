@@ -11,9 +11,14 @@
                       its line waiting until the first play (the calm card,
                       the owner's B, Nov 13: the play button says "drawn in
                       5 sec" until then); and ONE ROW (the quick-patterns
-                      mock's B): how many comments (a way to them, the icon
-                      alone at none), the heart and how many, Share, the ⋯,
-                      and "Open ›", the post, at the end. EASY TO OPEN
+                      mock's B; the reposts mock, the owner's "All yes", Nov
+                      14): how many comments (a way to them, the icon alone
+                      at none), the repost and how many, the heart and how
+                      many, the ⋯ (Share is in it), and "Open ›", the post,
+                      at the end. A REPOST's card is the original's, with
+                      "Mira Lopez reposted" at its top ("You reposted" for
+                      yours); a QUOTE's holds the original small under its
+                      words and its own drawing (_gallery.html quote_card). EASY TO OPEN
                       (the owner's yes, Nov 12): its words and its time are
                       each a link to its own page, and the comments' icon is
                       there even at none ("Comment"); the face, the name and
@@ -34,6 +39,12 @@
                       line's marks, which it draws (a small dot a like, a
                       step redder where they double); the hearts that rise
                       from them are likes.js's. Nothing taken down has any.
+    repost(c)         the repost in the row (reposts; the reposts mock, the
+                      owner's "All yes", Nov 14): the two arrows and how many
+                      reposts and quotes, none at zero, in the row's ink; once
+                      the repost is the viewer's, both in the small violet
+                      ink. A tap raises the repost sheet (signed out, its
+                      small sheet). Nothing taken down has one.
     post_sheets()     the ⋯ sheet ("This post": Bookmark first (bookmarks:
                       "Remove bookmark" once it is yours, its ribbon filled;
                       none on what is taken down), Copy link, Share…, and
@@ -45,7 +56,13 @@
                       once), and signed out the small sheet Bookmark raises
                       ("Bookmark this post?", the heart's own shape). One of
                       each a page; posts.js fills them for the post whose ⋯
-                      was pressed, and social.js moves them.
+                      was pressed, and social.js moves them. THE REPOST SHEET
+                      (#repostSheet, the ⋯'s shape, one card): Repost ("Show
+                      it to the people who follow you"), or once yours Undo
+                      repost ("Take it off your page and your followers’
+                      Home"), and Quote ("Repost it with your own words, or a
+                      drawing"); a drawing shown outside a post, Quote alone.
+                      Signed out, "Repost this post?", the heart's shape.
     post_words()      what posts.js says ([data-word]): this page's words.
 
     `c` is posts.cards()'s: the post, its author, its drawing as Skribl
@@ -89,27 +106,54 @@
         aria-pressed="{{ 'true' if mine else 'false' }}" aria-label="{{ 'Liked' if mine else 'Like' }}{% if n %}, {{ n }} {{ 'like' if n == 1 else 'likes' }}{% endif %}">{{ ic.heart() }}{% if n %}<span class="lk-n">{{ n }}</span>{% endif %}</button>
 {%- endmacro %}
 
+{#  THE REPOST in the row (reposts.py): how many reposts and quotes, none at
+    zero; lit (.is-on, the small violet ink) once the repost is the viewer's.
+    A tap raises the repost sheet, or signed out its small sheet (posts.js).
+    A drawing shown outside a post can be quoted alone: the same button, the
+    sheet showing Quote only. #}
+{% macro repost(c) -%}
+{%- set n = c.reposts.n %}{% set mine = c.reposts.mine -%}
+<button class="rp-btn{% if mine %} is-on{% endif %}{% if not n %} is-zero{% endif %}" type="button"
+        {%- if me %} data-repost-menu aria-controls="repostSheet"{% else %} data-repost-out aria-controls="repostOutSheet"{% endif %} aria-haspopup="dialog" aria-expanded="false"
+        aria-label="{{ 'Reposted' if mine else 'Repost' }}{% if n %}, {{ n }} {{ 'repost' if n == 1 else 'reposts' }}{% endif %}">{{ ic.repost() }}{% if n %}<span class="rp-n">{{ n }}</span>{% endif %}</button>
+{%- endmacro %}
+
 {#  THE ROW under every post (the quick-patterns mock's B; the owner's "Yes
-    on everything", Nov 13): the comments, even at none (the icon alone,
-    "Comment", a way to the box), the heart and how many, Share, the ⋯, and
-    on a card "Open ›", the post, at the end. Each 44px to a finger.
-    `landing`: heart()'s, on a post's own page. #}
+    on everything", Nov 13; the reposts mock, the owner's "All yes", Nov 14):
+    the comments, even at none (the icon alone, "Comment", a way to the box),
+    the repost and how many, the heart and how many, the ⋯ (Share… and Copy
+    link are in it), and on a card "Open ›", the post, at the end. Each 44px
+    to a finger. `landing`: heart()'s, on a post's own page. #}
 {% macro post_row(c, open=true, landing=false) -%}
 <footer class="post-row">
   <a class="post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d comment%s' % (c.comments, '' if c.comments == 1 else 's')) if c.comments else 'Comment' }}">{{ ic.comment() }}{% if c.comments %}<span>{{ c.comments }}</span>{% endif %}</a>
-  {% if not c.down %}{{ heart(c, landing) }}{% endif %}
-  <button class="icon-btn post-share" type="button" data-post-share aria-label="Share this post">{{ ic.share() }}</button>
+  {% if c.markable %}{{ repost(c) }}{% endif %}{% if not c.down %}{{ heart(c, landing) }}{% endif %}
   <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
           aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
   {% if open %}<a class="post-open" href="{{ c.url }}">Open<span class="sr"> the post</span><span class="post-open-go" aria-hidden="true">›</span></a>{% endif %}
 </footer>
 {%- endmacro %}
 
+{#  WHO REPOSTED IT, inside the original's card at its top (the reposts mock):
+    "Mira Lopez reposted", or "You reposted" for yours, in the @handle's ink
+    (--ink-2), 14px 600, the arrows 16px. #}
+{% macro reposted_by(c) -%}
+<p class="rp-by">{{ ic.repost() }}<span>{% if c.by_me %}You reposted{% else %}{{ c.by.display_name }} reposted{% endif %}</span></p>
+{%- endmacro %}
+
+{#  What a card says of reposts and quotes for posts.js: where a repost goes,
+    where the small card a quote shows comes from, and whether it can be
+    quoted (where it can be bookmarked). #}
+{% macro rp_data(c) -%}
+{%- if c.repost %} data-repost="{{ c.repost }}"{% endif %}{% if c.markable %} data-quoted="{{ c.quoted_url }}"{% endif %}
+{%- endmacro %}
+
 {% macro post_card(c) -%}
 {%- set p = c.post %}{% set who = c.who -%}
-<article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id }}" data-kind="{{ c.kind }}"
+<article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id or '' }}" data-kind="{{ c.kind }}"
          data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
-         {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %} aria-labelledby="pn-{{ p.public_id }}">
+         {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %}{{ rp_data(c) }} aria-labelledby="pn-{{ p.public_id }}">
+  {% if c.by %}{{ reposted_by(c) }}{% endif %}
   <header class="post-head">
     <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
     {#- Their page, the size of a finger: the name's link lies under the name and
@@ -123,7 +167,9 @@
   {% if c.down and c.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
   {#- The words are a link that drags as words: pressed and pulled, they select (posts.js opens nothing then). #}
   {% if p.words %}<a class="post-words" href="{{ c.url }}" draggable="false">{{ p.words }}</a>{% endif %}
-  <div class="post-art">{{ player(c) }}</div>
+  {#- A quote of words alone has no drawing of its own. #}
+  {% if p.skribl_id %}<div class="post-art">{{ player(c) }}</div>{% endif %}
+  {% if c.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(c.quote) }}{% endif %}
   {{ post_row(c) }}
 </article>
 {%- endmacro %}
@@ -186,6 +232,42 @@
   </form>
 </div>
 
+{% if me %}
+{#  THE REPOST SHEET (the reposts mock; the owner's "All yes", Nov 14): the ⋯'s
+    own shape, one card, each row its name and under it what it does (the
+    mute row's two lines). Repost, or once the repost is yours Undo repost;
+    and Quote, the bar's Make pencil, which opens the composer with the post
+    small under the words. A drawing shown outside a post shows Quote alone
+    (only its maker posts it). posts.js fills it for the post whose repost
+    was pressed; no Cancel, as the ⋯ has none. #}
+<div class="make post-sheet" id="repostSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="repostSheetTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="repostSheetTitle">Repost</h2>
+    <div class="post-acts">
+      <button class="post-act mu-act rp-act" type="button" data-rp="repost">{{ ic.repost() }}<span class="mu-words"><b data-rp-name>Repost</b><span class="mu-say" data-rp-say>Show it to the people who follow you</span></span></button>
+      <button class="post-act mu-act rp-act" type="button" data-rp="quote">{{ ic.pen() }}<span class="mu-words"><b>Quote</b><span class="mu-say">Repost it with your own words, or a drawing</span></span></button>
+    </div>
+  </div>
+</div>
+{% else %}
+{#  SIGNED OUT, THE REPOST raises this (the heart's own small sheet): it says
+    how, and Sign in comes back to this page. Nothing is reposted. #}
+<div class="make post-sheet bm-out" id="repostOutSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="repostOutTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="repostOutTitle">Repost this post?</h2>
+    <p class="post-lede">Sign in to show it to the people who follow you, or quote it with your own words.</p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Not now</button>
+      <a class="btn btn-primary btn-big" href="{{ signin_here or url_for('social.signin') }}">Sign in</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% if not me %}
 {#  SIGNED OUT, BOOKMARK raises this (the heart's own small sheet, _likes.html
     likeOutSheet): it says how, and Sign in comes back to this page. Nothing
@@ -243,6 +325,21 @@
   <span data-word="bm_gone">That isn’t here anymore. Reload the page to see what’s new.</span>
   <span data-word="bm_network">That didn’t reach us. Check your connection and try again.</span>
   <span data-word="bm_failed">That didn’t go through. Try again?</span>
+  <span data-word="rp_repost">Repost</span>
+  <span data-word="rp_reposted">Reposted</span>
+  <span data-word="rp_one">{n} repost</span>
+  <span data-word="rp_many">{n} reposts</span>
+  <span data-word="rp_do">Repost</span>
+  <span data-word="rp_do_say">Show it to the people who follow you</span>
+  <span data-word="rp_undo">Undo repost</span>
+  <span data-word="rp_undo_say">Take it off your page and your followers’ Home</span>
+  <span data-word="rp_stale">This page went stale. Reload it, then try again.</span>
+  <span data-word="rp_limited">Lots of that in a short while. Wait a little, then try again.</span>
+  <span data-word="rp_signed_out">You’ve been signed out. Sign in again, then try again.</span>
+  <span data-word="rp_taken_down">Your account was taken down, so nothing new can be shared from it.</span>
+  <span data-word="rp_gone">That isn’t here anymore. Reload the page to see what’s new.</span>
+  <span data-word="rp_network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="rp_failed">That didn’t go through. Try again?</span>
   <span data-word="copied">Link copied.</span>
   <span data-word="copy_by_hand">Here’s the link to copy: {url}</span>
   <span data-word="sending">Sending…</span>

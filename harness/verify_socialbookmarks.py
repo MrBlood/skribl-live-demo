@@ -756,11 +756,12 @@ with sync_playwright() as p:
             ctx, pg = browser_as(b, kai)
             go(pg, "/social/", wait=500)
             to(pg, card(p1), 120)
-            row = pg.evaluate("(s) => [...document.querySelector(s + ' .post-row').children].map(k => [...k.classList].find(c => /^(post|lk)-/.test(c)))"
+            row = pg.evaluate("(s) => [...document.querySelector(s + ' .post-row').children].map(k => [...k.classList].find(c => /^(post|lk|rp)-/.test(c)))"
                               " .concat([document.querySelectorAll(s + ' .post-row .ic-mark').length + ' ribbons'])", card(p1))
             close_ctx(ctx, pg)
-            check("the row under a post is as it was: 💬, the heart, Share, the ⋯ and Open ›, and no ribbon in it",
-                  row == ["post-count", "lk-heart", "post-share", "post-more", "post-open", "0 ribbons"], json.dumps(row))
+            # (Since reposts, the reposts mock, Nov 14: the repost where Share was, after the 💬, Share in the ⋯.)
+            check("the row under a post as it is: 💬, the repost, the heart, the ⋯ and Open ›, and no ribbon in it",
+                  row == ["post-count", "rp-btn", "lk-heart", "post-more", "post-open", "0 ribbons"], json.dumps(row))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(1, exc)
 
@@ -1256,7 +1257,9 @@ with sync_playwright() as p:
                               at("select * from social_likes"))
             was = others()
             up2 = chain("upgrade", MARKS)
-            heads = chain("heads").stdout.split()[:1]
+            # At its own revision (the reposts' migration follows it since Nov 14):
+            # what the chain stamps, not the chain's head.
+            heads = [r[0] for r in at("select version_num from social_alembic_version")]
             idx = {r[0]: r[1] for r in at("select name, sql from sqlite_master where type = 'index' and tbl_name = 'social_bookmarks'")}
             cols = [r[1] for r in at("pragma table_info(social_bookmarks)")]
             sql = (at("select sql from sqlite_master where name = 'social_bookmarks'") or [[""]])[0][0] or ""
@@ -1270,7 +1273,7 @@ with sync_playwright() as p:
                 "UNIQUE" in (idx.get("ix_social_bookmarks_person_drawing") or "")
             check("the site's chain on a database with people, posts and likes in it adds social_bookmarks (on a post or a"
                   " drawing, whose, who, when), its six indexes (once a person a thing, yours newest first, a post's, a"
-                  " drawing's, whose) and its CHECK, at its head, touching nothing else",
+                  " drawing's, whose) and its CHECK, at its own revision, touching nothing else",
                   up1.returncode == 0 and up2.returncode == 0 and heads == [MARKS]
                   and cols == ["id", "post_id", "drawing_id", "owner_id", "person_id", "created_at"] and idx_ok
                   and "ck_social_bookmarks_on_one" in sql and "ON DELETE CASCADE" in sql and others() == was,

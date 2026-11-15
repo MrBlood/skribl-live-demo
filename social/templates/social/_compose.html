@@ -32,6 +32,12 @@
     editor that made it, ?draft=<id> (composehost's openDraft). The face's
     overlay's own parts (.facepad), as Home's composer had them.
 
+    A QUOTE (reposts; the reposts mock, the owner's "All yes", Nov 14): the
+    repost sheet's Quote opens this sheet with the post small under the words
+    (the drawing you add, if any, between them), the words saying "Add your
+    words, or draw something…"; Post wakes once there are words or a
+    drawing (the original brings its own). Make opens it without the quote.
+
     Posting an older drawing (Yours, Drawings) sends its id, never a payload:
     the post names that drawing, and its hearts and comments come with it
     (posts.post_new; one drawing, one conversation). The player plays it from
@@ -66,6 +72,7 @@
             <button class="btn btn-small btn-quiet-danger" type="button" data-compose-remove>{{ ic.close() }}<span>Remove</span></button>
           </div>
         </div>
+        <div class="cmp-quote" data-compose-quote hidden></div>
         <p class="say cmp-say" data-compose-say role="status" hidden></p>
       </div>
       <div class="cmp-tools">
@@ -123,4 +130,9 @@
   <span data-word="cmp_failed">That didn’t go through. Try again?</span>
   <span data-word="cmp_opening">Opening…</span>
   <span data-word="cmp_open_failed">That didn’t open. Try again?</span>
+  <span data-word="cmp_say">Say something…</span>
+  <span data-word="cmp_say_quote">Add your words, or draw something…</span>
+  <span data-word="cmp_quote_empty">Add your words, or a drawing, first.</span>
+  <span data-word="cmp_quote_gone">That post isn’t here to quote anymore.</span>
+  <span data-word="cmp_one_quote">A post quotes one thing at a time.</span>
 </div>

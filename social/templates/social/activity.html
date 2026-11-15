@@ -22,6 +22,13 @@
     followed you", "Mira and 2 others followed you", when; no picture. One
     person opens their page; several, who follows you (your page, #followers).
 
+    A REPOST (reposts; the reposts mock) is a row like a like's, its face
+    wearing the small repost arrows: "Mira reposted your post", "Mira and 2
+    others reposted your post", when, and the post's small picture; it opens
+    the post. A QUOTE wears the same arrows: "Rook quoted your post", when,
+    their words under it in quotes, and the quote's own drawing (else yours)
+    small; it opens the quote.
+
     ON A PHONE the top says Activity, the way back beside it, as a post's
     page says Post; the page's own heading is a screen reader's there, and a
     desk, with no top, shows it. The bar marks no place: Activity is not in
@@ -51,12 +58,14 @@
 {% macro row(r) -%}
 {%- set says = {'comment': 'said something on your post', 'answer': 'answered your comment',
                 'answer_drawing': 'answered with a drawing', 'drawing': 'drew something on your post',
-                'like': 'liked your post', 'follow': 'followed you'} -%}
+                'like': 'liked your post', 'follow': 'followed you', 'repost': 'reposted your post',
+                'quote': 'quoted your post'} -%}
 {%- set n = r.n -%}
 <li><a class="act-row{% if r.new %} is-new{% endif %}" href="{{ r.href }}">
   <span class="act-mark" aria-hidden="true"></span>
   {%- if r.kind == 'like' %}<span class="act-who">{{ faces(r) }}<span class="act-badge" aria-hidden="true">{{ ic.heart() }}</span></span>
   {%- elif r.kind == 'follow' %}<span class="act-who">{{ faces(r) }}<span class="act-badge fo-badge" aria-hidden="true"><span class="fo-disc">{{ ic.plus() }}</span></span></span>
+  {%- elif r.kind in ('repost', 'quote') %}<span class="act-who">{{ faces(r) }}<span class="act-badge rp-badge" aria-hidden="true">{{ ic.repost() }}</span></span>
   {%- else %}{{ faces(r) }}{% endif %}
   <span class="act-text">{% if r.new %}<span class="sr">New: </span>{% endif %}<span class="act-say"><b>{{ r.names[0] }}</b>
     {%- if n == 2 %} and <b>{{ r.names[1] }}</b>{% elif n > 2 %} and {{ n - 1 }} others{% endif %} {{ says[r.kind] }}</span>
@@ -70,7 +79,7 @@
 <div class="act">
   <header class="page-head act-head">
     <h1 class="page-title">Activity</h1>
-    <p class="page-sub">Who followed you, liked your posts or said something on them, and who answered you.</p>
+    <p class="page-sub">Who followed you, liked or reposted your posts or said something on them, and who answered you.</p>
   </header>
   {% if fresh %}
   <h2 class="act-sec" id="actNew">New</h2>
@@ -84,7 +93,7 @@
   <section class="act-empty" aria-labelledby="actEmptyTitle">
     <img class="si-icon" src="{{ skribl_asset('apple-touch-icon.png') }}" alt="" width="64" height="64">
     <h2 class="act-empty-title" id="actEmptyTitle">Nothing new yet</h2>
-    <p class="act-empty-words">When someone follows you, likes your post, says something on it, or answers you, you’ll see it here.</p>
+    <p class="act-empty-words">When someone follows you, likes or reposts your post, says something on it, or answers you, you’ll see it here.</p>
     <button class="btn btn-primary btn-big" type="button" data-make aria-haspopup="dialog" aria-controls="composeSheet"
             aria-expanded="false">{{ ic.pen() }}<span>Make a skribl</span></button>
   </section>

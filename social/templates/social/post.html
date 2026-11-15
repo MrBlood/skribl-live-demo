@@ -26,12 +26,18 @@
     never the maker, and no line when the maker is the only one (the owner's
     A, Nov 14), when a like row in Activity lands on the heart instead.
 
+    REPOSTS (reposts; the owner's "All yes", Nov 14): the row's repost and
+    how many, its sheet (Repost or Undo repost, and Quote); a QUOTE's own page
+    holds the original small under its words and its own drawing, a tap on
+    it opening the original, or "This post is gone." once it is. A quote of
+    words alone has no drawing of its own, so nothing plays by itself there.
+
     MUTE (mutes; the owner's C): signed in, the ⋯ says Mute @them after
     Share… (Unmute once muted), and the toast says so; a post's own page is
     what you went to, so it stays as it is. Somebody you muted has their
     comments folded to one line with Show (_comments.html). #}
 {% extends 'social/base.html' %}
-{% from 'social/_post.html' import post_sheets, post_words, face, player, post_row with context %}
+{% from 'social/_post.html' import post_sheets, post_words, face, player, post_row, rp_data with context %}
 {% from 'social/_likes.html' import liked_by, like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% from 'social/_comments.html' import comments_section, comment_sheets with context %}
@@ -57,9 +63,9 @@
 {% endblock %}
 
 {% block main %}
-<article class="post-page" data-post="{{ p.public_id }}" data-url="{{ card.url }}" data-skribl="{{ p.skribl_id }}"
+<article class="post-page" data-post="{{ p.public_id }}" data-url="{{ card.url }}" data-skribl="{{ p.skribl_id or '' }}"
          data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if card.mine %} data-mine data-del="{{ card.delete }}"{% endif %}
-         {%- if card.muted %} data-muted{% endif %}{% if card.markable %} data-markable{% endif %}{% if card.marked %} data-marked{% endif %} data-kind="{{ card.kind }}" data-autoplay aria-labelledby="postWho">
+         {%- if card.muted %} data-muted{% endif %}{% if card.markable %} data-markable{% endif %}{% if card.marked %} data-marked{% endif %}{{ rp_data(card) }} data-kind="{{ card.kind }}"{% if p.skribl_id %} data-autoplay{% else %} data-no-art{% endif %} aria-labelledby="postWho">
   <header class="post-head">
     <a class="post-face" href="{{ card.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
     <a class="post-who" href="{{ card.profile }}">
@@ -69,9 +75,10 @@
   </header>
   {% if card.down and card.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
   {% if p.words %}<p class="post-words is-big">{{ p.words }}</p>{% endif %}
-  <div class="post-art">{{ player(card, waits=false) }}
+  {% if p.skribl_id %}<div class="post-art">{{ player(card, waits=false) }}
     {% if card.sk and card.sk.caption %}<p class="post-caption">{{ card.sk.caption }}</p>{% endif %}
-  </div>
+  </div>{% endif %}
+  {% if card.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(card.quote) }}{% endif %}
   {{ post_row(card, open=false, landing=(lk is not none and not lk.line)) }}
   <p class="post-meta"><time datetime="{{ when_iso(p.created_at) }}" data-when="at">{{ when_day(p.created_at) }}</time>{% if card.plays %} · {{ card.plays }}{% endif %}</p>
   {% if lk and lk.line %}{{ liked_by(lk) }}{% endif %}

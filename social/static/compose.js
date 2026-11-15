@@ -26,6 +26,15 @@
  * drawing made here; an older one is posted as it is) and Remove. With one
  * attached, a tool says so rather than adding a second.
  *
+ * A QUOTE (reposts; the owner's "All yes", Nov 14): the repost sheet's Quote
+ * opens this sheet through window.SocialComposer.quote, the post (or a
+ * drawing shown outside a post) small under the words, which say "Add your
+ * words, or draw something…"; a drawing added sits between them. Words
+ * alone are enough (the original brings its drawing), so POST wakes once
+ * there are words or a drawing, and sends what it quotes ({quote: the
+ * post's address}, or {quote_drawing: the drawing's id}) with them. Make
+ * opens the sheet without the quote: a quote is the Quote door's.
+ *
  * POST is dim until a drawing is attached (aria-disabled: still a button, so
  * a press says what is missing, as the editors' Add does in compose mode).
  * It sends the words and the attachment to the site (/posts, the page's
@@ -83,6 +92,8 @@
   var LIMIT = +(words.getAttribute('maxlength')) || 500;
 
   var att = null;       // what is attached: { kind: 'payload', payload, over } or { kind: 'skribl', id }
+  var quoted = null;    // what is quoted: { kind: 'p' (a post) or 's' (a drawing), id }
+  var quoteBox = q('[data-compose-quote]');
   var player = null;    // its player (SkriblInline)
   var sending = false;
   var view = 'write';
@@ -105,7 +116,7 @@
     if (words.scrollHeight) words.style.height = words.scrollHeight + 'px';
     left.textContent = String(LIMIT - words.value.length);
   }
-  words.addEventListener('input', grow);
+  words.addEventListener('input', function () { grow(); ready(); });
   grow();
 
   /* ---- a phone's keyboard: the sheet's foot rides above it ------------------
@@ -115,8 +126,12 @@
   function lift() { keyboard.watch(); }
 
   /* ---- what is attached ----------------------------------------------------- */
+  /* Ready to post: a drawing; or quoting, words or a drawing. */
+  function can() {
+    return !!att || (!!quoted && !!words.value.trim());
+  }
   function ready() {
-    postBtn.setAttribute('aria-disabled', att ? 'false' : 'true');
+    postBtn.setAttribute('aria-disabled', can() ? 'false' : 'true');
   }
   function playIt() {
     if (player && player.play && !still()) player.play();
@@ -203,13 +218,14 @@
   }
   postBtn.addEventListener('click', function () {
     if (sending) return;
-    if (!att) { tell(sayBox, say('no_drawing')); return; }
+    if (!can()) { tell(sayBox, say(quoted ? 'quote_empty' : 'no_drawing')); return; }
     sending = true;
     postBtn.setAttribute('aria-busy', 'true');
     tell(sayBox, say('posting'));
     var body = { words: words.value };
-    if (att.kind === 'skribl') body.skribl = att.id;
-    else body.payload = att.payload;
+    if (att && att.kind === 'skribl') body.skribl = att.id;
+    else if (att) body.payload = att.payload;
+    if (quoted) body[quoted.kind === 's' ? 'quote_drawing' : 'quote'] = quoted.id;
     post(wrap.getAttribute('data-post-new'), body).then(function (j) {
       if (j.ok && j.go) { window.location.assign(j.go); return; }
       sending = false;
@@ -345,21 +361,45 @@
       });
   });
 
+  /* ---- a quote: the post small under the words ------------------------------- */
+  function setQuote(next, html) {
+    quoted = next;
+    quoteBox.innerHTML = next ? html : '';
+    quoteBox.hidden = !next;
+    if (next && window.SocialWhen) window.SocialWhen(quoteBox);
+    words.setAttribute('placeholder', say(next ? 'say_quote' : 'say'));
+    tell(sayBox, '');
+    ready();
+  }
+
   /* ---- opening it ----------------------------------------------------------- */
   openers.forEach(function (o) {
     o.addEventListener('click', function (e) {
       e.preventDefault();
+      /* Make is a post of your own: no quote. */
+      if (quoted && !sending) setQuote(null);
       sheet.open(o);
       lift();
       grow();
     });
   });
 
-  /* What a later step reads (verify_composer), and where a quote post will
-     come in: whether it is open, and what is attached. */
+  /* What a later step reads (verify_composer), and where a quote comes in
+     (posts.js, the repost sheet's Quote): whether it is open, what is
+     attached and what is quoted. quote({kind, id, html, from}): `html` the
+     post small (the site's /p/<id>/quoted), `from` what takes focus back. */
   window.SocialComposer = {
     open: function (from) { sheet.open(from || null); lift(); grow(); },
+    quote: function (o) {
+      if (sending || !o || !o.id) return;
+      if (view !== 'write') show('write', true);
+      setQuote({ kind: o.kind === 's' ? 's' : 'p', id: o.id }, o.html || '');
+      sheet.open(o.from || null);
+      lift();
+      grow();
+    },
     isOpen: sheet.isOpen,
-    attached: function () { return att ? { kind: att.kind, id: att.id || null } : null; }
+    attached: function () { return att ? { kind: att.kind, id: att.id || null } : null; },
+    quoted: function () { return quoted ? { kind: quoted.kind, id: quoted.id } : null; }
   };
 })();

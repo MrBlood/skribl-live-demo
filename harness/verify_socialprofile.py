@@ -3387,6 +3387,29 @@ print("PLAN " + json.dumps(out))
               all((empty.get(k) or {}).get("none") == v and not empty[k]["ids"] and not empty[k]["more"]
                   for k, v in want_e.items()),
               json.dumps({k: (v or {}).get("none") for k, v in empty.items()}))
+        # POSTS HOLDS THEIR REPOSTS (the reposts mock, the owner's "All yes", Nov
+        # 14): merged with their posts, newest first, each the original's own
+        # card with the line at its top; on your own page "You reposted".
+        rae = _people.get("tabrae") or member(b, "tabrae", "Rae Lind")
+        rown = site_post(rae, "Rae's own, before her repost", tab_drawing(seed=80))
+        rc = rae.client()
+        rc.get(f"/social/p/{T['kais'][0]}")
+        st_r = rc.post_json(f"/social/p/{T['kais'][0]}/repost", {"reposted": True})[0]
+        LINES = """() => [...document.querySelectorAll('[data-prof-list] > .post-card')].map(c => {
+            const by = c.querySelector(':scope > .rp-by'); return [c.getAttribute('data-post'), c.getAttribute('data-handle'),
+            by ? by.textContent.trim() : null]; })"""
+        views = {}
+        for who_, tag_ in ((kai, "Kai's view"), (rae, "her own")):
+            ctx, pg = browser_as(b, who_, "phone", "light")
+            pg.goto(BASE + "/social/@tabrae")
+            pg.wait_for_timeout(600)
+            views[tag_] = pg.evaluate(LINES)
+            close_ctx(ctx, pg)
+        check("Posts holds their reposts too, merged with their posts, newest first: Kai's post as his own card with"
+              " \"Rae Lind reposted\" at its top (\"You reposted\" on her own page), then her own post",
+              st_r == 200 and views.get("Kai's view") == [[T["kais"][0], "tabkai", "Rae Lind reposted"], [rown, "tabrae", None]]
+              and views.get("her own") == [[T["kais"][0], "tabkai", "You reposted"], [rown, "tabrae", None]],
+              json.dumps(views))
 
     # ------------------------------------------------------------------ 17
     # THE TABS' WORDS, READ ON THE PAINT (WORKING-AGREEMENTS, "Contrast and
