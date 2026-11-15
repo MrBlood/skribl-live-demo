@@ -86,12 +86,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-{# The browser's own bar in the page's ground, as Skribl's pages do it
-   (skribl.core.THEME_GROUND): the device's own until a script runs, then
-   the chosen theme's in both (the boot below reads data-light and
-   data-dark, so it holds no colour of its own). #}
-<meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)" data-light="#fbfcfd" data-dark="#0b0d12">
-<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" data-light="#fbfcfd" data-dark="#0b0d12">
+{# The browser's own bar in the page's ground (the editors' column's, since
+   the owner's "Yes, A", Nov 14), keyed as Skribl's pages key theirs: the
+   device's own until a script runs, then the chosen theme's in both (the
+   boot below reads data-light and data-dark, so it holds no colour of its
+   own). #}
+<meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)" data-light="#f6f8fa" data-dark="#0f1218">
+<meta name="theme-color" content="#0f1218" media="(prefers-color-scheme: dark)" data-light="#f6f8fa" data-dark="#0f1218">
 <title>{% block title %}Blooby{% endblock %}</title>
 {% if token %}<meta name="social-csrf" content="{{ token }}">{% endif %}
 <link rel="icon" type="image/png" sizes="192x192" href="{{ skribl_asset('icon-192.png') }}">

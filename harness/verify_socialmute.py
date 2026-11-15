@@ -1034,7 +1034,8 @@ NEW_SET = [["#mutedTitle", "word", "Muted's title"], ["[aria-labelledby=mutedTit
            [".mu-list .blocked-who b", "word", "a muted name"], [".mu-list .blocked-who span", "word", "a muted @handle"],
            [".mu-list .btn", "word", "Settings' Unmute"]]
 
-LIGHT_PAGE, DARK_PAGE = "rgb(251, 252, 253)", "rgb(11, 13, 18)"
+# The page's own colour, the editors' ground since the owner's "Yes, A", Nov 14 (verify_socialsettings holds it to styles.css).
+LIGHT_PAGE, DARK_PAGE = "rgb(246, 248, 250)", "rgb(15, 18, 24)"
 
 
 def thanks(name):

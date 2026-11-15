@@ -41012,3 +41012,50 @@ jumps the page has somewhere to jump from). With the pill now the first
 thing under the header, 160px under it is no scroll. It scrolls the pill to
 12px under the window's top now (46px of scroll); red for a switch that
 scrolls the page to its top (a break in follows.js), green as built.
+
+## After v330 -- The page is Pad's: /social wears the editors' ground and glow
+
+The owner, Nov 14 (about 7:55 PM), with screenshots of Pad and Flip on their
+phone: "Also.. background color on /social? Here's flip and pad." Measured on
+the screenshots: Pad and Flip (16,18,23) with a purple glow at the top
+(23,23,41), Home (10,12,15). The site wore the editors' outer page (Skribl's
+--surface-base, THEME_GROUND), flat; on a phone the editors show their
+column's surface (--surface-raised) and its glow. Mocked: A, the editors'
+ground and glow; B, the colour alone. The owner asked which way round ("Would
+flip and pad look good with social background or social with flip and pad");
+mocked the other way too: on the site's ground the editors' empty canvas
+(12,14,19) is lighter than the page (11,13,18), its depth gone, the glow
+gone. Cal's pick, the site follows Pad; the owner: "Yes, A".
+
+WHAT CHANGES (social.css, base.html):
+- --page is the editors' column surface: #f6f8fa light, #0f1218 dark.
+- The body wears the editors' glow, radial-gradient(115% 62% at 50% -6%,
+  rgba(124,92,255,0.10), transparent 55%), one screen tall at the page's top
+  (it sits behind the header and scrolls away), and from 720px on at the
+  editors' wide size (828px across, styles.css body.canvas-wide).
+- The browser's bar (theme-color) wears the new ground, so the bar and the
+  page stay one colour. Skribl's own pages keep THEME_GROUND.
+Everything that wore --page follows it: the bell's dot's ring, the faces'
+rings, Activity's badges, the editor sheet over the page.
+
+PAD AND FLIP: nothing changes; the site follows them.
+
+CONTRAST, on the new ground: dark words 17.17 -> 16.56, second words 10.49 ->
+10.12, violet words 10.25 -> 9.89; light 17.47 -> 16.86, 7.36 -> 7.10, 8.04 ->
+7.75.
+
+THE CHECK, shown red by a break of its own in a throwaway copy, an untouched
+copy green beside them (verify_socialsettings 8): the site's --page is
+styles.css's --surface-raised, read off styles.css, light and dark; the
+body's glow is the editors' (its colour, its stops, its place); painted on a
+phone, the top of Home is lit purple (light 236,235,250, dark 24,25,43, the
+owner's Pad 23,23,41) and the ground beside the posts is the ground. Red
+for: the old ground, no glow. The control 3/3. FOUND ON THE WAY, by that
+control: the glow first written with min(115%, 828px) for its width is not
+a size Chromium takes there, so it dropped the whole background and the page
+went to the browser's own (white, or 18,18,18); it is the editors' own way
+now, 115% and from 720px on 828px.
+The page's colour, pinned elsewhere as the ring round the bell's dot
+(verify_socialactivity, verify_socialfollow, verify_sociallikes,
+verify_socialmute) and as the ground and the bar (verify_socialsettings),
+takes the new values.
