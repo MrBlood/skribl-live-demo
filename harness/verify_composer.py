@@ -61,7 +61,8 @@ Skribl's real Pad.
      Post dim until there are words (a press says what is missing and sends
      nothing), then awake; Post sends the words and the quote and lands on the
      new post, a quote of words alone; a drawing shown outside a post quoted
-     the same way; Make opens the sheet without the quote.
+     the same way; Make, on the same page once the quote was put away with
+     Cancel, opens the sheet without it.
   8. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 COMPOSER_PART=<n>[,<m>] runs those sections only (calibration); a section
@@ -1321,11 +1322,18 @@ with sync_playwright() as p:
                 pg.wait_for_timeout(200)
                 got[(screen, "with words")] = pg.evaluate(OPEN)
                 if screen == "phone":
-                    with pg.expect_navigation(timeout=15000):
-                        tap(pg, "#composeSheet [data-compose-post]", screen)
+                    try:
+                        with pg.expect_navigation(timeout=15000):
+                            tap(pg, "#composeSheet [data-compose-post]", screen)
+                    except Exception:  # noqa: BLE001 -- no new post is the posted row's red, read below
+                        pass
                     pg.wait_for_timeout(500)
                     got[(screen, "posted")] = {"at": pg.url.replace(BASE, ""), "sent": [json.loads(s_) for s_ in sent if s_]}
-                    go(pg, "/social/", wait=800)
+                else:
+                    # MAKE ON THE SAME PAGE, the quote still held (Cancel keeps
+                    # what was written, the quote too): Make is a post of your own.
+                    tap(pg, "#composeSheet [data-compose-cancel]", screen)
+                    pg.wait_for_timeout(700)
                     open_composer(pg, screen)
                     got[(screen, "make")] = pg.evaluate(OPEN)
                 close_ctx(ctx, pg)
@@ -1349,10 +1357,12 @@ with sync_playwright() as p:
             check("Post sends the words and the quote ({words, quote}) and lands on the new post: a quote of words alone"
                   " (no drawing of its own), quoting Quinn's",
                   posted.get("sent") and posted["sent"][-1] == {"words": "Rae's words on Quinn's, phone", "quote": qp}
-                  and posted["at"].startswith("/social/p/") and row == [(1, qp, None, "Rae's words on Quinn's, phone")],
+                  and posted["at"].startswith("/social/p/") and new != qp
+                  and row == [(1, qp, None, "Rae's words on Quinn's, phone")],
                   json.dumps([posted, row]))
-            mk = got.get(("phone", "make")) or {}
-            check("Make opens the composer without the quote: \"Say something…\", nothing small under the words",
+            mk = got.get(("desk", "make")) or {}
+            check("Make, on the same page once the quote was put away with Cancel, opens the composer without the quote:"
+                  " \"Say something…\", nothing small under the words",
                   mk.get("open") and not mk.get("shown") and mk.get("placeholder") == "Say something…" and mk.get("quoted") is None,
                   json.dumps(mk))
             # A DRAWING SHOWN OUTSIDE A POST: Quote alone, sending quote_drawing.
@@ -1367,8 +1377,11 @@ with sync_playwright() as p:
             pg.wait_for_timeout(1200)
             od = pg.evaluate(OPEN)
             pg.fill("#composeWords", "Rae on Quinn's drawing")
-            with pg.expect_navigation(timeout=15000):
-                tap(pg, "#composeSheet [data-compose-post]", "phone")
+            try:
+                with pg.expect_navigation(timeout=15000):
+                    tap(pg, "#composeSheet [data-compose-post]", "phone")
+            except Exception:  # noqa: BLE001 -- nothing sent, or not landing, is the row's red, read below
+                pass
             close_ctx(ctx, pg)
             sent_d = [json.loads(s_) for s_ in sent if s_]
             check("a drawing shown outside a post: its sheet has Quote alone; the composer shows it small and Post sends"

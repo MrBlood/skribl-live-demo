@@ -1907,7 +1907,7 @@ follow step 7.
    everywhere, words and a drawing; "Yours" posts an older drawing, its
    conversation moving with it. Quote posts reuse it. Built (below).
 2. Bookmarks: save a post; yours alone. Built (below).
-3. Reposts, then quote posts.
+3. Reposts, then quote posts. Built (below).
 4. Mentions: an @handle in a post or a comment links to that person and
    tells them.
 5. Finding people: search by name or @handle.
@@ -2004,3 +2004,58 @@ Flip: nothing changes in either.
                                     kept or taken away ({ok, bookmarked})
     /social/b/<skribl_id>/bookmark  the same, on a drawing shown outside a post
     /social/@<handle>/bookmarks     Bookmarks, yours alone (anybody else: the page)
+
+**Reposts and quote posts are built** (part two's item 3; DECISIONS,
+"Reposts and quote posts"; the owner's "All yes", Nov 14, to the mock's five
+asks and its defaults). THE ROW UNDER A POST is comment · repost · heart · ⋯
+· Open › (a post's page and a drawing's without Open ›): the repost takes
+Share's place, and Share… and Copy link are the ⋯'s. The repost is the two
+arrows (`_icons.html` `repost`) and how many reposts and quotes, none at
+zero, counted by the viewer as hearts are; once the repost is yours both are
+in the small violet ink (--accent-ink, 8.26:1 on the card light, 8.39:1
+dark). Three counts in the hundreds still fit a phone: the counted three
+give a little of the room past their counts. A TAP raises its own small
+sheet, the ⋯'s shape (`#repostSheet`): "Repost" ("Show it to the people who
+follow you"), or once yours "Undo repost" ("Take it off your page and your
+followers’ Home"), and "Quote" ("Repost it with your own words, or a
+drawing", the bar's Make pencil); a drawing shown outside a post shows Quote
+alone (only its maker posts it). Repost asks nothing more: the row lights
+and its count moves at once, the count fading and the button growing round
+the arrows (no toast; Undo is the sheet's own row). Signed out, "Repost
+this post?", the heart's small sheet. A REPOST IS NO POST OF ITS OWN (one
+drawing, one conversation): it is the original's own card, its hearts and
+comments its own, with "Mira Lopez reposted" at its top ("You reposted" for
+yours; the @handle's ink, 7.56:1 light, 8.59:1 dark), on Home's Following
+for the people who follow the reposter and on the reposter's Posts tab,
+merged newest first under the one cursor; Everyone shows posts only; the
+same post twice in one page shows once, the newest; never by somebody you
+muted or of their post on Home, nothing a block hides, nothing taken down.
+A QUOTE is a post with the original small inside it (`_gallery.html`
+`quote_card`): its author's name and @handle and when, its words two lines
+at most, its drawing as the Gallery's still picture with "drawn in", one
+link to the original. Its own words, its own drawing, or both: a quote of
+words alone has no drawing of its own. Quote opens the composer
+(`window.SocialComposer.quote`) with the original small under the words,
+"Add your words, or draw something…"; Post wakes once there are words or a
+drawing; Make opens the composer without the quote. A QUOTE OUTLIVES WHAT IT
+QUOTES: once the original is deleted, or hidden from the person looking (a
+block either way, taken down), its small card says "This post is gone."
+WHO IS TOLD: the original's author, in Activity ("Mira reposted your post",
+to the post, several since you last looked one row; "Rook quoted your post",
+to the quote, its words under it), each face wearing the arrows; Undo repost
+takes its row away; nobody muted; neither lights the bell's dot. Deleting a
+post takes its reposts and its quotes let go of it; an account the same, in
+code. The data: `social_reposts` (who, which post, whose, when) and four
+columns on `social_posts` (`is_quote`, `quoted_post_id`,
+`quoted_drawing_id`, `quoted_owner_id`), `skribl_id` no longer required
+(a migration of the table, the columns and their indexes alone). Pad and
+Flip: nothing changes in either.
+
+    /social/p/<id>/repost           POST {reposted}: your repost of a post, made
+                                    or undone ({ok, reposted, n})
+    /social/p/<id>/quoted           the post, small, as the composer shows it
+                                    under the words of a quote ({html})
+    /social/b/<skribl_id>/quoted    the same, for a drawing shown outside a post
+    /social/posts                   also {"words", "quote": <a post's address>}
+                                    or {"quote_drawing": <a drawing's id>}, with
+                                    or without a drawing of its own

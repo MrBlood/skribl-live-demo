@@ -41410,3 +41410,448 @@ Sans, FreeSans and DejaVu Sans, which straddle them; nothing was nudged to a
 face); Firefox (main's lanes after the merge); PostgreSQL (the migration's DDL
 read offline only; CI's postgres job runs it); the live site. The one-glance
 tell on the live site: your own page has five tabs, Bookmarks fourth.
+
+## After v330 -- Reposts and quote posts: the repost in the row, the original's own card, a quote's small card
+
+The owner, Nov 14 (Mountain Time), about 7:35 PM, "All yes" to the five asks
+of the reposts mock (part two of the map, its item 3, docs/SOCIAL-SITE.md
+section 17) and the defaults, each as Cal picked it: 1, the row under a post
+comment · REPOST (its count, none at zero) · heart · ⋯ · Open ›, Share into
+the ⋯ where Share… and Copy link already were; 2, a tap on the repost raises
+a small sheet, the ⋯'s, one card: "Repost — Show it to the people who follow
+you" and "Quote — Repost it with your own words, or a drawing", once reposted
+"Undo repost — Take it off your page and your followers’ Home"; 3, a repost
+on Home inside the original's card, at its top, "Mira Lopez reposted", the
+card the original's (its hearts and comments: one drawing, one
+conversation), on Home's Following for the people who follow the reposter
+and on the reposter's Posts tab; 4, a quote: your card with the original
+small inside it, from the composer, words alone enough, Post dim until there
+are words or a drawing (the mock drew it awake by mistake); 5, the
+original's author told in Activity ("Mira reposted your post", "Rook quoted
+your post"). The defaults: a drawing shown outside a post can be quoted, not
+reposted; blocked either way, no repost and no quote; a repost of a deleted
+post goes with it; your own post may be reposted. (Earlier that day, about
+2:45 PM: "one drawing, one conversation", and quote posts too, "a repost with
+your own words, or your own drawing".) Built Nov 14, after bookmarks (#911),
+on top of it.
+
+WHAT CHANGED.
+
+- THE ROW (`_post.html` `post_row`, `repost`): 💬 · the repost · the heart · ⋯
+  · Open › on Home's card, a post's page and a drawing's without Open ›; the
+  Share button is gone from it (Share… and Copy link are the ⋯'s, as they
+  were). The repost is the mock's two arrows (`_icons.html` `repost`, the
+  row's line style, its four lines) at 20px, 10px in, in the row's ink, and
+  how many reposts and quotes there are, 15px, none at zero, counted by the
+  viewer as hearts are; once the repost is yours both are in the small violet
+  ink (--accent-ink), named "Reposted, 3 reposts" (else "Repost, 3
+  reposts"). None on what is taken down or a drawing kept link-only (where
+  the ⋯ has no Bookmark either). THREE COUNTS IN THE HUNDREDS STILL FIT A
+  PHONE (social.css, the row): the counted three give a little of the room
+  past their counts (flex-shrink, never below 44px, their icons keeping their
+  place), so nothing runs past the card.
+- THE SHEET (`_post.html` `post_sheets`, `#repostSheet`; `posts.js`,
+  "REPOSTS"): the ⋯'s own shape, one card, each row its name 17px 600 and
+  under it what it does 15px in the second ink (the mute row's two lines):
+  Repost (the arrows), or once yours Undo repost, and Quote (the bar's Make
+  pencil). A drawing shown outside a post shows Quote alone. No Cancel, as
+  the ⋯ has none. It glides as every sheet does (SocialSheet).
+- A TAP ON REPOST asks nothing more: the sheet goes down, focus back on the
+  repost; every place on the page that shows the post lights its repost and
+  moves its count at once, before the site answers (/p/<id>/repost, the
+  page's token), and the site's count is what stays. KIND, NEVER JUMPY: the
+  count fades in and the button grows round the arrows, which keep their
+  place, the heart moving along a frame at a time (the heart's own way,
+  likes.js grow()); under Reduce Motion the count fades where it sits. No
+  toast: Undo is the sheet's own row (Cal's plan: the row lights, as the
+  heart does). One request at a time a post; taps made meanwhile are where it
+  ends; one that did not take goes back and the site's toast says why,
+  kindly. SIGNED OUT, the repost raises the heart's small sheet, "Repost this
+  post?" ("Sign in to show it to the people who follow you, or quote it with
+  your own words.", Not now | Sign in, back to the page).
+- A REPOST IS THE ORIGINAL'S OWN CARD (`posts.cards`, `reposted_by`): "Mira
+  Lopez reposted" inside it at its top, before its header ("You reposted"
+  for yours), the @handle's ink, 14px 600, the arrows 16px over the face's
+  middle, the mock's own sizes; its author, words, drawing, hearts and
+  comments are the original's. HOME'S FOLLOWING (`posts.feed_page`,
+  `reposts.reposts_before`): the posts and the reposts of the people you
+  follow and yours, merged newest first under the one cursor (a repost's key
+  is r<the original's address> at the repost's time; newest first, and at
+  one moment a drawing, then the reposts, then the posts, each by its
+  address: `gallery._after`, the Gallery's own rule). Everyone shows posts
+  only. On Home never a repost by somebody you
+  muted or of their post, and nowhere anything a block either way hides or
+  anything taken down. THE SAME POST TWICE IN ONE PAGE SHOWS ONCE, the
+  newest (`reposts.once`: a post and somebody's repost of it, two reposts of
+  it), the cursor where the page ended before that, so nothing comes back at
+  the next page's top; Fresh from everyone leaves out a post the page
+  already shows. A PERSON'S POSTS TAB (`posts.person_page`): their posts and
+  reposts merged the same way, the line on each repost.
+- A QUOTE (`_gallery.html` `quote_card`; `reposts.Quoted`): a post with the
+  original small inside it, one link to the original: its author's name
+  (700) and "@handle · when", its words two lines at most, its drawing as the
+  Gallery's still picture (the plate on its ground, its picture at its
+  sides) with its ▶ saying "drawn in 15 sec" (a Flip, "3 pages") at its
+  foot's middle, as the in-post player's at rest. Its own words, its own
+  drawing (played first, the small card under it), or both; a quote of a
+  drawing shown outside a post links to its own page. The originals of a
+  page are read once and their drawings in the page's one describe_posts. A
+  QUOTE OUTLIVES WHAT IT QUOTES: once the original is deleted, or hidden from
+  the person looking (a block either way, it or its maker taken down, a
+  drawing made link-only or deleted), the small card says "This post is
+  gone." and nothing more. A quote's own page holds it; on a desk a quote of
+  words alone has it where a drawing would be. The original's count is its
+  reposts and its quotes.
+- THE COMPOSER QUOTING (`compose.js` `window.SocialComposer.quote`,
+  `_compose.html`, `_quote.html`, `/p/<id>/quoted` and `/b/<id>/quoted`):
+  Quote asks the site for the post small, the sheet going down meanwhile,
+  and opens the composer with it under the words (no link there: a tap would
+  leave what is being written), the words saying "Add your words, or draw
+  something…", focused. Post is dim until there are words or a drawing (a
+  press says "Add your words, or a drawing, first." and sends nothing); it
+  sends {words, quote} ({quote_drawing} for a drawing) with the drawing if
+  one was added (between the words and the small card) and lands on the new
+  post. Make opens the composer without the quote.
+- POSTING A QUOTE (`posts.post_new`, `_quoting`): what it quotes is open to
+  them (`reposts.quotable`: comments.On, no block either way, not taken down,
+  a drawing public; a drawing under its lock, so a quote never lands as it
+  moves into a post); never two things; words alone need words.
+- ACTIVITY (`activity.py`, `activity.html`): "Mira reposted your post", to
+  the post, several since you last looked on one post one row ("Mira and 2
+  others"), Earlier one row a post, as likes; "Rook quoted your post", a row
+  each, his words under it in quotes, the small picture the quote's own
+  drawing else yours, to the quote; each face wearing the arrows in the small
+  violet ink. Read from the reposts and the quotes, never kept: Undo repost
+  takes its row with it, and a quote of something gone is not in it. Nobody
+  muted. NEITHER LIGHTS THE BELL'S DOT: nothing to answer, as likes and
+  follows. Its line and its empty words now say reposts ("Who followed you,
+  liked or reposted your posts or said something on them, and who answered
+  you."; "When someone follows you, likes or reposts your post, says
+  something on it, or answers you, you’ll see it here.").
+- THE DATA (`social/models.py` `Repost` and `Post`, revision 3e7b508ff939 on
+  the site's own chain, after the bookmarks' 224902330f2a; one head):
+  `social_reposts` (who, which post, whose, when; once a person a post;
+  indexed a person's newest first, a post's, whose newest first, as the plan
+  said); on `social_posts`, `is_quote` (for good), `quoted_post_id` (ON DELETE
+  SET NULL), `quoted_drawing_id`, `quoted_owner_id` (ON DELETE SET NULL), each
+  link on an index of its own, `skribl_id` no longer required (a quote of
+  words alone), and two CHECKs (a drawing or a quote; never a post and a
+  drawing at once). THE TABLE, THE COLUMNS AND THEIR INDEXES ONLY: its
+  PostgreSQL DDL read offline adds the columns and drops NOT NULL in the
+  catalogue, its four constraints NOT VALID (nothing scanned under the
+  lock: the rows there hold nothing in the new columns), no row read or
+  written. Going down it refuses, saying so before it changes anything, while
+  a quote of words alone is there (one row asked for): SQLite runs no DDL in
+  a transaction, and a refusal part-way left the table half changed in the
+  first try.
+- DELETING IS REAL AND SAID IN CODE: a post with its reposts, its quotes
+  letting go of it (`posts.drop_post`, `reposts.drop_post_reposts`); a
+  drawing deleted on the site, its quotes letting go (`posts.bloob_delete`);
+  an account with its reposts, every repost of what it owned, and the quotes
+  of what it owned letting go (`accounts.delete_person`). The foreign keys
+  are the net. ONE DRAWING, ONE CONVERSATION: an older drawing posted through
+  Yours takes its quotes onto the post (`move_drawing_quotes`, beside the
+  hearts', comments' and bookmarks' moves).
+- A QUOTE OF WORDS ALONE ELSEWHERE: no Gallery tile and no More from tile (a
+  tile is a drawing), nothing plays by itself on its page; Your Reports shows
+  whose it is, and taking it down withholds nothing in Skribl (it has no
+  drawing there).
+
+PAD AND FLIP: nothing changes in either editor. Reposts and quotes are the
+site's; Skribl is read through its documented `describe_posts` alone, as
+before; the composer's editors are as they were.
+
+CONTRAST (measured on the built pages by the new suite's section 11, read off
+the paint, phone and desk the same; light / dark): the "reposted" line 7.56 /
+8.59 on the card (the @handle's ink: the mock's own figures), the lit arrows
+8.31 / 8.39 (the small violet ink; the mock's 8.26 light, read here a hair
+higher in the paint's antialiasing; the action's purple, --fill, would be
+2.99 on the dark card, and the break that puts it there reads red). Every
+word on a repost's card, a quote's small card, a gone one's words, the
+repost sheet and the signed-out sheet at 4.5:1 or more: the lowest 5.33
+(white on the action's purple: Sign in), the sheet's own 6.74 / 8.59, the
+cards' 7.56 / 8.39. No colour and no token added: same role, same token (the
+row's ink, the small violet ink, the @handle's ink, the sheet's paper, the
+card's line).
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy of
+the tree (a copy and a folder for each break, one at a time, each suite's own
+PART), green on an untouched copy, the control:
+
+- verify_socialreposts, NEW (twelve sections; SOCIALREPOSTS_PART for
+  calibration; a section that cannot go on is a red row of its own):
+  - 1, THE ROW: comment · repost · heart · ⋯ · Open › on Home's card (a post's
+    page and a drawing's without Open ›), Share… and Copy link in the ⋯, phone
+    and desk, as Kai and as Pia (red: the repost after the heart); the repost
+    44px, the mock's arrows at 20px, 10px in, raising #repostSheet, painted
+    where it stands (red: the repost without the row's button rule); how many
+    reposts and quotes, 15px, none at zero (red: a count at zero); lit in
+    --accent-ink once yours, the row's ink otherwise (red: never lit); THREE
+    COUNTS IN THE HUNDREDS (120, 140, 130, written straight into the tables) on
+    a 402px touch phone, light and dark, in this box's face, Inter and DejaVu
+    Sans, read off the paint: every part's ink inside the card (and its own
+    box, but in DejaVu Sans, where a count runs 1 to 4px into the room beside
+    it), 25px or more of ground between two parts' ink, Open › whole, every
+    part 44px, nothing past the screen (red: the counted three never giving,
+    flex-shrink 0: Open ›'s ink running to 397 where the card ends at 385).
+  - 2, THE SHEET: "Repost", one card, Repost and Quote with their second
+    lines; once yours Undo repost; a drawing's, Quote alone; the ⋯'s sheet
+    staying down; phone (light) and desk (dark) (red: other words for
+    Repost's line; Undo repost never said; a drawing's sheet offering
+    Repost); each row the mute row's two lines, 17px 600 and 15px in the
+    second ink, 56px, the arrows and the bar's own Make pencil (red: Quote's
+    icon Share's); signed out "Repost this post?", its words, Not now | Sign
+    in back to the page, Not now in focus, nothing reposted (red: the
+    signed-out repost doing nothing); it rises gliding, read on every frame,
+    from 874 to 653, only ever up, no frame more than a fifth of the way;
+    still under Reduce Motion (red: the sheet's transition taken away).
+  - 3, A TAP REPOSTS, the site's answer held back while the page is read: the
+    sheet down, the focus back on the repost, lit and 1 at once, nothing yet
+    kept; then kept, Kai's, "Reposted, 1 repost", no toast (red: nothing
+    shown until the site answers); THE COUNT'S GLIDE, read on every frame:
+    the button 11.7px wider over 13 frames, only ever wider, the heart moving
+    3.6px at most in a frame, the count fading in from 0 (red: the room taken
+    at once, no glide); after a reload still lit; Undo repost unlit, its count
+    fading and the button closing, nothing kept (red: Undo reposting again);
+    a second tap while the first is asked ends where it says, one request at
+    a time (red: a tap made meanwhile forgotten); under Reduce Motion the new
+    width in one frame and the count fading (red: gliding under Reduce
+    Motion).
+  - 4, WHO MAY REPOST OR QUOTE: signed out 401; no token, another origin 403;
+    a post taken down, one whose maker blocked him, one not there 404; a body
+    not a yes or a no 400; nothing reposted (red: no token asked); once a
+    person a post, the answer {ok, reposted, n} alone, your own post too (red:
+    no pair index and no existence check, twice is two); taken down nothing
+    new (403), your own undone once a block stands (200) (red: a taken-down
+    person reposting; an undo asked only while the post is open to you); a
+    quote of a link-only drawing, a post taken down or blocked, or not there
+    404, of two things 400, of nothing with no words 400; of a post and of a
+    drawing made (red: a quote of two things taken); the limit, the 121st
+    refused (red: no limit).
+  - 5, HOME'S FOLLOWING: for somebody who follows Mira, Juno's post as her own
+    card (her hearts: 1) with "Mira Lopez reposted" inside it at its top,
+    before its header, once (red: Following without reposts); the line as the
+    mock has it, --ink-2, 14px 600, the arrows 16px (red: the line in 400);
+    Everyone posts only, no line on any card (red: Everyone showing reposts);
+    the same post twice in a page once, the newest ("Theo Park reposted"), and
+    your own "You reposted" (red: the same post twice); not on Home a repost
+    by somebody muted (Juno's post only as her own, in Fresh from everyone, no
+    line), of a muted person's post, of a post whose maker blocked you, of a
+    post taken down or deleted; the rest as ever (red: a muted person's repost
+    kept); LOAD MORE, Max's fifteen posts and eleven reposts, a page of twenty
+    then the rest, none twice and none missed, the line on each repost, two
+    reposts at the very same moment across the page's end, one each side
+    (red: a repost's cursor read as a post's, the second of the two missed;
+    a repost's page ignoring the cursor, its reposts again).
+  - 6, A POSTS TAB: Zoe's fourteen posts and ten reposts merged, newest first,
+    two pages with Load more, none twice or missed, the line on each repost
+    ("Zoe Quinn reposted" to Vic, "You reposted" to her), a repost of a post
+    taken down or of one whose maker blocked the one looking, not there (red:
+    a Posts tab without reposts; never "You reposted").
+  - 7, QUOTE POSTS: a quote of words alone, Rook's own card with Juno's post
+    small inside it, one link to her post, her name, @handle and words, its
+    drawing as the Gallery's still picture painted (its poster loaded; 282
+    colours and the drawing's own purple read off the screen) with "drawn in"
+    (red: no small card on a card, which reds the small card's four rows; its picture never loading); its
+    words two lines at most (red: not cut at two); a quote with its own
+    drawing (played first) and a quote of a drawing shown outside a post
+    (red with the picture's break); a tap on the small card opens the
+    original's page (red: it opening the quote, which reds the small card's
+    rows too); the original's count, reposts and quotes, 3 (red: the count
+    without quotes); deleted, hidden by a block, taken down, "This post is
+    gone." and nothing more, to Rook as ever, still a quote (red: what a
+    block hides shown); its own page, on a desk the small card where a
+    drawing would be, nothing playing by itself (red: that one CSS rule taken
+    away).
+  - 8, ACTIVITY: "Mira reposted your post" (new, the arrows, the post's small
+    picture, to the post), "Rook quoted your post" (his words, to his quote)
+    (red: no repost rows; no quote rows); neither lights the dot (red:
+    reposts lighting it); several since she last looked one row, Undo repost
+    taking Mira's away, Rook, muted, leaving it (red: a muted person's quote
+    kept; Undo repost keeping the repost).
+  - 9, DELETING, IN CODE: a post through its route, its reposts gone, its
+    quote still a quote and let go of it, its owner too; a drawing deleted on
+    the site, its quote the same (red: a post's reposts and quotes left to the
+    cascade, its quote keeping its owner; a drawing's quote keeping its id);
+    an account, its reposts and the reposts of what it owned, the quotes of
+    what it owned let go; with SQLite's cascade off on a copy, a post's
+    reposts (2, then 0) and its quote let go, an account's reposts (1 and 0,
+    then none) (red: an account's reposts left to the cascade, red there
+    alone, as a cascade takes them where it is on).
+  - 10, THE DATA: the chain on a populated database (people, posts, a like):
+    one head, 3e7b508ff939; up, every post kept as it was, none a quote, the
+    table and its four indexes, the posts' columns and three indexes, both
+    CHECKs, skribl_id no longer required (red: a person's reposts on no index
+    of their own, in the models and the chain, which also reds the plan's row
+    and the whole-table reading going down; no CHECK that a post has a
+    drawing or is a quote, red there and in the CHECKs' row); the CHECKs and
+    the pair refuse a post with no drawing that is no quote, a quote of two
+    things, one repost twice; back down refused while a quote of words alone
+    is there, saying so before it changes anything (every index there, no
+    half-built table), then gone, every post kept (red: going down asking
+    nothing first: SQLite left the table half changed); the reads on their
+    indexes in SQLite's own plan: a page's counts (ix_social_reposts_post_id,
+    ix_social_posts_quoted_post_id, _quoted_drawing_id), a Posts tab's reposts
+    (_person_created), Activity's (_owner_created, ix_social_posts_
+    quoted_owner_created); a page of Home's Following, twenty cards, three
+    reads of reposts and quotes (the feed's, the counts', the quotes'
+    counts) (red: a read a card).
+  - 11, CONTRAST AND TARGETS, read off the paint, phone and desk, light and
+    dark: the line 7.56 / 8.59 (red: the line in --rule, 1.22 / 1.27); the
+    lit arrows 8.31 / 8.39 (red: in --fill, 5.33 / 2.99); every word on a
+    repost's card, a quote's small card, a gone one's words, the repost sheet
+    and the signed-out sheet at 4.5:1, the lowest 5.33 (red: a small card's
+    @handle and time in --rule, 1.21 / 1.28; the line's break reds it too);
+    every target 44px (red: the repost 30px tall).
+  - 12, NO PAGE ERRORS (red: an error thrown as the sheet opens).
+  The controls: section 1 5/5, 2 4/4, 3 5/5, 4 5/5, 5 6/6 (and again 6/6 once
+  the Load more row was rebuilt, below), 6 1/1, 7 7/7, 8 3/3, 9 3/3, 10 5/5,
+  11 4/4, 2 and 12 5/5; every break red on its own row (and some on the rows
+  that follow from it, named above).
+- verify_composer 9, A QUOTE, new (four rows): the repost sheet's Quote opens
+  the composer with Quinn's post small under the words (her name, her words
+  and drawing, no link there), the words' field focused, "Add your words, or
+  draw something…", Post dim, a press on it saying "Add your words, or a
+  drawing, first." and sending nothing, words waking it, phone (light) and
+  desk (dark) (red: Post never waking with words; the words never saying a
+  quote's; the small card a link in the composer); Post sends {words, quote}
+  and lands on the new post, a quote of words alone (red: the quote never
+  sent); Make, on the same page once the quote was put away with Cancel, opens
+  the composer without it (red: Make keeping it); a drawing shown outside a
+  post, Quote alone, sending {words, quote_drawing} (red with the quote never
+  sent). The control 4/4; Post never waking reds the two rows that send as
+  well.
+- verify_socialauth 14, THE CHAIN: on an empty file fourteen tables with every
+  index (the reposts' table and their seven indexes in its list) (red: an
+  index the models have and the chain has not); a new row, the reposts'
+  PostgreSQL DDL read offline: the table and its four indexes, the four
+  columns, skribl_id's NOT NULL dropped, the four constraints NOT VALID, no
+  row of any table read or written, all of it dropped going down (red: a
+  constraint checked against every row; the migration writing a row). The
+  control 10/10; the index's break reds alembic check's row and the DDL's too.
+- verify_socialactivity 3, a new row: "Eli reposted your post" to the post
+  (its picture), "Gus quoted your post" to his quote, his words under it, each
+  face wearing the arrows, Undo repost taking its row (red: no repost rows; no
+  quote rows); 9, the empty words say reposts (red: the words as before). The
+  control 6/6.
+- verify_socialbookmarks 1, the row under a post as it is now (red: Share back
+  in the row); 8, MENDED: it read the chain's head as the bookmarks' revision,
+  which the reposts' now follows; it reads the revision the chain stamps (red:
+  the old reading, on this tree). The control 8/8.
+- verify_sociallikes 1, the heart after the comments and the repost, 14px
+  after the repost (red: the repost after the heart); 9, Activity's line says
+  reposts (red: the line as before); 11, MENDED: it read the eye's column as
+  the posts' last, and the reposts' columns now follow it; it reads it after
+  taken_down_at, where it was added (red: the old reading, on this tree). The
+  controls 18/18 and 7/7; the repost after the heart reds three more rows that
+  read the same row (its height, a post's page, a drawing's).
+- verify_socialposts 4, a new row: the row under every card, the repost where
+  Share was and Share in the ⋯ (red: Share back in the row); 11, the ⋯ and the
+  repost each do their own job and the page stays (Share's job before) (red:
+  the repost opening nothing). The control 8/8; Share back in the row reds the
+  tap on a card's own ground in the row too.
+- verify_socialfollow 8, a new row: a repost by somebody you follow on
+  Following, once, the original's own card with "Zed Ford reposted", Everyone
+  posts only (red: Following without reposts); 9, Activity's words say reposts
+  (red: as before). The control 16/16.
+- verify_socialprofile 16, a new row: Posts holds their reposts, merged newest
+  first, "Rae Lind reposted" to Kai, "You reposted" to her (red: a Posts tab
+  without reposts; never "You reposted"). The control 10/10.
+- verify_socialcomments 11, MENDED: the comments' count, then the repost 14px
+  on (it read the heart next) (red: the repost after the heart; the old
+  reading, on this tree). The control 1/1.
+- harness/release_run.py and harness/shard.py name verify_socialreposts
+  (measures; 150 s a shard), beside the bookmarks'.
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py, -j 3, its logs in
+a folder of their own):
+
+- SEVENTEEN SUITES SIDE BY SIDE on the tree as first built (before the two
+  mends below and section 5's rebuilt Load more), three at a time, 38
+  minutes: verify_socialreposts 49/49, verify_socialbookmarks 37/37,
+  verify_socialauth 68/68, verify_composer 38/38, verify_socialactivity
+  45/45, verify_socialposts 81/81, verify_socialfollow 75/75,
+  verify_socialmute 68/68, verify_socialsafety 38/38, verify_social 41/41,
+  verify_socialsettings 45/45, verify_seam 515/515, verify_theme 124/124.
+  Four went red beside the others and green alone, which run_parallel calls
+  INTERMITTENT; they are two things:
+  - TWO REAL REDS OF THIS CHANGE, in the suites' own reading of the row and
+    the posts' columns, each mended before its alone run (so the alone count
+    is the mended suite's): verify_sociallikes 98/100 beside, 100/100 alone
+    (11 read the eye's column as the posts' last; its other red was load,
+    "calm at 16x", one heart rising a moment late), and
+    verify_socialcomments 95/96 beside, 96/96 alone (11 read the heart as
+    the next thing after the comments). Each old reading, put back in a
+    throwaway copy, is red there (above).
+  - TWO OF LOAD: verify_socialprofile 91/93 beside, 93/93 alone (the photo
+    under the Pad not loaded in time, and the row that reads its words over
+    it), verify_hello 49/50 beside, 50/50 alone (the 3G first visit's
+    timing).
+- THEN, ON THE TREE AS COMMITTED: verify_csrf 27/27, verify_privacy 54/54,
+  verify_txcontract 103/103, verify_hostseams 139/139 (two at a time, beside
+  a calibration; none opens a browser); verify_socialreposts 49/49 (its
+  section 5 rebuilt since the first run: Load more across a tie);
+  verify_composer 38/38 (its section 9 mended since the first run: a
+  Post that never sends is now its rows' red where it stopped the section, the
+  post it lands on must be a new one, and Make is asked on the same page once
+  the quote was put away with Cancel, where a quote kept by mistake would
+  show; a fresh page never holds one); verify_docs 144/144 with this entry.
+- NOT RUN: the full battery (main's run after the merge does it);
+  PostgreSQL (CI's postgres job); Firefox and WebKit (main's lanes).
+
+JUDGMENT CALLS (where the mock and the plan did not say, the option closest
+to them and to likes' and bookmarks' ways):
+
+- FOUR COLUMNS ON THE POSTS WHERE THE PLAN NAMED ONE. quoted_post_id with ON
+  DELETE SET NULL forgets that a post was a quote once its original goes, so
+  "This post is gone." needs `is_quote`, kept for good; the plan's own default
+  that a drawing shown outside a post can be quoted needs `quoted_drawing_id`
+  (its skribl's id, as likes keep one); Activity's "quoted your post" for a
+  drawing, and deleting an account, need `quoted_owner_id` without asking
+  Skribl (likes' and bookmarks' owner_id). A quote of words alone needs
+  `skribl_id` empty, and the CHECK keeps every other post drawn. Each link
+  has an index: the counts, the SET NULL's own lookup on PostgreSQL, Activity.
+- YOUR OWN REPOSTS ARE ON YOUR FOLLOWING ("You reposted"), as your own posts
+  are; and YOUR OWN POST MAY BE REPOSTED (the default), as you may like it.
+- A MUTE: on Home a repost by somebody muted, or of their post, stays away
+  (what comes to you goes quiet); on the reposter's Posts tab it stays (what
+  you go to stays); a quote's small card of a muted person's post is shown
+  (the quote is the quoter's post); counts stay true.
+- "IN ONE PAGE": a post may come again on a later page (as the plan says);
+  the cursor is where the page ended before the dedupe, so the dropped one
+  never comes back at the next page's top.
+- THE COMPOSER: Make opens it without the quote (a quote is the Quote door's;
+  the words stay, as Cancel always kept them); the other way was a Remove
+  under the small card, which the mock did not draw. A quote's own drawing
+  sits between its words and the small card, as the original's own card
+  shows its drawing first.
+- ACTIVITY: neither reposts nor quotes light the dot; quotes are a row each
+  (each has words of its own), reposts grouped as likes; both wear the
+  arrows; its words now say reposts (three suites read them: mended).
+- A QUOTE OF A QUOTE is allowed (the original is a post): its small card shows
+  that quote's own words and drawing, never the quote's quote.
+- A QUOTE'S OWN PAGE ON A DESK: a quote of words alone has the small card in
+  the drawing's column, beside the words.
+- THE ANSWER SAYS HOW MANY: {ok, reposted, n}, the row's count as the viewer
+  is shown it, so every place on the page says the site's number.
+- THE REPOST IS HIDDEN where nothing can be reposted or quoted: taken down, a
+  drawing kept link-only (where Bookmark is hidden); a drawing shown outside a
+  post shows it with Quote alone, its count its quotes.
+- GOING DOWN REFUSES while a quote of words alone is there, rather than
+  deleting posts.
+
+THE FOUR. Simple: one row of the things you do with a post, the repost where
+the friend's share was, and its sheet saying in a line what each choice
+does. Kind: nothing is lost (Undo repost, a quote outliving what it quotes,
+saying so gently), nobody is surprised (the line says who reposted), and the
+row never runs off a phone. Playful: the count glides in beside the arrows,
+which light in the small violet ink. Powerful: reposts, quotes of words, of
+a drawing, or both, and the original's author told.
+
+NOT TESTED HERE: WebKit, so the owner's iPhone (the sheet, the row and the
+composer as Safari draws them); SF and Segoe UI (the row read in this box's
+face, Inter and DejaVu Sans, which straddle them; nothing was nudged to a
+face); Firefox (main's lanes after the merge); PostgreSQL (the migration's DDL
+read offline only, its NOT VALID constraints included; CI's postgres job runs
+it); the live site. The one-glance tell on the live site: the row under a
+post has the two arrows where Share was.
