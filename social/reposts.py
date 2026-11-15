@@ -148,9 +148,9 @@ def reposts_before(at, limit, viewer, hidden=frozenset(), among=None, person=Non
     if hid:
         q = q.where(Repost.person_id.notin_(hid), Post.person_id.notin_(hid))
     if at is not None:
-        # The one cursor (posts._cursor), Home's order: at one moment the
-        # posts (p), then the reposts (r), then a drawing shown outside a
-        # post (s), each by its address (gallery._after).
+        # The one cursor (posts._cursor), Home's order: newest first, and at
+        # one moment a drawing shown outside a post (s), then the reposts
+        # (r), then the posts (p), each by its address (gallery._after).
         q = q.where(_after(Repost.created_at, Post.public_id, "r", at))
     rows = site().session().execute(q).all()
     return ([{"kind": "p", "at": as_utc(when), "key": "r" + post.public_id, "post": post, "who": who, "by": rb}

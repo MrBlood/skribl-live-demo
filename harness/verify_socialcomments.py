@@ -1765,14 +1765,15 @@ with sync_playwright() as p:
               const r = n.getBoundingClientRect(), p = pl.getBoundingClientRect();
               return { label: n.getAttribute('aria-label'), text: n.textContent.trim(), icon: !!n.querySelector('svg'),
                        href: new URL(n.href).pathname + new URL(n.href).hash, first: row.firstElementChild === n,
-                       next: pl.classList.contains('lk-heart'), beside: Math.round(p.left - r.right),
+                       next: pl.classList.contains('rp-btn'), beside: Math.round(p.left - r.right),
                        middle: Math.abs((r.top + r.height / 2) - (p.top + p.height / 2)) < 1, w: r.width, h: r.height }; }"""
             got = pg.evaluate(CARD, post)
             none = pg.evaluate(CARD, bare) or {}
             # EVEN AT NONE (the owner's yes, Nov 12: "the 💬 shows even at zero"):
             # the icon alone, named Comment, the same way in, where the number goes.
+            # (Since the reposts mock, Nov 14, the repost comes next, where the heart was.)
             check("Home's card says how many comments first in the row under the drawing (the comment icon and the"
-                  " number, \"3 comments\"), 14px before the heart and on its middle, a way to them on the post's page,"
+                  " number, \"3 comments\"), 14px before the repost and on its middle, a way to them on the post's page,"
                   " 44px; a post with none shows the icon alone, no number, named \"Comment\", the same way in at the"
                   " same place",
                   got is not None and got.get("label") == "3 comments" and got.get("text") == "3" and got.get("icon")
