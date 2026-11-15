@@ -2196,7 +2196,7 @@ icons in the pen (your line across a blank page; onion skin, as Flip shows
 it), each drawing itself once as the sheet rises (DECISIONS, "Make's sheet,
 side by side and drawn in our pen").
 
-## 6al. blooby.app's own Home Screen icon (owner, Nov 13: "All yes") — CHOSEN AND FILED, built next
+## 6al. blooby.app's own Home Screen icon (owner, Nov 13: "All yes") — BUILT Nov 15 (DECISIONS, "Blooby on the Home Screen")
 
 Waving Blooby on his own, on today's lilac, with no star, 82% of the icon
 tall (DECISIONS, "blooby.app's own Home Screen icon, chosen and filed"). The
@@ -2222,6 +2222,16 @@ TO BUILD IT IN (the owner: the next session):
 - A check that reads the new icon's pixels, as verify_identity reads
   today's: the lilac at its corners, no star, his ink 0.82 of the side.
 - Not tested here: how iOS shows a website's icon on a real iPhone.
+
+BUILT, Nov 15, with the site's Home Screen app (the owner: "Let's do the home
+icon so I can get full screen on my iPhone", then "All yes"): `blooby.py
+site-icon social/static` draws him and writes `social/static/blooby-icon-512.png`,
+`-192.png` and `-180.png`, each within a pixel of the filed picture of its size;
+the rule that places him (across, halfway between centring his box and centring
+his weight, his ink and all it closes in; up and down, centred by his box) was
+read back off the filed pictures. The site's pages, its manifest and its small
+Blooby wear it; Skribl's files, manifest and app identity are unchanged.
+`verify_socialapp` 3 reads the site's files against the filed pictures.
 
 ## 7. The honest state
 

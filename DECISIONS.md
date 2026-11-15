@@ -42449,3 +42449,160 @@ collation not run: the walks read from where the typed letters sort and keep
 only what really starts with them, so a collation can cost rows, never give a
 wrong one); the live site. The one-glance tell on the live site: an @name in
 a post is violet and opens their page.
+
+## After v330 -- Blooby on the Home Screen: the site's own app, icon and steps
+
+The owner, Nov 15 (Mountain Time), about 7:35 AM: "Let's do the home icon so I
+can get full screen on my iPhone" (the map's part one, step 7, and part two's
+item 7). The mock (the ☰ now, its new row, the steps it opens, and Reload from
+the Home Screen; light and dark, a phone and a desk) asked four things, each
+with a default; then, about 7:45 AM, the owner pointed at blooby.app's own icon,
+picked Nov 13 and filed in #886 ("blooby.app gets this icon and the name Blooby;
+the demo keeps the name Skribl and today's icon"), and a fifth ask followed: the
+site's small Blooby wears it too. "All yes" to the five, about 8:20 AM.
+
+WHAT CHANGED.
+
+- THE SITE'S OWN MANIFEST, `/social/manifest.webmanifest` (social/__init__.py,
+  `manifest`), linked from every page of the site's (base.html): a route, as
+  Skribl's is, so its URLs follow both mount points through url_for. Blooby
+  (its name and short name: the name under the icon), opening on Home (its
+  start_url and id), standalone, the site's dark ground. Its scope is the
+  folder the site and Skribl's pages share (`shared_folder`: "/" here), so
+  the Pad, Flip and the Library that a post or Make opens stay inside the
+  app, full screen, not in a browser's sheet over it. The two grounds live in
+  one place, `social.SITE_GROUND`; base.html's two theme-color metas say them
+  from there now, as the manifest does.
+- BLOOBY.APP'S OWN ICON (the owner's pick, Nov 13: waving Blooby on the
+  lilac, no star, 82% of the side tall; DECISIONS, "blooby.app's own Home
+  Screen icon, chosen and filed"; FUTURE.md 6al). `harness/tools/blooby.py
+  site-icon social/static` draws him in the real Pad and writes
+  `social/static/blooby-icon-512.png`, `-192.png` and `-180.png`, the site's
+  own files (cache-busted by social_asset), each within a pixel of the filed
+  picture of its size. They are the site's touch icon, its page icon and its
+  manifest's icons, and Blooby in small on the sign-in page, joining,
+  recovery, the kind pages and Activity's empty state (the fifth ask).
+- THE ☰'S ROW, Add to Home Screen, right under Settings (Sign in, signed
+  out), hidden until social.js knows the phone: an iPhone or an iPad (which
+  says it is a Mac with a touch screen) in a browser tab gets it, and it lets
+  the ☰ go down as the steps rise (`#homeSteps`, _homescreen.html, the site's
+  own sheet: its quiet title, Blooby's icon and name as the Home Screen shows
+  them with "Opens full screen, like an app", the three steps on the rows'
+  card, "Open it from your Home Screen. It may ask you to sign in once there,
+  with your passkey." and Got it). Where Chrome offers its own install
+  (Android), the row shows and asks Chrome, once, its own bar kept away, and
+  goes once installed. A desk has no ☰ and neither row.
+- RELOAD FROM THE HOME SCREEN, in the same place: opened from the Home Screen
+  (navigator.standalone, or the standalone display) there is no browser bar to
+  reload with, so the row says Reload, as the Pad's menu does there.
+- iOS 26'S STEPS: "Tap ⋯ in Safari's bar, then Share", "Scroll down and tap
+  Add to Home Screen", "Keep Open as Web App on, and tap Add" (Share sits
+  behind ⋯ in iOS 26's compact bar, and every site added opens as a web app
+  unless that switch is turned off). A screen reader hears "More" for the ⋯,
+  as Safari names it. The Pad's and Flip's own steps (their one shared
+  partial, _skribl_homescreen.html) and the Pad's banner say the same: they
+  said "Tap Share in Safari's toolbar", which iOS 26 moved behind ⋯.
+
+PAD AND FLIP: Skribl's own Home Screen app is unchanged (Skribl, Blooby on the
+white star, opening the Pad: skribl/routes.py's manifest, its icons and
+_skribl_app_identity.html are untouched, as the owner asked). Added from the
+Pad, the app is still Skribl; added from the site, it is Blooby, with the Pad,
+Flip and the Library inside it. Shared: the steps' words, one partial for the
+Pad and Flip, so both changed together.
+
+CONTRAST, read off the paint (a 402px touch phone, light / dark): the new row
+17.95 / 14.05 (as Settings beside it), its icon 7.56 / 8.59; the steps' rows
+17.95 / 14.05, Blooby's name 16.00 / 15.85, the line under it and the note
+6.74 / 9.69 (the sheets' second ink), the steps' numbers 7.10 / 6.83 (the small
+violet words on the tint), Got it 5.33. No colour or token was added: the
+row is a row of the ☰ (`.post-act`), the steps sit on the rows' card
+(`--row-bg`, the menus' thin line), Got it is the site's one action
+(`btn-primary`).
+
+THE CHECKS. verify_socialapp, NEW (eight sections, 35 rows; SOCIALAPP_PART
+for calibration; its own server): 1, the manifest; 2, every page links it with
+the site's own icons, the metas, and Skribl's pages keep Skribl's; 3, the
+icon's pixels against the filed pictures, its corners, no star, his fill, and
+the site's small Blooby; 4, which phone sees which row; 5, the steps (the
+handover, their words and icon, a screen reader's list and "More", focus,
+their glide read on every frame and still under Reduce Motion) and Reload; 6,
+contrast and sizes, light and dark; 7, the Pad's and Flip's steps; 8, no page
+errors. Each row shown red by a break of its own in a throwaway copy, with an
+untouched copy green beside it (controls 11/11, 4/4, 8/8, 9/9, 2/2 and 1/1, a
+section group each):
+
+- 1 and 2: the scope the site's folder alone (its row); the manifest named
+  Skribl; display browser; an icon Skribl's; shared_folder keeping a URL's
+  last part (green at first: its cases could not tell; two that can were
+  added, a page alone and the same page twice, then red); no manifest link;
+  the touch icon Skribl's; a meta's colour typed on its own (each red on its
+  row, 10/11 or 6/7).
+- 3: the site's three files Skribl's star (the pixel and no-star rows, 2/4);
+  blooby.py's fill today's 0.757; the kind card's Blooby Skribl's; the nobody
+  page importing its card without context (each red on its row, 3/4).
+- 4: never an iPhone (the iPhone, signed-out and iPad rows, 5/8); the Home
+  Screen app not known (6/8); the row shown everywhere (the app, installed,
+  Android and desk rows, 4/8); Chrome's own bar not kept away (7/8); the rows
+  after Community rules (5/8).
+- 5 and 8: the steps over the open ☰; focus not on Got it; the Pad's old
+  third step in the site's steps; no "More"; Reload doing nothing (red only as
+  a stopped section at first: the row now reads the page either way, then red
+  on its own, 7/8); the steps not gliding; a page error on Reload (the Reload
+  and no-errors rows).
+- 6: the steps' numbers in --rule; Got it 30px; the row 40px (each red, 1/2).
+- 7: the Pad's old first step; the Pad's old banner line (each red, 0/1).
+
+OTHER SUITES: verify_socialactivity 9 reads the empty state's Blooby as the
+site's icon (control 2/2; the old icon put back, 1/2).
+
+FOUND WRONG, AND MENDED, before the rows were green:
+
+- THE KIND PAGES WOULD HAVE ANSWERED 500. Their card's Blooby is the site's
+  icon now, named by social_asset, a name the site's context processor gives
+  a page and not a global, and the six pages imported the card without
+  context (Jinja's import leaves the page's names behind): "Nobody here by
+  that name" was a server error in the new suite's first run. Each imports
+  it with context, as the site's other partials do; section 3 asks two kind
+  pages, and the break that drops the context is red there.
+- TWO INSTRUMENTS OF MINE, both found by calibration (above): shared_folder's
+  cases, and the Reload row.
+
+JUDGMENT CALLS (where the mock and the asks did not say):
+
+- THE SCOPE IS THE SHARED FOLDER, worked out from both mounts rather than
+  written: a host that mounts the site and Skribl elsewhere gets the right
+  one; a host that mounts them apart (no folder in common but "/") gets "/".
+- HE IS PLACED AS THE FILED PICTURES PLACE HIM. The pick's words were
+  "halfway between centring his box and centring his body"; read back off the
+  filed pictures, across it is halfway between his box and his weight (his
+  ink and everything it closes in), and up and down it is his box alone.
+  Drawn that way, every size is within a pixel of the filed one (on average
+  0.3 of 255 apart: the Pad's own hand from one drawing to the next).
+- THE ROW SECOND, under Settings, where a person looks first, as the Pad
+  puts its own second; no card on Home (the mock's default: the drawings
+  stay the page's).
+- THE ☰ GOES DOWN AS THE STEPS RISE, at once, as the ⋯ hands over to Report.
+- THE SIGN-IN NOTE SAYS "MAY": a Home Screen app keeps its own sign-in apart
+  from Safari's, as far as Apple's notes say; not seen on an iPhone here.
+- THE MANIFEST'S COLOUR IS THE DARK GROUND, as Skribl's is: the page's own
+  theme-color metas say the chosen theme's once a script runs.
+- CHROME'S OWN INSTALL BAR IS KEPT AWAY (its prompt's default prevented), so
+  the row is the one way in, quiet until wanted, as the Pad does it.
+
+THE FOUR. Simple: one row, three steps, and the icon you will get. Kind: no
+card over the drawings; the one surprise (signing in once there) said before
+it happens; Reload where the browser's bar is gone. Playful: Blooby himself,
+waving, on your Home Screen. Powerful: full screen, with the Pad, Flip and
+the Library inside it.
+
+THE AFFECTED SUITES, side by side: [COUNTS]
+
+NOT TESTED HERE: WebKit, so an iPhone: whether iOS 26 keeps the Pad inside
+the app by the manifest's scope, the clock bar's colour (theme-color), whether
+it asks to sign in once there, and Safari's exact taps (from Apple's iOS 26
+notes, not seen); Android's install (a stand-in event here); a Windows desk's
+Chrome and Edge, which may offer "Install Blooby" in their own bar; the live
+site. The one-glance tell on the live site: in Safari on the phone, the ☰ on
+Home shows Add to Home Screen right under Settings. A Blooby added to the Home
+Screen before this, delete and add again: an iPhone reads the app's settings
+when it is added.
