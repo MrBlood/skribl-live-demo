@@ -33,7 +33,9 @@
                           or "Answer Theo" with Theo's words under it); on a
                           desk it glides open in place, under the heading or
                           under the conversation it answers ("Answer Theo…").
-                          Put away, it keeps what was typed.
+                          Put away, it keeps what was typed. An @ typed in it
+                          shows the list of people under the line (mentions:
+                          _mentions.html, mentions.js), answers too.
     comment_sheets(cm)    the box's sheet (a phone's), the signed-out sheet
                           ("Say something?"), a comment's ⋯ sheet (Your
                           comment: Delete comment; Theo’s comment: Remove from
@@ -51,6 +53,7 @@
     parts; the words are here. #}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline, skribl_inline_draft %}
 {% from 'social/_post.html' import face with context %}
+{% from 'social/_mentions.html' import mention_list %}
 {% import 'social/_icons.html' as ic %}
 
 {#  A DRAWING ANSWER: Skribl's in-post player, in the drawing's own shape,
@@ -73,7 +76,7 @@
   <div class="cm-main">
     <div class="cm-head"><b class="cm-name">{{ who.display_name }}</b><time class="cm-when" datetime="{{ when_iso(c.created_at) }}" data-when="ago">{{ when_day(c.created_at) }}</time></div>
     {% if c.taken_down_at and me and me.id == c.person_id %}<p class="post-down cm-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
-    {% if c.words %}<p class="cm-words">{{ c.words }}</p>{% endif %}
+    {% if c.words %}<p class="cm-words">{{ said(c.words, it.mentions) }}</p>{% endif %}
     {% if c.skribl_id %}<div class="cm-art">{{ comment_art(it) }}</div>{% endif %}
     <div class="cm-acts">
       {% if can %}<button class="cm-act" type="button" data-cm-answer aria-expanded="false">{{ ic.comment() }}<span>Answer</span></button>{% endif %}
@@ -91,7 +94,8 @@
     {{ face(me, 'composer-face') }}
     <label class="sr" id="cmWordsLabel" for="cmWords" data-cm-label>Say something</label>
     <textarea class="composer-words" id="cmWords" rows="1" maxlength="500" placeholder="Say something, or draw it…"
-              data-cm-words></textarea>
+              data-cm-words aria-autocomplete="list" aria-controls="cmMentions" aria-expanded="false"></textarea>
+    {{ mention_list('cmMentions') }}
   </div>
   <div class="composer-draft" data-cm-draft hidden>
     {{ skribl_inline_draft('commentDraft') }}

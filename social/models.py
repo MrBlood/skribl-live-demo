@@ -34,7 +34,8 @@ import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
 __all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
-           "Comment", "Like", "Bookmark", "Repost", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX", "BIO_MAX",
+           "Comment", "Like", "Bookmark", "Repost", "Mention", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX",
+           "BIO_MAX",
            "BIO_LINES",
            "WORDS_MAX", "REPORT_KINDS", "REPORT_STATES", "REPORT_NOTE_MAX", "HOME_FEEDS",
            "new_person_id", "new_public_id", "as_utc", "utcnow", "attach_to_metadata"]
@@ -153,6 +154,12 @@ class Person(SocialBase):
         sa.Index("ix_social_people_handle_key", "handle_key", unique=True),
         sa.Index("ix_social_people_user_handle", "user_handle", unique=True),
     )
+
+
+#: THEIR NAME IN SMALL LETTERS (mentions: the list under an @, "anybody whose
+#: name starts with it"): an index of an expression, so it sits outside the
+#: class, where the column can be named.
+sa.Index("ix_social_people_name_key", sa.func.lower(Person.display_name))
 
 
 class Passkey(SocialBase):
@@ -545,6 +552,68 @@ class Repost(SocialBase):
         sa.Index("ix_social_reposts_post_id", "post_id"),
         #: Whose, newest first: Activity's reposts of what you made.
         sa.Index("ix_social_reposts_owner_created", "owner_id", "created_at"),
+    )
+
+
+class Mention(SocialBase):
+    """A mention (the map, part two, item 4; the owner's "All yes" on the
+    mentions mock, Nov 15): an @handle in a post's words, or in a comment's
+    or an answer's, that is somebody. Written in the same transaction as the
+    post or the comment (mentions.py), the first ten people named in it
+    (mentions.MOST), and never changed after: posts and comments can't be
+    edited.
+
+    WHO, AND AS TYPED: person_id is who was mentioned, `typed` the handle as
+    it was typed (without the @). The words keep their own spelling, and the
+    link goes to the person by their id, so a handle that changes later
+    never breaks an old mention: "@as-typed" still opens their page.
+
+    ON A POST OR ON A COMMENT, exactly one (ck_social_mentions_on_one). by_id
+    is who wrote it; owner_id whose the post is, or what the comment is on (a
+    post or a drawing shown outside a post), kept on the row as a comment
+    keeps it, so deleting an account never asks anything else.
+
+    TOLD IN ACTIVITY, worked out at read time (activity.py), never kept as a
+    row of its own: "Rook mentioned you". Once a person a post, and once a
+    person a comment (the two unique indexes).
+
+    DELETING IS REAL AND SAID IN CODE (mentions.py, from posts.drop_post,
+    comments' every delete and accounts.delete_person): a post or a comment
+    goes with its mentions, an account with the mentions of it and every
+    mention it wrote. The ON DELETE CASCADEs are the net under that."""
+    __tablename__ = "social_mentions"
+
+    id = sa.Column(BigId, primary_key=True)
+    #: Who was mentioned.
+    person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: Who wrote the words.
+    by_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: The post whose words mention them, or None for a comment's.
+    post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=True)
+    #: The comment (or answer) whose words mention them, or None for a post's.
+    comment_id = sa.Column(BigId, sa.ForeignKey("social_comments.id", ondelete="CASCADE"), nullable=True)
+    #: Whose the post is, or what the comment is on (its maker).
+    owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: The handle as it was typed, without the @.
+    typed = sa.Column(sa.String(20), nullable=False)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (
+        #: In a post or in a comment: exactly one.
+        sa.CheckConstraint("(post_id IS NOT NULL AND comment_id IS NULL) OR (post_id IS NULL AND comment_id IS NOT NULL)",
+                           name="ck_social_mentions_on_one"),
+        #: Once a person, once a post or a comment.
+        sa.Index("ix_social_mentions_person_post", "person_id", "post_id", unique=True),
+        sa.Index("ix_social_mentions_person_comment", "person_id", "comment_id", unique=True),
+        #: Theirs, newest first: Activity's "mentioned you", and the bell's dot.
+        sa.Index("ix_social_mentions_person_created", "person_id", "created_at"),
+        #: A post's and a comment's: the links in their words (one read a
+        #: page), and their going.
+        sa.Index("ix_social_mentions_post_id", "post_id"),
+        sa.Index("ix_social_mentions_comment_id", "comment_id"),
+        #: Who wrote them, and whose: deleting an account.
+        sa.Index("ix_social_mentions_by_id", "by_id"),
+        sa.Index("ix_social_mentions_owner_id", "owner_id"),
     )
 
 

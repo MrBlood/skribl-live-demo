@@ -69,6 +69,8 @@
     the map): every page with the bar or the rail carries the composer
     (_compose.html, compose.js, and Skribl's lib/composehost.js for its
     editors), and the bar's and the rail's Make open it, as Home's row does.
+    An @ typed in its words, or in a comment's box, shows the list of people
+    under the line (mentions.js, the list under an @).
     Signed out, or on a site without accounts, there is nobody to post as:
     Make keeps its sheet with two doors into Skribl's own Pad and Flip
     (_make.html, social.js).
@@ -110,7 +112,8 @@
 <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
 {% if composing %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endif %}
 <script src="{{ social_asset('social.js') }}" defer></script>
-{% if composing %}<script src="{{ social_asset('compose.js') }}" defer></script>{% endif %}
+{% if composing %}<script src="{{ social_asset('mentions.js') }}" defer></script>
+<script src="{{ social_asset('compose.js') }}" defer></script>{% endif %}
 {% block scripts %}{% endblock %}
 </head>
 <body{% if hide_nav %} class="focus"{% endif %}>

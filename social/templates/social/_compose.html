@@ -38,6 +38,10 @@
     words, or draw something…"; Post wakes once there are words or a
     drawing (the original brings its own). Make opens it without the quote.
 
+    MENTIONS (the mentions mock, the owner's "All yes", Nov 15): an @ typed in
+    the words shows the list of people under the line (_mentions.html,
+    mentions.js), placed over what is under it, never pushing it.
+
     Posting an older drawing (Yours, Drawings) sends its id, never a payload:
     the post names that drawing, and its hearts and comments come with it
     (posts.post_new; one drawing, one conversation). The player plays it from
@@ -48,6 +52,7 @@
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
 {% from 'social/_post.html' import face with context %}
 {% from 'social/_follow.html' import compose_pill with context %}
+{% from 'social/_mentions.html' import mention_list %}
 <div class="make cmp" id="composeSheet" hidden data-post-new="{{ url_for('social.post_new') }}"
      data-yours="{{ url_for('social.compose_yours') }}" data-skribl-api="{{ url_for(skribl_bp ~ '.create_skribl') }}">
   <div class="make-scrim" data-make-close></div>
@@ -63,7 +68,8 @@
           {{ face(me, 'cmp-face') }}
           <label class="sr" for="composeWords">Say something</label>
           <textarea class="cmp-words" id="composeWords" rows="3" maxlength="500" placeholder="Say something…"
-                    data-compose-words></textarea>
+                    data-compose-words aria-autocomplete="list" aria-controls="composeMentions" aria-expanded="false"></textarea>
+          {{ mention_list('composeMentions') }}
         </div>
         <div class="cmp-att composer-draft" data-compose-draft hidden>
           {{ skribl_inline_draft('composeDraft') }}

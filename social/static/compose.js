@@ -53,6 +53,9 @@
  * it back attached, the words in place under the editor as it goes. A
  * drawing is attached at once, as it is.
  *
+ * MENTIONS (the owner's "All yes", Nov 15): an @ typed in the words shows the
+ * list of people under the line, mentions.js's, as in a comment's box.
+ *
  * The words are the page's ([data-compose-said]): this file says nothing of
  * its own.
  */
@@ -118,6 +121,9 @@
   }
   words.addEventListener('input', function () { grow(); ready(); });
   grow();
+
+  /* ---- an @ typed: the list of people under the line (mentions.js) ------- */
+  if (window.SocialMentions) window.SocialMentions(words, q('#composeMentions'));
 
   /* ---- a phone's keyboard: the sheet's foot rides above it ------------------
      social.js's SocialKeyboard reads it (--cmp-kb), and reads it again until

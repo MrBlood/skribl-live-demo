@@ -1923,6 +1923,53 @@ button.fo-n {
 .rp-badge .ic { width: 15px; height: 15px; }
 .act-pic.is-none { visibility: hidden; }
 
+/* ---- MENTIONS (the map, part two, item 4; the mentions mock and the owner's
+   "All yes", Nov 15; mentions.py, mentions.js). SAME ROLE, SAME TOKEN, no
+   colour added: an @handle that is somebody is a link in the small violet
+   ink (--accent-ink), 600, never underlined, in a post's words, a comment's
+   or an answer's, and a quote's own (8.26:1 on the card light, 8.39:1 dark;
+   7.75:1 and 9.89:1 on a comment's ground, the page's). It is the words'
+   own size and line, so nothing else in them moves. A key reaching it
+   rings it as every link here is ringed. */
+.mention { color: var(--accent-ink); font-weight: 600; text-decoration: none; }
+.mention:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+/* THE LIST UNDER AN @, in the mock's own sizes: a card (--card, its edge
+   --card-line, 16px round, the mock's drop) that mentions.js places under
+   the line being typed (or over it, where there is no room under it), over
+   what is there and never in the page's flow, so nothing moves and the sheet
+   is not pushed; up to four rows of 52px: the face at 36, the name 17px 600
+   in the first ink, the @handle 15px in the second, the card's edge between
+   two; the highlighted row on the tint, its words in the first ink on it,
+   as a note's are. It fades in and out; under Reduce Motion it is simply
+   there, and simply gone. */
+.cmp-body, .composer-row { position: relative; }
+.mn-list {
+  position: absolute; z-index: 30; left: 52px; right: 0; margin: 0; padding: 4px 0; list-style: none;
+  border: 1px solid var(--card-line); border-radius: 16px; background: var(--card);
+  box-shadow: 0 10px 28px rgba(20, 16, 50, 0.14); overflow: hidden; opacity: 0; transition: opacity 0.16s ease;
+}
+.mn-list[hidden] { display: none; }
+.mn-list.is-open { opacity: 1; }
+.mn-row {
+  display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mn-row + .mn-row { border-top: 1px solid var(--card-line); }
+.mn-row[aria-selected="true"] { background: var(--tint); }
+.mn-row .face-ring { --skribl-face-size: 36px; width: 36px; height: 36px; }
+.mn-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.mn-name { overflow: hidden; color: var(--ink); font-size: 17px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.mn-handle { overflow: hidden; color: var(--ink-2); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+/* Where the caret's line is: a copy of the field, read and taken away at
+   once (mentions.js), never seen. */
+.mn-mirror { position: absolute; top: 0; left: -10000px; visibility: hidden; height: auto; overflow: hidden; }
+/* ACTIVITY: a mention's face wears an @, white on the follow badge's purple
+   disc (5.33:1), as the mock drew it. */
+.mn-at { font: 700 12px/1 var(--font); }
+@media (prefers-reduced-motion: reduce) {
+  .mn-list { transition: none; }
+}
+
 /* ---- MUTE (phase 2, mutes; the mute mock and the owner's "Yes to all", C,
    quiet everywhere, Nov 13), in the mock's own sizes. SAME ROLE, SAME TOKEN:
    the ⋯'s row is the sheet's own row, on its card's --row-bg, its second line Make's

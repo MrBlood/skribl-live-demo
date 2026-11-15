@@ -1909,7 +1909,7 @@ follow step 7.
 2. Bookmarks: save a post; yours alone. Built (below).
 3. Reposts, then quote posts. Built (below).
 4. Mentions: an @handle in a post or a comment links to that person and
-   tells them.
+   tells them. Built (below).
 5. Finding people: search by name or @handle.
 6. Open sign-up, with what it needs to stay kind (limits for new accounts,
    the admins' tools); the owner's rules asked when it is mocked.
@@ -2059,3 +2059,60 @@ Flip: nothing changes in either.
     /social/posts                   also {"words", "quote": <a post's address>}
                                     or {"quote_drawing": <a drawing's id>}, with
                                     or without a drawing of its own
+
+**Mentions are built** (part two's item 4; DECISIONS, "Mentions"; the
+owner's "All yes", Nov 15, to the mock's three asks and its defaults). HOW A
+MENTION LOOKS (A): an @handle that is somebody, in a post's words, a
+comment's or an answer's, and a quote's own words, is a link to their page in
+the small violet ink (--accent-ink, 600, never underlined: 8.26:1 on the card
+light, 8.39:1 dark; 7.75:1 and 9.89:1 on a comment's ground), the words' own
+size and line, so nothing else in the words moves. A handle that is nobody
+stays plain words, and so does every one past the first ten people named in
+one post or comment. The words are escaped first, as any words are, and only
+the handles the post or the comment keeps as its mentions become links
+(`mentions.said`); where the words are already one link (Activity's peek, a
+quote's small card, More from's tiles) they stay plain. A card's words are
+no link of their own any more (a link cannot hold the links to the people
+they name): a tap on them opens the post as the card's ground does
+(posts.js), a tap on a mention opens the person and never the post, and a
+drag that selects them opens nothing. THE LIST UNDER AN @: typing an @ in the
+composer or in a comment's box (answers too) shows, right under the line
+being typed and over what is there (nothing moves, the sheet is not pushed),
+the people you follow first (their @handle, or any word of their name,
+starting with what follows the @), then anybody whose @handle or name starts
+with it, by name, four at most: each row 52px, their face, their name and
+their @handle, on the mock's card (`mentions.js`, `_mentions.html`). Where
+there is no room under the line (a phone's comment sheet, sitting on the
+keyboard) it opens over the line, so on a phone it stays above the keyboard.
+A tap, or Enter or Tab on the highlighted row (the arrow keys move it, Esc
+closes the list and nothing else), puts "@handle " in where the typing was,
+and the field keeps its focus. Nobody a block hides either way, nobody taken
+down, never yourself. It fades in, and under Reduce Motion is simply there; a
+screen reader hears a listbox of options (the field's aria-expanded and
+aria-activedescendant). WHO IS TOLD: the person mentioned, in Activity,
+"Rook mentioned you", a row each, their words under it in quotes, the post's
+small picture (a comment's own drawing, else the post's), their face wearing
+an @ on the follow badge's purple disc; it opens the post, or the comment on
+its page, glowing; and it LIGHTS THE BELL'S DOT, as a comment does. Never
+from somebody you muted (quiet, as their comments are), never through a block
+either way (the link still shows; their page is nobody's to the one blocked,
+as it was), never yourself, never about anything taken down or that you
+cannot see. A comment on your post, or answering you, that also mentions you
+is one row, the comment's; so is a quote of your post that mentions you, the
+quote's. KEPT AS TYPED: `social_mentions` (who was mentioned, the handle as
+typed, who wrote it, in a post or in a comment, exactly one, a CHECK; whose
+the post is or what the comment is on; when), written in the same transaction
+as the post or the comment and never changed after (posts can't be edited
+yet, so a mention is fixed once posted); the link goes to the person by
+their id, so a handle that changes never breaks an old one. Read once a page
+for all its cards, once for all its comments. Posts written before mentions
+keep their words plain: nothing works mentions out of old words (a migration
+of the table, its indexes and one index on the people's names in small
+letters, alone). Deleting a post, a comment (every way one goes) or an
+account takes its mentions, in code. Pad and Flip: nothing changes in either
+(mentions are the site's words; Skribl's own titles take none).
+
+    /social/people/suggest?q=<what follows the @>
+                                    the list under an @: {people: [{handle,
+                                    name, face}]}, four at most; signed in
+                                    (401 otherwise), 600 an hour

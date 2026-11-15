@@ -1,0 +1,5 @@
+{#  One face in the list under an @ (mentions.py /people/suggest; the mentions
+    mock): the face every card wears (_post.html face), its still picture, or
+    the empty circle before one is drawn, at the list's 36px. #}
+{% from 'social/_post.html' import face with context %}
+{{ face(who, 'mn-face') }}

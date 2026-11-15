@@ -292,6 +292,10 @@
     holdPost();
   }
   if (words) { words.addEventListener('input', grow); grow(); }
+  /* AN @ TYPED shows the list of people under the line (mentions.js), as in
+     the composer; it travels with the box, to a phone's sheet or a desk's
+     fold. */
+  if (words && window.SocialMentions) window.SocialMentions(words, box.querySelector('#cmMentions'));
 
   function pressed(btn, on) { if (btn) btn.setAttribute('aria-expanded', on ? 'true' : 'false'); }
   /* The comment a comment sits under: itself, or the one its answers hang from. */

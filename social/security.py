@@ -403,6 +403,7 @@ LIMITS = {
     "mute": (60, 3600),            # mutes and unmutes, per person (mutes): as follows, nobody mutes and unmutes hundreds a minute
     "home-pick": (120, 3600),      # Home's pill, Following or Everyone, kept for the account (follows)
     "gallery": (120, 3600),        # the eye on your own Gallery tab, a drawing hidden or shown, per person: the same tap does both
+    "people": (600, 3600),         # the list under an @ asked, per person (mentions): a few asks a mention as it is typed
 }
 _SWEEP_EVERY = 64
 

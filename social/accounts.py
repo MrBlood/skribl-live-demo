@@ -304,8 +304,9 @@ def delete_person(sess, person_id):
     like on what they owned (likes); their bookmarks, and every bookmark on
     what they owned (bookmarks); their reposts, and every repost of what they
     owned, the quotes of what they owned letting go of it, each saying it is
-    gone (reposts); their follows, both ways (follows); their mutes, both
-    ways (mutes). Flushes; the request commits.
+    gone (reposts); every mention of them and every one they wrote, the words
+    that named them staying, plain (mentions); their follows, both ways
+    (follows); their mutes, both ways (mutes). Flushes; the request commits.
     (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
     for a host to take an author's drawings away in one go: they stay, and
     the confirm page says so.)"""
@@ -335,6 +336,11 @@ def delete_person(sess, person_id):
     # cascade or the SET NULL).
     from .reposts import drop_person_reposts
     drop_person_reposts(person_id)
+    # Every mention of them, every one they wrote, and every one on what they
+    # owned (mentions: said here too, never left to the cascade). The words
+    # that named them stay, plain.
+    from .mentions import drop_person_mentions
+    drop_person_mentions(person_id)
     # Their follows, both ways: whom they followed and who followed them
     # (follows: said here too, never left to the cascade).
     from .follows import drop_person_follows
