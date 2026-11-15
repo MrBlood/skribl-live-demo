@@ -18,7 +18,8 @@ virtual authenticator for the site's people.
      drawing shown outside a post), "answered your comment", "answered with a
      drawing", "drew something on your post": the face, the time as comments
      say it, the words in quotes (two lines at most), the small picture (the
-     drawing, or the post's), and the link to the comment on its page.
+     drawing, or the post's), and the link to the comment on its page; and
+     reposts and quotes, and mentions ("Hal mentioned you", since Nov 15).
   4. GROUPING: several since you last looked on one post are one row ("Lou
      and 2 others", "Kai and Jon"), the newest face in front, the newest
      words, the newest opened; answers to your comment the same; a drawing
@@ -911,6 +912,26 @@ with sync_playwright() as p:
                       ("Gus quoted your post", f"/social/p/{qp}", "“Gus on Ivy's”", True)])
                   and badges == [True, True] and after == ["Gus quoted your post"],
                   json.dumps([mine_r, badges, after]))
+            # MENTIONS (the mentions mock, the owner's "All yes", Nov 15): "Hal
+            # mentioned you", a row each, his words under it, to the post (its
+            # picture) or to the comment on its page; his face wearing an @ on
+            # the follow badge's disc.
+            mp = make_post(hal, "Section 3, for @ivy", seed=39)
+            mc = comment(hal, ("p", pst2), "@ivy look at this cottage")
+            ctx, pg = browser_as(b, ivy)
+            go(pg, "/social/activity")
+            got_m = [r for s in pg.evaluate(ROWS) for r in s["rows"] if r["say"] == "Hal mentioned you"]
+            m_badges = pg.evaluate("() => [...document.querySelectorAll('a.act-row')].filter(a => /mentioned you/.test(a.textContent))"
+                                   ".map(a => (a.querySelector('.mn-badge > .fo-disc') || {}).textContent || null)")
+            close_ctx(ctx, pg)
+            check("a mention of you is a row of its own: \"Hal mentioned you\", new, his words under it in quotes, to the"
+                  " post (its small picture) or to the comment on its page, his face wearing an @ on the follow badge's"
+                  " disc",
+                  sorted((r["href"], r["peek"], r["isNew"]) for r in got_m) == sorted([
+                      (f"/social/p/{mp}", "“Section 3, for @ivy”", True),
+                      (f"/social/p/{pst2}#c-{mc}", "“@ivy look at this cottage”", True)])
+                  and any(poster(skribl_of(mp)) in (r["pic"] or "") for r in got_m) and m_badges == ["@", "@"],
+                  json.dumps([got_m, m_badges])[:700])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(3, exc)
 
@@ -1277,9 +1298,9 @@ with sync_playwright() as p:
                                                    " && document.activeElement.getAttribute('placeholder'); }")
                 close_ctx(ctx, pg)
             want = {"icon": "apple-touch-icon.png", "title": "Nothing new yet",
-                    # likes (the likes mock), follows (the follow mock) and reposts (the reposts
-                    # mock): each is in Activity too
-                    "words": "When someone follows you, likes or reposts your post, says something on it, or answers you, you’ll see it here.",
+                    # likes (the likes mock), follows (the follow mock), reposts (the reposts
+                    # mock) and mentions (the mentions mock): each is in Activity too
+                    "words": "When someone follows you, likes or reposts your post, says something on it, answers you or mentions you, you’ll see it here.",
                     "button": "Make a skribl"}
             check("with nothing yet: Blooby as his Home Screen icon (64px, painted), \"Nothing new yet\", the words, and"
                   " Make a skribl (52px); no New, no Earlier; phone and desk",

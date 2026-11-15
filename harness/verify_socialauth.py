@@ -39,7 +39,9 @@ keys and user verification on, as Face ID or Windows Hello would be.
   14. THE SITE'S OWN MIGRATION CHAIN: empty to head on SQLite with its own
       version table (its posts with the eye's column since Nov 14, one plain
       ALTER TABLE on PostgreSQL, read offline; its bookmarks since Nov 14, a
-      table and its indexes alone, read offline too), Skribl's chain
+      table and its indexes alone, read offline too; its reposts' table and
+      columns; its mentions since Nov 15, a table and its indexes and the
+      names' index, read offline too), Skribl's chain
       untouched in either order, no drift;
       gunicorn (as Render starts it) runs it, and one that fails is logged
       and the demo serves on.
@@ -1358,6 +1360,7 @@ with sync_playwright() as p_:
                 "social_likes",                          # likes: phase 2
                 "social_bookmarks",                      # bookmarks: the map, part two
                 "social_reposts",                        # reposts: the map, part two
+                "social_mentions",                       # mentions: the map, part two
                 "social_follows",                        # follows: phase 2
                 "social_mutes"}                          # mutes: phase 2
         want_idx = {"ix_social_people_public_id", "ix_social_people_handle_key", "ix_social_people_user_handle",
@@ -1393,11 +1396,16 @@ with sync_playwright() as p_:
                     # reposts: once a person a post, a person's newest first, a post's, whose newest first
                     "ix_social_reposts_person_post", "ix_social_reposts_person_created", "ix_social_reposts_post_id",
                     "ix_social_reposts_owner_created",
+                    # mentions: once a person a post or a comment, theirs newest first, a post's, a
+                    # comment's, by whom, whose; and the people's names in small letters (the list)
+                    "ix_social_mentions_person_post", "ix_social_mentions_person_comment",
+                    "ix_social_mentions_person_created", "ix_social_mentions_post_id", "ix_social_mentions_comment_id",
+                    "ix_social_mentions_by_id", "ix_social_mentions_owner_id", "ix_social_people_name_key",
                     # follows: one row a pair, and newest first both ways
                     "ix_social_follows_pair", "ix_social_follows_follower_created", "ix_social_follows_followed_created",
                     # mutes: one row a pair, whose newest first, and whom
                     "ix_social_mutes_pair", "ix_social_mutes_muter_created", "ix_social_mutes_muted_id"}
-        check("on an empty SQLite file the site's chain builds its fourteen tables with every index, stamps its own"
+        check("on an empty SQLite file the site's chain builds its fifteen tables with every index, stamps its own"
               " version table (social_alembic_version) at its head, and touches nothing of Skribl's",
               r1.returncode == 0 and names == want | {"social_alembic_version"} and want_idx <= idx
               and stamps == {"social_alembic_version": [heads]},
@@ -1491,6 +1499,33 @@ with sync_playwright() as p_:
               and sum(s.startswith("DROP INDEX ix_social_") for s in rd) == 7
               and sum(s.startswith("ALTER TABLE social_posts DROP COLUMN") for s in rd) == 4,
               f"up {rp_up.returncode} {made_rp}; down {rp_down.returncode} {rd}")
+        # ...AND THE MENTIONS' (the owner's "All yes", Nov 15): a new table with
+        # its CHECK and its seven indexes, and one index on the people's names
+        # in small letters (the list under an @); no row of any table read or
+        # written, no ALTER of a table there is (so nothing there is scanned
+        # under its lock: a new table holds no row to check its CHECK or its
+        # keys against); and all of it dropped going down.
+        mn_up, mn_down = offline("upgrade", "3e7b508ff939:6dc6c4054756"), offline("downgrade", "6dc6c4054756:3e7b508ff939")
+        mu, md = statements(mn_up.stdout), statements(mn_down.stdout)
+        made_mn = [s.split(" (")[0] for s in mu]
+        want_mn = ["CREATE TABLE social_mentions",
+                   "CREATE UNIQUE INDEX ix_social_mentions_person_post ON social_mentions",
+                   "CREATE UNIQUE INDEX ix_social_mentions_person_comment ON social_mentions",
+                   "CREATE INDEX ix_social_mentions_person_created ON social_mentions",
+                   "CREATE INDEX ix_social_mentions_post_id ON social_mentions",
+                   "CREATE INDEX ix_social_mentions_comment_id ON social_mentions",
+                   "CREATE INDEX ix_social_mentions_by_id ON social_mentions",
+                   "CREATE INDEX ix_social_mentions_owner_id ON social_mentions",
+                   "CREATE INDEX ix_social_people_name_key ON social_people"]
+        check("...and its mentions' PostgreSQL DDL, read offline, is the new table with its CHECK and seven indexes,"
+              " and the people's names' index (lower(display_name)): no row of any table read or written, no table"
+              " there altered; and all of it dropped going down",
+              mn_up.returncode == 0 and mn_down.returncode == 0 and made_mn == want_mn
+              and "CONSTRAINT ck_social_mentions_on_one CHECK" in mu[0] and "lower(display_name)" in mu[-1]
+              and not any(s.split()[0] in ("INSERT", "UPDATE", "DELETE", "SELECT", "ALTER") for s in mu + md)
+              and md[-1] == "DROP TABLE social_mentions" and len(md) == 9
+              and all(s.startswith("DROP INDEX ix_social_") for s in md[:-1]),
+              f"up {mn_up.returncode} {made_mn}; down {mn_down.returncode} {md}")
         d2 = os.path.join(TMP, "chain-both-a.db")
         a1, a2 = alembic(d2, "upgrade", "head", ini=False), alembic(d2, "upgrade", "head")
         d3 = os.path.join(TMP, "chain-both-b.db")

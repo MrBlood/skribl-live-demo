@@ -37,6 +37,11 @@
 ON HOME'S CARDS (the owner's yes, Nov 12): the words and the time each open
 the card's own page; the face, the name and the @handle the person's; the
 comments' icon is there even at none (_post.html, social.css "EASY TO OPEN").
+Since MENTIONS (mentions.py; the owner's "All yes", Nov 15) the words are no
+link of their own, since a link cannot hold the links to the people they
+name: a tap on them opens the post as the card's ground does (posts.js), a
+tap on an @handle in them opens that person's page, and the time is the
+post's link.
 
 A POST IS WORDS AND A SKRIBL. The skribl is posted through Skribl's
 create_post (docs/INTEGRATION.md, "When your composer is a form") in the same
@@ -317,14 +322,17 @@ def person_page(person, viewer, before=None, limit=PAGE):
     return once(page), (_cursor(page[-1]) if more and page else None)
 
 
-def cards(entries, viewer):
+def cards(entries, viewer, words=True):
     """What each card shows: the post (a drawing shown outside a post is a
     post whose words are its title), its author, and its drawing's size, line,
     plays, ground and whether it is on a picture as Skribl describes them for
     `viewer` (None where it cannot be had: deleted or withheld since, or a
     quote of words alone, which has none); how many comments; where it goes,
     and its Delete. A REPOST's card (reposts.py) is the original's, with who
-    reposted it (`by`); a QUOTE's carries the original small (`quote`)."""
+    reposted it (`by`); a QUOTE's carries the original small (`quote`).
+    `words`: whether the cards show their words, whose mentions are then
+    read (mentions.links, one read for the page); a tile (the Gallery's,
+    More from's) shows none, and reads none."""
     from skribl import describe_posts
     from .comments import counts
     from .likes import stats
@@ -361,6 +369,10 @@ def cards(entries, viewer):
     # (reposts): every card's at once, counted by the same rules.
     shared = repost_stats(viewer, posts=[e["post"].id for e in entries if e["kind"] == "p"],
                           drawings=[e["sk"]["id"] for e in entries if e["kind"] == "s"])
+    # WHOM THEIR WORDS MENTION (mentions): every card's in one read, so each
+    # @handle that is somebody is a link to them (a drawing's title takes none).
+    from .mentions import links
+    named = links(posts=[e["post"].id for e in entries if e["kind"] == "p"]) if words else {}
     out = []
     for e in entries:
         who = e["who"]
@@ -414,6 +426,9 @@ def cards(entries, viewer):
                     # Posts tab): "Mira Lopez reposted", "You reposted".
                     "by": by, "by_me": by is not None and viewer is not None and by.id == viewer.id,
                     "quote": (quoted.card(p, drawings, makers) if getattr(p, "is_quote", False) else None),
+                    # MENTIONS (mentions.py): {as typed, in small letters:
+                    # their handle now}, which said() makes links of.
+                    "mentions": named.get(("p", p.id), {}) if e["kind"] == "p" else {},
                     "profile": profile_url(who.handle),
                     "mine": viewer is not None and viewer.id == who.id,
                     "muted": who.id in muted})
@@ -559,6 +574,7 @@ def register(bp, skribl_blueprint="skribl"):
             sess = site().session()
             sess.add(row)
             sess.flush()
+            mentioned(row)
             return jsonify({"ok": True, "post": row.public_id,
                             "go": url_for("social.post_page", public_id=row.public_id)})
         if not isinstance(payload, dict):
@@ -588,8 +604,17 @@ def register(bp, skribl_blueprint="skribl"):
         sess = site().session()
         sess.add(row)
         sess.flush()
+        mentioned(row)
         return jsonify({"ok": True, "post": row.public_id,
                         "go": url_for("social.post_page", public_id=row.public_id)})
+
+    def mentioned(row):
+        """MENTIONS (mentions.py): the people its words name, written beside
+        the post in the same transaction, once its row is flushed (its id and
+        its time are the mentions' too)."""
+        from .mentions import write_post
+        write_post(row)
+        site().session().flush()
 
     def _quoting(me, body):
         """What a post quotes, as its row's columns, or None for a post that
@@ -664,6 +689,7 @@ def register(bp, skribl_blueprint="skribl"):
         move_drawing_bookmarks(sid, row.id)
         # ...and its quotes quote the post (reposts: one drawing, one conversation).
         move_drawing_quotes(sid, row.id)
+        mentioned(row)
         sess.flush()
         return jsonify({"ok": True, "post": row.public_id,
                         "go": url_for("social.post_page", public_id=row.public_id)})
@@ -752,7 +778,7 @@ def register(bp, skribl_blueprint="skribl"):
         from .likes import for_maker
         lk = for_maker(on, me) if not card["down"] else None
         # The page's token for everybody: Report is anybody's (piece 5).
-        return _page("post.html", here="post", card=card, more=cards(others, me) if others else [],
+        return _page("post.html", here="post", card=card, more=cards(others, me, words=False) if others else [],
                      share_url=public_origin() + card["url"], token=csrf_token(), cm=cm, lk=lk,
                      signin_here=url_for("social.signin", next=card["url"]))
 
@@ -895,9 +921,9 @@ def drawing_lock(skribl_id):
 
 
 def drop_post(author_public_id, row):
-    """A post's comments and answers, its likes, its bookmarks and its
-    reposts, and its quotes letting go of it (phase 2, bookmarks and
-    reposts, said here and not left to a cascade), its drawing (Skribl's
+    """A post's comments and answers, its likes, its bookmarks, its reposts
+    and its mentions, and its quotes letting go of it (phase 2, bookmarks,
+    reposts and mentions, said here and not left to a cascade), its drawing (Skribl's
     delete_post, as its author; a quote of words alone has none) and its
     row. A drawing already gone is no reason to keep the words. Flushes
     nothing: the caller does, with whatever else goes in the same
@@ -906,11 +932,13 @@ def drop_post(author_public_id, row):
     from .bookmarks import drop_post_bookmarks
     from .comments import drop_post_comments
     from .likes import drop_post_likes
+    from .mentions import drop_post_mentions
     from .reposts import drop_post_reposts
     drop_post_comments(row.id)
     drop_post_likes(row.id)
     drop_post_bookmarks(row.id)
     drop_post_reposts(row.id)
+    drop_post_mentions(row.id)
     if row.skribl_id:
         try:
             delete_post(row.skribl_id, author_id=author_public_id)

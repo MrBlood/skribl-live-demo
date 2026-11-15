@@ -57,8 +57,13 @@ that visit (comments.js). thread() marks it (`quiet`); it is still shown and
 still counted, so the numbers add up, and the answers under it, by others,
 stay as they are.
 
-DELETING IS REAL, AND SAID IN CODE: a comment goes with its answers
-(drop_comments), a post with its comments (posts.drop_post), a drawing
+MENTIONS (mentions.py; the owner's "All yes", Nov 15): an @handle in a
+comment's or an answer's words that is somebody is a link to their page, and
+they are told in Activity. Written with the comment, in the same
+transaction; read once a page for all its comments (named()).
+
+DELETING IS REAL, AND SAID IN CODE: a comment goes with its answers and its
+mentions (drop_comments), a post with its comments (posts.drop_post), a drawing
 deleted through the site with its comments (posts.bloob_delete), an account
 with its comments, every answer under them and every comment on what it
 owned (accounts.delete_person; owner_id is on the row, so nothing asks
@@ -255,7 +260,19 @@ def thread(on, viewer, before=None, limit=PAGE):
             by[c.parent_id]["answers"].append({"c": c, "who": who, "answers": [], "sk": None,
                                                "quiet": who.id in muted})
         described(items + [a for i in items for a in i["answers"]], viewer)
+        named(items + [a for i in items for a in i["answers"]])
     return items, (_cursor(tops[-1][0]) if more and tops else None)
+
+
+def named(items):
+    """WHOM EACH ONE'S WORDS MENTION (mentions.py), put on its item as
+    "mentions" ({as typed, in small letters: their handle now}, which said()
+    makes links of): every comment and answer of a page in one read."""
+    from .mentions import links
+    got = links(comments=[i["c"].id for i in items])
+    for i in items:
+        i["mentions"] = got.get(("c", i["c"].id), {})
+    return items
 
 
 def described(items, viewer):
@@ -353,8 +370,12 @@ def _drop_drawings(where):
 
 
 def _drop(where):
-    """Every comment `where` names, and their drawings."""
+    """Every comment `where` names, their drawings and their mentions
+    (mentions.py: said here, every way a comment goes, never left to a
+    cascade)."""
+    from .mentions import drop_comment_mentions
     _drop_drawings(where)
+    drop_comment_mentions(where)
     site().session().execute(sa.delete(Comment).where(where).execution_options(synchronize_session=False))
 
 
@@ -509,8 +530,13 @@ def register(bp):
                       skribl_id=made.public_id if made is not None else None, **on.row())
         sess.add(row)
         sess.flush()
+        # MENTIONS (mentions.py): the people its words name, in the same
+        # transaction as the comment.
+        from .mentions import write_comment
+        write_comment(row)
+        sess.flush()
         who = sess.get(Person, me.id)
-        html = _cards(described([{"c": row, "who": who, "answers": [], "sk": None}], me), me, True,
+        html = _cards(named(described([{"c": row, "who": who, "answers": [], "sk": None}], me)), me, True,
                       me.id == on.owner.id)
         return jsonify({"ok": True, "comment": row.public_id,
                         "under": parent.public_id if parent is not None else None,

@@ -344,7 +344,7 @@ def tiles(entries, viewer, eye=False):
     to a screen reader; a hidden one's link says so too."""
     from .posts import cards
     out = []
-    for c in (cards(entries, viewer) if entries else []):
+    for c in (cards(entries, viewer, words=False) if entries else []):
         sk, who = c["sk"], c["who"]
         if not sk or c["down"]:
             continue

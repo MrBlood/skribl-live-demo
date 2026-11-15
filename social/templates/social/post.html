@@ -74,7 +74,7 @@
     </a>
   </header>
   {% if card.down and card.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
-  {% if p.words %}<p class="post-words is-big">{{ p.words }}</p>{% endif %}
+  {% if p.words %}<p class="post-words is-big">{{ said(p.words, card.mentions) }}</p>{% endif %}
   {% if p.skribl_id %}<div class="post-art">{{ player(card, waits=false) }}
     {% if card.sk and card.sk.caption %}<p class="post-caption">{{ card.sk.caption }}</p>{% endif %}
   </div>{% endif %}

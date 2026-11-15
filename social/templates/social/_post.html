@@ -19,10 +19,14 @@
                       "Mira Lopez reposted" at its top ("You reposted" for
                       yours); a QUOTE's holds the original small under its
                       words and its own drawing (_gallery.html quote_card). EASY TO OPEN
-                      (the owner's yes, Nov 12): its words and its time are
-                      each a link to its own page, and the comments' icon is
-                      there even at none ("Comment"); the face, the name and
-                      the @handle still go to the person's page. A tap
+                      (the owner's yes, Nov 12): its time is a link to its
+                      own page, and the comments' icon is there even at none
+                      ("Comment"); the face, the name and the @handle still go
+                      to the person's page. Its words opened the page as a
+                      link of their own until MENTIONS (Nov 15): now an
+                      @handle in them that is somebody is a link to that
+                      person (said(), mentions.py), and a tap anywhere else on
+                      them opens the page as the card's ground does. A tap
                       anywhere else on the card opens its page too (posts.js,
                       "ANYWHERE ON A CARD"), but on the drawing, which plays.
     heart(c)          the like's heart and how many (likes, phase 2), in the
@@ -165,8 +169,10 @@
     </div>
   </header>
   {% if c.down and c.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
-  {#- The words are a link that drags as words: pressed and pulled, they select (posts.js opens nothing then). #}
-  {% if p.words %}<a class="post-words" href="{{ c.url }}" draggable="false">{{ p.words }}</a>{% endif %}
+  {#- THE WORDS ARE NO LINK OF THEIR OWN (mentions; the owner's "All yes", Nov 15): a link can't hold the links
+      to the people they name. A tap on them opens the post as the card's ground does, an @handle that is
+      somebody opens that person's page, and pressed and pulled they select (posts.js opens nothing then). #}
+  {% if p.words %}<p class="post-words">{{ said(p.words, c.mentions) }}</p>{% endif %}
   {#- A quote of words alone has no drawing of its own. #}
   {% if p.skribl_id %}<div class="post-art">{{ player(c) }}</div>{% endif %}
   {% if c.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(c.quote) }}{% endif %}

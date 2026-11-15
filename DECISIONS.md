@@ -42007,3 +42007,445 @@ Pad and Flip: not affected; nothing in the app changed.
 THE FOUR: kind (Blooby saying hello); simple (just him, no star); playful
 (his own drawn line and his wave); powerful (the brand's face, as big as the
 owner wanted him).
+
+## After v330 -- Mentions: an @handle links to that person and tells them
+
+The owner, Nov 15 (Mountain Time), about 1:45 AM, "All yes" to the three asks
+of the mentions mock (part two of the map, its item 4, docs/SOCIAL-SITE.md
+section 17) and to every default, each as Cal picked it: 1, A: the @handle in
+the small violet ink, 600, no underline, a tap opening their page (B, the ink
+underlined, and "now", plain words, beside it); 2, typing @ in the composer
+and a comment's box shows a list of people right under the line, the people
+you follow first, then anybody whose name or handle starts with it, four rows
+of 52px, a tap putting "@handle " in; nobody a block hides either way, nobody
+taken down; 3, Activity's "Rook mentioned you", their words under it in
+quotes, the post's small picture, their face wearing an @ on the follow
+badge's purple disc, LIGHTING THE BELL'S DOT as a comment does, landing on the
+post or the comment, glowing; not from people you muted, never through a block,
+never yourself. The defaults: a handle that is nobody stays words; ten people
+at most in one post or comment, the rest words; a comment that is a row for
+you already (on your post, answering you) and mentions you is one row, the
+comment's; somebody who blocked you (or you them) is not told and the link
+still shows; Activity's line and its empty words say mentions; posts can't be
+edited yet, so a mention is fixed once posted. Built Nov 15, after reposts
+(#912), on top of it.
+
+WHAT CHANGED.
+
+- HOW A MENTION LOOKS (A; `mentions.said`, `_post.html`, `post.html`,
+  `_comments.html`, social.css "MENTIONS"): in a post's words (Home's card,
+  its page, your Posts, Likes and Bookmarks tabs), a comment's, an answer's,
+  and a quote's own words (a quote is a post), an @handle that is somebody is
+  a link to their page, `<a class="mention">`, in the small violet ink
+  (--accent-ink), 600, never underlined, the words' own size and line: the
+  words' box is one height with it and without it (69.28px on a phone, 44.64
+  on a desk for the mock's own words). A handle that is nobody stays words,
+  and so does every handle past the first ten people in one post or comment
+  (`MOST`), in order, each person once. The words are escaped first, as any
+  words are; only the handles the post or the comment keeps as its mentions
+  become links. Where the words are one link already they stay plain:
+  Activity's peek, a quote's small card, More from's tiles.
+- A CARD'S WORDS ARE NO LINK OF THEIR OWN (`_post.html` `post_card`): a link
+  can't hold the links to the people it names. They are `<p class="post-words">`
+  now, keeping the 10px above and below they had as a link (so nothing moves);
+  a tap on them opens the post as the card's ground does (posts.js, "ANYWHERE
+  ON A CARD", unchanged), a tap on a mention in them opens the person and never
+  the post, and a drag that selects them opens nothing. The time and Open ›
+  stay the post's links for a keyboard and a screen reader.
+- THE LIST UNDER AN @ (`mentions.js`, `_mentions.html`, `_mention_face.html`,
+  `compose.js`, `comments.js`, social.css): beside the composer's field and a
+  comment's box (answers too: the box travels to a phone's sheet and a desk's
+  fold with its list), a listbox hidden until an @ is typed. From the @ on
+  (an @ with nothing of a word or an email right before it, then the start of
+  a handle), it asks `/people/suggest` (120ms of quiet typing first; each
+  answer kept for the visit) and shows up to four rows: the face (36px), the
+  name (17px 600, --ink), the @handle (15px, --ink-2), on the mock's card
+  (--card, its edge --card-line, 16px round, the mock's drop), the rows 52px
+  with the card's edge between, the highlighted one on --tint. It is placed
+  over what is there, never laid out in the page: right under the line being
+  typed (8px), the line found by a copy of the field laid out as the field
+  lays its words and counted in whole lines; where there is no room under it
+  (a phone's comment sheet, sitting on its keyboard) it opens over the line;
+  with room neither way, under it, the words scrolling it into view; so on a
+  phone it stays above the keyboard. A tap on a row (a press on the list never
+  takes the field's focus), or Enter or Tab on the highlighted row (the arrow
+  keys move it), puts "@handle " in where the @ and what followed it were (a
+  space already there kept as the space), through the browser's own
+  insertText so Undo takes it back; Esc closes the list and nothing else (the
+  sheet, a desk's fold stay), and it stays shut for that @ until another is
+  typed. It fades in and out (0.16s); under Reduce Motion it is simply there.
+  The field says aria-expanded, aria-controls, aria-autocomplete="list" and,
+  while it is open, aria-activedescendant (the highlighted option).
+- WHOM IT OFFERS (`mentions.suggest`): the people you follow first, whose
+  @handle or any word of whose name starts with what follows the @, by name;
+  then anybody whose @handle or name starts with it, by name; four at most;
+  nobody a block hides either way (`safety.hidden_ids`), nobody taken down,
+  never yourself. Three reads, each on an index: your follows; the handles'
+  own index and the names' new one, each walked from where the typed letters
+  sort (24 rows at most) and kept only where they really start with them.
+- THE ROUTE (`/social/people/suggest?q=`): signed in (401 otherwise), the
+  site's limit before anything is read (`people`, 600 an hour a person), JSON
+  `{people: [{handle, name, face}]}` and nothing more (the face the site's own
+  markup, its still picture or the empty circle), `Cache-Control: private,
+  no-store`; what is no handle's start is nobody.
+- THE DATA (`social/models.py` `Mention`, `social_mentions`, revision
+  6dc6c4054756 on the site's own chain, after the reposts' 3e7b508ff939; one
+  head): who was mentioned (`person_id`), the handle as typed (`typed`, without
+  the @), who wrote it (`by_id`), in a post or in a comment (exactly one, a
+  CHECK), whose the post is or what the comment is on (`owner_id`, as a
+  comment keeps it), when (the post's or the comment's own time). Once a
+  person a post and once a person a comment (two unique indexes); theirs
+  newest first (Activity, the dot); a post's and a comment's (the links, their
+  going); by whom and whose (deleting an account). And `ix_social_people_name_key`,
+  an index of `lower(display_name)`, for the list. THE TABLE AND THE INDEXES
+  ONLY: no row of any table read or written, no table there altered; posts
+  written before keep their words plain.
+- WRITTEN WITH THE WORDS (`mentions.write_post`, `write_comment`): every way
+  words are written, in the same transaction, once the row is flushed: a post
+  with a drawing, a quote of words alone, an older drawing posted through
+  Yours (`posts.post_new`), a comment and an answer (`comments`'
+  new_comment). Never changed after: nothing can be edited. The link goes to
+  the person by their id (`mentions.links`: {as typed, small letters: their
+  handle now}), so a handle that changes never breaks an old mention.
+- READ ONCE A PAGE (`posts.cards`, `comments.named`): one read for all a
+  page's cards, one for all its comments; a tile (the Gallery's, More from's)
+  reads none (`cards(words=False)`).
+- ACTIVITY (`activity.py`, `activity.html`): "Rook mentioned you", a row each
+  (each has its words), their words under it in quotes (plain: the row is one
+  link), the small picture the comment's own drawing else the post's (a quote
+  of words alone, what it quotes), their face wearing an @ (white, 700, on the
+  follow badge's disc, --fill); to the post, or to the comment on its page
+  (#c-<id>), where it glows as a comment's row lands. Read from the mentions,
+  never kept (`_mentions`, on the mentions' own index), by a comment's row's
+  rules (comments.seen's: nothing taken down, an answer under a comment shown,
+  on a post there for everybody, a drawing's page there), and what it is in
+  must be there. Never from anybody muted, never through a block either way,
+  never yourself. ONE ROW, NOT TWO: a comment on what you own or answering you
+  is that comment's row, by the same rules; a quote of what you made is the
+  quote's row. Its line and its empty words say mentions: "Who followed you,
+  liked or reposted your posts or said something on them, and who answered or
+  mentioned you."; "When someone follows you, likes or reposts your post, says
+  something on it, answers you or mentions you, you’ll see it here."
+- THE DOT (`activity.dot`): a mention lights it, as a comment does: a third
+  read, on the mentions' own index, asked once a request with the other two.
+- DELETING IS REAL AND SAID IN CODE: a post with its mentions
+  (`posts.drop_post`); a comment with its own and its answers', every way a
+  comment goes (`comments._drop`: a comment deleted or removed, a post's, a
+  drawing's deleted on the site, an account's); an account with every mention
+  of it, by it and on what it owned (`accounts.delete_person`). The ON DELETE
+  CASCADEs are the net. ONE DRAWING, ONE CONVERSATION: a drawing's comments
+  moving into a post keep their mentions (they are on the comment).
+
+PAD AND FLIP: nothing changes in either editor. Mentions are the site's
+words; Skribl's own titles take none (a post's title, its first words, stays
+plain in Skribl), and Skribl is read through its documented `describe_posts`
+alone, as before.
+
+CONTRAST (measured on the built pages by the new suite's section 10, phone
+and desk the same; light / dark): the mention 8.26 / 8.39 on the card and 7.75
+/ 9.89 on a comment's ground (the page's), its own ink against what it sits
+on, value for value the mock's, and the same read off the paint (its most
+different pixel against the ground beside it). The list: the names 17.95 /
+14.05 and the @handles 7.56 / 8.59 on the card (the mock's); the highlighted
+row's @handle on --tint 6.5 / 6.99, its lowest word. Activity's @, white on the
+follow badge's --fill, 5.33 computed and off the paint (the mock's), the
+lowest word on a mention's row. Every word on a card with a mention, the list
+(a row highlighted and not), a post's page with its comments and Activity's
+mention rows at 4.5:1 or more; the fields 18px. No colour and no token added:
+same role, same token (the small violet ink, the card and its edge, the two
+inks, the tint, the action's purple).
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy of
+the tree (a copy for each break, one at a time, each section run alone with
+its own PART), green on an untouched copy, the control:
+
+- verify_socialmentions, NEW (eleven sections; SOCIALMENTIONS_PART for
+  calibration; a section that cannot go on is a red row of its own):
+  - 1, THE WORDS: who a post's words mention, as typed, by whom and whose: an
+    @handle that is somebody, any case, each once in order; an email, x@rook,
+    @@rook, @rook_ and @rookie, a handle that is nobody and one too short are
+    words (red: no boundary before the @); ten people at most, the first ten,
+    a handle that is nobody not among them, one named twice once (red: twelve);
+    every way words are written writes them beside the words at their own time
+    (a quote of words alone, an older drawing posted, a comment, an answer),
+    a post refused writes none (red: the older drawing's path writing none);
+    a handle that changes keeps the link, "@Juno" as typed opening
+    /social/@junebug (red: the link to the handle as typed). Control 4/4; the
+    first two breaks also red the third row, which counts every mention's
+    time.
+  - 2, HOW A MENTION LOOKS: a link to their page in the small violet ink, 600, never
+    underlined, the words' own size and line, painted where it is, on Home's
+    card, a post's page, a comment, an answer and a quote's own words, phone
+    and desk, light and dark (red: the mention at 400); the words' box one
+    height with it and without it (red: the mention a padded box of its own);
+    a handle that is nobody stays words, the words escaped as words, a
+    quote's small card plain (red: the words between mentions not escaped;
+    and the small card making links of its words, which reds the first row
+    too). Control 3/3.
+  - 3, THE CARD'S WORDS: no link of their own, a paragraph, a tap on them
+    opening the post, phone (a touch) and desk (a click) (red: the words a
+    control of their own, doing nothing); a tap on a mention opens the person,
+    never the post (red: a tap anywhere in the words opening the post, a
+    mention's too, which reds the next row as well); a drag from the words to
+    the mention selects and opens nothing (red: a drag and a selection read
+    as a tap). Control 3/3.
+  - 4, THE LIST: from the @ on, 8px under the line being typed, the first line
+    and the second, the sheet's tools and its words' room unmoved (red: 20px
+    under it); the people Mira follows first, then the first two of
+    everybody else by name, read from the site's table as the owner said it
+    (red: the people you follow not read first, which reds the next-but-two
+    row too); the mock's card and rows (red: rows of 46px); a listbox, the
+    field's aria-expanded, aria-controls, aria-autocomplete and
+    aria-activedescendant on the first row, the field 18px (red: no
+    aria-activedescendant, which reds the keys' row too); it narrows: "@pa"
+    Theo Park first by a later word of a name she follows, then Paz Ruiz,
+    "@v" four of five, "@ve" three, "@ver" one, a handle's start ("@rai", Bo
+    Lund) (red: a followed person's later words not read); nobody a block
+    hides either way, nobody taken down, never herself (red: blocks not
+    asked); a tap puts "@vera " in, the caret after it, the field keeping its
+    focus (red: no space after the handle, which reds the keys' row too); it
+    fades in, read on every frame (red: no fade); the keys on a desk: Down,
+    Enter, Tab (red: Enter not taken by the list); Esc shuts the list and
+    nothing else, shut for that @, a new @ opens it (red: Esc let through to
+    the sheet, which closed); under Reduce Motion whole from its first frame
+    (red: Reduce Motion fading it all the same). Control 11/11.
+  - 5, A COMMENT'S BOX AND A PHONE'S KEYBOARD: a desk's fold under the heading, the list
+    8px under the line, Enter putting "@veev " in, the box open; answering,
+    a click on its row (red for both, and for the phone's comment sheet: a
+    comment's box with no list; and for the answer alone, a click on a row
+    choosing nothing); the composer's list above a stand-in keyboard of
+    336px (red: the list fixed to the screen's foot, which reds the fold's
+    and the comment sheet's rows too); a comment's sheet, riding on the
+    keyboard, its list over the line, above the keyboard (red: the keyboard
+    not read, the screen's whole height thought free, so the list went under
+    the line, into the keyboard). Control 4/4 (calibrating it, a comment's
+    box with no list first stopped the section at the answer's click before
+    any row was read: each row is read where its steps end now, below).
+  - 6, WHO MAY ASK: signed out 401, four at most, {handle, name, face} and
+    nothing more, private and no-store (red: no Cache-Control); "@ve" as
+    "ve", "9x" and 21 letters nobody (red: the @ not taken off); the 601st
+    refused (red: 6000 an hour). Control 3/3.
+  - 7, ACTIVITY: "Rook mentioned you", a row each, new, his words in quotes
+    (plain), to the post or the comment, the post's small picture (red: the
+    row without its words); the @ on his face, white, 700, on --fill (red:
+    the @ without the follow badge's disc); it lights the dot (red: the dot
+    not reading mentions); the comment's row lands on the comment, glowing
+    (red: a landed comment not glowing; and the row pointing to the page, not
+    the comment, which reds the first row and stops the section at its tap);
+    never from somebody muted, through a block either way, herself, a post
+    taken down or a comment under one, the bell dark (red: the muted not
+    asked); one row, not two, for a comment on her post, an answer to her, a
+    quote of her post (red: a comment that is a row already, a row again; and
+    a quote, a row again: each also reds the next row, where it stays as a
+    mention); gone with what said it (red: the deletes in code and the
+    cascade both off and the read not asking whether what said them is there:
+    Activity's page then fails, and the section stops there). Control 7/7.
+  - 8, DELETING, IN CODE: a post's mentions through its route, a comment's and
+    its answers', a drawing's comments' (red: the post's and the comment's
+    deletes in code and the cascade both off, which reds every row of the
+    section, and stops it: SQLite gives a deleted comment's id to the next
+    comment, and the next comment's mention of Ivy met the one left behind
+    under that id, so the comment was refused, the site's resting answer (a
+    mention left behind is not clutter: it is the next comment's); an
+    account's of it, by it and on what it owned (red:
+    its delete in code and the cascade off); with SQLite's cascade off on a
+    copy, a post's (2, then 0), a comment's and its answer's (2, then 0), an
+    account's (2, then 0) (red three times: each delete in code taken away,
+    the post's, the comment's, the account's); a drawing's comment moving
+    into a post keeps its mention and its row lands on the post (red: the
+    row pointing to the drawing's page). Control 4/4.
+  - 9, THE DATA: the chain on a populated database at its head 6dc6c4054756,
+    the table, its CHECK and seven indexes, the names' index, no row written,
+    old words with an @ in them still words (red: an index the models have
+    and the chain has not, which reds going down too); the CHECK and the
+    pairs (red: no CHECK); back down, all of it gone, every row kept (red:
+    going down leaving the names' index); the reads on their indexes in
+    SQLite's own plan, no scan of the people or the mentions (red: the
+    links read off their index); a page of Home's cards reads the cards'
+    mentions once and shows them (red: a read a card). Control 5/5 (its
+    first control was red, below).
+  - 10, CONTRAST AND TARGETS: the mention 8.26 / 8.39 on the card and 7.75 / 9.89 on a
+    comment's ground, its ink against what it sits on, phone and desk (red:
+    the mention in the brand's purple, --brand, which reds the paint's and
+    the census's rows too); off the paint 4.5:1 or more (red: the mention
+    painted at 40%, which reds the census too); every word at 4.5:1 (red: the
+    list's @handles in --rule); the @ on --fill, 5.33 computed and 3:1 or
+    more off the paint (red: the @ faint, at 25%, which reds the census too);
+    every target 44px but the mentions, each mention painted where it is
+    (red twice: the list's rows 40px; a mention taking no taps,
+    pointer-events none). Control 5/5.
+  - 11, NO PAGE ERRORS: no page errors, no console errors, no CSP violations in
+    every browser the suite opened (red: a page error on every page with a
+    field to write in, run with section 2). Control 4/4.
+
+- verify_socialauth 14, CHANGED (the control 11/11): fifteen tables, the
+  mentions' seven indexes and the names' index among every index (red: the
+  old reading, fourteen tables, no social_mentions); a new row, the mentions'
+  PostgreSQL DDL read offline: the new table with its CHECK and seven
+  indexes and the names' index, nothing read or written, no table there
+  altered, all of it dropped going down (red: the migration writing a row;
+  the migration altering a table there is, which reds alembic check's
+  no-drift row too).
+- verify_socialactivity 3, a new row, "Hal mentioned you", new, his words in
+  quotes, to the post (its picture) or the comment, his face wearing the @
+  (red: a mention's row saying other words); 9, the empty words say mentions
+  (red: the old reading). The control 7/7.
+- verify_sociallikes 9 and verify_socialfollow 9, CHANGED: Activity's line and
+  its empty words say mentions (red: the old reading, in each). The controls
+  12/12 and 8/8.
+- verify_socialposts 10, CHANGED: a card's time is the post's link, its words
+  no link of their own, the card's ground anywhere in their 44px (red: the
+  old reading, the words a link; and the words a link again, as before
+  mentions). The control 4/4; sections 11 and 12 (a tap on the words, a
+  drag, the tap map) needed nothing: the words were already the card's in
+  them, a tap opening the post.
+- verify_socialreposts 10, MENDED: it read the chain's head as the reposts'
+  revision, which the mentions' now follows; it reads the revision the chain
+  stamps at the reposts' own (red: the old reading, on this tree). The
+  control 5/5.
+- verify_composer and verify_socialcomments needed nothing: the list is
+  hidden at rest and their rows read nothing it changes (the list's rows are
+  the new suite's 4 and 5).
+- harness/release_run.py and harness/shard.py name verify_socialmentions
+  (measures; 150 s a shard).
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py, -j 3, its logs in
+a folder of their own), on the tree as first committed (f5cc4568), the box
+shared with another change's runs (load about 14 to 20 on four cores):
+
+- verify_socialmentions 50/50, verify_socialposts 81/81, verify_socialcomments
+  96/96, verify_socialactivity 46/46, verify_sociallikes 100/100,
+  verify_socialfollow 75/75, verify_socialbookmarks 37/37, verify_socialsafety
+  38/38, verify_socialmute 68/68, verify_social 41/41, verify_socialauth
+  69/69, verify_seam 515/515, verify_theme 124/124, verify_docs 144/144,
+  verify_hello 50/50, verify_txcontract 103/103, verify_privacy 54/54,
+  verify_csrf 27/27, verify_socialsettings 45/45, verify_hostseams 139/139:
+  twenty suites ok in 35.2 minutes. Three went red beside the others and green
+  alone, which run_parallel calls INTERMITTENT; they are two things:
+  - ONE REAL RED OF THIS CHANGE: verify_socialreposts 48/49 beside, 49/49
+    alone. Its section 10 read the chain's head as the reposts' revision
+    (3e7b508ff939), and the head is the mentions' now; mended while the run
+    went on, so its alone count is the mended suite's (51fc3c8e: it upgrades to
+    the reposts' revision and reads what the chain stamps there, as
+    verify_socialbookmarks 8 reads the bookmarks'). The old reading, put back
+    in a throwaway copy, is red there, the new green: control 5/5.
+  - TWO OF LOAD: verify_composer 37/38 beside, 38/38 alone (Cancel's glide
+    down read on every frame: nine frames, the biggest step 402.7px, frames
+    dropped under the load); verify_socialprofile 91/93 beside, 93/93 alone
+    (the photo under the Pad not loaded in time, and the row that reads its
+    words over it: the reposts' run saw the same two).
+- THEN, ON THE TREE AS COMMITTED (a7045549, this entry in it; after the
+  read that asks what said a mention is there, section 9's own comment and
+  section 5 read row by row): side by side, verify_socialmentions 50/50,
+  verify_socialactivity 46/46, verify_socialreposts 49/49 (mended),
+  verify_socialmute 68/68, verify_socialfollow 75/75, verify_sociallikes
+  100/100, verify_docs 144/144: seven suites ok in 6.8 minutes. And
+  verify_socialmentions alone, 50/50 in 106 seconds.
+- NOT RUN: the full battery (main's run after the merge does it); PostgreSQL
+  (CI's postgres job; the migration's DDL read offline here); Firefox and
+  WebKit (main's lanes); verify_player_isolation and cssgraph (styles.css is
+  untouched: the site's CSS is social.css); no file of Skribl's changed, so
+  none of Skribl's own suites was run beyond the seams'.
+
+FOUND WRONG, AND MENDED, before the rows were green:
+
+- THE LIST SAT 2PX LOW. The caret's line was read as the top of the copy's
+  inline box, which sits half its leading below the line's own top (25.2px
+  lines of 18px words); it is counted in whole lines now (`lineOf`). Section
+  4's first row read 156.9 where the line's foot and 8px make 154.9, red, and
+  154.9 since.
+- A MENTION'S ROW COULD HAVE OUTLIVED WHAT SAID IT. Found by planning section
+  7's calibration: with the deletes in code and the cascade both gone, a
+  mention whose post was deleted would have been read with no post to show,
+  and Activity's page would have failed. The read now asks that the post or
+  the comment is there (a third layer under the code and the cascade).
+- AND FOUR INSTRUMENTS OF MINE: two handles of two letters in my own fixtures
+  ("oz", "jo"; a handle is 3 to 20), whose joins could not happen; section
+  2's first reader read every mention under a post's page, its comments' too,
+  and one scrolled out of sight (so not painted there): it reads the post's
+  own words, scrolled to them; section 9's count of a page's reads counted
+  the bell's own read of the mentions too (it selects the same column): it
+  counts the cards' read by its own columns; and section 9 run alone, as a
+  calibration's control runs it, had no comment for the comments' read to
+  plan (the control's first red): it makes one.
+
+JUDGMENT CALLS (where the mock, the asks and the brief did not say, the way
+closest to them and to the comments', likes' and reposts' ways):
+
+- ANYBODY ELSE BY THE START OF THEIR HANDLE OR THEIR NAME; ANY WORD OF A NAME
+  FOR THE PEOPLE YOU FOLLOW. The owner's words were "anybody whose name or
+  handle starts with it", and the brief asked for any word of a name, on
+  indexes. A name's later word for everybody would need every person read on
+  each letter typed, or a table of names' words that a migration cannot fill
+  (no data work): that is item 5's (Finding people) to build. So the people you
+  follow match on any word of their name (read through your follows, a
+  handful), and anybody else on the start of their handle or of their name
+  (each on its own index). "@park" finds Theo Park if you follow him, and
+  "@theo" finds him either way.
+- THE REST BY NAME, whatever matched (the mock's "the rest by name"): Bo Lund,
+  whose handle starts with what was typed, sits by his name among the others.
+- THE ANSWER IS AN OBJECT, {people: [...]}, as every answer of the site's is
+  ({ok, ...}, {html, next}); the brief wrote a list.
+- A TAKEN-DOWN PERSON, OR ONE A BLOCK HIDES, IS STILL A MENTION when typed by
+  hand: the link shows and their page decides, as the owner's default says for
+  a block; the list never offers them, and Activity never tells through a
+  block. A handle that is you is a link to your own page and counts among the
+  ten; you are never told.
+- A QUOTE OF YOUR POST THAT MENTIONS YOU IS ONE ROW, the quote's, by the
+  comment's own rule (one thing, one row); the mention in it still lights the
+  dot, and the rail's dot fades as you look, as for any lit row.
+- THE CHECK IS IN THE CREATE TABLE. The brief asked for it NOT VALID on
+  PostgreSQL "as the reposts' constraints are"; theirs were added to a table
+  with rows in it, where NOT VALID spares a scan under its lock. A new table
+  holds no row, so there is nothing to scan, and PostgreSQL marks a new
+  table's CHECK valid of itself (its documentation: NOT VALID is an ALTER
+  TABLE ADD CONSTRAINT option). The DDL's row holds what NOT VALID was for: no
+  table there is altered, no row read or written (not run on PostgreSQL here).
+- `owner_id` ON EVERY MENTION, whose the post is or what the comment is on (a
+  comment's own owner_id), as likes and bookmarks keep theirs: deleting an
+  account takes every mention on what it owned by its own index, asking
+  nothing else.
+- THE LIST'S ROWS SPLIT BY THE CARD'S EDGE (--card-line), the mock's own CSS,
+  not the menus' thin line (`--row-line`, from where the words start): a list
+  of people to pick, as the mock drew it; the highlighted row on --tint ("a
+  note: words in the first ink on it").
+- 600 AN HOUR (`people`): a mention typed asks a few times (each answer kept
+  for the visit, 120ms of quiet first); past it the list simply does not show.
+- OVER THE LINE WHERE THERE IS NO ROOM UNDER IT: the brief said under the
+  line; a phone's comment sheet sits on its keyboard with the box at its foot,
+  where under the line is the keyboard. Over the line, as phones' own lists
+  do; with room neither way, under it, the words scrolled to show it.
+- ESC CLOSES THE LIST ALONE, and it stays shut for that @ while more is typed
+  (a new @ opens it again): Esc is not then a request to see it again at the
+  next letter. A desk's fold and a phone's sheet stay as they were.
+- THE WORDS KEEP THE 10PX ABOVE AND BELOW they had as a link, so nothing on the
+  card moves; the time and Open › stay the post's links for a keyboard.
+- A MENTION IS NOT A 44PX TARGET: it is a link inside words (WCAG 2.5.8's
+  inline exception), the words' own line; padding it out would lay its tap
+  over the lines above and below, where a tap means the post. The new suite
+  holds every other target to 44px and each mention to being painted where it
+  is.
+- TILES READ NO MENTIONS (`cards(words=False)`: the Gallery, More from), so
+  the one read a page is the cards' that show words.
+
+THE FOUR. Simple: an @ and the first letters, and the person is there, the
+people you follow first; nothing to learn. Kind: nothing typed is lost (Esc
+closes the list and nothing else, the words stay as typed, a handle that is
+nobody stays words), nobody is told through a block, and the person mentioned
+hears of it once, not twice. Playful: the names light up violet in the words,
+and the @ sits on their face in Activity. Powerful: posts, quotes, comments
+and answers alike, ten people at a time, links that outlive a new handle.
+
+NOT TESTED HERE: WebKit, so the owner's iPhone (the list over Safari's own
+keyboard: the keyboard here is Chrome's visual viewport made to say one is
+there; a tapped row keeping the field's focus, which iPhone's Safari decides
+on its own touch; the "@handle " put in through the browser's own insertText,
+so Undo takes it back); SF and Segoe UI (the caret's line is read from a copy
+of the field in the page's own face, so it follows the face; the words' height
+with a mention in them was read in this box's faces only); Firefox (main's
+lanes after the merge); PostgreSQL (the migration's DDL read offline only; the
+list's three reads planned by SQLite only, PostgreSQL's planner and its en_US
+collation not run: the walks read from where the typed letters sort and keep
+only what really starts with them, so a collation can cost rows, never give a
+wrong one); the live site. The one-glance tell on the live site: an @name in
+a post is violet and opens their page.

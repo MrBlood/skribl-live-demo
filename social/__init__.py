@@ -95,6 +95,13 @@ Following and the reposter's Posts tab: one drawing, one conversation. A
 quote is a post with the original small inside it, from the composer. The
 original's author is told in Activity; neither lights the bell's dot.
 
+MENTIONS (mentions.py; the map, part two, item 4: the mentions mock, the
+owner's "All yes", Nov 15). An @handle in a post's or a comment's words that
+is somebody is a link to their page, in the small violet ink; typing an @ in
+the composer or a comment's box shows a list of people under the line, the
+people you follow first. The person mentioned is told in Activity ("Rook
+mentioned you"), and it lights the bell's dot, as a comment does.
+
 ONE SKRIBL, SHARED, PEOPLE TOO. The host hands Skribl the site's signed-in
 person as its current user (current_user_id() below) and names them with
 describe_author(), so a drawing made in the Pad while signed in is theirs.
@@ -323,8 +330,8 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
                                show="everyone", sort="new", q="", more_url=None)
 
     if site is not None:
-        from . import (accounts, activity, bookmarks, comments, compose, follows, gallery, likes, mutes, posts,
-                       profiles, reports, reposts, rules, safety)
+        from . import (accounts, activity, bookmarks, comments, compose, follows, gallery, likes, mentions, mutes,
+                       posts, profiles, reports, reposts, rules, safety)
         accounts.register(bp)
         gallery.register(bp)
         profiles.register(bp, skribl_blueprint)
@@ -334,6 +341,7 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         likes.register(bp)
         bookmarks.register(bp)
         reposts.register(bp)
+        mentions.register(bp)
         follows.register(bp)
         mutes.register(bp)
         activity.register(bp, skribl_blueprint)
@@ -394,6 +402,10 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             ctx["activity_dot"] = dot_for_request
             # What each kind of report may say, in its sheet's order (piece 5).
             ctx["report_reasons"] = REASONS
+            # A post's or a comment's words as a page shows them: escaped, each
+            # @handle it keeps as a mention a link to that person (mentions).
+            from .mentions import said
+            ctx["said"] = said
             # Times are kept in UTC; a page writes them so (an ISO stamp
             # for you.js to show in the person's own zone, and a plain
             # UTC day for a page without scripts).

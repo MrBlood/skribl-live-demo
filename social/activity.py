@@ -5,7 +5,8 @@ Explore (where Sign in sits before you sign in), and Activity in a desk's
 rail after Explore; each with a dot when something is new.
 
     /activity     who followed you, liked your posts or said something on
-                  them, and who answered you: New, then Earlier, a row each,
+                  them, who answered you and who mentioned you: New, then
+                  Earlier, a row each,
                   every row one link to its comment on its page (or, for
                   likes, to "Liked by…" there; for a follow, to their page, or
                   for several to who follows you); opening it marks
@@ -63,6 +64,19 @@ the small picture the quote's own drawing, else yours; it opens the quote.
 Undo repost takes its row with it, and a quote of something since gone (or
 gone itself) is not in it. NEITHER LIGHTS THE DOT: nothing to answer.
 
+MENTIONS TOO (mentions; the mentions mock, the owner's "All yes", Nov 15),
+read from the mentions, never kept as rows of their own: "Rook mentioned
+you", a row each (each has its words), their words under it in quotes, the
+small picture the comment's own drawing, else the post's (a quote of words
+alone, what it quotes), their face wearing an @ in the follow badge's purple
+disc; it opens the post, or the comment on its page (#c-<id>), glowing.
+Read by the same rules as a comment's row (comments.seen's), on the
+mentions' own index, (person_id, created_at); nobody muted. ONE ROW, NOT TWO:
+a comment on what you own or answering you, which mentions you too, is that
+comment's row; a quote of what you made, which mentions you too, is the
+quote's row. MENTIONS LIGHT THE DOT, as a comment does: somebody spoke to
+you.
+
 NEVER IN IT: yourself; anybody hidden from you (a block either way, or
 taken down: safety.hidden_ids); a comment taken down, or an answer under a
 comment you are not shown; anything on a post or a drawing whose page you
@@ -79,12 +93,13 @@ is a row as ever (the page shows it, theirs folded above it). Nothing is
 deleted: unmute them and every row is back, as it is all read each time.
 
 THE DOT (dot()): whether anything is said that is new since they last
-looked (comments and answers, never likes or follows), by the same rules,
-asked once a request by a page with the bar or the rail (the
+looked (comments, answers and mentions, never likes or follows), by the
+same rules, asked once a request by a page with the bar or the rail (the
 phone's bell on Home and Explore, a desk's rail on every page): newest
-first on the two indexes it reads, (owner_id, created_at) and
-(to_person_id, created_at), a handful of rows at most, and Skribl asked
-only when every new one is on a drawing (whether its page is still there).
+first on the three indexes it reads, (owner_id, created_at) and
+(to_person_id, created_at) of the comments, and (person_id, created_at) of
+the mentions, a handful of rows at most, and Skribl asked only when every
+new one is on a drawing (whether its page is still there).
 
 SEEN IS OPENING IT: the page reads the list as it stands, then sets the
 time it was opened; the rows that were new keep their dot while you are
@@ -104,7 +119,7 @@ import sqlalchemy.orm  # noqa: F401  (sa.orm.aliased)
 from flask import g, redirect, request, url_for
 
 from .accounts import _page, _rests
-from .models import PERSON_PREFIX, Comment, Like, Person, Post, Repost, as_utc, utcnow
+from .models import PERSON_PREFIX, Comment, Like, Mention, Person, Post, Repost, as_utc, utcnow
 from .safety import hidden_ids
 from .security import current_person, site
 
@@ -290,6 +305,48 @@ def _quotes(me, hidden, limit=READ):
     return site().session().execute(q).all()
 
 
+def _mentions(me, hidden, since=None, limit=READ, quiet=frozenset()):
+    """The mentions of `me` that may be Activity's rows, newest first (on the
+    mentions' own index, (person_id, created_at)): not by themselves, nobody
+    hidden from them or muted by them; in a post, one there for everybody
+    (not taken down; its author is who wrote it); in a comment or an answer,
+    as its page shows it (comments.seen's rules, as _query reads them): not
+    taken down, an answer only under a comment shown to them, on a post
+    there for everybody or theirs; after `since`, when given. Whether a
+    drawing's own page is there is Skribl's to say (_page_there). Rows:
+    (mention, who wrote it, the post it is in or None, the comment it is in
+    or None, that comment's post's address and skribl, the quoted post's
+    skribl)."""
+    m = Mention
+    c, par = sa.orm.aliased(Comment), sa.orm.aliased(Comment)
+    mp, cp, qp = sa.orm.aliased(Post), sa.orm.aliased(Post), sa.orm.aliased(Post)
+    q = (sa.select(m, Person, mp, c, cp.public_id, cp.skribl_id, qp.skribl_id)
+         .join(Person, Person.id == m.by_id)
+         .outerjoin(mp, mp.id == m.post_id)
+         .outerjoin(qp, qp.id == mp.quoted_post_id)
+         .outerjoin(c, c.id == m.comment_id)
+         .outerjoin(par, par.id == c.parent_id)
+         .outerjoin(cp, cp.id == c.post_id)
+         .where(m.person_id == me.id, m.by_id != me.id))
+    hid = sorted(hidden)
+    away = sorted(set(hidden) | set(quiet))
+    if away:
+        q = q.where(m.by_id.notin_(away))
+    under = sa.or_(par.taken_down_at.is_(None), par.person_id == me.id)
+    there = sa.or_(c.post_id.is_(None), cp.taken_down_at.is_(None))
+    if hid:
+        under = sa.and_(under, par.person_id.notin_(hid))
+        there = sa.and_(there, c.owner_id.notin_(hid))
+    # What it is in must be there (a mention outliving it is nobody's row).
+    in_post = sa.and_(m.post_id.isnot(None), mp.id.isnot(None), mp.taken_down_at.is_(None))
+    in_comment = sa.and_(m.comment_id.isnot(None), c.id.isnot(None), c.taken_down_at.is_(None),
+                         sa.or_(c.parent_id.is_(None), under), sa.or_(c.owner_id == me.id, there))
+    q = q.where(sa.or_(in_post, in_comment))
+    if since is not None:
+        q = q.where(m.created_at > since)
+    return site().session().execute(q.order_by(m.created_at.desc(), m.id.desc()).limit(limit)).all()
+
+
 def _follows(me, hidden, since, owner_url):
     """Activity's rows of who followed `me` (follows.of_me: those that stand,
     nobody hidden), newest first: since they last looked one row, all of
@@ -356,10 +413,14 @@ def dot(me):
     one is on a drawing."""
     from .mutes import muted_ids
     since = as_utc(me.activity_seen_at) if getattr(me, "activity_seen_at", None) else None
-    rows = _read(me, hidden_ids(me), since, DOT_READ, quiet=muted_ids(me))
-    if any(c.drawing_id is None for c, *_ in rows):
+    hidden, quiet = hidden_ids(me), muted_ids(me)
+    rows = _read(me, hidden, since, DOT_READ, quiet=quiet)
+    # MENTIONS light it as a comment does (mentions): on the mentions' own
+    # index, by the same rules.
+    named = _mentions(me, hidden, since, DOT_READ, quiet=quiet)
+    if any(c.drawing_id is None for c, *_ in rows) or any(r[3] is None or r[3].drawing_id is None for r in named):
         return True
-    drawings = [c.drawing_id for c, *_ in rows]
+    drawings = [c.drawing_id for c, *_ in rows] + [r[3].drawing_id for r in named]
     return bool(drawings) and bool(_drawings_shown(me, drawings, _described(me, drawings)))
 
 
@@ -448,13 +509,20 @@ def listing(me, skribl_blueprint="skribl"):
     # REPOSTS AND QUOTES (reposts): nobody muted either, as likes.
     shared = _reposts(me, hidden | quiet, since)
     quoted = _quotes(me, hidden | quiet)
+    # MENTIONS (mentions): nobody muted either, as comments.
+    named = _mentions(me, hidden, quiet=quiet)
     drawings = ([r[0].drawing_id for r in items if r[0].drawing_id] + [g["drawing_id"] for g in liked if g["drawing_id"]]
-                + [q.quoted_drawing_id for q, *_ in quoted if q.quoted_drawing_id])
+                + [q.quoted_drawing_id for q, *_ in quoted if q.quoted_drawing_id]
+                + [r[3].drawing_id for r in named if r[3] is not None and r[3].drawing_id])
     pics = {r[0].id: (r[0].skribl_id or r[3] or r[0].drawing_id) for r in items}
     # A quote's small picture: its own drawing, else what it quotes.
     qpics = {q.id: (q.skribl_id or osid or q.quoted_drawing_id) for q, _, _, osid in quoted}
+    # A mention's: the comment's own drawing, else what it is on; a post's own,
+    # else what it quotes.
+    mpics = {r[0].id: ((r[3].skribl_id or r[5] or r[3].drawing_id) if r[3] is not None
+                       else (r[2].skribl_id or r[6] or r[2].quoted_drawing_id)) for r in named}
     sk = _described(me, drawings + list(pics.values()) + [g["skribl_id"] for g in liked]
-                    + [g["skribl_id"] for g in shared] + list(qpics.values()))
+                    + [g["skribl_id"] for g in shared] + list(qpics.values()) + list(mpics.values()))
     shown = _drawings_shown(me, drawings, sk)
 
     def page(post_public, drawing_id):
@@ -463,6 +531,9 @@ def listing(me, skribl_blueprint="skribl"):
 
     sections = ([], [])
     groups = {}
+    # The quotes that are rows already, for a mention in one to say nothing
+    # twice (mentions).
+    rowed = {}
     for c, who, post_public, _ in items:
         if c.drawing_id is not None and c.drawing_id not in shown:
             continue
@@ -504,11 +575,34 @@ def listing(me, skribl_blueprint="skribl"):
         if q.quoted_drawing_id is not None and q.quoted_drawing_id not in shown:
             continue
         new = since is None or as_utc(q.created_at) > since
-        sections[0 if new else 1].append({
+        row = rowed[q.id] = {
             "kind": "quote", "new": new, "when": q.created_at, "words": q.words or None, "people": [who],
             "names": [who.display_name.split(" ")[0]], "n": 1,
             "href": url_for("social.post_page", public_id=q.public_id),
-            "pic": _pic(qpics[q.id], sk.get(qpics[q.id]), skribl_blueprint)})
+            "pic": _pic(qpics[q.id], sk.get(qpics[q.id]), skribl_blueprint)}
+        sections[0 if new else 1].append(row)
+    # MENTIONS: a row each (each has its words), "Rook mentioned you", their
+    # words under it; to the post, or to the comment on its page. ONE ROW,
+    # NOT TWO: a comment on what you own or answering you is a comment's row
+    # already, by the same rules, and says it; a quote of what you made that
+    # is a row says it too (and lights the dot, as the mention in it does).
+    for m, who, mpost, mc, cpublic, _, _ in named:
+        if mc is not None:
+            if me.id in (mc.owner_id, mc.to_person_id) or (mc.drawing_id is not None and mc.drawing_id not in shown):
+                continue
+            href = page(cpublic if mc.post_id is not None else None, mc.drawing_id) + "#c-" + mc.public_id
+            words = mc.words
+        else:
+            if mpost.id in rowed:
+                rowed[mpost.id]["mentioned"] = True
+                continue
+            href = url_for("social.post_page", public_id=mpost.public_id)
+            words = mpost.words
+        new = since is None or as_utc(m.created_at) > since
+        sections[0 if new else 1].append({
+            "kind": "mention", "new": new, "when": m.created_at, "words": words or None, "people": [who],
+            "names": [who.display_name.split(" ")[0]], "n": 1, "href": href,
+            "pic": _pic(mpics[m.id], sk.get(mpics[m.id]), skribl_blueprint)})
     # FOLLOWS: since you last looked one row, before a row a day; they open
     # their page, or several, who follows you.
     from .accounts import profile_url
@@ -527,7 +621,7 @@ def register(bp, skribl_blueprint="skribl"):
     @bp.get("/activity")
     @_rests()
     def activity():
-        """Activity: who followed you, liked your posts or said something on them, and who answered you."""
+        """Activity: who followed you, liked your posts or said something on them, who answered and who mentioned you."""
         me = current_person()
         if me is None:
             return redirect(url_for("social.signin", next=request.path), 303)
@@ -540,8 +634,8 @@ def register(bp, skribl_blueprint="skribl"):
         sess.flush()
         # The rail's dot (a desk) fades as they look, where there was one: a
         # like, a follow, a repost or a quote never lit it.
-        g.social_activity_dot = ("going" if any(r["kind"] not in ("like", "follow", "repost", "quote") for r in fresh)
-                                 else None)
+        g.social_activity_dot = ("going" if any(r["kind"] not in ("like", "follow", "repost", "quote")
+                                                 or r.get("mentioned") for r in fresh) else None)
         return _page("activity.html", here="activity", fresh=fresh, earlier=earlier)
 
     return bp

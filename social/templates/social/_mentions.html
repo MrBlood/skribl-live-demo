@@ -1,0 +1,11 @@
+{#  MENTIONS: THE LIST UNDER AN @ (the map, part two, item 4; the mentions mock
+    and the owner's "All yes", Nov 15). One list beside each field words are
+    written in (the composer's, a comment's box), empty and hidden until an
+    @ is typed: mentions.js fills it from /people/suggest (its rows: the
+    face, the name, the @handle) and places it under the line being typed,
+    the field saying it is open (aria-expanded) and which row is highlighted
+    (aria-activedescendant). Its field carries aria-controls with its id. #}
+{% macro mention_list(id) -%}
+<ul class="mn-list" id="{{ id }}" role="listbox" aria-label="People to mention" hidden
+    data-mn-suggest="{{ url_for('social.people_suggest') }}"></ul>
+{%- endmacro %}

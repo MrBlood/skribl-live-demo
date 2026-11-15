@@ -1606,14 +1606,21 @@ with sync_playwright() as p:
                 bad_open.append(f"{tag}: no card")
                 continue
             big = lambda x: bool(x) and x["w"] >= 44 and x["h"] >= 44 and x["lands"]  # noqa: E731
-            ways = {"when": w["when"]} if key == bare else {"when": w["when"], "words": w["words"]}
-            for name, x in ways.items():
-                # A CARD WITH NO WORDS: the drawing lies over the time's last
-                # pixels and keeps its taps there (the drawing never opens the
-                # post); the time's middle and top corners are its own.
-                ok_at = (x or {}).get("at") == (["self"] * 3 + ["drawing"] * 2 if key == bare else ["self"] * 5)
-                if not (x and x["w"] >= 44 and x["h"] >= 44 and ok_at and x["tag"] == "a" and x["href"] == want_page[key]):
-                    bad_open.append(f"{tag} {name}: {x}")
+            x = w["when"]
+            # A CARD WITH NO WORDS: the drawing lies over the time's last
+            # pixels and keeps its taps there (the drawing never opens the
+            # post); the time's middle and top corners are its own.
+            ok_at = (x or {}).get("at") == (["self"] * 3 + ["drawing"] * 2 if key == bare else ["self"] * 5)
+            if not (x and x["w"] >= 44 and x["h"] >= 44 and ok_at and x["tag"] == "a" and x["href"] == want_page[key]):
+                bad_open.append(f"{tag} when: {x}")
+            # THE WORDS ARE NO LINK OF THEIR OWN since mentions (Nov 15: a link
+            # can't hold the links to the people they name): the card's ground,
+            # 44px or more, a tap anywhere in it landing on the card, which opens
+            # the post (section 11 taps them, as a person would).
+            x = w["words"]
+            if key != bare and not (x and x["w"] >= 44 and x["h"] >= 44 and x["at"] == ["card"] * 5 and x["tag"] == "p"
+                                    and x["href"] is None):
+                bad_open.append(f"{tag} words: {x}")
             if key == bare and w["words"] is not None:
                 bad_open.append(f"{tag}: words where there are none {w['words']}")
             person = f"/social/@{'juno'}"
@@ -1632,10 +1639,11 @@ with sync_playwright() as p:
                 bad_still.append(f"{tag}: on the @handle's line {w['sameLine']}, the header {w['headH']}px, words"
                                  f" {w['wordsGap']}, drawing {w['artGap']}")
         made = bool(worded and bare and shown and st_s == 201 and commented == 200)
-        check("a card's words and its time each open its post's page, each a link a tap lands on anywhere in its 44px"
-              " or more (on a card with no words, the time's down to the drawing, which keeps its own taps): a post"
-              " with words and one without, phone and desk, light and dark; a drawing shown outside a post has no"
-              " card there (Home shows posts only)",
+        check("a card's time opens its post's page, a link a tap lands on anywhere in its 44px or more (on a card with"
+              " no words, the time's down to the drawing, which keeps its own taps), and its words, no link of their"
+              " own since mentions, are the card's ground anywhere in their 44px, which opens it too: a post with"
+              " words and one without, phone and desk, light and dark; a drawing shown outside a post has no card"
+              " there (Home shows posts only)",
               made and len(seen) == 12 and not bad_open and not drawn_cards,
               f"made {made}; {len(seen)} read; {bad_open[:4]}; the drawing's card on Home {drawn_cards}")
         check("the face, the name and the @handle still open the person's page: the name's link 44px, painted under the"
