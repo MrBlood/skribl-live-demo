@@ -43451,3 +43451,56 @@ NOT TESTED HERE: an iPhone (WebKit): the icons' sizes in Safari's own
 rendering, SF and Segoe UI (the bar holds no words now); the live site. The
 one-glance tell: the bar along the bottom shows four icons, no words, all
 the same size, the pen's line under the page you are on.
+
+## After v330 -- A quote is a card, and the Library stands on the Pad's ground
+
+The owner, Nov 14 (Mountain Time), in the evening: "What the background and
+card colors? Check all the pages in social compared to pad/flip". Measured:
+every page of the site already stood on the Pad's ground (#f6f8fa light,
+#0f1218 dark) with the cards' colour (#ffffff, #231e3b); two places did not.
+Nov 15, about 1:15 PM, after a close-up showed B barely changes light and
+mends dark: "Yes to B and the Library. I want everything to be beautiful and
+feel crisp and luxurious."
+
+WHAT CHANGED:
+
+- A QUOTE IS A CARD (social.css, A QUOTE): the original, small inside a
+  quote post, wears the card's own colour under the card's own line. On a
+  post's own page it was the line alone on the page's ground, nearly gone in
+  dark; inside a post's card on Home it is the card's colour on the card's
+  colour, as it was. The composer's preview of a quote is the same card
+  (social/_quote.html), so it is a card on the sheet now too: white on the
+  sheet's lilac, the deep purple on its dark (the menu's cards on its paper).
+- THE LIBRARY STANDS ON THE PAD'S GROUND (skribl_library.html): its --base is
+  the editors' own ground (styles.css --surface-raised), #f6f8fa light (was
+  #fbfcfd) and #0f1218 dark (was #0b0d12); its header's band, once scrolled,
+  follows (pagemenu.css paints --base). The browser's bar keeps Skribl's
+  identity ground (core.THEME_GROUND, as every Skribl page's), as the Pad's
+  does; it still follows the page into light. Skribl's own Gallery keeps its
+  ground: it was not asked.
+
+PAD AND FLIP: unchanged; the Library joins their ground.
+
+CONTRAST (WCAG, on what each now stands on): the quote's words 17.95:1 light
+and 14.05 dark on the card (16.86 and 16.56 on the page before), its second
+ink 7.56 and 8.59 (7.1 and 10.12); the Library's words 16.86 and 16.56 on its
+ground (17.47 and 17.17), its second ink 7.1 and 8.87 (7.36 and 9.2), its
+violet 7.75 and 12.45 (8.04 and 12.9).
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy,
+with an untouched copy green beside it:
+
+- verify_socialreposts 11 (control 5/5): a quote on its post's own page is a
+  card, the card's colour read off the paint inside its line, nothing over
+  it, phone and desk, light and dark (red: the quote an outline again); its
+  words read with every word at 4.5:1.
+- verify_library, its theme section (control 248/248): the Library's
+  ground is the Pad's, as the Pad resolves --surface-raised, light and dark
+  (red: the old ground). The row that asked the bar to be the page's ground
+  asks it to be Skribl's light ground in light (red: the bar left dark in
+  light).
+
+THE AFFECTED SUITES, side by side: [COUNTS]
+
+NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell: a
+quote post's own page in dark, the quoted post a deep purple card.
