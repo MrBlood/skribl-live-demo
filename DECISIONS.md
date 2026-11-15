@@ -40801,9 +40801,9 @@ border stays, transparent, so nothing moves), and the row draws its own
   owner chose the look; at one screen pixel the old --rule and
   --menu-card-rule read as nothing). On the site, a root token:
   rgba(20, 10, 60, 0.16) light, rgba(255, 255, 255, 0.16) dark. In Skribl,
-  the rows' own value, not a root token: the words' colour at 16%
-  (color-mix with --text-primary), which is the same two values on the two
-  themes and follows the Tune page's colours.
+  the rows' own value, not a root token: Skribl's own words' colour at 16%
+  (color-mix with --text-primary: #11161e light, #f6f7f9 dark), the same
+  whisper in Skribl's ink.
   No shadow, no groove.
 - Tune's rows (the Pad's colour page) are parted by the menu's rule, which a
   check holds them to; they take the same line, edge to edge as before
