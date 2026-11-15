@@ -103,6 +103,10 @@ with sync_playwright() as p:
     # visitor can press it. It ran Pad's replay here, with Pad's music loop,
     # which is editor_music.js's now and never loaded on this page: it
     # measured a path nobody can take, and not the one they do.
+    # Sampled over five seconds while it plays: repeat on first (it starts
+    # off since Nov 15), so a short Flip is still going round, its bed with it.
+    if pl.get_attribute("#playerLoopBtn", "aria-pressed") != "true":
+        pl.click("#playerLoopBtn")
     if pl.get_attribute("#playerPlayBtn", "aria-label") != "Pause":
         pl.click("#playerPlayBtn")
     pl.wait_for_timeout(1500)
