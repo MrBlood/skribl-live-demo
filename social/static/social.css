@@ -41,6 +41,7 @@
   --nav-line: rgba(20, 23, 29, 0.08);
   --nav-ink: #4b5563;
   --nav-on: #14171d;
+  --bar-blooby-lit: 31.9px;         /* Blooby lit in the phone's bar: as unlit on the light bar (THE BAR) */
   --nav-hover: rgba(124, 92, 255, 0.08);
   --sheet-paper: #f3f0ff;           /* --menu-paper */
   --row-bg: #ffffff;                /* --menu-card */
@@ -122,6 +123,7 @@
   --nav-line: rgba(255, 255, 255, 0.09);
   --nav-ink: #b7bfcc;
   --nav-on: #ffffff;
+  --bar-blooby-lit: 33.3px;
   --sheet-paper: #17142a;
   --row-bg: #231e3b;
   --grip: rgba(255, 255, 255, 0.22);
@@ -164,6 +166,7 @@
     --nav-line: rgba(255, 255, 255, 0.09);
     --nav-ink: #b7bfcc;
     --nav-on: #ffffff;
+    --bar-blooby-lit: 33.3px;
     --sheet-paper: #17142a;
     --row-bg: #231e3b;
     --grip: rgba(255, 255, 255, 0.22);
@@ -279,12 +282,10 @@ body {
 .nav .tab .ic { width: 32.4px; height: 32.4px; }                 /* 92% of 35.2 */
 .nav .tab .ic-blooby { width: var(--bar-blooby, 31.9px); height: var(--bar-blooby, 31.9px); }   /* 92% of 34.7 */
 .nav .tab-you .ic { width: 34.9px; height: 34.9px; }    /* Sign in's person, drawn smaller in its box: 92% of 37.9 */
-/* Lit on the dark bar: 96% of 34.7. A variable, so a desk's rail, which
-   names its own size below, keeps it. */
-:root[data-theme="dark"] .nav .tab .ic-blooby.is-lit { --bar-blooby: 33.3px; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .nav .tab .ic-blooby.is-lit { --bar-blooby: 33.3px; }
-}
+/* Lit, his size is the theme's (--bar-blooby-lit: 96% of 34.7 on the dark
+   bar, said in both dark copies as every dark value is; 92% on the light). A
+   variable, so a desk's rail, which names its own size below, keeps it. */
+.nav .tab .ic-blooby.is-lit { --bar-blooby: var(--bar-blooby-lit); }
 .nav .tab-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .nav .tab[aria-current="page"] { color: var(--nav-on); }
 .nav .tab[aria-current="page"] .tab-name { font-weight: 700; }
