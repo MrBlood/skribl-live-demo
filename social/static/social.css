@@ -510,6 +510,37 @@ a.post-act { text-decoration: none; }
   .gal-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 20px; }
 }
 
+/* ---- FINDING PEOPLE (the map, part two, item 5; the finding-people mock and
+ * the owner's "All yes", Nov 15), in the mock's own sizes (.fp-sec, .fp-row,
+ * .fp-who). With a search the Gallery shows "People" first, then "Drawings",
+ * each heading 15px 700 in the first ink; a person is a row 64px tall: their
+ * face at 44px, their name 17px 600 in the first ink and their @handle 15px
+ * in the second, cut with … only when they don't fit, the card's edge between
+ * two rows; then Follow, the profile's own button (FOLLOWING, below: 44px,
+ * both words in one cell). The row is one link to their page from its start
+ * to Follow, so a tap anywhere but Follow opens it. "See all" is the small
+ * violet words, 44px to a finger, as "See the whole Gallery" is. SAME ROLE,
+ * SAME TOKEN: no colour of its own. The section is inside the part of the
+ * page that fades (.gal-swap), so it comes and goes with the tiles. ---- */
+.fp-sec { margin: 18px 0 6px; color: var(--ink); font-size: 15px; font-weight: 700; line-height: 1.3; letter-spacing: 0; }
+.fp-list { margin: 0 0 8px; padding: 0; list-style: none; }
+.fp-row { display: flex; align-items: center; min-height: 64px; }
+.fp-row + .fp-row { border-top: 1px solid var(--card-line); }
+.fp-who {
+  display: flex; flex: 1; align-items: center; align-self: stretch; gap: 12px; min-width: 0; padding: 6px 12px 6px 0;
+  border-radius: 12px; color: inherit; text-decoration: none;
+}
+.fp-row .face-ring { --skribl-face-size: 44px; width: 44px; height: 44px; }
+.fp-words { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.fp-words b { overflow: hidden; color: var(--ink); font-size: 17px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.fp-words span { overflow: hidden; color: var(--ink-2); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.fp-row .fo-btn { flex: none; }
+.fp-all { margin: 0 0 4px; }
+.fp-all a {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 44px;
+  color: var(--accent-ink); font-size: 16px; font-weight: 600; text-decoration: none;
+}
+
 /* ---- THE EYE, on your own Gallery tab (the owner's "Yes, the eye in view",
    Nov 14; the tile-eye mock's own CSS, in the site's tokens) ---------------
  * Each of your tiles, and nobody else's, wears a small eye at its top right

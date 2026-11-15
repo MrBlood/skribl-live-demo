@@ -947,13 +947,14 @@ with sync_playwright() as p:
                      grid: !!document.querySelector('[data-gal-grid]') }; }""")
         check("Explore is the Gallery of everyone, the site's own page: its head says Gallery and \"Everyone's drawings"
               " and Flips. Tap one to watch it come alive.\"; signed out, no Following | Everyone (as Home has none);"
-              " New | Hot under it (New pressed, their tips Skribl's gallery's) and the search box (16px or more, 44px"
-              " tall); and nothing of Skribl's Gallery section on it",
+              " New | Hot under it (New pressed, their tips Skribl's gallery's) and the search box, saying it finds"
+              " people and drawings (\"Search people and drawings\", to the eye and to a screen reader alike, since"
+              " finding people), 16px or more, 44px tall; and nothing of Skribl's Gallery section on it",
               sec["title"] == "Gallery · Blooby" and sec["head"] == "Gallery"
               and sec["sub"] == "Everyone’s drawings and Flips. Tap one to watch it come alive."
               and not sec["skribls"] and not sec["show"] and sec["grid"]
               and sec["sorts"] == [["New", "true", "Newest first"], ["Hot", "false", "Most played in the last seven days"]]
-              and bool(sec["box"]) and sec["box"][:3] == ["search", "Search the Gallery", "Search words and names"]
+              and bool(sec["box"]) and sec["box"][:3] == ["search", "Search people and drawings", "Search people and drawings"]
               and sec["box"][3] >= 16 and sec["box"][4] >= 44, json.dumps(sec))
         c.close()
 

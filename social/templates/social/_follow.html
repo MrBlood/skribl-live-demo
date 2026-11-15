@@ -18,12 +18,17 @@
                         isn't zero. On your own page each count opens your
                         lists (they took the place of "Followed by…"); on
                         anybody else's they are words, not links.
-    follow_sheets(who, fl, mine)   "Unfollow Theo?" (somebody else's page,
-                        signed in), "Follow Theo?" (signed out), and the lists
-                        (your own page, when a count opens them): Make's
+    follow_sheets(who, fl, mine, many)   "Unfollow Theo?" (somebody else's
+                        page, signed in), "Follow Theo?" (signed out), and the
+                        lists (your own page, when a count opens them): Make's
                         sheet with the one pill, Followers | Following,
                         newest first, with when; and follows.js's words
-                        (follow_words(), Home's too).
+                        (follow_words(), Home's too). `many`: a page of many
+                        people's Follow (the Gallery's People, finding
+                        people): one sheet for them all, who=none, the name
+                        put in from the button that raised it (follows.js
+                        fills each [data-fo-first]), and Sign in coming back
+                        to the page as its address is then.
     home_pill(show)     Home's pill under the composer: Following | Everyone,
                         the Gallery's New / Hot, value for value.
     gallery_show_pill(show), gallery_sort_pill(sort)   the Gallery's two:
@@ -83,8 +88,8 @@
 </div>
 {%- endmacro %}
 
-{% macro follow_sheets(who, fl, mine) -%}
-{%- set first = who.display_name.split(' ')[0] -%}
+{% macro follow_sheets(who, fl, mine, many=false) -%}
+{%- set first = who.display_name.split(' ')[0] if who else '' -%}
 {% if mine and fl %}
 {#  WHO FOLLOWS YOU, AND WHOM YOU FOLLOW: yours alone, opened by your
     counts. Make's own sheet (social.js), the one pill, the people on one
@@ -112,8 +117,8 @@
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="unfollowTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
-    <h2 class="make-title" id="unfollowTitle">Unfollow {{ first }}?</h2>
-    <p class="post-lede">You’ll still see {{ first }}’s posts under Everyone. They aren’t told.</p>
+    <h2 class="make-title" id="unfollowTitle">Unfollow <span data-fo-first>{{ first }}</span>?</h2>
+    <p class="post-lede">You’ll still see <span data-fo-first>{{ first }}</span>’s posts under Everyone. They aren’t told.</p>
     <div class="post-sheet-acts">
       <button class="btn btn-big" type="button" data-make-close>Keep following</button>
       <button class="btn btn-primary btn-big" type="button" data-unfollow>Unfollow</button>
@@ -128,11 +133,11 @@
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="followOutTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
-    <h2 class="make-title" id="followOutTitle">Follow {{ first }}?</h2>
-    <p class="post-lede">Sign in, and {{ first }}’s new posts show first on your Home.</p>
+    <h2 class="make-title" id="followOutTitle">Follow <span data-fo-first>{{ first }}</span>?</h2>
+    <p class="post-lede">Sign in, and <span data-fo-first>{{ first }}</span>’s new posts show first on your Home.</p>
     <div class="post-sheet-acts">
       <button class="btn btn-big" type="button" data-make-close>Not now</button>
-      <a class="btn btn-primary btn-big" href="{{ signin_here }}">Sign in</a>
+      <a class="btn btn-primary btn-big" href="{{ signin_here }}"{% if many %} data-fo-signin="{{ url_for('social.signin') }}"{% endif %}>Sign in</a>
     </div>
   </div>
 </div>

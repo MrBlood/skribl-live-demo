@@ -1,0 +1,4 @@
+{#  A page of the people a search finds, as See all's Load more sends it
+    (gallery.py, /explore/more?who=people). #}
+{% from 'social/_people.html' import people_rows with context %}
+{{ people_rows(people) }}

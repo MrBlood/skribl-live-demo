@@ -12,7 +12,11 @@ own page (/b/<id>).
                         first, and Load more.
     /explore/more       a page of it as its tiles (JSON {html, next}): the
                         next one (?before=, Load more), or the first of a new
-                        pick (?show=, ?sort=, ?q=).
+                        pick (?show=, ?sort=, ?q=), with its People section
+                        ({people}, finding people) for a new pick.
+    /explore?q=..&who=people, /explore/more?q=..&who=people
+                        SEE ALL (finding people, people.py): the people a
+                        search finds, alone, twenty a page, Load more.
 
 EVERY SKRIBL OF THE SITE'S PEOPLE. A post is words (maybe none) and one
 drawing or Flip; a drawing shown outside a post (the Pad's own "Show in the
@@ -49,7 +53,12 @@ the newest first among equals, as Skribl's gallery's Hot
 (skribl.recent_plays, a subquery joined to both reads); its cursor holds the
 moment the first page was ranked at, so one scroll-through is one order.
 SEARCH is a post's words, a drawing's title, and its maker's name and
-@handle.
+@handle. AND IT FINDS PEOPLE (the map, part two, item 5; the owner's "All
+yes" on the finding-people mock, Nov 15): with a search, a People section
+comes first, up to three people whose name (any word of it) or @handle
+starts with it, the people you follow first, then "See all" when there are
+more (people.py); then the drawings, as before. Following | Everyone and
+New | Hot change the drawings alone.
 
 THROUGH SKRIBL'S SEAMS ONLY: shared_skribls, recent_plays and describe_posts
 (documented names, verify_social section 8), the poster's own address, the
@@ -89,6 +98,19 @@ def wants(args, me):
     sort = sort if sort in SORTS else "new"
     q = " ".join(str(args.get("q") or "").split())[:Q_MAX]
     return show, sort, q
+
+
+def who_wants(args, q):
+    """SEE ALL (finding people): "people" when the address asks for the people
+    a search finds alone (?who=people) and there is a search; else nothing,
+    the Gallery."""
+    return "people" if args.get("who") == "people" and q else ""
+
+
+def _signin_here():
+    """Sign in, coming back to this very page (Follow's sheet, signed out)."""
+    qs = request.query_string.decode("utf-8", "replace")
+    return url_for("social.signin", next=request.path + ("?" + qs if qs else ""))
 
 
 def _like(text):
@@ -410,15 +432,25 @@ def first_visit():
 
 @_rests()
 def explore_page():
-    """The Gallery, its first page for what the address asks (wants())."""
+    """The Gallery, its first page for what the address asks (wants()); with
+    a search, its People section first (finding people, people.find). See
+    all (who_wants()) is the people alone, their first page."""
+    from .people import PAGE, SECTION, find
     me = current_person()
     show, sort, q = wants(request.args, me)
-    entries, nxt = page(me, show, sort, q)
+    who = who_wants(request.args, q)
     # The page's token, signed in, for the ☰'s Sign out (_menu.html), a form
-    # as Settings' is.
-    return render_template("social/explore.html", here="explore", tiles=tiles(entries, me), next=nxt,
-                           show=show, sort=sort, q=q, more_url=url_for("social.explore_more"),
-                           token=csrf_token() if me is not None else None)
+    # as Settings' is, and for Follow.
+    common = dict(here="explore", q=q, who=who, more_url=url_for("social.explore_more"),
+                  token=csrf_token() if me is not None else None, signin_here=_signin_here())
+    if who:
+        people, nxt = find(me, q, PAGE)
+        return render_template("social/explore.html", tiles=[], next=nxt, show="everyone", sort="new",
+                               people=people, people_more=False, **common)
+    entries, nxt = page(me, show, sort, q)
+    people, more = find(me, q, SECTION) if q else ([], None)
+    return render_template("social/explore.html", tiles=tiles(entries, me), next=nxt, show=show, sort=sort,
+                           people=people, people_more=more is not None, **common)
 
 
 def register(bp):
@@ -428,15 +460,28 @@ def register(bp):
     @bp.get("/explore/more")
     @_rests(json_answer=True)
     def explore_more():
-        """A page of the Gallery as its tiles: {html, next, show, sort, q}."""
+        """A page of the Gallery as its tiles: {html, next, show, sort, q},
+        and for a new pick's first page its People section too ({people}:
+        finding people, whatever the pills say). See all's (?who=people): a
+        page of the people alone, as their rows ({html, next, q, who})."""
+        from .people import PAGE, SECTION, find
         me = current_person()
         show, sort, q = wants(request.args, me)
         before = request.args.get("before") or None
+        if who_wants(request.args, q):
+            people, nxt = find(me, q, PAGE, before)
+            html = render_template("social/_people_rows.html", people=people)
+            return jsonify({"html": html, "next": nxt, "q": q, "who": "people"})
         if before and len(before) > 200:
             before = "?"
         entries, nxt = page(me, show, sort, q, before)
         html = render_template("social/_gallery_tiles.html", tiles=tiles(entries, me))
-        return jsonify({"html": html, "next": nxt, "show": show, "sort": sort, "q": q})
+        out = {"html": html, "next": nxt, "show": show, "sort": sort, "q": q}
+        if not before:
+            people, more = find(me, q, SECTION) if q else ([], None)
+            out["people"] = render_template("social/_people_box.html", people=people, people_more=more is not None,
+                                            q=q)
+        return jsonify(out)
 
     return bp
 

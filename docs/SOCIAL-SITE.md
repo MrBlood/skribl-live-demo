@@ -1911,7 +1911,7 @@ follow step 7.
 3. Reposts, then quote posts. Built (below).
 4. Mentions: an @handle in a post or a comment links to that person and
    tells them. Built (below).
-5. Finding people: search by name or @handle.
+5. Finding people: search by name or @handle. Built (below).
 6. Open sign-up, with what it needs to stay kind (limits for new accounts,
    the admins' tools); the owner's rules asked when it is mocked.
 7. Add to Home Screen (part one's step 7), then push notifications. Add to
@@ -2082,7 +2082,7 @@ composer or in a comment's box (answers too) shows, right under the line
 being typed and over what is there (nothing moves, the sheet is not pushed),
 the people you follow first (their @handle, or any word of their name,
 starting with what follows the @), then anybody whose @handle or name starts
-with it, by name, four at most: each row 52px, their face, their name and
+with it (any word of it, since finding people, below), by name, four at most: each row 52px, their face, their name and
 their @handle, on the mock's card (`mentions.js`, `_mentions.html`). Where
 there is no room under the line (a phone's comment sheet, sitting on the
 keyboard) it opens over the line, so on a phone it stays above the keyboard.
@@ -2145,3 +2145,48 @@ The Pad's and Flip's own steps say iOS 26's too.
 
     /social/manifest.webmanifest    the site's web app manifest (Blooby,
                                     opening on Home)
+
+**Finding people is built** (part two's item 5; DECISIONS, "Finding people";
+the owner's "All yes", Nov 15, to the mock's A and every default). THE
+GALLERY'S SEARCH FINDS PEOPLE TOO: its box says "Search people and drawings"
+(to a screen reader too), and with a search a People section comes first, up
+to three people, then "See all" when there are more, then Drawings, the tiles
+as before; no search, the Gallery as it was. It sits in the part of the page
+that fades, so a search's people come and go with its tiles, changed only
+while they can't be seen; Following | Everyone and New | Hot change the
+drawings alone. A PERSON IN THE RESULTS is the mock's row, 64px: their face
+(44px), their name (17px 600, the first ink) and their @handle (15px, the
+second), cut with … only when they don't fit, and Follow exactly as on their
+page (Follow, Following, asked once to unfollow; signed out, the sheet that
+asks you to sign in, coming back to the search as it is); a tap anywhere on
+the row but Follow opens their page; your own row has no Follow, as your own
+page has none. WHO IS FOUND: anybody whose name, by any word of it, or whose
+@handle starts with what was typed ("pa" finds Theo Park; "ar" finds nobody
+by the middle of his name), case, accents and a leading @ put aside, and
+anything else that is not a letter or a digit read as a space; the people you
+follow first, then everybody else, each by the word that found them; nobody a
+block hides either way, nobody taken down, signed out too; somebody you muted
+is found (their page stays open to you). SEE ALL is the same page asked for
+the people alone (`?who=people`): "People", the box, twenty a page and Load
+more, no pills, the address shareable and the back button going back to the
+Gallery's search as it was. THE WAYS OF FINDING SOMEBODY are rows of their
+own, `social_people_words` (their name from each of its words on, and their
+@handle, folded), written in code with the name, on joining and in Edit
+profile, so a name changed is found by its new words at once and never by
+its old; every read is on an index (your follows and their ways, then
+everybody's ways), the same few a page however many are found. The people
+already on the site are given theirs in code, never by the migration (a
+table and its indexes alone): `flask social words --write`, which
+gunicorn.conf.py runs once each start right after the site's chain, and
+anybody may run by hand (without --write it says how many have none). The
+list under an @ (mentions) finds the same people the same way. Pad and Flip:
+nothing changes in either (Skribl's own /gallery keeps its own search).
+
+    /social/explore?q=<words>       the Gallery: People first (three), then
+                                    Drawings
+    /social/explore?q=<words>&who=people
+                                    See all: the people alone, twenty a page
+    /social/explore/more?q=<words>&who=people[&before=<cursor>]
+                                    a page of them ({html, next}); and a new
+                                    pick's /explore/more brings {people}, its
+                                    People section

@@ -31,12 +31,15 @@ links. A page reads every card's (or every comment's) mentions in one read
 (links()), as Home's cards read their likes.
 
 THE LIST UNDER THE @ (mentions.js, from the composer and a comment's box,
-answers too): people you follow first, whose handle or any word of whose
-name starts with what follows the @; then anybody whose handle or name
-starts with it (suggest()); four at most. Nobody a block hides either way,
-nobody taken down, never yourself. Each read is on an index: your follows,
-then the handles' own and the names' (ix_social_people_name_key), each
-walked from where what was typed would sort, a few rows at most.
+answers too): people you follow first, then anybody else, each whose handle
+or any word of whose name starts with what follows the @, found as the
+Gallery's search finds people (people.py, since finding people: the same
+ways, the same way), each by name (suggest()); four at most. Nobody a block
+hides either way, nobody taken down, never yourself. Each read is on an
+index: your follows and their ways of being found, then everybody's ways
+(ix_social_people_words_key), walked from where what was typed would sort,
+a few rows at most. An @ alone: the people you follow, then anybody, by
+name, on the handles' and the names' own indexes (ix_social_people_name_key).
 
 WHO IS TOLD (activity.py): the person mentioned, in Activity, "Rook mentioned
 you", a row each, their words under it in quotes; it lights the bell's dot,
@@ -171,41 +174,51 @@ def said(words, mentioned=None):
 
 def suggest(me, q):
     """Whom the list under the @ offers `me` for `q` (what follows the @, in
-    small letters): people they follow first, whose handle or any word of
-    whose name starts with it, by name; then anybody whose handle or name
-    starts with it, by name; SUGGEST at most. Nobody a block hides either way
-    (safety.hidden_ids), nobody taken down, never themselves."""
+    small letters): people they follow first, then anybody else, whose handle
+    or any word of whose name starts with it, found as the Gallery's search
+    finds people (people.followed, people.others); each by name; SUGGEST at
+    most. Nobody a block hides either way (safety.hidden_ids), nobody taken
+    down, never themselves. An @ alone: the people they follow, then anybody,
+    by name."""
     from .follows import _on
     from .models import Follow
+    from .people import fold, followed, others
     sess = site().session()
     away = sorted(hidden_ids(me) | {me.id})
     name = sa.func.lower(Person.display_name)
 
+    def by_name(p):
+        return ((p.display_name or "").lower(), p.handle_key)
+
+    nq = fold(q)
+    if nq:
+        # WITH LETTERS, THE WAYS FINDING PEOPLE READS: the people you follow,
+        # through your follows and their ways (each on its index); then
+        # anybody else, on everybody's ways' own index, from where the
+        # letters sort, WALK people at most; each part by name.
+        first = sorted((p for _, p in followed(me, nq)), key=by_name)[:SUGGEST]
+        if len(first) >= SUGGEST:
+            return first
+        rest = sorted((p for _, p in others(me, nq, most=WALK, exclude=me.id)), key=by_name)
+        return first + rest[:SUGGEST - len(first)]
+
     def shown(sel):
         return sel.where(Person.taken_down_at.is_(None), Person.id.notin_(away))
-
-    def starts(text):
-        return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-    # THE PEOPLE YOU FOLLOW, on your follows' own index: their handle, or any
-    # word of their name, starting with it.
+    # AN @ ALONE: the people you follow, by name, on your follows' own index;
+    # then anybody else, by name, from the start of the handles' own index and
+    # of the names' (a few rows of each).
     mine = sa.select(Person).join(Follow, Follow.followed_id == Person.id).where(Follow.follower_id == me.id, _on())
-    if q:
-        mine = mine.where(sa.or_(Person.handle_key.like(starts(q), escape="\\"), name.like(starts(q), escape="\\"),
-                                 name.like("% " + starts(q), escape="\\")))
     first = list(sess.execute(shown(mine).order_by(name, Person.handle_key).limit(SUGGEST)).scalars())
     if len(first) >= SUGGEST:
         return first
-    # ANYBODY ELSE, by the start of their handle and of their name, each read
-    # on its own index from where `q` would sort (a few rows: what starts with
-    # it comes first), and kept only where it really starts with it.
     have = {p.id for p in first}
     more = {}
-    for col, key in ((Person.handle_key, lambda p: p.handle_key), (name, lambda p: (p.display_name or "").lower())):
-        walk = shown(sa.select(Person).where(col >= q)).order_by(col).limit(WALK)
+    for col in (Person.handle_key, name):
+        walk = shown(sa.select(Person).where(col >= "")).order_by(col).limit(WALK)
         for p in sess.execute(walk).scalars():
-            if p.id not in have and key(p).startswith(q):
+            if p.id not in have:
                 more[p.id] = p
-    rest = sorted(more.values(), key=lambda p: ((p.display_name or "").lower(), p.handle_key))
+    rest = sorted(more.values(), key=by_name)
     return first + rest[:SUGGEST - len(first)]
 
 

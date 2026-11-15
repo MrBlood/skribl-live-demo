@@ -42630,3 +42630,403 @@ site. The one-glance tell on the live site: in Safari on the phone, the ☰ on
 Home shows Add to Home Screen right under Settings. A Blooby added to the Home
 Screen before this, delete and add again: an iPhone reads the app's settings
 when it is added.
+
+## After v330 -- Finding people: the Gallery's search finds people too
+
+The owner, Nov 15 (Mountain Time), about 1:45 AM, "All yes" to the three asks
+of the finding-people mock (part two of the map, its item 5, docs/SOCIAL-SITE.md
+section 17) and to every default, each as Cal picked it: 1, A: the Gallery's
+search box finds people too, "People" first (up to three, then "See all"
+when there are more), then "Drawings", the tiles as before, its words "Search
+people and drawings" (B, a page of its own behind a magnifier beside the bell,
+and "now", beside it); 2, a person in the results: their face (44px), their
+name (17px 600, the first ink), their @handle (15px, the second ink), Follow
+exactly as on their page, a tap on the row (not on Follow) opening their
+page, rows of 64px; 3, who shows up: anybody whose name (any word of it: "pa"
+finds Theo Park) or @handle starts with what was typed, the people you follow
+first, nobody a block hides either way, nobody taken down, signed out too
+(Follow asking to sign in). The defaults: case and a leading @ put aside; See
+all the people alone, twenty a page with Load more; the pill (Following |
+Everyone) does not narrow people. Built Nov 15, on top of mentions (not
+merged yet) and of "repeat starts off" (not merged yet).
+
+WHAT CHANGED.
+
+- THE BOX (explore.html): "Search people and drawings", its placeholder and
+  its name to a screen reader alike (it was "Search words and names" and
+  "Search the Gallery"); 16px, 44px tall, as before.
+- THE PEOPLE SECTION (gallery.py explore_page and /explore/more, `_people.html`
+  people_box, explore.js): with a search, "People" (15px 700, the first ink,
+  the mock's .fp-sec), up to three rows, then "See all" (the small violet
+  words, 44px to a finger, as "See the whole Gallery ›") when there are more,
+  then "Drawings" over the tiles. Finding nobody, the page is the Gallery as
+  it was, the drawings' heading for a screen reader alone; finding people and
+  no drawings, under "Drawings": "No drawings match that." The section is
+  inside the part of the page that fades (.gal-swap): a search typed in the
+  box fades the tiles and the people out, puts the new ones in while they
+  can't be seen, and fades them back (explore.js's own load(), its {people}
+  answer beside its {html}). Following | Everyone and New | Hot change the
+  drawings alone; the People section is the same at every pick.
+- A PERSON'S ROW (`_people.html` person_row, social.css "FINDING PEOPLE"): the
+  mock's own CSS, 64px: the face (44px, the cards' own face partial, the
+  empty circle before one is drawn), the name (17px 600, --ink) and the
+  @handle (15px, --ink-2), each cut with … only when it doesn't fit, the
+  card's edge (--card-line) between two rows; ONE LINK to their page from the
+  row's start to Follow (the face, the words and the ground between them), so
+  a tap anywhere but Follow opens their page; then Follow, the profile's own
+  button (_follow.html follow_button: Follow, Following, its check drawn;
+  135 x 44, both words in one cell). Your own row has no Follow and nothing in
+  its place, as your own page has none.
+- FOLLOW, MANY TO A PAGE (follows.js, _follow.html follow_sheets): every
+  Follow on a page keeps its own state, and one listener on the page reaches
+  each, rows that a search or Load more brings later too; one "Unfollow
+  Theo?" sheet serves them all, the name put in from the button that raised
+  it ([data-fo-first]); signed out, one "Follow Theo?" sheet, its Sign in
+  coming back to the page as its address is when the sheet rises (a search
+  typed changes the address). A person's page is unchanged (its one button,
+  its counts following the tap).
+- WHO IS FOUND (people.find): anybody whose name, by any word of it, or whose
+  @handle starts with what was typed: "pa" finds Theo Park by his last word,
+  "ar" finds nobody by the middle of it. Case, accents and a leading @ are put
+  aside, and anything that is not a letter or a digit is read as one space
+  (people.fold: "zoe" finds Zoë, "theo-pa" is "theo pa"). THE PEOPLE YOU
+  FOLLOW FIRST, then everybody else, each by the earliest of their ways that
+  starts with it (a word of their name from it on, or their handle), then who
+  joined first. Nobody a block hides either way and nobody taken down, signed
+  out too (a block is between two people: somebody signed out is shown the
+  people in it). Somebody you muted is found (their page stays open to you,
+  what you go to stays), and you find yourself.
+- SEE ALL (?who=people, the same page): its heading "People", the box
+  holding the search, no pills (nothing there they would change), twenty rows
+  and Load more, the rows coming in place under the others
+  (/explore/more?who=people, by a cursor naming a person's handle and the word
+  it ended on, never an internal id). A new search there brings its own rows
+  and address; an emptied box keeps the rows it has. Its address is
+  shareable, and the back button goes back to the Gallery's search as it was
+  left (the Gallery's live search keeps its address, replaced, as before).
+- THE WAYS OF FINDING SOMEBODY (models.PersonWord, social_people_words;
+  revision e8f5594cb16f on the site's own chain, after the mentions'
+  6dc6c4054756; one head): a row for each way a person is found: their name
+  from each of its words on ("theo park", "park") and their @handle, folded,
+  64 characters at most; on PostgreSQL in the "C" collation, so the range a
+  search reads (every key from what was typed up to the next letter after
+  it) is exactly the keys that start with it there as on SQLite, byte order
+  both. Two indexes: every key in order, then whose (the search); a person's
+  own, once each (writing them again, and the people you follow). THE TABLE
+  AND ITS INDEXES ONLY: no row of any table read or written.
+- WRITTEN WITH THE NAME (people.write_words): on joining and in Edit
+  profile, in the same transaction as the name, the old ones taken away
+  first, so a name changed is found by its new words at once and never by its
+  old; nothing else sets a name or a handle. A search shows a person only by
+  their name and handle as they are now (people.first_key), so a key that is
+  no way of theirs (one kept from an old name) finds nobody. Deleting an
+  account takes its ways, in code (accounts.delete_person); the ON DELETE
+  CASCADE is the net.
+- THE PEOPLE WHO WERE THERE FIRST (people.fill, cli.py `flask social words`):
+  IN CODE, NEVER IN THE MIGRATION (the v309 lesson), in the photo-sides
+  backfill's shape: without --write it says how many have no ways yet; with
+  it, it gives them theirs, 200 people a commit (--batch, --limit), asking
+  only after the people who have none (so a run stopped part way keeps what
+  it wrote, and the next carries on), each person in a savepoint of their own
+  (one who joined, or whose ways a run beside it wrote, meanwhile is left as
+  they are); exit 0 it ran, 1 it stopped part way, 2 it could not run. WHEN
+  IT RUNS: gunicorn.conf.py runs it with --write once each start, right after
+  the site's chain is at its head and before any worker takes a visitor (the
+  place the chain already runs, on Render and with the Procfile alike); when
+  nobody is without theirs it asks once and is done. A fill that fails or
+  hangs is logged and the server starts anyway, the people it did not reach
+  found by nobody's search until the next start, or the command by hand,
+  writes theirs. So on the owner's site the people already there are found
+  from the first start after the merge, with nothing to run.
+- THE LIST UNDER AN @ (mentions.suggest): with letters, the same ways, the
+  same way: the people you follow (through your follows and their ways),
+  then anybody else (everybody's ways, from where the letters sort, 24
+  people at most), each part by name as before. An @ alone is as it was
+  (your follows, then the handles' and the names' own indexes from their
+  start, by name): so ix_social_people_name_key stays, read for that.
+- THE READS: the People section and See all's page read the people you follow
+  once (your follows' own index, then each one's ways on theirs) and everybody
+  else once (the ways' own index, in its order, a page and a little more;
+  whom you follow asked of the pair's index; a second read only where one
+  person's several ways filled the first, four at most), the same few reads
+  whether a search finds three people or twenty-two; the Gallery's own reads
+  as before.
+  No new route, so no new limit: the Gallery's pages are read as they were.
+
+PAD AND FLIP: nothing changes in either editor, and nothing of Skribl's
+changed (Skribl's own /gallery keeps its own search; no file under skribl/,
+app.py or styles.css was touched).
+
+CONTRAST (measured on the built pages by the new suite's section 10, phone
+and desk the same; light / dark, on the page's ground): the name 16.86 / 16.56,
+the @handle 7.10 / 10.12, "People" and "Drawings" 16.86 / 16.56, value for
+value the mock's, and each read off the paint too (its most different pixel
+against the ground beside it). Every word on the Gallery with its People
+(signed in and out) and on See all at 4.5:1 or more on what is painted behind
+it; Follow is the profile's own button (its contrast is verify_socialfollow's).
+No colour and no token added: same role, same token (the two inks, the card's
+edge, the small violet words, the action's purple).
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy of
+the tree (a copy for each break, run alone with its own PART, the copies a few
+at a time), green on an untouched copy, the control:
+
+- verify_socialsearch, NEW (eleven sections; SOCIALSEARCH_PART for
+  calibration; a section that cannot go on is a red row of its own; the
+  people every section is read against made once, whichever runs first:
+  three who join, the rest written straight into the table and given their
+  ways by the site's own fill):
+  - 1, THE BOX AND THE PEOPLE SECTION: the box's words, to the eye and to a
+    screen reader, 16px, 44px tall (red: the old words); with a search,
+    People first, Theo Park (whom Mira follows) then Pam Lee and Patti Sun,
+    See all (four are found), then Drawings and the tiles, top to bottom,
+    phone and desk (red twice: four rows a section, so no See all, which reds
+    the pills' row too; People after the tiles); no search, the Gallery as it
+    was (red: a People heading with no search); the pills change the
+    drawings alone (red: no People at Following or Hot). Control 4/4.
+  - 2, A PERSON'S ROW: 64px, the face 44 round, the name 17px 600 in --ink,
+    the @handle 15px in --ink-2, the link the row's height from its start,
+    the words ending before Follow, Follow 44px and one width with either
+    word, phone and desk, light and dark (red twice: rows of 56px, which reds
+    the own row's too; the name at 700); each painted where it stands (red
+    twice: the list clipped to its first row, and something painted over
+    every row: rects kept, pixels gone); your own row has no Follow (red:
+    Follow on it). Control 3/3 (its first reading of the clip stayed green,
+    below).
+  - 3, A TAP: anywhere on a row but Follow opens their page, the face, the
+    name and the ground between the words and Follow, a touch and a click
+    (red twice: the face outside the link; the link only as wide as its
+    words); a tap on Follow follows them, the others as they were, the page
+    and its address staying (red: a tap reaching the page's first Follow, a
+    profile's one button, which reds the next row too); Following asks once,
+    the sheet naming the row's person, and Unfollow ends it (red: the sheet
+    not told whose it is: "Unfollow ?"); signed out, Follow asks to sign in,
+    coming back to the search typed after the page came (red: Sign in coming
+    back to the address the page came with). Control 4/4.
+  - 4, WHO IS FOUND: any word of a name, never the middle of one (red twice: a
+    name's whole only, which reds three more rows; every letter a start, "ax"
+    finding Max Box, which reds the blocks' row too); an @handle's start,
+    case, a leading @ and accents put aside (red twice: case kept, which reds
+    every row; accents kept); the people Mira follows first (red: nobody
+    first); nobody a block hides either way, nobody taken down, signed out
+    too (red twice: blocks not asked; taken down not asked); a mute changes
+    nothing (red: muted people left out). Control 5/5.
+  - 5, SEE ALL: the people alone, its heading, the box, no pills, twenty and
+    Load more (red: fifteen a page, which reds the next row and the walk
+    too); Load more in place, the twenty unmoved, the page where it was, the
+    button gone (red twice: Load more in place of the rows; the screen
+    reader's line back after the swap, the scroll anchor found below); the
+    back button to the Gallery's search as typed (red: a search not kept in
+    the address, which reds the next row too); a new search on See all, an
+    emptied box keeping its rows (red: an emptied box searching for
+    nothing); walked to its end, twenty then two, once each, none missed, in
+    order, the twins either side of the page's end, cursors naming no
+    internal id (red twice: a page resuming past its last word, which misses
+    the second twin; everybody at each of their words, Kiwi Kiwi twice; each
+    reds the Load more row too). Control 5/5 (its first readings stopped at
+    a later step, below).
+  - 6, NAMES CHANGED: Jorge Rivas, now Lola Brooks in Edit profile, found by
+    "brooks" and "lola", by "jorge" and "rivas" no more, by her @handle still
+    (red: Edit profile not writing the ways); a key that is no way of hers
+    now finds nobody (red: any kept key finding its person). Control 2/2.
+  - 7, THE PEOPLE WHO WERE THERE FIRST: three written straight in are found by
+    nobody; `flask social words` counts them (3) and with --write gives them
+    theirs, found then by first and later words (red: the fill committing
+    nothing, which reds the next row too); again it writes nothing and
+    changes nothing (red: the fill writing everybody again each run, which
+    reds the first row too). Control 2/2.
+  - 8, THE READS: on their indexes in SQLite's own plan, one read each, no
+    scan of the people, the ways or the follows (red: no index on the ways'
+    keys); the same few reads a page (two at most) for three people found or
+    twenty-two, the Gallery, See all, its Load more, a search typed (red: a
+    read for every row, which reds the first row too). Control 2/2.
+  - 9, KIND: a search typed fades the tiles and the People part out over
+    several frames, the people changed only unseen (under 5%: 0 on both
+    screens), back over several frames to whole, the page not scrolled,
+    phone and desk (red: the People part put in as soon as it comes, before
+    the fade). Control 1/1.
+  - 10, CONTRAST AND TARGETS: the mock's own figures, phone and desk, light and
+    dark, sixteen readings (red: the @handle in the first ink); read off the
+    paint, 4.5:1 or more (red: the name painted at a quarter, which reds the
+    census too); every word at 4.5:1 on the Gallery signed in and out and on
+    See all, every target 44px, the box 16px (red twice: See all 30px tall;
+    See all in the rule's ink). Control 3/3.
+  - 11, NO PAGE ERRORS: none, no console errors, no CSP violations (red: a
+    page error wherever People shows, run with section 1). Control 5/5.
+- verify_socialmentions 4 and 9, CHANGED: the list's narrowing row reads
+  anybody's later word too ("@qu", Vera Quill, whom Mira does not follow)
+  (red: the old rule back in suggest(), strangers by the start of a handle or
+  a name; control 11/11); its people written straight into the table are
+  given their ways by the site's own fill (red: never given them, which reds
+  the narrowing and the blocks' rows and stops the section at its tap); 9
+  reads the chain at the mentions' own revision, as reposts' 10 reads theirs,
+  the head being finding people's now (red: the old reading, the head read
+  as the mentions' revision); its plans row reads the list's letters on your
+  follows, their ways and everybody's ways (red: the old reading, the
+  handles' and the names' indexes; control 5/5).
+- verify_social 5, CHANGED: the box says "Search people and drawings" to the
+  eye and to a screen reader (red: the old reading, "Search words and names"
+  and "Search the Gallery"). Control 2/2.
+- verify_socialauth 14, CHANGED (control 13/13): sixteen tables, the ways'
+  two indexes among every index (red: the old reading, fifteen tables, no
+  social_people_words); a new row, finding people's PostgreSQL DDL read
+  offline: the table with its key in the "C" collation and its two indexes,
+  nothing read or written, no table altered, all of it dropped going down
+  (red twice: the migration writing a row, which reds the deploy's new row
+  too; the key in the database's own collation); a new row, the deploy
+  (gunicorn as Render starts it, on a site whose chain stood at the
+  mentions' revision with Ada Old on it) giving the people already there
+  their ways right after the chain, and the log saying so (red: the deploy
+  not giving them).
+- harness/release_run.py and harness/shard.py name verify_socialsearch
+  (measures; 90 s a shard, from 53 s alone with room beside it).
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py, -j 3, its logs in
+a folder of their own):
+
+- ON THE TREE AS FIRST COMMITTED (bb13a563), the box to itself (load up to
+  about 5 on four cores): verify_socialsearch 32/32, verify_socialauth
+  71/71, verify_socialmentions 50/50, verify_social 41/41, verify_socialmute
+  68/68, verify_socialsafety 38/38, verify_socialposts 81/81,
+  verify_socialprofile 93/93, verify_socialactivity 46/46,
+  verify_socialsettings 45/45, verify_socialbookmarks 37/37,
+  verify_sociallikes 100/100, verify_hostconfig 61/61, verify_txcontract
+  103/103, verify_socialreposts 49/49, verify_socialcomments 96/96: sixteen
+  suites ok in 25.1 minutes. Two were not:
+  - verify_socialfollow 74/75 beside, 75/75 alone, which run_parallel calls
+    INTERMITTENT: LOAD. Its red row is Home's pill under Reduce Motion, read on
+    every frame: a fade step of 0.93 where the row allows 0.35, in seven
+    frames where it asks eight (frames dropped with three suites on four
+    cores); Home's pill and its code are as they
+    were, and every row of Follow on a person's page (the follows.js this
+    changes) was green both times.
+  - verify_composer 37/38 beside and 37/38 alone: NOT THIS CHANGE. Its row
+    reads the composer's drawing still PLAYING after Add, and a replay now
+    plays once ("repeat starts off", under this tree); the same row is red on
+    the untouched base (e7ff1b0f) run alone, and its mend (8f1bf873, the row
+    reading "playing or played") is on the repeat change's own branch, not
+    under this tree.
+- verify_socialsearch alone, at the later commits: its section 5 at
+  0db5c006 (the back row typed), 5/5; the whole of it at bca31f1d (the
+  instruments mended and the cursor's cut key, run on that tree just before
+  it was committed), 32/32; and 53 seconds alone the first time (on the tree
+  bb13a563 then committed).
+- THEN, ON THE TREE AS COMMITTED (76882fe0, this entry in it; after the
+  instruments mended and the cursor's cut key): side by side,
+  verify_socialsearch 32/32, verify_socialmentions 50/50, verify_socialauth
+  71/71, verify_docs 144/144, verify_social 41/41, verify_socialfollow 75/75
+  (green beside the others this time): six suites ok in 6.5 minutes. And
+  verify_socialsearch alone, 32/32 in 55 seconds.
+- REBASED ONTO MAIN (611a8df7: repeat-off, mentions and the Home Screen in;
+  clean but for notes both had added at the same place), on the tree
+  65ed65ff: verify_socialsearch alone, 32/32 in 0.9 minutes; then side by
+  side, verify_social 41/41, verify_socialauth 71/71, verify_socialmentions
+  50/50, verify_composer 38/38 (its row mended on main by repeat-off),
+  verify_socialfollow 75/75, verify_socialsafety 38/38, verify_socialmute
+  68/68, verify_socialactivity 46/46, verify_socialsettings 45/45,
+  verify_docs 144/144, verify_socialapp 35/35, verify_txcontract 103/103,
+  verify_hostconfig 61/61, verify_socialposts 81/81: fourteen ok in 21.7
+  minutes. verify_socialprofile 91/93 beside, 93/93 alone, which
+  run_parallel calls INTERMITTENT: LOAD. Its two red rows are the face's
+  photo guide in the Pad, read before the photo had loaded (loaded false,
+  the slider not yet at 40%), and so the guide's words read over no photo
+  in light; this change touches neither the guide nor the Pad.
+- THE FULL HARNESS, dispatched on the branch at 65ed65ff (a migration): run
+  43735095853, all fifteen of its jobs green (both databases' six shards, the
+  MP4, Firefox and WebKit lanes; the smoke job, a pull request's own,
+  skipped on a dispatch). It does not run the search on PostgreSQL:
+  verify_socialsearch serves its own SQLite, on either database's shard.
+- NOT RUN here: the full battery (the harness above ran it, and main's run
+  after the merge does);
+  PostgreSQL (CI's postgres job does not run the site's chain: the
+  migration's DDL was read offline here, its "C" collation included, and
+  nothing of finding people ran on PostgreSQL); Firefox and WebKit (main's
+  lanes); verify_player_isolation and cssgraph (styles.css untouched: the
+  site's CSS is social.css); verify_contrast and verify_a11ypages (Skribl's
+  pages and sheets, untouched); no file of Skribl's changed.
+
+FOUND WRONG, AND MENDED, before the rows were green:
+
+- A JUMP ON SEE ALL'S LOAD MORE: the page moved 68px down as the two last rows
+  came. The screen reader's status line I had put after the swap (Follow's
+  "You're following Pam.") was where Chrome held the page still from, its
+  scroll anchor, so rows added above it (128px) and the button gone (60px)
+  moved the page by the difference. It sits above what changes now, and the
+  page stays where it was (section 5's Load more row; red with it put back).
+- A CURSOR THAT COULD NOT BE READ BACK: a way cut at 64 characters can end
+  with its space (a 34-letter name of ß's makes one), and the cursor's check
+  read such a key as not folded, ending See all early. It reads it back now.
+- AND MY INSTRUMENTS: the row reader's scrollIntoView scrolled even the box
+  that clipped a row, so a list clipped to its first row read as painted
+  (the calibration's one green break): the page is scrolled to the row now,
+  and it reds; two rows read after a later step (section 3's Follow, section
+  5's Load more), so their breaks stopped the section instead of reddening
+  the row: each is read where its steps end now; the census counted the
+  Follow button's other word (at opacity 0, not painted) and the Gallery's
+  pills (36px buttons in their 44px pill, not this change's): it takes
+  verify_socialfollow's own rules for both; a dump with tuple keys, the
+  link's height on rows under the card's 1px rule, a handle parser that
+  dropped its @, and the reads script counting rows in JSON whose quotes are
+  escaped.
+
+JUDGMENT CALLS (where the mock, the asks and the brief did not say, the way
+closest to them and to the site's own ways):
+
+- THE HANDLE IS ONE OF THE WAYS, in the same table as the name's words: one
+  index and one read for both, exact on PostgreSQL in the "C" collation (the
+  handles' own index sorts in the database's own collation there, which need
+  not be byte order, so a range read on it need not be exact). So a search
+  no longer reads
+  ix_social_people_handle_key; the @ list reads it for an @ alone.
+- A NAME FROM EACH OF ITS WORDS ON, not each word alone: "theo pa" finds Theo
+  Park (the name, read on from a word, starts with it), in one read; "park
+  theo" finds nobody.
+- ACCENTS PUT ASIDE TOO ("zoe" finds Zoë), with case and the @: a phone's
+  keyboard makes an accent a long press, and the owner's "case and a leading
+  @ ignored" asks the same kindness. Anything that is not a letter or a digit
+  reads as a space, so "mary-jane", "mary jane" and "@rook_t" find what they
+  look like.
+- BY THE WORD THAT FOUND THEM, then who joined first, after the people you
+  follow (who come first, as asked): See all has to read its pages in the
+  index's own order to stay a few reads a page and never show anybody twice
+  or miss them; "by name" would read every match on every letter typed. The
+  @ list keeps its own "by name" (approved with mentions) within its few rows.
+- A MUTE CHANGES NOTHING HERE: the owner's rule for mutes is that what you go
+  to stays (their page, their posts), and a search is going to them; blocks
+  and taken down are out, as asked.
+- YOUR OWN ROW SAYS NOTHING where Follow would be, as your own page shows no
+  Follow (the brief's "say nothing, or a quiet You": the profile's own rule).
+- SEE ALL HAS ITS OWN HEADING, "People", and no pills; the page head's line
+  about drawings is not on it. Its box, emptied, keeps the rows (there is
+  nothing to find, and "nothing" would read as nobody there).
+- "SEE ALL" UNDER THE ROWS, at their start, in the small violet words, as
+  "See the whole Gallery ›" is under the first visit's tiles, with " people"
+  for a screen reader.
+- THE WORDS FOR NOTHING FOUND: "No drawings match that." under Drawings when
+  people were found ("Nothing matches that" would be untrue there), and on
+  See all "Nobody by that name yet. Try the start of a name or an @handle."
+- THE FILL RUNS ONCE EACH START, not by hand alone: a person without ways is
+  found by nobody, unlike a tile without its ground (which looks as it
+  always did), so the site gives them theirs itself, where it already
+  brings its tables up to date; the command is there for a run by hand.
+- A KEY IS 64 CHARACTERS AT MOST: a name is 40, and folding seldom makes one
+  longer; a search compares what was typed cut the same way, and a person is
+  shown only where their own name, read whole, starts with it.
+
+THE FOUR. Simple: one box, where people already go to look around; type part
+of a name and the people come first, the people you follow before anybody.
+Kind: nobody hidden by a block shows, nobody taken down; Follow is the one on
+their page, asked once to undo; an emptied box keeps what it found; a name
+changed is found by its new words at once. Playful: their drawn faces in the
+rows, and their drawings right under them. Powerful: any word of a name, an
+@handle, accents and case put aside, See all twenty at a time, and the same
+people in the list under an @.
+
+NOT TESTED HERE: WebKit, so the owner's iPhone (a tap on a row, Follow's sheet
+on Safari, the fade); SF and Segoe UI (the rows' words were read in this
+box's faces; a long name is cut with … in any face); Firefox (main's lanes
+after the merge); PostgreSQL (the migration's DDL read offline only, its
+"C" collation included; the reads planned by SQLite only, PostgreSQL's
+planner not run; the fill at start not run against PostgreSQL); the live
+site, and the fill against the owner's own people. The one-glance tell on the
+live site: search "pa" in the Gallery and people come first.
