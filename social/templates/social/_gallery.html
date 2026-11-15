@@ -39,6 +39,13 @@
                         hand-off (Skribl's seam, docs/INTEGRATION.md "A
                         person's drafts on your own page"), which opens it as
                         their Your drafts does.
+    pick=true           either tile, IN THE COMPOSER'S PICKER ("Use one you
+                        made", _compose_tiles.html; the owner's B, Nov 14): the
+                        same tile as a button, not a link, since a tap there
+                        attaches it rather than opening it. A drawing's says
+                        "Post" before its words to a screen reader; a draft's
+                        what picking it does ("Use …", d.pick_label). One tile,
+                        so the picker never drifts from the Gallery.
     plate_frame(sk)     a drawing cut out of its poster: the share card, the
                         drawing on a plate on the card's own ground over a
                         strip with the wordmark, which "reads as an advert
@@ -98,10 +105,11 @@
 {%- if sk and sk.on_photo %}<span class="plate-fill" aria-hidden="true"><span style="{{ plate_frame(sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=sk.id) }}" alt="" loading="lazy" decoding="async"></span></span>{% endif -%}
 {%- endmacro %}
 
-{% macro gallery_tile(t) -%}
+{% macro gallery_tile(t, pick=false) -%}
 {%- if t.eye %}<div class="gal-cell{% if t.hidden %} is-hidden{% endif %}" data-eye-cell>{% endif -%}
+{%- if pick %}<button class="gal-tile is-pick" type="button" data-pick-drawing="{{ t.sk.id }}" aria-label="Post {{ t.label }}">{% else -%}
 <a class="gal-tile" href="{{ t.url }}" {% if t.kind == 's' %}data-drawing="{{ t.sk.id }}"{% else %}data-post="{{ t.post }}"{% endif %} data-handle="{{ t.who.handle }}" aria-label="{{ t.label }}"
-   {%- if t.eye %} data-label-shown="{{ t.shown_label }}" data-label-hidden="{{ t.hidden_label }}"{% endif %}>
+   {%- if t.eye %} data-label-shown="{{ t.shown_label }}" data-label-hidden="{{ t.hidden_label }}"{% endif %}>{% endif %}
   <span class="gal-pic"{{ plate_ground(t.sk) }}>{{ plate_fill(t.sk) }}<span class="gal-plate" style="{{ plate_frame(t.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=t.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
     <span class="gal-dur">{{ ic.tri() }}{% if t.says %}<span>{{ t.says }}</span>{% endif %}</span></span>
   <span class="gal-by">{{ face(t.who) }}<b>{{ t.name }}</b>
@@ -109,16 +117,16 @@
     {%- if t.likes %}<span class="gal-likes">{{ ic.heart() }}{{ t.likes }}</span>{% endif %}
     {%- if t.comments %}<span class="gal-comments">{{ ic.comment() }}{{ t.comments }}</span>{% endif -%}
     </span>{% endif %}</span>
-</a>
+{% if pick %}</button>{% else %}</a>{% endif %}
 {%- if t.eye %}<button class="gal-eye" type="button" data-eye="{{ t.eye }}" aria-pressed="{{ 'false' if t.hidden else 'true' }}" aria-label="In the Gallery: {{ t.what }}"><span class="gal-eye-chip"><span class="gal-eye-ics">{{ ic.eye_open() }}{{ ic.eye_shut() }}</span><span class="gal-eye-word">Hidden</span></span></button></div>{% endif %}
 {%- endmacro %}
 
-{% macro draft_tile(d) -%}
-<a class="gal-tile is-draft" href="{{ d.url }}" data-draft="{{ d.id }}" data-kind="{{ d.kind }}" aria-label="{{ d.label }}">
+{% macro draft_tile(d, pick=false) -%}
+{% if pick %}<button class="gal-tile is-draft is-pick" type="button" data-pick-draft="{{ d.id }}" data-kind="{{ d.kind }}" aria-label="{{ d.pick_label }}">{% else %}<a class="gal-tile is-draft" href="{{ d.url }}" data-draft="{{ d.id }}" data-kind="{{ d.kind }}" aria-label="{{ d.label }}">{% endif %}
   <span class="gal-pic">{% if d.thumbnail %}<img class="gal-thumb" src="{{ d.thumbnail }}" alt="" decoding="async">{% endif %}
     <span class="gal-dur">{{ ic.draft() }}<span>Draft</span></span></span>
   <span class="gal-by"><b>{{ d.title }}</b><span class="gal-when">{{ d.line }}</span></span>
-</a>
+{% if pick %}</button>{% else %}</a>{% endif %}
 {%- endmacro %}
 
 {#  What explore.js says ([data-gal-words]): the page's words. #}

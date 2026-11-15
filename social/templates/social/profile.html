@@ -68,8 +68,7 @@
 
 {% block title %}{{ who.display_name }} (@{{ who.handle }}) · Blooby{% endblock %}
 {% block head %}<link rel="canonical" href="{{ canonical or share_url }}">
-{% if mine %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>
-{{ skribl_face_maker_assets() }}{% endif %}{% endblock %}
+{% if mine %}{{ skribl_face_maker_assets() }}{% endif %}{% endblock %}
 {% block scripts %}<script src="{{ social_asset('profile.js') }}" defer></script>
 <script src="{{ social_asset('follows.js') }}" defer></script>
 <script src="{{ social_asset('safety.js') }}" defer></script>

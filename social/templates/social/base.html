@@ -65,12 +65,21 @@
     out; signed out, Sign in, Community rules and Privacy. A desk has none:
     the top is a phone's alone, and the rail already holds Settings.
 
+    MAKE IS THE COMPOSER, SIGNED IN (the owner's "Yes", Nov 14; part two of
+    the map): every page with the bar or the rail carries the composer
+    (_compose.html, compose.js, and Skribl's lib/composehost.js for its
+    editors), and the bar's and the rail's Make open it, as Home's row does.
+    Signed out, or on a site without accounts, there is nobody to post as:
+    Make keeps its sheet with two doors into Skribl's own Pad and Flip
+    (_make.html, social.js).
+
     ONE SCRIPT IN THE PAGE, SKRIBL'S THEME BOOT. The site's own policy
     (social/__init__.py, site_csp) is script-src 'self' and this page's own
     nonce, which only the boot carries: every other script here is a file. #}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets %}
 {% from 'skribl/_skribl_face.html' import skribl_face_assets, skribl_face %}
 {% import 'social/_icons.html' as ic %}
+{% set composing = accounts and me and not hide_nav %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -98,7 +107,9 @@
    it after your stylesheets"). Still before the first paint. #}
 {% include 'skribl/_skribl_theme_boot.html' %}
 <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
+{% if composing %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endif %}
 <script src="{{ social_asset('social.js') }}" defer></script>
+{% if composing %}<script src="{{ social_asset('compose.js') }}" defer></script>{% endif %}
 {% block scripts %}{% endblock %}
 </head>
 <body{% if hide_nav %} class="focus"{% endif %}>
@@ -130,7 +141,7 @@
   <a class="tab tab-activity" href="{{ url_for('social.activity') }}" data-activity{% if here == 'activity' %} aria-current="page"{% endif %}{% if dot == 'new' %} aria-label="Activity, something new"{% endif %}>
     <span class="tab-ic">{{ ic.bell(here == 'activity', dot) }}</span><span class="tab-name">Activity{% if here == 'activity' %}{{ ic.underline() }}{% endif %}</span></a>
   {% endif %}
-  <button class="tab tab-make" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet" aria-expanded="false">
+  <button class="tab tab-make" type="button" data-make aria-haspopup="dialog" aria-controls="{{ 'composeSheet' if composing else 'makeSheet' }}" aria-expanded="false">
     <span class="tab-ic">{{ ic.pen() }}</span><span class="tab-name">Make</span></button>
   {% if accounts and me %}
   {# Settings, a desk's rail only (hidden in a phone's bar), above You. #}
@@ -151,10 +162,10 @@
 <main class="main" id="main"><div class="col">
 {% block main %}{% endblock %}
 </div></main>
-{# What rises over the page (Make's sheet; a profile's Pad for your face)
-   sits outside #main: opening one makes #main inert, and a sheet inside it
-   would go inert with it. #}
-{% if not hide_nav %}{% include 'social/_make.html' %}{% endif %}
+{# What rises over the page (the composer, or Make's sheet; a profile's Pad
+   for your face) sits outside #main: opening one makes #main inert, and a
+   sheet inside it would go inert with it. #}
+{% if composing %}{% include 'social/_compose.html' %}{% elif not hide_nav %}{% include 'social/_make.html' %}{% endif %}
 {% if accounts and not hide_nav and here in ('home', 'explore') %}{% include 'social/_menu.html' %}{% endif %}
 {% block overlays %}{% endblock %}
 </body>

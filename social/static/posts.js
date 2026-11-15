@@ -1,14 +1,6 @@
-/* Posts (piece 4): Home's composer and feed (feed.html), a post's own page
- * (post.html), and the ⋯ sheet both share (social/_post.html).
- *
- * THE COMPOSER. Draw and Flip open Skribl's editor over Home in compose mode
- * (social.js's SocialPadOverlay over lib/composehost.js). Its Add hands the
- * drawing back; it shows here in Skribl's in-post player
- * (SkriblInline.attach: the same player the post will have), with Edit
- * drawing (the editor again, the drawing in it) and Remove. Post sends the
- * words and the drawing to the site (/posts, its token in X-Social-CSRF) and
- * goes to the new post's page. A press on Post with nothing drawn says so;
- * nothing is posted before Post.
+/* Posts (piece 4): Home's feed (feed.html), a post's own page (post.html),
+ * and the ⋯ sheet both share (social/_post.html). The composer that was
+ * Home's is compose.js's since Nov 14, on every page (one Make).
  *
  * THE FEED: Load more brings the next page in place and mounts its players
  * (SkriblInline.mount, as Skribl asks of a feed that adds posts later). A tap
@@ -412,81 +404,4 @@
     });
   }
 
-  /* ---- the composer ------------------------------------------------------- */
-  var composer = doc.querySelector('[data-composer]');
-  if (!composer) return;
-  var words = composer.querySelector('[data-compose-words]');
-  var left = composer.querySelector('[data-compose-left]');
-  var draftWrap = composer.querySelector('[data-compose-draft]');
-  var draftBox = draftWrap ? draftWrap.querySelector('.skribl-inline') : null;
-  var chips = Array.prototype.slice.call(composer.querySelectorAll('[data-compose-open]'));
-  var postBtn = composer.querySelector('[data-compose-post]');
-  var sayBox = composer.querySelector('[data-compose-say]');
-  var LIMIT = +(words && words.getAttribute('maxlength')) || 500;
-  var draft = null;     // { payload, over }
-  var sending = false;
-
-  /* The words' box grows with what is typed, and says how many characters
-     are left once there are few. */
-  function grow() {
-    words.style.height = 'auto';
-    words.style.height = words.scrollHeight + 'px';
-    var n = LIMIT - words.value.length;
-    left.textContent = n <= 100 ? say('left', { n: n }) : '';
-  }
-  if (words) { words.addEventListener('input', grow); grow(); }
-
-  var overs = {};
-  chips.forEach(function (chip) {
-    var kind = chip.getAttribute('data-compose-open');
-    var wrap = doc.getElementById(kind === 'flip' ? 'composeFlip' : 'composePad');
-    var over = window.SocialPadOverlay ? window.SocialPadOverlay(wrap, {
-      openers: [chip],
-      onDone: function (payload) { attach(payload, over); }
-    }) : null;
-    overs[kind] = over;
-    chip.addEventListener('click', function () {
-      if (!over || sending) return;
-      tell(sayBox, '');
-      over.open(chip);
-    });
-  });
-
-  function attach(payload, over) {
-    draft = { payload: payload, over: over };
-    draftWrap.hidden = false;
-    if (draftBox && window.SkriblInline) window.SkriblInline.attach(draftBox, payload);
-    chips.forEach(function (c) { c.hidden = true; });
-    tell(sayBox, '');
-    var edit = composer.querySelector('[data-compose-edit]');
-    if (edit) edit.focus({ preventScroll: true });
-  }
-
-  composer.querySelector('[data-compose-edit]').addEventListener('click', function (e) {
-    if (draft && draft.over && !sending) draft.over.open(e.currentTarget);
-  });
-  composer.querySelector('[data-compose-remove]').addEventListener('click', function () {
-    if (!draft || sending) return;
-    if (draft.over) draft.over.pad.clear();
-    draft = null;
-    draftWrap.hidden = true;
-    chips.forEach(function (c) { c.hidden = false; });
-    if (chips[0]) chips[0].focus({ preventScroll: true });
-  });
-
-  postBtn.addEventListener('click', function () {
-    if (sending) return;
-    if (!draft) { tell(sayBox, say('no_drawing')); return; }
-    sending = true;
-    postBtn.disabled = true;
-    tell(sayBox, say('posting'));
-    post(composer.getAttribute('data-post-new'), { words: words.value, payload: draft.payload },
-         { 'X-Social-CSRF': token })
-      .then(function (j) {
-        if (j.ok && j.go) { window.location.assign(j.go); return; }
-        sending = false;
-        postBtn.disabled = false;
-        tell(sayBox, why(j));
-      });
-  });
 })();

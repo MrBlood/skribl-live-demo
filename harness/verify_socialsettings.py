@@ -10,7 +10,8 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
      Your passkeys 102px further down), the one pill under the choice; named
      Theme, the choice pressed; phone (touch) and desk.
   2. ONE CHOICE, SKRIBL'S OWN, BOTH WAYS: Dark on Settings opens the Pad and
-     Flip dark, their switch saying Dark; on a dark device Light in the Pad's
+     Flip dark (through Make, the composer's Draw and Flip since Nov 14), their
+     switch saying Dark; on a dark device Light in the Pad's
      own menu is light back on the site, its row saying Light, and Flip's
      System is System, the device again; kept under skribl_theme_v1 and
      nowhere else; another tab hears it; a page the back button brings back
@@ -322,6 +323,24 @@ def press(pg, sel):
         loc.tap(timeout=5000)
     else:
         loc.click(timeout=5000)
+
+
+def editor_in_frame(pg, needle, timeout=30):
+    """The Pad or Flip in the composer's frame (needle: its address), its
+    scripts run: Make is the composer for somebody signed in (Nov 14), and
+    its Draw and Flip open the editors over the page."""
+    end = time.time() + timeout
+    while time.time() < end:
+        fr = next((f for f in pg.frames if needle in (f.url or "") and "compose=1" in (f.url or "")), None)
+        if fr:
+            try:
+                fr.wait_for_function("() => document.readyState === 'complete' && !!window.SkriblTheme"
+                                     " && !!document.querySelector('#themeSeg')", timeout=1000)
+                return fr
+            except Exception:
+                pass
+        pg.wait_for_timeout(200)
+    return None
 
 
 def editor_choose(pg, choice, menu):
@@ -820,22 +839,21 @@ with sync_playwright() as p:
             pg.wait_for_timeout(700)
             site_dark = pg.evaluate(STATE)
             keys1 = pg.evaluate("() => Object.keys(localStorage)")
-            # Through Make's doors, as a person goes: the Pad, then Flip.
+            # Through Make, as a person goes: the composer (Make's own for
+            # somebody signed in, since Nov 14), its Draw, then its Flip, each
+            # the editor over the page.
             press(pg, ".nav .tab-make")
             pg.wait_for_timeout(500)
-            with pg.expect_navigation(timeout=30000):
-                press(pg, "#makeSheet a.make-door >> nth=0")
-            editor(pg)
-            pad_dark = pg.evaluate(EDITOR)
-            pg.go_back()
-            ready(pg)
-            pg.wait_for_timeout(300)
-            press(pg, ".nav .tab-make")
-            pg.wait_for_timeout(500)
-            with pg.expect_navigation(timeout=30000):
-                press(pg, "#makeSheet a.make-door >> nth=1")
-            editor(pg)
-            flip_dark = pg.evaluate(EDITOR)
+            press(pg, "#composeSheet [data-compose-open=pad]")
+            fr = editor_in_frame(pg, "skribl-pad")
+            NONE = {"mode": None, "stamp": None, "on": [], "ground": None}   # no editor opened: the row's red
+            pad_dark = fr.evaluate(EDITOR) if fr else dict(NONE)
+            if fr:
+                fr.click("#composeCloseBtn")
+                pg.wait_for_timeout(700)
+            press(pg, "#composeSheet [data-compose-open=flip]")
+            fr = editor_in_frame(pg, "/flip?")
+            flip_dark = fr.evaluate(EDITOR) if fr else dict(NONE)
             check("Dark chosen on Settings is kept as Skribl's own choice (skribl_theme_v1, nothing else added), the"
                   " site turns dark, and the Pad and Flip open dark, their own switch saying Dark",
                   site_dark["kept"] == "dark" and site_dark["stamp"] == "dark" and site_dark["page"] == PAGE_RGB["dark"]

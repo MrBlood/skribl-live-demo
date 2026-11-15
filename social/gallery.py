@@ -272,6 +272,27 @@ def person_page(person, viewer, before=None, limit=PAGE):
     return _read(viewer, "everyone", "new", "", before, limit, person=person, mine=mine)
 
 
+def loose_page(person, before=None, limit=PAGE):
+    """YOUR DRAWINGS NOT IN A POST (the composer's Yours, its Drawings; the
+    owner's "Yes", Nov 14, one drawing, one conversation): every drawing and
+    Flip `person` shared outside a post, newest first, the ones kept
+    link-only too (the page is theirs alone), as their Gallery tab reads them
+    (_reads, mine): never a post's drawing, a face, a comment's drawing or
+    one taken down. (entries, next cursor or None), Home's own cursor; one
+    that cannot be read ends the list."""
+    from .posts import _cursor, _uncursor
+    if before and (len(before) > 200 or _uncursor(before) is None):
+        return [], None
+    _, drawings, d = _reads(person, person=person, mine=True)
+    q = drawings.order_by(d.created_at.desc(), d.skribl_id.desc())
+    if before:
+        q = q.where(_after(d.created_at, d.skribl_id, "s", _uncursor(before)))
+    rows = site().session().execute(q.limit(limit + 1)).all()
+    page_ = [{"kind": "s", "at": as_utc(made), "key": "s" + sid, "sk": {"id": sid, "visibility": vis}, "who": who}
+             for sid, made, vis, who in (r[:4] for r in rows[:limit])]
+    return page_, (_cursor(page_[-1]) if len(rows) > limit and page_ else None)
+
+
 def duration_words(ms):
     """How long a drawing took, as the in-post player says it at rest
     (lib/replayline.js words(): its rounding, Math.round, is half up): "15

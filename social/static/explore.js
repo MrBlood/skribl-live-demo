@@ -4,7 +4,7 @@
  * it (explore.html).
  *
  * A PICK. Following | Everyone (signed in) and New | Hot are the one pill:
- * follows.js places and glides its tint (window.SocialPill). A tap glides
+ * social.js places and glides its tint (window.SocialPill). A tap glides
  * it, fades the tiles out, puts the first page of the new pick in while they
  * can't be seen (/explore/more), and fades them back; the page doesn't
  * scroll. The search box asks once the typing pauses (350ms, as Skribl's

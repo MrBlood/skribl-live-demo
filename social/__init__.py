@@ -20,7 +20,9 @@ the left of a desk, and three things to do there:
                         drawings, Following | Everyone, New and Hot, a search.
     Make                a small sheet with two doors, Draw into Skribl's Pad
                         and Flip into Skribl's Flip, from the bar, the rail or
-                        Home's button. It is not a page.
+                        Home's button. It is not a page. Signed in (since
+                        Nov 14, part two of the map), Make is THE COMPOSER on
+                        every page, the sheet a post is made in (compose.py).
 
 PHASE 1, PIECE 2: SIGN-IN, invite-only, with passkeys (accounts.py; the
 owner's "all yes", Nov 10). Given the host's database session, the site has
@@ -306,12 +308,13 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
                                show="everyone", sort="new", q="", more_url=None)
 
     if site is not None:
-        from . import (accounts, activity, comments, follows, gallery, likes, mutes, posts, profiles, reports,
-                       rules, safety)
+        from . import (accounts, activity, comments, compose, follows, gallery, likes, mutes, posts, profiles,
+                       reports, rules, safety)
         accounts.register(bp)
         gallery.register(bp)
         profiles.register(bp, skribl_blueprint)
         posts.register(bp, skribl_blueprint)
+        compose.register(bp, skribl_blueprint)
         comments.register(bp)
         likes.register(bp)
         follows.register(bp)
@@ -362,6 +365,13 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             from .safety import REASONS
             from .security import current_person
             ctx["me"] = current_person()
+            # THE COMPOSER, on every page of somebody signed in (compose.py):
+            # its Post sends the page's token, so every such page carries one
+            # (a page that passes its own still wins: a context processor's
+            # names give way to the page's).
+            if ctx["me"] is not None:
+                from .security import csrf_token
+                ctx["token"] = csrf_token()
             # Activity's dot (notifications): asked only by a page that shows
             # the bell or the rail, and then once a request.
             ctx["activity_dot"] = dot_for_request

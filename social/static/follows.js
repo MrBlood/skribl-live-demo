@@ -29,8 +29,10 @@
  * (posts.js: its cursor says which).
  *
  * THE GALLERY'S PILLS (Following | Everyone and New | Hot) are the one pill
- * too: their tint is placed and glided here, and explore.js presses them
- * through window.SocialPill and says what they show.
+ * too, and so is the composer's Drafts | Drawings (compose.js): the tint is
+ * placed and glided by social.js (window.SocialPill, on every page since the
+ * composer is), and explore.js presses the Gallery's through it and says
+ * what they show.
  *
  * KIND, NEVER JUMPY: nothing moves but the pill's tint, which glides; the
  * rest fades or draws (social.css, "FOLLOWING"). Under Reduce Motion the
@@ -76,48 +78,9 @@
   }
 
   /* ---- the one pill: the tint under the chosen option ----------------------- */
-  /* Placed from the rendered boxes, to the hundredth of a pixel (as Skribl's
-     lib/segslider.js places the Gallery's): the first time, and `now`, put
-     there; after that it glides (social.css), and is put there under Reduce
-     Motion. Until it is placed, the chosen option wears the tint itself. */
-  function place(seg, now) {
-    var pill = seg.querySelector('.fo-slider'), btn = seg.querySelector('button[aria-pressed="true"]');
-    var g = seg.getBoundingClientRect(), b = btn ? btn.getBoundingClientRect() : null;
-    if (!pill || !b || !b.width || !g.width) { seg.removeAttribute('data-pill'); return; }
-    var x = Math.round((b.left - g.left - seg.clientLeft - (parseFloat(getComputedStyle(pill).left) || 0)) * 100) / 100;
-    var w = Math.round(b.width * 100) / 100;
-    var first = now || !seg.hasAttribute('data-pill');
-    if (first) pill.style.transition = 'none';
-    pill.style.transform = 'translateX(' + x + 'px)';
-    pill.style.width = w + 'px';
-    if (first) {
-      seg.setAttribute('data-pill', '');
-      void pill.offsetWidth;
-      pill.style.transition = '';
-    }
-  }
-  function choose(seg, btn) {
-    Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b) {
-      b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
-    });
-    place(seg, false);
-  }
-  /* The one pill for another page's own (the Gallery's two: explore.js):
-     choose() presses an option and glides the tint to it. */
-  window.SocialPill = { choose: choose, place: place };
-  /* Watched, so a pill in a sheet that ships hidden, a late font or a turned
-     phone still has its tint where its option is. */
-  Array.prototype.forEach.call(doc.querySelectorAll('.fo-seg'), function (seg) {
-    var wide = 0;
-    function again() {
-      var w = seg.getBoundingClientRect().width;
-      place(seg, !wide || !w);
-      wide = w;
-    }
-    if (window.ResizeObserver) new ResizeObserver(again).observe(seg);
-    again();
-    if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(again);
-  });
+  /* social.js's (window.SocialPill), the site's every page's since the
+     composer's picker carries one on all of them: placed, glided, watched. */
+  var choose = window.SocialPill.choose, place = window.SocialPill.place;
 
   /* ---- Follow, then Following ------------------------------------------------ */
   var said = doc.querySelector('[data-say]');

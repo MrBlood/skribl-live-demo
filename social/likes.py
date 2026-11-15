@@ -296,6 +296,18 @@ def drop_drawing_likes(skribl_id):
     _drop(Like.drawing_id == str(skribl_id))
 
 
+def move_drawing_likes(skribl_id, post_id):
+    """ONE DRAWING, ONE CONVERSATION (comments.move_drawing_comments' twin):
+    every like on a drawing shown outside a post, onto the post it is now in,
+    each keeping its person, its moment on the drawing's clock (the dots stay
+    where they were) and its time. The post is new, so no one's like on it
+    can meet theirs on the drawing (once a person, once a thing). Flushes
+    nothing."""
+    site().session().execute(
+        sa.update(Like).where(Like.drawing_id == str(skribl_id))
+        .values(post_id=post_id, drawing_id=None).execution_options(synchronize_session=False))
+
+
 def drop_owner_likes(person_id):
     """Every like on what a person owned (accounts.delete_person)."""
     _drop(Like.owner_id == person_id)
@@ -364,8 +376,15 @@ def register(bp):
     @bp.post("/b/<skribl_id>/like")
     @_rests(json_answer=True)
     def like_drawing(skribl_id):
-        """This person's like on a drawing shown outside a post, set or taken back."""
+        """This person's like on a drawing shown outside a post, set or taken
+        back. Under the drawing's lock (posts.drawing_lock), so a like never
+        lands on a drawing as it moves into a post."""
         from .comments import on_drawing
-        return set_like(lambda me: on_drawing(me, skribl_id))
+        from .posts import drawing_lock
+
+        def find(me):
+            drawing_lock(skribl_id)
+            return on_drawing(me, skribl_id)
+        return set_like(find)
 
     return bp

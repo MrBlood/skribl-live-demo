@@ -2,19 +2,23 @@
 piece 4, posts"), through the demo's own server, with Chromium's virtual
 authenticator for the site's people and a real pen in Skribl's real Pad.
 
-  1. HOME, SIGNED IN: "Say something, then draw it…", Draw and Flip, Post;
-     with nothing drawn, Post says so and sends nothing; an empty feed says
-     so kindly. Signed out, Home is the first visit, as before.
-  2. COMPOSING: Draw opens Skribl's Pad over Home in compose mode, with the
-     gallery choice in its sheet (compose=1&gallery=1); Add hands the drawing
-     back into the composer's own in-post player; Edit drawing reopens it
-     with the drawing in it; Remove takes it away. Flip opens Flip the same.
+  1. HOME, SIGNED IN: its row, "Say something, then draw it…", Draw and
+     Flip, which opens the composer (since Nov 14, one Make everywhere:
+     verify_composer holds the composer itself); there, with nothing drawn,
+     Post says so and sends nothing; an empty feed says so kindly. Signed
+     out, Home is the first visit, as before.
+  2. COMPOSING FROM HOME: the row's Draw opens Skribl's Pad over the
+     composer in compose mode, with the gallery choice in its sheet
+     (compose=1&gallery=1); Add hands the drawing back into the composer's
+     own in-post player; Edit drawing reopens it with the drawing in it;
+     Remove takes it away. Flip opens Flip the same.
   3. POSTING: the words and the drawing, one post: its row on the site's
      chain, its skribl through create_post (unlisted without the tick, its
      title the first words, no caption), and the post's own page, where the
      drawing plays by itself; under Reduce Motion it rests still. With the
      tick, the skribl is public and Skribl's listing shows it. No Make your
-     own on the page (Nov 14): the bar's and the rail's Make opens there. On
+     own on the page (Nov 14): the bar's and the rail's Make opens the
+     composer there. On
      a desk, More from shows each other drawing alone, cut out of its share
      card.
   4. THE FEED: everyone's posts, newest first, each card still until
@@ -779,89 +783,96 @@ with sync_playwright() as p:
     b = p.chromium.launch()
 
     # ------------------------------------------------------------------ 1
-    if part(1, "Home, signed in: the composer, an empty feed said kindly; Post with nothing drawn"):
+    if part(1, "Home, signed in: the row that opens the composer, an empty feed said kindly; Post with nothing drawn"):
         mira = someone(b, "mira", "Mira Okafor")
         pg = mira.pg
         sent = []
         pg.on("request", lambda r: sent.append(r.url) if r.method == "POST" and r.url.endswith("/social/posts") else None)
         pg.goto(BASE + "/social/")
         pg.wait_for_timeout(500)
-        home = pg.evaluate("""() => ({ composer: !!document.querySelector('[data-composer]'),
-          placeholder: (document.querySelector('[data-compose-words]') || {}).placeholder,
-          chips: [...document.querySelectorAll('[data-compose-open]')].map(c => c.textContent.trim()),
-          post: (document.querySelector('[data-compose-post]') || {}).textContent,
+        home = pg.evaluate("""() => ({ row: !!document.querySelector('[data-compose-row]'),
+          words: (document.querySelector('[data-compose-row] [data-compose-go=words]') || {}).textContent,
+          chips: [...document.querySelectorAll('[data-compose-row] [data-compose-go=pad], [data-compose-row] [data-compose-go=flip]')].map(c => c.textContent.trim()),
+          post: !!document.querySelector('[data-compose-row] [data-compose-post]'),
           none: (document.querySelector('[data-feed-none]') || {}).textContent || null,
           hello: !!document.querySelector('.hello') })""")
-        pg.click("[data-compose-post]")
+        pg.click("[data-compose-row] [data-compose-go=words]")
+        pg.wait_for_timeout(700)
+        sheet = pg.evaluate("""() => ({ open: document.getElementById('composeSheet').classList.contains('is-open'),
+          field: document.activeElement === document.querySelector('#composeSheet [data-compose-words]') })""")
+        # The button's own click: a sheet that never opened is this row's red,
+        # not a stop at a hidden button.
+        pg.evaluate("() => document.querySelector('#composeSheet [data-compose-post]').click()")
         pg.wait_for_timeout(300)
-        said = pg.evaluate("() => document.querySelector('[data-compose-say]').textContent")
+        said = pg.evaluate("() => document.querySelector('#composeSheet [data-compose-say]').textContent")
         nctx, npg = browser_as(b, None)
         npg.goto(BASE + "/social/")
         npg.wait_for_timeout(400)
-        nobody = npg.evaluate("() => ({ hello: !!document.querySelector('.hello'), composer: !!document.querySelector('[data-composer]') })")
+        nobody = npg.evaluate("() => ({ hello: !!document.querySelector('.hello'), composer: !!document.querySelector('[data-compose-row], #composeSheet') })")
         close_ctx(nctx, npg)
-        check("Home signed in has the composer: \"Say something, then draw it…\", Draw and Flip, Post; an empty feed"
-              " says so kindly; Post with nothing drawn says what is missing and sends nothing; signed out, Home is"
-              " the first visit, as before",
-              home["composer"] and home["placeholder"] == "Say something, then draw it…"
-              and home["chips"] == ["Draw", "Flip"] and home["post"] == "Post"
+        check("Home signed in has its row: \"Say something, then draw it…\", Draw and Flip, no Post, opening the"
+              " composer, its field ready; an empty feed says so kindly; there Post with nothing drawn says what is"
+              " missing and sends nothing; signed out, Home is the first visit, as before",
+              home["row"] and home["words"] == "Say something, then draw it…"
+              and home["chips"] == ["Draw", "Flip"] and not home["post"] and sheet == {"open": True, "field": True}
               and home["none"] == "No posts yet. Yours could be the first: say something, then draw it."
-              and not home["hello"] and said == "Draw something first, then Post." and not sent
+              and not home["hello"] and said == "Draw something first, or pick one you made." and not sent
               and nobody["hello"] and not nobody["composer"],
-              f"home {home}; said {said!r}; posted {len(sent)}; signed out {nobody}")
+              f"home {home}; sheet {sheet}; said {said!r}; posted {len(sent)}; signed out {nobody}")
 
     # ------------------------------------------------------------------ 2
-    if part(2, "composing: the Pad over Home, Add hands the drawing back, Edit and Remove; Flip opens Flip"):
+    if part(2, "composing from Home: the Pad over the composer, Add hands the drawing back, Edit and Remove; Flip opens Flip"):
         mira = someone(b, "mira", "Mira Okafor")
         pg = mira.pg
         pg.goto(BASE + "/social/")
         pg.wait_for_timeout(500)
-        pg.click("[data-compose-open=pad]")
+        pg.click("[data-compose-row] [data-compose-go=pad]")
         fr = editor_frame(pg, "skribl-pad")
         src = pg.evaluate("() => document.querySelector('#composePad iframe').getAttribute('src')")
         sheet = add_from_pad(pg, fr) if fr else {}
         drafted = pg.evaluate("""() => { const d = document.querySelector('[data-compose-draft]');
           const box = d && d.querySelector('[data-skribl-inline]');
           return { shown: !!d && !d.hidden, attached: !!(box && box._skriblInline),
-                   chips: [...document.querySelectorAll('[data-compose-open]')].map(c => c.hidden),
+                   chips: [...document.querySelectorAll('#composeSheet [data-compose-open]')].map(c => c.hidden),
                    overlay: document.getElementById('composePad').hidden,
                    focus: document.activeElement ? document.activeElement.textContent.trim() : null }; }""")
         loads = []
         pg.evaluate("""() => { window.__loads = 0; const f = document.querySelector('#composePad iframe');
           f.contentWindow.addEventListener('message', e => { if (e.data && e.data.type === 'skribl:compose:load') window.__loads++; }); }""")
-        pg.click("[data-compose-edit]")
+        pg.click("#composeSheet [data-compose-edit]")
         pg.wait_for_timeout(900)
         reopened = pg.evaluate("() => ({ open: !document.getElementById('composePad').hidden, loads: window.__loads })")
         fr2 = editor_frame(pg, "skribl-pad")
         if fr2:
             fr2.click("#composeCloseBtn")
             pg.wait_for_timeout(700)
-        pg.click("[data-compose-remove]")
+        pg.click("#composeSheet [data-compose-remove]")
         pg.wait_for_timeout(400)
         removed = pg.evaluate("""() => ({ draft: document.querySelector('[data-compose-draft]').hidden,
-          chips: [...document.querySelectorAll('[data-compose-open]')].map(c => c.hidden),
+          chips: [...document.querySelectorAll('#composeSheet [data-compose-open]')].map(c => c.hidden),
           frame: document.querySelector('#composePad iframe').getAttribute('src') })""")
-        check("Draw opens Skribl's Pad over Home in compose mode with the gallery choice (compose=1&gallery=1); its"
-              " sheet says Add to post and offers Show in the Skribls gallery; Add hands the drawing back into the"
-              " composer's own in-post player, Draw and Flip step aside, and focus lands on Edit drawing",
+        check("Home's Draw opens Skribl's Pad over the composer in compose mode with the gallery choice"
+              " (compose=1&gallery=1); its sheet says Add to post and offers Show in the Skribls gallery; Add hands the"
+              " drawing back into the composer's own in-post player, Draw and Flip still along its foot (a post holds"
+              " one: they say so), and focus lands on Edit drawing",
               bool(fr) and "compose=1" in (src or "") and "gallery=1" in (src or "")
               and sheet.get("label") == "Add to post" and any("Skribls gallery" in t for t in sheet.get("tick", []))
-              and drafted["shown"] and drafted["attached"] and drafted["chips"] == [True, True] and drafted["overlay"]
+              and drafted["shown"] and drafted["attached"] and drafted["chips"] == [False, False] and drafted["overlay"]
               and drafted["focus"] == "Edit drawing",
               f"src {src}; sheet {sheet}; drafted {drafted}")
         check("Edit drawing reopens the Pad with the drawing put back in it (a load message); Remove takes the"
-              " drawing away, Draw and Flip come back, and the frame is let go (about:blank)",
+              " drawing away, Draw and Flip there, and the frame is let go (about:blank)",
               reopened["open"] and reopened["loads"] >= 1
               and removed["draft"] and removed["chips"] == [False, False] and removed["frame"] == "about:blank",
               f"reopened {reopened}; removed {removed}")
-        pg.click("[data-compose-open=flip]")
+        pg.click("#composeSheet [data-compose-open=flip]")
         ffr = editor_frame(pg, "/flip?")
         fsrc = pg.evaluate("() => document.querySelector('#composeFlip iframe').getAttribute('src')")
         fopen = pg.evaluate("() => !document.getElementById('composeFlip').hidden")
         if ffr:
             ffr.click("#composeCloseBtn")
             pg.wait_for_timeout(700)
-        check("Flip opens Skribl's Flip over Home the same way (compose=1&gallery=1), and its × puts it away",
+        check("Flip opens Skribl's Flip over the composer the same way (compose=1&gallery=1), and its × puts it away",
               bool(ffr) and fopen and "compose=1" in (fsrc or "") and "gallery=1" in (fsrc or "")
               and pg.evaluate("() => document.getElementById('composeFlip').hidden"),
               f"frame {bool(ffr)}; src {fsrc}; open {fopen}")
@@ -872,14 +883,14 @@ with sync_playwright() as p:
         pg = mira.pg
         pg.goto(BASE + "/social/")
         pg.wait_for_timeout(500)
-        pg.click("[data-compose-open=pad]")
+        pg.click("[data-compose-row] [data-compose-go=pad]")
         fr = editor_frame(pg, "skribl-pad")
         if fr:
             add_from_pad(pg, fr)
-        pg.fill("[data-compose-words]", "Day 12. The beard took longer than the skull.\nWatch it at 2×.")
+        pg.fill("#composeSheet [data-compose-words]", "Day 12. The beard took longer than the skull.\nWatch it at 2×.")
         try:
             with pg.expect_navigation(timeout=30000):
-                pg.click("[data-compose-post]")
+                pg.click("#composeSheet [data-compose-post]")
         except Exception as exc:
             ERRS.append(f"post did not go: {str(exc).splitlines()[0][:100]}")
         pg.wait_for_timeout(1500)
@@ -939,14 +950,14 @@ with sync_playwright() as p:
                 else:
                     mpg.locator("nav.nav .tab-make").click()
                 mpg.wait_for_timeout(700)
-                here_["sheet"] = mpg.evaluate("""() => { const w = document.getElementById('makeSheet');
+                here_["sheet"] = mpg.evaluate("""() => { const w = document.getElementById('composeSheet');
                   return !!w && !w.hidden && w.classList.contains('is-open'); }""")
                 makes[screen] = here_
             except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
                 makes[screen] = {"stopped": str(exc).splitlines()[0][:120]}
             close_ctx(mctx, mpg)
         check("a post's own page has no Make your own (no make button in the page, phone and desk); the bar's Make on a"
-              " touch phone and the rail's on a desk is there and opens Make's sheet on it",
+              " touch phone and the rail's on a desk is there and opens the composer on it",
               all(makes.get(k) == {"inPage": 0, "words": 0, "bar": 1, "sheet": True} for k in ("phone", "desk")),
               json.dumps(makes))
 

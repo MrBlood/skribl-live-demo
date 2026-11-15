@@ -1563,13 +1563,13 @@ with sync_playwright() as p:
             follow(vic, "wes")
             go(pg, "/social/")
             after = pg.evaluate(PILL, "[data-home-pill]")
-            where = pg.evaluate("""() => { const c = document.querySelector('[data-composer]').getBoundingClientRect(),
+            where = pg.evaluate("""() => { const c = document.querySelector('[data-compose-row]').getBoundingClientRect(),
               p = document.querySelector('[data-home-pill]').getBoundingClientRect(), f = document.querySelector('[data-feed] > *').getBoundingClientRect();
               return { composer: c.bottom, top: p.top, bottom: p.bottom, first: f.top }; }""")
             check("Home opens on Everyone before you follow anybody, and on Following once you do",
                   before and before["pressed"] == "Everyone" and after and after["pressed"] == "Following",
                   f"{before and before['pressed']} then {after and after['pressed']}")
-            check("the pill sits under the composer, over the posts: the Gallery's New / Hot value for value (44px, the"
+            check("the pill sits under Home's row (the composer's, since Nov 14), over the posts: the Gallery's New / Hot value for value (44px, the"
                   " card's ground and line, 12px round, the tint rgba(124, 92, 255, 0.22) under the chosen one, 13px words"
                   " at 600, the chosen one's ink and the other's), each option 44px to a finger",
                   after and where["composer"] < where["top"] and where["bottom"] < where["first"]

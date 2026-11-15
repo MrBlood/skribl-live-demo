@@ -180,6 +180,15 @@
 {%- endcall %}
 {%- endmacro %}
 
+{#  THE COMPOSER'S PICKER ("Use one you made", _compose.html; the owner's B,
+    Nov 14): the one pill once more, Drafts | Drawings, Drafts first as the
+    mock drew it. compose.js presses it through window.SocialPill. #}
+{% macro compose_pill() -%}
+{% call _pill('Use one you made from', (('drafts', 'Drafts'), ('drawings', 'Drawings')), 'drafts', 'pick', 'cmp-pill') -%}
+{{ ' ' }}data-compose-pill
+{%- endcall %}
+{%- endmacro %}
+
 {% macro feed_extra(kind) -%}
 {%- if kind == 'none' %}
 <section class="fo-none" aria-labelledby="foNoneTitle">
