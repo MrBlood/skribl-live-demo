@@ -83,7 +83,7 @@ def stopped(n, exc):
 
 
 try:
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import TimeoutError as PWTimeout, sync_playwright
 except ImportError as exc:
     print(f"SUITE-SKIPPED: {exc}")
     print("No assertions were executed. This is NOT evidence the Home Screen app works.")
@@ -392,7 +392,7 @@ with sync_playwright() as pw:
             from social import shared_folder
             cases = {("/social/", "/skribl-pad"): "/", ("/app/social/", "/app/flip", "/app/library"): "/app/",
                      ("/social/", "/social/explore"): "/social/", ("/social/?next=/a/b", "/skribl-pad"): "/",
-                     ("/a/b/c/", "/a/b/d"): "/a/b/"}
+                     ("/a/b/c/", "/a/b/d"): "/a/b/", ("/skribl-pad",): "/", ("/app/flip", "/app/flip"): "/app/"}
             got = {" ".join(k): shared_folder(*k) for k in cases}
             check("shared_folder: the deepest folder its addresses share, on other mounts too (a page is not a folder;"
                   " a query is not a path)", all(got[" ".join(k)] == v for k, v in cases.items()), json.dumps(got))
@@ -661,9 +661,12 @@ with sync_playwright() as pw:
             go(pg, "/social/")
             pg.evaluate("() => { window.__before = 1; }")
             open_menu(pg)
-            with pg.expect_navigation(timeout=15000):
-                pg.click("#siteReload")
-            pg.wait_for_function("() => document.readyState === 'complete'", timeout=15000)
+            try:
+                with pg.expect_navigation(timeout=8000):
+                    pg.click("#siteReload")
+                pg.wait_for_function("() => document.readyState === 'complete'", timeout=15000)
+            except PWTimeout:
+                pass    # no page came again: the row below says so
             again = pg.evaluate("""() => ({ before: window.__before === 1,
               type: (performance.getEntriesByType('navigation')[0] || {}).type, at: location.pathname })""")
             close_ctx(ctx, pg)

@@ -155,6 +155,7 @@ BATCHES = [
     ["verify_socialbookmarks.py"],         # measures — the toast and the ribbon read from the paint, the tab's list; its own server
     ["verify_socialreposts.py"],           # measures — the row and the line read from the paint, the count's glide on every frame; its own server
     ["verify_socialmentions.py"],          # measures — the mention read from the paint, the list's fade on every frame; its own server
+    ["verify_socialapp.py"],               # measures — the steps' glide read on every frame, the rows and words read from the paint, the icon's pixels; its own server
     ["verify_socialfollow.py"],            # measures — the button's fade and draw and Home's pill read on every frame; its own server
     ["verify_socialsettings.py"],          # measures — the theme's cross-fade read off the screen on every frame, the first frames of the next page; its own server
     ["verify_socialmute.py"],              # measures — a card folding away, the line, the toast and Show read on every frame, words read from the paint; its own server

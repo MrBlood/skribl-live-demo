@@ -81,6 +81,8 @@ MEASURED = {
     "verify_socialreposts.py": 150,
     # The local run, Nov 15 (mentions), alone (104 s), to the nearest ten with room for two beside it.
     "verify_socialmentions.py": 150,
+    # The local run, Nov 15 (the Home Screen app), alone.
+    "verify_socialapp.py": 60,
 }
 SMALL = 11          # every other suite: the rest averaged 11 seconds
 
