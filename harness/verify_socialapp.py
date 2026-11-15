@@ -899,6 +899,7 @@ with sync_playwright() as pw:
                 pg.wait_for_timeout(max(0, at - (time.time() - t_on) * 1000))
                 ink.append((at, pg.evaluate(INK, [brand, blush])))
             shot = pg.screenshot()
+            jump_foot = pg.evaluate("() => document.querySelector('#bloobySplash .splash-jump').getBoundingClientRect().bottom")
             pg.wait_for_timeout(2400)
             fr = pg.evaluate("() => window.__sp")
             after = pg.evaluate("""() => ({ cls: document.documentElement.className, bar: document.querySelector('meta[name=theme-color]').content,
@@ -1119,9 +1120,24 @@ with sync_playwright() as pw:
             check("the page's own drawing waits for it: Home's first visit draws Blooby's card once the splash has gone, "
                   "never under it", under == 0 and later, json.dumps({"under": under, "after": later}))
 
-            # THE WORD AND THE PERIOD, READ OFF THE PAINT, against the ground beside them at the foot: a big word in
-            # the site's purple, 3:1 and more (the bar for large text), its period the same.
-            beside = im.getpixel((8, round(H * 0.83)))
+            # THE WORD UNDER THE STAGE (the owner, of 83%, 76% and 70%: "70"): its ink read off the paint below
+            # Blooby's feet (his purple is the word's), its middle at 70% of the splash, all of it below the light's
+            # pool.
+            pool = [float(v) for v in next(f["light"] for f in reversed(shown) if f["show"] > 0.99).split("|")[1].split(",")]
+            pool_foot = pool[1] + pool[3]
+            B, pxs = hx(brand), im.load()
+            rows = [y for y in range(int(jump_foot) + 1, H)
+                    if sum(1 for x in range(0, W, 2) if sum(abs(a - c) for a, c in zip(pxs[x, y], B)) < 60) >= 3]
+            word_mid = (rows[0] + rows[-1]) / 2 if rows else None
+            check("the word under the stage (the owner's 70): its ink's middle at 70% of the splash, give or take 2%, and "
+                  "all of it below the light's pool",
+                  bool(rows) and abs(word_mid / H - 0.70) <= 0.02 and rows[0] > pool_foot,
+                  json.dumps({"word": [rows[0], rows[-1]] if rows else None, "middle": round(word_mid / H * 100, 1) if rows else None,
+                              "pool_foot": round(pool_foot), "his_feet": round(jump_foot)}))
+
+            # THE WORD AND THE PERIOD, READ OFF THE PAINT, against the ground beside them at the word's own height: a big
+            # word in the site's purple, 3:1 and more (the bar for large text), its period the same.
+            beside = im.getpixel((8, round(word_mid if rows else H * 0.70)))
             check("the word and its period read off the paint against the ground beside them: the word (the site's purple, "
                   "a large word) 3:1 and more, the period 3:1 and more",
                   ratio(hx(brand), beside) >= 3.0 and ratio(hx(blush), beside) >= 3.0,

@@ -43331,3 +43331,36 @@ NOT TESTED HERE: an iPhone (WebKit): whether iOS 26 keeps its glass off
 before keeps its bar's style; the live site. The one-glance tell: open
 Blooby from the Home Screen, and the top of "blooby." is as sharp as its
 bottom.
+
+## After v330 -- The splash's word moves up under the stage
+
+The owner, Nov 15 (Mountain Time), about 12:00 PM, of the merged splash: "I
+like the splash. Does it say blooby too low on screen?" Measured at their
+phone's size (the page under the clock, 402 x 812, as the app shows it):
+"blooby." had its middle 84% of the way down the screen and the foot of its
+y 77px above the screen's foot, just over the home bar, with a wide empty
+band between the stage and the word. The mock, beside "now": the word at
+83% (now), 76% and 70% of the splash. "70".
+
+WHAT CHANGED: social.css's .splash-word sits with its middle at 70% of the
+splash, not 83% (its middle 72% down the owner's screen, 183px clear of its
+foot, under the stage and clear of the light's pool). Nothing else: Blooby,
+the light, the timing and the word writing itself are as they were. On the
+darker ground higher up the word reads 3.65:1 (it was 3.36), its period
+6.0:1.
+
+THE CHECK, shown red by a break of its own in a throwaway copy, with an
+untouched copy green beside it (control 17/17): verify_socialapp 8 gains a
+row, the word under the stage, its ink read off the paint below Blooby's
+feet (his purple is the word's), its middle at 70% of the splash, give or
+take 2%, all of it below the light's pool (red: the word back at 83%; the
+word at 50%, in the pool). The contrast row reads the ground beside the
+word at the word's own height now, not at a fixed 83%.
+
+PAD AND FLIP: unchanged.
+
+THE AFFECTED SUITES: [COUNTS]
+
+NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell:
+open Blooby from the Home Screen after closing it, and "blooby." sits just
+under Blooby's stage.
