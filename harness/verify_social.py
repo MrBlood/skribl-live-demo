@@ -524,8 +524,11 @@ with sync_playwright() as p:
         # THE BAR'S ICONS ALONE, ONE SIZE (the owner, Nov 15: "Can all icons look the same size - bigger", "show me
         # if you take the words off?", then "I like g"): on a touch phone no word painted under them (each place's
         # name its accessible name, as a screen reader says it); each icon's own paint read off the screen at twice
-        # its size: the line drawings (Home, the Gallery, Sign in) reaching 26.5 to 29.5px, Make's purple round and
-        # 31 to 33 across; the pen's line centred under the page's icon. A desk's rail keeps its words and its sizes.
+        # its size: the line drawings (Home, the Gallery, Sign in) at 92% of the square they first filled, reaching
+        # 24.5 to 26.8px ("Home and gallery (unselected) look a little big", then "I like your 92%"), Make's purple
+        # round and 31 to 33 across; lit on the dark bar, where his black line is lost to the ground, Blooby at 96%,
+        # what shows of him 22.5 to 23.5px ("the black disappears and it looks smaller"); the pen's line centred
+        # under the page's icon. A desk's rail keeps its words and its sizes.
         ICONS = r"""() => [...document.querySelectorAll('nav.nav > .tab')].filter(e => e.getClientRects().length).map(e => {
             const r = e.querySelector('.tab-ic').getBoundingClientRect(), nr = e.querySelector('.tab-name').getBoundingClientRect();
             const pl = [...e.querySelectorAll('.pen-line')].find(l => l.getBoundingClientRect().width > 10), pr = pl && pl.getBoundingClientRect();
@@ -567,13 +570,16 @@ with sync_playwright() as p:
               " accessible name (Home, Gallery, Make, Sign in, as a screen reader says them); a desk's rail keeps its words",
               words_ok, json.dumps({"phone": {f"{k[1]} {k[2]}": {n: v["word"] for n, v in d.items()} for k, d in alone.items() if k[0] == "phone"},
                                     "said": {f"{k[0]} {k[1]}": v for k, v in said.items()}})[:700])
-        def one_size(d):
-            lines = [d[n] for n in ("Home", "Gallery", "Sign in")]
-            return all(v and 26.5 <= max(v) <= 29.5 for v in lines) and bool(d["Make"]) and 31 <= d["Make"][0] <= 33
+        def one_size(key, d):
+            lit_dark = key == ("dark", "explore")   # Blooby lit on the dark bar, his black line lost to it
+            lines = [d[n] for n in ("Home", "Sign in")] + ([] if lit_dark else [d["Gallery"]])
+            return (all(v and 24.5 <= max(v) <= 26.8 for v in lines) and bool(d["Make"]) and 31 <= d["Make"][0] <= 33
+                    and (not lit_dark or bool(d["Gallery"]) and 22.5 <= max(d["Gallery"]) <= 23.5))
         check("...and every icon looks one size, read off its paint: the line drawings (Home, the Gallery's Blooby, Sign in)"
-              " reaching 26.5 to 29.5px and Make's purple round, 31 to 33 across (a circle drawn a seventh bigger), light"
-              " and dark, Home and the Gallery",
-              len(sizes) == 4 and all(one_size(d) for d in sizes.values()),
+              " at 92%, reaching 24.5 to 26.8px, and Make's purple round, 31 to 33 across (a circle drawn a seventh"
+              " bigger); Blooby lit on the dark bar at 96%, what shows of him 22.5 to 23.5px; light and dark, Home and"
+              " the Gallery",
+              len(sizes) == 4 and all(one_size(k, d) for k, d in sizes.items()),
               json.dumps({f"{k[0]} {k[1]}": v for k, v in sizes.items()}))
         pens_at = {f"{k[1]} {k[2]}": [v["pen"] for v in d.values() if v["pen"]] for k, d in alone.items() if k[0] == "phone"}
         check("...the pen's line under the page's icon on a phone: centred under it, 28 to 32px wide, just below it",
