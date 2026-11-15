@@ -42906,9 +42906,11 @@ a folder of their own):
     the untouched base (e7ff1b0f) run alone, and its mend (8f1bf873, the row
     reading "playing or played") is on the repeat change's own branch, not
     under this tree.
-- verify_socialsearch alone, at the later commits (0db5c006, the back row
-  typed; bca31f1d, the instruments mended and the cursor's cut key):
-  32/32 each; 53 seconds alone the first time.
+- verify_socialsearch alone, at the later commits: its section 5 at
+  0db5c006 (the back row typed), 5/5; the whole of it at bca31f1d (the
+  instruments mended and the cursor's cut key, run on that tree just before
+  it was committed), 32/32; and 53 seconds alone the first time (on the tree
+  bb13a563 then committed).
 - THEN, ON THE TREE AS COMMITTED (76882fe0, this entry in it; after the
   instruments mended and the cursor's cut key): side by side,
   verify_socialsearch 32/32, verify_socialmentions 50/50, verify_socialauth
