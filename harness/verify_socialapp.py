@@ -52,7 +52,12 @@ Chromium's virtual authenticator for the site's people.
      does not come; the page's own drawing waits for it; it fades out on
      several frames and the bar comes back; the word and its period read off
      the paint.
-  9. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
+  9. THE APP'S TOP EDGE (the owner, Nov 15, from the Home Screen app: "the
+     top bar is fuzzy on top"): in the app, every page's top 6px are its own
+     ground over whatever scrolls under them, light and dark, so iOS 26 lays
+     no glass blur there; never in a tab; under the sheets' scrims; out of
+     the header's buttons' way.
+  10. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALAPP_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
@@ -1123,12 +1128,68 @@ with sync_playwright() as pw:
             stopped(8, exc)
 
     # ------------------------------------------------------------------ 9
-    if part(9, "no page errors, no console errors and no CSP violations"):
+    if part(9, "the app's top edge: the page's own ground, so iOS 26 lays no glass over it"):
+        try:
+            mira = member(b, "mira", "Mira Lopez")
+            # Something under the top to cover: a tall red block at the head of the page, scrolled up past the top.
+            UNDER = """() => { const d = document.createElement('div'); d.style.cssText = 'height:1600px;background:#ff0000';
+              const m = document.querySelector('main') || document.body; m.insertBefore(d, m.firstChild); window.scrollTo(0, 300); }"""
+            def top_rows(pg):
+                im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+                W = im.width
+                rows = [{im.getpixel((x, y)) for x in range(0, W, 7)} for y in range(0, 12)]
+                return rows
+            hx = lambda h: tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+            app_rows, tab_rows = {}, {}
+            for scheme in ("light", "dark"):
+                for path in ("/social/", "/social/explore"):
+                    ctx, pg = browser_as(b, mira, scheme=scheme, ua=IPHONE_UA, init=(STANDALONE, SPLASHED))
+                    go(pg, path)
+                    ground = pg.evaluate("() => getComputedStyle(document.body).getPropertyValue('--page').trim()")
+                    pg.evaluate(UNDER)
+                    pg.wait_for_timeout(200)
+                    rows = top_rows(pg)
+                    app_rows[f"{scheme} {path}"] = {"ground": ground, "edge": [sorted(r) for r in rows[:6]],
+                                                    "below": sorted(rows[8])[:3]}
+                    close_ctx(ctx, pg)
+                ctx, pg = browser_as(b, mira, scheme=scheme, ua=IPHONE_UA)
+                go(pg, "/social/")
+                pg.evaluate(UNDER)
+                pg.wait_for_timeout(200)
+                tab_rows[scheme] = [sorted(r)[:2] for r in top_rows(pg)[:6]]
+                close_ctx(ctx, pg)
+            red = (255, 0, 0)
+            check("in the app, the top edge is the page's own ground on every page (Home, the Gallery), light and dark: "
+                  "its top 6px all that ground, over the page scrolled up under it, and the page itself just below",
+                  all(all(r == [hx(v["ground"])] for r in v["edge"]) and red in v["below"]
+                      for v in app_rows.values()),
+                  json.dumps(app_rows)[:600])
+            check("a browser tab never has it: the page runs up to the top edge there",
+                  all(all(red in r for r in v) for v in tab_rows.values()), json.dumps(tab_rows))
+
+            # UNDER THE SHEETS, AND OUT OF THE HEADER'S WAY: the ☰'s scrim dims it; the ☰ takes a tap at its own top.
+            ctx, pg = browser_as(b, mira, scheme="light", ua=IPHONE_UA, init=(STANDALONE, SPLASHED))
+            go(pg, "/social/")
+            ground = hx(pg.evaluate("() => getComputedStyle(document.body).getPropertyValue('--page').trim()"))
+            hit = pg.evaluate("""() => { const m = document.querySelector('[data-site-menu]'); const r = m.getBoundingClientRect();
+              const at = document.elementFromPoint(r.x + r.width / 2, r.top + 1); return { top: r.top, mine: !!at && !!at.closest('[data-site-menu]') }; }""")
+            open_menu(pg)
+            dim = Image.open(io.BytesIO(pg.screenshot())).convert("RGB").getpixel((201, 3))
+            close_ctx(ctx, pg)
+            check("...under the bar and every sheet: the ☰'s scrim dims it as it dims the page; and the header's buttons "
+                  "start below it and take their taps (the ☰ at its own top edge)",
+                  sum(dim) < sum(ground) - 60 and hit["top"] >= 6 and hit["mine"],
+                  json.dumps({"ground": ground, "dimmed": dim, "menu": hit}))
+        except Exception as exc:  # noqa: BLE001
+            stopped(9, exc)
+
+    # ------------------------------------------------------------------ 10
+    if part(10, "no page errors, no console errors and no CSP violations"):
         try:
             check("no page errors, no console errors and no CSP violations, in every browser the suite opened",
                   not ERRS, f"{len(ERRS)}: {ERRS[:4]}")
         except Exception as exc:  # noqa: BLE001
-            stopped(9, exc)
+            stopped(10, exc)
     b.close()
 
 bad = [(n, d) for ok, n, d in results if not ok]

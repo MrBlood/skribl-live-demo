@@ -387,6 +387,27 @@ html.is-splashing body { overflow: hidden; }
 .splash .skribl-inline-dur, .splash .skribl-inline-play, .splash .skribl-inline-veil, .splash .skribl-inline-prog,
 .splash .skribl-inline-err { display: none; }
 
+/* THE APP'S TOP EDGE (the owner, Nov 15, from the Home Screen app: "the top
+   bar is fuzzy on top (top of blooby is blurry)"). iOS 26 lays a glass blur
+   over the top of a Home Screen web app (Liquid Glass's scroll edge effect,
+   fading down about 40pt), so at rest it softened the wordmark's top and the
+   header's words. WebKit leaves it off where the top edge is a fixed,
+   full-width box with an opaque ground, and takes the top's colour from it:
+   this strip, 6px of the page's own ground (the colour iOS's bar above it
+   already is: the theme-color metas say the site's ground), the app's alone
+   (html.is-app, splash-boot.js). The page scrolls under it as under the
+   phone's own bar; it sits under the bar along the bottom and every sheet,
+   so a sheet's scrim still dims it. It takes the taps in those 6px (nothing
+   of the page's starts there: the header's buttons begin below them), as
+   WebKit finds the box at the top edge by hitting it, as a tap does. A
+   browser tab never has it. Not testable here (no iPhone engine): the
+   owner's phone says whether iOS keeps its glass off. */
+.app-edge { display: none; }
+html.is-app .app-edge {
+  display: block; position: fixed; z-index: 25; top: 0; left: 0; right: 0; height: 6px;
+  background: var(--page);
+}
+
 /* THE STEPS TO THE HOME SCREEN (the Home Screen mock; the owner, Nov 15),
    the ☰'s Add to Home Screen opens them (_homescreen.html): the ☰'s own
    sheet, and in it nothing new to the site. What you will get, as a Home
