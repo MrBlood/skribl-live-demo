@@ -137,7 +137,9 @@
     });
 
     doc.addEventListener('keydown', function (e) {
-      if (!isOpen || OPEN[OPEN.length - 1] !== self) return;
+      /* The top sheet's key alone, and once: a key it has used (Esc closing
+         it) is not the next sheet's, now on top, to use again. */
+      if (!isOpen || e.defaultPrevented || OPEN[OPEN.length - 1] !== self) return;
       if (e.key === 'Escape') { e.preventDefault(); close(); return; }
       if (e.key !== 'Tab') return;
       var stops = Array.prototype.filter.call(
