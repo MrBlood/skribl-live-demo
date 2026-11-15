@@ -43510,3 +43510,45 @@ verify_posted 163/163, verify_docs 144/144. NOT RUN: the full battery
 
 NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell: a
 quote post's own page in dark, the quoted post a deep purple card.
+
+## After v330 -- The bar: Home and the Gallery at 92%, Blooby lit on the dark bar at 96%
+
+The owner, Nov 15 (Mountain Time), about 1:30 PM, of the bar merged in #921:
+"Home and gallery (unselected) look a little big on the bottom bar. Can't we
+get this right?" Measured: the house 27.3 x 26.3 of ink and Blooby 25.3 x
+28.3, heavy lines with square corners, beside Make's 32px circle and your
+32px face. The owner was handed the bars at life size on their own phone (a
+page of the real site's bar, light and dark, on Home, the Gallery and your
+page, with a slider from 84% to 100%, a hold to see now), then: "I like your
+92% but I think gallery selected on dark theme should be 96% because the
+black disappears and it looks smaller."
+
+WHAT CHANGED (social.css, THE BAR): the line drawings (the house, Blooby,
+Sign in's person) are drawn at 92% of their size: their boxes 32.4px, 31.9
+and 34.9 (were 35.2, 34.7 and 37.9), the house 25 x 24 of ink and Blooby 23
+x 26. Make and your face as they were. Lit on the dark bar, where his black
+line is lost to the ground (1.2:1 there), Blooby is drawn at 96% (33.3px),
+which gives his purple and his card back the size the line took; selected
+and unselected otherwise one size, so nothing jumps between pages. A desk's
+rail keeps its own sizes (the dark rule sets a variable the rail does not
+read).
+
+PAD AND FLIP: unchanged (the site's bar alone).
+
+CONTRAST: no colour or token changed.
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy,
+with an untouched copy green beside it: verify_social 2 (control 14/14). The
+one-size row reads the line drawings at 92%, 24.5 to 26.8px of ink, Make 31
+to 33 (red: the old sizes). A new row reads Blooby's drawn box, 33.3px lit
+on the dark bar and 31.9 lit on the light bar and unlit on either (red: the
+old sizes; Blooby lit on the dark bar at 92% too). Its ink is not the
+instrument there: the threshold that reads ink counts his 1.2:1 line, which
+the eye loses, so the first version of the row, asking what shows of him,
+read his whole outline and was red on the control; the row reads the
+property the fix governs instead.
+
+THE AFFECTED SUITES, side by side: [COUNTS]
+
+NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell: on
+the Gallery in dark, Blooby lit looks as big as Home beside him.
