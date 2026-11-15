@@ -42917,7 +42917,27 @@ a folder of their own):
   71/71, verify_docs 144/144, verify_social 41/41, verify_socialfollow 75/75
   (green beside the others this time): six suites ok in 6.5 minutes. And
   verify_socialsearch alone, 32/32 in 55 seconds.
-- NOT RUN: the full battery (main's run after the merge does it);
+- REBASED ONTO MAIN (611a8df7: repeat-off, mentions and the Home Screen in;
+  clean but for notes both had added at the same place), on the tree
+  65ed65ff: verify_socialsearch alone, 32/32 in 0.9 minutes; then side by
+  side, verify_social 41/41, verify_socialauth 71/71, verify_socialmentions
+  50/50, verify_composer 38/38 (its row mended on main by repeat-off),
+  verify_socialfollow 75/75, verify_socialsafety 38/38, verify_socialmute
+  68/68, verify_socialactivity 46/46, verify_socialsettings 45/45,
+  verify_docs 144/144, verify_socialapp 35/35, verify_txcontract 103/103,
+  verify_hostconfig 61/61, verify_socialposts 81/81: fourteen ok in 21.7
+  minutes. verify_socialprofile 91/93 beside, 93/93 alone, which
+  run_parallel calls INTERMITTENT: LOAD. Its two red rows are the face's
+  photo guide in the Pad, read before the photo had loaded (loaded false,
+  the slider not yet at 40%), and so the guide's words read over no photo
+  in light; this change touches neither the guide nor the Pad.
+- THE FULL HARNESS, dispatched on the branch at 65ed65ff (a migration): run
+  43735095853, all fifteen of its jobs green (both databases' six shards, the
+  MP4, Firefox and WebKit lanes; the smoke job, a pull request's own,
+  skipped on a dispatch). It does not run the search on PostgreSQL:
+  verify_socialsearch serves its own SQLite, on either database's shard.
+- NOT RUN here: the full battery (the harness above ran it, and main's run
+  after the merge does);
   PostgreSQL (CI's postgres job does not run the site's chain: the
   migration's DDL was read offline here, its "C" collation included, and
   nothing of finding people ran on PostgreSQL); Firefox and WebKit (main's
