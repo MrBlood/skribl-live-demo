@@ -793,7 +793,9 @@ with sync_playwright() as pw:
                 window.__sp.push({ t: performance.now() - t0, shown: cs.display !== 'none', o: +cs.opacity });
                 if (performance.now() - t0 < 5200) requestAnimationFrame(step); };
               requestAnimationFrame(step); return first; }"""
-            FIRST_PAINT = "document.addEventListener('DOMContentLoaded', () => { const el = document.getElementById('bloobySplash'); window.__dcl = { cls: document.documentElement.className, shown: el && getComputedStyle(el).display, bar: (document.querySelector('meta[name=theme-color]') || {}).content }; });"
+            # Read as the page is parsed, before any deferred script runs (Skribl's lib/theme.js among them, which
+            # stamps the bar again): what the first paint shows is the head's own work.
+            FIRST_PAINT = "document.addEventListener('readystatechange', () => { if (document.readyState !== 'interactive') return; const el = document.getElementById('bloobySplash'); window.__dcl = { cls: document.documentElement.className, shown: el && getComputedStyle(el).display, bar: (document.querySelector('meta[name=theme-color]') || {}).content }; });"
             INK = """([tile, blush]) => { const c = document.querySelector('#bloobySplash canvas'); if (!c) return null;
               const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const hx = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
               const T = hx(tile), B = hx(blush); let w = 0, p = 0;
@@ -840,10 +842,11 @@ with sync_playwright() as pw:
             shown = [f for f in fr if f["shown"]]
             fade = [f["o"] for f in shown if f["o"] < 0.999]
             gone_at = max((f["t"] for f in shown), default=0)
-            steps = [abs(a - c) for a, c in zip(fade, fade[1:])]
+            steps = [abs(a - c) for a, c in zip([1.0] + fade, fade)]
+            mids = [o for o in fade if 0.05 < o < 0.95]
             check("...then it fades on several frames (no frame more than a third at once) and is gone by 4 s, the "
                   "bar back in the page's ground, marked seen and this launch's",
-                  len(fade) >= 6 and (max(steps) if steps else 1) <= 0.34 and 2600 <= gone_at <= 4000
+                  len(mids) >= 4 and (max(steps) if steps else 1) <= 0.34 and 2600 <= gone_at <= 4000
                   and after["cls"] == "" and after["bar"] == "#f6f8fa" and after["seen"] == "1" and after["launch"] == "1",
                   json.dumps({"fade": [round(v, 2) for v in fade[:8]], "gone": round(gone_at), "after": after}))
             check("...once a launch: the next page in the app has none", next_page == "", next_page)
@@ -873,7 +876,7 @@ with sync_playwright() as pw:
             fr = pg.evaluate("() => window.__sp")
             close_ctx(ctx, pg)
             gone_at = max((f["t"] for f in fr if f["shown"]), default=0)
-            fading = [f["o"] for f in fr if f["shown"] and f["o"] < 0.999]
+            fading = [f["o"] for f in fr if f["shown"] and 0.05 < f["o"] < 0.95]
             check("a tap lets it go at once: fading on several frames from the tap, gone within 0.6 s of it",
                   len(fading) >= 4 and gone_at <= 500 + 650, json.dumps({"gone": round(gone_at), "fading": len(fading)}))
 
