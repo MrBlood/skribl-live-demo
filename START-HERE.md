@@ -641,6 +641,14 @@ token after the owner's deploy) and `SKRIBL_SOCIAL_FIRST_INVITE` (spent: the
 owner joined as the site's first person and admin that evening, and may delete
 it). `SKRIBL_TRUSTED_PROXIES` is 1 (the owner's screenshot, Nov 10).
 
+**The site's demo people** (Rook, Pip, Mira, Juno and Theo on /social) were
+made through the site as people use it, by `harness/tools/demo_people.py`
+(its section in `harness/tools/README.md`): faces and drawings drawn with
+real pen input in the site's own Pad and Flip, so every tile shows its
+picture. Their passkeys lived in that session's scratch folder and went with
+it; to act as them again, ask the owner for a sign-in link each (Settings,
+Invites and sign-in links).
+
 **The deployed code can lag this tree** — Render deploys from `main`, so
 anything merged is live after its build finishes and anything unmerged is not.
 Check the version label, the last line of the editors' ⋯ menu, before

@@ -43659,3 +43659,56 @@ up for a nice fresh new session"):
   makes a sign-in link per person (Settings, Invites and sign-in links), and
   the demo-people tool (saved by the pull request after this one) takes it
   from there.
+
+## After v330 -- The demo people's tool, kept, and the site's doc caught up with the bar
+
+The owner, Nov 15 (Mountain Time), about 4 PM: "Yes, do both and tidy up
+staleness anywhere you see it. Clean up for a nice fresh new session" (both:
+the open threads in the last entry, and keeping the tool that made the demo
+people).
+
+THE DEMO PEOPLE, made on the live site that afternoon (the owner, about
+2 PM: "Make more users. Make sure they have avatars and this time, make
+their drawings show on the screens ... Use all the functions that we have so
+I can see them in use. Have some follow me"), finished about 2:40 PM: three
+new people (Mira, Juno and Theo) on three of the owner's invites, and Rook
+and Pip back in on a sign-in link each, every link from the owner's Settings
+(Invites and sign-in links). Rook's and Pip's four drawings had been posted
+to the API by a script, which makes no still picture (only the Pad and Flip
+make one as they post), so their tiles and players started on a blank
+canvas; each was drawn again in the composer's Pad, and the blank ones
+deleted. Every face drawn in the face sheet's Pad; twelve posts (eleven
+drawings, one Flip) performed with real pen input, pressure along each
+stroke, in an artist's order; then follows (everyone follows the owner),
+likes, comments, an answer and a drawn answer, reposts, two quotes, a
+mention and bookmarks, all through the site's own endpoints as each person.
+
+WHAT CHANGED:
+
+- `harness/tools/demo_people.py`: that script, kept. Its docstring has the
+  usage, the links file's shape and the state file's warning: the file it
+  writes holds each person's passkey and cookies, a key to their accounts,
+  so it lives in a scratch folder and never in the repository. The owner's
+  handle comes from the links file.
+- `harness/tools/README.md`: its section ("The site's demo people").
+- START-HERE.md, the live demo: who the demo people are, how they were made,
+  and that their passkeys went with the session.
+- docs/SOCIAL-SITE.md, section 9's bar: it still said every icon filled one
+  28px square; it says #923's sizes now (the line drawings at 92%, Blooby
+  lit on the dark bar at 96%), and that Explore is the Gallery.
+
+PAD AND FLIP: unchanged.
+
+CONTRAST: no colour or token changed.
+
+THE CHECKS: none new; no suite runs a tool (harness/tools/README.md, "Not
+suites"). The tool was rehearsed end to end on a local site shaped like the
+live one (an owner, Rook and Pip with blank drawings, the links made by the
+site's own CLI) before the live run. From its new home, `--check` against
+the live site, which changes nothing, about 4:30 PM: ALL GOOD, the twelve
+posts' pictures each answering 200 (the two quotes carry no drawing of
+their own), the five faces set, and Rook's and Pip's four blank drawings
+gone (404).
+
+THE AFFECTED SUITES: verify_docs 144/144 (the documents' file names). NOT
+RUN: the full battery (main's run after the merge does it).
