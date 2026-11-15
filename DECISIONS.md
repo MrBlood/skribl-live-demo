@@ -43249,3 +43249,85 @@ rate and how quickly the two pictures come over a phone's network; SF and
 Segoe UI (it holds no words); the live site. The one-glance tell: close
 Blooby from the app switcher, open it from the Home Screen, and the light
 comes up on Blooby jumping, with "blooby." at the foot.
+
+## After v330 -- The app's top edge: iOS 26's glass kept off the top of the page
+
+The owner, Nov 15 (Mountain Time), about 10:50 AM, with four screenshots from
+the Home Screen app: "the top bar is fuzzy on top (top of blooby is blurry)".
+Not the site's own doing: since iOS 26, a Home Screen web app gets Liquid
+Glass's scroll edge effect, a blur fading down about 40pt from the top of the
+page, and at rest it fell on the wordmark's top and the header's words.
+Chromium does not draw it, so it cannot be seen here. Other web apps' notes
+(pull requests on public projects; no Apple or WebKit document says it)
+agree that WebKit leaves the blur off where the top edge is a fixed,
+full-width box with an opaque ground, found by hitting a point a few pixels
+inside the top edge, and takes the top's colour from that box; a
+see-through box or one with a backdrop filter does not count.
+
+WHAT CHANGED.
+
+- THE APP SAYS SO ON EVERY PAGE: splash-boot.js, which already knows the
+  Home Screen app from a tab before the first paint, gives <html> is-app on
+  every page of it, splash or none.
+- THE APP'S TOP EDGE (base.html's .app-edge; social.css, "THE APP'S TOP
+  EDGE"): 6px of the page's own ground, fixed at the top, the full width,
+  in the app alone. It is the colour iOS's bar above it already is (the
+  theme-color metas say the site's ground), so it cannot be seen: the page
+  scrolls under it as under the phone's bar. It sits under the bar along
+  the bottom and every sheet (a sheet's scrim dims it), and it takes the
+  taps in its 6px, where nothing of the page's starts (the header's buttons
+  begin at 6px), as WebKit finds it by hitting it as a tap does.
+
+PAD AND FLIP: unchanged. They open inside the Blooby app too and may get the
+same blur over their own tops; that is Skribl's to answer, and it is on the
+list once the owner's phone says whether this works.
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy,
+with an untouched copy green beside it (control 4/4):
+
+- verify_socialapp 9, NEW (three rows; the old ninth, no page errors, is
+  the tenth): in the app, every page's top 6px are its own ground over a page
+  scrolled up under them, Home and the Gallery, light and dark, and the page
+  itself just below (red: the strip see-through; not fixed; the app never
+  saying so); a tab never has it (red: the strip in a tab too); under the
+  sheets and out of the header's buttons' way (red: the strip over the
+  sheets, not dimmed by the ☰'s scrim; the strip 12px, over the ☰'s top).
+  The rows read the paint, a red block scrolled under the top, not the
+  strip's style.
+
+FOUND WRONG, AND MENDED: two of the splash's rows (verify_socialapp 8) read
+<html>'s classes as empty once the splash had gone, and in the app they say
+is-app now; the first side-by-side run had them red (52/54), a real red of
+this change, not load. They ask that the splash's own marks are gone, and
+that the app's next page is is-app and nothing more (red: the splash leaving
+is-splashing on; every page splashing; the app never saying so; control
+16/16).
+
+JUDGMENT CALLS:
+
+- A STRIP, NOT A STICKY HEADER: the header scrolls away, as the owner's
+  frame has it ("the drawings get the height"); a header that stayed would
+  also keep the blur off, and is the next try if the strip does not.
+- 6PX: past the point WebKit hits (about 4px in), short of the header's
+  buttons.
+- ONLY THE APP: a tab's Safari has its own bars and its own rules.
+
+THE FOUR. Kind: the words at the top are crisp again, and nothing moves.
+Simple: nothing to see. Powerful: the app looks like an app at its top.
+Playful: the wordmark keeps its hand-drawn line where the blur softened it.
+
+THE AFFECTED SUITES, side by side: on e0799e2e (the box to itself but for a few
+mock pages): verify_social 41/41, verify_hostseams 139/139, verify_seam
+515/515, verify_docs 144/144, verify_socialsettings 45/45,
+verify_socialactivity 46/46, verify_a11y 444/444: seven ok in 7.9 minutes.
+verify_socialapp 52/54 beside them, a real red of this change (the two
+splash rows above), 54/54 alone once mended (30814672); run_parallel calls
+it intermittent because it re-ran it after the mend had landed. NOT RUN:
+the full battery (main's run after the merge does it); verify_contrast (no
+colour or token added); Firefox and WebKit (main's lanes).
+
+NOT TESTED HERE: an iPhone (WebKit): whether iOS 26 keeps its glass off
+(the reason for all of it), the top's colour, and whether an app added
+before keeps its bar's style; the live site. The one-glance tell: open
+Blooby from the Home Screen, and the top of "blooby." is as sharp as its
+bottom.

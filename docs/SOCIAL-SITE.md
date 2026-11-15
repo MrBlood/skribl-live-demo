@@ -2157,7 +2157,12 @@ player; a tap skips it, Reduce Motion keeps it still, a picture that does not
 come never holds the page, and the page's own drawings wait for it). The
 light is what lets his dark outline show (5:1 and more at every pose; 1.1:1 on
 the night alone). The Pad's and Flip's hello at blooby.app falls the same way
-now.
+now. THE APP'S TOP EDGE (the owner, Nov 15: "the top bar is fuzzy on top"):
+iOS 26 lays a glass blur over the top of a Home Screen web app; in the app
+(`is-app` on <html>, from `splash-boot.js`) every page has a 6px strip of its
+own ground fixed at the top, which WebKit reads as an opaque edge and so draws
+no blur there. It cannot be seen: the page scrolls under it as under the
+phone's bar.
 
     /social/manifest.webmanifest    the site's web app manifest (Blooby,
                                     opening on Home)

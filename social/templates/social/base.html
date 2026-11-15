@@ -133,6 +133,10 @@
 {% block scripts %}{% endblock %}
 </head>
 <body{% if hide_nav %} class="focus"{% endif %}>
+{# THE APP'S TOP EDGE: a strip of the page's own ground, shown in the Home
+   Screen app alone, so iOS 26 lays no glass blur over the top of the page
+   (social.css, THE APP'S TOP EDGE). #}
+<div class="app-edge" aria-hidden="true"></div>
 {# THE BLOOBY APP'S SPLASH (the owner, Nov 15: "make a splash screen load
    first and show blooby", on the dark ground "with no stars", then "All yes,
    B with the stage spotlight"): over the page while <html> is-splashing

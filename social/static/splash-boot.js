@@ -26,6 +26,10 @@
  * their way while the page is still parsed; splash.js asks for the same
  * addresses and the browser hands them over.
  *
+ * THE APP, EVERY PAGE OF IT, says so too, splash or none: <html> gets
+ * is-app, which keeps iOS 26's glass off the app's top edge (social.css,
+ * THE APP'S TOP EDGE).
+ *
  * Automation asks for it (window.__bloobySplashForce, before the page loads),
  * as Skribl's hello is asked for: every suite's browser is a tab. */
 (function () {
@@ -36,6 +40,7 @@
   var app = nav.standalone === true || window.__bloobySplashForce === true;
   try { app = app || window.matchMedia('(display-mode: standalone)').matches; } catch (e) { /* none */ }
   if (!app) return;
+  root.classList.add('is-app');
   try {
     if (window.sessionStorage.getItem('blooby.splash.launch')) return;
     window.sessionStorage.setItem('blooby.splash.launch', '1');
