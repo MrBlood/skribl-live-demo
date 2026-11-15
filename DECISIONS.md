@@ -41002,4 +41002,13 @@ own in a throwaway copy, an untouched copy green beside them):
   compose through Make and the composer's Draw.
 - verify_socialfollow 7: the pill is the first thing under the header.
 - verify_socialprofile 16: your own empty Posts tab's new words.
-Red for: Home's box put back; the old empty words.
+Red for: Home's box put back (verify_composer 1, verify_socialposts 1,
+verify_socialfollow 7), the old empty words (verify_socialposts 1,
+verify_socialprofile 16). The controls: 4/4, 1/1, 6/6, 9/9.
+FOUND ON THE WAY: verify_socialfollow 7's switch row went red as built,
+alone too. It scrolls the page "down to the pill", the pill 160px under the
+window's top, and asks that the page was scrolled at all (so a switch that
+jumps the page has somewhere to jump from). With the pill now the first
+thing under the header, 160px under it is no scroll. It scrolls the pill to
+12px under the window's top now (46px of scroll); red for a switch that
+scrolls the page to its top (a break in follows.js), green as built.

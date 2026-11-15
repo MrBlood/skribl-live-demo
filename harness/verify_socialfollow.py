@@ -1620,7 +1620,9 @@ with sync_playwright() as p:
                     pick(vic, "following")
                     ctx, pg = browser_as(b, vic, scheme=scheme, reduced=reduced)
                     go(pg, "/social/", wait=600)
-                    y = pg.evaluate("() => { const p = document.querySelector('[data-home-pill]'); const y = Math.max(0, p.getBoundingClientRect().top + scrollY - 160); scrollTo(0, y); return scrollY; }")
+                    # Scrolled down to the pill: its top 12px under the window's (the pill is the first thing under the
+                    # header since Home's box went, Nov 14, so 160px under it, as before, is no scroll at all).
+                    y = pg.evaluate("() => { const p = document.querySelector('[data-home-pill]'); const y = Math.max(0, p.getBoundingClientRect().top + scrollY - 12); scrollTo(0, y); return scrollY; }")
                     pg.wait_for_timeout(300)
                     pg.evaluate(PFRAMES, [1500])
                     pg.locator("[data-home-pill] button[data-show=everyone]").tap()
