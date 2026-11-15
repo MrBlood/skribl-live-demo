@@ -1284,7 +1284,7 @@ with sync_playwright() as p_:
         check("an empty profile says it in its own words, tab by tab: to its own person what puts something there"
               " (Posts: say something on Home and draw it; the Gallery: share one in a post), to anybody else only"
               " that there is nothing yet, and that it comes when they share one",
-              own_empty == ("No posts yet. Say something on Home, then draw it, and your posts show up here.",
+              own_empty == ("No posts yet. Tap Make to share one, and your posts show up here.",
                             "No drawings here yet. Share one in a post, and it shows up here.")
               and their_empty == theirs_words and nobodys_empty == theirs_words,
               f"own {own_empty!r}; Juno's view {their_empty!r}; signed out {nobodys_empty!r}")
@@ -3190,7 +3190,7 @@ print("PLAN " + json.dumps(out))
             pg.goto(BASE + "/social/@tabola" + path)
             empty[label] = pg.evaluate(PANEL)
             close_ctx(ctx, pg)
-        want_e = {"own posts": "No posts yet. Say something on Home, then draw it, and your posts show up here.",
+        want_e = {"own posts": "No posts yet. Tap Make to share one, and your posts show up here.",
                   "own gallery": "No drawings here yet. Share one in a post, and it shows up here.",
                   "own likes": "Nothing liked yet. Tap the heart on a post you love, and it’s kept here. Only you can"
                                " see your likes.",
@@ -3407,7 +3407,7 @@ print("PLAN " + json.dumps(out))
               "stopped" not in rm and rg.get("gone") and rg.get("fading", 0) >= 4 and rg.get("still while seen")
               and rg.get("moving") == 1 and rg.get("way", 0) >= 100 and rg.get("at") == ["/social/@delmo"]
               and last.get("at") == "/social/@delmo" and last.get("cards") == 0
-              and last.get("words") == "No posts yet. Say something on Home, then draw it, and your posts show up here."
+              and last.get("words") == "No posts yet. Tap Make to share one, and your posts show up here."
               and last.get("op") == 1 and "prof-tab" in (last.get("focus") or "")
               and not db("select 1 from social_posts where person_id = (select id from social_people where handle_key = 'delmo')"),
               json.dumps(rm))

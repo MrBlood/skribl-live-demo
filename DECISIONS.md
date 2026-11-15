@@ -40961,3 +40961,54 @@ in the two parts.
 
 NOT TESTED HERE: an iPhone; the stand-in plays Chrome's order of events as
 the owner's screenshots show it.
+
+## After v330 -- Home has no box at the top: Make is the way to post
+
+The owner, Nov 14 (about 6:55 PM), on their phone, the evening the composer
+merged: "Clicking in the top box goes the same as make. By the way, why is
+the top 'say something' there? Why not make as way to post? Do we need post
+at top?" Mocked on the real page (Home now beside A, no box; a touch phone
+and a desk, light and dark): without the box the posts start 164px higher
+(the pill from 222 to 58 under the page's top, the first drawing from 390 to
+226), a second post in sight on a phone before any scroll. Cal's pick, A;
+the owner: "All yes". (The ask just before it, Yours on Home's box, is moot:
+Yours is in the composer.)
+
+WHAT CHANGES:
+- Home's box (your face, "Say something, then draw it…", Draw and Flip) is
+  gone from feed.html: Make (the bar's on a phone, the rail's on a desk) is
+  the way to post, and opens the composer as it did. Home opens on its pill,
+  Following | Everyone, then the posts.
+- The words that pointed at the box point at Make: an empty Home, "No posts
+  yet. Tap Make to share your first one."; your own empty Posts tab, "No
+  posts yet. Tap Make to share one, and your posts show up here."
+- compose.js opens on Make alone (Home's three openers and the path that
+  raised an editor straight from Home's Draw and Flip are gone; the
+  composer's own Draw and Flip do that). The one style only Home's box wore
+  (.cmp-row-say) is gone; the card's styles stay, the comment box wears them.
+
+PAD AND FLIP: nothing changes in either editor.
+
+CONTRAST: nothing new; no colour or token changes, and no word moves onto a
+new ground.
+
+THE CHECKS, turned to guard the change (each shown red by a break of its
+own in a throwaway copy, an untouched copy green beside them):
+- verify_composer 1: Home has no box (nothing of one in the page, not its
+  words), its pill the first thing under the header and its posts under the
+  pill, and the bar's Make opens the composer with the field focused.
+- verify_socialposts 1: Home signed in has no box; Make opens the composer,
+  its field ready; an empty Home says to tap Make. Its sections 2 and 3
+  compose through Make and the composer's Draw.
+- verify_socialfollow 7: the pill is the first thing under the header.
+- verify_socialprofile 16: your own empty Posts tab's new words.
+Red for: Home's box put back (verify_composer 1, verify_socialposts 1,
+verify_socialfollow 7), the old empty words (verify_socialposts 1,
+verify_socialprofile 16). The controls: 4/4, 1/1, 6/6, 9/9.
+FOUND ON THE WAY: verify_socialfollow 7's switch row went red as built,
+alone too. It scrolls the page "down to the pill", the pill 160px under the
+window's top, and asks that the page was scrolled at all (so a switch that
+jumps the page has somewhere to jump from). With the pill now the first
+thing under the header, 160px under it is no scroll. It scrolls the pill to
+12px under the window's top now (46px of scroll); red for a switch that
+scrolls the page to its top (a break in follows.js), green as built.

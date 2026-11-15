@@ -1549,7 +1549,7 @@ with sync_playwright() as p:
             stopped(6, exc)
 
     # ------------------------------------------------------------------ 7
-    if part(7, "Home's pill: under the composer, the Gallery's own; Everyone, then Following; the pick kept; the switch read on every frame"):
+    if part(7, "Home's pill: first under the header, the Gallery's own; Everyone, then Following; the pick kept; the switch read on every frame"):
         try:
             vic = someone(b, "vic", "Vic Bell")
             wes = someone(b, "wes", "Wes Cruz")
@@ -1563,16 +1563,17 @@ with sync_playwright() as p:
             follow(vic, "wes")
             go(pg, "/social/")
             after = pg.evaluate(PILL, "[data-home-pill]")
-            where = pg.evaluate("""() => { const c = document.querySelector('[data-compose-row]').getBoundingClientRect(),
+            where = pg.evaluate("""() => { const t = document.querySelector('body > .top').getBoundingClientRect(),
               p = document.querySelector('[data-home-pill]').getBoundingClientRect(), f = document.querySelector('[data-feed] > *').getBoundingClientRect();
-              return { composer: c.bottom, top: p.top, bottom: p.bottom, first: f.top }; }""")
+              return { header: t.bottom, top: p.top, bottom: p.bottom, first: f.top,
+                       box: document.querySelectorAll('[data-compose-row], [data-compose-go]').length }; }""")
             check("Home opens on Everyone before you follow anybody, and on Following once you do",
                   before and before["pressed"] == "Everyone" and after and after["pressed"] == "Following",
                   f"{before and before['pressed']} then {after and after['pressed']}")
-            check("the pill sits under Home's row (the composer's, since Nov 14), over the posts: the Gallery's New / Hot value for value (44px, the"
+            check("the pill is the first thing under the header (Home has no box since the owner's \"All yes\", Nov 14), over the posts: the Gallery's New / Hot value for value (44px, the"
                   " card's ground and line, 12px round, the tint rgba(124, 92, 255, 0.22) under the chosen one, 13px words"
                   " at 600, the chosen one's ink and the other's), each option 44px to a finger",
-                  after and where["composer"] < where["top"] and where["bottom"] < where["first"]
+                  after and where["box"] == 0 and 0 <= where["top"] - where["header"] <= 24 and where["bottom"] < where["first"]
                   and after["h"] == 44 and after["bg"] == CARD["light"] and after["line"] == CARD_LINE["light"]
                   and after["radius"] == "12px" and after["tint"] == TINT and after["tintOp"] == 1 and after["under"]
                   and [x["words"] for x in after["buttons"]] == ["Following", "Everyone"]
@@ -1619,7 +1620,9 @@ with sync_playwright() as p:
                     pick(vic, "following")
                     ctx, pg = browser_as(b, vic, scheme=scheme, reduced=reduced)
                     go(pg, "/social/", wait=600)
-                    y = pg.evaluate("() => { const p = document.querySelector('[data-home-pill]'); const y = Math.max(0, p.getBoundingClientRect().top + scrollY - 160); scrollTo(0, y); return scrollY; }")
+                    # Scrolled down to the pill: its top 12px under the window's (the pill is the first thing under the
+                    # header since Home's box went, Nov 14, so 160px under it, as before, is no scroll at all).
+                    y = pg.evaluate("() => { const p = document.querySelector('[data-home-pill]'); const y = Math.max(0, p.getBoundingClientRect().top + scrollY - 12); scrollTo(0, y); return scrollY; }")
                     pg.wait_for_timeout(300)
                     pg.evaluate(PFRAMES, [1500])
                     pg.locator("[data-home-pill] button[data-show=everyone]").tap()

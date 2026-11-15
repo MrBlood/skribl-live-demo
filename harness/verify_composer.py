@@ -577,7 +577,7 @@ with sync_playwright() as p:
     b = p.chromium.launch()
 
     # ------------------------------------------------------------------ 1
-    if part(1, "one Make, everywhere: the bar and the rail open the composer on every page, Home's row the same"):
+    if part(1, "one Make, everywhere: the bar and the rail open the composer on every page; Home has no box of its own"):
         try:
             mira = someone(b, "mira", "Mira Okafor")
             st, made = mira.api("POST", "/social/posts", {"words": "Section 1's post", "payload": drawing(seed=1)})
@@ -620,28 +620,27 @@ with sync_playwright() as p:
                   and dk["width"] == 600 and abs((dk["left"] + dk["right"]) / 2 - 640) <= 2
                   and abs((dk["top"] + dk["bottom"]) / 2 - 430) <= 2,
                   f"phone {[ph[k] for k in ('top', 'bottom', 'left', 'right')]}; desk {[dk[k] for k in ('top', 'bottom', 'left', 'right', 'width')]}")
+            # HOME HAS NO BOX AT THE TOP (the owner's "All yes", Nov 14: "Why not make as way to post?"): its pill
+            # is the first thing under the header, nothing of a box is in the page, and the bar's Make opens the
+            # composer, the field focused.
             ctx, pg = browser_as(b, mira)
             go(pg, "/social/")
-            row = pg.evaluate("""() => { const r = document.querySelector('[data-compose-row]');
-              return r && { words: r.querySelector('[data-compose-go=words]').textContent.trim(),
-                tools: [...r.querySelectorAll('[data-compose-go]')].map(b => b.getAttribute('data-compose-go')),
-                post: !!r.querySelector('[data-compose-post], .composer-post') }; }""")
-            tap(pg, "[data-compose-row] [data-compose-go=words]")
+            home = pg.evaluate("""() => { const top = document.querySelector('body > .top').getBoundingClientRect().bottom,
+                pill = document.querySelector('[data-home-pill]'), card = document.querySelector('.post-card');
+              const p = pill && pill.getBoundingClientRect(), c = card && card.getBoundingClientRect();
+              return { box: document.querySelectorAll('[data-compose-row], [data-compose-go], .cmp-row-say').length,
+                say: document.body.innerText.includes('Say something, then draw it'),
+                pill: p ? Math.round(p.top - top) : null, card: c ? Math.round(c.top - p.bottom) : null }; }""")
+            press(pg, "nav.nav .tab-make")
             pg.wait_for_timeout(700)
-            by_words = pg.evaluate(SHEET)
-            press(pg, "#composeSheet [data-compose-cancel]")
-            pg.wait_for_timeout(700)
-            tap(pg, "[data-compose-row] [data-compose-go=pad]")
-            fr = editor_frame(pg, "skribl-pad")
-            by_draw = pg.evaluate("""() => ({ sheet: document.getElementById('composeSheet').classList.contains('is-open'),
-              pad: !document.getElementById('composePad').hidden, src: document.querySelector('#composePad iframe').getAttribute('src') })""")
+            by_make = pg.evaluate(SHEET)
             close_ctx(ctx, pg)
-            check("Home's row (\"Say something, then draw it…\", Draw, Flip, no Post) opens the same sheet: its words with the"
-                  " field focused, its Draw with Skribl's Pad rising over the sheet (compose=1&gallery=1)",
-                  row == {"words": "Say something, then draw it…", "tools": ["words", "pad", "flip"], "post": False}
-                  and by_words["open"] and by_words["focus"] == "words" and bool(fr) and by_draw["sheet"] and by_draw["pad"]
-                  and "compose=1" in (by_draw["src"] or "") and "gallery=1" in (by_draw["src"] or ""),
-                  f"row {row}; by its words {by_words and {k: by_words[k] for k in ('open', 'focus')}}; by Draw {by_draw}, frame {bool(fr)}")
+            check("Home has no box at the top: nothing of one in the page, its pill the first thing under the header and its"
+                  " posts under the pill, and the bar's Make opens the composer with the field focused (the owner's \"All"
+                  " yes\", Nov 14)",
+                  home["box"] == 0 and not home["say"] and home["pill"] is not None and 0 <= home["pill"] <= 24
+                  and home["card"] is not None and 0 <= home["card"] <= 24 and by_make["open"] and by_make["focus"] == "words",
+                  f"Home {home}; by Make {by_make and {k: by_make[k] for k in ('open', 'focus')}}")
             nctx, npg = browser_as(b, None)
             go(npg, "/social/")
             raw = urllib.request.urlopen(BASE + "/social/explore", timeout=20).read().decode()

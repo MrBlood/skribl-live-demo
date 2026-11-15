@@ -8,9 +8,9 @@
  * a skribl") open the composer, Make's own sheet made tall (social.js's
  * SocialSheet: it glides, a desk's card rises a little as it fades in, Reduce
  * Motion fades it where it sits; a tap outside, Esc and a swipe down put it
- * away, as Cancel does; Tab stays in it). Home's row opens the same sheet
- * ([data-compose-go]: its words with the field ready, its Draw and Flip with
- * that editor rising over the sheet). Opened, the words' field has focus, so
+ * away, as Cancel does; Tab stays in it). Home has no box of its own (the
+ * owner, Nov 14: "Why not make as way to post?"): Make is the way to post.
+ * Opened, the words' field has focus, so
  * a phone's keyboard comes up with it, and the sheet rides above the keyboard.
  * Cancel keeps what is in it for as long as the page is open: the next Make
  * shows it again.
@@ -87,7 +87,7 @@
   var sending = false;
   var view = 'write';
 
-  var openers = all('[data-make], [data-compose-go]', doc);
+  var openers = all('[data-make]', doc);
   var sheet = window.SocialSheet(wrap, {
     openers: openers, doorCloses: false, ownTouch: '.cmp-scroll, .cmp-lists',
     first: function () { return view === 'pick' ? backBtn : words; },
@@ -349,15 +349,9 @@
   openers.forEach(function (o) {
     o.addEventListener('click', function (e) {
       e.preventDefault();
-      var go = o.getAttribute('data-compose-go');
       sheet.open(o);
       lift();
       grow();
-      /* Home's Draw and Flip: their editor rises over the sheet. */
-      if ((go === 'pad' || go === 'flip') && overs[go]) {
-        if (att) { tell(sayBox, say('one_drawing')); return; }
-        overs[go].open(tools.filter(function (c) { return c.getAttribute('data-compose-open') === go; })[0] || o);
-      }
     });
   });
 

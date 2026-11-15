@@ -575,9 +575,10 @@ with drawn faces at /social") says what each check was shown red by.
 From the approved mocks (Home's composer and feed, "A post", the ⋯ sheet)
 and the owner's "all yes" to piece 4's choices (Nov 11). `social/posts.py`:
 
-    /social/              Home, signed in: "Say something, then draw it…",
-                          then everyone's posts, newest first (Following comes
-                          with phase 2). Signed out, the first visit, as before.
+    /social/              Home, signed in: everyone's posts, newest first
+                          (Following came with phase 2; Home's box, "Say
+                          something, then draw it…", went on Nov 14: Make is
+                          the way to post). Signed out, the first visit.
     /social/posts         a post: the words and the drawing (JSON)
     /social/feed          the next page of the feed, for Load more (JSON)
     /social/p/<id>        a post's own page: its drawing plays by itself
@@ -1922,9 +1923,11 @@ follow step 7.
 **The composer is built** (part two's item 1; DECISIONS, "The composer: one
 Make, and an older drawing's conversation comes with it"). ONE MAKE,
 EVERYWHERE: for somebody signed in, Make (the bar on a phone, the rail on a
-desk) opens the composer on every page with the bar, and Home's row ("Say
-something, then draw it…", Draw and Flip, as the box looked; no Post of its
-own) opens the same sheet (`_compose.html`, `compose.js`, `compose.py`). On
+desk) opens the composer on every page with the bar (`_compose.html`,
+`compose.js`, `compose.py`). HOME HAS NO BOX AT THE TOP (the owner, Nov 14:
+"Why not make as way to post? Do we need post at top?", then "All yes" to
+the mock without it): Make is the way to post, and Home opens on its pill
+and its posts, 164px higher. On
 a phone it rises almost to the top and rides above the keyboard (social.js's
 SocialKeyboard, which a comment's sheet shares: it reads the keyboard again
 until it rests, since a phone can report a size the keyboard only passes
