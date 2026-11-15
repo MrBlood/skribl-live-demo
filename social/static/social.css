@@ -2047,6 +2047,9 @@ button.fo-n {
   display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: 0; padding: 0; border: 0;
   background: none; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
+/* A count that has gone to zero on your own page, hidden in place (follows.js),
+   as the page draws a zero: nothing. */
+.fo-counts [hidden] { display: none; }
 .fo-new { color: var(--accent-ink); font-weight: 600; }
 @media (min-width: 900px) { .fo-counts { justify-content: flex-start; } }
 /* THE ONE PILL: the Gallery's New / Hot (gallerysection.css .seg-track, as
