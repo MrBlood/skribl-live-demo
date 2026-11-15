@@ -43500,7 +43500,13 @@ with an untouched copy green beside it:
   asks it to be Skribl's light ground in light (red: the bar left dark in
   light).
 
-THE AFFECTED SUITES, side by side: [COUNTS]
+THE AFFECTED SUITES, side by side (run_parallel -j 3, on 4c40ab46), thirteen
+ok in 26.2 minutes: verify_contrast 645/645, verify_socialreposts 50/50,
+verify_library 248/248, verify_a11y 444/444, verify_a11ypages 162/162,
+verify_galib 176/176, verify_onepill 2878/2878, verify_theme 124/124,
+verify_identity 135/135, verify_composer 38/38, verify_socialmentions 50/50,
+verify_posted 163/163, verify_docs 144/144. NOT RUN: the full battery
+(main's run after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell: a
 quote post's own page in dark, the quoted post a deep purple card.
