@@ -323,9 +323,12 @@ with sync_playwright() as p:
     check("...sitting above the tools, not over them", _tb[0] <= _tb[1], str(_tb))
     _tap(hp, "homeScreenBannerOpen")
     _steps = hp.evaluate("() => [...document.querySelectorAll('#homeScreenSteps .hs-list li')].map(l => l.textContent.replace(/\\s+/g, ' ').trim())")
-    check("...and tapping it opens the steps: Share, Add to Home Screen, Add",
+    # iOS 26's steps (the owner's "All yes", Nov 15, with the site's own): Share sits behind Safari's ⋯, and
+    # "Open as Web App" is a switch in Add to Home Screen (verify_socialapp 7 reads every word).
+    check("...and tapping it opens the steps: ⋯ then Share, Add to Home Screen, Open as Web App on and Add",
           hp.evaluate(_PAINTED, "homeScreenSteps") and len(_steps) == 3
-          and "Share" in _steps[0] and "Add to Home Screen" in _steps[1] and _steps[2] == "Tap Add",
+          and "⋯" in _steps[0] and "Share" in _steps[0] and "Add to Home Screen" in _steps[1]
+          and _steps[2] == "Keep Open as Web App on, and tap Add",
           str(_steps))
     hp.keyboard.press("Escape")
     hp.wait_for_timeout(300)

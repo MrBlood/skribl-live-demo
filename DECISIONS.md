@@ -42595,7 +42595,31 @@ it happens; Reload where the browser's bar is gone. Playful: Blooby himself,
 waving, on your Home Screen. Powerful: full screen, with the Pad, Flip and
 the Library inside it.
 
-THE AFFECTED SUITES, side by side: [COUNTS]
+THE AFFECTED SUITES, side by side (harness/run_parallel.py, -j 3, its logs in
+a folder of their own), on the tree with this entry in it (2b663132), the box
+to itself: verify_socialapp 35/35, verify_socialactivity 46/46, verify_social
+41/41, verify_socialauth 69/69, verify_hostseams 139/139, verify_icons 60/60,
+verify_docs 144/144, verify_seam 515/515, verify_socialposts 81/81,
+verify_socialprofile 93/93, verify_a11y 444/444, verify_contrast 645/645:
+twelve suites ok in 38.1 minutes. Two were red, both real reds of this change
+(older rows reading the ☰'s rows and the Pad's steps as they were), each
+mended and shown both ways in throwaway copies:
+
+- verify_socialsettings 41/45 beside: section 10 read every row in the ☰,
+  hidden or not, and tapped "the ☰'s button", three now. It reads the rows
+  the sheet shows and taps Sign out's own form (96a8b9ba). 45/45 alone, after
+  the mend (run_parallel calls it INTERMITTENT, having re-run it alone once
+  the mend had landed: a defect mended, not load). Control 11/11; the old
+  reading put back 7/11; the Home Screen row shown everywhere 8/11.
+- verify_identity 134/135: its Home Screen row read the Pad's old third
+  step, "Tap Add". It reads iOS 26's three now. Control 135/135; the Pad's old
+  step back 134/135; the old reading put back 134/135.
+
+NOT RUN: the full battery (main's run after the merge does it: no migration);
+PostgreSQL (nothing here reads or writes a table); Firefox and WebKit (main's
+lanes); cssgraph and verify_player_isolation (styles.css untouched: the site's
+CSS is social.css); verify_pointerpad and the dock's suites (no header or
+dock changed).
 
 NOT TESTED HERE: WebKit, so an iPhone: whether iOS 26 keeps the Pad inside
 the app by the manifest's scope, the clock bar's colour (theme-color), whether
