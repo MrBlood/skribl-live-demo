@@ -2130,12 +2130,12 @@ with sync_playwright() as _spa:
         const look = () => { const c = getComputedStyle(lb); return c.backgroundColor + ' ' + c.color; };
         const lookBefore = look();
         lb.click();
-        return { state: st.state, loaded: st.loaded,
+        return { state: st.state, loaded: st.loaded, played: st.elapsedMs > 0,
                  loopBefore: loopBefore, loopAfter: pl.looping(),
                  lookBefore: lookBefore, lookAfter: look(),
                  lit: lb.classList.contains('on') }; }""")
     check("pressing play on a card plays THAT card's drawing",
-          not _fdrive.get("noPlayer") and _fdrive["state"] == "playing"
+          not _fdrive.get("noPlayer") and (_fdrive["state"] == "playing" or _fdrive.get("played"))
           and _fdrive["loaded"],
           f"{_fdrive} \u2014 the footer holds no state of its own; it asks the "
           f"player, which is what keeps it honest when a replay ends by itself")
@@ -3076,6 +3076,9 @@ with sync_playwright() as _spf:
     browsing.goto(_pf, BASE, "/gallery")
     _pf.wait_for_selector(".tile .tileStage", timeout=15000)
     _pf.wait_for_timeout(1200)
+    # A PLAYING card is what these rows watch, for seconds at a time: repeat
+    # on (it starts off since Nov 15), so a short drawing is still playing.
+    _pf.evaluate("() => SkriblInline.players().forEach(p => p.setLoop && p.setLoop(true))")
 
     # PAINT, at the bar's own centre. A rect says where the bar WOULD be and an
     # opacity-0 ancestor does not move it, so only what is painted there can
@@ -3343,6 +3346,7 @@ _CHURN = r"""async (ms) => {
     const box = stage.querySelector('.skribl-inline');
     const pl = box && box._skriblInline;
     if (!pl) return { missing: true };
+    pl.setLoop && pl.setLoop(true);   // a PLAYING card, for the whole measure (repeat starts off since Nov 15)
     if (pl.state().state !== 'playing') pl.play && pl.play();
     const seen = { controls: 0, records: 0 };
     const mo = new MutationObserver(list => {
