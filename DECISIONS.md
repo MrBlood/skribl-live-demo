@@ -43425,7 +43425,27 @@ with an untouched copy green beside it:
 - verify_socialprofile 11 (control 8/8): You's circle in the bar is 29px,
   its ring round it (red: your face back to 28).
 
-THE AFFECTED SUITES, side by side: [COUNTS]
+ALSO CHANGED: three rows that read the old bar. verify_socialactivity 10
+kept a floor of three words on the phone's chrome on Home, which has none
+now (the floor stays on every other reading); verify_socialposts 7's floor
+for a post's page on a phone, which reads 7 this section alone, is 6, as
+Home's 7 is; verify_socialprofile 4 took You's pen line, inside its icon
+now, for a picture in the circle. Each shown red by a break of its own (the
+desk's chrome read as nothing; a reader that misses the phone's post page;
+a stock silhouette beside You's empty circle), its control green.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3): on 8cde64b5,
+verify_social 44/44, verify_socialauth 71/71, verify_socialsettings 45/45,
+verify_composer 38/38, verify_socialmentions 50/50, verify_socialapp 55/55,
+verify_hostseams 139/139, verify_docs 144/144, verify_a11y 444/444; the
+three above, on the fix (ea748dde): verify_socialactivity 46/46,
+verify_socialprofile 93/93, verify_socialposts 81/81. INTERMITTENT once,
+load: on 8cde64b5 verify_socialposts' "a finger's tap on the drawing plays
+it there" was red beside others (Home's first card in a fresh phone, light,
+not playing within 8 s) and green alone, and green beside others on the fix;
+the bar is not on the cards or their player. NOT RUN: the full battery
+(main's run after the merge does it); verify_contrast (no colour or token
+changed).
 
 NOT TESTED HERE: an iPhone (WebKit): the icons' sizes in Safari's own
 rendering, SF and Segoe UI (the bar holds no words now); the live site. The
