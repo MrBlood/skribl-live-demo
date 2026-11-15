@@ -37,7 +37,17 @@ Chromium's virtual authenticator for the site's people.
   7. THE PAD'S AND FLIP'S STEPS SAY iOS 26's TOO (their one shared partial):
      ⋯ (a screen reader's "More") then Share; Open as Web App; the banner's
      line the same.
-  8. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
+  8. THE SPLASH (the owner, Nov 15: "make a splash screen load first and show
+     blooby ... Fall the same way and compress then pop back the exact same
+     way", on the dark ground "with no stars"): its drawing, the site's hello
+     with the word in the icon's lilac; never in a browser tab; in the app,
+     over the page from the first paint, the night ground with no stars and
+     the bar the same; the first launch writes the word then the blush falls,
+     a later one only the blush; once a launch; a tap lets it go at once;
+     still under Reduce Motion; never held for a drawing that does not come;
+     the page's own drawing waits for it; it fades out on several frames, and
+     the bar comes back; the word and the period read off the paint.
+  9. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALAPP_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
@@ -157,6 +167,9 @@ DESK = dict(viewport={"width": 1280, "height": 860}, device_scale_factor=1)
 STANDALONE = "Object.defineProperty(navigator, 'standalone', { value: true, configurable: true });"
 DISPLAY_STANDALONE = """(() => { const real = window.matchMedia.bind(window);
   window.matchMedia = q => /display-mode:\\s*standalone/.test(q) ? { matches: true, media: q, addEventListener() {}, removeEventListener() {} } : real(q); })();"""
+# The splash has been, this launch (splash-boot.js): the rows about the ☰ in
+# the app are not about the splash, which section 8 reads.
+SPLASHED = "try { sessionStorage.setItem('blooby.splash.launch', '1'); } catch (e) {}"
 # iPadOS says it is a Mac; a Mac with a touch screen is an iPad.
 IPAD = ("Object.defineProperty(navigator, 'platform', { value: 'MacIntel', configurable: true });"
         "Object.defineProperty(navigator, 'maxTouchPoints', { value: 5, configurable: true });")
@@ -519,8 +532,8 @@ with sync_playwright() as pw:
             got = {}
             for name, who, ua, init in (("iPhone, signed in", mira, IPHONE_UA, ()), ("iPhone, signed out", None, IPHONE_UA, ()),
                                         ("iPad (says Mac)", mira, MAC_UA, (IPAD,)),
-                                        ("Home Screen app (iOS)", mira, IPHONE_UA, (STANDALONE,)),
-                                        ("installed (display standalone)", mira, ANDROID_UA, (DISPLAY_STANDALONE,)),
+                                        ("Home Screen app (iOS)", mira, IPHONE_UA, (STANDALONE, SPLASHED)),
+                                        ("installed (display standalone)", mira, ANDROID_UA, (DISPLAY_STANDALONE, SPLASHED)),
                                         ("Android, no offer", mira, ANDROID_UA, ())):
                 ctx, pg = browser_as(b, who, ua=ua, init=init)
                 go(pg, "/social/")
@@ -657,7 +670,7 @@ with sync_playwright() as pw:
                   g0["n"] >= 8 and g0["up"] and g0["moved"] > 100 and g0["jump"] <= g0["moved"] / 5
                   and g1["n"] >= 2 and abs(g1["moved"]) < 1, json.dumps(glides))
             # Reload, from the Home Screen: the page comes again, from the server.
-            ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE,))
+            ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE, SPLASHED))
             go(pg, "/social/")
             pg.evaluate("() => { window.__before = 1; }")
             open_menu(pg)
@@ -738,12 +751,202 @@ with sync_playwright() as pw:
             stopped(7, exc)
 
     # ------------------------------------------------------------------ 8
-    if part(8, "no page errors, no console errors and no CSP violations"):
+    if part(8, "the splash: the app's first paint, the word and its blush, once a launch, kind"):
+        try:
+            # ITS DRAWING: the site's hello, the word in the icon's lilac.
+            hello = json.load(open(ROOT / "social" / "static" / "brand" / "blooby-hello.json"))
+            spl = json.load(open(ROOT / "social" / "static" / "brand" / "blooby-splash.json"))
+            sys.path.insert(0, str(ROOT / "harness" / "tools"))
+            import importlib
+            tile = importlib.import_module("blooby").ICON_TILE.lower()
+            css = (ROOT / "social" / "static" / "social.css").read_text(encoding="utf-8")
+            blush = re.search(r"--blooby-blush:\s*(#[0-9a-fA-F]{6})", css).group(1).lower()
+            inks = [sorted({q["color"].lower() for q in f["strokes"]}) for f in spl["frames"]]
+            box = lambda f: [round(v) for v in (min(q["x"] for q in f["strokes"]), min(q["y"] for q in f["strokes"]),
+                                                max(q["x"] for q in f["strokes"]), max(q["y"] for q in f["strokes"]))]
+            same = len(spl["frames"]) == len(hello["frames"]) and all(
+                max(abs(a - c) for a, c in zip(box(f), box(g))) <= 2 for f, g in zip(spl["frames"], hello["frames"]))
+            check("its drawing is the site's hello, page for page (the word, then the period's fall, squash and pop, as "
+                  "skribl's i-dot), the word in the icon's lilac (blooby.py's ICON_TILE) and the period in Blooby's blush",
+                  same and inks[0] == [tile] and all(k == [blush] for k in inks[1:])
+                  and spl.get("under") == {"page": 0, "from": 1, "to": len(spl["frames"]) - 1},
+                  f"{len(spl['frames'])} pages, the same as the hello's: {same}; inks {inks[:3]}")
+
+            # NEVER IN A BROWSER TAB: Home and a post's page, signed in.
+            mira = member(b, "mira", "Mira Lopez")
+            ctx, pg = browser_as(b, mira, ua=IPHONE_UA)
+            tab = {}
+            for path in ("/social/", "/social/explore"):
+                pg.goto(BASE + path)
+                pg.wait_for_function("() => document.readyState === 'complete'")
+                tab[path] = pg.evaluate("""() => ({ cls: document.documentElement.className,
+                  shown: getComputedStyle(document.getElementById('bloobySplash')).display })""")
+            close_ctx(ctx, pg)
+            check("never in a browser tab: no splash on Home or the Gallery (only the Home Screen app opens with one)",
+                  all(v == {"cls": "", "shown": "none"} for v in tab.values()), json.dumps(tab))
+
+            # IN THE APP: from the first paint, then every frame until it has gone.
+            WATCH_SPLASH = """() => { window.__sp = []; const t0 = performance.now(); const el = document.getElementById('bloobySplash');
+              const first = { cls: document.documentElement.className, shown: getComputedStyle(el).display,
+                              bar: document.querySelector('meta[name=theme-color]').content };
+              const step = () => { const cs = getComputedStyle(el), c = el.querySelector('canvas');
+                window.__sp.push({ t: performance.now() - t0, shown: cs.display !== 'none', o: +cs.opacity });
+                if (performance.now() - t0 < 5200) requestAnimationFrame(step); };
+              requestAnimationFrame(step); return first; }"""
+            FIRST_PAINT = "document.addEventListener('DOMContentLoaded', () => { const el = document.getElementById('bloobySplash'); window.__dcl = { cls: document.documentElement.className, shown: el && getComputedStyle(el).display, bar: (document.querySelector('meta[name=theme-color]') || {}).content }; });"
+            INK = """([tile, blush]) => { const c = document.querySelector('#bloobySplash canvas'); if (!c) return null;
+              const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const hx = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+              const T = hx(tile), B = hx(blush); let w = 0, p = 0;
+              for (let i = 0; i < x.length; i += 16) { if (x[i + 3] < 128) continue;
+                const d = (a) => Math.abs(x[i] - a[0]) + Math.abs(x[i + 1] - a[1]) + Math.abs(x[i + 2] - a[2]);
+                if (d(T) < 60) w++; else if (d(B) < 60) p++; }
+              return [w, p]; }"""
+            ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE, FIRST_PAINT))
+            pg.goto(BASE + "/social/")
+            first = pg.evaluate(WATCH_SPLASH)
+            ink = []
+            for at in (500, 1300, 1700, 2600):
+                pg.wait_for_timeout(max(0, at - (ink[-1][0] if ink else 0)))
+                ink.append((at, pg.evaluate(INK, [tile, blush])))
+            # the night ground with no stars, as painted: the top, the foot, and no light dot between
+            ground = pg.evaluate("""() => new Promise(res => { const el = document.getElementById('bloobySplash');
+              const cs = getComputedStyle(el); res({ bg: cs.backgroundImage }); })""")
+            shot = pg.screenshot()
+            pg.wait_for_timeout(2600)
+            fr = pg.evaluate("() => window.__sp")
+            after = pg.evaluate("""() => ({ cls: document.documentElement.className, bar: document.querySelector('meta[name=theme-color]').content,
+              seen: localStorage.getItem('blooby.splash.v1'), launch: sessionStorage.getItem('blooby.splash.launch') })""")
+            dcl = pg.evaluate("() => window.__dcl")
+            pg.goto(BASE + "/social/explore")
+            pg.wait_for_function("() => document.readyState === 'complete'")
+            pg.wait_for_timeout(300)
+            next_page = pg.evaluate("() => document.documentElement.className")
+            close_ctx(ctx, pg)
+            im = Image.open(io.BytesIO(shot)).convert("RGB")
+            W, H = im.size
+            top, foot = im.getpixel((W // 2, 3)), im.getpixel((W // 2, H - 4))
+            stars = sum(1 for y in range(10, H // 3, 3) for x in range(0, W, 3) if sum(im.getpixel((x, y))) > 300)
+            check("in the app, the first launch: over the page from the first paint (is-splashing and shown before the "
+                  "page's scripts), the browser's bar in its night (#0f1218), the night ground from the dark ground at "
+                  "the top to the deep purple at the foot, and no stars",
+                  dcl and "is-splashing" in dcl["cls"] and dcl["shown"] == "grid" and dcl["bar"] == "#0f1218"
+                  and max(abs(a - c) for a, c in zip(top, (0x0f, 0x12, 0x18))) <= 6
+                  and max(abs(a - c) for a, c in zip(foot, (0x2e, 0x21, 0x78))) <= 10 and stars == 0,
+                  json.dumps({"dcl": dcl, "top": top, "foot": foot, "stars": stars}))
+            check("...the word writes itself first, the blush only once it is written (it falls), then both whole",
+                  all(v is not None for _, v in ink) and ink[0][1][0] > 0 and ink[0][1][1] == 0
+                  and ink[1][1][0] > ink[0][1][0] and ink[1][1][1] == 0 and ink[2][1][1] > 0
+                  and ink[3][1][0] >= ink[1][1][0] and ink[3][1][1] > 0, json.dumps(ink))
+            shown = [f for f in fr if f["shown"]]
+            fade = [f["o"] for f in shown if f["o"] < 0.999]
+            gone_at = max((f["t"] for f in shown), default=0)
+            steps = [abs(a - c) for a, c in zip(fade, fade[1:])]
+            check("...then it fades on several frames (no frame more than a third at once) and is gone by 4 s, the "
+                  "bar back in the page's ground, marked seen and this launch's",
+                  len(fade) >= 6 and (max(steps) if steps else 1) <= 0.34 and 2600 <= gone_at <= 4000
+                  and after["cls"] == "" and after["bar"] == "#f6f8fa" and after["seen"] == "1" and after["launch"] == "1",
+                  json.dumps({"fade": [round(v, 2) for v in fade[:8]], "gone": round(gone_at), "after": after}))
+            check("...once a launch: the next page in the app has none", next_page == "", next_page)
+
+            # A LATER LAUNCH: the word there, only the blush falls, and it is quick.
+            ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE, "try { localStorage.setItem('blooby.splash.v1', '1'); } catch (e) {}"))
+            pg.goto(BASE + "/social/")
+            pg.evaluate(WATCH_SPLASH)
+            pg.wait_for_function("() => { const c = document.querySelector('#bloobySplash canvas'); return !!c && c.width > 0; }")
+            pg.wait_for_timeout(120)
+            early = pg.evaluate(INK, [tile, blush])
+            pg.wait_for_timeout(2900)
+            fr = pg.evaluate("() => window.__sp")
+            close_ctx(ctx, pg)
+            gone_at = max((f["t"] for f in fr if f["shown"]), default=0)
+            check("a later launch: the word is there from the start and only the blush falls; gone by 2.4 s",
+                  early is not None and early[0] >= 0.9 * ink[3][1][0] and gone_at <= 2400,
+                  json.dumps({"early": early, "whole": ink[3][1], "gone": round(gone_at)}))
+
+            # A TAP LETS IT GO AT ONCE, fading.
+            ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE,))
+            pg.goto(BASE + "/social/")
+            pg.evaluate(WATCH_SPLASH)
+            pg.wait_for_timeout(500)
+            pg.touchscreen.tap(201, 437)
+            pg.wait_for_timeout(1000)
+            fr = pg.evaluate("() => window.__sp")
+            close_ctx(ctx, pg)
+            gone_at = max((f["t"] for f in fr if f["shown"]), default=0)
+            fading = [f["o"] for f in fr if f["shown"] and f["o"] < 0.999]
+            check("a tap lets it go at once: fading on several frames from the tap, gone within 0.6 s of it",
+                  len(fading) >= 4 and gone_at <= 500 + 650, json.dumps({"gone": round(gone_at), "fading": len(fading)}))
+
+            # REDUCE MOTION: the finished word, still, then the fade.
+            ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE,), reduced=True)
+            pg.goto(BASE + "/social/")
+            pg.evaluate(WATCH_SPLASH)
+            pg.wait_for_function("() => { const c = document.querySelector('#bloobySplash canvas'); return !!c && c.width > 0; }")
+            pg.wait_for_timeout(150)
+            a1 = pg.evaluate(INK, [tile, blush])
+            pg.wait_for_timeout(300)
+            a2 = pg.evaluate(INK, [tile, blush])
+            pg.wait_for_timeout(1600)
+            fr = pg.evaluate("() => window.__sp")
+            close_ctx(ctx, pg)
+            gone_at = max((f["t"] for f in fr if f["shown"]), default=0)
+            check("Reduce Motion: the finished word with its period, still (the same ink a moment later), then the fade; "
+                  "gone by 1.6 s",
+                  a1 is not None and a1 == a2 and a1[1] > 0 and a1[0] >= 0.9 * ink[3][1][0] and gone_at <= 1600,
+                  json.dumps({"a": a1, "b": a2, "gone": round(gone_at)}))
+
+            # NEVER HELD FOR A DRAWING THAT DOES NOT COME.
+            ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE,))
+            pg.route("**/brand/blooby-splash.json*", lambda route: route.fulfill(status=404, body="no"))
+            pg.goto(BASE + "/social/")
+            pg.evaluate(WATCH_SPLASH)
+            pg.wait_for_timeout(1500)
+            fr = pg.evaluate("() => window.__sp")
+            close_ctx(ctx, pg)
+            gone_at = max((f["t"] for f in fr if f["shown"]), default=0)
+            check("the drawing not there: it goes at once, fading (gone within 0.7 s), never holding the page",
+                  gone_at <= 700, json.dumps({"gone": round(gone_at)}))
+
+            # THE PAGE'S OWN DRAWING WAITS: Home's first visit draws Blooby's card, signed out, not under the splash.
+            ctx, pg = browser_as(b, None, ua=IPHONE_UA, init=(STANDALONE,))
+            pg.goto(BASE + "/social/")
+            pg.evaluate("""() => { window.__card = []; const t0 = performance.now(); const step = () => {
+                const sp = document.documentElement.classList.contains('is-splashing');
+                const p = (window.SkriblInline && SkriblInline.players ? SkriblInline.players() : []).find(x => x.el && x.el.id === 'helloCard');
+                window.__card.push({ t: performance.now() - t0, sp, playing: !!p && p.state().state === 'playing' });
+                if (performance.now() - t0 < 5000) requestAnimationFrame(step); }; requestAnimationFrame(step); }""")
+            pg.wait_for_timeout(5100)
+            card = pg.evaluate("() => window.__card")
+            close_ctx(ctx, pg)
+            under = sum(1 for f in card if f["sp"] and f["playing"])
+            later = any(f["playing"] for f in card if not f["sp"])
+            check("the page's own drawing waits for it: Home's first visit draws Blooby's card once the splash has gone, "
+                  "never under it", under == 0 and later, json.dumps({"under": under, "after": later}))
+
+            # THE WORD AND THE PERIOD, READ OFF THE PAINT: at rest, against the ground beside them.
+            img = im
+            def lum(c):
+                v = [x / 255 for x in c]
+                v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+                return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+            def ratio(a, c):
+                x, y = lum(a), lum(c)
+                return round((max(x, y) + 0.05) / (min(x, y) + 0.05), 2)
+            hx = lambda h: tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+            beside = img.getpixel((10, H // 2 - 30))
+            check("the word and its period read off the paint against the ground beside them: the word 4.5:1 and more, "
+                  "the period 3:1 and more", ratio(hx(tile), beside) >= 4.5 and ratio(hx(blush), beside) >= 3.0,
+                  json.dumps({"ground": beside, "word": ratio(hx(tile), beside), "period": ratio(hx(blush), beside)}))
+        except Exception as exc:  # noqa: BLE001
+            stopped(8, exc)
+
+    # ------------------------------------------------------------------ 9
+    if part(9, "no page errors, no console errors and no CSP violations"):
         try:
             check("no page errors, no console errors and no CSP violations, in every browser the suite opened",
                   not ERRS, f"{len(ERRS)}: {ERRS[:4]}")
         except Exception as exc:  # noqa: BLE001
-            stopped(8, exc)
+            stopped(9, exc)
     b.close()
 
 bad = [(n, d) for ok, n, d in results if not ok]
