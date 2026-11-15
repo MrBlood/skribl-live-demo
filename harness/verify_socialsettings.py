@@ -595,7 +595,8 @@ MSHEET = r"""() => { const w = document.getElementById('siteMenu'); if (!w) retu
   return { open: !w.hidden && w.classList.contains('is-open'), hidden: w.hidden, sheet: w.matches('.make.post-sheet'),
     role: s.getAttribute('role'), modal: s.getAttribute('aria-modal'), labelled: !!t && s.getAttribute('aria-labelledby') === t.id,
     title: t ? t.textContent.trim() : null, paper: getComputedStyle(s).backgroundColor,
-    rows: [...w.querySelectorAll('.post-acts .post-act')].map(e => { const q = e.getBoundingClientRect();
+    // the rows the sheet shows: Add to Home Screen and Reload wait hidden for a phone that can use them (verify_socialapp 4)
+    rows: [...w.querySelectorAll('.post-acts .post-act')].filter(e => !e.hidden).map(e => { const q = e.getBoundingClientRect();
       const o = e.closest('.post-acts > *').getBoundingClientRect();   // Sign out's row is its form
       const gap = above ? Math.round((o.top - above.bottom) * 10) / 10 : null; above = o;
       return { words: e.textContent.trim(), href: e.tagName === 'A' ? new URL(e.href).pathname : null,
@@ -1518,7 +1519,7 @@ with sync_playwright() as p:
                 pg.wait_for_timeout(600)
                 try:
                     with pg.expect_navigation(timeout=15000):
-                        pg.locator("#siteMenu button.post-act").tap(timeout=5000)
+                        pg.locator("#siteMenu .menu-out button.post-act").tap(timeout=5000)
                     pg.wait_for_timeout(300)
                     at = urllib.parse.urlparse(pg.url)
                     note = pg.evaluate("() => (document.querySelector('.note') || {}).textContent || null")
