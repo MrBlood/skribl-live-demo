@@ -43615,3 +43615,19 @@ THE AFFECTED SUITES, side by side: [COUNTS]
 
 NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell:
 your page, your counts, Following: each row has its button.
+
+OPEN, FOR THE NEXT SESSION (the owner, about 4:00 PM, ending this one: "Clean
+up for a nice fresh new session"):
+
+- Skribl's own Public gallery (/gallery, from the Pad's menu) still stands on
+  the Library's old ground (#fbfcfd, #0b0d12); the Library moved to the Pad's
+  in #922. Its twin by design: ask the owner whether it follows.
+- The app's top edge (#919) keeps iOS 26's glass off the site's pages; the
+  Pad and Flip, opened inside the Blooby app, were not looked at for it.
+- The owner, Nov 15: "I want everything to be beautiful and feel crisp and
+  luxurious." A polish pass, mocked first, is the next project they asked for.
+- The demo people on the live site (Mira, Juno, Theo; Rook and Pip mended):
+  their passkeys lived in that session alone. To act as them again, the owner
+  makes a sign-in link per person (Settings, Invites and sign-in links), and
+  the demo-people tool (saved by the pull request after this one) takes it
+  from there.
