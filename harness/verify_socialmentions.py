@@ -1094,24 +1094,29 @@ with sync_playwright() as p:
             pg.wait_for_timeout(350)
             d2 = pg.evaluate(LIST, "cmMentions")
             fold_open = pg.evaluate("() => document.querySelector('[data-cm-fold]').classList.contains('is-open')")
-            pg.keyboard.press("Escape")
-            pg.wait_for_timeout(600)
-            pg.click(f"#c-{c5} [data-cm-answer]")
-            pg.wait_for_function("() => document.activeElement === document.getElementById('cmWords')", timeout=6000)
-            pg.wait_for_timeout(500)
-            d3 = typed(pg, "@vic", list_id="cmMentions", field="#cmWords")
-            pg.click("#cmMentions .mn-row")
-            pg.wait_for_timeout(350)
-            d4 = pg.evaluate(LIST, "cmMentions")
-            in_answer = pg.evaluate("(id) => !!document.querySelector('#c-' + id + ' #cmWords')", c5)
-            close_ctx(ctx, pg)
             f1 = (d1 or {}).get("field") or {}
+            # Each row read where its steps end, so a list that never comes is
+            # its own row's red and not a step that stops the section.
             check("in a comment's box on a desk (the fold under the heading): the list under the line, Enter puts"
                   " \"@veev \" in, the box staying open",
                   bool(d1) and d1["open"] and handles(d1["rows"]) == ["@veev", "@vera", "@vexx"]
                   and abs(d1["box"][1] - (f1["box"][1] + f1["padTop"] + f1["lh"] + 8)) <= 1.5
                   and d2["field"]["value"] == "@veev " and fold_open and d2["field"]["focused"],
                   json.dumps([d1 and d1["box"], f1.get("box"), d2 and d2["field"]["value"], fold_open]))
+            pg.keyboard.press("Escape")
+            pg.wait_for_timeout(600)
+            pg.click(f"#c-{c5} [data-cm-answer]")
+            pg.wait_for_function("() => document.activeElement === document.getElementById('cmWords')", timeout=6000)
+            pg.wait_for_timeout(500)
+            d3 = typed(pg, "@vic", list_id="cmMentions", field="#cmWords")
+            try:
+                pg.click("#cmMentions .mn-row", timeout=4000)
+            except Exception:  # noqa: BLE001 -- no row to click is the row's own red
+                pass
+            pg.wait_for_timeout(350)
+            d4 = pg.evaluate(LIST, "cmMentions")
+            in_answer = pg.evaluate("(id) => !!document.querySelector('#c-' + id + ' #cmWords')", c5)
+            close_ctx(ctx, pg)
             check("answering (the fold under the conversation): the list again, a click on its row puts \"@victran \" in,"
                   " the field keeping its focus",
                   bool(d3) and d3["open"] and handles(d3["rows"]) == ["@victran"] and in_answer
