@@ -94,10 +94,12 @@
         var dot = (payload.frames.length - 1) * 1000 / (payload.fps || 12);
         if (!first) player.seek(Math.max(0, total - dot));
         player.play();
+        // Where it has got to, through the player's own seam (docs/INTEGRATION.md,
+        // "Where the playhead is"): played through, and stopped there.
         (function watch() {
           if (gone) return;
-          var t = player.state();
-          if (t.state !== 'playing' && t.elapsedMs >= total - 1) { window.setTimeout(leave, REST); return; }
+          var h = player.playhead();
+          if (!h.playing && h.ms >= total - 1) { window.setTimeout(leave, REST); return; }
           window.requestAnimationFrame(watch);
         })();
       })();
