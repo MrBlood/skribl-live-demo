@@ -41910,7 +41910,25 @@ turned off; lit Loop's contrast row in verify_inline now lights it first.
 
 THE CHECKS, each shown red by the old default (on) put back in a throwaway
 copy, green on an untouched copy:
-{{CAL}}
+- verify_inline (control 222/222; the old default 217/222): the loop starts
+  off, one press turns it on, lit Loop's contrast read lit, a second press
+  off, the replay left off stops and its music with it, a press on starts it
+  again.
+- verify_socialposts 12 (control 11/11; the old default 10/11): on Home, the
+  line's ⟲ tap turns repeating on.
+- verify_viewedges (control 19/19; the Library's old default 17/19): the
+  Library's Loop turned on in full screen reads on on the page; a Flip played
+  once stops on its last page.
+- verify_player_isolation (control 85/85; app.js's old default 84/85): the
+  link page's Loop off when it opens, one press on.
+- FOUND ON THE WAY, rows that assumed a replay never stops, mended:
+  verify_inline's in-post taps asked a short post to be still playing 900ms
+  on, and read the player now (playing, loading, or played through; red when
+  the tap is never made, 220/222); its photo-fit rows sampled the centre
+  column, which the fixture's one stroke crosses corner to corner, where a
+  finished replay rests, and sample a quarter across (red still with every
+  photo letterboxed: the cover row, 220/222); verify_viewedges'
+  Flip-at-its-end row pressed Loop to turn it off, and only restarts now.
 
 THE AFFECTED SUITES:
 {{COUNTS}}
