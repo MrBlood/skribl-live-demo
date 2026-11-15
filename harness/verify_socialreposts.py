@@ -1848,7 +1848,28 @@ with sync_playwright() as p:
                 best = max((ratio(im.getpixel((x, y)), gpx) for x in range(x0, x0 + max(1, w)) for y in range(y0, y0 + max(1, h))
                             if 0 <= x < im.width and 0 <= y < im.height), default=1)
                 return {"ground": gpx, "best": round(best, 2)}
-            paints, lows, smalls, reads = {}, [], [], {}
+            # A point of the quote's own ground inside its line (6px in, under its
+            # corner's curve), what is painted there (the card, nothing over it), the
+            # card's colour as the page resolves --card, and the page's ground beside it.
+            QT_AT = r"""() => { const q = document.querySelector('.post-page > .qt-card'); if (!q) return null;
+              const r = q.getBoundingClientRect(), x = r.left + 24, y = r.top + 6, hit = document.elementFromPoint(x, y);
+              return { pt: [x, y], beside: [Math.max(1, r.left - 6), r.top + r.height / 2], hit: hit === q,
+                       card: getComputedStyle(document.documentElement).getPropertyValue('--card').trim(),
+                       seen: r.top >= 0 && r.top + 12 <= innerHeight }; }"""
+
+            def qt_fill(pg):
+                at = pg.evaluate(QT_AT)
+                if not at or not at["seen"]:
+                    return at
+                im = Image.open(io.BytesIO(pg.screenshot(scale="device"))).convert("RGB")
+                k = im.width / pg.viewport_size["width"]
+                px = im.getpixel((int(at["pt"][0] * k), int(at["pt"][1] * k)))
+                gd = im.getpixel((int(at["beside"][0] * k), int(at["beside"][1] * k)))
+                h = at["card"].lstrip("#")
+                want = tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) if len(h) == 6 else None
+                return {"hit": at["hit"], "painted": px, "card": want, "ground": gd,
+                        "on_ground": round(ratio(px, gd), 2)}
+            paints, lows, smalls, reads, fills = {}, [], [], {}, {}
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
                     tag = f"{screen} {scheme}"
@@ -1876,6 +1897,12 @@ with sync_playwright() as p:
                     press(pg, PAGE_ROW + " .rp-btn")
                     pg.wait_for_timeout(800)
                     got.append(("the signed-out sheet", pg.evaluate(READ, "#repostOutSheet")))
+                    # THE QUOTE ON ITS OWN PAGE, a card (the owner's "Yes to B", Nov 15): its
+                    # words on it, and the card's colour read off the paint inside its line.
+                    go(pg, f"/social/p/{q11}")
+                    to(pg, ".post-page > .qt-card", 120)
+                    got.append(("a quote on its own page", pg.evaluate(READ, ".post-page > .qt-card")))
+                    fills[tag] = qt_fill(pg)
                     close_ctx(ctx, pg)
                     reads[tag] = [(w, r["read"], r["lowest"]) for w, r in got]
                     lows += [f"{tag} {w}: {x}" for w, r in got for x in r["low"]]
@@ -1889,10 +1916,17 @@ with sync_playwright() as p:
                   all(v and v["best"] >= 3 for k, v in paints.items() if k[1] == "lit arrows"),
                   json.dumps({" ".join(k): v and v["best"] for k, v in paints.items() if k[1] == "lit arrows"}))
             check("every word at 4.5:1 or more on what is painted behind it, phone and desk, light and dark: a repost's"
-                  " card with its line, a quote's small card, a gone one's words, the repost sheet, the signed-out sheet",
+                  " card with its line, a quote's small card, a gone one's words, the repost sheet, the signed-out sheet,"
+                  " a quote on its own page",
                   len(reads) == 4 and all(n > 0 for v in reads.values() for _, n, _ in v) and not lows,
                   f"low {lows[:4]}; read {json.dumps(reads)[:500]}")
             check("every target 44px or more, on all of them", not smalls, f"small {smalls[:4]}")
+            check("a quote on its post's own page is a card: the card's own colour painted inside its line, nothing"
+                  " over it, phone and desk, light and dark (on the page's ground, not an outline)",
+                  len(fills) == 4 and all(v and v.get("hit") and v.get("card")
+                                          and all(abs(a - c) <= 3 for a, c in zip(v["painted"], v["card"]))
+                                          for v in fills.values()),
+                  json.dumps(fills))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(11, exc)
 
