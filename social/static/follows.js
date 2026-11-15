@@ -205,6 +205,24 @@
       btn.removeAttribute('aria-expanded');
     }
   }
+  /* ONE PERSON, ONE STATE: the same person can be on the page twice (your
+     follows sheet: somebody who follows you and whom you follow is in both
+     lists), each with a button of their own. Whatever one shows, the other
+     shows too, so a tap on either does what it says. */
+  function twins(btn) {
+    var to = btn.getAttribute('data-follow');
+    return Array.prototype.filter.call(doc.querySelectorAll('[data-follow]'), function (b) {
+      return b !== btn && b.getAttribute('data-follow') === to;
+    });
+  }
+  function echo(btn) {
+    var st = state(btn);
+    twins(btn).forEach(function (b) {
+      var s = state(b);
+      s.on = st.on; s.sure = st.sure;
+      show(b, st.on, false);
+    });
+  }
   function send(btn) {
     var st = state(btn);
     if (st.busy) return;      /* its answer sends again if a tap changed what they want */
@@ -216,12 +234,14 @@
         st.sure = !!j.following;
         if (st.on !== want) { send(btn); return; }
         if (st.on !== st.sure) { st.on = st.sure; show(btn, st.on, true); }
+        echo(btn);
         if (ownPage) ownRecount(j.mine); else recount(j.counts);
         if (heard) heard.textContent = st.sure ? say('fo_now_following', { name: btn.getAttribute('data-name') || '' }) : '';
         return;
       }
       st.on = st.sure;
       show(btn, st.on, true);
+      echo(btn);
       tell(why(j));
     });
   }
@@ -242,6 +262,7 @@
     st.on = true;
     tell('');
     show(btn, true, true);
+    echo(btn);
     send(btn);
   });
   var go = unWrap && unWrap.querySelector('[data-unfollow]');
@@ -255,6 +276,7 @@
       st.on = false;
       tell('');
       show(btn, false, true);
+      echo(btn);
       if (heard) heard.textContent = '';
       send(btn);
     });

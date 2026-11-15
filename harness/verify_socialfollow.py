@@ -1520,12 +1520,13 @@ with sync_playwright() as p:
             pg.wait_for_timeout(600)
             gone = pg.evaluate(ROWBTN)
             check("a tap on Following asks \"Unfollow Rik?\" over the lists, both up; Unfollow ends the follow (kept, its"
-                  " end said), and the lists stay up, the row too, its button saying Follow; the page behind out of reach"
-                  " until the lists go",
+                  " end said), and the lists stay up, the row too, its button saying Follow, and so does Rik's row in"
+                  " Followers (one person, one state); the page behind out of reach until the lists go",
                   asked["un"] and asked["lists"] and (asked["title"] or "").replace("\u00a0", " ") == "Unfollow Rik?"
                   and ended and ended[-1][3] is not None and not after["un"] and after["lists"] and after["inert"]
                   and [(r["handle"], r["on"]) for r in after["following"]] == [("@rik", False)]
-                  and not gone["lists"] and not gone["inert"],
+                  and not gone["lists"] and not gone["inert"]
+                  and [(r["handle"], r["on"]) for r in after["followers"]][1] == ("@rik", False),
                   json.dumps({"asked": {k: asked[k] for k in ("un", "lists", "title")}, "ended": bool(ended and ended[-1][3]),
                               "after": {k: after[k] for k in ("un", "lists", "inert", "following")}, "gone": {k: gone[k] for k in ("lists", "inert")}}))
             check("your page's counts change with the tap, your own (Pia follows nobody now: her following count goes, as"
