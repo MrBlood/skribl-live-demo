@@ -742,6 +742,9 @@
   /* The Pad's desktop rows are a third tighter than its touch rows (a mouse
      reads 9/12 better than 12/14); the size class says which surface this is. */
   :where(body[data-size="regular"]) .flip-menu .menu-item { padding: 9px 12px; }
+  /* ...so Apple's thin line between two rows starts where their words do and
+     stops at their inside edge (styles.css, "THE LINE BETWEEN TWO ROWS"). */
+  :where(body[data-size="regular"]) .flip-menu .menu-list { --line-start: 48px; --line-end: 12px; }
   .flip-menu[hidden] { display: none; }
   /* On COMPACT the ... menu is a BOTTOM SHEET, exactly like Pad's: the two
      menus carry the same items, so they should not have two different bodies.

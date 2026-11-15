@@ -40769,3 +40769,88 @@ posts of one drawing at once there; no migration, so CI's postgres job is
 the only place it runs); the live site. A Flip draft picked from Yours was
 probed by hand, not by a suite (it opened in Flip with its two pages, and
 Add to post attached it playing).
+
+## After v330 -- Apple's thin line between the rows of a card
+
+The owner, Nov 14, on the live site's ☰ sheet once one card held its rows
+(#903): "Can you do a better job on those separated lines? They don't need
+to extend all the way to the borders and they should have a shadow on them
+to give them depth under them." Mocked on the real sheets (the ☰'s, a post's
+⋯ on a desk, the Pad's menu; light and dark; a close-up of one line): A, in
+16px from both edges as a groove; B, the groove from where the words start;
+C, in 16px with a soft shadow under it (Cal's pick). The owner: "Not sure
+about a b or c. I want it to look premium, maybe nothing? I really don't
+know." Mocked again at the owner's phone's 3x: D, no lines (Cal's pick, the
+lists being short), and E, Apple's way. The owner: "Apples thin line".
+
+WHAT CHANGES. Between two rows of a card, on the site and in Skribl's lists
+alike (the ☰'s, a post's, a comment's and a person's ⋯, Report's reasons;
+the Pad's and Flip's menu list, Export's formats, Your drafts and "As a
+file", People often ask), the line a row drew as its top border is gone (the
+border stays, transparent, so nothing moves), and the row draws its own
+::before in that pixel instead:
+- ONE SCREEN PIXEL: 1px scaled by `--hair` (1, 0.5 on a 2x screen, 0.3334 on
+  a 3x), so it is the thinnest line the screen has, on every screen.
+- FROM WHERE THE ROW'S WORDS START (`--line-start`, each list's own,
+  measured: the site's menu rows 52px, Report's reasons 48px; the Pad's menu
+  50px, 48px on a desk's sheet, whose rows are padded 12px; Your drafts' files
+  44px and its saved drafts 92px, past their pictures; Export's formats 64px;
+  People often ask 14px, which have no icon) TO THE ROW'S INSIDE EDGE (16px on
+  the site; 14px in Skribl's, 12px on a desk's sheet).
+- In `--row-line`, a new token for the role, the mock's own values (the
+  owner chose the look; at one screen pixel the old --rule and
+  --menu-card-rule read as nothing). On the site, a root token:
+  rgba(20, 10, 60, 0.16) light, rgba(255, 255, 255, 0.16) dark. In Skribl,
+  the rows' own value, not a root token: Skribl's own words' colour at 16%
+  (color-mix with --text-primary: #11161e light, #f6f7f9 dark), the same
+  whisper in Skribl's ink.
+  No shadow, no groove.
+- Tune's rows (the Pad's colour page) are parted by the menu's rule, which a
+  check holds them to; they take the same line, edge to edge as before
+  (`--line-start: 0`).
+- The row in focus hides its own line: its ring is its edge there, and the
+  line, drawn above the row before it, crossed the ring's top. The row is
+  lifted above the rows after it (z-index 1), whose lines would cross its foot.
+WHY SKRIBL'S VALUES ARE NOT ROOT TOKENS: the player's stylesheet
+(player.css, emitted from styles.css) keeps every root token, and the two
+values with --hair's steps grew it five lines past its byte ratchet
+(verify_player_isolation 84/85, verify_jsstrip 34/35, red as first built).
+On the rows they stay out of it: player.css is byte for byte what it was.
+
+PAD AND FLIP: Skribl's lists are shared by both editors, so the Pad's menu
+and Flip's, Export, Your drafts and How it works change alike.
+
+FOUND ON THE WAY, AND WHY THE BORDER STAYS. First built with the border
+taken off (border-top: 0), verify_contrast's ring row went red as built,
+and only there: on a desk in dark, Your drafts' "Save as a file", its ring's
+foot read (103, 77, 207) against the ring's (124, 92, 255). Run untouched on
+main the row was green (36 rings read), so the change did it. Not the
+positioning (a focused row lifted above the rows after it, z-index 1, left
+it red), but the layout: four lists a pixel shorter for each border, and a
+desk's sheet is centred, so it moved half a pixel, and at 1x the ring's foot
+fell across two pixels. The row keeps its 1px border, transparent, and the
+line is drawn in it (top: -1px); the lift stays, since the rows after a
+focused one are positioned now and would paint over a ring that met them.
+Flip's menu on a desk pads its rows 12px by its size class (flip.css), not
+by the Pad's width query, so its line start is set there too (48px, ending
+12px in): red in the first run as built, Flip's desk menu reading 50.
+
+THE CHECKS, each shown red by a break of its own in a throwaway copy, an
+untouched copy green beside them:
+- verify_socialposts 16 (the site): each list's rows are parted by a line one
+  screen pixel thick (read at 1x and at 3x, where it is a third of a CSS
+  pixel), from where the row's words start to 16px before the card's edge,
+  in --row-line, with no border of its own; TOKENS16 holds --row-line's two
+  values. Red for: the line edge to edge, a CSS pixel thick, the old top
+  border back, no line, the old colour, Report's reasons from the menu's
+  start. The control 7/7.
+- verify_contrast ONE CARD (Skribl, Pad and Flip, phone and desk, light and
+  dark): the same, per list, the line's colour read in the list's second row
+  (--row-line), its end at the row's own padding; and Tune's rows parted by
+  the menu's line. Red for: the line edge to edge, a CSS pixel thick,
+  Export's old top border back, no line, a desk's menu starting where a
+  phone's does, the drafts' card starting where the files do, Tune's rows
+  back to the old rule. The control 113/117 under the trimmed run's filter,
+  its four reds the rows that filter always leaves empty (the gallery's tick
+  box and the drawers' edge, light and dark), the same in every copy.
+
