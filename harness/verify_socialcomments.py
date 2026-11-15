@@ -3032,6 +3032,25 @@ with sync_playwright() as p:
                   " rests (the owner's iPhone, Nov 14; stood in)",
                   all(passing) and abs(rests["bottom"] - rests["floor"]) <= 1 and rests["field"] < rests["floor"],
                   f"passing through 780px, dimmed below at 40/70/98%: {passing}; at rest on 336px: {rests}")
+            # Chrome on an iPhone: the page itself shrinks for the keyboard after the visual viewport did, saying
+            # nothing; the keyboard is not to be taken off twice (read after the second reading's timers).
+            qctx, qpg = browser_as(b, theo)
+            qpg.add_init_script(KEYBOARD)
+            open_post(qpg, post)
+            open_box(qpg)
+            qpg.evaluate("() => window.__keyboard(336)")
+            qpg.wait_for_timeout(2600)
+            qpg.set_viewport_size({"width": 402, "height": 874 - 336})
+            qpg.wait_for_timeout(700)
+            chrome = qpg.evaluate("""() => { const s = document.querySelector('#commentBoxSheet .make-sheet').getBoundingClientRect(),
+              w = document.querySelector('[data-cm-words]').getBoundingClientRect();
+              return { bottom: Math.round(s.bottom), field: Math.round(w.bottom), top: Math.round(w.top), floor: innerHeight }; }""")
+            close_ctx(qctx, qpg)
+            check("Chrome on an iPhone, where the page itself shrinks for the keyboard after the visual viewport did, saying"
+                  " nothing: the keyboard is taken off once, the sheet's foot on it and its field in view (the owner's"
+                  " screenshots, Nov 14; stood in)",
+                  abs(chrome["bottom"] - chrome["floor"]) <= 1 and 0 <= chrome["top"] and chrome["field"] < chrome["floor"],
+                  f"page shrunk to {chrome['floor']}: {chrome}")
             # Draw over the sheet: the Pad rises above it and goes; the page behind stays inert under the sheet.
             dctx, dpg = browser_as(b, theo)
             open_post(dpg, post)

@@ -794,6 +794,27 @@ with sync_playwright() as p:
                   all(passing["dimmed"]) and not passing["outside"]
                   and abs(rests["bottom"] - rests["floor"]) <= 1 and rests["tools"] <= rests["floor"] and abs(rests["top"] - 44) <= 1,
                   f"passing through 780px: {passing}; at rest on 336px: {rests}")
+            # CHROME ON AN IPHONE (the owner's screenshots, Nov 14: the bar sat on the keyboard): the page itself
+            # shrinks for the keyboard, after the visual viewport did and without a word from it. The keyboard
+            # is not to be taken off twice: the sheet fills what is left, its foot on the keyboard. Read after
+            # the second reading's timers have run out, so the layout viewport's own change is what is heard.
+            kctx, kpg = browser_as(b, mira, init=KEYBOARD)
+            go(kpg, "/social/explore")
+            open_composer(kpg)
+            kpg.evaluate("() => window.__keyboard(336)")
+            kpg.wait_for_timeout(2600)
+            kpg.set_viewport_size({"width": 402, "height": 874 - 336})
+            kpg.wait_for_timeout(700)
+            chrome = kpg.evaluate("""() => { const s = document.querySelector('#composeSheet .make-sheet').getBoundingClientRect(),
+              t = document.querySelector('#composeSheet .cmp-tools').getBoundingClientRect(), w = document.querySelector('[data-compose-words]').getBoundingClientRect();
+              return { bottom: Math.round(s.bottom), tools: Math.round(t.bottom), field: Math.round(w.bottom), floor: innerHeight, top: Math.round(s.top) }; }""")
+            close_ctx(kctx, kpg)
+            check("Chrome on an iPhone, where the page itself shrinks for the keyboard after the visual viewport did, saying"
+                  " nothing: the keyboard is taken off once, the sheet's foot on it and its words and tools in view (the"
+                  " owner's screenshots, Nov 14; stood in)",
+                  abs(chrome["bottom"] - chrome["floor"]) <= 1 and chrome["tools"] <= chrome["floor"] and chrome["field"] < chrome["tools"]
+                  and chrome["top"] < 60,
+                  f"page shrunk to {chrome['floor']}: {chrome}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(3, exc)
 
