@@ -41059,3 +41059,354 @@ The page's colour, pinned elsewhere as the ring round the bell's dot
 (verify_socialactivity, verify_socialfollow, verify_sociallikes,
 verify_socialmute) and as the ground and the bar (verify_socialsettings),
 takes the new values.
+
+## After v330 -- Bookmarks: kept in the ⋯, a fifth tab on your page, nobody told
+
+The owner, Nov 14 (Mountain Time), about 6:53 PM, "All yes" to the three asks
+of the bookmarks mock (part two of the map, its item 2, docs/SOCIAL-SITE.md
+section 17), each as Cal picked it: 1, A: "Bookmark" at the top of the ⋯,
+"Remove bookmark" once kept, the row under a post unchanged; 2, a fifth tab on
+your own page, "Bookmarks", between Likes and Drafts, yours alone, the phone's
+tabs sized to their words; 3, nobody told and no count, the toast with Undo,
+and signed out the heart's small sheet. (Earlier that day: "Bookmarks I didn't
+mean to say no to that.") Built Nov 14.
+
+WHAT CHANGED.
+
+- THE ROW IN THE ⋯ (`_post.html` `post_sheets`, `posts.js`): "Bookmark" first
+  in the sheet's first card, above Copy link, on every post and on a drawing
+  shown outside a post (its own page's ⋯ is the same sheet), your own too. Its
+  icon is a ribbon in our pen (`_icons.html` `ribbon`, the mock's own line:
+  its inside, then the line, one unit long, 2.1 wide) in the row's icon ink,
+  as Copy link's. Once the post is yours to come back to, the row reads
+  "Remove bookmark" and the ribbon is filled in --accent-ink, the words
+  staying the row's (social.css, "BOOKMARKS"). None on what is taken down or a
+  drawing kept link-only (`cards()`'s `markable`), as the heart is not there
+  either. The row under a post is unchanged.
+- A TAP (`posts.js`, "BOOKMARK asks nothing either"): the sheet goes down;
+  every place on the page that shows the post says so at once (its card's or
+  page's `data-marked`, so the next ⋯ says Remove bookmark); the site is told
+  (`/p/<id>/bookmark`, `/b/<id>/bookmark`, the page's token); and the site's
+  toast says "Bookmarked. It’s on your page, under Bookmarks." (or "Removed
+  from your bookmarks.") beside the ribbon, with Undo, kept clear of every ⋯
+  on the page (`SocialToast` `clear`, the next press). Undo puts it back as it
+  was and says what it did, with no Undo of its own, the focus back on the ⋯.
+  One request at a time a post; what is asked meanwhile is where it ends up;
+  a refusal puts it back and the toast says why, kindly.
+- THE TOAST (`mutes.js`, `_mute.html`): `SocialToast.rise(text, {icon:
+  'mark'})` shows the ribbon in the eye's place (`.mu-toast.is-mark`); every
+  other toast is as it was.
+- SIGNED OUT (`_post.html`, `#bookmarkOutSheet`): Bookmark raises the heart's
+  own small sheet: "Bookmark this post?", "Sign in, and it’s kept for you on
+  your page, where only you can see it.", Not now | Sign in, Sign in coming
+  back to the page; Not now gives the ⋯ its focus back. Nothing is kept.
+- THE DATA (`social/models.py` `Bookmark`, `social_bookmarks`, revision
+  224902330f2a on the site's own chain, after the eye's 9b1e6c3d5a72): shaped
+  as a like is, on a post or a drawing (exactly one, a CHECK), whose
+  (`owner_id`), who (`person_id`), when; once a person a thing (two unique
+  indexes); yours newest first (`ix_social_bookmarks_person_created`, the
+  tab's read), a post's, a drawing's and whose (deleting, and the move). THE
+  TABLE AND ITS INDEXES ONLY: the migration reads and writes no row (the house
+  lesson, v309); its PostgreSQL DDL read offline is the CREATE TABLE and six
+  CREATE INDEX, nothing else.
+- THE ROUTES (`social/bookmarks.py`, mirroring `likes.py`): signed in (401
+  otherwise), the token and Origin (403), the site's limit (`bookmark`, 120 an
+  hour, keeping and taking away alike), JSON `{ok, bookmarked}` and nothing
+  more. Kept: not taken down (403), on what is open to them (`comments.On`:
+  no block either way, not taken down, a drawing public; 404 otherwise, as
+  their pages are). Taken away: always, on your own, by its address, whatever
+  became of the thing since (you taken down, a block since); one never kept
+  on what is not there is 404. The drawing's under `posts.drawing_lock`, as a
+  like's.
+- YOUR BOOKMARKS (`profiles.py` TABS, TAB_NAMES, `tab_view`;
+  `/@<handle>/bookmarks`; `bookmarks.marked_page`): Posts · Gallery · Likes ·
+  Bookmarks · Drafts on your own page, Posts · Gallery on anybody else's
+  (`tabs_for`). Yours alone: on nobody else's page or in its source, its
+  address sending anybody else to your page (302) and its JSON answering them
+  404, as Likes'. What you kept as Home's cards, posts and drawings shown
+  outside a post (a drawing's card opening its own page), newest kept first,
+  twenty a page, Load more by a cursor naming no internal id. Hidden, never
+  deleted: whatever a block either way hides, anybody taken down, a post
+  taken down (your own shows with its note, as on Home and in Likes), a
+  drawing its own page no longer shows you (made link-only, deleted in
+  Skribl, taken down: `posts.bloob`'s rule, read in one `describe_posts` a
+  page). Somebody you muted stays: you chose it. Empty: "Nothing bookmarked
+  yet. Tap ⋯ on a post you want to come back to, then Bookmark, and it’s kept
+  here. Only you can see your bookmarks."; its heading for a screen reader
+  "Your bookmarks".
+- THE FIVE TABS ON A PHONE ARE SIZED TO THEIR WORDS (social.css "SIZED TO
+  THEIR WORDS", `.prof-tabs.is-words` under 900px): each tab is its word and
+  8px either side, and what the strip has over is shared equally between
+  them, so the room between two words is the same everywhere: 24.3 to 24.4px
+  at 402 in this box's face (Posts 16.2-59.2, Gallery 83.5-138.5, Likes
+  162.9-203.1, Bookmarks 227.4-314.7, Drafts 339-385.8: the mock's own
+  places), the outer words 16.2px in. Short of room, a wider face or a
+  narrower phone takes it from the edges first (a 4px spacer at each end
+  gives, down to nothing, a thousand times as readily as a tab), and only
+  then from the words' own 8px, never from past the screen: in DejaVu Sans,
+  the face CI draws in and wider than any a device draws the site in, 17 to
+  18px between the painted words at 402 and 12px at the edges, where fixed
+  16px edges leave 15 and equal fifths run Bookmarks into Drafts; on a 360px
+  phone 17px in this box's faces, and in DejaVu Sans the words closer but
+  nothing past the screen. Under 360px a size down (15px). A desk keeps
+  equal columns (195.2px each), and anybody else's two keep their halves.
+- THE PEN'S LINE IS THE CHOSEN TAB'S OWN (`_profile.html` `profile_tabs`,
+  `tabs.js` `mark`, social.css `.prof-pen`): it was placed by the tab's place
+  (`--at` of `--n`), which only an equal column can say; now it is drawn
+  inside the chosen tab, at its middle, so it is under it before any script
+  runs whatever the tab's width, and a tap moves it into the next tab, where
+  it draws itself, the copy it left fading in the tab it left. `--at` and
+  `--n` are gone.
+- ONE DRAWING, ONE CONVERSATION (`posts._post_older`):
+  `move_drawing_bookmarks` beside the likes' and comments' moves, in the same
+  transaction, each keeping its person and its time (so your Bookmarks keep
+  it where it was).
+- DELETING IS REAL AND SAID IN CODE: a post with its bookmarks
+  (`posts.drop_post`), a drawing deleted on the site with its bookmarks
+  (`posts.bloob_delete`; a drawing's have no cascade under them), an account
+  with its own and every bookmark on what it owned (`accounts.delete_person`).
+  The ON DELETE CASCADEs are the net.
+- NOBODY IS TOLD AND NOTHING COUNTS THEM: Activity reads comments and likes
+  and never bookmarks; no page has a count; all a page says of bookmarks is
+  whether one is the viewer's own (`data-marked`, `bookmarks.marked`, one read
+  a kind a page of cards), and only to them.
+
+PAD AND FLIP: nothing changes in either editor. Bookmarks are the site's;
+Skribl is read through its documented `describe_posts` alone, as before.
+
+CONTRAST (measured on the built pages by the new suite's section 9, read off
+the paint, phone and desk the same; light / dark): the filled ribbon 8.26 /
+8.39 on the card (its inside, at its middle), the empty ribbon's line 7.56 /
+8.59, the toast's ribbon 8.26 / 8.39: the mock's own figures (row icon 7.56 /
+8.59, --accent-ink 8.26 / 8.39), value for value. --fill would have been 5.33 /
+2.99, and the break that puts it there reads 2.99 on the dark card, red. Every
+word on the ⋯ (Bookmark and Remove bookmark), the toast, the signed-out sheet
+and the Bookmarks tab, full and empty, at 4.5:1 or more: the lowest 5.33
+(white on the action's purple: Sign in, the rail's Make), the ⋯'s "This post"
+6.74 / 8.59, the toast's words and Undo 17.95 / 11.86. No colour and no token
+added: same role, same token (the row's ink, the small violet ink filled, the
+sheet's paper, the toast's card).
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy of
+the tree (a runner of its own, a copy and a folder for each break, two at a
+time, each suite's own PART), green on an untouched copy, the control:
+
+- verify_socialbookmarks, NEW (ten sections; SOCIALBOOKMARKS_PART for
+  calibration; a section that cannot go on is a red row of its own):
+  - 1, THE ROW IN THE ⋯: Bookmark first in the first card, above Copy link,
+    on somebody's post on Home, its own page, a drawing's own page and your
+    own post, a phone and a desk (red: Bookmark after Copy link); the ribbon
+    in our pen, the mock's line, in Copy link's icon ink, its inside empty,
+    "Bookmark" 17px 600 where every row's words start, 56px (red: the ribbon
+    without the pen's class); none on your own post taken down or your own
+    drawing kept link-only (red: `markable` always); the row under a post as
+    it was (red: a ribbon put in it).
+  - 2, A TAP KEEPS IT, on a touch phone: one bookmark (Kai's, on Pia's post,
+    hers), the sheet down, the toast's words with Undo beside the ribbon
+    (red: the toast without Undo; the eye in the ribbon's place); the toast
+    never over a ⋯, the card's ⋯ put just where it rises (it rose 56px over
+    it; red: no `clear`, the toast over the ⋯); the ⋯ then "Remove bookmark",
+    the ribbon filled in --accent-ink, at once and after a reload (red: the
+    card not told at once; the ribbon never filled; the words never
+    following); Remove, its toast and Undo, Undo's words with no Undo and
+    the focus on the ⋯ (red: Undo doing nothing); a drawing on its own page,
+    a desk in dark, the same (red with each break above that reaches it).
+  - 3, WHO MAY BOOKMARK: signed out 401; no token, another origin 403; a
+    block either way, a post taken down, a drawing kept link-only, a post's
+    drawing asked as a drawing, your own post taken down and your own drawing
+    kept link-only 404; a body not a yes or a no 400; nothing kept (red: no
+    token asked; any body taken; open_to not asked, your own taken-down and
+    link-only kept; a block asked nowhere, the post read as nobody's view and
+    open_to not asked; red by a block alone, it stayed green, open_to
+    catching it: a break that left the protection in place, not an
+    instrument that could not see); once a person a thing, the answer
+    {ok, bookmarked} alone (red: the existence check gone, a second keep a
+    500); taken down nothing new (403), your own always yours to take away
+    (red: still keeping when taken down; your own kept once the thing is
+    closed to you); the limit, the 121st refused (red: no limit, 125 kept).
+  - 4, SIGNED OUT: the ⋯ says Bookmark; a tap raises "Bookmark this post?",
+    its lede, Not now | Sign in, focus on Not now, the ⋯ down; on a post's
+    page (a phone) and a profile's card (a desk) (red: the tap doing
+    nothing); Sign in to the sign-in page with this page as `next`, Not now
+    handing the ⋯ its focus back, nothing kept (red: Sign in without `next`;
+    the sheet opened from nothing, the focus nowhere).
+  - 5, NOBODY TOLD, NOTHING COUNTED: the maker's Activity no row more, the
+    bell no dot (red: a bookmark that made a like as well, Activity's row);
+    no page says how many, to the maker, the two who kept it, anybody or
+    nobody, each page saying only whether one is the viewer's own (red: "2
+    bookmarks" on the maker's page; anybody's bookmark marking the card, the
+    maker's page saying hers).
+  - 6, YOUR BOOKMARKS: posts and a drawing as cards, newest kept first, the
+    drawing's opening its page, every card marked, its heading (red: oldest
+    first); hidden, never deleted, a block either way, a person taken down,
+    a post taken down, a drawing made link-only and one deleted in Skribl,
+    your own taken down there with its note (red: blocks and takedowns not
+    hidden; the drawings' own pages not asked, the link-only one shown; your
+    own taken down hidden); the muted kept (red: the muted hidden); twenty a
+    page, Load more, none twice (red: oldest first; no Load more); the empty
+    tab's words (red: other words).
+  - 7, DELETING, IN CODE: a post and a drawing through their routes, an
+    account (red: a drawing's bookmarks left behind, which no cascade
+    takes); with SQLite's cascade off on a copy, a post's (2, then 0) and an
+    account's (red: each left to the cascade).
+  - 8, THE DATA: the chain on a populated database, the table's columns, its
+    six indexes and CHECK, at its head, nothing else touched (red: yours not
+    on its own index; no CHECK); once a person a thing, on exactly one thing,
+    back down (red: no CHECK, nothing and both kept); the reads on their
+    indexes, one read for the list and one a kind (red: the index without
+    its person, the plan off it); Home's cards asking once (red: a read a
+    card).
+  - 9, CONTRAST AND TARGETS: every word at 4.5:1, phone and desk, light and
+    dark, the toast's words and Undo read hit-testable (red: the toast's
+    words faint, all four); every target 44px (red: Undo 30px); the ribbon
+    off the paint, filled, empty and the toast's, 3:1 at least, the empty
+    one's inside the row's ground (red: the filled ribbon in --fill, 2.99:1
+    on the dark card, the mock's own figure; the empty ribbon filled).
+  - 10, NO PAGE ERRORS (red: an error thrown on a tap).
+  The controls: sections 1-2 9/9, 3-4 6/6 (section 3 again 4/4 with its two
+  cases of your own), 5-6 7/7, 7-8 8/8, 9-10 7/7.
+- verify_socialprofile 15, CHANGED and NEW ROWS (the control 11/11, then
+  12/12 with the 360px row): the
+  five on your own page; Likes, Bookmarks and Drafts yours alone, in the page
+  and its source (302 and 404 to anybody else, nothing she bookmarked
+  there); NEW, the five sized to their words on a 402 touch phone, read off
+  the paint in the page's own face and in Inter, Liberation Sans, FreeSans
+  and DejaVu Sans, light and dark: 25 to 26px between painted words (17 to
+  18 in DejaVu Sans), the outer words 16 to 18px in (12 in DejaVu Sans),
+  every tab 44px or more, nothing past the screen (red: equal columns on a
+  phone, 7px between Bookmarks and Drafts in this box's face and the two
+  touching in DejaVu Sans; the edges never giving, 16px at each end and the
+  room shared between the words' own boxes: 25 to 26 in the narrow faces
+  but 15 in DejaVu Sans, red in it alone); NEW, on a 360px touch phone
+  nothing past the screen in any face, read as a phone draws it (the width
+  the page was laid out at, its zoom, the strip not scrolling in itself),
+  and 12px or more between the painted words in the narrow faces, 17 here
+  (red: the tabs never giving, only the edges, as first built: in DejaVu
+  Sans the page laid out 396px wide on a 360px screen and drawn smaller,
+  the strip scrolling 36px; equal columns, the words run together); NEW, a
+  desk's equal columns
+  (195.2px each; red: a desk sized to its words too); NEW, the line before
+  any script runs, a browser that runs none, under your Bookmarks on a phone
+  and a desk, your Likes on a phone and Kai's view of the Gallery, read from
+  its box and off the paint (red: the line placed by --at of --n as before,
+  the words-sized strip kept, which also reddens the chosen tab's row on the
+  Gallery and the switch; the line placed by a script alone, the first tab's
+  until tabs.js moves it, red here alone); the switch, now to Bookmarks on a
+  phone and to Likes on a desk, and under Reduce Motion (red: a tap never
+  moving the line).
+- verify_composer 6, CHANGED (the control 7/7): Dee's and Eli's bookmarks on
+  the drawing are the post's after it is posted, each its person and time,
+  none left; the old bookmark address takes nothing (404); a move refused
+  leaves the bookmark on the drawing, and asked again it goes (red: the
+  bookmarks left on the drawing, both rows).
+- verify_socialauth 14, CHANGED (the control 9/9): thirteen tables, the six
+  bookmarks indexes among every index; its PostgreSQL DDL read offline, the
+  table and six indexes alone, and dropped going down (red: the migration
+  writing a row; an index the models have and the chain has not, which
+  alembic check finds too).
+- verify_socialposts 5, 9 and 16, verify_socialmute 1, verify_socialsafety 2
+  and 4, CHANGED: the ⋯'s rows with Bookmark first, each red with the ⋯'s
+  Bookmark row taken out, as before, and green as built: verify_socialmute
+  1, its control 6/6, red in the order on their posts, Unmute's place and
+  your own post's and signed out's rows; verify_socialsafety 2 and 4, 7/7,
+  red in both rows that read the ⋯; verify_socialposts 5 and 16, 10/10, red
+  in yours and somebody else's ⋯ and the one card's rows.
+- verify_socialprofile 17, CHANGED: your Bookmarks, full and empty, among
+  the pages its census reads.
+
+THE AFFECTED SUITES, side by side (harness/run_parallel.py, -j 3, its logs in
+a folder of their own), on the tree as committed:
+
+verify_socialbookmarks 37/37, verify_socialprofile 91/91, verify_socialposts
+80/80, verify_composer 33/33, verify_socialauth 67/67, verify_socialsafety
+38/38, verify_socialactivity 44/44, verify_sociallikes 100/100,
+verify_socialcomments 95/95, verify_socialfollow 74/74, verify_socialsettings
+44/44, verify_social 41/41, verify_hello 50/50 and verify_theme 124/124 (they
+read social.css), verify_docs 144/144: sixteen suites in 22.7 minutes, and
+verify_socialmute 67/68 beside them and 67/68 alone, A REAL RED, NOT LOAD:
+its section 13 read the mutes' migration by taking the chain to its head and
+asking that only social_mutes was new, and the head now adds
+social_bookmarks too. Mended to read it at its own revision, as sociallikes
+11 reads the likes' (its own DDL row already did); then verify_socialmute
+68/68 and verify_socialbookmarks 37/37 side by side (the new suite tidied
+meanwhile: section 4 a red row of its own where a break had stopped it, and
+the likes' helpers it never called taken out). Then, after the tabs'
+give rule (FOUND WRONG, below), side by side: verify_socialprofile 92/92
+(the 360px row in), verify_socialbookmarks 37/37, verify_socialfollow 74/74,
+verify_hello 50/50, verify_theme 124/124 and verify_docs 144/144 with this
+entry in, and verify_socialmute INTERMITTENT, 67/68 beside them and 68/68
+alone: load, not a defect (one frame of Show's room opening on a muted
+person's comment read 36.4% of the way where 30% is the most, under three
+suites at once; nothing in this change reaches it, and it was 68/68 beside
+one other suite before). styles.css is untouched, so cssgraph was not re-emitted
+and verify_player_isolation was not run; no file of Skribl's changed, so
+none of Skribl's suites was run. The full battery was not run; main's run
+after the merge is that.
+
+FOUND WRONG, AND MENDED, before any row was green: the ⋯ offered Bookmark
+on its maker's own drawing kept link-only, which the route (rightly, as a
+like) refuses: the row asked only whether it was taken down, and now asks
+what the route asks (`markable`). And after the suites were green, by a
+probe at the widths around the owner's (320 to 768): as first built only
+the edges could give, so a 360 or 375px phone in a face as wide as DejaVu
+Sans laid the page out wider than the screen, and a phone then draws the
+whole page smaller; the tabs now give too, once the edges are spent, and
+section 15 holds it at 360px. The first instrument for "nothing past the
+screen" (the page's scrollWidth against innerWidth) read 0 on that very page,
+since a phone that draws the page smaller grows both; it reads the width
+the page was laid out at now. And three instruments of mine: the census
+looked through the toast's words (a tap reaches the page under them), so it
+read Undo alone on a phone, and reads them made hit-testable now; Load more
+came back with one card twice, because the suite wrote its bookmarks' times
+by hand without the microseconds the site always writes, and SQLite compares
+the stored words (the site's own form is written now); and verify_socialmute
+13, above.
+
+JUDGMENT CALLS (where the mock did not say, the option closest to it and to
+Likes):
+
+- BOOKMARK ON YOUR OWN POSTS TOO, as you may like your own (the mock drew
+  somebody else's); never on what is taken down or a drawing kept link-only,
+  which take nothing new (the route says 404 to its maker too, as a like).
+- ANYBODY ELSE AT `/@you/bookmarks` IS SENT TO YOUR PAGE (302), and the tab's
+  JSON answers them 404: Likes' and Drafts' own behaviour, which the brief
+  called "404s, as Likes does". Nothing of yours is in either answer.
+- THE LIST HOLDS DRAWINGS SHOWN OUTSIDE A POST TOO (as cards opening their own
+  page): one can be bookmarked from its own page's ⋯, so it has to come back
+  somewhere. Likes' list is posts only.
+- YOUR OWN POST TAKEN DOWN STAYS IN YOUR BOOKMARKS, with its note, as Home and
+  Likes show it to you; anybody else's taken down is hidden.
+- TAKING YOUR OWN AWAY ALWAYS WORKS, whatever became of the thing (a block
+  since, you taken down): it is your own row. Keeping a new one asks
+  everything a like asks.
+- UNDO SAYS WHAT IT DID WITH NO UNDO OF ITS OWN, as Mute's and the eye's
+  Undo do, and the focus goes back to the ⋯ it began from.
+- THE TOAST KEEPS CLEAR OF EVERY ⋯ ON THE PAGE (the cards' and a post's own):
+  the next bookmark's first press.
+- THE TOAST'S RIBBON IS THE OUTLINE, both ways, as the mock drew it.
+- A DRAWING'S OWN PAGE SAYS "Bookmark this post?" signed out, as its ⋯ says
+  "This post".
+- SIZED TO THEIR WORDS UNDER 900px (the site's desk breakpoint), so a
+  tablet's five share their room equally between the words too; under 360px
+  a size down (15px) and the tabs may give, so nothing runs past a 320px
+  screen.
+- NO COUNT EVEN IN THE ANSWER: `{ok, bookmarked}`.
+- verify_socialauth 14 holds the site's chain (the brief named
+  verify_migrations, which holds Skribl's chain and reads nothing of the
+  site's); the chain on a populated database is the new suite's 8, as Likes'
+  is verify_sociallikes' 11.
+
+THE FOUR. Simple: one row, where the post's other choices already are, and
+one place they all go, the tab with its name. Kind: nothing is lost (Undo,
+your own always yours to take away, hidden rather than deleted while a block
+stands), nobody is told, and the toast says where it went. Playful: the
+ribbon drawn in the pen fills in the small violet ink. Powerful: posts and
+drawings alike, kept in the order you kept them, through the move into a
+post.
+
+NOT TESTED HERE: WebKit, so the owner's iPhone (the sheet, the toast and the
+tabs as Safari draws them); SF and Segoe UI (the tabs read in Inter, Liberation
+Sans, FreeSans and DejaVu Sans, which straddle them; nothing was nudged to a
+face); Firefox (main's lanes after the merge); PostgreSQL (the migration's DDL
+read offline only; CI's postgres job runs it); the live site. The one-glance
+tell on the live site: your own page has five tabs, Bookmarks fourth.

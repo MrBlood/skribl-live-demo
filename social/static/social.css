@@ -862,16 +862,18 @@ body.focus .top { justify-content: center; }
    fifth of the screen. Each tab is its word and 8px either side, and what the
    strip has over is shared out equally between them, so the room between two
    words is the same everywhere (about 24px at 402 in this box's faces, the
-   outer words about 16px in); a wider face takes it from the edges first
-   (the 4px at each end gives, down to nothing), never from between the
-   words, which keep 16px. Under 360px the tabs may give too, a size down. */
+   outer words about 16px in). Short of room, a wider face or a narrower
+   phone takes it from the edges first (the 4px at each end gives, down to
+   nothing, a thousand times as readily), and only then from the words' own
+   8px, never from past the screen: a strip wider than a phone would have it
+   draw the whole page smaller. Under 360px a size down. */
 @media (max-width: 899.98px) {
   .prof-tabs.is-words { display: flex; }
-  .prof-tabs.is-words::before, .prof-tabs.is-words::after { content: ""; flex: 0 1 4px; }
-  .prof-tabs.is-words .prof-tab { flex: 1 0 auto; padding: 0 8px; }
+  .prof-tabs.is-words::before, .prof-tabs.is-words::after { content: ""; flex: 0 1000 4px; }
+  .prof-tabs.is-words .prof-tab { flex: 1 1 auto; min-width: 0; padding: 0 8px; }
 }
 @media (max-width: 359.98px) {
-  .prof-tabs.is-words .prof-tab { flex-shrink: 1; min-width: 0; padding: 0 5px; font-size: 15px; }
+  .prof-tabs.is-words .prof-tab { padding: 0 5px; font-size: 15px; }
 }
 .prof-pen .pen-line { display: block; width: 100%; height: 100%; }
 /* A tap: the line draws itself under its tab in 0.17s, at once (no page to

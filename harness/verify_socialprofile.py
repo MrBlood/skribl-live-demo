@@ -957,6 +957,14 @@ def pen_paint(pg, st):
 TAB_FACES = ["Inter", "Liberation Sans", "FreeSans", "DejaVu Sans"]
 TAB_HAVE = """(faces) => faces.filter((f) => { const x = document.createElement('canvas').getContext('2d'), t = 'Posts Gallery Likes Bookmarks Drafts';
   x.font = '600 40px monospace'; const a = x.measureText(t).width; x.font = '600 40px "' + f + '", monospace'; return Math.abs(x.measureText(t).width - a) > 0.5; })"""
+#: Whether anything is past the screen, as a touch phone shows it: a phone
+#: whose page is wider than it draws the whole page smaller to fit, so the
+#: page's own widths say nothing (scrollWidth and innerWidth grow together);
+#: what tells is the width the page was laid out at, its zoom, and the strip
+#: scrolling within itself.
+PAST = """(w) => { const s = document.querySelector('[data-prof-tabs]');
+  return { vw: innerWidth, scale: visualViewport ? visualViewport.scale : 1, strip: s ? s.scrollWidth - s.clientWidth : null,
+           ok: innerWidth === w && (!visualViewport || Math.abs(visualViewport.scale - 1) < 0.001) && !!s && s.scrollWidth <= s.clientWidth }; }"""
 TAB_FORCE = """(f) => { let s = document.getElementById('tabsFace');
   if (!s) { s = document.createElement('style'); s.id = 'tabsFace'; document.head.appendChild(s); }
   s.textContent = f ? '[data-prof-tabs] .prof-tab { font-family: "' + f + '", sans-serif !important; }' : ''; }"""
@@ -3024,7 +3032,7 @@ with sync_playwright() as p_:
                 pg.wait_for_timeout(150)
                 st = pg.evaluate(STRIP)
                 words = painted_words(pg, st)
-                over = pg.evaluate("() => document.documentElement.scrollWidth - innerWidth")
+                over = pg.evaluate(PAST, 402)
                 fits[(scheme, f or "its own face")] = (st, words, over)
             pg.evaluate(TAB_FORCE, None)
             close_ctx(ctx, pg)
@@ -3034,7 +3042,7 @@ with sync_playwright() as p_:
         for (scheme, f), (st, words, over) in fits.items():
             gaps = [round(z[0] - a[1], 1) for a, z in zip(words, words[1:])]
             ok = (len(words) == 5 and min(gaps) >= 16 and words[0][0] >= 8 and st["vw"] - words[-1][1] >= 8
-                  and over <= 0 and all(tb["w"] >= 44 and tb["painted"] for tb in st["tabs"]))
+                  and over["ok"] and all(tb["w"] >= 44 and tb["painted"] for tb in st["tabs"]))
             if f in ("Inter", "Liberation Sans", "FreeSans"):
                 ok = ok and abs(words[0][0] - 16) <= 2 and abs(st["vw"] - words[-1][1] - 16) <= 2
             told15[f"{scheme} {f}"] = {"words": words, "gaps": gaps, "over": over, "ok": ok}
@@ -3046,6 +3054,36 @@ with sync_playwright() as p_:
               len(faced) >= 4 and len(fits) == len(faced) + 1 and all(v["ok"] for v in told15.values()),
               f"{len(faced)} faces; " + json.dumps({k: [v["gaps"], v["words"][:1], v["words"][-1:], v["over"]]
                                                       for k, v in told15.items()})[:700])
+        # ...AND ON A NARROWER PHONE (360px, a common Android width), short of
+        # room, the edges give first and then the tabs' own room: nothing is
+        # ever past the screen, so the phone never draws the page smaller, in
+        # every face (DejaVu Sans, CI's, the widest); in the faces of SF's,
+        # Arial's and Helvetica's widths the words keep 12px or more.
+        narrow = {}
+        ctx = b.new_context(viewport={"width": 360, "height": 780}, device_scale_factor=1, is_mobile=True, has_touch=True,
+                            extra_http_headers={"X-Forwarded-For": pia.xff})
+        ctx.add_cookies([{k: v for k, v in c.items() if k in ("name", "value", "domain", "path", "httpOnly", "sameSite",
+                                                             "secure", "expires")} for c in pia.cookies()])
+        pg = ctx.new_page()
+        pg.goto(BASE + "/social/@tabpia/bookmarks")
+        pg.evaluate("() => { const s = document.querySelector('[data-prof-tabs]'); if (s) s.scrollIntoView({ block: 'center' }); }")
+        pg.wait_for_timeout(300)
+        for f in [None] + pg.evaluate(TAB_HAVE, TAB_FACES):
+            pg.evaluate(TAB_FORCE, f)
+            pg.wait_for_timeout(150)
+            st = pg.evaluate(STRIP)
+            words = painted_words(pg, st)
+            gaps = [round(z[0] - a[1], 1) for a, z in zip(words, words[1:])]
+            past = pg.evaluate(PAST, 360)
+            ok = past["ok"] and all(tb["painted"] for tb in st["tabs"]) and (
+                f not in ("Inter", "Liberation Sans", "FreeSans") or (len(words) == 5 and min(gaps) >= 12))
+            narrow[f or "its own face"] = {"ok": ok, "gaps": gaps, "past": past}
+        ctx.close()
+        check("...and on a 360px touch phone, short of room, the edges give first and then the tabs' own room: nothing"
+              " past the screen in any face (the phone never draws the page smaller to fit it), and 12px or more between"
+              " the painted words in the faces of SF's, Arial's and Helvetica's widths",
+              len(narrow) >= 5 and all(v["ok"] for v in narrow.values()),
+              json.dumps(narrow)[:700])
         ctx, pg = browser_as(b, pia, "desk", "light")
         pg.goto(BASE + "/social/@tabpia/bookmarks")
         pg.wait_for_timeout(300)

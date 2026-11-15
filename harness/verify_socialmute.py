@@ -1961,6 +1961,10 @@ with sync_playwright() as p:
         try:
             mdb = os.path.join(TMP, "chain-mutes.db")
             BEFORE = "1757a4385be8"      # the chain's head before mutes (its migration's down_revision)
+            # The mutes' own migration, read at its own revision: the chain's
+            # head has grown since (the eye's column, Nov 14; the bookmarks'
+            # table, Nov 14), as sociallikes 11 reads the likes' at theirs.
+            MUTES = "4cdc4af46a77"
 
             def chain(*args, url=None):
                 return subprocess.run([sys.executable, "-m", "alembic", "-c", "social/alembic.ini", *args], cwd=ROOT,
@@ -1984,7 +1988,7 @@ with sync_playwright() as p:
             con.commit()
             con.close()
             tables0 = {r[0] for r in at("select name from sqlite_master where type = 'table'")}
-            up2 = chain("upgrade", "head")
+            up2 = chain("upgrade", MUTES)
             idx = {r[0]: r[1] for r in at("select name, sql from sqlite_master where type = 'index' and tbl_name = 'social_mutes'")}
             cols = [r[1] for r in at("pragma table_info(social_mutes)")]
             sql = (at("select sql from sqlite_master where name = 'social_mutes'") or [[""]])[0][0] or ""
@@ -2025,10 +2029,8 @@ with sync_playwright() as p:
                   and at("select handle from social_people order by id") == [("ann",), ("bob",)],
                   f"down {down.returncode}, left {gone}, stamped {stamp_down}; up {up3.returncode}: {sorted(back_again)}")
             pg_url = "postgresql://nobody:nothing@localhost/none"
-            # The mutes' own migration, read at its own revision: the chain's
-            # head has grown since (the eye's column on social_posts, Nov 14,
-            # an ALTER TABLE of its own), as #898 read the likes' at theirs.
-            MUTES = "4cdc4af46a77"
+            # Its PostgreSQL DDL at its own revision too (above), as #898 read
+            # the likes' at theirs.
             ddl_up = chain("upgrade", f"{BEFORE}:{MUTES}", "--sql", url=pg_url)
             ddl_down = chain("downgrade", f"{MUTES}:{BEFORE}", "--sql", url=pg_url)
             u, d = ddl_up.stdout, ddl_down.stdout

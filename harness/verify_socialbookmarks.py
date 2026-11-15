@@ -367,38 +367,9 @@ def make_drawing(who, title, seed=0, vis="public"):
     return sid if st == 201 else None
 
 
-def give_face(who, seed):
-    """A face for them, so a face on the page says whose it is: a drawing of
-    theirs, kept unlisted, named as their face on their row. Its skribl's id."""
-    sid = make_drawing(who, f"{who.handle}'s face", seed=seed, vis="unlisted")
-    db_write("update social_people set face_id = ?, face_w = 816, face_h = 612 where handle_key = ?",
-             (sid, who.handle.lower()))
-    return sid
-
-
 def page_of(on):
     kind, oid = on
     return f"/social/{'p' if kind == 'p' else 'b'}/{oid}"
-
-
-def like(who, on, liked=True, at=None, raw=None):
-    """A like (or taking it back) as the heart sends one, on a post (("p", id))
-    or a drawing (("s", id)): (status, answer)."""
-    c = who.client() if who is not None else Client()
-    c.get(page_of(on))
-    if not c.token:
-        c.get("/social/")      # a page they cannot open: the token from one they can
-    return c.post_json(page_of(on) + "/like", raw if raw is not None else {"liked": liked, "at_ms": at})
-
-
-def likes_on(on):
-    """The likes kept on a post or a drawing: [(handle, at_ms)], oldest first."""
-    kind, oid = on
-    if kind == "p":
-        return db("select p.handle, l.at_ms from social_likes l join social_posts s on s.id = l.post_id"
-                  " join social_people p on p.id = l.person_id where s.public_id = ? order by l.id", (oid,))
-    return db("select p.handle, l.at_ms from social_likes l join social_people p on p.id = l.person_id"
-              " where l.drawing_id = ? order by l.id", (oid,))
 
 
 def block(who, handle):
@@ -424,36 +395,8 @@ def go(pg, path, wait=300):
     return r.status if r else None
 
 
-def tap_heart(pg, sel, after=250):
-    """Tap a heart and wait for the site's answer. A tap that sends nothing
-    reads as the row's own red, never a section that stops."""
-    try:
-        with pg.expect_response(lambda r: r.url.endswith("/like") and r.request.method == "POST", timeout=8000):
-            pg.locator(sel).first.tap(timeout=5000)
-    except Exception:  # noqa: BLE001
-        pass
-    pg.wait_for_timeout(after)
-
-
-def tap_to(pg, loc, timeout=10000):
-    """Tap something that should open a page, and wait for it: one that does
-    not go anywhere reads as the row's own red."""
-    try:
-        with pg.expect_navigation(timeout=timeout):
-            loc.tap(timeout=5000)
-    except Exception:  # noqa: BLE001
-        pass
-
-
-PAGE_HEART = ".post-page > .post-row .lk-heart"
-
-
 def card(post):
     return f'.post-card[data-post="{post}"]'
-
-
-def drawing_card(sid):
-    return f'.post-card[data-skribl="{sid}"]'
 
 
 # ---- the census of words and targets (verify_sociallikes' READ) -----------------
@@ -1020,10 +963,11 @@ with sync_playwright() as p:
                     buttons: [...w.querySelectorAll('.post-sheet-acts .btn')].map(e => e.textContent.trim()),
                     signin: [u.pathname, u.searchParams.get('next')], paper: getComputedStyle(w.querySelector('.make-sheet')).backgroundColor,
                     focus: document.activeElement && document.activeElement.textContent.trim() }; }""")
-                press(pg, "#bookmarkOutSheet .post-sheet-acts [data-make-close]")
+                if sheet and sheet["open"]:
+                    press(pg, "#bookmarkOutSheet .post-sheet-acts [data-make-close]")
                 pg.wait_for_timeout(700)
                 back = pg.evaluate("(s) => { const w = document.getElementById('bookmarkOutSheet');"
-                                   " return { open: w.classList.contains('is-open'), focus: document.activeElement === document.querySelector(s) }; }",
+                                   " return { open: !!w && w.classList.contains('is-open'), focus: document.activeElement === document.querySelector(s) }; }",
                                    opener)
                 outs[screen] = {"first": first, "sheet": sheet, "back": back, "path": path}
                 close_ctx(ctx, pg)
@@ -1040,8 +984,9 @@ with sync_playwright() as p:
                   json.dumps(outs)[:800])
             check("Sign in comes back to the page it was asked from; Not now closes the sheet and gives the ⋯ its focus"
                   " back; nothing is kept for anybody",
-                  all(o["sheet"] and o["sheet"]["signin"] == nxt(o["path"]) and not o["back"]["open"] and o["back"]["focus"]
-                      for o in outs.values()) and after == before,
+                  len(outs) == 2 and all(o["sheet"] and o["sheet"]["open"] and o["sheet"]["signin"] == nxt(o["path"])
+                                         and not o["back"]["open"] and o["back"]["focus"] for o in outs.values())
+                  and after == before,
                   f"{[(o['sheet'] or {}).get('signin') for o in outs.values()]} want {[nxt(o['path']) for o in outs.values()]};"
                   f" back {[o['back'] for o in outs.values()]}; kept {before} -> {after}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop

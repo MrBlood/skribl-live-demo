@@ -1988,7 +1988,8 @@ down (your own shows with its note, as on Home), a drawing its own page no
 longer shows you (made link-only, deleted in Skribl). Somebody you muted
 stays: you chose it. On a phone your own five tabs are SIZED TO THEIR WORDS
 ("Bookmarks" is wider than a fifth of a phone: about 24px between words,
-16px at the edges, the edges giving first in a wider face); a desk keeps
+16px at the edges; short of room the edges give first, then the tabs, never
+past the screen); a desk keeps
 equal columns; the pen's line is the chosen tab's own (drawn inside it), so
 it is under it before any script runs, and tabs.js moves it on a tap. NOBODY
 IS TOLD: no Activity row, no dot, no count anywhere; a page says only
