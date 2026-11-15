@@ -1373,11 +1373,15 @@ with sync_playwright() as p:
             missing = [(" ".join(k), w) for k, v in seen.items() for w in musts.get(k[2], ())
                        if not any(x == w or (len(w) > 22 and x[:22] == w[:22]) for x in v["words"])]
             short = {f"{k[0]} {k[1]}": [h for h, _, _ in v if h < 76] for k, v in rows.items()}
+            # The phone's bar is its icons alone (Nov 15), their names for VoiceOver: the phone's chrome on Home
+            # has no word to read, so the floor of three read is on every other reading (the phone's chrome is in
+            # its Activity and empty page's).
             check("every word on Activity (a list with New and Earlier, and the empty page) and on the chrome with the bell"
                   " reads at 4.5:1 or more on what is painted behind it, every target is 44px or more each way, the rows"
                   " 76px; phone (touch) and desk, light and dark",
                   not low and not small and not fields and not missing and not any(short.values())
-                  and all(v["read"] >= 3 for v in seen.values()) and all(len(v) >= 4 for v in rows.values()),
+                  and all(v["read"] >= 3 for k, v in seen.items() if not (k[0] == "phone" and k[2] == "home"))
+                  and all(len(v) >= 4 for v in rows.values()),
                   f"{sum(v['read'] for v in seen.values())} read, the lowest {lowest}; under 4.5: {low[:3]}; small:"
                   f" {small[:3]}; fields {fields[:2]}; not read {missing[:3]}; rows under 76px {short}")
             ks = {" ".join(k): (v["dot"]["k"] if v and v.get("dot") else None) if k[2] == "bell" else v for k, v in dots.items()}

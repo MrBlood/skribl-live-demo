@@ -1766,9 +1766,11 @@ with sync_playwright() as p_:
         jcard = post_skribl(juno, "Juno's card " + secrets.token_hex(3))
         juno.pg.goto(BASE + "/social/@juno")
         juno.pg.wait_for_timeout(400)
+        # You's pen line (the page you're on) sits inside its icon since the phone's bar went to its icons
+        # alone (Nov 15): a line under the circle, not a picture in it, so it is no stock silhouette.
         own = juno.pg.evaluate("""() => { const f = document.querySelector('.prof-face'), y = document.querySelector('nav.nav .tab-you .tab-ic');
             return { words: f && f.innerText.trim(), img: !!(f && f.querySelector('img')), svg: !!(f && f.querySelector('svg:not(.ic)')),
-                     you: y && y.innerHTML.includes('face-blank'), youImg: !!(y && y.querySelector('img, svg')) }; }""")
+                     you: y && y.innerHTML.includes('face-blank'), youImg: !!(y && y.querySelector('img, svg:not(.pen-line)')) }; }""")
         octx, opg = browser_as(b, theo)
         opg.goto(BASE + "/social/@juno")
         opg.wait_for_timeout(400)
