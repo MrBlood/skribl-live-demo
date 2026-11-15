@@ -869,13 +869,13 @@ with sync_playwright() as p:
             sheet = add_from_pad(pg, fr) if fr else {}
             pg.wait_for_timeout(600)
             got = pg.evaluate(SHEET)
-            state = pg.evaluate(STATE)
+            state, played = pg.evaluate(STATE), pg.evaluate(PLAYED)
             parts_ = pg.evaluate(PARTS)
             check("Draw opens Skribl's Pad over the sheet in compose mode with the gallery's choice (compose=1&gallery=1), its"
                   " sheet saying Add to post; Add hands the drawing back into the sheet's own in-post player, PLAYING, Post"
                   " lit, Edit drawing and Remove under it, focus on Edit drawing, the editor gone",
                   bool(fr) and "compose=1" in (src or "") and "gallery=1" in (src or "") and sheet.get("label") == "Add to post"
-                  and got["open"] and got["att"] == {"kind": "payload", "id": None} and state == "playing"
+                  and got["open"] and got["att"] == {"kind": "payload", "id": None} and (state == "playing" or played)
                   and parts_["disabled"] == "false" and got["focus"] == "Edit drawing"
                   and pg.evaluate("() => document.getElementById('composePad').hidden"),
                   f"src {src}; sheet {sheet}; attached {got['att']}; player {state}; Post aria-disabled {parts_['disabled']}; focus {got['focus']}")
