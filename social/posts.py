@@ -159,9 +159,11 @@ def plays_text(n):
 
 def _cursor(entry):
     """Where a page of the feed ended: its time and which card, in a form
-    that names no internal id. A post's card is p<its address>, a drawing
-    shown outside a post s<its skribl's address> (More from's; a Home page
-    opened before Home kept posts only can still hold one)."""
+    that names no internal id. A post's card is p<its address>, a repost's
+    r<the original's address> at the repost's time (reposts.py: Home's
+    Following and a person's Posts tab), a drawing shown outside a post
+    s<its skribl's address> (More from's; a Home page opened before Home kept
+    posts only can still hold one)."""
     at = as_utc(entry["at"])
     raw = f"{int(at.timestamp() * 1_000_000)}.{entry['key']}"
     return base64.urlsafe_b64encode(raw.encode()).rstrip(b"=").decode()
@@ -173,7 +175,7 @@ def _uncursor(text):
     try:
         raw = base64.urlsafe_b64decode((text or "") + "=" * (-len(text or "") % 4)).decode()
         us, key = raw.split(".", 1)
-        if not (len(key) == 12 and key[0] in "ps"):
+        if not (len(key) == 12 and key[0] in "prs"):
             key = "p" + key
         return datetime.fromtimestamp(int(us) / 1_000_000, tz=timezone.utc), key
     except (ValueError, TypeError, UnicodeDecodeError):
@@ -205,12 +207,10 @@ def _posts_before(at, limit, person=None, hidden=frozenset(), viewer=None, among
     mine = viewer.id if viewer is not None else -1
     q = q.where(sa.or_(Post.taken_down_at.is_(None), Post.person_id == mine))
     if at is not None:
-        when, key = at
-        if key.startswith("s"):
-            q = q.where(Post.created_at <= when)
-        else:
-            q = q.where(sa.or_(Post.created_at < when,
-                               sa.and_(Post.created_at == when, Post.public_id < key[1:])))
+        # A drawing's cursor (s) or a repost's (r) sorts after every post's at
+        # its very time, so the posts at that time come next (gallery._after).
+        from .gallery import _after
+        q = q.where(_after(Post.created_at, Post.public_id, "p", at))
     rows = site().session().execute(q).all()
     return rows[:limit], len(rows) > limit
 
@@ -263,7 +263,14 @@ def feed_page(before=None, limit=PAGE, viewer=None, person=None, among=None):
     MUTES (C, quiet everywhere): a feed of everybody's (Home, Following and
     Everyone alike) leaves out the people the viewer muted, in its query, so
     its pages stay whole; one person's (More from) is what the viewer went
-    to, and keeps them."""
+    to, and keeps them.
+
+    REPOSTS (reposts.py; the owner's "All yes", Nov 14): Home's Following
+    (`among`) holds the reposts of the people you follow and yours, merged
+    newest first under the one cursor, each the original's card with who
+    reposted it; never by somebody muted or of their post. Everyone holds
+    posts only. THE SAME POST TWICE IN ONE PAGE SHOWS ONCE, the newest
+    (reposts.once): the cursor is where the page ended before that."""
     from .mutes import muted_ids
     from .safety import hidden_ids
     at = _uncursor(before) if before else None
@@ -272,49 +279,70 @@ def feed_page(before=None, limit=PAGE, viewer=None, person=None, among=None):
         hidden = hidden | muted_ids(viewer)
     posts, more = _posts_before(at, limit, person, hidden, viewer, among)
     out = [_entry(p, who) for p, who in posts]
+    if among is not None and viewer is not None:
+        from .reposts import reposts_before
+        shared, more_r = reposts_before(at, limit, viewer, hidden, among=among)
+        out = sorted(out + shared, key=lambda e: (e["at"], e["key"]), reverse=True)
+        more = len(out) > limit or more or more_r
     if person is not None:
         drawings, more_s = _drawings_before(at, limit, viewer, person, hidden)
         out = sorted(out + drawings, key=lambda e: (e["at"], e["key"]), reverse=True)
         more = len(out) > limit or more or more_s
     page = out[:limit]
-    return page, (_cursor(page[-1]) if more and page else None)
+    from .reposts import once
+    return once(page), (_cursor(page[-1]) if more and page else None)
 
 
 def person_page(person, viewer, before=None, limit=PAGE):
-    """A page of one person's posts, newest first, for their profile's Posts
-    tab (the map's step 4): (entries, next cursor or None). Posts only (their
-    drawings shown outside a post are their Gallery's), Home's own cursor and
-    its rules for one person's: nobody a block hides either way, nothing
-    taken down but to its own author, who sees it with the note; a mute
-    leaves it as it is (their page is what the viewer went to)."""
+    """A page of one person's posts and reposts, newest first, for their
+    profile's Posts tab (the map's step 4; reposts, the owner's "All yes",
+    Nov 14): (entries, next cursor or None). Their drawings shown outside a
+    post are their Gallery's. Home's own cursor and its rules for one
+    person's: nobody a block hides either way, nothing taken down but to its
+    own author, who sees it with the note (a repost of anything taken down,
+    never); a mute leaves it as it is (their page is what the viewer went
+    to). A repost is the original's card with "Mira Lopez reposted" ("You
+    reposted" on your own); the same post twice in one page shows once."""
+    from .reposts import once, reposts_before
     from .safety import hidden_ids
     at = _uncursor(before) if before else None
     if before and at is None:
         return [], None
-    rows, more = _posts_before(at, limit, person, hidden_ids(viewer), viewer)
-    page = [_entry(p, who) for p, who in rows]
-    return page, (_cursor(page[-1]) if more and page else None)
+    hidden = hidden_ids(viewer)
+    rows, more = _posts_before(at, limit, person, hidden, viewer)
+    shared, more_r = reposts_before(at, limit, viewer, hidden, person=person)
+    out = sorted([_entry(p, who) for p, who in rows] + shared, key=lambda e: (e["at"], e["key"]), reverse=True)
+    more = len(out) > limit or more or more_r
+    page = out[:limit]
+    return once(page), (_cursor(page[-1]) if more and page else None)
 
 
 def cards(entries, viewer):
     """What each card shows: the post (a drawing shown outside a post is a
     post whose words are its title), its author, and its drawing's size, line,
     plays, ground and whether it is on a picture as Skribl describes them for
-    `viewer` (None where it cannot be had: deleted or withheld since); how
-    many comments; where it goes, and its Delete."""
+    `viewer` (None where it cannot be had: deleted or withheld since, or a
+    quote of words alone, which has none); how many comments; where it goes,
+    and its Delete. A REPOST's card (reposts.py) is the original's, with who
+    reposted it (`by`); a QUOTE's carries the original small (`quote`)."""
     from skribl import describe_posts
     from .comments import counts
     from .likes import stats
     from .mutes import muted_ids
+    from .reposts import Quoted, makers_of, stats as repost_stats
     entries = [e if isinstance(e, dict) else _entry(*e) for e in entries]
     # WHOM THIS VIEWER MUTED (mutes): their ⋯ says Unmute. Read once a request.
     muted = muted_ids(viewer)
+    # WHAT THE QUOTES QUOTE (reposts): the originals in one read, their
+    # drawings in the page's one describe_posts below.
+    quoted = Quoted([e["post"] for e in entries if e["kind"] == "p"], viewer)
     # A drawing shown outside a post is asked too, in the same one read: the
     # listing it came from says no ground and no picture, and a tile lays
     # its box in them as a post's does (_gallery.html plate_ground and
     # plate_fill).
-    drawings = describe_posts([e["post"].skribl_id if e["kind"] == "p" else e["sk"]["id"] for e in entries],
-                              viewer_id=viewer.public_id if viewer else None)
+    drawings = describe_posts([e["post"].skribl_id if e["kind"] == "p" else e["sk"]["id"] for e in entries]
+                              + quoted.skribls, viewer_id=viewer.public_id if viewer else None)
+    makers = makers_of(drawings, quoted.drawing_ids)
     # HOW MANY COMMENTS each card says (phase 2; a drawing's too, since every
     # drawing has comments): what its page will show this viewer, so a block
     # or a takedown is neither shown nor counted.
@@ -329,6 +357,10 @@ def cards(entries, viewer):
     from .bookmarks import marked
     kept = marked(viewer, posts=[e["post"].id for e in entries if e["kind"] == "p"],
                   drawings=[e["sk"]["id"] for e in entries if e["kind"] == "s"])
+    # HOW MANY REPOSTS AND QUOTES, and whether a repost is this viewer's
+    # (reposts): every card's at once, counted by the same rules.
+    shared = repost_stats(viewer, posts=[e["post"].id for e in entries if e["kind"] == "p"],
+                          drawings=[e["sk"]["id"] for e in entries if e["kind"] == "s"])
     out = []
     for e in entries:
         who = e["who"]
@@ -355,6 +387,7 @@ def cards(entries, viewer):
         down = (getattr(p, "taken_down_at", None) is not None or (sk or {}).get("visibility") == "withheld"
                 or getattr(who, "taken_down_at", None) is not None)
         key = ("p", p.id) if e["kind"] == "p" else ("s", p.skribl_id)
+        by = e.get("by")
         out.append({"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
                     "plays": plays_text(sk["views"]) if sk else None,
                     "comments": said.get(key, 0),
@@ -368,6 +401,19 @@ def cards(entries, viewer):
                     # alone sees.
                     "markable": not down and (e["kind"] == "p" or (sk or {}).get("visibility") == "public"),
                     "marked": key in kept,
+                    # REPOSTS AND QUOTES (reposts.py): how many and whether a
+                    # repost is theirs; a post can be reposted and quoted, a
+                    # drawing shown outside a post quoted alone, and neither
+                    # once taken down or kept link-only (where one can be
+                    # bookmarked, one can be quoted).
+                    "reposts": shared.get(key, {"n": 0, "mine": False}),
+                    "repost": url_for("social.repost_post", public_id=p.public_id) if e["kind"] == "p" else None,
+                    "quoted_url": (url_for("social.quoted_post", public_id=p.public_id) if e["kind"] == "p"
+                                   else url_for("social.quoted_drawing", skribl_id=p.skribl_id)),
+                    # WHO REPOSTED IT, on a repost's card (Home's Following, a
+                    # Posts tab): "Mira Lopez reposted", "You reposted".
+                    "by": by, "by_me": by is not None and viewer is not None and by.id == viewer.id,
+                    "quote": (quoted.card(p, drawings, makers) if getattr(p, "is_quote", False) else None),
                     "profile": profile_url(who.handle),
                     "mine": viewer is not None and viewer.id == who.id,
                     "muted": who.id in muted})
@@ -473,7 +519,10 @@ def register(bp, skribl_blueprint="skribl"):
     @_rests(json_answer=True)
     def post_new():
         """A post: the words, and the drawing the editor handed back. The
-        skribl and the row land in one transaction, or neither does."""
+        skribl and the row land in one transaction, or neither does. A QUOTE
+        (reposts.py; the composer's Quote) names what it quotes, {"quote": a
+        post's address} or {"quote_drawing": a drawing's id}, open to them as
+        a like asks; its words, its own drawing, or both."""
         if not origin_ok() or not token_ok():
             return _json_error("stale", 403)
         me = current_person()
@@ -490,13 +539,28 @@ def register(bp, skribl_blueprint="skribl"):
         words, problem = check_words(body.get("words"))
         if problem:
             return _json_error(problem, 400)
+        quoting, refusal = _quoting(me, body)
+        if refusal is not None:
+            return refusal
         if body.get("skribl") is not None:
             # ONE OF YOUR OLDER DRAWINGS (the composer's Yours, Drawings),
             # never beside a new one: a post holds one drawing.
             if body.get("payload") is not None:
                 return _json_error("one_drawing", 400)
-            return _post_older(me, words, body.get("skribl"))
+            return _post_older(me, words, body.get("skribl"), quoting)
         payload = body.get("payload")
+        if payload is None and quoting is not None:
+            # A QUOTE OF WORDS ALONE: the original brings its drawing, so
+            # words are enough; with none it would be a repost, which the
+            # sheet's Repost makes.
+            if not words:
+                return _json_error("quote_empty", 400)
+            row = Post(public_id=new_public_id(8), person_id=me.id, words=words, skribl_id=None, **quoting)
+            sess = site().session()
+            sess.add(row)
+            sess.flush()
+            return jsonify({"ok": True, "post": row.public_id,
+                            "go": url_for("social.post_page", public_id=row.public_id)})
         if not isinstance(payload, dict):
             return _json_error("no_drawing", 400)
         from skribl import SkriblRejected, SkriblUnavailable, create_post
@@ -520,14 +584,41 @@ def register(bp, skribl_blueprint="skribl"):
         except SkriblUnavailable:
             return _json_error("busy", 503)
         row = Post(public_id=new_public_id(8), person_id=me.id, words=words or "",
-                   skribl_id=made.public_id)
+                   skribl_id=made.public_id, **(quoting or {}))
         sess = site().session()
         sess.add(row)
         sess.flush()
         return jsonify({"ok": True, "post": row.public_id,
                         "go": url_for("social.post_page", public_id=row.public_id)})
 
-    def _post_older(me, words, skribl_id):
+    def _quoting(me, body):
+        """What a post quotes, as its row's columns, or None for a post that
+        quotes nothing: (columns or None, refusal or None). A post (by its
+        address) or a drawing shown outside a post (by its id, under the
+        drawing's lock, so a quote never lands as it moves into a post), open
+        to them (reposts.quotable: no block either way, not taken down, a
+        drawing public); never both."""
+        from .reposts import quotable
+        post_id, drawing_id = body.get("quote"), body.get("quote_drawing")
+        if post_id is None and drawing_id is None:
+            return None, None
+        if post_id is not None and drawing_id is not None:
+            return None, _json_error("one_quote", 400)
+        oid = post_id if post_id is not None else drawing_id
+        if not isinstance(oid, str) or not (0 < len(oid) <= 32):
+            return None, _json_error("quote_gone", 404)
+        if drawing_id is not None:
+            drawing_lock(oid)
+        on = quotable(me, "p" if post_id is not None else "s", oid)
+        if on is None:
+            # Gone, taken down, kept link-only, or a block either way: as gone
+            # as one never made, saying nothing of which.
+            return None, _json_error("quote_gone", 404)
+        return {"is_quote": True, "quoted_post_id": on.post.id if on.post is not None else None,
+                "quoted_drawing_id": on.drawing if on.post is None else None,
+                "quoted_owner_id": on.owner.id}, None
+
+    def _post_older(me, words, skribl_id, quoting=None):
         """ONE DRAWING, ONE CONVERSATION: one of `me`'s older drawings as a
         post (the header's rule). The drawing is theirs, shared (public or
         link-only), never a post's, a face or a comment's; taken down
@@ -540,6 +631,7 @@ def register(bp, skribl_blueprint="skribl"):
         from .comments import move_drawing_comments
         from .likes import move_drawing_likes
         from .models import Comment
+        from .reposts import move_drawing_quotes
         sid = skribl_id if isinstance(skribl_id, str) else ""
         if not (0 < len(sid) <= 32):
             return _json_error("drawing_gone", 404)
@@ -558,15 +650,20 @@ def register(bp, skribl_blueprint="skribl"):
             # In a post already (posted a moment ago, another tab): sharing
             # it again will be a repost, a step of its own.
             return _json_error("drawing_posted", 409)
+        if quoting is not None and quoting.get("quoted_drawing_id") == sid:
+            # A post can't quote its own drawing.
+            return _json_error("quote_gone", 404)
         row = Post(public_id=new_public_id(8), person_id=me.id, words=words or "", skribl_id=sid,
                    # Hidden from the Gallery by its maker (link-only): the
                    # post's drawing stays out of it, as the eye said.
-                   gallery_hidden_at=None if sk.get("visibility") == "public" else utcnow())
+                   gallery_hidden_at=None if sk.get("visibility") == "public" else utcnow(), **(quoting or {}))
         sess.add(row)
         sess.flush()
         move_drawing_comments(sid, row.id)
         move_drawing_likes(sid, row.id)
         move_drawing_bookmarks(sid, row.id)
+        # ...and its quotes quote the post (reposts: one drawing, one conversation).
+        move_drawing_quotes(sid, row.id)
         sess.flush()
         return jsonify({"ok": True, "post": row.public_id,
                         "go": url_for("social.post_page", public_id=row.public_id)})
@@ -644,7 +741,8 @@ def register(bp, skribl_blueprint="skribl"):
         owner's yes on Nov 12, a drawing's: whatever is opened has them)."""
         others, _ = feed_page(limit=MORE + 1, viewer=me, person=card["who"])
         key = ("s" + card["post"].skribl_id) if card["kind"] == "s" else ("p" + card["post"].public_id)
-        others = [e for e in others if e["key"] != key][:MORE]
+        # A tile is a drawing: a quote of words alone has none to show.
+        others = [e for e in others if e["key"] != key and (e["kind"] != "p" or e["post"].skribl_id)][:MORE]
         from . import comments
         on = (comments.On(card["who"], post=card["post"]) if card["kind"] == "p" else
               comments.On(card["who"], drawing=card["post"].skribl_id, sk=card["sk"]))
@@ -766,9 +864,12 @@ def register(bp, skribl_blueprint="skribl"):
         from .bookmarks import drop_drawing_bookmarks
         from .comments import drop_drawing_comments
         from .likes import drop_drawing_likes
+        from .reposts import drop_drawing_quotes
         drop_drawing_comments(skribl_id)
         drop_drawing_likes(skribl_id)
         drop_drawing_bookmarks(skribl_id)
+        # ...and its quotes let go of it, each saying it is gone (reposts).
+        drop_drawing_quotes(skribl_id)
         sess.flush()
         return jsonify({"ok": True, "go": url_for("social.home", note="deleted_drawing")})
 
@@ -794,20 +895,25 @@ def drawing_lock(skribl_id):
 
 
 def drop_post(author_public_id, row):
-    """A post's comments and answers, its likes and its bookmarks (phase 2 and
-    bookmarks, said here and not left to a cascade), its drawing (Skribl's
-    delete_post, as its author) and its row. A drawing already gone is no
-    reason to keep the words. Flushes nothing: the caller does, with whatever
-    else goes in the same transaction."""
+    """A post's comments and answers, its likes, its bookmarks and its
+    reposts, and its quotes letting go of it (phase 2, bookmarks and
+    reposts, said here and not left to a cascade), its drawing (Skribl's
+    delete_post, as its author; a quote of words alone has none) and its
+    row. A drawing already gone is no reason to keep the words. Flushes
+    nothing: the caller does, with whatever else goes in the same
+    transaction."""
     from skribl import SkriblNotFound, delete_post
     from .bookmarks import drop_post_bookmarks
     from .comments import drop_post_comments
     from .likes import drop_post_likes
+    from .reposts import drop_post_reposts
     drop_post_comments(row.id)
     drop_post_likes(row.id)
     drop_post_bookmarks(row.id)
-    try:
-        delete_post(row.skribl_id, author_id=author_public_id)
-    except SkriblNotFound:
-        pass
+    drop_post_reposts(row.id)
+    if row.skribl_id:
+        try:
+            delete_post(row.skribl_id, author_id=author_public_id)
+        except SkriblNotFound:
+            pass
     site().session().delete(row)

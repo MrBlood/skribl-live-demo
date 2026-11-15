@@ -79,6 +79,20 @@
                         plain ground has none: its strips are its ground
                         (plate_ground). Both tiles, one rule.
 
+    quote_card(q)       THE ORIGINAL, SMALL, inside a quote post (reposts; the
+                        reposts mock, the owner's "All yes", Nov 14), and under
+                        the words of the composer quoting it: ONE link to the
+                        original's page, its author's name and @handle and
+                        when, its words (two lines at most), and its drawing as
+                        this tile's still picture (the plate on its ground, its
+                        picture at its sides), its ▶ saying "drawn in 15 sec"
+                        (a Flip, "3 pages"), at its foot's middle as the
+                        in-post player's at rest. Once the original is gone or
+                        hidden from the person looking: "This post is gone.",
+                        and nothing more. In the composer (_quote.html, its
+                        own file) it is no link (link=false): a tap there
+                        would leave what is being written.
+
     Import these WITH CONTEXT: they read the page's skribl_bp. #}
 {% from 'social/_post.html' import face with context %}
 {% import 'social/_icons.html' as ic %}
@@ -127,6 +141,16 @@
     <span class="gal-dur">{{ ic.draft() }}<span>Draft</span></span></span>
   <span class="gal-by"><b>{{ d.title }}</b><span class="gal-when">{{ d.line }}</span></span>
 {% if pick %}</button>{% else %}</a>{% endif %}
+{%- endmacro %}
+
+{% macro quote_card(q, link=true) -%}
+{%- if q.gone %}<p class="qt-card is-gone" data-quote-card>This post is gone.</p>
+{%- else %}<{{ 'a' if link else 'div' }} class="qt-card"{% if link %} href="{{ q.url }}"{% endif %} data-quote-card>
+  <span class="qt-head"><b class="qt-name">{{ q.who.display_name }}</b><span class="qt-sub">@{{ q.who.handle }}{% if q.at %} · <time datetime="{{ when_iso(q.at) }}" data-when="ago">{{ when_day(q.at) }}</time>{% endif %}</span></span>
+  {%- if q.words %}<span class="qt-words">{{ q.words }}</span>{% endif %}
+  {%- if q.sk %}<span class="gal-pic qt-pic"{{ plate_ground(q.sk) }}>{{ plate_fill(q.sk) }}<span class="gal-plate" style="{{ plate_frame(q.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=q.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
+    {%- if q.says %}<span class="gal-dur qt-dur">{{ ic.tri() }}<span>{{ q.says }}</span></span>{% endif %}</span>{% endif %}
+</{{ 'a' if link else 'div' }}>{% endif %}
 {%- endmacro %}
 
 {#  What explore.js says ([data-gal-words]): the page's words. #}

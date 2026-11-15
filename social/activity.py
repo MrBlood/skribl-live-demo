@@ -53,6 +53,16 @@ Following again never tells you twice (the follow keeps its first time). A
 follow they took back is not in it. FOLLOWS NEVER LIGHT THE DOT either: a
 follow needs no answer.
 
+REPOSTS AND QUOTES TOO (reposts; the reposts mock, the owner's "All yes",
+Nov 14), read from the reposts and the quote posts, never kept as rows of
+their own: "Mira reposted your post", their face wearing the small repost
+arrows, several since you last looked on one post one row ("Mira and 2
+others reposted your post"), Earlier one row a post, as likes; it opens the
+post. "Rook quoted your post", a row each, their words under it in quotes,
+the small picture the quote's own drawing, else yours; it opens the quote.
+Undo repost takes its row with it, and a quote of something since gone (or
+gone itself) is not in it. NEITHER LIGHTS THE DOT: nothing to answer.
+
 NEVER IN IT: yourself; anybody hidden from you (a block either way, or
 taken down: safety.hidden_ids); a comment taken down, or an answer under a
 comment you are not shown; anything on a post or a drawing whose page you
@@ -94,7 +104,7 @@ import sqlalchemy.orm  # noqa: F401  (sa.orm.aliased)
 from flask import g, redirect, request, url_for
 
 from .accounts import _page, _rests
-from .models import PERSON_PREFIX, Comment, Like, Person, Post, as_utc, utcnow
+from .models import PERSON_PREFIX, Comment, Like, Person, Post, Repost, as_utc, utcnow
 from .safety import hidden_ids
 from .security import current_person, site
 
@@ -224,6 +234,60 @@ def _like_groups(conds, new):
         if g is not None:
             g["people"].append(person)
     return list(groups.values())
+
+
+def _reposts(me, hidden, since):
+    """The reposts of what `me` made as Activity's rows would have them: not
+    theirs, nobody hidden from them, never of a post taken down; one group a
+    post for those after `since` and one for those before, newest first,
+    LIKE_GROUPS at most, as _likes(): [{"post_id", "new", "n", "at",
+    "people" (the newest two), "post_public", "skribl_id"}]."""
+    hid = sorted(hidden)
+    base = [Repost.owner_id == me.id, Repost.person_id != me.id, Post.taken_down_at.is_(None)]
+    if hid:
+        base.append(Repost.person_id.notin_(hid))
+    parts = ([(True, base)] if since is None else
+             [(True, base + [Repost.created_at > since]), (False, base + [Repost.created_at <= since])])
+    sess = site().session()
+    groups = []
+    for new, conds in parts:
+        newest = sa.func.max(Repost.created_at)
+        q = (sa.select(Repost.post_id, Post.public_id, Post.skribl_id, sa.func.count(), newest)
+             .join(Post, Post.id == Repost.post_id).where(*conds)
+             .group_by(Repost.post_id, Post.public_id, Post.skribl_id).order_by(newest.desc()).limit(LIKE_GROUPS))
+        found = {pid: {"post_id": pid, "new": new, "n": int(n), "at": at, "people": [], "post_public": public,
+                       "skribl_id": sid} for pid, public, sid, n, at in sess.execute(q).all()}
+        if not found:
+            continue
+        # Each group's newest two people: a window over the same reposts.
+        rank = sa.func.row_number().over(partition_by=Repost.post_id,
+                                         order_by=(Repost.created_at.desc(), Repost.id.desc()))
+        inner = (sa.select(Repost.post_id, Repost.person_id, rank.label("rank")).join(Post, Post.id == Repost.post_id)
+                 .where(*conds, Repost.post_id.in_(sorted(found))).subquery())
+        for pid, person in sess.execute(sa.select(inner.c.post_id, Person).join(Person, Person.id == inner.c.person_id)
+                                        .where(inner.c.rank <= 2).order_by(inner.c.rank)).all():
+            found[pid]["people"].append(person)
+        groups += list(found.values())
+    return sorted((g for g in groups if g["people"]), key=lambda g: as_utc(g["at"]), reverse=True)[:LIKE_GROUPS]
+
+
+def _quotes(me, hidden, limit=READ):
+    """The quotes of what `me` made as Activity's rows would have them, newest
+    first: not theirs, nobody hidden from them, none taken down, and only of
+    what is still there (a quote of something since gone has let go of it):
+    [(quote, its author, the original post's address and skribl, or the
+    drawing's id)]."""
+    orig = sa.orm.aliased(Post)
+    q = (sa.select(Post, Person, orig.public_id, orig.skribl_id)
+         .join(Person, Person.id == Post.person_id)
+         .outerjoin(orig, orig.id == Post.quoted_post_id)
+         .where(Post.quoted_owner_id == me.id, Post.person_id != me.id, Post.taken_down_at.is_(None),
+                sa.or_(Post.quoted_post_id.isnot(None), Post.quoted_drawing_id.isnot(None)))
+         .order_by(Post.created_at.desc(), Post.id.desc()).limit(limit))
+    hid = sorted(hidden)
+    if hid:
+        q = q.where(Post.person_id.notin_(hid))
+    return site().session().execute(q).all()
 
 
 def _follows(me, hidden, since, owner_url):
@@ -381,9 +445,16 @@ def listing(me, skribl_blueprint="skribl"):
     quiet = muted_ids(me)
     items = _read(me, hidden, quiet=quiet)
     liked = _likes(me, hidden | quiet, since)
-    drawings = [r[0].drawing_id for r in items if r[0].drawing_id] + [g["drawing_id"] for g in liked if g["drawing_id"]]
+    # REPOSTS AND QUOTES (reposts): nobody muted either, as likes.
+    shared = _reposts(me, hidden | quiet, since)
+    quoted = _quotes(me, hidden | quiet)
+    drawings = ([r[0].drawing_id for r in items if r[0].drawing_id] + [g["drawing_id"] for g in liked if g["drawing_id"]]
+                + [q.quoted_drawing_id for q, *_ in quoted if q.quoted_drawing_id])
     pics = {r[0].id: (r[0].skribl_id or r[3] or r[0].drawing_id) for r in items}
-    sk = _described(me, drawings + list(pics.values()) + [g["skribl_id"] for g in liked])
+    # A quote's small picture: its own drawing, else what it quotes.
+    qpics = {q.id: (q.skribl_id or osid or q.quoted_drawing_id) for q, _, _, osid in quoted}
+    sk = _described(me, drawings + list(pics.values()) + [g["skribl_id"] for g in liked]
+                    + [g["skribl_id"] for g in shared] + list(qpics.values()))
     shown = _drawings_shown(me, drawings, sk)
 
     def page(post_public, drawing_id):
@@ -421,6 +492,23 @@ def listing(me, skribl_blueprint="skribl"):
             "names": [p.display_name.split(" ")[0] for p in g["people"]], "n": g["n"],
             "href": page(g["post_public"], g["drawing_id"]) + "#liked",
             "pic": _pic(g["skribl_id"], sk.get(g["skribl_id"]), skribl_blueprint)})
+    # REPOSTS: a row a post, since you last looked and before, as likes; they open the post.
+    for g in shared:
+        sections[0 if g["new"] else 1].append({
+            "kind": "repost", "new": g["new"], "when": g["at"], "words": None, "people": g["people"],
+            "names": [p.display_name.split(" ")[0] for p in g["people"]], "n": g["n"],
+            "href": url_for("social.post_page", public_id=g["post_public"]),
+            "pic": _pic(g["skribl_id"], sk.get(g["skribl_id"]), skribl_blueprint)})
+    # QUOTES: a row each, their words under it; they open the quote.
+    for q, who, opublic, _ in quoted:
+        if q.quoted_drawing_id is not None and q.quoted_drawing_id not in shown:
+            continue
+        new = since is None or as_utc(q.created_at) > since
+        sections[0 if new else 1].append({
+            "kind": "quote", "new": new, "when": q.created_at, "words": q.words or None, "people": [who],
+            "names": [who.display_name.split(" ")[0]], "n": 1,
+            "href": url_for("social.post_page", public_id=q.public_id),
+            "pic": _pic(qpics[q.id], sk.get(qpics[q.id]), skribl_blueprint)})
     # FOLLOWS: since you last looked one row, before a row a day; they open
     # their page, or several, who follows you.
     from .accounts import profile_url
@@ -451,8 +539,9 @@ def register(bp, skribl_blueprint="skribl"):
         sess.execute(sa.update(Person).where(Person.id == me.id).values(activity_seen_at=now))
         sess.flush()
         # The rail's dot (a desk) fades as they look, where there was one: a
-        # like or a follow never lit it.
-        g.social_activity_dot = "going" if any(r["kind"] not in ("like", "follow") for r in fresh) else None
+        # like, a follow, a repost or a quote never lit it.
+        g.social_activity_dot = ("going" if any(r["kind"] not in ("like", "follow", "repost", "quote") for r in fresh)
+                                 else None)
         return _page("activity.html", here="activity", fresh=fresh, earlier=earlier)
 
     return bp

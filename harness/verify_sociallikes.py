@@ -515,31 +515,34 @@ HEART = r"""(sel) => { const el = document.querySelector(sel); if (!el || !el.ge
     inkColor: cs('.ht-ink') ? cs('.ht-ink').stroke : null, fillColor: cs('.ht-fill') ? cs('.ht-fill').fill : null,
     like: el.getAttribute('data-like'), out: el.hasAttribute('data-like-out'), color: getComputedStyle(el).color }; }"""
 
-# THE ROW under a post (Nov 13, the quick-patterns mock's B), in `sel`: what
-# it shows, in order; the heart's box beside the comments' (their ink, their
-# middle, the 14px between), its ground, its icon's size, and whether a press
-# lands on it at each edge; whether any heart is left on the drawing's line.
+# THE ROW under a post (Nov 13, the quick-patterns mock's B; the repost
+# beside the comments since the reposts mock, Nov 14), in `sel`: what it
+# shows, in order; the heart's box beside the comments' (their ink, their
+# middle) and 14px after what comes before it (the repost), its ground, its
+# icon's size, and whether a press lands on it at each edge; whether any
+# heart is left on the drawing's line.
 ROW = r"""(sel) => { const root = document.querySelector(sel); if (!root) return null;
   const row = root.querySelector('.post-row'); if (!row) return null;
   const rd = v => Math.round(v * 100) / 100;
   const name = e => e.classList.contains('post-count') ? 'count' : e.classList.contains('lk-heart') ? 'heart'
-    : e.classList.contains('post-share') ? 'share' : e.classList.contains('post-more') ? 'more'
-    : e.classList.contains('post-open') ? 'open' : e.className;
+    : e.classList.contains('rp-btn') ? 'repost' : e.classList.contains('post-share') ? 'share'
+    : e.classList.contains('post-more') ? 'more' : e.classList.contains('post-open') ? 'open' : e.className;
   const out = { kids: [...row.children].filter(e => e.getClientRects().length).map(name),
                 h: rd(row.getBoundingClientRect().height),
                 inLine: !!root.querySelector('.skribl-inline-line .lk-heart, .skribl-inline-lead'), heart: null };
   const heart = row.querySelector('.lk-heart'), count = row.querySelector('.post-count');
   if (!heart || !count) return out;
   const r = heart.getBoundingClientRect(), c = count.getBoundingClientRect(), hc = getComputedStyle(heart);
+  const before = (heart.previousElementSibling || count).getBoundingClientRect();
   const icon = heart.querySelector('svg').getBoundingClientRect(), my = (r.top + r.bottom) / 2, mx = (r.left + r.right) / 2;
   const hit = (x, y) => { const e = document.elementFromPoint(x, y); return !!e && (e === heart || heart.contains(e)); };
-  out.heart = { h: rd(r.height), w: rd(r.width), gap: rd(r.left - c.right), mid: rd(my), countMid: rd((c.top + c.bottom) / 2),
+  out.heart = { h: rd(r.height), w: rd(r.width), gap: rd(r.left - before.right), mid: rd(my), countMid: rd((c.top + c.bottom) / 2),
     ink: hc.color, countInk: getComputedStyle(count).color, ground: hc.backgroundColor, icon: rd(icon.width),
     hits: [hit(r.left + 1, my), hit(r.right - 1, my), hit(mx, r.top + 1), hit(mx, r.bottom - 1)] };
   return out; }"""
 
-CARD_ROW = ["count", "heart", "share", "more", "open"]
-PAGE_ROW = ["count", "heart", "share", "more"]
+CARD_ROW = ["count", "repost", "heart", "more", "open"]
+PAGE_ROW = ["count", "repost", "heart", "more"]
 
 
 def to_middle(pg, sel):
@@ -551,10 +554,11 @@ def to_middle(pg, sel):
 
 def placed(rw, kids=CARD_ROW):
     """The heart's place in the row (ROW's reading), as the quick-patterns
-    mock's B has it: after the comments, before Share, the ⋯ and (on a card)
-    Open ›; 44px to a finger with a 20px pen heart, in the comments' own ink
-    and on their middle, 14px after them, on no ground of its own; a press
-    lands on it at every edge; none left on the drawing's line."""
+    mock's B has it, and the reposts mock since Nov 14: after the comments
+    and the repost, before the ⋯ and (on a card) Open ›; 44px to a finger
+    with a 20px pen heart, in the comments' own ink and on their middle, 14px
+    after the repost, on no ground of its own; a press lands on it at every
+    edge; none left on the drawing's line."""
     h = (rw or {}).get("heart") or {}
     return (bool(rw) and rw["kids"] == kids and not rw["inLine"] and h.get("h") == 44 and h.get("w", 0) >= 44
             and h.get("icon") == 20 and abs(h.get("gap", 0) - 14) < 0.6 and abs(h.get("mid", 0) - h.get("countMid", 99)) < 0.6
@@ -565,7 +569,7 @@ def placed(rw, kids=CARD_ROW):
 def told(rw):
     h = (rw or {}).get("heart") or {}
     return (f"row {rw and rw['kids']} (a heart on the line: {rw and rw['inLine']}); heart {h.get('w')}x{h.get('h')},"
-            f" icon {h.get('icon')}, {h.get('gap')}px after the comments, middle {h.get('mid')} / {h.get('countMid')};"
+            f" icon {h.get('icon')}, {h.get('gap')}px after the repost, middle {h.get('mid')} / {h.get('countMid')};"
             f" ink {h.get('ink')} / {h.get('countInk')}, ground {h.get('ground')}; lands {h.get('hits')}")
 
 
@@ -886,7 +890,7 @@ RISE_PAINT = r"""(sel) => { const h = document.querySelector(sel + ' .lk-rise');
 CARD_FRAMES = r"""([sel, ms]) => { window.__cf = []; const c = document.querySelector(sel), t0 = performance.now();
   const parts = { head: '.post-head', words: '.post-words', drawing: '.skribl-inline', heart: '.lk-heart',
                   scrubber: '.skribl-inline-scrub', line: '.skribl-inline-line', words2: '.skribl-inline-say', row: '.post-row',
-                  share: '.post-row .post-share', more: '.post-row .post-more', open: '.post-row .post-open' };
+                  repost: '.post-row .rp-btn', more: '.post-row .post-more', open: '.post-row .post-open' };
   const step = () => { const boxes = {};
     for (const [k, s] of Object.entries(parts)) { const e = c.querySelector(s); if (!e) continue;
       const r = e.getBoundingClientRect(); boxes[k] = [r.left, r.top, r.width, r.height]; }
@@ -1071,9 +1075,10 @@ with sync_playwright() as p:
             to_middle(pg, card(p1) + " .post-row")
             rw = pg.evaluate(ROW, card(p1))
             h = pg.evaluate(HEART, card(p1) + " .lk-heart")
-            check("on Home's card the heart is in the row under the drawing, after the comments and before Share, the ⋯"
-                  " and Open ›: 44px to a finger, the pen's heart 20px, in the comments' own ink and on their middle,"
-                  " 14px after them, on no ground of its own, a press landing at every edge; none on the drawing's line",
+            check("on Home's card the heart is in the row under the drawing, after the comments and the repost and before"
+                  " the ⋯ and Open ›: 44px to a finger, the pen's heart 20px, in the comments' own ink and on their"
+                  " middle, 14px after the repost, on no ground of its own, a press landing at every edge; none on the"
+                  " drawing's line",
                   placed(rw), told(rw))
             check("with nothing liked it stays empty and says so: not pressed, named 'Like', no number at zero; the"
                   " pen's heart (one line drawn round), its blush and ink hidden, its line the row's own ink",
@@ -1082,9 +1087,9 @@ with sync_playwright() as p:
                   and h["lineColor"] == ((rw or {}).get("heart") or {}).get("countInk") and not h["liked"],
                   json.dumps({k: h.get(k) for k in ("pressed", "label", "n", "pen", "fill", "ink", "line", "lineColor")} if h else None))
             check("nothing else moves: a row with the heart is the height of one without (its maker's taken-down card,"
-                  " which has none), and the rest keep their order",
+                  " which has none, nor a repost), and the rest keep their order",
                   with_h and without and with_h["h"] == without["h"] == 44
-                  and without["kids"] == [k for k in CARD_ROW if k != "heart"] and with_h["kids"] == CARD_ROW,
+                  and without["kids"] == [k for k in CARD_ROW if k not in ("heart", "repost")] and with_h["kids"] == CARD_ROW,
                   f"with {with_h and (with_h['kids'], with_h['h'])}; without {without and (without['kids'], without['h'])}")
             go(pg, f"/social/p/{p1}")
             to_middle(pg, ".post-page > .post-row")
@@ -1858,12 +1863,13 @@ with sync_playwright() as p:
             go(pg, "/social/activity")
             empty = pg.evaluate("() => (document.querySelector('.act-empty-words') || {}).textContent")
             close_ctx(ctx, pg)
-            # Since follows (the follow mock, Nov 13) the same lines say follows too.
-            check("Activity's words say likes: 'Who followed you, liked your posts or said something on them, and who"
-                  " answered you.', and with nothing yet 'When someone follows you, likes your post, says something on"
-                  " it, or answers you, you’ll see it here.'",
-                  sub == "Who followed you, liked your posts or said something on them, and who answered you."
-                  and empty == "When someone follows you, likes your post, says something on it, or answers you, you’ll see it here.",
+            # Since follows (the follow mock, Nov 13) the same lines say follows too,
+            # and since reposts (the reposts mock, Nov 14) reposts.
+            check("Activity's words say likes: 'Who followed you, liked or reposted your posts or said something on them,"
+                  " and who answered you.', and with nothing yet 'When someone follows you, likes or reposts your post,"
+                  " says something on it, or answers you, you’ll see it here.'",
+                  sub == "Who followed you, liked or reposted your posts or said something on them, and who answered you."
+                  and empty == "When someone follows you, likes or reposts your post, says something on it, or answers you, you’ll see it here.",
                   f"{sub!r}; {empty!r}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(9, exc)
@@ -2013,7 +2019,9 @@ with sync_playwright() as p:
             hid3 = at("select public_id, gallery_hidden_at from social_posts") if "gallery_hidden_at" in post_cols3 else None
             check("...and its posts gain the eye's column (gallery_hidden_at, the eye on your own Gallery tab), every post"
                   " kept and in the Gallery (none hidden)",
-                  up3.returncode == 0 and post_cols3[-1:] == ["gallery_hidden_at"] and hid3 == [("P1", None)],
+                  # (the eye's column after taken_down_at; the reposts' columns, Nov 14, after it)
+                  up3.returncode == 0 and "gallery_hidden_at" in post_cols3
+                  and post_cols3[post_cols3.index("gallery_hidden_at") - 1] == "taken_down_at" and hid3 == [("P1", None)],
                   f"columns {post_cols3}; {hid3}")
             down = chain("downgrade", BEFORE)
             gone = at("select name from sqlite_master where tbl_name = 'social_likes'")

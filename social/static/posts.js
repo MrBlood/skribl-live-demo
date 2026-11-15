@@ -41,6 +41,21 @@
  * raises a small sheet that says how ("Bookmark this post?", the heart's
  * own), and nothing is kept. Nobody is told, and nothing counts them.
  *
+ * REPOSTS (the reposts mock, the owner's "All yes", Nov 14): the row's
+ * repost raises its own small sheet (#repostSheet, the ⋯'s shape): Repost,
+ * or Undo repost once it is yours, and Quote; a drawing shown outside a post
+ * has Quote alone. Repost asks nothing more: the sheet goes down, every
+ * place on the page that shows the post lights its repost (the small violet
+ * ink) and its count moves at once, as the heart's does, the count fading
+ * and the button growing round the arrows, which keep their place; the site
+ * is told (/p/<id>/repost, the page's token) and its count is what stays.
+ * No toast: Undo is the sheet's own row. One request at a time a post, taps
+ * made meanwhile where it ends up; one that did not take goes back and the
+ * site's toast says why, kindly. QUOTE asks the site for the post, small
+ * (/p/<id>/quoted), and opens the composer with it under the words
+ * (compose.js, window.SocialComposer.quote). Signed out, the repost raises
+ * a small sheet that says how ("Repost this post?"), and nothing is done.
+ *
  * TIMES are said in the person's own time: "35m" in the feed, "Nov 10 at
  * 8:20 PM" on a post's page (social.js's SocialWhen, with this page's
  * words); without the scripts, the day in UTC.
@@ -127,7 +142,8 @@
              del: p.getAttribute('data-del'), kind: p.getAttribute('data-kind') || 'p',
              handle: p.getAttribute('data-handle') || '', first: p.getAttribute('data-first') || '',
              muted: p.hasAttribute('data-muted'), markable: p.hasAttribute('data-markable'),
-             marked: p.hasAttribute('data-marked') };
+             marked: p.hasAttribute('data-marked'), repost: p.getAttribute('data-repost') || '',
+             quoted: p.getAttribute('data-quoted') || '' };
   }
 
   /* ---- the ⋯ sheet, and Report and Delete -------------------------------- */
@@ -174,11 +190,6 @@
       tell(menuWrap.querySelector('[data-post-say]'), '');
       menu.open(m);
       return;
-    }
-    var s = e.target.closest('[data-post-share]');
-    if (s) {
-      var p = postOf(s);
-      if (p) share(p.url, pageSay);
     }
   });
 
@@ -284,6 +295,185 @@
       st.want = !want;
       markShow(p, !want);
       markSay(markWhy(j), null, wait);
+    });
+  }
+
+  /* ---- REPOSTS ------------------------------------------------------------- */
+  var rpWrap = doc.getElementById('repostSheet');
+  var rpSheet = rpWrap && window.SocialSheet ? window.SocialSheet(rpWrap, { doorCloses: false }) : null;
+  var rpOutWrap = doc.getElementById('repostOutSheet');
+  var rpOut = rpOutWrap && window.SocialSheet ? window.SocialSheet(rpOutWrap, {
+    doorCloses: false, first: function () { return rpOutWrap.querySelector('.post-sheet-acts [data-make-close]'); }
+  }) : null;
+  var rpNow = null, rpFrom = null;
+  var GLIDE = { duration: 220, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' };
+  function still() { return !!(reduced && reduced.matches); }
+  /* Every repost on the page for the post (its cards, its own page's row). */
+  function rpButtons(p) {
+    return Array.prototype.filter.call(doc.querySelectorAll('.post-card[data-post] .post-row .rp-btn, .post-page[data-post] > .post-row .rp-btn'),
+      function (b) { return b.closest('[data-post]').getAttribute('data-post') === p.id; });
+  }
+  /* WHAT MOVES, GLIDES (the heart's own, likes.js): a count that comes or
+     goes fades, and the button grows or shrinks round the arrows, which keep
+     their place, what follows it in the row moving along a frame at a time;
+     under Reduce Motion it fades where it sits. */
+  function rpGrow(b, change) {
+    var w0 = b.getBoundingClientRect().width;
+    if (b._grow) b._grow.cancel();
+    change();
+    var w1 = b.getBoundingClientRect().width;
+    if (still() || !b.animate || Math.abs(w1 - w0) < 0.5) return;
+    b.style.overflow = 'hidden';
+    var a = b._grow = b.animate([{ width: w0 + 'px' }, { width: w1 + 'px' }], GLIDE);
+    a.onfinish = a.oncancel = function () { if (b._grow === a) { b._grow = null; b.style.overflow = ''; } };
+  }
+  function rpFade(el, from, to, done) {
+    if (!el.animate) { if (done) done(); return null; }
+    var a = el.animate([{ opacity: from }, { opacity: to }], { duration: to ? 200 : 150, easing: 'ease', fill: 'forwards' });
+    a.onfinish = function () { if (done) done(); };
+    return a;
+  }
+  function rpCount(b, n) {
+    var span = b.querySelector('.rp-n');
+    if (n > 0) {
+      if (span) {
+        span.textContent = String(n);
+        if (span._going) {
+          var was = parseFloat(getComputedStyle(span).opacity);
+          span._going.cancel();
+          span._going = null;
+          rpFade(span, isFinite(was) ? was : 0, 1, function () { span.getAnimations().forEach(function (a) { a.cancel(); }); });
+        }
+        return;
+      }
+      span = doc.createElement('span');
+      span.className = 'rp-n';
+      span.textContent = String(n);
+      rpGrow(b, function () { b.appendChild(span); b.classList.remove('is-zero'); });
+      rpFade(span, 0, 1, function () { span.getAnimations().forEach(function (a) { a.cancel(); }); });
+    } else if (span && !span._going) {
+      span._going = rpFade(span, 1, 0, function () {
+        if (!span._going) return;
+        span._going = null;
+        rpGrow(b, function () { span.remove(); b.classList.add('is-zero'); });
+      });
+      if (!span._going) { span.remove(); b.classList.add('is-zero'); }
+    }
+  }
+  function rpShow(p, on, n) {
+    rpButtons(p).forEach(function (b) {
+      b.classList.toggle('is-on', on);
+      rpCount(b, n);
+      b.setAttribute('aria-label', say(on ? 'rp_reposted' : 'rp_repost')
+        + (n > 0 ? ', ' + say(n === 1 ? 'rp_one' : 'rp_many', { n: n }) : ''));
+    });
+  }
+  var rps = {};
+  function rpState(p, b) {
+    var st = rps[p.id];
+    if (!st) {
+      var span = b && b.querySelector('.rp-n'), on = !!b && b.classList.contains('is-on');
+      var n = span ? parseInt(span.textContent, 10) || 0 : 0;
+      st = rps[p.id] = { on: on, n: n, sure: on, sureN: n, busy: false, p: p };
+    }
+    return st;
+  }
+  function rpWhy(j) {
+    if (j && j.error && WORDS['rp_' + j.error]) return say('rp_' + j.error);
+    if (j && j.status === 429) return say('rp_limited');
+    if (j && j.status === 401) return say('rp_signed_out');
+    if (j && j.status === 403) return say('rp_stale');
+    if (j && j.status === 404) return say('rp_gone');
+    return say('rp_failed');
+  }
+  function rpSay(text) {
+    if (window.SocialToast) window.SocialToast.rise(text, { plain: true, wait: 300, clear: '[data-repost-menu], ' + MENUS });
+    else tell(pageSay, text);
+  }
+  function rpAct(p, want) {
+    var st = rpState(p, rpButtons(p)[0]);
+    if (st.on !== want) {
+      st.on = want;
+      st.n = Math.max(0, st.n + (want ? 1 : -1));
+    }
+    rpShow(p, st.on, st.n);
+    rpSend(st);
+  }
+  function rpSend(st) {
+    if (st.busy) return;           /* its answer sends again if a tap changed what they want */
+    st.busy = true;
+    var want = st.on;
+    post(st.p.repost, { reposted: want }, { 'X-Social-CSRF': token }).then(function (j) {
+      st.busy = false;
+      if (j.ok) {
+        st.sure = !!j.reposted;
+        st.sureN = +j.n || 0;
+        if (st.on !== want) { rpSend(st); return; }
+        st.on = st.sure;
+        st.n = st.sureN;
+        rpShow(st.p, st.on, st.n);
+        return;
+      }
+      st.on = st.sure;
+      st.n = st.sureN;
+      rpShow(st.p, st.on, st.n);
+      rpSay(rpWhy(j));
+    });
+  }
+  /* QUOTE: the post, small, from the site, then the composer with it under
+     the words; the sheet goes down as it is asked for. */
+  var quoting = false;
+  function quote(p, from) {
+    if (quoting || !p.quoted || !window.SocialComposer || !window.SocialComposer.quote) return;
+    quoting = true;
+    rpSheet.close(true);
+    fetch(p.quoted, { credentials: 'same-origin' })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { j.status = r.status; return j; }); },
+            function () { return { error: 'network' }; })
+      .then(function (j) {
+        quoting = false;
+        if (j && typeof j.html === 'string' && j.status === 200) {
+          window.SocialComposer.quote({ kind: p.kind, id: p.kind === 's' ? p.skribl : p.id, html: j.html, from: from });
+          return;
+        }
+        if (from && from.isConnected) from.focus({ preventScroll: true });
+        rpSay(rpWhy(j));
+      });
+  }
+  doc.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-repost-menu]');
+    if (b && rpSheet) {
+      e.preventDefault();
+      var p = postOf(b);
+      if (!p) return;
+      rpNow = p;
+      rpFrom = b;
+      var st = rpState(p, b), row = rpWrap.querySelector('[data-rp="repost"]');
+      /* A drawing shown outside a post: Quote alone (only its maker posts it). */
+      row.hidden = !p.repost;
+      row.querySelector('[data-rp-name]').textContent = say(st.on ? 'rp_undo' : 'rp_do');
+      row.querySelector('[data-rp-say]').textContent = say(st.on ? 'rp_undo_say' : 'rp_do_say');
+      rpWrap.querySelector('[data-rp="quote"]').hidden = !p.quoted;
+      rpSheet.open(b);
+      return;
+    }
+    var o = e.target.closest('[data-repost-out]');
+    if (o && rpOut) {
+      e.preventDefault();
+      rpOut.open(o);
+    }
+  });
+  if (rpWrap) {
+    rpWrap.addEventListener('click', function (e) {
+      var a = e.target.closest('[data-rp]');
+      if (!a || !rpNow) return;
+      if (a.getAttribute('data-rp') === 'repost') {
+        /* Nothing asked first: the sheet goes down, focus back on the repost. */
+        rpSheet.close();
+        rpAct(rpNow, !rpState(rpNow).on);
+      } else {
+        quote(rpNow, rpFrom);
+      }
     });
   }
 
@@ -405,8 +595,8 @@
      keyboard and a screen reader, and the card is not one big link. What
      does a thing of its own keeps it: the drawing plays and pauses and never
      opens the post (its player keeps its own taps from reaching here); the
-     face, the name and the @handle open the person's page; ⋯ and Share do
-     their own job; the 💬 opens the comments; any other control its own. A
+     face, the name and the @handle open the person's page; ⋯ and the repost
+     do their own job; the 💬 opens the comments; any other control its own. A
      press that moved is a drag, not a tap, and a click that ends a text
      selection opens nothing, a link's included. With Ctrl or ⌘, or the
      middle button, the post opens in a new tab, as a link's would.

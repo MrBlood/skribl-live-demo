@@ -1357,6 +1357,7 @@ with sync_playwright() as p_:
                 "social_comments",                       # comments: phase 2
                 "social_likes",                          # likes: phase 2
                 "social_bookmarks",                      # bookmarks: the map, part two
+                "social_reposts",                        # reposts: the map, part two
                 "social_follows",                        # follows: phase 2
                 "social_mutes"}                          # mutes: phase 2
         want_idx = {"ix_social_people_public_id", "ix_social_people_handle_key", "ix_social_people_user_handle",
@@ -1367,6 +1368,9 @@ with sync_playwright() as p_:
                     "ix_social_rate_bucket_key_time", "ix_social_rate_created_at",
                     "ix_social_posts_public_id", "ix_social_posts_created", "ix_social_posts_person_created",
                     "ix_social_posts_skribl_id",
+                    # quote posts: a post's quotes, a drawing's, and quotes of what a person made, newest first
+                    "ix_social_posts_quoted_post_id", "ix_social_posts_quoted_drawing_id",
+                    "ix_social_posts_quoted_owner_created",
                     "ix_social_blocks_pair", "ix_social_blocks_blocked_id",
                     "ix_social_reports_public_id", "ix_social_reports_once", "ix_social_reports_state_created",
                     "ix_social_reports_about_id", "ix_social_reports_reporter_id", "ix_social_reports_handled_by_id",
@@ -1386,11 +1390,14 @@ with sync_playwright() as p_:
                     "ix_social_bookmarks_person_post", "ix_social_bookmarks_person_drawing",
                     "ix_social_bookmarks_person_created", "ix_social_bookmarks_post_id", "ix_social_bookmarks_drawing_id",
                     "ix_social_bookmarks_owner_id",
+                    # reposts: once a person a post, a person's newest first, a post's, whose newest first
+                    "ix_social_reposts_person_post", "ix_social_reposts_person_created", "ix_social_reposts_post_id",
+                    "ix_social_reposts_owner_created",
                     # follows: one row a pair, and newest first both ways
                     "ix_social_follows_pair", "ix_social_follows_follower_created", "ix_social_follows_followed_created",
                     # mutes: one row a pair, whose newest first, and whom
                     "ix_social_mutes_pair", "ix_social_mutes_muter_created", "ix_social_mutes_muted_id"}
-        check("on an empty SQLite file the site's chain builds its thirteen tables with every index, stamps its own"
+        check("on an empty SQLite file the site's chain builds its fourteen tables with every index, stamps its own"
               " version table (social_alembic_version) at its head, and touches nothing of Skribl's",
               r1.returncode == 0 and names == want | {"social_alembic_version"} and want_idx <= idx
               and stamps == {"social_alembic_version": [heads]},
@@ -1445,6 +1452,45 @@ with sync_playwright() as p_:
               and len(bd) == 7 and bd[-1] == "DROP TABLE social_bookmarks"
               and all(s.startswith("DROP INDEX ix_social_bookmarks_") for s in bd[:-1]),
               f"up {bm_up.returncode} {made}; down {bm_down.returncode} {bd}")
+        # ...AND THE REPOSTS' (the owner's "All yes", Nov 14): the table and its
+        # four indexes; the posts' four columns added (one with a constant
+        # default, which PostgreSQL keeps in its catalogue), skribl_id's NOT
+        # NULL dropped, the four constraints NOT VALID (nothing scanned under
+        # the lock), three indexes; no row of any table read or written; and
+        # all of it dropped going down (the one read going down, whether a
+        # quote of words alone is there, is not asked offline).
+        rp_up, rp_down = offline("upgrade", "224902330f2a:3e7b508ff939"), offline("downgrade", "3e7b508ff939:224902330f2a")
+        ru, rd = statements(rp_up.stdout), statements(rp_down.stdout)
+        made_rp = [s.split(" (")[0] for s in ru]
+        want_rp = ["CREATE TABLE social_reposts",
+                   "CREATE UNIQUE INDEX ix_social_reposts_person_post ON social_reposts",
+                   "CREATE INDEX ix_social_reposts_person_created ON social_reposts",
+                   "CREATE INDEX ix_social_reposts_post_id ON social_reposts",
+                   "CREATE INDEX ix_social_reposts_owner_created ON social_reposts",
+                   "ALTER TABLE social_posts ADD COLUMN is_quote BOOLEAN DEFAULT false NOT NULL",
+                   "ALTER TABLE social_posts ADD COLUMN quoted_post_id BIGINT",
+                   "ALTER TABLE social_posts ADD COLUMN quoted_drawing_id VARCHAR(32)",
+                   "ALTER TABLE social_posts ADD COLUMN quoted_owner_id BIGINT",
+                   "ALTER TABLE social_posts ALTER COLUMN skribl_id DROP NOT NULL",
+                   "ALTER TABLE social_posts ADD CONSTRAINT fk_social_posts_quoted_post_id FOREIGN KEY(quoted_post_id)"
+                   " REFERENCES social_posts",
+                   "ALTER TABLE social_posts ADD CONSTRAINT fk_social_posts_quoted_owner_id FOREIGN KEY(quoted_owner_id)"
+                   " REFERENCES social_people",
+                   "ALTER TABLE social_posts ADD CONSTRAINT ck_social_posts_drawn_or_quote CHECK",
+                   "ALTER TABLE social_posts ADD CONSTRAINT ck_social_posts_quotes_one CHECK",
+                   "CREATE INDEX ix_social_posts_quoted_post_id ON social_posts",
+                   "CREATE INDEX ix_social_posts_quoted_drawing_id ON social_posts",
+                   "CREATE INDEX ix_social_posts_quoted_owner_created ON social_posts"]
+        check("...and its reposts' PostgreSQL DDL, read offline, is the table with its four indexes, the posts' four"
+              " columns and three indexes, skribl_id's NOT NULL dropped and the four constraints NOT VALID (no row of"
+              " any table read or written, nothing scanned under the lock), and all of it dropped going down",
+              rp_up.returncode == 0 and rp_down.returncode == 0 and made_rp == want_rp
+              and all(s.endswith("NOT VALID") for s in ru if "ADD CONSTRAINT" in s)
+              and not any(s.split()[0] in ("INSERT", "UPDATE", "DELETE", "SELECT") for s in ru + rd)
+              and rd[-1] == "DROP TABLE social_reposts" and "ALTER TABLE social_posts ALTER COLUMN skribl_id SET NOT NULL" in rd
+              and sum(s.startswith("DROP INDEX ix_social_") for s in rd) == 7
+              and sum(s.startswith("ALTER TABLE social_posts DROP COLUMN") for s in rd) == 4,
+              f"up {rp_up.returncode} {made_rp}; down {rp_down.returncode} {rd}")
         d2 = os.path.join(TMP, "chain-both-a.db")
         a1, a2 = alembic(d2, "upgrade", "head", ini=False), alembic(d2, "upgrade", "head")
         d3 = os.path.join(TMP, "chain-both-b.db")

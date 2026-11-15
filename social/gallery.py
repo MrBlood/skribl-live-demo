@@ -176,8 +176,9 @@ def _reads(viewer, show="everyone", q="", person=None, mine=False):
                                    Person.handle.ilike(_like(handle), escape="\\")))
         return sel
 
+    # A post's tile is its drawing: a quote of words alone has none (reposts).
     posts = (sa.select(Post, Person).join(Person, Post.person_id == Person.id)
-             .where(Post.taken_down_at.is_(None)))
+             .where(Post.taken_down_at.is_(None), Post.skribl_id.isnot(None)))
     if not mine:
         posts = posts.where(Post.gallery_hidden_at.is_(None))
     if person is not None:

@@ -77,6 +77,8 @@ MEASURED = {
     "verify_composer.py": 170,
     # The local run, Nov 14 (bookmarks), beside two others.
     "verify_socialbookmarks.py": 120,
+    # The local run, Nov 14 (reposts), beside two others.
+    "verify_socialreposts.py": 150,
 }
 SMALL = 11          # every other suite: the rest averaged 11 seconds
 

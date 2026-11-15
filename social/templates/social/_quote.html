@@ -1,0 +1,6 @@
+{#  A post or a drawing, small, as a quote of it shows it: the composer's,
+    under the words of a quote (reposts.py /p/<id>/quoted). The one card a
+    quote post shows (_gallery.html quote_card), so the composer never drifts
+    from the post it makes. #}
+{% from 'social/_gallery.html' import quote_card with context %}
+{{ quote_card(q, link=false) }}

@@ -48,7 +48,11 @@ card), as Everyone's page reads them: posts only, as all of Home (the map's
 step 3; a drawing shown outside a post keeps its own page and its maker's).
 Home opens on Following
 once you follow somebody, on Everyone before that, and on your own pick
-once you make one (Person.home_feed).
+once you make one (Person.home_feed). THEIR REPOSTS TOO (reposts.py; the
+owner's "All yes", Nov 14): the people you follow and you, posts and
+reposts merged newest first, a repost the original's card with "Mira Lopez
+reposted" at its top; the same post twice in a page once, the newest, and
+Fresh from everyone leaves out a post the page already shows.
 """
 import sqlalchemy as sa
 from flask import jsonify, render_template, request
@@ -258,6 +262,9 @@ def home_items(me, show, before=None):
     if nxt:
         return page, _FOLLOWING + nxt, "following"
     rest, rnxt = _rest(me, ids, None, max(PAGE - len(page), _REST_MIN))
+    # A post somebody you follow reposted is shown once, as their repost.
+    shown = {e["post"].id for e in page if e.get("kind") == "p"}
+    rest = [e for e in rest if not (e.get("kind") == "p" and e["post"].id in shown)]
     items = page + [{"extra": "caught"}]
     if rest or rnxt:
         items += [{"extra": "fresh"}] + rest

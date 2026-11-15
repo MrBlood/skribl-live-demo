@@ -398,6 +398,7 @@ LIMITS = {
     "comment": (60, 3600),         # comments and answers sent, per person (phase 2)
     "like": (120, 3600),           # likes and unlikes, per person (phase 2: the same tap does both)
     "bookmark": (120, 3600),       # bookmarks kept and taken away, per person (bookmarks: the same row does both), as likes
+    "repost": (120, 3600),         # reposts made and undone, per person (reposts: the sheet's one row does both), as likes
     "follow": (60, 3600),          # follows and unfollows, per person (follows): nobody follows everyone at once
     "mute": (60, 3600),            # mutes and unmutes, per person (mutes): as follows, nobody mutes and unmutes hundreds a minute
     "home-pick": (120, 3600),      # Home's pill, Following or Everyone, kept for the account (follows)

@@ -37,7 +37,7 @@
         <span class="rep-meta">{{ c.count }} report{{ '' if c.count == 1 else 's' }}{% if c.latest %} · <time datetime="{{ when_iso(c.latest) }}" data-when="ago">{{ when_day(c.latest) }}</time>{% endif %}</span>
       </p>
       <div class="rep-what">
-        {% if c.kind == 'person' or (c.kind == 'comment' and not c.poster) %}
+        {% if c.kind == 'person' or (c.kind == 'comment' and not c.poster) or (c.kind == 'post' and c.what and not c.poster) %}
         <span class="rep-face{% if c.child %} is-veiled{% endif %}" data-veil>{% if c.who %}{{ face(c.who) }}{% endif %}</span>
         {% else %}
         <span class="rep-pic{% if c.child %} is-veiled{% endif %}" data-veil style="background-image: url('{{ c.poster }}')"></span>

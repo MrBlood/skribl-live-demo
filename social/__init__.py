@@ -86,6 +86,15 @@ owner's "All yes", Nov 14). "Bookmark" at the top of a post's or a drawing's
 Bookmarks tab keeps them, newest first. Yours alone: nobody is told, and
 there is no count anywhere.
 
+REPOSTS AND QUOTE POSTS (reposts.py; the map, part two, item 3: the reposts
+mock, the owner's "All yes", Nov 14). The row under a post: comment · repost
+· heart · ⋯ · Open ›, Share in the ⋯; a tap on the repost raises a small
+sheet, Repost (Undo repost once yours) and Quote. A repost shows the
+original's own card with "Mira Lopez reposted" at its top, on Home's
+Following and the reposter's Posts tab: one drawing, one conversation. A
+quote is a post with the original small inside it, from the composer. The
+original's author is told in Activity; neither lights the bell's dot.
+
 ONE SKRIBL, SHARED, PEOPLE TOO. The host hands Skribl the site's signed-in
 person as its current user (current_user_id() below) and names them with
 describe_author(), so a drawing made in the Pad while signed in is theirs.
@@ -315,7 +324,7 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
 
     if site is not None:
         from . import (accounts, activity, bookmarks, comments, compose, follows, gallery, likes, mutes, posts,
-                       profiles, reports, rules, safety)
+                       profiles, reports, reposts, rules, safety)
         accounts.register(bp)
         gallery.register(bp)
         profiles.register(bp, skribl_blueprint)
@@ -324,6 +333,7 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         comments.register(bp)
         likes.register(bp)
         bookmarks.register(bp)
+        reposts.register(bp)
         follows.register(bp)
         mutes.register(bp)
         activity.register(bp, skribl_blueprint)
