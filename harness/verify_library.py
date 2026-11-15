@@ -311,10 +311,9 @@ with sync_playwright() as sp:
     check("...and a tap on the drawing shows on the transport at once (Play turns to Pause)",
           _tap["state"] == "playing" and _tap["lag"] is not None and _tap["lag"] < 400, json.dumps(_tap))
 
-    # A post has no loop toggle (inlineplayer.css says why); a page ABOUT one
-    # does, because somebody looking at a single drawing may want it to stop.
-    pg.click("#btnLoop")
-    pg.wait_for_timeout(100)
+    # A page ABOUT one drawing has its own Loop; like every replay's it starts
+    # off since Nov 15 (the owner: "Start with it off by default"), so a
+    # Restart plays the drawing once.
     pg.click("#btnRestart")
     pg.wait_for_timeout(4000)
     ended = pg.evaluate("""() => {

@@ -41876,3 +41876,100 @@ them; nothing was nudged to a face); Firefox (main's lanes after the merge); Pos
 read offline only, its NOT VALID constraints included; CI's postgres job runs
 it); the live site. The one-glance tell on the live site: the row under a
 post has the two arrows where Share was.
+
+## After v330 -- Repeat starts off on every replay, Pad and Flip alike
+
+The owner, Nov 15 (Mountain Time), about 1:45 AM, with "All yes" to the
+mentions and finding-people mocks: "don't automatically start with loop on.
+Start with it off by default." Until now a post repeated by default ("posts
+keep repeating as now", the Pad's Repeat page), while the Pad's own Repeat
+started off. Asked whether posted Flips should keep going round, as Flip's
+own Play does, the owner: "Both off by default."
+
+WHAT CHANGED. The repeat control on every replay of a Skribl starts off:
+a post's ⟲ in the line under the drawing (inlineplayer.js `looping`, and
+its macro's button, which now ships unlit: aria-pressed false, "Repeat",
+"Plays once"), so Home's cards, a post's and a drawing's page, the
+composer's preview, a quote's own drawing, Skribl's own feed and gallery
+cards and their full-screen band; the link page's Loop (app.js `loop`,
+_skribl_player_controls.html); and the Library's stage (library.js,
+skribl_library.html). A replay plays once and rests on the finished
+drawing, a Flip on its last page, and the music stops with it (the same
+call as before); a press repeats that one drawing, and a press on a replay
+sitting finished starts it again, as it always did. A Flip's forever
+stretch is its animation and plays on either way: frame() wraps inside the
+stretch whatever the switch says. Callers that set it themselves keep what
+they set: the help cards' examples loop on purpose; the post sheet's card,
+hello, faces and hand words play once. The Pad's own Repeat (off to start,
+remembered) and Flip's Play (always round) are unchanged.
+
+PAD AND FLIP: shared. One player for both, so both change together.
+
+CONTRAST: nothing new. The unlit control is the state it already had when
+turned off; lit Loop's contrast row in verify_inline now lights it first.
+
+THE CHECKS, each shown red by the old default (on) put back in a throwaway
+copy, green on an untouched copy:
+- verify_inline (control 222/222; the old default 217/222): the loop starts
+  off, one press turns it on, lit Loop's contrast read lit, a second press
+  off, the replay left off stops and its music with it, a press on starts it
+  again.
+- verify_socialposts 12 (control 11/11; the old default 10/11): on Home, the
+  line's ⟲ tap turns repeating on.
+- verify_viewedges (control 19/19; the Library's old default 17/19): the
+  Library's Loop turned on in full screen reads on on the page; a Flip played
+  once stops on its last page.
+- verify_player_isolation (control 85/85; app.js's old default 84/85): the
+  link page's Loop off when it opens, one press on.
+- FOUND ON THE WAY, rows that assumed a replay never stops, mended:
+  verify_inline's in-post taps asked a short post to be still playing 900ms
+  on, and read the player now (playing, loading, or played through; red when
+  the tap is never made, 220/222); its photo-fit rows sampled the centre
+  column, which the fixture's one stroke crosses corner to corner, where a
+  finished replay rests, and sample a quarter across (red still with every
+  photo letterboxed: the cover row, 220/222); verify_viewedges'
+  Flip-at-its-end row pressed Loop to turn it off, and only restarts now.
+- AND BY CI'S FULL RUN ON THIS BRANCH, ten more suites whose rows read a
+  replay as still going round, each mended the same way and shown: where a
+  scenario IS a repeating drawing, repeat is pressed on first (verify_fullfade's
+  laps, control 70/70, the link page's old default 62/70; verify_flipbeat's
+  posted rounds on the song, control 17/17, without it 8/17;
+  verify_replayspeed's Song choice through three picks; verify_gallery's bar
+  fade and churn probe, a PLAYING card watched for seconds; verify_audio's
+  five seconds of sampling); where a row asked a short drawing to be still
+  playing, it reads playing or played (verify_socialposts 9, a drawing's own
+  page, control 6/6, red never playing by itself 5/6; verify_composer 4 and 5, the
+  sheet's player after Draw's Add and after Yours (4 found here, by the
+  mentions' suites run on top of this change; CI had caught it still
+  playing), controls 5/5 and 6/6, red never playing 4/5 and 4/6; verify_galib's pill,
+  control 176/176, red never tapped 174/176; verify_gallery's play on a
+  card); and where a row pressed Loop to turn it off, it no longer presses
+  (verify_library, control 247/247, the Library's old default 246/247). And
+  verify_ux V207 reads the link player's Repeat out at rest and lit, the one
+  pill's tint, once pressed (control 487/487, the old default 486/487). The
+  red for verify_replayspeed, verify_gallery and verify_audio is CI's own run
+  before their mends (its sqlite 3/6, 5/6 and 4/6), the green CI's after.
+
+THE AFFECTED SUITES:
+- Side by side here (run_parallel -j 3): verify_docs 144/144,
+  verify_framecache 23/23, verify_audiostate 33/33, verify_audiosession
+  41/41; verify_fullfade 68/70 and verify_socialposts 80/81 there, alone too,
+  before their mends above (each green in its proof since: 70/70, and 6/6 and
+  11/11 for the two sections).
+- The proofs' controls, each a whole suite unless a part is named:
+  verify_inline 222/222, verify_viewedges 19/19, verify_player_isolation
+  85/85, verify_library 247/247, verify_galib 176/176, verify_ux 487/487,
+  verify_fullfade 70/70; verify_socialposts 12 11/11 and 9 6/6,
+  verify_composer 5 6/6, verify_flipbeat's posted 17/17.
+- The full harness on this branch: run 43714087677 on 1addee7c went red
+  only on its sqlite and PostgreSQL 5/6 and 6/6, for verify_composer 4's
+  Draw row (above) and verify_gallery's churn probe, which had turned repeat
+  on just inside its window and read the bar's one redraw for it (it waits
+  400ms for the bar now); both mended after it, verify_composer 38/38 and
+  verify_gallery 232/232 here. The final run, 43718749294 on 275c2def,
+  every lane green, MP4, Firefox and WebKit too. It changes a default many
+  suites play through, so the full battery is CI's run, not this box's.
+
+NOT TESTED HERE: WebKit, so the owner's iPhone; the live site. The
+one-glance tell: a post's ⟲ under the drawing is unlit when the page opens,
+and the drawing stops when it is done.

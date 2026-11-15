@@ -567,6 +567,11 @@ CENSUS = """(root) => {
 STATE = """() => { const p = window.SkriblInline ? SkriblInline.players() : [];
   const box = document.getElementById('composeDraft'); const me = p.find(x => x.el === box);
   return me ? me.state().state : null; }"""
+# PLAYED: playing, or (repeat off to start since Nov 15) a short drawing
+# already played through and resting on its end.
+PLAYED = """() => { const p = window.SkriblInline ? SkriblInline.players() : [];
+  const box = document.getElementById('composeDraft'); const me = p.find(x => x.el === box);
+  const s = me ? me.state() : null; return !!s && (s.state === 'playing' || s.elapsedMs > 0); }"""
 
 
 def open_composer(pg, screen="phone"):
@@ -864,13 +869,13 @@ with sync_playwright() as p:
             sheet = add_from_pad(pg, fr) if fr else {}
             pg.wait_for_timeout(600)
             got = pg.evaluate(SHEET)
-            state = pg.evaluate(STATE)
+            state, played = pg.evaluate(STATE), pg.evaluate(PLAYED)
             parts_ = pg.evaluate(PARTS)
             check("Draw opens Skribl's Pad over the sheet in compose mode with the gallery's choice (compose=1&gallery=1), its"
                   " sheet saying Add to post; Add hands the drawing back into the sheet's own in-post player, PLAYING, Post"
                   " lit, Edit drawing and Remove under it, focus on Edit drawing, the editor gone",
                   bool(fr) and "compose=1" in (src or "") and "gallery=1" in (src or "") and sheet.get("label") == "Add to post"
-                  and got["open"] and got["att"] == {"kind": "payload", "id": None} and state == "playing"
+                  and got["open"] and got["att"] == {"kind": "payload", "id": None} and (state == "playing" or played)
                   and parts_["disabled"] == "false" and got["focus"] == "Edit drawing"
                   and pg.evaluate("() => document.getElementById('composePad').hidden"),
                   f"src {src}; sheet {sheet}; attached {got['att']}; player {state}; Post aria-disabled {parts_['disabled']}; focus {got['focus']}")
@@ -1013,11 +1018,11 @@ with sync_playwright() as p:
             tap(pg, f"#composeSheet [data-pick-drawing='{loose}']")
             pg.wait_for_timeout(1400)
             got = pg.evaluate(SHEET)
-            state = pg.evaluate(STATE)
+            state, played = pg.evaluate(STATE), pg.evaluate(PLAYED)
             edit = pg.evaluate("() => document.querySelector('[data-compose-edit]').getClientRects().length")
             check("a drawing picked is attached as it is: the words' view back, the drawing PLAYING in the sheet's player, no"
                   " Edit drawing (it is posted as it is), Remove ready (focused), Post lit",
-                  got["views"] == ["write"] and got["att"] == {"kind": "skribl", "id": loose} and state == "playing"
+                  got["views"] == ["write"] and got["att"] == {"kind": "skribl", "id": loose} and (state == "playing" or played)
                   and edit == 0 and got["focus"] == "Remove"
                   and pg.evaluate("() => document.querySelector('[data-compose-post]').getAttribute('aria-disabled')") == "false",
                   f"views {got['views']}; attached {got['att']}; player {state}; Edit shown {edit}; focus {got['focus']}")
@@ -1057,10 +1062,10 @@ with sync_playwright() as p:
                 fr.click("#postSubmitBtn")
                 pg.wait_for_timeout(1500)
             got = pg.evaluate(SHEET)
-            state = pg.evaluate(STATE)
+            state, played = pg.evaluate(STATE), pg.evaluate(PLAYED)
             close_ctx(ctx, pg)
             check("Add to post attaches the draft, PLAYING in the sheet's player, the words' view back, Edit drawing ready",
-                  got["att"] == {"kind": "payload", "id": None} and got["views"] == ["write"] and state == "playing"
+                  got["att"] == {"kind": "payload", "id": None} and got["views"] == ["write"] and (state == "playing" or played)
                   and got["focus"] == "Edit drawing",
                   f"attached {got['att']}; views {got['views']}; player {state}; focus {got['focus']}")
             asked = {}

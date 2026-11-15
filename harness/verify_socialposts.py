@@ -1487,6 +1487,10 @@ with sync_playwright() as p:
         jp = juno.pg
         jp.goto(BASE + f"/social/b/{shown}")
         jp.wait_for_timeout(1500)
+        # PLAYED BY ITSELF: playing, or (repeat off to start since Nov 15) a
+        # short drawing already played through and resting on its end.
+        played = jp.evaluate("() => (window.SkriblInline ? SkriblInline.players() : []).map(x => { const s = x.state();"
+                             " return s.state === 'playing' || s.elapsedMs > 0; })")
         page = jp.evaluate("""() => ({ at: location.pathname, kind: document.querySelector('.post-page').getAttribute('data-kind'),
           words: (document.querySelector('.post-page .post-words') || {}).textContent || '',
           more: [...document.querySelectorAll('.more-tile')].map(e => [e.getAttribute('href'), e.querySelector('.more-words').textContent]) })""")
@@ -1524,7 +1528,7 @@ with sync_playwright() as p:
               " it), and then it is gone (Home says so); a post's drawing's page is the post's",
               page["at"] == f"/social/b/{shown}" and page["kind"] == "s"
               and page["words"].strip() == "Section 9, shown from the Pad"
-              and playing[:1] == ["playing"]
+              and (playing[:1] == ["playing"] or played[:1] == [True])
               and [f"/social/b/{another}", "A drawing"] in page["more"]
               and [f"/social/p/{g_post}", "Section 9, a post shown in the gallery"] in page["more"]
               and theirs == ["Bookmark", "Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
@@ -1532,7 +1536,7 @@ with sync_playwright() as p:
               and mine == ["Bookmark", "Copy link", "Share…", "Delete post"] and ask.get("open") and "stopped" not in ask
               and ask.get("lede") == ["The drawing goes for good, from your page too. This can’t be undone."]
               and after["url"] == "/social/?note=deleted_drawing" and after["note"] == "Your drawing is gone." and gone,
-              f"page {page}; players {playing}; theirs {theirs}; a post's drawing lands {landed}; mine {mine};"
+              f"page {page}; players {playing}, played {played}; theirs {theirs}; a post's drawing lands {landed}; mine {mine};"
               f" ask {ask}; after {after}; gone {gone}")
 
         # The guards.
@@ -2042,10 +2046,10 @@ with sync_playwright() as p:
         close_ctx(ctx, cpg)
         check("...and on Home, once its drawing is played (the line waits until then), the line's own controls keep"
               " their taps: the speed opens its choices (a tap between two"
-              " of them opens nothing and leaves them open) and takes one (2×), the loop stops repeating, and the page"
-              " stays",
+              " of them opens nothing and leaves them open) and takes one (2×), the loop (off to start since Nov 15)"
+              " starts repeating, and the page stays",
               made and line.get("chips") == "true" and line.get("between") == (True, "/social/", "true")
-              and line.get("speed", "").startswith("2") and line.get("loop") == "false"
+              and line.get("speed", "").startswith("2") and line.get("loop") == "true"
               and line.get("at") == "/social/", f"{line}")
 
         # ON A DESK: Ctrl (as ⌘ is on a Mac) and the middle button open the card

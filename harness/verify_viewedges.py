@@ -270,7 +270,8 @@ with sync_playwright() as p:
           all(r["label"] == ("Pause" if r["state"] == "playing" else "Play") for r in reads)
           and any(r["state"] == "playing" for r in reads) and any(r["state"] != "playing" for r in reads), str(reads))
 
-    # Loop, off in full screen, is off on the page; one press turns it on.
+    # Loop (off to start since Nov 15), on in full screen, is on on the page;
+    # one press turns it off.
     was = pg.evaluate("() => document.getElementById('btnLoop').getAttribute('aria-pressed')")
     pg.evaluate("() => document.getElementById('btnFull').click()")
     pg.wait_for_timeout(1200)
@@ -285,9 +286,9 @@ with sync_playwright() as p:
     pg.wait_for_timeout(300)
     again = pg.evaluate("(S) => { const p = (new Function('return (' + S + ')()'))(); const b = document.getElementById('btnLoop');"
                         " return { pressed: b.getAttribute('aria-pressed'), looping: p ? p.looping() : null }; }", STAGE)
-    check("Loop turned off in full screen reads off on the page, and one press turns it back on",
-          was == "true" and page_loop == {"pressed": "false", "lit": False, "looping": False}
-          and again == {"pressed": "true", "looping": True}, f"before {was}; after full screen {page_loop}; one press {again}")
+    check("Loop, off to start, turned on in full screen reads on on the page, and one press turns it back off",
+          was == "false" and page_loop == {"pressed": "true", "lit": True, "looping": True}
+          and again == {"pressed": "false", "looping": False}, f"before {was}; after full screen {page_loop}; one press {again}")
     # ...and the press reads the player itself, so it holds even before the
     # page's clock has caught up with a loop turned off elsewhere (the row
     # above passes on that clock alone; this one pins the press).
@@ -347,9 +348,9 @@ with sync_playwright() as p:
     # new Function, so the stage is named outright there.
     ON_STAGE = "document.querySelector('.stageCanvasWrap .skribl-inline')._skriblInline"
     # As a person does it: the drawing starts on its own when its row is
-    # picked; Loop off, then Restart, and watch it to its end.
+    # picked; Loop is off to start (since Nov 15), so Restart, and watch it to
+    # its end.
     pg.wait_for_function(f"() => {{ const p = {ON_STAGE}; return p && p.state().state === 'playing'; }}", timeout=15000)
-    pg.click("#btnLoop")
     pg.click("#btnRestart")
     try:
         pg.wait_for_function(f"() => {{ const s = {ON_STAGE}.state(); return s.state !== 'playing' && s.elapsedMs >= s.totalMs; }}",

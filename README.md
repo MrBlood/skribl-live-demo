@@ -165,8 +165,8 @@ until somebody taps. Playing, it redraws itself with a nib at the pen, at the
 speed its author chose for viewers, and the line under it scrubs and changes
 the speed (¼× to 16×, and Fit); with `line=False` a hairline shows the
 progress instead. Beside them are **mute** (page-wide, session-remembered;
-sound starts off, muted) and **loop** (per post, on by default; turning it off
-stops the drawing at its last frame and stops the music with it). One Skribl
+sound starts off, muted) and **loop** (per post, off to start since Nov 15;
+off, the drawing rests at its last frame and the music stops with it). One Skribl
 plays at a time, and scrolling one out of view settles it. docs/INTEGRATION.md
 ("What a viewer gets") has the whole of it.
 `/feed` is that page, live, over whatever this deployment has posted publicly.

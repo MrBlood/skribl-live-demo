@@ -526,6 +526,7 @@ with sync_playwright() as p:
         pg.on("pageerror", lambda e: perrs.append(str(e)))
         pg.goto(f"{BASE}/s/{pid}", wait_until="load")
         pg.wait_for_selector("#playerPlayBtn", state="visible", timeout=20000); pg.wait_for_timeout(900)
+        pg.click("#playerLoopBtn")   # rounds need repeat on: it starts off since Nov 15
         pg.click("#playerPlayBtn")
         rec = [dict(r, page=page_of(r["rgb"])) for r in pg.evaluate(WATCH, ["#canvas", 16])]
         off = round_starts(rec, bpm, 0.5)
@@ -539,6 +540,7 @@ with sync_playwright() as p:
         pg.wait_for_selector(box, state="attached", timeout=20000)
         pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", box)
         pg.wait_for_timeout(800)
+        pg.evaluate("(s) => document.querySelector(s)._skriblInline.setLoop(true)", box)   # rounds: repeat on (off to start)
         pg.evaluate("(s) => document.querySelector(s).click()", box)
         rec = [dict(r, page=page_of(r["rgb"])) for r in pg.evaluate(WATCH, [box + " .skribl-inline-canvas", 16])]
         off = round_starts(rec, bpm, 0.5)
@@ -553,6 +555,7 @@ with sync_playwright() as p:
         pg.wait_for_selector(box, state="attached", timeout=20000)
         pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", box)
         pg.wait_for_timeout(800)
+        pg.evaluate("(s) => document.querySelector(s)._skriblInline.setLoop(true)", box)   # rounds: repeat on (off to start)
         pg.evaluate("(s) => document.querySelector(s).click()", box); pg.wait_for_timeout(2300)
         pg.evaluate("(s) => document.querySelector(s).click()", box); pg.wait_for_timeout(900)
         pg.evaluate("(s) => document.querySelector(s).click()", box)
@@ -595,6 +598,7 @@ with sync_playwright() as p:
               f"frames {clk and clk['hic'][0]:.2f} to {clk and clk['hic'][1]:.2f}ms; {clk and clk['hicEnd']:.1f}ms off the song at the end")
         check("...and a drawing that falls behind its song (a song's clock 1% fast, twenty seconds) eases back onto it, "
               "never more than 20ms behind", bool(clk) and 0 < clk["behind"] <= 20, f"at most {clk and clk['behind']:.1f}ms behind")
+        pg.click("#playerLoopBtn")   # rounds need repeat on: it starts off since Nov 15
         pg.click("#playerPlayBtn")
         pg.evaluate(STALL, [3000, 300])
         rec = [dict(r, page=page_of(r["rgb"])) for r in pg.evaluate(WATCH, ["#canvas", 12])]
@@ -639,6 +643,7 @@ with sync_playwright() as p:
         pg.on("pageerror", lambda e: perrs.append(str(e)))
         pg.goto(f"{BASE}/s/{pid}", wait_until="load")
         pg.wait_for_selector("#playerPlayBtn", state="visible", timeout=20000); pg.wait_for_timeout(900)
+        pg.click("#playerLoopBtn")   # rounds need repeat on: it starts off since Nov 15
         pg.click("#playerPlayBtn"); pg.wait_for_timeout(1500); pg.click("#playerPlayBtn")
         late = pg.evaluate(LATE, 250)
         pg.click("#playerPlayBtn")
@@ -658,6 +663,7 @@ with sync_playwright() as p:
         pg.wait_for_selector(box, state="attached", timeout=20000)
         pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", box)
         pg.wait_for_timeout(800)
+        pg.evaluate("(s) => document.querySelector(s)._skriblInline.setLoop(true)", box)   # rounds: repeat on (off to start)
         pg.evaluate("(s) => document.querySelector(s).click()", box)
         pg.evaluate(STALL, [3000, 300])
         rec = [dict(r, page=page_of(r["rgb"])) for r in pg.evaluate(WATCH, [box + " .skribl-inline-canvas", 12])]

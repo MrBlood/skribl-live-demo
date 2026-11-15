@@ -112,7 +112,7 @@
   var current = null;      /* the item on the stage */
   var pending = null;      /* the item asked for and not on the stage yet */
   var player = null;       /* the inlineplayer handle */
-  var looping = true;
+  var looping = false;     /* Repeat, off to start as every replay's (the owner, Nov 15) */
   var tick = null;                       /* the transport's next beat (beat() below) */
   var PLAYING_MS = 100, IDLE_MS = 1000;
 

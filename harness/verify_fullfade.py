@@ -272,8 +272,8 @@ def walk(b, fx, name, go_in, root, bar, x, cv, playing, toggle, whole, finger):
 
 
 def laps(b, fx, finger):
-    """A drawing shorter than the quiet spell, repeating as it does by default:
-    the bar stays away through the laps that follow. The link page told the
+    """A drawing shorter than the quiet spell, repeating (Loop turned on first:
+    it starts off since Nov 15): the bar stays away through the laps that follow. The link page told the
     fade at every lap that its state had changed, so they came back each time,
     and on this drawing never left. Sampled every 200 ms over three laps, with
     the progress bar read alongside to prove the laps happened."""
@@ -282,7 +282,13 @@ def laps(b, fx, finger):
     pg = ctx.new_page()
     if finger:
         pg.add_init_script(NO_API)
-    link_in(pg, fx)
+    # link_in, with Loop pressed on before Play: a lap needs it.
+    browsing.goto(pg, BASE, "/s/" + fx["id"])
+    pg.click("#playerLoopBtn")
+    pg.click("#playerPlayBtn")
+    pg.wait_for_timeout(300)
+    pg.click("#playerFullBtn")
+    pg.wait_for_timeout(700)
     if not finger:
         pg.mouse.move(2, 2)
     pg.wait_for_timeout(QUIET_MS)

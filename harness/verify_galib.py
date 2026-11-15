@@ -944,11 +944,14 @@ with sync_playwright() as p:
                 else:
                     pg.mouse.move(r[0], r[1]); pg.wait_for_timeout(400); pg.mouse.click(r[0], r[1])
                 pg.wait_for_timeout(700)
+                # PLAYS: playing, or (repeat off to start since Nov 15) a short
+                # drawing already played through and resting on its end.
                 st = pg.evaluate("""(s) => { const b = document.querySelector(s), t = b.closest('article.tile');
-                  return { state: b._skriblInline && b._skriblInline.state().state,
+                  const s_ = b._skriblInline && b._skriblInline.state();
+                  return { state: s_ && s_.state, played: !!s_ && s_.elapsedMs > 0,
                            loop: t.querySelector('.skfull-card .skfull-loop').getAttribute('aria-pressed') }; }""", sel)
                 check(f"/gallery {dev}: a {'tap' if dev == '390' else 'click'} on the pill plays the drawing, and does not land on the card's bar",
-                      st["state"] == "playing" and st["loop"] == loop0, f"{st}, repeat before {loop0}")
+                      (st["state"] == "playing" or st["played"]) and st["loop"] == loop0, f"{st}, repeat before {loop0}")
                 pg.close()
                 pg = open_page(c_, "/gallery", theme)
                 pg.evaluate("(tag) => [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag)).scrollIntoView({block: 'center'})", f"{TAG} coil")

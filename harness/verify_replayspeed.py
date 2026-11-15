@@ -1538,6 +1538,7 @@ with sync_playwright() as p:
             pg = ctx.new_page(); pg.add_init_script(HEAR)
             pg.goto(BASE + _sp["url"], wait_until="load")
             pg.wait_for_function(browsing.SPEED_READY, timeout=20000)
+            pg.click("#playerLoopBtn")   # the song plays on through the picks: repeat on (off to start since Nov 15)
             pg.click("#playerPlayBtn")
             pg.wait_for_function("() => window.__songs.length > 0", timeout=15000)
             speed(pg, "#playerLine", 8)

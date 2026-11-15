@@ -858,9 +858,13 @@
      * environmental — someone in a quiet room wants it off for the whole feed,
      * so unmuting one post unmutes them all. Repeating is a property of THIS
      * drawing: a two-second loop you want to watch again is not a statement
-     * about the next post. So this is per instance and not remembered; the
-     * default is on, which is what a post did before there was a control. */
-    var looping = true;
+     * about the next post. So this is per instance and not remembered. It
+     * STARTS OFF (the owner, Nov 15: "don't automatically start with loop on.
+     * Start with it off by default"): a replay plays once and rests on the
+     * finished drawing, as the Pad's own Repeat starts off, and ⟲ repeats
+     * this one drawing. A Flip's forever stretch is its animation and plays
+     * on either way (frame(), below). */
+    var looping = false;
 
     var me = {
       el: el,
@@ -877,10 +881,9 @@
       play: play,
       pause: pause,
       toggle: function () { if (state === 'playing' || queued) pause(); else play(); },
-      /* Posts loop: a still frame at the end of a two-second replay reads as
-       * broken, and a Flip document IS a loop. A library stage can offer the
-       * choice, because somebody looking at one drawing on purpose may want it
-       * to stop. */
+      /* Repeating, for this drawing: off to start (the owner, Nov 15); the
+       * post's own ⟲ turns it on, and so can a page that offers its own
+       * control (a library stage, the full-screen band). */
       setLoop: function (on) { setLooping(on); },
       looping: function () { return looping; },
       /* Changing rate mid-play RE-ANCHORS the clock: `elapsed` is scaled time
@@ -1888,9 +1891,9 @@
         return;
       }
       if (at >= totalMs) {
-        /* Both kinds loop by DEFAULT, for different reasons: a Flip document IS
-         * a loop, and a Pad replay that stopped dead on the finished drawing
-         * reads as a broken GIF. The viewer can turn it off per post. */
+        /* Neither kind repeats unless asked to, since Nov 15 (the owner:
+         * "Start with it off by default"): the replay rests on the finished
+         * drawing (a Flip on its last page), and the post's ⟲ repeats it. */
         if (!looping) {
           render(totalMs, false);
           /* WHEN THE DRAWING STOPS, THE MUSIC STOPS. pause() takes the audio
