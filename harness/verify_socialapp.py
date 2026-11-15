@@ -974,9 +974,11 @@ with sync_playwright() as pw:
             check("...then it fades on several frames (no frame more than a third at once) and is gone by 4.6 s, the "
                   "bar back in the page's ground, marked seen and this launch's",
                   len(mids) >= 4 and (max(steps) if steps else 1) <= 0.34 and 2600 <= gone_at <= 4600
-                  and after["cls"] == "" and after["bar"] == "#f6f8fa" and after["seen"] == "1" and after["launch"] == "1",
+                  and not {"is-splashing", "is-splash-first"} & set(after["cls"].split()) and after["bar"] == "#f6f8fa"
+                  and after["seen"] == "1" and after["launch"] == "1",
                   json.dumps({"fade": [round(v, 2) for v in fade[:8]], "gone": round(gone_at), "after": after}))
-            check("...once a launch: the next page in the app has none", next_page == "", next_page)
+            check("...once a launch: the next page in the app has none (it is the app's still: is-app, not is-splashing)",
+                  next_page.split() == ["is-app"], next_page)
 
             # HIS OUTLINE AGAINST THE LIGHT (the owner: "you can't see his black outline"), at every pose: his
             # dark ink against what is painted just outside him (2 to 4 px out), read off two shots, the splash as
