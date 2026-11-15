@@ -1053,8 +1053,9 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   --accent: #7c5cff; --accent-2: #7c5cff; --text-dim: var(--ink-2);
 }
 
-/* THE COMPOSER: a card, your face beside "Say something, then draw it…",
-   Draw and Flip as tinted chips, Post the one action. */
+/* THE COMMENT BOX'S CARD (it was Home's box too, until Home's went: the
+   owner's "All yes", Nov 14, Make being the way to post): your face beside
+   its words, Draw and Flip as tinted chips, Post the one action. */
 .composer {
   margin: 8px 0 18px; padding: 16px; border: 1px solid var(--card-line); border-radius: 24px;
   background: var(--card); box-shadow: var(--card-drop);
@@ -1082,15 +1083,6 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .composer-left { margin-left: auto; color: var(--ink-2); font-size: 14px; }
 .composer-post { min-width: 96px; }
 .composer-say { text-align: left; }
-/* HOME'S ROW (the owner's "Yes", Nov 14: "Home's box stays as the inviting
-   row ... and a tap opens the same sheet"): the box as it looked, its words
-   a button that opens the composer, dressed as the field it stands for. */
-.cmp-row-say {
-  flex: 1; min-width: 0; min-height: 44px; margin: 0; padding: 10px 0 9px; border: 0;
-  border-bottom: 1px solid var(--rule); background: transparent; color: var(--ink-2);
-  font: inherit; font-size: 17px; line-height: 1.4; text-align: left; cursor: text;
-}
-.cmp-row-say:focus-visible { border-radius: 6px; }
 
 /* ---- THE COMPOSER: ONE MAKE, EVERYWHERE (the owner's "Yes", Nov 14, to the
  * mock beside Bluesky's new-post screen, B; _compose.html, compose.js) ------

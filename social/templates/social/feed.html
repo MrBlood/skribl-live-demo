@@ -2,17 +2,14 @@
     yes" to piece 4's choices, Nov 11). Signed out, Home is the first visit
     (home.html).
 
-    THE ROW THAT OPENS THE COMPOSER (the owner's "Yes", Nov 14: "Home's box
-    stays as the inviting row ... and a tap opens the same sheet: one
-    composer everywhere"): your face, "Say something, then draw it…", Draw
-    and Flip, as the box always looked. A tap on the words opens the
-    composer (_compose.html, base.html's, the sheet Make opens) with its
-    field ready; Draw and Flip open it with their editor rising over it, and
-    what Add hands back is attached there. The box holds nothing itself, so
-    it has no Post: the sheet does.
+    NO BOX AT THE TOP (the owner, Nov 14: "Why not make as way to post? Do
+    we need post at top?", then "All yes" to the mock without it): Make is
+    the way to post, the bar's on a phone and the rail's on a desk, and it
+    opens the composer (_compose.html, base.html's). Home opens on its pill
+    and its posts, the drawings first; an empty Home says to tap Make.
 
     THE PILL (follows; the owner's "Yes to all", Nov 13): Following |
-    Everyone under the row, the Gallery's New / Hot (social/_follow.html,
+    Everyone at the top, the Gallery's New / Hot (social/_follow.html,
     home_pill). Following is the people you follow and you, newest first,
     then "You're caught up…" and Fresh from everyone; Everyone is everyone's.
     Home opens on Following once you follow somebody, on Everyone before
@@ -37,7 +34,6 @@
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% from 'social/_follow.html' import home_pill, feed_extra, follow_words with context %}
 {% from 'social/_mute.html' import mute_parts with context %}
-{% import 'social/_icons.html' as ic %}
 
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
 <script src="{{ social_asset('likes.js') }}" defer></script>
@@ -49,27 +45,13 @@
 {% if note == 'deleted' %}<p class="note" role="status">Your post is gone, its drawing with it.</p>{% endif %}
 {% if note == 'deleted_drawing' %}<p class="note" role="status">Your drawing is gone.</p>{% endif %}
 {% if note == 'blocked' %}<p class="note" role="status">Blocked. You won’t see each other’s posts or drawings. You can unblock them in Settings.</p>{% endif %}
-<section class="composer cmp-row" aria-label="Make a post" data-compose-row>
-  <div class="composer-row">
-    {{ face(me, 'composer-face') }}
-    <button class="cmp-row-say" type="button" data-compose-go="words" aria-haspopup="dialog"
-            aria-controls="composeSheet" aria-expanded="false">Say something, then draw it…</button>
-  </div>
-  <div class="composer-acts">
-    <button class="chip" type="button" data-compose-go="pad" aria-haspopup="dialog" aria-controls="composeSheet"
-            aria-expanded="false">{{ ic.make_draw() }}<span>Draw</span></button>
-    <button class="chip" type="button" data-compose-go="flip" aria-haspopup="dialog" aria-controls="composeSheet"
-            aria-expanded="false">{{ ic.make_flip() }}<span>Flip</span></button>
-  </div>
-</section>
-
 {{ home_pill(show) }}
 <h2 class="sr">Posts</h2>
 <div class="feed-swap" data-feed-swap>
 <div class="feed" data-feed data-more="{{ url_for('social.feed_more') }}">
   {% for c in cards %}{% if c.extra %}{{ feed_extra(c.extra) }}{% else %}{{ post_card(c) }}{% endif %}{% endfor %}
 </div>
-<p class="feed-none" data-feed-none{% if cards %} hidden{% endif %}>No posts yet. Yours could be the first: say something, then draw it.</p>
+<p class="feed-none" data-feed-none{% if cards %} hidden{% endif %}>No posts yet. Tap Make to share your first one.</p>
 <button class="btn btn-wide feed-more" type="button" data-feed-next="{{ next or '' }}"{% if not next %} hidden{% endif %}>Load more</button>
 </div>
 <p class="say" data-feed-say role="status" hidden></p>

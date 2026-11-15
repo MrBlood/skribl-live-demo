@@ -2,11 +2,11 @@
 4): a person's words and a skribl, from the approved mocks and the owner's
 "all yes" to piece 4's choices (Nov 11).
 
-    /                   Home, signed in: "Say something, then draw it...",
-                        the row that opens the composer (compose.py), then
-                        the pill, Following | Everyone (follows.py), and its
-                        posts, newest first. Signed out, Home is the first
-                        visit.
+    /                   Home, signed in: the pill, Following | Everyone
+                        (follows.py), and its posts, newest first; Make is
+                        the way to post (compose.py, the owner's "All yes",
+                        Nov 14: no box at the top). Signed out, Home is the
+                        first visit.
     /posts              a post: the words and the drawing the Pad or Flip
                         handed back in compose mode, or ONE OF YOUR OLDER
                         DRAWINGS (the composer's Yours: {"skribl": its id}),

@@ -2,12 +2,12 @@
 piece 4, posts"), through the demo's own server, with Chromium's virtual
 authenticator for the site's people and a real pen in Skribl's real Pad.
 
-  1. HOME, SIGNED IN: its row, "Say something, then draw it…", Draw and
-     Flip, which opens the composer (since Nov 14, one Make everywhere:
-     verify_composer holds the composer itself); there, with nothing drawn,
-     Post says so and sends nothing; an empty feed says so kindly. Signed
+  1. HOME, SIGNED IN: no box at the top (the owner's "All yes", Nov 14:
+     Make is the way to post); the bar's Make opens the composer
+     (verify_composer holds the composer itself); there, with nothing drawn,
+     Post says so and sends nothing; an empty feed says to tap Make. Signed
      out, Home is the first visit, as before.
-  2. COMPOSING FROM HOME: the row's Draw opens Skribl's Pad over the
+  2. COMPOSING FROM HOME: Make, then the composer's Draw, opens Skribl's Pad over the
      composer in compose mode, with the gallery choice in its sheet
      (compose=1&gallery=1); Add hands the drawing back into the composer's
      own in-post player; Edit drawing reopens it with the drawing in it;
@@ -806,20 +806,17 @@ with sync_playwright() as p:
     b = p.chromium.launch()
 
     # ------------------------------------------------------------------ 1
-    if part(1, "Home, signed in: the row that opens the composer, an empty feed said kindly; Post with nothing drawn"):
+    if part(1, "Home, signed in: no box at the top, Make opens the composer, an empty feed said kindly; Post with nothing drawn"):
         mira = someone(b, "mira", "Mira Okafor")
         pg = mira.pg
         sent = []
         pg.on("request", lambda r: sent.append(r.url) if r.method == "POST" and r.url.endswith("/social/posts") else None)
         pg.goto(BASE + "/social/")
         pg.wait_for_timeout(500)
-        home = pg.evaluate("""() => ({ row: !!document.querySelector('[data-compose-row]'),
-          words: (document.querySelector('[data-compose-row] [data-compose-go=words]') || {}).textContent,
-          chips: [...document.querySelectorAll('[data-compose-row] [data-compose-go=pad], [data-compose-row] [data-compose-go=flip]')].map(c => c.textContent.trim()),
-          post: !!document.querySelector('[data-compose-row] [data-compose-post]'),
+        home = pg.evaluate("""() => ({ box: document.querySelectorAll('[data-compose-row], [data-compose-go]').length,
           none: (document.querySelector('[data-feed-none]') || {}).textContent || null,
           hello: !!document.querySelector('.hello') })""")
-        pg.click("[data-compose-row] [data-compose-go=words]")
+        pg.click("nav.nav .tab-make")
         pg.wait_for_timeout(700)
         sheet = pg.evaluate("""() => ({ open: document.getElementById('composeSheet').classList.contains('is-open'),
           field: document.activeElement === document.querySelector('#composeSheet [data-compose-words]') })""")
@@ -833,12 +830,11 @@ with sync_playwright() as p:
         npg.wait_for_timeout(400)
         nobody = npg.evaluate("() => ({ hello: !!document.querySelector('.hello'), composer: !!document.querySelector('[data-compose-row], #composeSheet') })")
         close_ctx(nctx, npg)
-        check("Home signed in has its row: \"Say something, then draw it…\", Draw and Flip, no Post, opening the"
-              " composer, its field ready; an empty feed says so kindly; there Post with nothing drawn says what is"
+        check("Home signed in has no box at the top (the owner's \"All yes\", Nov 14): Make opens the composer, its"
+              " field ready; an empty feed says to tap Make, kindly; there Post with nothing drawn says what is"
               " missing and sends nothing; signed out, Home is the first visit, as before",
-              home["row"] and home["words"] == "Say something, then draw it…"
-              and home["chips"] == ["Draw", "Flip"] and not home["post"] and sheet == {"open": True, "field": True}
-              and home["none"] == "No posts yet. Yours could be the first: say something, then draw it."
+              home["box"] == 0 and sheet == {"open": True, "field": True}
+              and home["none"] == "No posts yet. Tap Make to share your first one."
               and not home["hello"] and said == "Draw something first, or pick one you made." and not sent
               and nobody["hello"] and not nobody["composer"],
               f"home {home}; sheet {sheet}; said {said!r}; posted {len(sent)}; signed out {nobody}")
@@ -849,7 +845,9 @@ with sync_playwright() as p:
         pg = mira.pg
         pg.goto(BASE + "/social/")
         pg.wait_for_timeout(500)
-        pg.click("[data-compose-row] [data-compose-go=pad]")
+        pg.click("nav.nav .tab-make")
+        pg.wait_for_timeout(700)
+        pg.click("#composeSheet [data-compose-open=pad]")
         fr = editor_frame(pg, "skribl-pad")
         src = pg.evaluate("() => document.querySelector('#composePad iframe').getAttribute('src')")
         sheet = add_from_pad(pg, fr) if fr else {}
@@ -906,7 +904,9 @@ with sync_playwright() as p:
         pg = mira.pg
         pg.goto(BASE + "/social/")
         pg.wait_for_timeout(500)
-        pg.click("[data-compose-row] [data-compose-go=pad]")
+        pg.click("nav.nav .tab-make")
+        pg.wait_for_timeout(700)
+        pg.click("#composeSheet [data-compose-open=pad]")
         fr = editor_frame(pg, "skribl-pad")
         if fr:
             add_from_pad(pg, fr)
