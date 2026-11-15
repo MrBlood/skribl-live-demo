@@ -120,8 +120,10 @@
 {% include 'skribl/_skribl_theme_boot.html' %}
 {# THE BLOOBY APP'S SPLASH (the owner, Nov 15), decided here before the first
    paint, right after the theme boot it reads the browser's bar from: a file,
-   so the page keeps its one inline script. splash.js plays it. #}
-<script src="{{ social_asset('splash-boot.js') }}"></script>
+   so the page keeps its one inline script. For a splash, it asks for the
+   show's two pictures at once (the same addresses as the splash's own,
+   below). splash.js plays it. #}
+<script src="{{ social_asset('splash-boot.js') }}" data-word="{{ social_asset('brand/blooby-hello.json') }}" data-jump="{{ social_asset('brand/blooby-splash-jump.webp') }}"></script>
 <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
 {% if composing %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endif %}
 <script src="{{ social_asset('social.js') }}" defer></script>
@@ -132,13 +134,22 @@
 </head>
 <body{% if hide_nav %} class="focus"{% endif %}>
 {# THE BLOOBY APP'S SPLASH (the owner, Nov 15: "make a splash screen load
-   first and show blooby", on the dark ground "with no stars"): over the page
-   while <html> is-splashing (splash-boot.js: the Home Screen app, once a
-   launch), and nothing at all otherwise (social.css, THE SPLASH). "blooby."
-   writing itself and its blush falling as skribl's i-dot does, played by
-   Skribl's own player as a draft (splash.js). #}
-<div class="splash" id="bloobySplash" role="img" aria-label="Blooby" data-splash="{{ social_asset('brand/blooby-splash.json') }}">
-  <div class="splash-word">{{ skribl_inline_draft('splashBox', controls=false, progress=false, plain=true, shaped=false) }}</div>
+   first and show blooby", on the dark ground "with no stars", then "All yes,
+   B with the stage spotlight"): over the page while <html> is-splashing
+   (splash-boot.js: the Home Screen app, once a launch), and nothing at all
+   otherwise (social.css, THE SPLASH). Blooby jumping, hands thrown up, in a
+   stage spotlight, and "blooby." writing itself at the foot with its blush
+   falling as skribl's i-dot does, played by Skribl's own player as a draft
+   (splash.js). His strip is named, not loaded: splash.js fetches it only for
+   a splash, so a browser tab never downloads it. #}
+<div class="splash" id="bloobySplash" role="img" aria-label="Blooby" data-splash="{{ social_asset('brand/blooby-hello.json') }}">
+  <div class="splash-show">
+    <div class="splash-beam" aria-hidden="true"><i></i></div>
+    <div class="splash-pool" aria-hidden="true"></div>
+    <div class="splash-shadow" aria-hidden="true"></div>
+    <div class="splash-jump" aria-hidden="true"><img alt="" data-src="{{ social_asset('brand/blooby-splash-jump.webp') }}"></div>
+    <div class="splash-word">{{ skribl_inline_draft('splashBox', controls=false, progress=false, plain=true, shaped=false) }}</div>
+  </div>
 </div>
 {# Two wordmarks, one shown at a time: the phone's at the top of the page,
    the desk's at the top of the rail. Both are blooby. (social/_blooby_mark.html:

@@ -21,11 +21,17 @@
  * data-splash-dark) and splash.js puts them back as it goes. And never longer
  * than LONGEST, whatever becomes of splash.js.
  *
+ * THE SHOW'S TWO PICTURES, asked for here for a splash alone (the word's
+ * drawing and Blooby's strip, named on this script's tag), so they are on
+ * their way while the page is still parsed; splash.js asks for the same
+ * addresses and the browser hands them over.
+ *
  * Automation asks for it (window.__bloobySplashForce, before the page loads),
  * as Skribl's hello is asked for: every suite's browser is a tab. */
 (function () {
   'use strict';
   var LONGEST = 6000;
+  var me = document.currentScript;
   var root = document.documentElement, nav = window.navigator;
   var app = nav.standalone === true || window.__bloobySplashForce === true;
   try { app = app || window.matchMedia('(display-mode: standalone)').matches; } catch (e) { /* none */ }
@@ -38,6 +44,14 @@
   try { first = !window.localStorage.getItem('blooby.splash.v1'); } catch (e) { /* first, then */ }
   root.classList.add('is-splashing');
   if (first) root.classList.add('is-splash-first');
+  var ask = function (href, as) {
+    if (!href) return;
+    var l = document.createElement('link');
+    l.rel = 'preload'; l.as = as; l.href = href;
+    if (as === 'fetch') l.crossOrigin = 'anonymous';
+    document.head.appendChild(l);
+  };
+  if (me) { ask(me.getAttribute('data-word'), 'fetch'); ask(me.getAttribute('data-jump'), 'image'); }
   var NIGHT = '#0f1218';
   var metas = document.querySelectorAll('meta[name="theme-color"]');
   for (var i = 0; i < metas.length; i++) {

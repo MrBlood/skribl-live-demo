@@ -39,14 +39,19 @@ Chromium's virtual authenticator for the site's people.
      line the same.
   8. THE SPLASH (the owner, Nov 15: "make a splash screen load first and show
      blooby ... Fall the same way and compress then pop back the exact same
-     way", on the dark ground "with no stars"): its drawing, the site's hello
-     with the word in the icon's lilac; never in a browser tab; in the app,
-     over the page from the first paint, the night ground with no stars and
-     the bar the same; the first launch writes the word then the blush falls,
-     a later one only the blush; once a launch; a tap lets it go at once;
-     still under Reduce Motion; never held for a drawing that does not come;
-     the page's own drawing waits for it; it fades out on several frames, and
-     the bar comes back; the word and the period read off the paint.
+     way", on the dark ground "with no stars", then Blooby jumping, "All yes,
+     B with the stage spotlight"): its pictures, the site's hello and his
+     strip, the last pose without its sparks; never in a browser tab, his
+     strip never downloaded there; in the app, over the page from the first
+     paint, the night ground and the bar the same; the spotlight in the
+     icon's lilac, still, coming up once the pictures are here; his jump read
+     on every frame (the floor, the top, the poses in order, his shadow, and
+     it glides); his outline against the light at every pose; the word
+     writes itself, then the blush; once a launch; a later launch quick; a
+     tap lets it go; still under Reduce Motion; never held for a picture that
+     does not come; the page's own drawing waits for it; it fades out on
+     several frames and the bar comes back; the word and its period read off
+     the paint.
   9. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALAPP_PART=<n>[,<m>] runs those sections only (calibration); a section
@@ -70,7 +75,7 @@ import urllib.request
 from pathlib import Path
 
 from assertions import make_check
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "harness"))
@@ -751,74 +756,144 @@ with sync_playwright() as pw:
             stopped(7, exc)
 
     # ------------------------------------------------------------------ 8
-    if part(8, "the splash: the app's first paint, the word and its blush, once a launch, kind"):
+    if part(8, "the splash: the app's first paint, Blooby's jump in a stage spotlight, the word and its blush, kind"):
         try:
-            # ITS DRAWING: the site's hello, the word in the icon's lilac.
-            hello = json.load(open(ROOT / "social" / "static" / "brand" / "blooby-hello.json"))
-            spl = json.load(open(ROOT / "social" / "static" / "brand" / "blooby-splash.json"))
             sys.path.insert(0, str(ROOT / "harness" / "tools"))
             import importlib
             tile = importlib.import_module("blooby").ICON_TILE.lower()
             css = (ROOT / "social" / "static" / "social.css").read_text(encoding="utf-8")
+            brand = re.search(r"--brand:\s*(#[0-9a-fA-F]{6})", css).group(1).lower()
             blush = re.search(r"--blooby-blush:\s*(#[0-9a-fA-F]{6})", css).group(1).lower()
-            inks = [sorted({q["color"].lower() for q in f["strokes"]}) for f in spl["frames"]]
-            box = lambda f: [round(v) for v in (min(q["x"] for q in f["strokes"]), min(q["y"] for q in f["strokes"]),
-                                                max(q["x"] for q in f["strokes"]), max(q["y"] for q in f["strokes"]))]
-            same = len(spl["frames"]) == len(hello["frames"]) and all(
-                max(abs(a - c) for a, c in zip(box(f), box(g))) <= 2 for f, g in zip(spl["frames"], hello["frames"]))
-            check("its drawing is the site's hello, page for page (the word, then the period's fall, squash and pop, as "
-                  "skribl's i-dot), the word in the icon's lilac (blooby.py's ICON_TILE) and the period in Blooby's blush",
-                  same and inks[0] == [tile] and all(k == [blush] for k in inks[1:])
-                  and spl.get("under") == {"page": 0, "from": 1, "to": len(spl["frames"]) - 1},
-                  f"{len(spl['frames'])} pages, the same as the hello's: {same}; inks {inks[:3]}")
+            hx = lambda h: tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
 
-            # NEVER IN A BROWSER TAB: Home and a post's page, signed in.
+            def lum(c):
+                v = [x / 255 for x in c[:3]]
+                v = [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+                return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+            def ratio(a, c):
+                x, y = lum(a), lum(c)
+                return round((max(x, y) + 0.05) / (min(x, y) + 0.05), 2)
+
+            # ITS PICTURES, as the page names them: the word is the site's hello, Blooby his strip, and the head
+            # asks for the same two.
+            st, _, body = get("/social/")
+            html = body.decode("utf-8")
+            def named(pat):
+                m = re.search(pat, html)
+                return m.group(1) if m else None
+            names = {"word": named(r'id="bloobySplash"[^>]*\sdata-splash="([^"?]+)'),
+                     "strip": named(r'<div class="splash-jump"[^>]*><img [^>]*data-src="([^"?]+)'),
+                     "boot_word": named(r'splash-boot\.js[^"]*"[^>]*\sdata-word="([^"?]+)'),
+                     "boot_jump": named(r'splash-boot\.js[^"]*"[^>]*\sdata-jump="([^"?]+)')}
+            hello = json.load(open(ROOT / "social" / "static" / "brand" / "blooby-hello.json"))
+            inks = [sorted({q["color"].lower() for q in f["strokes"]}) for f in hello["frames"]]
+            check("its pictures: the word is the site's hello (brand/blooby-hello.json: the word in the site's purple, "
+                  "its period in Blooby's blush, falling as skribl's i-dot does), Blooby is his strip (brand/"
+                  "blooby-splash-jump.webp), and the head asks for the same two",
+                  bool(names["word"]) and names["word"].endswith("/brand/blooby-hello.json")
+                  and bool(names["strip"]) and names["strip"].endswith("/brand/blooby-splash-jump.webp")
+                  and names["boot_word"] == names["word"] and names["boot_jump"] == names["strip"]
+                  and inks[0] == [brand] and all(k == [blush] for k in inks[1:])
+                  and hello.get("under") == {"page": 0, "from": 1, "to": len(hello["frames"]) - 1},
+                  json.dumps({"names": names, "inks": inks[:3]}))
+
+            # HIS STRIP: seven poses on a clear ground; the last Blooby alone, arms up (the owner: "lose the little
+            # motion lines on the last frame by his hand balls"), the poses at the top with their sparks.
+            strip = Image.open(ROOT / "social" / "static" / "brand" / "blooby-splash-jump.webp").convert("RGBA")
+            fw = strip.width // 7
+
+            def shapes(k, q=4, cut=64):
+                """Frame k's separate shapes of ink (its alpha at a quarter size, side by side counts)."""
+                a = strip.crop((k * fw, 0, (k + 1) * fw, strip.height)).getchannel("A").resize((fw // q, strip.height // q))
+                w, h = a.size
+                px = a.load()
+                seen, sizes = set(), []
+                for y in range(h):
+                    for x in range(w):
+                        if px[x, y] > cut and (x, y) not in seen:
+                            stack, c = [(x, y)], 0
+                            seen.add((x, y))
+                            while stack:
+                                cx, cy = stack.pop()
+                                c += 1
+                                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                                    if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in seen and px[nx, ny] > cut:
+                                        seen.add((nx, ny))
+                                        stack.append((nx, ny))
+                            sizes.append(c)
+                return sizes
+            parts = [len(shapes(k)) for k in range(7)]
+            corners = [strip.getpixel((k * fw + dx, dy))[3] for k in range(7)
+                       for dx, dy in ((2, 2), (fw - 3, 2), (2, strip.height - 3), (fw - 3, strip.height - 3))]
+            check("his strip: seven poses side by side on a clear ground, each frame as tall as wide or near it, the last "
+                  "Blooby alone with his arms up (one shape: no lines by his hands), the top of his jump with its sparks",
+                  strip.width % 7 == 0 and 0.9 < fw / strip.height < 1.0 and max(corners) == 0
+                  and parts[6] == 1 and parts[3] >= 3,
+                  json.dumps({"size": strip.size, "shapes": parts, "corners": max(corners)}))
+
+            # NEVER IN A BROWSER TAB: Home and the Gallery, signed in; not shown, and its pictures never asked for.
             mira = member(b, "mira", "Mira Lopez")
             ctx, pg = browser_as(b, mira, ua=IPHONE_UA)
+            asked = []
+            pg.on("request", lambda r: asked.append(r.url.split("/")[-1]) if "splash-jump" in r.url else None)
             tab = {}
             for path in ("/social/", "/social/explore"):
                 pg.goto(BASE + path)
                 pg.wait_for_function("() => document.readyState === 'complete'")
+                pg.wait_for_timeout(300)
                 tab[path] = pg.evaluate("""() => ({ cls: document.documentElement.className,
                   shown: getComputedStyle(document.getElementById('bloobySplash')).display })""")
             close_ctx(ctx, pg)
-            check("never in a browser tab: no splash on Home or the Gallery (only the Home Screen app opens with one)",
-                  all(v == {"cls": "", "shown": "none"} for v in tab.values()), json.dumps(tab))
+            check("never in a browser tab: no splash on Home or the Gallery, and Blooby's strip never downloaded there "
+                  "(only the Home Screen app opens with one)",
+                  all(v == {"cls": "", "shown": "none"} for v in tab.values()) and not asked,
+                  json.dumps({"tab": tab, "asked": asked}))
 
-            # IN THE APP: from the first paint, then every frame until it has gone.
+            # IN THE APP: from the first paint, then every frame until it has gone: the splash, the show, his box
+            # (lift and squash), the strip's pose, his shadow, and where the light is.
             WATCH_SPLASH = """() => { window.__sp = []; const t0 = performance.now(); const el = document.getElementById('bloobySplash');
+              const show = el.querySelector('.splash-show'), j = el.querySelector('.splash-jump'), im = j.querySelector('img'),
+                    sh = el.querySelector('.splash-shadow'), beam = el.querySelector('.splash-beam'), pool = el.querySelector('.splash-pool');
               const first = { cls: document.documentElement.className, shown: getComputedStyle(el).display,
                               bar: document.querySelector('meta[name=theme-color]').content };
-              const step = () => { const cs = getComputedStyle(el), c = el.querySelector('canvas');
-                window.__sp.push({ t: performance.now() - t0, shown: cs.display !== 'none', o: +cs.opacity });
+              const r = e => { const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(v => Math.round(v * 10) / 10).join(','); };
+              const step = () => { const cs = getComputedStyle(el), m = new DOMMatrix(getComputedStyle(j).transform),
+                  s = new DOMMatrix(getComputedStyle(im).transform), w = im.offsetWidth / 7;
+                window.__sp.push({ t: performance.now() - t0, shown: cs.display !== 'none', o: +cs.opacity,
+                  show: +getComputedStyle(show).opacity, on: el.classList.contains('is-on'), pic: im.complete && im.naturalWidth > 0,
+                  lift: Math.round(m.m42 * 10) / 10, sx: m.m11, sy: m.m22, pose: w ? Math.round(-s.m41 / w) : -1,
+                  shade: +getComputedStyle(sh).opacity, light: r(beam) + '|' + r(pool) });
                 if (performance.now() - t0 < 5200) requestAnimationFrame(step); };
               requestAnimationFrame(step); return first; }"""
             # Read as the page is parsed, before any deferred script runs (Skribl's lib/theme.js among them, which
             # stamps the bar again): what the first paint shows is the head's own work.
             FIRST_PAINT = "document.addEventListener('readystatechange', () => { if (document.readyState !== 'interactive') return; const el = document.getElementById('bloobySplash'); window.__dcl = { cls: document.documentElement.className, shown: el && getComputedStyle(el).display, bar: (document.querySelector('meta[name=theme-color]') || {}).content }; });"
-            INK = """([tile, blush]) => { const c = document.querySelector('#bloobySplash canvas'); if (!c) return null;
+            INK = """([word, blush]) => { const c = document.querySelector('#bloobySplash canvas'); if (!c) return null;
               const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const hx = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-              const T = hx(tile), B = hx(blush); let w = 0, p = 0;
+              const T = hx(word), B = hx(blush); let w = 0, p = 0;
               for (let i = 0; i < x.length; i += 16) { if (x[i + 3] < 128) continue;
                 const d = (a) => Math.abs(x[i] - a[0]) + Math.abs(x[i + 1] - a[1]) + Math.abs(x[i + 2] - a[2]);
                 if (d(T) < 60) w++; else if (d(B) < 60) p++; }
               return [w, p]; }"""
             ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE, FIRST_PAINT))
             pg.goto(BASE + "/social/")
-            first = pg.evaluate(WATCH_SPLASH)
+            pg.evaluate(WATCH_SPLASH)
+            # the word's moments, from when the show comes up (once its pictures are here)
+            pg.wait_for_function("() => document.getElementById('bloobySplash').classList.contains('is-on')", timeout=6000)
+            t_on = time.time()
             ink = []
-            for at in (500, 1300, 1700, 2600):
-                pg.wait_for_timeout(max(0, at - (ink[-1][0] if ink else 0)))
-                ink.append((at, pg.evaluate(INK, [tile, blush])))
-            # the night ground with no stars, as painted: the top, the foot, and no light dot between
-            ground = pg.evaluate("""() => new Promise(res => { const el = document.getElementById('bloobySplash');
-              const cs = getComputedStyle(el); res({ bg: cs.backgroundImage }); })""")
+            for at in (400, 1200, 1750, 2600):
+                pg.wait_for_timeout(max(0, at - (time.time() - t_on) * 1000))
+                ink.append((at, pg.evaluate(INK, [brand, blush])))
             shot = pg.screenshot()
-            pg.wait_for_timeout(2600)
+            pg.wait_for_timeout(2400)
             fr = pg.evaluate("() => window.__sp")
             after = pg.evaluate("""() => ({ cls: document.documentElement.className, bar: document.querySelector('meta[name=theme-color]').content,
               seen: localStorage.getItem('blooby.splash.v1'), launch: sessionStorage.getItem('blooby.splash.launch') })""")
             dcl = pg.evaluate("() => window.__dcl")
+            light_css = pg.evaluate("""() => { const el = document.getElementById('bloobySplash');
+              return getComputedStyle(el).getPropertyValue('--splash-light').trim(); }""")
             pg.goto(BASE + "/social/explore")
             pg.wait_for_function("() => document.readyState === 'complete'")
             pg.wait_for_timeout(300)
@@ -826,45 +901,140 @@ with sync_playwright() as pw:
             close_ctx(ctx, pg)
             im = Image.open(io.BytesIO(shot)).convert("RGB")
             W, H = im.size
-            top, foot = im.getpixel((W // 2, 3)), im.getpixel((W // 2, H - 4))
-            stars = sum(1 for y in range(10, H // 3, 3) for x in range(0, W, 3) if sum(im.getpixel((x, y))) > 300)
+            top, foot = im.getpixel((8, 3)), im.getpixel((8, H - 4))
+            stars = sum(1 for y in range(10, 2 * H // 3, 3) for x in list(range(0, 24, 3)) + list(range(W - 24, W, 3))
+                        if sum(im.getpixel((x, y))) > 300)
             check("in the app, the first launch: over the page from the first paint (is-splashing and shown before the "
                   "page's scripts), the browser's bar in its night (#0f1218), the night ground from the dark ground at "
-                  "the top to the deep purple at the foot, and no stars",
-                  dcl and "is-splashing" in dcl["cls"] and dcl["shown"] == "grid" and dcl["bar"] == "#0f1218"
+                  "the top to the deep purple at the foot, and no stars beside the light",
+                  bool(dcl) and "is-splashing" in dcl["cls"] and dcl["shown"] == "block" and dcl["bar"] == "#0f1218"
                   and max(abs(a - c) for a, c in zip(top, (0x0f, 0x12, 0x18))) <= 6
                   and max(abs(a - c) for a, c in zip(foot, (0x2e, 0x21, 0x78))) <= 10 and stars == 0,
                   json.dumps({"dcl": dcl, "top": top, "foot": foot, "stars": stars}))
+
+            # THE STAGE SPOTLIGHT: in the icon's lilac, still, coming up with Blooby and the word, and only once both
+            # pictures are here.
+            shown = [f for f in fr if f["shown"]]
+            up = [f["show"] for f in shown if f["on"]]
+            rise = [o for o in up if 0.05 < o < 0.95]
+            rsteps = [c - a for a, c in zip(up, up[1:])]
+            onset = next((f for f in shown if f["show"] > 0.01), None)
+            lights = {f["light"] for f in shown if f["show"] > 0.99 and f["o"] > 0.99}
+            check("the stage spotlight: in the icon's lilac (blooby.py's ICON_TILE), still while he jumps (the beam and the "
+                  "pool where they were on every frame), coming up with him and the word on several frames (none more "
+                  "than a third at once), and only once his strip and the word's drawing are here",
+                  tuple(int(v) for v in light_css.split()) == hx(tile) and len(lights) == 1 and len(rise) >= 4
+                  and max(rsteps or [1]) <= 0.34 and bool(onset) and onset["pic"],
+                  json.dumps({"light": light_css, "tile": tile, "places": len(lights), "rise": len(rise),
+                              "step": round(max(rsteps or [1]), 2), "onset": onset and {k: onset[k] for k in ("t", "pic")}}))
+
+            # HIS JUMP, read on every frame: he leaves the floor and lands, his poses in order, his shadow with him;
+            # it glides: no frame moves him faster than the jump is drawn to (1.8 px a ms at its fastest).
+            jumping = [f for f in shown if f["on"] and f["o"] > 0.99]
+            lifts = [f["lift"] for f in jumping]
+            poses = [f["pose"] for f in jumping]
+            order = [p for i, p in enumerate(poses) if i == 0 or p != poses[i - 1]]
+            fast = [(round(c["t"]), round(abs(c["lift"] - a["lift"]) / max(1, c["t"] - a["t"]), 2))
+                    for a, c in zip(jumping, jumping[1:]) if abs(c["lift"] - a["lift"]) > 2.2 * (c["t"] - a["t"]) + 2]
+            peak = min(lifts or [0])
+            i_top = lifts.index(peak) if lifts else 0
+            on_way_up = [v for v in lifts[:i_top] if -90 < v < -5]
+            on_way_down = [v for v in lifts[i_top:] if -90 < v < -5]
+            at_top = [f["shade"] for f in jumping if f["lift"] <= -90]
+            check("his jump, read on every frame: he crouches, leaves the floor 96px (the top of his jump) and lands back "
+                  "on it, his seven poses in order and the last held (arms up); his shadow smaller and fainter at the top "
+                  "and whole on the floor; and it glides (several frames between the floor and the top each way, none "
+                  "moving him faster than the jump is drawn to)",
+                  -97.5 <= peak <= -94.5 and abs(lifts[-1]) < 0.5 and order == [0, 1, 2, 3, 4, 5, 6]
+                  and len(on_way_up) >= 6 and len(on_way_down) >= 4 and not fast
+                  and bool(at_top) and max(at_top) <= 0.45 and jumping[-1]["shade"] > 0.99,
+                  json.dumps({"peak": peak, "end": lifts[-1] if lifts else None, "order": order, "up": len(on_way_up),
+                              "down": len(on_way_down), "fast": fast[:4], "shade_top": max(at_top or [1])}))
+
             check("...the word writes itself first, the blush only once it is written (it falls), then both whole",
                   all(v is not None for _, v in ink) and ink[0][1][0] > 0 and ink[0][1][1] == 0
                   and ink[1][1][0] > ink[0][1][0] and ink[1][1][1] == 0 and ink[2][1][1] > 0
                   and ink[3][1][0] >= ink[1][1][0] and ink[3][1][1] > 0, json.dumps(ink))
-            shown = [f for f in fr if f["shown"]]
             fade = [f["o"] for f in shown if f["o"] < 0.999]
             gone_at = max((f["t"] for f in shown), default=0)
             steps = [abs(a - c) for a, c in zip([1.0] + fade, fade)]
             mids = [o for o in fade if 0.05 < o < 0.95]
-            check("...then it fades on several frames (no frame more than a third at once) and is gone by 4 s, the "
+            check("...then it fades on several frames (no frame more than a third at once) and is gone by 4.6 s, the "
                   "bar back in the page's ground, marked seen and this launch's",
-                  len(mids) >= 4 and (max(steps) if steps else 1) <= 0.34 and 2600 <= gone_at <= 4000
+                  len(mids) >= 4 and (max(steps) if steps else 1) <= 0.34 and 2600 <= gone_at <= 4600
                   and after["cls"] == "" and after["bar"] == "#f6f8fa" and after["seen"] == "1" and after["launch"] == "1",
                   json.dumps({"fade": [round(v, 2) for v in fade[:8]], "gone": round(gone_at), "after": after}))
             check("...once a launch: the next page in the app has none", next_page == "", next_page)
 
-            # A LATER LAUNCH: the word there, only the blush falls, and it is quick.
+            # HIS OUTLINE AGAINST THE LIGHT (the owner: "you can't see his black outline"), at every pose: his
+            # dark ink against what is painted just outside him (2 to 4 px out), read off two shots, the splash as
+            # it is and Blooby alone on white, which says where he and his ink are. The word is held still so the
+            # splash stays while it is read.
+            FREEZE = """(ms) => { const el = document.getElementById('bloobySplash');
+              const p = (SkriblInline.players ? SkriblInline.players() : []).find(x => x.el && x.el.id === 'splashBox'); if (p) p.seek(0);
+              const a = ['.splash-jump', '.splash-jump img', '.splash-shadow'].flatMap(s => el.querySelector(s).getAnimations());
+              a.forEach(x => { x.pause(); x.currentTime = ms; }); return a.length; }"""
+            ALONE = """(on) => { const el = document.getElementById('bloobySplash'); el.style.background = on ? '#fff' : '';
+              for (const s of ['.splash-beam', '.splash-pool', '.splash-shadow', '.splash-word']) el.querySelector(s).style.visibility = on ? 'hidden' : ''; }"""
+            HOLD = [266, 384, 523, 853, 974, 1151, 1220]     # each pose, held (splash.js POSES)
+
+            def outline(s_png, w_png):
+                S = Image.open(io.BytesIO(s_png)).convert("RGB")
+                Wb = Image.open(io.BytesIO(w_png)).convert("RGB")
+                M = ImageChops.difference(Wb, Image.new("RGB", Wb.size, (255, 255, 255))).convert("L").point(lambda v: 255 if v > 12 else 0)
+                ring = ImageChops.subtract(M.filter(ImageFilter.MaxFilter(9)), M.filter(ImageFilter.MaxFilter(3)))
+                inkm = ImageChops.multiply(Wb.convert("L").point(lambda v: 255 if v < 50 else 0), ring.filter(ImageFilter.MaxFilter(9)))
+                sp, wd = S.load(), S.size[0]
+                at = lambda m: [(i % wd, i // wd) for i, v in enumerate(m.getdata()) if v]
+                cols = [sp[x, y] for x, y in at(inkm)]
+                if not cols:
+                    return None
+                col = tuple(sorted(c[i] for c in cols)[len(cols) // 2] for i in range(3))
+                rs = sorted(ratio(sp[x, y], col) for x, y in at(ring))
+                return {"p10": rs[len(rs) // 10], "min": rs[0]}
+
+            def read_poses(screen, which):
+                c2, p2 = browser_as(b, mira, screen=screen, ua=IPHONE_UA, init=(STANDALONE,))
+                p2.goto(BASE + "/social/")
+                p2.wait_for_function("() => document.querySelector('#bloobySplash .splash-jump').getAnimations().length > 0", timeout=8000)
+                p2.wait_for_timeout(450)
+                got = {}
+                for k in which:
+                    p2.evaluate(FREEZE, HOLD[k])
+                    p2.wait_for_timeout(40)
+                    s_png = p2.screenshot()
+                    p2.evaluate(ALONE, True)
+                    p2.wait_for_timeout(40)
+                    w_png = p2.screenshot()
+                    p2.evaluate(ALONE, False)
+                    got[k] = outline(s_png, w_png)
+                close_ctx(c2, p2)
+                return got
+            phone = read_poses("phone", range(7))
+            desk = read_poses("desk", (3,))
+            every = list(phone.values()) + list(desk.values())
+            check("his outline shows against the light at every pose: his ink against what is painted just outside him, "
+                  "4.5:1 and more for nearly all of it and 3:1 at its faintest, on a phone at each of his seven poses "
+                  "and on a desk at the top of his jump (on the night alone it is 1.1:1)",
+                  all(v and v["p10"] >= 4.5 and v["min"] >= 3.0 for v in every),
+                  json.dumps({"phone": phone, "desk": desk}))
+
+            # A LATER LAUNCH: the word there, he jumps as the blush falls, and it is quick.
             ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE, "try { localStorage.setItem('blooby.splash.v1', '1'); } catch (e) {}"))
             pg.goto(BASE + "/social/")
             pg.evaluate(WATCH_SPLASH)
-            pg.wait_for_function("() => { const c = document.querySelector('#bloobySplash canvas'); return !!c && c.width > 0; }")
-            pg.wait_for_timeout(120)
-            early = pg.evaluate(INK, [tile, blush])
-            pg.wait_for_timeout(2900)
+            pg.wait_for_function("() => document.getElementById('bloobySplash').classList.contains('is-on')")
+            pg.wait_for_timeout(60)
+            early = pg.evaluate(INK, [brand, blush])
+            pg.wait_for_timeout(3200)
             fr = pg.evaluate("() => window.__sp")
             close_ctx(ctx, pg)
             gone_at = max((f["t"] for f in fr if f["shown"]), default=0)
-            check("a later launch: the word is there from the start and only the blush falls; gone by 2.4 s",
-                  early is not None and early[0] >= 0.9 * ink[3][1][0] and gone_at <= 2400,
-                  json.dumps({"early": early, "whole": ink[3][1], "gone": round(gone_at)}))
+            top_later = min((f["lift"] for f in fr if f["shown"]), default=0)
+            check("a later launch: the word is there from the start, he jumps all the same (to the top) as the blush "
+                  "falls; gone by 2.9 s",
+                  early is not None and early[0] >= 0.9 * ink[3][1][0] and top_later <= -94.5 and gone_at <= 2900,
+                  json.dumps({"early": early, "whole": ink[3][1], "top": top_later, "gone": round(gone_at)}))
 
             # A TAP LETS IT GO AT ONCE, fading.
             ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE,))
@@ -880,35 +1050,44 @@ with sync_playwright() as pw:
             check("a tap lets it go at once: fading on several frames from the tap, gone within 0.6 s of it",
                   len(fading) >= 4 and gone_at <= 500 + 650, json.dumps({"gone": round(gone_at), "fading": len(fading)}))
 
-            # REDUCE MOTION: the finished word, still, then the fade.
+            # REDUCE MOTION: Blooby still in his last pose, the light on, the word whole, then the fade.
             ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE,), reduced=True)
             pg.goto(BASE + "/social/")
             pg.evaluate(WATCH_SPLASH)
-            pg.wait_for_function("() => { const c = document.querySelector('#bloobySplash canvas'); return !!c && c.width > 0; }")
+            pg.wait_for_function("() => document.getElementById('bloobySplash').classList.contains('is-on')")
             pg.wait_for_timeout(150)
-            a1 = pg.evaluate(INK, [tile, blush])
+            a1 = pg.evaluate(INK, [brand, blush])
             pg.wait_for_timeout(300)
-            a2 = pg.evaluate(INK, [tile, blush])
-            pg.wait_for_timeout(1600)
+            a2 = pg.evaluate(INK, [brand, blush])
+            pg.wait_for_timeout(1700)
             fr = pg.evaluate("() => window.__sp")
             close_ctx(ctx, pg)
+            on = [f for f in fr if f["shown"] and f["on"]]
             gone_at = max((f["t"] for f in fr if f["shown"]), default=0)
-            check("Reduce Motion: the finished word with its period, still (the same ink a moment later), then the fade; "
-                  "gone by 1.6 s",
-                  a1 is not None and a1 == a2 and a1[1] > 0 and a1[0] >= 0.9 * ink[3][1][0] and gone_at <= 1600,
-                  json.dumps({"a": a1, "b": a2, "gone": round(gone_at)}))
+            check("Reduce Motion: Blooby still in his last pose, arms up, on every frame (no lift, no squash), the light "
+                  "on, the word whole with its period and still (the same ink a moment later), then the fade; gone by "
+                  "2 s",
+                  bool(on) and all(f["pose"] == 6 and f["lift"] == 0 and f["sx"] == 1 and f["sy"] == 1 for f in on)
+                  and max(f["show"] for f in on) > 0.99
+                  and a1 is not None and a1 == a2 and a1[1] > 0 and a1[0] >= 0.9 * ink[3][1][0] and gone_at <= 2000,
+                  json.dumps({"poses": sorted({f["pose"] for f in on}), "lifts": sorted({f["lift"] for f in on})[:4],
+                              "a": a1, "b": a2, "gone": round(gone_at)}))
 
-            # NEVER HELD FOR A DRAWING THAT DOES NOT COME.
-            ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE,))
-            pg.route("**/brand/blooby-splash.json*", lambda route: route.fulfill(status=404, body="no"))
-            pg.goto(BASE + "/social/")
-            pg.evaluate(WATCH_SPLASH)
-            pg.wait_for_timeout(1500)
-            fr = pg.evaluate("() => window.__sp")
-            close_ctx(ctx, pg)
-            gone_at = max((f["t"] for f in fr if f["shown"]), default=0)
-            check("the drawing not there: it goes at once, fading (gone within 0.7 s), never holding the page",
-                  gone_at <= 700, json.dumps({"gone": round(gone_at)}))
+            # NEVER HELD FOR A PICTURE THAT DOES NOT COME: the word's drawing, or Blooby's strip.
+            held = {}
+            for what, pat in (("the word's drawing", "**/brand/blooby-hello.json*"), ("his strip", "**/brand/blooby-splash-jump.webp*")):
+                ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE,))
+                pg.route(pat, lambda route: route.fulfill(status=404, body="no"))
+                pg.goto(BASE + "/social/")
+                pg.evaluate(WATCH_SPLASH)
+                pg.wait_for_timeout(1500)
+                fr = pg.evaluate("() => window.__sp")
+                close_ctx(ctx, pg)
+                held[what] = {"gone": round(max((f["t"] for f in fr if f["shown"]), default=0)),
+                              "show": max((f["show"] for f in fr), default=0)}
+            check("either picture not there (the word's drawing, his strip): it goes at once, fading (gone within 0.7 s), "
+                  "never holding the page, and the show never comes up without it",
+                  all(v["gone"] <= 700 and v["show"] == 0 for v in held.values()), json.dumps(held))
 
             # THE PAGE'S OWN DRAWING WAITS: Home's first visit draws Blooby's card, signed out, not under the splash.
             ctx, pg = browser_as(b, None, ua=IPHONE_UA, init=(STANDALONE,))
@@ -917,8 +1096,8 @@ with sync_playwright() as pw:
                 const sp = document.documentElement.classList.contains('is-splashing');
                 const p = (window.SkriblInline && SkriblInline.players ? SkriblInline.players() : []).find(x => x.el && x.el.id === 'helloCard');
                 window.__card.push({ t: performance.now() - t0, sp, playing: !!p && p.state().state === 'playing' });
-                if (performance.now() - t0 < 5000) requestAnimationFrame(step); }; requestAnimationFrame(step); }""")
-            pg.wait_for_timeout(5100)
+                if (performance.now() - t0 < 5500) requestAnimationFrame(step); }; requestAnimationFrame(step); }""")
+            pg.wait_for_timeout(5600)
             card = pg.evaluate("() => window.__card")
             close_ctx(ctx, pg)
             under = sum(1 for f in card if f["sp"] and f["playing"])
@@ -926,20 +1105,13 @@ with sync_playwright() as pw:
             check("the page's own drawing waits for it: Home's first visit draws Blooby's card once the splash has gone, "
                   "never under it", under == 0 and later, json.dumps({"under": under, "after": later}))
 
-            # THE WORD AND THE PERIOD, READ OFF THE PAINT: at rest, against the ground beside them.
-            img = im
-            def lum(c):
-                v = [x / 255 for x in c]
-                v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
-                return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
-            def ratio(a, c):
-                x, y = lum(a), lum(c)
-                return round((max(x, y) + 0.05) / (min(x, y) + 0.05), 2)
-            hx = lambda h: tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
-            beside = img.getpixel((10, H // 2 - 30))
-            check("the word and its period read off the paint against the ground beside them: the word 4.5:1 and more, "
-                  "the period 3:1 and more", ratio(hx(tile), beside) >= 4.5 and ratio(hx(blush), beside) >= 3.0,
-                  json.dumps({"ground": beside, "word": ratio(hx(tile), beside), "period": ratio(hx(blush), beside)}))
+            # THE WORD AND THE PERIOD, READ OFF THE PAINT, against the ground beside them at the foot: a big word in
+            # the site's purple, 3:1 and more (the bar for large text), its period the same.
+            beside = im.getpixel((8, round(H * 0.83)))
+            check("the word and its period read off the paint against the ground beside them: the word (the site's purple, "
+                  "a large word) 3:1 and more, the period 3:1 and more",
+                  ratio(hx(brand), beside) >= 3.0 and ratio(hx(blush), beside) >= 3.0,
+                  json.dumps({"ground": beside, "word": ratio(hx(brand), beside), "period": ratio(hx(blush), beside)}))
         except Exception as exc:  # noqa: BLE001
             stopped(8, exc)
 

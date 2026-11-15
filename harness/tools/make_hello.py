@@ -39,19 +39,11 @@ compress then pop back the exact same way"; it splatted from Nov 12, landing
 B): skribl's own pages, stretched as it falls, squashed as it lands, the
 bounce, at rest, without the wink (its three pages at rest: a period is not an
 eye). The site keeps it as its own file, and app.py hands it to Skribl's
-editors at blooby.app (skribl/brand.py):
+editors at blooby.app (skribl/brand.py), and the Blooby app's splash plays
+it at its foot (social/static/splash.js):
 
     python3 harness/tools/make_hello.py OUTDIR --site
     cp OUTDIR/blooby-hello.json social/static/brand/blooby-hello.json
-
-THE BLOOBY APP'S SPLASH, --splash (the owner, Nov 15: "make a splash screen
-load first and show blooby", on the dark ground "with no stars"): the site's
-hello again, the word in the icon's lilac (harness/tools/blooby.py ICON_TILE)
-for the splash's night ground, the period in the blush; social/static/
-splash.js plays it as the Home Screen app opens:
-
-    python3 harness/tools/make_hello.py OUTDIR --splash
-    cp OUTDIR/blooby-splash.json social/static/brand/blooby-splash.json
 
 Needs the local server (SKRIBL_BASE). The payload carries no background colour:
 the ground is the page's own (lib/hello.js), in either theme.
@@ -99,9 +91,9 @@ def sweep(t):
 # THE LOOKS. Skribl's hello writes the header's own mark in its sweep, in
 # PIECES so the ink carries the gradient, and its dot bounces and winks; the
 # site's writes its own mark, the word one colour and so one stroke, and its
-# period bounces the same way, without the wink; the splash's is the site's
-# with the word in the icon's lilac. Everything else (the pen, the fit, the
-# timing, the dot's pages, the way the drawing is made) is the one tool's.
+# period bounces the same way, without the wink. Everything else (the pen,
+# the fit, the timing, the dot's pages, the way the drawing is made) is the
+# one tool's.
 SKRIBL = {"name": "hello.json", "mark": MARK,
           "word": r'<path class="st" d="([^"]+)"', "dot": r'<path class="st dot" d="([^"]+)"',
           "ink": sweep, "dot_ink": None, "pieces": PIECES, "wink": True}
@@ -117,13 +109,6 @@ def site_look():
             "word": r'<g transform="skewX\(-?[\d.]+\)"><path d="([^"]+)"',
             "dot": r'<path class="brand-period"[^>]*? d="([^"]+)"',
             "ink": lambda t: word, "dot_ink": blush, "pieces": 1, "wink": False}
-
-
-def splash_look():
-    """The Blooby app's splash: the site's look, the word in the icon's lilac
-    (blooby.py's ICON_TILE, read from its source) for the splash's night ground."""
-    tile = re.search(r'^ICON_TILE = "(#[0-9a-fA-F]{6})"', (HERE / "blooby.py").read_text(encoding="utf-8"), re.M).group(1).lower()
-    return dict(site_look(), name="blooby-splash.json", ink=lambda t: tile)
 
 
 def mark(look=SKRIBL):
@@ -306,12 +291,12 @@ def build(out_dir, browser, look=SKRIBL):
 
 if __name__ == "__main__":
     from playwright.sync_api import sync_playwright
-    args = [a for a in sys.argv[1:] if a not in ("--site", "--splash")]
+    args = [a for a in sys.argv[1:] if a != "--site"]
     out = args[0] if args else None
     if not out:
         raise SystemExit(__doc__)
     pathlib.Path(out).mkdir(parents=True, exist_ok=True)
     with sync_playwright() as pw:
         b = pw.chromium.launch()
-        build(out, b, site_look() if "--site" in sys.argv[1:] else splash_look() if "--splash" in sys.argv[1:] else SKRIBL)
+        build(out, b, site_look() if "--site" in sys.argv[1:] else SKRIBL)
         b.close()

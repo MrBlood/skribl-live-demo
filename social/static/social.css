@@ -313,26 +313,76 @@ body {
 a.post-act { text-decoration: none; }
 .menu-out { margin: 0; }
 /* THE BLOOBY APP'S SPLASH (the owner, Nov 15, with Bluesky's: "make a splash
-   screen load first and show blooby", then "Do it on the dark background. I
-   like that with no stars"). Nothing at all unless <html> is-splashing
-   (splash-boot.js: the Home Screen app, once a launch); then over everything,
-   the night ground: the site's dark ground at the top, the colour the app
-   opens on (the manifest's), deepening to a deep purple at the foot, no
-   stars; "blooby." in the icon's lilac with its blush period, 82% of the
-   screen wide at most, a touch above the middle. It fades as it goes
-   (is-leaving), an opacity alone, so Reduce Motion fades it too; nothing
-   under it scrolls while it shows. Skribl's player is a draft here: no frame,
-   no ground, no chip, no Play. */
-:root { --splash-top: #0f1218; --splash-mid: #17143a; --splash-foot: #2e2178; }
+   screen load first and show blooby", "Do it on the dark background. I like
+   that with no stars", then Blooby jumping in the middle and the word drawing
+   at the bottom, "All yes, B with the stage spotlight"). Nothing at all
+   unless <html> is-splashing (splash-boot.js: the Home Screen app, once a
+   launch); then over everything, the night ground: the site's dark ground at
+   the top, the colour the app opens on (the manifest's), deepening to a deep
+   purple at the foot, no stars. Nothing under it scrolls while it shows, and
+   it fades as it goes (is-leaving), an opacity alone, so Reduce Motion fades
+   it too.
+
+   ON IT, THE SHOW, which comes up together once its pictures are here
+   (is-on, splash.js), an opacity again:
+   - THE STAGE SPOTLIGHT, still, in the icon's lilac (blooby.py's ICON_TILE):
+     a beam from above, clear at the top and brightest at the floor, softened
+     at its edges, and a bright pool where he stands. His outline (his dark
+     ink) is dark against the night; the light behind him is what lets it
+     show: 5.6:1 and more at every pose, as the mock measured (1.1:1 on the
+     night alone).
+   - BLOOBY, a strip of his seven jump poses drawn by the real Pad
+     (brand/blooby-splash-jump.webp, blooby.py splash-jump), one frame shown;
+     splash.js steps through them and lifts him. His shadow lies on the pool.
+   - "blooby." at the foot, the site's hello (brand/blooby-hello.json): the
+     word in the site's purple and its blush period falling as skribl's
+     i-dot does, by Skribl's player as a draft (no frame, ground, chip or
+     Play).
+
+   ITS UNIT, --u, is a pixel of the owner's phone (874 tall), smaller on a
+   shorter screen, so the whole show keeps its proportions and his jump stays
+   on the screen in a landscape phone or a short window. */
+:root { --splash-top: #0f1218; --splash-mid: #17143a; --splash-foot: #2e2178; --splash-light: 205 191 255; }
 .splash { display: none; }
 html.is-splashing .splash {
-  position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
+  position: fixed; inset: 0; z-index: 200; display: block; overflow: hidden;
+  --u: min(1px, calc(100vh / 874));
   background: linear-gradient(180deg, var(--splash-top) 0%, var(--splash-mid) 50%, var(--splash-foot) 100%);
   opacity: 1; transition: opacity 0.45s ease;
 }
 html.is-splashing .splash.is-leaving { opacity: 0; }
 html.is-splashing body { overflow: hidden; }
-.splash-word { width: min(82vw, 330px); margin-top: -30px; }
+.splash-show { position: absolute; inset: 0; opacity: 0; transition: opacity 0.4s ease-out; }
+.splash.is-on .splash-show { opacity: 1; }
+.splash-beam {
+  position: absolute; left: 50%; top: 0; width: calc(340 * var(--u)); height: calc(40% + 100 * var(--u));
+  margin-left: calc(-170 * var(--u)); filter: blur(calc(9 * var(--u)));
+}
+.splash-beam i {
+  position: absolute; inset: 0; clip-path: polygon(31% 0, 69% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, rgb(var(--splash-light) / 0) 0%, rgb(var(--splash-light) / 0.64) 24%,
+                              rgb(var(--splash-light) / 0.86) 50%, rgb(var(--splash-light) / 0.95) 100%);
+}
+.splash-pool {
+  position: absolute; left: 50%; top: calc(40% + 100 * var(--u)); width: calc(320 * var(--u)); height: calc(84 * var(--u));
+  margin: calc(-42 * var(--u)) 0 0 calc(-160 * var(--u)); border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(var(--splash-light)) 0%, rgb(var(--splash-light) / 0.95) 55%, rgb(var(--splash-light) / 0) 100%);
+}
+.splash-shadow {
+  position: absolute; left: 50%; top: calc(40% + 92 * var(--u)); width: calc(120 * var(--u)); height: calc(16 * var(--u));
+  margin-left: calc(-60 * var(--u)); border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(5 3 20 / 0.55), rgb(5 3 20 / 0));
+}
+.splash-jump {
+  position: absolute; left: 50%; top: 40%; width: calc(180 * var(--u)); aspect-ratio: 540 / 566;
+  margin: calc(-94 * var(--u)) 0 0 calc(-90 * var(--u)); overflow: hidden; transform-origin: 50% 100%;
+}
+.splash-jump img { display: block; width: 700%; height: 100%; max-width: none; }
+.splash.is-still .splash-jump img { transform: translateX(-85.7143%); }   /* his last pose, arms up */
+.splash-word {
+  position: absolute; left: 50%; width: calc(280 * var(--u)); margin-left: calc(-140 * var(--u));
+  top: calc(83% - 280 * var(--u) * 16 / 9 * 0.46);
+}
 .splash .skribl-inline { aspect-ratio: 9 / 16; width: 100%; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .splash .skribl-inline-dur, .splash .skribl-inline-play, .splash .skribl-inline-veil, .splash .skribl-inline-prog,
 .splash .skribl-inline-err { display: none; }
