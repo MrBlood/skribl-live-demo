@@ -2141,7 +2141,17 @@ Screen shows them, iOS 26's three steps, "It may ask you to sign in once
 there, with your passkey", Got it). On Android the row shows once Chrome
 offers its own install, and asks Chrome. A desk sees neither. FROM THE HOME
 SCREEN the same row says Reload, as there is no browser bar to reload with.
-The Pad's and Flip's own steps say iOS 26's too.
+The Pad's and Flip's own steps say iOS 26's too. THE SPLASH (the owner, Nov 15,
+with Bluesky's: "make a splash screen load first and show blooby", on the dark
+ground "with no stars"): the app, once a launch, opens on the night ground
+(the site's dark ground deepening to a deep purple), where "blooby." in the
+icon's lilac writes itself the first time and its blush period falls,
+squashes and pops back as skribl's i-dot does; later launches show only the
+blush falling; then it fades into the page (`splash-boot.js` decides before
+the first paint, `splash.js` plays it with Skribl's player; a tap skips it,
+Reduce Motion keeps it still, a drawing that does not come never holds the
+page, and the page's own drawings wait for it). The Pad's and Flip's hello at
+blooby.app falls the same way now.
 
     /social/manifest.webmanifest    the site's web app manifest (Blooby,
                                     opening on Home)

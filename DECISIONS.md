@@ -43030,3 +43030,138 @@ after the merge); PostgreSQL (the migration's DDL read offline only, its
 planner not run; the fill at start not run against PostgreSQL); the live
 site, and the fill against the owner's own people. The one-glance tell on the
 live site: search "pa" in the Gallery and people come first.
+
+## After v330 -- The Blooby app's splash: "blooby." writes itself, its blush falls as skribl's i-dot does
+
+The owner, Nov 15 (Mountain Time), about 9:31 AM, with a picture of Bluesky
+opening (its butterfly on a dark sky): "Can you make a splash screen load
+first and show blooby. Just like the skribl with the dotted i falling down.
+[Instead] have the blush. Fall the same way and compress then pop back the
+exact same way. Kinda the same way Bluesky loads". The mock (three looks at
+rest beside "now", the frames of the fall, a film, and the wink if wanted):
+A, the icon's lilac (the period nearly lost on it, 1.6:1); B, the theme's own
+ground; C, a night like Bluesky's, with faint stars. "Do it on the dark
+background. I like that with no stars", about 10:10 AM: C without the
+stars, and the mock's defaults (no wink; each fresh open of the Home Screen
+app, never a tab; the whole hello the first time, the blush alone after; a
+tap skips; the Pad's and Flip's hello at blooby.app falling the same way).
+
+WHAT CHANGED.
+
+- THE SPLASH, the Home Screen app's alone, once a launch. `splash-boot.js`,
+  in the head right after Skribl's theme boot (a file, so the page keeps its
+  one inline script), decides before the first paint: opened from the Home
+  Screen (navigator.standalone, or the standalone display) and not yet this
+  launch (sessionStorage, which the app keeps from page to page and loses
+  when it is closed), <html> is-splashing, and is-splash-first the first time
+  ever (localStorage). A browser tab never shows it; storage that throws
+  shows nothing. `splash.js` plays it and lets it go.
+- WHAT IT SHOWS: the night ground, the site's dark ground (#0f1218, the
+  colour the app opens on, the manifest's) deepening to a deep purple at the
+  foot (--splash-top, --splash-mid, --splash-foot, social.css "THE SPLASH"),
+  no stars; "blooby." a touch above the middle, 82% of the screen wide at
+  most, in the icon's lilac (blooby.py's ICON_TILE), its period in Blooby's
+  blush. The first time, the word writes itself (1.6 s) and the blush falls,
+  squashes and pops back (13 pages at 12 a second); after that the word is
+  there and only the blush falls (1.1 s). A moment's rest, then it fades on
+  several frames into the page.
+- THE DRAWING is the site's hello made for it (`brand/blooby-splash.json`,
+  `make_hello.py --splash`), played by Skribl's own player as a draft, no
+  frame, no ground, no chip.
+- THE SITE'S HELLO FALLS THE SAME WAY: `blooby-hello.json` (the Pad's and
+  Flip's first-open hello at blooby.app) is drawn again, its period on
+  skribl's own pages (stretched as it falls, squashed as it lands, popped
+  back, settled), the wink's three pages at rest; it splatted from Nov 12.
+  make_hello.py lost the splat (its pages and its drawing) and gained a look
+  per drawing: skribl's (the wink), the site's and the splash's (no wink).
+- KIND: a tap, a click or a key lets it go at once, fading; under Reduce
+  Motion the finished word, still, a moment, then the fade; the drawing not
+  here within 1.5 s, or the player not there, and it fades at once
+  (splash-boot.js lets it go at 6 s whatever happens); nothing under it
+  scrolls; and the page's own drawings wait for it (Home's first visit
+  drawing Blooby's card, a post's own page, a drawing answer landed on), as
+  one drawing plays at a time and one started under it would stop it unseen
+  (`BloobySplash.after`).
+- THE BROWSER'S BAR in the night while it shows: both theme-color metas,
+  and the grounds they carry for Skribl's lib/theme.js to stamp (data-light,
+  data-dark), which it does as the page loads; all put back as it goes.
+
+PAD AND FLIP: their first-open hello at blooby.app falls as the splash's
+does (shared: one tool, one way of falling); Skribl's own hello, its i-dot
+and its wink, is unchanged. Nothing else of the editors changed.
+
+CONTRAST, read off the paint (a 402px touch phone): the word 10.47:1 and the
+period 6.65:1 against the ground beside them. Nothing else new is read: it
+holds no words.
+
+THE CHECKS, each row shown red by a break of its own in a throwaway copy,
+with an untouched copy green beside it:
+
+- verify_socialapp 8, NEW (twelve rows; control 12/12): its drawing the
+  site's hello in the icon's lilac (red: the hello's purple file in its
+  place, with the word's reading); never in a tab (red: a tab shows it);
+  over the page from the first paint, the night, no stars, the bar's night
+  read as the page is parsed (red three ways: no boot, which reds six rows;
+  the stars back; the bar left in the page's ground, green at first, below);
+  the word first, then the blush; the fade on several frames, the bar back,
+  marked seen (red: the bar not put back; the transition taken away, green at
+  first, below); once a launch (red: every page splashes); a later launch
+  quick, the word already there (red: the word written again); a tap (red: a
+  tap doing nothing); Reduce Motion still (red: it plays); never held (red:
+  the drawing waited for); the page's drawing waits (red: Home's card played
+  under it); the word and period read off the paint. Its ninth section is
+  the old eighth, no page errors.
+- verify_socialapp 4 and 5: the app's ☰ rows open with the splash already
+  had this launch (SPLASHED): they are about the ☰, and section 8 reads the
+  splash.
+- verify_hello, the site's part (control 22/22): its period read against
+  skribl's i-dot's own pages, page for page, the same height above its rest
+  in canvas widths and the same size, at rest where skribl's winks (red: the
+  splat put back, 20/22; the wink kept, 20/22, its glide row too); on the
+  screen it falls tall, lands wide and pops back round (red: the splat); the
+  glide reads the trailing pages at rest as one look, however many.
+
+FOUND WRONG, AND MENDED, before the rows were green:
+
+- THE SPLASH STOPPED UNDER ITSELF: Home's first visit starts Blooby's card by
+  itself, and one drawing plays at a time, so a later launch's splash stopped
+  at its start (the first probe; the word never came). The page's own
+  drawings wait for it now.
+- THE BAR WENT BACK EARLY: Skribl's lib/theme.js stamps the theme-color
+  metas from their grounds as the page loads, after the boot had set the
+  night: the boot gives the grounds the night too.
+- TWO INSTRUMENTS OF MINE: the first-paint row read the bar after
+  lib/theme.js had stamped it again, so a boot that never set it passed; and
+  the fade rows counted frames under full opacity, so a cut passed. The bar
+  is read as the page is parsed, before any deferred script; a fade needs
+  frames between 5% and 95%.
+
+JUDGMENT CALLS:
+
+- ONLY THE APP, never a tab: a splash is how an app opens; a web page that
+  covered itself would only hold people up.
+- ONCE A LAUNCH, by sessionStorage: not between pages, not coming back from
+  another app, and an app iOS closed in the background and opens again is a
+  new launch (not tested on an iPhone here).
+- THE WHOLE HELLO ONCE EVER, then the blush alone: the word writing itself
+  every time would hold every opening up by a second and a half more.
+- A FILE IN THE HEAD, not inline: the site's pages keep their one inline
+  script (the theme boot); the file is the size of a paragraph, kept for a
+  year by its digest, and blocks the first paint by one fetch the first time.
+- THE NIGHT'S PURPLES ARE NEW TOKENS (--splash-mid, --splash-foot): a new
+  role, the owner's pick; the top is the site's own dark ground.
+
+THE FOUR. Playful: the blush falls and pops like a ball, as skribl's dot
+does. Simple: one word, one dot, the colour of the icon. Kind: quick after
+the first time, a tap skips it, still under Reduce Motion, never between
+pages, never holding up a page. Powerful: the app opens like an app.
+
+THE AFFECTED SUITES, side by side: [COUNTS]
+
+NOT TESTED HERE: an iPhone (WebKit): the moment iOS shows before the page
+(its blank screen in the manifest's colour, the dark ground, which the splash
+continues), whether iOS's bar follows theme-color in the app, whether an app
+iOS closed in the background keeps its sessionStorage, and its frame rate; the
+live site. The one-glance tell: close Blooby from the app switcher, open it
+from the Home Screen, and "blooby." writes itself on the night before Home
+(after the first time, just the blush falling).
