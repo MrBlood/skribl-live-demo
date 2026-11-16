@@ -47,13 +47,13 @@
   --row-bg: #ffffff;                /* --menu-card */
   --grip: rgba(20, 23, 29, 0.2);
   --scrim: rgba(23, 20, 42, 0.36);
-  --draw-line: rgba(20, 23, 29, 0.08);
   --draw-wait: #f1f3f7;             /* where a drawing will be, before it is */
-  /* A drawing's edge (THE EDGES, part four): its line over the box's own
-     ground, made solid, for a ring of one screen pixel; and its lift, the
-     cards' own on the light page, nothing in dark, where a shadow can't show. */
+  /* A drawing's edge (THE EDGES, part four): its line (the player's border, at
+     8% of the ink) as it looked over the box's own ground, made solid, for a
+     ring of one screen pixel; and its lift, the cards' own on the light page,
+     none in dark (the mock's). */
   --draw-edge: color-mix(in srgb, rgb(20 23 29) 8%, var(--draw-wait));
-  --draw-lift: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
+  --draw-lift: var(--card-drop);
   /* Sign-in and the account pages (piece 2): Skribl's own roles again. */
   --card: #ffffff;                  /* --menu-card */
   --card-line: rgba(124, 92, 255, 0.34);   /* --menu-card-line */
@@ -137,7 +137,6 @@
   --row-bg: #231e3b;
   --grip: rgba(255, 255, 255, 0.22);
   --scrim: rgba(0, 0, 0, 0.5);
-  --draw-line: rgba(255, 255, 255, 0.08);
   --draw-wait: #13161c;
   --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
   --draw-lift: 0 0 0 transparent;
@@ -183,7 +182,6 @@
     --row-bg: #231e3b;
     --grip: rgba(255, 255, 255, 0.22);
     --scrim: rgba(0, 0, 0, 0.5);
-    --draw-line: rgba(255, 255, 255, 0.08);
     --draw-wait: #13161c;
     --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
     --draw-lift: 0 0 0 transparent;
