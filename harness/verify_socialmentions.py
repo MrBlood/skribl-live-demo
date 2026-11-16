@@ -1079,6 +1079,33 @@ with sync_playwright() as p:
                   bool(k5) and not k5["open"] and sheet_up and k5["field"]["focused"] and k5["field"]["expanded"] == "false"
                   and bool(k6) and not k6["open"] and bool(k7) and k7["open"],
                   json.dumps([k5 and k5["open"], sheet_up, k6 and k6["open"], k7 and k7["open"]]))
+            # AN EARLIER @'S LIST NEVER ANSWERS FOR THIS ONE (main's run after
+            # #926, on a busy runner: "@ver" and Tab put in "@valerie", the
+            # first row "@v" had answered, because the site's answer for
+            # "@ver" came after the Tab). Here that answer is HELD until the
+            # Tab has been pressed, so the race is the same every time: the
+            # rows shown are only those of "@v"'s that fit "@ver", and Tab puts
+            # in "@vera ".
+            ctx, pg = browser_as(b, mira, screen="desk", scheme="light")
+            go(pg, "/social/", wait=400)
+            open_composer(pg)
+            typed(pg, "Hello @v")
+            held = []
+            pg.route(re.compile(r".*/people/suggest\?q=ver$"), lambda route: held.append(route))
+            r1 = typed(pg, "@ver")
+            pg.keyboard.press("Tab")
+            pg.wait_for_timeout(350)
+            r2 = pg.evaluate(LIST, "composeMentions")
+            for route in held:
+                route.continue_()
+            close_ctx(ctx, pg)
+            fit = [(r or {}).get("handle", "").lower().startswith("@ver") or (r or {}).get("name", "").lower().startswith("ver")
+                   for r in (r1 or {}).get("rows") or []]
+            check("an earlier @'s list never answers for this one: with the site's answer for \"@ver\" held back, the"
+                  " rows shown are only \"@v\"'s that fit it, and Tab puts in \"@vera \"",
+                  bool(held) and bool(r1) and r1["open"] and bool(fit) and all(fit)
+                  and bool(r2) and r2["field"]["value"] == "@vera " and r2["field"]["focused"],
+                  json.dumps([len(held), handles((r1 or {}).get("rows")), r2 and r2["field"]["value"]]))
             # UNDER REDUCE MOTION it is simply there: whole from its first frame.
             ctx, pg = browser_as(b, mira, screen="phone", scheme="light", reduced=True)
             go(pg, "/social/", wait=400)

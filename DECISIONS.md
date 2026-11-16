@@ -43816,3 +43816,40 @@ of it; the Pad's page is not edge to edge (no viewport-fit=cover) where the
 site's is, so the strip meets the glass at the top of the page's own view.
 The one-glance tell: open the Pad from Make in the Blooby app, and the top
 of "blooby." is as sharp as on Home.
+
+## After v330 -- Main green again: a mention's list never answers for an earlier @
+
+Main's full run after #926 (which carried #925 too) was red on one row, in
+one of its twelve shards (sqlite 1/6), Nov 15 at 6:26 PM (Mountain Time); the
+red-main issue (#927) opened itself. verify_socialmentions 4, "the keys, on a
+desk": Down and Enter put in "Hello @veev ", then "@ver" and Tab put in
+"@valerie " where "@vera " was asked. The same suite was green on all six
+PostgreSQL shards and on the pull request's side.
+
+A REAL RACE, NOT A FLAKE. The list under an @ (social/static/mentions.js)
+moved on to each new @ as it was typed but kept showing the rows the last
+answer had brought, and asked the site for the new @ a moment later (WAIT,
+120ms, then the round trip). "@v" was answered (Valerie first); "@ve" and
+"@ver" were typed at once and asked once, for "@ver"; the row the test (and
+a person) pressed Tab on was still "@v"'s first: Valerie, who does not fit
+"@ver" at all. The test waits 260ms after typing; on a busy runner the
+answer came later than that. On a phone over a real network the window is
+wider: a quick "@ver" and Enter could put in the wrong person.
+
+WHAT CHANGED (mentions.js): while a new @'s answer is on its way, the rows
+shown are only those of the last answer that still fit what is typed, as
+the site finds people (people.keys_of: the handle, or the name from any of
+its words, starting with it, folded as people.fold folds: accents aside,
+small letters, anything else a space), so Enter and Tab can only put in
+somebody who fits; none fits, and the list shuts until the answer comes.
+The answer then replaces them, as before.
+
+PAD AND FLIP: unchanged (the site's composer and comments).
+
+THE CHECK, shown red by putting the old behaviour back with the rest of the
+tree as built (control 12/12, section 4): verify_socialmentions 4 gains a
+row that holds the site's answer for "@ver" until Tab has been pressed, so
+the race is the same every time: the rows shown are only "@v"'s that fit
+"@ver", and Tab puts in "@vera " (red: the rows "@valerie", "@veev",
+"@vera", "@vexx", and "@valerie " put in, main's failure exactly). On this
+quiet box the old row passed beside it: it was the load that lost the race.
