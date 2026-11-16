@@ -44464,6 +44464,12 @@ how it was found; and GALIB 10's first version read the playing row (which by
 design has no edge) and New | Hot's chosen side (where the pill sits 3px
 inside): the instrument, not the tree.
 
+THE AFFECTED SUITES, side by side (run_parallel -j 3), nine ok in 29.1
+minutes: verify_galib 180/180, verify_library 248/248, verify_gallery
+234/234, verify_seam 515/515, verify_contrast 647/647, verify_onepill
+2878/2878, verify_posted 163/163, verify_surfaces 13/13, verify_docs 144/144.
+NOT RUN: the full battery (main's run after the merge does it).
+
 NOT TESTED HERE: an iPhone (WebKit) and Windows' own rendering; the live
 site. The one-glance tell: the Gallery in light, each tile's lilac edge a
 fine line, as fine as the site's; the ••• menu's rows' lines starting where
