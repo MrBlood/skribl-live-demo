@@ -44985,9 +44985,10 @@ Skribl's lilac (rgb 124 92 255), one value for both themes since --page
 carries the theme; a quote's small card inside a post's card (Home, a
 person's page) wears it and no line, so the change of colour is its edge. On
 a post's own page a quote stays the raised card the owner chose on Nov 15.
-Make's quote, under the words of a quote being written, is not changed here:
-it was not in the mock (the census the owner asked for the same evening
-names it).
+Make's quote, under the words of a quote being written, is not changed: it
+is a card (--card) on the sheet's own paper (--sheet-paper), set apart by
+its colour already, and the census the owner asked for the same afternoon
+found nothing there.
 
 PAD AND FLIP: not for them; quotes are the site's.
 
@@ -45007,8 +45008,12 @@ card, 1.00:1, as main); its line kept; a stronger tint (12%, painted
 too turns the Nov 15 row red ("a quote on its post's own page is a card"),
 which holds the well to a post's card.
 
-THE AFFECTED SUITES: in the pull request (it rides with posts of words
-alone, the same cards on the same screen).
+THE AFFECTED SUITES, side by side (run_parallel -j 3), seven ok in 9.4
+minutes on the tree with posts of words alone under it (it rides with them,
+the same cards on the same screen): verify_socialreposts 51/51,
+verify_socialposts 99/99, verify_socialprofile 94/94, verify_socialmentions
+51/51, verify_a11ypages 162/162, verify_composer 39/39, verify_docs
+144/144. NOT RUN: the full battery (main's run after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: Home, a quote post: the small card inside it a soft
