@@ -44825,11 +44825,15 @@ own, the tree as built green beside them:
 - on the light page it sits with the cards' lift, just under it darker than
   with its shadow cut to its line, and none in dark (red: no lift).
 
-THE AFFECTED SUITES, side by side (run_parallel -j 2), eight ok in 18.1
-minutes: verify_socialposts 97/97, verify_socialcomments 96/96,
-verify_sociallikes 100/100, verify_socialreposts 50/50, verify_social 45/45,
-verify_composer 39/39, verify_socialprofile 94/94, verify_docs 144/144. NOT
-RUN: the full battery (main's run after the merge does it).
+THE AFFECTED SUITES, side by side (run_parallel -j 3), twelve ok in 15.3
+minutes on the tree rebased onto #943: verify_socialposts 97/97,
+verify_socialcomments 96/96, verify_sociallikes 100/100,
+verify_socialreposts 50/50, verify_social 45/45, verify_composer 39/39,
+verify_socialprofile 94/94, verify_docs 144/144, and four first named after
+#939's red (they read the in-post player's border or shadow on the site's
+pages): verify_socialfollow 79/79, verify_socialsettings 45/45,
+verify_socialmentions 51/51, verify_a11ypages 162/162. NOT RUN: the full
+battery (main's run after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: Home in light, a post's drawing a fine line round it and
