@@ -43941,3 +43941,87 @@ Flip looks like the Pad. Playful: the paper reads as paper.
 NOT TESTED HERE: an iPhone (WebKit) and Windows' own rendering; the live
 site. The one-glance tell: the Pad in light on Paper, the canvas's top edge
 as fine as its sides; Flip's canvas edge the same fine line.
+
+## After v330 -- The edges, part two: the site's lines are one screen pixel, and its tiles sit on the page
+
+The owner's "all yes" to "The edges" (B), Nov 15 (Mountain Time), part two of
+three: the site at /social. Part one gave the canvases their edge.
+
+WHAT CHANGED (social.css):
+
+- ONE SCREEN PIXEL: --edge, 1px scaled by the rows' --hair, beside it. A
+  border cannot draw it (Chromium rounds a border, and an outline, under 1px
+  up to 1px), so every outline keeps its border's width, transparent, and
+  nothing moves, and a ring of --edge hugs it outside (0 0 0 var(--edge)):
+  the second button (.btn) and Following, a boxed icon, the gear, the theme
+  switch; the Gallery's search box and New | Hot; the fields (sign in,
+  joining, settings, a bio, a report's note; their 1.5px border kept as the
+  transparent width); the cards (a post's, a quote's, the composer and a
+  comment's box, the account panels, sign-in's card, the follows' empty
+  card, the mentions list, the mute toast, a report); Activity's pictures
+  and More from's; the legal links. A separator is a line of --edge just
+  above its row (keys, links, the blocked, comments, likes, Activity, the
+  follows, the first visit's people, the mentions list's rows, sign-in's
+  "new here", the composer's tools) or just below (a profile's tabs, the
+  composer's words); the bar's, above it on a phone and beside the rail on
+  a desk.
+- A CARD'S RING IN --card-edge, a new token: its line as it looked over the
+  card, made solid (the line mixed into --card). The ring lies outside the
+  card, over the page; in the dark its 12% lilac over the page is all but
+  the card's own colour, and the faint lighter hairline the mock showed
+  would have gone. Tiles, a quote's picture, the faces' rings and the legal
+  links keep --card-line: their rings always lay over what is behind them.
+- STATES SHOW AS THEY ALWAYS DID, the ring stepping aside: an invalid
+  field's 1.5px red, Following's and a boxed icon's hover in the brand
+  colour, a made invite's panel, a reported child's danger ring; the action
+  and Remove buttons have none. A comment box's states keep its ring and
+  wait only with its drop. Not changed: the dashed empty faces (an
+  invitation, drawn), the hover rings on a desk's Make doors and faces, and
+  focus rings.
+- B, THE LIFT: the Gallery's tiles (and More from's) sit on the light page
+  with the cards' own soft shadow (--card-drop), as a post's card does;
+  same role, same token. A quote's picture, inside a card, keeps its ring
+  and no lift.
+- A FIELD'S EDGE AT 3:1, AS ITS NOTE SAYS: --field-line at 82% where it was
+  75%. It read 2.90:1 on its own white; now 3.30:1 (and 3.06 on the page).
+
+PAD AND FLIP: unchanged (the site alone; part three is Skribl's sheets and
+pages).
+
+CONTRAST: no word changed; the field's edge 3.30:1 on its white.
+
+THE CHECKS, each row shown red by a break of its own, the untouched tree
+green beside it:
+
+- verify_socialposts 17, new (control 3/3), read off the paint at 3x, light
+  and dark, a line being the screen pixels 1.15:1 apart from both the page
+  and what is inside: a post's card on Home, the Gallery's search box, New |
+  Hot, a tile, and the bar's line are each one screen pixel (red: the whole
+  old sheet, every one three; a tile's ring at 1px; the bar's line back);
+  a tile sits on the light page with a lift (red: the lift gone); the search
+  box's edge reads 3:1 on its white (red: the line at 75%, 2.90:1). The
+  first version counted a pixel apart by 5%, and the lift's gradient beside
+  a tile's ring (1.06:1) read as a second pixel of line; the faintest real
+  line here, a dark card's, is 1.22:1. And one break of the calibration
+  missed its mark (it hit the face card's identical line, so the tile's ring
+  row stayed green): with the tile's own anchor, red.
+- verify_socialmentions 4 (control 12/12): the list's card row asked for a
+  1px --card-line border; it asks for the ring, one screen pixel of
+  --card-edge, the border kept and transparent (red: the old sheet).
+- Rows that read a line's colour off its border read it where it is drawn
+  now, the border's where it shows one, else the ring's: verify_socialsettings
+  1 and 6 (the Theme switch's track and your profile's Settings, in the
+  second button's dress; 10/10, red with the switch's ring gone, the link's
+  ring gone and the link's ring in another colour) and verify_socialfollow 7
+  (Home's pill in the card's edge, as the page resolves --card-edge; 6/6,
+  red with no ring and with the line not laid over the card). Each went red
+  on the first run beside the others, which is how they were found.
+
+THE FOUR. Kind: nothing moves, and the drawings are the boldest thing on
+the page. Simple: one rule, one line, every edge. Powerful: the tiles
+read as objects to pick up. Playful: the hand-drawn lines win.
+
+NOT TESTED HERE: an iPhone (WebKit): whether Safari draws a 0.3334px ring
+as one screen pixel (Chromium does; it is how the rows' thin line is
+drawn too); Segoe UI; the live site. The one-glance tell: the Gallery in
+light, each tile's lilac edge a fine line, the tile lifted off the page.

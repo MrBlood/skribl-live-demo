@@ -658,7 +658,7 @@ LIST = r"""(id) => { const l = document.getElementById(id); if (!l) return null;
   return { open: !l.hidden && l.classList.contains('is-open'), hidden: l.hidden, opacity: +cs.opacity,
            position: cs.position, radius: cs.borderTopLeftRadius, border: cs.borderTopColor, borderW: cs.borderTopWidth,
            bg: cs.backgroundColor, shadow: cs.boxShadow, role: l.getAttribute('role'), label: l.getAttribute('aria-label'),
-           card: probe('var(--card)'), line: probe('var(--card-line)'), ink: probe('var(--ink)'), ink2: probe('var(--ink-2)'),
+           card: probe('var(--card)'), line: probe('var(--card-line)'), edge: probe('var(--card-edge)'), ink: probe('var(--ink)'), ink2: probe('var(--ink-2)'),
            tint: probe('var(--tint)'),
            box: [Math.round(r.left * 10) / 10, Math.round(r.top * 10) / 10, Math.round(r.right * 10) / 10, Math.round(r.bottom * 10) / 10],
            field: fr ? { box: [fr.left, fr.top, fr.right, fr.bottom], padTop: parseFloat(fcs.paddingTop), lh: parseFloat(fcs.lineHeight),
@@ -989,11 +989,16 @@ with sync_playwright() as p:
             row_ok = rows and all(r["h"] == 52 and r["face"] == 36 and r["nameSize"] == "17px" and r["nameWeight"] == "600"
                                   and r["nameColor"] == look["ink"] and r["handleSize"] == "15px"
                                   and r["handleColor"] == look["ink2"] and r["hit"] and r["role"] == "option" for r in rows)
-            check("the mock's card and rows: --card, its edge --card-line (1px), 16px round, a drop; each row 52px, the"
-                  " face 36px, the name 17px 600 in the first ink, the @handle 15px in the second, painted where it is",
-                  bool(row_ok) and look["bg"] == look["card"] and look["border"] == look["line"] and look["borderW"] == "1px"
-                  and look["radius"] == "16px" and look["shadow"] not in ("none", ""),
-                  json.dumps({k: look.get(k) for k in ("bg", "card", "border", "line", "borderW", "radius", "shadow")})
+            # THE EDGES (Nov 15, B): the card's edge is a ring one screen pixel wide in --card-edge (its line as it
+            # looked over the card, made solid), the border kept, transparent, so nothing moves.
+            ring = re.match(r"(.+?) 0px 0px 0px ([0-9.]+)px", look.get("shadow") or "")
+            check("the mock's card and rows: --card, its edge one screen pixel of --card-edge (the border kept,"
+                  " transparent), 16px round, a drop; each row 52px, the face 36px, the name 17px 600 in the first ink,"
+                  " the @handle 15px in the second, painted where it is",
+                  bool(row_ok) and look["bg"] == look["card"] and look["border"] in ("rgba(0, 0, 0, 0)", "transparent")
+                  and look["borderW"] == "1px" and bool(ring) and ring.group(1) == look["edge"] and float(ring.group(2)) <= 1
+                  and look["radius"] == "16px" and "0px 10px 28px" in look["shadow"],
+                  json.dumps({k: look.get(k) for k in ("bg", "card", "border", "edge", "borderW", "radius", "shadow")})
                   + " " + json.dumps(rows[:1]))
             check("to a screen reader: a listbox of options, named; the field says it is open (aria-expanded), which it"
                   " controls and which row is highlighted (aria-activedescendant, the first); the field 16px or more",

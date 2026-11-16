@@ -359,7 +359,17 @@ def editor_choose(pg, choice, menu):
 
 # ---- what the page shows, read in the page ---------------------------------------
 # The Theme row: where it is, its words, its switch's boxes, paint and state.
-ROW = r"""() => { const sw = document.querySelector('[data-theme-switch]'); if (!sw || !sw.getClientRects().length) return null;
+# THE COLOUR AN EDGE IS DRAWN IN: its border's where it shows one, else its
+# ring's. Since the edges' part two, a second button's line is one screen
+# pixel: a ring of --edge outside a transparent border (social.css, THE
+# EDGES), so the border alone reads transparent. The ring's thinness is
+# verify_socialposts 17's; these rows ask for its colour.
+LINE_OF = r"""const lineOf = (cs) => { const t = cs.borderTopColor;
+    if (t !== 'transparent' && !/^rgba\(.*,\s*0\)$/.test(t)) return t;
+    const m = (cs.boxShadow || '').match(/(rgba?\([^)]*\)) 0px 0px 0px [\d.]+px/); return m ? m[1] : t; };
+  """
+
+ROW = r"""() => { """ + LINE_OF + r"""const sw = document.querySelector('[data-theme-switch]'); if (!sw || !sw.getClientRects().length) return null;
   const panel = sw.closest('section.panel'), panels = [...document.querySelectorAll('.acct > section.panel')];
   const q = e => { const r = e.getBoundingClientRect(); return [Math.round(r.left * 100) / 100, Math.round(r.top * 100) / 100,
                                                                 Math.round(r.width * 100) / 100, Math.round(r.height * 100) / 100]; };
@@ -369,7 +379,7 @@ ROW = r"""() => { const sw = document.querySelector('[data-theme-switch]'); if (
     title: panel.querySelector('h2') ? panel.querySelector('h2').textContent.trim() : null,
     line: panel.querySelector('.panel-sub') ? panel.querySelector('.panel-sub').textContent.trim() : null,
     role: sw.getAttribute('role'), name: title ? title.textContent.trim() : null, box: q(sw),
-    track: { bg: getComputedStyle(sw).backgroundColor, line: getComputedStyle(sw).borderTopColor },
+    track: { bg: getComputedStyle(sw).backgroundColor, line: lineOf(getComputedStyle(sw)) },
     options: [...sw.querySelectorAll('button')].map(b => { const cs = getComputedStyle(b), r = b.getBoundingClientRect();
       const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
       return { words: b.textContent.trim(), choice: b.getAttribute('data-choice'), pressed: b.getAttribute('aria-pressed'),
@@ -493,7 +503,7 @@ READ = r"""(sel) => {
 # ground cannot see, so it is laid over the track here), the other two on the
 # track, and the track's own edge on the card. A colour in a form this cannot
 # read is a red reading that says so, never a guess.
-THEME_INK = r"""() => { const sw = document.querySelector('[data-theme-switch]'); if (!sw || !sw.getClientRects().length) return null;
+THEME_INK = r"""() => { """ + LINE_OF + r"""const sw = document.querySelector('[data-theme-switch]'); if (!sw || !sw.getClientRects().length) return null;
   const KNOWN = /^(rgba?\(|color\(srgb )/;
   const rgba = s => { if (!KNOWN.test(s)) return null; const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
     return m.length >= 3 ? [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1] : null; };
@@ -509,7 +519,7 @@ THEME_INK = r"""() => { const sw = document.querySelector('[data-theme-switch]')
   for (let n = sw.parentElement; n; n = n.parentElement) { const b = rgba(getComputedStyle(n).backgroundColor); if (b && b[3] > 0) { under.push(b); if (b[3] >= 1) break; } }
   for (let i = under.length - 1; i >= 0; i--) card = over(under[i], card);
   const tint = rgba(getComputedStyle(sw.querySelector('.theme-pill')).backgroundColor), on = sw.querySelector('button[aria-pressed="true"]');
-  const line = rgba(getComputedStyle(sw).borderTopColor);
+  const line = rgba(lineOf(getComputedStyle(sw)));
   if (!tint || !on || !line) return { unread: true };
   const t = over(tint, g);
   return { on: ratio(over(rgba(getComputedStyle(on).color), t), t),
@@ -535,12 +545,12 @@ RAIL = r"""() => [...document.querySelectorAll('nav.nav > a, nav.nav > button')]
            color: getComputedStyle(e).color, line: linePainted }; })"""
 
 # Your own profile's way to Settings: the phone's top and a desk's row.
-GEAR = r"""() => { const at = (e) => { const r = e.getBoundingClientRect(); const x = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+GEAR = r"""() => { """ + LINE_OF + r"""const at = (e) => { const r = e.getBoundingClientRect(); const x = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     return !!x && (x === e || e.contains(x)); };
   const box = e => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
     return { words: e.textContent.trim(), href: e.getAttribute('href'), gear: !!e.querySelector('svg.ic'), x: Math.round(r.left * 100) / 100,
              right: Math.round((innerWidth - r.right) * 100) / 100, y: r.top, w: Math.round(r.width * 100) / 100, h: Math.round(r.height * 100) / 100,
-             hit: at(e), bg: cs.backgroundColor, line: cs.borderTopColor, ink: cs.color, weight: cs.fontWeight, size: cs.fontSize,
+             hit: at(e), bg: cs.backgroundColor, line: lineOf(cs), ink: cs.color, weight: cs.fontWeight, size: cs.fontSize,
              label: e.getAttribute('aria-label') }; };
   const top = [...document.querySelectorAll('header.top a[href$="/social/you"]')].filter(e => e.getClientRects().length);
   const row = [...document.querySelectorAll('.prof-acts > *')].filter(e => e.getClientRects().length);
