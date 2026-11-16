@@ -42,6 +42,7 @@ row drawn inside it. Shown red by a break of each part and green as built:
 DECISIONS.md, "One card for a list of choices, and the menu's equal lines".
 """
 import io
+import json
 import math
 import os
 import struct
@@ -191,8 +192,14 @@ CENSUS = r"""(root) => {
   const R = document.querySelector(root); if (!R) return null;
   const thinLine = (el) => { const b = getComputedStyle(el, '::before');
     return b.content && b.content !== 'none' && b.content !== 'normal' && b.display !== 'none' ? b.backgroundColor : 'none'; };
-  const s = (el) => { const cs = getComputedStyle(el); return { bg: cs.backgroundColor, line: thinLine(el), edge: cs.borderTopWidth !== '0px' ? cs.borderTopColor : 'none',
-    side: cs.borderLeftWidth !== '0px' ? cs.borderLeftColor : 'none', r: cs.borderTopLeftRadius, foot: cs.borderBottomLeftRadius, blur: cs.backdropFilter }; };
+  // An edge's colour where it is drawn: its border's where that shows, else
+  // its ring's (the edges' part three: a card's line is a ring of --edge
+  // outside a transparent border, so the border alone reads transparent).
+  const lineOf = (cs, s) => { const w = cs['border' + s + 'Width'], t = cs['border' + s + 'Color'];
+    if (w !== '0px' && t !== 'transparent' && !/^rgba\(.*,\s*0\)$/.test(t)) return t;
+    const m = (cs.boxShadow || '').match(/^((?:rgba?|color)\([^)]*\)) 0px 0px 0px [\d.]+px/); return m ? m[1] : 'none'; };
+  const s = (el) => { const cs = getComputedStyle(el); return { bg: cs.backgroundColor, line: thinLine(el), edge: lineOf(cs, 'Top'),
+    side: lineOf(cs, 'Left'), r: cs.borderTopLeftRadius, foot: cs.borderBottomLeftRadius, blur: cs.backdropFilter }; };
   const cards = {};
   for (const sel of ['.menu-tile', '.menu-list', '.seg', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
                      '.help-tip', '.help-search', '.export-list', '.export-opt', '.sdrafts-card', '.tune-row', '.post-card', '.ask-list', '.accordion-header', '.post-preview',
@@ -244,7 +251,8 @@ LISTS = r"""(root) => {
   const p = document.createElement('i'); document.body.appendChild(p);
   const read = (prop, v) => { p.style.cssText = prop + ': ' + v; return getComputedStyle(p)[prop === 'color' ? 'color' : 'boxShadow']; };
   const tok = { card: read('color', 'var(--menu-card)'), line: read('color', 'var(--menu-card-line)'),
-                rule: read('color', 'var(--menu-card-rule)'), drop: read('box-shadow', 'var(--menu-card-drop)') };
+                rule: read('color', 'var(--menu-card-rule)'), drop: read('box-shadow', 'var(--menu-card-drop)'),
+                edge: read('color', 'var(--menu-card-edge)') };
   p.remove();
   const lists = [...R.querySelectorAll('.menu-list, .export-list, .sdrafts-card, .sdrafts-files, .ask-list')].filter(shown).map(l => {
     const cs = getComputedStyle(l), lr = l.getBoundingClientRect();
@@ -271,6 +279,8 @@ LISTS = r"""(root) => {
       prev = q; return o; });
     return { kind: l.classList[0], rowline, bg: cs.backgroundColor, edge: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor,
              r: cs.borderTopLeftRadius, foot: cs.borderBottomRightRadius, drop: cs.boxShadow,
+             ring: (() => { const m = cs.boxShadow.match(/^((?:rgba?|color)\([^)]*\)) 0px 0px 0px ([\d.]+)px/);
+               return m ? { color: m[1], px: Math.round(parseFloat(m[2]) * devicePixelRatio * 100) / 100 } : null; })(),
              l: lr.left + parseFloat(cs.borderLeftWidth), r_: lr.right - parseFloat(cs.borderRightWidth), rows };
   });
   return { tok, lists }; }"""
@@ -906,7 +916,8 @@ for (name, scheme, dev), agg in sorted(typeset.items()):
 
 # THE DRAWER'S EDGE SHOWS (owner, after v324: "I can't really see the edges
 # of the drawer"). The page's pixel just outside a drawer's left edge, against
-# the strongest of the drawer's first three columns there: the dock's glass
+# the strongest of the five columns across its box's edge there (its ring lies
+# outside the box since the edges' part three, its first columns inside): the dock's glass
 # measured 1.01:1 in light, no edge at all; the menu's card line is 1.53 in
 # light and 1.29 in dark. At the phone's 2x, the draw drawer and the photo card.
 print("\nTHE DRAWERS' EDGE")
@@ -926,11 +937,104 @@ with sync_playwright() as p:
                 im = Image.open(io.BytesIO(q.screenshot())).convert("RGB")
                 X, Y = round(r[0] * 2), round((r[1] + min(r[2], 120) / 2) * 2)
                 page = im.getpixel((X - 8, Y))
-                rim = max((im.getpixel((X + k, Y)) for k in range(3)), key=lambda px: abs(lum(px) - lum(page)))
+                rim = max((im.getpixel((X + k, Y)) for k in range(-2, 3)), key=lambda px: abs(lum(px) - lum(page)))
                 check(f"{name}, {scheme}: the {what} drawer's edge shows against the page (1.25:1 or more)",
                       ratio(rim, page) >= 1.25, f"page {page} edge {rim} {ratio(rim, page):.2f}")
             c.close()
     b.close()
+
+# THE SHEETS' EDGES, ONE SCREEN PIXEL (the owner's "all yes" to "The edges",
+# B, Nov 15; the edges' part three). A card or a control on the menu's paper,
+# and a drawer's paper on the page, is edged by the thinnest line the screen
+# draws: read off the paint at a phone's 3x, across each one's left side at
+# its middle, the screen pixels that stand 1.15:1 apart from both what is
+# outside and what is inside are one (part two's measure, verify_socialposts
+# 17). A 1px border is three. And the two inks the rings wear are the card's
+# line laid over the card and over the paper, as the page resolves
+# --menu-card-line and the grounds: their lilac is written twice in
+# styles.css, and this holds the second to the first.
+print("\nTHE SHEETS' EDGES")
+EDGED = (("the menu", (".menu-list", ".menu-tile")), ("Export", (".export-list", ".export-nameinput")),
+         ("Your drafts", (".sdrafts-files",)), ("The draw drawer", ("#drawPanel", ".eyedropper-btn")))
+INKS = r"""() => { const p = document.createElement('i'); document.body.appendChild(p);
+  const c = (v) => { p.style.color = v; return getComputedStyle(p).color; };
+  const out = { line: c('var(--menu-card-line)'), card: c('var(--menu-card)'), paper: c('var(--menu-paper)'),
+                cardEdge: c('var(--menu-card-edge)'), paperEdge: c('var(--menu-paper-edge)') };
+  p.remove(); return out; }"""
+
+
+def _rgba(v):
+    inner = v[v.index("(") + 1:v.index(")")]
+    if v.startswith("color("):          # color(srgb r g b [/ a]), each 0 to 1
+        n = [float(x) for x in inner.split(None, 1)[1].replace("/", " ").split()]
+        n = [n_ * 255 for n_ in n[:3]] + n[3:]
+    else:
+        n = [float(x) for x in inner.replace(",", " ").replace("/", " ").split()]
+    return n[:3], (n[3] if len(n) > 3 else 1.0)
+
+
+def _laid(line, ground):
+    (lc, la), (gc, _) = _rgba(line), _rgba(ground)
+    return [la * lc[i] + (1 - la) * gc[i] for i in range(3)]
+
+
+def _band(im, pts, out, inside):
+    return [im.getpixel(p_) for p_ in pts if ratio(im.getpixel(p_), out) >= 1.15 and ratio(im.getpixel(p_), inside) >= 1.15]
+
+
+if not ONLY or "edges" in ONLY:
+    widths, inks = {}, {}
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        for name, route, btn, canvas, ids in EDITORS:
+            for scheme in ("light", "dark"):
+                c = b.new_context(color_scheme=scheme, **dict(PHONE, device_scale_factor=3))
+                c.add_init_script("try { localStorage.setItem('skribl.learncard.note.v1', '1'); } catch (e) {}")
+                q = c.new_page()
+                for label, opener, root in surfaces(name, ids, q, canvas, btn):
+                    sels = dict(EDGED).get(label)
+                    if not sels:
+                        continue
+                    try:
+                        q.mouse.move(PHONE["viewport"]["width"] / 2, PHONE["viewport"]["height"] / 2)
+                        browsing.goto(q, BASE, route); q.wait_for_timeout(700)
+                        q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+                        opener()
+                        q.evaluate("() => document.activeElement && document.activeElement.blur()")
+                        q.wait_for_timeout(300)
+                        if label == "the menu":
+                            inks[(name, scheme)] = q.evaluate(INKS)
+                        im = Image.open(io.BytesIO(q.screenshot())).convert("RGB")
+                        for sel in sels:
+                            r = q.evaluate("(s) => { const e = [...document.querySelectorAll(s)].find(x => x.getClientRects().length);"
+                                           " if (!e) return null; const b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; }", sel)
+                            if not r:
+                                widths[(name, scheme, sel)] = None
+                                continue
+                            x, y = round(r[0] * 3), round((r[1] + r[3] / 2) * 3)
+                            out, inside = im.getpixel((x - 9, y)), im.getpixel((x + 12, y))
+                            got = _band(im, [(i, y) for i in range(x - 6, x + 8)], out, inside)
+                            widths[(name, scheme, sel)] = {"n": len(got), "px": got[:3], "out": out, "in": inside}
+                    except Exception as e:
+                        widths[(name, scheme, label)] = {"stopped": repr(e)[:160]}
+                c.close()
+        b.close()
+    want = len(EDITORS) * 2 * sum(len(v) for _, v in EDGED)
+    check(f"a card's edge on the editors' sheets is one screen pixel at 3x, light and dark, Pad and Flip: the menu's list "
+          f"and a tile, Export's formats and its name, Your drafts' As a file, the draw drawer's paper on the page and a "
+          f"button on it ({len(widths)} read)",
+          len(widths) == want and all(v and v.get("n") == 1 for v in widths.values()),
+          "; ".join(f"{n} {s_} {sel}: {v and v.get('n', v)}" for (n, s_, sel), v in sorted(widths.items())
+                    if not (v and v.get("n") == 1))[:900] or json.dumps({" ".join(k): v and v.get("n") for k, v in widths.items()})[:400])
+    off = []
+    for (n, s_), t in sorted(inks.items()):
+        for ring, ground in (("cardEdge", "card"), ("paperEdge", "paper")):
+            want_px, got_px = _laid(t["line"], t[ground]), _rgba(t[ring])[0]
+            if max(abs(a - b_) for a, b_ in zip(want_px, got_px)) > 1.0:
+                off.append(f"{n} {s_} {ring}: {t[ring]} where the line over the {ground} is {[round(v, 1) for v in want_px]}")
+    check(f"...and its ink is the card's line laid over the card (or, for a drawer's paper, over the paper), as the page "
+          f"resolves them ({len(inks) * 2} read)",
+          len(inks) == len(EDITORS) * 2 and not off, "; ".join(off) or json.dumps({" ".join(k): v for k, v in inks.items()})[:300])
 
 # A LIST OF CHOICES IS ONE CARD (the owner's "B, equal lines", Nov 14: "Do we
 # need everything to be in a pill?"), on the editors' sheets as on the menu:
@@ -976,13 +1080,14 @@ if not ONLY or set(ONECARD) & set(ONLY):
         for L in got["lists"]:
             kinds.add(L["kind"])
             rows = L["rows"]
-            if not (L["bg"] == tok["card"] and L["edge"] == f"1px solid {tok['line']}" and L["r"] == "16px"
-                    and L["foot"] == "16px" and L["drop"] == tok["drop"] and rows
+            if not (L["bg"] == tok["card"] and L["edge"] == "1px solid rgba(0, 0, 0, 0)" and L["ring"]
+                    and L["ring"]["color"] == tok["edge"] and abs(L["ring"]["px"] - 1) <= 0.05 and L["r"] == "16px"
+                    and L["foot"] == "16px" and L["drop"].endswith(tok["drop"]) and rows
                     and all((r["tinted"] or r["own"] == "rgba(0, 0, 0, 0)") and r["painted"]
                             and abs(r["l"] - L["l"]) <= 0.5 and abs(r["r"] - L["r_"]) <= 0.5 for r in rows)
                     and rows[0]["line"] == "none"
                     and all(abs(r["gap"]) <= 0.5 and thin_ok(r, L["rowline"]) for r in rows[1:])):
-                bad_card.append(f"{tag} {L['kind']}: card {L['bg']} edge {L['edge']} {L['r']}/{L['foot']} drop {L['drop'][:40]};"
+                bad_card.append(f"{tag} {L['kind']}: card {L['bg']} edge {L['edge']} ring {L['ring']} {L['r']}/{L['foot']} drop {L['drop'][:40]};"
                                 f" rows " + "; ".join(f"{r['name']} own {r['own']} gap {r['gap']} line {r['line']} painted {r['painted']}"
                                                       for r in rows))
             if not (L["margins"] and all(_near(px, _rgb(tok["card"]), 4) for px in L["margins"])):
@@ -996,7 +1101,7 @@ if not ONLY or set(ONECARD) & set(ONLY):
                 bad_ring.append(f"{tag} list {i}: {fr}")
     want = len(EDITORS) * 2 * 2 * len([s for s in ONECARD if not ONLY or s in ONLY])
     check(f"a list of choices on the editors' sheets is ONE CARD, as the menu's own list draws it: the menu's white card,"
-          f" its lilac edge and drop, 16 round; its rows on it with nothing of their own behind them (How it works keeps"
+          f" its lilac edge (one screen pixel, the line laid over the card, outside a transparent border) and drop, 16 round; its rows on it with nothing of their own behind them (How it works keeps"
           f" its tint), as wide as the card's inside and touching, the menu's rule between two that show, each what is"
           f" painted at its middle: the menu's list, Export's formats, Your drafts and As a file, Ask's People often ask"
           f" ({len(onecard)} sheets read, Pad and Flip, phone and desk, light and dark)",
