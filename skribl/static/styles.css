@@ -8863,6 +8863,10 @@ body.stroking .toolbar, body.stroking .flip-tools {
    the card wears the frame's tint, so the pixel inside the line, under the
    card's transparent border, is the frame's and not a white rim. */
 :is(.ask-answer-pic, .bk-pic):has(> .lc-phone) { background: color-mix(in srgb, var(--accent) 8%, var(--menu-card)); }
+/* ...and a drawing's card wears the drawing's own ground (lib/learncard.js
+   sets --pic-ground once the drawing is in), so the pixel inside its line is
+   the drawing's, not a rim of the card's colour (part three's leftover). */
+:is(.ask-answer-pic, .bk-pic):has(> .lc-stage) { background: var(--pic-ground, var(--menu-card)); }
 .ask-answer-pic .lc-phone video { width: 148px; }   /* 150 with its outline */
 .ask-answer-pic .lc-stage { border-radius: 0; }
 .ask-steps { counter-reset: s; margin: 10px 0 0; padding: 0; list-style: none; }

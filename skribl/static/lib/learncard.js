@@ -370,6 +370,12 @@
       if (state.gone || !payload || !window.SkriblInline) return;
       var p = window.SkriblInline.attach(stage.querySelector('.skribl-inline'), payload, { ambient: true });
       if (!p) return;
+      /* THE CARD WEARS THE DRAWING'S GROUND (the edges, part three's
+         leftover): under its transparent border, the pixel inside the line
+         was the card's own colour, a rim between the line and the drawing.
+         A phone's card wears its frame's tint for the same reason. */
+      var g = p.ground && p.ground();
+      if (g) box.style.setProperty('--pic-ground', g);
       p.setLoop(true); state.p = p;
       if (!reduce) p.play();
     });
