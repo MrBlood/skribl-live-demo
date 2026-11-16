@@ -286,20 +286,44 @@ def _band_rules(region, band, out_sel, used):
 # Skribl site, lib/postfull.js) has the same scrubber and words OUTSIDE the
 # frame, and rules such as .rl-scrub took the line's tint away and made its
 # words 15px there. So a selector that is not already the frame's own
-# (.watch-full, .canvas-wrap) is put under :where(.skfull-host), the class
-# lib/fullbar.js gives every band's host: nothing outside a band matches,
-# and :where() adds no weight, so inside one the cascade is what it was.
-SCOPE = ":where(.skfull-host)"
+# (.watch-full, .canvas-wrap) has its first part kept to a band's host or
+# what is inside it, .skfull-host being the class lib/fullbar.js gives every
+# band's host: nothing outside a band matches, and :where() adds no weight,
+# so inside one the cascade is what it was. THE HOST ITSELF TOO: the band
+# steps back by a class on the host (.chrome-asleep, lib/chromefade.js), and
+# a first try that put the band's rules under the host, not on it, kept that
+# rule from matching anywhere (verify_onefull: the band stayed while the
+# drawing played).
+HOST = ":where(.skfull-host, .skfull-host *)"
+
+
+def _first_compound(x):
+    """x with HOST on its first compound, before a pseudo-element if it has one."""
+    depth, cut, i = 0, None, 0
+    while i < len(x):
+        c = x[i]
+        if c in "([":
+            depth += 1
+        elif c in ")]":
+            depth -= 1
+        elif depth == 0:
+            if c in " >+~":
+                break
+            if cut is None and x.startswith("::", i):
+                cut = i
+        i += 1
+    at = i if cut is None else cut
+    return x[:at] + HOST + x[at:]
 
 
 def _scope_sel(x):
     x = " ".join(x.split())
-    if "watch-full" in x or "canvas-wrap" in x or x.startswith(SCOPE):
+    if "watch-full" in x or "canvas-wrap" in x or HOST in x:
         return x
     m = re.match(r"((?::root|html)(?:\[[^\]]*\]|\.[\w-]+|:[\w-]+(?:\([^)]*\))?)*)\s+(.*)$", x)
     if m:
-        return f"{m.group(1)} {SCOPE} {m.group(2)}"
-    return f"{SCOPE} {x}"
+        return f"{m.group(1)} {_first_compound(m.group(2))}"
+    return _first_compound(x)
 
 
 def _scoped(region, s, e, h, b):
