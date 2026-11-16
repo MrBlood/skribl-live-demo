@@ -1824,6 +1824,22 @@ with sync_playwright() as p_:
         form = pg.evaluate("""() => ({ name: (document.getElementById('editName') || {}).value, bio: (document.getElementById('editBio') || {}).value,
             sizes: ['editName', 'editBio'].map(id => { const e = document.getElementById(id); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; }),
             cancel: (document.querySelector('a.btn[href$="/social/@rosa"]') || {}).textContent })""")
+        # A FIELD IN FOCUS WEARS THE SITE'S RING (the owner, Nov 16, with a
+        # screenshot of About you in focus on an iPhone: "is this outline
+        # supposed to be blue?"). The site's focus rule named input, button and
+        # summary, not textarea, so the one text box fell to the browser's own
+        # ring (Safari's blue) while Your name wore the site's. Both, focused:
+        # the site's 2px solid --focus, as the page resolves it.
+        rings = pg.evaluate("""() => { const pr = document.createElement('i'); document.body.appendChild(pr);
+            pr.style.color = 'var(--focus)'; const want = getComputedStyle(pr).color; pr.remove();
+            return { want, got: ['editName', 'editBio'].map(id => { const e = document.getElementById(id); if (!e) return { id, missing: true };
+              e.focus(); const c = getComputedStyle(e);
+              const r = { id, fv: e.matches(':focus-visible'), style: c.outlineStyle, width: c.outlineWidth, color: c.outlineColor };
+              e.blur(); return r; }) }; }""")
+        check("Edit profile's two fields, in focus, wear the site's own ring (2px solid in --focus), never the"
+              " browser's: Your name and About you alike",
+              all(r.get("fv") and r.get("style") == "solid" and r.get("width") == "2px" and r.get("color") == rings["want"]
+                  for r in rings["got"]), json.dumps(rings))
         pg.fill("#editName", "Rosa Lima-Reyes")
         pg.fill("#editBio", "Line one\n\n\n\nLine   two")
         with pg.expect_navigation(timeout=15000):
