@@ -44295,3 +44295,84 @@ passkeys are still the last session's: the owner makes a sign-in link per
 person when one is needed. An optional setup script for this environment
 (the harness's packages installed, a minute saved each session) was
 offered and is the owner's to want.
+
+## After v330 -- The app's top edge on the Library, Skribl's Gallery and the link page
+
+The owner's "All yes", Nov 16 (Mountain Time), about 4 AM, to the evening's
+third choice: the Library, Skribl's Gallery and a drawing's link page get the
+Blooby app's top edge (#919 on the site, #929 on the Pad and Flip), since they
+open inside the app too (its manifest's scope is the folder they share with
+the site).
+
+WHAT CHANGED:
+
+- THE MARK, BEFORE THE FIRST PAINT: the three pages include
+  _skribl_app_boot.html after their theme boot, as the editors do, so <html>
+  says data-skribl-app from the first frame on the Home Screen. Its script
+  lost its own guard for a browser without matchMedia, which its try already
+  caught (the same test, 39 bytes lighter on every page that carries it).
+- THE STRIP: 6px of the page's own ground, fixed at the top, the full width,
+  from the Home Screen alone, first in each page's body. All three tops are
+  the Pad's ground, so the strip is the same colour everywhere: the link
+  page's is the editors' own rule (styles.css), which reaches it in
+  player.css by listing its two selectors live in css_live.json, since only
+  the app shows it; the Library's and the Gallery's is one rule in
+  pagemenu.css, beside their sticky header, in their --base. z-index 43 on
+  all three: over the Library's and the Gallery's header (40), under their
+  cards' menus, sheets and ••• menu (50 and up), whose scrims dim it, and
+  under every full screen (the stand-in's 2147483000). On a phone their
+  header sticks at 6px, so nothing to press starts in the strip; on the link
+  page nothing does either (the way back to a site is at 12px). The box is
+  written as inset (the editors' too).
+- THE LINK PAGE'S BUDGETS, two named raises: its HTML 14,147 to 14,410 (+263:
+  the boot and the strip's element, the boot's spent 39 first), its CSS
+  43,515 to 43,695 (+180: the two rules, the inset's 10 spent first), in
+  verify_player_isolation; verify_jsstrip's line moves with it.
+
+PAD AND FLIP: unchanged but for their boot's 39 bytes (the same test) and
+their strip's box written as inset (the same box).
+
+CONTRAST: no colour changed; the strip is each page's own ground.
+
+THE CHECKS, verify_identity's THE APP'S TOP EDGE grown from the Pad and Flip
+to all five pages, each row shown red by a break of its own in a throwaway
+copy of the section, with a fresh server per break, the untouched tree green
+beside it (control 5/5):
+
+- in the app, light and dark, each page's top 6px are its own ground over
+  a red block put under them at the header's level, and the red shows just
+  below (red: the Library's and the Gallery's strip see-through; the link
+  page's see-through; the Gallery's strip element left out; the Library's
+  boot left out; the link page's boot left out; the strip 30px tall);
+- the mark is on <html> as <body> is parsed, and on the editors
+  homescreen.js agrees, the other three not loading it (red: the Library's
+  boot left out; the link page's);
+- a tab never has it (red: the strip shown in a tab too);
+- the menu's scrim dims it, a tap at the top edge finds it, and every header
+  control starts below it and takes its own tap, Pad, Flip, the Library and
+  the Gallery (red: the Gallery's element left out; the Library's boot left
+  out; the strip over the menu's scrim; the strip 30px tall, over the
+  header). The first run asked every page for two header controls and found
+  one on the Library's phone header (its menu): the instrument, not the
+  tree; each page has its own floor now;
+- on a link page a tap at the top edge finds it, nothing to press starts in
+  it, and its full screen (an iPhone's stand-in) covers it, light and dark
+  (red: the boot left out; the strip over its full screen).
+
+A SLIP, CAUGHT BEFORE IT WAS PUSHED: the first commit was made while the
+calibration had the Library's boot taken out (its fifth break), and took the
+file that way; amended once the calibration had put it back, and the tree
+checked against the commit before anything else ran. Nothing is committed
+while a calibration has a file broken.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3), thirteen ok in 10.2 minutes:
+verify_identity 140/140, verify_player_isolation 85/85, verify_jsstrip
+35/35, verify_cssplit 18/18, verify_galib 176/176, verify_surfaces 13/13,
+verify_linkpage 58/58, verify_library 248/248, verify_gallery 234/234,
+verify_a11y 444/444, verify_csp 34/34, verify_docs 144/144, verify_seam
+515/515. NOT RUN: the full battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit) and iOS 26's glass, the reason for all of
+it. The one-glance tell: in the Blooby app, open the Library (the Pad's ⋯,
+then Your Skribls) or a drawing's link, and the top of the page is as sharp
+as Home's.
