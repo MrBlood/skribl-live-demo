@@ -44025,3 +44025,128 @@ NOT TESTED HERE: an iPhone (WebKit): whether Safari draws a 0.3334px ring
 as one screen pixel (Chromium does; it is how the rows' thin line is
 drawn too); Segoe UI; the live site. The one-glance tell: the Gallery in
 light, each tile's lilac edge a fine line, the tile lifted off the page.
+
+## After v330 -- The edges, part three: the sheets' and the drawers' lines are one screen pixel
+
+The owner's "all yes" to "The edges" (B), Nov 15 (Mountain Time), part three
+of three: the Pad's and Flip's sheets and drawers. Part one (#930) gave the
+canvases their edge, part two (#931) the site its lines. The mock's own list
+for this part: "The sheets' cards (the ☰, Your drafts, Export, Report,
+Post), the Library's rows, the link page's round buttons ... the same
+one-pixel line." The Library, Skribl's Gallery and the link page are pages
+of their own, with their own sheets (the player's is budgeted): they come
+next, on their own.
+
+WHAT CHANGED (styles.css, flip.css):
+
+- ONE SCREEN PIXEL, AS ON THE SITE: --edge is 1px scaled by --hair, set on
+  the editors' pages beside it (the player's stylesheet, which keeps every
+  root token, never carries it). A card or a control keeps its border's
+  width, transparent, so nothing moves, and wears a ring of --edge outside:
+  the menu's tiles, list and tracks; Your drafts' cards, its row's menu and
+  its sheet; Export's formats, its name and its numbers (Flip); Post's
+  fields, its card and its quiet buttons; Report's details and button; How
+  it works' search, cards, tips, chips, Ask's tour, lists, answers and
+  pictures, the little book's picture and buttons, Draw along's pill; a
+  button's card and its tags, notes and banner; the dock's drawers (draw,
+  photo, music, Text, the shape picker, Tune, the stamp shelf) and every
+  control on them; the music drawer's timeline boxes, its Hear and its
+  follow; the Leave dialog. A separator is a line of --edge (Settings' rows,
+  an answer's steps, a button's card's rule, the music drawer's click).
+- THE RING'S INK: a card's is --menu-card-edge, its lilac line laid over its
+  own white and made solid; a drawer's paper (and a quiet button on it) is
+  --menu-paper-edge, the line laid over the paper. The ring lies outside,
+  over the paper, where the dark theme's 12% lilac is all but the paper's own
+  colour: the card's lighter hairline would have gone. The older grey lines
+  (Report, Post's preview and key button, the Leave dialog, Your drafts'
+  sheet) keep their own colour, thinner.
+- THE GLASS'S RIM (--glass), wherever it is worn (Flip's page strip and the
+  menus' sheets on a phone), is the same line.
+- STATES SHOW AS THEY DID, their ring stepping aside: a field in focus, a
+  pressed or armed button, a chosen tile or choice, an onion or grid switch
+  on, an open answer, a hover. Not changed, being states, marks or
+  invitations: Flip's chosen page, the pen's selection, focus rings, the
+  colour dots' rims, the Post sheet's tick box (its edge held to 3:1, the
+  owner's "almost invisible"), the dashed drop zones, the Watch button (its
+  border pulses once), the New sheet's shape icons and the pops' paper
+  arrows.
+- JOINS, DRAWN AGAIN: the draw drawer's open tile reaches 12px (was 11) into
+  its card and is cut 2px above its foot outside its own width, so its sides
+  stop at the card's ring and its white covers the seam (a first version
+  left a faint line at the seam, through the clip's soft edge at a
+  fractional pixel; zoomed at 3x, now none); the music drawer's follow, open
+  at the top, is cut there; a button's card's arrow and the hint's caret
+  are drawn 1/--hair as large and scaled back, so their two lines are the
+  screen's pixel too, joining the card's.
+- A TINT TO THE EDGE: a row with a tint of its own stopped a pixel short of
+  the ring, the card's white between (a white rim on a phone, zoomed and
+  then seen at the phone's own pixels): How it works lays its tint over that
+  pixel too (a ring of its tint, cut at its foot; the menu's list no longer
+  clips its rows, whose first and last are rounded already), and a phone
+  recording's card in Ask's answers and the little book wears its frame's
+  tint. Still there: a wide clip in those cards sits in a pixel of the
+  card's colour (it was two lines), and on a desk a hovered row's tint
+  stops a pixel short of the line.
+- FOUND ON THE WAY: Flip's Tune with a beat parted the row after Beat's more
+  with the old rule, three screen pixels where every other row's line is
+  one; it wears the rows' thin line. And Flip's Undo-clear, enabled, wore a
+  stronger lilac line than the Pad's (its own copy of the rule won there,
+  flip.css loading last); it wears the drawers' card's, as the Pad's does.
+
+ON A DESK at 100% one screen pixel is 1px: the lines keep their colour and
+their width, a pixel further out (the ring outside the box, where the border
+was inside it).
+
+PAD AND FLIP: shared, one rule set; Flip's own copies (the stamp shelf,
+Export's numbers, Undo-clear, Tune's beat row) brought along.
+
+CONTRAST: no word changed. The rings' inks are the lines they were, laid
+over what they were drawn on.
+
+THE CHECKS, verify_contrast, each shown red by a break of its own, green as
+built:
+
+- THE SHEETS' EDGES, new: read off the paint at 3x, light and dark, Pad and
+  Flip, across each one's left side at its middle, the screen pixels that
+  stand 1.15:1 apart from both sides are one, for the menu's list and a
+  tile, Export's formats and its name, Your drafts' As a file, the draw
+  drawer's paper on the page and a button on it (28 read; red: the tree
+  before, three; the cards' ring at 1px; the paper's ring at 1px); and the
+  two inks are the line laid over the card and over the paper, as the page
+  resolves them (red: the tree before; the light card's at 30% for 34%; the
+  dark paper's at 20% for 12%).
+- ONE CARD asked for a 1px border in the line; it asks for the ring: the
+  border transparent, the ring one screen pixel in --menu-card-edge, the
+  drop after it.
+- The census reads a line where it is drawn (the border's where it shows,
+  else the ring's), so CONSISTENCY's "every one with an edge wears the
+  tiles' lilac line" and the timeline's copy's sides still read the line.
+- THE DRAWERS' EDGE reads the strongest pixel across the box's edge, the
+  ring outside it included; and "each drawer's edge is the tiles' lilac
+  line" asks one ink for every drawer, the line laid over its paper (red
+  with the drawers' ring in the card's ink).
+- Rows elsewhere that read a line where the border was read it where it is
+  drawn, each found red on the first run beside the others and shown red by
+  a break of its own: verify_drawtiles and verify_musicdoors (the open tile
+  joins its card 2px deep, its bottom edge transparent over its white, and
+  at an end the line is read half a screen pixel outside, against both the
+  card and the paper: red with the tile's side ring cut; the drawer tiles'
+  also with the seam's faint line back, which a 1x desk, where the doors are
+  read, cannot draw); verify_text (Text's open tile, 2px: red detached);
+  verify_menu (the list's edge, the pixel across the box's edge furthest
+  from the sheet: red with the cards' ring gone); verify_galib (the Library's
+  and the Gallery's menus against the Pad's, the line as it shows over the
+  card, since theirs keep a 1px border until their own part: red with the
+  Pad's ring gone and with its ink off); verify_onepill (How it works' one
+  shadow is its own tint a pixel wider: red with a ring of the accent).
+
+THE FOUR. Kind: nothing moves, and the drawings, not the boxes, are the
+boldest lines on the screen. Simple: one rule, one line, every sheet.
+Powerful: the Pad and Flip match, sheet for sheet. Playful: the paper reads
+as paper, the cards as cards laid on it.
+
+NOT TESTED HERE: an iPhone (WebKit): whether Safari draws a 0.3334px ring
+as one screen pixel (Chromium does; the rows' thin line, scaled the same
+way, is what the owner has seen); Segoe UI; the live site. The one-glance
+tell: the Pad's ⋯ in light, How it works' tint up to a fine lilac line, the
+tiles' edges as fine as the rows' lines.

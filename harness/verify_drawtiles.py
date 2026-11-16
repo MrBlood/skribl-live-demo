@@ -23,10 +23,14 @@ The rows:
   Draw-on) and the tile's words follow.
 
   ONE SHAPE. The open tile reaches over the gap into its card, and what is
-  painted on the seam is the tile; its bottom edge is the card's colour. No
-  line shows there, read on the screenshot's pixels in light and dark (the
-  card's dark top light, a 1px inset, once showed under the open tile), and
-  at an end the card's edge runs unbroken. The tiles and the card are the
+  painted on the seam is the tile; its bottom edge is the card's colour (or,
+  since the edges' part three, transparent over its own white). No line
+  shows there, read on the screenshot's pixels in light and dark (the card's
+  dark top light, a 1px inset, once showed under the open tile; so did the
+  tile's own ring through its clip's soft edge), and at an end the card's
+  edge runs unbroken: its line, a ring outside the tile and the card since
+  part three, read just outside their side, against both the card and the
+  drawer's paper. The tiles and the card are the
   menu's card, an unchosen choice the menu's paper, the chosen one the one
   tint.
 
@@ -172,7 +176,9 @@ JOINT = """([t, p]) => { t = document.querySelector(t); p = document.querySelect
   let a = t.getBoundingClientRect();
   if (a.bottom < 8 || a.bottom > innerHeight - 8) { t.scrollIntoView({ block: 'center', behavior: 'instant' }); a = t.getBoundingClientRect(); }
   const z = p.getBoundingClientRect();
-  return { a: [a.left, a.top, a.right, a.bottom], z: [z.left, z.top, z.right, z.bottom], card: getComputedStyle(p).backgroundColor }; }"""
+  let paper = null;
+  for (let e = p.parentElement; e && !paper; e = e.parentElement) { const g = getComputedStyle(e).backgroundColor; if (g !== 'rgba(0, 0, 0, 0)') paper = g; }
+  return { a: [a.left, a.top, a.right, a.bottom], z: [z.left, z.top, z.right, z.bottom], card: getComputedStyle(p).backgroundColor, paper }; }"""
 
 
 # THE JOINT HOLDS STILL FOR ITS PHOTOGRAPH. A drawer fitted under the header
@@ -195,15 +201,19 @@ def seam(q, tsel, psel, dpr):
             break
         q.wait_for_timeout(250)
     card = [int(v) for v in re.findall(r"\d+", j["card"])[:3]]
+    paper = [int(v) for v in re.findall(r"\d+", j["paper"] or "")[:3]] or card
     w, h = im.size
 
-    def step(x, y):
+    def step(x, y, ref=card):
         c = im.getpixel((min(w - 1, max(0, int((x - x0) * dpr))), min(h - 1, max(0, int((y - y0) * dpr)))))
-        return max(abs(c[i] - card[i]) for i in range(3))
+        return max(abs(c[i] - ref[i]) for i in range(3))
     inside = [a[0] + 2 + i / dpr for i in range(int((a[2] - a[0] - 4) * dpr))]
     worst = max(step(x, a[3] - 1 + i / dpr) for i in range(int(4 * dpr)) for x in inside)
-    edges = {side: min(step(col, a[3] - 4 + i / dpr) for i in range(int(8 * dpr)))
-             for side, xa, xz, col in (("left", a[0], z[0], a[0] + .5 / dpr), ("right", a[2], z[2], a[2] - .5 / dpr))
+    # The card's line at an end: a ring just outside the tile's side and the
+    # card's (half a screen pixel out), every row across the joint standing
+    # apart from both the card and the paper.
+    edges = {side: min(min(step(col, a[3] - 4 + i / dpr), step(col, a[3] - 4 + i / dpr, paper)) for i in range(int(8 * dpr)))
+             for side, xa, xz, col in (("left", a[0], z[0], a[0] - .5 / dpr), ("right", a[2], z[2], a[2] + .5 / dpr))
              if abs(xa - xz) < .75}
     return worst, edges
 
@@ -258,11 +268,11 @@ with sync_playwright() as pw:
                         p = document.querySelector(`.dp-panel[data-dp=${k}]`), a = t.getBoundingClientRect(), z = p.getBoundingClientRect();
                         const at = document.elementFromPoint(a.left + a.width / 2, z.top + 0.5);
                         return { over: a.bottom - z.top, seam: !!(at && t.contains(at)),
-                                 edge: getComputedStyle(t).borderBottomColor, card: getComputedStyle(p).backgroundColor,
+                                 edge: getComputedStyle(t).borderBottomColor, card: getComputedStyle(p).backgroundColor,   // transparent since the edges' part three
                                  tile: getComputedStyle(t).backgroundColor }; }""", k)
                     check(f"{who}: {k}'s tile and its choices are one shape: the tile runs into the card, "
                           "the seam painted by the tile in the card's colour",
-                          j["over"] >= 0.5 and j["seam"] and j["edge"] == j["card"] and j["tile"] == j["card"], str(j))
+                          j["over"] >= 0.5 and j["seam"] and j["edge"] in (j["card"], "rgba(0, 0, 0, 0)") and j["tile"] == j["card"], str(j))
                     worst, edges = seam(q, f".dp-tile[data-dp={k}]", f".dp-panel[data-dp={k}]", opts.get("device_scale_factor", 1))
                     check(f"{who}: no line shows where {k}'s tile meets its card (painted pixels: the rows at the "
                           "joint are the card's colour), and at an end the card's edge runs unbroken",

@@ -868,8 +868,11 @@ with sync_playwright() as p:
                   pb and pb["bg"] == tint and pb["anim"] == "none" and pw["anim"] == "none", f"{pb} / wrap {pw}")
             q.click("#menuBtn"); settle(q, 500)
             f = q.evaluate(LOOK, ".menu-item.menu-feature")
+            # Its one shadow, since the edges' part three, is its own tint a
+            # pixel wider (the pixel under the card's line, which the card's
+            # transparent border left white): not a ring, the tint to the edge.
             check(f"TINTS [{theme}]: the How it works row keeps its tint and drops its ring",
-                  f and f["shadow"] == "none" and f["bg"] not in ("rgba(0, 0, 0, 0)", "transparent"), str(f))
+                  f and f["shadow"] in ("none", f"{f['bg']} 0px 0px 0px 1px") and f["bg"] not in ("rgba(0, 0, 0, 0)", "transparent"), str(f))
             c.close()
 
             c = ctx_for(theme, "desk"); q = c.new_page()
