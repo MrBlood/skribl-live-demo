@@ -44932,12 +44932,15 @@ and on SQLite with posts in it (a post of words taken and a post of nothing
 refused; down refused while one is there, the table whole; then down, the
 old rule back; red: the way down without its refusal).
 
-THE AFFECTED SUITES, side by side (run_parallel -j 3), ten ok in 10.6
-minutes: verify_socialposts 86/86, verify_composer 39/39, verify_socialauth
-73/73, verify_socialreposts 50/50, verify_socialprofile 94/94,
-verify_sociallikes 100/100, verify_socialmentions 51/51, verify_migrations
-86/86, verify_social 45/45, verify_docs 144/144. NOT RUN: the full battery
-(main's run after the merge does it).
+THE AFFECTED SUITES, side by side (run_parallel -j 3), eleven ok in 13.1
+minutes on the tree with #944 under it (its edge on a post's drawing, and
+verify_socialposts 17's rows): verify_socialposts 99/99, verify_composer
+39/39, verify_socialauth 73/73, verify_socialreposts 50/50,
+verify_socialprofile 94/94, verify_sociallikes 100/100,
+verify_socialmentions 51/51, verify_migrations 86/86, verify_social 45/45,
+verify_docs 144/144, and verify_socialcomments 96/96 (a comment's words and
+a post's share the card). NOT RUN: the full battery (main's run after the
+merge does it).
 
 ON A REAL POSTGRESQL, by hand (16.15, a throwaway cluster here). CI's
 PostgreSQL job migrated Skribl's chain only and built the site's tables from
