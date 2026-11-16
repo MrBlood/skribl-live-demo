@@ -606,7 +606,18 @@ skribl through `create_post` and the site's row (`social_posts`, on the
 site's own chain) in one transaction. The skribl is public with the gallery
 tick and unlisted without (reachable by its link, listed nowhere but the
 site's feed); its title is the post's first words, its caption only what was
-written under the tick. A press on Post with nothing drawn says so.
+written under the tick. A press on Post with nothing said or drawn says so.
+
+**A post can be its words alone** (the owner's "I like your pick", Nov 16, to
+A on the words-only mock: "a person should be allowed to post without a
+drawing or flip"), as a comment can and a quote of words alone. Post works
+once there are words; the post has no drawing and no quote (`skribl_id` is
+None, `is_quote` false), and its card is its words and its row, with no empty
+drawing box, so it takes little room beside the drawings around it. Its page
+is its words and the comments under them. The Gallery, which holds drawings,
+never shows it. The database's rule says a post has a drawing, a quote or
+words (`ck_social_posts_drawn_quoted_or_said`, revision 7db36bfedef0); going
+down past it refuses while a post of words alone is there.
 
 **The feed** reads its drawings' sizes, lines and plays through Skribl's new
 `describe_posts` (docs/INTEGRATION.md, "Reading them on your server"), one
@@ -1950,7 +1961,7 @@ SocialKeyboard, which a comment's sheet shares: it reads the keyboard again
 until it rests, since a phone can report a size the keyboard only passes
 through and then say nothing; the owner's iPhone, Nov 14); on a desk it is
 a 600px card in the middle. Cancel at the top left, Post at the top
-right, dim until a drawing is attached; your face beside "Say something…";
+right, dim until there are words or a drawing; your face beside "Say something…";
 the drawing under the words, playing, with Edit drawing and Remove; Draw,
 Flip and Yours along the bottom, and the characters left (500). Draw and
 Flip open Skribl's editor over it in compose mode, as Home's did. YOURS is

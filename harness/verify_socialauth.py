@@ -1550,6 +1550,82 @@ with sync_playwright() as p_:
               and fd == ["DROP INDEX ix_social_people_words_person", "DROP INDEX ix_social_people_words_key",
                          "DROP TABLE social_people_words"],
               f"up {fp_up.returncode} {made_fp} {fu[:1]}; down {fp_down.returncode} {fd}")
+        # ...AND POSTS OF WORDS ALONE'S (the owner's "I like your pick", Nov 16,
+        # to A on the words-only mock): one CHECK made wider, a drawing, a
+        # quote or words, the old one dropped and the new added NOT VALID (no
+        # row read or written, nothing scanned under the lock); and the old one
+        # back going down (the one read going down, whether a post of words
+        # alone is there, is not asked offline).
+        wo_up, wo_down = offline("upgrade", "e8f5594cb16f:7db36bfedef0"), offline("downgrade", "7db36bfedef0:e8f5594cb16f")
+        wu, wd = statements(wo_up.stdout), statements(wo_down.stdout)
+        check("...and posts of words alone's PostgreSQL DDL, read offline, is one CHECK made wider (a drawing, a quote or"
+              " words), the old one dropped and the new added NOT VALID: no row of any table read or written; and the old"
+              " one back going down",
+              wo_up.returncode == 0 and wo_down.returncode == 0
+              and wu == ["ALTER TABLE social_posts DROP CONSTRAINT ck_social_posts_drawn_or_quote",
+                         "ALTER TABLE social_posts ADD CONSTRAINT ck_social_posts_drawn_quoted_or_said CHECK (skribl_id IS NOT NULL"
+                         " OR is_quote OR words <> '') NOT VALID"]
+              and wd == ["ALTER TABLE social_posts DROP CONSTRAINT ck_social_posts_drawn_quoted_or_said",
+                         "ALTER TABLE social_posts ADD CONSTRAINT ck_social_posts_drawn_or_quote CHECK (skribl_id IS NOT NULL"
+                         " OR is_quote) NOT VALID"],
+              f"up {wo_up.returncode} {wu}; down {wo_down.returncode} {wd}")
+        # ...and on SQLite, a chain with posts in it: up, every post kept and a
+        # post of words alone taken (a post of nothing still refused); back
+        # down refused while one is there, saying so before it changes
+        # anything (the table whole, nothing half done); without it, down, and
+        # the old rule back.
+        wdb = os.path.join(TMP, "chain-words.db")
+        w1 = alembic(wdb, "upgrade", "e8f5594cb16f")
+        con = sqlite3.connect(wdb)
+        con.execute("insert into social_people (id, public_id, handle, handle_key, display_name, user_handle, is_admin,"
+                    " session_gen, age_confirmed_at, created_at) values (1, 'site:wo', 'wo', 'wo', 'Wo', x'00', 0, 1,"
+                    " '2026-11-01 10:00:00.000000', '2026-11-01 10:00:00.000000')")
+        con.execute("insert into social_posts (public_id, person_id, words, skribl_id, created_at) values"
+                    " ('drawn000001', 1, 'drawn', 'sk1', '2026-11-02 10:00:00.000000')")
+        con.commit()
+        con.close()
+        w2 = alembic(wdb, "upgrade", "7db36bfedef0")
+        con = sqlite3.connect(wdb)
+        took, nothing = True, False
+        try:
+            con.execute("insert into social_posts (public_id, person_id, words, skribl_id, created_at) values"
+                        " ('words000001', 1, 'just words', null, '2026-11-03 10:00:00.000000')")
+        except sqlite3.IntegrityError:
+            took = False
+        try:
+            con.execute("insert into social_posts (public_id, person_id, words, skribl_id, created_at) values"
+                        " ('empty000001', 1, '', null, '2026-11-03 10:00:00.000000')")
+        except sqlite3.IntegrityError:
+            nothing = True
+        con.commit()
+        wsql = con.execute("select sql from sqlite_master where name = 'social_posts'").fetchone()[0]
+        con.close()
+        w3 = alembic(wdb, "downgrade", "e8f5594cb16f")
+        con = sqlite3.connect(wdb)
+        whole_w = (con.execute("select count(*) from social_posts").fetchone()[0] == 2
+                   and not con.execute("select 1 from sqlite_master where name like '_alembic_tmp%'").fetchone())
+        con.execute("delete from social_posts where public_id = 'words000001'")
+        con.commit()
+        con.close()
+        w4 = alembic(wdb, "downgrade", "e8f5594cb16f")
+        con = sqlite3.connect(wdb)
+        old_back = False
+        try:
+            con.execute("insert into social_posts (public_id, person_id, words, skribl_id, created_at) values"
+                        " ('words000002', 1, 'words again', null, '2026-11-04 10:00:00.000000')")
+        except sqlite3.IntegrityError:
+            old_back = True
+        kept = con.execute("select public_id from social_posts").fetchall()
+        con.close()
+        check("...and on SQLite with posts in it: up, the drawn post kept, a post of words alone taken and a post of"
+              " nothing still refused; back down refused while a post of words alone is there, saying so before it"
+              " changes anything (the table whole); without it, down, the old rule back and the drawn post kept",
+              w1.returncode == 0 and w2.returncode == 0 and took and nothing
+              and "ck_social_posts_drawn_quoted_or_said" in wsql and "ck_social_posts_drawn_or_quote" not in wsql
+              and w3.returncode != 0 and "posts of words alone" in w3.stderr and whole_w
+              and w4.returncode == 0 and old_back and kept == [("drawn000001",)],
+              f"up {w1.returncode}/{w2.returncode}; took {took}, nothing refused {nothing}; down blocked {w3.returncode}"
+              f" whole {whole_w}; down {w4.returncode} {w4.stderr.strip().splitlines()[-1:]}; old back {old_back}; kept {kept}")
         d2 = os.path.join(TMP, "chain-both-a.db")
         a1, a2 = alembic(d2, "upgrade", "head", ini=False), alembic(d2, "upgrade", "head")
         d3 = os.path.join(TMP, "chain-both-b.db")

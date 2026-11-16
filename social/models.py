@@ -325,7 +325,9 @@ class Post(SocialBase):
     and whose it is (quoted_owner_id: Activity's "Rook quoted your post", and
     deleting an account, never ask Skribl). Its words, its own drawing, or
     both: a quote of words alone has no skribl of its own (skribl_id is then
-    None, and only a quote may be without one: ck_social_posts_drawn_or_quote).
+    None). A POST OF WORDS ALONE (the owner's "I like your pick", Nov 16, to A
+    on the words-only mock) has none either, and no quote: its words are all
+    it has. A post has at least one of the three: ck_social_posts_drawn_quoted_or_said.
     A QUOTE OUTLIVES WHAT IT QUOTES: is_quote is kept for good, while the
     links go when the original does (ON DELETE SET NULL, said in code first:
     reposts.py), so its small card can still say "This post is gone.", kindly.
@@ -337,7 +339,7 @@ class Post(SocialBase):
     person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
     #: Plain text as typed, tidied (posts.check_words); may be empty.
     words = sa.Column(sa.String(WORDS_MAX), nullable=False, default="", server_default="")
-    #: The post's drawing, Skribl's; None only for a quote of words alone.
+    #: The post's drawing, Skribl's; None for a quote of words alone, and a post of words alone.
     skribl_id = sa.Column(sa.String(32), nullable=True)
     created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
     #: TAKEN DOWN by an admin (piece 5): when. Hidden from everybody but its
@@ -366,8 +368,8 @@ class Post(SocialBase):
                                                      name="fk_social_posts_quoted_owner_id"), nullable=True)
 
     __table_args__ = (
-        #: A drawing, or a quote (whose words may be all it has).
-        sa.CheckConstraint("skribl_id IS NOT NULL OR is_quote", name="ck_social_posts_drawn_or_quote"),
+        #: A drawing, a quote (whose words may be all it has), or words.
+        sa.CheckConstraint("skribl_id IS NOT NULL OR is_quote OR words <> ''", name="ck_social_posts_drawn_quoted_or_said"),
         #: A quote shows one thing small: a post, or a drawing.
         sa.CheckConstraint("quoted_post_id IS NULL OR quoted_drawing_id IS NULL", name="ck_social_posts_quotes_one"),
         sa.Index("ix_social_posts_public_id", "public_id", unique=True),

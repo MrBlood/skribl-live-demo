@@ -355,6 +355,13 @@ jobs:
         # alembic_version row — so the baseline revision would then try to create
         # tables that already exist. Exercise the chain where nothing has been
         # created behind its back.
+        #
+        # THE SITE'S CHAIN TOO (social/alembic.ini, its own version table), on
+        # the same database after Skribl's: the shards build the site's tables
+        # from its models, so until Nov 16 its revisions met PostgreSQL first at
+        # a deploy (posts of words alone's was tried on one by hand first).
+        # `check` here prints a SAWarning about 'not_valid' as it reads back a
+        # NOT VALID rule; it is harmless and the check still compares.
         env:
           DATABASE_URL: postgresql://skribl:skribl@127.0.0.1:5432/migrations_only
         run: |
@@ -363,6 +370,8 @@ jobs:
             -c "CREATE DATABASE migrations_only OWNER skribl;"
           python -m alembic upgrade head
           python -m alembic check
+          python -m alembic -c social/alembic.ini upgrade head
+          python -m alembic -c social/alembic.ini check
       - name: Fail if verify_postgres only SKIPPED
         if: matrix.shard == 1
         # A skip contributes zero assertions and proves nothing about

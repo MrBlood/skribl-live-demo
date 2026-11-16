@@ -60,6 +60,11 @@
   /* A card's ring (THE EDGES) lies outside it, over the page, where its line
      used to lie over the card: the line as it looked there, made solid. */
   --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card));
+  /* A quote's small card inside a post's card (the owner's "d2 is good",
+     Nov 16): a well, the page's ground with a touch of Skribl's lilac and no
+     line, so the change of colour is its edge and it sits in the card. One
+     value for both themes: --page carries the theme. */
+  --quote-well: color-mix(in srgb, rgb(124 92 255) 6%, var(--page));
   --card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
   --rule: rgba(80, 60, 170, 0.12);  /* --menu-card-rule */
   --row-line: rgba(20, 10, 60, 0.16);  /* the thin line between two rows of a card (Apple's way) */
@@ -1532,13 +1537,15 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    as the in-post player's at rest. Gone, "This post is gone." in the second
    ink, nothing to open. A CARD, NOT AN OUTLINE (the owner's "Yes to B", Nov
    15): on a post's own page it sat on the page's ground with only its line,
-   which nearly vanished in dark; inside a post's card on Home it is the card's
-   colour on the card's colour, as it was. */
+   which nearly vanished in dark. INSIDE A POST'S CARD, A WELL (the owner's
+   "d2 is good", Nov 16): there it was the card's colour on the card's colour
+   with only its line between, so on Home and a person's page it is
+   --quote-well, the page's ground touched with lilac, and no line. */
 .qt-card {
   display: block; margin-top: 12px; padding: 12px; border: 1px solid transparent; border-radius: 18px;
   background: var(--card); color: inherit; text-decoration: none; box-shadow: 0 0 0 var(--edge) var(--card-edge);
 }
-.post-card .qt-card { position: relative; z-index: 1; }
+.post-card .qt-card { position: relative; z-index: 1; background: var(--quote-well); box-shadow: none; }
 .qt-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .qt-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 15px; line-height: 1.3; }
 .qt-name { flex: none; max-width: 60%; overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }

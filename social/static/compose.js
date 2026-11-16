@@ -35,8 +35,10 @@
  * post's address}, or {quote_drawing: the drawing's id}) with them. Make
  * opens the sheet without the quote: a quote is the Quote door's.
  *
- * POST is dim until a drawing is attached (aria-disabled: still a button, so
- * a press says what is missing, as the editors' Add does in compose mode).
+ * POST is dim until there are words or a drawing (aria-disabled: still a
+ * button, so a press says what is missing, as the editors' Add does in
+ * compose mode). WORDS ALONE ARE A POST (the owner's "I like your pick",
+ * Nov 16, to A on the words-only mock), as they are a comment.
  * It sends the words and the attachment to the site (/posts, the page's
  * token in X-Social-CSRF) and goes to the new post's page; nothing is posted
  * before. The characters left are said at the tools' end, 500 to start.
@@ -134,7 +136,7 @@
   /* ---- what is attached ----------------------------------------------------- */
   /* Ready to post: a drawing; or quoting, words or a drawing. */
   function can() {
-    return !!att || (!!quoted && !!words.value.trim());
+    return !!att || !!words.value.trim();
   }
   function ready() {
     postBtn.setAttribute('aria-disabled', can() ? 'false' : 'true');
@@ -224,7 +226,7 @@
   }
   postBtn.addEventListener('click', function () {
     if (sending) return;
-    if (!can()) { tell(sayBox, say(quoted ? 'quote_empty' : 'no_drawing')); return; }
+    if (!can()) { tell(sayBox, say(quoted ? 'quote_empty' : 'empty')); return; }
     sending = true;
     postBtn.setAttribute('aria-busy', 'true');
     tell(sayBox, say('posting'));

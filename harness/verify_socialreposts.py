@@ -1869,7 +1869,31 @@ with sync_playwright() as p:
                 want = tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) if len(h) == 6 else None
                 return {"hit": at["hit"], "painted": px, "card": want, "ground": gd,
                         "on_ground": round(ratio(px, gd), 2)}
-            paints, lows, smalls, reads, fills = {}, [], [], {}, {}
+            # INSIDE A POST'S CARD, A WELL (the owner's "d2 is good", Nov 16): a point
+            # of the quote's own ground inside it (6px in, under its corner's curve),
+            # the post card's ground just beside it, the well the page's --page with
+            # 6% of Skribl's lilac (#7c5cff), and what could draw a line round it.
+            QT_WELL = r"""(post) => { const c = document.querySelector('.post-card[data-post="' + post + '"]'); if (!c) return null;
+              const q = c.querySelector(':scope > .qt-card'); if (!q) return null;
+              const r = q.getBoundingClientRect(), cs = getComputedStyle(q), x = r.left + 24, y = r.top + 6;
+              return { pt: [x, y], beside: [r.left - 4, r.top + r.height / 2], hit: document.elementFromPoint(x, y) === q,
+                       page: getComputedStyle(document.documentElement).getPropertyValue('--page').trim(),
+                       shadow: cs.boxShadow, border: cs.borderTopColor,
+                       seen: r.top >= 0 && r.top + 12 <= innerHeight && r.left >= 6 }; }"""
+            def qt_well(pg, post):
+                at = pg.evaluate(QT_WELL, post)
+                if not at or not at["seen"]:
+                    return at
+                im = Image.open(io.BytesIO(pg.screenshot(scale="device"))).convert("RGB")
+                k = im.width / pg.viewport_size["width"]
+                px = im.getpixel((int(at["pt"][0] * k), int(at["pt"][1] * k)))
+                gd = im.getpixel((int(at["beside"][0] * k), int(at["beside"][1] * k)))
+                h = at["page"].lstrip("#")
+                page = tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) if len(h) == 6 else None
+                want = tuple(round(0.06 * a + 0.94 * p) for a, p in zip((124, 92, 255), page)) if page else None
+                return {"hit": at["hit"], "painted": px, "want": want, "card": gd, "on_card": round(ratio(px, gd), 2),
+                        "shadow": at["shadow"], "border": at["border"]}
+            paints, lows, smalls, reads, fills, wells = {}, [], [], {}, {}, {}
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
                     tag = f"{screen} {scheme}"
@@ -1886,6 +1910,7 @@ with sync_playwright() as p:
                     got = [("the card with its line", pg.evaluate(READ, card(j11)))]
                     to(pg, card(q11), 160)
                     got.append(("a quote's small card", pg.evaluate(READ, card(q11))))
+                    wells[tag] = qt_well(pg, q11)
                     to(pg, card(qg11), 160)
                     got.append(("a gone one's", pg.evaluate(READ, card(qg11))))
                     to(pg, card(j11), 160)
@@ -1927,6 +1952,16 @@ with sync_playwright() as p:
                                           and all(abs(a - c) <= 3 for a, c in zip(v["painted"], v["card"]))
                                           for v in fills.values()),
                   json.dumps(fills))
+            check("inside a post's card on Home, a quote's small card is a well (the owner's \"d2 is good\", Nov 16):"
+                  " the page's ground touched with lilac painted inside it, set apart from the post's card by its"
+                  " colour alone (1.08:1 or more against the card's ground beside it: the mock's 1.14 light, 1.12"
+                  " dark), and no line round it, phone and desk, light and dark",
+                  len(wells) == 4 and all(v and v.get("hit") and v.get("want")
+                                          and all(abs(a - c) <= 3 for a, c in zip(v["painted"], v["want"]))
+                                          and v["on_card"] >= 1.08 and v["shadow"] == "none"
+                                          and v["border"] in ("rgba(0, 0, 0, 0)", "transparent")
+                                          for v in wells.values()),
+                  json.dumps(wells))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(11, exc)
 

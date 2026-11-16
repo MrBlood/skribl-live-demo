@@ -44880,3 +44880,141 @@ verify_a11y 444/444, verify_helpdemos 129/129. NOT RUN: the full battery
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: the little book's first page, the drawing's paper right
 up to the card's lilac line, no white between.
+
+## After v330 -- A post can be its words alone
+
+The owner, Nov 16 (Mountain Time): "a person should be allowed to post
+without a drawing or flip. don't you think?", then "I like your pick" to the
+words-only mock (https://claude.ai/artifact/RyMSAqZLS6ibcmxHufy8Vx): A,
+words on their own, quietly. A comment could already be just words, and so
+could a quote of someone's post; only a plain post could not.
+
+WHAT CHANGED:
+
+- MAKE: Post lights up when there are words or a drawing (compose.js can()).
+  A press with neither says "Say something or draw something first, then
+  Post.", the comment box's own words; Draw, Flip and Yours stay where they
+  are. The 500 characters stay the limit.
+- THE SERVER (posts.py): words alone are a post, as a quote of words alone
+  was; nothing at all is refused ("empty"), and a drawing that is not one
+  keeps its own refusal ("no_drawing", its own words now).
+- THE DATABASE'S RULE: a post has a drawing, a quote or words
+  (ck_social_posts_drawn_quoted_or_said, where ck_social_posts_drawn_or_quote
+  asked a drawing or a quote), on the site's chain at 7db36bfedef0: no row
+  read or written on the way up, PostgreSQL adding it NOT VALID; going down
+  refuses while a post of words alone is there, saying so before it changes
+  anything, as the reposts' revision does for a quote of words alone.
+- THE CARD is its words and its row, with no empty drawing box (the card's
+  template already left the drawing out of a quote of words alone), 185
+  points tall on a phone where a drawing's card is 425: drawings stay the big
+  things on Home. Its own page is the words and the comments under them. The
+  Gallery, which holds drawings, never shows it.
+
+PAD AND FLIP: not for them. The editors are where drawings are made; a
+post's words are written in Make.
+
+CONTRAST: no new colour. The one new sentence is the comment box's, in the
+composer's own words' ink.
+
+THE CHECKS, each shown red by a break of its own, the tree as built green
+beside them: verify_socialposts 19 (new): words alone posted from Make,
+landing on their page, stored with no drawing and no quote, its card the
+words and the row and shorter than a drawing's, never in the Gallery (red:
+Make's Post as before; the endpoint as before; the database's rule as
+before); verify_socialposts 1 and 6, a post of nothing refused kindly and a
+drawing that is not one refused with its own words (red: the endpoint as
+before); verify_composer 3, Post dim with nothing and lit once there are
+words, a press with neither saying so (red: Make's Post as before; its word
+as before); verify_socialauth 14, the revision's PostgreSQL DDL read offline
+(the old rule dropped, the new added NOT VALID, nothing read or written, the
+old back going down; red: the new rule added VALID, a scan under the lock)
+and on SQLite with posts in it (a post of words taken and a post of nothing
+refused; down refused while one is there, the table whole; then down, the
+old rule back; red: the way down without its refusal).
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3), eleven ok in 13.1
+minutes on the tree with #944 under it (its edge on a post's drawing, and
+verify_socialposts 17's rows): verify_socialposts 99/99, verify_composer
+39/39, verify_socialauth 73/73, verify_socialreposts 50/50,
+verify_socialprofile 94/94, verify_sociallikes 100/100,
+verify_socialmentions 51/51, verify_migrations 86/86, verify_social 45/45,
+verify_docs 144/144, and verify_socialcomments 96/96 (a comment's words and
+a post's share the card). NOT RUN: the full battery (main's run after the
+merge does it).
+
+ON A REAL POSTGRESQL, by hand (16.15, a throwaway cluster here). CI's
+PostgreSQL job migrated Skribl's chain only and built the site's tables from
+its models, so the deploy would have been this revision's first PostgreSQL.
+Skribl's chain up and checked on an empty database, as CI's step; the site's
+chain up on one, then Skribl's beside it, stamped at this head, its rule the
+wider one, NOT VALID; with posts in it: before it, the old rule (a drawn post
+taken, a post of words refused); up, the drawn post kept, a post of words
+alone taken, a post of nothing refused, the rule NOT VALID; down refused
+while a post of words alone is there, saying so, the table, the rule and the
+stamp unchanged; without it, down, the old rule back and the drawn post
+kept; up again. The check's first run read three rows red: it took
+social_posts to hold one CHECK, and the reposts' ck_social_posts_quotes_one
+stands beside it; read by name, green. Then verify_socialposts 97/97,
+verify_composer 39/39 and verify_socialauth 73/73 on it, as CI's PostgreSQL
+shards run them (run_harness.sh with its DATABASE_URL).
+
+AND CI NOW DOES THE SAME: the PostgreSQL job's migration step runs the
+site's chain after Skribl's on its empty database, up and checked. Shown
+both ways (on SQLite, where check reads the same): as built, it passes; a
+column added to a site model with no revision, "New upgrade operations
+detected", exit 255. `check` prints a SAWarning about 'not_valid' as it
+reads back a NOT VALID rule; main's tree does the same (the reposts' rule),
+so it is not this revision's, and it is harmless.
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: Make, a few words and nothing drawn: Post lit, and the
+post a card of words.
+
+## After v330 -- A quote sits deeper: inside a post's card, a well (D2)
+
+The owner, Nov 16, of Theo's quote of Mr. Bloob in dark: "shouldn't quote
+reposts have a slightly different color to make it seem like the thing they
+are reposting maybe sits a little deeper in the card?", then "d2 is good" to
+the quotes mock (https://claude.ai/artifact/1ABp8adYFPKF1ZdHUCxv8s): D2, a
+lilac well, over D1 (halfway from the card to the page, its line kept, which
+in light almost did not show). Inside a post's card the quote's small card
+was the card's colour on the card's colour, 1.00:1, only its line between.
+
+WHAT CHANGED (social.css): --quote-well, the page's ground with 6% of
+Skribl's lilac (rgb 124 92 255), one value for both themes since --page
+carries the theme; a quote's small card inside a post's card (Home, a
+person's page) wears it and no line, so the change of colour is its edge. On
+a post's own page a quote stays the raised card the owner chose on Nov 15.
+Make's quote, under the words of a quote being written, is not changed: it
+is a card (--card) on the sheet's own paper (--sheet-paper), set apart by
+its colour already, and the census the owner asked for the same afternoon
+found nothing there.
+
+PAD AND FLIP: not for them; quotes are the site's.
+
+CONTRAST, read off the paint: the well against its card 1.14:1 light, 1.12:1
+dark (the mock's figures; 1.00 before); every word on it at 4.5:1 or more
+(verify_socialreposts 11's census: the mock read its words 15.68 and 15.73,
+its @handle 6.6 and 9.62).
+
+THE CHECK, verify_socialreposts 11 (one new row): inside a post's card on
+Home, the well painted as asked, set apart from the card by its colour alone
+(1.08:1 or more against the card's ground beside it), and no line round it
+(no ring, its border transparent), phone and desk, light and dark. Each part
+shown red by a break of its own (SOCIALREPOSTS_PART=11, a fresh server
+each), the tree as built green beside them: the well taken away (card on
+card, 1.00:1, as main); its line kept; a stronger tint (12%, painted
+231 229 251 where 239 239 250 was asked). The well put on a post's own page
+too turns the Nov 15 row red ("a quote on its post's own page is a card"),
+which holds the well to a post's card.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3), seven ok in 9.4
+minutes on the tree with posts of words alone under it (it rides with them,
+the same cards on the same screen): verify_socialreposts 51/51,
+verify_socialposts 99/99, verify_socialprofile 94/94, verify_socialmentions
+51/51, verify_a11ypages 162/162, verify_composer 39/39, verify_docs
+144/144. NOT RUN: the full battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: Home, a quote post: the small card inside it a soft
+lilac tint with no line, in both themes.
