@@ -44880,3 +44880,65 @@ verify_a11y 444/444, verify_helpdemos 129/129. NOT RUN: the full battery
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: the little book's first page, the drawing's paper right
 up to the card's lilac line, no white between.
+
+## After v330 -- A post can be its words alone
+
+The owner, Nov 16 (Mountain Time): "a person should be allowed to post
+without a drawing or flip. don't you think?", then "I like your pick" to the
+words-only mock (https://claude.ai/artifact/RyMSAqZLS6ibcmxHufy8Vx): A,
+words on their own, quietly. A comment could already be just words, and so
+could a quote of someone's post; only a plain post could not.
+
+WHAT CHANGED:
+
+- MAKE: Post lights up when there are words or a drawing (compose.js can()).
+  A press with neither says "Say something or draw something first, then
+  Post.", the comment box's own words; Draw, Flip and Yours stay where they
+  are. The 500 characters stay the limit.
+- THE SERVER (posts.py): words alone are a post, as a quote of words alone
+  was; nothing at all is refused ("empty"), and a drawing that is not one
+  keeps its own refusal ("no_drawing", its own words now).
+- THE DATABASE'S RULE: a post has a drawing, a quote or words
+  (ck_social_posts_drawn_quoted_or_said, where ck_social_posts_drawn_or_quote
+  asked a drawing or a quote), on the site's chain at 7db36bfedef0: no row
+  read or written on the way up, PostgreSQL adding it NOT VALID; going down
+  refuses while a post of words alone is there, saying so before it changes
+  anything, as the reposts' revision does for a quote of words alone.
+- THE CARD is its words and its row, with no empty drawing box (the card's
+  template already left the drawing out of a quote of words alone), 185
+  points tall on a phone where a drawing's card is 425: drawings stay the big
+  things on Home. Its own page is the words and the comments under them. The
+  Gallery, which holds drawings, never shows it.
+
+PAD AND FLIP: not for them. The editors are where drawings are made; a
+post's words are written in Make.
+
+CONTRAST: no new colour. The one new sentence is the comment box's, in the
+composer's own words' ink.
+
+THE CHECKS, each shown red by a break of its own, the tree as built green
+beside them: verify_socialposts 19 (new): words alone posted from Make,
+landing on their page, stored with no drawing and no quote, its card the
+words and the row and shorter than a drawing's, never in the Gallery (red:
+Make's Post as before; the endpoint as before; the database's rule as
+before); verify_socialposts 1 and 6, a post of nothing refused kindly and a
+drawing that is not one refused with its own words (red: the endpoint as
+before); verify_composer 3, Post dim with nothing and lit once there are
+words, a press with neither saying so (red: Make's Post as before; its word
+as before); verify_socialauth 14, the revision's PostgreSQL DDL read offline
+(the old rule dropped, the new added NOT VALID, nothing read or written, the
+old back going down; red: the new rule added VALID, a scan under the lock)
+and on SQLite with posts in it (a post of words taken and a post of nothing
+refused; down refused while one is there, the table whole; then down, the
+old rule back; red: the way down without its refusal).
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3), ten ok in 10.6
+minutes: verify_socialposts 86/86, verify_composer 39/39, verify_socialauth
+73/73, verify_socialreposts 50/50, verify_socialprofile 94/94,
+verify_sociallikes 100/100, verify_socialmentions 51/51, verify_migrations
+86/86, verify_social 45/45, verify_docs 144/144. NOT RUN: the full battery
+(main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site;
+PostgreSQL itself (CI's postgres lane runs the chain). The one-glance tell:
+Make, a few words and nothing drawn: Post lit, and the post a card of words.
