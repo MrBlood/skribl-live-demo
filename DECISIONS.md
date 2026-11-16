@@ -44939,6 +44939,30 @@ verify_sociallikes 100/100, verify_socialmentions 51/51, verify_migrations
 86/86, verify_social 45/45, verify_docs 144/144. NOT RUN: the full battery
 (main's run after the merge does it).
 
-NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site;
-PostgreSQL itself (CI's postgres lane runs the chain). The one-glance tell:
-Make, a few words and nothing drawn: Post lit, and the post a card of words.
+ON A REAL POSTGRESQL, by hand (16.15, a throwaway cluster here). CI's
+PostgreSQL job migrated Skribl's chain only and built the site's tables from
+its models, so the deploy would have been this revision's first PostgreSQL.
+Skribl's chain up and checked on an empty database, as CI's step; the site's
+chain up on one, then Skribl's beside it, stamped at this head, its rule the
+wider one, NOT VALID; with posts in it: before it, the old rule (a drawn post
+taken, a post of words refused); up, the drawn post kept, a post of words
+alone taken, a post of nothing refused, the rule NOT VALID; down refused
+while a post of words alone is there, saying so, the table, the rule and the
+stamp unchanged; without it, down, the old rule back and the drawn post
+kept; up again. The check's first run read three rows red: it took
+social_posts to hold one CHECK, and the reposts' ck_social_posts_quotes_one
+stands beside it; read by name, green. Then verify_socialposts 97/97,
+verify_composer 39/39 and verify_socialauth 73/73 on it, as CI's PostgreSQL
+shards run them (run_harness.sh with its DATABASE_URL).
+
+AND CI NOW DOES THE SAME: the PostgreSQL job's migration step runs the
+site's chain after Skribl's on its empty database, up and checked. Shown
+both ways (on SQLite, where check reads the same): as built, it passes; a
+column added to a site model with no revision, "New upgrade operations
+detected", exit 255. `check` prints a SAWarning about 'not_valid' as it
+reads back a NOT VALID rule; main's tree does the same (the reposts' rule),
+so it is not this revision's, and it is harmless.
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: Make, a few words and nothing drawn: Post lit, and the
+post a card of words.
