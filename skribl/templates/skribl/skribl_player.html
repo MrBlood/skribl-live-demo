@@ -38,8 +38,14 @@
      empty cache) could arrive with a cut, and Chrome reported the dropped
      fade as an error on the page (main after #889, #892's full run). #}
   {% include 'skribl/_skribl_theme_boot.html' %}
+  {#- From the Home Screen, marked before the first paint: the strip at the top
+      of the body (player.css, THE APP'S TOP EDGE). -#}
+  {% include 'skribl/_skribl_app_boot.html' %}
 </head>
 <body class="player-mode{% if skribl_home %} has-home{% endif %}">
+  {#- THE APP'S TOP EDGE: a strip of the page's own ground, from the Home
+      Screen alone, so iOS 26 lays no glass blur over the top of the page. -#}
+  <div class="app-edge" aria-hidden="true"></div>
   {#- THE WAY BACK to the site this Skribl sits in (the owner's yes on the
       mock): a small pill at the top left, only when the site has named its
       home (create_blueprint's home_url). _top, so a host that frames this

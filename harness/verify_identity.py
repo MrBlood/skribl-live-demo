@@ -1420,18 +1420,23 @@ check("compose mode, where nothing is posted yet, has no band and no posted line
       _cmp and all(v == (False, False) for v in _cmp.values()), str(_cmp))
 
 # --------------------------------------------------------------------------
-print("\nTHE APP'S TOP EDGE — the Pad's and Flip's, from the Home Screen")
+print("\nTHE APP'S TOP EDGE — the Pad's, Flip's, the Library's, the Gallery's and a link page's, from the Home Screen")
 # The owner, Nov 15, "all yes": the Pad and Flip get the Blooby app's top edge
-# (#919, verify_socialapp 9), since they open inside it. iOS 26's glass is not
-# in this box, so what is asked is what keeps it off: in the app (an iPhone's
-# Home Screen app says navigator.standalone), each editor's top 6px are its
-# own ground (--surface-raised, as the page resolves it) over something put
-# under them at the header's level, which shows just below; the mark that
-# shows the strip is on <html> as <body> is parsed, before the first paint,
-# and lib/homescreen.js's own answer agrees; a tab has none of it; the ⋯
-# sheet's scrim dims it, a tap at the top edge finds it (WebKit finds the box
-# that way), and every control in the header starts below it and takes its
-# own tap. All read off the paint and the hit test, never the strip's style.
+# (#919, verify_socialapp 9), since they open inside it; Nov 16, "all yes":
+# the Library, Skribl's Gallery and a drawing's link page too, which open
+# inside it as well. iOS 26's glass is not in this box, so what is asked is
+# what keeps it off: in the app (an iPhone's Home Screen app says
+# navigator.standalone), each page's top 6px are its own ground (the editors'
+# and the link page's --surface-raised, the Library's and the Gallery's
+# --base, as the page resolves it) over something put under them at the
+# header's level, which shows just below; the mark that shows the strip is on
+# <html> as <body> is parsed, before the first paint, and on the editors
+# lib/homescreen.js's own answer agrees (the other three do not load it); a tab
+# has none of it; a sheet's scrim dims it, a tap at the top edge finds it
+# (WebKit finds the box that way), and every control in the header starts
+# below it and takes its own tap; the link page's full screen covers it (on an
+# iPhone the stand-in, which pins the drawing over the page). All read off the
+# paint and the hit test, never the strip's style.
 _EDGE_UA = ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 "
             "(KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
 _EDGE_APP = "Object.defineProperty(navigator, 'standalone', { get: () => true });"
@@ -1441,7 +1446,10 @@ _EDGE_AT_BODY = """(() => { const mo = new MutationObserver(() => { if (!documen
 _EDGE_UNDER = """() => { const d = document.createElement('div');
     d.style.cssText = 'position:fixed;top:0;left:0;right:0;height:40px;background:#ff0000;z-index:42;pointer-events:none';
     document.body.appendChild(d); }"""
-_EDGE_GROUND = "() => getComputedStyle(document.documentElement).getPropertyValue('--surface-raised').trim()"
+# The page's own ground: the editors' and the link page's token, else the
+# Library's and the Gallery's (each page defines one of the two).
+_EDGE_GROUND = """() => { const cs = getComputedStyle(document.documentElement);
+    return (cs.getPropertyValue('--surface-raised').trim() || cs.getPropertyValue('--base').trim()); }"""
 _EDGE_HITS = """() => { const at = document.elementFromPoint(201, 3);
     const ctl = [...document.querySelectorAll('button, a[href], [role=button], input, select, textarea')].filter(e => {
         const r = e.getBoundingClientRect(); if (!r.width || !r.height || r.top > 70 || r.bottom < 0) return false;
@@ -1450,6 +1458,9 @@ _EDGE_HITS = """() => { const at = document.elementFromPoint(201, 3);
       .map(e => { const r = e.getBoundingClientRect(); const h = document.elementFromPoint(r.x + r.width / 2, r.top + 1);
         return { id: e.id || e.className.toString().split(' ')[0], top: Math.round(r.top), mine: !!h && (h === e || e.contains(h)) }; });
     return { edge: !!at && at.classList.contains('app-edge'), controls: ctl }; }"""
+# No Fullscreen API, as on an iPhone: lib/immersive.js takes its stand-in.
+_EDGE_NO_FS = """Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get() { return false; } });
+Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { get() { return false; } });"""
 
 
 def _edge_rows(pg_):
@@ -1470,11 +1481,29 @@ def _edge_ctx(b_, scheme, app):
     return c_
 
 
+def _edge_post():
+    """A drawing, for its link page."""
+    n = 10
+    pts = [{"x": 90 + i * 50, "y": 160 + (i % 3) * 40, "color": "#7c5cff", "size": 12, "t": i * 100}
+           for i in range(n)]
+    body = {"title": "The app's top edge", "version": 2, "schemaVersion": 2, "visibility": "public",
+            "playbackMode": "replay", "frames": [{"strokes": pts, "strokeGroups": [n]}],
+            "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
+    req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode())["id"]
+
+
+_EDGE_LINK = "/s/" + _edge_post()
+_EDGE_EDITORS = ("/skribl-pad", "/flip")
+_EDGE_PAGES = _EDGE_EDITORS + ("/library", "/gallery", _EDGE_LINK)
+
 with sync_playwright() as p:
     b = p.chromium.launch()
     _app, _tab, _mark = {}, {}, {}
     for _scheme in ("light", "dark"):
-        for _path in ("/skribl-pad", "/flip"):
+        for _path in _EDGE_PAGES:
             for _is_app in (True, False):
                 c = _edge_ctx(b, _scheme, _is_app)
                 pg = c.new_page()
@@ -1482,33 +1511,39 @@ with sync_playwright() as p:
                 pg.wait_for_timeout(600)
                 _ground = pg.evaluate(_EDGE_GROUND)
                 _m = pg.evaluate("() => [window.__appMarkAtBody === true,"
-                                 " !!(window.SkriblHomeScreen && SkriblHomeScreen.isStandalone()),"
+                                 " window.SkriblHomeScreen ? SkriblHomeScreen.isStandalone() : null,"
                                  " document.documentElement.hasAttribute('data-skribl-app')]")
                 pg.evaluate(_EDGE_UNDER)
                 pg.wait_for_timeout(150)
                 _rows = _edge_rows(pg)
-                _key = f"{_scheme} {_path}"
+                _key = f"{_scheme} {_path.split('/')[1]}"
                 if _is_app:
                     _app[_key] = {"ground": _ground, "edge": [sorted(r) for r in _rows[:6]], "below": sorted(_rows[8])[:3]}
                 else:
                     _tab[_key] = [sorted(r)[:2] for r in _rows[:6]]
-                _mark[_key + (" app" if _is_app else " tab")] = _m
+                _mark[_key + (" app" if _is_app else " tab")] = (_path in _EDGE_EDITORS, _m)
                 c.close()
     _red = (255, 0, 0)
-    check("in the app, the Pad's and Flip's top 6px are their own ground (--surface-raised), light and dark, over what"
-          " is put under them at the header's level, which shows just below",
-          len(_app) == 4 and all(all(r == [_hx(v["ground"])] for r in v["edge"]) and _red in v["below"]
-                                 for v in _app.values()),
-          json.dumps(_app)[:700])
-    check("...the mark that shows it is on <html> as <body> is parsed, before the first paint, and"
-          " lib/homescreen.js's own answer agrees",
-          all(v == [True, True, True] for k, v in _mark.items() if k.endswith(" app")), json.dumps(_mark))
-    check("a browser tab never has it: the editor runs up to the top edge, and nothing marks the page an app",
-          len(_tab) == 4 and all(all(_red in r for r in v) for v in _tab.values())
-          and all(v == [False, False, False] for k, v in _mark.items() if k.endswith(" tab")),
-          json.dumps(_tab)[:500])
-    _sheet = {}
-    for _path, _opener in (("/skribl-pad", "#menuBtn"), ("/flip", "#moreBtn")):
+    check("in the app, the Pad's, Flip's, the Library's, the Gallery's and a link page's top 6px are their own"
+          " ground, light and dark, over what is put under them at the header's level, which shows just below",
+          len(_app) == 10 and all(v["ground"] and all(r == [_hx(v["ground"])] for r in v["edge"]) and _red in v["below"]
+                                  for v in _app.values()),
+          json.dumps(_app)[:900])
+    check("...the mark that shows it is on <html> as <body> is parsed, before the first paint, and on the"
+          " editors lib/homescreen.js's own answer agrees",
+          len([k for k in _mark if k.endswith(" app")]) == 10
+          and all(v == [True, True if ed else None, True] for k, (ed, v) in _mark.items() if k.endswith(" app")),
+          json.dumps(_mark))
+    check("a browser tab never has it: each page runs up to the top edge, and nothing marks the page an app",
+          len(_tab) == 10 and all(all(_red in r for r in v) for v in _tab.values())
+          and all(v == [False, False if ed else None, False] for k, (ed, v) in _mark.items() if k.endswith(" tab")),
+          json.dumps(_tab)[:600])
+    # The floor is the controls each header always has on a phone: the Pad's
+    # and Flip's two (Post takes no tap on an empty canvas), the Gallery's
+    # three (its mark, Make one, its menu), the Library's menu alone.
+    _sheet, _floor = {}, {"/skribl-pad": 2, "/flip": 2, "/library": 1, "/gallery": 3}
+    for _path, _opener in (("/skribl-pad", "#menuBtn"), ("/flip", "#moreBtn"),
+                           ("/library", "#pageMenuBtn"), ("/gallery", "#pageMenuBtn")):
         c = _edge_ctx(b, "light", True)
         pg = c.new_page()
         browsing.goto(pg, BASE, _path)
@@ -1521,13 +1556,39 @@ with sync_playwright() as p:
         _dim = Image.open(io.BytesIO(pg.screenshot())).convert("RGB").getpixel((201, 3))
         _sheet[_path] = {"ground": _ground, "dimmed": _dim, "hit": _hit}
         c.close()
-    check("...under the sheets and out of the header's way, Pad and Flip: the ⋯ sheet's scrim dims it as it dims the"
-          " page, a tap at the top edge finds it (as WebKit finds the box), and every control in the header starts"
-          " below it and takes its own tap",
-          len(_sheet) == 2 and all(
-              sum(v["dimmed"]) < sum(v["ground"]) - 60 and v["hit"]["edge"] and len(v["hit"]["controls"]) >= 2
-              and all(x["top"] >= 6 and x["mine"] for x in v["hit"]["controls"]) for v in _sheet.values()),
-          json.dumps(_sheet)[:800])
+    check("...under the sheets and out of the header's way, Pad, Flip, the Library and the Gallery: the menu's"
+          " scrim dims it as it dims the page, a tap at the top edge finds it (as WebKit finds the box), and every"
+          " control in the header starts below it and takes its own tap",
+          len(_sheet) == 4 and all(
+              sum(v["dimmed"]) < sum(v["ground"]) - 60 and v["hit"]["edge"] and len(v["hit"]["controls"]) >= _floor[k]
+              and all(x["top"] >= 6 and x["mine"] for x in v["hit"]["controls"]) for k, v in _sheet.items()),
+          json.dumps(_sheet)[:900])
+    # The link page has no sheet over its top and nothing to press there (the
+    # way back to a site is at 12px, and only where the host named its home);
+    # what lies over it is its own full screen, which on an iPhone is the
+    # stand-in pinned over the page, so the stand-in is what is asked here.
+    _full = {}
+    for _scheme in ("light", "dark"):
+        c = _edge_ctx(b, _scheme, True)
+        c.add_init_script(_EDGE_NO_FS)
+        pg = c.new_page()
+        browsing.goto(pg, BASE, _EDGE_LINK)
+        pg.wait_for_selector("#playerFullBtn:not([hidden])", timeout=8000)
+        pg.wait_for_timeout(400)
+        _hit = pg.evaluate(_EDGE_HITS)
+        pg.click("#playerFullBtn")
+        pg.wait_for_timeout(700)
+        _over = pg.evaluate("""() => { const at = document.elementFromPoint(201, 3);
+            return { tag: at ? at.className.toString().split(' ')[0] || at.tagName : null,
+                     edge: !!at && at.classList.contains('app-edge'),
+                     inFull: !!at && !!at.closest('.is-immersive-page, :fullscreen') }; }""")
+        _full[_scheme] = {"before": _hit, "full": _over}
+        c.close()
+    check("...and on a link page, a tap at the top edge finds it, nothing there to press starts inside it, and its"
+          " full screen (an iPhone's stand-in) covers it, light and dark",
+          len(_full) == 2 and all(v["before"]["edge"] and all(x["top"] >= 6 and x["mine"] for x in v["before"]["controls"])
+                                  and not v["full"]["edge"] and v["full"]["inFull"] for v in _full.values()),
+          json.dumps(_full))
     b.close()
 
 bad = [r for r in results if not r[0]]

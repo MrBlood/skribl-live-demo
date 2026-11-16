@@ -1144,6 +1144,34 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .post-watch { animation: none; }
 }
+
+/* THE APP'S TOP EDGE, THE PAD'S AND FLIP'S (the owner, Nov 15, "all yes":
+   they get the Blooby app's, #919, which made "blooby." sharp at the top of
+   the site's pages). iOS 26 lays a glass blur over the top of a Home Screen
+   web app (Liquid Glass's scroll edge effect, fading down about 40pt), and
+   the Pad and Flip open inside the Blooby app (its manifest's scope is the
+   folder they share with the site), so it would soften the header's top.
+   WebKit leaves it off where the top edge is a fixed, full-width box with an
+   opaque ground, found by hitting a point a few pixels inside the top edge,
+   and takes the top's colour from it. This strip is 6px of the editors' own
+   ground (--surface-raised, the site's --page too), in the app alone
+   (html[data-skribl-app], set before the first paint by
+   _skribl_app_boot.html and again by lib/homescreen.js). Over the header
+   (42), under the popovers (44 on) and every sheet, whose scrims dim it;
+   full screen covers it. Nothing to press starts in its 6px: the header's
+   controls begin below them. A tab never has it. Not testable here (no
+   iPhone engine): the owner's phone said the site's works.
+   A DRAWING'S LINK PAGE WEARS IT TOO (the owner, Nov 16, "all yes"; it opens
+   inside the app as well): these two rules reach it in player.css, listed
+   live in css_live.json since only the app shows the strip. Its top is the
+   Pad's ground, and nothing to press starts there (the way back to the site
+   is at 12px); its full screen covers the strip. The Library and the Gallery
+   wear their own (pagemenu.css). */
+.app-edge { display: none; }
+html[data-skribl-app] .app-edge {
+  display: block; position: fixed; z-index: 43; inset: 0 0 auto; height: 6px;
+  background: var(--surface-raised);
+}
 /* Mobile: bottom sheet */
 @media (max-width: 640px) {
   .menu-item { padding: 15px 14px; }}

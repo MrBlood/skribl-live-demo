@@ -18,6 +18,9 @@
      nonce'd theme boot), so the logic is the self-hosted gallery.js. #}
   {% include 'skribl/_skribl_app_identity.html' %}
   {% include 'skribl/_skribl_theme_boot.html' %}
+  {# From the Home Screen, marked before the first paint: the strip below
+     (pagemenu.css, THE APP'S TOP EDGE). #}
+  {% include 'skribl/_skribl_app_boot.html' %}
   {% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets %}
   {% from 'skribl/_skribl_gallery_section.html' import skribl_gallery_section %}
   {{ skribl_inline_assets() }}
@@ -668,6 +671,10 @@
    What stays here is the page's own: lib/postedui.js reads the shared-cache
    flag off <body>. #}
 <body{% if skribl_shared_cache %} data-skribl-shared-cache="1"{% endif %}>
+{# THE APP'S TOP EDGE: a strip of the page's own ground, from the Home Screen
+   alone, so iOS 26 lays no glass blur over the top of the page (pagemenu.css;
+   _skribl_app_boot.html). #}
+<div class="app-edge" aria-hidden="true"></div>
 <div class="wrap">
   <header class="top">
     <a class="brand" href="{{ url_for('.skribl_editor') }}" aria-label="Skribl">

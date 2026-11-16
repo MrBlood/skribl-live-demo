@@ -4888,10 +4888,16 @@ body.player-mode #canvasEmptyHint { display: none !important; }
    (42), under the popovers (44 on) and every sheet, whose scrims dim it;
    full screen covers it. Nothing to press starts in its 6px: the header's
    controls begin below them. A tab never has it. Not testable here (no
-   iPhone engine): the owner's phone said the site's works. */
+   iPhone engine): the owner's phone said the site's works.
+   A DRAWING'S LINK PAGE WEARS IT TOO (the owner, Nov 16, "all yes"; it opens
+   inside the app as well): these two rules reach it in player.css, listed
+   live in css_live.json since only the app shows the strip. Its top is the
+   Pad's ground, and nothing to press starts there (the way back to the site
+   is at 12px); its full screen covers the strip. The Library and the Gallery
+   wear their own (pagemenu.css). */
 .app-edge { display: none; }
 html[data-skribl-app] .app-edge {
-  display: block; position: fixed; z-index: 43; top: 0; left: 0; right: 0; height: 6px;
+  display: block; position: fixed; z-index: 43; inset: 0 0 auto; height: 6px;
   background: var(--surface-raised);
 }
 /* Mobile: bottom sheet */
