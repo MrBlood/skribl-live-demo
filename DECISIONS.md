@@ -43712,3 +43712,44 @@ gone (404).
 
 THE AFFECTED SUITES: verify_docs 144/144 (the documents' file names). NOT
 RUN: the full battery (main's run after the merge does it).
+
+## After v330 -- Skribl's own Gallery stands on the Pad's ground
+
+The owner, Nov 15 (Mountain Time), about 6:00 PM, to the polish pass's first
+mock (https://claude.ai/artifact/8cvZ1wYuYpxrUWW1dGfTjM, "The edges"), whose
+second question was whether Skribl's own Gallery should follow the Library
+onto the Pad's ground: "all yes". The last session's open list carried it:
+/gallery, from the Pad's menu, still stood on the ground the Library left in
+#922.
+
+WHAT CHANGED: skribl_gallery.html's --base is the editors' own ground
+(styles.css --surface-raised), #f6f8fa light (was #fbfcfd) and #0f1218 dark
+(was #0b0d12), as the Library's is since #922. The browser's bar keeps
+Skribl's identity ground (core.THEME_GROUND), as the Pad's and the
+Library's do. gallerysection.css, generated from /gallery's own rules
+(cssgraph.py --emit), follows, so a host's Gallery section stands on the
+same ground; the player's CSS and the band's are unchanged.
+
+PAD AND FLIP: unchanged; the Gallery joins their ground, and the Library's.
+
+CONTRAST (WCAG, the page's own words on the ground they stand on; the cards'
+words are on the cards, unchanged): the first ink 16.86:1 light and 16.56
+dark (17.47 and 17.17 before), the second 7.1 and 8.87 (7.36 and 9.2), the
+small violet words 7.75 and 9.89 (8.04 and 10.25).
+
+THE CHECKS, each shown red by a break of its own in a throwaway copy, with
+the untouched tree green beside it (control 4/4): verify_gallery 5's theme
+row, which asked the page's ground to be the theme-color, is two rows: the
+Gallery's ground is the Pad's, as the Pad resolves --surface-raised, light
+and dark (red: the old ground back, both themes); and the browser's bar
+follows into each theme in Skribl's own ground, as on the Pad (red: the
+bar's light taking the page's ground). verify_gallery puts the repository on
+its path to read core.THEME_GROUND, as verify_library does.
+
+THE FOUR. Kind: nothing moves; the page you open from the Pad is the Pad's
+own ground. Simple: one ground for the Pad, Flip, the Library and the
+Gallery. Powerful and playful: the drawings' cards read as they did.
+
+NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell: the
+Gallery from the Pad's ⋯ in light, the page behind the cards the Pad's soft
+grey, not near-white.

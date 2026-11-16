@@ -41,6 +41,8 @@ from assertions import make_check
 import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))          # the theme section reads skribl.core.THEME_GROUND
 
 try:
     from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
@@ -496,7 +498,20 @@ with sync_playwright() as sp:
           f"{st['ink']} pixels after {_waited:.1f}s")
 
     # THE THEME: a Skribl page, so the ground follows the app's theme, and the
-    # browser chrome (the theme-color meta) follows the page.
+    # browser chrome (the theme-color meta) follows the page into each theme.
+    # THE PAD'S GROUND (the owner, Nov 15, "all yes"): the page stood on
+    # Skribl's identity ground, a breath lighter in light and darker in dark
+    # than the Pad it opens from; it stands on the editors' own now, as the
+    # Library does since #922. The browser's bar keeps that identity ground
+    # (core.THEME_GROUND, as every Skribl page's, verify_identity), as the
+    # Pad's does. The Pad's ground is read off the Pad itself, as it resolves
+    # --surface-raised, never typed here.
+    from skribl.core import THEME_GROUND as _TG  # noqa: E402 (ROOT is on the path above)
+    _pad_ground = {}
+    for theme in ("dark", "light"):
+        pg.goto(BASE + "/skribl-pad?theme=" + theme, wait_until="load")
+        _pad_ground[theme] = pg.evaluate(
+            "() => getComputedStyle(document.documentElement).getPropertyValue('--surface-raised').trim().toLowerCase()")
     for theme in ("dark", "light"):
         pg.goto(BASE + "/gallery?theme=" + theme, wait_until="load")
         pg.wait_for_timeout(500)
@@ -505,7 +520,11 @@ with sync_playwright() as sp:
                 return '#' + r.map(v => v.toString(16).padStart(2, '0')).join(''); };
             return { meta: m.content.toLowerCase(), body: hex(getComputedStyle(document.body).backgroundColor),
                      attr: document.documentElement.getAttribute('data-theme') }; }""")
-        check(f"{theme}: the page ground is the meta's theme colour", t["meta"] == t["body"], str(t))
+        check(f"{theme}: the Gallery's ground is the Pad's, the editors' own (--surface-raised as the Pad resolves it)",
+              t["attr"] == theme and bool(_pad_ground.get(theme)) and t["body"] == _pad_ground[theme],
+              f"{t} vs the Pad's {_pad_ground.get(theme)}")
+        check(f"{theme}: ...and the browser's bar follows into the theme in Skribl's own ground, as on the Pad",
+              t["meta"] == _TG[theme], f"meta {t['meta']} vs {_TG[theme]}")
     pg.close()
 
     # ------------------------------------------------------------ section 6

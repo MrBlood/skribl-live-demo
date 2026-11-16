@@ -43,7 +43,12 @@
        Not one rule touches .skribl-inline: the component is the component. */
     :root {
       color-scheme: dark;
-      --base: {{ skribl_theme_ground.dark }};
+      /* The page's ground is the editors' own, Pad's and Flip's column
+         (styles.css --surface-raised), as the Library's is since #922, so
+         the Gallery, the Library and the Pad are one ground (the owner,
+         Nov 15, "all yes"). The browser's bar keeps Skribl's own
+         (core.THEME_GROUND, the app's identity), as the Pad's does. */
+      --base: #0f1218;
       --panel: #13161c;
       --control: #171b23;
       --control-hi: #1c212c;
@@ -76,7 +81,7 @@
     }
     :root[data-theme="light"] {
       color-scheme: light;
-      --base: {{ skribl_theme_ground.light }};
+      --base: #f6f8fa;   /* the editors' ground (styles.css --surface-raised) */
       --panel: #ffffff;
       --control: #f1f3f7;
       --control-hi: #e7eaf0;
