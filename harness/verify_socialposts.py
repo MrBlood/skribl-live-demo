@@ -3664,7 +3664,23 @@ print("PLAN " + json.dumps(out))
                             continue
                         im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
                         x, y = round(r[0] * 3), round((r[1] + r[3] / 2) * 3)
-                        art[f"{scheme} {sel}"] = _line1(im, [(i, y) for i in range(x - 6, x + 6)])
+                        got = _line1(im, [(i, y) for i in range(x - 6, x + 6)])
+                        # ...and by its mechanism, as the link page's edges are read:
+                        # the player's own border transparent (a thick line beside a
+                        # thin one reads as one thin line), and the line one screen
+                        # pixel wide by its own measure, its widest unblurred shadow.
+                        mech = pg.evaluate("""(s) => { const c = getComputedStyle(document.querySelector(s));
+                            const a = (c.borderLeftColor.match(/[\\d.]+/g) || []).map(Number);
+                            const line = (parseFloat(c.borderLeftWidth) || 0) > 0 && (a.length < 4 ? a.length > 0 : a[3] > 0);
+                            let w = null;
+                            for (const one of c.boxShadow.split(/,(?![^()]*\\))/)) {
+                              const v = (one.replace(/[a-z]+\\([^)]*\\)/g, '').match(/-?[\\d.]+(?=px)/g) || []).map(Number);
+                              if (v.length >= 2 && (v.length < 3 || v[2] === 0)) w = Math.max(w || 0, Math.abs(v[0]), Math.abs(v[1]), Math.abs(v[3] || 0));
+                            }
+                            return { border: line ? c.borderLeftColor : null, w: w }; }""", sel)
+                        if mech["border"] or mech["w"] is None or abs(mech["w"] * 3 - 1) > 0.05:
+                            got = f"{got} and {mech}"
+                        art[f"{scheme} {sel}"] = got
                         if path == "/social/":
                             # The lift: just under the box, against the same with its
                             # shadow cut to its line.
