@@ -2027,8 +2027,11 @@ with sync_playwright() as p:
             # more): its fill against the ground that shows round it (past any
             # wrapper its own size) must differ by 1.08:1 or more. Not counted: a box
             # with a soft lift (its shadow sets it apart), one on a drawing or a
-            # picture (its ground is what the picture paints), one its own picture
-            # fills, a dashed outline (an "add" place is an outline), and fields.
+            # picture (its ground is what the picture paints), a picture's own box
+            # (the picture four fifths of it or more; and a drawing's plate,
+            # .gal-pic, whose ground is the drawing's own paper by plate_ground,
+            # cropped to the drawing so a sparse one sits small in it), a dashed
+            # outline (an "add" place is an outline), and fields.
             JUST = r"""(where) => {
               const rgba = s => { if (!s) return null; const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
                 return m.length >= 3 ? [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1] : null; };
@@ -2063,7 +2066,7 @@ with sync_playwright() as p:
                 let g = e.parentElement;
                 while (g && g !== document.body && same(g, e)) g = g.parentElement;
                 const covers = m => { const q = m.getBoundingClientRect(); return q.left <= r.left + 1 && q.top <= r.top + 1 && q.right >= r.right - 1 && q.bottom >= r.bottom - 1; };
-                if ([...e.querySelectorAll('canvas, img, video')].some(m => { const q = m.getBoundingClientRect(); return q.width * q.height >= 0.8 * r.width * r.height; })) continue;
+                if (e.matches('.gal-pic') || [...e.querySelectorAll('canvas, img, video')].some(m => { const q = m.getBoundingClientRect(); return q.width * q.height >= 0.8 * r.width * r.height; })) continue;
                 if ([...(g || document.body).querySelectorAll('canvas, img, video')].some(m => !e.contains(m) && covers(m))) continue;
                 const text = (e.innerText || '').replace(/\s+/g, ' ').trim();
                 const pic = !!e.querySelector('img, canvas, video, .skribl-inline');

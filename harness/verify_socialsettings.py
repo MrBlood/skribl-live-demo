@@ -817,7 +817,7 @@ with sync_playwright() as p:
                       and r["tintOp"] > 0.99 and r["pill"][3] == 44 and same_colour(r["tint"], "rgba(124, 92, 255, 0.22)")
                       and same_colour(r["options"][0]["color"], "rgb(63, 39, 168)")
                       and all(same_colour(o["color"], "rgb(63, 71, 86)") for o in r["options"][1:])
-                      and same_colour(r["track"]["bg"], "rgb(255, 255, 255)") and same_colour(r["track"]["line"], "rgba(124, 92, 255, 0.34)")
+                      and same_colour(r["track"]["bg"], "rgba(124, 92, 255, 0.14)") and same_colour(r["track"]["line"], "rgba(124, 92, 255, 0.34)")
                       for r in rows.values()),
                   json.dumps({k: v and {x: v[x] for x in ("role", "name", "pressed", "placed", "under", "pill", "tint", "track")}
                               | {"inks": [o["color"] for o in v["options"]]} for k, v in rows.items()}))
