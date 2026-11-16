@@ -615,7 +615,11 @@ with sync_playwright() as sp:
     # top edge on the link page (Nov 16): the strip's two rules, 6px of the
     # page's own ground at the top, from the Home Screen alone. Spent value
     # and 25 B again.
-    _css_target = 43_720
+    #
+    # AND 1,377 B MORE, IN WRITING, at the owner's "all yes" to "The edges"
+    # (part four, Nov 16): the link page's lines one screen pixel. Spent
+    # value and 25 B again.
+    _css_target = 45_097
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")

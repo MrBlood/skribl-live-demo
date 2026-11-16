@@ -512,24 +512,76 @@ try:
         # line the screen can draw, its border kept, transparent, and a line of
         # --edge outside it. Read off the paint, at the owner's phone's 3x and
         # a desk's 2x, light and dark: across an edge, the screen pixels that
-        # are neither what is beside the box nor what is inside it. Every one
-        # was three at 3x (two at 2x): a round button, the way back, the More
-        # card and the line between its rows, the speed chips' card, the
-        # scrubber's bubble, the x in full screen, and the column's sides.
-        def _line(im, pts, side, inside):
+        # stand apart from BOTH their neighbours, which a line one screen pixel
+        # wide does, and a wider line (each of its pixels has a neighbour of
+        # its own colour) or a shadow's soft fall does not. Every one was three
+        # at 3x (two at 2x): a round button, the way back, the More card and the
+        # line between its rows, the speed chips' card, the scrubber's bubble,
+        # the x in full screen, and the column's sides. A first reading, of the
+        # pixels unlike both what is beside the box and what is inside, counted
+        # the More card's and the bubble's drop shadows: the instrument.
+        def _line(im, pts, side=None, inside=None):
             far = lambda c, d: max(abs(c[k] - d[k]) for k in range(3)) > 4
-            return sum(1 for q_ in pts if far(im.getpixel(q_), side) and far(im.getpixel(q_), inside))
+            px = [im.getpixel(q_) for q_ in pts]
+            return sum(1 for i in range(1, len(px) - 1) if far(px[i], px[i - 1]) and far(px[i], px[i + 1]))
 
         _BOX = "(s) => { const e = document.querySelector(s); if (!e || !e.getClientRects().length) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }"
 
-        def _left(pg, sel, k, at=0.5):
-            """The screen pixels of the line across the middle of the box's left side."""
-            r = pg.evaluate(_BOX, sel)
-            if not r:
+        _why = {}
+
+        def _ring(shadow):
+            """The widest unblurred shadow in a computed box-shadow, in CSS px:
+            a ring's spread, or a side's offset (the column's)."""
+            best = None
+            for one in re.split(r",(?![^()]*\))", shadow or ""):
+                v = [float(x_) for x_ in re.findall(r"(-?[\d.]+)px", re.sub(r"[a-z]+\([^)]*\)", "", one))]
+                if len(v) >= 2 and (len(v) < 3 or v[2] == 0):
+                    w_ = max(abs(x_) for x_ in v[:2] + v[3:4])
+                    best = w_ if best is None else max(best, w_)
+            return best
+
+        def _left(pg, sel, k, at=0.5, top=False):
+            """The screen pixels of the line across the middle of the box's left
+            side (or, top=True, across the middle of its top), the drawing
+            hidden for the photograph: a stroke beside the More card read as
+            lines of its own. The box where it is: Chrome puts a box's edges
+            on the screen's own pixels, and nudging it with a translate (which
+            Chrome does not put there) shared a line out over two."""
+            if not pg.evaluate(_BOX, sel):
                 return None
+            st = pg.add_style_tag(content="canvas, .player-poster { visibility: hidden !important; }")
+            pg.wait_for_timeout(120)
+            r = pg.evaluate(_BOX, sel)
             im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
-            x, y = round(r[0] * k), round((r[1] + r[3] * at) * k)
-            return _line(im, [(i, y) for i in range(x - 6, x + 6)], im.getpixel((x - 9, y)), im.getpixel((x + 9, y)))
+            st.evaluate("s => s.remove()")
+            if top:
+                x, y = round((r[0] + r[2] / 2) * k), round(r[1] * k)
+                pts = [(x, j) for j in range(y - 6, y + 6)]
+            else:
+                x, y = round(r[0] * k), round((r[1] + r[3] * at) * k)
+                pts = [(i, y) for i in range(x - 6, x + 6)]
+            n = _line(im, pts)
+            # AND NO LINE OF THE BORDER'S OWN BESIDE IT: a pixel reading sees a
+            # line one pixel wide and not a wide one next to it (the x with its
+            # 1px border back still wore the round buttons' line, and read 1),
+            # so the border that drew the old line is asked to be transparent.
+            bd = pg.evaluate("([s, t]) => { const c = getComputedStyle(document.querySelector(s));"
+                             " const w = parseFloat(t ? c.borderTopWidth : c.borderLeftWidth) || 0, k = t ? c.borderTopColor : c.borderLeftColor;"
+                             " const a = (k.match(/[\\d.]+/g) || []).map(Number); return w > 0 && (a.length < 4 ? a.length > 0 : a[3] > 0) ? k : null; }",
+                             [sel, top])
+            if bd:
+                n = f"{n} and a border line {bd}"
+            # ...AND THE LINE IS THE SCREEN'S PIXEL BY ITS OWN MEASURE: a round
+            # box's line one pixel too wide wears a soft outer pixel that also
+            # stands apart from its neighbours (the x, its line at 1px, read
+            # 1), so the line's own width is read too, the widest unblurred
+            # shadow, in screen pixels.
+            w = _ring(pg.evaluate("(s) => getComputedStyle(document.querySelector(s)).boxShadow", sel))
+            if w is None or abs(w * k - 1) > 0.05:
+                n = f"{n} and a line {w}px wide"
+            if n != 1:
+                _why[sel] = [round(r[0], 3), round(r[1], 3), [im.getpixel(q_) for q_ in pts]]
+            return n
 
         _NO_FS = ("Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get() { return false; } });"
                   "Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { get() { return false; } });")
@@ -564,7 +616,7 @@ try:
                 pg.mouse.down()
                 pg.mouse.move(sr[0] + sr[2] * 0.55, sr[1] + sr[3] / 2)
                 pg.wait_for_timeout(400)
-                _edges[f"{theme} the scrubber's bubble"] = _left(pg, ".player-bar .rl-bubble", 3)
+                _edges[f"{theme} the scrubber's bubble"] = _left(pg, ".player-bar .rl-bubble", 3, top=True)
                 pg.mouse.up()
                 pg.wait_for_timeout(300)
             pg.click("#playerFullBtn")
@@ -577,7 +629,7 @@ try:
         check("every outline on the link page is one screen pixel, light and dark: a round button, the way back to the"
               " site, the More card, the speed chips' card, the scrubber's bubble and the x in full screen (a phone at"
               " 3x), and the column's sides (a desk at 2x)",
-              len(_edges) == 14 and all(v == 1 for v in _edges.values()), json.dumps(_edges))
+              len(_edges) == 14 and all(v == 1 for v in _edges.values()), json.dumps(_edges) + " " + json.dumps(_why)[:1500])
         check("...and the line between the More card's rows is one screen pixel, light and dark",
               len(_rule) == 2 and all(v == 1 for v in _rule.values()), json.dumps(_rule))
 
