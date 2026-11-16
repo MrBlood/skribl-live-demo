@@ -101,6 +101,23 @@
 <script src="{{ skribl_asset('inlineplayer.js') }}" data-recolorplay="{{ skribl_asset('lib/recolorplay.js') }}" defer></script>
 {%- endmacro %}
 
+{#  A POST'S FULL SCREEN (the owner's "yes to A", Nov 16): what a page that
+    passes skribl_inline(full=...) loads, once, after skribl_inline_assets():
+    the link page's full screen, its band's sheets (fullband.css, fullbar.css)
+    and modules (lib/fullbar.js and what it reads), and lib/postfull.js, which
+    opens it from the button at the end of a post's line. A page that does not
+    call this shows no button and pays for none of it. #}
+{% macro skribl_full_assets() -%}
+<link rel="stylesheet" href="{{ skribl_asset('fullband.css') }}">
+<link rel="stylesheet" href="{{ skribl_asset('fullbar.css') }}">
+<link rel="stylesheet" href="{{ skribl_asset('postfull.css') }}">
+<script src="{{ skribl_asset('lib/chromefade.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/smartfade.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/fullbar.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/postfull.js') }}" defer></script>
+{%- endmacro %}
+
 {#  THE INSIDES, ONCE. A posted Skribl and an un-posted DRAFT differ only in
     their wrapper attributes and in whether there is a share card to show
     behind them; everything from the canvas down is the same player.
@@ -114,7 +131,7 @@
     drawing for a post (v322: "the loop button comes off the drawing"). Mute
     hides itself on a silent Skribl (.is-silent); loop stays, because a silent
     drawing still repeats. #}
-{% macro _skribl_inline_controls() -%}
+{% macro _skribl_inline_controls(full=false) -%}
   <div class="skribl-inline-controls">
     <button type="button" class="skribl-inline-mute"
             aria-pressed="true" aria-label="Unmute" title="Sound is off">
@@ -132,6 +149,14 @@
         <path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
       </svg>
     </button>
+{%- if full %}
+    <button type="button" class="skribl-inline-full" aria-label="Full screen" title="Full screen">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>
+        <path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+      </svg>
+    </button>
+{%- endif %}
   </div>
 {%- endmacro %}
 
@@ -162,7 +187,7 @@
   <div class="skribl-inline-err" hidden></div>
 {%- endmacro %}
 
-{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None, line_waits=false, marks=None) -%}
+{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None, line_waits=false, marks=None, full=false, full_meta=None) -%}
 {# is-muted and is-silent are the pre-script truth: sound is off by default, and
    nothing yet knows whether this Skribl has any. inlineplayer.js clears
    is-silent when the payload turns out to carry a loop.
@@ -208,7 +233,16 @@
    normal play (a `skribl:mark` event from the dot). Written onto the box, so
    the dots are there from the line's first paint; player.marks(list) changes
    them later. line=false has no line, so no marks. What a mark means is the
-   host's: Skribl never knows. #}
+   host's: Skribl never knows.
+
+   `full` (the owner's "yes to A", Nov 16) puts a full-screen button at the
+   end of the line, after Repeat, which opens the link page's full screen
+   around this player (lib/postfull.js; the page loads it with
+   skribl_full_assets(), and without it the button never shows).
+   `full_meta` is who drew it, for the full screen's corner: {"title": ...,
+   "name": ..., "handle": ...}, the title the bold line and the name and the
+   handle under it (the Skribl site gives the post's words, and its maker's
+   name and @handle). line=false has no line, so no button. #}
 {%- set shaped = line and canvas_w and canvas_h %}
 <div class="skribl-inline is-muted is-silent{% if line %} has-line{% endif %}{% if shaped %} is-shaped{% endif %}"
      data-skribl-inline
@@ -225,6 +259,9 @@
 {%- endif %}
 {%- if line and marks %}
      data-skribl-marks='{{ marks|tojson }}'
+{%- endif %}
+{%- if line and full and full_meta %}
+     data-skribl-full='{{ full_meta|tojson }}'
 {%- endif %}
      data-skribl-api="{{ url_for(bp ~ '.create_skribl') }}"
      role="button"
@@ -252,7 +289,7 @@
 <div class="skribl-inline-line is-muted is-silent{% if line_waits %} is-waiting{% endif %}">
   <div class="skribl-inline-row">
     <div class="skribl-inline-scrub" aria-label="Scrub"></div>
-{{ _skribl_inline_controls() }}
+{{ _skribl_inline_controls(full=full) }}
   </div>
   <div class="skribl-inline-say"></div>
 </div>

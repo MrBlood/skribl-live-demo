@@ -227,6 +227,7 @@ here is the rule you can break tomorrow.
 | Every drawer shows what a tap opens: a tile's choices end on the screen, or the page stops with the top of the drawer at the header; a music door shows all of what it opens, its tile kept below the header and the timeline's copy; it glides there (straight there under Reduce Motion), only ever down, keeping Text's words in view; one tile swapped for a shorter one glides rather than clamps; and every `.dp-tile` in the page is one the check presses. | `verify_drawerreveal.py` |
 | The Gallery card's fade takes its colours from the drawing under it: invisible on empty paper, inside the drawing's round corners and off the card beside it; each glass control takes the tone of what is under it; the time reads at 4.5:1 on painted pixels; a drawing that cannot be read keeps the scrim; Mute steps aside on a silent drawing, on the card and in full screen, from the first paint. | `verify_cardfade.py` |
 | One full screen, everywhere: the Gallery's and the Library's full screen is the link page's -- its band (the scrubber in the drawing's shape, the artist's clock, the words with every speed, the buttons), its x and the drawing's ground to the screen's edges -- built by `lib/fullbar.js` band() in the link page's markup, from styles.css's own rules (`fullband.css`, emitted by `harness/tools/cssgraph.py` like `player.css`), with who drew it in the top corner. | `verify_onefull.py` (every part measured against the link page's), `verify_seam.py` (`fullband.css` byte for byte what the tool emits) |
+| A post's full screen is that one too (the owner's "yes to A and all your picks", Nov 16; `lib/postfull.js`, `postfull.css`, `skribl_full_assets()` and `skribl_inline(full=, full_meta=)`): on the Skribl site a post's line, and a comment's drawing's, ends in a full-screen button after Repeat (32px drawn, 44 to a finger; none on a page that does not load the full screen), which opens the band around the post's own player, the post's words over "Name · @handle" in the corner; the drawing carries on from where it was, playing or paused (one never played is played); leaving puts the post back as it was, its line given back (`inlineplayer.js` unband(), the band borrowing it afresh the next time) and the focus on the button. The band's rules reach only a band's host (`:where(.skfull-host)` in `fullband.css` and `gallerysection.css`), so a post's own line under it is never restyled. | `verify_socialposts.py` (18), `verify_seam.py` (the scoped sheets byte for byte), `verify_inline.py` (the embed's ratchet: the full screen is not in it) |
 | Every full screen's bar takes its colours from the drawing too (the Gallery's and the Library's, the link page's, Pad's and Flip's), read by the card's own reading (lib/smartfade.js): the fade unseen on empty paper and no fog on a dark drawing; every word at 4.5:1 on its worst painted pixel; each control's glass by what is under it, turning with the theme; a title crossing a tall drawing's edge in a capsule; a photo under the drawing as a picture of its own keeps the scrim. | `verify_fullsmart.py` |
 | On a window with room the canvas shows past the size it was drawn at and its bitmap grows with it, so it stays sharp, pixel for pixel at 1x (the Pad's up to 3x the drawing, Flip's up to 2x, inside its frame); the drawing's own units, its payload and everything that leaves the canvas (files, post card, drafts, thumbnails, the fill) keep the drawing's own size, and a new drawing starts in the shape the 720px column gives it. | `verify_bigcanvas.py` |
 
@@ -837,7 +838,7 @@ rather than a shared rule.
 | `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
 | `canvaszoom.js` | Pad+Flip | The canvas magnifier: zoom, pan, the HUD, its grip, wheel and Space-drag. |
 | `capmore.js` | Pad+Flip+player+gallery+host gallery | A CAPTION AT TWO LINES, AND A "MORE" WHERE THERE IS MORE. |
-| `chromefade.js` | Pad+Flip+player+library+gallery+host gallery | Controls that step back while a drawing plays, and come back the moment someone reaches for them. |
+| `chromefade.js` | Pad+Flip+player+library+gallery+in-post+host gallery | Controls that step back while a drawing plays, and come back the moment someone reaches for them. |
 | `chromefit.js` | Pad+Flip | The editors' fit when the chrome around the canvas changes size and the window says nothing -- Pad's and Flip's, one watch -- the canvas's row reaching past the column on a wide window (span()), and the shape the canvas starts in (a new drawing's, startShape; a draft's own, noted beside it). |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
 | `composehost.js` | HOST | The pad button's lifecycle, for a HOST's composer. |
@@ -857,7 +858,7 @@ rather than a shared rule.
 | `faceframe.js` | face | A face from a drawing you already have, placed in the circle and made a face of its own. |
 | `floodfill.js` | Flip | Flood fill, expressed in the only vocabulary this project has: strokes. |
 | `framebitmap.js` | Flip+player | Frame bitmaps — a painted page is rasterised once per playback, shared rule. |
-| `fullbar.js` | library+gallery+host gallery | The full-screen bar: one transport, and the SAME one on both surfaces. |
+| `fullbar.js` | library+gallery+in-post+host gallery | The full-screen bar: one transport, and the SAME one on both surfaces. |
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
 | `handwords.js` | Pad+Flip | YOUR HAND'S WORDS on an empty canvas (the owner's pick after the "Empty canvas ideas" mock): "Draw anything" on the Pad and "Draw page 1" on Flip, in the owner's own hand. |
 | `headerglass.js` | Pad+Flip | The header's ground, only while the drawing is under it. |
@@ -867,7 +868,7 @@ rather than a shared rule.
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |
 | `holdtiming.js` | Pad+Flip+player+library+in-post | Per-page timing — the ONE definition of how long a page lasts and how much of a drawing page has been revealed, shared by the Flip editor and every surface that plays one. |
 | `homescreen.js` | Pad+Flip | Getting Skribl onto the Home Screen: the ⋯ row, the one-time banner, and the steps sheet both open. |
-| `immersive.js` | Pad+Flip+player+library+gallery+host gallery | Full size on the devices that have a Fullscreen API, and on the one that does not. |
+| `immersive.js` | Pad+Flip+player+library+gallery+in-post+host gallery | Full size on the devices that have a Fullscreen API, and on the one that does not. |
 | `inputlog.js` | Pad+Flip | The input log: what the screen said, for a bug only a phone shows. |
 | `inputsamples.js` | Pad+Flip | The points the browser already captured and the handler was throwing away. |
 | `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things answer at once. |
@@ -908,6 +909,7 @@ rather than a shared rule.
 | `postedaudio.js` | Pad+Flip | What a POST stores, which is deliberately not what an EXPORT downloads. |
 | `postedcard.js` | Pad+Flip+face | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
 | `postedui.js` | library+gallery+host gallery | Your Skribls — rendering. |
+| `postfull.js` | in-post | A post's full screen: the button at the end of a post's line opens the link page's full screen around the post's own player. |
 | `postsheet.js` | Pad+Flip | The Post sheet — shared by Pad and Flip (skribl/_skribl_post.html). |
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
@@ -927,7 +929,7 @@ rather than a shared rule.
 | `sheetswipe.js` | Pad+Flip+library+gallery+host gallery | Sheets that go away — one swipe, every bottom sheet. |
 | `sizeclass.js` | Flip | One size decision, made once, for the whole app. |
 | `slidernudge.js` | Pad+Flip | - and + beside a range slider, for exact steps a slider alone cannot land on with a finger. |
-| `smartfade.js` | Pad+Flip+player+library+gallery+host gallery | The smart fade: one reading of a drawing for every bar that lies over it. |
+| `smartfade.js` | Pad+Flip+player+library+gallery+in-post+host gallery | The smart fade: one reading of a drawing for every bar that lies over it. |
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
 | `songtext.js` | Pad+Flip | A SONG'S TEXT, MADE OFF THE PAGE: the data URL both editors keep beside a song's bytes, made in a worker so that adding a song does not hold the page while it is made (the speed fixes, Nov 5; the owner: "do the song speed for both editors"). |
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |

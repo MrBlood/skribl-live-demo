@@ -58,12 +58,14 @@
 
 {#  A DRAWING ANSWER: Skribl's in-post player, in the drawing's own shape,
     still until tapped (a post's own page plays only the post's: posts.js),
-    the line under it saying what it is. Gone or withheld since, the box
-    says the drawing is not here anymore. #}
+    the line under it saying what it is, and ending in the full-screen button
+    as a post's does (the owner's "yes to A", Nov 16). Gone or withheld since,
+    the box says the drawing is not here anymore. #}
 {% macro comment_art(it) -%}
 {%- set sk = it.sk -%}
-{%- if sk and sk.canvas_w %}{{ skribl_inline(it.c.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp) }}
-{%- else %}{{ skribl_inline(it.c.skribl_id, bp=skribl_bp) }}{% endif %}
+{%- set fm = {'title': it.c.words or it.who.display_name, 'name': it.who.display_name if it.c.words else '', 'handle': '@' ~ it.who.handle} -%}
+{%- if sk and sk.canvas_w %}{{ skribl_inline(it.c.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, full=true, full_meta=fm) }}
+{%- else %}{{ skribl_inline(it.c.skribl_id, bp=skribl_bp, full=true, full_meta=fm) }}{% endif %}
 {%- endmacro %}
 
 {% macro comment(it, can, post_mine) -%}

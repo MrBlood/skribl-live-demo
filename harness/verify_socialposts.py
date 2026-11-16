@@ -3625,6 +3625,121 @@ print("PLAN " + json.dumps(out))
         except Exception as exc:  # noqa: BLE001
             check("section 17 ran to its end", False, str(exc).splitlines()[0][:200])
 
+    if part(18, "a post's full screen: the link page's, from the end of the post's line"):
+        # The owner, Nov 16: "yes to A and all your picks", to the mock of full
+        # screen on the site's posts. A post's line ends in the full-screen
+        # button, after Repeat; a press opens the link page's own full screen
+        # (lib/fullbar.js band(), lib/postfull.js) around the post's own
+        # player: the band's Restart, Play, Loop and Leave, the post's line
+        # lent to it (its scrubber and its words with every speed), the x, and
+        # who drew it in the corner, the post's words over "Name · @handle".
+        # One player, one clock: the drawing carries on from where it was, and
+        # leaving gives the post back as it was. Read on an iPhone's terms: no
+        # Fullscreen API, so lib/immersive.js's stand-in. Nothing of the
+        # band's sheet reaches the post's own line (it took its tint away and
+        # its words to 15px, loaded whole).
+        try:
+            NO_FS = ("Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get() { return false; } });"
+                     "Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { get() { return false; } });")
+            fs = someone(b, "fulla", "Fulla Screen")
+            st18, j18 = make_post(fs, "A slow snail, full screen.", seed=18, card=True)
+            pid18 = j18.get("post") if isinstance(j18, dict) else None
+            c18 = fs.client()
+            c18.get(f"/social/p/{pid18}")
+            stc, _ = c18.post_json(f"/social/p/{pid18}/comments", {"words": "And an answer, drawn.", "payload": drawing(seed=19)})
+            ctx, pg = browser_as(b, fs)
+            ctx.add_init_script(NO_FS)
+            pg.goto(BASE + f"/social/p/{pid18}")
+            pg.wait_for_function("() => { const b = document.querySelector('.post-page [data-skribl-inline]'); return !!(b && b._skriblInline && b._skriblInline.state().loaded); }", timeout=20000)
+            pg.wait_for_timeout(500)
+            BTN = """(s) => { const b = document.querySelector(s); if (!b) return null; const r = b.getBoundingClientRect();
+                const hit = (x, y) => { const h = document.elementFromPoint(x, y); return !!h && (h === b || b.contains(h)); };
+                const prev = b.previousElementSibling;
+                return { shown: !!b.getClientRects().length && getComputedStyle(b).display !== 'none', w: Math.round(r.width), h: Math.round(r.height),
+                         after: prev ? prev.className : null, last: !b.nextElementSibling, name: b.getAttribute('aria-label'),
+                         reach: hit(r.left - 5.5, r.top + r.height / 2) && hit(r.right + 5.5, r.top + r.height / 2) && hit(r.left + r.width / 2, r.top - 5.5) && hit(r.left + r.width / 2, r.bottom + 5.5) }; }"""
+            btn = pg.evaluate(BTN, ".post-page .skribl-inline-line .skribl-inline-full")
+            check("a post's line ends in the full-screen button, after Repeat: 32px drawn, 44 to a finger, named Full screen",
+                  st18 == 200 and bool(btn) and btn["shown"] and btn["w"] == 32 and btn["h"] == 32 and btn["last"]
+                  and "skribl-inline-loop" in (btn["after"] or "") and btn["reach"] and btn["name"] == "Full screen", str(btn))
+            LINE = """() => { const l = document.querySelector('.post-page .skribl-inline-line'); const sc = l.querySelector('.skribl-inline-scrub'), w = l.querySelector('.skribl-inline-say');
+                return { scrubBg: getComputedStyle(sc).backgroundColor, wordsSize: getComputedStyle(w).fontSize, head: (sc.querySelector('.rl-head') || {}).style ? sc.querySelector('.rl-head').style.left : null }; }"""
+            before = pg.evaluate(LINE)
+            # One player, one clock: put the drawing at 40%, paused, and open.
+            pg.evaluate("() => { const p = document.querySelector('.post-page [data-skribl-inline]')._skriblInline; p.seek(p.state().totalMs * 0.4); }")
+            pg.wait_for_timeout(200)
+            at0 = pg.evaluate("() => document.querySelector('.post-page [data-skribl-inline]')._skriblInline.state().elapsedMs")
+            pg.click(".post-page .skribl-inline-full")
+            pg.wait_for_timeout(900)
+            FULL = """() => { const st = document.querySelector('.post-page .skribl-post-stage'), box = document.querySelector('.post-page [data-skribl-inline]');
+                const r = st ? st.getBoundingClientRect() : null, band = st && st.querySelector('.player-bar');
+                const prog = band && band.querySelector('.player-progress.rl-scrub'), cv = prog && prog.querySelector('canvas.rl-strip');
+                let ink = 0; if (cv && cv.width) { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; for (let i = 3; i < d.length; i += 4) if (d[i]) ink++; }
+                const names = band ? [...band.querySelectorAll('.player-controls .player-btn')].filter(x => x.getClientRects().length).map(x => x.getAttribute('aria-label')) : [];
+                const who = st && st.querySelector('.fb-who');
+                return { on: !!st && st.classList.contains('is-immersive-page'), rect: r ? [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] : null,
+                         immersive: box.classList.contains('is-immersive'), band: !!band && !band.hidden, names, ink,
+                         words: band ? (band.querySelector('.replay-line') || {}).textContent || '' : '',
+                         x: !!(st && st.querySelector('.player-btn.full-exit') && st.querySelector('.player-btn.full-exit').getClientRects().length),
+                         who: who ? [who.querySelector('b').textContent, who.querySelector('span').textContent] : null,
+                         at: box._skriblInline.state().elapsedMs, playing: box._skriblInline.state().state }; }"""
+            f1 = pg.evaluate(FULL)
+            check("...a press opens the link page's full screen around the post's player, over the whole screen: Restart, Play,"
+                  " Loop and Leave, the x, and the post's line lent to it (its scrubber painted with the drawing, its words"
+                  " with the speed)",
+                  f1["on"] and f1["rect"] == [0, 0, 402, 874] and f1["immersive"] and f1["band"] and f1["x"]
+                  and f1["names"][:2] == ["Restart", "Play"] and "Loop" in f1["names"] and "Leave full screen" in f1["names"]
+                  and f1["ink"] > 50 and "watching at" in f1["words"], json.dumps(f1)[:600])
+            check("...who drew it, in the corner: the post's words over 'Name · @handle'",
+                  f1["who"] == ["A slow snail, full screen.", "Fulla Screen · @fulla"], str(f1["who"]))
+            check("...and the drawing carries on from where it was: paused at 40%, still there",
+                  abs(f1["at"] - at0) < 60 and f1["playing"] != "playing", f"{at0} -> {f1['at']} {f1['playing']}")
+            # Leave by the x: the post as it was, its line its own again.
+            pg.click(".post-page .skribl-post-stage .player-btn.full-exit")
+            pg.wait_for_timeout(700)
+            pg.evaluate("() => { const p = document.querySelector('.post-page [data-skribl-inline]')._skriblInline; p.seek(p.state().totalMs * 0.8); }")
+            pg.wait_for_timeout(300)
+            back = pg.evaluate("""() => { const st = document.querySelector('.post-page .skribl-post-stage'), box = document.querySelector('.post-page [data-skribl-inline]');
+                const h = document.querySelector('.post-page .skribl-inline-line .rl-head');
+                return { on: st.classList.contains('is-immersive-page'), immersive: box.classList.contains('is-immersive') || box.classList.contains('is-bare'),
+                         head: h ? parseFloat(h.style.left) : null, focus: document.activeElement === document.querySelector('.post-page .skribl-inline-full') }; }""")
+            check("...and leaving gives the post back as it was: not full screen, its line its own again (a seek moves its"
+                  " playhead), the button given the focus back",
+                  not back["on"] and not back["immersive"] and back["head"] is not None and abs(back["head"] - 80) < 3
+                  and back["focus"], str(back))
+            # Again: the line lent afresh, the band's scrubber moving with the drawing.
+            pg.click(".post-page .skribl-inline-full")
+            pg.wait_for_timeout(800)
+            pg.evaluate("() => { const p = document.querySelector('.post-page [data-skribl-inline]')._skriblInline; p.seek(p.state().totalMs * 0.25); }")
+            pg.wait_for_timeout(300)
+            again = pg.evaluate("""() => { const h = document.querySelector('.post-page .skribl-post-stage .player-bar .rl-head');
+                return h ? parseFloat(h.style.left) : null; }""")
+            check("...and open again, the band has the line afresh: its playhead moves with the drawing", again is not None and abs(again - 25) < 3, str(again))
+            pg.keyboard.press("Escape")
+            pg.wait_for_timeout(500)
+            after = pg.evaluate(LINE)
+            check("...nothing of the full screen's sheets reaches the post's own line: its scrubber's tint and its words' size"
+                  " as they are with no full screen on the page",
+                  after["scrubBg"] == before["scrubBg"] and after["wordsSize"] == before["wordsSize"] == "14px", f"{before} -> {after}")
+            pg.evaluate("() => { const b = document.querySelector('.cm .skribl-inline-full'); if (b) b.scrollIntoView({ block: 'center' }); }")
+            pg.wait_for_timeout(400)
+            cm = pg.evaluate(BTN, ".cm .skribl-inline-line .skribl-inline-full")
+            cmf = None
+            if cm and cm["shown"]:
+                pg.click(".cm .skribl-inline-full")
+                pg.wait_for_timeout(900)
+                cmf = pg.evaluate("""() => { const st = document.querySelector('.cm .skribl-post-stage'), who = st && st.querySelector('.fb-who');
+                    return { on: !!st && st.classList.contains('is-immersive-page'), who: who ? [who.querySelector('b').textContent, who.querySelector('span').textContent] : null }; }""")
+                pg.keyboard.press("Escape")
+                pg.wait_for_timeout(400)
+            check("...and a comment's drawing ends its line in the same button, which opens the same full screen, its"
+                  " own words over its maker",
+                  stc == 200 and bool(cm) and cm["shown"] and cm["w"] == 32 and cm["reach"] and bool(cmf) and cmf["on"]
+                  and cmf["who"] == ["And an answer, drawn.", "Fulla Screen · @fulla"], f"{cm} {cmf}")
+            close_ctx(ctx, pg)
+        except Exception as exc:  # noqa: BLE001
+            check("section 18 ran to its end", False, str(exc).splitlines()[0][:200])
+
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):
             ERRS.extend(f"csp: {v}" for v in who.csp())

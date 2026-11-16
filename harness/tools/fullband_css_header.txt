@@ -16,6 +16,12 @@
    restyled. Rules are taken one by one, inside @media too, in their original
    order.
 
+   KEPT TO THE BAND'S HOST. A selector that is not the frame's own is put
+   under :where(.skfull-host), the class lib/fullbar.js gives a band's host:
+   a post's own line under a post's full screen (lib/postfull.js) has the
+   same scrubber and words outside the frame, and is never restyled by them;
+   :where() adds no weight, so inside the frame the cascade is unchanged.
+
    THE COST IS DUPLICATION, paid for by an assertion: verify_seam.py, on
    every pull request, regenerates this file with player.css and fails if it
    differs by one byte from what styles.css and the recorded census produce.

@@ -78,7 +78,7 @@
     ONE SCRIPT IN THE PAGE, SKRIBL'S THEME BOOT. The site's own policy
     (social/__init__.py, site_csp) is script-src 'self' and this page's own
     nonce, which only the boot carries: every other script here is a file. #}
-{% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets, skribl_inline_draft %}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets, skribl_inline_draft, skribl_full_assets %}
 {% from 'skribl/_skribl_face.html' import skribl_face_assets, skribl_face %}
 {% import 'social/_icons.html' as ic %}
 {% set composing = accounts and me and not hide_nav %}
@@ -109,6 +109,9 @@
 <link rel="apple-touch-icon" sizes="180x180" href="{{ social_asset('blooby-icon-180.png') }}">
 <link rel="manifest" href="{{ url_for('social.manifest') }}">
 {{ skribl_inline_assets() }}
+{# A post's full screen (the owner's "yes to A", Nov 16): the button at the end of a
+   drawing's line, Skribl's (_post.html, _comments.html ask for it). #}
+{{ skribl_full_assets() }}
 {{ skribl_face_assets() }}
 {% block head %}{% endblock %}
 <link rel="stylesheet" href="{{ social_asset('social.css') }}">

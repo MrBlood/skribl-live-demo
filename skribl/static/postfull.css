@@ -1,0 +1,39 @@
+/* A POST'S FULL SCREEN (lib/postfull.js; the owner's "yes to A", Nov 16).
+   Travels with that module in skribl_full_assets(), with the band's sheets
+   (fullband.css, fullbar.css), so a host that does not ask for it pays for
+   none of it.
+
+   THE BUTTON, at the end of a post's line, after Repeat: dressed as Repeat
+   and Mute are at rest there (inlineplayer.css), 32px drawn and 44 to a
+   finger, its glyph the corners every full screen in Skribl draws. Hidden
+   until the module has run (inlineplayer.css keeps it out of sight
+   otherwise), so a page without the module never shows a button that does
+   nothing. */
+html.skribl-postfull .skribl-inline-line .skribl-inline-full {
+  position: relative; display: grid; place-items: center;
+  width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%;
+  background: none; color: inherit; font: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.skribl-inline-line .skribl-inline-full::before { content: ''; position: absolute; inset: -6px; }
+.skribl-inline-line .skribl-inline-full svg {
+  width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; opacity: .62;
+}
+@media (hover: hover) {
+  .skribl-inline-line .skribl-inline-full:hover { background: color-mix(in srgb, var(--accent, #7c5cff) 22%, transparent); }
+}
+.skribl-inline-line .skribl-inline-full:focus-visible { outline: 2px solid var(--accent, #7c5cff); outline-offset: 1px; }
+
+/* THE STAGE: the post's box in a block of its own, which is what goes full
+   screen, the drawing's ground to the screen's edges and the band over it
+   (fullband.css). The stand-in (lib/immersive.js, an iPhone's) is the same
+   geometry pinned over the page; 100dvh, so the drawing's foot is never
+   under Safari's bar. */
+.skribl-post-stage { display: block; position: relative; }
+.skribl-post-stage:fullscreen, .skribl-post-stage.is-immersive-page {
+  width: 100vw; height: 100vh; margin: 0; border-radius: 0; }
+.skribl-post-stage.is-immersive-page {
+  position: fixed; inset: 0; z-index: 2147483000;
+  width: 100vw; height: 100dvh; }
+html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
