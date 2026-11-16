@@ -44500,3 +44500,118 @@ Side by side: verify_composer 39/39, verify_socialprofile 94/94.
 
 NOT TESTED HERE: an iPhone (WebKit). The one-glance tell: Make, then a tap in
 "Say something…": the caret, and no box.
+
+## After v330 -- Full screen on a post: the link page's, from the end of the post's line
+
+The owner, Nov 16 (Mountain Time): "yes to a and all your picks", to the mock
+of full screen on the site's posts ("On the post player (in the gallery too),
+there's no full screen option? Am I not getting the same player as the
+link?"). A: one button at the end of a post's line, after Repeat. The picks:
+the corner says the post's words over "Name · @handle"; a comment's drawing
+gets the button too; the site's links stay the post's.
+
+WHAT CHANGED:
+
+- THE BUTTON (skribl_inline(full=, full_meta=), _skribl_inline_player.html):
+  at the end of the line, after Repeat, the corners every full screen in
+  Skribl draws, dressed as Repeat and Mute are at rest (postfull.css), 32px
+  drawn and 44 to a finger. It shows only where the full screen is loaded:
+  inlineplayer.css hides it, postfull.css shows it once lib/postfull.js has
+  run, so a host that does not load it never shows a button that does
+  nothing.
+- THE FULL SCREEN (lib/postfull.js) is the link page's own: lib/fullbar.js
+  band() around the post's player, the one Skribl's Gallery and the Library
+  wear. The band (Restart, Play, Loop, Mute on a drawing with sound, Leave),
+  the post's line lent to it (its scrubber in the drawing's shape, its words
+  with every speed), the x, and who drew it in the corner (data-skribl-full,
+  the site's words for it). The post's box is put once into a block of its
+  own, the band's host, which fullband.css takes to the screen's edges, real
+  full screen or, on an iPhone, lib/immersive.js's stand-in pinned over the
+  page; postfull.css holds the page still behind it.
+- ONE PLAYER, ONE CLOCK: the drawing carries on from where it was, playing or
+  paused (one never played is played). Leaving gives the post back as it
+  was: its line given back wired as before (inlineplayer.js unband(): band()
+  keeps the line's four parts rather than refusing a player with a line, and
+  the line's marks stay where they are while it is lent), Repeat and the
+  speed picked in full screen with it, the band borrowing the line afresh the
+  next time (lib/fullbar.js forgets a player it no longer has), the button
+  given the focus back. Opening takes the focus into the full screen, onto
+  the band's Play: the button that opened it stays under the full screen,
+  and a keyboard's next Tab would have landed behind it.
+- KEPT TO THE BAND'S HOST (harness/tools/cssgraph.py): in fullband.css and
+  gallerysection.css every selector that is not the frame's own has its first
+  part kept to a band's host or what is inside it, :where(.skfull-host,
+  .skfull-host *), .skfull-host being the class lib/fullbar.js gives a band's
+  host. Loaded whole on a post's page, the band's sheet took the post's own
+  line's tint away and its words to 15px. :where() adds no weight, so inside
+  the frame the cascade is unchanged (player.css unchanged). The first
+  version put the band's rules under the host, not on it, and the band steps
+  back by a class on the host itself (.chrome-asleep): verify_onefull caught
+  the Gallery's band staying up while the drawing played, which the mock's
+  capture, taken at rest, could not show.
+- skribl_full_assets() loads it: fullband.css, fullbar.css, postfull.css and
+  lib/chromefade.js, lib/smartfade.js, lib/fullbar.js, lib/immersive.js,
+  lib/postfull.js. The site's base.html loads it after skribl_inline_assets();
+  _post.html and _comments.html pass full and the corner's words.
+  docs/INTEGRATION.md, "Full screen on a post".
+
+PAD AND FLIP: not for them. The editors' preview has its own full screen;
+this is the in-post player's, the same one as the Gallery's and the
+Library's (lib/fullbar.js, shared).
+
+WHAT IT COSTS: every page that shows a post, +256 B on the embed's ratchet,
+a named raise (82,041 B measured): the line lent and given back (+222,
+inlineplayer.js) and the rule that hides the button where the full screen is
+not loaded (+34, inlineplayer.css). The full screen itself is apart, for the
+hosts that ask: on the site's pages, eight files, 50,936 B served (about 15
+KB gzipped; the mock said 46 KB before the band's sheet was kept to its host
+and postfull's two were written).
+
+THE CHECKS, verify_socialposts 18, on an iPhone's terms (no Fullscreen API,
+so the stand-in), each row shown red by a break of its own, a fresh server
+for each, the tree as built green beside them:
+
+- the button at the end of the post's line, after Repeat, 32px drawn and 44
+  to a finger, named Full screen (red: no button on a post; the full screen
+  not loaded; the button undressed);
+- a press opens the full screen over the whole screen, the page behind held
+  still: Restart, Play, Loop and Leave, the x, and the post's line lent (red:
+  the band refusing a post with a line; the page not held still);
+- who drew it in the corner (red: no corner words);
+- the drawing carries on from where it was (red: played on opening);
+- while it plays, the band steps back, and who drew it with it (red: the
+  band's sheet under its host, not on it, as first built);
+- leaving gives the post back: not full screen, its line its own again, the
+  focus on the button (red: the line never given back; the focus not given
+  back);
+- opened again, from the keyboard, the focus goes with it onto the band's
+  Play (red: the focus left behind), and the band has the line afresh (red:
+  the band's wiring kept from the last time);
+- Repeat and a speed picked in full screen come back to the post's line, the
+  mock's promise (red: the line given back without its words refreshed);
+- nothing of the band's sheet reaches the post's own line (red: fullband.css
+  as on main, unscoped);
+- a comment's drawing the same (red: no button on a comment's drawing).
+
+One break stayed green, and it was the build's: postfull.css gave the stage
+the full screen's geometry, which fullband.css already gives a band's host.
+Taken out; the page held still is all postfull.css says of the stage. And
+verify_surfaces found postfull.js exporting a global nothing read: it wires
+itself, so it exports nothing now. Reading the build from a keyboard found
+the focus left under the full screen: it goes onto the band's Play now.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3), twelve, every one ok
+on the tree as it merges, in three runs as the build moved: verify_socialposts
+95/95, verify_onefull 57/57, verify_seam 518/518, verify_gallery 234/234,
+verify_library 248/248, verify_fullsmart 26/26, verify_example 59/59 and
+verify_docs 144/144 after the scoping fix (and verify_socialposts and
+verify_docs again after the keyboard's focus); verify_inline 222/222,
+verify_socialcomments 96/96, verify_surfaces 13/13 and verify_jsstrip 35/35
+before it, which it does not touch. The first run's verify_onefull, 56/57, is
+how the scoping was found. NOT RUN: the full battery (main's run after the
+merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit): the stand-in is driven here with the
+Fullscreen API hidden; Windows' own rendering; the live site. The one-glance
+tell: a post on the site, the four corners at the end of its line, after
+Repeat.
