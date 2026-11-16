@@ -44969,3 +44969,47 @@ so it is not this revision's, and it is harmless.
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: Make, a few words and nothing drawn: Post lit, and the
 post a card of words.
+
+## After v330 -- A quote sits deeper: inside a post's card, a well (D2)
+
+The owner, Nov 16, of Theo's quote of Mr. Bloob in dark: "shouldn't quote
+reposts have a slightly different color to make it seem like the thing they
+are reposting maybe sits a little deeper in the card?", then "d2 is good" to
+the quotes mock (https://claude.ai/artifact/1ABp8adYFPKF1ZdHUCxv8s): D2, a
+lilac well, over D1 (halfway from the card to the page, its line kept, which
+in light almost did not show). Inside a post's card the quote's small card
+was the card's colour on the card's colour, 1.00:1, only its line between.
+
+WHAT CHANGED (social.css): --quote-well, the page's ground with 6% of
+Skribl's lilac (rgb 124 92 255), one value for both themes since --page
+carries the theme; a quote's small card inside a post's card (Home, a
+person's page) wears it and no line, so the change of colour is its edge. On
+a post's own page a quote stays the raised card the owner chose on Nov 15.
+Make's quote, under the words of a quote being written, is not changed here:
+it was not in the mock (the census the owner asked for the same evening
+names it).
+
+PAD AND FLIP: not for them; quotes are the site's.
+
+CONTRAST, read off the paint: the well against its card 1.14:1 light, 1.12:1
+dark (the mock's figures; 1.00 before); every word on it at 4.5:1 or more
+(verify_socialreposts 11's census: the mock read its words 15.68 and 15.73,
+its @handle 6.6 and 9.62).
+
+THE CHECK, verify_socialreposts 11 (one new row): inside a post's card on
+Home, the well painted as asked, set apart from the card by its colour alone
+(1.08:1 or more against the card's ground beside it), and no line round it
+(no ring, its border transparent), phone and desk, light and dark. Each part
+shown red by a break of its own (SOCIALREPOSTS_PART=11, a fresh server
+each), the tree as built green beside them: the well taken away (card on
+card, 1.00:1, as main); its line kept; a stronger tint (12%, painted
+231 229 251 where 239 239 250 was asked). The well put on a post's own page
+too turns the Nov 15 row red ("a quote on its post's own page is a card"),
+which holds the well to a post's card.
+
+THE AFFECTED SUITES: in the pull request (it rides with posts of words
+alone, the same cards on the same screen).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: Home, a quote post: the small card inside it a soft
+lilac tint with no line, in both themes.
