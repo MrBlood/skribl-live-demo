@@ -44642,3 +44642,51 @@ red, each "over 1 frames"; the music drawer's doors' glide made instant
 frame; as built, 217/217.
 
 Main's failed job was re-run: a runner's stall, not the tree.
+
+## After v330 -- Main red after #939: the splash's rows read the page's whole class list (verify_socialapp), and shard 3 ran out its hour
+
+Main at 8a2ecd7 (run 43931940697), shard 4 on both databases:
+verify_socialapp, two rows. "Never in a browser tab" read `skribl-postfull`
+where it wanted nothing; "...once a launch" read `is-app skribl-postfull`
+where it wanted `is-app` alone. The splash behaved as built: not shown in a
+tab, Blooby's strip never asked for. The rows compared the page's whole
+class list, and #939's lib/postfull.js puts `skribl-postfull` on every page
+of the site, which is none of the splash's business. verify_socialapp reads
+the site's pages' class list, so it was an affected suite for #939, and it
+was not named.
+
+THE MEND: the rows ask about the splash's own classes, read off what
+splash-boot.js stamps (its classList.add calls: is-app, is-splashing,
+is-splash-first), with a floor: those three must be among them, so a boot
+that stamps a class another way goes red rather than quiet.
+
+CALIBRATED with SOCIALAPP_PART=8, a fresh server per break: as built, both
+rows green (the page wearing skribl-postfull) and part 8's other 15 with
+them; a tab taking is-app alone, the tab row red; the next page in the app
+splashing again, and the next page losing is-app, the launch row red; the
+boot stamping is-app another way, both red.
+
+SHARD 3 RAN OUT ITS HOUR in the same run: postgresql 3/6 was stopped at its
+60 minutes (60.2), its suites done (58.9 minutes) and its own steps not. It
+had taken 55 to 60 minutes on every main run that week, and ran out once
+before (sqlite 3/6 at ba7eef9), while the other shards took 44 to 54.
+harness/shard.py's table of each suite's seconds dated from Oct 29. Suites
+not in it counted as SMALL (11 s), most of them the site's: verify_socialposts
+takes 500 s on CI, verify_socialcomments and verify_socialprofile 330, and
+the Post sheet's verify_postmoment 310; and some in it had grown
+(verify_learncard, 110 to 360). As its note says to when a shard runs long,
+re-measured: the seconds every suite took in main's last two runs (b350974
+and 8a2ecd7), the slowest of each suite's four, read off each shard's log
+(the log archive's host is refused here, so a helper read the 24 jobs' tails
+and wrote the tables to a file; every job's count matched its summary, a
+skipped suite counted). 119
+of 199 suites take half a minute or more; the rest still average 11 s.
+
+THE INSTRUMENT, shown both ways: the split with the old table, timed at those
+slowest seconds, puts shard 3's suites at 58.9 minutes, what ran out, and the
+others at 47 to 53; with the new one, every shard at 51 to 52, and a job's
+own steps add 0.6 to 2. `shard.py --check 6`: every suite once. The comments
+in harness.yml that said a shard takes about 17 minutes now say what it
+takes. Room left: six to eight minutes a shard. When a shard runs long again,
+re-measure first; a seventh shard (free on a public repository's standard
+runners) is the step after.
