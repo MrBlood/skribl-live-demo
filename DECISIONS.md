@@ -44122,7 +44122,23 @@ built:
   else the ring's), so CONSISTENCY's "every one with an edge wears the
   tiles' lilac line" and the timeline's copy's sides still read the line.
 - THE DRAWERS' EDGE reads the strongest pixel across the box's edge, the
-  ring outside it included.
+  ring outside it included; and "each drawer's edge is the tiles' lilac
+  line" asks one ink for every drawer, the line laid over its paper (red
+  with the drawers' ring in the card's ink).
+- Rows elsewhere that read a line where the border was read it where it is
+  drawn, each found red on the first run beside the others and shown red by
+  a break of its own: verify_drawtiles and verify_musicdoors (the open tile
+  joins its card 2px deep, its bottom edge transparent over its white, and
+  at an end the line is read half a screen pixel outside, against both the
+  card and the paper: red with the tile's side ring cut; the drawer tiles'
+  also with the seam's faint line back, which a 1x desk, where the doors are
+  read, cannot draw); verify_text (Text's open tile, 2px: red detached);
+  verify_menu (the list's edge, the pixel across the box's edge furthest
+  from the sheet: red with the cards' ring gone); verify_galib (the Library's
+  and the Gallery's menus against the Pad's, the line as it shows over the
+  card, since theirs keep a 1px border until their own part: red with the
+  Pad's ring gone and with its ink off); verify_onepill (How it works' one
+  shadow is its own tint a pixel wider: red with a ring of the accent).
 
 THE FOUR. Kind: nothing moves, and the drawings, not the boxes, are the
 boldest lines on the screen. Simple: one rule, one line, every sheet.
