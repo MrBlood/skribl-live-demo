@@ -44690,3 +44690,97 @@ in harness.yml that said a shard takes about 17 minutes now say what it
 takes. Room left: six to eight minutes a shard. When a shard runs long again,
 re-measure first; a seventh shard (free on a public repository's standard
 runners) is the step after.
+
+## After v330 -- The edges, part four (a drawing's link page): its lines are one screen pixel
+
+The owner's "all yes" to "The edges" (B, Nov 15), and to its part four (Nov
+16): the link page, after the Library and Skribl's Gallery (#937). A post's
+drawing on the site is the last part.
+
+A CENSUS FIRST, of every state the link page has, as part three's handoff
+asked: at rest, More open, the speed chips open, scrubbing (the bubble), a
+tooltip (a desk; the link page shows none), full screen and its chips;
+phone and desk, light and dark. Every outline it found is one screen pixel
+now, but two kept on purpose: the scrubber's head's 2px ring (a control's,
+which "The edges" kept bold) and full screen's glass buttons on the drawing
+(toned by what is under them, as every full screen's are).
+
+WHAT CHANGED (styles.css; the link page's in player.css, and the band's in
+fullband.css, so the Gallery's and the Library's full screens too):
+
+- ONE SCREEN PIXEL ON EVERY PAGE: --hair and --edge on body, where they were
+  the editors' alone; the canvas's ring the same on the link page.
+- THE ROUND BUTTONS (Restart, Loop, More, Full), THE MORE CARD and the line
+  between its rows, its point (drawn 1/--hair as large and scaled back, so
+  its two lines are the screen's pixel too), THE SPEED CHIPS' CARD, THE
+  SCRUBBER'S BUBBLE and THE X in full screen: each border kept, transparent,
+  and a line of --edge outside it, in its line as it looked over its own
+  control's ground, made solid (--control-edge, --control-edge-strong,
+  --deep-edge).
+- THE WAY BACK to a host's site (the pill), in its own lilac line over the
+  page; hover's accent as it was, the line stepping aside.
+- THE COLUMN'S SIDES on a desk (.app, the editors' too): a line of --edge
+  outside each side (--raised-edge), none above or below; none on a phone or
+  while the canvas's row spans the page, as before.
+- WRITTEN ONCE, AND INCREASE CONTRAST FOLLOWS: the solid lines are each
+  written once, from --hl and --hls, the hairlines' strengths, which each
+  theme sets and Increase Contrast (prefers-contrast: more) swaps for the
+  -hc ones, as it swaps the hairlines themselves. A pair per theme would have
+  kept the lines at their ordinary strength with Increase Contrast on.
+- States show as they did: the accent Play has none, a lit Loop none.
+
+PAD AND FLIP: shared: the speed chips' card, the bubble and the column's
+sides are the editors' too (the Pad's line, its preview), and the round
+buttons and the More card are the Pad's preview player's.
+
+WHAT IT COSTS: the link page's stylesheet, +1,377 B, a named raise
+(verify_player_isolation, and verify_jsstrip's line with it). Spent first:
+the solid lines written once (151 B under a pair per theme), shadows with no
+blur written without it.
+
+CONTRAST: no word changed. Every line keeps its colour, laid over what it was
+drawn on; with Increase Contrast a round button's line reads 1.97:1 on its
+ground in light (1.22:1 without) and 2.04:1 in dark (1.16:1).
+
+THE CHECKS, verify_linkpage's THE LINK PAGE'S EDGES (new), read three ways,
+light and dark: off the paint, at the owner's phone's 3x and a desk's 2x;
+the border that drew the old line transparent; and the line one screen
+pixel by its own measure, its widest unblurred shadow. Each row shown red by
+a break of its own, the tree as built green beside them:
+
+- every outline is one screen pixel: a round button, the way back, the More
+  card, the speed chips' card, the scrubber's bubble and the x in full
+  screen, and the column's sides on a desk (red: each part's 1px line back,
+  one at a time; and --hair kept off the link page, every line three
+  screen pixels wide);
+- the line between the More card's rows is one screen pixel (red: its 1px
+  rule back);
+- Increase Contrast strengthens them (red: the strengths not swapped).
+
+THE INSTRUMENT, three times: a first reading of "pixels unlike both sides"
+counted the More card's and the bubble's drop shadows; reading only pixels
+that stand apart from both their own neighbours, the More card still read
+four, a stroke of the drawing beside it, so the drawing is hidden for the
+photograph (as the suite hides words for its contrast reading); and the
+bubble, read across its side, picked up a pixel of something beside it on
+the hosted page that a bare page did not have, so it is read across its
+top. A nudge onto the screen's pixels was tried and taken out: Chrome puts a
+box's edges on them already, and a translate, which it does not, shared a
+line out over two. And a pixel reading sees a line one pixel wide, not a
+wide one beside it: the x with its old 1px border back still wore the round
+buttons' new line and read 1, and a round box's line one pixel too wide
+wears a soft outer pixel that reads as a line; so the border is asked to be
+transparent, and the line's own width is read from its shadow.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3), fifteen ok in 32.1
+minutes: verify_linkpage 61/61, verify_player_isolation 85/85, verify_jsstrip
+35/35, verify_seam 518/518, verify_onefull 57/57, verify_gallery 234/234,
+verify_library 248/248, verify_fullsmart 26/26, verify_example 59/59,
+verify_contrast 647/647, verify_theme 124/124, verify_surfaces 13/13,
+verify_a11y 444/444, verify_docs 144/144, verify_replayspeed 186/186 (the
+Pad's line wears the speed chips' card). NOT RUN: the full battery (main's
+run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: a drawing's link page in light, the round buttons'
+edges a fine line, as fine as the Gallery's tiles'.
