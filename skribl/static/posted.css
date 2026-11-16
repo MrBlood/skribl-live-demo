@@ -349,9 +349,13 @@
   max-width: 420px;
   padding: 20px;
   border-radius: 16px;
-  border: 1px solid var(--line-strong);
+  /* ONE SCREEN PIXEL (the edges, part four): the border keeps its width,
+     transparent, so nothing moves, and the line is a ring of --edge outside
+     it (the editors' and the Library's, pagemenu.css), its colour as it was.
+     The panel's lines below are the same. */
+  border: 1px solid transparent;
   background: var(--surface-sheet);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 var(--edge) var(--line-strong), 0 18px 48px rgba(0, 0, 0, 0.55);
 }
 .reckey-title {
   margin: 0 0 10px;
@@ -373,7 +377,8 @@
   margin: 0 0 12px;
   padding: 12px;
   border-radius: 10px;
-  border: 1px solid var(--line-mid);
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 var(--edge) var(--line-mid);
   background: var(--surface-well);
   color: var(--text-strong);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -392,7 +397,8 @@
   cursor: pointer;
 }
 .reckey-copy {
-  border: 1px solid var(--line-strong);
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 var(--edge) var(--line-strong);
   background: var(--surface-control);
   color: var(--text-strong);
 }
@@ -415,7 +421,8 @@
   margin: 0 0 12px;
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 var(--edge) var(--line-strong);
   background: var(--surface-well);
   font-size: 14px;
   line-height: 1.45;
@@ -436,7 +443,8 @@
   margin: 0 0 12px;
   padding: 11px 12px;
   border-radius: 10px;
-  border: 1px solid var(--line-mid);
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 var(--edge) var(--line-mid);
   background: var(--surface-well);
   color: var(--text-strong);
   font-size: 16px;

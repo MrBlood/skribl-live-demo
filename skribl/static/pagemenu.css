@@ -35,7 +35,7 @@
   --glass-sheet-fill: var(--glass-fill);
   --header-rim: rgba(0, 0, 0, 0.55);
   --glass-drop: rgba(0, 0, 0, 0.30);
-  --glass: 0 0 0 1px var(--header-rim), 0 6px 20px var(--glass-drop);
+  --glass: 0 0 0 var(--edge) var(--header-rim), 0 6px 20px var(--glass-drop);
   --glass-scrim: rgba(0, 0, 0, 0.4);           /* styles.css .menu-overlay::before */
   --on-glass-2: var(--text-2);
   /* The editors' focus ring: 2px, 2px out, in this colour. */
@@ -50,6 +50,17 @@
   --on-glass-2: #3f4756;
 }
 .pm-sheet, .sheet-card, .cardMenu { --text-2: var(--on-glass-2); --text-3: var(--on-glass-2); }
+/* ONE SCREEN PIXEL (the edges, part four; the owner's "all yes" to "The
+   edges", B, Nov 15): a 1px line is three of a 3x phone's pixels, and
+   Chromium rounds any border, or outline, under 1px up to 1px. So every
+   outline on these two pages keeps its border's width, transparent, and
+   nothing moves, and wears a ring of --edge outside it, 1px scaled by --hair
+   to the screen's own pixel, as the editors' and the site's do; a separator
+   is a line of --edge above or below its row. The ring's ink is the line as
+   it looked over what the border was drawn on, laid over it and made solid. */
+:root { --hair: 1; --edge: calc(1px * var(--hair)); }
+@media (min-resolution: 2dppx) { :root { --hair: 0.5; } }
+@media (min-resolution: 3dppx) { :root { --hair: 0.3334; } }
 /* ---- THE MENU'S PAPER, restated (after v324: the Gallery and Library menu
    mock, A, "All yes") -------------------------------------------------------
    The ••• menu here is the editors' menu, minus what only an editor has: the
@@ -65,6 +76,7 @@
   --menu-card-line: rgba(167, 146, 255, 0.12);
   --menu-card-rule: rgba(167, 146, 255, 0.12);
   --menu-card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+  --menu-card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--menu-card));
   --text-2: #9aa2b1; --text-3: #9aa2b1;
 }
 :root[data-theme="light"] .pm-sheet {
@@ -73,6 +85,7 @@
   --menu-card-line: rgba(124, 92, 255, 0.34);
   --menu-card-rule: rgba(80, 60, 170, 0.10);
   --menu-card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
+  --menu-card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--menu-card));
   --text-2: #545c6a; --text-3: #545c6a;
   --seg-on-ink: #4c31c4;
 }
@@ -110,7 +123,7 @@ html { scroll-padding-top: 96px; }
   transition: background-color 0.25s ease, box-shadow 0.25s ease;
 }
 .top.scrolled { background: var(--base); }
-.top.scrolled::before { background-color: var(--base); box-shadow: 0 1px 0 var(--hairline); }
+.top.scrolled::before { background-color: var(--base); box-shadow: 0 var(--edge) 0 var(--hairline); }
 @media (max-width: 640px) {
   .top { top: 6px; padding: 8px 0; }
 }
@@ -282,9 +295,23 @@ html.skribl-sheet { overscroll-behavior-y: none; }
 @media (hover: hover) { .pm-item:hover { background: var(--control); } }
 /* The places, one card: the editors' .menu-list and its rows. */
 .pm-list { display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; margin: 4px 0 8px;
-  background: var(--menu-card); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop); }
+  background: var(--menu-card); border: 1px solid transparent;
+  box-shadow: 0 0 0 var(--edge) var(--menu-card-edge), var(--menu-card-drop); }
 .pm-list > .pm-item { min-height: 64px; padding: 10px 14px; gap: 14px; border-radius: 0; font-size: 16px; }
-.pm-list > .pm-item + .pm-item { border-top: 1px solid var(--menu-card-rule); }
+/* THE LINE BETWEEN TWO ROWS, the Pad's menu's (styles.css, Apple's thin
+   line): one screen pixel, from where a row's words start to the row's
+   inside edge, in the words' own colour at 16%, drawn in the pixel the row's
+   top border took (transparent, kept, so nothing moves). */
+.pm-list > .pm-item + .pm-item { border-top: 1px solid transparent; position: relative; }
+.pm-list > .pm-item + .pm-item::before {
+  content: ""; position: absolute; top: -1px; left: 50px; right: 14px; height: 1px;
+  background: color-mix(in srgb, var(--text) 16%, transparent);
+  transform: scaleY(var(--hair)); transform-origin: top; pointer-events: none;
+}
+/* A row in focus hides its own line (the ring is its edge there) and sits
+   above the next row's, which would paint over the ring's foot, as the Pad's. */
+.pm-list > .pm-item:focus-visible::before { display: none; }
+.pm-list > .pm-item:focus-visible { position: relative; z-index: 1; }
 .pm-list > .pm-item svg { width: 22px; height: 22px; }
 .pm-list .pm-sub { font-size: 14px; line-height: 1.3; }
 @media (hover: hover) { .pm-list > .pm-item:hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
@@ -315,7 +342,8 @@ html.skribl-sheet { overscroll-behavior-y: none; }
   width: 204px;   /* three equal options, "System" at the pill's 13px / 600 with room */
 }
 .seg-track.pm-seg > button { flex: 1 1 0; min-width: 0; padding: 0 6px; }
-.seg-track.pm-seg { background: var(--menu-card); border-color: var(--menu-card-line); }   /* a white card on the paper, as the editors' */
+.seg-track.pm-seg { background: var(--menu-card); border-color: transparent;
+  box-shadow: 0 0 0 var(--edge) var(--menu-card-edge); }   /* a white card on the paper, as the editors' */
 /* A pointer's popover once read a third tighter than a finger's sheet; its
    rows are the editors' card rows now, the same at both sizes, as theirs. */
 

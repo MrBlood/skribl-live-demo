@@ -686,6 +686,55 @@
     .posted-actions .posted-delete.armed, .draft-acts .draft-del.armed { background: #9e0b39; color: #fff; }
     :root { --mp: #17142a; --ml: rgba(167, 146, 255, 0.18); }
     :root[data-theme="light"] { --mp: #f3f0ff; --ml: rgba(124, 92, 255, 0.34); }
+    /* ONE SCREEN PIXEL (the edges, part four; the owner's "all yes" to "The
+       edges", B): every outline keeps its border's width, transparent, so
+       nothing moves, and wears a ring of --edge (pagemenu.css) outside it,
+       in the line as it looked over what it was drawn on, laid over it and
+       made solid; the cards keep their lift. --card-edge is the site's and
+       the editors' (a card's lilac line over its own white); a field's edge
+       is the site's --field-line, which reads 3:1 on its white (the search
+       read 2.68:1 in the card's line). A state that colours a border (a
+       choice made, Copied, a hover) shows as it did, its ring stepping
+       aside. */
+    :root {
+      --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
+      --field-line: rgba(167, 146, 255, 0.7);
+      --menu-paper-edge: color-mix(in srgb, rgb(167 146 255) 18%, var(--mp));
+      --danger-edge: color-mix(in srgb, rgb(244 50 111) 43%, var(--card));
+    }
+    :root[data-theme="light"] {
+      --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card));
+      --field-line: rgba(124, 92, 255, 0.82);
+      --menu-paper-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--mp));
+    }
+    .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge); }
+    .player, .posted-row, .draft-row { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
+    .search input { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--field-line); }
+    .tbtn:not(.on), .posted-copy, .posted-key, .more, .draft-file {
+      border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge); }
+    :is(.posted-copy, .posted-key).done { border-color: rgba(124, 92, 255, 0.4); box-shadow: none; }
+    @media (hover: hover) { .more:hover { box-shadow: none; } }
+    /* Delete: its danger line, as it looked over its own tint on the card. */
+    .posted-delete, .draft-del { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--danger-edge); }
+    .kind { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--hairline); }
+    /* The lines across the list's foot. */
+    .posted-foot-top { border-bottom-color: transparent; box-shadow: 0 var(--edge) 0 0 var(--hairline); }
+    .posted-foot { border-top-color: transparent; box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--hairline); }
+    /* Undo after a remove: its accent line, over its tint. */
+    .posted-undo { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--ui-line); }
+    .posted-undo-btn { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--line-strong); }
+    @media (hover: hover) { .posted-undo-btn:hover { box-shadow: none; } }
+    @media (max-width: 640px) {
+      /* The ⋯'s menu, on the menu's paper: its edge the line over the paper,
+         its drop kept; its buttons have no edge there; the rule above Delete
+         one screen pixel. */
+      .posted-row.has-more.more-open .posted-actions,
+      .draft-row.has-more.more-open .draft-acts { border-color: transparent;
+        box-shadow: 0 0 0 var(--edge) var(--menu-paper-edge), 0 12px 40px rgba(30, 16, 90, 0.22), 0 2px 6px rgba(30, 16, 90, 0.10); }
+      .posted-row.has-more .posted-actions button, .draft-row.has-more .draft-act { box-shadow: none; }
+      .posted-row.has-more .posted-actions .posted-delete::after,
+      .draft-row.has-more .draft-del::after { transform: scaleY(var(--hair)); transform-origin: top; }
+    }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>

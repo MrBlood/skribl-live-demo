@@ -36,6 +36,7 @@ library's list is the record lib/posted.js keeps, written into this browser.
 Requires a running server:
     ./harness/run_harness.sh verify_galib.py
 """
+import io
 import json
 import os
 import re
@@ -893,8 +894,12 @@ with sync_playwright() as p:
         rgb = _rgba(pl["bg"])[0]
         # NEUTRAL: grey, or the card it sits on (after v324 the player's
         # controls are the card's white, the app's card, as the editors').
+        # Its edge is a ring now (the edges, part four): a shadow with no
+        # offset and no blur, one pixel or less, is that line, not a glow.
+        _glow = [x for x in re.split(r",(?![^()]*\))", pl["shadow"]) if x.strip() != "none"
+                 and not re.search(r"(^|\s)0px 0px 0px (0\.\d+|1)px", x)]
         check(f"/library {theme}: Play has no accent gradient, no glow, and a neutral ground (grey, or its card's)",
-              pl["img"] == "none" and pl["shadow"] == "none" and (max(rgb) - min(rgb) < 24 or pl["bg"] == pl["card"]), str(pl))
+              pl["img"] == "none" and not _glow and (max(rgb) - min(rgb) < 24 or pl["bg"] == pl["card"]), str(pl))
         pg.close()
 
     # ======================================================= THE CARD'S PILL
@@ -1117,6 +1122,103 @@ with sync_playwright() as p:
                   len(_geo) == 1 and next(iter(_geo))[0] == "fixed" and next(iter(_geo))[3] and len(_mid) >= 3 and not _bare and not _clip,
                   f"strip {sorted(_geo)[:3]}, {len(_mid)} in-between frames, frames off the foot {_bare[:5]}, clip {_clip}")
         _c.close()
+
+    # ================================================================ EDGES
+    print("\nGALIB 10 -- the edges, part four: every outline one screen pixel on the Library and the Gallery")
+    # The owner's "all yes" to "The edges", B (Nov 15); the Library's and the
+    # Gallery's part. Every outline is one screen pixel: its border kept,
+    # transparent, so nothing moves, and a ring of --edge outside it. Read off
+    # the paint at the owner's phone's 3x, light and dark, as
+    # verify_socialposts 17 reads the site's: at the middle of a box's left
+    # side, the screen pixels that stand 1.15:1 apart from both what is beside
+    # it and what is inside. Every one of them was three. The page menu's rows
+    # wear the Pad's thin line, one screen pixel from where the words start;
+    # the tiles and the rows keep their lift on the light page; a search's edge
+    # reads 3:1 on its white (2.68:1 in the card's line, before).
+    def _cr(p_, q_):
+        a_, b_ = sorted((_lum(p_), _lum(q_)), reverse=True)
+        return (a_ + 0.05) / (b_ + 0.05)
+
+    def _band(im, pts, side, inside):
+        return [im.getpixel(q_) for q_ in pts if _cr(im.getpixel(q_), side) >= 1.15 and _cr(im.getpixel(q_), inside) >= 1.15]
+
+    _BOX = "(s) => { const e = [...document.querySelectorAll(s)].find(x => x.getClientRects().length); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }"
+    _edges, _lift, _rows = {}, {}, {}
+    for _scheme in ("light", "dark"):
+        _c = b.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=3, is_mobile=True, has_touch=True,
+                           color_scheme=_scheme, storage_state=state)
+        # A row that is not the one playing (that one is the lit row, with no
+        # edge); New | Hot read on its right side, past the option not chosen
+        # (on its left the chosen pill sits 3px in, and is not its inside).
+        for _path, _sels in (("/gallery", [".tile", ".find input", ".tabs.seg-track"]),
+                             ("/library", [".player", ".tbtn:not(.on)", ".posted-row:not(.active)", ".search input"])):
+            _p = open_page(_c, _path, _scheme)
+            _p.wait_for_timeout(600)
+            for _sel in _sels:
+                _p.evaluate("(s) => { const e = [...document.querySelectorAll(s)].find(x => x.getClientRects().length); if (e) e.scrollIntoView({ block: 'center' }); }", _sel)
+                _p.wait_for_timeout(250)
+                im = Image.open(io.BytesIO(_p.screenshot())).convert("RGB")
+                r = _p.evaluate(_BOX, _sel)
+                if not r:
+                    _edges[f"{_scheme} {_sel}"] = None
+                    continue
+                y = round((r[1] + r[3] / 2) * 3)
+                if _sel == ".tabs.seg-track":
+                    x = round((r[0] + r[2]) * 3)
+                    side, inside = im.getpixel((x + 8, y)), im.getpixel((x - 13, y))
+                    got = _band(im, [(i, y) for i in range(x - 8, x + 6)], side, inside)
+                else:
+                    x = round(r[0] * 3)
+                    side, inside = im.getpixel((x - 9, y)), im.getpixel((x + 12, y))
+                    got = _band(im, [(i, y) for i in range(x - 6, x + 8)], side, inside)
+                _edges[f"{_scheme} {_sel}"] = {"n": len(got), "px": got[:3], "inside": inside}
+                if _scheme == "light" and _sel in (".tile", ".posted-row:not(.active)"):
+                    # THE LIFT IS WHAT DARKENS THE PAGE JUST UNDER THE CARD: read
+                    # there (3px under its middle), then again with this one
+                    # card's shadow cut to its ring alone. (A first version read
+                    # 12px further down, which under a row is the next row's
+                    # white, and stayed green with the rows' lift gone.)
+                    xm, yb = round((r[0] + r[2] / 2) * 3), round((r[1] + r[3]) * 3)
+                    _with = _lum(im.getpixel((xm, yb + 9)))
+                    _p.evaluate("(s) => { const e = [...document.querySelectorAll(s)].find(x => x.getClientRects().length); e.dataset.liftWas = e.style.boxShadow; e.style.boxShadow = '0 0 0 var(--edge) var(--card-edge)'; }", _sel)
+                    _p.wait_for_timeout(120)
+                    _bare = _lum(Image.open(io.BytesIO(_p.screenshot())).convert("RGB").getpixel((xm, yb + 9)))
+                    _p.evaluate("(s) => { const e = [...document.querySelectorAll(s)].find(x => x.getClientRects().length); e.style.boxShadow = e.dataset.liftWas; }", _sel)
+                    _lift[_sel] = [round(_with * 1000, 1), round(_bare * 1000, 1)]
+            # THE PAGE MENU: its list card's edge, and the line between its
+            # first two rows, one screen pixel past the words' start (x + 120)
+            # and none at the row's own left (x + 20), where a full rule ran.
+            _p.click("#pageMenuBtn"); _p.wait_for_timeout(700)
+            im = Image.open(io.BytesIO(_p.screenshot())).convert("RGB")
+            r = _p.evaluate(_BOX, ".pm-list")
+            x, y = round(r[0] * 3), round((r[1] + r[3] / 2) * 3)
+            side, inside = im.getpixel((x - 9, y)), im.getpixel((x + 12, y))
+            got = _band(im, [(i, y) for i in range(x - 6, x + 8)], side, inside)
+            _edges[f"{_scheme} {_path} menu"] = {"n": len(got), "px": got[:3], "inside": inside}
+            r2 = _p.evaluate("() => { const it = [...document.querySelectorAll('.pm-list > .pm-item')].filter(e => e.getClientRects().length); if (it.length < 2) return null; const r = it[1].getBoundingClientRect(); return [r.left, r.top]; }")
+            if r2:
+                yt = round(r2[1] * 3)
+                def _col(xc):
+                    above, below = im.getpixel((xc, yt - 9)), im.getpixel((xc, yt + 9))
+                    return len(_band(im, [(xc, j) for j in range(yt - 6, yt + 6)], above, below))
+                _rows[f"{_scheme} {_path}"] = {"past the words": _col(round((r2[0] + 120) * 3)), "at the row's left": _col(round((r2[0] + 20) * 3))}
+            _p.close()
+        _c.close()
+    check("every outline on the Gallery and the Library is one screen pixel at 3x, light and dark: a tile, the search,"
+          " New | Hot, the Library's stage, its buttons, a row and its search, and each page menu's card",
+          len(_edges) == 18 and all(v and v["n"] == 1 for v in _edges.values()),
+          json.dumps({k: (v and v["n"]) for k, v in _edges.items()}) + " " + json.dumps(_edges)[:400])
+    check("...the page menu's rows wear the Pad's thin line: one screen pixel past where the words start, none at the"
+          " row's own left, on both pages, light and dark",
+          len(_rows) == 4 and all(v["past the words"] == 1 and v["at the row's left"] == 0 for v in _rows.values()),
+          json.dumps(_rows))
+    check("...a tile and a row sit on the light page with the cards' own lift: the page just under each darker than"
+          " with that card's shadow cut to its ring",
+          len(_lift) == 2 and all(v[0] < v[1] - 2 for v in _lift.values()), json.dumps(_lift))
+    _fl = [_edges.get(f"light {s}") or {} for s in (".find input", ".search input")]
+    check("...and the Gallery's and the Library's search fields' edges read 3:1 or more against their own white",
+          all(f.get("px") and _cr(f["px"][0], f["inside"]) >= 3.0 for f in _fl),
+          json.dumps([(f.get("px", [None])[:1], f.get("inside"), round(_cr(f["px"][0], f["inside"]), 2) if f.get("px") else None) for f in _fl]))
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)
