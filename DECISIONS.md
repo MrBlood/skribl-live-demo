@@ -44008,6 +44008,14 @@ green beside it:
 - verify_socialmentions 4 (control 12/12): the list's card row asked for a
   1px --card-line border; it asks for the ring, one screen pixel of
   --card-edge, the border kept and transparent (red: the old sheet).
+- Rows that read a line's colour off its border read it where it is drawn
+  now, the border's where it shows one, else the ring's: verify_socialsettings
+  1 and 6 (the Theme switch's track and your profile's Settings, in the
+  second button's dress; 10/10, red with the switch's ring gone, the link's
+  ring gone and the link's ring in another colour) and verify_socialfollow 7
+  (Home's pill in the card's edge, as the page resolves --card-edge; 6/6,
+  red with no ring and with the line not laid over the card). Each went red
+  on the first run beside the others, which is how they were found.
 
 THE FOUR. Kind: nothing moves, and the drawings are the boldest thing on
 the page. Simple: one rule, one line, every edge. Powerful: the tiles
