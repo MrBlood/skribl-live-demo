@@ -44615,3 +44615,30 @@ NOT TESTED HERE: an iPhone (WebKit): the stand-in is driven here with the
 Fullscreen API hidden; Windows' own rendering; the live site. The one-glance
 tell: a post on the site, the four corners at the end of its line, after
 Repeat.
+
+## After v330 -- Main red after #938: a short glide a stalled frame swallowed read as no glide (verify_drawerreveal)
+
+Main at b350974 (run 43910999317), sqlite 4/6: verify_drawerreveal 216/217,
+"Flip desk music: beat: ...gliding there, never back up": 68px over two
+frames, 67 of it in one 119ms frame, the most back 0px, no leap we made. On
+the same tree here, alone, 217/217. #938 touched the site's composer, which
+this suite never opens: the runner. The rule asked for three frames; a frame
+that stalls for 119ms swallows most of a short glide, and two were left.
+
+THE MEND: two frames that took as long as three (50ms), with no instant write
+and no clamp in them at all, are the browser's own glide caught up after a
+stall, as the entry for #825 said of a big step. A write in a long frame
+reads small for a frame's time, so it never gets the allowance: the three
+frames were what failed it, and the mend's first draft, without "no write",
+let it through.
+
+CALIBRATED, under both rules: eight shapes (the CI trace, green now and red
+before; a snap in one frame, short or stalled, red either way; two quick
+frames, red; two frames with a write or a clamp in the big one, red, which
+the first draft passed; a five-frame glide and #825's, green). In a tree copy
+with its own server: every glide in lib/drawerdetent.js made instant, 34 rows
+red, each "over 1 frames"; the music drawer's doors' glide made instant
+(lib/musicdrawer.js), 16 rows red, the CI's own row among them, 68px over one
+frame; as built, 217/217.
+
+Main's failed job was re-run: a runner's stall, not the tree.
