@@ -413,20 +413,34 @@ with sync_playwright() as p:
     # "All yes"). It was the Pad's glass; the editors' menu moved to solid
     # lilac paper with white cards after v323, and this one now wears the
     # same, read here off the Pad's own menu in the same theme, not typed.
-    MENU = """() => { const s = document.getElementById('pageMenu'), b = document.getElementById('pageMenuBtn');
+    # A CARD'S LINE AS IT SHOWS over its white, laid over it: its border's, or
+    # its ring's (the editors' since the edges' part three, a ring of --edge
+    # outside a transparent border, its ink the line laid over the card
+    # already). The Library's and the Gallery's menus keep their 1px border
+    # until their own part; the line they show is the same.
+    SEEN = """const seen = (c) => { if (!c) return null;
+      const rgba = (v) => { const m = v.match(/^color\\(srgb ([\\d.]+) ([\\d.]+) ([\\d.]+)(?: \\/ ([\\d.]+))?\\)/);
+        if (m) return [m[1] * 255, m[2] * 255, m[3] * 255, m[4] === undefined ? 1 : +m[4]];
+        const n = (v.match(/[\\d.]+/g) || []).map(Number); return n.length >= 3 ? [n[0], n[1], n[2], n.length > 3 ? n[3] : 1] : null; };
+      const bc = c.borderTopColor, shown = c.borderTopWidth !== '0px' && rgba(bc) && rgba(bc)[3] > 0;
+      const ring = (c.boxShadow || '').match(/^((?:rgba?|color)\\([^)]*\\)) 0px 0px 0px [\\d.]+px/);
+      const L = rgba(shown ? bc : (ring ? ring[1] : 'none') || 'none'), G = rgba(c.backgroundColor);
+      return L && G ? [0, 1, 2].map(k => Math.round(L[k] * L[3] + G[k] * (1 - L[3]))) : null; };
+      """
+    MENU = """() => { """ + SEEN + """const s = document.getElementById('pageMenu'), b = document.getElementById('pageMenuBtn');
       const sr = s.getBoundingClientRect(), br = b.getBoundingClientRect(), cs = getComputedStyle(s);
       const scrim = getComputedStyle(document.getElementById('pageMenuOverlay'), '::before');
       const l = s.querySelector('.pm-list'), lc = l ? getComputedStyle(l) : null, t = s.querySelector('.pm-seg');
       return { right: sr.right - br.right, gap: sr.top - br.bottom, w: sr.width, left: sr.left,
                bottom: innerHeight - sr.bottom, vw: innerWidth, bf: cs.backdropFilter, bg: cs.backgroundColor,
                r: cs.borderTopLeftRadius, pad: cs.paddingTop,
-               card: lc && lc.backgroundColor, line: lc && lc.borderTopColor, cardR: lc && lc.borderTopLeftRadius,
+               card: lc && lc.backgroundColor, line: seen(lc), cardR: lc && lc.borderTopLeftRadius,
                places: l ? l.querySelectorAll('a[data-dest]').length : 0, track: t && getComputedStyle(t).backgroundColor,
                weight: getComputedStyle(s.querySelector('.pm-item')).fontWeight,
                scrim: scrim.backgroundColor, scrimBf: scrim.backdropFilter }; }"""
-    PAD = """() => { const m = document.getElementById('menuSheet'), l = m.querySelector('.menu-list'), t = m.querySelector('.menu-editor-seg');
+    PAD = """() => { """ + SEEN + """const m = document.getElementById('menuSheet'), l = m.querySelector('.menu-list'), t = m.querySelector('.menu-editor-seg');
       return { bg: getComputedStyle(m).backgroundColor, card: getComputedStyle(l).backgroundColor,
-               line: getComputedStyle(l).borderTopColor, track: getComputedStyle(t).backgroundColor }; }"""
+               line: seen(getComputedStyle(l)), track: getComputedStyle(t).backgroundColor }; }"""
     for theme in ("dark", "light"):
         pg = open_page(ctx, "/skribl-pad", theme)
         pg.evaluate("() => document.getElementById('menuBtn').click()"); pg.wait_for_timeout(700)
@@ -439,7 +453,8 @@ with sync_playwright() as p:
             check(f"{path} {theme}: the menu is the editors' paper -- solid, the Pad's paper, its four places one card "
                   "of the Pad's white with the lilac edge, Theme on that card, 600 rows, a blurred .4 dim",
                   m["bf"] == "none" and m["bg"] == pad["bg"] and m["places"] == 4 and m["card"] == pad["card"]
-                  and m["line"] == pad["line"] and m["track"] == pad["card"] and m["weight"] == "600"
+                  and bool(m["line"]) and bool(pad["line"]) and all(abs(a - b_) <= 1 for a, b_ in zip(m["line"], pad["line"]))
+                  and m["track"] == pad["card"] and m["weight"] == "600"
                   and "blur(2px)" in m["scrimBf"] and abs(_rgba(m["scrim"])[1] - 0.4) < 0.01, f"{m} pad={pad}")
             if theme == "dark":
                 check(f"{path}: on a desktop it is the editors' popover under the ••• -- 336 wide, a 22 corner, "
