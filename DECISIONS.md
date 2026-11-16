@@ -44868,11 +44868,14 @@ light and dark, the Pad's and Flip's, the screen pixel inside the card's
 line is the drawing's ground (red: the rule gone, the card's white and its
 dark lilac inside the line; the ground never handed over).
 
-THE AFFECTED SUITES, side by side (run_parallel -j 3), nine ok in 27.2
-minutes: verify_book 58/58, verify_ask 54/54, verify_learncard 150/150,
+THE AFFECTED SUITES, side by side (run_parallel -j 3), eleven ok in 26.0
+minutes on the tree rebased onto #943 (whose styles.css this shares):
+verify_book 58/58, verify_ask 54/54, verify_learncard 150/150,
 verify_contrast 647/647, verify_theme 124/124, verify_surfaces 13/13,
-verify_hello 50/50, verify_helpclaims 47/47, verify_docs 144/144. NOT RUN:
-the full battery (main's run after the merge does it).
+verify_hello 50/50, verify_helpclaims 47/47, verify_docs 144/144, and two
+first named after #939's red (they read the editors' picture cards):
+verify_a11y 444/444, verify_helpdemos 129/129. NOT RUN: the full battery
+(main's run after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: the little book's first page, the drawing's paper right
