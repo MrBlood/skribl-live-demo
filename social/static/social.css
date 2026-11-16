@@ -1381,6 +1381,11 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   color: var(--ink); font: 18px/1.4 var(--font); resize: none; overflow: hidden; outline: none;
 }
 .cmp-words::placeholder { color: var(--ink-2); opacity: 1; }
+/* NO BOX AROUND THE WORDS: the sheet is the box, and the caret says where you
+   type (the composer's B). The site's ring for a text box in focus (#934)
+   outweighed the outline: none above, and drew a square ring tight to the
+   words (the owner, Nov 16: "squared corners and no padding"). */
+.cmp-words:focus-visible { outline: none; }
 .cmp-att { margin: 6px 0 0 52px; }
 .cmp-att[hidden], .cmp-att .btn[hidden], .cmp-more[hidden] { display: none; }
 /* A QUOTE (reposts): the post small under the words (and under a drawing

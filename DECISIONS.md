@@ -44474,3 +44474,29 @@ NOT TESTED HERE: an iPhone (WebKit) and Windows' own rendering; the live
 site. The one-glance tell: the Gallery in light, each tile's lilac edge a
 fine line, as fine as the site's; the ••• menu's rows' lines starting where
 their words do.
+
+## After v330 -- Make's words in focus wear no box again
+
+The owner, Nov 16 (Mountain Time), with a screenshot of Make's composer,
+"Say something…" in focus inside a square lilac ring tight to its words:
+"how many boxes ended up with squared corners and no padding between the
+edges and the text?" One: Make's words (.cmp-words, the same sheet on every
+page). #934 gave every textarea the site's ring and meant to leave the
+composers' words their own, but named only .composer-words, the comment
+box's (which keeps its own ring, rounded 6px); Make's had outline: none in
+its own rule, which the shared rule outweighed (an element and a
+pseudo-class against one class). A census of every field on the site in
+focus, light and dark, phone and desk (a temporary part of
+verify_socialposts, taken out after): every other one rounded and padded.
+
+WHAT CHANGED: .cmp-words:focus-visible { outline: none; } (social.css): the
+sheet is the box, and the caret says where you type, as the composer's B drew
+it. Pad and Flip unchanged (the site alone).
+
+THE CHECK, verify_composer 3: "Say something…" in focus wears no ring, phone
+and desk, light and dark (red on main's stylesheet: a solid 2px ring on all
+four; green after). verify_socialprofile 6 still reads About you's ring.
+Side by side: verify_composer 39/39, verify_socialprofile 94/94.
+
+NOT TESTED HERE: an iPhone (WebKit). The one-glance tell: Make, then a tap in
+"Say something…": the caret, and no box.
