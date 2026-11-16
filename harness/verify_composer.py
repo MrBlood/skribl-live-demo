@@ -515,6 +515,14 @@ PARTS = """() => { const s = document.querySelector('#composeSheet .make-sheet')
            field: { size: cs.fontSize, placeholder: w.getAttribute('placeholder'), max: w.getAttribute('maxlength') },
            say: (s.querySelector('[data-compose-say]') || {}).textContent || '' }; }"""
 
+# THE WORDS IN FOCUS: whether the field is focused and matches :focus-visible
+# (a text field always does in Chromium), and the ring it wears there: its
+# outline's style (none when it has none) and its shadow.
+RING = """() => { const w = document.querySelector('#composeSheet [data-compose-words]'), cs = getComputedStyle(w);
+  return { focused: document.activeElement === w, visible: w.matches(':focus-visible'),
+           outline: cs.outlineStyle === 'none' || parseFloat(cs.outlineWidth) === 0 ? 'none' : cs.outlineStyle + ' ' + cs.outlineWidth,
+           shadow: cs.boxShadow }; }"""
+
 # EVERY WORD on what is painted behind it, every control 44px, every text
 # field 16px, in `root` (the site's suites' own reader: the ground composited
 # up to the first opaque one, and a word counted only where it is what is
@@ -751,6 +759,7 @@ with sync_playwright() as p:
                     pg.fill("#composeSheet [data-compose-words]", "A slow snail for a slow Saturday.")
                     pg.wait_for_timeout(200)
                     look["typed"] = pg.evaluate(PARTS)["left"]["words"]
+                    look["ring"] = pg.evaluate(RING)
                     look["sent"] = len(sent)
                     looks[f"{screen} {scheme}"] = look
                     close_ctx(ctx, pg)
@@ -772,6 +781,10 @@ with sync_playwright() as p:
                   " something…\" (18px, 500 at most); Draw, Flip and Yours along the bottom, the characters left at their"
                   " end, 500, then 467 after 33 typed; phone and desk, light and dark",
                   not bad, json.dumps(bad)[:1200])
+            ringed = {k: v["ring"] for k, v in looks.items() if v["ring"] != {"focused": True, "visible": True, "outline": "none", "shadow": "none"}}
+            check("no box around the words: \"Say something…\" in focus wears no ring (the sheet is the box, the caret says"
+                  " where you type), though the site's text boxes wear theirs (#934); phone and desk, light and dark",
+                  len(looks) == 4 and not ringed, json.dumps(ringed)[:600])
             kctx, kpg = browser_as(b, mira, init=KEYBOARD)
             go(kpg, "/social/explore")
             open_composer(kpg)
