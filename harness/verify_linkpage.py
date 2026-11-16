@@ -506,6 +506,103 @@ try:
         nav = pg.evaluate("() => ({ path: location.pathname, nav: (performance.getEntriesByType('navigation')[0] || {}).type })")
         check("...and with no Pad behind it, it opens the Pad", nav["path"] == PAD_PATH and nav["nav"] == "navigate", str(nav))
         ctx.close()
+
+        print("\nTHE LINK PAGE'S EDGES, one screen pixel (the edges, part four)")
+        # The owner's "all yes" to "The edges", B: every outline the thinnest
+        # line the screen can draw, its border kept, transparent, and a line of
+        # --edge outside it. Read off the paint, at the owner's phone's 3x and
+        # a desk's 2x, light and dark: across an edge, the screen pixels that
+        # are neither what is beside the box nor what is inside it. Every one
+        # was three at 3x (two at 2x): a round button, the way back, the More
+        # card and the line between its rows, the speed chips' card, the
+        # scrubber's bubble, the x in full screen, and the column's sides.
+        def _line(im, pts, side, inside):
+            far = lambda c, d: max(abs(c[k] - d[k]) for k in range(3)) > 4
+            return sum(1 for q_ in pts if far(im.getpixel(q_), side) and far(im.getpixel(q_), inside))
+
+        _BOX = "(s) => { const e = document.querySelector(s); if (!e || !e.getClientRects().length) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }"
+
+        def _left(pg, sel, k, at=0.5):
+            """The screen pixels of the line across the middle of the box's left side."""
+            r = pg.evaluate(_BOX, sel)
+            if not r:
+                return None
+            im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+            x, y = round(r[0] * k), round((r[1] + r[3] * at) * k)
+            return _line(im, [(i, y) for i in range(x - 6, x + 6)], im.getpixel((x - 9, y)), im.getpixel((x + 9, y)))
+
+        _NO_FS = ("Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get() { return false; } });"
+                  "Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { get() { return false; } });")
+        _PH3 = dict(viewport={"width": 402, "height": 874}, device_scale_factor=3, is_mobile=True, has_touch=True)
+        _DK2 = dict(viewport={"width": 1280, "height": 800}, device_scale_factor=2)
+        _edges, _rule = {}, {}
+        for theme in ("light", "dark"):
+            ctx, pg = open_page(b, HOSTED, hosted_url, _PH3, theme)
+            ctx.add_init_script(_NO_FS)
+            pg.evaluate("() => document.getElementById('playerRestartBtn').scrollIntoView({ block: 'center' })")
+            pg.wait_for_timeout(400)
+            _edges[f"{theme} a round button"] = _left(pg, "#playerRestartBtn", 3)
+            _edges[f"{theme} the way back"] = _left(pg, "a.player-home", 3)
+            pg.click("#playerMoreBtn")
+            pg.wait_for_timeout(500)
+            _edges[f"{theme} the More card"] = _left(pg, "#playerMenu", 3)
+            r2 = pg.evaluate("() => { const it = [...document.querySelectorAll('#playerMenu > *')].filter(e => e.getClientRects().length); if (it.length < 2) return null; const r = it[1].getBoundingClientRect(); return [r.left, r.top, r.width]; }")
+            if r2:
+                im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+                xc, yt = round((r2[0] + r2[2] / 2) * 3), round(r2[1] * 3)
+                _rule[theme] = _line(im, [(xc, j) for j in range(yt - 6, yt + 6)], im.getpixel((xc, yt - 9)), im.getpixel((xc, yt + 9)))
+            pg.click("#playerMoreBtn")
+            pg.wait_for_timeout(400)
+            pg.click(".player-bar .rl-speed")
+            pg.wait_for_timeout(500)
+            _edges[f"{theme} the speed chips' card"] = _left(pg, ".player-bar .rl-chips:not([hidden])", 3)
+            pg.click(".player-bar .rl-speed")
+            pg.wait_for_timeout(400)
+            sr = pg.evaluate(_BOX, ".player-bar .rl-scrub")
+            if sr:
+                pg.mouse.move(sr[0] + sr[2] * 0.5, sr[1] + sr[3] / 2)
+                pg.mouse.down()
+                pg.mouse.move(sr[0] + sr[2] * 0.55, sr[1] + sr[3] / 2)
+                pg.wait_for_timeout(400)
+                _edges[f"{theme} the scrubber's bubble"] = _left(pg, ".player-bar .rl-bubble", 3)
+                pg.mouse.up()
+                pg.wait_for_timeout(300)
+            pg.click("#playerFullBtn")
+            pg.wait_for_timeout(900)
+            _edges[f"{theme} the x in full screen"] = _left(pg, ".player-btn.full-exit", 3)
+            ctx.close()
+            ctx, pg = open_page(b, HOSTED, hosted_url, _DK2, theme)
+            _edges[f"{theme} the column's side, a desk at 2x"] = _left(pg, ".app", 2, 0.6)
+            ctx.close()
+        check("every outline on the link page is one screen pixel, light and dark: a round button, the way back to the"
+              " site, the More card, the speed chips' card, the scrubber's bubble and the x in full screen (a phone at"
+              " 3x), and the column's sides (a desk at 2x)",
+              len(_edges) == 14 and all(v == 1 for v in _edges.values()), json.dumps(_edges))
+        check("...and the line between the More card's rows is one screen pixel, light and dark",
+              len(_rule) == 2 and all(v == 1 for v in _rule.values()), json.dumps(_rule))
+
+        # INCREASE CONTRAST strengthens the hairlines (styles.css, -hc), and
+        # the solid lines laid over a control follow it: a round button's line
+        # stands further from its ground with it than without, both themes.
+        _RING = """() => { const e = document.getElementById('playerRestartBtn'), cs = getComputedStyle(e);
+          const num = s => (s.match(/[\\d.]+/g) || []).map(Number);
+          const col = s => { const m = s.match(/color\\(srgb ([\\d.]+) ([\\d.]+) ([\\d.]+)/); if (m) return [+m[1] * 255, +m[2] * 255, +m[3] * 255];
+                             const n = num(s); return n.slice(0, 3); };
+          return { ring: col(cs.boxShadow), ground: col(cs.backgroundColor) }; }"""
+        _hc = {}
+        for theme in ("light", "dark"):
+            for more in (False, True):
+                ctx, pg = open_page(b, HOSTED, hosted_url, _PH3, theme)
+                if more:
+                    pg.emulate_media(contrast="more")
+                    pg.wait_for_timeout(200)
+                v = pg.evaluate(_RING)
+                _hc[f"{theme} {'more' if more else 'normal'}"] = round(ratio(v["ring"], v["ground"]), 2) if v["ring"] and v["ground"] else None
+                ctx.close()
+        check("...and Increase Contrast strengthens them: a round button's line stands further from its ground with it,"
+              " light and dark",
+              all(_hc.get(f"{t} more") and _hc.get(f"{t} normal") and _hc[f"{t} more"] > _hc[f"{t} normal"] + 0.1
+                  for t in ("light", "dark")), json.dumps(_hc))
         b.close()
 finally:
     proc.terminate()

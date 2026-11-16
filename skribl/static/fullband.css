@@ -34,9 +34,12 @@
 .watch-full:is(:fullscreen, .is-immersive-page) {
   --accent: #7c5cff;
   --accent-bright: #9179ff;
+  --control-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--surface-control));
+  --control-edge-strong: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-control));
+  --deep-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-deep));
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --hairline: rgba(255,255,255,0.055);
-  --hairline-strong: rgba(255,255,255,0.09);
+  --hl: 5.5%;
+  --hls: 9%;
   --on-canvas-drop-rgb: 10,6,30;
   --on-canvas-ink: #241a52;
   --on-canvas-shade-rgb: 16,12,32;
@@ -57,8 +60,8 @@
   --wash-rgb: 255,255,255;
 }
 :root[data-theme="light"] .watch-full:is(:fullscreen, .is-immersive-page) {
-  --hairline: rgba(0,0,0,0.09);
-  --hairline-strong: rgba(0,0,0,0.15);
+  --hl: 9%;
+  --hls: 15%;
   --seg-on-ink: #36209a;
   --surface-base: #fbfcfd;
   --surface-control: #edf0f4;
@@ -172,7 +175,7 @@
    longer depends on where it sits. */
 .player-btn.full-exit:where(.skfull-host, .skfull-host *) { display: none; position: absolute; top: 14px; right: 14px;
   z-index: 3; width: 44px; height: 44px; background: var(--surface-deep);
-  border-color: var(--hairline-strong); color: var(--text-primary); }
+  box-shadow: 0 0 0 var(--edge) var(--deep-edge); color: var(--text-primary); }
 :is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-btn.full-exit { display: grid; place-items: center; }
 
 /* THE TRANSPORT GOES FULL SCREEN WITH THE DRAWING. Full screen renders only
@@ -356,7 +359,8 @@
   width: 46px;
   height: 46px;
   border-radius: 999px;
-  border: 1px solid var(--hairline);
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 var(--edge) var(--control-edge);
   background: var(--surface-control);
   color: var(--text-primary);
   cursor: pointer;
@@ -373,6 +377,7 @@
   height: 58px;
   background: var(--accent);
   border: none;
+  box-shadow: none;
   color: #fff;
 }
 .player-btn.primary:where(.skfull-host, .skfull-host *) svg { width: 24px; height: 24px; }
@@ -391,6 +396,7 @@
 .player-btn.active:where(.skfull-host, .skfull-host *) {
   background: var(--seg-on-fill);
   border-color: transparent;
+  box-shadow: none;
   color: var(--seg-on-ink);
 }
 
@@ -434,7 +440,7 @@
    pill). 90vw, not 100vw less 32px: the player's sheet had 2 bytes to spare. */
 .rl-chips:where(.skfull-host, .skfull-host *) { display: flex; gap: 2px; padding: 4px 8px; max-width: 90vw; box-sizing: border-box;
   border-radius: var(--r-pill); background: rgb(var(--surface-control-rgb));
-  border: 1px solid var(--hairline-strong); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--control-edge-strong), 0 8px 24px rgba(0, 0, 0, 0.18);
   opacity: 1; transform: none;
   transition: opacity 0.26s var(--ease), transform 0.26s var(--ease), display 0.26s allow-discrete; }
 @starting-style { .rl-chips:where(.skfull-host, .skfull-host *) { opacity: 0; transform: translateY(-4px); }
@@ -489,8 +495,8 @@
    link page's canvas sits at 1, so the bubble went under it there. */
 .rl-bubble:where(.skfull-host, .skfull-host *) { position: absolute; z-index: 2; bottom: calc(100% + 10px); transform: translateX(-50%); white-space: pre;
   padding: 4px 10px; border-radius: 10px; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums;
-  color: var(--text-primary); background: rgb(var(--surface-control-rgb)); border: 1px solid var(--hairline-strong);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2); opacity: 0; transition: opacity 0.15s var(--ease); pointer-events: none; }
+  color: var(--text-primary); background: rgb(var(--surface-control-rgb)); border: 1px solid transparent;
+  box-shadow: 0 0 0 var(--edge) var(--control-edge-strong), 0 6px 18px rgba(0, 0, 0, 0.2); opacity: 0; transition: opacity 0.15s var(--ease); pointer-events: none; }
 .rl-scrub.dragging:where(.skfull-host, .skfull-host *) .rl-bubble { opacity: 1; }
 /* While it shows, the bubble is the clock, and the words beside the bar fade
    until the finger lifts: on a phone the Pad's sit just over the bar, where

@@ -107,6 +107,19 @@
   --surface-panel-rgb: 19,22,28;      /* = #13161c */
   --surface-well-2-rgb: 23,26,34;     /* = #171a22 */
   --surface-control-rgb: 23,27,35;    /* = #171b23 */
+  /* THE LINES OVER A CONTROL, SOLID (the edges, part four): --hairline and
+     --hairline-strong as they look over a control's ground (the round
+     buttons, the More card and its rows, the speed chips' card, the
+     scrubber's bubble), the x's and the column's sides, laid over them and
+     made solid, for a line of one screen pixel outside the box. Written
+     once: --hl and --hls are the two lines' strengths (their alphas, as
+     percentages), which each theme sets and Increase Contrast swaps for the
+     -hc ones, as it swaps the lines themselves (below). */
+  --hl: 5.5%; --hls: 9%; --hl-hc: 22%; --hls-hc: 34%;
+  --control-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--surface-control));
+  --control-edge-strong: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-control));
+  --deep-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-deep));
+  --raised-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--surface-raised));
   --surface-deep-rgb: 6,7,10;         /* = #06070a */
   --line-rgb: 37,43,55;               /* = #252b37 */
 
@@ -413,8 +426,9 @@ body {
   max-width: 720px;
   width: 100%;
   margin: 0 auto;
-  border-left: 1px solid var(--hairline);
-  border-right: 1px solid var(--hairline);
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
+  box-shadow: calc(-1 * var(--edge)) 0 var(--raised-edge), var(--edge) 0 var(--raised-edge);
   position: relative;
 }
 /* ONE SURFACE WHILE THE CANVAS'S ROW SPANS THE PAGE (lib/chromefit.js span(),
@@ -429,7 +443,7 @@ body.canvas-wide {
     radial-gradient(828px 62% at 50% -6%, rgba(124,92,255,0.10) 0%, transparent 55%),
     var(--surface-raised);
 }
-body.canvas-wide .app { background: transparent; border-left-color: transparent; border-right-color: transparent; }
+body.canvas-wide .app { background: transparent; border-left-color: transparent; border-right-color: transparent; box-shadow: none; }
 
 .header {
   display: flex;
@@ -1018,21 +1032,20 @@ body:not(.player-mode) .canvas-wrap #canvas {
 /* THE CANVAS'S EDGE, ONE SCREEN PIXEL (the owner, Nov 15, "The edges", B:
    every outline the thinnest line the screen can draw, one line per edge).
    --hair scales a 1px line to the screen's own pixel (1, 0.5 at 2x, 0.3334
-   at 3x), as the rows' thin line does; set on the editors' pages alone
-   (body:not(.player-mode)), so the player's stylesheet, which keeps every
-   root token, never carries it. A border cannot draw it (Chromium rounds a
-   border under 1px up to 1px, three screen pixels at 3x); an inset ring
-   can, and the canvas's edge was one already. The player's canvas keeps
-   its 1px ring (its rule is shared, and its CSS is budgeted). */
-body:not(.player-mode) { --hair: 1; }
-@media (min-resolution: 2dppx) { body:not(.player-mode) { --hair: 0.5; } }
-@media (min-resolution: 3dppx) { body:not(.player-mode) { --hair: 0.3334; } }
-body:not(.player-mode) .canvas-wrap:not(.light-bg) {
+   at 3x), as the rows' thin line does, and --edge is that line. Both are
+   set on every page, the editors' and a drawing's link page (the edges,
+   part four), which they reach in player.css. A border cannot draw it
+   (Chromium rounds a border under 1px up to 1px, three screen pixels at
+   3x); an inset ring can, and the canvas's edge was one already. */
+body { --hair: 1; --edge: calc(1px * var(--hair)); }
+@media (min-resolution: 2dppx) { body { --hair: 0.5; } }
+@media (min-resolution: 3dppx) { body { --hair: 0.3334; } }
+body .canvas-wrap:not(.light-bg) {
   --canvas-ring: inset 0 0 0 calc(1px * var(--hair)) rgba(var(--wash-rgb), 0.18);
 }
 
 /* THE SHEETS' AND THE DRAWERS' EDGES, ONE SCREEN PIXEL (the edges, part
-   three). --edge is the line, 1px scaled by --hair. A card or a control on
+   three). --edge is the line (above). A card or a control on
    the menu's paper keeps its border's width, transparent, so nothing moves,
    and wears --card-ring outside it, in --menu-card-edge: its lilac line as it
    looked over its own white, laid over it and made solid. The ring lies
@@ -1047,7 +1060,6 @@ body:not(.player-mode) .canvas-wrap:not(.light-bg) {
    Set on the editors' pages, so the player's stylesheet (which keeps every
    root token) never carries them. */
 body:not(.player-mode) {
-  --edge: calc(1px * var(--hair));
   --menu-card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--menu-card));
   --menu-paper-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--menu-paper));
   --card-ring: 0 0 0 var(--edge) var(--menu-card-edge);
@@ -5402,6 +5414,7 @@ button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-item
   .app {
     border-left: none;
     border-right: none;
+    box-shadow: none;
   }
 
   .header { padding: 12px 14px; }
@@ -5666,7 +5679,7 @@ body.player-mode .app {
    longer depends on where it sits. */
 .player-btn.full-exit { display: none; position: absolute; top: 14px; right: 14px;
   z-index: 3; width: 44px; height: 44px; background: var(--surface-deep);
-  border-color: var(--hairline-strong); color: var(--text-primary); }
+  box-shadow: 0 0 0 var(--edge) var(--deep-edge); color: var(--text-primary); }
 :is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-btn.full-exit { display: grid; place-items: center; }
 
 /* THE TRANSPORT GOES FULL SCREEN WITH THE DRAWING. Full screen renders only
@@ -6043,11 +6056,12 @@ body.player-ready .player-bar > * { animation: player-up 0.3s var(--ease); }
    screen covers it. */
 .player-home { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); left: max(12px, env(safe-area-inset-left, 0px)); z-index: 50;
   display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px 0 10px; border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-raised) 86%, transparent); border: 1px solid var(--menu-card-line);
+  background: color-mix(in srgb, var(--surface-raised) 86%, transparent); border: 1px solid transparent;
+  box-shadow: 0 0 0 var(--edge) var(--menu-card-line);
   color: var(--text-primary); font-size: 14px; font-weight: 600; text-decoration: none; backdrop-filter: blur(10px); }
 .player-home::before { content: ''; position: absolute; inset: -5px; }   /* from inside its 1px edge: 44px */
 .player-home svg { width: 16px; height: 16px; }
-@media (hover: hover) { .player-home:hover { border-color: var(--accent); } }
+@media (hover: hover) { .player-home:hover { border-color: var(--accent); box-shadow: none; } }
 /* On a phone the drawing would run under it (an iPhone SE's starts 20px down),
    so the page keeps the pill's height clear; the fit measures that room. */
 @media (max-width: 640px) { body.has-home .app { padding-top: calc(env(safe-area-inset-top, 0px) + 56px); } }
@@ -6117,7 +6131,8 @@ a.player-btn { text-decoration: none; }
   width: 46px;
   height: 46px;
   border-radius: 999px;
-  border: 1px solid var(--hairline);
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 var(--edge) var(--control-edge);
   background: var(--surface-control);
   color: var(--text-primary);
   cursor: pointer;
@@ -6133,6 +6148,7 @@ a.player-btn { text-decoration: none; }
   height: 58px;
   background: var(--accent);
   border: none;
+  box-shadow: none;
   color: #fff;
 }
 .player-btn.primary svg { width: 24px; height: 24px; }
@@ -6150,6 +6166,7 @@ a.player-btn { text-decoration: none; }
 .player-btn.active {
   background: var(--seg-on-fill);
   border-color: transparent;
+  box-shadow: none;
   color: var(--seg-on-ink);
 }
 
@@ -6172,12 +6189,16 @@ a.player-btn { text-decoration: none; }
 .player-menu { position: absolute; right: var(--menu-shift, 0); bottom: calc(100% + 12px); z-index: 20;
   min-width: min(248px, calc(100vw - 16px)); padding: 4px; border-radius: 14px;
   background: rgb(var(--surface-control-rgb));
-  border: 1px solid var(--hairline-strong); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35); }
-.player-menu::after { content: ''; position: absolute; right: calc(15px - var(--menu-shift, 0px)); bottom: -7px;
-  width: 12px; height: 12px; transform: rotate(45deg); background: inherit;
-  border: solid var(--hairline-strong); border-width: 0 1px 1px 0; }
+  border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--control-edge-strong), 0 12px 36px rgba(0, 0, 0, 0.35); }
+/* Its point is drawn 1/--hair as large and scaled back, its middle where it
+   was, so its two lines are the screen's own pixel, joining the card's. */
+.player-menu::after { content: ''; position: absolute; right: calc(21px - var(--menu-shift, 0px) - 6px / var(--hair, 1));
+  bottom: calc(-1px - 6px / var(--hair, 1)); width: calc(12px / var(--hair, 1)); height: calc(12px / var(--hair, 1));
+  transform: rotate(45deg) scale(var(--hair, 1)); background: inherit;
+  border: solid var(--control-edge-strong); border-width: 0 1px 1px 0; }
 .player-menu[hidden] { display: none; }
-.player-menu > * + * { border-top: 1px solid var(--hairline); border-radius: 0; }
+.player-menu > * + * { border-top: 1px solid transparent; border-radius: 0;
+  box-shadow: 0 calc(-1 * var(--edge)) var(--control-edge); }
 /* The card's line icons carry their stroke here rather than on every <svg>:
    four icons' worth of the same five attributes was most of the card's HTML. */
 .player-menu svg { fill: none; stroke: currentColor; stroke-width: 2;
@@ -6245,7 +6266,7 @@ a.player-btn { text-decoration: none; }
    pill). 90vw, not 100vw less 32px: the player's sheet had 2 bytes to spare. */
 .rl-chips { display: flex; gap: 2px; padding: 4px 8px; max-width: 90vw; box-sizing: border-box;
   border-radius: var(--r-pill); background: rgb(var(--surface-control-rgb));
-  border: 1px solid var(--hairline-strong); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--control-edge-strong), 0 8px 24px rgba(0, 0, 0, 0.18);
   opacity: 1; transform: none;
   transition: opacity 0.26s var(--ease), transform 0.26s var(--ease), display 0.26s allow-discrete; }
 @starting-style { .rl-chips { opacity: 0; transform: translateY(-4px); } }
@@ -6299,8 +6320,8 @@ a.player-btn { text-decoration: none; }
    link page's canvas sits at 1, so the bubble went under it there. */
 .rl-bubble { position: absolute; z-index: 2; bottom: calc(100% + 10px); transform: translateX(-50%); white-space: pre;
   padding: 4px 10px; border-radius: 10px; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums;
-  color: var(--text-primary); background: rgb(var(--surface-control-rgb)); border: 1px solid var(--hairline-strong);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2); opacity: 0; transition: opacity 0.15s var(--ease); pointer-events: none; }
+  color: var(--text-primary); background: rgb(var(--surface-control-rgb)); border: 1px solid transparent;
+  box-shadow: 0 0 0 var(--edge) var(--control-edge-strong), 0 6px 18px rgba(0, 0, 0, 0.2); opacity: 0; transition: opacity 0.15s var(--ease); pointer-events: none; }
 .rl-scrub.dragging .rl-bubble { opacity: 1; }
 /* While it shows, the bubble is the clock, and the words beside the bar fade
    until the finger lifts: on a phone the Pad's sit just over the bar, where
@@ -9506,6 +9527,7 @@ body.replaying .media-card { pointer-events: none; }
   --surface-panel-rgb:       241,243,247;
   --surface-well-2-rgb:      234,238,244;
   --surface-control-rgb:     237,240,244;
+  --hl: 9%; --hls: 15%; --hl-hc: 28%; --hls-hc: 42%;   /* --hairline's and --hairline-strong's alphas */
   --surface-deep-rgb:        255,255,255;   /* = #ffffff, the light --surface-deep */
   --line-rgb:                224,229,236;
 
@@ -9558,8 +9580,8 @@ body.replaying .media-card { pointer-events: none; }
    Loaded by both editors and by the profile page; see skribl/static/posted.css. */
 
 /* ---------- Increased contrast and forced colours ----------
-   PREFERS-CONTRAST: MORE swaps four tokens for the -hc counterparts defined
-   beside them in each ramp. Tokens, not literals: the ratchets that keep every
+   PREFERS-CONTRAST: MORE swaps six tokens for the -hc counterparts defined
+   beside them in each ramp (the lines' strengths with the lines). Tokens, not literals: the ratchets that keep every
    neutral in :root (verify_surfaces) and every neutral overridden for light
    (verify_theme) read this block as a mapping, which is what it is.
 
@@ -9575,6 +9597,8 @@ body.replaying .media-card { pointer-events: none; }
     --text-dim: var(--text-dim-hc);
     --hairline: var(--hairline-hc);
     --hairline-strong: var(--hairline-strong-hc);
+    --hl: var(--hl-hc);
+    --hls: var(--hls-hc);
   }
 }
 @media (forced-colors: active) {
