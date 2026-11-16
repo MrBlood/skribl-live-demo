@@ -662,6 +662,29 @@
     .seg-track { background: var(--card); border-color: var(--card-line); }
     .tile { background: var(--card); border-color: var(--card-line); box-shadow: var(--card-drop); --bg-elev: var(--card); }
     .find input { background: var(--card); border-color: var(--card-line); border-radius: 12px; }
+    /* ONE SCREEN PIXEL (the edges, part four; the owner's "all yes" to "The
+       edges", B): every outline keeps its border's width, transparent, so
+       nothing moves, and wears a ring of --edge (pagemenu.css) outside it,
+       in the line as it looked over what it was drawn on, laid over it and
+       made solid; the tiles keep their lift. --card-edge is the site's and
+       the editors' (a card's lilac line over its own white); a field's edge
+       is the site's --field-line, which reads 3:1 on its white (the search
+       read 2.68:1 in the card's line). The accent button has no edge. */
+    :root {
+      --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
+      --field-line: rgba(167, 146, 255, 0.7);
+      --control-edge: color-mix(in srgb, rgb(255 255 255) 9%, var(--control));
+    }
+    :root[data-theme="light"] {
+      --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card));
+      --field-line: rgba(124, 92, 255, 0.82);
+      --control-edge: color-mix(in srgb, rgb(0 0 0) 12%, var(--control));
+    }
+    .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge); }
+    .tile { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
+    .find input, .note { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--field-line); }
+    .btn { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--control-edge); }
+    .btn.primary { box-shadow: none; }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>

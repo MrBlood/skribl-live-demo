@@ -298,12 +298,19 @@
 }
 
 /* ---- from pagemenu.css ---- */
-#skriblGallery { --glass-fill: rgba(23, 26, 34, 0.78); --glass-solid: rgb(23, 26, 34); --glass-sheet-fill: var(--glass-fill); --header-rim: rgba(0, 0, 0, 0.55); --glass-drop: rgba(0, 0, 0, 0.30); --glass: 0 0 0 1px var(--header-rim), 0 6px 20px var(--glass-drop); --glass-scrim: rgba(0, 0, 0, 0.4); --on-glass-2: var(--text-2); --focus-ring: #7c5cff; }
+#skriblGallery { --glass-fill: rgba(23, 26, 34, 0.78); --glass-solid: rgb(23, 26, 34); --glass-sheet-fill: var(--glass-fill); --header-rim: rgba(0, 0, 0, 0.55); --glass-drop: rgba(0, 0, 0, 0.30); --glass: 0 0 0 var(--edge) var(--header-rim), 0 6px 20px var(--glass-drop); --glass-scrim: rgba(0, 0, 0, 0.4); --on-glass-2: var(--text-2); --focus-ring: #7c5cff; }
 :root[data-theme="light"] #skriblGallery { --glass-fill: rgba(234, 238, 244, 0.78); --glass-solid: rgb(234, 238, 244); --glass-sheet-fill: rgba(246, 248, 251, 0.9); --header-rim: rgba(255, 255, 255, 0.9); --glass-drop: rgba(20, 24, 40, 0.10); --on-glass-2: #3f4756; }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) #skriblGallery { --glass-fill: rgba(234, 238, 244, 0.78); --glass-solid: rgb(234, 238, 244); --glass-sheet-fill: rgba(246, 248, 251, 0.9); --header-rim: rgba(255, 255, 255, 0.9); --glass-drop: rgba(20, 24, 40, 0.10); --on-glass-2: #3f4756; }
 }
 #skriblGallery .sheet-card, #skriblGallery .cardMenu { --text-2: var(--on-glass-2); --text-3: var(--on-glass-2); }
+#skriblGallery { --hair: 1; --edge: calc(1px * var(--hair)); }
+@media (min-resolution: 2dppx) {
+  #skriblGallery { --hair: 0.5; }
+}
+@media (min-resolution: 3dppx) {
+  #skriblGallery { --hair: 0.3334; }
+}
 @media (min-width: 641px) {
   #skriblGallery .pm-grab { display: none; }
 }
@@ -483,6 +490,16 @@ html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
 #skriblGallery .seg-track { background: var(--card); border-color: var(--card-line); }
 #skriblGallery .tile { background: var(--card); border-color: var(--card-line); box-shadow: var(--card-drop); --bg-elev: var(--card); }
 #skriblGallery .find input { background: var(--card); border-color: var(--card-line); border-radius: 12px; }
+#skriblGallery { --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card)); --field-line: rgba(167, 146, 255, 0.7); --control-edge: color-mix(in srgb, rgb(255 255 255) 9%, var(--control)); }
+:root[data-theme="light"] #skriblGallery { --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card)); --field-line: rgba(124, 92, 255, 0.82); --control-edge: color-mix(in srgb, rgb(0 0 0) 12%, var(--control)); }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) #skriblGallery { --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card)); --field-line: rgba(124, 92, 255, 0.82); --control-edge: color-mix(in srgb, rgb(0 0 0) 12%, var(--control)); }
+}
+#skriblGallery .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge); }
+#skriblGallery .tile { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
+#skriblGallery .find input, #skriblGallery .note { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--field-line); }
+#skriblGallery .btn { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--control-edge); }
+#skriblGallery .btn.primary { box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
   #skriblGallery, #skriblGallery * { animation: none !important; transition: none !important; }
 }

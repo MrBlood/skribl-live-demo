@@ -44376,3 +44376,95 @@ NOT TESTED HERE: an iPhone (WebKit) and iOS 26's glass, the reason for all of
 it. The one-glance tell: in the Blooby app, open the Library (the Pad's ⋯,
 then Your Skribls) or a drawing's link, and the top of the page is as sharp
 as Home's.
+
+## After v330 -- The edges, part four (the Library and Skribl's Gallery): their lines are one screen pixel
+
+The owner's "all yes" to "The edges" (B, Nov 15), and to its part four next
+(Nov 16, about 4 AM): the Library and Skribl's own Gallery, their menus, and
+posted.css's parts the Library shows. Parts one to three gave the canvases,
+the site and the editors' sheets their edges (#930 to #932). The link page's
+round buttons and a post's drawing on the site are the next two parts.
+
+A CENSUS FIRST (as part three's handoff asked): every painted border and ring
+on the Library and the Gallery, at rest, a row chosen, a row's ⋯ open (a
+phone), a card's ⋯ open and the page menu open, phone and desk, light and
+dark, each with what it is drawn on. After, every outline is a ring of one
+screen pixel, but for three, kept on purpose: the play button's ring (a
+control's, which "The edges" kept bold), the Gallery card's glass buttons on
+the drawing (toned by what is under them, as every full screen's are), and
+the in-post player's own line on a one-up card, which is the player's (the
+Gallery never styles the player; a seam for it goes with a post's drawing,
+part four's last).
+
+WHAT CHANGED:
+
+- ONE SCREEN PIXEL ON BOTH PAGES (pagemenu.css, which both load): --hair and
+  --edge, as the editors and the site set them, and the glass's rim (the
+  page menu, a card's ⋯, the report sheet) in --edge.
+- THE PAGE MENU, THE PAD'S: its list card in --menu-card-edge (the editors'
+  token, restated), and its rows' rule the Pad's own thin line: one screen
+  pixel, from where the words start (50px) to the row's inside edge, in the
+  words' colour at 16%, where a full-width 1px rule ran; the Theme switch's
+  track on the card in the same edge. A row in focus hides its own line and
+  sits over the next one's, as the Pad's.
+- THE GALLERY (its <style>): the tiles in --card-edge (the site's and the
+  editors' card line over its white, made solid), their lift kept; New | Hot
+  the same; the search and the report's note in the site's --field-line, which
+  reads 3:1 on its white (3.30:1; the search read 2.68:1 in the card's line);
+  the report's Cancel in its own line over its ground; the accent button none.
+  gallerysection.css, made from these sheets for a host's page, re-emitted.
+- THE LIBRARY (its <style>): the stage, the rows and the drafts' rows in
+  --card-edge, their lift kept; its tracks, its transport, Copy link, Copy
+  key, Load more and Save file the same; the search in --field-line (3:1);
+  Delete in its danger line as it looked over its own tint (43% over the
+  card); the kind chip in its hairline; the foot's two rules lines of --edge;
+  Undo's bar and button; on a phone the ⋯'s menu on the paper in its line
+  over the paper, its buttons none, the rule above Delete one screen pixel.
+- STATES SHOW AS THEY DID, the ring stepping aside: the row playing (the lit
+  row, no edge), a lit transport button, Copied, a hover that colours an edge.
+- THE RECOVERY-KEY PANEL (posted.css, which the Pad and Flip show after a
+  post and the Library from a row): its sheet, the key, the field, Copy and
+  the warning, rings of --edge in their own solid colours.
+
+PAD AND FLIP: shared where shared: the recovery-key panel is posted.css, the
+same on the Pad, Flip and the Library; the rest is the Library's and the
+Gallery's own (the page menu restates the Pad's, and now draws its rows as
+the Pad's do).
+
+CONTRAST: no word changed. The search fields' edge rises to the site's field
+line (3.30:1 on white, light; dark 0.7 lilac); every other line keeps its
+colour, laid over what it was drawn on.
+
+THE CHECKS, verify_galib 10 (new), read off the paint at the owner's phone's
+3x, light and dark, as verify_socialposts 17 reads the site's; each row shown
+red by a break of its own, the untouched tree green beside it, with a fresh
+server per break:
+
+- every outline is one screen pixel, light and dark: a tile, the search,
+  New | Hot, the Library's stage, a transport button, a row (not the one
+  playing) and its search, and each page menu's card (red: the four sheets
+  as on main, every one three; a tile's ring at 1px; New | Hot's; the
+  Library's cards'; its buttons'; the menu's card's; the Library's search's);
+- the page menu's rows wear the Pad's thin line, one screen pixel past where
+  the words start and none at the row's own left (red: the full rule back;
+  the line at 1px);
+- a tile and a row keep their lift on the light page: the page just under
+  each is darker than with that card's shadow cut to its ring (red: the
+  tiles' lift gone; the rows' lift gone). The first version read 12px under
+  a row, which is the next row's white, and stayed green with the rows' lift
+  gone: the instrument, mended, then red;
+- the Gallery's and the Library's search fields' edges read 3:1 or more on
+  their own white (red: each in the card's line, 2.68:1).
+
+ALSO CHANGED: verify_galib 8 asked that the Library's Play have no shadow at
+all ("no glow"); its edge is a ring now, so it asks for no glow: no shadow
+with an offset or a blur, a ring of a pixel or less being the line (red:
+Play with a glow back; green as built). It was red on the first run, which is
+how it was found; and GALIB 10's first version read the playing row (which by
+design has no edge) and New | Hot's chosen side (where the pill sits 3px
+inside): the instrument, not the tree.
+
+NOT TESTED HERE: an iPhone (WebKit) and Windows' own rendering; the live
+site. The one-glance tell: the Gallery in light, each tile's lilac edge a
+fine line, as fine as the site's; the ••• menu's rows' lines starting where
+their words do.
