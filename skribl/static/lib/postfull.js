@@ -100,6 +100,4 @@
     e.preventDefault();
     open(b);
   }, true);
-
-  global.SkriblPostFull = { open: open };
 })(window);
