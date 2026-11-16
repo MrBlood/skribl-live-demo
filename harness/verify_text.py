@@ -1467,7 +1467,10 @@ with sync_playwright() as p:
             tap_tile(q, "size")
             settle(q)
             t1 = q.evaluate(TILES)
-            joined = t1["panel"][0] is not None and abs(t1["panel"][0][0] - t1["tile"][0][1]) <= 1.5
+            # Joined: the open tile reaches into its card, 2px since the edges'
+            # part three (the card's ring above its edge, its border's row and the
+            # row its drop lights), 1 before.
+            joined = t1["panel"][0] is not None and abs(t1["panel"][0][0] - t1["tile"][0][1]) <= 2.5
             check(f"{ed}: a tap on a tile opens its slider right under it, joined to it, and the tile says so",
                   t1["shown"] == ["size"] and t1["open"] == ["size"] and t1["expanded"] == ["size"] and t1["col"] == "0" and joined,
                   f"open {t1['shown']}, lit {t1['open']}, expanded {t1['expanded']}, column {t1['col']}; the tile ends {round(t1['tile'][0][1], 1)}, its slider starts {round(t1['panel'][0][0], 1) if t1['panel'][0] else None}")

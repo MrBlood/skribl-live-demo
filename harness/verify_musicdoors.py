@@ -322,7 +322,9 @@ JOINT = """(k) => { const t = document.querySelector('#musicDoors .dp-tile[data-
   const z = p.getBoundingClientRect();
   const moving = [t, p].some((e) => { void getComputedStyle(e).backgroundColor;
     return e.getAnimations().some((x) => x.pending || x.playState === 'running'); });
-  return { a: [a.left, a.top, a.right, a.bottom], z: [z.left, z.top, z.right, z.bottom], card: getComputedStyle(p).backgroundColor, still: !moving }; }"""
+  let paper = null;
+  for (let e = p.parentElement; e && !paper; e = e.parentElement) { const g = getComputedStyle(e).backgroundColor; if (g !== 'rgba(0, 0, 0, 0)') paper = g; }
+  return { a: [a.left, a.top, a.right, a.bottom], z: [z.left, z.top, z.right, z.bottom], card: getComputedStyle(p).backgroundColor, paper, still: !moving }; }"""
 
 
 def seam(pg, k, dpr=1):
@@ -337,15 +339,19 @@ def seam(pg, k, dpr=1):
             break
         pg.wait_for_timeout(250)
     card = [int(v) for v in re.findall(r"\d+", j["card"])[:3]]
+    paper = [int(v) for v in re.findall(r"\d+", j["paper"] or "")[:3]] or card
     w, h = im.size
 
-    def step(x, y):
+    def step(x, y, ref=card):
         c = im.getpixel((min(w - 1, max(0, int((x - x0) * dpr))), min(h - 1, max(0, int((y - y0) * dpr)))))
-        return max(abs(c[i] - card[i]) for i in range(3))
+        return max(abs(c[i] - ref[i]) for i in range(3))
     inside = [a[0] + 2 + i / dpr for i in range(int((a[2] - a[0] - 4) * dpr))]
     worst = max(step(x, a[3] - 1 + i / dpr) for i in range(int(4 * dpr)) for x in inside)
-    edges = {side: min(step(col, a[3] - 4 + i / dpr) for i in range(int(8 * dpr)))
-             for side, xa, xz, col in (("left", a[0], z[0], a[0] + .5 / dpr), ("right", a[2], z[2], a[2] - .5 / dpr))
+    # The card's line at an end: since the edges' part three a ring just
+    # outside the tile's side and the card's, read half a screen pixel out,
+    # every row across the joint apart from both the card and the paper.
+    edges = {side: min(min(step(col, a[3] - 4 + i / dpr), step(col, a[3] - 4 + i / dpr, paper)) for i in range(int(8 * dpr)))
+             for side, xa, xz, col in (("left", a[0], z[0], a[0] - .5 / dpr), ("right", a[2], z[2], a[2] + .5 / dpr))
              if abs(xa - xz) < .75}
     return worst, edges
 
@@ -393,7 +399,9 @@ with sync_playwright() as pw:
               not tab and pg.evaluate(WHERE) == [None, "none", "0000"], f"not [hidden] with every door shut: {tab}; {pg.evaluate(WHERE)}")
         # Joined: the open tile reaches over the card's edge and is above it,
         # so the point just inside the card's edge under it is the tile's, and
-        # at an end of the row the card's corner under it is square.
+        # at an end of the row the card's corner under it is square. It reaches
+        # 2px since the edges' part three (the card's ring above its edge, its
+        # border's row and the row its drop lights), 1 before.
         JOIN = """(k) => { const t = document.querySelector('#musicDoors .dp-tile[data-dp="' + k + '"]'), d = document.getElementById(t.getAttribute('aria-controls'));
             t.scrollIntoView({ block: 'center' }); const a = t.getBoundingClientRect(), r = d.getBoundingClientRect(), cs = getComputedStyle(d);
             const at = document.elementFromPoint(a.left + a.width / 2, r.top + 0.5);
@@ -408,7 +416,7 @@ with sync_playwright() as pw:
                 painted[(k, scheme)] = seam(pg, k)
         pg.emulate_media(color_scheme="light")
         check(f"{_n}: open, a door's tile and its group are one shape, the tile over the card's edge, the corner square at the row's ends",
-              all(j["open"] and j["tile"] and 0.5 <= j["over"] <= 1.5 for j in joins.values())
+              all(j["open"] and j["tile"] and 1.5 <= j["over"] <= 2.5 for j in joins.values())
               and joins["length"]["corners"][0] == "0px" and joins["exact"]["corners"][1] == "0px", str(joins))
         check(f"{_n}: no line shows where a door's tile meets its group, light or dark (painted pixels: the rows "
               "at the joint are the card's colour), and at an end the card's edge runs unbroken",
