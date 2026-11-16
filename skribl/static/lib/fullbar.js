@@ -611,7 +611,11 @@
        nodes, so the last player's hold on the old ones goes with them. */
     var prog = null, words = null, wired = null;
     function wire(pl) {
-      if (!pl || pl === wired) return;
+      /* No player is no wiring: a post's full screen hands its player only
+         while it is up (lib/postfull.js), so the next time it opens, the band
+         borrows the post's line afresh. */
+      if (!pl) { wired = null; return; }
+      if (pl === wired) return;
       wired = pl;
       if (prog) prog.remove();
       if (words) words.remove();

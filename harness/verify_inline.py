@@ -1868,7 +1868,24 @@ with sync_playwright() as sp:
     #   heart, its only user, is in the site's own row now); openLine written
     #   in one pass, one handler for both endings; the transitions' default
     #   timing left out. 81,784 B measured, against 81,241 before it.
-    EMBED_RATCHET = 81_787
+    # RAISED (the owner's "yes to A and all your picks", Nov 16: full screen
+    #   on a post, from a button at the end of its line), for one named cost:
+    #   +256 B -- a post's own line LENT to the full screen's band and GIVEN
+    #   BACK (inlineplayer.js: band() keeps the line's scrubber and words
+    #   instead of refusing a player that has a line, unband() restores them
+    #   wired as before, and the line's marks are left where they are while
+    #   it is lent, +222), and the button hidden wherever the full screen is
+    #   not loaded (inlineplayer.css, +34), so a host that does not pass
+    #   full= or load skribl_full_assets() never shows a button that does
+    #   nothing. The full screen itself (lib/postfull.js, postfull.css, the
+    #   band's sheets and modules) is NOT here: skribl_full_assets() loads it
+    #   apart, for the hosts that ask. WHICH CALLER PAYS: every page that
+    #   shows a post, for the hand-back any host's full screen needs. Spent
+    #   first: the band keeps the line's four parts as they were rather than
+    #   building them again (which would lay a second strip in the scrubber),
+    #   and the button's dress lives in postfull.css, not here. 82,041 B
+    #   measured, against 81,785 before it.
+    EMBED_RATCHET = 82_044
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

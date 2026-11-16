@@ -1,0 +1,33 @@
+/* A POST'S FULL SCREEN (lib/postfull.js; the owner's "yes to A", Nov 16).
+   Travels with that module in skribl_full_assets(), with the band's sheets
+   (fullband.css, fullbar.css), so a host that does not ask for it pays for
+   none of it.
+
+   THE BUTTON, at the end of a post's line, after Repeat: dressed as Repeat
+   and Mute are at rest there (inlineplayer.css), 32px drawn and 44 to a
+   finger, its glyph the corners every full screen in Skribl draws. Hidden
+   until the module has run (inlineplayer.css keeps it out of sight
+   otherwise), so a page without the module never shows a button that does
+   nothing. */
+html.skribl-postfull .skribl-inline-line .skribl-inline-full {
+  position: relative; display: grid; place-items: center;
+  width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%;
+  background: none; color: inherit; font: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.skribl-inline-line .skribl-inline-full::before { content: ''; position: absolute; inset: -6px; }
+.skribl-inline-line .skribl-inline-full svg {
+  width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; opacity: .62;
+}
+@media (hover: hover) {
+  .skribl-inline-line .skribl-inline-full:hover { background: color-mix(in srgb, var(--accent, #7c5cff) 22%, transparent); }
+}
+.skribl-inline-line .skribl-inline-full:focus-visible { outline: 2px solid var(--accent, #7c5cff); outline-offset: 1px; }
+
+/* THE STAGE needs no rule of its own: lib/fullbar.js makes the block the
+   post's box is put in a band's host (.watch-full), so fullband.css gives it
+   the link page's full screen, real or an iPhone's stand-in pinned over the
+   page (100dvh). What the site's pages lack is the page held still behind
+   the stand-in, which each of Skribl's own pages says for itself. */
+html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }

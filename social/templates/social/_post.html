@@ -87,12 +87,15 @@
 
 {#  The drawing in Skribl's player. On a card its line waits until the first
     play (`line_waits`, Skribl's seam); a post's own page passes waits=false,
-    as you went there to watch. #}
+    as you went there to watch. Its line ends in the full-screen button
+    (`full`, the owner's "yes to A", Nov 16), and its full screen's corner says
+    the post's words over its maker's name and @handle (`full_meta`). #}
 {% macro player(c, waits=true) -%}
 {%- set p = c.post %}{% set sk = c.sk -%}
 {%- set marks = c.likes.marks if not c.down else none -%}
-{%- if sk and sk.canvas_w %}{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, line_waits=waits, marks=marks) }}
-{%- else %}{{ skribl_inline(p.skribl_id, bp=skribl_bp, line_waits=waits, marks=marks) }}{% endif %}
+{%- set fm = {'title': p.words or c.who.display_name, 'name': c.who.display_name if p.words else '', 'handle': '@' ~ c.who.handle} -%}
+{%- if sk and sk.canvas_w %}{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, line_waits=waits, marks=marks, full=true, full_meta=fm) }}
+{%- else %}{{ skribl_inline(p.skribl_id, bp=skribl_bp, line_waits=waits, marks=marks, full=true, full_meta=fm) }}{% endif %}
 {%- endmacro %}
 
 {#  THE DOTS (likes, part 2): the drawing's moments, counted by this viewer,

@@ -820,7 +820,7 @@
      * to; `picked` is the viewer having chosen, which the drawing arriving
      * must not undo. */
     var choice = 1, picked = false, songPick = null;
-    var RL = global.SkriblReplayLine, lineUI = null, scrubUI = null, bar = null, sayEl = null;
+    var RL = global.SkriblReplayLine, lineUI = null, scrubUI = null, bar = null, sayEl = null, lent = null;
     var info = null, pagesN = 0, shapeCols = null, drawnMs = null, held = false, pendingF = null;
     var clockFn = null;   // replay ms -> the artist's, for the scrubber's bubble
     /* MARKS ON THE LINE, a host's (docs/INTEGRATION.md): its moments on the
@@ -941,13 +941,21 @@
        * the others? with the same scrubber and all?", then "All yes"). The
        * Gallery's and the Library's band (lib/fullbar.js) takes the line a
        * post wears under it, the scrubber that shows the drawing's shape and
-       * the words with every speed, wired here to this player's own clock. A
-       * player with a line of its own keeps that one. */
+       * the words with every speed, wired here to this player's own clock.
+       * A POST'S OWN LINE IS LENT, NOT LOST (the owner's "yes to A", Nov 16:
+       * full screen on a post, lib/postfull.js): while the band has it, the
+       * line's scrubber and words are kept as they were, and unband() gives
+       * them back, wired as before (wiring them again would lay a second
+       * strip in the scrubber). Its marks stay on the post's line. */
       band: function (scrubEl, wordsEl) {
-        if (!RL || line) return false;
+        if (!RL) return false;
+        if (line && !lent) lent = [bar, sayEl, scrubUI, lineUI];
         wire(scrubEl, wordsEl);
         paintLine();
         return true;
+      },
+      unband: function () {
+        if (lent) { bar = lent[0]; sayEl = lent[1]; scrubUI = lent[2]; lineUI = lent[3]; lent = null; lineUI.update(); paintLine(); }
       },
       /* Where the replay is and how long it runs: the artist's time for a
        * drawing, as "Drawn in" counts it, and the replay's for a Flip. The
@@ -1511,7 +1519,7 @@
       if (global.SkriblScrub) global.SkriblScrub.sync(bar, f);
       /* The marks again when the scrubber's width or the marks changed (a
        * phone's line doubles what a desk's keeps apart). */
-      if (marks.length + dots.length && bar.clientWidth !== markW) placeMarks();
+      if (!lent && marks.length + dots.length && bar.clientWidth !== markW) placeMarks();
     }
 
     /* MARKS ON THE LINE (docs/INTEGRATION.md, "Marks on the line"): a 5px dot

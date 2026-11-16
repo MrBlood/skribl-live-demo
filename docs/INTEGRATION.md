@@ -198,6 +198,33 @@ opening frame by frame; `verify_seam.py` holds the source.
                  line_info=post.line, line_waits=True) }}
 ```
 
+**Full screen on a post** (Nov 16: the owner's "yes to A", full screen on the
+Skribl site's posts). Pass `full=True` and the line ends in a full-screen
+button, after loop, that opens the link page's own full screen around this
+player: the drawing to the screen's edges, the band over it (the scrubber in
+the drawing's shape and the words with every speed, the post's own line lent
+to it; Restart, Play, Loop, Mute and Leave), the ×, and who drew it in the
+corner. `full_meta` says who: `{"title": ..., "name": ..., "handle": ...}`,
+the title the bold line, the name and the handle under it. The drawing carries
+on from where it was, playing or paused (one never played is played), and
+leaving gives the post its line back and the focus back to the button. On an
+iPhone, which has no full screen for a part of a page, it is a stand-in pinned
+over the page (`lib/immersive.js`), so, as the Gallery's (below), keep the
+post out of an element with `transform`, `filter` or `contain`. Load it once
+per page with `skribl_full_assets()`, after `skribl_inline_assets()`: it is
+`fullband.css`, `fullbar.css` and `postfull.css`, and `lib/chromefade.js`,
+`lib/smartfade.js`, `lib/fullbar.js`, `lib/immersive.js` and
+`lib/postfull.js`, apart from the embed's ratchet. A page that does not load
+them shows no button. With `line=False` there is no line, so no button.
+`verify_socialposts.py` 18 opens one and leaves it on the Skribl site.
+
+```jinja
+{{ skribl_full_assets() }}   {# once, in the head, after skribl_inline_assets() #}
+{{ skribl_inline(post.skribl_id, canvas_w=post.canvas_w, canvas_h=post.canvas_h,
+                 line_info=post.line, full=True,
+                 full_meta={'title': post.words, 'name': name, 'handle': '@' ~ handle}) }}
+```
+
 **A tap on the line is the line's.** A click on the line stops at the line (a
 post that is a link must not navigate on a scrub), so a control of yours near
 it listens on itself, or on the document while capturing. A card that opens
