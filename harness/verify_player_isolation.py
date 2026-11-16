@@ -1355,7 +1355,21 @@ with sync_playwright() as sp:
     #   live in css_live.json since only the app shows it. Spent first: the
     #   box written as inset (-10 B, the editors' too). verify_jsstrip's line
     #   moves with it. 43,695 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 43_701, 119_844, 40_000
+    # RAISED (the owner's "all yes" to "The edges", B, Nov 15, and to its part
+    #   four, Nov 16: every outline the thinnest line the screen can draw),
+    #   for one named cost: +1,377 B -- the link page's lines one screen pixel:
+    #   --hair and --edge on every page (they were the editors' alone), the
+    #   canvas's ring, the round buttons, the More card, its point (drawn
+    #   1/--hair as large and scaled back) and the line between its rows, the
+    #   speed chips' card, the scrubber's bubble, the x in full screen, the
+    #   way back and the column's sides, each a line of --edge in its line as
+    #   it looked over what it was drawn on, made solid; a state that colours
+    #   an edge steps its line aside. Spent first: the solid lines written
+    #   once, each theme setting only their strength (--hl, --hls), which
+    #   also lets Increase Contrast strengthen them as it does the hairlines
+    #   (151 B under a pair per theme); shadows with no blur written without
+    #   it. verify_jsstrip's line moves with it. 45,072 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_078, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

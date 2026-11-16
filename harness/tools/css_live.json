@@ -199,7 +199,8 @@
   ".rl-song-k",
   ".rl-chips.rl-song",
   ".rl-chips.rl-song button",
-  ".player-bar .rl-song"
+  ".player-bar .rl-song",
+  "body .canvas-wrap:not(.light-bg)"
  ],
  "editor": [
   "#canvas",
