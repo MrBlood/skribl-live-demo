@@ -44838,3 +44838,42 @@ battery (main's run after the merge does it).
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: Home in light, a post's drawing a fine line round it and
 a soft shadow under it, as the Gallery's tiles have.
+
+## After v330 -- The edges, part three's leftover: a drawing's picture card has one line
+
+Left by part three (the Nov 16 handoff, in the owner's order after part
+four): a picture card in Ask's answers and the little book, holding a drawing
+that plays, sat a pixel of the card's own colour inside its line, a rim
+between the line and the drawing: two lines where "The edges" asked for one.
+Read at the owner's phone's 3x on the book's first page: the line, three
+screen pixels of the card's white (its own lilac in dark), then the
+drawing's paper.
+
+WHAT CHANGED: the card wears the drawing's own ground once the drawing is
+in (lib/learncard.js hands it the player's ground(), as --pic-ground;
+styles.css: a drawing's card's background), so the pixel under its
+transparent border is the drawing's. A phone recording's card already wore
+its frame's tint for the same reason (part three). Nothing moves: dropping
+the border instead would have let the drawing meet the line, but the book's
+card would then be 2px shorter on a drawing's page than on a recording's,
+and turning a page would have jumped.
+
+PAD AND FLIP: shared: the little book and Ask are both editors', one module
+(lib/learncard.js) and one rule.
+
+CONTRAST: no word changed; the picture's own colour is under its line.
+
+THE CHECK, verify_book 8 (new): on the book's first page (a drawing), at 3x,
+light and dark, the Pad's and Flip's, the screen pixel inside the card's
+line is the drawing's ground (red: the rule gone, the card's white and its
+dark lilac inside the line; the ground never handed over).
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3), nine ok in 27.2
+minutes: verify_book 58/58, verify_ask 54/54, verify_learncard 150/150,
+verify_contrast 647/647, verify_theme 124/124, verify_surfaces 13/13,
+verify_hello 50/50, verify_helpclaims 47/47, verify_docs 144/144. NOT RUN:
+the full battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: the little book's first page, the drawing's paper right
+up to the card's lilac line, no white between.
