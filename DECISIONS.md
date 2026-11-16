@@ -44218,3 +44218,26 @@ OPEN, FOR THE NEXT SESSION:
 - The instrument: run_parallel's 63 suites took 120 minutes at -j 3 on this
   box, so a background run of that size needs the full two-hour limit; a
   run left at the 30-minute default was cut short and finished by hand.
+
+## After v330 -- A text box in focus wears the site's ring
+
+The owner, Nov 16 (Mountain Time), about 4:35 AM, with a screenshot of Edit
+profile on an iPhone, About you in focus inside a blue ring: "is this
+outline supposed to be blue?" It was not. The site's focus rule
+(social.css) named input, button and summary, so a textarea fell to the
+browser's own ring: Safari's blue on the owner's phone, a dark 1px auto ring
+in Chromium, while Your name beside it wore the site's 2px --focus. Older
+than the edges (the rule had the same list before #931). The site's three
+text boxes without a rule of their own were About you and the report notes
+(a post's, a comment's, a person's); the composer's and the comment box's
+words keep their own (.composer-words).
+
+WHAT CHANGED: textarea joins the rule, so every field in focus wears the
+site's ring. Pad and Flip unchanged (the site alone).
+
+THE CHECK, verify_socialprofile 6: Edit profile's two fields, focused, wear
+the site's 2px solid --focus as the page resolves it (red before the fix:
+About you's auto 1px in the browser's colour; green after).
+
+NOT TESTED HERE: an iPhone (WebKit). The one-glance tell: About you in
+focus, the same ring as Your name.
