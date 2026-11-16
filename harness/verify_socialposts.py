@@ -3557,6 +3557,74 @@ print("PLAN " + json.dumps(out))
         except Exception as exc:  # noqa: BLE001
             check("section 16 ran to its end", False, str(exc).splitlines()[0][:200])
 
+    # ------------------------------------------------------------------ 17
+    if part(17, "the edges: every outline one screen pixel; a Gallery tile's lift on the light page; a field's edge 3:1"):
+        # THE EDGES (the owner, Nov 15, "The edges", B): every outline the
+        # site draws is one screen pixel, the rows' thin line given to every
+        # edge, and the Gallery's tiles sit on the light page with the cards'
+        # own soft shadow. Read off the paint at the owner's phone's 3x, light
+        # and dark: at the middle of a box's left side (the bar: of its top),
+        # the screen pixels that stand 1.15:1 apart from both the page beside
+        # and what is inside. Every one of them was three; a field's edge
+        # read 2.90:1 on its own white.
+        try:
+            def _lum(q):
+                ch = [(v / 255) / 12.92 if v / 255 <= 0.03928 else (((v / 255) + 0.055) / 1.055) ** 2.4 for v in q[:3]]
+                return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]
+
+            def _cr(p_, q_):
+                a_, b_ = sorted((_lum(p_), _lum(q_)), reverse=True)
+                return (a_ + 0.05) / (b_ + 0.05)
+
+            # A line pixel stands 1.15:1 or more apart from both sides: every line here does (the faintest, a dark
+            # card's hairline, 1.22:1 on its card), and a tile's lift does not (its gradient beside the ring reads
+            # 1.06:1 against the page: the first version, at 1.05, counted it as a second pixel of line).
+            def _band(im, pts, page, inside):
+                return [im.getpixel(p_) for p_ in pts if _cr(im.getpixel(p_), page) >= 1.15 and _cr(im.getpixel(p_), inside) >= 1.15]
+
+            BOX = "(s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }"
+            ed = member(b, "edgy", "Eddie Edge")
+            st17, _ = make_post(ed, "Edges, one screen pixel.", card=True)
+            edges, lift = {}, None
+            for scheme in ("light", "dark"):
+                ctx, pg = browser_as(b, ed, screen="phone", scheme=scheme, scale=3)
+                for path, sels in (("/social/", [".post-card"]), ("/social/explore", [".gal-find input", ".fo-seg", ".gal-pic"])):
+                    pg.goto(BASE + path)
+                    pg.wait_for_timeout(900)
+                    im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+                    for sel in sels:
+                        r = pg.evaluate(BOX, sel)
+                        if not r:
+                            edges[f"{scheme} {sel}"] = None
+                            continue
+                        x, y = round(r[0] * 3), round((r[1] + r[3] / 2) * 3)
+                        page, inside = im.getpixel((x - 9, y)), im.getpixel((x + 12, y))
+                        got = _band(im, [(i, y) for i in range(x - 6, x + 8)], page, inside)
+                        edges[f"{scheme} {sel}"] = {"n": len(got), "px": got[:3], "inside": inside}
+                        if sel == ".gal-pic" and scheme == "light":
+                            xm, yb = round((r[0] + r[2] / 2) * 3), round((r[1] + r[3]) * 3)
+                            lift = [round(_lum(im.getpixel((xm, yb + 9))) * 1000, 1), round(_lum(im.getpixel((xm, yb + 75))) * 1000, 1)]
+                    if path == "/social/explore":
+                        r = pg.evaluate(BOX, "nav.nav")
+                        x6, y = 6, round(r[1] * 3)
+                        page, inside = im.getpixel((x6, y - 9)), im.getpixel((x6, y + 12))
+                        got = _band(im, [(x6, j) for j in range(y - 6, y + 8)], page, inside)
+                        edges[f"{scheme} the bar"] = {"n": len(got), "px": got[:3]}
+                close_ctx(ctx, pg)
+            check("every outline is one screen pixel at 3x, light and dark: a post's card on Home, the Gallery's search box,"
+                  " New | Hot, a tile, and the bar's line along its top",
+                  st17 == 200 and len(edges) == 10 and all(v and v["n"] == 1 for v in edges.values()),
+                  json.dumps({k: (v and v["n"]) for k, v in edges.items()}) + " " + json.dumps(edges)[:500])
+            check("...a Gallery tile sits on the light page with the cards' own lift: the page just under it darker than"
+                  " further down",
+                  bool(lift) and lift[0] < lift[1] - 2, json.dumps(lift))
+            fld = edges.get("light .gal-find input") or {}
+            check("...and the search box's edge reads 3:1 or more against its own white",
+                  bool(fld.get("px")) and _cr(fld["px"][0], fld["inside"]) >= 3.0,
+                  json.dumps(fld) + (f" {_cr(fld['px'][0], fld['inside']):.2f}:1" if fld.get("px") else ""))
+        except Exception as exc:  # noqa: BLE001
+            check("section 17 ran to its end", False, str(exc).splitlines()[0][:200])
+
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):
             ERRS.extend(f"csp: {v}" for v in who.csp())

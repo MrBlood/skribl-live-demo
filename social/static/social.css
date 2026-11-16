@@ -52,11 +52,15 @@
   /* Sign-in and the account pages (piece 2): Skribl's own roles again. */
   --card: #ffffff;                  /* --menu-card */
   --card-line: rgba(124, 92, 255, 0.34);   /* --menu-card-line */
+  /* A card's ring (THE EDGES) lies outside it, over the page, where its line
+     used to lie over the card: the line as it looked there, made solid. */
+  --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card));
   --card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
   --rule: rgba(80, 60, 170, 0.12);  /* --menu-card-rule */
   --row-line: rgba(20, 10, 60, 0.16);  /* the thin line between two rows of a card (Apple's way) */
   --field: #ffffff;
-  --field-line: rgba(124, 92, 255, 0.75);  /* 3:1 against the card, as a field's edge must be */
+  --field-line: rgba(124, 92, 255, 0.82);  /* 3:1 against the card, as a field's edge must be: 3.26:1 on white,
+                                              3.06 on the page (at 0.75 it read 2.90 and 2.68: "The edges") */
   --tint: rgba(124, 92, 255, 0.12); /* a note: words in the first ink on it */
   --danger-ink: #7a0a2d;            /* the drafts sheet's Delete (--row-danger-ink) */
   --danger-fill: #b3283f;           /* --danger-fill: white on it, in both themes */
@@ -132,6 +136,7 @@
   --draw-wait: #13161c;
   --card: #231e3b;
   --card-line: rgba(167, 146, 255, 0.12);
+  --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
   --card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
   --rule: rgba(167, 146, 255, 0.14);
   --row-line: rgba(255, 255, 255, 0.16);
@@ -175,6 +180,7 @@
     --draw-wait: #13161c;
     --card: #231e3b;
     --card-line: rgba(167, 146, 255, 0.12);
+    --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
     --card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
     --rule: rgba(167, 146, 255, 0.14);
     --row-line: rgba(255, 255, 255, 0.16);
@@ -232,7 +238,8 @@ body {
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 44px; padding: 0 18px; border-radius: 999px;
-  border: 1px solid var(--btn2-line); background: var(--btn2-bg); color: var(--btn2-ink);
+  border: 1px solid transparent; --line: var(--btn2-line); box-shadow: 0 0 0 var(--edge) var(--line);
+  background: var(--btn2-bg); color: var(--btn2-ink);
   font: 600 15px/1.2 var(--font); text-decoration: none; white-space: nowrap; cursor: pointer;
 }
 .btn .ic { width: 20px; height: 20px; }
@@ -268,7 +275,7 @@ body {
   position: fixed; z-index: 30; left: 0; right: 0; bottom: 0;
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: stretch;
   padding: 0 8px env(safe-area-inset-bottom);
-  background: var(--nav-bg); border-top: 1px solid var(--nav-line);
+  background: var(--nav-bg); border-top: 1px solid transparent; box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--nav-line);
   -webkit-backdrop-filter: saturate(1.4) blur(16px); backdrop-filter: saturate(1.4) blur(16px);
 }
 .nav .brand { display: none; }
@@ -477,7 +484,8 @@ html.is-app .app-edge {
   .nav {
     top: 0; right: auto; width: 248px;
     display: flex; flex-direction: column; gap: 4px;
-    padding: 22px 16px 20px; border-top: 0; border-right: 1px solid var(--nav-line);
+    padding: 22px 16px 20px; border-top: 0; border-right: 1px solid transparent;
+    box-shadow: var(--edge) 0 0 0 var(--nav-line);
   }
   .nav .brand { display: flex; padding: 6px 12px 22px; }
   .nav .brand .brand-mark { height: 38px; }
@@ -577,7 +585,8 @@ html.is-app .app-edge {
 .gal-bar .fo-seg { flex: none; }
 .gal-find { flex: 1 1 220px; min-width: 0; margin: 0; }
 .gal-find input {
-  width: 100%; min-height: 44px; margin: 0; padding: 0 16px; border: 1px solid var(--field-line); border-radius: 12px;
+  width: 100%; min-height: 44px; margin: 0; padding: 0 16px; border: 1px solid transparent; border-radius: 12px;
+  box-shadow: 0 0 0 var(--edge) var(--field-line);
   background: var(--field); color: var(--ink); font: 16px/1.3 var(--font);
 }
 .gal-find input::placeholder { color: var(--ink-2); opacity: 1; }
@@ -589,7 +598,10 @@ html.is-app .app-edge {
 .gal-tile { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: var(--ink); text-decoration: none; }
 .gal-pic {
   position: relative; display: grid; place-items: center; aspect-ratio: 650 / 486; overflow: hidden;
-  border-radius: 14px; background: var(--plate-ground, var(--blooby-paper)); box-shadow: 0 0 0 1px var(--card-line);
+  border-radius: 14px; background: var(--plate-ground, var(--blooby-paper));
+  /* B, the lift: the tile sits on the page with the cards' own soft shadow,
+     as a post's card does (same role, same token). */
+  box-shadow: 0 0 0 var(--edge) var(--card-line), var(--card-drop);
   container-type: size;
 }
 .gal-plate {
@@ -654,7 +666,7 @@ html.is-app .app-edge {
 .fp-sec { margin: 18px 0 6px; color: var(--ink); font-size: 15px; font-weight: 700; line-height: 1.3; letter-spacing: 0; }
 .fp-list { margin: 0 0 8px; padding: 0; list-style: none; }
 .fp-row { display: flex; align-items: center; min-height: 64px; }
-.fp-row + .fp-row { border-top: 1px solid var(--card-line); }
+.fp-row + .fp-row { border-top: 1px solid transparent; box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--card-line); }
 .fp-who {
   display: flex; flex: 1; align-items: center; align-self: stretch; gap: 12px; min-width: 0; padding: 6px 12px 6px 0;
   border-radius: 12px; color: inherit; text-decoration: none;
@@ -787,7 +799,8 @@ body.focus .top { justify-content: center; }
 .si-or { display: flex; align-items: center; gap: 12px; margin: 24px 0 6px; font-size: 14px; font-weight: 600; line-height: 1.45; }
 .si-or::before, .si-or::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
 .si-or span { color: var(--ink-2); }
-.si-new { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--rule); text-align: center; }
+.si-new { margin-top: 22px; padding-top: 16px; border-top: 1px solid transparent; box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--rule);
+          text-align: center; }
 .si-new p { margin: 0; }
 .si-card .cta { margin-top: 4px; }
 .si-new .fine { margin-top: 6px; }
@@ -812,8 +825,8 @@ body.focus .top { justify-content: center; }
   .si { align-items: center; min-height: calc(100vh - 160px); padding-top: 0; }
   .si-art { display: block; flex: none; width: 440px; }
   .si-art .hello-art { width: 100%; }
-  .si-card { padding: 32px 32px 26px; background: var(--card); border: 1px solid var(--card-line);
-             border-radius: 24px; box-shadow: var(--card-drop); }
+  .si-card { padding: 32px 32px 26px; background: var(--card); border: 1px solid transparent;
+             border-radius: 24px; box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
 }
 
 /* What happened, said where it happened: a note on the lilac tint, in the
@@ -828,11 +841,12 @@ body.focus .top { justify-content: center; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field > label, .key-form label { color: var(--ink); font-size: 15px; font-weight: 600; line-height: 1.4; }
 .field input[type="text"], .key-form input, .linkfield {
-  width: 100%; min-height: 52px; padding: 0 14px; border: 1.5px solid var(--field-line); border-radius: 14px;
+  width: 100%; min-height: 52px; padding: 0 14px; border: 1.5px solid transparent; border-radius: 14px;
+  box-shadow: 0 0 0 var(--edge) var(--field-line);
   background: var(--field); color: var(--ink); font: 17px/1.3 var(--font);
 }
-.at { display: flex; align-items: center; min-height: 52px; padding-left: 14px; border: 1.5px solid var(--field-line);
-      border-radius: 14px; background: var(--field); }
+.at { display: flex; align-items: center; min-height: 52px; padding-left: 14px; border: 1.5px solid transparent;
+      border-radius: 14px; background: var(--field); box-shadow: 0 0 0 var(--edge) var(--field-line); }
 .at-sign { color: var(--ink-2); font-size: 17px; }
 .field .at input[type="text"] { flex: 1; min-width: 0; min-height: 49px; padding: 0 14px 0 2px; border: 0; background: transparent; }
 .at:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -840,7 +854,7 @@ body.focus .top { justify-content: center; }
 :is(input, button, summary):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .hint { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
 .err { margin: 0; color: var(--danger-ink); font-size: 14px; font-weight: 600; line-height: 1.45; }
-.field input[aria-invalid="true"], .at:has(input[aria-invalid="true"]) { border-color: var(--danger-ink); }
+.field input[aria-invalid="true"], .at:has(input[aria-invalid="true"]) { border-color: var(--danger-ink); box-shadow: none; }
 .check { display: flex; align-items: center; gap: 12px; min-height: 44px; color: var(--ink); font-size: 16px; font-weight: 600; cursor: pointer; }
 .check input { flex: none; width: 24px; height: 24px; margin: 0; accent-color: var(--fill); }
 
@@ -848,14 +862,16 @@ body.focus .top { justify-content: center; }
    card (--menu-card), its rows split by the card's rule. */
 .acct { max-width: 560px; margin: 0 auto; }
 .panel { display: flex; flex-direction: column; gap: 12px; margin: 0 0 16px; padding: 18px 16px;
-         background: var(--card); border: 1px solid var(--card-line); border-radius: 20px; box-shadow: var(--card-drop); }
+         background: var(--card); border: 1px solid transparent; border-radius: 20px;
+         --line: var(--card-edge); box-shadow: 0 0 0 var(--edge) var(--line), var(--card-drop); }
 .panel form { margin: 0; }
 .panel-title { margin: 0; font-size: 18px; font-weight: 700; line-height: 1.3; }
 .panel-sub, .panel-text { margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
-.panel-made { border-color: var(--brand); }
+.panel-made { border-color: var(--brand); --line: transparent; }
 .panel-go { display: flex; flex-direction: column; }
 .keys, .links { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
-.key, .link-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.key, .link-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid transparent;
+                  box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--rule); }
 .link-row { align-items: center; }
 .link-row form { flex: none; }
 .key-ic { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border-radius: 12px;
@@ -889,7 +905,8 @@ body.focus .top { justify-content: center; }
 .theme-words .panel-sub { font-size: 14px; line-height: 1.3; }
 .theme-switch {
   position: relative; display: flex; flex: none; width: 216px; height: 52px; padding: 3px;
-  border: 1px solid var(--btn2-line); border-radius: 12px; background: var(--btn2-bg);
+  border: 1px solid transparent; border-radius: 12px; background: var(--btn2-bg);
+  box-shadow: 0 0 0 var(--edge) var(--btn2-line);
 }
 .theme-switch > button {
   position: relative; z-index: 1; flex: 1 1 0; min-width: 44px; height: 44px; margin: 0; padding: 0 8px; border: 0;
@@ -907,14 +924,15 @@ body.focus .top { justify-content: center; }
 
 /* BLOCKED (piece 5): the people you blocked, a row each, as the keys are. */
 .blocked { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
-.blocked-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.blocked-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid transparent;
+               box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--rule); }
 .blocked-row form { flex: none; }
 .face-ring.blocked-face { --skribl-face-size: 40px; flex: none; width: 40px; height: 40px; }
 .blocked-who { display: flex; flex: 1; flex-direction: column; min-width: 0; line-height: 1.35; }
 .blocked-who b { overflow: hidden; font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
 .blocked-who span { color: var(--ink-2); font-size: 14px; }
 .btn-small { min-height: 44px; padding: 0 16px; font-size: 15px; }
-.btn-danger { background: var(--danger-fill); border-color: transparent; color: #ffffff; }
+.btn-danger { background: var(--danger-fill); border-color: transparent; --line: transparent; color: #ffffff; }
 .btn-quiet-danger { color: var(--danger-ink); }
 .danger-link { display: inline-flex; align-items: center; align-self: flex-start; min-height: 44px; color: var(--danger-ink);
                font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
@@ -947,7 +965,8 @@ body.focus .top { justify-content: center; }
   text-decoration: none;
 }
 .icon-btn .ic { width: 22px; height: 22px; }
-.icon-btn.boxed { border: 1px solid var(--btn2-line); background: var(--btn2-bg); color: var(--btn2-ink); }
+.icon-btn.boxed { border: 1px solid transparent; --line: var(--btn2-line); box-shadow: 0 0 0 var(--edge) var(--line);
+                  background: var(--btn2-bg); color: var(--btn2-ink); }
 
 /* The bar's You (a phone) and the rail's foot (a desk): your face, still,
    ringed in the bar's ink, the ring the words' own colour where You is the
@@ -968,7 +987,8 @@ body.focus .top { justify-content: center; }
              text-overflow: ellipsis; white-space: nowrap; }
 .top-gear {
   display: inline-flex; flex: none; align-items: center; gap: 6px; height: 44px; margin-left: auto; padding: 0 14px 0 11px;
-  border: 1px solid var(--btn2-line); border-radius: 999px; background: var(--btn2-bg); color: var(--btn2-ink);
+  border: 1px solid transparent; border-radius: 999px; background: var(--btn2-bg); color: var(--btn2-ink);
+  box-shadow: 0 0 0 var(--edge) var(--btn2-line);
   font: 600 15px/1 var(--font); text-decoration: none; white-space: nowrap;
 }
 .top-gear .ic { width: 20px; height: 20px; }
@@ -976,7 +996,7 @@ body.focus .top { justify-content: center; }
 .prof { display: flex; flex-direction: column; align-items: center; padding-top: 8px; text-align: center; }
 .prof-face {
   --skribl-face-size: 112px; width: 112px; height: 112px; margin-bottom: 16px;
-  box-shadow: 0 0 0 4px var(--card), 0 0 0 5px var(--card-line), var(--card-drop);
+  box-shadow: 0 0 0 4px var(--card), 0 0 0 calc(4px + var(--edge)) var(--card-line), var(--card-drop);
 }
 /* Your own empty circle says what to do, and does it: the Pad opens. */
 .face-ask {
@@ -1015,7 +1035,7 @@ body.focus .top { justify-content: center; }
 }
 @media (hover: hover) {
   .face-ask:hover { border-color: var(--brand); }
-  .icon-btn.boxed:hover { border-color: var(--brand); }
+  .icon-btn.boxed:hover { border-color: var(--brand); --line: transparent; }
 }
 
 /* ---- A PROFILE'S TABS (the map's step 4) -----------------------------------
@@ -1037,7 +1057,7 @@ body.focus .top { justify-content: center; }
  * The panel under it fades as the Gallery's tiles do (.gal-swap). */
 .prof-tabs {
   position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
-  margin: 24px -16px 14px; border-bottom: 1px solid var(--rule);
+  margin: 24px -16px 14px; border-bottom: 1px solid transparent; box-shadow: 0 var(--edge) 0 0 var(--rule);
 }
 .prof-tab {
   position: relative; display: grid; place-items: center; height: 48px; padding: 0 4px; color: var(--ink-2);
@@ -1091,10 +1111,11 @@ body.focus .top { justify-content: center; }
 
 /* Edit profile's bio: a text field that grows by hand. */
 .field textarea {
-  width: 100%; min-height: 112px; padding: 12px 14px; border: 1.5px solid var(--field-line); border-radius: 14px;
+  width: 100%; min-height: 112px; padding: 12px 14px; border: 1.5px solid transparent; border-radius: 14px;
+  box-shadow: 0 0 0 var(--edge) var(--field-line);
   background: var(--field); color: var(--ink); font: 17px/1.45 var(--font); resize: vertical;
 }
-.field textarea[aria-invalid="true"] { border-color: var(--danger-ink); }
+.field textarea[aria-invalid="true"] { border-color: var(--danger-ink); box-shadow: none; }
 .opt { margin-left: 4px; color: var(--ink-2); font-size: 14px; font-weight: 400; }
 
 /* DRAW YOUR FACE: the Pad over the page (lib/composehost.js runs it). A
@@ -1225,7 +1246,7 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
  * Reduce Motion each is there, drawn. Make's sheet keeps its tiles for now. */
 .face-lead {
   gap: 16px; min-height: 112px; margin-bottom: 8px; padding: 14px 16px; border-radius: 20px;
-  box-shadow: 0 0 0 1px var(--card-line), var(--card-drop);
+  box-shadow: 0 0 0 var(--edge) var(--card-line), var(--card-drop);
 }
 .face-lead .make-words b { font-size: 19px; }
 .face-lead-me {
@@ -1281,14 +1302,14 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    owner's "All yes", Nov 14, Make being the way to post): your face beside
    its words, Draw and Flip as tinted chips, Post the one action. */
 .composer {
-  margin: 8px 0 18px; padding: 16px; border: 1px solid var(--card-line); border-radius: 24px;
-  background: var(--card); box-shadow: var(--card-drop);
+  margin: 8px 0 18px; padding: 16px; border: 1px solid transparent; border-radius: 24px;
+  background: var(--card); box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop);
 }
 .composer-row { display: flex; align-items: flex-start; gap: 12px; }
 .face-ring.composer-face { --skribl-face-size: 44px; width: 44px; height: 44px; }
 .composer-words {
   flex: 1; min-width: 0; min-height: 44px; margin: 0; padding: 10px 0 9px; border: 0;
-  border-bottom: 1px solid var(--rule); background: transparent; color: var(--ink);
+  border-bottom: 1px solid transparent; box-shadow: 0 var(--edge) 0 0 var(--rule); background: transparent; color: var(--ink);
   font: inherit; font-size: 17px; line-height: 1.4; resize: none; overflow: hidden;
 }
 .composer-words::placeholder { color: var(--ink-2); opacity: 1; }
@@ -1367,7 +1388,7 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .cmp-say { margin: 12px 0 0 52px; text-align: left; }
 .cmp-tools {
   display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 8px;
-  padding-top: 12px; border-top: 1px solid var(--rule);
+  padding-top: 12px; border-top: 1px solid transparent; box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--rule);
 }
 .cmp-left { margin-left: auto; color: var(--ink-2); font-size: 14px; font-variant-numeric: tabular-nums; }
 /* "USE ONE YOU MADE" (Yours): Back where Cancel was, its title, the one pill
@@ -1391,8 +1412,8 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 /* THE FEED: a column of cards, the mock's. */
 .feed { display: flex; flex-direction: column; gap: 16px; }
 .post-card {
-  padding: 16px; border: 1px solid var(--card-line); border-radius: 24px; background: var(--card);
-  box-shadow: var(--card-drop);
+  padding: 16px; border: 1px solid transparent; border-radius: 24px; background: var(--card);
+  box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop);
 }
 .post-head { display: flex; align-items: center; gap: 12px; }
 .post-face { display: block; flex: none; }
@@ -1495,8 +1516,8 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    which nearly vanished in dark; inside a post's card on Home it is the card's
    colour on the card's colour, as it was. */
 .qt-card {
-  display: block; margin-top: 12px; padding: 12px; border: 1px solid var(--card-line); border-radius: 18px;
-  background: var(--card); color: inherit; text-decoration: none;
+  display: block; margin-top: 12px; padding: 12px; border: 1px solid transparent; border-radius: 18px;
+  background: var(--card); color: inherit; text-decoration: none; box-shadow: 0 0 0 var(--edge) var(--card-edge);
 }
 .post-card .qt-card { position: relative; z-index: 1; }
 .qt-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -1507,7 +1528,7 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
   margin-top: 6px; font-size: 15px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere;
 }
-.qt-pic { margin-top: 10px; border-radius: 12px; }
+.qt-pic { margin-top: 10px; border-radius: 12px; box-shadow: 0 0 0 var(--edge) var(--card-line); }   /* in a card: its ring, no lift */
 .qt-dur { left: 50%; transform: translateX(-50%); }
 .qt-card.is-gone { margin-bottom: 0; color: var(--ink-2); font-size: 15px; line-height: 1.4; }
 .post-open {
@@ -1537,9 +1558,18 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    with depth): one screen pixel (1px scaled by --hair to the screen's own
    pixel), from where the row's words start (--line-start) to 16px before
    the card's edge, in --row-line. Report's reasons the same way. */
-:root { --hair: 1; }
+:root { --hair: 1; --edge: calc(1px * var(--hair)); }
 @media (min-resolution: 2dppx) { :root { --hair: 0.5; } }
 @media (min-resolution: 3dppx) { :root { --hair: 0.3334; } }
+/* THE EDGES (the owner, Nov 15, "The edges", B): every outline the site
+   draws is one screen pixel, the rows' thin line given to every edge. A
+   border cannot draw it (Chromium rounds a border, and an outline, under
+   1px up to 1px: three screen pixels at 3x), so each keeps its border's
+   width, transparent, and nothing moves, and a ring of --edge hugs it
+   outside: a box-shadow, 0 0 0 var(--edge), in the line's own colour, or a
+   line just above (a row's top) or below. Where a state colours a border
+   (an error, a hover, a made panel) the state's border shows as it always
+   did and the ring steps aside. */
 /* The row keeps the 1px it gave its border (now transparent), so nothing
    moves; the line is drawn in that pixel. */
 .post-acts > :not([hidden]) ~ :not([hidden]), .post-reason + .post-reason { position: relative; border-top: 1px solid transparent; }
@@ -1590,7 +1620,8 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .post-note-label { display: block; margin: 4px 4px 6px; font-size: 15px; font-weight: 600; }
 .post-note-label span { color: var(--ink-2); font-weight: 400; }
 .post-note {
-  display: block; width: 100%; min-height: 64px; padding: 10px 12px; border: 1px solid var(--field-line);
+  display: block; width: 100%; min-height: 64px; padding: 10px 12px; border: 1px solid transparent;
+  box-shadow: 0 0 0 var(--edge) var(--field-line);
   border-radius: 12px; background: var(--field); color: var(--ink); font: inherit; font-size: 16px; resize: vertical;
 }
 .post-sheet-acts { display: flex; gap: 10px; margin-top: 14px; }
@@ -1621,8 +1652,9 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    Gallery's tile wears it), and where that is not known, what it was; a
    drawing on a picture with its picture at its sides (plate_fill, above). */
 .more-pic {
-  position: relative; display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--card-line);
+  position: relative; display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid transparent;
   border-radius: 14px; background: var(--plate-ground, var(--draw-wait)); container-type: size;
+  box-shadow: 0 0 0 var(--edge) var(--card-line), var(--card-drop);   /* B: a tile's lift, as the Gallery's */
 }
 .more-plate {
   position: relative; overflow: hidden; border-radius: 6px; aspect-ratio: var(--plate-a);
@@ -1681,7 +1713,7 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .cm-list, .cm-answers { margin: 0; padding: 0; list-style: none; }
 .cm {
   display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 12px; padding: 14px 0 2px;
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid transparent; box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--rule);
 }
 .cm-list > .cm:first-child { border-top: 0; }
 .cm .face-ring { --skribl-face-size: 36px; width: 36px; height: 36px; }
@@ -1748,9 +1780,11 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .cm-fold.is-still > .cm-fold-in, .cm-first-fold.is-still > .cm-fold-in { overflow: visible; }
 .cm-fold.is-quick, .cm-first-fold.is-quick { transition-duration: 0.24s; transition-timing-function: cubic-bezier(0.4, 0, 1, 1); }
 .cm-fold.is-quick > .cm-fold-in, .cm-first-fold.is-quick > .cm-fold-in { transition-delay: 0.24s; }
-.cm-fold .cm-box { opacity: 0; box-shadow: none; transition: opacity 0.18s ease, box-shadow 0.18s ease; }
+/* The box's edge is its ring (THE EDGES), kept in every state here; only
+   its drop waits for the fold to rest. */
+.cm-fold .cm-box { opacity: 0; box-shadow: 0 0 0 var(--edge) var(--card-edge); transition: opacity 0.18s ease, box-shadow 0.18s ease; }
 .cm-fold.is-open .cm-box { opacity: 1; transition: opacity 0.22s ease 0.06s, box-shadow 0.2s ease; }
-.cm-fold.is-still .cm-box { box-shadow: var(--card-drop); }
+.cm-fold.is-still .cm-box { box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
 .cm-first-fold .cm-first { opacity: 0; transition: opacity 0.18s ease; }
 .cm-first-fold.is-open .cm-first { opacity: 1; transition: opacity 0.22s ease 0.06s; }
 /* Answering on a desk: the fold under the conversation, across the row. */
@@ -1770,7 +1804,7 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
   text-overflow: ellipsis; white-space: nowrap;
 }
 .cm-quote[hidden] { display: none; }
-.cm-sheet .composer.cm-box { margin: 0; box-shadow: none; }
+.cm-sheet .composer.cm-box { margin: 0; box-shadow: 0 0 0 var(--edge) var(--card-edge); }
 /* SIGNED OUT: Make's sheet, small, saying how (the heart's twin). */
 .cm-out .post-sheet-acts a.btn { text-decoration: none; }
 /* A COMMENT THAT ARRIVES (yours, posted) opens its room as it fades in, and
@@ -1895,7 +1929,8 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
   touch-action: pan-y; list-style: none; border-radius: 18px; background: var(--row-bg);
 }
 .lk-row {
-  display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 0; border-top: 1px solid var(--rule);
+  display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 0; border-top: 1px solid transparent;
+  box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--rule);
   color: var(--ink); text-decoration: none;
 }
 .lk-list > li:first-child > .lk-row { border-top: 0; }
@@ -1945,7 +1980,8 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .act-list { margin: 0; padding: 0; list-style: none; }
 .act-row {
   display: grid; grid-template-columns: 8px 44px minmax(0, 1fr) 52px; column-gap: 12px; align-items: center;
-  min-height: 76px; padding: 12px 0; border-top: 1px solid var(--rule); color: var(--ink); text-decoration: none;
+  min-height: 76px; padding: 12px 0; border-top: 1px solid transparent; box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--rule);
+  color: var(--ink); text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
 .act-list > li:first-child > .act-row { border-top: 0; }
@@ -1977,7 +2013,8 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 }
 /* The small picture: the drawing's middle, cut from its poster (activity.py _pic). */
 .act-pic {
-  width: 52px; height: 52px; border-radius: 10px; border: 1px solid var(--card-line); background-color: var(--draw-wait);
+  width: 52px; height: 52px; border-radius: 10px; border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--card-line);
+  background-color: var(--draw-wait);
   background-repeat: no-repeat;
 }
 /* NOTHING YET: Blooby as his Home Screen icon in small (the sign-in pages' own: blooby.app's icon, the site's Home Screen app's), and a way to make something. */
@@ -2027,7 +2064,7 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 @media (prefers-reduced-motion: reduce) { .fo-check path { stroke-dasharray: none; } }
 @media (hover: hover) {
   .fo-btn:not(.is-following):hover { filter: brightness(1.08); }
-  .fo-btn.is-following:hover { border-color: var(--brand); }
+  .fo-btn.is-following:hover { border-color: var(--brand); --line: transparent; }
 }
 /* THE COUNTS (the quick-patterns mock's A, in its own sizes), under the
    @handle: each number in the first ink, its word in the second, a dot
@@ -2060,7 +2097,7 @@ button.fo-n {
    Under Reduce Motion it is put there. */
 .fo-seg {
   position: relative; display: inline-flex; align-items: stretch; height: 44px; padding: 3px;
-  border: 1px solid var(--card-line); border-radius: 12px; background: var(--card);
+  border: 1px solid transparent; border-radius: 12px; background: var(--card); box-shadow: 0 0 0 var(--edge) var(--card-edge);
 }
 .fo-seg > button {
   position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center;
@@ -2094,7 +2131,8 @@ button.fo-n {
 .feed > .fo-fresh { margin: 8px 0 0; }
 .fo-none {
   display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 18px 20px;
-  border: 1px solid var(--card-line); border-radius: 22px; background: var(--card); box-shadow: var(--card-drop);
+  border: 1px solid transparent; border-radius: 22px; background: var(--card);
+  box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop);
   text-align: center;
 }
 .fo-none h2 { margin: 0; font: 700 19px/1.3 var(--font); }
@@ -2117,8 +2155,9 @@ button.fo-n {
    wear it; the card's rule between rows is the row's now, so it runs under
    the button too. The when sits after the @handle, so the name keeps its
    room on a phone. */
-.fo-list > .fo-row { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--rule); }
-.fo-list > .fo-row:first-child { border-top: 0; }
+.fo-list > .fo-row { display: flex; align-items: center; gap: 10px; border-top: 1px solid transparent;
+                     box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--rule); }
+.fo-list > .fo-row:first-child { border-top: 0; box-shadow: none; }
 .fo-row > .lk-row { flex: 1; min-width: 0; border-top: 0; }
 .fo-row > .fo-btn { flex: none; }
 /* ACTIVITY: a follow's face wears a small Follow, the action's purple and a
@@ -2153,8 +2192,8 @@ button.fo-n {
 .cmp-body, .composer-row { position: relative; }
 .mn-list {
   position: absolute; z-index: 30; left: 52px; right: 0; margin: 0; padding: 4px 0; list-style: none;
-  border: 1px solid var(--card-line); border-radius: 16px; background: var(--card);
-  box-shadow: 0 10px 28px rgba(20, 16, 50, 0.14); overflow: hidden; opacity: 0; transition: opacity 0.16s ease;
+  border: 1px solid transparent; border-radius: 16px; background: var(--card);
+  box-shadow: 0 0 0 var(--edge) var(--card-edge), 0 10px 28px rgba(20, 16, 50, 0.14); overflow: hidden; opacity: 0; transition: opacity 0.16s ease;
 }
 .mn-list[hidden] { display: none; }
 .mn-list.is-open { opacity: 1; }
@@ -2162,7 +2201,7 @@ button.fo-n {
   display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.mn-row + .mn-row { border-top: 1px solid var(--card-line); }
+.mn-row + .mn-row { border-top: 1px solid transparent; box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--card-line); }
 .mn-row[aria-selected="true"] { background: var(--tint); }
 .mn-row .face-ring { --skribl-face-size: 36px; width: 36px; height: 36px; }
 .mn-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
@@ -2212,8 +2251,8 @@ button.fo-n {
 }
 .mu-toast {
   display: flex; align-items: center; gap: 10px; width: 100%; max-width: 460px; min-height: 56px; padding: 6px 6px 6px 14px;
-  border-radius: 18px; background: var(--card); border: 1px solid var(--card-line); color: var(--ink);
-  box-shadow: var(--card-drop), 0 16px 36px rgba(0, 0, 0, 0.16); font-size: 15px; line-height: 1.35;
+  border-radius: 18px; background: var(--card); border: 1px solid transparent; color: var(--ink);
+  box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop), 0 16px 36px rgba(0, 0, 0, 0.16); font-size: 15px; line-height: 1.35;
   opacity: 0; transform: translateY(10px); pointer-events: none;
 }
 .mu-toast[hidden] { display: none; }
@@ -2287,8 +2326,8 @@ button.fo-n {
 /* YOUR REPORTS (piece 5): a card per thing reported, as the mock drew it; a
    child's safety ringed in the danger fill, its picture blurred until Open it. */
 .reps .rep-list { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; list-style: none; }
-.rep { padding: 14px 16px 16px; border: 1px solid var(--card-line); border-radius: 18px; background: var(--card);
-       box-shadow: var(--card-drop); }
+.rep { padding: 14px 16px 16px; border: 1px solid transparent; border-radius: 18px; background: var(--card);
+       box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
 .rep.is-child { border-color: var(--danger-fill); box-shadow: 0 0 0 1px var(--danger-fill) inset, var(--card-drop); }
 .rep-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
 .rep-why { color: var(--ink); font-weight: 700; }
@@ -2322,7 +2361,8 @@ button.fo-n {
 .legal { max-width: 640px; }
 .legal-nav { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
 .legal-nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 999px;
-               border: 1px solid var(--card-line); color: var(--ink); font-size: 15px; font-weight: 600; text-decoration: none; }
+               border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--card-line);
+               color: var(--ink); font-size: 15px; font-weight: 600; text-decoration: none; }
 .legal-nav a[aria-current] { background: var(--tint); }
 .legal-draft { margin: 0 0 18px; padding: 12px 14px; border-radius: 14px; background: var(--tint); color: var(--ink);
                font-size: 15px; }
