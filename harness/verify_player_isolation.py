@@ -1121,7 +1121,14 @@ with sync_playwright() as sp:
     # owner's "Yes to all"), for one named cost: +8 B -- the head boot says
     # dark out loud (data-theme="dark", for every host), so a host's styles
     # can tell light, dark and nothing chosen apart. 14,147 measured.
-    HTML_RATCHET = 14_148
+    # RAISED (the Blooby app's top edge on the link page, the owner's "all
+    # yes", Nov 16: it opens inside the app, as the Pad and Flip do), for one
+    # named cost: +263 B -- the app boot (_skribl_app_boot.html, one inline
+    # script that marks the page an app before the first paint) and the
+    # strip's element. Spent first: the boot's own guard for a browser with
+    # no matchMedia, which its try already catches (-39 B, on every page that
+    # carries it). 14,410 measured.
+    HTML_RATCHET = 14_411
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
@@ -1341,7 +1348,14 @@ with sync_playwright() as sp:
     #   cost: +57 B -- the pill wraps a whole choice to a second row where a
     #   face cannot hold it on one (flex-wrap, centred, 10px between rows).
     #   verify_jsstrip's line moves with it. 43,515 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 43_521, 119_844, 40_000
+    # RAISED (the Blooby app's top edge on the link page, the owner's "all
+    #   yes", Nov 16), for one named cost: +180 B -- the strip's two rules
+    #   (.app-edge, and html[data-skribl-app] .app-edge: 6px of the page's own
+    #   ground, fixed at the top, in the app alone), the editors' own, listed
+    #   live in css_live.json since only the app shows it. Spent first: the
+    #   box written as inset (-10 B, the editors' too). verify_jsstrip's line
+    #   moves with it. 43,695 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 43_701, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

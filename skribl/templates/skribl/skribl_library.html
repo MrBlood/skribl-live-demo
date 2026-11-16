@@ -18,6 +18,9 @@
      editors and the gallery carry. Until v313 this page did not include it and
      stayed dark whatever the person had chosen (SK312-001). #}
   {% include 'skribl/_skribl_theme_boot.html' %}
+  {# From the Home Screen, marked before the first paint: the strip below
+     (pagemenu.css, THE APP'S TOP EDGE). #}
+  {% include 'skribl/_skribl_app_boot.html' %}
   {# posted.css: Your Skribls' rows and the recovery-key overlays, in
      styles.css's token vocabulary; the map below speaks it in this page's
      palette, both ramps (this said "both ramps" for releases while the page
@@ -693,6 +696,10 @@
       data-skribl-player="{{ skribl_player_base }}"
       data-skribl-me="{{ library_user_id if library_user_id is not none else '' }}"
       data-skribl-pad="{{ url_for('.skribl_editor') }}">
+{# THE APP'S TOP EDGE: a strip of the page's own ground, from the Home Screen
+   alone, so iOS 26 lays no glass blur over the top of the page (pagemenu.css;
+   _skribl_app_boot.html). #}
+<div class="app-edge" aria-hidden="true"></div>
 <div class="wrap">
   {# PULL TO REFRESH, in the Home Screen app only (lib/offline.js wires it and
      grows it; a browser tab has its own and never sees this). #}

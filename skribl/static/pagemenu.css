@@ -114,6 +114,22 @@ html { scroll-padding-top: 96px; }
 @media (max-width: 640px) {
   .top { top: 6px; padding: 8px 0; }
 }
+/* THE APP'S TOP EDGE, THE LIBRARY'S AND THE GALLERY'S (the owner, Nov 16, "all
+   yes": as the Pad and Flip have it, #929). They open inside the Blooby app
+   too, and iOS 26 lays a glass blur over the top of a Home Screen web app;
+   WebKit leaves it off where the top edge is a fixed, full-width box with an
+   opaque ground, found by hitting a point a few pixels inside the top edge.
+   So: 6px of the page's own ground (--base, the editors' --surface-raised),
+   from the Home Screen alone (html[data-skribl-app], _skribl_app_boot.html,
+   before the first paint). Over the header (40), the same colour as its band
+   once scrolled; under the cards' menus, the sheets and the ••• menu, whose
+   scrims dim it; full screen covers it. On a phone the header sticks at 6px,
+   so nothing to press starts in it. A tab never has it. */
+.app-edge { display: none; }
+html[data-skribl-app] .app-edge {
+  display: block; position: fixed; z-index: 43; inset: 0 0 auto; height: 6px;
+  background: var(--base);
+}
 
 /* ---- THE ONE LOCKUP ------------------------------------------------------
    Mark 30 (owner, after v324: "Doesn't skribl look tiny up there?", B) and
