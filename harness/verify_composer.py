@@ -758,7 +758,9 @@ with sync_playwright() as p:
                     look["pressed"] = pg.evaluate(PARTS)["say"]
                     pg.fill("#composeSheet [data-compose-words]", "A slow snail for a slow Saturday.")
                     pg.wait_for_timeout(200)
-                    look["typed"] = pg.evaluate(PARTS)["left"]["words"]
+                    after = pg.evaluate(PARTS)
+                    look["typed"] = after["left"]["words"]
+                    look["lit"] = after["disabled"]
                     look["ring"] = pg.evaluate(RING)
                     look["sent"] = len(sent)
                     looks[f"{screen} {scheme}"] = look
@@ -772,12 +774,13 @@ with sync_playwright() as p:
                       and v["face"] and v["face"]["w"] == 40 and v["words"] and v["words"]["x"] == v["face"]["x"] + 52
                       and v["field"] == {"size": "18px", "placeholder": "Say something…", "max": "500"}
                       and v["tools"] == ["Draw", "Flip", "Yours", "500 characters left"] and v["toolsBox"]["bottom"] <= 32
-                      and v["left"]["right"] <= 16 and v["pressed"] == "Draw something first, or pick one you made."
-                      and v["typed"] == "467 characters left" and v["sent"] == 0)
+                      and v["left"]["right"] <= 16 and v["pressed"] == "Say something or draw something first, then Post."
+                      and v["typed"] == "467 characters left" and v["lit"] == "false" and v["sent"] == 0)
                 if not ok:
                     bad[k] = v
-            check("as the mock drew it: Cancel at the top left and Post at the top right on its line, dim (0.45) until a"
-                  " drawing is attached, a press saying what is missing and sending nothing; your face (40) beside \"Say"
+            check("as the mock drew it: Cancel at the top left and Post at the top right on its line, dim (0.45) with"
+                  " nothing said or drawn, a press saying what is missing and sending nothing, and lit once there are words"
+                  " (words alone are a post: the owner's \"I like your pick\", Nov 16); your face (40) beside \"Say"
                   " something…\" (18px, 500 at most); Draw, Flip and Yours along the bottom, the characters left at their"
                   " end, 500, then 467 after 33 typed; phone and desk, light and dark",
                   not bad, json.dumps(bad)[:1200])

@@ -831,11 +831,11 @@ with sync_playwright() as p:
         nobody = npg.evaluate("() => ({ hello: !!document.querySelector('.hello'), composer: !!document.querySelector('[data-compose-row], #composeSheet') })")
         close_ctx(nctx, npg)
         check("Home signed in has no box at the top (the owner's \"All yes\", Nov 14): Make opens the composer, its"
-              " field ready; an empty feed says to tap Make, kindly; there Post with nothing drawn says what is"
+              " field ready; an empty feed says to tap Make, kindly; there Post with nothing said or drawn says what is"
               " missing and sends nothing; signed out, Home is the first visit, as before",
               home["box"] == 0 and sheet == {"open": True, "field": True}
               and home["none"] == "No posts yet. Tap Make to share your first one."
-              and not home["hello"] and said == "Draw something first, or pick one you made." and not sent
+              and not home["hello"] and said == "Say something or draw something first, then Post." and not sent
               and nobody["hello"] and not nobody["composer"],
               f"home {home}; sheet {sheet}; said {said!r}; posted {len(sent)}; signed out {nobody}")
 
@@ -1182,7 +1182,8 @@ with sync_playwright() as p:
             "signed out": nb.post_json("/social/posts", {"words": "x", "payload": drawing()})[0],
             "too many words": c.post_json("/social/posts", {"words": "w" * 501, "payload": drawing()})[1],
             "hidden character": c.post_json("/social/posts", {"words": "hi‮you", "payload": drawing()})[1],
-            "no drawing": c.post_json("/social/posts", {"words": "only words"})[1],
+            "nothing": c.post_json("/social/posts", {"words": "  "})[1],
+            "not a drawing": c.post_json("/social/posts", {"words": "x", "payload": "a drawing"})[1],
         }
         big = drawing(n=1800, seed=9)
         st_big, j_big = c.post_json("/social/posts", {"words": "A long drawing", "payload": big})
@@ -1193,12 +1194,14 @@ with sync_playwright() as p:
         jc.get("/social/")
         st_other, j_other = jc.post_json(f"/social/p/{pid}/delete", {})
         check("a post is refused kindly without the page's token (403), signed out (401), with too many words or a"
-              " hidden character, or with no drawing (400, each its own words), and nothing is posted; a post's body"
+              " hidden character, with nothing said or drawn, or with a drawing that is not one (400, each its own"
+              " words), and nothing is posted; a post's body"
               " may be far past the site's 64 KiB; somebody else's post is not theirs to delete (404) and stays",
               answers["no token"] == 403 and answers["signed out"] == 401
               and isinstance(answers["too many words"], dict) and answers["too many words"].get("error") == "words_long"
               and isinstance(answers["hidden character"], dict) and answers["hidden character"].get("error") == "words_chars"
-              and isinstance(answers["no drawing"], dict) and answers["no drawing"].get("error") == "no_drawing"
+              and isinstance(answers["nothing"], dict) and answers["nothing"].get("error") == "empty"
+              and isinstance(answers["not a drawing"], dict) and answers["not a drawing"].get("error") == "no_drawing"
               and st_big == 200 and size_big > 64 * 1024
               and st_other == 404 and post_row(pid) is not None,
               f"{answers}; big {st_big} at {size_big} bytes; another's delete {st_other}")
@@ -3859,6 +3862,61 @@ print("PLAN " + json.dumps(out))
             close_ctx(ctx, pg)
         except Exception as exc:  # noqa: BLE001
             check("section 18 ran to its end", False, str(exc).splitlines()[0][:200])
+    if part(19, "words alone: a post can be its words, as a comment can (the owner's \"I like your pick\", Nov 16)"):
+        # A on the words-only mock: Post works once there are words, and the
+        # post is its words and its row, no empty drawing box; its own page the
+        # words and the comments under them; the Gallery never shows it (it has
+        # no drawing); a post of nothing is still refused (part 6).
+        try:
+            wo = someone(b, "wordy", "Wren Words")
+            WORDS = "What should I draw this weekend? Ideas welcome."
+            make_post(wo, "A drawing to stand beside it.", seed=19, card=True)
+            ctx, pg = browser_as(b, wo)
+            sent = []
+            pg.on("request", lambda r: sent.append(r.url) if r.method == "POST" and r.url.endswith("/social/posts") else None)
+            pg.goto(BASE + "/social/explore")
+            pg.wait_for_timeout(700)
+            pg.locator("nav.nav .tab-make").first.tap(force=True)
+            pg.wait_for_timeout(700)
+            pg.fill("#composeSheet [data-compose-words]", WORDS)
+            pg.wait_for_timeout(200)
+            lit = pg.evaluate("() => document.querySelector('#composeSheet [data-compose-post]').getAttribute('aria-disabled')")
+            try:
+                with pg.expect_navigation(timeout=15000):
+                    pg.locator("#composeSheet [data-compose-post]").first.tap(force=True)
+            except Exception:  # noqa: BLE001
+                pass
+            pg.wait_for_timeout(700)
+            at = pg.url
+            pid = at.split("#")[0].rstrip("/").split("/")[-1] if "/social/p/" in at else None
+            page = pg.evaluate("""() => ({ words: ((document.querySelector('.post-page .post-words') || {}).textContent || '').trim(),
+                art: !!document.querySelector('.post-page .post-art, .post-page [data-skribl-inline]'),
+                comments: !!document.querySelector('#comments') })""")
+            row = db("select skribl_id, is_quote, words from social_posts where public_id = ?", (pid,)) if pid else []
+            pg.goto(BASE + "/social/@wordy")
+            pg.wait_for_timeout(900)
+            card = pg.evaluate("""(pid) => { const c = document.querySelector('.post-card[data-post="' + pid + '"]'); if (!c) return null;
+                const d = [...document.querySelectorAll('.post-card')].find(x => x !== c && x.querySelector('.post-art'));
+                return { words: ((c.querySelector('.post-words') || {}).textContent || '').trim(), art: !!c.querySelector('.post-art, [data-skribl-inline]'),
+                         row: !!c.querySelector('.post-row'), h: Math.round(c.getBoundingClientRect().height),
+                         drawn: d ? Math.round(d.getBoundingClientRect().height) : null }; }""", pid)
+            pg.goto(BASE + "/social/explore")
+            pg.wait_for_timeout(900)
+            tiles = pg.evaluate("""(pid) => ({ n: document.querySelectorAll('.gal-tile').length,
+                it: [...document.querySelectorAll('.gal-tile')].some(t => (t.getAttribute('href') || '').includes('/p/' + pid)) })""", pid)
+            close_ctx(ctx, pg)
+            check("words alone are a post: Make's Post lit once there are words, a press posting them and going to the new"
+                  " post, which is its words and the comments under them, no drawing; stored with no drawing and no quote",
+                  lit == "false" and len(sent) == 1 and bool(pid) and page["words"] == WORDS and not page["art"]
+                  and page["comments"] and row == [(None, 0, WORDS)],
+                  f"lit {lit}; sent {len(sent)}; at {at}; page {page}; row {row}")
+            check("...its card is its words and its row, no empty drawing box, shorter than a drawing's card; and the"
+                  " Gallery, which holds drawings, never shows it",
+                  bool(card) and card["words"] == WORDS and not card["art"] and card["row"]
+                  and card["drawn"] is not None and card["h"] < card["drawn"] and tiles["n"] >= 1 and not tiles["it"],
+                  f"card {card}; gallery {tiles}")
+        except Exception as exc:  # noqa: BLE001
+            check("section 19 ran to its end", False, str(exc).splitlines()[0][:200])
 
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):

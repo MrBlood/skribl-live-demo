@@ -533,8 +533,9 @@ def register(bp, skribl_blueprint="skribl"):
     @bp.post("/posts")
     @_rests(json_answer=True)
     def post_new():
-        """A post: the words, and the drawing the editor handed back. The
-        skribl and the row land in one transaction, or neither does. A QUOTE
+        """A post: the words, and the drawing the editor handed back, or
+        the words alone. The skribl and the row land in one transaction, or
+        neither does. A QUOTE
         (reposts.py; the composer's Quote) names what it quotes, {"quote": a
         post's address} or {"quote_drawing": a drawing's id}, open to them as
         a like asks; its words, its own drawing, or both."""
@@ -564,19 +565,24 @@ def register(bp, skribl_blueprint="skribl"):
                 return _json_error("one_drawing", 400)
             return _post_older(me, words, body.get("skribl"), quoting)
         payload = body.get("payload")
-        if payload is None and quoting is not None:
-            # A QUOTE OF WORDS ALONE: the original brings its drawing, so
-            # words are enough; with none it would be a repost, which the
-            # sheet's Repost makes.
+        if payload is None and (quoting is not None or words):
+            # WORDS ALONE: a quote of words alone (the original brings its
+            # drawing; with no words it would be a repost, which the sheet's
+            # Repost makes), or a post of words alone (the owner's "I like
+            # your pick", Nov 16, to A on the words-only mock: a person can
+            # post without a drawing or a Flip, as a comment can).
             if not words:
                 return _json_error("quote_empty", 400)
-            row = Post(public_id=new_public_id(8), person_id=me.id, words=words, skribl_id=None, **quoting)
+            row = Post(public_id=new_public_id(8), person_id=me.id, words=words, skribl_id=None, **(quoting or {}))
             sess = site().session()
             sess.add(row)
             sess.flush()
             mentioned(row)
             return jsonify({"ok": True, "post": row.public_id,
                             "go": url_for("social.post_page", public_id=row.public_id)})
+        if payload is None:
+            # Nothing at all: no words, no drawing, nothing quoted.
+            return _json_error("empty", 400)
         if not isinstance(payload, dict):
             return _json_error("no_drawing", 400)
         from skribl import SkriblRejected, SkriblUnavailable, create_post
