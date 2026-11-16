@@ -44241,3 +44241,57 @@ About you's auto 1px in the browser's colour; green after).
 
 NOT TESTED HERE: an iPhone (WebKit). The one-glance tell: About you in
 focus, the same ring as Your name.
+
+## After v330 -- Handoff, Nov 16: where things stand, and how part four goes
+
+The owner, Nov 16 (Mountain Time), about 5 AM: "Finish up, tidy up, and make
+a handoff so next session transitions smoothly."
+
+WHERE THINGS STAND. Everything is merged: #928 to #933 last night (the two
+entries above list them) and #934 this morning (a text box in focus wears
+the site's ring, 4:52 AM). Nothing is open. Main's full runs are green
+through #932 (11:23 PM); #934's was still going at handoff, due about
+6:45 AM: check it first, and if it is red, that is the first job (its
+"main is red" issue opens itself). Not sealed since v330, and that is fine.
+
+NEXT, IN THE OWNER'S ORDER (their "All yes", the entry above): the mock of
+full screen on the site's posts, first; the app's top edge on the Library,
+Skribl's Gallery and the link page (a yes already: build it); the edges,
+part four. And the one leftover of part three, a wide clip in a picture
+card in a pixel of the card's colour.
+
+FOR PART FOUR, what part three learned:
+
+- THE MECHANISM, one for every edge: the border kept at its width and made
+  transparent, so nothing moves; a ring of --edge (1px scaled by --hair)
+  outside it, its ink the line laid over what the border was drawn on (a
+  colour-mix, as --menu-card-edge and the site's --card-edge are); a
+  separator a line of --edge offset above or below its row; a state that
+  colours a border shows as it did, its ring stepping aside (box-shadow:
+  none); a rotated arrow drawn 1/--hair as large and scaled back; a joined
+  shape cut with clip-path, then zoomed at 3x for a seam.
+- THE PAGES HAVE THEIR OWN SHEETS: the Library and Skribl's Gallery carry
+  their own tokens (skribl_library.html, skribl_gallery.html, posted.css,
+  gallerysection.css made by cssgraph), so --hair and --edge go there too.
+  The link page's sheet is player.css, six bytes under its ratchet in
+  verify_player_isolation: the link page's edges and its top-edge strip are
+  one named raise there, and verify_jsstrip's line moves with it.
+- A ROW THAT READS A BORDER'S COLOUR BREAKS when its line becomes a ring:
+  part two taught rows in three suites, part three in seven. Read the line
+  where it is drawn (lineOf in verify_socialsettings and verify_contrast's
+  census); calibrate each, red on a break of its own. verify_galib already compares the
+  Library's and the Gallery's menus to the Pad's by the line as it shows
+  over the card, so their own rings will keep it green.
+- A TINT AGAINST A CARD'S EDGE shows the card's colour in the pixel under
+  the line once the border is transparent: zoom every card whose child has
+  a ground of its own, and give that pixel the child's ground.
+- A CENSUS FIRST: open every sheet the way verify_contrast's surfaces() does
+  and list each painted border and ring with its own ground, before and
+  after; the after-list holds only states, marks and invitations.
+
+THE MACHINE: a run_parallel battery in the background needs the full
+two-hour limit (63 suites took 120 minutes at -j 3 here). The demo people's
+passkeys are still the last session's: the owner makes a sign-in link per
+person when one is needed. An optional setup script for this environment
+(the harness's packages installed, a minute saved each session) was
+offered and is the owner's to want.
