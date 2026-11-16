@@ -25,15 +25,9 @@ html.skribl-postfull .skribl-inline-line .skribl-inline-full {
 }
 .skribl-inline-line .skribl-inline-full:focus-visible { outline: 2px solid var(--accent, #7c5cff); outline-offset: 1px; }
 
-/* THE STAGE: the post's box in a block of its own, which is what goes full
-   screen, the drawing's ground to the screen's edges and the band over it
-   (fullband.css). The stand-in (lib/immersive.js, an iPhone's) is the same
-   geometry pinned over the page; 100dvh, so the drawing's foot is never
-   under Safari's bar. */
-.skribl-post-stage { display: block; position: relative; }
-.skribl-post-stage:fullscreen, .skribl-post-stage.is-immersive-page {
-  width: 100vw; height: 100vh; margin: 0; border-radius: 0; }
-.skribl-post-stage.is-immersive-page {
-  position: fixed; inset: 0; z-index: 2147483000;
-  width: 100vw; height: 100dvh; }
+/* THE STAGE needs no rule of its own: lib/fullbar.js makes the block the
+   post's box is put in a band's host (.watch-full), so fullband.css gives it
+   the link page's full screen, real or an iPhone's stand-in pinned over the
+   page (100dvh). What the site's pages lack is the page held still behind
+   the stand-in, which each of Skribl's own pages says for itself. */
 html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }

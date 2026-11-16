@@ -3682,12 +3682,13 @@ print("PLAN " + json.dumps(out))
                          words: band ? (band.querySelector('.replay-line') || {}).textContent || '' : '',
                          x: !!(st && st.querySelector('.player-btn.full-exit') && st.querySelector('.player-btn.full-exit').getClientRects().length),
                          who: who ? [who.querySelector('b').textContent, who.querySelector('span').textContent] : null,
-                         at: box._skriblInline.state().elapsedMs, playing: box._skriblInline.state().state }; }"""
+                         at: box._skriblInline.state().elapsedMs, playing: box._skriblInline.state().state,
+                         still: getComputedStyle(document.documentElement).overflowY === 'hidden' && getComputedStyle(document.body).overflowY === 'hidden' }; }"""
             f1 = pg.evaluate(FULL)
-            check("...a press opens the link page's full screen around the post's player, over the whole screen: Restart, Play,"
-                  " Loop and Leave, the x, and the post's line lent to it (its scrubber painted with the drawing, its words"
-                  " with the speed)",
-                  f1["on"] and f1["rect"] == [0, 0, 402, 874] and f1["immersive"] and f1["band"] and f1["x"]
+            check("...a press opens the link page's full screen around the post's player, over the whole screen, the page"
+                  " behind held still: Restart, Play, Loop and Leave, the x, and the post's line lent to it (its scrubber"
+                  " painted with the drawing, its words with the speed)",
+                  f1["on"] and f1["rect"] == [0, 0, 402, 874] and f1["still"] and f1["immersive"] and f1["band"] and f1["x"]
                   and f1["names"][:2] == ["Restart", "Play"] and "Loop" in f1["names"] and "Leave full screen" in f1["names"]
                   and f1["ink"] > 50 and "watching at" in f1["words"], json.dumps(f1)[:600])
             check("...who drew it, in the corner: the post's words over 'Name · @handle'",
@@ -3715,8 +3716,23 @@ print("PLAN " + json.dumps(out))
             again = pg.evaluate("""() => { const h = document.querySelector('.post-page .skribl-post-stage .player-bar .rl-head');
                 return h ? parseFloat(h.style.left) : null; }""")
             check("...and open again, the band has the line afresh: its playhead moves with the drawing", again is not None and abs(again - 25) < 3, str(again))
+            # The mock: "Repeat and the speed you pick come back to the post
+            # with you." Pick 4x in the band's words and Repeat on its Loop,
+            # leave, and read the post's own line.
+            pg.click(".post-page .skribl-post-stage .player-bar .rl-speed")
+            pg.wait_for_timeout(300)
+            pg.click(".post-page .skribl-post-stage .player-bar .rl-chips button[data-r='4']")
+            pg.wait_for_timeout(300)
+            pg.click(".post-page .skribl-post-stage .player-bar .player-btn[aria-label='Loop']")
+            pg.wait_for_timeout(300)
             pg.keyboard.press("Escape")
             pg.wait_for_timeout(500)
+            came = pg.evaluate("""() => { const st = document.querySelector('.post-page .skribl-post-stage'), l = document.querySelector('.post-page .skribl-inline-line');
+                const lp = l.querySelector('.skribl-inline-loop');
+                return { on: st.classList.contains('is-immersive-page'), speed: ((l.querySelector('.rl-speed') || {}).textContent || '').trim(),
+                         repeat: !l.classList.contains('is-noloop'), pressed: lp ? lp.getAttribute('aria-pressed') : null }; }""")
+            check("...and Repeat and the speed picked in full screen come back to the post with it: its line says 4x, and repeats",
+                  not came["on"] and came["speed"] == "4×" and came["repeat"] and came["pressed"] == "true", str(came))
             after = pg.evaluate(LINE)
             check("...nothing of the full screen's sheets reaches the post's own line: its scrubber's tint and its words' size"
                   " as they are with no full screen on the page",
