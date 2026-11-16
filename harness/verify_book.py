@@ -28,6 +28,8 @@ row holds a promise, on the Pad and on Flip:
 Touch is real touch (CDP), so the editor draws what a finger would. Visible
 means painted: elementFromPoint.
 """
+import io
+import json
 import os
 import sys
 
@@ -345,6 +347,37 @@ with sync_playwright() as p:
         clip_rows(q, name, n, "desk, dark")   # ...and on a desk in dark
         check(f"{name}: no page errors on a desk", not errs, "; ".join(errs[:2]))
         c.close()
+
+        # 8. A DRAWING'S CARD WEARS THE DRAWING'S GROUND (the edges, part
+        # three's leftover). Under the card's transparent border, the pixel
+        # inside its line was the card's own colour: a rim between the line and
+        # the drawing, a second line. Read at the owner's phone's 3x, light and
+        # dark, on page 1 (a drawing): the screen pixel inside the line is the
+        # drawing's ground, which lib/learncard.js hands the card.
+        from PIL import Image
+        PH3 = dict(PHONE, device_scale_factor=3)
+        rims = {}
+        for scheme in ("light", "dark"):
+            c, q, errs = fresh(b, PH3, route, scheme=scheme)
+            open_book(q)
+            q.wait_for_timeout(800)
+            pr = q.evaluate("""() => { const p = document.getElementById('bkPic'); if (!p || !p.querySelector(':scope > .lc-stage')) return null;
+              const r = p.getBoundingClientRect(); return [r.left, r.top, r.width, r.height, p.style.getPropertyValue('--pic-ground').trim()]; }""")
+            if pr:
+                im = Image.open(io.BytesIO(q.screenshot())).convert("RGB")
+                x, y = round(pr[0] * 3), round((pr[1] + pr[3] / 2) * 3)
+                rims[scheme] = {"ground": pr[4], "inside": list(im.getpixel((x + 1, y))), "line": list(im.getpixel((x - 1, y)))}
+            else:
+                rims[scheme] = None
+            c.close()
+
+        def _rgb(h):
+            h = (h or "").strip().lstrip("#")
+            return [int(h[k:k + 2], 16) for k in (0, 2, 4)] if len(h) == 6 else None
+        check(f"{name}: the book's drawing card wears the drawing's ground: the screen pixel inside its line is the"
+              " drawing's, not the card's, light and dark (3x)",
+              len(rims) == 2 and all(v and _rgb(v["ground"]) and max(abs(a - g) for a, g in zip(v["inside"], _rgb(v["ground"]))) <= 3
+                                     for v in rims.values()), json.dumps(rims))
     b.close()
 
 bad = [r for r in results if not r[0]]
