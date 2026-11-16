@@ -2177,7 +2177,9 @@ iOS 26 lays a glass blur over the top of a Home Screen web app; in the app
 (`is-app` on <html>, from `splash-boot.js`) every page has a 6px strip of its
 own ground fixed at the top, which WebKit reads as an opaque edge and so draws
 no blur there. It cannot be seen: the page scrolls under it as under the
-phone's bar.
+phone's bar. The Pad and Flip, which open inside the app, have their own
+since Nov 15 (Skribl's, styles.css: `data-skribl-app`, marked before the
+first paint by `_skribl_app_boot.html`); nothing of the site's reaches them.
 
     /social/manifest.webmanifest    the site's web app manifest (Blooby,
                                     opening on Home)

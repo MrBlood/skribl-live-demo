@@ -25,11 +25,14 @@
         data-scope="{{ url_for('.skribl_sw')[:-5] }}"
         data-build="{{ skribl_build }}" data-build-url="{{ url_for('.skribl_build') }}" defer></script>
 {% include 'skribl/_skribl_theme_boot.html' %}
+{% include 'skribl/_skribl_app_boot.html' %}
 {% include 'skribl/_skribl_hand_boot.html' %}
 {% include 'skribl/_skribl_fit_boot.html' %}
 {% include 'skribl/_skribl_hello_boot.html' %}
 </head>
 <body class="flip-app">
+  {# THE APP'S TOP EDGE: as the Pad's (styles.css, THE APP'S TOP EDGE). #}
+  <div class="app-edge" aria-hidden="true"></div>
   <h1 class="vis-hidden">{{ _brand_name }} Flip</h1>
   <div class="app">
     <div class="header">

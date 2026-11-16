@@ -1,0 +1,14 @@
+{# THE APP, BEFORE THE FIRST PAINT (the owner, Nov 15, "all yes": the Pad and
+   Flip get the Blooby app's top edge, #919). Marks <html> data-skribl-app when
+   the page runs from the Home Screen (navigator.standalone, or the standalone
+   display a manifest asks for), the same mark and the same test as
+   lib/homescreen.js's standalone(), which sets it again once the page's
+   scripts run (verify_identity holds the two to one answer). Here it is set
+   before the body paints, so what keys off it (styles.css, THE APP'S TOP
+   EDGE) is there from the first frame: iOS 26's glass never shows over the
+   header and then leaves. Inline for the reason the theme boot is: a
+   deferred script runs after the first paint. Tiny and total: anything that
+   throws leaves the page a tab. #}
+<script nonce="{{ csp_nonce }}">
+(function(){try{var n=window.navigator;if(n.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)){document.documentElement.setAttribute('data-skribl-app','');}}catch(e){}})();
+</script>
