@@ -265,7 +265,8 @@ def motion(log):
     back = min([s[1] for s in steps] + [0])
     bound = max(24, 0.6 * abs(total))
     leaps = [s for s in moving if abs(s[0]) > bound and s[3]]
-    return {"total": total, "frames": len(moving), "big": big, "back": back, "leaps": leaps}
+    return {"total": total, "frames": len(moving), "ms": sum(s[2] for s in moving), "wrote": any(s[3] for s in moving),
+            "big": big, "back": back, "leaps": leaps}
 
 
 def glided(m):
@@ -273,8 +274,13 @@ def glided(m):
     more than 60% of the whole move, or 24px, that an instant write or a
     clamp made. A bigger step with neither is the browser's own glide caught
     up after a stall (main after #825: 218px of 353 in a 15ms frame, no
-    write), not a leap."""
-    return m["frames"] >= 3 and not m.get("leaps", [])
+    write), not a leap. And two frames that took as long as three (50ms) with
+    no write or clamp in them at all are that glide too, a short one a stalled
+    frame swallowed (main after #938: 68px over two frames, 67 of it in a
+    119ms frame). A write in a long frame reads small for a frame's time, so
+    it never gets the two frames' allowance."""
+    return ((m["frames"] >= 3 or (m["frames"] >= 2 and m.get("ms", 0) >= 50 and not m.get("wrote")))
+            and not m.get("leaps", []))
 
 
 def judge(who, dev, drawer, g, m):
@@ -309,7 +315,7 @@ def judge(who, dev, drawer, g, m):
         big = m["big"]
         check(f"{who}: ...gliding there, never back up",
               glided(m) and m["back"] >= -2,
-              f"{round(m['total'])}px over {m['frames']} frames, the most {round(big[1])}px in a {round(big[2])}ms frame "
+              f"{round(m['total'])}px over {m['frames']} frames ({round(m.get('ms', 0))}ms), the most {round(big[1])}px in a {round(big[2])}ms frame "
               f"({round(big[0])}px a frame's time{', an instant write or a clamp in it' if big[3] else ''}); "
               f"the most back {round(m['back'])}px; leaps we made {[(round(s[1]), round(s[2])) for s in m['leaps']]}")
 
@@ -438,7 +444,7 @@ with sync_playwright() as p:
                 if then == "eraser":
                     check(f"{ed} {dev} pen: Feel for Eraser, the page glides up as the drawer gets shorter, never leaps",
                           m["total"] < -40 and glided(m),
-                          f"{round(m['total'])}px over {m['frames']} frames, the most {round(big[1])}px in a {round(big[2])}ms frame "
+                          f"{round(m['total'])}px over {m['frames']} frames ({round(m.get('ms', 0))}ms), the most {round(big[1])}px in a {round(big[2])}ms frame "
                           f"({round(big[0])}px a frame's time)")
                     check(f"{ed} {dev} pen: ...and Eraser's choices show", g["open"] and g["bottom"] <= min(g["vh"], g["foot"]) + 1,
                           f"opened {round(g['top'])}..{round(g['bottom'])} of {round(g['vh'])}")
