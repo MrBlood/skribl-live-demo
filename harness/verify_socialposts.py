@@ -3622,6 +3622,68 @@ print("PLAN " + json.dumps(out))
             check("...and the search box's edge reads 3:1 or more against its own white",
                   bool(fld.get("px")) and _cr(fld["px"][0], fld["inside"]) >= 3.0,
                   json.dumps(fld) + (f" {_cr(fld['px'][0], fld['inside']):.2f}:1" if fld.get("px") else ""))
+
+            # A DRAWING ON THE SITE (the edges, part four, its last: the owner's
+            # yes to "a post's drawing on the site, with the mock's lift for it
+            # on the light page"): the player's own line made transparent
+            # (--border, the seam the site sets), and a line of one screen
+            # pixel outside the box, in the drawing's line over its own ground,
+            # made solid; on the light page the cards' own lift. Read as part
+            # four reads the link page: the drawing hidden for the photograph,
+            # and the screen pixels that stand apart from both their neighbours
+            # (a line one pixel wide does; a wider line, or a shadow's soft
+            # fall, does not). The box's left side on Home's card and on the
+            # post's page, and a comment's drawing.
+            def _line1(im, pts):
+                far = lambda c, d: max(abs(c[k] - d[k]) for k in range(3)) > 4
+                px = [im.getpixel(q_) for q_ in pts]
+                return sum(1 for i in range(1, len(px) - 1) if far(px[i], px[i - 1]) and far(px[i], px[i + 1]))
+
+            HIDE = "canvas, .skribl-inline-poster, .skribl-inline img { visibility: hidden !important; }"
+            stc17, j17 = make_post(ed, "A drawing's edge, one screen pixel.", seed=17, card=True)
+            pid17 = j17.get("post") if isinstance(j17, dict) else None
+            ec = ed.client()
+            ec.get(f"/social/p/{pid17}")
+            stcm, _ = ec.post_json(f"/social/p/{pid17}/comments", {"words": "Drawn back.", "payload": drawing(seed=21)})
+            art, lifts = {}, {}
+            for scheme in ("light", "dark"):
+                ctx, pg = browser_as(b, ed, screen="phone", scheme=scheme, scale=3)
+                for path, sels in (("/social/", [".post-card .post-art .skribl-inline"]),
+                                   (f"/social/p/{pid17}", [".post-page .post-art .skribl-inline", ".cm-art .skribl-inline"])):
+                    pg.goto(BASE + path)
+                    pg.wait_for_timeout(900)
+                    for sel in sels:
+                        pg.evaluate("(s) => { const e = document.querySelector(s); if (e) e.scrollIntoView({ block: 'center' }); }", sel)
+                        pg.wait_for_timeout(300)
+                        hide = pg.add_style_tag(content=HIDE)
+                        pg.wait_for_timeout(120)
+                        r = pg.evaluate(BOX, sel)
+                        if not r:
+                            art[f"{scheme} {sel}"] = None
+                            hide.evaluate("s => s.remove()")
+                            continue
+                        im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+                        x, y = round(r[0] * 3), round((r[1] + r[3] / 2) * 3)
+                        art[f"{scheme} {sel}"] = _line1(im, [(i, y) for i in range(x - 6, x + 6)])
+                        if path == "/social/":
+                            # The lift: just under the box, against the same with its
+                            # shadow cut to its line.
+                            xm, yb = round((r[0] + r[2] * 0.3) * 3), round((r[1] + r[3]) * 3) + 6
+                            was = _lum(im.getpixel((xm, yb)))
+                            cut = pg.add_style_tag(content=sel + " { box-shadow: 0 0 0 var(--edge) var(--draw-edge) !important; }")
+                            pg.wait_for_timeout(120)
+                            im2 = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+                            cut.evaluate("s => s.remove()")
+                            lifts[scheme] = [round(was * 1000, 1), round(_lum(im2.getpixel((xm, yb))) * 1000, 1)]
+                        hide.evaluate("s => s.remove()")
+                close_ctx(ctx, pg)
+            check("a drawing on the site wears a line of one screen pixel at 3x, light and dark: a post's on Home's card"
+                  " and on its own page, and a comment's",
+                  stc17 == 200 and stcm == 200 and len(art) == 6 and all(v == 1 for v in art.values()), json.dumps(art))
+            check("...and on the light page it sits with the cards' lift: just under it darker than with its shadow cut to"
+                  " its line; in dark, none",
+                  bool(lifts.get("light")) and lifts["light"][0] < lifts["light"][1] - 2
+                  and bool(lifts.get("dark")) and abs(lifts["dark"][0] - lifts["dark"][1]) <= 1, json.dumps(lifts))
         except Exception as exc:  # noqa: BLE001
             check("section 17 ran to its end", False, str(exc).splitlines()[0][:200])
 

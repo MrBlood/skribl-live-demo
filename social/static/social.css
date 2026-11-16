@@ -49,6 +49,11 @@
   --scrim: rgba(23, 20, 42, 0.36);
   --draw-line: rgba(20, 23, 29, 0.08);
   --draw-wait: #f1f3f7;             /* where a drawing will be, before it is */
+  /* A drawing's edge (THE EDGES, part four): its line over the box's own
+     ground, made solid, for a ring of one screen pixel; and its lift, the
+     cards' own on the light page, nothing in dark, where a shadow can't show. */
+  --draw-edge: color-mix(in srgb, rgb(20 23 29) 8%, var(--draw-wait));
+  --draw-lift: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
   /* Sign-in and the account pages (piece 2): Skribl's own roles again. */
   --card: #ffffff;                  /* --menu-card */
   --card-line: rgba(124, 92, 255, 0.34);   /* --menu-card-line */
@@ -134,6 +139,8 @@
   --scrim: rgba(0, 0, 0, 0.5);
   --draw-line: rgba(255, 255, 255, 0.08);
   --draw-wait: #13161c;
+  --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
+  --draw-lift: 0 0 0 transparent;
   --card: #231e3b;
   --card-line: rgba(167, 146, 255, 0.12);
   --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
@@ -178,6 +185,8 @@
     --scrim: rgba(0, 0, 0, 0.5);
     --draw-line: rgba(255, 255, 255, 0.08);
     --draw-wait: #13161c;
+    --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
+    --draw-lift: 0 0 0 transparent;
     --card: #231e3b;
     --card-line: rgba(167, 146, 255, 0.12);
     --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
@@ -538,7 +547,7 @@ html.is-app .app-edge {
   margin: 0 auto;
   border-radius: 14px;
   background: var(--draw-wait);
-  --border: var(--draw-line); --radius: 14px; --bg-elev: var(--draw-wait);
+  --border: transparent; --radius: 14px; --bg-elev: var(--draw-wait);
   --accent: #7c5cff; --accent-2: #7c5cff; --text-dim: var(--ink-2);
 }
 .hello-fade { opacity: 0; transition: opacity 0.32s ease; }
@@ -1296,9 +1305,14 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    first visit's (same role, same values); everything else is the site's own
    cards, rows and words. ---- */
 .post-art, .composer-draft, .cm-art {
-  --border: var(--draw-line); --radius: 14px; --bg-elev: var(--draw-wait);
+  --border: transparent; --radius: 14px; --bg-elev: var(--draw-wait);
   --accent: #7c5cff; --accent-2: #7c5cff; --text-dim: var(--ink-2);
 }
+/* ONE SCREEN PIXEL (THE EDGES, part four): the player's border is kept, its
+   token transparent, so nothing moves, and the box wears a ring of --edge in
+   the drawing's line over its own ground, and the lift on the light page. */
+:is(.post-art, .composer-draft, .cm-art, .hello-art) .skribl-inline {
+  box-shadow: 0 0 0 var(--edge) var(--draw-edge), var(--draw-lift); }
 
 /* THE COMMENT BOX'S CARD (it was Home's box too, until Home's went: the
    owner's "All yes", Nov 14, Make being the way to post): your face beside
