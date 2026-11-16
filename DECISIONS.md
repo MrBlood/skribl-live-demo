@@ -44784,3 +44784,57 @@ run after the merge does it).
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: a drawing's link page in light, the round buttons'
 edges a fine line, as fine as the Gallery's tiles'.
+
+## After v330 -- The edges, part four (a drawing on the site): its edge is one screen pixel, and it sits on the light page
+
+The owner's "all yes" to "The edges" (B, Nov 15), and its part four's last
+piece as the Nov 16 handoff wrote it: "a post's drawing on the site
+(.skribl-inline, inlineplayer.css, with the mock's lift for it on the light
+page)". The Library and the Gallery (#937) and the link page came before.
+
+WHAT CHANGED (social.css): the in-post player's own border, which the site
+coloured through the token it already sets for it (--border, the drawing's
+line at 8% of the ink), is transparent, so nothing moves; and the box wears
+a line of --edge outside it in --draw-edge, that line as it looked over the
+box's own ground (--draw-wait), made solid, and on the light page the cards'
+own lift (--draw-lift, --card-drop; none in dark, as the mock drew it). The
+same in the four places a drawing sits on the site: a post (Home's card and
+its own page), a comment's drawing, the composer's draft, and Blooby's card.
+--draw-line, which nothing reads now, goes.
+
+SKRIBL'S PLAYER IS NOT RESTYLED: the site draws its edge, through the seam it
+had (the player's tokens on its box). inlineplayer.css is unchanged, so a
+host that sets nothing keeps the player's own 1px line, and the embed's
+ratchet does not move.
+
+PAD AND FLIP: not for them; the site's own sheet.
+
+CONTRAST: no word changed; the line keeps its colour, laid over what it was
+drawn on.
+
+THE CHECKS, verify_socialposts 17 (two new rows), read as the link page's
+edges are: off the paint at the owner's phone's 3x, light and dark, the
+drawing hidden for the photograph; the player's border transparent; the line
+one screen pixel by its own measure. Each row shown red by a break of its
+own, the tree as built green beside them:
+
+- a drawing on the site wears a line of one screen pixel: a post's on Home's
+  card and on its own page, and a comment's (red: the site's sheet as before,
+  the player's 1px line; the line at 1px; the player's own line back beside
+  the new one);
+- on the light page it sits with the cards' lift, just under it darker than
+  with its shadow cut to its line, and none in dark (red: no lift).
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3), twelve ok in 15.3
+minutes on the tree rebased onto #943: verify_socialposts 97/97,
+verify_socialcomments 96/96, verify_sociallikes 100/100,
+verify_socialreposts 50/50, verify_social 45/45, verify_composer 39/39,
+verify_socialprofile 94/94, verify_docs 144/144, and four first named after
+#939's red (they read the in-post player's border or shadow on the site's
+pages): verify_socialfollow 79/79, verify_socialsettings 45/45,
+verify_socialmentions 51/51, verify_a11ypages 162/162. NOT RUN: the full
+battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: Home in light, a post's drawing a fine line round it and
+a soft shadow under it, as the Gallery's tiles have.
