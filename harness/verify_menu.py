@@ -130,12 +130,17 @@ with sync_playwright() as p:
                 if dev == "phone":
                     # 9. the paper: solid, and the list's edge shows. At the
                     # phone's 2x, the pixel 3px outside the list (the sheet),
-                    # its 1px border, and How it works' fill just inside.
+                    # its edge, and How it works' fill just inside. The edge
+                    # is a ring just outside the list's box since the edges'
+                    # part three (its tint reaches the box's own edge), so it
+                    # is the pixel across the box's edge that stands furthest
+                    # from the sheet, the ring's or, before, the border's.
                     e = q.evaluate(EDGE)
                     im = Image.open(io.BytesIO(q.screenshot())).convert("RGB")
                     X, Y = round(e["x"] * 2), round(e["y"] * 2)
-                    out, rim, fill = im.getpixel((X - 6, Y)), im.getpixel((X, Y)), im.getpixel((X + 20, Y))
                     dist = lambda u, v: sum(abs(i - j) for i, j in zip(u, v))
+                    out, fill = im.getpixel((X - 6, Y)), im.getpixel((X + 20, Y))
+                    rim = max((im.getpixel((X + k, Y)) for k in range(-2, 2)), key=lambda px: dist(px, out))
                     solid = e["blur"] == "none" and e["bg"].startswith("rgb(")
                     check(f"{name}, {scheme}: the menu is solid paper, and How it works' card edge shows against it",
                           solid and max(dist(rim, out), dist(fill, out)) >= 30,

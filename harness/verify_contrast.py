@@ -232,7 +232,10 @@ CENSUS = r"""(root) => {
   const a = getComputedStyle(R, '::after');
   const arrow = a.content !== 'none' && a.display !== 'none' && parseFloat(a.borderTopWidth) > 0
     && a.borderLeftColor === 'rgba(0, 0, 0, 0)' ? a.borderTopColor : null;
-  return { sheet: s(R), arrow, cards, labels, caps };
+  // The line laid over the paper, as the page resolves it: a drawer's ring.
+  const pr = document.createElement('i'); R.appendChild(pr); pr.style.color = 'var(--menu-paper-edge)';
+  const paperEdge = getComputedStyle(pr).color; pr.remove();
+  return { sheet: s(R), arrow, cards, labels, caps, paperEdge };
 }"""
 
 # A LIST OF CHOICES IS ONE CARD (the owner's "B, equal lines", Nov 14: "Do we
@@ -1239,11 +1242,16 @@ for scheme in ("light", "dark"):
           f"paper {paper}; " + "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(drawers.items()) if g != paper))
     # AND ITS EDGE IS THE TILES' LILAC LINE, as its cards' is (Tune's top is the
     # header's, so Tune is not read here). The stamp shelf wore the dock's grey.
-    rims = {(n, l): census[(n, sc, l)]["sheet"]["edge"] for (n, sc, l) in census
+    # Since the edges' part three the line is a ring outside the drawer, its
+    # ink the line laid over the drawer's own paper, as a tile's is laid over
+    # its white (THE SHEETS' EDGES holds the two inks to the line): one ink for
+    # every drawer, the paper's.
+    rims = {(n, l): (census[(n, sc, l)]["sheet"]["edge"], census[(n, sc, l)].get("paperEdge")) for (n, sc, l) in census
             if sc == scheme and l in DRAWERS and not l.startswith("Tune") and census[(n, sc, l)]}
-    check(f"{scheme}: and each drawer's edge is the tiles' lilac line ({len(rims)} read)",
-          bool(rim) and rim != "none" and len(rims) >= (1 if ONLY else 10) and set(rims.values()) == {rim},
-          f"tile {rim}; " + "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(rims.items()) if g != rim))
+    check(f"{scheme}: and each drawer's edge is the tiles' lilac line, laid over its paper ({len(rims)} read)",
+          bool(rim) and rim != "none" and len(rims) >= (1 if ONLY else 10)
+          and all(g == pe and g != "none" for g, pe in rims.values()) and len({g for g, _ in rims.values()}) == 1,
+          f"tile {rim}; " + "; ".join(f"{n} {l}: {g} (the line over the paper {pe})" for (n, l), (g, pe) in sorted(rims.items()) if g != pe))
     # AND THE ARROW UNDER A POP IS ITS PAPER. It points at the button the pop
     # opened from and is of a piece with it: the shape picker's kept the well's
     # grey when the picker took the paper, on both editors.
