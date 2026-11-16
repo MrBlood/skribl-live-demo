@@ -968,11 +968,16 @@ with sync_playwright() as p:
     page.close()
     browser.close()
 
-print("\nTHEME — Flip's canvas edge is the page's, not the drawing's ground")
+print("\nTHEME — Flip's canvas edge is never a bright rim")
 # The owner, switching a Paper drawing to the dark theme: a near-white rim
-# round Flip's canvas. The ground is painted on the element (applyBg) and, by
-# default, under its see-through border too, so the edge showed Paper. Read
-# off the screen: the border's middle pixel against the page and the ground.
+# round Flip's canvas. The ground was painted on the element (applyBg) and, by
+# default, under its see-through grey border too, so the band showed Paper
+# under 20% white: brighter than the Paper itself. It was mended by showing
+# the page in the band; since "The edges" (Nov 15, B: Flip's canvas wears the
+# Pad's) the band is transparent and the Paper fills it, the frame's ring at
+# its edge, as the Pad's Paper runs to its edge. What the owner saw, a rim
+# brighter than the drawing, is what is asked: read off the screen, the 2px
+# band's screen pixels against the drawing's own ground just inside.
 import io as _io
 from PIL import Image as _Image
 with sync_playwright() as _pr:
@@ -988,11 +993,14 @@ with sync_playwright() as _pr:
         _r = _pg.evaluate("() => { const b = document.getElementById('pad').getBoundingClientRect();"
                           " return [b.left, b.top, b.width, b.height]; }")
         _shot = _Image.open(_io.BytesIO(_pg.screenshot(
-            clip={"x": _r[0], "y": _r[1] + _r[3] / 2, "width": 6, "height": 2}))).convert("RGB")
-        _edge = _shot.getpixel((2, 1))            # 1 CSS px in: the middle of the 2px edge
-        _lum = 0.2126 * _edge[0] + 0.7152 * _edge[1] + 0.0722 * _edge[2]
-        check(f"{_scheme}: a Paper drawing's canvas edge stays the page's faint line, not a bright rim",
-              _lum < _maxlum, f"edge pixel {_edge} (luminance {_lum:.0f}); the ground is 244,239,230")
+            clip={"x": _r[0], "y": _r[1] + _r[3] / 2, "width": 12, "height": 2}))).convert("RGB")
+        _lum = lambda q: 0.2126 * q[0] + 0.7152 * q[1] + 0.0722 * q[2]   # noqa: E731
+        _band = [_shot.getpixel((_x, 1)) for _x in range(4)]   # the 2px band, four screen pixels at 2x
+        _inside = _shot.getpixel((10, 1))                         # 5 CSS px in: the drawing's own ground
+        check(f"{_scheme}: a Paper drawing's canvas edge is never a bright rim: no screen pixel of the 2px band round"
+              " it is lighter than the Paper, and its outermost is a line darker than it",
+              all(_lum(q) <= _lum(_inside) + 2 for q in _band) and _lum(_band[0]) < _lum(_inside) - 10,
+              f"band {_band}, the drawing's ground {_inside}")
         _cx.close()
     _br.close()
 
