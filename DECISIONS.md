@@ -44150,3 +44150,71 @@ as one screen pixel (Chromium does; the rows' thin line, scaled the same
 way, is what the owner has seen); Segoe UI; the live site. The one-glance
 tell: the Pad's ⋯ in light, How it works' tint up to a fine lilac line, the
 tiles' edges as fine as the rows' lines.
+
+## After v330 -- The evening's close: the owner's four yeses, and what a post is missing
+
+The owner, Nov 16 (Mountain Time), about 4 AM, to the evening's four
+choices: "All yes."
+
+THE EVENING (Nov 15, from 5 PM): #928 (Skribl's own Gallery on the Pad's
+ground, 6:35 PM), #929 (the Pad and Flip get the Blooby app's top edge, and
+main green again, the mention list's race, 7:01 PM), #930 (the edges, part
+one: the canvases, 8:07 PM), #931 (part two: the site, 8:14 PM), #932 (part
+three: the sheets and the drawers, 10:26 PM). Main's full runs green after
+each: #928's at 7:29 PM, #929's at 8:27, #931's (with #930's) at 9:24,
+#932's at 11:23. A slip: #928 merged while main was red (the run after #926
+had failed minutes before, the mention race). It touched nothing near it,
+but a merge waits for a green main (docs/SESSION-CONTEXT.md), and every
+merge after it did.
+
+THE FOUR YESES (the first of each):
+
+1. On a desk at 100% the edges' lines sit a pixel further out than the
+   borders did (the ring is outside the box), the same colour and width,
+   and a hovered row's tint stops a pixel short of its card's line: left as
+   it is ("one way of drawing every line, and you'd have to look for it").
+2. The edges, part four, next session: the Library (its rows, posted.css,
+   and its menu), Skribl's own Gallery (its tiles, its search field, whose
+   edge reads under 3:1 at 0.34, its New | Hot track, and its menu), the
+   link page's round buttons (player.css is at its ratchet: a named raise),
+   and a post's drawing on the site (.skribl-inline, inlineplayer.css, with
+   the mock's lift for it on the light page).
+3. The app's top edge (#919, #929) for the Library, Skribl's Gallery and the
+   link page, when they open inside the Blooby app: yes, as the Pad and Flip
+   have it.
+4. Full screen on the site's posts: mocked first, next session.
+
+WHAT A POST IS MISSING (the owner, about 10:40 PM: "On the post player (in
+the galler too), there's no full screen option? Am I not getting the same
+player as the link? What's happening? What else am I missing? Even the link
+opens the post"). Read on the live site on Mira's post: the post page's
+player (the in-post player, inlineplayer.js), started, offers Play, Repeat
+and 1x, with its scrubber and its line; the same drawing's link page
+(/s/<id>) offers 1x, Restart, Play, Loop, Full screen and More. The site's
+Home plays in the same in-post player; the site's Gallery's tiles hold no
+player and open the post page; and the site's Copy link and Share... give the
+post page (social.post_page), so from the site there is no way to the full
+player at all. Skribl's own Gallery and Library wear the link page's full
+screen since v326 ("one full screen: the Gallery's and the Library's are the
+link page's": lib/fullbar.js, fullband.css); the site's pages never loaded
+it. Recommended for the mock: that same full screen on the site's posts
+(Restart comes with its band), the links still the post's, which carries
+the likes and the comments.
+
+OPEN, FOR THE NEXT SESSION:
+
+- The mock: full screen on the site's posts (above), light and dark, phone
+  and desk, beside the post as it is.
+- The app's top edge on the Library, Skribl's Gallery and the link page
+  (yes): skribl_library.html and skribl_gallery.html carry their own sheets;
+  the link page's is player.css, six bytes under its ratchet
+  (verify_player_isolation), so its strip is a named raise; verify_identity's THE APP'S TOP EDGE grows to the
+  three.
+- The edges, part four (above).
+- Left by part three: a wide clip in Ask's answers' and the little book's
+  picture cards sits inside a pixel of the card's colour (it sat inside two
+  lines).
+- Not sealed since v330, and that is fine.
+- The instrument: run_parallel's 63 suites took 120 minutes at -j 3 on this
+  box, so a background run of that size needs the full two-hour limit; a
+  run left at the 30-minute default was cut short and finished by hand.
