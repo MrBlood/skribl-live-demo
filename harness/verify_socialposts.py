@@ -3725,9 +3725,18 @@ print("PLAN " + json.dumps(out))
                   " playhead), the button given the focus back",
                   not back["on"] and not back["immersive"] and back["head"] is not None and abs(back["head"] - 80) < 3
                   and back["focus"], str(back))
-            # Again: the line lent afresh, the band's scrubber moving with the drawing.
-            pg.click(".post-page .skribl-inline-full")
+            # Again, from the keyboard: the focus goes into the full screen, onto
+            # its Play (the button that opened it is under the full screen, and
+            # a keyboard's next Tab would land behind it); and the line is lent
+            # afresh, the band's scrubber moving with the drawing.
+            pg.focus(".post-page .skribl-inline-full")
+            pg.keyboard.press("Enter")
             pg.wait_for_timeout(800)
+            kb = pg.evaluate("""() => { const st = document.querySelector('.post-page .skribl-post-stage'), a = document.activeElement;
+                return { on: st.classList.contains('is-immersive-page'), inside: !!a && st.contains(a),
+                         play: !!a && a.matches('.player-bar .player-btn.primary') }; }""")
+            check("...and opened from the keyboard, the focus goes with it, onto the band's Play",
+                  kb["on"] and kb["inside"] and kb["play"], str(kb))
             pg.evaluate("() => { const p = document.querySelector('.post-page [data-skribl-inline]')._skriblInline; p.seek(p.state().totalMs * 0.25); }")
             pg.wait_for_timeout(300)
             again = pg.evaluate("""() => { const h = document.querySelector('.post-page .skribl-post-stage .player-bar .rl-head');

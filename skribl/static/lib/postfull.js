@@ -13,7 +13,8 @@
  * ONE PLAYER, ONE CLOCK. The drawing carries on from where it was, playing
  * or paused (one never loaded is played, the one call that loads and
  * shows), and leaving puts the post back as it was: the line given back
- * (inlineplayer.js unband), the button given the focus back.
+ * (inlineplayer.js unband), the button given the focus back. Opening takes
+ * the focus into the full screen, onto the band's Play.
  *
  * A HOST OPTS IN: skribl_inline(full=...) draws the button
  * (_skribl_inline_player.html), and skribl_full_assets() loads this with
@@ -70,6 +71,11 @@
       if (big) {
         if (!pl.state().loaded) pl.play();
         it.bar.running(true);
+        /* THE FOCUS GOES WITH IT, onto the band's Play: the button that
+           opened it stays under the full screen, and a keyboard's next Tab
+           would land behind it. The band is shown by now (running). */
+        var go = it.bar.el.querySelector('.player-btn.primary');
+        if (go) { try { go.focus({ preventScroll: true }); } catch (e) {} }
         return;
       }
       it.bar.running(false);
