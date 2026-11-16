@@ -26,12 +26,17 @@
         data-scope="{{ url_for('.skribl_sw')[:-5] }}"
         data-build="{{ skribl_build }}" data-build-url="{{ url_for('.skribl_build') }}" defer></script>
   {% include 'skribl/_skribl_theme_boot.html' %}
+  {% include 'skribl/_skribl_app_boot.html' %}
   {% include 'skribl/_skribl_hand_boot.html' %}
   {% include 'skribl/_skribl_fit_boot.html' %}
   {# Not on the letter sheet: a page with a job of its own, opened on purpose. #}
   {% if not letters %}{% include 'skribl/_skribl_hello_boot.html' %}{% endif %}
 </head>
 <body{% if letters %} class="letters-mode"{% endif %}>
+  {# THE APP'S TOP EDGE: a strip of the page's own ground, shown from the Home
+     Screen alone, so iOS 26 lays no glass blur over the top of the page
+     (styles.css, THE APP'S TOP EDGE; _skribl_app_boot.html). #}
+  <div class="app-edge" aria-hidden="true"></div>
   {# The page's one heading. Visually the brand mark is the title; assistive
      tech gets the same fact as text. #}
   <h1 class="vis-hidden">{{ _brand_name }} Pad</h1>

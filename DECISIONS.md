@@ -43753,3 +43753,103 @@ Gallery. Powerful and playful: the drawings' cards read as they did.
 NOT TESTED HERE: an iPhone (WebKit); the live site. The one-glance tell: the
 Gallery from the Pad's ⋯ in light, the page behind the cards the Pad's soft
 grey, not near-white.
+
+## After v330 -- The Pad and Flip get the Blooby app's top edge
+
+The owner, Nov 15 (Mountain Time), about 6:00 PM: "all yes" to the edges
+mock's third question, "Did the top of 'blooby.' look sharp in the Home
+Screen app after #919? If yes, the Pad and Flip get the same fix." The
+site's manifest scope is the folder it shares with Skribl's pages, so the
+Pad and Flip open inside the Blooby app, under the same iOS 26 glass at the
+top that #919 kept off the site's pages.
+
+WHAT CHANGED (Skribl's own; nothing of the site's reaches the editors):
+
+- THE MARK, BEFORE THE FIRST PAINT: a new inline boot,
+  _skribl_app_boot.html, in the Pad's and Flip's head right after the theme
+  boot, marks <html> data-skribl-app when the page runs from the Home Screen
+  (navigator.standalone, or the standalone display mode): the mark and the
+  test lib/homescreen.js already used for the home bar, which sets it again
+  once the page's scripts run. Set here, what keys off it is there from the
+  first frame, so the glass never shows and then leaves.
+- THE STRIP (styles.css, THE APP'S TOP EDGE; .app-edge first in each
+  editor's body): 6px of the editors' own ground (--surface-raised, the
+  site's --page too), fixed at the top, the full width, in the app alone,
+  as the site's. z-index 43: over the header (42), under the popovers (44
+  on) and every sheet, whose scrims dim it; full screen covers it. The
+  header's controls begin at 19px on a phone and 26 on a desk, so nothing
+  to press is under it. The player's CSS is unchanged (the strip is not on
+  its page).
+
+ALSO, NOT YET: the Library and Skribl's own Gallery open inside the app too
+(the same scope), and so would a drawing's link page; they keep the glass at
+their tops for now. Each is the same strip in its own <style>; the owner's
+call.
+
+CONTRAST: no colour changed (the strip is the page's own ground).
+
+THE CHECKS, verify_identity's new THE APP'S TOP EDGE, each row shown red by
+a break of its own in a throwaway copy of the section, the untouched tree
+green beside it (control 4/4):
+
+- in the app, light and dark, the Pad's and Flip's top 6px are their own
+  ground over a red block put under them at the header's level, and the red
+  shows just below (red: the strip see-through; the strip under the header,
+  at 41; the strip 30px tall);
+- the mark is on <html> as <body> is parsed, and homescreen.js agrees (red:
+  the boot left out of both editors, homescreen.js's mark arriving later);
+- a tab never has it, and nothing marks a tab an app (red: the strip shown
+  in a tab; a boot that marks every page);
+- the ⋯ sheet's scrim dims it, a tap at the top edge finds it, and every
+  header control starts below it and takes its own tap, Pad and Flip (red:
+  the strip over the sheets; the strip 30px tall, over the controls). The
+  first version asked for three controls and found two, the Post button
+  taking no tap on an empty canvas: the instrument, not the tree; the floor
+  is the two that are always there.
+
+THE FOUR. Kind: the words at the top stay crisp, and nothing moves.
+Simple: nothing to see. Powerful: the editors look like the app they open
+in. Playful: the wordmark keeps its hand-drawn line.
+
+NOT TESTED HERE: an iPhone (WebKit) and iOS 26's glass, the reason for all
+of it; the Pad's page is not edge to edge (no viewport-fit=cover) where the
+site's is, so the strip meets the glass at the top of the page's own view.
+The one-glance tell: open the Pad from Make in the Blooby app, and the top
+of "blooby." is as sharp as on Home.
+
+## After v330 -- Main green again: a mention's list never answers for an earlier @
+
+Main's full run after #926 (which carried #925 too) was red on one row, in
+one of its twelve shards (sqlite 1/6), Nov 15 at 6:26 PM (Mountain Time); the
+red-main issue (#927) opened itself. verify_socialmentions 4, "the keys, on a
+desk": Down and Enter put in "Hello @veev ", then "@ver" and Tab put in
+"@valerie " where "@vera " was asked. The same suite was green on all six
+PostgreSQL shards and on the pull request's side.
+
+A REAL RACE, NOT A FLAKE. The list under an @ (social/static/mentions.js)
+moved on to each new @ as it was typed but kept showing the rows the last
+answer had brought, and asked the site for the new @ a moment later (WAIT,
+120ms, then the round trip). "@v" was answered (Valerie first); "@ve" and
+"@ver" were typed at once and asked once, for "@ver"; the row the test (and
+a person) pressed Tab on was still "@v"'s first: Valerie, who does not fit
+"@ver" at all. The test waits 260ms after typing; on a busy runner the
+answer came later than that. On a phone over a real network the window is
+wider: a quick "@ver" and Enter could put in the wrong person.
+
+WHAT CHANGED (mentions.js): while a new @'s answer is on its way, the rows
+shown are only those of the last answer that still fit what is typed, as
+the site finds people (people.keys_of: the handle, or the name from any of
+its words, starting with it, folded as people.fold folds: accents aside,
+small letters, anything else a space), so Enter and Tab can only put in
+somebody who fits; none fits, and the list shuts until the answer comes.
+The answer then replaces them, as before.
+
+PAD AND FLIP: unchanged (the site's composer and comments).
+
+THE CHECK, shown red by putting the old behaviour back with the rest of the
+tree as built (control 12/12, section 4): verify_socialmentions 4 gains a
+row that holds the site's answer for "@ver" until Tab has been pressed, so
+the race is the same every time: the rows shown are only "@v"'s that fit
+"@ver", and Tab puts in "@vera " (red: the rows "@valerie", "@veev",
+"@vera", "@vexx", and "@valerie " put in, main's failure exactly). On this
+quiet box the old row passed beside it: it was the load that lost the race.

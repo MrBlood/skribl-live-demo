@@ -1419,6 +1419,117 @@ for _path in ("/skribl-pad?compose=1", "/flip?compose=1"):
 check("compose mode, where nothing is posted yet, has no band and no posted line, in either editor",
       _cmp and all(v == (False, False) for v in _cmp.values()), str(_cmp))
 
+# --------------------------------------------------------------------------
+print("\nTHE APP'S TOP EDGE — the Pad's and Flip's, from the Home Screen")
+# The owner, Nov 15, "all yes": the Pad and Flip get the Blooby app's top edge
+# (#919, verify_socialapp 9), since they open inside it. iOS 26's glass is not
+# in this box, so what is asked is what keeps it off: in the app (an iPhone's
+# Home Screen app says navigator.standalone), each editor's top 6px are its
+# own ground (--surface-raised, as the page resolves it) over something put
+# under them at the header's level, which shows just below; the mark that
+# shows the strip is on <html> as <body> is parsed, before the first paint,
+# and lib/homescreen.js's own answer agrees; a tab has none of it; the ⋯
+# sheet's scrim dims it, a tap at the top edge finds it (WebKit finds the box
+# that way), and every control in the header starts below it and takes its
+# own tap. All read off the paint and the hit test, never the strip's style.
+_EDGE_UA = ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 "
+            "(KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
+_EDGE_APP = "Object.defineProperty(navigator, 'standalone', { get: () => true });"
+_EDGE_AT_BODY = """(() => { const mo = new MutationObserver(() => { if (!document.body) return;
+    window.__appMarkAtBody = document.documentElement.hasAttribute('data-skribl-app'); mo.disconnect(); });
+    mo.observe(document, { childList: true, subtree: true }); })();"""
+_EDGE_UNDER = """() => { const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;top:0;left:0;right:0;height:40px;background:#ff0000;z-index:42;pointer-events:none';
+    document.body.appendChild(d); }"""
+_EDGE_GROUND = "() => getComputedStyle(document.documentElement).getPropertyValue('--surface-raised').trim()"
+_EDGE_HITS = """() => { const at = document.elementFromPoint(201, 3);
+    const ctl = [...document.querySelectorAll('button, a[href], [role=button], input, select, textarea')].filter(e => {
+        const r = e.getBoundingClientRect(); if (!r.width || !r.height || r.top > 70 || r.bottom < 0) return false;
+        const h = document.elementFromPoint(r.x + r.width / 2, Math.max(0, r.y + r.height / 2));
+        return !!h && (h === e || e.contains(h)); })
+      .map(e => { const r = e.getBoundingClientRect(); const h = document.elementFromPoint(r.x + r.width / 2, r.top + 1);
+        return { id: e.id || e.className.toString().split(' ')[0], top: Math.round(r.top), mine: !!h && (h === e || e.contains(h)) }; });
+    return { edge: !!at && at.classList.contains('app-edge'), controls: ctl }; }"""
+
+
+def _edge_rows(pg_):
+    im = Image.open(io.BytesIO(pg_.screenshot())).convert("RGB")
+    return [{im.getpixel((x, y)) for x in range(0, im.width, 7)} for y in range(0, 12)]
+
+
+def _hx(h):
+    return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def _edge_ctx(b_, scheme, app):
+    c_ = b_.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True,
+                        user_agent=_EDGE_UA, color_scheme=scheme, reduced_motion="reduce")
+    c_.add_init_script(_EDGE_AT_BODY)
+    if app:
+        c_.add_init_script(_EDGE_APP)
+    return c_
+
+
+with sync_playwright() as p:
+    b = p.chromium.launch()
+    _app, _tab, _mark = {}, {}, {}
+    for _scheme in ("light", "dark"):
+        for _path in ("/skribl-pad", "/flip"):
+            for _is_app in (True, False):
+                c = _edge_ctx(b, _scheme, _is_app)
+                pg = c.new_page()
+                browsing.goto(pg, BASE, _path)
+                pg.wait_for_timeout(600)
+                _ground = pg.evaluate(_EDGE_GROUND)
+                _m = pg.evaluate("() => [window.__appMarkAtBody === true,"
+                                 " !!(window.SkriblHomeScreen && SkriblHomeScreen.isStandalone()),"
+                                 " document.documentElement.hasAttribute('data-skribl-app')]")
+                pg.evaluate(_EDGE_UNDER)
+                pg.wait_for_timeout(150)
+                _rows = _edge_rows(pg)
+                _key = f"{_scheme} {_path}"
+                if _is_app:
+                    _app[_key] = {"ground": _ground, "edge": [sorted(r) for r in _rows[:6]], "below": sorted(_rows[8])[:3]}
+                else:
+                    _tab[_key] = [sorted(r)[:2] for r in _rows[:6]]
+                _mark[_key + (" app" if _is_app else " tab")] = _m
+                c.close()
+    _red = (255, 0, 0)
+    check("in the app, the Pad's and Flip's top 6px are their own ground (--surface-raised), light and dark, over what"
+          " is put under them at the header's level, which shows just below",
+          len(_app) == 4 and all(all(r == [_hx(v["ground"])] for r in v["edge"]) and _red in v["below"]
+                                 for v in _app.values()),
+          json.dumps(_app)[:700])
+    check("...the mark that shows it is on <html> as <body> is parsed, before the first paint, and"
+          " lib/homescreen.js's own answer agrees",
+          all(v == [True, True, True] for k, v in _mark.items() if k.endswith(" app")), json.dumps(_mark))
+    check("a browser tab never has it: the editor runs up to the top edge, and nothing marks the page an app",
+          len(_tab) == 4 and all(all(_red in r for r in v) for v in _tab.values())
+          and all(v == [False, False, False] for k, v in _mark.items() if k.endswith(" tab")),
+          json.dumps(_tab)[:500])
+    _sheet = {}
+    for _path, _opener in (("/skribl-pad", "#menuBtn"), ("/flip", "#moreBtn")):
+        c = _edge_ctx(b, "light", True)
+        pg = c.new_page()
+        browsing.goto(pg, BASE, _path)
+        pg.wait_for_timeout(600)
+        pg.evaluate("() => { try { window.SkriblHints && SkriblHints.hide(); } catch (e) {} }")
+        _ground = _hx(pg.evaluate(_EDGE_GROUND))
+        _hit = pg.evaluate(_EDGE_HITS)
+        pg.click(_opener)
+        pg.wait_for_timeout(700)
+        _dim = Image.open(io.BytesIO(pg.screenshot())).convert("RGB").getpixel((201, 3))
+        _sheet[_path] = {"ground": _ground, "dimmed": _dim, "hit": _hit}
+        c.close()
+    check("...under the sheets and out of the header's way, Pad and Flip: the ⋯ sheet's scrim dims it as it dims the"
+          " page, a tap at the top edge finds it (as WebKit finds the box), and every control in the header starts"
+          " below it and takes its own tap",
+          len(_sheet) == 2 and all(
+              sum(v["dimmed"]) < sum(v["ground"]) - 60 and v["hit"]["edge"] and len(v["hit"]["controls"]) >= 2
+              and all(x["top"] >= 6 and x["mine"] for x in v["hit"]["controls"]) for v in _sheet.values()),
+          json.dumps(_sheet)[:800])
+    b.close()
+
 bad = [r for r in results if not r[0]]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"

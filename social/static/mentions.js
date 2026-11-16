@@ -48,6 +48,24 @@
   var TYPED = /(^|[^A-Za-z0-9_@])@([A-Za-z][A-Za-z0-9_]{0,19})?$/;
   var TAIL = /^[A-Za-z0-9_]*/;
 
+  /* As people.fold folds for finding people: accents put aside, small
+     letters, every run of anything that is not a letter or a digit one
+     space, none at either end. */
+  function fold(s) {
+    return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  }
+  /* Whether the site finds `p` for `q`, as it does (people.keys_of): its
+     handle, or its name from any of its words on, starts with it. */
+  function fits(p, q) {
+    var nq = fold(q);
+    if (!nq) return true;
+    if (fold(p.handle).indexOf(nq) === 0) return true;
+    var w = fold(p.name).split(' ');
+    for (var i = 0; i < w.length; i++) if (w.slice(i).join(' ').indexOf(nq) === 0) return true;
+    return false;
+  }
+
   function still() { return !!(reduced && reduced.matches); }
 
   /* WHERE THE CARET'S LINE IS IN THE FIELD: a copy of the field, laid out as
@@ -138,6 +156,16 @@
       at = t;
       clearTimeout(timer);
       if (Object.prototype.hasOwnProperty.call(cache, t.q)) { show(cache[t.q]); return; }
+      /* WHILE THIS @'S ANSWER IS ON ITS WAY (WAIT, then the site), THE LIST
+         SHOWN ANSWERED AN EARLIER ONE: only its rows that still fit what is
+         typed stay, so Enter and Tab never put in somebody who does not
+         (main's run after #926, on a busy runner: "@ver" and Tab put in
+         "@valerie", the first row "@v" had answered). None fits, and it shuts
+         until the answer comes. */
+      if (isOpen()) {
+        var keep = rows.filter(function (p) { return fits(p, t.q); });
+        if (keep.length) show(keep); else close();
+      }
       timer = setTimeout(function () { ask(t.q); }, WAIT);
     }
 
