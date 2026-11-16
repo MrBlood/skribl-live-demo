@@ -43924,6 +43924,16 @@ in a throwaway copy of the section, the untouched tree green beside it
   screen's own left edge through the stand-in full screen (red: the ring
   left on in full screen).
 
+ALSO CHANGED: verify_theme's row for the owner's near-white rim (a Paper
+drawing on Flip in the dark theme) asked that Flip's 2px band show the page,
+which was how the rim was mended, not what the owner saw; with the Paper
+filling the band it went red (123/124) on the first run. It asks what was
+seen now: no screen pixel of the band lighter than the Paper, and its
+outermost a line darker than it (red: the see-through grey band over the
+ground back, the band 246,242,235 against the Paper's 244,239,230, the very
+colour the owner reported; green as built, the ring 190,186,179 then
+Paper).
+
 THE FOUR. Kind: nothing moves, and the drawing's own lines are the boldest
 thing at its edge. Simple: one line, the same on both editors. Powerful:
 Flip looks like the Pad. Playful: the paper reads as paper.
