@@ -1015,25 +1015,41 @@ body:not(.player-mode) .canvas-wrap #canvas {
 
 .canvas-wrap.eraser { cursor: cell; }
 
-/* Light/white canvas: swap the dark inset vignette for a soft light one so the
-   edges don't look muddy. Screen-only; export is unaffected. */
-.canvas-wrap.light-bg {
-  /* Darker ring: a white ring on a white canvas is not an edge. */
-  --canvas-ring: inset 0 0 0 1px rgba(0,0,0,0.22);
-  box-shadow: var(--canvas-ring),
-              inset 0 1px 0 rgba(var(--wash-rgb), 0.6), inset 0 0 70px rgba(0,0,0,0.06);
+/* THE CANVAS'S EDGE, ONE SCREEN PIXEL (the owner, Nov 15, "The edges", B:
+   every outline the thinnest line the screen can draw, one line per edge).
+   --hair scales a 1px line to the screen's own pixel (1, 0.5 at 2x, 0.3334
+   at 3x), as the rows' thin line does; set on the editors' pages alone
+   (body:not(.player-mode)), so the player's stylesheet, which keeps every
+   root token, never carries it. A border cannot draw it (Chromium rounds a
+   border under 1px up to 1px, three screen pixels at 3x); an inset ring
+   can, and the canvas's edge was one already. The player's canvas keeps
+   its 1px ring (its rule is shared, and its CSS is budgeted). */
+body:not(.player-mode) { --hair: 1; }
+@media (min-resolution: 2dppx) { body:not(.player-mode) { --hair: 0.5; } }
+@media (min-resolution: 3dppx) { body:not(.player-mode) { --hair: 0.3334; } }
+body:not(.player-mode) .canvas-wrap:not(.light-bg) {
+  --canvas-ring: inset 0 0 0 calc(1px * var(--hair)) rgba(var(--wash-rgb), 0.18);
 }
 
-/* Light theme: the canvas slab gets a seat — a 1px mat line so it reads as an
-   object placed on the light page rather than a hole cut in it, whatever its
-   ground. An OUTLINE, not another box-shadow layer: every state rule above
-   swaps box-shadow wholesale, and an outline survives all of them. Editor
-   only; the player already frames its canvas.
-   And a new drawing starts on Paper here (lib/canvasground.js), so the canvas
-   wears it before the script that sets it inline runs, rather than showing
-   the dark default for a frame. A restored draft's own ground replaces it. */
+/* Light/white canvas: swap the dark inset vignette for a soft light one so the
+   edges don't look muddy. Screen-only; export is unaffected. ONE LINE: the
+   ring alone, one screen pixel. It wore a second line along its top, the
+   dark canvas's white highlight at 60% written in --wash-rgb, which the
+   light theme flips to black, so the light theme's Paper had a dark lip
+   along its top (the edges mock, Nov 15). */
+.canvas-wrap.light-bg {
+  /* Darker ring: a white ring on a white canvas is not an edge. */
+  --canvas-ring: inset 0 0 0 calc(1px * var(--hair, 1)) rgba(0,0,0,0.22);
+  box-shadow: var(--canvas-ring), inset 0 0 70px rgba(0,0,0,0.06);
+}
+
+/* Light theme: a new drawing starts on Paper here (lib/canvasground.js), so
+   the canvas wears it before the script that sets it inline runs, rather
+   than showing the dark default for a frame. A restored draft's own ground
+   replaces it. (It also wore a 1px mat line, an outline outside the ring, so
+   the slab read as placed on the page: two lines at every edge, which the
+   edges' one line replaces.) */
 :root[data-theme="light"] body:not(.player-mode) .canvas-wrap {
-  outline: 1px solid rgba(0, 0, 0, 0.14);
   background-color: #f6f2ea;
 }
 
@@ -1047,8 +1063,7 @@ body:not(.player-mode) .canvas-wrap #canvas {
    the muddy grey .light-bg exists to prevent (seen mocking Paper for the
    light theme; verify_visual measures the edge against the middle). */
 .canvas-wrap.light-bg.recording {
-  box-shadow: var(--canvas-ring),
-              inset 0 1px 0 rgba(var(--wash-rgb), 0.6), inset 0 0 70px rgba(0,0,0,0.06);
+  box-shadow: var(--canvas-ring), inset 0 0 70px rgba(0,0,0,0.06);
 }
 
 .canvas-wrap.locked {

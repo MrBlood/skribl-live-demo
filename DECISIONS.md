@@ -43853,3 +43853,81 @@ the race is the same every time: the rows shown are only "@v"'s that fit
 "@ver", and Tab puts in "@vera " (red: the rows "@valerie", "@veev",
 "@vera", "@vexx", and "@valerie " put in, main's failure exactly). On this
 quiet box the old row passed beside it: it was the load that lost the race.
+
+## After v330 -- The edges, part one: the canvas's edge is one screen pixel, the Pad's on Flip too
+
+The owner, Nov 15 (Mountain Time), about 6:00 PM, to the polish pass's first
+mock (https://claude.ai/artifact/8cvZ1wYuYpxrUWW1dGfTjM, "The edges": every
+outline one screen pixel, A; and a lift under the tiles on the light page,
+B, Cal's pick): "all yes", so B. Built in three parts, one pull request
+each, as the agreements want one per screen: the canvases first (the Pad
+first), then the site, then Skribl's sheets and pages.
+
+WHAT CHANGED (the canvases):
+
+- ONE SCREEN PIXEL: a 1px line is three of a 3x phone's pixels. The
+  canvas's ring is scaled by --hair (1, 0.5 at 2x, 0.3334 at 3x), set on
+  the editors' pages alone (body:not(.player-mode)), so the player's CSS,
+  which keeps every root token, never carries it; it is unchanged. A border
+  cannot draw it (Chromium rounds any border under 1px up to 1px, measured:
+  0.5px and 0.3334px both paint three screen pixels, and so does an
+  outline); an inset ring can, and the Pad's edge was one already.
+- THE PAD'S LIGHT CANVAS, ONE LINE: its ring alone. Along its top it also
+  wore the dark canvas's white highlight at 60%, written in --wash-rgb,
+  which the light theme flips to black: a dark lip along the top of the
+  light theme's Paper (75,74,71 where its sides read 188,185,178). And the
+  light theme's mat line, an outline outside the ring, is gone: it was
+  painted only at the curves of the corners (216 screen pixels of a phone's
+  whole frame, 3 to 5 levels), the rest covered, so its going cannot be
+  seen; its break could not turn the check red, and that was the instrument
+  telling the truth.
+- FLIP WEARS THE PAD'S EDGE: its 2px grey band, its faint outer ring and its
+  heavy drop shadow (0 20px 50px at 45%) are gone, as the Pad has none of
+  them. The band stays 2px, because padBox() and Recolor's lens find the
+  drawing inside it (clientLeft), but it is transparent and the ground
+  fills it, so the paper runs to the frame as the Pad's does (the
+  padding-box clip was for the see-through grey band, whose ground showed
+  through as a near-white rim). The ring is the frame's (.flip-wrap::after,
+  over its own edge, above the drawing, never in a finger's way), in the
+  Pad's colours: 18% of the page's ink on a dark ground, 22% black on a
+  light one. Flip paints its ground into the drawing's own pixels, so a
+  ring under them never shows: the first try, an inset ring on the canvas,
+  read nothing at all on the dark ground. In full screen the frame's ring
+  goes with the frame.
+
+MEASURED at 3x, the screen pixels of the edge between the page and the
+ground (5% apart from both), now then after: the Pad's on Paper 3 and 1 at
+its side, 3 (the dark lip) and 1 along its top, light and dark; on the dark
+ground in dark 3 and 1; Flip's 6 and 1 in every case where a line shows,
+its line 192,189,182 where the Pad's is 188,185,178. A dark ground on the
+light page is its own edge, for both, before and after.
+
+PAD AND FLIP: shared, the Pad's edge on both; the ring's colours are the
+Pad's.
+
+CONTRAST: no word changed; the ring's colours are the Pad's (Flip's edge on
+Paper reads 1.76:1 against the light page where its grey band read 2.97:1:
+the Pad's has read 1.84:1 all along).
+
+THE CHECKS, verify_visual's new THE CANVAS'S EDGE, read off the paint at 3x
+through the real ground swatches, each row shown red by a break of its own
+in a throwaway copy of the section, the untouched tree green beside it
+(control 3/3):
+
+- the Pad's canvas edge is one screen pixel, along its top as at its side,
+  light and dark, on Paper and on the dark ground (red: the light ring at
+  1px; the dark lip back; the editors' dark ring at 1px);
+- Flip's is the Pad's, the same screen pixels at its side and top in every
+  case, its line within 8 levels of the Pad's (red: the 2px grey band
+  back; the frame's ring gone; the ring at 1px);
+- in full screen Flip's ring steps aside with its frame, read off the
+  screen's own left edge through the stand-in full screen (red: the ring
+  left on in full screen).
+
+THE FOUR. Kind: nothing moves, and the drawing's own lines are the boldest
+thing at its edge. Simple: one line, the same on both editors. Powerful:
+Flip looks like the Pad. Playful: the paper reads as paper.
+
+NOT TESTED HERE: an iPhone (WebKit) and Windows' own rendering; the live
+site. The one-glance tell: the Pad in light on Paper, the canvas's top edge
+as fine as its sides; Flip's canvas edge the same fine line.

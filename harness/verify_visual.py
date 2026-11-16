@@ -301,6 +301,83 @@ with sync_playwright() as p:
               f"{_w['recording']=} {_w['light']=} {_lum}")
         _pg.close()
 
+    # THE CANVAS'S EDGE, ONE SCREEN PIXEL, THE PAD'S ON BOTH (the owner, Nov 15,
+    # "The edges", B). On a phone's 3x screen the Pad's light canvas wore three
+    # lines along its top (the light theme's mat line, the ring, and a 60%
+    # black line that was the dark canvas's white highlight flipped by the
+    # theme) and Flip's a 2px grey band, six screen pixels. Asked of the PAINT:
+    # a 3x screenshot of the frame's left side and its top, decoded here, and
+    # the edge counted as the screen pixels between the page's run and the
+    # ground's run that stand 5% apart from both. Light and dark, on Paper and
+    # on the dark ground, through the real ground swatch. A dark ground on the
+    # light page is its own edge (no line stands apart from both there).
+    print("\nVISUAL — the canvas's edge is one screen pixel, the Pad's on Flip too")
+    _EDGE = """async ([b64, w, h]) => {
+        const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+        const px = (a, b) => Array.from(x.getImageData(a, b, 1, 1).data.slice(0, 3));
+        const ch = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+        const L = p => 0.2126 * ch(p[0]) + 0.7152 * ch(p[1]) + 0.0722 * ch(p[2]);
+        const cr = (p, q) => { const a = L(p), b = L(q); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); };
+        const band = (pts, page, ground) => pts.map(([a, b]) => px(a, b)).filter(p => cr(p, page) >= 1.05 && cr(p, ground) >= 1.05);
+        // the frame's left side at its middle, and its top at its middle; the clip starts 12 screen px outside
+        const midY = Math.round(img.height / 2), midX = Math.round(img.width / 2);
+        const side = band([...Array(24).keys()].map(i => [4 + i, midY]), px(0, midY), px(40, midY));
+        const top = band([...Array(24).keys()].map(i => [midX, 4 + i]), px(midX, 0), px(midX, 40));
+        return { side: side.length, top: top.length, sidePx: side[0] || null, topPx: top[0] || null }; }"""
+
+    def _edge_of(route, scheme, ground):
+        _c = b.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=3, is_mobile=True,
+                           has_touch=True, color_scheme=scheme, reduced_motion="reduce")
+        _q = _c.new_page()
+        _q.goto(BASE + route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _q.evaluate("(hex) => document.querySelector(`.bg-swatch[data-bg=\"${hex}\"]`).click()", ground)
+        _q.wait_for_timeout(400)
+        _f = _q.evaluate("""(s) => { const r = document.querySelector(s).getBoundingClientRect();
+            return { x: r.left, y: r.top, w: r.width, h: r.height }; }""", ".canvas-wrap" if route == "/skribl-pad" else ".flip-wrap")
+        # the frame and 12 screen px (4 CSS px) of page round it
+        _clip = {"x": _f["x"] - 4, "y": _f["y"] - 4, "width": _f["w"] + 8, "height": _f["h"] + 8}
+        _r = _q.evaluate(_EDGE, [base64.b64encode(_q.screenshot(clip=_clip)).decode(), _f["w"], _f["h"]])
+        _c.close()
+        return _r
+
+    _cases = [(s, g) for s in ("light", "dark") for g in ("#f6f2ea", "#0d0f14")]
+    _pad = {f"{s} {g}": _edge_of("/skribl-pad", s, g) for s, g in _cases}
+    _flip = {f"{s} {g}": _edge_of("/flip", s, g) for s, g in _cases}
+    _near = lambda a, b: bool(a) and bool(b) and max(abs(i - j) for i, j in zip(a, b)) <= 8
+    check("the Pad's canvas edge is one screen pixel on a phone, along its top as at its side (no darker line"
+          " there), light and dark, on Paper and on the dark ground",
+          all(v["side"] <= 1 and v["top"] == v["side"] and (v["side"] == 0 or _near(v["sidePx"], v["topPx"]))
+              for v in _pad.values())
+          and _pad["light #f6f2ea"]["side"] == 1 and _pad["dark #0d0f14"]["side"] == 1,
+          str(_pad))
+    check("...and Flip's is the Pad's: the same screen pixels at its side and top in every case, its line within 8"
+          " levels of the Pad's",
+          all(_flip[k]["side"] == _pad[k]["side"] and _flip[k]["top"] == _pad[k]["top"]
+              and (_pad[k]["side"] == 0 or _near(_flip[k]["sidePx"], _pad[k]["sidePx"])) for k in _pad),
+          str(_flip))
+
+    # IN FULL SCREEN THE DRAWING IS THE SCREEN: Flip's frame ring steps aside
+    # with the rest of the frame, read off the screen's own left edge, through
+    # the stand-in full screen a phone without the API gets (lib/watchfull.js).
+    _c = b.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=3, is_mobile=True,
+                       has_touch=True, color_scheme="light", reduced_motion="reduce")
+    _q = _c.new_page()
+    _q.goto(BASE + "/flip", wait_until="load"); _q.wait_for_timeout(700)
+    _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    _q.evaluate("() => document.querySelector('.flip-wrap').classList.add('is-immersive-page')")
+    _q.wait_for_timeout(400)
+    _full = _q.evaluate("""async (b64) => {
+        const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const x = c.getContext('2d'); x.drawImage(img, 0, 0); const y = Math.round(img.height / 2);
+        return [0, 1, 2, 6].map(i => Array.from(x.getImageData(i, y, 1, 1).data.slice(0, 3))); }""",
+        base64.b64encode(_q.screenshot()).decode())
+    _c.close()
+    check("in full screen Flip's ring steps aside with its frame: the screen's left edge is the drawing's ground",
+          all(p == _full[-1] for p in _full[:3]), str(_full))
 
     b.close()
 
