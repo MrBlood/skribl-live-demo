@@ -3695,6 +3695,23 @@ print("PLAN " + json.dumps(out))
                   f1["who"] == ["A slow snail, full screen.", "Fulla Screen · @fulla"], str(f1["who"]))
             check("...and the drawing carries on from where it was: paused at 40%, still there",
                   abs(f1["at"] - at0) < 60 and f1["playing"] != "playing", f"{at0} -> {f1['at']} {f1['playing']}")
+            # Play: after a quiet spell the band steps back (the canvas is the
+            # hero), and who drew it with it; a move brings them back. The
+            # step-back is a class on the stage itself (lib/chromefade.js).
+            pg.click(".post-page .skribl-post-stage .player-bar .player-btn[aria-label='Play']")
+            pg.wait_for_timeout(4200)
+            slept = pg.evaluate("""() => { const st = document.querySelector('.post-page .skribl-post-stage'),
+                band = st.querySelector(':scope > .player-bar'), who = st.querySelector(':scope > .fb-who');
+                return { asleep: st.classList.contains('chrome-asleep'), band: band ? getComputedStyle(band).opacity : null,
+                         who: who ? getComputedStyle(who).opacity : null }; }""")
+            check("...while it plays the band steps back, and who drew it with it",
+                  slept["asleep"] and slept["band"] == "0" and slept["who"] == "0", str(slept))
+            pg.mouse.move(200, 300)
+            pg.mouse.move(220, 330)
+            pg.wait_for_timeout(500)
+            if pg.evaluate("() => document.querySelector('.post-page [data-skribl-inline]')._skriblInline.state().state") == "playing":
+                pg.click(".post-page .skribl-post-stage .player-bar .player-btn[aria-label='Pause']")
+                pg.wait_for_timeout(300)
             # Leave by the x: the post as it was, its line its own again.
             pg.click(".post-page .skribl-post-stage .player-btn.full-exit")
             pg.wait_for_timeout(700)
