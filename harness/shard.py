@@ -16,6 +16,14 @@ while the others took 31 to 39, because the contrast census had grown to
 1,406 s (sqlite) and 1,461 s (postgresql) against its 900, and 35 suites
 counted as SMALL took 28 to 180 s.
 Re-weighed from that run, the split puts each shard at 39 to 41 minutes.
+Nov 16, the same again: shard 3 took 55 to 60 of its 60 minutes on every run
+that week, and on postgresql after #939 it ran out (its suites 58.9 minutes,
+the job 60.2), while the others took 44 to 54. Suites not in the table
+counted as SMALL, most of them the site's: verify_socialposts takes 500 s,
+verify_socialcomments and verify_socialprofile 330. Re-weighed from main's
+last two runs (119 of 199 suites take half a minute or more), each shard's
+suites add up to 51 to 52 minutes at their slowest, and a job's own steps
+take one or two more.
 Suites go slowest first to the shard with the least so far, and the split is
 deterministic, so a re-run of a shard runs the same suites.
 
@@ -35,56 +43,49 @@ from pathlib import Path
 HARNESS = Path(__file__).resolve().parent
 PINNED_FIRST = ("verify_postgres.py",)
 
-# Seconds on CI (Oct 29, run 40809932689 on 92bc060: the slower of the sqlite
-# and postgresql shards), to the nearest ten.
+# Seconds on CI (Nov 16, runs 43910999317 on b350974 and 43931940697 on
+# 8a2ecd7: the slowest of each suite's four, sqlite and postgresql in each),
+# to the nearest ten.
 MEASURED = {
-    "verify_a11y.py": 380, "verify_a11ypages.py": 200, "verify_amber.py": 260, "verify_ask.py": 40,
-    "verify_audio.py": 50, "verify_audiosession.py": 100, "verify_audiostate.py": 90,
-    "verify_bigcanvas.py": 160, "verify_book.py": 130, "verify_cardfade.py": 30,
-    "verify_clouddrafts.py": 150, "verify_compose.py": 110, "verify_contrast.py": 1490,
-    "verify_cssplit.py": 100, "verify_dots.py": 50, "verify_drafts.py": 230,
-    "verify_drawerreveal.py": 250, "verify_drawfull.py": 70, "verify_drawtiles.py": 100, "verify_fix.py": 60,
-    "verify_flipbeat.py": 180, "verify_flipedges.py": 70, "verify_flipmeta.py": 100,
-    "verify_flipspeed.py": 60, "verify_fullfade.py": 180, "verify_fullsmart.py": 80,
-    "verify_galib.py": 210, "verify_gallery.py": 160, "verify_hello.py": 110, "verify_help.py": 40,
-    "verify_helpclaims.py": 130, "verify_helpdemos.py": 150, "verify_hold.py": 70,
-    "verify_identity.py": 60, "verify_inline.py": 190, "verify_jsstrip.py": 100,
-    "verify_layout.py": 270, "verify_learncard.py": 110, "verify_library.py": 180,
-    "verify_liquify.py": 40, "verify_loopui.py": 30, "verify_menu.py": 140, "verify_motion.py": 40,
-    "verify_move.py": 30, "verify_music.py": 170, "verify_musicbeat.py": 340,
-    "verify_musicclick.py": 140, "verify_musicdoors.py": 530, "verify_musicears.py": 160,
-    "verify_musiclane.py": 100, "verify_musicsnap.py": 260, "verify_musictall.py": 140,
-    "verify_musictempo.py": 210, "verify_musicthree.py": 190, "verify_musictimeline.py": 570,
-    "verify_musicundo.py": 300, "verify_offline.py": 40, "verify_onefull.py": 80,
-    "verify_onepill.py": 380, "verify_padedges.py": 60, "verify_padrepeat.py": 170,
-    "verify_pages.py": 40, "verify_parity.py": 520, "verify_pillfit.py": 40,
-    "verify_player_isolation.py": 60, "verify_pointerpad.py": 50, "verify_posted.py": 190,
-    "verify_recolor.py": 110, "verify_recolorplay.py": 40, "verify_replayspeed.py": 210,
-    "verify_review.py": 80, "verify_select.py": 40, "verify_sheetfit.py": 40,
-    "verify_sheetswipe.py": 200, "verify_sizeclass.py": 30, "verify_smudgeblur.py": 60,
-    "verify_soundfade.py": 60, "verify_stamps.py": 50, "verify_tappause.py": 120,
-    "verify_theme.py": 160, "verify_tips.py": 70, "verify_tools.py": 220, "verify_tray.py": 70,
-    "verify_ux.py": 470, "verify_videoexport.py": 90, "verify_viewedges.py": 30,
-    "verify_visual.py": 30, "verify_watchfull.py": 110,
-    # Not yet measured on CI: the local run, Nov 1, to the nearest ten. CI's
-    # own figure replaces it at the next re-measure.
-    "verify_letters.py": 110, "verify_text.py": 90,
-    # The local run, Nov 5, beside two others (a worker's 20 s deadline is in it).
-    "verify_songoff.py": 70,
-    # The local runs, Nov 6.
-    "verify_emptytake.py": 60, "verify_drawerfit.py": 40,
-    # The local run, Nov 14, beside two others.
-    "verify_composer.py": 170,
-    # The local run, Nov 14 (bookmarks), beside two others.
-    "verify_socialbookmarks.py": 120,
-    # The local run, Nov 14 (reposts), beside two others.
-    "verify_socialreposts.py": 150,
-    # The local run, Nov 15 (mentions), alone (104 s), to the nearest ten with room for two beside it.
-    "verify_socialmentions.py": 150,
-    # The local run, Nov 15 (the Home Screen app), alone.
-    "verify_socialapp.py": 60,
-    # The local run, Nov 15 (finding people), alone (53 s), with room for two beside it.
-    "verify_socialsearch.py": 90,
+    "verify_a11y.py": 270, "verify_a11ypages.py": 170, "verify_amber.py": 240, "verify_ask.py": 30,
+    "verify_audio.py": 50, "verify_audiosession.py": 100, "verify_audiostate.py": 80,
+    "verify_bigcanvas.py": 130, "verify_book.py": 120, "verify_captions.py": 50,
+    "verify_cardfade.py": 40, "verify_clouddrafts.py": 180, "verify_compose.py": 90,
+    "verify_composer.py": 180, "verify_contrast.py": 1560, "verify_cssplit.py": 90,
+    "verify_dots.py": 40, "verify_drafts.py": 180, "verify_drawerreveal.py": 340,
+    "verify_drawfull.py": 60, "verify_drawtiles.py": 120, "verify_emptytake.py": 70,
+    "verify_example.py": 40, "verify_exportui.py": 40, "verify_firstlook.py": 30,
+    "verify_fix.py": 50, "verify_flipbeat.py": 170, "verify_flipedges.py": 50,
+    "verify_flipmeta.py": 80, "verify_flipopen.py": 40, "verify_flipspeed.py": 60,
+    "verify_fullfade.py": 180, "verify_fullsmart.py": 80, "verify_galib.py": 220,
+    "verify_gallery.py": 170, "verify_hello.py": 140, "verify_help.py": 30,
+    "verify_helpclaims.py": 100, "verify_helpdemos.py": 150, "verify_hold.py": 50,
+    "verify_hostconfig.py": 50, "verify_identity.py": 200, "verify_inline.py": 200,
+    "verify_jsstrip.py": 110, "verify_layout.py": 190, "verify_learncard.py": 360,
+    "verify_letters.py": 100, "verify_library.py": 170, "verify_linkpage.py": 50,
+    "verify_liquify.py": 30, "verify_menu.py": 130, "verify_motion.py": 30, "verify_move.py": 30,
+    "verify_music.py": 150, "verify_musicbeat.py": 320, "verify_musicclick.py": 170,
+    "verify_musicdoors.py": 460, "verify_musicears.py": 190, "verify_musiclane.py": 80,
+    "verify_musicsnap.py": 290, "verify_musictall.py": 120, "verify_musictempo.py": 190,
+    "verify_musicthree.py": 170, "verify_musictimeline.py": 510, "verify_musicundo.py": 250,
+    "verify_offline.py": 30, "verify_onefull.py": 80, "verify_onepill.py": 300,
+    "verify_padcanvas.py": 40, "verify_padedges.py": 50, "verify_padopen.py": 60,
+    "verify_padrepeat.py": 190, "verify_pages.py": 40, "verify_parity.py": 490,
+    "verify_pillfit.py": 40, "verify_player_isolation.py": 50, "verify_pointerpad.py": 40,
+    "verify_posted.py": 150, "verify_postgres.py": 50, "verify_postmoment.py": 310,
+    "verify_recolor.py": 110, "verify_recolorplay.py": 40, "verify_replayspeed.py": 240,
+    "verify_review.py": 70, "verify_sheetfit.py": 40, "verify_sheetswipe.py": 170,
+    "verify_smudgeblur.py": 60, "verify_social.py": 100, "verify_socialactivity.py": 120,
+    "verify_socialapp.py": 80, "verify_socialauth.py": 100, "verify_socialbookmarks.py": 100,
+    "verify_socialcomments.py": 330, "verify_socialfollow.py": 220, "verify_sociallikes.py": 230,
+    "verify_socialmentions.py": 100, "verify_socialmute.py": 200, "verify_socialposts.py": 500,
+    "verify_socialprofile.py": 330, "verify_socialreposts.py": 120, "verify_socialsafety.py": 110,
+    "verify_socialsearch.py": 50, "verify_socialsettings.py": 170, "verify_songoff.py": 50,
+    "verify_soundfade.py": 50, "verify_stamps.py": 50, "verify_standin.py": 60,
+    "verify_tappause.py": 100, "verify_text.py": 200, "verify_theme.py": 100, "verify_tips.py": 90,
+    "verify_tools.py": 180, "verify_tray.py": 60, "verify_undofast.py": 140, "verify_ux.py": 460,
+    "verify_videoexport.py": 80, "verify_viewedges.py": 30, "verify_visual.py": 50,
+    "verify_watchfull.py": 100,
 }
 SMALL = 11          # every other suite: the rest averaged 11 seconds
 

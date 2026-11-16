@@ -25,7 +25,7 @@ name: harness
 #
 # THE TRIM IS STILL RIGHT, FOR THE OTHER REASON. The full battery is a long
 # time to sit on a pull request (40-90 minutes a job before the shards, about
-# 19 after), whether or not anyone is invoiced for it. So: pull requests get ONE fast smoke job (the boot suite — does the
+# 19 after, and about 54 by Nov 16), whether or not anyone is invoiced for it. So: pull requests get ONE fast smoke job (the boot suite — does the
 # app start and serve at all — plus, since EXT-P1-9, every suite that needs
 # neither a browser nor a server), and the full battery runs only on
 # pushes to main and on manual dispatch. The working rhythm this repo actually
@@ -160,7 +160,8 @@ jobs:
     # budgeting"). One job took 85-95 minutes at 120 suites, so on Oct 11 a red
     # main took the afternoon to show and the first green came at 6:39 PM.
     # harness/shard.py picks each shard's suites by their measured seconds, and
-    # the six together run every suite once, about 17 minutes each. Standard
+    # the six together run every suite once, about 17 minutes each then; by
+    # Nov 16 the battery had tripled, and re-weighed, each takes 52 to 54. Standard
     # runners on a public repository cost nothing however many there are; six
     # shards of two databases plus the mp4 job is 13 of the 20 jobs a free
     # account runs at once. 60 minutes a shard keeps the old habit of room to grow.
@@ -241,7 +242,8 @@ jobs:
     # budgeting"). One job took 85-95 minutes at 120 suites, so on Oct 11 a red
     # main took the afternoon to show and the first green came at 6:39 PM.
     # harness/shard.py picks each shard's suites by their measured seconds, and
-    # the six together run every suite once, about 17 minutes each. Standard
+    # the six together run every suite once, about 17 minutes each then; by
+    # Nov 16 the battery had tripled, and re-weighed, each takes 52 to 54. Standard
     # runners on a public repository cost nothing however many there are; six
     # shards of two databases plus the mp4 job is 13 of the 20 jobs a free
     # account runs at once. 60 minutes a shard keeps the old habit of room to grow.

@@ -837,6 +837,14 @@ with sync_playwright() as pw:
                   and parts[6] == 1 and parts[3] >= 3,
                   json.dumps({"size": strip.size, "shapes": parts, "corners": max(corners)}))
 
+            # THE SPLASH'S OWN CLASSES, read off what splash-boot.js puts on the page (its classList.add calls).
+            # The page wears others that are none of the splash's business (lib/postfull.js's skribl-postfull,
+            # since #939), so a row about the splash asks about these, never the whole class list. The three it
+            # has always had must be among them: a boot that stamps a class another way goes red here, not quiet.
+            boot = (ROOT / "social" / "static" / "splash-boot.js").read_text(encoding="utf-8")
+            SPLASH_CLS = {c for a in re.findall(r"classList\.add\(([^)]*)\)", boot) for c in re.findall(r"'([\w-]+)'", a)}
+            ours = lambda cls: SPLASH_CLS & set(cls.split())
+
             # NEVER IN A BROWSER TAB: Home and the Gallery, signed in; not shown, and its pictures never asked for.
             mira = member(b, "mira", "Mira Lopez")
             ctx, pg = browser_as(b, mira, ua=IPHONE_UA)
@@ -852,8 +860,9 @@ with sync_playwright() as pw:
             close_ctx(ctx, pg)
             check("never in a browser tab: no splash on Home or the Gallery, and Blooby's strip never downloaded there "
                   "(only the Home Screen app opens with one)",
-                  all(v == {"cls": "", "shown": "none"} for v in tab.values()) and not asked,
-                  json.dumps({"tab": tab, "asked": asked}))
+                  {"is-app", "is-splashing", "is-splash-first"} <= SPLASH_CLS
+                  and all(not ours(v["cls"]) and v["shown"] == "none" for v in tab.values()) and not asked,
+                  json.dumps({"tab": tab, "asked": asked, "the splash's": sorted(SPLASH_CLS)}))
 
             # IN THE APP: from the first paint, then every frame until it has gone: the splash, the show, his box
             # (lift and squash), the strip's pose, his shadow, and where the light is.
@@ -979,7 +988,7 @@ with sync_playwright() as pw:
                   and after["seen"] == "1" and after["launch"] == "1",
                   json.dumps({"fade": [round(v, 2) for v in fade[:8]], "gone": round(gone_at), "after": after}))
             check("...once a launch: the next page in the app has none (it is the app's still: is-app, not is-splashing)",
-                  next_page.split() == ["is-app"], next_page)
+                  ours(next_page) == {"is-app"}, next_page)
 
             # HIS OUTLINE AGAINST THE LIGHT (the owner: "you can't see his black outline"), at every pose: his
             # dark ink against what is painted just outside him (2 to 4 px out), read off two shots, the splash as
