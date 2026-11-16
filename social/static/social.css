@@ -34,7 +34,11 @@
   --on-fill: #ffffff;
   --fill-drop: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 6px 16px rgba(109, 76, 240, 0.30);
   --focus: #6d4cf0;
-  --btn2-bg: #ffffff;               /* the second button: a --menu-card */
+  /* The second button, and every switch's track: Skribl's lilac, see-through,
+     as dark wears it (the owner's "all yes" to "Just a Border", Nov 16). It
+     was white, and white on a white panel or the near-white page had only its
+     line to tell it apart (1.00:1 and 1.06:1); tinted it reads 1.19:1 on both. */
+  --btn2-bg: rgba(124, 92, 255, 0.14);
   --btn2-line: rgba(124, 92, 255, 0.34);
   --btn2-ink: #14171d;
   --nav-bg: rgba(251, 252, 253, 0.94);
@@ -2116,14 +2120,18 @@ button.fo-n {
 .fo-counts [hidden] { display: none; }
 .fo-new { color: var(--accent-ink); font-weight: 600; }
 @media (min-width: 900px) { .fo-counts { justify-content: flex-start; } }
-/* THE ONE PILL: the Gallery's New / Hot (gallerysection.css .seg-track, as
-   the site's pages wear it), value for value: 44px, every option 36px to see
-   and 44px to a finger, the tint sliding under the chosen one (follows.js
-   places it); until it is placed the chosen option wears the tint itself.
-   Under Reduce Motion it is put there. */
+/* THE ONE PILL: 44px, every option 36px to see and 44px to a finger, the
+   tint sliding under the chosen one (follows.js places it); until it is
+   placed the chosen option wears the tint itself. Under Reduce Motion it is
+   put there. ONE SWITCH (the owner's "all yes" to "Just a Border", Nov 16):
+   its track is the second button's, tint and line, as the theme's switch
+   wears them, so Home's, the Gallery's and the theme's are one switch. It
+   was the card's white on the near-white page, its line all that told them
+   apart (1.06:1). Skribl's own Gallery's (gallerysection.css .seg-track),
+   which it matched value for value, follows with the editors' own mock. */
 .fo-seg {
   position: relative; display: inline-flex; align-items: stretch; height: 44px; padding: 3px;
-  border: 1px solid transparent; border-radius: 12px; background: var(--card); box-shadow: 0 0 0 var(--edge) var(--card-edge);
+  border: 1px solid transparent; border-radius: 12px; background: var(--btn2-bg); box-shadow: 0 0 0 var(--edge) var(--btn2-line);
 }
 .fo-seg > button {
   position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center;

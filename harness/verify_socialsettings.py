@@ -1128,7 +1128,8 @@ with sync_playwright() as p:
                     go(pg, "/social/@mira")
                     theirs[(screen, scheme)] = pg.evaluate(GEAR)
                     close_ctx(ctx, pg)
-            BTN2 = {"light": ("rgb(255, 255, 255)", "rgba(124, 92, 255, 0.34)"),
+            # the second button's dress: tinted in light too since "Just a Border" (Nov 16)
+            BTN2 = {"light": ("rgba(124, 92, 255, 0.14)", "rgba(124, 92, 255, 0.34)"),
                     "dark": ("rgba(167, 146, 255, 0.1)", "rgba(167, 146, 255, 0.26)")}
             phone_ok = all(len(mine[("phone", s)]["top"]) == 1 and mine[("phone", s)]["top"][0]["words"] == "Settings"
                            and mine[("phone", s)]["top"][0]["gear"] and mine[("phone", s)]["top"][0]["h"] == 44
