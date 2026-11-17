@@ -1060,10 +1060,10 @@ with sync_playwright() as _p2:
         # wears the toast's glass, and a second button on it its own fill,
         # read as painted in both themes. The notice kept the old grey glass,
         # on which the solid lilac sat 1.02:1 in light; on the violet glass the
-        # solid violet sat 1.07:1 in dark, so there it steps up.
-        # Dark is read with the page's drawing on its light ground, where the
-        # glass (6% see-through) is lightest: the harder case for a button
-        # lighter than the glass. One shade up (#3d326b) read 1.03:1 there.
+        # solid violet sat 1.07:1 in dark, so there it steps up. The notice
+        # lies over the page's own ground, where in dark the glass (6% see-
+        # through) is at its darkest: the case the solid violet failed.
+        # verify_newundo reads the other, a toast over a light drawing.
         _apart = {}
         if _bar:
             _th0 = _c.evaluate("() => document.documentElement.getAttribute('data-theme')")
