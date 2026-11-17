@@ -196,7 +196,7 @@
      (3.1:1; this is 6.5:1 on the drawers' track). --ui-hi is not the selected
      ink anywhere: the dock wore it, at 3.1:1 dark and 2.9:1 light. */
   --seg-on-fill: rgba(124, 92, 255, 0.22);
-  --seg-on-ink: #dad1ff;          /* 7.4:1 on the pill over the second button's tint, 8.4 on the tint over a card
+  --seg-on-ink: #dad1ff;          /* 7.4:1 on the pill over the second button's tint, 8.6 on the tint over a card
                                      (Just a Border: was #d4c9ff, 6.92 on the tinted switch; #b9a8ff before, 5.97) */
   /* JUST A BORDER, THE EDITORS (the owner's "Yes to all", Nov 16, to the
      editors' mock): a box set apart from what it sits on by its line alone
@@ -9525,7 +9525,7 @@ body.replaying .media-card { pointer-events: none; }
      over the drawers' track, under the unselected label's 4.99. One step
      deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground
      a pill sits on; the tint itself, the look the owner chose, does not move. */
-  --seg-on-ink:              #301c8c;   /* 7.35:1 on the pill over the second button's tint on Flip's frame, 8.6 on the
+  --seg-on-ink:              #301c8c;   /* 7.35:1 on the pill over the second button's tint on Flip's frame, 8.5 on the
                                            tint over the menu's lilac (Just a Border: was #36209a, 6.71 on the tinted
                                            switch; #4c31c4 before, 5:1; verify_contrast) */
   --btn2-bg:                 rgba(124, 92, 255, 0.14);   /* JUST A BORDER: the site's, value for value */

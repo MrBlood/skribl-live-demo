@@ -165,6 +165,13 @@ large built-in controls, clean type with varied weights. The Home Screen icon is
 Blooby in purple glass: dark accent at the outer edge, a soft light glow coming
 up from under him.
 
+**No dinge.** The owner, Nov 16, choosing inks for the lilac tint: "I want
+everything to pop, crisp and luxurious.. no dingy. Colorful but not
+cartoonish. Premium but kind and fun. Artistic, clean, and kind (like a
+sophisticated hippy)." A colour that greys or muddies (a see-through tint
+landing on a grey, a washed-out ink, grey words where a clear one reads) is
+the thing to fix; between a grey and a clear colour, offer the clear colour.
+
 **It lives in skribls.net too.** Pad, the Library and the Gallery will sit inside
 the owner's site. Pad acts like an app on the phone: it opens full screen, has a
 Home Screen icon, and returns to the site after posting. Anything built has to
