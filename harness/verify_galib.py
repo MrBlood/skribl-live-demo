@@ -1253,9 +1253,9 @@ with sync_playwright() as p:
         out[role] = els.map(e => { let g = e.parentElement; const r = e.getBoundingClientRect();
           while (g && g !== document.body) { const q = g.getBoundingClientRect(); if (q.width > r.width + 4 || q.height > r.height + 4) break; g = g.parentElement; }
           const f = fill(e), a = lum(f), z = lum(g ? fill(g) : [255, 255, 255]);
-          const own = rgba(getComputedStyle(e).backgroundColor), [r, gg, bb] = f.map(x => { x /= 255; return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
-          const L = Math.cbrt(0.4122214708*r + 0.5363325363*gg + 0.0514459929*bb), M = Math.cbrt(0.2119034982*r + 0.6806995451*gg + 0.1073969566*bb),
-                S = Math.cbrt(0.0883024619*r + 0.2817188376*gg + 0.6299787005*bb);
+          const own = rgba(getComputedStyle(e).backgroundColor), [rr, gg, bb] = f.map(x => { x /= 255; return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+          const L = Math.cbrt(0.4122214708*rr + 0.5363325363*gg + 0.0514459929*bb), M = Math.cbrt(0.2119034982*rr + 0.6806995451*gg + 0.1073969566*bb),
+                S = Math.cbrt(0.0883024619*rr + 0.2817188376*gg + 0.6299787005*bb);
           const C = Math.hypot(1.9779984951*L - 2.4285922050*M + 0.4505937099*S, 0.0259040371*L + 0.7827717662*M - 0.8086757660*S);
           return { apart: +((Math.max(a, z) + 0.05) / (Math.min(a, z) + 0.05)).toFixed(3), alpha: own ? +own[3].toFixed(3) : 0, chroma: +C.toFixed(3) }; });
       }
