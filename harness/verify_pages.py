@@ -914,6 +914,24 @@ with sync_playwright() as p:
               and gap("addblank", "addinbetween") >= gap("addcopy", "addblank") + 10,
               f"not painted {[t['id'] for t in w2 + s2 if not t['painted']]}; gaps within {inside:.0f}px, between {between:.0f}px; "
               f"add row {gap('addcopy', 'addblank'):.0f} then {gap('addblank', 'addinbetween'):.0f}px")
+        # THE PAGE BAR TAKES THE STRIP'S PAPER, AND A PAGE'S BADGES WEAR THE
+        # TOASTS' CLEAR GLASS (No dinge, the last round, the owner's "All yes",
+        # Nov 17): they were a second glass laid over the strip (grey-white,
+        # near-black) and a deep glass that took the page's colour, the ✕
+        # 1.04:1 on a plain page. A ✕ armed to delete keeps its red.
+        _pb = q.evaluate("""() => { const bar = document.getElementById('pagebar'), on = document.querySelector('#strip .frame.on');
+            const want = (el, tok) => { const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
+              el.appendChild(p); const v = getComputedStyle(p).backgroundColor; p.remove(); return v; };
+            const del = on && on.querySelector('.del'), num = on && on.querySelector('.num');
+            const out = { bar: getComputedStyle(bar).backgroundColor, glass: on ? want(on, 'var(--chip-glass)') : null,
+              line: on ? want(on, 'var(--chip-line)') : null, del: del ? getComputedStyle(del).backgroundColor : null,
+              num: num ? getComputedStyle(num).backgroundColor : null, edge: del ? getComputedStyle(del).boxShadow : null };
+            if (del) { del.classList.add('armed'); out.armed = getComputedStyle(del).backgroundColor; del.classList.remove('armed'); }
+            return out; }""")
+        check(f"desk, {scheme}: the page bar takes the strip's own paper, and a page's ✕ and number wear the toasts' clear glass "
+              "with its lilac edge; a ✕ armed to delete keeps its red",
+              _pb["bar"] == "rgba(0, 0, 0, 0)" and bool(_pb["glass"]) and _pb["del"] == _pb["glass"] and _pb["num"] == _pb["glass"]
+              and bool(_pb["line"]) and _pb["line"] in (_pb["edge"] or "") and _pb.get("armed") == "rgba(244, 50, 111, 0.2)", str(_pb))
         q.evaluate("() => delFrame(1)")
         q.wait_for_timeout(900)
         w3 = q.evaluate(TOOLS, WAITS)

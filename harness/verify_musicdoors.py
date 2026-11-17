@@ -138,6 +138,10 @@ def eds(name):
     return EDITORS if part(name) else []
 DESK = dict(viewport={"width": 1280, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
+WEARS = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]'));
+  if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
+  e.parentElement.appendChild(p); const want = getComputedStyle(p).backgroundColor; p.remove();
+  return { got: getComputedStyle(e).backgroundColor, want }; }"""   # an element's own paint against its token, resolved where it sits
 SIDEWAYS = dict(viewport={"width": 874, "height": 402}, device_scale_factor=2, is_mobile=True, has_touch=True)
 # An iPhone SE held sideways, its 375 less Safari's bar: where the timeline
 # can scroll away under Exact times.
@@ -839,6 +843,21 @@ with sync_playwright() as pw:
     print("\nMUSIC DOORS — Exact times")
     for _n, _p in eds("exact"):
         c, pg, _ = editor(b, _n, _p, door="exact")
+        # THE - AND + ARE THE ONE LILAC (No dinge, the last round, the owner's
+        # "All yes", Nov 17): 7% of the accent on their card read 1.09:1. Under
+        # a pointer, the lilac's hover, where it was the line's grey.
+        _nb, _nd = '.nudge-btn[data-which="start"][data-amount="-1"]', {}
+        _th0 = pg.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        for _th in ("light", "dark"):
+            pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(250)
+            _nd[_th] = pg.evaluate(WEARS, [_nb, "var(--btn2-bg)"])
+        pg.hover(_nb); pg.wait_for_timeout(300)
+        _nd["hover"] = pg.evaluate(WEARS, [_nb, "var(--btn2-hover)"])
+        pg.mouse.move(2, 2); pg.wait_for_timeout(200)
+        pg.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+        check(f"{_n}: the - and + are the one lilac, light and dark, and its hover under a pointer (they were 7% of the accent, 1.09:1)",
+              all(_nd[k] and _nd[k]["got"] == _nd[k]["want"] for k in ("light", "dark", "hover"))
+              and _nd["light"]["want"] != _nd["dark"]["want"], str(_nd))
         pg.fill("#endReadout", "4.25"); pg.press("#endReadout", "Enter"); pg.wait_for_timeout(150)
         t1 = pg.evaluate(TRIM)
         pg.fill("#endReadout", "soon"); pg.press("#endReadout", "Enter"); pg.wait_for_timeout(150)

@@ -51,6 +51,10 @@ WEARS = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find
   if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
   e.parentElement.appendChild(p); const want = getComputedStyle(p).backgroundColor; p.remove();
   return { got: getComputedStyle(e).backgroundColor, want }; }"""   # an element's own paint against its token, resolved where it sits
+INK = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]') && x.getClientRects().length);
+  if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;color:' + tok;
+  e.parentElement.appendChild(p); const want = getComputedStyle(p).color; p.remove();
+  return { got: getComputedStyle(e).color, want }; }"""   # an element's own ink against its token, resolved where it sits
 
 COUNTS = """() => {
   const out = [];
@@ -124,6 +128,30 @@ with sync_playwright() as p:
         pg.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
         check(f"{surface}: a section header under the pointer takes the faint lilac Ask's rows do, light and dark (not the control's grey)",
               sorted(_hv) == ["dark", "light"] and all(v and v["got"] == v["want"] for v in _hv.values()), str(_hv))
+        # THE DISCS ARE THE SITE'S (No dinge, the last round, the owner's "All
+        # yes", Nov 17): the one lilac, the mark in the small violet words' ink,
+        # an open section's a step up as the Library's playing row. The
+        # see-through tint took what it sat on, and the violet mark read 3.0:1
+        # on the lilac in dark.
+        _dc, _step = {}, {"light": "rgb(224, 215, 255)", "dark": "rgb(61, 50, 107)"}
+        _th0 = pg.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        _shut = "#helpDrawer .accordion-header:not(.open) .accordion-icon"
+        try:
+            for _th in ("light", "dark"):
+                pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(300)
+                _dc[_th] = {"disc": pg.evaluate(WEARS, [_shut, "var(--btn2-bg)"]), "mark": pg.evaluate(INK, [_shut, "var(--accent-ink)"])}
+                pg.evaluate("() => document.querySelector('#helpDrawer .accordion-header:not(.open)').click()"); pg.wait_for_timeout(450)
+                _dc[_th]["open"] = pg.evaluate("""() => { const i = document.querySelector('#helpDrawer .accordion-header.open .accordion-icon');
+                    return i ? getComputedStyle(i).backgroundColor : null; }""")
+                pg.evaluate("() => document.querySelector('#helpDrawer .accordion-header.open').click()"); pg.wait_for_timeout(350)
+        except Exception as _e:  # a disc not there to read is a red row, never a stop
+            _dc["stopped"] = repr(_e)[:160]
+        pg.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+        check(f"{surface}: a section's disc is the site's, the one lilac with its mark in the small violet words' ink, an open one a step up, light and dark",
+              sorted(_dc) == ["dark", "light"]
+              and all(_dc[t]["disc"] and _dc[t]["disc"]["got"] == _dc[t]["disc"]["want"]
+                      and _dc[t]["mark"] and _dc[t]["mark"]["got"] == _dc[t]["mark"]["want"] and _dc[t]["open"] == _step[t] for t in _step)
+              and _dc["light"]["disc"]["want"] != _dc["dark"]["disc"]["want"], str(_dc))
         pg.close()
 
     # ...AND THE EDITORS DO NOT BIND THEM. Read from the code, not the

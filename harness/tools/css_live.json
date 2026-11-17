@@ -200,7 +200,8 @@
   ".rl-chips.rl-song",
   ".rl-chips.rl-song button",
   ".player-bar .rl-song",
-  "body .canvas-wrap:not(.light-bg)"
+  "body .canvas-wrap:not(.light-bg)",
+  ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .rl-scrub"
  ],
  "editor": [
   "#canvas",
@@ -746,6 +747,7 @@
   ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-btn.full-exit",
   ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-progress",
   ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-time",
+  ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .rl-scrub",
   ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .rl-scrub + .player-time",
   ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) :is(.player-bar, .player-btn.full-exit)"
  ],
