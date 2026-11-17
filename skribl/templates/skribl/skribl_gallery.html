@@ -682,13 +682,18 @@
       --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
       --field-line: rgba(167, 146, 255, 0.7);
       --control-edge: color-mix(in srgb, rgb(255 255 255) 9%, var(--control));
+      /* A solid track's edge (No dinge): the card's lilac line is the solid
+         violet's own colour, so the line went (0 screen pixels, verify_galib);
+         this one reads 1.5:1 from the violet and 2.2:1 from the page. */
+      --track-edge: #4c4574;
     }
     :root[data-theme="light"] {
       --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card));
+      --track-edge: var(--card-edge);
       --field-line: rgba(124, 92, 255, 0.82);
       --control-edge: color-mix(in srgb, rgb(0 0 0) 12%, var(--control));
     }
-    .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge); }
+    .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--track-edge); }
     .tile { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
     .find input, .note { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--field-line); }
     .btn { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--control-edge); }

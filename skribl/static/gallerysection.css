@@ -494,12 +494,12 @@ html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
 #skriblGallery .seg-track { background: var(--btn2-bg); border-color: var(--card-line); }
 #skriblGallery .tile { background: var(--card); border-color: var(--card-line); box-shadow: var(--card-drop); --bg-elev: var(--card); }
 #skriblGallery .find input { background: var(--card); border-color: var(--card-line); border-radius: 12px; }
-#skriblGallery { --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card)); --field-line: rgba(167, 146, 255, 0.7); --control-edge: color-mix(in srgb, rgb(255 255 255) 9%, var(--control)); }
-:root[data-theme="light"] #skriblGallery { --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card)); --field-line: rgba(124, 92, 255, 0.82); --control-edge: color-mix(in srgb, rgb(0 0 0) 12%, var(--control)); }
+#skriblGallery { --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card)); --field-line: rgba(167, 146, 255, 0.7); --control-edge: color-mix(in srgb, rgb(255 255 255) 9%, var(--control)); --track-edge: #4c4574; }
+:root[data-theme="light"] #skriblGallery { --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card)); --track-edge: var(--card-edge); --field-line: rgba(124, 92, 255, 0.82); --control-edge: color-mix(in srgb, rgb(0 0 0) 12%, var(--control)); }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme]) #skriblGallery { --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card)); --field-line: rgba(124, 92, 255, 0.82); --control-edge: color-mix(in srgb, rgb(0 0 0) 12%, var(--control)); }
+  :root:not([data-theme]) #skriblGallery { --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card)); --track-edge: var(--card-edge); --field-line: rgba(124, 92, 255, 0.82); --control-edge: color-mix(in srgb, rgb(0 0 0) 12%, var(--control)); }
 }
-#skriblGallery .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge); }
+#skriblGallery .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--track-edge); }
 #skriblGallery .tile { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
 #skriblGallery .find input, #skriblGallery .note { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--field-line); }
 #skriblGallery .btn { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--control-edge); }
