@@ -216,6 +216,10 @@ JUST_ROLES = r"""() => {
     ["Hear the restart", ".loop-btn.subtle"], ["a panel button", ".panel-btn"], ["Retry", ".learn-retry"], ["Try again", ".sdrafts-retry"],
     ["Keep for later", ".othertab-later"], ["Flip's loop buttons", "#pagebar .pb"], ["Flip's speeds", ".flip-speeds .seg"],
     ["This page / After", ".mb-scope"], ["the fine-tune step", ".mt-step-seg"]];
+  // The paper's own card, where the control sits: a control on the drawers'
+  // paper is a white card like the menu's tiles (ONE LOOK ON THE PAPER).
+  const cardOf = e => { const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background:var(--menu-card)';
+    e.parentElement.appendChild(p); const v = getComputedStyle(p).backgroundColor; p.remove(); return v; };
   const out = {};
   for (const [role, sel] of ROLES) {
     const els = [...document.querySelectorAll(sel)].filter(e => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
@@ -226,7 +230,7 @@ JUST_ROLES = r"""() => {
       const cs = getComputedStyle(e), own = rgba(cs.backgroundColor), lay = layerOf(cs), f = fill(e);
       return { apart: +ratio(f, g ? fill(g) : [255, 255, 255]).toFixed(3), shadow: cs.boxShadow, border: cs.borderTopColor,
                alpha: +Math.max(own ? own[3] : 0, lay ? lay[3] : 0).toFixed(3), chroma: +chroma(f).toFixed(3),
-               on: e.matches('.on, [aria-checked="true"], [aria-pressed="true"]') }; });
+               on: e.matches('.on, [aria-checked="true"], [aria-pressed="true"]'), card: !lay && cs.backgroundColor === cardOf(e) }; });
   }
   return out; }"""
 
@@ -1406,15 +1410,22 @@ check(f"just a border, the editors (the owner's \"Yes to all\", Nov 16): every t
 # as lilac: OKLCH chroma just under the chosen colours (the second button
 # 0.042 light, 0.080 dark; a tip's well 0.026, 0.051) and over every wash they
 # replaced (0.031 to 0.034 light, 0.030 to 0.065 dark; 0.015, 0.031). A switched-
-# on button keeps its own tint over the solid fill, as a chosen pill does.
+# on button keeps its own tint over the solid fill, as a chosen pill does. A
+# control on the drawers' paper painted exactly the paper's own card
+# (--menu-card, where it sits: Reset adjustments in Photo) is the menu's
+# tiles' white card, styles.css's ONE LOOK ON THE PAPER, which the no-dinge
+# mock left as it is; anything else it wears, a wash or a grey, is read here.
+# (A first version asked it for lilac: the full run opened Photo, which the
+# calibration's trimmed copy had not, and called the white card dingy.)
 _DFLOOR = {"a tip": (0.02, 0.045)}
-_djb = [(k, role, r) for k, role, r in _jrows if not r.get("on") and "alpha" in r]
+_dcard = sorted({f"{role} in {k[3]}" for k, role, r in _jrows if r.get("card")})
+_djb = [(k, role, r) for k, role, r in _jrows if not r.get("on") and not r.get("card") and "alpha" in r]
 _dingy = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {role} alpha {r['alpha']} chroma {r['chroma']}" for k, role, r in _djb
                  if r["alpha"] < 0.99 or r["chroma"] < _DFLOOR.get(role, (0.038, 0.07))[0 if k[1] == "light" else 1]})
 check(f"no dinge (the owner's \"All yes\", Nov 16): every tip, second button and switch above wears one chosen colour,"
       f" solid, and reads as lilac (chroma 0.038 and up, a tip's well 0.02; 0.07 and 0.045 in dark), on Pad and Flip,"
       f" light and dark, phone and desk ({len(_djb)} read)",
-      bool(_djb) and not _dingy, f"dingy {_dingy[:6]}")
+      bool(_djb) and not _dingy, f"dingy {_dingy[:6]}; the paper's own card, not asked for lilac: {_dcard}")
 
 print("\nEach surface's own colours, for reading side by side")
 for (name, scheme, label), cz in sorted(census.items(), key=lambda kv: (kv[0][1], kv[0][2], kv[0][0])):
