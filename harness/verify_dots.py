@@ -111,7 +111,10 @@ with sync_playwright() as p:
     c = pgB.evaluate(COLOURS, "music")
     check("music dot AMBER when re-add is needed", c["dotBg"] == AMBER and c["dotPending"], c["dotBg"])
     check("re-add card visible", c["cardHidden"] is False)
-    check("card border amber", "255, 210, 63" in c["cardBorder"], c["cardBorder"])
+    # The paper's card with the amber on its edge (No dinge's leftovers, Nov
+    # 17): a deeper amber than the dot's #ffd23f, which is 1.4:1 on the white
+    # card where this edge is 2.0:1.
+    check("card border amber", "230, 160, 0" in c["cardBorder"], c["cardBorder"])
     check("Re-add button is the action colour with white words, not amber",
           c["btnBg"] == _rgb(c["accent"]) and c["btnColor"] == WHITE,
           f"bg {c['btnBg']} (accent {c['accent']}), text {c['btnColor']}")
