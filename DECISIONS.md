@@ -45246,3 +45246,30 @@ battery (main's run after the merge does it).
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: How it works' tips a soft lilac with no line; Make
 another and Flip's page bar lilac; the Library's Skribls / Drafts lilac.
+
+## After v330 -- Main red after #948: the Gallery section's switch track solid, so a host's ground cannot show through it
+
+Main's full run after #948 (Just a Border, the editors) went red on shard 2,
+SQLite and PostgreSQL alike: verify_standin, "every word on the stand-in,
+its own and its Gallery section's, reads at 4.5:1 or more on what is painted
+behind it", New and Hot at 1.38:1 to 2.34:1, light and dark. #948 laid the
+Gallery's New / Hot track in the second button's see-through lilac. Inside
+Skribl's own Gallery page the section paints its own ground under it; a host
+page that mounts the section (the stand-in, a site) paints its own, and the
+wash took that colour, the host's light ground under the section's light
+words in dark, and the reverse. The section's --btn2-bg is solid now, the
+values the owner chose in "No dinge" ("All yes", Nov 16: #332a58 dark,
+#e7e0ff light), which is the rest of that change's direction: a see-through
+wash takes the colour of whatever is beneath it.
+
+#948's affected suites were chosen by the selectors it changed; none named
+the section's track, and verify_standin reads every word on a host page
+instead. A change to gallerysection.css runs every suite that loads the
+section (verify_standin, verify_gallery, verify_hostseams, verify_seam, and
+the site's suites that open its Gallery).
+
+THE CHECK: verify_standin, red on main (21/22, the four words) and green
+with the solid track (22/22), a fresh server each.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 2): {{suites}}. NOT RUN:
+the full battery (main's run after the merge does it).
