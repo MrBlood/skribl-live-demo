@@ -592,9 +592,9 @@
        editors' (7:1 and up on the page, the cards and a lit row), the
        switches' words in it, and the page's name beside the mark in the
        first ink. The action purple is the app's, shared with the editors. */
-    :root { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; --danger-soft: #ffb3c6;
+    :root { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #dad1ff; --danger-soft: #ffb3c6;
           --btn2-bg: rgba(167, 146, 255, 0.10); --btn2-hover: rgba(167, 146, 255, 0.18); }
-    :root[data-theme="light"] { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #36209a; --danger-soft: #7a0a2d;
+    :root[data-theme="light"] { --text-2: #3b4251; --seg-off-ink: var(--text-2); --seg-on-ink: #301c8c; --danger-soft: #7a0a2d;
           --btn2-bg: rgba(124, 92, 255, 0.14); --btn2-hover: rgba(124, 92, 255, 0.22); }
     /* JUST A BORDER (the owner's "Yes to all", Nov 16): a switch's track and a
        second button wear Skribl's lilac, see-through, as the editors' and the
@@ -619,19 +619,18 @@
     /* JUST A BORDER (the owner's "Yes to all", Nov 16): Copy link, Copy key
        and Save file keep posted.css's tint, the second button's, where the
        card's white on a row's white had only its line (1.00:1). Their words,
-       and Share's, a step stronger, so they keep 7:1 on the tint over the
-       playing row's lilac (the page's second ink read 6.76:1 light, 6.36:1
-       dark there): the tint does not move, the ink does. */
+       and Share's, are the first ink, as Undo's beside them and every second
+       button's on the site: the second ink read 6.76:1 light and 6.36:1 dark
+       on the tint over the playing row's lilac, under the page's 7:1. */
     .posted-copy, .posted-key, .draft-file { border-color: var(--card-line); }
-    .posted-copy, .posted-key, .posted-share, .draft-file { --text-secondary: #c5ccd8; }
-    :root[data-theme="light"] :is(.posted-copy, .posted-key, .posted-share, .draft-file) { --text-secondary: #3b4251; }
+    .posted-copy, .posted-key, .posted-share, .draft-file { color: var(--text-primary); }
     .posted-copy, .posted-key, .posted-gallery, .posted-delete, .draft-act { border-radius: 12px; }
     .now .lbl, .stat span, .kind { text-transform: none; letter-spacing: normal; font-size: 13px; }
     /* A CALMER LIST (the owner's pick A after v324: "all yes"). The count
        repeats "6 posted" above, so it is drawn only while a search narrows
        it ("2 of 6"), and is still read out; the note about this browser sits
        under the list (_skribl_posted.html), said once, with no rules around
-       it. The selected pill's ink is the editors' #36209a, and Delete's red
+       it. The selected pill's ink is the editors' #301c8c, and Delete's red
        one step deeper, so a desk row's small words read 7:1 too. */
     .posted-count:not(.is-q) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
     .posted-foot-top { border: 0; margin: 20px 0 0; padding: 0; text-align: center; justify-content: center; }

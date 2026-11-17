@@ -46,7 +46,7 @@
   --on-canvas-violet: #3a24a8;
   --r-pill: 999px;
   --seg-on-fill: rgba(124, 92, 255, 0.22);
-  --seg-on-ink: #d4c9ff;
+  --seg-on-ink: #dad1ff;
   --surface-base: #0b0d12;
   --surface-control: #171b23;
   --surface-control-hover: #1c212c;
@@ -62,16 +62,16 @@
 :root[data-theme="light"] .watch-full:is(:fullscreen, .is-immersive-page) {
   --hl: 9%;
   --hls: 15%;
-  --seg-on-ink: #36209a;
+  --seg-on-ink: #301c8c;
   --surface-base: #fbfcfd;
   --surface-control: #edf0f4;
   --surface-control-hover: #e2e7ee;
   --surface-control-rgb: 237,240,244;
   --surface-deep: #ffffff;
   --surface-deep-rgb: 255,255,255;
-  --text-muted: #3f4756;
+  --text-muted: #3b4251;
   --text-primary: #11161e;
-  --text-secondary: #3f4756;
+  --text-secondary: #3b4251;
   --text-strong: #1f252f;
   --wash-rgb: 0,0,0;
 }

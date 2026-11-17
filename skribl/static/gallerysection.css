@@ -103,10 +103,10 @@
 #skriblGallery :where(:not(.skribl-inline, .skribl-inline *, svg, svg *, canvas))::placeholder { all: revert; }
 
 /* ---- from fullband.css ---- */
-#skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --accent: #7c5cff; --accent-bright: #9179ff; --control-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--surface-control)); --control-edge-strong: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-control)); --deep-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-deep)); --ease: cubic-bezier(0.4, 0, 0.2, 1); --hl: 5.5%; --hls: 9%; --on-canvas-drop-rgb: 10,6,30; --on-canvas-ink: #241a52; --on-canvas-shade-rgb: 16,12,32; --on-canvas-violet: #3a24a8; --r-pill: 999px; --seg-on-fill: rgba(124, 92, 255, 0.22); --seg-on-ink: #d4c9ff; --surface-base: #0b0d12; --surface-control: #171b23; --surface-control-hover: #1c212c; --surface-control-rgb: 23,27,35; --surface-deep: #06070a; --surface-deep-rgb: 6,7,10; --text-muted: #b7bfcc; --text-primary: #f6f7f9; --text-secondary: #b7bfcc; --text-strong: #e7e9ea; --wash-rgb: 255,255,255; }
-:root[data-theme="light"] #skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --hl: 9%; --hls: 15%; --seg-on-ink: #36209a; --surface-base: #fbfcfd; --surface-control: #edf0f4; --surface-control-hover: #e2e7ee; --surface-control-rgb: 237,240,244; --surface-deep: #ffffff; --surface-deep-rgb: 255,255,255; --text-muted: #3f4756; --text-primary: #11161e; --text-secondary: #3f4756; --text-strong: #1f252f; --wash-rgb: 0,0,0; }
+#skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --accent: #7c5cff; --accent-bright: #9179ff; --control-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--surface-control)); --control-edge-strong: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-control)); --deep-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-deep)); --ease: cubic-bezier(0.4, 0, 0.2, 1); --hl: 5.5%; --hls: 9%; --on-canvas-drop-rgb: 10,6,30; --on-canvas-ink: #241a52; --on-canvas-shade-rgb: 16,12,32; --on-canvas-violet: #3a24a8; --r-pill: 999px; --seg-on-fill: rgba(124, 92, 255, 0.22); --seg-on-ink: #dad1ff; --surface-base: #0b0d12; --surface-control: #171b23; --surface-control-hover: #1c212c; --surface-control-rgb: 23,27,35; --surface-deep: #06070a; --surface-deep-rgb: 6,7,10; --text-muted: #b7bfcc; --text-primary: #f6f7f9; --text-secondary: #b7bfcc; --text-strong: #e7e9ea; --wash-rgb: 255,255,255; }
+:root[data-theme="light"] #skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --hl: 9%; --hls: 15%; --seg-on-ink: #301c8c; --surface-base: #fbfcfd; --surface-control: #edf0f4; --surface-control-hover: #e2e7ee; --surface-control-rgb: 237,240,244; --surface-deep: #ffffff; --surface-deep-rgb: 255,255,255; --text-muted: #3b4251; --text-primary: #11161e; --text-secondary: #3b4251; --text-strong: #1f252f; --wash-rgb: 0,0,0; }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme]) #skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --hl: 9%; --hls: 15%; --seg-on-ink: #36209a; --surface-base: #fbfcfd; --surface-control: #edf0f4; --surface-control-hover: #e2e7ee; --surface-control-rgb: 237,240,244; --surface-deep: #ffffff; --surface-deep-rgb: 255,255,255; --text-muted: #3f4756; --text-primary: #11161e; --text-secondary: #3f4756; --text-strong: #1f252f; --wash-rgb: 0,0,0; }
+  :root:not([data-theme]) #skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --hl: 9%; --hls: 15%; --seg-on-ink: #301c8c; --surface-base: #fbfcfd; --surface-control: #edf0f4; --surface-control-hover: #e2e7ee; --surface-control-rgb: 237,240,244; --surface-deep: #ffffff; --surface-deep-rgb: 255,255,255; --text-muted: #3b4251; --text-primary: #11161e; --text-secondary: #3b4251; --text-strong: #1f252f; --wash-rgb: 0,0,0; }
 }
 #skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { -webkit-font-smoothing: antialiased; color: var(--text-strong); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-variant-numeric: tabular-nums; line-height: normal; }
 #skriblGallery .player-btn[hidden]:where(.skfull-host, .skfull-host *) { display: none; }
@@ -303,9 +303,9 @@
 
 /* ---- from pagemenu.css ---- */
 #skriblGallery { --glass-fill: rgba(23, 26, 34, 0.78); --glass-solid: rgb(23, 26, 34); --glass-sheet-fill: var(--glass-fill); --header-rim: rgba(0, 0, 0, 0.55); --glass-drop: rgba(0, 0, 0, 0.30); --glass: 0 0 0 var(--edge) var(--header-rim), 0 6px 20px var(--glass-drop); --glass-scrim: rgba(0, 0, 0, 0.4); --on-glass-2: var(--text-2); --focus-ring: #7c5cff; }
-:root[data-theme="light"] #skriblGallery { --glass-fill: rgba(234, 238, 244, 0.78); --glass-solid: rgb(234, 238, 244); --glass-sheet-fill: rgba(246, 248, 251, 0.9); --header-rim: rgba(255, 255, 255, 0.9); --glass-drop: rgba(20, 24, 40, 0.10); --on-glass-2: #3f4756; }
+:root[data-theme="light"] #skriblGallery { --glass-fill: rgba(234, 238, 244, 0.78); --glass-solid: rgb(234, 238, 244); --glass-sheet-fill: rgba(246, 248, 251, 0.9); --header-rim: rgba(255, 255, 255, 0.9); --glass-drop: rgba(20, 24, 40, 0.10); --on-glass-2: #3b4251; }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme]) #skriblGallery { --glass-fill: rgba(234, 238, 244, 0.78); --glass-solid: rgb(234, 238, 244); --glass-sheet-fill: rgba(246, 248, 251, 0.9); --header-rim: rgba(255, 255, 255, 0.9); --glass-drop: rgba(20, 24, 40, 0.10); --on-glass-2: #3f4756; }
+  :root:not([data-theme]) #skriblGallery { --glass-fill: rgba(234, 238, 244, 0.78); --glass-solid: rgb(234, 238, 244); --glass-sheet-fill: rgba(246, 248, 251, 0.9); --header-rim: rgba(255, 255, 255, 0.9); --glass-drop: rgba(20, 24, 40, 0.10); --on-glass-2: #3b4251; }
 }
 #skriblGallery .sheet-card, #skriblGallery .cardMenu { --text-2: var(--on-glass-2); --text-3: var(--on-glass-2); }
 #skriblGallery { --hair: 1; --edge: calc(1px * var(--hair)); }
@@ -486,10 +486,10 @@ html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) #skriblGallery { --card: #ffffff; --card-line: rgba(124, 92, 255, 0.34); --card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09); }
 }
-#skriblGallery { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; --danger: #ff7a9c; --btn2-bg: rgba(167, 146, 255, 0.10); --btn2-hover: rgba(167, 146, 255, 0.18); }
-:root[data-theme="light"] #skriblGallery { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; --btn2-bg: rgba(124, 92, 255, 0.14); --btn2-hover: rgba(124, 92, 255, 0.22); }
+#skriblGallery { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #dad1ff; --danger: #ff7a9c; --btn2-bg: rgba(167, 146, 255, 0.10); --btn2-hover: rgba(167, 146, 255, 0.18); }
+:root[data-theme="light"] #skriblGallery { --text-2: #3b4251; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; --btn2-bg: rgba(124, 92, 255, 0.14); --btn2-hover: rgba(124, 92, 255, 0.22); }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme]) #skriblGallery { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; --btn2-bg: rgba(124, 92, 255, 0.14); --btn2-hover: rgba(124, 92, 255, 0.22); }
+  :root:not([data-theme]) #skriblGallery { --text-2: #3b4251; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; --btn2-bg: rgba(124, 92, 255, 0.14); --btn2-hover: rgba(124, 92, 255, 0.22); }
 }
 #skriblGallery .seg-track { background: var(--btn2-bg); border-color: var(--card-line); }
 #skriblGallery .tile { background: var(--card); border-color: var(--card-line); box-shadow: var(--card-drop); --bg-elev: var(--card); }
