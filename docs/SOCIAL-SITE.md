@@ -2066,8 +2066,8 @@ owner's "all yes" to "Just a Border", Nov 16): an original with no
 drawing of its own that is itself a quote shows the drawing its own
 original has, through as many quotes as it takes, as a quote of a drawing
 shows it, until a post the person looking may not see; Make's small card
-the same. Inside a post's card the small card is a well, the page's ground
-touched with lilac and no line (D2). Its own words, its own drawing, or both: a quote of
+the same. Inside a post's card the small card is a well, a clear lilac
+and no line (D2; a chosen lilac since No dinge, Nov 16). Its own words, its own drawing, or both: a quote of
 words alone has no drawing of its own. Quote opens the composer
 (`window.SocialComposer.quote`) with the original small under the words,
 "Add your words, or draw something…"; Post wakes once there are words or a

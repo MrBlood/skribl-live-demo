@@ -983,10 +983,11 @@ def judge_pill(fs, reduced=False):
 LIGHT_PAGE, DARK_PAGE = "rgb(246, 248, 250)", "rgb(15, 18, 24)"
 SHEET_PAPER = {"light": "rgb(243, 240, 255)", "dark": "rgb(23, 20, 42)"}
 FILL, WHITE = "rgb(109, 76, 240)", "rgb(255, 255, 255)"
-# The second button (and every switch's track): Skribl's lilac, see-through, in
-# both themes since the owner's "all yes" to "Just a Border" (Nov 16); white
-# in light before.
-BTN2 = {"light": "rgba(124, 92, 255, 0.14)", "dark": "rgba(167, 146, 255, 0.1)"}
+# The second button (and every switch's track): Skribl's lilac in both themes
+# since the owner's "all yes" to "Just a Border" (Nov 16; white in light
+# before), solid since "No dinge" (the owner's "All yes", Nov 16: a see-through
+# wash took the grey of what it sat on).
+BTN2 = {"light": "rgb(231, 224, 255)", "dark": "rgb(51, 42, 88)"}
 CARD = {"light": "rgb(255, 255, 255)", "dark": "rgb(35, 30, 59)"}
 PILL_ON = {"light": "rgb(63, 39, 168)", "dark": "rgb(212, 201, 255)"}
 PILL_OFF = {"light": "rgb(63, 71, 86)", "dark": "rgb(183, 191, 204)"}

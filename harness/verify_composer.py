@@ -507,7 +507,8 @@ PARTS = """() => { const s = document.querySelector('#composeSheet .make-sheet')
     const at = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
     return { x: Math.round(q.left - r.left), y: Math.round(q.top - r.top), right: Math.round(r.right - q.right), bottom: Math.round(r.bottom - q.bottom),
              w: Math.round(q.width), h: Math.round(q.height), painted: !!at && (at === e || e.contains(at)),
-             words: (e.textContent || '').trim().replace(/\\s+/g, ' '), opacity: +getComputedStyle(e).opacity }; };
+             words: (e.textContent || '').trim().replace(/\\s+/g, ' '), opacity: +getComputedStyle(e).opacity,
+             bg: getComputedStyle(e).backgroundColor, ink: getComputedStyle(e).color }; };
   const w = s.querySelector('[data-compose-words]'), cs = getComputedStyle(w);
   const tools = [...s.querySelectorAll('.cmp-tools > *')].filter(e => e.getClientRects().length).map(e => (e.textContent || '').trim().replace(/\\s+/g, ' '));
   return { cancel: one('[data-compose-cancel]'), post: one('[data-compose-post]'), face: one('.cmp-face'), words: one('[data-compose-words]'),
@@ -765,12 +766,17 @@ with sync_playwright() as p:
                     look["sent"] = len(sent)
                     looks[f"{screen} {scheme}"] = look
                     close_ctx(ctx, pg)
+            # WAITING, CRISP (No dinge, the owner's "All yes", Nov 16): Post waits on
+            # the second button's lilac in the chosen violet, at full strength; it
+            # faded the purple to 45%.
+            WAIT = {"light": ("rgb(231, 224, 255)", "rgb(63, 39, 168)"), "dark": ("rgb(51, 42, 88)", "rgb(212, 201, 255)")}
             bad = {}
             for k, v in looks.items():
                 c, po = v["cancel"], v["post"]
                 ok = (c and c["words"] == "Cancel" and c["x"] <= 16 and c["y"] <= 20 and c["painted"] and c["h"] >= 44
                       and po and po["words"] == "Post" and po["right"] <= 16 and abs((po["y"] + po["h"] / 2) - (c["y"] + c["h"] / 2)) <= 1
-                      and po["painted"] and v["disabled"] == "true" and abs(po["opacity"] - 0.45) < 0.01
+                      and po["painted"] and v["disabled"] == "true" and po["opacity"] == 1
+                      and po["bg"] == WAIT[k.split()[1]][0] and po["ink"] == WAIT[k.split()[1]][1]
                       and v["face"] and v["face"]["w"] == 40 and v["words"] and v["words"]["x"] == v["face"]["x"] + 52
                       and v["field"] == {"size": "18px", "placeholder": "Say something…", "max": "500"}
                       and v["tools"] == ["Draw", "Flip", "Yours", "500 characters left"] and v["toolsBox"]["bottom"] <= 32
@@ -778,8 +784,8 @@ with sync_playwright() as p:
                       and v["typed"] == "467 characters left" and v["lit"] == "false" and v["sent"] == 0)
                 if not ok:
                     bad[k] = v
-            check("as the mock drew it: Cancel at the top left and Post at the top right on its line, dim (0.45) with"
-                  " nothing said or drawn, a press saying what is missing and sending nothing, and lit once there are words"
+            check("as the mock drew it: Cancel at the top left and Post at the top right on its line, waiting on the"
+                  " second button's lilac in the chosen violet at full strength (No dinge) with nothing said or drawn, a press saying what is missing and sending nothing, and lit once there are words"
                   " (words alone are a post: the owner's \"I like your pick\", Nov 16); your face (40) beside \"Say"
                   " something…\" (18px, 500 at most); Draw, Flip and Yours along the bottom, the characters left at their"
                   " end, 500, then 467 after 33 typed; phone and desk, light and dark",
