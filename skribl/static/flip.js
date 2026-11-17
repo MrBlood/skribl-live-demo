@@ -4515,10 +4515,8 @@ function updateToolState(){
   const undoB=document.getElementById('undo');
   undoB.disabled = frame().strokeGroups.length === 0
     && !(actionLog.length && typeof actionLog[actionLog.length-1] === 'object');
-  undoB.style.opacity = undoB.disabled ? .32 : 1;
   const redoB=document.getElementById('redo');
   redoB.disabled = redoStack.length === 0;
-  redoB.style.opacity = redoB.disabled ? .32 : 1;
   const postB=document.getElementById('postBtn');
   if(postB) postB.disabled = nothingToShare();
 }

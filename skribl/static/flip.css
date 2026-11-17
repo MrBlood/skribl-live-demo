@@ -376,7 +376,8 @@
   .t-btn.armed { color: var(--danger); border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   .t-btn svg { width: 19px; height: 19px; }
   /* Undo and Redo in the Pad's grey (its .toolbar .undo-btn, text-tool-lit);
-     their disabled opacity is the Pad's .32, written by updateToolState(). */
+     when off, the Pad's too: full strength, quiet words (styles.css, NO
+     DINGE). updateToolState() sets only `disabled`; it wrote .32 inline. */
   #undo, #redo { color: var(--text-tool-lit); }
   @media (hover:hover) { .t-btn:hover { filter: brightness(1.12); } }
   /* Flip's tool row shrinks at each breakpoint; Pad's does not. The MECHANISM
