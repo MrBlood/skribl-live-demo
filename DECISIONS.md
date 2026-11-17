@@ -45268,8 +45268,21 @@ instead. A change to gallerysection.css runs every suite that loads the
 section (verify_standin, verify_gallery, verify_hostseams, verify_seam, and
 the site's suites that open its Gallery).
 
-THE CHECK: verify_standin, red on main (21/22, the four words) and green
-with the solid track (22/22), a fresh server each.
+In dark the solid violet is the colour of the card's lilac line that edged
+the track, so its one-screen-pixel edge went (verify_galib's edges row read 0
+pixels): the track wears its own edge, #4c4574 in dark (1.5:1 from the
+violet, 2.2:1 from the page), the card's line in light as before.
 
-THE AFFECTED SUITES, side by side (run_parallel -j 2): {{suites}}. NOT RUN:
-the full battery (main's run after the merge does it).
+THE CHECKS: verify_standin, red on main (21/22, the four words) and green
+with the solid track (22/22); verify_galib's edges row, red on the solid
+track with the card's line (dark New | Hot, 0 pixels) and green with its own
+edge (1 pixel); a fresh server each.
+
+THE AFFECTED SUITES (every suite that loads the Gallery section, the
+budgets and the docs): verify_standin 22/22, verify_gallery 234/234,
+verify_galib 181/181, verify_hostseams 139/139 and verify_seam 518/518 on the
+tree as built, one at a time on a fresh server; and, side by side
+(run_parallel -j 2) on the tree before the edge, verify_onepill 2878/2878,
+verify_socialreposts 55/55, verify_socialsearch 32/32,
+verify_player_isolation 85/85, verify_jsstrip 35/35 and verify_docs 144/144.
+NOT RUN: the full battery (main's run after the merge does it).
