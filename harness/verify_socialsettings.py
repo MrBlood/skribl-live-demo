@@ -1131,7 +1131,7 @@ with sync_playwright() as p:
             # the second button's dress: tinted in light too since "Just a Border" (Nov 16),
             # solid since "No dinge" (Nov 16)
             BTN2 = {"light": ("rgb(231, 224, 255)", "rgba(124, 92, 255, 0.34)"),
-                    "dark": ("rgb(51, 42, 88)", "rgba(167, 146, 255, 0.26)")}
+                    "dark": ("rgb(51, 42, 88)", "rgba(167, 146, 255, 0.4)")}
             phone_ok = all(len(mine[("phone", s)]["top"]) == 1 and mine[("phone", s)]["top"][0]["words"] == "Settings"
                            and mine[("phone", s)]["top"][0]["gear"] and mine[("phone", s)]["top"][0]["h"] == 44
                            and mine[("phone", s)]["top"][0]["w"] >= 44 and mine[("phone", s)]["top"][0]["hit"]

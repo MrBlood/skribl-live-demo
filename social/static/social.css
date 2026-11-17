@@ -138,7 +138,7 @@
   --brand: #8f74ff;
   --focus: #c1b2ff;
   --btn2-bg: #332a58;               /* solid (No dinge): murky over the page as a wash */
-  --btn2-line: rgba(167, 146, 255, 0.26);
+  --btn2-line: rgba(167, 146, 255, 0.4);    /* No dinge: 0.26 vanished into the solid violet (1.03:1); now 1.5:1, 2.2:1 from the page */
   --btn2-ink: #eef1f6;
   --nav-bg: rgba(11, 13, 18, 0.92);
   --nav-line: rgba(255, 255, 255, 0.09);
@@ -184,7 +184,7 @@
     --brand: #8f74ff;
     --focus: #c1b2ff;
     --btn2-bg: #332a58;
-    --btn2-line: rgba(167, 146, 255, 0.26);
+    --btn2-line: rgba(167, 146, 255, 0.4);
     --btn2-ink: #eef1f6;
     --nav-bg: rgba(11, 13, 18, 0.92);
     --nav-line: rgba(255, 255, 255, 0.09);
