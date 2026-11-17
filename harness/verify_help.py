@@ -47,12 +47,21 @@ except ImportError:
     print("  [SKIP] playwright unavailable — this suite needs a browser")
     summarise_and_exit()
 
-WEARS = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]'));
-  if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
+# A COLOUR THAT GLIDES IS READ WHERE IT LANDS. A disc's background takes
+# 0.18s to follow the theme, and a glide moves only as the page draws frames:
+# on a busy runner a fixed wait read it a step short (main red after #958,
+# sqlite 6/6: Flip's dark disc rgb(52, 43, 89) for its token's rgb(51, 42,
+# 88), while postgres 6/6 passed the same tree). So each read waits for the
+# element's own animations that end (a loop that never ends is not waited
+# on), for three seconds at most, then reads what is painted.
+SETTLE = ("await Promise.race([Promise.all(e.getAnimations().filter(a => a.effect && isFinite(a.effect.getComputedTiming().endTime))"
+          ".map(a => a.finished.catch(() => null))), new Promise(r => setTimeout(r, 3000))]);")
+WEARS = r"""async ([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]'));
+  if (!e) return null; """ + SETTLE + r""" const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
   e.parentElement.appendChild(p); const want = getComputedStyle(p).backgroundColor; p.remove();
   return { got: getComputedStyle(e).backgroundColor, want }; }"""   # an element's own paint against its token, resolved where it sits
-INK = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]') && x.getClientRects().length);
-  if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;color:' + tok;
+INK = r"""async ([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]') && x.getClientRects().length);
+  if (!e) return null; """ + SETTLE + r""" const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;color:' + tok;
   e.parentElement.appendChild(p); const want = getComputedStyle(p).color; p.remove();
   return { got: getComputedStyle(e).color, want }; }"""   # an element's own ink against its token, resolved where it sits
 
@@ -141,8 +150,8 @@ with sync_playwright() as p:
                 pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(300)
                 _dc[_th] = {"disc": pg.evaluate(WEARS, [_shut, "var(--btn2-bg)"]), "mark": pg.evaluate(INK, [_shut, "var(--accent-ink)"])}
                 pg.evaluate("() => document.querySelector('#helpDrawer .accordion-header:not(.open)').click()"); pg.wait_for_timeout(450)
-                _dc[_th]["open"] = pg.evaluate("""() => { const i = document.querySelector('#helpDrawer .accordion-header.open .accordion-icon');
-                    return i ? getComputedStyle(i).backgroundColor : null; }""")
+                _dc[_th]["open"] = pg.evaluate("""async () => { const e = document.querySelector('#helpDrawer .accordion-header.open .accordion-icon');
+                    if (!e) return null; """ + SETTLE + """ return getComputedStyle(e).backgroundColor; }""")
                 pg.evaluate("() => document.querySelector('#helpDrawer .accordion-header.open').click()"); pg.wait_for_timeout(350)
         except Exception as _e:  # a disc not there to read is a red row, never a stop
             _dc["stopped"] = repr(_e)[:160]

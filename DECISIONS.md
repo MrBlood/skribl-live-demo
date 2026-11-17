@@ -45842,3 +45842,32 @@ THE CHECKS: none needed. This entry changes no code the app runs. The tool
 ran once from its new place: ten shots, with the words' room 322, 274 and
 226px on a phone and 292, 244 and 196px on a desk, and the icons 7.1:1
 light and 10.1:1 dark, as the mock measured.
+
+## After v330 -- Main red after #958: verify_help read a disc mid-glide
+
+WHAT WENT RED. Main's run after #958 (docs and a mock tool, no app code) had
+one red job, sqlite 6/6: verify_help 94/95. Flip's dark disc read
+rgb(52, 43, 89) for its token's rgb(51, 42, 88), a step short.
+- The postgres twin of the shard passed the same tree, and both shards had
+  passed it after #957.
+- The check is mine, from #957. It read the disc 300ms after switching the
+  theme, and the disc's background glides there in 0.18s.
+- A glide moves only as the page draws frames, so a busy runner caught its
+  last step.
+
+THE FIX is in the instrument; the app was right. verify_help's colour reads
+(WEARS, INK, and the open disc's) now wait for the element's own animations
+that end, for three seconds at most, and then read what is painted. Main
+watch's issue (#959) closes itself on main's next green run.
+
+CALIBRATED on both the mechanism and the property:
+- With the disc's and the header's glides slowed to 1.5s, side by side: the
+  old check 91/95 (the hover and the disc, Pad and Flip, all read mid-glide),
+  the new one 95/95.
+- With the disc's old see-through tint back: the new check 93/95, red on
+  the disc alone, Pad and Flip.
+- As built: 95/95.
+
+NOT DONE: the same fixed-wait read lives in WEARS in verify_exportui,
+verify_menu, verify_musicdoors and verify_replayspeed. None has flaked;
+SETTLE is the fix if one does.
