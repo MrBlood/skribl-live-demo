@@ -398,6 +398,18 @@ with sync_playwright() as sp:
     h1 = pp.evaluate(HUD)
     check("on a phone a pinch zooms and shows the panel (there is no Magnify button to do it)",
           h1["shown"] and not h1["button"] and h1["zoom"] > 1.1, str(h1))
+    # THE PANEL IS THE TOASTS' CLEAR GLASS (No dinge's leftovers, the owner's
+    # "All yes", Nov 17): it was a grey glass. Light and dark.
+    _zg = {}
+    _th0 = pp.evaluate("() => document.documentElement.getAttribute('data-theme')")
+    for _th in ("light", "dark"):
+        pp.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pp.wait_for_timeout(200)
+        _zg[_th] = pp.evaluate("""() => { const e = document.getElementById('zoomHud'), p = document.createElement('i');
+            p.style.cssText = 'position:absolute;width:0;height:0;background-color:var(--chip-glass)'; e.parentElement.appendChild(p);
+            const want = getComputedStyle(p).backgroundColor; p.remove(); return { got: getComputedStyle(e).backgroundColor, want }; }""")
+    pp.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+    check("...and the panel is the toasts' clear glass, light and dark (it was a grey glass)",
+          all(v["got"] == v["want"] for v in _zg.values()) and _zg["light"]["want"] != _zg["dark"]["want"], str(_zg))
     pp.tap("#zoomFitBtn"); pp.wait_for_timeout(400)
     h2 = pp.evaluate(HUD)
     check("...and tapping Fit returns to 100% AND puts the panel away",

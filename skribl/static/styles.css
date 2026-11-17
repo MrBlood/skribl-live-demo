@@ -1281,13 +1281,13 @@ body.stroking .autosave-status {
   display: flex;
   flex-direction: column;
   width: 46px;
-  background: rgba(var(--surface-panel-rgb), 0.9);
+  background: var(--chip-glass);   /* the toasts' clear glass (No dinge's leftovers, Nov 17): it was a grey glass */
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  border: 1px solid var(--hairline-strong);
+  border: 1px solid var(--chip-line);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--chip-lift);
   opacity: 1;
   transition: opacity 0.25s var(--ease), box-shadow 0.15s var(--ease);
   touch-action: none;
@@ -2293,10 +2293,10 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
   padding: 5px 5px 5px 16px;
   border-radius: 999px;
   white-space: nowrap;
-  background: var(--glass-fill);
+  background: var(--chip-glass);   /* the toasts' clear glass (No dinge's leftovers, Nov 17): it was a grey glass */
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
-  box-shadow: var(--glass);
+  box-shadow: 0 0 0 var(--edge, 1px) var(--chip-line), var(--chip-lift);
   color: var(--text-primary);
   font-size: 13.5px;
   font-weight: 600;
@@ -2312,9 +2312,8 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 
    LIGHT: the pill sits over the drawing, which is dark in both themes, so the
    light glass (78% of a pale grey) went a muddy mid-grey there and Cancel's
-   ink fell to 2.85:1. Near-opaque white, as the light chrome is, keeps it
-   crisp and independent of what is under it. */
-:root[data-theme="light"] .eyedropper-pill { background: rgba(var(--glass-deep-rgb), 0.96); }
+   ink fell to 2.85:1. Near-opaque white keeps it crisp and independent of
+   what is under it: the clear glass's own light value (--chip-glass, 96%). */
 .eyedropper-pill:focus-visible,
 .eyedropper-pill-cancel:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .eyedropper-pill-cancel {
@@ -2324,8 +2323,8 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
   border-radius: 999px;
   min-height: 34px;
   padding: 0 14px;
-  background: var(--seg-on-fill);
-  color: var(--seg-on-ink);
+  background: var(--seg-on-fill);   /* a second button on the glass: the NO DINGE block steps it up */
+  color: var(--text-primary);
   font: inherit;
   cursor: pointer;
 }
@@ -3090,9 +3089,9 @@ body.recoloring #canvas { cursor: crosshair !important; }
   align-items: center;
   gap: 12px;
   padding: 12px 12px 12px 14px;
-  border: 1px solid rgba(255, 210, 63, 0.4);
+  border: 1px solid rgba(230, 160, 0, 0.85);   /* the amber on its edge, and its dot: "this needs you" */
   border-radius: 12px;
-  background: rgba(255, 210, 63, 0.08);
+  background: var(--menu-card);   /* the paper's card (No dinge's leftovers, Nov 17): the amber wash went beige-grey on the lilac paper, 1.03:1 */
 }
 
 .pending-card[hidden] { display: none; }
@@ -3215,7 +3214,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-tl-mag-btn svg { width: 18px; height: 18px; display: block; }
 @media (hover: hover) { .mt-tl-mag-btn:hover:not(:disabled) { color: var(--text-strong); } }
 .mt-tl-mag-btn:active:not(:disabled) { background: var(--ui-active); color: #fff; }
-.mt-tl-mag-btn:disabled { opacity: .35; cursor: default; }
+.mt-tl-mag-btn:disabled { opacity: 1; color: var(--off-ink); cursor: default; }   /* off at full strength, as Undo and Redo (No dinge) */
 .mt-tl-mag-btn:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 1px; }
 .mt-tl-mag-val { min-width: 34px; text-align: center; font-size: 14px; font-weight: 700; line-height: 1; color: var(--text-strong);
   font-variant-numeric: tabular-nums; }
@@ -4071,7 +4070,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .menu-item.menu-feature svg { color: var(--accent); }
 @media (hover: hover) {
   .menu-item.menu-feature:hover { background: color-mix(in srgb, var(--accent) 19%, transparent); }
-  .menu-item:hover { background: rgba(var(--wash-rgb), 0.06); }
+  .menu-item:hover { background: color-mix(in srgb, var(--accent) 6%, var(--menu-card)); }   /* Ask's rows' hover; it was a grey wash */
 }
 .menu-item.danger { color: var(--danger); }
 .menu-item.danger svg { color: var(--danger); }
@@ -5165,10 +5164,10 @@ html.help-open, html.help-open body { overflow: hidden; }
 }
 
 @media (hover: hover) {
-  .accordion-header:hover {
-    background: var(--surface-control);
-    border-color: var(--line-mid-2);
-    box-shadow: none;
+  .accordion-header:hover {   /* Ask's rows' hover (No dinge's leftovers, Nov 17): it was the control's grey */
+    background: color-mix(in srgb, var(--accent) 6%, var(--menu-card));
+    border-color: transparent;
+    box-shadow: var(--card-ring);
   }
 }
 
@@ -6283,8 +6282,8 @@ a.player-btn { text-decoration: none; }
    ends are 270px and the line 260: held to the line, "Fit" ran out of the
    pill). 90vw, not 100vw less 32px: the player's sheet had 2 bytes to spare. */
 .rl-chips { display: flex; gap: 2px; padding: 4px 8px; max-width: 90vw; box-sizing: border-box;
-  border-radius: var(--r-pill); background: rgb(var(--surface-control-rgb));
-  border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--control-edge-strong), 0 8px 24px rgba(0, 0, 0, 0.18);
+  border-radius: var(--r-pill); background: var(--chip-glass);   /* the toasts' clear glass (No dinge's leftovers): a grey pill, 1.06:1 in dark */
+  border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--chip-line), var(--chip-lift);
   opacity: 1; transform: none;
   transition: opacity 0.26s var(--ease), transform 0.26s var(--ease), display 0.26s allow-discrete; }
 @starting-style { .rl-chips { opacity: 0; transform: translateY(-4px); } }
@@ -10079,8 +10078,8 @@ html[data-input="pointer"] .sdrafts-row:has(> .sdrafts-open:focus-visible) { out
    playing row's one shade (#3d326b) sat 1.03:1 there; this step clears both
    grounds, 1.15:1 over the lightest and 1.41:1 over the dark, its words
    9.2:1 (verify_newundo, verify_drafts). */
-.toast-action, .othertab-later { background: #45397a; }
-:root[data-theme="light"] :is(.toast-action, .othertab-later) { background: var(--btn2-bg); }
+.toast-action, .othertab-later, .eyedropper-pill-cancel { background: #45397a; }
+:root[data-theme="light"] :is(.toast-action, .othertab-later, .eyedropper-pill-cancel) { background: var(--btn2-bg); }
 /* And Copy delete key on its row in light, a shade up as on the Library's
    playing row: the row is the ink's 5% over the lilac paper, and the solid
    lilac sat 1.03:1 on it (1.10:1 here). Dark is 1.23:1 as it is. */

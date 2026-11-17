@@ -47,6 +47,11 @@ except ImportError:
     print("  [SKIP] playwright unavailable — this suite needs a browser")
     summarise_and_exit()
 
+WEARS = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]'));
+  if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
+  e.parentElement.appendChild(p); const want = getComputedStyle(p).backgroundColor; p.remove();
+  return { got: getComputedStyle(e).backgroundColor, want }; }"""   # an element's own paint against its token, resolved where it sits
+
 COUNTS = """() => {
   const out = [];
   document.querySelectorAll('.accordion-header').forEach(h => {
@@ -100,6 +105,18 @@ with sync_playwright() as p:
             return seen; }""")
         check(f"{surface}: a section header opens its section, and closes it again",
               tog == [[True, "true", True], [False, "false", False]], str(tog))
+        # A HEADER UNDER A POINTER takes Ask's rows' faint lilac (No dinge's
+        # leftovers, the owner's "All yes", Nov 17): it turned the control's grey.
+        _hv = {}
+        _th0 = pg.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        for _th in ("light", "dark"):
+            pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(200)
+            pg.hover("#helpDrawer .accordion-header:not(.open)"); pg.wait_for_timeout(350)
+            _hv[_th] = pg.evaluate(WEARS, ["#helpDrawer .accordion-header:hover", "color-mix(in srgb, var(--accent) 6%, var(--menu-card))"])
+            pg.mouse.move(2, 2); pg.wait_for_timeout(250)
+        pg.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+        check(f"{surface}: a section header under the pointer takes the faint lilac Ask's rows do, light and dark (not the control's grey)",
+              all(v and v["got"] == v["want"] for v in _hv.values()), str(_hv))
         pg.close()
 
     # ...AND THE EDITORS DO NOT BIND THEM. Read from the code, not the

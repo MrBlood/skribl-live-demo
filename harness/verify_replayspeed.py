@@ -98,6 +98,12 @@ FRAC = "() => +document.getElementById('playerProgress').getAttribute('aria-valu
 FILL = "() => parseFloat(document.getElementById('playerProgressFill').style.width) || 0"
 
 
+WEARS = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]'));
+  if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
+  e.parentElement.appendChild(p); const want = getComputedStyle(p).backgroundColor; p.remove();
+  return { got: getComputedStyle(e).backgroundColor, want }; }"""   # an element's own paint against its token, resolved where it sits
+
+
 def pick(pg, scope, r):
     pg.evaluate("""([s, r]) => { document.querySelector(s + ' .rl-speed').click();
         document.querySelector(s + ' .rl-chips [data-r="' + r + '"]').click(); }""", [scope, r])
@@ -223,6 +229,17 @@ with sync_playwright() as p:
               len(fit["chips"]) == 8 and all(o <= 0 and inside for _, o, inside in fit["chips"])
               and fit["row"][0] >= 0 and fit["row"][1] <= vw, str(fit))
     pg.set_viewport_size({"width": 1100, "height": 900})
+
+    # THE SPEEDS ARE THE TOASTS' CLEAR GLASS (No dinge's leftovers, the owner's
+    # "All yes", Nov 17): a grey pill, 1.06:1 from what was under it in dark.
+    open_player(keep["url"])
+    pg.evaluate("() => document.querySelector('#playerLine .rl-speed').click()"); pg.wait_for_timeout(350)
+    _glass = {}
+    for _th in ("light", "dark"):
+        pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(250)
+        _glass[_th] = pg.evaluate(WEARS, ["#playerLine .rl-chips", "var(--chip-glass)"])
+    check("the speeds' pill is the toasts' clear glass, light and dark (it was a grey pill)",
+          all(v and v["got"] == v["want"] for v in _glass.values()) and _glass["light"]["want"] != _glass["dark"]["want"], str(_glass))
 
     open_player(eight["url"])
     check("a post whose author picked 8x starts at 8x", pg.evaluate(LINE).endswith("watching at 8×"),

@@ -34,6 +34,9 @@
 .watch-full:is(:fullscreen, .is-immersive-page) {
   --accent: #7c5cff;
   --accent-bright: #9179ff;
+  --chip-glass: rgba(46, 38, 88, 0.94);
+  --chip-lift: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --chip-line: rgba(167, 146, 255, 0.32);
   --control-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--surface-control));
   --control-edge-strong: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-control));
   --deep-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-deep));
@@ -60,6 +63,9 @@
   --wash-rgb: 255,255,255;
 }
 :root[data-theme="light"] .watch-full:is(:fullscreen, .is-immersive-page) {
+  --chip-glass: rgba(255, 255, 255, 0.96);
+  --chip-lift: 0 10px 30px rgba(60, 40, 140, 0.16), 0 2px 6px rgba(60, 40, 140, 0.08);
+  --chip-line: rgba(124, 92, 255, 0.3);
   --hl: 9%;
   --hls: 15%;
   --seg-on-ink: #301c8c;
@@ -439,8 +445,8 @@
    ends are 270px and the line 260: held to the line, "Fit" ran out of the
    pill). 90vw, not 100vw less 32px: the player's sheet had 2 bytes to spare. */
 .rl-chips:where(.skfull-host, .skfull-host *) { display: flex; gap: 2px; padding: 4px 8px; max-width: 90vw; box-sizing: border-box;
-  border-radius: var(--r-pill); background: rgb(var(--surface-control-rgb));
-  border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--control-edge-strong), 0 8px 24px rgba(0, 0, 0, 0.18);
+  border-radius: var(--r-pill); background: var(--chip-glass);   /* the toasts' clear glass (No dinge's leftovers): a grey pill, 1.06:1 in dark */
+  border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--chip-line), var(--chip-lift);
   opacity: 1; transform: none;
   transition: opacity 0.26s var(--ease), transform 0.26s var(--ease), display 0.26s allow-discrete; }
 @starting-style { .rl-chips:where(.skfull-host, .skfull-host *) { opacity: 0; transform: translateY(-4px); }

@@ -712,6 +712,18 @@ with sync_playwright() as p:
     check("Pad: ...and a photo that never lands is missing again once the window closes: pending, its card, the pill says so",
           after["pending"] == "broken.png" and after["card"] and after["shown"] and "missing" in after["text"].lower()
           and after["saved"] == "broken.png", str(after))
+    # ITS CARD IS THE PAPER'S CARD, THE AMBER ON ITS EDGE (No dinge's leftovers,
+    # the owner's "All yes", Nov 17): the amber wash went beige-grey on the
+    # drawer's lilac paper, 1.03:1. Light and dark.
+    _pend = {}
+    for _th in ("light", "dark"):
+        pgR.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pgR.wait_for_timeout(200)
+        _pend[_th] = pgR.evaluate("""() => { const e = document.getElementById('photoPending'), p = document.createElement('i');
+            p.style.cssText = 'position:absolute;width:0;height:0;background-color:var(--menu-card)'; e.parentElement.appendChild(p);
+            const want = getComputedStyle(p).backgroundColor; p.remove(); const cs = getComputedStyle(e);
+            return { got: cs.backgroundColor, want, edge: cs.borderTopColor }; }""")
+    check("Pad: ...and its card is the paper's card, the amber on its edge, light and dark",
+          all(v["got"] == v["want"] and v["edge"] == "rgba(230, 160, 0, 0.85)" for v in _pend.values()), str(_pend))
     # The × on "Media missing" dismisses what is MISSING: a track still
     # decoding beside a lost photo keeps its loop and crossfade (it lost them).
     dism = pgR.evaluate("""() => {
