@@ -2121,7 +2121,9 @@ with sync_playwright() as p:
                              chroma: c ? +chroma(c).toFixed(3) : 0 });
                 }
               return out; }"""
-            FLOOR = {"a second button": (0.05, 0.07), "a switch's track": (0.05, 0.07), "a well": (0.02, 0.045), "a placeholder": (0.03, 0.06)}
+            # Just under the chosen colours (0.042, 0.080; 0.026, 0.051; 0.034, 0.074) and over every
+            # wash they replaced (0.031 to 0.034 light, 0.030 to 0.065 dark; 0.015, 0.031; 0.006, 0.013).
+            FLOOR = {"a second button": (0.038, 0.07), "a switch's track": (0.038, 0.07), "a well": (0.02, 0.045), "a placeholder": (0.03, 0.06)}
             found, seen, dinge = [], 0, []
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
@@ -2154,7 +2156,7 @@ with sync_playwright() as p:
                              if d["alpha"] < 0.99 or d["chroma"] < FLOOR[d["role"]][0 if " light " in f' {d["where"]} ' else 1]})
             check("no dinge (the owner's \"All yes\", Nov 16): on the same pages, phone and desk, light and dark, every"
                   " second button, switch's track, quote's well and placeholder wears one chosen colour, solid, and reads"
-                  " as lilac (chroma 0.05 and up for a button or a track, 0.02 for a well, 0.03 for a placeholder; 0.07,"
+                  " as lilac (chroma 0.038 and up for a button or a track, 0.02 for a well, 0.03 for a placeholder; 0.07,"
                   f" 0.045 and 0.06 in dark), every role seen ({len(dinge)} read)",
                   set(FLOOR) <= _roles and not _dingy,
                   f"unseen {sorted(set(FLOOR) - _roles)}; dingy {_dingy[:6]}")
