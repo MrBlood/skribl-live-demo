@@ -215,6 +215,7 @@ JUST_ROLES = r"""() => {
   const ROLES = [["a tip", ".help-tip"], ["Make another", ".post-quiet"], ["Keep drawing", ".addtake-pill"], ["Tap the beat", ".mt-tap"],
     ["Hear the restart", ".loop-btn.subtle"], ["a panel button", ".panel-btn"], ["Retry", ".learn-retry"], ["Try again", ".sdrafts-retry"],
     ["Keep for later", ".othertab-later"], ["Flip's loop buttons", "#pagebar .pb"], ["Flip's speeds", ".flip-speeds .seg"],
+    ["Flip's add buttons", ".addcol .addbtn"], ["Copy delete key", ".post-key-btn"],
     ["This page / After", ".mb-scope"], ["the fine-tune step", ".mt-step-seg"]];
   // The paper's own card, where the control sits: a control on the drawers'
   // paper is a white card like the menu's tiles (ONE LOOK ON THE PAPER).
@@ -1391,7 +1392,11 @@ for scheme in ("light", "dark"):
 # from what it sits on by its own fill, 1.08:1 or more (the tint 1.12 to 1.19;
 # a white card on the drawers' lilac paper 1.10 and up); a tip a well with no
 # line. Every role this suite reaches must be seen, so it cannot pass empty.
+# Flip's add buttons and Copy delete key joined after #952: the first stayed
+# the grey wash (an older .addcol rule outranked the new one, and no role here
+# read them); the second sat lilac on its row's lilac, 1.03:1 in light.
 JUST_SEEN = ("a tip", "Make another", "Keep drawing", "Tap the beat", "Hear the restart", "a panel button",
+             "Flip's add buttons", "Copy delete key",
              "Flip's loop buttons", "Flip's speeds", "This page / After", "the fine-tune step")
 _jrows = [(k, role, r) for k, roles in justb.items() for role, rs in (roles or {}).items() for r in rs]
 _jseen = {role for _, role, _ in _jrows}

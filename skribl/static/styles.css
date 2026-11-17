@@ -10081,6 +10081,10 @@ html[data-input="pointer"] .sdrafts-row:has(> .sdrafts-open:focus-visible) { out
    9.2:1 (verify_newundo, verify_drafts). */
 .toast-action, .othertab-later { background: #45397a; }
 :root[data-theme="light"] :is(.toast-action, .othertab-later) { background: var(--btn2-bg); }
+/* And Copy delete key on its row in light, a shade up as on the Library's
+   playing row: the row is the ink's 5% over the lilac paper, and the solid
+   lilac sat 1.03:1 on it (1.10:1 here). Dark is 1.23:1 as it is. */
+:root[data-theme="light"] .post-key-btn { background: #e0d7ff; }
 @media (hover: hover) { .leave-btn:not(.danger):hover { background: var(--btn2-hover); } }
 .accordion-count { background: var(--count-fill); color: var(--seg-on-ink); }
 .sdrafts-thumb { background: var(--draw-wait); }
