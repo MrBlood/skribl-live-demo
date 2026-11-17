@@ -8780,7 +8780,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
    the lilac paper, and Theme, Tips, Canvas and New's shapes kept the old grey
    one: two looks for one control. Each track is now a card with the lilac
    edge, like the tiles beside it; the one pill still says which is chosen. */
-:is(.menu-sheet, .flip-menu) .seg { background: var(--btn2-bg); border-color: transparent; box-shadow: var(--card-ring); }
+:is(.menu-sheet, .flip-menu) .seg { background: var(--menu-card); border-color: transparent; box-shadow: var(--card-ring); }
 /* An open section of Ask's answers continues its card: it was the grey of
    the old glass, not the paper's. */
 .accordion-body { background: var(--menu-card); }
@@ -9029,7 +9029,7 @@ body.lc-open .skribl-tip { display: none !important; }   /* the card grows out o
    wins, so no family can quietly keep an older corner, weight or colour. */
 .seg, .smooth-seg, .gif-seg, .photo-fit-group {
   position: relative;
-  background: var(--btn2-bg); border: 1px solid var(--hairline);
+  background: var(--surface-control); border: 1px solid var(--hairline);
   border-radius: var(--r-seg); padding: var(--seg-inset);
 }
 /* ONE LABEL WEIGHT, selected or not: a label that gets bolder when chosen
@@ -9981,6 +9981,14 @@ body.drawalong .canvas-empty-hint { display: none; }
    above, so it wore the lilac edge on a grey fill; here it is the card. */
 :where(.tune-shell) .onion-tint { background: var(--menu-card); border-color: transparent; box-shadow: var(--card-ring); }
 :where(.tab-panel, .media-card) .loop-btn.subtle { background: var(--btn2-bg); }
+/* ONE TINTED SWITCH, WHERE A SWITCH SITS ON A CARD OR ON THE FRAME (Just a
+   Border, the editors: the owner's "Yes to all", Nov 16): Flip's speeds, its
+   This page / After, and a switch on a door's card (the fine-tune step) wear
+   the second button's tint, as the site's switches do. Their own grey or
+   white was the colour of what they sat on, their line all that told them
+   apart. A switch on the paper stays a white card (ONE LOOK ON THE PAPER).
+   After the drawers' block, which it must outrank at equal weight. */
+.flip-speeds .seg, .mb-scope, :where(.dp-panel) .seg { background: var(--btn2-bg); }
 /* THE DRAWERS' WORDS, ONE SIZE UP (the owner, of the type mock's B: "all yes"):
    every word in a dock drawer a size nearer the menu's 16 over 14, the
    smallest 12 where it was 11. The drawers' own rules carry their new sizes;

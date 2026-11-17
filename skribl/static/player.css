@@ -2261,7 +2261,7 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
    wins, so no family can quietly keep an older corner, weight or colour. */
 .seg, .smooth-seg, .gif-seg, .photo-fit-group {
   position: relative;
-  background: var(--btn2-bg); border: 1px solid var(--hairline);
+  background: var(--surface-control); border: 1px solid var(--hairline);
   border-radius: var(--r-seg); padding: var(--seg-inset);
 }
 /* ONE LABEL WEIGHT, selected or not: a label that gets bolder when chosen

@@ -620,11 +620,11 @@ with sync_playwright() as sp:
     # (part four, Nov 16): the link page's lines one screen pixel. Spent
     # value and 25 B again.
     #
-    # AND 185 B MORE, IN WRITING, at the owner's "Yes to all" to "Just a
+    # AND 193 B MORE, IN WRITING, at the owner's "Yes to all" to "Just a
     # Border" in the editors (Nov 16): the second button's tint and its
-    # hover, both themes, which the player's own switch wears. How it works'
-    # well spent 73 B first, written in its one rule.
-    _css_target = 45_282
+    # hover, both themes, copied with the token block. How it works' well
+    # spent 73 B first, written in its one rule.
+    _css_target = 45_290
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")
