@@ -205,8 +205,13 @@
      value), a stronger one under a pointer; a TIP in How it works is a WELL
      (its own rule: one use, and every token here is copied into the
      player's sheet, which has a byte budget). */
-  --btn2-bg: rgba(167, 146, 255, 0.10);
-  --btn2-hover: rgba(167, 146, 255, 0.18);
+  --btn2-bg: #332a58;   /* SOLID since No dinge (Nov 16): a see-through wash took the grey beneath it */
+  --btn2-hover: #3b3166;
+  /* A toast, Flip's chip, the save status, a hint: clear glass (No dinge), violet
+     here, white with a lilac edge in light; it was the line's grey at 82%. */
+  --chip-glass: rgba(46, 38, 88, 0.94);
+  --chip-line: rgba(167, 146, 255, 0.32);
+  --chip-lift: 0 8px 24px rgba(0, 0, 0, 0.35);
 
   /* The letterpress relief on the signature (SINK, not pop,
      and asked for the old purple halo to go). A bright lower edge and a
@@ -3638,10 +3643,10 @@ body.recoloring #canvas { cursor: crosshair !important; }
   position: absolute;
   left: 50%;
   transform: translateX(-50%) translateY(-6px);
-  background: rgba(var(--line-rgb), 0.82);
+  background: var(--chip-glass);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   backdrop-filter: blur(20px) saturate(1.4);
-  border: 1px solid var(--hairline-strong);
+  border: 1px solid var(--chip-line);
   color: var(--text-primary);
   font-size: 13px;
   font-weight: 600;
@@ -3655,7 +3660,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
   z-index: 200;
   opacity: 0;
   pointer-events: none;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  box-shadow: var(--chip-lift);
   transition: opacity 0.25s ease, transform 0.4s var(--spring);
 }
 
@@ -3698,10 +3703,10 @@ body.recoloring #canvas { cursor: crosshair !important; }
   gap: 7px;
   padding: 6px 11px;
   border-radius: 999px;
-  background: rgba(var(--surface-control-rgb), 0.82);
+  background: var(--chip-glass);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--chip-line);
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
@@ -6030,11 +6035,11 @@ body.player-ready .player-bar > * { animation: player-up 0.3s var(--ease); }
   text-decoration: none;
   cursor: pointer;
   border: 1px solid var(--hairline);
-  background: rgba(var(--wash-rgb), 0.04);
+  background: var(--btn2-bg);   /* the second button's (No dinge; it was a grey wash) */
   color: var(--text-primary);
   transition: background .15s ease, border-color .15s ease;
 }
-@media (hover: hover) { .player-error-btn:hover { background: rgba(var(--wash-rgb), 0.08); } }
+@media (hover: hover) { .player-error-btn:hover { background: var(--btn2-hover); } }
 .player-error-btn.primary {
   background: var(--accent-fill);
   border-color: transparent;
@@ -7403,9 +7408,9 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
   max-width: min(360px, calc(100vw - 32px));
   padding: 11px 14px;
   border-radius: 12px;
-  background: var(--surface-control-hover);
+  background: var(--chip-glass);
   border: 1px solid transparent;
-  box-shadow: 0 0 0 var(--edge, 1px) rgba(124, 92, 255, 0.35), 0 12px 32px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 var(--edge, 1px) rgba(124, 92, 255, 0.35), var(--chip-lift);
   color: var(--text-primary);
   font-size: 12.5px; line-height: 1.5; text-align: center;
   opacity: 0;
@@ -9528,8 +9533,11 @@ body.replaying .media-card { pointer-events: none; }
   --seg-on-ink:              #301c8c;   /* 7.35:1 on the pill over the second button's tint on Flip's frame, 8.5 on the
                                            tint over the menu's lilac (Just a Border: was #36209a, 6.71 on the tinted
                                            switch; #4c31c4 before, 5:1; verify_contrast) */
-  --btn2-bg:                 rgba(124, 92, 255, 0.14);   /* JUST A BORDER: the site's, value for value */
-  --btn2-hover:              rgba(124, 92, 255, 0.22);
+  --btn2-bg:                 #e7e0ff;   /* the site's, value for value; solid since No dinge */
+  --btn2-hover:              #ddd4ff;
+  --chip-glass:              rgba(255, 255, 255, 0.96);
+  --chip-line:               rgba(124, 92, 255, 0.3);
+  --chip-lift:               0 10px 30px rgba(60, 40, 140, 0.16), 0 2px 6px rgba(60, 40, 140, 0.08);
   /* Letterpress for a light surface: the classic bright ledge below the
      ink, a whisper of shade above. */
   --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
@@ -10037,3 +10045,33 @@ html[data-input="pointer"] .sdrafts-row:has(> .sdrafts-open:focus-visible) { out
 #postSheet #postSubmitBtn, .menu-start, .sdrafts-save, .player-cta { font-size: 19px; font-weight: 700; }
 .player-cta { padding: 12px 24px; }
 .player-cta .cta-star { font-size: 20px; }
+
+/* NO DINGE (the owner's "All yes", Nov 16, to the no-dinge mock; WORKING-
+   AGREEMENTS, "No dinge"): a see-through wash takes the grey of what it sits
+   on, and a flat grey is dingy. Each surface here wears a chosen colour, the
+   site's values (social.css), the same in Pad and Flip. Last in the sheet, so
+   it outranks the rules it amends at equal weight.
+   - A tip's well: a clear lilac, a deep violet in dark (the site's --quote-well).
+   - Toasts, Flip's chip, the save status and the hints: clear glass, white
+     with a lilac edge and a soft lift in light, violet in dark, not grey
+     (--chip-glass, --chip-line, --chip-lift, at their own rules, which the
+     link page's sheet carries too).
+   - Grey buttons join the second button.
+   - The tips' counts: lilac.
+   - Placeholders: the site's --draw-wait.
+   - Waiting and off: Post waits on the second button's lilac in the chosen
+     violet; a page bar button, undo and redo when off keep their shape at
+     full strength and only their words go quiet, where the whole button
+     faded to 30 to 42%. */
+.help-tip { background: #16112b; }
+:root[data-theme="light"] .help-tip { background: #f0ecff; }
+.toast-action, .leave-btn:not(.danger), .post-key-btn { background: var(--btn2-bg); }
+@media (hover: hover) { .leave-btn:not(.danger):hover { background: var(--btn2-hover); } }
+.accordion-count { background: #2b2450; color: var(--seg-on-ink); }
+:root[data-theme="light"] .accordion-count { background: #ece6ff; }
+.sdrafts-thumb { background: #2e2650; }
+:root[data-theme="light"] .sdrafts-thumb { background: #ece6ff; }
+.pb:disabled, .undo-btn:disabled, .addbtn:disabled, .toolbar .undo-btn:disabled { opacity: 1; color: #756e9c; }
+:root[data-theme="light"] .pb:disabled, :root[data-theme="light"] .undo-btn:disabled, :root[data-theme="light"] .addbtn:disabled,
+:root[data-theme="light"] .toolbar .undo-btn:disabled { color: #a59dcc; }
+.btn.post:disabled, .btn.post[aria-disabled="true"] { opacity: 1; background: var(--btn2-bg); color: var(--seg-on-ink); box-shadow: none; }

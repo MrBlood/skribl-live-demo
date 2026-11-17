@@ -323,10 +323,10 @@
 html[data-input="pointer"] #skriblGallery :focus-visible { outline: none !important; }
 
 /* ---- from segslider.css ---- */
-#skriblGallery { --r-seg: 12px; --seg-inset: 3px; --seg-pill-r: calc(var(--r-seg) - var(--seg-inset)); --seg-track: rgba(167, 146, 255, 0.10); --seg-line: rgba(255, 255, 255, 0.055); --seg-off-ink: #8a93a6; --seg-on-fill: rgba(124, 92, 255, 0.22); --seg-on-ink: #b9a8ff; }
-:root[data-theme="light"] #skriblGallery { --seg-track: rgba(124, 92, 255, 0.14); --seg-line: rgba(0, 0, 0, 0.09); --seg-off-ink: #5f6775; --seg-on-ink: #5434dc; }
+#skriblGallery { --r-seg: 12px; --seg-inset: 3px; --seg-pill-r: calc(var(--r-seg) - var(--seg-inset)); --seg-track: #332a58; --seg-line: rgba(255, 255, 255, 0.055); --seg-off-ink: #8a93a6; --seg-on-fill: rgba(124, 92, 255, 0.22); --seg-on-ink: #b9a8ff; }
+:root[data-theme="light"] #skriblGallery { --seg-track: #e7e0ff; --seg-line: rgba(0, 0, 0, 0.09); --seg-off-ink: #5f6775; --seg-on-ink: #5434dc; }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme]) #skriblGallery { --seg-track: rgba(124, 92, 255, 0.14); --seg-line: rgba(0, 0, 0, 0.09); --seg-off-ink: #5f6775; --seg-on-ink: #5434dc; }
+  :root:not([data-theme]) #skriblGallery { --seg-track: #e7e0ff; --seg-line: rgba(0, 0, 0, 0.09); --seg-off-ink: #5f6775; --seg-on-ink: #5434dc; }
 }
 #skriblGallery .seg-track { position: relative; display: inline-flex; align-items: stretch; box-sizing: border-box; height: 44px; background: var(--seg-track); border: 1px solid var(--seg-line); border-radius: var(--r-seg); padding: var(--seg-inset); }
 #skriblGallery .seg-track > button { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; margin: 0; padding: 0 14px; border: 0; border-radius: var(--seg-pill-r); background: transparent; color: var(--seg-off-ink); font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0; line-height: 1; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -377,6 +377,10 @@ html[data-input="pointer"] #skriblGallery :focus-visible { outline: none !import
 #skriblGallery .state[hidden] { display: none; }
 #skriblGallery .btn { font: inherit; font-weight: 600; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 0 20px; min-height: 44px; cursor: pointer; }
 #skriblGallery .btn:hover { background: var(--control-hi); }
+#skriblGallery .btn:not(.primary) { background: var(--btn2-bg); }
+@media (hover: hover) {
+  #skriblGallery .btn:not(.primary):hover { background: var(--btn2-hover); }
+}
 #skriblGallery .btn:disabled { opacity: 0.5; cursor: default; }
 #skriblGallery .btn[hidden] { display: none; }
 #skriblGallery .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; align-items: start; }

@@ -164,6 +164,10 @@
       min-height: 44px; cursor: pointer;
     }
     .btn:hover { background: var(--control-hi); }
+    /* NO DINGE (Nov 16): Cancel, Retry and Load more on the second button's lilac,
+       where they were the control's grey; the primary keeps its purple. */
+    .btn:not(.primary) { background: var(--btn2-bg); }
+    @media (hover: hover) { .btn:not(.primary):hover { background: var(--btn2-hover); } }
     .btn:disabled { opacity: 0.5; cursor: default; }
     .btn[hidden] { display: none; }
 

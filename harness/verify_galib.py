@@ -1252,8 +1252,12 @@ with sync_playwright() as p:
         if (!els.length) continue;
         out[role] = els.map(e => { let g = e.parentElement; const r = e.getBoundingClientRect();
           while (g && g !== document.body) { const q = g.getBoundingClientRect(); if (q.width > r.width + 4 || q.height > r.height + 4) break; g = g.parentElement; }
-          const a = lum(fill(e)), z = lum(g ? fill(g) : [255, 255, 255]);
-          return +((Math.max(a, z) + 0.05) / (Math.min(a, z) + 0.05)).toFixed(3); });
+          const f = fill(e), a = lum(f), z = lum(g ? fill(g) : [255, 255, 255]);
+          const own = rgba(getComputedStyle(e).backgroundColor), [r, gg, bb] = f.map(x => { x /= 255; return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+          const L = Math.cbrt(0.4122214708*r + 0.5363325363*gg + 0.0514459929*bb), M = Math.cbrt(0.2119034982*r + 0.6806995451*gg + 0.1073969566*bb),
+                S = Math.cbrt(0.0883024619*r + 0.2817188376*gg + 0.6299787005*bb);
+          const C = Math.hypot(1.9779984951*L - 2.4285922050*M + 0.4505937099*S, 0.0259040371*L + 0.7827717662*M - 0.8086757660*S);
+          return { apart: +((Math.max(a, z) + 0.05) / (Math.min(a, z) + 0.05)).toFixed(3), alpha: own ? +own[3].toFixed(3) : 0, chroma: +C.toFixed(3) }; });
       }
       return out; }"""
     SWITCHES = [["New | Hot", ".tabs.seg-track"], ["Skribls | Drafts", ".libtabs-list.seg-track"],
@@ -1286,13 +1290,18 @@ with sync_playwright() as p:
     _want = {"phone": {"New | Hot", "Skribls | Drafts", "All | In the gallery | Link only", "Undo"}}
     _want["desk"] = _want["phone"] | {"Copy link", "Share", "Copy key", "Save file"}
     _seen = {d: {role for (_, dv, _), roles in _just.items() if dv == d for role in roles} for d in ("phone", "desk")}
-    _low = sorted(f"{k[0]} {k[1]} {k[2]}: {role} {v}" for k, roles in _just.items() for role, vs in roles.items() for v in vs if v < 1.08)
+    _low = sorted(f"{k[0]} {k[1]} {k[2]}: {role} {v['apart']}" for k, roles in _just.items() for role, vs in roles.items() for v in vs if v["apart"] < 1.08)
+    # NO DINGE (the owner's "All yes", Nov 16): each one solid and lilac enough.
+    _dingy = sorted(f"{k[0]} {k[1]} {k[2]}: {role} alpha {v['alpha']} chroma {v['chroma']}" for k, roles in _just.items()
+                    for role, vs in roles.items() for v in vs if v["alpha"] < 0.99 or v["chroma"] < (0.038 if k[0] == "light" else 0.07))
     check("every switch and second button on the Library and the Gallery is set apart from what it sits on by its own fill,"
           " 1.08:1 or more, light and dark, phone and desk: New | Hot, Skribls | Drafts, All | In the gallery | Link only,"
           " Undo, and on a desk Copy link, Share, Copy key and Save file (the owner's \"Yes to all\", Nov 16)",
           all(_want[d] <= _seen[d] for d in _want) and not _low,
-          f"least apart by role {json.dumps({r: min(v for roles in _just.values() for rr, vs in roles.items() if rr == r for v in vs) for r in sorted(_seen['desk'] | _seen['phone'])})}; "
+          f"least apart by role {json.dumps({r: min(v['apart'] for roles in _just.values() for rr, vs in roles.items() if rr == r for v in vs) for r in sorted(_seen['desk'] | _seen['phone'])})}; "
           f"unseen {[(d, sorted(_want[d] - _seen[d])) for d in _want]}; low {_low[:8]}")
+    check("...and each one wears one chosen colour, solid, lilac enough (chroma 0.038 and up, 0.07 in dark): No dinge,"
+          " the owner's \"All yes\", Nov 16", not _dingy and bool(_just), f"dingy {_dingy[:8]}")
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)

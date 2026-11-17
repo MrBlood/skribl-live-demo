@@ -399,10 +399,10 @@
 .reckey-copy {
   border: 1px solid transparent;
   box-shadow: 0 0 0 var(--edge) var(--line-strong);
-  background: var(--surface-control);
+  background: var(--btn2-bg);   /* the second button's (No dinge; it was the control's grey) */
   color: var(--text-strong);
 }
-@media (hover: hover) { .reckey-copy:hover { background: var(--surface-control-hover); } }
+@media (hover: hover) { .reckey-copy:hover { background: var(--btn2-hover); } }
 .reckey-done {
   border: 1px solid transparent;
   background: var(--accent);

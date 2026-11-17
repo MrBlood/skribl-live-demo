@@ -1812,3 +1812,11 @@ body:not([data-size="compact"]):not(.one-page) :is(#pbCopy, #pbDraw, #addinbetwe
 /* Inside the loop, never past the bar: at the strip's edge it was clipped. */
 .loophandle.from .lh-bubble { left: calc(100% + 6px); transform: translate(0, -50%); }
 .loophandle.to .lh-bubble { right: calc(100% + 6px); transform: translate(0, -50%); }
+
+/* NO DINGE (the owner's "All yes", Nov 16): Duplicate, Blank, Tween and Smear
+   and the move bar's offset readout on the second button's lilac, where they
+   were the sheet's grey; Flip's frame clear, where it was grey glass. Last in
+   the sheet, so it outranks the rules it amends at equal weight. */
+.addbtn, .mb-offset { background: var(--btn2-bg); }
+.strip-wrap { background: rgba(23, 20, 42, 0.94); }
+:root[data-theme="light"] .strip-wrap { background: rgba(255, 255, 255, 0.9); }
