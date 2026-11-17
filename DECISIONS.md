@@ -45563,3 +45563,52 @@ RUN: the full battery (main's run after the merge does it).
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell, this time measured as merged: Flip's Duplicate and
 Blank are lilac.
+
+
+## After v330 -- No dinge's leftovers, the site: notes, highlights and icon discs one solid lilac
+
+The owner's "All yes" (Nov 17) to the leftovers mock
+(https://claude.ai/artifact/RiJXckCdXenJeWmHAc2URg), its second choice.
+
+WHAT CHANGED (social.css): the note's tint, `--tint`, is the second button's
+lilac, solid (`var(--btn2-bg)`: #e7e0ff light, #332a58 dark). It was 12% of
+the violet, see-through (18% in dark), and took the colour of what it sat on:
+greyer on the page (#e7e5fb, chroma 0.029) than on a card (#efebff), murkier
+on the dark page (#231f42). Its thirteen readers wear it unchanged: the notes
+(.note, a person you blocked, the rules' draft, taken down, a report's quoted
+thing), the highlights (a comment or Liked by you came to, the @ list's
+chosen row, the rules page you're on) and the small discs (the passkey's,
+the Home Screen steps' numbers, Make's pen, your face's place). Now 0.042
+light and 0.080 dark, 1.20 to 1.27:1 from their grounds in light, 1.22 to
+1.44:1 in dark; the notes' words 14.1 and 11.5:1, the discs' marks 6.5 and
+6.9:1. Said plainly in the mock: it measured lilac enough already, never
+grey; this makes it one colour everywhere. Its two dark values go: the
+second button's token carries the theme.
+
+THE CHECKS, each shown red by a break of its own, green as built:
+
+- verify_socialreposts 13 (no dinge) reads a note and an icon's disc too
+  (Settings opened with a note: "Unblocked."; its passkey's disc), every role
+  seen. Red with the tint back (a note and a disc, alpha 0.12) and red with
+  no note to read (a note unseen).
+- The landings' pins move to the solid values: verify_socialcomments 33 (a
+  comment glows in the landing's tint), verify_sociallikes 9 (Liked by...)
+  and verify_socialactivity 7 (from Activity). Each red with the tint back.
+  Every one green as built; each run a part of its suite, a server of its
+  own.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3): 19 suites. 18 ok beside
+others: socialreposts 56/56, socialcomments 96/96, socialprofile 94/94,
+sociallikes 100/100, socialposts 99/99, socialsettings 45/45, socialfollow
+79/79, socialmentions 51/51, socialsearch 32/32, socialactivity 46/46,
+composer 39/39, socialapp 55/55, socialbookmarks 37/37, docs 144/144, social
+45/45, socialsafety 38/38, socialauth 73/73, a11ypages 162/162. And socialmute
+INTERMITTENT: 67/68 beside others, 68/68 alone. The red was a toast's fade-in,
+which in dark took 36% of its change in one frame against a cap of 35%, with
+two other suites and the editors' run on a four-core box: load, not a defect
+(this change is a colour; the fade's timing is not touched). NOT RUN: the full
+battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: "Saved." on your profile, and "Unblocked." in Settings,
+sit on the lilac of Home's Following | Everyone.

@@ -2112,7 +2112,9 @@ with sync_playwright() as p:
                 return Math.hypot(1.9779984951*l - 2.4285922050*m + 0.4505937099*q, 0.0259040371*l + 0.7827717662*m - 0.8086757660*q); };
               const ROLES = [["a second button", ".btn:not(.btn-primary):not(.btn-danger):not(.cmp-post), .icon-btn.boxed, .cm-say, .chip"],
                              ["a switch's track", ".fo-seg, .theme-switch"], ["a well", ".post-card > .qt-card"],
-                             ["a placeholder", ".face-blank:not(.nav .face-blank), .act-pic, .skribl-inline"]];
+                             ["a placeholder", ".face-blank:not(.nav .face-blank), .act-pic, .skribl-inline"],
+                             ["a note", ".note, .prof-blocked, .legal-draft, .post-down, .prof-down, .rep-what"],
+                             ["a disc", ".key-ic, .home-steps-list i, .face-lead-me, .make-ic.is-pen"]];
               const out = [];
               for (const [role, sel] of ROLES)
                 for (const e of [...document.querySelectorAll(sel)].filter(e => e.getClientRects().length && getComputedStyle(e).visibility === 'visible' && !e.closest('[hidden]')).slice(0, 4)) {
@@ -2123,13 +2125,16 @@ with sync_playwright() as p:
               return out; }"""
             # Just under the chosen colours (0.042, 0.080; 0.026, 0.051; 0.034, 0.074) and over every
             # wash they replaced (0.031 to 0.034 light, 0.030 to 0.065 dark; 0.015, 0.031; 0.006, 0.013).
-            FLOOR = {"a second button": (0.038, 0.07), "a switch's track": (0.038, 0.07), "a well": (0.02, 0.045), "a placeholder": (0.03, 0.06)}
+            # A note and an icon's disc wear the second button's lilac since the leftovers (Nov 17), the note's
+            # tint made solid: its floors are the button's, over the tint they replaced (0.026 to 0.029 light).
+            FLOOR = {"a second button": (0.038, 0.07), "a switch's track": (0.038, 0.07), "a well": (0.02, 0.045), "a placeholder": (0.03, 0.06),
+                     "a note": (0.038, 0.07), "a disc": (0.038, 0.07)}
             found, seen, dinge = [], 0, []
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
                     tag = f"{screen} {scheme}"
                     ctx, pg = browser_as(b, kai, screen=screen, scheme=scheme)
-                    for path_ in ("/social/", f"/social/p/{jt13}", f"/social/p/{qq13}", "/social/@rook", "/social/you",
+                    for path_ in ("/social/", f"/social/p/{jt13}", f"/social/p/{qq13}", "/social/@rook", "/social/you?note=unblocked",
                                   "/social/explore", "/social/explore?q=juno&who=people"):
                         go(pg, path_, wait=700)
                         found += pg.evaluate(JUST, f"{tag} {path_}")
@@ -2155,9 +2160,9 @@ with sync_playwright() as p:
             _dingy = sorted({f'{d["where"]}: {d["role"]} .{d["el"]} alpha {d["alpha"]} chroma {d["chroma"]}' for d in dinge
                              if d["alpha"] < 0.99 or d["chroma"] < FLOOR[d["role"]][0 if " light " in f' {d["where"]} ' else 1]})
             check("no dinge (the owner's \"All yes\", Nov 16): on the same pages, phone and desk, light and dark, every"
-                  " second button, switch's track, quote's well and placeholder wears one chosen colour, solid, and reads"
-                  " as lilac (chroma 0.038 and up for a button or a track, 0.02 for a well, 0.03 for a placeholder; 0.07,"
-                  f" 0.045 and 0.06 in dark), every role seen ({len(dinge)} read)",
+                  " second button, switch's track, quote's well, placeholder, note and icon's disc wears one chosen colour,"
+                  " solid, and reads as lilac (chroma 0.038 and up for a button, a track, a note or a disc, 0.02 for a well,"
+                  f" 0.03 for a placeholder; 0.07, 0.045 and 0.06 in dark), every role seen ({len(dinge)} read)",
                   set(FLOOR) <= _roles and not _dingy,
                   f"unseen {sorted(set(FLOOR) - _roles)}; dingy {_dingy[:6]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop

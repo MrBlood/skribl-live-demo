@@ -818,7 +818,7 @@ ROW_BG = {"light": "rgb(255, 255, 255)", "dark": "rgb(35, 30, 59)"}
 HEART_INK = {"light": "rgb(230, 74, 120)", "dark": "rgb(255, 111, 145)"}
 BLUSH = "rgb(255, 111, 145)"
 INK2 = {"light": "rgb(75, 85, 99)", "dark": "rgb(183, 191, 204)"}
-TINT = {"light": "rgba(124, 92, 255, 0.12)", "dark": "rgba(124, 92, 255, 0.18)"}
+TINT = {"light": "rgb(231, 224, 255)", "dark": "rgb(51, 42, 88)"}   # --tint, solid since No dinge's leftovers (Nov 17)
 
 # ---- the dots on the line and the hearts that rise (sections 14 and 15) -----------
 # The page's own drawing is here (its player has the drawing).

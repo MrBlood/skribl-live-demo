@@ -78,7 +78,11 @@
   --field: #ffffff;
   --field-line: rgba(124, 92, 255, 0.82);  /* 3:1 against the card, as a field's edge must be: 3.26:1 on white,
                                               3.06 on the page (at 0.75 it read 2.90 and 2.68: "The edges") */
-  --tint: rgba(124, 92, 255, 0.12); /* a note: words in the first ink on it */
+  /* A note, a highlight (a comment or Liked by you came to, the chosen row,
+     the page you're on), an icon's disc: the second button's lilac, solid
+     (No dinge's leftovers, the owner's "All yes", Nov 17). See-through, it
+     took the colour of what it sat on: greyer on the page than on a card. */
+  --tint: var(--btn2-bg);
   --danger-ink: #7a0a2d;            /* the drafts sheet's Delete (--row-danger-ink) */
   --danger-fill: #b3283f;           /* --danger-fill: white on it, in both themes */
   /* THE DOT FOR SOMETHING NEW (notifications: the bell's, and each new row's
@@ -161,7 +165,6 @@
   --row-line: rgba(255, 255, 255, 0.16);
   --field: #17142a;
   --field-line: rgba(167, 146, 255, 0.7);
-  --tint: rgba(124, 92, 255, 0.18);
   --danger-ink: #ffb3c6;
   --new-dot: var(--blooby-blush); /* his blush itself: 7.34:1 on the dark page */
   --heart: var(--blooby-blush);   /* the same: 6.01:1 on a dark card */
@@ -207,7 +210,6 @@
     --row-line: rgba(255, 255, 255, 0.16);
     --field: #17142a;
     --field-line: rgba(167, 146, 255, 0.7);
-    --tint: rgba(124, 92, 255, 0.18);
     --danger-ink: #ffb3c6;
     --new-dot: var(--blooby-blush); /* his blush itself: 7.34:1 on the dark page */
     --heart: var(--blooby-blush);   /* the same: 6.01:1 on a dark card */

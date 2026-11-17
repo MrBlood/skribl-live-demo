@@ -628,7 +628,7 @@ def faded(ops):
 LIGHT_DOT, DARK_DOT = "rgb(230, 74, 120)", "rgb(255, 111, 145)"
 # The page's own colour, the editors' ground since the owner's "Yes, A", Nov 14 (verify_socialsettings holds it to styles.css).
 LIGHT_PAGE, DARK_PAGE = "rgb(246, 248, 250)", "rgb(15, 18, 24)"
-TINT = {"light": "rgba(124, 92, 255, 0.12)", "dark": "rgba(124, 92, 255, 0.18)"}
+TINT = {"light": "rgb(231, 224, 255)", "dark": "rgb(51, 42, 88)"}   # --tint, solid since No dinge's leftovers (Nov 17)
 
 # On a copy of the database, the site's code with SQLite's cascade OFF
 # (SKRIBL_SQLITE_FOREIGN_KEYS=0, the documented opt-out): what changes then

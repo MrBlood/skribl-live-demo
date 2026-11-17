@@ -891,7 +891,7 @@ POSTED = """async ([ms]) => {
            first: (q('[data-cm-list] > .cm') || {}).id || null, under_head: Math.round((head.bottom + 10) * 100) / 100 }; }"""
 
 # The landing's tint (Activity's): what a posted comment glows in.
-TINT = {"light": "rgba(124, 92, 255, 0.12)", "dark": "rgba(124, 92, 255, 0.18)"}
+TINT = {"light": "rgb(231, 224, 255)", "dark": "rgb(51, 42, 88)"}   # --tint, solid since No dinge's leftovers (Nov 17)
 
 # Press a comment's Answer, and read on every frame where the comment is on the
 # screen (against where it was), the box's opacity and a phone's sheet: did
