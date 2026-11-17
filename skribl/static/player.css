@@ -1841,7 +1841,11 @@ a.player-btn { text-decoration: none; }
   border: 1px solid transparent;
   /* The second button's lilac (No dinge, the last round): the family of the
      "1×" pill beside them, where they were the control grey, 1.07:1 off the
-     page. Full screen tones its own over the drawing (.player-bar.is-smart). */
+     page. Full screen tones its own over the drawing (.player-bar.is-smart).
+     Its line is the link page's one screen pixel, the control edge's mix laid
+     over the lilac rather than the grey, so Increase Contrast strengthens it
+     (--hl) and it reads as the lilac's own deeper shade. */
+  box-shadow: 0 0 0 var(--edge) color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--btn2-bg));
   background: var(--btn2-bg);
   color: var(--text-primary);
   cursor: pointer;
@@ -1876,7 +1880,6 @@ a.player-btn { text-decoration: none; }
    wore the one pill's tint, which sat darker than the lilac in dark. */
 .player-btn.active {
   background: var(--press-fill);
-  border-color: transparent;
   box-shadow: inset 0 0 0 1px var(--press-ring);
   color: var(--seg-on-ink);
 }

@@ -45685,3 +45685,101 @@ the full battery (main's run after the merge does it).
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: the replay's speeds open as white glass with a lilac
 edge (violet in dark), and a menu row turns a faint lilac under the pointer.
+
+## After v330 -- No dinge, the last round: the player's buttons and track lilac, Flip's page bar clear and its badges glass, the song's nudges and the icon discs lilac, the key row a card
+
+The owner's "All yes" (Nov 17) to the last round's mock
+(https://claude.ai/artifact/Wpir7kDwnc5XN1pBXjrzLb), all seven, my pick in
+each.
+
+WHAT CHANGED (styles.css and flip.css; the player's, the band's and the
+Gallery section's sheets re-emitted):
+
+- THE PLAYER'S ROUND BUTTONS (the link page's Restart, Loop, Mute, Full screen
+  and More, and the way into full screen at the end of the Pad's line and of
+  Flip's speed row) are the second button's lilac, the family of the "1×" pill
+  beside them: they were the control grey, 1.07:1 off the page (a grey disc on
+  the Pad's line). Their one-screen-pixel line stays (the edges, part four),
+  the control edge's mix laid over the lilac instead of the grey, so Increase
+  Contrast still strengthens it; the mock showed none, and the first build
+  left it off, which verify_linkpage caught. A lit toggle among them (the link
+  page's Loop, on by default) wears the pressed full screen's look, its violet
+  fill and ring (--press-fill, --press-ring, both themes): the one pill's tint
+  came out darker than the lilac beside it in dark. B, the speeds' white
+  glass, measured 1.02:1 on Flip's white strip.
+- THE SCRUB'S TRACK on the page (the link page's, the Pad's line) is the
+  lilac, where it was a grey wash; the drawing's bars on it read as before
+  (1.51:1 light, 1.47:1 dark). In full screen it keeps the wash it had, 6% and
+  12% in a phone's band, over the drawing among full screen's own glass, which
+  takes its tone from the drawing: a rule on the scrubber itself. The first
+  cut put it on the frame's every track and took Flip's line too (14% to 6%,
+  and the Pad's phone band 12% to 6%); a probe of every full screen's track
+  before and after found both, and verify_watchfull now reads each.
+- FLIP'S PAGE BAR takes the strip's own paper, where it was a second glass
+  over it (grey-white in light, near-black in dark); the hairline under it
+  keeps the rows apart. THE BADGES ON FLIP'S PAGES (number, hold, loop,
+  under, the no-play tag, the ✕ and the ⋯) wear the toasts' clear glass and
+  its lilac edge, where a deep glass took the page's colour: on a plain page
+  the ✕ was 1.04:1 in either theme. A ✕ armed to delete keeps its red.
+- THE SONG'S - AND + are the lilac (they were 7% of the accent, 1.09:1), and
+  under a pointer its hover, where they turned the line's grey.
+- THE ICON DISCS (How it works' sections, Export's choices) are the site's
+  disc since #954: the lilac, the mark in the small violet words' ink (6.5:1
+  light, 6.9:1 dark, from 3.1 to 3.7:1); an open section's a step up, as the
+  Library's playing row.
+- THE POST SHEET'S KEY ROW is the sheet's white card with its lilac edge,
+  where it was 5% of the ink on the lilac paper; Copy delete key on it is
+  the plain lilac again (#953's step up is gone with the wash it answered).
+
+FLIP: shared, wherever both editors have the thing: the way into full screen,
+the song's - and +, the discs and the Post sheet live in the sheet both load.
+The page bar and the badges are Flip's alone, because only Flip has pages.
+Flip's own scrubber is the 3px line on its strip (the owner's F1), a 14% wash
+not in the mock, left as it is and on the list.
+
+THE BUDGET: the player's sheet 45,605 B, 270 over the 45,335 the editors'
+leftovers left: the pressed look's tokens in both themes, its ring on Loop,
+the round buttons' line mixed over the lilac, and full screen's scrubber
+keeping its wash, whose rule joins the live list for the player and the band.
+Spent first: the border the lit button repeated from its base. The line moves
+259 B, named, in verify_player_isolation and verify_jsstrip.
+
+THE CHECKS, one each in the suite that opens the thing, reading its paint
+against its token resolved where it sits, light and dark, each shown red with
+that change put back and green as built: the link page's round buttons and its
+track (verify_replayspeed) red with the control grey back and, alone, with the
+grey wash back; Loop on red with the one pill's tint back (no ring); the way
+into full screen (verify_watchfull) red on the Pad and Flip, phone and desk;
+the Pad's track on the page red with its wash back, phone and desk; each full
+screen's track: without its rule the Pad's took the lilac (red, phone and
+desk) and the link page's (verify_fullsmart, red in all four), and with the
+first cut's broad rule back Flip's line went red (phone and desk) and the
+Pad's phone band; the song's - and + (verify_musicdoors) red on the Pad and
+Flip; the discs (verify_help) red with the tint back and, alone, with the open
+step's old tint, and Export's (verify_exportui) red on the Pad and Flip, phone
+and desk; the key row (verify_ux) red on the Pad and Flip at 390 and 1100; the
+page bar and the badges (verify_pages) red each alone, light and dark. No
+other row went red in any of the fifteen runs.
+
+THE AFFECTED SUITES, side by side: 43 suites (run_parallel -j 3, 48.3 min): 42
+ok, ux 491/491, parity 436/436, watchfull 86/86, fullsmart 30/30, replayspeed
+190/190, help 95/95, exportui 70/70, pages 103/103, player_isolation 85/85,
+jsstrip 35/35, cssplit 18/18, seam 518/518, musicdoors 118/118, surfaces
+13/13, docs 144/144, theme 124/124, a11ypages 162/162, a11y 444/444, onefull
+57/57, contrast 677/677, gallery 234/234, library 248/248, hostseams 139/139,
+standin 22/22, drawfull 48/48, fullfade 70/70, compactops 28/28, galib
+182/182, move 82/82, sizeclass 89/89, padrepeat 25/25, music 37/37, musicundo
+106/106, musicthree 49/49, text 186/186, exopts 26/26, musictimeline 184/184,
+tips 72/72, learncard 150/150, firstlook 43/43, recolorplay 23/23, helpclaims
+47/47. One red, mine: verify_linkpage 59/61, beside others and alone: the
+round buttons had lost their one-pixel line, and with it what Increase
+Contrast strengthens. The line put back over the lilac, the suites that read
+the player's sheet again, 14 of 14 ok: linkpage 61/61, player_isolation 85/85,
+jsstrip 35/35, cssplit 18/18, seam 518/518, replayspeed 190/190, theme
+124/124, surfaces 13/13, onefull 57/57, fullsmart 30/30, gallery 234/234,
+library 248/248, a11y 444/444, docs 144/144. NOT RUN: the full battery (main's
+run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: a drawing's link page shows its round buttons in lilac
+beside the violet Play, and Loop, on, with a violet ring.

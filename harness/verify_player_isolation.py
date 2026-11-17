@@ -1390,15 +1390,17 @@ with sync_playwright() as sp:
     # RAISED (the owner's "All yes" to No dinge's last round, Nov 17: the
     #   player's round buttons the second button's lilac, a lit toggle among
     #   them the pressed look, the scrub's track the lilac on the page), for
-    #   one named cost: +188 B on the line, 199 B over the 45,335 the
+    #   one named cost: +259 B on the line, 270 B over the 45,335 the
     #   editors' leftovers left -- the pressed look's fill and ring, both
     #   themes (--press-fill, --press-ring), copied with the token blocks
-    #   whole; its ring on Loop; and full screen's scrubber keeping its wash,
-    #   where it lies over the drawing (a rule of its own, on the scrubber:
-    #   on its frame's track it also took Flip's line). Spent first: the
-    #   round buttons' control edge, which the lilac needs none of.
-    #   verify_jsstrip's line moves with it. 45,534 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_540, 119_844, 40_000
+    #   whole; its ring on Loop; the round buttons' one-pixel line mixed over
+    #   the lilac, not the grey, so Increase Contrast still strengthens it
+    #   (verify_linkpage); and full screen's scrubber keeping its wash, where
+    #   it lies over the drawing (a rule of its own, on the scrubber: on its
+    #   frame's track it also took Flip's line). Spent first: the border the
+    #   lit button repeated from its base. verify_jsstrip's line moves with
+    #   it. 45,605 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_611, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
