@@ -622,7 +622,7 @@
        and Share's, are the first ink, as Undo's beside them and every second
        button's on the site: the second ink read 6.76:1 light and 6.36:1 dark
        on the tint over the playing row's lilac, under the page's 7:1. */
-    .posted-copy, .posted-key, .draft-file { border-color: var(--card-line); }
+    .posted-copy, .posted-key, .posted-share, .draft-file { border-color: var(--card-line); }
     .posted-copy, .posted-key, .posted-share, .draft-file { color: var(--text-primary); }
     .posted-copy, .posted-key, .posted-gallery, .posted-delete, .draft-act { border-radius: 12px; }
     .now .lbl, .stat span, .kind { text-transform: none; letter-spacing: normal; font-size: 13px; }
@@ -723,8 +723,8 @@
     .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge); }
     .player, .posted-row, .draft-row { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
     .search input { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--field-line); }
-    .tbtn:not(.on), .posted-copy, .posted-key, .more, .draft-file {
-      border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge); }
+    .tbtn:not(.on), .posted-copy, .posted-key, .posted-share, .more, .draft-file {
+      border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge); }   /* Share with its neighbours (Just a Border; it kept a grey 1px line) */
     :is(.posted-copy, .posted-key).done { border-color: rgba(124, 92, 255, 0.4); box-shadow: none; }
     @media (hover: hover) { .more:hover { box-shadow: none; } }
     /* Delete: its danger line, as it looked over its own tint on the card. */
