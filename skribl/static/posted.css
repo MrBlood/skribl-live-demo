@@ -44,7 +44,7 @@
 .posted-undo[hidden] { display: none; }
 .posted-undo-msg { flex: 1 1 auto; min-width: 0; }
 .posted-undo-btn { flex: 0 0 auto; font: inherit; font-weight: 600;
-  background: transparent; border: 1px solid var(--line-strong);
+  background: var(--btn2-bg); border: 1px solid var(--line-strong);
   color: var(--text-primary); border-radius: 8px; padding: 0 12px;
   min-height: 34px; cursor: pointer;
   position: relative; z-index: 1; --tap-grow: 5px; }
@@ -253,7 +253,7 @@
    the button turns solid danger for the seconds it is live. */
 .posted-delete.armed, .draft-del.armed { background: var(--danger); color: #fff; }
 
-.posted-copy, .draft-file { flex: 0 0 auto; background: transparent; font: inherit; font-size: 12px;
+.posted-copy, .draft-file { flex: 0 0 auto; background: var(--btn2-bg); font: inherit; font-size: 12px;
   border: 1px solid var(--hairline-strong); color: var(--text-secondary);
   padding: 5px 9px; border-radius: 8px; cursor: pointer; }
 @media (hover: hover) { :is(.posted-copy, .draft-file):hover { color: var(--text-primary); } }
@@ -262,7 +262,7 @@
    and deliberately NOT danger-toned like .posted-delete beside it: copying a
    recovery key destroys nothing. It sits between the two so the destructive
    button is not the only thing a worried person sees. */
-.posted-key { flex: 0 0 auto; background: transparent; font: inherit; font-size: 12px;
+.posted-key { flex: 0 0 auto; background: var(--btn2-bg); font: inherit; font-size: 12px;
   border: 1px solid var(--hairline-strong); color: var(--text-secondary);
   padding: 5px 9px; border-radius: 8px; cursor: pointer; }
 @media (hover: hover) { .posted-key:hover { color: var(--text-primary); } }

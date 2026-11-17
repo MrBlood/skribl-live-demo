@@ -83,6 +83,7 @@ DRAWERS = ("Tune", "Tune, with Beat", "The shape picker", "The draw drawer", "Th
            "The stamp shelf", "The stamp shelf, with stamps")
 SHELF = ("The stamp shelf", "The stamp shelf, with stamps")       # the Pad has no stamps,
 FLIP_ONLY = SHELF + ("Tune, with Beat",)                          # nor pages to put on a song's beat
+DESK_ONLY = ("A loop",)   # Flip's page bar is a desk's: a touch phone's compact layout has none
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
          "Post, posted", "Post, the reason", "Ask", "Ask, its answers", "Ask, an answer", "The little book",
          "Your drafts, three saved")
@@ -184,6 +185,44 @@ WORDS = r"""(root) => {
   return out;
 }"""
 
+# JUST A BORDER, THE EDITORS (the owner's "Yes to all", Nov 16, to the editors'
+# mock): each role the mock named, its own fill against the ground that shows
+# round it (past any wrapper its own size), the colours laid over each other as
+# they paint, a one-colour gradient layer included (Keep drawing lays the tint
+# over its own near-solid ground); and what could draw a line round a tip.
+JUST_ROLES = r"""() => {
+  const rgba = s => { if (!s) return null; const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
+    return m.length >= 3 ? [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1] : null; };
+  const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+                     return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  // A one-colour gradient layer, as Keep drawing lays its tint: the computed
+  // value lists an image for every layer, so its colour layer's is ", none".
+  const layerOf = cs => { const m = /^linear-gradient\(((?:rgba?|color)\([^)]*\)), \1\)(?:, none)*$/.exec(cs.backgroundImage || ''); return m ? rgba(m[1]) : null; };
+  const fill = e => { const layers = [];
+    for (let n = e; n; n = n.parentElement) { const cs = getComputedStyle(n), t = layerOf(cs), b = rgba(cs.backgroundColor);
+      if (t && t[3] > 0) layers.push(t);
+      if (b && b[3] > 0) { layers.push(b); if (b[3] >= 1) break; } }
+    let g = [255, 255, 255];
+    for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; g = [0, 1, 2].map(k => l[k] * l[3] + g[k] * (1 - l[3])); }
+    return g; };
+  const ROLES = [["a tip", ".help-tip"], ["Make another", ".post-quiet"], ["Keep drawing", ".addtake-pill"], ["Tap the beat", ".mt-tap"],
+    ["Hear the restart", ".loop-btn.subtle"], ["a panel button", ".panel-btn"], ["Retry", ".learn-retry"], ["Try again", ".sdrafts-retry"],
+    ["Keep for later", ".othertab-later"], ["Flip's loop buttons", "#pagebar .pb"], ["Flip's speeds", ".flip-speeds .seg"],
+    ["This page / After", ".mb-scope"], ["the fine-tune step", ".mt-step-seg"]];
+  const out = {};
+  for (const [role, sel] of ROLES) {
+    const els = [...document.querySelectorAll(sel)].filter(e => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+      return r.width > 0 && r.height > 0 && cs.visibility === 'visible' && !e.closest('[hidden]'); }).slice(0, 3);
+    if (!els.length) continue;
+    out[role] = els.map(e => { let g = e.parentElement; const r = e.getBoundingClientRect();
+      while (g && g !== document.body) { const q = g.getBoundingClientRect(); if (q.width > r.width + 4 || q.height > r.height + 4) break; g = g.parentElement; }
+      const cs = getComputedStyle(e);
+      return { apart: +ratio(fill(e), g ? fill(g) : [255, 255, 255]).toFixed(3), shadow: cs.boxShadow, border: cs.borderTopColor }; });
+  }
+  return out; }"""
+
+
 # The surface's own colours and its cards', for the consistency table. The
 # rule between two rows is a card here too: the second row's top edge (the
 # menu's list and Tune's rows). And every word set in capitals, aria-hidden or
@@ -201,7 +240,7 @@ CENSUS = r"""(root) => {
   const s = (el) => { const cs = getComputedStyle(el); return { bg: cs.backgroundColor, line: thinLine(el), edge: lineOf(cs, 'Top'),
     side: lineOf(cs, 'Left'), r: cs.borderTopLeftRadius, foot: cs.borderBottomLeftRadius, blur: cs.backdropFilter }; };
   const cards = {};
-  for (const sel of ['.menu-tile', '.menu-list', '.seg', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
+  for (const sel of ['.menu-tile', '.menu-list', '.seg:not(.mt-step-seg)', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
                      '.help-tip', '.help-search', '.export-list', '.export-opt', '.sdrafts-card', '.tune-row', '.post-card', '.ask-list', '.accordion-header', '.post-preview',
                      '.bk-pic', '.ask-go', '.menu-start', '.export-nameinput', '.post-input', '.bk-back',
                      '.smooth-seg', '.media-tabs', '.photo-fit-group', '.reposition-btn', '.clear-drawer-btn', '.edge-controls',
@@ -741,6 +780,39 @@ def surfaces(name, ids, q, canvas, btn):
         q.evaluate("() => scrollTo(0, document.documentElement.scrollHeight)")
         q.wait_for_timeout(900)
 
+    # JUST A BORDER (the owner's "Yes to all" to the editors' mock, Nov 16):
+    # How it works with its first section open, its tips the wells; and, on
+    # Flip, its pages looped (the loop's buttons), playing (its speeds) and
+    # moving the artwork (This page / After).
+    def tips():
+        via(ids["help"], 1500)()
+        q.click("#askBrowse"); q.wait_for_timeout(700)
+        q.locator("#helpDrawer .accordion-header").first.click(); q.wait_for_timeout(800)
+
+    def stroke():
+        bx = q.locator(canvas).bounding_box()
+        cx, cy = bx["x"] + bx["width"] / 2, bx["y"] + bx["height"] / 2
+        q.mouse.move(cx - 60, cy); q.mouse.down()
+        for i in range(24):
+            q.mouse.move(cx - 60 + i * 5, cy + math.sin(i / 4) * 30)
+            q.wait_for_timeout(10)
+        q.mouse.up(); q.wait_for_timeout(300)
+
+    def pages():
+        for _ in range(2):
+            stroke(); q.click("#addcopy"); q.wait_for_timeout(400)
+
+    def a_loop():
+        pages(); q.click("#pbLoop"); q.wait_for_timeout(400)
+        q.evaluate("() => typeof loopCycle === 'function' && !document.querySelector('.loopchip') && loopCycle()")
+        q.wait_for_timeout(500)
+
+    def playing():
+        pages(); q.click("#play"); q.wait_for_timeout(900)
+
+    def moving():
+        pages(); q.evaluate("() => setTool('artmove')"); q.wait_for_timeout(600)
+
     # The card on the button and the name tags (lib/learncard.js), which the
     # page only shows to automation that asks (see the context's init script).
     def card():
@@ -806,12 +878,16 @@ def surfaces(name, ids, q, canvas, btn):
             + (("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
                ("Name every button", names, ".lc-tags"),
                ("Your drafts, a row's menu", drafts_menu, "#savedDraftsSheet"),
-               ("Your drafts, three saved", drafts_saved, "#savedDraftsSheet")))
+               ("Your drafts, three saved", drafts_saved, "#savedDraftsSheet"))
+            + (("How it works, its tips", tips, "#helpDrawer .help-drawer-inner"),)
+            + ((("A loop", a_loop, "#pagebar"), ("Playing", playing, "#flipSpeeds"),
+                ("Moving the artwork", moving, "#movebar")) if name == "Flip" else ()))
 
 
 census = {}
 onecard = {}   # (editor, scheme, device, surface): its lists of choices (ONE CARD)
 typeset = {}   # (editor, scheme, device): every drawer's words, cuts and knobs
+justb = {}     # (editor, scheme, device, surface): JUST A BORDER's roles, each fill against its ground
 with sync_playwright() as p:
     b = p.chromium.launch()
     for name, route, btn, canvas, ids in EDITORS:
@@ -824,6 +900,8 @@ with sync_playwright() as p:
                 q = c.new_page()
                 for label, opener, root in surfaces(name, ids, q, canvas, btn):
                     if ONLY and label not in ONLY:
+                        continue
+                    if dev == "phone" and label in DESK_ONLY:
                         continue
                     where = f"{name}, {scheme}, {dev}: {label}"
                     try:
@@ -851,6 +929,10 @@ with sync_playwright() as p:
                         continue
                     check(f"{where}: every word clears AA on what is painted behind it ({len(words)} read)",
                           bool(words) and not low, "; ".join(low[:6]) + (f" (+{len(low) - 6} more)" if len(low) > 6 else ""))
+                    try:
+                        justb[(name, scheme, dev, label)] = q.evaluate(JUST_ROLES)
+                    except Exception as e:  # noqa: BLE001 -- an unread surface reads as a low row, never a stop
+                        justb[(name, scheme, dev, label)] = {"(unread)": [{"apart": 0, "shadow": repr(e)[:120], "border": ""}]}
                     if label in ("New", "Your drafts", "Post"):
                         # BIG WORDS ON THE PURPLE (owner, after v324, B): the big
                         # purple buttons carry large words, 19px bold.
@@ -1150,12 +1232,16 @@ for scheme in ("light", "dark"):
     # restart joined this list with the drawers' census (after #630): they
     # were the page's grey, or a grey fill inside the lilac edge.
     # And the stamp shelf's cells, their × and its way out (with the shelf).
-    CARDLIKE = (".seg", ".export-list", ".smooth-seg", ".media-tabs", ".photo-fit-group", ".reposition-btn",
+    # The fine-tune step on Exact times' card is not on the paper: since Just
+    # a Border (Nov 16) it wears the second button's tint, read below with the
+    # roles, and so does Hear the restart on its door's card: its edge stays
+    # the tiles'.
+    CARDLIKE = (".seg:not(.mt-step-seg)", ".export-list", ".smooth-seg", ".media-tabs", ".photo-fit-group", ".reposition-btn",
                 ".clear-drawer-btn", ".edge-controls", ".dp-tile", ".dp-panel",
                 ".loop-btn.subtle", ".onion-tint:not(.active)", ".post-input", ".post-check-box",
                 '.stamp-btn:not([aria-pressed="true"])', ".stamp-del", ".stamp-empty-go")
     cardlike = {(n, l, sel): census[(n, sc, l)]["cards"][sel]["bg"] for (n, sc, l) in census
-                for sel in CARDLIKE
+                for sel in CARDLIKE if sel != ".loop-btn.subtle"
                 if sc == scheme and l in ("the menu", "New", "Settings", "Export", "Post") + DRAWERS and census[(n, sc, l)]
                 and sel in census[(n, sc, l)]["cards"]}
     check(f"{scheme}: every choice on the menu's sheets and in the dock's drawers, Export's options and Post's fields, "
@@ -1227,7 +1313,7 @@ for scheme in ("light", "dark"):
     KIND = {".menu-tile": "16px", ".menu-list": "16px", ".sdrafts-this": "16px", ".sdrafts-files": "16px", ".learn-card": "16px",
             ".ask-tour": "16px", ".ask-best-card": "16px", ".ask-list": "16px", ".help-tip": "16px", ".accordion-header": "16px",
             ".export-list": "16px", ".post-preview": "16px", ".bk-pic": "16px", ".sdrafts-card": "16px",
-            ".seg": "12px", ".help-search": "12px", ".ask-go": "12px", ".menu-start": "12px", ".export-nameinput": "12px",
+            ".seg:not(.mt-step-seg)": "12px", ".help-search": "12px", ".ask-go": "12px", ".menu-start": "12px", ".export-nameinput": "12px",
             ".post-input": "12px", ".bk-back": "12px", ".smooth-seg": "12px", ".media-tabs": "12px", ".photo-fit-group": "12px",
             ".reposition-btn": "12px", ".clear-drawer-btn": "12px", ".edge-controls": "12px", ".dp-tile": "16px",
             ".mt-rv": "12px", ".dz-lead": "12px",
@@ -1287,6 +1373,25 @@ for scheme in ("light", "dark"):
               bool(tile) and bool(rim) and len(fws) == len(EDITORS)
               and all(f["bg"] == tile and f["side"] == rim and f["foot"] == "16px" and f["r"] == "0px" for f in fws.values()),
               f"tile {tile}, line {rim}; " + "; ".join(f"{n}: {f['bg']}, side {f['side']}, foot {f['foot']}, top {f['r']}" for n, f in sorted(fws.items())))
+
+# JUST A BORDER, THE EDITORS (the owner's "Yes to all" to the editors' mock,
+# Nov 16): every role the mock named, wherever this suite opened it, set apart
+# from what it sits on by its own fill, 1.08:1 or more (the tint 1.12 to 1.19;
+# a white card on the drawers' lilac paper 1.10 and up); a tip a well with no
+# line. Every role this suite reaches must be seen, so it cannot pass empty.
+JUST_SEEN = ("a tip", "Make another", "Keep drawing", "Tap the beat", "Hear the restart", "a panel button",
+             "Flip's loop buttons", "Flip's speeds", "This page / After", "the fine-tune step")
+_jrows = [(k, role, r) for k, roles in justb.items() for role, rs in (roles or {}).items() for r in rs]
+_jseen = {role for _, role, _ in _jrows}
+_jlow = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {role} {r['apart']}:1" for k, role, r in _jrows if r["apart"] < 1.08})
+_jline = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {r['shadow'][:40]} / {r['border']}" for k, role, r in _jrows
+                 if role == "a tip" and not (r["shadow"] == "none" and r["border"] in ("rgba(0, 0, 0, 0)", "transparent"))})
+check(f"just a border, the editors (the owner's \"Yes to all\", Nov 16): every tip, second button and switch the mock "
+      f"named, on Pad and Flip, light and dark, phone and desk, set apart from what it sits on by its own fill "
+      f"(1.08:1 or more), a tip a well with no line ({len(_jrows)} read, every role seen)",
+      bool(_jrows) and (bool(ONLY) or set(JUST_SEEN) <= _jseen) and not _jlow and not _jline,
+      f"least apart by role {json.dumps({r: min(x['apart'] for _, rr, x in _jrows if rr == r) for r in sorted(_jseen)})}; "
+      f"unseen {sorted(set(JUST_SEEN) - _jseen)}; low {_jlow[:6]}; lined {_jline[:3]}")
 
 print("\nEach surface's own colours, for reading side by side")
 for (name, scheme, label), cz in sorted(census.items(), key=lambda kv: (kv[0][1], kv[0][2], kv[0][0])):

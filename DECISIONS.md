@@ -45108,3 +45108,141 @@ NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: Settings in light, the theme switch and its buttons a
 soft lilac; Home's Following and Everyone the same; a quote of a quote on
 Home with its drawing.
+
+## After v330 -- Just a Border, the editors: How it works' tips wells, the second buttons tinted, one tinted switch, on Pad, Flip, the Library and the Gallery
+
+The owner, Nov 16, "Yes to all" to the editors' mock
+(https://claude.ai/artifact/XfCytjpxyh9giKaMG2Lsft): the fourth yes to Just a
+Border, the site's rule in Skribl's own pages. The census (the one the site's
+entry describes, at every state of the Pad and Flip that check_centring.py
+reaches, and on the Library and the Gallery) found the editors setting a box
+apart by its line alone in three ways: How it works' tips (the section card's
+white with only its ring between, 1.00:1), the second buttons in the drawers
+and sheets (1.00:1 to 1.05), and the switches (1.00:1 to 1.075).
+
+WHAT CHANGED:
+
+- A TIP IS A WELL: How it works' tips, every section, the Pad's and Flip's,
+  the editors' ground touched with lilac and no line (6% of Skribl's purple
+  over --surface-raised: the site's --quote-well, value for value), 1.14:1
+  light and 1.12:1 dark on their section's card. Its own rule after the
+  cards' rule, not a token: every token in styles.css's :root is copied into
+  the player's sheet, which has a byte budget.
+- THE SECOND BUTTON wears --btn2-bg, Skribl's lilac, see-through, the site's
+  value for value (rgba(167, 146, 255, 0.10) dark, rgba(124, 92, 255, 0.14)
+  light), and --btn2-hover under a pointer: Make another, Keep drawing (its
+  tint laid over its own near-solid ground, as one layer of a gradient), Tap
+  the beat, Hear the restart, Flip's page bar and selection bar (.pb: Left,
+  Right, Copy, Delete, Draw, Loop, Under, Reset, Cut, Paste, Duplicate, Flip,
+  Color, Stamp), the drawers' panel buttons (Reset, Close, Cancel), How it
+  works' Retry, Your drafts' Try again, Keep for later; on the Library Copy
+  link, Share, Copy key (posted.css: "the same chrome as Copy link"), Save
+  file and Undo. The Library's own rule had laid the card's white over Copy
+  link, Copy key and Save file; it lets go of them.
+- ONE TINTED SWITCH: Flip's speeds, This page / After, the fine-tune step on
+  Exact times' card (0.01s, 0.1s, a bar), the Library's Skribls / Drafts and
+  All / In the gallery / Link only, and the Gallery's New / Hot on the same
+  tint (the Library's and the Gallery's .seg-track, and segslider.css's
+  --seg-track, which restates the editors' values). A switch on the menu's
+  paper stays a white card (ONE LOOK ON THE PAPER); Length's and the bar's
+  switches, on their door cards, keep their own grey, which set them apart
+  already (the census never found them).
+- THE WORDS ON THE TINT KEEP TWO INKS' 7:1 (and the Library's own 7:1),
+  through the tokens: the tint does not move, the ink does, a step, as
+  --seg-on-ink did when the menu went lilac. The calibration found five
+  words under it: Tap the beat's violet 6.91:1 (it wears --seg-on-ink, the
+  tint's violet, now 10.5:1); on the tinted switches the chosen word 6.71:1
+  light (Flip's speeds) and 6.92:1 dark (the fine-tune step), a word not
+  chosen 6.93:1 light (Flip's speeds, on the frame's grey). A first fix gave
+  the tinted switches inks of their own; verify_onepill (one selected ink)
+  went red on all twelve, rightly, so the tokens moved instead, everywhere
+  they are written (the editors, the page menu's glass, the Library's and the
+  Gallery's own copies): --seg-on-ink #36209a to #301c8c light, #d4c9ff to
+  #dad1ff dark; the one second ink, light, #3f4756 to #3b4251 (dark's
+  #b7bfcc reads 7:1 on the tint and stays). The Library's Copy link, Copy key,
+  Share and Save file read 6.76:1 light and 6.36:1 dark on the tint over the
+  playing row's lilac: their words are the first ink, as Undo's beside them
+  and every second button's on the site. Share wears its neighbours' lilac
+  edge; it had kept a grey 1px line (the edges, part four, missed it).
+- THE OWNER CHOSE THE VISIBLE ONES (Nov 16, "Yes all" to the words-on-the-tint
+  mock, https://claude.ai/artifact/W7c9hsP37e6GCMP8fK5uYD): A, the Library's
+  row buttons in the first ink (B was a stronger grey); A, a page bar button
+  switched on in the chosen pill's violet (B, the small violet, read 6.54:1
+  light, under 7:1); A, the move bar's page name in the small violet (B was
+  the second ink's grey).
+- TWO WORDS UNDER AA, FOUND BY THE NEW SURFACES and there before this change:
+  a page bar button switched on (Loop, Draw, Under) wore the brand purple on
+  its own tint, 3.44:1 light and 3.81:1 dark; it wears the chosen pill's ink,
+  9.9:1 and up. The move bar's "Page 6" wore the brand purple on the bar,
+  4.08:1 light and 4.35:1 dark; it wears --accent-ink, small violet words,
+  7.75:1 and 9.95:1.
+
+LEFT AS THEY ARE, as the mock said: sheets, drawers and menus (they float with
+a shadow), the dashed drop zones, the name field. FOUND AND NOT IN THE MOCK,
+asked rather than built: the recovery key's own buttons (its Copy key, Add to
+my list, Close, Copy the keys, Cancel, 1.05:1), the Library's Load more (1.065), the
+Gallery's Report Cancel, Retry and Load more (1.03 to 1.04), the replay's
+speed chips (1.074), the desk zoom readout, How it works' section headers, the
+eyedropper's pill, the error boxes and the media card's Re-add card.
+
+NO DINGE (the owner, the same evening, now in WORKING-AGREEMENTS.md): "I want
+everything to pop, crisp and luxurious.. no dingy. Colorful but not
+cartoonish. Premium but kind and fun. Artistic, clean, and kind (like a
+sophisticated hippy)." Then: "look back at this session and the one before".
+The likeliest dinge is this entry's own habit and the site's: a see-through
+tint, a thin wash of lilac over whatever is beneath, clean on white and grey-
+lilac or murky on a grey or dark ground (D2's well the faintest, chroma
+0.016 in OKLCH against the clean lilac's 0.031; the owner: "d2 is what got me
+thinking"). A pass over both sessions, shot and measured, is the next mock.
+
+PAD AND FLIP: shared, one stylesheet; nothing is the Pad's alone or Flip's
+alone (Flip's .pb and speeds are Flip's because only Flip has them).
+
+CONTRAST: on the tint, after the inks moved: Tap the beat 10.5:1 light; a
+chosen word on a tinted switch 7.35:1 light and 7.4:1 dark; a word not chosen
+7.47:1 light; the page bar's words when on 9.9:1 and up; the move bar's "Page
+6" 7.75:1 light and 9.95:1 dark; the Library's row buttons in the first ink.
+Every word verify_contrast reads clears AA on what is painted behind it, and
+every word off the brand purple 7:1 (two inks).
+
+THE CHECKS, each shown red by a break of its own, a fresh server each, the
+tree as built green beside them:
+
+- verify_contrast, "just a border, the editors" (new): at every surface it
+  opens, on Pad and Flip, light and dark, phone and desk, each role the mock
+  named, its fill against the ground that shows round it (past any wrapper its
+  own size, its colours laid over each other as they paint, a one-colour
+  gradient layer included), 1.08:1 or more, and a tip with no line; every role
+  this suite reaches seen. Four new surfaces carry them: How it works' tips,
+  and on Flip a loop (on a desk, where its page bar is), Playing and Moving
+  the artwork. Its instrument: as
+  built it first read Keep drawing at 1.005:1, its tint unseen: the computed
+  background-image names an image for every layer, so the colour layer's
+  "none" followed the gradient and the reader's pattern missed it.
+  Red: the tint gone (every second button and switch 1.00:1,
+  Keep drawing 1.005); the old fills back (Flip's loop buttons 1.024, its
+  speeds 1.001, Tap the beat and the fine-tune step 1.00, This page / After
+  1.075); a tip's well gone (1.00:1, and lined); its line back (lined); a
+  role it cannot see (a tip, unseen). Green as built, every role seen: a tip
+  1.12, Flip's loop buttons and This page / After 1.152, Make another and a
+  panel button 1.167, Flip's speeds 1.168, Keep drawing 1.178, Tap the beat,
+  Hear the restart and the fine-tune step 1.185.
+- verify_galib 11 (new): the Library's and the Gallery's switches and second
+  buttons, light and dark, phone and desk (a phone's row buttons are its ⋯
+  menu's rows, with no box), every role seen. Red: the switches back
+  on the card's white (New | Hot, Skribls | Drafts, All | In the gallery |
+  Link only, 1.065:1 light); the row buttons back (Copy link, Copy key,
+  Share, Save file, Undo, 1.00:1); Share unseen. Green as built: the switches
+  1.153, Copy link, Copy key and Share 1.177, Undo 1.173, Save file 1.185.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3), forty-six, 57 minutes
+(every suite that reads a changed selector's paint, the player's and the
+band's copies of the tokens, and the budgets): verify_galib 181/181, verify_onepill 2878/2878, verify_library 248/248, verify_posted 163/163, verify_player_isolation 85/85, verify_jsstrip 35/35, verify_parity 434/434, verify_ux 487/487, verify_theme 124/124, verify_postmoment 82/82, verify_musicdoors 116/116, verify_musicsnap 54/54, verify_contrast 676/676, verify_help 91/91, verify_helpclaims 47/47, verify_a11y 444/444, verify_a11ypages 162/162, verify_pages 101/101, verify_drawtiles 289/289, verify_docs 144/144, verify_recolor 118/118, verify_identity 140/140, verify_menu 72/72, verify_music 37/37, verify_layout 257/257, verify_move 82/82, verify_musicbeat 66/66, verify_emptytake 12/12, verify_replayspeed 186/186, verify_learncard 150/150, verify_drafts 99/99, verify_clouddrafts 116/116, verify_loopui 152/152, verify_sheetswipe 247/247, verify_pointerpad 55/55, verify_compactops 28/28, verify_musicundo 102/102, verify_text 186/186, verify_stamps 76/76, verify_linkpage 61/61, verify_fullsmart 26/26, verify_review 292/292, verify_inline 222/222, verify_fullfade 70/70, verify_watchfull 76/76, verify_hold 72/74 beside the others and 74/74 alone (load: the no-dinge census shared the box; no frame-pacing code is touched here). Then, after
+Share's edge and the records, verify_galib, verify_library, verify_docs,
+verify_player_isolation and verify_jsstrip again: 181/181, 248/248, 144/144,
+85/85 and 35/35. NOT RUN: the full
+battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: How it works' tips a soft lilac with no line; Make
+another and Flip's page bar lilac; the Library's Skribls / Drafts lilac.

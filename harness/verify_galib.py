@@ -29,6 +29,9 @@ PAINTED or DRIVEN question, never "a style changed":
                   photographed, each text box's pixels measured), both themes.
   ROW ACTIONS     at 390, no point between two row actions answers nothing.
   LIBRARY PLAY    no accent gradient and no glow.
+  JUST A BORDER   every switch's track and second button set apart from what
+                  it sits on by its own fill (the editors' mock's Library and
+                  Gallery part), light and dark, phone and desk.
 
 Fixtures are posted through the API with a token unique to this run, and the
 library's list is the record lib/posted.js keeps, written into this browser.
@@ -1219,6 +1222,77 @@ with sync_playwright() as p:
     check("...and the Gallery's and the Library's search fields' edges read 3:1 or more against their own white",
           all(f.get("px") and _cr(f["px"][0], f["inside"]) >= 3.0 for f in _fl),
           json.dumps([(f.get("px", [None])[:1], f.get("inside"), round(_cr(f["px"][0], f["inside"]), 2) if f.get("px") else None) for f in _fl]))
+
+    # ================================================================ JUST A BORDER
+    print("\nGALIB 11 -- just a border: every switch and second button on the Library and the Gallery set apart by its own fill")
+    # The owner's "Yes to all" to the editors' mock (Nov 16), its Library and
+    # Gallery part: a switch's track (New | Hot; Skribls | Drafts; All | In
+    # the gallery | Link only) and a second button (Copy link, Share, Copy
+    # key, Save file, Undo) wear Skribl's lilac, see-through, as the editors'
+    # and the site's do. Each is read against the ground that shows round it
+    # (past any wrapper its own size), its colours laid over each other as
+    # they paint, light and dark, phone and desk: 1.08:1 or more, the census's
+    # line (the tint reads 1.12 to 1.19). Before, a switch was the card's white
+    # on the page, 1.06:1, and a row's buttons the row's own white, 1.00:1. On
+    # a phone a row's buttons are its ⋯ menu's rows, with no box to set apart.
+    JUST = r"""(roles) => {
+      const rgba = s => { const m = (s.match(/[\d.]+/g) || []).map(Number); return m.length >= 3 ? [m[0], m[1], m[2], m.length > 3 ? m[3] : 1] : null; };
+      const lum = c => { const v = c.map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+                         return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+      const fill = e => { const layers = [];
+        for (let n = e; n; n = n.parentElement) { const b = rgba(getComputedStyle(n).backgroundColor);
+          if (b && b[3] > 0) { layers.push(b); if (b[3] >= 1) break; } }
+        let g = [255, 255, 255];
+        for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; g = [0, 1, 2].map(k => l[k] * l[3] + g[k] * (1 - l[3])); }
+        return g; };
+      const out = {};
+      for (const [role, sel] of roles) {
+        const els = [...document.querySelectorAll(sel)].filter(e => { const r = e.getBoundingClientRect();
+          return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility === 'visible' && !e.closest('[hidden]'); }).slice(0, 3);
+        if (!els.length) continue;
+        out[role] = els.map(e => { let g = e.parentElement; const r = e.getBoundingClientRect();
+          while (g && g !== document.body) { const q = g.getBoundingClientRect(); if (q.width > r.width + 4 || q.height > r.height + 4) break; g = g.parentElement; }
+          const a = lum(fill(e)), z = lum(g ? fill(g) : [255, 255, 255]);
+          return +((Math.max(a, z) + 0.05) / (Math.min(a, z) + 0.05)).toFixed(3); });
+      }
+      return out; }"""
+    SWITCHES = [["New | Hot", ".tabs.seg-track"], ["Skribls | Drafts", ".libtabs-list.seg-track"],
+                ["All | In the gallery | Link only", ".chips.seg-track"]]
+    ROW_BTNS = [["Copy link", ".posted-copy"], ["Share", ".posted-share"], ["Copy key", ".posted-key"]]
+    LOCAL = {"id": f"{TAG}local", "url": None, "title": f"{TAG} on this device", "kind": "pad", "pages": 1, "visibility": None,
+             "tok": None, "local": True, "has_audio": False, "at": 0}
+    _just = {}
+    for _scheme in ("light", "dark"):
+        for _dev, _kw in (("phone", PHONE), ("desk", DESK)):
+            _c = b.new_context(storage_state=state, color_scheme=_scheme, **_kw)
+            # Share is drawn only where the system has a sheet (posted.js).
+            _c.add_init_script("navigator.share = () => Promise.resolve(); navigator.canShare = () => true;")
+            _p = open_page(_c, "/gallery", _scheme)
+            _just[(_scheme, _dev, "/gallery")] = _p.evaluate(JUST, SWITCHES)
+            _p.close()
+            _p = open_page(_c, "/library", _scheme)
+            remember(_p, mine + [LOCAL])
+            _p.reload(); _p.wait_for_timeout(1000)
+            _p.evaluate("() => { if (window.SkriblHints) window.SkriblHints.hide(); }")
+            _just[(_scheme, _dev, "/library")] = _p.evaluate(JUST, SWITCHES + ROW_BTNS)
+            # Undo: a save on this device deleted, two taps, as its ✕ asks.
+            _x = _p.locator(".posted-row-local .posted-del")
+            _x.scroll_into_view_if_needed(); _x.click(); _p.wait_for_timeout(250); _x.click(); _p.wait_for_timeout(600)
+            _just[(_scheme, _dev, "/library undo")] = _p.evaluate(JUST, [["Undo", ".posted-undo-btn"]])
+            _p.click("#tabDrafts"); _p.wait_for_timeout(900)
+            _just[(_scheme, _dev, "/library drafts")] = _p.evaluate(JUST, [["Save file", ".draft-file"]])
+            _p.close()
+            _c.close()
+    _want = {"phone": {"New | Hot", "Skribls | Drafts", "All | In the gallery | Link only", "Undo"}}
+    _want["desk"] = _want["phone"] | {"Copy link", "Share", "Copy key", "Save file"}
+    _seen = {d: {role for (_, dv, _), roles in _just.items() if dv == d for role in roles} for d in ("phone", "desk")}
+    _low = sorted(f"{k[0]} {k[1]} {k[2]}: {role} {v}" for k, roles in _just.items() for role, vs in roles.items() for v in vs if v < 1.08)
+    check("every switch and second button on the Library and the Gallery is set apart from what it sits on by its own fill,"
+          " 1.08:1 or more, light and dark, phone and desk: New | Hot, Skribls | Drafts, All | In the gallery | Link only,"
+          " Undo, and on a desk Copy link, Share, Copy key and Save file (the owner's \"Yes to all\", Nov 16)",
+          all(_want[d] <= _seen[d] for d in _want) and not _low,
+          f"least apart by role {json.dumps({r: min(v for roles in _just.values() for rr, vs in roles.items() if rr == r for v in vs) for r in sorted(_seen['desk'] | _seen['phone'])})}; "
+          f"unseen {[(d, sorted(_want[d] - _seen[d])) for d in _want]}; low {_low[:8]}")
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)
