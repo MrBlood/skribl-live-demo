@@ -1376,7 +1376,18 @@ with sync_playwright() as sp:
     #   whole (the player's own switches keep their grey). Spent first: How
     #   it works' well written in its one rule, not as a token (-73 B).
     #   verify_jsstrip's line moves with it. 45,265 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_271, 119_844, 40_000
+    # RAISED (the owner's "All yes" to "No dinge", Nov 16: one lilac, solid;
+    #   lilac wells, counts and placeholders; clear glass; off at full
+    #   strength), for one named cost: +147 B -- the tokens those are written
+    #   in, both themes, copied with the token blocks whole: --chip-glass,
+    #   --chip-line and --chip-lift, --off-ink, --tip-well, --count-fill and
+    #   --draw-wait (verify_surfaces and verify_theme: a neutral or an ink in
+    #   the chrome is a token). Spent first: three tokens nothing read
+    #   anywhere (--surface-well-2, --text-brightest, --text-strong-2: -200 B)
+    #   and the light theme's new tokens written without the column's padding
+    #   (the stripper keeps it). verify_jsstrip's line moves with it. 45,412
+    #   measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_418, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

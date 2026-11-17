@@ -1819,5 +1819,5 @@ body:not([data-size="compact"]):not(.one-page) :is(#pbCopy, #pbDraw, #addinbetwe
    were the sheet's grey; Flip's frame clear, where it was grey glass. Last in
    the sheet, so it outranks the rules it amends at equal weight. */
 .addbtn, .mb-offset { background: var(--btn2-bg); }
-.strip-wrap { background: rgba(23, 20, 42, 0.94); }
+.strip-wrap { background: color-mix(in srgb, var(--menu-paper) 94%, transparent); }   /* the paper, clear: #17142a at 94% */
 :root[data-theme="light"] .strip-wrap { background: rgba(255, 255, 255, 0.9); }

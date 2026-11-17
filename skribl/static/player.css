@@ -234,6 +234,11 @@
   --chip-lift: 0 8px 24px rgba(0, 0, 0, 0.35);
   /* A control when off (No dinge): at full strength, only its words quiet. */
   --off-ink: #756e9c;
+  /* No dinge's solid lilacs: a tip's well (the site's --quote-well), a
+     count's pill, and where a drawing will be (the site's --draw-wait). */
+  --tip-well: #16112b;
+  --count-fill: #2b2450;
+  --draw-wait: #2e2650;
 
   /* The letterpress relief on the signature (SINK, not pop,
      and asked for the old purple halo to go). A bright lower edge and a
@@ -2429,6 +2434,9 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   --chip-line: rgba(124, 92, 255, 0.3);
   --chip-lift: 0 10px 30px rgba(60, 40, 140, 0.16), 0 2px 6px rgba(60, 40, 140, 0.08);
   --off-ink: #a59dcc;
+  --tip-well: #f0ecff;
+  --count-fill: #ece6ff;
+  --draw-wait: #ece6ff;
   /* Letterpress for a light surface: the classic bright ledge below the
      ink, a whisper of shade above. */
   --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
