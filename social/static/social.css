@@ -34,11 +34,13 @@
   --on-fill: #ffffff;
   --fill-drop: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 6px 16px rgba(109, 76, 240, 0.30);
   --focus: #6d4cf0;
-  /* The second button, and every switch's track: Skribl's lilac, see-through,
-     as dark wears it (the owner's "all yes" to "Just a Border", Nov 16). It
-     was white, and white on a white panel or the near-white page had only its
-     line to tell it apart (1.00:1 and 1.06:1); tinted it reads 1.19:1 on both. */
-  --btn2-bg: rgba(124, 92, 255, 0.14);
+  /* The second button, and every switch's track: Skribl's lilac (the owner's
+     "all yes" to "Just a Border", Nov 16; white before, which on a white panel
+     or the near-white page had only its line to tell it apart). SOLID since
+     "No dinge" (the owner's "All yes", Nov 16): a see-through wash took the
+     grey of what it sat on, grey-lilac on the page (chroma 0.034); one chosen
+     lilac is the same everywhere (0.055), 1.13:1 to 1.27:1 from every ground. */
+  --btn2-bg: #e7e0ff;
   --btn2-line: rgba(124, 92, 255, 0.34);
   --btn2-ink: #14171d;
   --nav-bg: rgba(251, 252, 253, 0.94);
@@ -51,7 +53,7 @@
   --row-bg: #ffffff;                /* --menu-card */
   --grip: rgba(20, 23, 29, 0.2);
   --scrim: rgba(23, 20, 42, 0.36);
-  --draw-wait: #f1f3f7;             /* where a drawing will be, before it is */
+  --draw-wait: #ece6ff;             /* where a drawing will be, before it is; an empty face (No dinge: lilac, it was a flat grey) */
   /* A drawing's edge (THE EDGES, part four): its line (the player's border, at
      8% of the ink) as it looked over the box's own ground, made solid, for a
      ring of one screen pixel; and its lift, the cards' own on the light page,
@@ -65,10 +67,11 @@
      used to lie over the card: the line as it looked there, made solid. */
   --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card));
   /* A quote's small card inside a post's card (the owner's "d2 is good",
-     Nov 16): a well, the page's ground with a touch of Skribl's lilac and no
-     line, so the change of colour is its edge and it sits in the card. One
-     value for both themes: --page carries the theme. */
-  --quote-well: color-mix(in srgb, rgb(124 92 255) 6%, var(--page));
+     Nov 16): a well, a clear lilac and no line, so the change of colour is
+     its edge and it sits in the card. No dinge (Nov 16): it was the page's
+     grey with 6% of the lilac, which read as grey (chroma 0.015); now a
+     chosen lilac, the same depth (1.16:1 on its card), a deep violet in dark. */
+  --quote-well: #f0ecff;
   --card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
   --rule: rgba(80, 60, 170, 0.12);  /* --menu-card-rule */
   --row-line: rgba(20, 10, 60, 0.16);  /* the thin line between two rows of a card (Apple's way) */
@@ -134,7 +137,7 @@
   --accent-ink: #c1b2ff;
   --brand: #8f74ff;
   --focus: #c1b2ff;
-  --btn2-bg: rgba(167, 146, 255, 0.10);
+  --btn2-bg: #332a58;               /* solid (No dinge): murky over the page as a wash */
   --btn2-line: rgba(167, 146, 255, 0.26);
   --btn2-ink: #eef1f6;
   --nav-bg: rgba(11, 13, 18, 0.92);
@@ -146,7 +149,8 @@
   --row-bg: #231e3b;
   --grip: rgba(255, 255, 255, 0.22);
   --scrim: rgba(0, 0, 0, 0.5);
-  --draw-wait: #13161c;
+  --draw-wait: #2e2650;             /* No dinge: a deep violet, it was near-black */
+  --quote-well: #16112b;            /* No dinge: violet, 1.15:1 on the card (it was #161626) */
   --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
   --draw-lift: 0 0 0 transparent;
   --card: #231e3b;
@@ -179,7 +183,7 @@
     --accent-ink: #c1b2ff;
     --brand: #8f74ff;
     --focus: #c1b2ff;
-    --btn2-bg: rgba(167, 146, 255, 0.10);
+    --btn2-bg: #332a58;
     --btn2-line: rgba(167, 146, 255, 0.26);
     --btn2-ink: #eef1f6;
     --nav-bg: rgba(11, 13, 18, 0.92);
@@ -191,7 +195,8 @@
     --row-bg: #231e3b;
     --grip: rgba(255, 255, 255, 0.22);
     --scrim: rgba(0, 0, 0, 0.5);
-    --draw-wait: #13161c;
+    --draw-wait: #2e2650;
+    --quote-well: #16112b;
     --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
     --draw-lift: 0 0 0 transparent;
     --card: #231e3b;
@@ -1343,7 +1348,7 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .composer-acts { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
 .chip {
   display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px; border: 0;
-  border-radius: 999px; background: var(--tint); color: var(--accent-ink); font: inherit; font-size: 16px;
+  border-radius: 999px; background: var(--btn2-bg); color: var(--accent-ink); font: inherit; font-size: 16px;
   font-weight: 700; cursor: pointer;
 }
 .chip[hidden] { display: none; }
@@ -1393,7 +1398,9 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   color: var(--accent-ink); font: 600 17px/1.2 var(--font); cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .cmp-post { min-width: 76px; margin-left: auto; }
-.cmp-post[aria-disabled="true"] { opacity: 0.45; box-shadow: none; cursor: default; }
+/* WAITING, CRISP (No dinge, Nov 16): with nothing to post, Post waits on the
+   second button's lilac in the chosen violet; it faded the purple to 45%. */
+.cmp-post[aria-disabled="true"] { background: var(--btn2-bg); color: var(--pill-on-ink); box-shadow: none; cursor: default; }
 .cmp-scroll { flex: 1; min-height: 0; margin: 0 -4px; padding: 0 4px 8px; overflow-y: auto; overscroll-behavior: contain; }
 .cmp-body { display: flex; align-items: flex-start; gap: 12px; padding-top: 6px; }
 .face-ring.cmp-face { --skribl-face-size: 40px; flex: none; width: 40px; height: 40px; }
@@ -1544,7 +1551,8 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    which nearly vanished in dark. INSIDE A POST'S CARD, A WELL (the owner's
    "d2 is good", Nov 16): there it was the card's colour on the card's colour
    with only its line between, so on Home and a person's page it is
-   --quote-well, the page's ground touched with lilac, and no line. */
+   --quote-well, a clear lilac (No dinge: the page's ground touched with
+   lilac read as grey), and no line. */
 .qt-card {
   display: block; margin-top: 12px; padding: 12px; border: 1px solid transparent; border-radius: 18px;
   background: var(--card); color: inherit; text-decoration: none; box-shadow: 0 0 0 var(--edge) var(--card-edge);
@@ -1776,7 +1784,7 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    purple (5.33:1), as an action is; the light comes and goes as a fade.
    Signed out it raises "Say something?" and stays as it is: no box is open. */
 .cm-say {
-  margin: -7.5px 0 -7.5px auto; background: var(--tint); color: var(--accent-ink);
+  margin: -7.5px 0 -7.5px auto; background: var(--btn2-bg); color: var(--accent-ink);
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 .cm-say[aria-expanded="true"]:is([aria-controls="commentFold"], [aria-controls="commentBoxSheet"]) {

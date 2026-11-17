@@ -1922,13 +1922,14 @@ with sync_playwright() as p:
                         "on_ground": round(ratio(px, gd), 2)}
             # INSIDE A POST'S CARD, A WELL (the owner's "d2 is good", Nov 16): a point
             # of the quote's own ground inside it (6px in, under its corner's curve),
-            # the post card's ground just beside it, the well the page's --page with
-            # 6% of Skribl's lilac (#7c5cff), and what could draw a line round it.
+            # the post card's ground just beside it, the well --quote-well (a chosen
+            # lilac since No dinge; it was the page's --page with 6% of Skribl's
+            # lilac, which read as grey), and what could draw a line round it.
             QT_WELL = r"""(post) => { const c = document.querySelector('.post-card[data-post="' + post + '"]'); if (!c) return null;
               const q = c.querySelector(':scope > .qt-card'); if (!q) return null;
               const r = q.getBoundingClientRect(), cs = getComputedStyle(q), x = r.left + 24, y = r.top + 6;
               return { pt: [x, y], beside: [r.left - 4, r.top + r.height / 2], hit: document.elementFromPoint(x, y) === q,
-                       page: getComputedStyle(document.documentElement).getPropertyValue('--page').trim(),
+                       page: cs.backgroundColor,
                        shadow: cs.boxShadow, border: cs.borderTopColor,
                        seen: r.top >= 0 && r.top + 12 <= innerHeight && r.left >= 6 }; }"""
             def qt_well(pg, post):
@@ -1939,9 +1940,8 @@ with sync_playwright() as p:
                 k = im.width / pg.viewport_size["width"]
                 px = im.getpixel((int(at["pt"][0] * k), int(at["pt"][1] * k)))
                 gd = im.getpixel((int(at["beside"][0] * k), int(at["beside"][1] * k)))
-                h = at["page"].lstrip("#")
-                page = tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) if len(h) == 6 else None
-                want = tuple(round(0.06 * a + 0.94 * p) for a, p in zip((124, 92, 255), page)) if page else None
+                rgb = re.findall(r"[\d.]+", at["page"] or "")
+                want = tuple(round(float(x)) for x in rgb[:3]) if len(rgb) >= 3 else None   # the well's own colour, as it paints
                 return {"hit": at["hit"], "painted": px, "want": want, "card": gd, "on_card": round(ratio(px, gd), 2),
                         "shadow": at["shadow"], "border": at["border"]}
             paints, lows, smalls, reads, fills, wells = {}, [], [], {}, {}, {}
@@ -2004,7 +2004,7 @@ with sync_playwright() as p:
                                           for v in fills.values()),
                   json.dumps(fills))
             check("inside a post's card on Home, a quote's small card is a well (the owner's \"d2 is good\", Nov 16):"
-                  " the page's ground touched with lilac painted inside it, set apart from the post's card by its"
+                  " a clear lilac painted inside it (No dinge), set apart from the post's card by its"
                   " colour alone (1.08:1 or more against the card's ground beside it: the mock's 1.14 light, 1.12"
                   " dark), and no line round it, phone and desk, light and dark",
                   len(wells) == 4 and all(v and v.get("hit") and v.get("want")
@@ -2096,7 +2096,33 @@ with sync_playwright() as p:
             for h in ("juno", "rook", "mira"):
                 follow(kai, h)
             follow(juno, "kai")
-            found, seen = [], 0
+            # NO DINGE (the owner's "All yes", Nov 16, to the no-dinge mock): a second
+            # button, a switch's track, a quote's well and a placeholder (an empty
+            # face, Activity's picture slot, a drawing's plate while it loads) each
+            # wear one chosen colour, solid (a see-through wash took the grey of what
+            # it sat on), and colourful enough to read as lilac (OKLCH chroma), read
+            # off the computed fill wherever the tour goes.
+            DINGE = r"""(where) => {
+              const rgba = s => { const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
+                return m.length >= 3 ? [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1] : null; };
+              const lin = x => { x /= 255; return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); };
+              const chroma = c => { const [r, g, b] = c.slice(0, 3).map(lin);
+                const l = Math.cbrt(0.4122214708*r + 0.5363325363*g + 0.0514459929*b), m = Math.cbrt(0.2119034982*r + 0.6806995451*g + 0.1073969566*b),
+                      q = Math.cbrt(0.0883024619*r + 0.2817188376*g + 0.6299787005*b);
+                return Math.hypot(1.9779984951*l - 2.4285922050*m + 0.4505937099*q, 0.0259040371*l + 0.7827717662*m - 0.8086757660*q); };
+              const ROLES = [["a second button", ".btn:not(.btn-primary):not(.btn-danger):not(.cmp-post), .icon-btn.boxed, .cm-say, .chip"],
+                             ["a switch's track", ".fo-seg, .theme-switch"], ["a well", ".post-card > .qt-card"],
+                             ["a placeholder", ".face-blank:not(.nav .face-blank), .act-pic, .skribl-inline"]];
+              const out = [];
+              for (const [role, sel] of ROLES)
+                for (const e of [...document.querySelectorAll(sel)].filter(e => e.getClientRects().length && getComputedStyle(e).visibility === 'visible' && !e.closest('[hidden]')).slice(0, 4)) {
+                  const c = rgba(getComputedStyle(e).backgroundColor);
+                  out.push({ where, role, el: e.className.toString().split(/\s+/).slice(0, 2).join('.'), alpha: c ? +c[3].toFixed(3) : 0,
+                             chroma: c ? +chroma(c).toFixed(3) : 0 });
+                }
+              return out; }"""
+            FLOOR = {"a second button": (0.05, 0.07), "a switch's track": (0.05, 0.07), "a well": (0.02, 0.045), "a placeholder": (0.03, 0.06)}
+            found, seen, dinge = [], 0, []
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
                     tag = f"{screen} {scheme}"
@@ -2105,21 +2131,33 @@ with sync_playwright() as p:
                                   "/social/explore", "/social/explore?q=juno&who=people"):
                         go(pg, path_, wait=700)
                         found += pg.evaluate(JUST, f"{tag} {path_}")
+                        dinge += pg.evaluate(DINGE, f"{tag} {path_}")
                         seen += 1
                     close_ctx(ctx, pg)
                     ctx, pg = browser_as(b, juno, screen=screen, scheme=scheme)
                     go(pg, "/social/activity", wait=900)
                     found += pg.evaluate(JUST, f"{tag} /social/activity")
+                    dinge += pg.evaluate(DINGE, f"{tag} /social/activity")
                     close_ctx(ctx, pg)
                     ctx, pg = browser_as(b, None, screen=screen, scheme=scheme)
                     go(pg, "/social/", wait=900)
                     found += pg.evaluate(JUST, f"{tag} signed out /social/")
+                    dinge += pg.evaluate(DINGE, f"{tag} signed out /social/")
                     close_ctx(ctx, pg)
                     seen += 2
             check("just a border: on Home, a post, a quote of a quote, a person, Settings, the Gallery, people search,"
                   " Activity and signed-out Home, phone and desk, light and dark, no box with something in it is set"
                   " apart from what it sits on by its line alone (its fill 1.08:1 or more from its ground, or a lift)",
                   seen == 36 and not found, f"{len(found)} on {seen} pages: {found[:6]}")
+            _roles = {d["role"] for d in dinge}
+            _dingy = sorted({f'{d["where"]}: {d["role"]} .{d["el"]} alpha {d["alpha"]} chroma {d["chroma"]}' for d in dinge
+                             if d["alpha"] < 0.99 or d["chroma"] < FLOOR[d["role"]][0 if " light " in f' {d["where"]} ' else 1]})
+            check("no dinge (the owner's \"All yes\", Nov 16): on the same pages, phone and desk, light and dark, every"
+                  " second button, switch's track, quote's well and placeholder wears one chosen colour, solid, and reads"
+                  " as lilac (chroma 0.05 and up for a button or a track, 0.02 for a well, 0.03 for a placeholder; 0.07,"
+                  f" 0.045 and 0.06 in dark), every role seen ({len(dinge)} read)",
+                  set(FLOOR) <= _roles and not _dingy,
+                  f"unseen {sorted(set(FLOOR) - _roles)}; dingy {_dingy[:6]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(13, exc)
 
