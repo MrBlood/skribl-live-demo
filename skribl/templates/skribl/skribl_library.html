@@ -720,16 +720,18 @@
        aside. */
     :root {
       --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
+      --track-edge: #4c4574;   /* a solid track's own edge in dark (No dinge; as the Gallery's, #950) */
       --field-line: rgba(167, 146, 255, 0.7);
       --menu-paper-edge: color-mix(in srgb, rgb(167 146 255) 18%, var(--mp));
       --danger-edge: color-mix(in srgb, rgb(244 50 111) 43%, var(--card));
     }
     :root[data-theme="light"] {
       --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card));
+      --track-edge: var(--card-edge);
       --field-line: rgba(124, 92, 255, 0.82);
       --menu-paper-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--mp));
     }
-    .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge); }
+    .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--track-edge); }
     .player, .posted-row, .draft-row { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
     .search input { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--field-line); }
     .tbtn:not(.on), .posted-copy, .posted-key, .posted-share, .more, .draft-file {
