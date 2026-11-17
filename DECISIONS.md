@@ -45239,7 +45239,8 @@ THE AFFECTED SUITES, side by side (run_parallel -j 3), forty-six, 57 minutes
 (every suite that reads a changed selector's paint, the player's and the
 band's copies of the tokens, and the budgets): verify_galib 181/181, verify_onepill 2878/2878, verify_library 248/248, verify_posted 163/163, verify_player_isolation 85/85, verify_jsstrip 35/35, verify_parity 434/434, verify_ux 487/487, verify_theme 124/124, verify_postmoment 82/82, verify_musicdoors 116/116, verify_musicsnap 54/54, verify_contrast 676/676, verify_help 91/91, verify_helpclaims 47/47, verify_a11y 444/444, verify_a11ypages 162/162, verify_pages 101/101, verify_drawtiles 289/289, verify_docs 144/144, verify_recolor 118/118, verify_identity 140/140, verify_menu 72/72, verify_music 37/37, verify_layout 257/257, verify_move 82/82, verify_musicbeat 66/66, verify_emptytake 12/12, verify_replayspeed 186/186, verify_learncard 150/150, verify_drafts 99/99, verify_clouddrafts 116/116, verify_loopui 152/152, verify_sheetswipe 247/247, verify_pointerpad 55/55, verify_compactops 28/28, verify_musicundo 102/102, verify_text 186/186, verify_stamps 76/76, verify_linkpage 61/61, verify_fullsmart 26/26, verify_review 292/292, verify_inline 222/222, verify_fullfade 70/70, verify_watchfull 76/76, verify_hold 72/74 beside the others and 74/74 alone (load: the no-dinge census shared the box; no frame-pacing code is touched here). Then, after
 Share's edge and the records, verify_galib, verify_library, verify_docs,
-verify_player_isolation and verify_jsstrip again: {{rerun}}. NOT RUN: the full
+verify_player_isolation and verify_jsstrip again: 181/181, 248/248, 144/144,
+85/85 and 35/35. NOT RUN: the full
 battery (main's run after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
