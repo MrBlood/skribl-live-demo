@@ -10,7 +10,9 @@ what Explore and a profile show, no follower counts), section 16 is the
 decision. **Its part two, since Nov 14, is section 17**: what any social site
 has (bookmarks, reposts and quote posts, mentions, finding people, open
 sign-up, push notifications, direct messages), in the owner's order, and one
-drawing, one conversation.
+drawing, one conversation. **Next, since Nov 17, is section 18**: the
+comment thread (bubbles, the post's choices on every comment, two levels and
+then a reply's own page), the owner's yes, not built yet.
 
 The owner, Nov 10: "we are beginning to build the social media site, so we
 need to take care to keep it straight. This may be the beginning of a social
@@ -2245,3 +2247,161 @@ nothing changes in either (Skribl's own /gallery keeps its own search).
                                     a page of them ({html, next}); and a new
                                     pick's /explore/more brings {people}, its
                                     People section
+
+## 18. Next: the comment thread (the owner's yes, Nov 17; not built)
+
+The owner, Nov 17, with a picture of another site's comments: "take a look
+at this comment format. does it look like it would work for what we are
+doing? ours looks a little sloppy?", then, with a second picture of bordered
+comments, "also consider the bordered comment to show separation?". Three
+mocks followed, each answered, and a yes to the last. The owner's weekly
+limit ran out at the yes, so this section is the plan; section 10 is still
+what is built. Each mock shoots the site's own post page on a phone and a
+desk, light and dark, with now beside the options:
+
+- [The Comment Thread](https://claude.ai/artifact/QmpBByK9hUwrZLxn317sCa):
+  now, A (open) and B (bubbles). The owner: "I like B, bubbles, but I think
+  it should have the same choices as a post - reply, likes, repost,
+  bookmark, copy link, share, delete. don't you think? "reply" works better
+  than answer to me also. no need to show the words on a phone. also how
+  would you handle a reply to a reply to a reply and so on? mock that first"
+- [Replies to Replies](https://claude.ai/artifact/AgEnrGVMviaEFRms6ZWPmt):
+  one level (with the @name), two levels and every level, and the post's
+  choices on every comment. The owner pointed to Bluesky instead: "(which
+  goes more than 2 deep (which is too far for us), but see on the first one
+  where it says Read 2 more replies - then the second shot opens that screen
+  to the reply and shows the replies to that reply."
+- [Read More Replies](https://claude.ai/artifact/XbQmHKjA2swkoMkCwfdUjo),
+  the yes: two levels, then "Read N more replies", which opens the reply's
+  own page, built in three steps. The owner: "I like it. not sure how you'll
+  handle drawings in there, but.. what I would like to do is say yes to this
+  most recent mock".
+
+`harness/tools/mock_comments.py` shot the last one and shoots it again: the
+mock's look laid over today's page, with nothing in the app changed. Start
+the next mock from it.
+
+**What the yes says.**
+
+- **Bubbles (B).** A comment's name, time and words sit in a bubble: the
+  site's card (`--card`) with its lilac edge (`--card-edge`, one screen
+  pixel) and its lift (`--card-drop`), as a post's card wears. It is 18px
+  round and as wide as its words. The lift is not decoration: in light, a
+  white card on the near-white page is 1.06:1, and Just a Border asks for
+  1.08:1 or a lift. The words read 18.0:1 light, 14.1:1 dark. There are no
+  divider lines between comments. The glow on a comment you came to stays
+  visible, because the bubble is not lilac.
+- **A face not drawn yet shows its initial** in the site's disc (`--tint`,
+  the letter in `--accent-ink`: 6.5:1 light, 6.9:1 dark). The count beside
+  "Comments" sits in a small pill of the same lilac.
+- **The thread's line** is a soft lilac, 2px of `--card-edge` (1.47:1
+  light, 1.45:1 dark: there to be followed, not read). A reply hangs from it
+  on a curve out of the face it answers. Each line stops where its branch
+  stops, so none hangs past the last reply.
+- **The post's choices on every comment.** Under each bubble is the post's
+  own row with its icons: Reply, Repost, Like with its count, and ⋯ (7.1:1
+  light, 10.1:1 dark). The ⋯ opens the post's sheet, titled "This comment":
+  Bookmark, Copy link, Share…, then Report this comment on somebody else's
+  or Delete comment on your own. On your own post or drawing, Remove from
+  my post stays, as today. There is no thumbs-down: a dislike count on
+  somebody's comment isn't kind.
+- **"Reply", never "Answer"**, wherever the site says it:
+  - the button;
+  - the box ("Reply to Eli…"; on a phone, the sheet "Reply to Eli");
+  - the drawing's sheet ("Draw your reply");
+  - signed out ("you can reply to…");
+  - the muted line ("Someone you muted replied.");
+  - Activity ("replied to your comment", "replied with a drawing").
+
+  Today's words are in `social/templates/social/_comments.html`,
+  `social/static/comments.js` and `social/templates/social/activity.html`.
+- **Icons alone on a phone** ("no need to show the words on a phone"). On a
+  desk, "Reply" is spelled out beside its icon. Every button stays a 44px
+  tap.
+- **Two levels, then "Read more".** A comment, its replies, and replies to
+  those: that is as deep as a thread goes. Each level costs 48px of the
+  words' room: 322, 274 and 226px on a phone, 292, 244 and 196px on a desk.
+  It never gets less, however long the talk goes. Under a second-level
+  reply whose talk goes on, "⊕ Read N more replies" sits on the thread's
+  line: the row's second ink (`--ink-2`) with an 18px circled plus, a 44px
+  tap, 7.1:1 light, 10.1:1 dark. N counts every reply under it, at any
+  depth, that the viewer may see.
+- **A reply's own page.** "Read more" opens the page of the reply it sits
+  under, and the reply becomes the post, as on Bluesky. The header says
+  "Reply", and back goes where you were. The page, top to bottom:
+  1. The way to the reply, small and joined by the line: the post (or the
+     drawing), the comment, and each reply on the way.
+  2. The reply itself, as big as a post: its 48px face, its words, its full
+     time, and its row with its counts.
+  3. "Replies" with its count, then its replies, two levels again, each
+     deeper branch with its own "Read more".
+
+  Every comment and reply has such a page, so any of them can be linked and
+  shared.
+
+**Drawings in a thread: mock first.** The owner, at the yes: "not sure how
+you'll handle drawings in there". A drawn reply (section 10's: 150px wide in
+its own shape, with the player's line under it, fetched only when tapped)
+is not in the mocks. The plan to mock, before anything is built:
+- **In the thread:** the drawing sits inside its bubble under the words,
+  still 150px. That fits even at the second level (226px on a phone, 196px
+  on a desk).
+- **On a reply's own page:** a drawn reply is the post, its drawing as big
+  as a post's (on a desk, on the drawing's side).
+- **In the way to it above:** a drawn comment shows a small still picture
+  beside its words.
+
+The same mock asks three smaller questions the build needs, each with a
+default:
+- **Deleting a reply that has replies.** Today a comment goes with its
+  answers; the alternative is a "deleted" place that keeps the others'
+  words.
+- **What Copy link gives.** The default is the comment's own page.
+- **The header on a top-level comment's own page.** The default is
+  "Comment".
+
+**The build, in three steps.** Each step is its own PR, with checks that
+read its paint against its tokens in light and dark, shown red on today's
+look before they pass. Each step shows only what works: no button waits on
+a later step.
+
+1. **The thread and its pages.** Bubbles, initials, the count pill, the
+   lines, "Reply" everywhere, two levels, "Read more", a reply's own page,
+   and the row with Reply and ⋯ (Copy link, Share…, Report or Delete).
+   The data changes too. Today a reply to a reply is filed under the first
+   comment (`parent_id` is always a top-level comment's; section 10), so a
+   reply has to start keeping the reply it answers. That is a new column,
+   empty for the replies already there, which stay at the first level, as
+   now.
+2. **Likes on comments**, counted, and shown in Activity.
+3. **Repost and bookmark a comment.** A reposted comment shows as a card
+   that opens that comment.
+
+**Where it lives.** The site only: comments are the site's, so Pad and Flip
+don't change (not for Flip: Flip has no comments of its own). Both pages
+that carry comments get it: a post's and a drawing's shown outside a post
+(`/social/b/<id>`). `harness/verify_socialcomments.py` is the suite it
+extends.
+
+**What Bluesky does**, from its code (github.com/bluesky-social/social-app),
+read for the mock:
+- **Two views.** The default follows one chain of replies, up to 10 deep
+  (`LINEAR_VIEW_BELOW`). "Tree" view, the one in the owner's screenshot,
+  shows every branch: 4 levels on a phone and 6 on a desk (`TREE_VIEW_BELOW`,
+  `TREE_VIEW_BELOW_DESKTOP`). Its faces are 24px, where the chain view's are
+  42px, and its lines are 2px.
+- **"Read N more replies"** (`ThreadItemReadMore`, a circled plus) sits under
+  the last reply a branch shows. It links to that reply's own post page,
+  where the reply is the post with its replies below.
+- **Lines end where a branch ends.**
+
+Ours keeps our 36px faces and our bubbles, and stops at two levels, so the
+words never squeeze.
+
+**The four.**
+- **Kind:** no conversation gets lost or squeezed, and a good reply can get
+  a heart.
+- **Simple:** two levels, then "Read more"; a reply works just like a post.
+- **Powerful:** any reply, however deep, has a page of its own to link and
+  share.
+- **Playful:** following a conversation down is a tap, not a squint.
