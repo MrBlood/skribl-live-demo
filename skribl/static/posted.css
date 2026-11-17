@@ -262,7 +262,7 @@
    and deliberately NOT danger-toned like .posted-delete beside it: copying a
    recovery key destroys nothing. It sits between the two so the destructive
    button is not the only thing a worried person sees. */
-.posted-key { flex: 0 0 auto; background: transparent; font: inherit; font-size: 12px;
+.posted-key { flex: 0 0 auto; background: var(--btn2-bg); font: inherit; font-size: 12px;
   border: 1px solid var(--hairline-strong); color: var(--text-secondary);
   padding: 5px 9px; border-radius: 8px; cursor: pointer; }
 @media (hover: hover) { .posted-key:hover { color: var(--text-primary); } }
@@ -399,10 +399,10 @@
 .reckey-copy {
   border: 1px solid transparent;
   box-shadow: 0 0 0 var(--edge) var(--line-strong);
-  background: var(--btn2-bg);
+  background: var(--surface-control);
   color: var(--text-strong);
 }
-@media (hover: hover) { .reckey-copy:hover { background: var(--btn2-hover); } }
+@media (hover: hover) { .reckey-copy:hover { background: var(--surface-control-hover); } }
 .reckey-done {
   border: 1px solid transparent;
   background: var(--accent);
