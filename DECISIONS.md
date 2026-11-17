@@ -45365,3 +45365,163 @@ NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: an empty face is a soft lilac circle; Make's Post,
 before you write, is lilac with violet words; Home's Following and Everyone a
 clear lilac.
+
+## After v330 -- No dinge, Skribl: one lilac, solid; lilac wells, counts and placeholders; clear glass; waiting and off crisp
+
+The owner's "All yes" (Nov 16) to the no-dinge mock
+(https://claude.ai/artifact/CxFeGo83rBoSWaA5btRjSR), Skribl's half: Pad,
+Flip, the Library, the Gallery and the link page. The site's entry above is
+the same rule, value for value.
+
+WHAT CHANGED:
+
+- ONE LILAC, SOLID: --btn2-bg is #332a58 dark and #e7e0ff light (styles.css,
+  the Library's and the Gallery's own copies, segslider.css's --seg-track),
+  where it was a see-through wash that took the grey of what it sat on (the
+  speeds on Flip's frame read #dddbf7, a grey-lilac; the Library's rows in
+  dark a murky #302a4f). --btn2-hover #3b3166 and #ddd4ff. The grey buttons
+  join it: Flip's Duplicate, Blank, Tween and Smear and its offset readout,
+  the recovery key's buttons, the leave sheet's Keep drawing, Copy delete
+  key, the toast's Undo, the link page's error button, the Library's Load
+  more and the Gallery's Cancel and Retry. In dark the Library's switch
+  tracks wear their own edge (#4c4574), as the Gallery's have since #950:
+  on the solid violet the card's lilac line was the fill's own colour.
+- A STEP UP WHERE LILAC MEETS LILAC: on the Library's playing row a second
+  button is #3d326b dark, #e0d7ff light (the solid violet sat 1.07:1 from
+  the row). In dark a second button on the violet glass (a toast's Undo,
+  Flip's chip's, the other-tab notice's Keep for later) is #45397a: the
+  solid violet sat 1.07:1 there over a dark drawing, and the glass lets 6%
+  through, so over a light drawing it is lighter and the playing row's one
+  shade sat 1.03:1. #45397a is 1.18:1 over the light and 1.41:1 over the
+  dark, its words 9.2:1. That shade is Cal's, to meet just-a-border's
+  1.08:1; the mock showed the solid violet there.
+- WELLS, COUNTS AND PLACEHOLDERS, LILAC: a tip's well --tip-well (#16112b
+  dark, #f0ecff light: the site's --quote-well), the tips' counts
+  --count-fill (#2b2450, #ece6ff, in the chosen ink), a draft's picture slot
+  (Your drafts', the Library's) --draw-wait (#2e2650, #ece6ff: the site's
+  name and values), where each was grey.
+- CLEAR GLASS: toasts, Flip's chip, the save status, the hints and the
+  other-tab notice wear --chip-glass, --chip-line and --chip-lift (violet
+  glass in dark; white with a lilac edge and a soft lift in light), where
+  they were the line's grey at 82 to 90%. Flip's frame is clear too (the
+  menu's paper at 94% in dark, white at 90% in light).
+- WAITING AND OFF: the Pad's Post, waiting, on the second button's lilac in
+  the chosen violet, at full strength (it faded the purple to 42%); a page
+  bar button, undo and redo, and Flip's add buttons, when off, at full
+  strength with quiet words (--off-ink: #756e9c dark, #a59dcc light), where
+  the whole button faded to 30 to 42%.
+
+WHAT THE RUNS FOUND ON THE WAY, each fixed:
+
+- Flip's Undo and Redo stayed faded beside the Pad's crisp ones: its script
+  wrote their .32 inline (updateToolState), which no rule outranks
+  (verify_parity, eight rows). It sets only disabled now; one rule holds
+  both editors' off controls. Calibrated in a trimmed copy (the fixture and
+  its section): red with the inline .32 back (Flip's Redo 0.32 against the
+  Pad's 1) and red with the rule's two ids taken out (0.42, grey words);
+  green as built.
+- Colours written as literals: an ink in the chrome is a token
+  (verify_theme), and so is a neutral (verify_surfaces); the light lilacs
+  are neutral by its measure (channels within 30). Hence the tokens above;
+  Flip's dark frame is a color-mix of --menu-paper, the same colour.
+- The other-tab notice ("the toast's glass", its own comment says) had
+  kept the old grey, on which the solid lilac Keep for later sat 1.02:1 in
+  light (verify_contrast's just-a-border row, in a run where a previous
+  tab's drawing was waiting). It wears the toasts' glass now.
+- The ball's ending in a post box (verify_identity): a coach hint anchored
+  above the ball's box lies over its top three rows. Its old grey glass was
+  near the canvas's colour and under the measure's eye; the violet glass
+  read as ink there, 0.67% of the box (0.5% allowed) where the box itself
+  left nothing. The reading steps the hints out for its instant. Red with
+  the box left painted (1.01%); green as built (0.00%).
+- The link page's sheet carries the token blocks whole, so the new tokens
+  took it past its line (verify_player_isolation, verify_jsstrip). Spent
+  first: four tokens nothing reads any more (--surface-well-2,
+  --text-brightest, --text-strong-2, and the old glass's --line-rgb, in
+  each theme: 266 B served) and the light theme's new tokens written
+  without the column's padding, which the stripper keeps. Then raised for
+  one named cost, +81 B net: 45,346 B served, both suites' lines moved with
+  a note. A first version wrote the light glass as a light-theme rule,
+  which the player's sheet never carries (cssgraph keeps a rule only if a
+  live player page matched it): a toast on a light link page would have
+  been dark glass under dark words. Tokens carry both themes.
+
+THE CHECKS, each shown red by a break of its own, the tree as built green
+beside it:
+
+- verify_contrast, "no dinge" (new): every role the just-a-border row reads
+  (a tip, Make another, Keep drawing, Tap the beat, Hear the restart, a
+  panel button, Flip's loop buttons, its speeds, This page / After, the
+  fine-tune step), on Pad and Flip, light and dark, phone and desk: solid,
+  and lilac enough (chroma 0.038 and a tip's 0.02; 0.07 and 0.045 in dark).
+  A switched-on button keeps its own tint over the solid fill, as a chosen
+  pill does. A control painted exactly the drawers' paper's own card
+  (--menu-card, resolved where it sits: Reset adjustments in Photo, ONE LOOK
+  ON THE PAPER) is the tiles' white card and not asked for lilac; anything
+  else it wears is read. Calibrated in a trimmed copy (the fixture and the
+  row): red with the wash back (Flip's loop buttons in dark, see-through,
+  chroma 0.035) and with the old well (a tip in dark, 0.03); green as built.
+  Run whole, it read 372 and opened Photo, which that copy had not, and
+  called the white card dingy: hence the card's place. Red with that place
+  taken out (Reset adjustments: chroma 0 light, 0.054 dark), and with the
+  button a wash (alpha 0.14) or a grey (chroma 0.006 light, 0.015 dark);
+  green as built.
+- verify_galib 11: the Library's and the Gallery's switches and second
+  buttons solid and lilac enough. Red with the wash back (dark New | Hot,
+  see-through, chroma 0.031; the Library's Save file and Undo); green as
+  built.
+- verify_drafts (new): Keep for later stands apart from the other-tab
+  notice's glass by its own fill, 1.08:1 or more, painted, light and dark
+  (the notice over the page's own ground). Red on the old grey glass
+  (1.024:1 light) and without the step (1.073:1 dark); green as built
+  (1.27:1, 1.41:1).
+- verify_newundo (new): a toast's Undo and Flip's chip's the same way, over
+  a light drawing. Red with the playing row's one shade (1.038:1 in dark);
+  green as built (1.27:1, 1.18:1).
+- Not guarded by colour: the glass itself (white glass in light has no
+  chroma to measure); the words on it are held by verify_contrast's AA.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3): first sixty-four, on
+the tree before the fixes above (#948's forty-six; every suite that loads the
+Gallery section; every suite that reads a selector this changes): fifty-seven
+ok, verify_library 248/248, verify_galib 182/182, verify_onepill 2878/2878,
+verify_posted 163/163, verify_ux 487/487, verify_postmoment 82/82,
+verify_musicsnap 54/54, verify_help 91/91, verify_helpclaims 47/47,
+verify_musicdoors 116/116, verify_a11ypages 162/162, verify_pages 101/101,
+verify_a11y 444/444, verify_docs 144/144, verify_drawtiles 289/289,
+verify_recolor 118/118, verify_menu 72/72, verify_music 37/37, verify_move
+82/82, verify_layout 257/257, verify_emptytake 12/12, verify_musicbeat 66/66,
+verify_replayspeed 186/186, verify_drafts 99/99, verify_loopui 152/152,
+verify_learncard 150/150, verify_clouddrafts 116/116, verify_pointerpad
+55/55, verify_compactops 28/28, verify_sheetswipe 247/247, verify_stamps
+76/76, verify_linkpage 61/61, verify_text 186/186, verify_fullsmart 26/26,
+verify_musicundo 102/102, verify_review 292/292, verify_watchfull 76/76,
+verify_fullfade 70/70, verify_hold 74/74, verify_inline 222/222,
+verify_hostseams 139/139, verify_seam 518/518, verify_standin 22/22,
+verify_social 45/45, verify_gallery 234/234, verify_socialsearch 32/32,
+verify_socialreposts 56/56, verify_tips 72/72, verify_newundo 10/10,
+verify_flipedges 22/22, verify_icons 60/60, verify_pillfit 28/28,
+verify_exportui 66/66, verify_sizeclass 89/89, verify_amber 111/111,
+verify_socialposts 99/99, verify_flipbeat 40/40; seven red, each a finding
+above: verify_parity 426/434 (the same alone), verify_player_isolation 84/85
+(the same alone), verify_jsstrip 34/35, verify_theme 123/124, verify_surfaces
+12/13, verify_contrast 676/677 and verify_identity 139/140 (the same alone).
+Then, on the tree as it merges, the thirty the fixes touch (the seven, every
+suite that reads Flip's Undo and Redo, the tips, the counts and the drafts,
+the header's and dock's set, the link page, the docs), every one ok:
+verify_ux 487/487, verify_parity 434/434, verify_layout 257/257, verify_a11y
+444/444, verify_identity 140/140, verify_drafts 101/101, verify_text 186/186,
+verify_clouddrafts 116/116, verify_a11ypages 162/162, verify_amber 111/111,
+verify_recolor 118/118, verify_sheetswipe 247/247, verify_tips 72/72,
+verify_menu 72/72, verify_contrast 677/677, verify_jsstrip 35/35,
+verify_surfaces 13/13, verify_newundo 12/12, verify_player_isolation 85/85,
+verify_theme 124/124, verify_move 82/82, verify_flipedges 22/22,
+verify_drawfull 48/48, verify_help 91/91, verify_pointerpad 55/55,
+verify_sizeclass 89/89, verify_helpclaims 47/47, verify_docs 144/144,
+verify_undofast 98/98, verify_linkpage 61/61. NOT RUN: the full battery
+(main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: Flip's Duplicate and Blank are lilac; a toast is white
+with a lilac edge (violet in dark); the Pad's Post, before you draw, is lilac
+with violet words.

@@ -37,6 +37,36 @@ ROOT = Path(__file__).resolve().parents[1]
 results = []
 check = make_check(results)
 
+
+def _set_apart(pg, host, btn):
+    """A button's own fill against the glass round it, as PAINTED: the commonest
+    colour inside the button, and the commonest in the host outside every
+    button (words and corners are the few). (ratio, button, glass), or None."""
+    import io
+    from collections import Counter
+    from PIL import Image
+    r = pg.evaluate("""([h, b]) => { const H = document.querySelector(h), B = H && H.querySelector(b); if (!H || !B) return null;
+      const o = H.getBoundingClientRect(), at = e => { const q = e.getBoundingClientRect(); return [q.left - o.left, q.top - o.top, q.width, q.height]; };
+      return { host: [o.left, o.top, o.width, o.height], btn: at(B), btns: [...H.querySelectorAll('button')].map(at) }; }""", [host, btn])
+    if not r or r["host"][2] < 4 or r["host"][3] < 4:
+        return None
+    im = Image.open(io.BytesIO(pg.screenshot(clip=dict(zip(("x", "y", "width", "height"), r["host"]))))).convert("RGB")
+    inside = lambda x, y, q: q[0] <= x < q[0] + q[2] and q[1] <= y < q[1] + q[3]
+    fill, glass = Counter(), Counter()
+    for y in range(im.size[1]):
+        for x in range(im.size[0]):
+            if inside(x, y, r["btn"]):
+                fill[im.getpixel((x, y))] += 1
+            elif not any(inside(x, y, q) for q in r["btns"]):
+                glass[im.getpixel((x, y))] += 1
+    if not fill or not glass:
+        return None
+    f_, g_ = fill.most_common(1)[0][0], glass.most_common(1)[0][0]
+    lin = lambda v: v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+    lum = lambda c: sum(k * lin(ch / 255) for k, ch in zip((0.2126, 0.7152, 0.0722), c))
+    a, b = lum(f_), lum(g_)
+    return (round((max(a, b) + 0.05) / (min(a, b) + 0.05), 3), f_, g_)
+
 # One tiny real PNG, drawn in-page, so the media path exercises the real
 # validators rather than a fake byte string they would rightly reject.
 MAKE_PNG_FILE = """async () => {
@@ -1026,6 +1056,25 @@ with sync_playwright() as _p2:
         check(f"{_ed}: ...its buttons say Open it, Keep for later and Not now, each a 44px tap on screen",
               bool(_bar) and [b[0] for b in _bar["btns"]] == ["Open it", "Keep for later", "Not now"]
               and all(b[1] >= 44 and b[2] >= 44 and b[3] for b in _bar["btns"]), str(_bar and _bar["btns"]))
+        # KEEP FOR LATER STANDS APART FROM THE NOTICE (No dinge): the notice
+        # wears the toast's glass, and a second button on it its own fill,
+        # read as painted in both themes. The notice kept the old grey glass,
+        # on which the solid lilac sat 1.02:1 in light; on the violet glass the
+        # solid violet sat 1.07:1 in dark, so there it steps up. The notice
+        # lies over the page's own ground, where in dark the glass (6% see-
+        # through) is at its darkest: the case the solid violet failed.
+        # verify_newundo reads the other, a toast over a light drawing.
+        _apart = {}
+        if _bar:
+            _th0 = _c.evaluate("() => document.documentElement.getAttribute('data-theme')")
+            for _th in ("light", "dark"):
+                _c.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th)
+                _c.wait_for_timeout(300)
+                _apart[_th] = _set_apart(_c, ".othertab", ".othertab-later")
+            _c.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+            _c.wait_for_timeout(200)
+        check(f"{_ed}: ...Keep for later stands apart from the notice's glass by its own fill, 1.08:1 or more, painted, light and dark",
+              len(_apart) == 2 and all(v and v[0] >= 1.08 for v in _apart.values()), str(_apart))
         if _bar:
             _c.click(".othertab-later"); _c.wait_for_timeout(900)
         _kept = _c.evaluate("() => window.SkriblSavedDrafts.list()")

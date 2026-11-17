@@ -593,9 +593,9 @@
        switches' words in it, and the page's name beside the mark in the
        first ink. The action purple is the app's, shared with the editors. */
     :root { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #dad1ff; --danger-soft: #ffb3c6;
-          --btn2-bg: rgba(167, 146, 255, 0.10); --btn2-hover: rgba(167, 146, 255, 0.18); }
+          --btn2-bg: #332a58; --btn2-hover: #3b3166; }   /* solid since No dinge */
     :root[data-theme="light"] { --text-2: #3b4251; --seg-off-ink: var(--text-2); --seg-on-ink: #301c8c; --danger-soft: #7a0a2d;
-          --btn2-bg: rgba(124, 92, 255, 0.14); --btn2-hover: rgba(124, 92, 255, 0.22); }
+          --btn2-bg: #e7e0ff; --btn2-hover: #ddd4ff; }
     /* JUST A BORDER (the owner's "Yes to all", Nov 16): a switch's track and a
        second button wear Skribl's lilac, see-through, as the editors' and the
        site's do; the card's white on the page had only its line (1.06:1). */
@@ -615,7 +615,16 @@
     .posted-row.active { background: #2e2552; border-color: transparent; box-shadow: none; }
     :root[data-theme="light"] .posted-row.active { background: #efebff; }
     .search input { background: var(--card); border-color: var(--card-line); border-radius: 12px; }
-    .tbtn:not(.on), .more { background: var(--card); border-color: var(--card-line); }
+    .tbtn:not(.on) { background: var(--card); border-color: var(--card-line); }
+    /* NO DINGE (Nov 16): Load more on the second button's lilac (the card's white
+       on the page had only its line, 1.065:1); a draft's picture slot the site's
+       --draw-wait, not a hairline grey; on the playing row's lilac a second button
+       a shade up, so it stands apart from the row (1.17:1, 1.24:1 dark). */
+    .more { background: var(--btn2-bg); border-color: var(--card-line); }
+    .draft-pic { background: #2e2650; }
+    :root[data-theme="light"] .draft-pic { background: #ece6ff; }
+    .posted-row.active :is(.posted-copy, .posted-key, .posted-share, .draft-file) { background: #3d326b; }
+    :root[data-theme="light"] .posted-row.active :is(.posted-copy, .posted-key, .posted-share, .draft-file) { background: #e0d7ff; }
     /* JUST A BORDER (the owner's "Yes to all", Nov 16): Copy link, Copy key
        and Save file keep posted.css's tint, the second button's, where the
        card's white on a row's white had only its line (1.00:1). Their words,
@@ -711,16 +720,18 @@
        aside. */
     :root {
       --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
+      --track-edge: #4c4574;   /* a solid track's own edge in dark (No dinge; as the Gallery's, #950) */
       --field-line: rgba(167, 146, 255, 0.7);
       --menu-paper-edge: color-mix(in srgb, rgb(167 146 255) 18%, var(--mp));
       --danger-edge: color-mix(in srgb, rgb(244 50 111) 43%, var(--card));
     }
     :root[data-theme="light"] {
       --card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--card));
+      --track-edge: var(--card-edge);
       --field-line: rgba(124, 92, 255, 0.82);
       --menu-paper-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--mp));
     }
-    .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge); }
+    .seg-track { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--track-edge); }
     .player, .posted-row, .draft-row { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
     .search input { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--field-line); }
     .tbtn:not(.on), .posted-copy, .posted-key, .posted-share, .more, .draft-file {

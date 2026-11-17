@@ -196,6 +196,12 @@ JUST_ROLES = r"""() => {
   const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  // NO DINGE: how colourful a fill is (OKLCH chroma).
+  const lin = x => { x /= 255; return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); };
+  const chroma = c => { const [r, g, b] = c.slice(0, 3).map(lin);
+    const l = Math.cbrt(0.4122214708*r + 0.5363325363*g + 0.0514459929*b), m = Math.cbrt(0.2119034982*r + 0.6806995451*g + 0.1073969566*b),
+          q = Math.cbrt(0.0883024619*r + 0.2817188376*g + 0.6299787005*b);
+    return Math.hypot(1.9779984951*l - 2.4285922050*m + 0.4505937099*q, 0.0259040371*l + 0.7827717662*m - 0.8086757660*q); };
   // A one-colour gradient layer, as Keep drawing lays its tint: the computed
   // value lists an image for every layer, so its colour layer's is ", none".
   const layerOf = cs => { const m = /^linear-gradient\(((?:rgba?|color)\([^)]*\)), \1\)(?:, none)*$/.exec(cs.backgroundImage || ''); return m ? rgba(m[1]) : null; };
@@ -210,6 +216,10 @@ JUST_ROLES = r"""() => {
     ["Hear the restart", ".loop-btn.subtle"], ["a panel button", ".panel-btn"], ["Retry", ".learn-retry"], ["Try again", ".sdrafts-retry"],
     ["Keep for later", ".othertab-later"], ["Flip's loop buttons", "#pagebar .pb"], ["Flip's speeds", ".flip-speeds .seg"],
     ["This page / After", ".mb-scope"], ["the fine-tune step", ".mt-step-seg"]];
+  // The paper's own card, where the control sits: a control on the drawers'
+  // paper is a white card like the menu's tiles (ONE LOOK ON THE PAPER).
+  const cardOf = e => { const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background:var(--menu-card)';
+    e.parentElement.appendChild(p); const v = getComputedStyle(p).backgroundColor; p.remove(); return v; };
   const out = {};
   for (const [role, sel] of ROLES) {
     const els = [...document.querySelectorAll(sel)].filter(e => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
@@ -217,8 +227,10 @@ JUST_ROLES = r"""() => {
     if (!els.length) continue;
     out[role] = els.map(e => { let g = e.parentElement; const r = e.getBoundingClientRect();
       while (g && g !== document.body) { const q = g.getBoundingClientRect(); if (q.width > r.width + 4 || q.height > r.height + 4) break; g = g.parentElement; }
-      const cs = getComputedStyle(e);
-      return { apart: +ratio(fill(e), g ? fill(g) : [255, 255, 255]).toFixed(3), shadow: cs.boxShadow, border: cs.borderTopColor }; });
+      const cs = getComputedStyle(e), own = rgba(cs.backgroundColor), lay = layerOf(cs), f = fill(e);
+      return { apart: +ratio(f, g ? fill(g) : [255, 255, 255]).toFixed(3), shadow: cs.boxShadow, border: cs.borderTopColor,
+               alpha: +Math.max(own ? own[3] : 0, lay ? lay[3] : 0).toFixed(3), chroma: +chroma(f).toFixed(3),
+               on: e.matches('.on, [aria-checked="true"], [aria-pressed="true"]'), card: !lay && cs.backgroundColor === cardOf(e) }; });
   }
   return out; }"""
 
@@ -1392,6 +1404,28 @@ check(f"just a border, the editors (the owner's \"Yes to all\", Nov 16): every t
       bool(_jrows) and (bool(ONLY) or set(JUST_SEEN) <= _jseen) and not _jlow and not _jline,
       f"least apart by role {json.dumps({r: min(x['apart'] for _, rr, x in _jrows if rr == r) for r in sorted(_jseen)})}; "
       f"unseen {sorted(set(JUST_SEEN) - _jseen)}; low {_jlow[:6]}; lined {_jline[:3]}")
+
+# NO DINGE (the owner's "All yes", Nov 16): every role above wears one chosen
+# colour, solid (a see-through wash took the grey of what it sat on), and reads
+# as lilac: OKLCH chroma just under the chosen colours (the second button
+# 0.042 light, 0.080 dark; a tip's well 0.026, 0.051) and over every wash they
+# replaced (0.031 to 0.034 light, 0.030 to 0.065 dark; 0.015, 0.031). A switched-
+# on button keeps its own tint over the solid fill, as a chosen pill does. A
+# control on the drawers' paper painted exactly the paper's own card
+# (--menu-card, where it sits: Reset adjustments in Photo) is the menu's
+# tiles' white card, styles.css's ONE LOOK ON THE PAPER, which the no-dinge
+# mock left as it is; anything else it wears, a wash or a grey, is read here.
+# (A first version asked it for lilac: the full run opened Photo, which the
+# calibration's trimmed copy had not, and called the white card dingy.)
+_DFLOOR = {"a tip": (0.02, 0.045)}
+_dcard = sorted({f"{role} in {k[3]}" for k, role, r in _jrows if r.get("card")})
+_djb = [(k, role, r) for k, role, r in _jrows if not r.get("on") and not r.get("card") and "alpha" in r]
+_dingy = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {role} alpha {r['alpha']} chroma {r['chroma']}" for k, role, r in _djb
+                 if r["alpha"] < 0.99 or r["chroma"] < _DFLOOR.get(role, (0.038, 0.07))[0 if k[1] == "light" else 1]})
+check(f"no dinge (the owner's \"All yes\", Nov 16): every tip, second button and switch above wears one chosen colour,"
+      f" solid, and reads as lilac (chroma 0.038 and up, a tip's well 0.02; 0.07 and 0.045 in dark), on Pad and Flip,"
+      f" light and dark, phone and desk ({len(_djb)} read)",
+      bool(_djb) and not _dingy, f"dingy {_dingy[:6]}; the paper's own card, not asked for lilac: {_dcard}")
 
 print("\nEach surface's own colours, for reading side by side")
 for (name, scheme, label), cz in sorted(census.items(), key=lambda kv: (kv[0][1], kv[0][2], kv[0][0])):

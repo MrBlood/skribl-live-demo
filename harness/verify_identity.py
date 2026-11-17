@@ -1007,7 +1007,14 @@ with sync_playwright() as p:
             gone_at = oo; break
         pg.wait_for_timeout(100)
     pg.wait_for_timeout(500)
+    # WHAT THE BOX LEFT, AND ONLY THAT: a coach hint anchored above it (to the
+    # speed switch) lies over its top three rows. Its glass was the canvas's
+    # near-grey, under the measure's eye; since No dinge it is violet and read
+    # as ink there (0.67% of the box, where the box itself left nothing). The
+    # hints step out of the reading for its instant, and come back.
+    fr.evaluate("() => document.querySelectorAll('.skribl-hint').forEach(e => { e.dataset.readWas = e.style.visibility; e.style.visibility = 'hidden'; })")
     left = _inked(pg, box)
+    fr.evaluate("() => document.querySelectorAll('.skribl-hint').forEach(e => { e.style.visibility = e.dataset.readWas || ''; delete e.dataset.readWas; })")
     oo = fr.evaluate(_ONCE)
     check("...three bounces by its own loop, a splat on the fourth landing, and then it is gone: the box fades, nothing left",
           rec["pages"] == 22 and rec["loop"] == {"from": 0, "to": 9, "times": 3} and rec["held"][0] == 3 and min(rec["held"]) >= 2
