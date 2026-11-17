@@ -1291,7 +1291,8 @@ with sync_playwright() as p:
           " 1.08:1 or more, light and dark, phone and desk: New | Hot, Skribls | Drafts, All | In the gallery | Link only,"
           " Undo, and on a desk Copy link, Share, Copy key and Save file (the owner's \"Yes to all\", Nov 16)",
           all(_want[d] <= _seen[d] for d in _want) and not _low,
-          f"unseen {[(d, sorted(_want[d] - _seen[d])) for d in _want]}; low {_low[:8]}; read {json.dumps({' '.join(k): v for k, v in _just.items()})[:900]}")
+          f"least apart by role {json.dumps({r: min(v for roles in _just.values() for rr, vs in roles.items() if rr == r for v in vs) for r in sorted(_seen['desk'] | _seen['phone'])})}; "
+          f"unseen {[(d, sorted(_want[d] - _seen[d])) for d in _want]}; low {_low[:8]}")
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)

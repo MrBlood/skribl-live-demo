@@ -1384,6 +1384,7 @@ check(f"just a border, the editors (the owner's \"Yes to all\", Nov 16): every t
       f"named, on Pad and Flip, light and dark, phone and desk, set apart from what it sits on by its own fill "
       f"(1.08:1 or more), a tip a well with no line ({len(_jrows)} read, every role seen)",
       bool(_jrows) and (bool(ONLY) or set(JUST_SEEN) <= _jseen) and not _jlow and not _jline,
+      f"least apart by role {json.dumps({r: min(x['apart'] for _, rr, x in _jrows if rr == r) for r in sorted(_jseen)})}; "
       f"unseen {sorted(set(JUST_SEEN) - _jseen)}; low {_jlow[:6]}; lined {_jline[:3]}")
 
 print("\nEach surface's own colours, for reading side by side")
