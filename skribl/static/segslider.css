@@ -17,14 +17,14 @@
   --r-seg: 12px;
   --seg-inset: 3px;
   --seg-pill-r: calc(var(--r-seg) - var(--seg-inset));
-  --seg-track: #171b23;                  /* styles.css --surface-control */
+  --seg-track: rgba(167, 146, 255, 0.10); /* styles.css --btn2-bg (Just a Border; was --surface-control) */
   --seg-line: rgba(255, 255, 255, 0.055); /* --hairline */
   --seg-off-ink: #8a93a6;                /* --text-soft */
   --seg-on-fill: rgba(124, 92, 255, 0.22);
   --seg-on-ink: #b9a8ff;
 }
 :root[data-theme="light"] {
-  --seg-track: #edf0f4;
+  --seg-track: rgba(124, 92, 255, 0.14);
   --seg-line: rgba(0, 0, 0, 0.09);
   --seg-off-ink: #5f6775;
   --seg-on-ink: #5434dc;

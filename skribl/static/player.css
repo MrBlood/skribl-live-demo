@@ -220,6 +220,15 @@
      ink anywhere: the dock wore it, at 3.1:1 dark and 2.9:1 light. */
   --seg-on-fill: rgba(124, 92, 255, 0.22);
   --seg-on-ink: #d4c9ff;          /* 8.0:1 on the tint over a card (was #b9a8ff, 5.97) */
+  /* JUST A BORDER, THE EDITORS (the owner's "Yes to all", Nov 16, to the
+     editors' mock): a box set apart from what it sits on by its line alone
+     reads as nothing. A SECOND BUTTON AND EVERY SWITCH'S TRACK wear Skribl's
+     lilac, see-through, as the site's do (social.css --btn2-bg, value for
+     value), a stronger one under a pointer; a TIP in How it works is a WELL
+     (its own rule: one use, and every token here is copied into the
+     player's sheet, which has a byte budget). */
+  --btn2-bg: rgba(167, 146, 255, 0.10);
+  --btn2-hover: rgba(167, 146, 255, 0.18);
 
   /* The letterpress relief on the signature (SINK, not pop,
      and asked for the old purple halo to go). A bright lower edge and a
@@ -2252,7 +2261,7 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
    wins, so no family can quietly keep an older corner, weight or colour. */
 .seg, .smooth-seg, .gif-seg, .photo-fit-group {
   position: relative;
-  background: var(--surface-control); border: 1px solid var(--hairline);
+  background: var(--btn2-bg); border: 1px solid var(--hairline);
   border-radius: var(--r-seg); padding: var(--seg-inset);
 }
 /* ONE LABEL WEIGHT, selected or not: a label that gets bolder when chosen
@@ -2407,6 +2416,8 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
      deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground
      a pill sits on; the tint itself, the look the owner chose, does not move. */
   --seg-on-ink:              #36209a;   /* 7.8:1 on the tint over the menu's lilac (was #4c31c4, 5:1; verify_contrast) */
+  --btn2-bg:                 rgba(124, 92, 255, 0.14);   /* JUST A BORDER: the site's, value for value */
+  --btn2-hover:              rgba(124, 92, 255, 0.22);
   /* Letterpress for a light surface: the classic bright ledge below the
      ink, a whisper of shade above. */
   --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))

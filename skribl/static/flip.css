@@ -1052,7 +1052,7 @@
   gap: 6px;
   border: 1px solid var(--hairline-strong);
   border-radius: 9px;
-  background: rgba(var(--surface-sheet-rgb), 0.9);
+  background: var(--btn2-bg);   /* the second button's (Just a Border, the editors) */
   color: var(--text-secondary);
   font-size: 12.5px;
   font-weight: 500;
@@ -1065,7 +1065,7 @@
    change until the pointer left. Hover is only for buttons that are off. */
 @media (hover: hover) {
   .pb:hover:not(:disabled):not(.on):not([aria-checked="true"]) {
-    background: rgba(var(--wash-rgb), 0.07);
+    background: var(--btn2-hover);
     border-color: var(--hairline-strong);
     color: var(--text-primary);
   }

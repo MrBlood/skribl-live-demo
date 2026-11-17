@@ -197,6 +197,15 @@
      ink anywhere: the dock wore it, at 3.1:1 dark and 2.9:1 light. */
   --seg-on-fill: rgba(124, 92, 255, 0.22);
   --seg-on-ink: #d4c9ff;          /* 8.0:1 on the tint over a card (was #b9a8ff, 5.97) */
+  /* JUST A BORDER, THE EDITORS (the owner's "Yes to all", Nov 16, to the
+     editors' mock): a box set apart from what it sits on by its line alone
+     reads as nothing. A SECOND BUTTON AND EVERY SWITCH'S TRACK wear Skribl's
+     lilac, see-through, as the site's do (social.css --btn2-bg, value for
+     value), a stronger one under a pointer; a TIP in How it works is a WELL
+     (its own rule: one use, and every token here is copied into the
+     player's sheet, which has a byte budget). */
+  --btn2-bg: rgba(167, 146, 255, 0.10);
+  --btn2-hover: rgba(167, 146, 255, 0.18);
 
   /* The letterpress relief on the signature (SINK, not pop,
      and asked for the old purple halo to go). A bright lower edge and a
@@ -1645,7 +1654,7 @@ html[data-hello-cover="lift"] body::after { opacity: 0; pointer-events: none; }
   padding: 9px 16px 9px 13px;
   border-radius: 999px;
   border: 1px solid var(--hairline-strong);
-  background: rgba(var(--surface-panel-rgb), 0.9);
+  background: linear-gradient(var(--btn2-bg), var(--btn2-bg)), rgba(var(--surface-panel-rgb), 0.9);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   color: var(--text-primary);
@@ -2577,13 +2586,13 @@ body.recoloring #canvas { cursor: crosshair !important; }
    every drawer's buttons speak one language. */
 .panel-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--hairline); background: var(--surface-panel); color: var(--text-soft);
+  border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--hairline); background: var(--btn2-bg); color: var(--text-soft);
   font-size: 12px; font-weight: 500; padding: 9px 12px; border-radius: 10px;
   cursor: pointer;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
-@media (hover: hover) { .panel-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); } }
+@media (hover: hover) { .panel-btn:hover { background: var(--btn2-hover); color: var(--text-bright); } }
 
 .mt-pick[hidden] { display: none; }
 
@@ -2812,7 +2821,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
    the tap 6px down and back as the line changed. */
 .mt-tap-row { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px 12px; }
 .mt-tap { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px 6px 12px; border-radius: 999px;
-  border: 1px solid transparent; background: var(--menu-card); box-shadow: var(--card-ring), var(--menu-card-drop);
+  border: 1px solid transparent; background: var(--btn2-bg); box-shadow: var(--card-ring), var(--menu-card-drop);
   color: var(--accent-ink); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer;
   -webkit-tap-highlight-color: transparent; transition: background .15s ease, box-shadow .15s ease; }
 .mt-tap svg { width: 18px; height: 18px; flex: none; }
@@ -3318,7 +3327,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 }
 
 .loop-btn.subtle {
-  background: var(--surface-control-hover);
+  background: var(--btn2-bg);
   color: var(--text-secondary);   /* words, so the second ink (was the tool icons' grey, 6.5:1) */
 }
 
@@ -4802,7 +4811,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 #postSheet.is-posted .post-result-soft svg { width: 17px; height: 17px; }
 .post-next { display: flex; gap: 8px; }
 .post-quiet { flex: 1 1 0; min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 7px;
-  padding: 0 6px; border: 1px solid transparent; box-shadow: var(--paper-ring); border-radius: 12px; background: transparent;
+  padding: 0 6px; border: 1px solid transparent; box-shadow: var(--paper-ring); border-radius: 12px; background: var(--btn2-bg);
   color: var(--text-primary); font: inherit; font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer;
   -webkit-tap-highlight-color: transparent; }
 .post-quiet[hidden] { display: none; }
@@ -7168,9 +7177,9 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .learn-fail-sub { color: var(--text-secondary); font-size: 13px; }
 .learn-retry { margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 6px;
   min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line-faint);
-  background: transparent; color: var(--text-primary); font: inherit; font-size: 13.5px; font-weight: 650; cursor: pointer; }
+  background: var(--btn2-bg); color: var(--text-primary); font: inherit; font-size: 13.5px; font-weight: 650; cursor: pointer; }
 .learn-retry svg { width: 14px; height: 14px; }
-@media (hover: hover) { .learn-retry:hover { background: var(--surface-tint); } }
+@media (hover: hover) { .learn-retry:hover { background: var(--btn2-hover); } }
 .learn-retry:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 @media (hover: hover) { .learn-try:hover { filter: brightness(1.08); } }
 .learn-try:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
@@ -7975,7 +7984,7 @@ body.playing .flip-grid { display: none; }
 .sdrafts-list.sdrafts-scrolls { padding-right: 12px; margin-bottom: 0; }
 .sdrafts-empty { margin: 18px 4px; font-size: 14px; color: var(--text-muted); text-align: center; }
 .sdrafts-retry { align-self: center; min-height: 44px; padding: 0 20px; border-radius: 999px;
-  border: 1px solid var(--hairline, #252a35); background: transparent; color: var(--text-heading);
+  border: 1px solid var(--hairline, #252a35); background: var(--btn2-bg); color: var(--text-heading);
   font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
 /* ONE ROW, BOTH PLACES (v317): the same row as the Library's Drafts tab --
    picture, name, "Pad · 12m ago", and its end. The whole row opens the draft;
@@ -8771,7 +8780,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
    the lilac paper, and Theme, Tips, Canvas and New's shapes kept the old grey
    one: two looks for one control. Each track is now a card with the lilac
    edge, like the tiles beside it; the one pill still says which is chosen. */
-:is(.menu-sheet, .flip-menu) .seg { background: var(--menu-card); border-color: transparent; box-shadow: var(--card-ring); }
+:is(.menu-sheet, .flip-menu) .seg { background: var(--btn2-bg); border-color: transparent; box-shadow: var(--card-ring); }
 /* An open section of Ask's answers continues its card: it was the grey of
    the old glass, not the paper's. */
 .accordion-body { background: var(--menu-card); }
@@ -8806,6 +8815,12 @@ body.stroking .toolbar, body.stroking .flip-tools {
   .help-drawer.open .help-drawer-inner { transform: translate(-50%, 0); opacity: 1; }
 }
 .learn-card, .help-tip, .help-search, .accordion-header { background: var(--menu-card); border-color: transparent; box-shadow: var(--card-ring); }
+/* A TIP IS A WELL (Just a Border, the editors: the owner's "Yes to all", Nov
+   16): on its section's card it was the card's own white with only its ring
+   between (1.00:1); a well, the editors' ground touched with lilac, and no
+   line, as the site's quote is (1.14:1 light, 1.12:1 dark): the site's
+   --quote-well, value for value (--surface-raised is the site's --page). */
+.help-tip { background: color-mix(in srgb, rgb(124 92 255) 6%, var(--surface-raised)); box-shadow: none; }
 .learn-card { box-shadow: var(--card-ring), var(--menu-card-drop); }
 
 /* ---- Ask's home, answers and answer (lib/ask.js) ----------------------------
@@ -9014,7 +9029,7 @@ body.lc-open .skribl-tip { display: none !important; }   /* the card grows out o
    wins, so no family can quietly keep an older corner, weight or colour. */
 .seg, .smooth-seg, .gif-seg, .photo-fit-group {
   position: relative;
-  background: var(--surface-control); border: 1px solid var(--hairline);
+  background: var(--btn2-bg); border: 1px solid var(--hairline);
   border-radius: var(--r-seg); padding: var(--seg-inset);
 }
 /* ONE LABEL WEIGHT, selected or not: a label that gets bolder when chosen
@@ -9509,6 +9524,8 @@ body.replaying .media-card { pointer-events: none; }
      deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground
      a pill sits on; the tint itself, the look the owner chose, does not move. */
   --seg-on-ink:              #36209a;   /* 7.8:1 on the tint over the menu's lilac (was #4c31c4, 5:1; verify_contrast) */
+  --btn2-bg:                 rgba(124, 92, 255, 0.14);   /* JUST A BORDER: the site's, value for value */
+  --btn2-hover:              rgba(124, 92, 255, 0.22);
   /* Letterpress for a light surface: the classic bright ledge below the
      ink, a whisper of shade above. */
   --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
@@ -9841,7 +9858,7 @@ body.replaying .media-card { pointer-events: none; }
 .othertab-open, .othertab-later { order: 2; flex: 1 1 0; min-height: 44px; padding: 0 14px; border-radius: 999px;
   font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .othertab-open { border: 0; background: var(--accent-fill); color: #fff; }
-.othertab-later { border: 1px solid var(--hairline-strong); background: transparent; color: inherit; margin-right: 8px; }
+.othertab-later { border: 1px solid var(--hairline-strong); background: var(--btn2-bg); color: inherit; margin-right: 8px; }
 .othertab-open:disabled, .othertab-later:disabled { opacity: .55; cursor: default; }
 /* The buttons start their own line: a zero-height break after Not now. */
 .othertab::after { content: ''; order: 1; flex-basis: 100%; height: 0; }
@@ -9963,7 +9980,7 @@ body.drawalong .canvas-empty-hint { display: none; }
    wins). And Hear the restart: .loop-btn.subtle's own grey outranked the list
    above, so it wore the lilac edge on a grey fill; here it is the card. */
 :where(.tune-shell) .onion-tint { background: var(--menu-card); border-color: transparent; box-shadow: var(--card-ring); }
-:where(.tab-panel, .media-card) .loop-btn.subtle { background: var(--menu-card); }
+:where(.tab-panel, .media-card) .loop-btn.subtle { background: var(--btn2-bg); }
 /* THE DRAWERS' WORDS, ONE SIZE UP (the owner, of the type mock's B: "all yes"):
    every word in a dock drawer a size nearer the menu's 16 over 14, the
    smallest 12 where it was 11. The drawers' own rules carry their new sizes;

@@ -323,10 +323,10 @@
 html[data-input="pointer"] #skriblGallery :focus-visible { outline: none !important; }
 
 /* ---- from segslider.css ---- */
-#skriblGallery { --r-seg: 12px; --seg-inset: 3px; --seg-pill-r: calc(var(--r-seg) - var(--seg-inset)); --seg-track: #171b23; --seg-line: rgba(255, 255, 255, 0.055); --seg-off-ink: #8a93a6; --seg-on-fill: rgba(124, 92, 255, 0.22); --seg-on-ink: #b9a8ff; }
-:root[data-theme="light"] #skriblGallery { --seg-track: #edf0f4; --seg-line: rgba(0, 0, 0, 0.09); --seg-off-ink: #5f6775; --seg-on-ink: #5434dc; }
+#skriblGallery { --r-seg: 12px; --seg-inset: 3px; --seg-pill-r: calc(var(--r-seg) - var(--seg-inset)); --seg-track: rgba(167, 146, 255, 0.10); --seg-line: rgba(255, 255, 255, 0.055); --seg-off-ink: #8a93a6; --seg-on-fill: rgba(124, 92, 255, 0.22); --seg-on-ink: #b9a8ff; }
+:root[data-theme="light"] #skriblGallery { --seg-track: rgba(124, 92, 255, 0.14); --seg-line: rgba(0, 0, 0, 0.09); --seg-off-ink: #5f6775; --seg-on-ink: #5434dc; }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme]) #skriblGallery { --seg-track: #edf0f4; --seg-line: rgba(0, 0, 0, 0.09); --seg-off-ink: #5f6775; --seg-on-ink: #5434dc; }
+  :root:not([data-theme]) #skriblGallery { --seg-track: rgba(124, 92, 255, 0.14); --seg-line: rgba(0, 0, 0, 0.09); --seg-off-ink: #5f6775; --seg-on-ink: #5434dc; }
 }
 #skriblGallery .seg-track { position: relative; display: inline-flex; align-items: stretch; box-sizing: border-box; height: 44px; background: var(--seg-track); border: 1px solid var(--seg-line); border-radius: var(--r-seg); padding: var(--seg-inset); }
 #skriblGallery .seg-track > button { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; margin: 0; padding: 0 14px; border: 0; border-radius: var(--seg-pill-r); background: transparent; color: var(--seg-off-ink); font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0; line-height: 1; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -486,12 +486,12 @@ html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) #skriblGallery { --card: #ffffff; --card-line: rgba(124, 92, 255, 0.34); --card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09); }
 }
-#skriblGallery { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; --danger: #ff7a9c; }
-:root[data-theme="light"] #skriblGallery { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; }
+#skriblGallery { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; --danger: #ff7a9c; --btn2-bg: rgba(167, 146, 255, 0.10); --btn2-hover: rgba(167, 146, 255, 0.18); }
+:root[data-theme="light"] #skriblGallery { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; --btn2-bg: rgba(124, 92, 255, 0.14); --btn2-hover: rgba(124, 92, 255, 0.22); }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme]) #skriblGallery { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; }
+  :root:not([data-theme]) #skriblGallery { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; --btn2-bg: rgba(124, 92, 255, 0.14); --btn2-hover: rgba(124, 92, 255, 0.22); }
 }
-#skriblGallery .seg-track { background: var(--card); border-color: var(--card-line); }
+#skriblGallery .seg-track { background: var(--btn2-bg); border-color: var(--card-line); }
 #skriblGallery .tile { background: var(--card); border-color: var(--card-line); box-shadow: var(--card-drop); --bg-elev: var(--card); }
 #skriblGallery .find input { background: var(--card); border-color: var(--card-line); border-radius: 12px; }
 #skriblGallery { --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card)); --field-line: rgba(167, 146, 255, 0.7); --control-edge: color-mix(in srgb, rgb(255 255 255) 9%, var(--control)); }

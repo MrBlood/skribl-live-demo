@@ -1369,7 +1369,14 @@ with sync_playwright() as sp:
     #   also lets Increase Contrast strengthen them as it does the hairlines
     #   (151 B under a pair per theme); shadows with no blur written without
     #   it. verify_jsstrip's line moves with it. 45,072 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_078, 119_844, 40_000
+    # RAISED (the owner's "Yes to all" to "Just a Border" in the editors, Nov
+    #   16: a second button and every switch's track tinted, as the site's),
+    #   for one named cost: +185 B -- the second button's tint and its hover,
+    #   both themes (--btn2-bg, --btn2-hover), which the player's own switch
+    #   wears; the hover rides along, the token block being copied whole.
+    #   Spent first: How it works' well written in its one rule, not as a
+    #   token (-73 B). verify_jsstrip's line moves with it. 45,257 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_263, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

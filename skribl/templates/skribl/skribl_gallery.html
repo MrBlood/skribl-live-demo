@@ -657,9 +657,14 @@
        editors' (7:1 and up on the page, the cards and a lit row), the
        switches' words in it, and the page's name beside the mark in the
        first ink. The action purple is the app's, shared with the editors. */
-    :root { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; --danger: #ff7a9c; }   /* Report on a tile's menu, over the card: 4.49 */
-    :root[data-theme="light"] { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; }
-    .seg-track { background: var(--card); border-color: var(--card-line); }
+    :root { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; --danger: #ff7a9c;   /* Report on a tile's menu, over the card: 4.49 */
+  --btn2-bg: rgba(167, 146, 255, 0.10); --btn2-hover: rgba(167, 146, 255, 0.18); }
+    :root[data-theme="light"] { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8;
+  --btn2-bg: rgba(124, 92, 255, 0.14); --btn2-hover: rgba(124, 92, 255, 0.22); }
+    /* JUST A BORDER (the owner's "Yes to all", Nov 16): the switch's track wears
+       Skribl's lilac, see-through, as the editors' and the site's do; the card's
+       white on the page had only its line (1.06:1). */
+    .seg-track { background: var(--btn2-bg); border-color: var(--card-line); }
     .tile { background: var(--card); border-color: var(--card-line); box-shadow: var(--card-drop); --bg-elev: var(--card); }
     .find input { background: var(--card); border-color: var(--card-line); border-radius: 12px; }
     /* ONE SCREEN PIXEL (the edges, part four; the owner's "all yes" to "The
