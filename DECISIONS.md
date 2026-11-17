@@ -45286,3 +45286,82 @@ tree as built, one at a time on a fresh server; and, side by side
 verify_socialreposts 55/55, verify_socialsearch 32/32,
 verify_player_isolation 85/85, verify_jsstrip 35/35 and verify_docs 144/144.
 NOT RUN: the full battery (main's run after the merge does it).
+
+## After v330 -- No dinge, the site: one lilac, solid; lilac wells and placeholders; Post waits crisp
+
+The owner, Nov 16: "I want everything to pop, crisp and luxurious.. no
+dingy. Colorful but not cartoonish. Premium but kind and fun. Artistic,
+clean, and kind (like a sophisticated hippy)." Then: "look back at this
+session and the one before", and of the assessment, "d2 is what got me
+thinking". The no-dinge mock (https://claude.ai/artifact/CxFeGo83rBoSWaA5btRjSR)
+rested on a census of every painted surface (897 on the site, 17,306 in Pad,
+Flip, the Library and the Gallery, light and dark, phone and desk), found
+five habits, and showed each now beside proposed; "All yes". This is the
+site's half; Skribl's follows.
+
+WHAT CHANGED (social.css):
+
+- ONE LILAC, SOLID: --btn2-bg (the second button, the boxed icon buttons,
+  every switch's track) is a chosen lilac, #e7e0ff light and #332a58 dark.
+  It was a see-through wash that took the grey of what it sat on: chroma
+  0.031 to 0.034 in light (grey-lilac on the page), a murky 0.030 in dark on
+  the page. Now 0.042 and 0.080, and 1.13:1 to 1.27:1 (light), 1.22:1 to
+  1.44:1 (dark) from every ground. The comment button and Make's Draw, Flip
+  and Yours, which wore the note's wash (--tint), wear it too. Notes and
+  highlights keep --tint, unchanged.
+  In dark its edge (--btn2-line) goes from 0.26 to 0.4 of the light violet:
+  on the solid fill the old edge was nearly the fill's own colour, and New |
+  Hot's one-pixel outline read 0 pixels (verify_socialposts; the Gallery's
+  track lost its edge the same way, #950).
+- WELLS THAT ARE LILAC: --quote-well (D2) is #f0ecff light, #16112b dark. It
+  was the page's grey with 6% of the lilac (chroma 0.015, 0.031): now 0.026
+  and 0.051, the same depth (1.16:1 and 1.15:1 on its card).
+- PLACEHOLDERS IN LILAC: --draw-wait (an empty face, Activity's picture slot,
+  a drawing's plate while it loads) is #ece6ff light, #2e2650 dark. It was a
+  flat grey (#f1f3f7) and a near-black (#13161c).
+- WAITING, CRISP: Make's Post, with nothing to post, waits on the second
+  button's lilac in the chosen violet (--pill-on-ink), at full strength
+  (7.98:1 light, 8.4:1 dark). It faded the purple to 45%.
+
+The mock's number for the light lilac's chroma read 0.055: the target, before
+sRGB trimmed it (its blue tops out at 255). It paints 0.042. The picture was
+the real colour all along; the page shows the corrected number.
+
+THE CHECKS, each shown red by a break of its own, the tree as built green
+beside them:
+
+- verify_socialreposts 13, "no dinge" (new): on Home, a post, a quote of a
+  quote, a person, Settings, the Gallery, people search, Activity and
+  signed-out Home, phone and desk, light and dark, every second button,
+  switch's track, quote's well and placeholder solid and lilac enough
+  (chroma 0.038, 0.02 and 0.03 light; 0.07, 0.045 and 0.06 dark), every role
+  seen. Red: the wash back; the old well; the grey placeholders; a role it
+  cannot see. Its instrument: the floors first sat at the mock's planned
+  0.05, over the real 0.042, and read the build red; they sit just under the
+  chosen colours as they paint and over every wash they replaced.
+- verify_socialreposts 11: D2's well paints its own colour (it compared the
+  paint against 6% of the lilac over the page; its colour is 13's now).
+- verify_composer 3: Post waits crisp. Red on the 45% fade.
+- verify_socialfollow 2 and 7, verify_socialsettings 1 and 6: the second
+  button's solid values. Red on the wash.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3): the nineteen site
+suites. Seventeen ok on the first pass: verify_socialreposts 56/56,
+verify_socialcomments 96/96, verify_socialprofile 94/94, verify_sociallikes
+100/100, verify_socialmute 68/68, verify_socialsettings 45/45,
+verify_socialmentions 51/51, verify_socialactivity 46/46, verify_composer
+39/39, verify_socialsearch 32/32, verify_socialbookmarks 37/37,
+verify_socialapp 55/55, verify_socialsafety 38/38, verify_social 45/45,
+verify_docs 144/144, verify_socialauth 73/73, verify_a11ypages 162/162.
+verify_socialposts went red, 98/99, and it was a defect: the dark outline
+above (0 pixels); with the edge at 0.4, verify_socialposts 99/99,
+verify_socialsettings 45/45 and verify_socialreposts 56/56 side by side
+again. verify_socialfollow went red beside others, 78/79, on a Reduce Motion
+fade that stepped 0.356 in one frame (light): load, not the change, which
+touches no motion; 79/79 alone, twice. NOT RUN: the full battery (main's run
+after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: an empty face is a soft lilac circle; Make's Post,
+before you write, is lilac with violet words; Home's Following and Everyone a
+clear lilac.
