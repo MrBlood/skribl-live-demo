@@ -83,6 +83,7 @@ DRAWERS = ("Tune", "Tune, with Beat", "The shape picker", "The draw drawer", "Th
            "The stamp shelf", "The stamp shelf, with stamps")
 SHELF = ("The stamp shelf", "The stamp shelf, with stamps")       # the Pad has no stamps,
 FLIP_ONLY = SHELF + ("Tune, with Beat",)                          # nor pages to put on a song's beat
+DESK_ONLY = ("A loop",)   # Flip's page bar is a desk's: a touch phone's compact layout has none
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
          "Post, posted", "Post, the reason", "Ask", "Ask, its answers", "Ask, an answer", "The little book",
          "Your drafts, three saved")
@@ -802,8 +803,7 @@ def surfaces(name, ids, q, canvas, btn):
             stroke(); q.click("#addcopy"); q.wait_for_timeout(400)
 
     def a_loop():
-        # Loop is in the page bar's overflow on a phone: pressed by script.
-        pages(); q.evaluate("() => document.getElementById('pbLoop').click()"); q.wait_for_timeout(400)
+        pages(); q.click("#pbLoop"); q.wait_for_timeout(400)
         q.evaluate("() => typeof loopCycle === 'function' && !document.querySelector('.loopchip') && loopCycle()")
         q.wait_for_timeout(500)
 
@@ -900,6 +900,8 @@ with sync_playwright() as p:
                 q = c.new_page()
                 for label, opener, root in surfaces(name, ids, q, canvas, btn):
                     if ONLY and label not in ONLY:
+                        continue
+                    if dev == "phone" and label in DESK_ONLY:
                         continue
                     where = f"{name}, {scheme}, {dev}: {label}"
                     try:
