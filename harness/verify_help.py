@@ -107,16 +107,23 @@ with sync_playwright() as p:
               tog == [[True, "true", True], [False, "false", False]], str(tog))
         # A HEADER UNDER A POINTER takes Ask's rows' faint lilac (No dinge's
         # leftovers, the owner's "All yes", Nov 17): it turned the control's grey.
+        # The headers are How it works' browse view (Ask first, then "browse
+        # everything"): they must be on screen for a pointer to rest on them.
         _hv = {}
         _th0 = pg.evaluate("() => document.documentElement.getAttribute('data-theme')")
-        for _th in ("light", "dark"):
-            pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(200)
-            pg.hover("#helpDrawer .accordion-header:not(.open)"); pg.wait_for_timeout(350)
-            _hv[_th] = pg.evaluate(WEARS, ["#helpDrawer .accordion-header:hover", "color-mix(in srgb, var(--accent) 6%, var(--menu-card))"])
-            pg.mouse.move(2, 2); pg.wait_for_timeout(250)
+        try:
+            pg.evaluate("() => { const b = document.getElementById('askBrowse'); if (b) b.click(); }")
+            pg.wait_for_timeout(700)
+            for _th in ("light", "dark"):
+                pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(200)
+                pg.hover("#helpDrawer .accordion-header:not(.open)", timeout=5000); pg.wait_for_timeout(350)
+                _hv[_th] = pg.evaluate(WEARS, ["#helpDrawer .accordion-header:hover", "color-mix(in srgb, var(--accent) 6%, var(--menu-card))"])
+                pg.mouse.move(2, 2); pg.wait_for_timeout(250)
+        except Exception as _e:  # a header not there to rest on is a red row, never a stop
+            _hv["stopped"] = repr(_e)[:160]
         pg.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
         check(f"{surface}: a section header under the pointer takes the faint lilac Ask's rows do, light and dark (not the control's grey)",
-              all(v and v["got"] == v["want"] for v in _hv.values()), str(_hv))
+              sorted(_hv) == ["dark", "light"] and all(v and v["got"] == v["want"] for v in _hv.values()), str(_hv))
         pg.close()
 
     # ...AND THE EDITORS DO NOT BIND THEM. Read from the code, not the

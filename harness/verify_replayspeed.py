@@ -455,6 +455,15 @@ with sync_playwright() as p:
             chips = pg.evaluate(CHIPS, "#padSpeed")
             check(f"[{label}] ...tapping it opens every speed, each one on top and on screen",
                   len(chips) == 8 and all(c["hit"] and c["inside"] for c in chips), str(chips))
+            # The Pad's own speeds are the toasts' clear glass too (styles.css; the
+            # link page's, read above, are the player's sheet's copy).
+            _pad, _th0 = {}, pg.evaluate("() => document.documentElement.getAttribute('data-theme')")
+            for _th in ("light", "dark"):
+                pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(250)
+                _pad[_th] = pg.evaluate(WEARS, ["#padSpeed .rl-chips", "var(--chip-glass)"])
+            pg.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+            check(f"[{label}] ...and they are the toasts' clear glass, light and dark (it was a grey pill)",
+                  all(v and v["got"] == v["want"] for v in _pad.values()) and _pad["light"]["want"] != _pad["dark"]["want"], str(_pad))
             taps = [pg.evaluate(TAP, sp.element_handle())] + [pg.evaluate(TAP, h) for h in pg.locator("#padSpeed .rl-chips button[data-r]").element_handles()]
             check(f"[{label}] ...and the button and every speed are at least a 44px tap",
                   all(w >= 44 and h >= 44 for w, h in taps), str(taps))
