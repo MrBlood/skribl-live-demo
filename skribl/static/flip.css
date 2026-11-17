@@ -1073,7 +1073,10 @@
 .pb:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
 .pb:active:not(:disabled) { transform: translateY(1px); }
 .pb:disabled { opacity: 0.3; cursor: default; }
-.pb.on { color: var(--ui-hi); border-color: rgba(124, 92, 255, 0.5); background: rgba(124, 92, 255, 0.14); }
+/* Its words the chosen pill's ink (Just a Border, the editors, Nov 16): the
+   brand purple read 3.44:1 on its own tint in light, 3.81:1 in dark, under
+   AA; the tint's violet reads 9:1 and up. */
+.pb.on { color: var(--seg-on-ink); border-color: rgba(124, 92, 255, 0.5); background: rgba(124, 92, 255, 0.14); }
 
 /* Destructive action lives at the far end, so a mis-tap on Hold or Move cannot
    land on Delete — which is exactly what the old 18px overlay allowed. */
@@ -1174,7 +1177,7 @@
    is the visible one, and both are needed — an aria-checked nobody can see is
    the defect verify_a11y exists to find, in the other direction. */
 .pb[aria-checked="true"] {
-  color: var(--ui-hi);
+  color: var(--seg-on-ink);   /* the brand purple, on the second button's tint, read 3.44:1 */
   border-color: var(--ui-hi);
 }
 
@@ -1358,7 +1361,7 @@
   /* Redundant since styles.css added a global [hidden] rule; kept so the
      move bar still hides if flip.css is ever loaded without styles.css. */
   .movebar[hidden] { display: none; }
-  .mb-label { font-size: 12px; font-weight: 600; color: var(--ui-hi); }
+  .mb-label { font-size: 12px; font-weight: 600; color: var(--accent-ink); }   /* small violet words (the brand purple read 4.08:1 on the bar) */
   /* The offset readout and the scope pill are a matched pair: both report
      state, both sit between the "Moving" label and the actions. They were 24px
      and 20px — three pixels apart on a Mac — because neither stated a height.
@@ -1776,7 +1779,7 @@ body:not([data-size="compact"]):not(.one-page) :is(#pbCopy, #pbDraw, #addinbetwe
   background: rgba(var(--glass-deep-2-rgb), .88); color: var(--text-soft); white-space: nowrap; pointer-events: none;
 }
 .frame .noplaymark { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.pb#pbLoop.on { color: var(--ui-hi); }
+.pb#pbLoop.on { color: var(--seg-on-ink); }
 /* THE LOOP IS A TRIM FRAME (owner chose "A", from mocks: the stick-and-knob
    handles "look weird up against the rounded corners, plus we don't really
    need a grabber on top"). The outline's left and right edges are the handles:

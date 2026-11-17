@@ -618,8 +618,13 @@
     .tbtn:not(.on), .more { background: var(--card); border-color: var(--card-line); }
     /* JUST A BORDER (the owner's "Yes to all", Nov 16): Copy link, Copy key
        and Save file keep posted.css's tint, the second button's, where the
-       card's white on a row's white had only its line (1.00:1). */
+       card's white on a row's white had only its line (1.00:1). Their words,
+       and Share's, a step stronger, so they keep 7:1 on the tint over the
+       playing row's lilac (the page's second ink read 6.76:1 light, 6.36:1
+       dark there): the tint does not move, the ink does. */
     .posted-copy, .posted-key, .draft-file { border-color: var(--card-line); }
+    .posted-copy, .posted-key, .posted-share, .draft-file { --text-secondary: #c5ccd8; }
+    :root[data-theme="light"] :is(.posted-copy, .posted-key, .posted-share, .draft-file) { --text-secondary: #3b4251; }
     .posted-copy, .posted-key, .posted-gallery, .posted-delete, .draft-act { border-radius: 12px; }
     .now .lbl, .stat span, .kind { text-transform: none; letter-spacing: normal; font-size: 13px; }
     /* A CALMER LIST (the owner's pick A after v324: "all yes"). The count

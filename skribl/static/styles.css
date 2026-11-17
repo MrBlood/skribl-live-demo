@@ -2822,7 +2822,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-tap-row { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px 12px; }
 .mt-tap { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px 6px 12px; border-radius: 999px;
   border: 1px solid transparent; background: var(--btn2-bg); box-shadow: var(--card-ring), var(--menu-card-drop);
-  color: var(--accent-ink); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer;
+  color: var(--seg-on-ink); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer;
   -webkit-tap-highlight-color: transparent; transition: background .15s ease, box-shadow .15s ease; }
 .mt-tap svg { width: 18px; height: 18px; flex: none; }
 .mt-tap.tapping { background: var(--seg-on-fill); border-color: transparent; color: var(--seg-on-ink);
@@ -9983,12 +9983,19 @@ body.drawalong .canvas-empty-hint { display: none; }
 :where(.tab-panel, .media-card) .loop-btn.subtle { background: var(--btn2-bg); }
 /* ONE TINTED SWITCH, WHERE A SWITCH SITS ON A CARD OR ON THE FRAME (Just a
    Border, the editors: the owner's "Yes to all", Nov 16): Flip's speeds, its
-   This page / After, and a switch on a door's card (the fine-tune step) wear
-   the second button's tint, as the site's switches do. Their own grey or
-   white was the colour of what they sat on, their line all that told them
-   apart. A switch on the paper stays a white card (ONE LOOK ON THE PAPER).
-   After the drawers' block, which it must outrank at equal weight. */
-.flip-speeds .seg, .mb-scope, :where(.dp-panel) .seg { background: var(--btn2-bg); }
+   This page / After, and the fine-tune step on Exact times' card wear the
+   second button's tint, as the site's switches do. Their own grey or white
+   was the colour of what they sat on, their line all that told them apart.
+   A switch on the paper stays a white card (ONE LOOK ON THE PAPER), and
+   Length's and the bar's switches, set apart by their own grey, stay it.
+   After the drawers' block, which it must outrank at equal weight.
+   THEIR WORDS KEEP TWO INKS' 7:1 ON THE TINT: the tint does not move, the
+   ink does, a step (as --seg-on-ink did for the menu's lilac). The chosen
+   word on the pill over the tint read 6.71:1 in light (Flip's speeds) and
+   6.92:1 in dark (the fine-tune step), a word not chosen 6.93:1 in light
+   (Flip's speeds, on the frame's grey). */
+.flip-speeds .seg, .mb-scope, .mt-step-seg { background: var(--btn2-bg); --seg-on-ink: #dad1ff; }
+:root[data-theme="light"] :is(.flip-speeds .seg, .mb-scope, .mt-step-seg) { --seg-on-ink: #301c8c; --text-soft: #3b4251; }
 /* THE DRAWERS' WORDS, ONE SIZE UP (the owner, of the type mock's B: "all yes"):
    every word in a dock drawer a size nearer the menu's 16 over 14, the
    smallest 12 where it was 11. The drawers' own rules carry their new sizes;

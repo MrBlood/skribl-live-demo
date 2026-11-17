@@ -195,7 +195,9 @@ JUST_ROLES = r"""() => {
   const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
-  const layerOf = cs => { const m = /^linear-gradient\(((?:rgba?|color)\([^)]*\)), \1\)$/.exec(cs.backgroundImage || ''); return m ? rgba(m[1]) : null; };
+  // A one-colour gradient layer, as Keep drawing lays its tint: the computed
+  // value lists an image for every layer, so its colour layer's is ", none".
+  const layerOf = cs => { const m = /^linear-gradient\(((?:rgba?|color)\([^)]*\)), \1\)(?:, none)*$/.exec(cs.backgroundImage || ''); return m ? rgba(m[1]) : null; };
   const fill = e => { const layers = [];
     for (let n = e; n; n = n.parentElement) { const cs = getComputedStyle(n), t = layerOf(cs), b = rgba(cs.backgroundColor);
       if (t && t[3] > 0) layers.push(t);
@@ -206,7 +208,7 @@ JUST_ROLES = r"""() => {
   const ROLES = [["a tip", ".help-tip"], ["Make another", ".post-quiet"], ["Keep drawing", ".addtake-pill"], ["Tap the beat", ".mt-tap"],
     ["Hear the restart", ".loop-btn.subtle"], ["a panel button", ".panel-btn"], ["Retry", ".learn-retry"], ["Try again", ".sdrafts-retry"],
     ["Keep for later", ".othertab-later"], ["Flip's loop buttons", "#pagebar .pb"], ["Flip's speeds", ".flip-speeds .seg"],
-    ["This page / After", ".mb-scope"], ["a switch on a door's card", ".dp-panel .seg"]];
+    ["This page / After", ".mb-scope"], ["the fine-tune step", ".mt-step-seg"]];
   const out = {};
   for (const [role, sel] of ROLES) {
     const els = [...document.querySelectorAll(sel)].filter(e => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
@@ -237,7 +239,7 @@ CENSUS = r"""(root) => {
   const s = (el) => { const cs = getComputedStyle(el); return { bg: cs.backgroundColor, line: thinLine(el), edge: lineOf(cs, 'Top'),
     side: lineOf(cs, 'Left'), r: cs.borderTopLeftRadius, foot: cs.borderBottomLeftRadius, blur: cs.backdropFilter }; };
   const cards = {};
-  for (const sel of ['.menu-tile', '.menu-list', '.seg:not(.dp-panel .seg)', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
+  for (const sel of ['.menu-tile', '.menu-list', '.seg:not(.mt-step-seg)', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
                      '.help-tip', '.help-search', '.export-list', '.export-opt', '.sdrafts-card', '.tune-row', '.post-card', '.ask-list', '.accordion-header', '.post-preview',
                      '.bk-pic', '.ask-go', '.menu-start', '.export-nameinput', '.post-input', '.bk-back',
                      '.smooth-seg', '.media-tabs', '.photo-fit-group', '.reposition-btn', '.clear-drawer-btn', '.edge-controls',
@@ -800,7 +802,8 @@ def surfaces(name, ids, q, canvas, btn):
             stroke(); q.click("#addcopy"); q.wait_for_timeout(400)
 
     def a_loop():
-        pages(); q.click("#pbLoop"); q.wait_for_timeout(400)
+        # Loop is in the page bar's overflow on a phone: pressed by script.
+        pages(); q.evaluate("() => document.getElementById('pbLoop').click()"); q.wait_for_timeout(400)
         q.evaluate("() => typeof loopCycle === 'function' && !document.querySelector('.loopchip') && loopCycle()")
         q.wait_for_timeout(500)
 
@@ -1227,10 +1230,11 @@ for scheme in ("light", "dark"):
     # restart joined this list with the drawers' census (after #630): they
     # were the page's grey, or a grey fill inside the lilac edge.
     # And the stamp shelf's cells, their × and its way out (with the shelf).
-    # A switch on a door's card is not on the paper: since Just a Border (Nov
-    # 16) it wears the second button's tint, read below with the roles, and
-    # so does Hear the restart on its door's card: its edge stays the tiles'.
-    CARDLIKE = (".seg:not(.dp-panel .seg)", ".export-list", ".smooth-seg", ".media-tabs", ".photo-fit-group", ".reposition-btn",
+    # The fine-tune step on Exact times' card is not on the paper: since Just
+    # a Border (Nov 16) it wears the second button's tint, read below with the
+    # roles, and so does Hear the restart on its door's card: its edge stays
+    # the tiles'.
+    CARDLIKE = (".seg:not(.mt-step-seg)", ".export-list", ".smooth-seg", ".media-tabs", ".photo-fit-group", ".reposition-btn",
                 ".clear-drawer-btn", ".edge-controls", ".dp-tile", ".dp-panel",
                 ".loop-btn.subtle", ".onion-tint:not(.active)", ".post-input", ".post-check-box",
                 '.stamp-btn:not([aria-pressed="true"])', ".stamp-del", ".stamp-empty-go")
@@ -1307,7 +1311,7 @@ for scheme in ("light", "dark"):
     KIND = {".menu-tile": "16px", ".menu-list": "16px", ".sdrafts-this": "16px", ".sdrafts-files": "16px", ".learn-card": "16px",
             ".ask-tour": "16px", ".ask-best-card": "16px", ".ask-list": "16px", ".help-tip": "16px", ".accordion-header": "16px",
             ".export-list": "16px", ".post-preview": "16px", ".bk-pic": "16px", ".sdrafts-card": "16px",
-            ".seg:not(.dp-panel .seg)": "12px", ".help-search": "12px", ".ask-go": "12px", ".menu-start": "12px", ".export-nameinput": "12px",
+            ".seg:not(.mt-step-seg)": "12px", ".help-search": "12px", ".ask-go": "12px", ".menu-start": "12px", ".export-nameinput": "12px",
             ".post-input": "12px", ".bk-back": "12px", ".smooth-seg": "12px", ".media-tabs": "12px", ".photo-fit-group": "12px",
             ".reposition-btn": "12px", ".clear-drawer-btn": "12px", ".edge-controls": "12px", ".dp-tile": "16px",
             ".mt-rv": "12px", ".dz-lead": "12px",
@@ -1373,8 +1377,8 @@ for scheme in ("light", "dark"):
 # from what it sits on by its own fill, 1.08:1 or more (the tint 1.12 to 1.19;
 # a white card on the drawers' lilac paper 1.10 and up); a tip a well with no
 # line. Every role this suite reaches must be seen, so it cannot pass empty.
-JUST_SEEN = ("a tip", "Make another", "Tap the beat", "Hear the restart", "a panel button",
-             "Flip's loop buttons", "Flip's speeds", "This page / After", "a switch on a door's card")
+JUST_SEEN = ("a tip", "Make another", "Keep drawing", "Tap the beat", "Hear the restart", "a panel button",
+             "Flip's loop buttons", "Flip's speeds", "This page / After", "the fine-tune step")
 _jrows = [(k, role, r) for k, roles in justb.items() for role, rs in (roles or {}).items() for r in rs]
 _jseen = {role for _, role, _ in _jrows}
 _jlow = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {role} {r['apart']}:1" for k, role, r in _jrows if r["apart"] < 1.08})
