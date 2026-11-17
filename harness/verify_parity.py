@@ -2146,6 +2146,22 @@ with sync_playwright() as p:
         check(f"{_route}: arming shows the pill with its words and a painted Cancel, and says it once to a screen reader",
               bool(_pill) and _pill["text"].startswith("Click your drawing to pick a colour") and _pill["cancel"]
               and _pill["grown"] and "Enter picks" in _pill["live"], str(_pill))
+        # THE BAR IS THE TOASTS' CLEAR GLASS, ITS CANCEL THE STEP ON THE GLASS (No
+        # dinge's leftovers, the owner's "All yes", Nov 17): the bar was a grey
+        # glass in dark. The same on the Pad and on Flip, light and dark.
+        _gl = {}
+        _th0 = _q.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        for _th in ("light", "dark"):
+            _q.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); _q.wait_for_timeout(200)
+            _gl[_th] = _q.evaluate("""() => { const e = document.querySelector('.eyedropper-pill'), p = document.createElement('i');
+                p.style.cssText = 'position:absolute;width:0;height:0;background-color:var(--chip-glass)'; e.appendChild(p);
+                const want = getComputedStyle(p).backgroundColor; p.remove();
+                return { got: getComputedStyle(e).backgroundColor, want, cancel: getComputedStyle(e.querySelector('.eyedropper-pill-cancel')).backgroundColor }; }""")
+        _q.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+        _q.wait_for_timeout(200)
+        check(f"{_route}: the eyedropper's bar is the toasts' clear glass, and its Cancel the step on the glass (#45397a dark, the lilac light)",
+              all(v["got"] == v["want"] for v in _gl.values()) and _gl["dark"]["cancel"] == "rgb(69, 57, 122)"
+              and _gl["light"]["cancel"] == "rgb(231, 224, 255)", str(_gl))
         check(f"{_route}: arming puts the lens ON the drawing, at the last point the pen touched",
               bool(_s0) and _q.evaluate(PAINTED, ".eyedropper-lens")
               and abs(_s0["stage"]["x"] - _endS["x"]) <= 2.5 and abs(_s0["stage"]["y"] - _endS["y"]) <= 2.5,

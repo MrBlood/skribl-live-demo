@@ -57,6 +57,9 @@
   --accent-bright: initial;
   --bg-elev: initial;
   --border: initial;
+  --chip-glass: initial;
+  --chip-lift: initial;
+  --chip-line: initial;
   --control-edge-strong: initial;
   --deep-edge: initial;
   --ease: initial;
@@ -103,10 +106,10 @@
 #skriblGallery :where(:not(.skribl-inline, .skribl-inline *, svg, svg *, canvas))::placeholder { all: revert; }
 
 /* ---- from fullband.css ---- */
-#skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --accent: #7c5cff; --accent-bright: #9179ff; --control-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--surface-control)); --control-edge-strong: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-control)); --deep-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-deep)); --ease: cubic-bezier(0.4, 0, 0.2, 1); --hl: 5.5%; --hls: 9%; --on-canvas-drop-rgb: 10,6,30; --on-canvas-ink: #241a52; --on-canvas-shade-rgb: 16,12,32; --on-canvas-violet: #3a24a8; --r-pill: 999px; --seg-on-fill: rgba(124, 92, 255, 0.22); --seg-on-ink: #dad1ff; --surface-base: #0b0d12; --surface-control: #171b23; --surface-control-hover: #1c212c; --surface-control-rgb: 23,27,35; --surface-deep: #06070a; --surface-deep-rgb: 6,7,10; --text-muted: #b7bfcc; --text-primary: #f6f7f9; --text-secondary: #b7bfcc; --text-strong: #e7e9ea; --wash-rgb: 255,255,255; }
-:root[data-theme="light"] #skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --hl: 9%; --hls: 15%; --seg-on-ink: #301c8c; --surface-base: #fbfcfd; --surface-control: #edf0f4; --surface-control-hover: #e2e7ee; --surface-control-rgb: 237,240,244; --surface-deep: #ffffff; --surface-deep-rgb: 255,255,255; --text-muted: #3b4251; --text-primary: #11161e; --text-secondary: #3b4251; --text-strong: #1f252f; --wash-rgb: 0,0,0; }
+#skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --accent: #7c5cff; --accent-bright: #9179ff; --chip-glass: rgba(46, 38, 88, 0.94); --chip-lift: 0 8px 24px rgba(0, 0, 0, 0.35); --chip-line: rgba(167, 146, 255, 0.32); --control-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--surface-control)); --control-edge-strong: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-control)); --deep-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-deep)); --ease: cubic-bezier(0.4, 0, 0.2, 1); --hl: 5.5%; --hls: 9%; --on-canvas-drop-rgb: 10,6,30; --on-canvas-ink: #241a52; --on-canvas-shade-rgb: 16,12,32; --on-canvas-violet: #3a24a8; --r-pill: 999px; --seg-on-fill: rgba(124, 92, 255, 0.22); --seg-on-ink: #dad1ff; --surface-base: #0b0d12; --surface-control: #171b23; --surface-control-hover: #1c212c; --surface-control-rgb: 23,27,35; --surface-deep: #06070a; --surface-deep-rgb: 6,7,10; --text-muted: #b7bfcc; --text-primary: #f6f7f9; --text-secondary: #b7bfcc; --text-strong: #e7e9ea; --wash-rgb: 255,255,255; }
+:root[data-theme="light"] #skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --chip-glass: rgba(255, 255, 255, 0.96); --chip-lift: 0 10px 30px rgba(60, 40, 140, 0.16), 0 2px 6px rgba(60, 40, 140, 0.08); --chip-line: rgba(124, 92, 255, 0.3); --hl: 9%; --hls: 15%; --seg-on-ink: #301c8c; --surface-base: #fbfcfd; --surface-control: #edf0f4; --surface-control-hover: #e2e7ee; --surface-control-rgb: 237,240,244; --surface-deep: #ffffff; --surface-deep-rgb: 255,255,255; --text-muted: #3b4251; --text-primary: #11161e; --text-secondary: #3b4251; --text-strong: #1f252f; --wash-rgb: 0,0,0; }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme]) #skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --hl: 9%; --hls: 15%; --seg-on-ink: #301c8c; --surface-base: #fbfcfd; --surface-control: #edf0f4; --surface-control-hover: #e2e7ee; --surface-control-rgb: 237,240,244; --surface-deep: #ffffff; --surface-deep-rgb: 255,255,255; --text-muted: #3b4251; --text-primary: #11161e; --text-secondary: #3b4251; --text-strong: #1f252f; --wash-rgb: 0,0,0; }
+  :root:not([data-theme]) #skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { --chip-glass: rgba(255, 255, 255, 0.96); --chip-lift: 0 10px 30px rgba(60, 40, 140, 0.16), 0 2px 6px rgba(60, 40, 140, 0.08); --chip-line: rgba(124, 92, 255, 0.3); --hl: 9%; --hls: 15%; --seg-on-ink: #301c8c; --surface-base: #fbfcfd; --surface-control: #edf0f4; --surface-control-hover: #e2e7ee; --surface-control-rgb: 237,240,244; --surface-deep: #ffffff; --surface-deep-rgb: 255,255,255; --text-muted: #3b4251; --text-primary: #11161e; --text-secondary: #3b4251; --text-strong: #1f252f; --wash-rgb: 0,0,0; }
 }
 #skriblGallery .watch-full:is(:fullscreen, .is-immersive-page) { -webkit-font-smoothing: antialiased; color: var(--text-strong); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-variant-numeric: tabular-nums; line-height: normal; }
 #skriblGallery .player-btn[hidden]:where(.skfull-host, .skfull-host *) { display: none; }
@@ -164,7 +167,7 @@
 #skriblGallery .replay-line.open:where(.skfull-host, .skfull-host *) .rl-speed svg { transform: rotate(180deg); }
 #skriblGallery .rl-skip:where(.skfull-host, .skfull-host *) { flex-basis: 100%; font-size: 13px; }
 #skriblGallery .rl-skip[hidden]:where(.skfull-host, .skfull-host *) { display: none; }
-#skriblGallery .rl-chips:where(.skfull-host, .skfull-host *) { display: flex; gap: 2px; padding: 4px 8px; max-width: 90vw; box-sizing: border-box; border-radius: var(--r-pill); background: rgb(var(--surface-control-rgb)); border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--control-edge-strong), 0 8px 24px rgba(0, 0, 0, 0.18); opacity: 1; transform: none; transition: opacity 0.26s var(--ease), transform 0.26s var(--ease), display 0.26s allow-discrete; }
+#skriblGallery .rl-chips:where(.skfull-host, .skfull-host *) { display: flex; gap: 2px; padding: 4px 8px; max-width: 90vw; box-sizing: border-box; border-radius: var(--r-pill); background: var(--chip-glass); border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--chip-line), var(--chip-lift); opacity: 1; transform: none; transition: opacity 0.26s var(--ease), transform 0.26s var(--ease), display 0.26s allow-discrete; }
 @starting-style {
   #skriblGallery .rl-chips:where(.skfull-host, .skfull-host *) { opacity: 0; transform: translateY(-4px); }
 }

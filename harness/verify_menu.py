@@ -84,6 +84,12 @@ SWITCH = """() => { const seg = document.querySelector('.menu-editor-seg'), lit 
            lit: lit.textContent.trim(), linkTo: link ? link.getAttribute('href') : null, linkText: link ? link.textContent.trim() : null }; }"""
 
 
+WEARS = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]'));
+  if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
+  e.parentElement.appendChild(p); const want = getComputedStyle(p).backgroundColor; p.remove();
+  return { got: getComputedStyle(e).backgroundColor, want }; }"""   # an element's own paint against its token, resolved where it sits
+
+
 def scribble(q, sel):
     bx = q.locator(sel).bounding_box()
     cx, cy = bx["x"] + bx["width"] / 2, bx["y"] + bx["height"] / 2
@@ -127,6 +133,14 @@ with sync_playwright() as p:
                       return { pad: cs.padding, top: Math.round(s.top - r.top - parseFloat(cs.borderTopWidth)) }; }""")
                     check(f"{name}, desk, {scheme}: the menu has 12px of room inside its edge, so the switch clears the top",
                           room["pad"] == "12px" and room["top"] >= 12, str(room))
+                    # A ROW UNDER THE POINTER takes Ask's rows' faint lilac (No dinge's
+                    # leftovers, the owner's "All yes", Nov 17): it was a grey wash.
+                    _row = ".menu-list > .menu-item:not([hidden]):not(.menu-feature)"
+                    q.hover(_row); q.wait_for_timeout(300)
+                    hv = q.evaluate(WEARS, [_row + ":hover", "color-mix(in srgb, var(--accent) 6%, var(--menu-card))"])
+                    q.mouse.move(2, 2); q.wait_for_timeout(200)
+                    check(f"{name}, desk, {scheme}: a menu row under the pointer takes Ask's rows' faint lilac, not a grey wash",
+                          bool(hv) and hv["got"] == hv["want"], str(hv))
                 if dev == "phone":
                     # 9. the paper: solid, and the list's edge shows. At the
                     # phone's 2x, the pixel 3px outside the list (the sheet),

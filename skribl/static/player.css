@@ -1169,7 +1169,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 .menu-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-secondary); }
 @media (hover: hover) {
-  .menu-item:hover { background: rgba(var(--wash-rgb), 0.06); }}
+  .menu-item:hover { background: color-mix(in srgb, var(--accent) 6%, var(--menu-card)); }}
 @media (forced-colors: active) {
   .post-check-box { border-color: ButtonText; forced-color-adjust: none; }
   .post-check-input:checked + .post-check-box { background: Highlight; border-color: Highlight; }
@@ -1932,8 +1932,8 @@ a.player-btn { text-decoration: none; }
    ends are 270px and the line 260: held to the line, "Fit" ran out of the
    pill). 90vw, not 100vw less 32px: the player's sheet had 2 bytes to spare. */
 .rl-chips { display: flex; gap: 2px; padding: 4px 8px; max-width: 90vw; box-sizing: border-box;
-  border-radius: var(--r-pill); background: rgb(var(--surface-control-rgb));
-  border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--control-edge-strong), 0 8px 24px rgba(0, 0, 0, 0.18);
+  border-radius: var(--r-pill); background: var(--chip-glass);   /* the toasts' clear glass (No dinge's leftovers): a grey pill, 1.06:1 in dark */
+  border: 1px solid transparent; box-shadow: 0 0 0 var(--edge) var(--chip-line), var(--chip-lift);
   opacity: 1; transform: none;
   transition: opacity 0.26s var(--ease), transform 0.26s var(--ease), display 0.26s allow-discrete; }
 @starting-style { .rl-chips { opacity: 0; transform: translateY(-4px); } }

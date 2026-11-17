@@ -45612,3 +45612,76 @@ battery (main's run after the merge does it).
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: "Saved." on your profile, and "Unblocked." in Settings,
 sit on the lilac of Home's Following | Everyone.
+
+
+## After v330 -- No dinge's leftovers, the editors: the last grey glass clear, the replay's speeds glass, off and hover crisp, the Re-add card a card
+
+The owner's "All yes" (Nov 17) to the leftovers mock
+(https://claude.ai/artifact/RiJXckCdXenJeWmHAc2URg), its choices 3 to 6. (1,
+the step on the glass, stays as built; 2 is the site's entry above.)
+
+WHAT CHANGED (styles.css; the player's, the band's and the Gallery section's
+copies re-emitted):
+
+- CLEAR GLASS: the zoom readout and the eyedropper's bar wear the toasts'
+  clear glass (--chip-glass, --chip-line, --chip-lift), where they were a
+  grey glass: in dark the bar read chroma 0.017 and 1.10:1 from the drawing
+  under it, now 0.084 and 1.39:1; in light both were near white already. The
+  eyedropper's Cancel is a second button on the glass: the step up in dark
+  (#45397a), the lilac in light; its words 9.2 and 14.3:1. The hex readout
+  under the lens stays black, so the colour picked reads true.
+- THE REPLAY'S SPEEDS are clear glass too (B in the mock): a grey pill, 1.06:1
+  from what was under it in dark. The lilac track every other switch wears
+  (A) was the expected pick, but measured it sat 1.07:1 over a light desk;
+  the glass is 1.34 to 3.04:1 everywhere, its words 6.7 to 10.1:1. On the
+  link page, in the band and in the Gallery section's full screen alike.
+- OFF AND HOVER: the song timeline's zoom, undo and redo when off keep full
+  strength with their marks in the quiet off ink, as Undo and Redo since
+  #952 (the whole button faded to 35%); a How it works header and a menu row
+  under a pointer take the faint lilac Ask's rows already do (6% of the
+  accent over the card), never the control's grey (chroma 0.006 light; in
+  dark 1.04 to 1.21:1 from the paper).
+- THE RE-ADD CARD is the paper's card, the amber on its edge and on its dot.
+  The edge is a deeper amber than the dot's #ffd23f, so it reads on the white
+  card (2.0:1, where #ffd23f is 1.4:1). The amber wash had gone beige-grey on
+  the drawer's lilac paper, 1.03:1; 1.12 and 1.13:1 now, its words 15.4 and
+  13.1:1. (B, a solid amber, was 1.01:1 in light.)
+
+THE CHECKS, a check each in the suite that opens the thing, its own paint
+against its token resolved where it sits, light and dark; each red with that
+change put back, green as built: the zoom readout (verify_pointerpad) red with
+the grey glass back, light and dark; the eyedropper's bar (verify_parity) red
+on the Pad and Flip; the speeds (verify_replayspeed) red on the link page and
+on the Pad's own, with the grey pill back; the timeline's buttons when off
+(verify_musicundo) red on the Pad and Flip, phone and desk (opacity 0.35); a
+How it works header under the pointer (verify_help) red on the Pad and Flip; a
+menu row under the pointer (verify_menu) red on the Pad and Flip, light and
+dark; the Re-add card (verify_amber) red with the amber wash back. Two of the
+instruments needed fixing before they told the truth. verify_help's header
+lives in How it works' browse view, which was not open: the first version
+could not reach it and stopped the suite. It opens the view first now, and a
+header it cannot find is a red row, never a stop. verify_replayspeed's link
+page reads the player's own sheet, which the first break did not revert, so
+nothing changed there: the break reverts both sheets now, and the check reads
+the Pad's own speeds too.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 2): 33 suites, stacked on
+the site's change. 31 ok: parity 436/436, replayspeed 188/188, musicundo
+106/106, contrast 677/677, amber 112/112, help 93/93, a11y 444/444, menu
+76/76, pointerpad 56/56, helpclaims 47/47, theme 124/124, a11ypages 162/162,
+surfaces 13/13, docs 144/144, player_isolation 85/85, linkpage 61/61, jsstrip
+35/35, fullsmart 26/26, fullfade 70/70, watchfull 76/76, onefull 57/57,
+standin 22/22, hostseams 139/139, seam 518/518, gallery 234/234, socialreposts
+56/56, socialsearch 32/32, social 45/45, socialposts 99/99, names 9/9,
+musictimeline 184/184. Two red, neither the change misbehaving. verify_dots
+38/39 pinned the Re-add card's old amber edge (255, 210, 63); the card wears
+the deeper amber the mock showed (2.0:1 on the white card, where the dot's
+amber is 1.4:1), so the pin moved to it: red with the old edge back (38/39),
+green as built (39/39). verify_ux 486/487 beside others, 487/487 alone: its
+recording dot's breath took one step of 0.041 against a 0.03 cap, with the
+other suites on a four-core box, and nothing here touches that dot. NOT RUN:
+the full battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: the replay's speeds open as white glass with a lilac
+edge (violet in dark), and a menu row turns a faint lilac under the pointer.

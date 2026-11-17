@@ -98,6 +98,12 @@ FRAC = "() => +document.getElementById('playerProgress').getAttribute('aria-valu
 FILL = "() => parseFloat(document.getElementById('playerProgressFill').style.width) || 0"
 
 
+WEARS = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]'));
+  if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
+  e.parentElement.appendChild(p); const want = getComputedStyle(p).backgroundColor; p.remove();
+  return { got: getComputedStyle(e).backgroundColor, want }; }"""   # an element's own paint against its token, resolved where it sits
+
+
 def pick(pg, scope, r):
     pg.evaluate("""([s, r]) => { document.querySelector(s + ' .rl-speed').click();
         document.querySelector(s + ' .rl-chips [data-r="' + r + '"]').click(); }""", [scope, r])
@@ -223,6 +229,17 @@ with sync_playwright() as p:
               len(fit["chips"]) == 8 and all(o <= 0 and inside for _, o, inside in fit["chips"])
               and fit["row"][0] >= 0 and fit["row"][1] <= vw, str(fit))
     pg.set_viewport_size({"width": 1100, "height": 900})
+
+    # THE SPEEDS ARE THE TOASTS' CLEAR GLASS (No dinge's leftovers, the owner's
+    # "All yes", Nov 17): a grey pill, 1.06:1 from what was under it in dark.
+    open_player(keep["url"])
+    pg.evaluate("() => document.querySelector('#playerLine .rl-speed').click()"); pg.wait_for_timeout(350)
+    _glass = {}
+    for _th in ("light", "dark"):
+        pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(250)
+        _glass[_th] = pg.evaluate(WEARS, ["#playerLine .rl-chips", "var(--chip-glass)"])
+    check("the speeds' pill is the toasts' clear glass, light and dark (it was a grey pill)",
+          all(v and v["got"] == v["want"] for v in _glass.values()) and _glass["light"]["want"] != _glass["dark"]["want"], str(_glass))
 
     open_player(eight["url"])
     check("a post whose author picked 8x starts at 8x", pg.evaluate(LINE).endswith("watching at 8×"),
@@ -438,6 +455,15 @@ with sync_playwright() as p:
             chips = pg.evaluate(CHIPS, "#padSpeed")
             check(f"[{label}] ...tapping it opens every speed, each one on top and on screen",
                   len(chips) == 8 and all(c["hit"] and c["inside"] for c in chips), str(chips))
+            # The Pad's own speeds are the toasts' clear glass too (styles.css; the
+            # link page's, read above, are the player's sheet's copy).
+            _pad, _th0 = {}, pg.evaluate("() => document.documentElement.getAttribute('data-theme')")
+            for _th in ("light", "dark"):
+                pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(250)
+                _pad[_th] = pg.evaluate(WEARS, ["#padSpeed .rl-chips", "var(--chip-glass)"])
+            pg.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+            check(f"[{label}] ...and they are the toasts' clear glass, light and dark (it was a grey pill)",
+                  all(v and v["got"] == v["want"] for v in _pad.values()) and _pad["light"]["want"] != _pad["dark"]["want"], str(_pad))
             taps = [pg.evaluate(TAP, sp.element_handle())] + [pg.evaluate(TAP, h) for h in pg.locator("#padSpeed .rl-chips button[data-r]").element_handles()]
             check(f"[{label}] ...and the button and every speed are at least a 44px tap",
                   all(w >= 44 and h >= 44 for w, h in taps), str(taps))

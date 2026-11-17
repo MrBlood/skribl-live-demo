@@ -304,12 +304,13 @@ with sync_playwright() as pw:
       if (!box) return null;
       const bx = R(box), cell = (id) => { const e = q('#' + id), r = R(e), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
         return { w: Math.round(r.width), h: Math.round(r.height), painted: !!at && (at === e || e.contains(at)), name: e.getAttribute('aria-label'),
-                 tip: e.getAttribute('data-tip') || e.title, off: e.disabled, op: getComputedStyle(e).opacity }; };
+                 tip: e.getAttribute('data-tip') || e.title, off: e.disabled, op: getComputedStyle(e).opacity, ink: getComputedStyle(e).color }; };
       const cs = getComputedStyle(box), zs = getComputedStyle(zoom);
       return { right: Math.round((line.right - bx.right) * 10) / 10, mid: Math.round(((line.top + line.bottom) - (bx.top + bx.bottom)) * 5) / 10,
                clear: Math.round((bx.left - text.right) * 10) / 10, inLine: box.parentElement === q('#musicPickLine'),
                zoomBox: box.classList.contains('mt-tl-mag') && cs.backgroundColor === zs.backgroundColor && cs.borderTopColor === zs.borderTopColor && cs.borderRadius === zs.borderRadius,
                undo: cell('musicUndo'), redo: cell('musicRedo'), zoomOff: getComputedStyle(q('#musicTlOut')).opacity,
+               offInk: (() => { const p = document.createElement('i'); p.style.color = 'var(--off-ink)'; box.appendChild(p); const v = getComputedStyle(p).color; p.remove(); return v; })(),
                height: Math.round(line.height * 10) / 10, pairH: Math.round(bx.height * 10) / 10 }; }"""
     for _n, _p in eds("pair"):
         for dev, o, scheme in (("phone", PHONE, "dark"), ("desk", DESK, "light")):
@@ -332,6 +333,9 @@ with sync_playwright() as pw:
             check(f"{_n} ({dev}): with nothing to take back or again both are greyed, as the zoom's minus is at 1x",
                   bool(fresh) and fresh["undo"]["off"] and fresh["redo"]["off"] and fresh["undo"]["op"] == fresh["redo"]["op"] == fresh["zoomOff"],
                   str(fresh and {k: fresh[k] for k in ("undo", "redo", "zoomOff")}))
+            check(f"{_n} ({dev}): ...at full strength, their marks the quiet off ink, as Undo and Redo (No dinge's leftovers: they faded to 35%)",
+                  bool(fresh) and fresh["undo"]["op"] == "1" and fresh["undo"]["ink"] == fresh["redo"]["ink"] == fresh["offInk"],
+                  str(fresh and {k: fresh.get(k) for k in ("undo", "redo", "offInk")}))
             if dev == "phone":
                 bare_c, bare, _ = editor(b, _n, _p, opts=o, scheme=scheme, drawn=False)
                 setup(bare, FREE)
