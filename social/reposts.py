@@ -191,8 +191,46 @@ class Quoted:
             for post, who in sess.execute(sa.select(Post, Person).join(Person, Person.id == Post.person_id)
                                           .where(Post.id.in_(pids))).all():
                 self.posts[post.id] = (post, who)
-        self.drawing_ids = sorted({p.quoted_drawing_id for p in quotes if p.quoted_drawing_id})
-        self.skribls = [post.skribl_id for post, _ in self.posts.values() if post.skribl_id] + self.drawing_ids
+        # A QUOTE SHOWS THE DRAWING IT LEADS TO, HOWEVER DEEP (the owner's "all
+        # yes" to "Just a Border", Nov 16, A): a quoted post with no drawing of
+        # its own that is itself a quote leads on, to the drawing its own
+        # original has, through as many quotes as it takes, and shows it as a
+        # quote of a drawing does. The chain ends at a drawing, at a post this
+        # viewer may not see, or at words alone; a level of posts is read at a
+        # time, LEAD_DEPTH levels at most.
+        self.leads = {}                  # a quoted post's id -> ("p" | "s", the drawing it leads to)
+        known = dict(self.posts)
+        step = [(pid, pid) for pid, (post, _who) in self.posts.items()
+                if not post.skribl_id and getattr(post, "is_quote", False)]
+        for _depth in range(LEAD_DEPTH):
+            nxt, want = [], set()
+            for pid, root in step:
+                post, who = known[pid]
+                if pid != root:
+                    if not self._shown_post(post, who):
+                        continue                 # a post this viewer may not see: the chain ends
+                    if post.skribl_id:
+                        self.leads[root] = ("p", post.skribl_id)
+                        continue
+                    if not getattr(post, "is_quote", False):
+                        continue                 # words alone: nothing further
+                if post.quoted_drawing_id:
+                    self.leads[root] = ("s", post.quoted_drawing_id)
+                elif post.quoted_post_id is not None:
+                    nxt.append((post.quoted_post_id, root))
+                    if post.quoted_post_id not in known:
+                        want.add(post.quoted_post_id)
+            if want:
+                for post, who in sess.execute(sa.select(Post, Person).join(Person, Person.id == Post.person_id)
+                                              .where(Post.id.in_(sorted(want)))).all():
+                    known[post.id] = (post, who)
+            step = [(pid, root) for pid, root in nxt if pid in known]
+            if not step:
+                break
+        self.drawing_ids = sorted({p.quoted_drawing_id for p in quotes if p.quoted_drawing_id}
+                                  | {sid for kind, sid in self.leads.values() if kind == "s"})
+        self.skribls = ([post.skribl_id for post, _ in self.posts.values() if post.skribl_id] + self.drawing_ids
+                        + [sid for kind, sid in self.leads.values() if kind == "p"])
 
     def _shown_post(self, post, who):
         """The page's rule (comments.on_post): no block either way, nobody
@@ -213,7 +251,7 @@ class Quoted:
             post, who = self.posts[quote.quoted_post_id]
             if not self._shown_post(post, who):
                 return {"gone": True}
-            sk = described.get(post.skribl_id) if post.skribl_id else None
+            sk = described.get(post.skribl_id) if post.skribl_id else self.lead(post.id, described, makers)
             return {"gone": False, "url": url_for("social.post_page", public_id=post.public_id), "who": who,
                     "words": post.words or "", "at": post.created_at, "sk": sk, "says": _says(sk, says)}
         sid = quote.quoted_drawing_id
@@ -226,6 +264,25 @@ class Quoted:
             return {"gone": False, "url": url_for("social.bloob_page", skribl_id=sid), "who": who,
                     "words": _title_words(sk.get("title")), "at": _made(sk), "sk": sk, "says": _says(sk, says)}
         return {"gone": True}
+
+    def lead(self, pid, described, makers):
+        """The drawing a quoted post with none of its own leads to (A), as
+        `described` has it, or None. One outside a post is shown as a quote of
+        it would be: by one of the site's people this viewer may see, and
+        shown to them (_drawing_shown); a post's own drawing, with its post."""
+        kind, sid = self.leads.get(pid, (None, None))
+        sk = described.get(sid) if sid else None
+        if sk is None:
+            return None
+        if kind == "s":
+            who = makers.get(str(sk.get("user_id") or ""))
+            if who is None or who.id in self.hidden or not _drawing_shown(sk, self.viewer):
+                return None
+        return sk
+
+
+#: How many quotes deep a quote's small card looks for the drawing it leads to.
+LEAD_DEPTH = 12
 
 
 def _says(sk, says):
@@ -285,6 +342,13 @@ def small_of(on, me):
     from .posts import _title_words
     sid = on.post.skribl_id if on.post is not None else on.drawing
     sk = (describe_posts([sid], viewer_id=me.public_id).get(sid) if sid else None) if on.sk is None else on.sk
+    if on.post is not None and sk is None and getattr(on.post, "is_quote", False):
+        # A quote of a quote shows the drawing it leads to (A), here as the
+        # post being written will show it: the page's own Quoted, for one.
+        from types import SimpleNamespace
+        q = Quoted([SimpleNamespace(is_quote=True, quoted_post_id=on.post.id, quoted_drawing_id=None)], me)
+        described = describe_posts(q.skribls, viewer_id=me.public_id) if q.skribls else {}
+        sk = q.lead(on.post.id, described, makers_of(described, q.drawing_ids))
     if on.post is not None:
         return {"gone": False, "url": on.page(), "who": on.owner, "words": on.post.words or "",
                 "at": on.post.created_at, "sk": sk, "says": _says(sk, says)}

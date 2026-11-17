@@ -817,7 +817,7 @@ with sync_playwright() as p:
                       and r["tintOp"] > 0.99 and r["pill"][3] == 44 and same_colour(r["tint"], "rgba(124, 92, 255, 0.22)")
                       and same_colour(r["options"][0]["color"], "rgb(63, 39, 168)")
                       and all(same_colour(o["color"], "rgb(63, 71, 86)") for o in r["options"][1:])
-                      and same_colour(r["track"]["bg"], "rgb(255, 255, 255)") and same_colour(r["track"]["line"], "rgba(124, 92, 255, 0.34)")
+                      and same_colour(r["track"]["bg"], "rgba(124, 92, 255, 0.14)") and same_colour(r["track"]["line"], "rgba(124, 92, 255, 0.34)")
                       for r in rows.values()),
                   json.dumps({k: v and {x: v[x] for x in ("role", "name", "pressed", "placed", "under", "pill", "tint", "track")}
                               | {"inks": [o["color"] for o in v["options"]]} for k, v in rows.items()}))
@@ -1128,7 +1128,8 @@ with sync_playwright() as p:
                     go(pg, "/social/@mira")
                     theirs[(screen, scheme)] = pg.evaluate(GEAR)
                     close_ctx(ctx, pg)
-            BTN2 = {"light": ("rgb(255, 255, 255)", "rgba(124, 92, 255, 0.34)"),
+            # the second button's dress: tinted in light too since "Just a Border" (Nov 16)
+            BTN2 = {"light": ("rgba(124, 92, 255, 0.14)", "rgba(124, 92, 255, 0.34)"),
                     "dark": ("rgba(167, 146, 255, 0.1)", "rgba(167, 146, 255, 0.26)")}
             phone_ok = all(len(mine[("phone", s)]["top"]) == 1 and mine[("phone", s)]["top"][0]["words"] == "Settings"
                            and mine[("phone", s)]["top"][0]["gear"] and mine[("phone", s)]["top"][0]["h"] == 44

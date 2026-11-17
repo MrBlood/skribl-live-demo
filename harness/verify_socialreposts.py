@@ -40,7 +40,9 @@ authenticator for the site's people.
      Gallery's still picture painted with "drawn in"), one link to the
      original; a quote with its own drawing; a drawing's quote; the original
      gone, hidden by a block, or taken down: "This post is gone."; the quote's
-     own page; the original's count, reposts and quotes.
+     own page; the original's count, reposts and quotes. A quote of a quote
+     shows the drawing it leads to, however deep (A, Nov 16), until a post
+     its viewer may not see; and Make shows it as the post will.
   8. ACTIVITY: "Mira reposted your post" (to the post), "Rook quoted your
      post" (to the quote, its words under it); Undo repost takes its row
      away; nobody muted; neither lights the bell's dot.
@@ -54,7 +56,10 @@ authenticator for the site's people.
  11. CONTRAST AND TARGETS: the "reposted" line and the lit arrows read off
      the paint, phone and desk, light and dark; every word on the sheet, the
      signed-out sheet and a quote's small card (and its gone words) at 4.5:1,
-     every target 44px.
+     every target 44px; inside a post's card the quote a well (D2).
+ 13. JUST A BORDER: on the site's pages, phone and desk, light and dark, no
+     box with something in it is set apart from what it sits on by its line
+     alone (the owner's question, Nov 16).
  12. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALREPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a
@@ -1566,6 +1571,52 @@ with sync_playwright() as p:
             check("the quote's own page holds the original small; on a desk, a quote of words alone has it where the"
                   " drawing would be, beside the words, and nothing plays by itself",
                   place and place["left"] and place["beside"] and not place["auto"], json.dumps(place))
+            # A QUOTE SHOWS THE DRAWING IT LEADS TO, HOWEVER DEEP (the owner's "all yes"
+            # to "Just a Border", Nov 16, A): Theo's quote of Mr. Bloob's quote of Hello
+            # showed Mr. Bloob's words alone. Lark and Moth quote quotes; Ivy (who
+            # blocked Kai) sits in the middle of one chain.
+            lark = someone(b, "lark", "Lark Day")
+            moth = someone(b, "moth", "Moth Rey")
+            c1, _, _ = quote(lark, "Lark quotes Rook's quote of a drawing", post=qs)
+            c2, _, _ = quote(moth, "Moth quotes Lark's", post=c1)
+            c3, _, _ = quote(lark, "Lark quotes Rook's quote of Juno's post", post=q7)
+            c6, _, _ = quote(ivy, "Ivy quotes Rook's quote of a drawing", post=qs)
+            c7, _, _ = quote(lark, "Lark quotes Ivy's", post=c6)
+            c8, _, _ = quote(moth, "Moth quotes Lark's quote of Ivy's", post=c7)
+            leads = {}
+            ctx, pg = browser_as(b, kai)
+            for k, v in (("2 deep, a drawing", c1), ("3 deep, a drawing", c2), ("2 deep, a post's drawing", c3),
+                         ("through Ivy, to Kai", c8)):
+                go(pg, f"/social/p/{v}")
+                leads[k] = pg.evaluate(SMALL, v)
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, rook)
+            go(pg, f"/social/p/{c8}")
+            leads["through Ivy, to Rook"] = pg.evaluate(SMALL, c8)
+            close_ctx(ctx, pg)
+            pic = lambda g: bool(g and g.get("img") and g["img"][0] and g["img"][1] > 0 and (g.get("dur") or "").startswith("drawn in "))
+            check("a quote of a quote shows the drawing it leads to, as a picture, as a quote of a drawing shows it"
+                  " (the owner's \"all yes\", Nov 16, A): Lark's quote of Rook's quote of Juno's drawing, Moth's a quote"
+                  " further, and Lark's quote of Rook's quote of Juno's post (her post's drawing), each its picture"
+                  " painted with \"drawn in\", the small card still the quoted post's, one link to it",
+                  pic(leads["2 deep, a drawing"]) and leads["2 deep, a drawing"].get("href") == f"/social/p/{qs}"
+                  and pic(leads["3 deep, a drawing"]) and leads["3 deep, a drawing"].get("href") == f"/social/p/{c1}"
+                  and pic(leads["2 deep, a post's drawing"]) and leads["2 deep, a post's drawing"].get("href") == f"/social/p/{q7}",
+                  json.dumps(leads)[:900])
+            check("...and the chain ends at a post its viewer may not see: Moth's quote of Lark's quote of Ivy's shows"
+                  " Kai, whom Ivy blocked, Lark's words and no drawing; Rook, whom nobody blocked, the drawing",
+                  leads["through Ivy, to Kai"] and not leads["through Ivy, to Kai"].get("img")
+                  and leads["through Ivy, to Kai"].get("words") == "Lark quotes Ivy's"
+                  and pic(leads["through Ivy, to Rook"]),
+                  json.dumps({k: leads[k] for k in ("through Ivy, to Kai", "through Ivy, to Rook")})[:700])
+            st_q, raw = moth.client().get(f"/social/p/{qs}/quoted")
+            try:
+                made = json.loads(raw).get("html") or ""
+            except ValueError:
+                made = ""
+            check("...and Make shows it as the post will: Quote on Rook's quote of a drawing opens Make with the"
+                  " drawing in its small card",
+                  st_q == 200 and "qt-pic" in made and f"/{d7}/" in made, f"{st_q} {made[:300]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(7, exc)
 
@@ -1964,6 +2015,113 @@ with sync_playwright() as p:
                   json.dumps(wells))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(11, exc)
+
+    # ------------------------------------------------------------------ 13
+    if part(13, "just a border: no box on the site is set apart from what it sits on by its line alone"):
+        try:
+            # The owner, Nov 16: "are there any other places where you just have a
+            # border around something with the same color as the background that it
+            # is sitting in (so there's no way to differentiate it?) like the quote
+            # repost?" A census of every box with something in it (words or a
+            # picture) and a line round it (a ring, or a border on two sides or
+            # more): its fill against the ground that shows round it (past any
+            # wrapper its own size) must differ by 1.08:1 or more. Not counted: a box
+            # with a soft lift (its shadow sets it apart), one on a drawing or a
+            # picture (its ground is what the picture paints), a picture's own box
+            # (the picture four fifths of it or more; and a drawing's plate,
+            # .gal-pic, whose ground is the drawing's own paper by plate_ground,
+            # cropped to the drawing so a sparse one sits small in it), a dashed
+            # outline (an "add" place is an outline), and fields.
+            JUST = r"""(where) => {
+              const rgba = s => { if (!s) return null; const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
+                return m.length >= 3 ? [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1] : null; };
+              const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+                                 return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+              const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+              const fill = e => { const layers = [];
+                for (let n = e; n; n = n.parentElement) { const b = rgba(getComputedStyle(n).backgroundColor);
+                  if (b && b[3] > 0) { layers.push(b); if (b[3] >= 1) break; } }
+                let g = [255, 255, 255];
+                for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; g = [0, 1, 2].map(k => l[k] * l[3] + g[k] * (1 - l[3])); }
+                return g; };
+              const shadows = s => [...(s || '').matchAll(/(rgba?\([^)]*\)|color\([^)]*\))\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+([\d.]+)px(?:\s+(-?[\d.]+)px)?/g)]
+                .map(m => ({ c: rgba(m[1]), blur: parseFloat(m[4]), spread: parseFloat(m[5] || '0'), x: parseFloat(m[2]), y: parseFloat(m[3]) }));
+              const SKIP = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'IMG', 'CANVAS', 'VIDEO', 'svg', 'path', 'HR', 'OPTION']);
+              const name = e => e.tagName.toLowerCase() + (typeof e.className === 'string' && e.className.trim() ? '.' + e.className.trim().split(/\s+/).slice(0, 2).join('.') : '');
+              const out = [];
+              for (const e of document.querySelectorAll('body *')) {
+                if (SKIP.has(e.tagName) || !e.getClientRects().length || e.closest('[hidden]')) continue;
+                const r = e.getBoundingClientRect(); if (r.width < 40 || r.height < 28) continue;
+                const cs = getComputedStyle(e); if (cs.visibility === 'hidden' || +cs.opacity === 0) continue;
+                const sh = shadows(cs.boxShadow);
+                if (sh.some(s => s.c && s.c[3] > 0.04 && s.blur > 0)) continue;
+                const bw = ['Top', 'Right', 'Bottom', 'Left'].map(s => parseFloat(cs['border' + s + 'Width']) || 0);
+                const bc = ['Top', 'Right', 'Bottom', 'Left'].map(s => rgba(cs['border' + s + 'Color']));
+                const dashed = /dashed|dotted/.test(cs.borderTopStyle);
+                const sides = dashed ? 0 : bw.map((w, i) => w > 0 && bc[i] && bc[i][3] > 0.02).filter(Boolean).length;
+                const ring = sh.some(s => s.c && s.c[3] > 0.02 && s.blur === 0 && s.x === 0 && s.y === 0 && s.spread > 0);
+                if (sides < 2 && !ring) continue;
+                const same = (a, b) => { const x = a.getBoundingClientRect(), y = b.getBoundingClientRect();
+                  return Math.abs(x.left - y.left) < 2 && Math.abs(x.top - y.top) < 2 && Math.abs(x.right - y.right) < 2 && Math.abs(x.bottom - y.bottom) < 2; };
+                let g = e.parentElement;
+                while (g && g !== document.body && same(g, e)) g = g.parentElement;
+                const covers = m => { const q = m.getBoundingClientRect(); return q.left <= r.left + 1 && q.top <= r.top + 1 && q.right >= r.right - 1 && q.bottom >= r.bottom - 1; };
+                if (e.matches('.gal-pic') || [...e.querySelectorAll('canvas, img, video')].some(m => { const q = m.getBoundingClientRect(); return q.width * q.height >= 0.8 * r.width * r.height; })) continue;
+                if ([...(g || document.body).querySelectorAll('canvas, img, video')].some(m => !e.contains(m) && covers(m))) continue;
+                const text = (e.innerText || '').replace(/\s+/g, ' ').trim();
+                const pic = !!e.querySelector('img, canvas, video, .skribl-inline');
+                if (!text && !pic) continue;
+                const apart = ratio(fill(e), g ? fill(g) : [255, 255, 255]);
+                if (apart >= 1.08) continue;
+                out.push(where + ': ' + name(e) + ' "' + text.slice(0, 28) + '" ' + apart.toFixed(2) + ':1');
+              }
+              return out; }"""
+            juno = someone(b, "juno", "Juno")
+            rook = someone(b, "rook", "Rook")
+            mira = someone(b, "mira", "Mira Lopez")
+            kai = someone(b, "kai", "Kai Moss")
+            j13 = make_post(juno, "Section 13, Juno's drawing", payload=with_poster(drawing(seed=130)))
+            jt13 = make_post(juno, "Section 13, Juno's, with comments", seed=131)
+            q13, _, _ = quote(rook, "Section 13, Rook quotes Juno's", post=j13)
+            d13 = make_drawing(juno, "Section 13, a drawing", seed=132)
+            qd13, _, _ = quote(rook, "Section 13, Rook quotes a drawing", drawing=d13)
+            qq13, _, _ = quote(mira, "Section 13, Mira quotes Rook's quote", post=qd13)
+            gone13 = make_post(juno, "Section 13, to be deleted", seed=133)
+            qg13, _, _ = quote(rook, "Section 13, Rook quotes one gone", post=gone13)
+            c = juno.client()
+            c.get(f"/social/p/{gone13}")
+            c.post_json(f"/social/p/{gone13}/delete", {})
+            repost(mira, j13)
+            pile_on(jt13, 3, 2, 0)
+            for h in ("juno", "rook", "mira"):
+                follow(kai, h)
+            follow(juno, "kai")
+            found, seen = [], 0
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    tag = f"{screen} {scheme}"
+                    ctx, pg = browser_as(b, kai, screen=screen, scheme=scheme)
+                    for path_ in ("/social/", f"/social/p/{jt13}", f"/social/p/{qq13}", "/social/@rook", "/social/you",
+                                  "/social/explore", "/social/explore?q=juno&who=people"):
+                        go(pg, path_, wait=700)
+                        found += pg.evaluate(JUST, f"{tag} {path_}")
+                        seen += 1
+                    close_ctx(ctx, pg)
+                    ctx, pg = browser_as(b, juno, screen=screen, scheme=scheme)
+                    go(pg, "/social/activity", wait=900)
+                    found += pg.evaluate(JUST, f"{tag} /social/activity")
+                    close_ctx(ctx, pg)
+                    ctx, pg = browser_as(b, None, screen=screen, scheme=scheme)
+                    go(pg, "/social/", wait=900)
+                    found += pg.evaluate(JUST, f"{tag} signed out /social/")
+                    close_ctx(ctx, pg)
+                    seen += 2
+            check("just a border: on Home, a post, a quote of a quote, a person, Settings, the Gallery, people search,"
+                  " Activity and signed-out Home, phone and desk, light and dark, no box with something in it is set"
+                  " apart from what it sits on by its line alone (its fill 1.08:1 or more from its ground, or a lift)",
+                  seen == 36 and not found, f"{len(found)} on {seen} pages: {found[:6]}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(13, exc)
 
     # ------------------------------------------------------------------ 12
     if part(12, "no page errors, no console errors and no CSP violations"):

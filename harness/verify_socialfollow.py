@@ -609,19 +609,20 @@ LISTS = r"""() => { const w = document.getElementById('followsSheet'); if (!w) r
 # A pill: where it is, its paint, which option is pressed, whether its tint is
 # placed under that option, and each option's box, paint and reach (a press at
 # its middle and 21px above and below lands on it: 44px to a finger).
-# Its line is read where it is drawn: since the edges' part two, a ring of
-# --edge in --card-edge (the card's line laid over the card, made solid)
-# outside a transparent border (social.css, THE EDGES); the border's own
-# colour where it shows one. The token as the page resolves it rides along.
+# Its line is read where it is drawn: a ring of --edge outside a transparent
+# border (social.css, THE EDGES), in the second button's line since the one
+# switch (the owner's "all yes" to "Just a Border", Nov 16; --card-edge
+# before); the border's own colour where it shows one. The token as the page
+# resolves it rides along.
 PILL = r"""(sel) => { const seg = document.querySelector(sel); if (!seg || !seg.getClientRects().length) return null;
   const r = seg.getBoundingClientRect(), sl = seg.querySelector('.fo-slider'), sr = sl.getBoundingClientRect();
   const on = seg.querySelector('button[aria-pressed="true"]'), onr = on ? on.getBoundingClientRect() : null, cs = getComputedStyle(seg);
   const lineOf = (c) => { const t = c.borderTopColor; if (t !== 'transparent' && !/^rgba\(.*,\s*0\)$/.test(t)) return t;
     const m = (c.boxShadow || '').match(/^((?:rgba?|color)\([^)]*\)) 0px 0px 0px [\d.]+px/); return m ? m[1] : t; };
-  const pr = document.createElement('i'); pr.style.color = 'var(--card-edge)'; seg.appendChild(pr);
-  const edge = getComputedStyle(pr).color; pr.remove();
+  const pr = document.createElement('i'); pr.style.color = 'var(--btn2-line)'; seg.appendChild(pr);
+  const token = getComputedStyle(pr).color; pr.remove();
   return { top: r.top, bottom: r.bottom, left: r.left, w: Math.round(r.width * 100) / 100, h: Math.round(r.height * 100) / 100,
-    bg: cs.backgroundColor, line: lineOf(cs), edge, radius: cs.borderTopLeftRadius, placed: seg.hasAttribute('data-pill'),
+    bg: cs.backgroundColor, line: lineOf(cs), token, radius: cs.borderTopLeftRadius, placed: seg.hasAttribute('data-pill'),
     pressed: on ? on.textContent.trim() : null, tint: getComputedStyle(sl).backgroundColor, tintOp: +getComputedStyle(sl).opacity,
     under: !!onr && Math.abs(sr.left - onr.left) < 0.6 && Math.abs(sr.width - onr.width) < 0.6 && sr.height > 30,
     buttons: [...seg.querySelectorAll('button')].map(b => { const q = b.getBoundingClientRect(), mid = q.left + q.width / 2;
@@ -982,7 +983,10 @@ def judge_pill(fs, reduced=False):
 LIGHT_PAGE, DARK_PAGE = "rgb(246, 248, 250)", "rgb(15, 18, 24)"
 SHEET_PAPER = {"light": "rgb(243, 240, 255)", "dark": "rgb(23, 20, 42)"}
 FILL, WHITE = "rgb(109, 76, 240)", "rgb(255, 255, 255)"
-BTN2 = {"light": "rgb(255, 255, 255)", "dark": "rgba(167, 146, 255, 0.1)"}
+# The second button (and every switch's track): Skribl's lilac, see-through, in
+# both themes since the owner's "all yes" to "Just a Border" (Nov 16); white
+# in light before.
+BTN2 = {"light": "rgba(124, 92, 255, 0.14)", "dark": "rgba(167, 146, 255, 0.1)"}
 CARD = {"light": "rgb(255, 255, 255)", "dark": "rgb(35, 30, 59)"}
 PILL_ON = {"light": "rgb(63, 39, 168)", "dark": "rgb(212, 201, 255)"}
 PILL_OFF = {"light": "rgb(63, 71, 86)", "dark": "rgb(183, 191, 204)"}
@@ -1650,11 +1654,11 @@ with sync_playwright() as p:
             check("Home opens on Everyone before you follow anybody, and on Following once you do",
                   before and before["pressed"] == "Everyone" and after and after["pressed"] == "Following",
                   f"{before and before['pressed']} then {after and after['pressed']}")
-            check("the pill is the first thing under the header (Home has no box since the owner's \"All yes\", Nov 14), over the posts: the Gallery's New / Hot value for value (44px, the"
-                  " card's ground and its edge, the card's line laid over the card, 12px round, the tint rgba(124, 92, 255, 0.22) under the chosen one, 13px words"
+            check("the pill is the first thing under the header (Home has no box since the owner's \"All yes\", Nov 14), over the posts: the one switch, as the"
+                  " Gallery's and the theme's (the owner's \"all yes\", Nov 16: 44px, the second button's tint and line, 12px round, the tint rgba(124, 92, 255, 0.22) under the chosen one, 13px words"
                   " at 600, the chosen one's ink and the other's), each option 44px to a finger",
                   after and where["box"] == 0 and 0 <= where["top"] - where["header"] <= 24 and where["bottom"] < where["first"]
-                  and after["h"] == 44 and after["bg"] == CARD["light"] and after["line"] == after["edge"] != "rgba(0, 0, 0, 0)"
+                  and after["h"] == 44 and after["bg"] == BTN2["light"] and after["line"] == after["token"] != "rgba(0, 0, 0, 0)"
                   and after["radius"] == "12px" and after["tint"] == TINT and after["tintOp"] == 1 and after["under"]
                   and [x["words"] for x in after["buttons"]] == ["Following", "Everyone"]
                   and all(x["size"] == "13px" and x["weight"] == "600" and x["reach"] and x["w"] >= 44 for x in after["buttons"])

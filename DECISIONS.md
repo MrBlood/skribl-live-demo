@@ -45018,3 +45018,93 @@ verify_socialposts 99/99, verify_socialprofile 94/94, verify_socialmentions
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: Home, a quote post: the small card inside it a soft
 lilac tint with no line, in both themes.
+
+## After v330 -- Just a Border, the site: a quote shows the drawing it leads to, the light theme's second controls tinted, one switch, and a census that holds it
+
+The owner, Nov 16: "are there any other places where you just have a border
+around something with the same color as the background that it is sitting
+in (so there's no way to differentiate it?) like the quote repost?" and "how
+is a quote of a drawing any different than a quote of a quote?", then "all
+yes" to the Just a Border mock
+(https://claude.ai/artifact/6xok12QmR51J1wLc8thMsG): A, yes, yes and yes.
+
+THE CENSUS first (a temporary part, never committed): every box with
+something in it and a line round it, read against the ground that shows
+round it, on every page and sheet of the site and in every state of the Pad
+and Flip that check_centring.py reaches, light and dark, phone and desk. On
+the site, besides the quote (D2, #946): in light the second button and the
+switches were plain white, 1.00:1 on Settings' white panels (the theme
+switch, Rename, Add a passkey, Sign out) and 1.06:1 on the page (Home's
+Following and Everyone, the Gallery's New and Hot, Following, Look around);
+in dark they wear a lilac tint and read. Found and not a problem: Blooby's
+card (his drawing paints its own paper; the census read the box behind it),
+the ▶ "drawn in" pill (it sits on the drawing), cards and panels (their lift
+sets them apart; the census does not count shadows), Make's quote (a white
+card on the sheet's lilac paper). Skribl's editors have more of it (How it
+works' tips, the drawers' second buttons, their switches): the owner's fourth
+yes is to mock those next, with the same rule.
+
+WHAT CHANGED:
+
+- A (reposts.Quoted): a quoted post with no drawing of its own that is
+  itself a quote leads on, to the drawing its own original has, as many
+  quotes deep as it takes (LEAD_DEPTH 12), a level of posts read at a time;
+  it ends at a drawing, at a post the person looking may not see, or at
+  words alone. A drawing outside a post reached that way is shown as a quote
+  of it would be. The small card stays the quoted post's, one link to it;
+  Make's small card (small_of) shows the same, as the post will.
+- THE SECOND BUTTON AND EVERY SWITCH'S TRACK, light: --btn2-bg is Skribl's
+  lilac, see-through, rgba(124, 92, 255, 0.14), as dark wears its own (it
+  was #ffffff): 1.19:1 on a white panel and on the page alike. It reaches
+  every .btn, the boxed icon buttons, the Settings gear and the theme switch.
+- ONE SWITCH: .fo-seg (Home's Following and Everyone, the Gallery's New and
+  Hot, the lists' pill) on the second button's tint and line, as the theme's
+  switch wears them. Skribl's own Gallery's .seg-track, which it matched
+  value for value, follows with the editors' mock.
+
+PAD AND FLIP: not yet; the editors' census findings are the next mock.
+
+CONTRAST: words on a tinted button 15.04:1 on Settings, 14.2:1 on the page
+(17.95 on white); the chosen pill against its track 1.28:1 (1.33 on white).
+
+THE CHECKS, each shown red by a break of its own, a fresh server each, the
+tree as built green beside them:
+
+- verify_socialreposts 7 (three new rows): a quote of a quote shows the
+  drawing it leads to (two deep, three deep, and through a quote of a drawn
+  post), the chain ends at a post its viewer may not see (Ivy, who blocked
+  Kai, in the middle), and Make shows it. Red: the chain not followed (all
+  three); one level only (the deeper ones); the hidden check gone (the
+  chain's row); Make's small card not following (Make's row).
+- verify_socialreposts 13 (new), JUST A BORDER: the census as a check, on
+  Home, a post, a quote of a quote, a person, Settings, the Gallery, people
+  search, Activity and signed-out Home, phone and desk, light and dark. Red:
+  the tint gone (22 found), the one switch undone (6), D2 undone (8, "This
+  post is gone." in a post's card; a quote card that is mostly its drawing
+  is the picture's box to this census, and part 11's row holds its well,
+  read off the paint above the picture). Its instrument: as built it first
+  found a quoted drawing's plate, the drawing's own paper in the well at
+  1.03:1, a picture and not a box; a plate is cropped to its drawing, so a
+  sparse one sits small in its paper and no share of picture tells it: a
+  plate is skipped by its class (.gal-pic, whose ground is the drawing's
+  paper by plate_ground).
+- verify_socialfollow 2 and 7, verify_socialsettings 1 and 6: the second
+  button's dress and the one switch, their white pins moved to the tint.
+  Red on the old white.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3), nineteen ok in 20.1
+minutes, every one of the site's (the tint reaches every second button on
+it, so the sample is the whole site): verify_socialposts 99/99,
+verify_socialcomments 96/96, verify_socialprofile 94/94, verify_sociallikes
+100/100, verify_socialfollow 79/79, verify_socialmute 68/68,
+verify_socialsettings 45/45, verify_composer 39/39, verify_socialreposts
+55/55, verify_socialmentions 51/51, verify_socialactivity 46/46,
+verify_socialbookmarks 37/37, verify_socialsearch 32/32, verify_socialsafety
+38/38, verify_socialapp 55/55, verify_social 45/45, verify_socialauth 73/73,
+verify_a11ypages 162/162, verify_docs 144/144. NOT RUN: the full battery
+(main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: Settings in light, the theme switch and its buttons a
+soft lilac; Home's Following and Everyone the same; a quote of a quote on
+Home with its drawing.
