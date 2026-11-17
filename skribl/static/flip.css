@@ -1821,3 +1821,14 @@ body:not([data-size="compact"]):not(.one-page) :is(#pbCopy, #pbDraw, #addinbetwe
 .addbtn, .mb-offset { background: var(--btn2-bg); }
 .strip-wrap { background: color-mix(in srgb, var(--menu-paper) 94%, transparent); }   /* the paper, clear: #17142a at 94% */
 :root[data-theme="light"] .strip-wrap { background: rgba(255, 255, 255, 0.9); }
+/* NO DINGE, THE LAST ROUND (the owner's "All yes", Nov 17). The page bar
+   takes the strip's own paper, where it was a second glass laid over it
+   (grey-white in light, near-black in dark); the hairline under it keeps the
+   two rows apart. The badges on each page (its number, hold, loop, under,
+   the no-play tag, the ✕ and the ⋯) wear the toasts' clear glass and its
+   lilac edge, as everything over a drawing does, where they were a deep glass
+   that took the page's colour: on a plain page the ✕ was 1.04:1 in either
+   theme. A ✕ armed to delete keeps its red (.frame .del.armed outranks this). */
+.pagebar { background: transparent; }
+.frame :is(.num, .del, .pageops, .loopchip, .underlabel, .noplaytag), .frame .holdbadge.idle {
+  background: var(--chip-glass); box-shadow: 0 0 0 var(--edge) var(--chip-line); }

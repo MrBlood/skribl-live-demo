@@ -3225,6 +3225,24 @@ with _sp() as _pr:
         check(f"DELETE KEY ({_name}) at {_w}: the posted card offers Copy delete key, painted, a 44px tap, inside the sheet",
               bool(_k) and _k["painted"] and _k["h"] >= 44 and _k["inside"]
               and "Only this browser can delete it" in _k["words"], str(_k))
+        # THE ROW IS THE SHEET'S CARD (No dinge, the last round, the owner's "All
+        # yes", Nov 17): it was 5% of the ink on the lilac paper, a grey-lilac,
+        # and Copy delete key on it had to step up a shade. The card with its
+        # lilac edge now, and the button on it the plain lilac.
+        if _k:
+            _kw, _th0 = {}, _pg.evaluate("() => document.documentElement.getAttribute('data-theme')")
+            for _th in ("light", "dark"):
+                _pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); _pg.wait_for_timeout(250)
+                _kw[_th] = _pg.evaluate("""() => { const row = document.getElementById('postKeyRow'), b = document.getElementById('postKeyBtn');
+                    const want = (css, key) => { const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;' + css;
+                      row.appendChild(p); const v = getComputedStyle(p)[key]; p.remove(); return v; };
+                    return { row: getComputedStyle(row).backgroundColor, card: want('background-color:var(--menu-card)', 'backgroundColor'),
+                             ring: getComputedStyle(row).boxShadow, cardRing: want('box-shadow:var(--card-ring)', 'boxShadow'),
+                             btn: getComputedStyle(b).backgroundColor, lilac: want('background-color:var(--btn2-bg)', 'backgroundColor') }; }""")
+            _pg.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+            check(f"DELETE KEY ({_name}) at {_w}: ...on the sheet's card with its lilac edge, the button the plain lilac, light and dark (it was a grey-lilac wash)",
+                  all(v["row"] == v["card"] and v["ring"] == v["cardRing"] and v["ring"] != "none" and v["btn"] == v["lilac"] for v in _kw.values())
+                  and _kw["light"]["card"] != _kw["dark"]["card"], str(_kw)[:400])
         if _k:
             _pg.evaluate("() => { window.__copied = null; }")
             _pg.click("#postKeyBtn"); _pg.wait_for_timeout(300)

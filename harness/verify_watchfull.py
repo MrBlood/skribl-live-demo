@@ -133,6 +133,10 @@ with sync_playwright() as p:
     PAINTED = """(sel) => { const el = document.querySelector(sel); if (!el) return false; const x = el.getBoundingClientRect();
         if (!x.width || !x.height) return false;
         const h = document.elementFromPoint(x.left + x.width / 2, x.top + x.height / 2); return !!h && el.contains(h); }"""
+    WEARS = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]'));
+      if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
+      e.parentElement.appendChild(p); const want = getComputedStyle(p).backgroundColor; p.remove();
+      return { got: getComputedStyle(e).backgroundColor, want }; }"""   # an element's own paint against its token, resolved where it sits
 
     def _band(q, sel):
         """A press on a control in the band, as a person makes it: a faded band is woken first, so a
@@ -179,9 +183,39 @@ with sync_playwright() as p:
                   "painted, off the drawing and 44px to tap",
                   bool(_w) and _w["painted"] and _w["off"] and _o.get("after_" + _dev, _o["after"]) in (_w["after"] or "")
                   and min(_w["tap"]) >= 44, str(_w))
+            # ...IN THE PLAYER'S ROUND BUTTONS' LILAC (No dinge, the last round, the
+            # owner's "All yes", Nov 17): beside the speed's lilac it was a grey
+            # disc on the Pad's line and the control grey in Flip's row.
+            _wl, _th0 = {}, _q.evaluate("() => document.documentElement.getAttribute('data-theme')")
+            for _th in ("light", "dark"):
+                _q.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); _q.wait_for_timeout(250)
+                _wl[_th] = _q.evaluate(WEARS, [_o["btn"], "var(--btn2-bg)"])
+            _q.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+            _q.wait_for_timeout(200)
+            check(f"{_tag}: ...in the player's round buttons' lilac, light and dark (it was grey beside the speed's lilac)",
+                  all(v and v["got"] == v["want"] for v in _wl.values()) and _wl["light"]["want"] != _wl["dark"]["want"], str(_wl))
+            if _name == "Pad":
+                # THE SCRUB'S TRACK ON THE PAGE IS THE LILAC (No dinge, the last
+                # round): a grey wash, 6% on a desk and 12% in a phone's bar.
+                _tp = {}
+                for _th in ("light", "dark"):
+                    _q.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); _q.wait_for_timeout(250)
+                    _tp[_th] = _q.evaluate(WEARS, ["#playScrub", "var(--btn2-bg)"])
+                _q.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+                _q.wait_for_timeout(200)
+                check(f"{_tag}: the scrub's track on the page is the lilac, light and dark (it was a grey wash)",
+                      all(v and v["got"] == v["want"] for v in _tp.values()) and _tp["light"]["want"] != _tp["dark"]["want"], str(_tp))
             _page = _q.evaluate(FS, _o)
             _q.click(_o["btn"]); _q.wait_for_timeout(600)
             _s = _q.evaluate(FS, _o)
+            # ...AND IN FULL SCREEN THE SCRUBBER KEEPS ITS WASH (No dinge, the last
+            # round, made the page's track the lilac only): over the drawing,
+            # among full screen's own glass, 6%, and 12% in a phone's band where
+            # the Pad's is in the bar; Flip's line is not the scrubber, its 14%.
+            _wash = {"/skribl-pad": "0.12" if _dev == "phone" else "0.06", "/flip": "0.14"}[_route]
+            _fw = _q.evaluate(WEARS, [_o["carry"][0], f"rgba(var(--wash-rgb), {_wash})"])
+            check(f"{_tag}: ...in full screen its track keeps the {round(float(_wash) * 100)}% wash it had, not the page's lilac",
+                  bool(_fw) and _fw["got"] == _fw["want"], str(_fw))
             check(f"{_tag}: it opens over the whole screen ({'the stand-in' if _dev == 'phone' else 'the real API'}), "
                   "the drawing as big as the screen allows, centred, in its own shape",
                   _s["mode"] == ("stand-in" if _dev == "phone" else "api") and _fills(_s, _page)

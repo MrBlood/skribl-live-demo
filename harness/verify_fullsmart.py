@@ -264,6 +264,14 @@ def gallery(b, view, theme, title):
                    ".player-btn:not(.primary), .rl-speed")
 
 
+# THE SCRUBBER'S TRACK KEEPS ITS WASH IN FULL SCREEN (No dinge, the last
+# round, the owner's "All yes", Nov 17, made the page's track the lilac): over
+# the drawing, among full screen's own glass, it stays the 6% it was.
+TRACK_WASH = """() => { const e = document.getElementById('playerProgress'), p = document.createElement('i');
+  p.style.cssText = 'position:absolute;width:0;height:0;background-color:rgba(var(--wash-rgb), 0.06)'; e.parentElement.appendChild(p);
+  const want = getComputedStyle(p).backgroundColor; p.remove(); return { got: getComputedStyle(e).backgroundColor, want }; }"""
+
+
 def link(b, view, theme, sid):
     """A shared link's full screen, paused near its end."""
     pg = b.new_page(color_scheme=theme, **view)
@@ -447,6 +455,9 @@ with sync_playwright() as p:
             worst, where, n = bar.words_worst()
             check(f"Link page, {vname}: every word reads on the dark drawing (4.5:1 or more)",
                   n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
+            _tw = pg.evaluate(TRACK_WASH)
+            check(f"Link page, {vname}, light page: the scrubber's track keeps its 6% wash in full screen, not the page's lilac",
+                  _tw["got"] == _tw["want"], str(_tw))
             pg.close()
             pg, bar = link(b, view, "dark", ids["paper"])
             st = bar.state()
@@ -456,6 +467,9 @@ with sync_playwright() as p:
             worst, where, n = bar.words_worst()
             check(f"Link page, {vname}: every word reads on the paper (4.5:1 or more)",
                   n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
+            _tw = pg.evaluate(TRACK_WASH)
+            check(f"Link page, {vname}, dark page: the scrubber's track keeps its 6% wash in full screen, not the page's lilac",
+                  _tw["got"] == _tw["want"], str(_tw))
             pg.close()
         # Lines of ink right under the words: what their halo is for. Without
         # it the worst pixel read 3.7 (dark lines on paper, phone) and 3.9

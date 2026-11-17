@@ -518,6 +518,14 @@ WATCH = """() => { const p = document.getElementById('exportProgress'); window._
   mo.observe(p, { attributes: true, attributeFilter: ['hidden'] }); }"""
 PHONE12 = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
 DESK12 = dict(viewport={"width": 1280, "height": 900})
+WEARS = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]') && x.getClientRects().length);
+  if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
+  e.parentElement.appendChild(p); const want = getComputedStyle(p).backgroundColor; p.remove();
+  return { got: getComputedStyle(e).backgroundColor, want }; }"""   # an element's own paint against its token, resolved where it sits
+INK = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]') && x.getClientRects().length);
+  if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;color:' + tok;
+  e.parentElement.appendChild(p); const want = getComputedStyle(p).color; p.remove();
+  return { got: getComputedStyle(e).color, want }; }"""   # an element's own ink against its token, resolved where it sits
 
 with sync_playwright() as p6:
     b6 = p6.chromium.launch()
@@ -554,6 +562,18 @@ with sync_playwright() as p6:
             r = pg.evaluate(SMALL12)
             check(f"{ed}, {size}: nothing the Export sheet paints is under 12px",
                   r["n"] >= 12 and not r["small"], f"{r['n']} words read; under 12px: {r['small']}")
+            # A CHOICE'S DISC IS THE SITE'S (No dinge, the last round, the owner's
+            # "All yes", Nov 17): the one lilac, its mark in the small violet
+            # words' ink. It was a see-through tint, its violet mark 3.1:1 in dark.
+            _ed, _th0 = {}, pg.evaluate("() => document.documentElement.getAttribute('data-theme')")
+            for _th in ("light", "dark"):
+                pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(250)
+                _ed[_th] = {"disc": pg.evaluate(WEARS, ["#exportSheet .export-opt-icon", "var(--btn2-bg)"]),
+                            "mark": pg.evaluate(INK, ["#exportSheet .export-opt-icon", "var(--accent-ink)"])}
+            pg.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", _th0)
+            check(f"{ed}, {size}: a choice's disc is the site's, the one lilac with its mark in the small violet words' ink, light and dark",
+                  all(v["disc"] and v["disc"]["got"] == v["disc"]["want"] and v["mark"] and v["mark"]["got"] == v["mark"]["want"] for v in _ed.values())
+                  and _ed["light"]["disc"]["want"] != _ed["dark"]["disc"]["want"], str(_ed))
             if ed == "Pad":
                 pg.evaluate(WATCH)
                 pg.click("#exportGif")

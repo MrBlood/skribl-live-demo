@@ -34,25 +34,26 @@
 .watch-full:is(:fullscreen, .is-immersive-page) {
   --accent: #7c5cff;
   --accent-bright: #9179ff;
+  --btn2-bg: #332a58;
+  --btn2-hover: #3b3166;
   --chip-glass: rgba(46, 38, 88, 0.94);
   --chip-lift: 0 8px 24px rgba(0, 0, 0, 0.35);
   --chip-line: rgba(167, 146, 255, 0.32);
-  --control-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--surface-control));
   --control-edge-strong: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-control));
   --deep-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-deep));
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --hl: 5.5%;
   --hls: 9%;
   --on-canvas-drop-rgb: 10,6,30;
   --on-canvas-ink: #241a52;
   --on-canvas-shade-rgb: 16,12,32;
   --on-canvas-violet: #3a24a8;
+  --press-fill: rgba(124, 92, 255, 0.38);
+  --press-ring: #a593ff;
   --r-pill: 999px;
   --seg-on-fill: rgba(124, 92, 255, 0.22);
   --seg-on-ink: #dad1ff;
   --surface-base: #0b0d12;
   --surface-control: #171b23;
-  --surface-control-hover: #1c212c;
   --surface-control-rgb: 23,27,35;
   --surface-deep: #06070a;
   --surface-deep-rgb: 6,7,10;
@@ -63,15 +64,17 @@
   --wash-rgb: 255,255,255;
 }
 :root[data-theme="light"] .watch-full:is(:fullscreen, .is-immersive-page) {
+  --btn2-bg: #e7e0ff;
+  --btn2-hover: #ddd4ff;
   --chip-glass: rgba(255, 255, 255, 0.96);
   --chip-lift: 0 10px 30px rgba(60, 40, 140, 0.16), 0 2px 6px rgba(60, 40, 140, 0.08);
   --chip-line: rgba(124, 92, 255, 0.3);
-  --hl: 9%;
   --hls: 15%;
+  --press-fill: rgba(124, 92, 255, 0.22);
+  --press-ring: #7c5cff;
   --seg-on-ink: #301c8c;
   --surface-base: #fbfcfd;
   --surface-control: #edf0f4;
-  --surface-control-hover: #e2e7ee;
   --surface-control-rgb: 237,240,244;
   --surface-deep: #ffffff;
   --surface-deep-rgb: 255,255,255;
@@ -287,6 +290,12 @@
    ring: at a drawing's end, where a finished drawing rests, it sat on the last
    digit. 6px under, as on the page, where the column's 16px gap makes it. */
 :is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .rl-scrub + .player-time { margin-top: -5px; }
+/* THE SCRUBBER'S TRACK KEEPS ITS WASH IN FULL SCREEN. On the page it is the
+   lilac (No dinge, the last round); here it lies over the drawing, among full
+   screen's own glass, which takes its tone from the drawing and not the
+   theme: the wash it had, 6%, and 12% in a phone's band, where the Pad's
+   scrubber is in the bar. Flip's line is not the scrubber, and keeps its own. */
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .rl-scrub { background: rgba(var(--wash-rgb), 0.06); }
 
 /* CONTROLS THAT STEP BACK (lib/chromefade.js; the owner's picks for every
    full screen -- the link page's, the editors', and the Gallery's and the
@@ -366,15 +375,17 @@
   height: 46px;
   border-radius: 999px;
   border: 1px solid transparent;
-  box-shadow: 0 0 0 var(--edge) var(--control-edge);
-  background: var(--surface-control);
+  /* The second button's lilac (No dinge, the last round): the family of the
+     "1×" pill beside them, where they were the control grey, 1.07:1 off the
+     page. Full screen tones its own over the drawing (.player-bar.is-smart). */
+  background: var(--btn2-bg);
   color: var(--text-primary);
   cursor: pointer;
   transition: background 0.15s ease, transform 0.1s ease;
   -webkit-tap-highlight-color: transparent;
 }
 .player-btn:where(.skfull-host, .skfull-host *) svg { width: 20px; height: 20px; }
-@media (hover: hover) { .player-btn:hover:where(.skfull-host, .skfull-host *) { background: var(--surface-control-hover); }
+@media (hover: hover) { .player-btn:hover:where(.skfull-host, .skfull-host *) { background: var(--btn2-hover); }
 }
 .player-btn:active:where(.skfull-host, .skfull-host *) { transform: scale(0.94); }
 
@@ -396,13 +407,15 @@
 @media (hover: hover) { .player-btn.primary:hover:where(.skfull-host, .skfull-host *) { background: var(--accent-bright); }
 }
 
-/* A LIT TOGGLE IS THE ONE PILL'S SELECTED LOOK -- its tint and its ink, as
-   on the library's transport -- and not solid violet, which is Play's: Loop
-   on read as a second Play button. */
+/* A LIT TOGGLE IS THE PRESSED LOOK -- a violet fill and ring, with the one
+   pill's selected ink -- and not solid violet, which is Play's: Loop on read
+   as a second Play button. Since the buttons beside it are lilac (No dinge,
+   the last round) it takes the pressed full screen's fill and ring, where it
+   wore the one pill's tint, which sat darker than the lilac in dark. */
 .player-btn.active:where(.skfull-host, .skfull-host *) {
-  background: var(--seg-on-fill);
+  background: var(--press-fill);
   border-color: transparent;
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1px var(--press-ring);
   color: var(--seg-on-ink);
 }
 
@@ -493,7 +506,7 @@
 /* THE SCRUBBER, on both (lib/replayline.js scrub(); the owner's S3): a bar of
    the drawing's shape, painted in the bar's `color`; a playhead; the artist's
    clock in a bubble while dragging. The old thin fill is hidden under it. */
-.rl-scrub:where(.skfull-host, .skfull-host *) { color: var(--accent); background: rgba(var(--wash-rgb), 0.06); border-radius: 9px; touch-action: none; }
+.rl-scrub:where(.skfull-host, .skfull-host *) { color: var(--accent); background: var(--btn2-bg); border-radius: 9px; touch-action: none; }
 .rl-strip:where(.skfull-host, .skfull-host *) { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .rl-head:where(.skfull-host, .skfull-host *) { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; border-radius: 2px;
   background: var(--accent); box-shadow: 0 0 0 2px var(--surface-base); pointer-events: none; }

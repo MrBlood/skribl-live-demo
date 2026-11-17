@@ -240,6 +240,29 @@ with sync_playwright() as p:
         _glass[_th] = pg.evaluate(WEARS, ["#playerLine .rl-chips", "var(--chip-glass)"])
     check("the speeds' pill is the toasts' clear glass, light and dark (it was a grey pill)",
           all(v and v["got"] == v["want"] for v in _glass.values()) and _glass["light"]["want"] != _glass["dark"]["want"], str(_glass))
+    # THE PLAYER'S ROUND BUTTONS AND ITS TRACK ARE THE SECOND BUTTON'S LILAC
+    # (No dinge, the last round, the owner's "All yes", Nov 17): the control
+    # grey, 1.07:1 off the page, and a grey wash. Loop, on, is the pressed
+    # look, its violet fill and ring: the one pill's tint sat darker than the
+    # lilac beside it in dark.
+    pg.evaluate("() => { const b = document.getElementById('playerLoopBtn'); if (!b.classList.contains('active')) { b.click(); window.__loopWas = false; } else window.__loopWas = true; }")
+    _rb = {}
+    for _th in ("light", "dark"):
+        pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", _th); pg.wait_for_timeout(350)
+        _rb[_th] = {"restart": pg.evaluate(WEARS, ["#playerRestartBtn", "var(--btn2-bg)"]),
+                    "track": pg.evaluate(WEARS, ["#playerProgress", "var(--btn2-bg)"]),
+                    "loop": pg.evaluate(WEARS, ["#playerLoopBtn", "var(--press-fill)"]),
+                    "ring": pg.evaluate("""() => { const e = document.getElementById('playerLoopBtn'), p = document.createElement('i');
+                        p.style.cssText = 'position:absolute;width:0;height:0;background-color:var(--press-ring)'; e.parentElement.appendChild(p);
+                        const want = getComputedStyle(p).backgroundColor; p.remove();
+                        return { on: e.classList.contains('active'), shadow: getComputedStyle(e).boxShadow, want }; }""")}
+    pg.evaluate("() => { if (window.__loopWas === false) document.getElementById('playerLoopBtn').click(); }")
+    check("the link page's round buttons and its track are the second button's lilac, light and dark (the control grey and a grey wash)",
+          all(v[k] and v[k]["got"] == v[k]["want"] for v in _rb.values() for k in ("restart", "track"))
+          and _rb["light"]["restart"]["want"] != _rb["dark"]["restart"]["want"], str({t: {k: v[k] for k in ("restart", "track")} for t, v in _rb.items()}))
+    check("...and Loop, on, wears the pressed look: its violet fill and ring, light and dark",
+          all(v["loop"] and v["loop"]["got"] == v["loop"]["want"] and v["ring"]["on"] and v["ring"]["want"] in v["ring"]["shadow"] for v in _rb.values())
+          and _rb["light"]["loop"]["want"] != _rb["dark"]["loop"]["want"], str({t: {k: v[k] for k in ("loop", "ring")} for t, v in _rb.items()}))
 
     open_player(eight["url"])
     check("a post whose author picked 8x starts at 8x", pg.evaluate(LINE).endswith("watching at 8×"),
