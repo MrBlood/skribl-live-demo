@@ -1670,7 +1670,7 @@ body.stroking .strip-wrap {
   flex: 1 1 0; width: auto; max-width: 600px; min-height: 34px; padding: 0 6px;
   flex-direction: row; gap: 6px;
   border: 0; border-radius: 12px;
-  background: rgba(var(--wash-rgb), .05);
+  background: var(--btn2-bg);   /* the second button's (No dinge): this rule outranked #952's .addbtn, so they stayed the grey wash */
   color: var(--text-secondary);
   font-size: 12px; font-weight: 600; line-height: 1.1; white-space: nowrap;
 }
@@ -1682,7 +1682,7 @@ body.stroking .strip-wrap {
   .addcol { flex-wrap: wrap; }
   .addcol .addbtn, .addcol .addbtn.mini { flex-basis: calc(50% - 3px); }
 }
-@media (hover: hover) { .addcol .addbtn:hover { background: rgba(var(--wash-rgb), .09); color: var(--text-primary); } }
+@media (hover: hover) { .addcol .addbtn:hover { background: var(--btn2-hover); color: var(--text-primary); } }
 
 /* THE PAGE TOOLS WAIT FOR A SECOND PAGE (FUTURE 6z item 9; the owner's B from
    the three asks' mock, Nov 4). On a desk, with one page, six of the eleven

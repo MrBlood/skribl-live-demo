@@ -45525,3 +45525,41 @@ NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: Flip's Duplicate and Blank are lilac; a toast is white
 with a lilac edge (violet in dark); the Pad's Post, before you draw, is lilac
 with violet words.
+
+## After v330 -- No dinge, a fix: Flip's add buttons were still grey; Copy delete key sat lilac on lilac
+
+Found by the census for the leftovers mock
+(https://claude.ai/artifact/RiJXckCdXenJeWmHAc2URg), run on main as merged
+after #952. Two things #952 said it did and didn't, fixed without a choice:
+they are the owner's "All yes" to No dinge, applied.
+
+- FLIP'S DUPLICATE, BLANK, TWEEN AND SMEAR stayed the grey wash (chroma 0
+  light, 0.037 dark): #952 wrote `.addbtn` on the second button's lilac at
+  the end of flip.css, but `.addcol .addbtn` (an older rule, more specific)
+  painted them, and no role in verify_contrast read them, so nothing said
+  so. #952's one-glance tell ("Flip's Duplicate and Blank are lilac") was
+  wrong as merged. That rule wears --btn2-bg now, and its hover --btn2-hover.
+- COPY DELETE KEY on the Post sheet sat on its row, which is the ink's 5%
+  over the lilac paper (#e8e5f4 in light), at 1.03:1: lilac on lilac, set
+  apart by its line alone. A shade up in light (#e0d7ff, the Library playing
+  row's), 1.10:1; dark is 1.23:1 as it was. The row's own grey wash is for
+  the next round's mock, as a white card on the paper.
+
+THE CHECK: verify_contrast's just-a-border and no-dinge rows read both now
+("Flip's add buttons", "Copy delete key"), and must see them. In a trimmed
+copy (A loop, Post, posted), a fresh server each: red with the grey wash
+back (no dinge: alpha 0.05, chroma 0 light, 0.037 dark), red without the
+step (just a border: Copy delete key 1.027:1), green as built.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3): eighteen, every one
+ok: verify_icons 60/60, verify_tips 72/72, verify_flipedges 22/22,
+verify_flipbeat 40/40, verify_sizeclass 89/89, verify_layout 257/257,
+verify_a11y 444/444, verify_ux 487/487, verify_posted 163/163,
+verify_postmoment 82/82, verify_surfaces 13/13, verify_docs 144/144,
+verify_theme 124/124, verify_player_isolation 85/85, verify_jsstrip 35/35,
+verify_pointerpad 55/55, verify_parity 434/434, verify_contrast 677/677. NOT
+RUN: the full battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell, this time measured as merged: Flip's Duplicate and
+Blank are lilac.
