@@ -134,7 +134,10 @@ with sync_playwright() as p:
         # ITS UNDO STANDS APART FROM THE GLASS (No dinge): the toast and Flip's
         # chip are clear glass, and a second button on it its own fill, read
         # as painted in both themes. On the violet glass the solid violet sat
-        # 1.07:1 in dark, so there it steps up a shade.
+        # 1.07:1 in dark, so there it steps up.
+        # Dark is read with the page's drawing on its light ground, where the
+        # glass (6% see-through) is lightest: the harder case for a button
+        # lighter than the glass. One shade up (#3d326b) read 1.03:1 there.
         th0 = pg.evaluate("() => document.documentElement.getAttribute('data-theme')")
         apart = {}
         for th in ("light", "dark"):

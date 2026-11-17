@@ -10072,10 +10072,14 @@ html[data-input="pointer"] .sdrafts-row:has(> .sdrafts-open:focus-visible) { out
      quiet (--off-ink), where the whole button faded to 30 to 42%. */
 .help-tip { background: var(--tip-well); }
 .toast-action, .leave-btn:not(.danger), .post-key-btn { background: var(--btn2-bg); }
-/* A second button ON THE GLASS steps up a shade in dark, as on the Library's
-   playing row: the solid violet on the violet glass sat 1.07:1 (the toast's
-   Undo, Flip's chip's, the other-tab notice's Keep for later); 1.24:1 here. */
-.toast-action, .othertab-later { background: #3d326b; }
+/* A second button ON THE GLASS steps up in dark, as on the Library's playing
+   row: the solid violet on the violet glass sat 1.07:1 over a dark drawing
+   (the toast's Undo, Flip's chip's, the other-tab notice's Keep for later).
+   The glass lets 6% through, so over a light drawing it is lighter and the
+   playing row's one shade (#3d326b) sat 1.03:1 there; this step clears both
+   grounds, 1.15:1 over the lightest and 1.41:1 over the dark, its words
+   9.2:1 (verify_newundo, verify_drafts). */
+.toast-action, .othertab-later { background: #45397a; }
 :root[data-theme="light"] :is(.toast-action, .othertab-later) { background: var(--btn2-bg); }
 @media (hover: hover) { .leave-btn:not(.danger):hover { background: var(--btn2-hover); } }
 .accordion-count { background: var(--count-fill); color: var(--seg-on-ink); }
