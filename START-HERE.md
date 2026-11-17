@@ -576,8 +576,10 @@ Nov 13, is section 16 of that document: a post is the one thing people
 share (words, and a drawing or a Flip), Home is posts, Explore is the
 Gallery of everyone's drawings, and a profile is Posts · Gallery · Likes ·
 Bookmarks · Drafts; part two of it (section 17: the composer, bookmarks,
-reposts and quote posts, and what comes next) since Nov 14. Read it before
-changing what the site shows.
+reposts and quote posts, and what comes next) since Nov 14. Section 18 is
+the comment thread, the owner's yes of Nov 17, not built yet: bubbles, the
+post's choices on every comment, two levels of replies and then a reply's
+own page. Read it before changing what the site shows.
 
     SKRIBL_VERSION   see skribl/core.py — the archive name derives from it.
                      This line used to hand-type it, and read v191 while the

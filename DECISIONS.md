@@ -45783,3 +45783,62 @@ run after the merge does it).
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: a drawing's link page shows its round buttons in lilac
 beside the violet Play, and Loop, on, with a violet ring.
+
+## After v330 -- The comment thread: the owner's yes (Nov 17), not built yet
+
+THE ASK. The owner, Nov 17, with a picture of another site's comments: "take
+a look at this comment format. does it look like it would work for what we
+are doing? ours looks a little sloppy?" Then, with a picture of bordered
+comments: "also consider the bordered comment to show separation?"
+
+THREE MOCKS, each answered. docs/SOCIAL-SITE.md section 18 links them and
+quotes each answer.
+- The Comment Thread put now beside A (open) and B (bubbles). The owner
+  chose B, with the post's choices on every comment, "Reply" for "Answer"
+  and icons alone on a phone, and asked how a reply to a reply would go.
+- Replies to Replies showed one level, two levels and every level; my pick
+  was one level with the @name. The owner pointed to Bluesky's "Read 2 more
+  replies" instead, which opens the reply's own page.
+- Read More Replies showed that in our bubbles, and the owner said yes: "I
+  like it. not sure how you'll handle drawings in there, but.. what I would
+  like to do is say yes to this most recent mock".
+
+THE YES:
+- bubbles: the site's card, with its lilac edge and its lift;
+- an initial in a face not drawn yet, and the count in a pill;
+- the thread's lilac line, ending where its branch ends;
+- the post's row and ⋯ on every comment;
+- "Reply" everywhere, the word shown on a desk only;
+- two levels, then "Read N more replies";
+- every reply its own page, the way to it above and its replies below;
+- built in three steps: the thread and its pages; likes on comments, with
+  Activity; repost and bookmark.
+
+The site only: Pad and Flip don't change, because comments are the site's.
+
+NOT BUILT. The owner's weekly limit ran out at the yes, and the owner asked
+for it to be the first thing the next session does, packaged so nothing is
+lost:
+- Section 18 is the spec.
+- harness/tools/mock_comments.py shoots the mock again from the site's own
+  page, with verify_socialreposts.py's fixture, and is where the next mock
+  starts.
+
+FIRST, A MOCK of drawings in a thread, which the yes left open. It also asks
+three smaller questions, each with a default:
+- what deleting a reply with replies under it does;
+- what Copy link on a comment gives;
+- the header on a top-level comment's own page.
+
+STILL ON THE LIST, from No dinge's survey. Each needs more than a colour,
+and none is mocked yet:
+- The Play pill on the Pad and in Flip: a 4.5% grey wash that turns violet
+  while playing, so a lilac at rest needs a new playing look.
+- Full screen's ✕ and the Gallery's full-screen bar: full screen's own
+  glass, whose tone comes from the drawing behind it.
+- Flip's own scrubber, the 3px line on its strip (the last round's entry).
+
+THE CHECKS: none needed. This entry changes no code the app runs. The tool
+ran once from its new place: ten shots, with the words' room 322, 274 and
+226px on a phone and 292, 244 and 196px on a desk, and the icons 7.1:1
+light and 10.1:1 dark, as the mock measured.
