@@ -66,6 +66,36 @@ def stroke(pg, sel):
         pg.click("#recordBtn"); pg.wait_for_timeout(600)
 
 
+def set_apart(pg, host, btn):
+    """A button's own fill against the glass round it, as PAINTED: the commonest
+    colour inside the button, and the commonest in the host outside every
+    button (words and corners are the few). (ratio, button, glass), or None."""
+    import io
+    from collections import Counter
+    from PIL import Image
+    r = pg.evaluate("""([h, b]) => { const H = document.querySelector(h), B = H && H.querySelector(b); if (!H || !B) return null;
+      const o = H.getBoundingClientRect(), at = e => { const q = e.getBoundingClientRect(); return [q.left - o.left, q.top - o.top, q.width, q.height]; };
+      return { host: [o.left, o.top, o.width, o.height], btn: at(B), btns: [...H.querySelectorAll('button')].map(at) }; }""", [host, btn])
+    if not r or r["host"][2] < 4 or r["host"][3] < 4:
+        return None
+    im = Image.open(io.BytesIO(pg.screenshot(clip=dict(zip(("x", "y", "width", "height"), r["host"]))))).convert("RGB")
+    inside = lambda x, y, q: q[0] <= x < q[0] + q[2] and q[1] <= y < q[1] + q[3]
+    fill, glass = Counter(), Counter()
+    for y in range(im.size[1]):
+        for x in range(im.size[0]):
+            if inside(x, y, r["btn"]):
+                fill[im.getpixel((x, y))] += 1
+            elif not any(inside(x, y, q) for q in r["btns"]):
+                glass[im.getpixel((x, y))] += 1
+    if not fill or not glass:
+        return None
+    f_, g_ = fill.most_common(1)[0][0], glass.most_common(1)[0][0]
+    lin = lambda v: v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+    lum = lambda c: sum(k * lin(ch / 255) for k, ch in zip((0.2126, 0.7152, 0.0722), c))
+    a, b = lum(f_), lum(g_)
+    return (round((max(a, b) + 0.05) / (min(a, b) + 0.05), 3), f_, g_)
+
+
 def act(pg, sel):
     """Press the button in the toast or the chip, as a finger would: where it is painted."""
     at = pg.evaluate("""(s) => { const a = document.querySelector(s + ' .toast-action'); if (!a) return null;
@@ -101,6 +131,20 @@ with sync_playwright() as p:
               was_strokes > 0 and new_strokes == 0 and new_shape == f"{want}/{want}"
               and said[0] == {"text": "New Skribl", "action": "Undo"},
               f"strokes {was_strokes} -> {new_strokes}, shape {was_shape} -> {new_shape} (picked {want}), said {said[0]}")
+        # ITS UNDO STANDS APART FROM THE GLASS (No dinge): the toast and Flip's
+        # chip are clear glass, and a second button on it its own fill, read
+        # as painted in both themes. On the violet glass the solid violet sat
+        # 1.07:1 in dark, so there it steps up a shade.
+        th0 = pg.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        apart = {}
+        for th in ("light", "dark"):
+            pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", th)
+            pg.wait_for_timeout(250)
+            apart[th] = set_apart(pg, e["say"], ".toast-action")
+        pg.evaluate("(t) => t ? document.documentElement.setAttribute('data-theme', t) : document.documentElement.removeAttribute('data-theme')", th0)
+        pg.wait_for_timeout(150)
+        check(f"{name}: ...its Undo stands apart from the glass it sits on by its own fill, 1.08:1 or more, painted, light and dark",
+              len(apart) == 2 and all(v and v[0] >= 1.08 for v in apart.values()), str(apart))
 
         undone = act(pg, e["say"])
         said.append(pg.evaluate(SAID, e["say"]))

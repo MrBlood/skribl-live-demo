@@ -625,11 +625,11 @@ with sync_playwright() as sp:
     # hover, both themes, copied with the token block. How it works' well
     # spent 73 B first, written in its one rule.
     #
-    # AND 147 B MORE, IN WRITING, at the owner's "All yes" to "No dinge" (Nov
+    # AND 81 B MORE, IN WRITING, at the owner's "All yes" to "No dinge" (Nov
     # 16): the tokens its glass, its off words, its wells, counts and
-    # placeholders are written in, both themes. Three tokens nothing read
-    # spent 200 B first.
-    _css_target = 45_437
+    # placeholders are written in, both themes. Four tokens nothing read any
+    # more spent 266 B first.
+    _css_target = 45_371
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")

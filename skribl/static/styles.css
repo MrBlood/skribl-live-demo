@@ -118,7 +118,6 @@
   --deep-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-deep));
   --raised-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--surface-raised));
   --surface-deep-rgb: 6,7,10;         /* = #06070a */
-  --line-rgb: 37,43,55;               /* = #252b37 */
 
   /* The wash behind every hover fill and translucent hairline. Held as an RGB
      TRIPLET rather than a colour so call sites keep their own alpha:
@@ -9569,7 +9568,6 @@ body.replaying .media-card { pointer-events: none; }
   --surface-control-rgb:     237,240,244;
   --hl: 9%; --hls: 15%; --hl-hc: 28%; --hls-hc: 42%;   /* --hairline's and --hairline-strong's alphas */
   --surface-deep-rgb:        255,255,255;   /* = #ffffff, the light --surface-deep */
-  --line-rgb:                224,229,236;
 
   /* Semantic colours, restated for a light ground. Same hues, dropped in
      luminance until each clears 4.5:1 against the DEEPEST light surface
@@ -9859,14 +9857,16 @@ body.replaying .media-card { pointer-events: none; }
   @starting-style { opacity: 0; }
 }
 
-/* ANOTHER TAB'S DRAWING IS WAITING (lib/othertab.js, T1). The toast's glass,
-   under the header: the words and Not now on one line, Open it and Keep for
-   later under them, so it reads at 320px. Every button keeps the 44px floor. */
+/* ANOTHER TAB'S DRAWING IS WAITING (lib/othertab.js, T1). The toast's glass
+   (--chip-glass since No dinge: it kept the old grey, on which the solid lilac
+   Keep for later sat 1.02:1 in light), under the header: the words and Not now
+   on one line, Open it and Keep for later under them, so it reads at 320px.
+   Every button keeps the 44px floor. */
 .othertab { position: fixed; z-index: 60; left: 50%; transform: translateX(-50%);
   top: calc(env(safe-area-inset-top, 0px) + 70px); width: min(92vw, 460px); box-sizing: border-box;
   display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 6px 8px 14px;
-  background: rgba(var(--line-rgb), 0.9); color: var(--text-primary); border: 1px solid var(--hairline-strong);
-  border-radius: 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, .28);
+  background: var(--chip-glass); color: var(--text-primary); border: 1px solid var(--chip-line);
+  border-radius: 14px; box-shadow: var(--chip-lift);
   -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
   font-size: 14px; line-height: 1.35; }
 .othertab[hidden] { display: none; }
@@ -10072,6 +10072,11 @@ html[data-input="pointer"] .sdrafts-row:has(> .sdrafts-open:focus-visible) { out
      quiet (--off-ink), where the whole button faded to 30 to 42%. */
 .help-tip { background: var(--tip-well); }
 .toast-action, .leave-btn:not(.danger), .post-key-btn { background: var(--btn2-bg); }
+/* A second button ON THE GLASS steps up a shade in dark, as on the Library's
+   playing row: the solid violet on the violet glass sat 1.07:1 (the toast's
+   Undo, Flip's chip's, the other-tab notice's Keep for later); 1.24:1 here. */
+.toast-action, .othertab-later { background: #3d326b; }
+:root[data-theme="light"] :is(.toast-action, .othertab-later) { background: var(--btn2-bg); }
 @media (hover: hover) { .leave-btn:not(.danger):hover { background: var(--btn2-hover); } }
 .accordion-count { background: var(--count-fill); color: var(--seg-on-ink); }
 .sdrafts-thumb { background: var(--draw-wait); }

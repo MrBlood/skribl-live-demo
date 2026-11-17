@@ -141,7 +141,6 @@
   --deep-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-deep));
   --raised-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hl), var(--surface-raised));
   --surface-deep-rgb: 6,7,10;         /* = #06070a */
-  --line-rgb: 37,43,55;               /* = #252b37 */
 
   /* The wash behind every hover fill and translucent hairline. Held as an RGB
      TRIPLET rather than a colour so call sites keep their own alpha:
@@ -2461,7 +2460,6 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   --surface-control-rgb:     237,240,244;
   --hl: 9%; --hls: 15%; --hl-hc: 28%; --hls-hc: 42%;   /* --hairline's and --hairline-strong's alphas */
   --surface-deep-rgb:        255,255,255;   /* = #ffffff, the light --surface-deep */
-  --line-rgb:                224,229,236;
 
   /* Semantic colours, restated for a light ground. Same hues, dropped in
      luminance until each clears 4.5:1 against the DEEPEST light surface
