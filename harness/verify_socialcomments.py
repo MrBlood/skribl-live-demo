@@ -121,12 +121,12 @@ mock; docs/SOCIAL-SITE.md section 18):
      between comments, an initial in a face not drawn yet, the count in a
      pill, the row under the bubble (Reply spelled out on a desk only, 44px):
      read against their tokens, phone and desk, light and dark.
- 39. ONE LEVEL AT REST (the owner, Nov 17): a reply keeps the reply it
-     answers; a list shows only direct replies, each alone with the count
-     by its talk cloud (every reply under it the viewer may see), a
-     comment's room, no line; a tap on one opens its replies in place (47),
-     its time its own page; a block hides a reply and everything under it,
-     counted the same way.
+ 39. THE LIST (the owner, Nov 17; Bluesky's way since Nov 18): a reply
+     keeps the reply it answers; a list shows the direct replies, each with
+     the count by its talk cloud (every reply under it the viewer may see)
+     and its conversation followed down (47), a comment's room, the line
+     straight; a tap on one opens its own page; a block hides a reply and
+     everything under it, counted the same way.
  40. A COMMENT'S OWN PAGE: the way to it, it as big as a post, "Replies";
      back where you were; signed out readable; hidden on the way is 404.
  41. REPLYING FROM A LIST: where that one's tree is closed, the count by
@@ -149,17 +149,17 @@ mock; docs/SOCIAL-SITE.md section 18):
      taking no reply; hidden with what hangs under it, never counted; the
      chain refuses to go down while one is there.
 
-The tree, two deep (the owner's "Yes on all", Nov 18, to The Tree, Two
-Deep; docs/SOCIAL-SITE.md section 18):
- 47. THE TREE: the count by each talk cloud at rest, nothing hanging under
-     anything; a tap on a comment opens its replies in place, two deep, "N
-     more replies" past that and "Hide replies" at the end, its line drawn;
-     the + opens the rest in place at the second step, each saying whom it
-     answers ("↳ Eli"); the words' room at every step; every move a glide,
-     read on every frame on the page and on the screen, and under Reduce
-     Motion put in place; the tree's own button for a keyboard; a comment's
-     own page the same; signed out the count alone; a reply lands where
-     its branch is open, else its count glows; deleting counts down.
+Bluesky's way with our look (the owner's yes, Nov 18, after the tree was
+built, tried and set aside; docs/SOCIAL-SITE.md section 18):
+ 47. EACH CONVERSATION FOLLOWED DOWN: under each comment its first reply,
+     the first reply to that, ten deep, in one column (every face the
+     comment's), then "Read N more replies" to the tenth's own page; the
+     line straight, no curve anywhere; the words' room at every depth; the
+     count by each talk cloud (a second reply only counted); a tap opens a
+     comment's own page, which lists its replies the same way; signed out
+     the count alone; a reply to the last of a conversation continues it,
+     to one whose first reply shows only counts, glowing; deleting counts
+     down.
 
 SOCIALCOMMENTS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
@@ -1658,12 +1658,12 @@ with sync_playwright() as p:
             jpg.wait_for_timeout(300)
             deeper = [c["words"] for c in jpg.evaluate(SECTION)["list"]]
             check("a reply to a reply (the comment thread, step 1): on Theo's comment's page the box replies to Mira (\"Reply"
-                  " to Mira…\"), Mira's reply keeping its place; the new one goes under hers, closed, so here her count"
-                  " by the talk cloud comes (1), glowing; its row keeps the reply it answers, and the comment its"
-                  " conversation hangs under",
+                  " to Mira…\"), Mira's reply keeping its place; the new one, her first, continues her conversation"
+                  " right under hers (Bluesky's way), her count by the talk cloud saying 1; its row keeps the reply it"
+                  " answers, and the comment its conversation hangs under",
                   jbox["title"] == "Reply to Mira" and jbox["placeholder"] == "Reply to Mira…" and steady(jwent)
                   and rows == [(rows[0][0] if rows else None, theo_c, mine_id)]
-                  and jw["more"] == [None, "1"] and jw["glow"] and deeper == ["Three times! Thank you, Mira."],
+                  and jw["more"] == [None, "1"] and jw["new"] == 1 and deeper == ["Three times! Thank you, Mira."],
                   f"box {jbox}; rows {rows}; {jw}; on her reply's page {deeper}; the move {jwent['now']}px, then {glide(jwent)}")
             # A desk: Reply opens it under the conversation; Reply again, or Esc, folds it away.
             dctx, dpg = browser_as(b, mira, "desk")
@@ -2452,9 +2452,10 @@ with sync_playwright() as p:
             pg.goto(BASE + f"/social/c/{theo_c}")
             ready(pg)
             pg.wait_for_timeout(400)
-            check("a drawing alone is a comment too, and a reply can be one: the count by the comment's talk cloud takes it,"
-                  " glowing, and on the comment's own page it is in the list, its drawing in the player, no words",
-                  [r[:3] for r in arow] == [("", 1, theo_c)] and went_d["new"] == 0 and went_d["glow"]
+            check("a drawing alone is a comment too, and a reply can be one: the comment's first, it continues its"
+                  " conversation under it (Bluesky's way), its count saying 1, and on the comment's own page it is in"
+                  " the list, its drawing in the player, no words",
+                  [r[:3] for r in arow] == [("", 1, theo_c)] and went_d["new"] == 1 and went_d["more"] == [None, "1"]
                   and pg.evaluate(ART, alone_id) is not None,
                   f"row {arow}; {went_d}")
             # STILL UNTIL TAPPED: on the post's own page only the post's drawing plays by itself.
@@ -2767,12 +2768,12 @@ with sync_playwright() as p:
             crossed = [say_on(mira, elsewhere, "Section 21, crossing over", answer_to=theo_c)[0],
                        say(mira, a_post, "Section 21, crossing from a post", answer_to=theo_c)[0]]
             check("on a drawing, Reply opens the box for the comment (\"Reply to Theo\", \"Reply to Theo…\"), the comment keeping its"
-                  " place; the count by its talk cloud takes the reply, glowing, and it is in the list on Theo's comment's"
-                  " own page,"
+                  " place; the reply, its first, continues its conversation under it (Bluesky's way), its count saying 1,"
+                  " and it is in the list on Theo's comment's own page,"
                   " a reply to that reply on Mira's in turn (the comment thread: one level, everywhere), each on the drawing,"
                   " whose the drawing is kept; a reply to it from another drawing, or from a post, is refused (404)",
                   there["open"] == "sheet" and there["title"] == "Reply to Theo" and there["placeholder"] == "Reply to Theo…"
-                  and steady(went) and joined["more"] == [None, "1"] and joined["glow"]
+                  and steady(went) and joined["more"] == [None, "1"] and joined["new"] == 1
                   and theo_li["more"] == "2"
                   and under == [("Section 21, Mira under Theo's", "1")]
                   and nested == [("Section 21, Juno answering Mira", None)]
@@ -3735,13 +3736,13 @@ with sync_playwright() as p:
             dpg.fill("[data-cm-words]", "Section 33, an answer from a desk")
             w = dpg.evaluate(PAST_AND_WATCH, top_c)
             went_home, err33 = steps(lambda: dpg.wait_for_function(GONE, timeout=8000))
-            focus = dpg.evaluate("(id) => { const a = document.activeElement;"
-                                 " return !!a && a.hasAttribute('data-cm-answer') && a.closest('.cm') === document.getElementById('c-' + id); }",
-                                 top_c)
+            focus = dpg.evaluate("(id) => { const a = document.activeElement, ch = document.querySelector('#c-' + id + ' > .cm-chain');"
+                                 " return !!a && a.hasAttribute('data-cm-answer') && !!ch && ch.contains(a); }", top_c)
             close_ctx(dctx, dpg)
-            check("a reply posted on a desk, its comment's tree closed, goes into the count by its talk cloud (the tree, two"
-                  " deep), which glows; the fold folds away under the comment and goes home; focus back on its Reply",
-                  w["more"] == [None, "1"] and w["new"] == 0 and w["glow"] and err33 is None and focus,
+            check("a reply posted on a desk to a comment with none continues its conversation, right under it (Bluesky's"
+                  " way), its count saying 1; the fold folds away under the comment and goes home; focus on the new"
+                  " reply's Reply",
+                  w["more"] == [None, "1"] and w["new"] == 1 and err33 is None and focus,
                   f"{w}; home {err33 is None}; focus {focus}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(33, exc)
@@ -4063,7 +4064,8 @@ with sync_playwright() as p:
                     cctx, cpg = browser_as(b, dee, screen=screen, scheme=scheme)
                     open_post(cpg, post)
                     got = {"sec": cpg.evaluate(SECTION), "line": cpg.evaluate(LINE, c1), "room": cpg.evaluate(ROOM, [c1, c2]),
-                           "bare": cpg.evaluate(BARE, c2), "bare1": cpg.evaluate(BARE, c1), "when": cpg.evaluate(WHEN_LINK, c1)}
+                           "bare": cpg.evaluate(BARE, c2), "straight": cpg.evaluate(STRAIGHT, c1),
+                           "when": cpg.evaluate(WHEN_LINK, c1)}
                     cpg.goto(BASE + f"/social/c/{c1}")
                     ready(cpg)
                     cpg.wait_for_timeout(300)
@@ -4079,21 +4081,22 @@ with sync_playwright() as p:
 
             def shape(sec):
                 return [(c["id"], c["more"], [a["id"] for a in c["answers"]]) for c in sec["list"]]
-            check("ONE LEVEL AT REST (the owner, Nov 17; since the tree, two deep, Nov 18, the count by each talk cloud): a"
-                  " post's page lists its comments alone, nothing nested under them, Eli's counting 5 (every reply under"
-                  " it, at any depth), Cora's none; Eli's own page lists his direct replies, Aria's and Bram's (oldest"
-                  " first; Bram's from before replies kept what they answer), Aria's counting 3; hers, Elio's reply alone"
-                  " counting 2; the counts say seven, five and three",
-                  shape(first["sec"]) == [(c2, None, []), (c1, "5", [])] and first["sec"]["count"] == "7"
-                  and shape(first["page"]) == [(r1, "3", []), (r2, None, [])] and first["page"]["count"] == "5"
-                  and shape(first["deeper"]) == [(r3, "2", [])] and first["deeper"]["count"] == "3",
+            check("BLUESKY'S WAY (the owner's yes, Nov 18): a post's page lists its comments, Eli's counting 5 by its"
+                  " talk cloud (every reply under it, at any depth) with its conversation followed down under it, each"
+                  " the first reply to the one above (Aria's, Elio's, Aria's, Cora's), Cora's none; Eli's own page lists"
+                  " his direct replies, Aria's and Bram's (oldest first; Bram's from before replies kept what they"
+                  " answer), Aria's counting 3 with hers followed down; hers, Elio's reply counting 2; the counts say"
+                  " seven, five and three",
+                  shape(first["sec"]) == [(c2, None, []), (c1, "5", [r1, r3, r4, r5])] and first["sec"]["count"] == "7"
+                  and shape(first["page"]) == [(r1, "3", [r3, r4, r5]), (r2, None, [])] and first["page"]["count"] == "5"
+                  and shape(first["deeper"]) == [(r3, "2", [r4, r5])] and first["deeper"]["count"] == "3",
                   f"post {shape(first['sec'])} {first['sec']['count']}; Eli's {shape(first['page'])} {first['page']['count']};"
                   f" Aria's {shape(first['deeper'])} {first['deeper']['count']}")
-            lines = {" ".join(k): (v["line"], v["bare"], v["bare1"]) for k, v in seen.items()}
-            check("at rest no line hangs under anything, one with replies under it or none (the tree's line is drawn as a"
-                  " tap opens it: section 47): phone and desk, light and dark",
-                  all(ln["rm"] is None and not ln["bad"] and bare["line"] is False and bare["more"] is False
-                      and b1["line"] is False and b1["more"] is False for ln, bare, b1 in lines.values()), f"{lines}")
+            lines = {" ".join(k): (v["straight"], v["bare"]) for k, v in seen.items()}
+            check("the thread's line runs straight down Eli's conversation, face to face, never stepping in; Cora's, with"
+                  " none, has none: phone and desk, light and dark",
+                  all(st["ok"] and bare["line"] is False and bare["more"] is False for st, bare in lines.values()),
+                  f"{lines}")
             rooms = {" ".join(k): (v["room"], v["page_room"]) for k, v in seen.items()}
             check("every reply in a list has a comment's room, nothing nested to take it: 322px on a phone, 292 on a desk, on"
                   " the post's page and on a comment's own",
@@ -4101,15 +4104,17 @@ with sync_playwright() as p:
             when = {" ".join(k): v["when"] for k, v in seen.items()}
             check("the way to a comment's own page is its time: a 44px tap in the row's second ink, 4.5:1 or more on the page",
                   all(v["h"] >= 44 and v["ratio"] >= 4.5 and v["href"] == f"/social/c/{c1}" for v in when.values()), f"{when}")
-            # A TAP ON A COMMENT OPENS ITS REPLIES IN PLACE (the tree, two deep):
-            # on its words, going nowhere; its time opens its own page; Reply
-            # opens the box and goes nowhere.
+            # A TAP ON A COMMENT OPENS ITS OWN PAGE (Bluesky's way): on its words,
+            # and on its time; Reply opens the box and goes nowhere.
             pg = dee.pg
             open_post(pg, post)
-            pg.click(f"#c-{c1} > .cm-main .cm-words", timeout=8000)
-            opened, err = steps(lambda: pg.wait_for_function(
-                "(id) => !!document.querySelector('#c-' + id + ' > .cm-answers .cm')", arg=c1, timeout=8000))
-            here = pg.evaluate("() => location.pathname")
+
+            def tap_words():
+                with pg.expect_navigation(timeout=8000):
+                    pg.click(f"#c-{c1} > .cm-main .cm-words", timeout=8000)
+                return pg.evaluate("() => location.pathname")
+            here, err = steps(tap_words)
+            open_post(pg, post)
 
             def tap_when():
                 with pg.expect_navigation(timeout=8000):
@@ -4121,9 +4126,9 @@ with sync_playwright() as p:
             pg.wait_for_timeout(600)
             stayed = pg.evaluate("() => location.pathname")
             pg.keyboard.press("Escape")
-            check("a tap on a comment in a list (its words, in its bubble) opens its replies in place and goes nowhere; its"
-                  " time opens its own page; Reply opens the box and goes nowhere",
-                  err is None and here == f"/social/p/{post}" and err2 is None and went == f"/social/c/{c1}"
+            check("a tap on a comment in a list (its words, in its bubble) opens its own page, as a post's card opens the"
+                  " post, and so does its time; Reply opens the box and goes nowhere",
+                  err is None and here == f"/social/c/{c1}" and err2 is None and went == f"/social/c/{c1}"
                   and stayed == f"/social/p/{post}", f"here {here} {err}; went {went} {err2}; stayed {stayed}")
             # What the viewer may not see is not counted: Dee blocks Cyd, then Ana.
             dc = dee.client()
@@ -4147,8 +4152,8 @@ with sync_playwright() as p:
             check("the count by the cloud counts only what the viewer may see: with Cora blocked, 4 (her comment gone too);"
                   " with Aria blocked, her replies go and everything under them at any depth, 1 (Bram's), and on"
                   " Eli's page Bram's alone; the count and Home's card alike",
-                  shape(no_cyd) == [(c1, "4", [])] and no_cyd["count"] == "5"
-                  and shape(no_ana) == [(c2, None, []), (c1, "1", [])] and no_ana["count"] == "3"
+                  shape(no_cyd) == [(c1, "4", [r1, r3, r4])] and no_cyd["count"] == "5"
+                  and shape(no_ana) == [(c2, None, []), (c1, "1", [r2])] and no_ana["count"] == "3"
                   and shape(no_ana_page) == [(r2, None, [])] and card == "3 comments",
                   f"Cora blocked {shape(no_cyd)} {no_cyd['count']}; Aria blocked {shape(no_ana)} {no_ana['count']},"
                   f" Eli's page {shape(no_ana_page)}, card {card}")
@@ -4399,33 +4404,26 @@ with sync_playwright() as p:
             ready(apg)
             apg.wait_for_timeout(300)
             again = [(c["id"], c["gone"], c["more"]) for c in apg.evaluate(SECTION)["list"]]
-            # A tap on the place opens what hangs under it, as on a comment (the tree, two deep).
-            apg.click(f"#c-{r1} > .cm-main .cm-gone")
-            steps(lambda: apg.wait_for_function("(id) => !!document.querySelector('#c-' + id + ' > .cm-answers .cm')",
-                                                arg=r1, timeout=8000))
-            apg.wait_for_timeout(600)
-            place_tree = apg.evaluate(TREE, r1)
+            # The place keeps its conversation followed down under it (Bluesky's way).
+            place_chain = apg.evaluate(CHAIN, r1)
             apg.goto(BASE + f"/social/c/{r1}")
             ready(apg)
             apg.wait_for_timeout(300)
             its_own = [(c["id"], c["more"]) for c in apg.evaluate(SECTION)["list"]]
             check("Delete comment on a reply with replies under it keeps its place (\"This reply was deleted\", nobody's),"
                   " the 3 under it with it, and every reply under it stays, at any depth, with their drawings; after a"
-                  " reload Elio's page lists the place and Bram's reply, and a tap on the place opens what hangs under it,"
-                  " two deep (Elio's reply, Aria's under it carrying \"1 more reply\"); the place's own page lists Elio's"
-                  " reply (counting 2); the count drops by it alone",
+                  " reload Elio's page lists the place and Bram's reply, the place with its conversation followed down"
+                  " under it (Elio's reply, Aria's, the drawn one); the place's own page lists Elio's reply (counting 2);"
+                  " the count drops by it alone",
                   gone["place"] and gone["words"] == "This reply was deleted" and gone["more"] == "3"
                   and left == sorted([c1, r1, r2, r3, r4, d_id]) and row == [(None, "deleted", "")]
                   and had == [True] and skribl_there(d_sid) == [True] and gone["count"] == "4"
                   and again == [(r1, "This reply was deleted", "3"), (r2, None, None)]
-                  and place_tree == {"id": r1, "n": None, "to": None, "under": [
-                      {"id": r3, "n": "2", "to": None, "under": [
-                          {"id": r4, "n": "1", "to": None, "under": [{"rm": "1 more reply", "rest": True, "hide": False}]}]},
-                      {"rm": "Hide replies", "rest": False, "hide": True}]}
+                  and place_chain and place_chain["chain"] == [[r3, "2"], [r4, "1"], [d_id, None]]
                   and its_own == [(r3, "2")],
                   f"{ {k: gone[k] for k in ('place', 'words', 'more', 'count')} }; left {left}; the row {row};"
                   f" the deep drawing there before {had}, after {skribl_there(d_sid)}; Elio's page {again};"
-                  f" the place's tree {place_tree}; the place's page {its_own}")
+                  f" the place's conversation {place_chain}; the place's page {its_own}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(43, exc)
 
