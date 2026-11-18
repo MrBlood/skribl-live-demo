@@ -469,13 +469,12 @@ with sync_playwright() as p:
         rest = {k: v for k, v in rings.items() if "playing" not in k}
         check("Repeat, on, is outlined: its edge at least 3:1 against the same edge off, in the pill, the line and the full-screen band, light and dark",
               all(v[1] == "true" and v[0] >= 3 for v in rest.values()), "; ".join(f"{k}: {v[0]:.3f}:1 ({v[1]})" for k, v in rest.items()))
-        # ...and while it plays, in dark, where No dinge's pressed pill took
-        # it from 3.20 to 2.53 under --ui-hi. Light's is said, not judged: it
-        # read 2.88 before No dinge too (--press-ring is --ui-hi's #7c5cff
-        # there), and a deeper ring is the owner's pick, not a fix's.
+        # ...and while it plays, light and dark: No dinge's pressed pill took
+        # dark's from 3.20 to 2.53 under --ui-hi (#970), and light's read 2.88
+        # before it and after, until the owner's A (Nov 18): Post's violet.
         dk, lt = rings["dark, desk pill, playing"], rings["light, desk pill, playing"]
-        check("...and in the pill while it plays (the pressed look), in dark, at least 3:1",
-              dk[1] == "true" and dk[0] >= 3, f"dark: {dk[0]:.3f}:1 ({dk[1]}); light, said not judged: {lt[0]:.3f}:1 ({lt[1]})")
+        check("...and in the pill while it plays (the pressed look), light and dark, at least 3:1",
+              all(v[1] == "true" and v[0] >= 3 for v in (dk, lt)), f"dark: {dk[0]:.3f}:1 ({dk[1]}); light: {lt[0]:.3f}:1 ({lt[1]})")
 
     if part("posts"):
         print("\nREPEAT — posts as they were, and not on Flip")
