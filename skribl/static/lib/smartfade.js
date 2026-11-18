@@ -32,8 +32,8 @@
  *   SkriblSmartFade.full(bar, o)         -> a full screen's bar: { start, read, stop }
  *
  * WHAT LIES OUTSIDE THE BAR (o.also: full screen's x in the top corner, No
- * dinge, the last four, Nov 18) is toned by the drawing under its own box,
- * read where it lies, not by the foot.
+ * dinge, the last four, Nov 18) is toned by the drawing's head, its top
+ * eighth read as the foot is, under its own box.
  */
 (function (global) {
   'use strict';
@@ -53,15 +53,15 @@
     }
     return out;
   }
-  /* A canvas's foot, over the ground under it. A tainted canvas throws on the
-     read, and is unreadable, not black. */
-  function foot(cv, under) {
+  /* A canvas's foot, over the ground under it, or with `top` its head. A
+     tainted canvas throws on the read, and is unreadable, not black. */
+  function foot(cv, under, top) {
     try {
       var c = doc.createElement('canvas'), g = c.getContext('2d');
       c.width = N * W; c.height = H;
       g.fillStyle = rgb(under || [255, 255, 255]);
       g.fillRect(0, 0, N * W, H);
-      g.drawImage(cv, cv.width * 0.01, cv.height * 0.875, cv.width * 0.98, cv.height * 0.115, 0, 0, N * W, H);
+      g.drawImage(cv, cv.width * 0.01, cv.height * (top ? 0.01 : 0.875), cv.width * 0.98, cv.height * 0.115, 0, 0, N * W, H);
       return medians(g.getImageData(0, 0, N * W, H).data);
     } catch (e) { return null; }
   }
@@ -80,25 +80,6 @@
     }).join(', ') + ')';
   }
   function luma(v) { return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; }
-  /* The middle colour of what the drawing paints under a box on screen (a
-     drawn at `a`, its ground `m` beyond it); null where it cannot be read. */
-  function under(cv, a, r, m) {
-    var cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
-    if (cx < a.left || cx > a.right || cy < a.top || cy > a.bottom) return m;
-    try {
-      var sx = cv.width / (a.right - a.left), sy = cv.height / (a.bottom - a.top);
-      var x0 = Math.max(0, (r.left - a.left) * sx), y0 = Math.max(0, (r.top - a.top) * sy);
-      var w = Math.max(1, Math.min(cv.width, (r.right - a.left) * sx) - x0), h = Math.max(1, Math.min(cv.height, (r.bottom - a.top) * sy) - y0);
-      var c = doc.createElement('canvas'), g = c.getContext('2d');
-      c.width = W; c.height = H;
-      g.fillStyle = rgb(m);
-      g.fillRect(0, 0, W, H);
-      g.drawImage(cv, x0, y0, w, h, 0, 0, W, H);
-      var px = g.getImageData(0, 0, W, H).data, ch = [[], [], []];
-      for (var i = 0; i < px.length; i += 4) for (var k = 0; k < 3; k++) ch[k].push(px[i + k]);
-      return ch.map(function (v) { v.sort(function (p, q) { return p - q; }); return v[v.length >> 1]; });
-    } catch (e) { return null; }
-  }
   /* Light or dark by what is under a control's box, or a word's letters. */
   function tone(el, at, words) {
     var q = el.getBoundingClientRect();
@@ -158,7 +139,7 @@
        o.words     words, toned by their letters
        o.caps      names, which also take the capsule where they cross */
   function full(bar, o) {
-    var cols = null, on = false, ro = null, unwatch = null;
+    var cols = null, head = null, on = false, ro = null, unwatch = null;
     function each(sel, fn) {
       if (!sel) return;
       var list = bar.querySelectorAll(sel);
@@ -181,7 +162,7 @@
     function update() {
       if (!on) return;
       var cv = o.canvas && o.canvas();
-      if (!cv || !cv.width || !bar.isConnected || (o.photo && o.photo())) { cols = null; return off(); }
+      if (!cv || !cv.width || !bar.isConnected || (o.photo && o.photo())) { cols = head = null; return off(); }
       var m = ground(cv), a = drawn(cv), b = bar.getBoundingClientRect();
       if (!cols) cols = foot(cv, m);
       if (!cols || !b.width || a.right - a.left < 8) return off();
@@ -191,24 +172,25 @@
       s.setProperty('--fx-b', Math.max(0, b.bottom - a.bottom).toFixed(1) + 'px');
       s.setProperty('--fade-x', gradient(cols));
       bar.classList.add('is-smart');
-      function at(x, y) {
-        if (x < a.left || x > a.right || y < a.top || y > a.bottom) return m;
-        return cols[Math.max(0, Math.min(n - 1, Math.floor((x - a.left) / w * n)))];
+      function by(cs) {
+        return function (x, y) {
+          if (x < a.left || x > a.right || y < a.top || y > a.bottom) return m;
+          return cs[Math.max(0, Math.min(n - 1, Math.floor((x - a.left) / w * n)))];
+        };
       }
+      var at = by(cols);
       each(o.glass, function (el) { tone(el, at, false); });
       each(o.words, function (el) { tone(el, at, true); });
       each(o.caps, function (el) { el.classList.toggle('cap', tone(el, at, true).mixed); });
-      (o.also || []).forEach(function (el) {
-        if (!el.isConnected || !el.getClientRects().length) return;
-        var v = under(cv, a, el.getBoundingClientRect(), m);
-        if (v) tone(el, function () { return v; }, false);
-      });
+      if (o.also && (head || (head = foot(cv, m, 1)))) {
+        o.also.forEach(function (el) { if (el.getClientRects().length) tone(el, by(head), false); });
+      }
     }
     return {
       start: function () {
         if (on) return;
         on = true;
-        cols = null;
+        cols = head = null;
         if (global.ResizeObserver) {
           ro = new ResizeObserver(update);
           ro.observe(bar);
@@ -219,7 +201,7 @@
         update();
       },
       /* What shows changed (a play, a pause, the end, a page): read again. */
-      read: function () { if (on) { cols = null; update(); } },
+      read: function () { if (on) { cols = head = null; update(); } },
       stop: function () {
         on = false;
         if (ro) ro.disconnect();

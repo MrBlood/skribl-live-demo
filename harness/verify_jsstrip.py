@@ -351,9 +351,12 @@ with sync_playwright() as sp:
     # in both places together, by the calm open's part 2 (the owner's "Yes
     # calm"): the Pad's first shape left app.js for lib/chromefit.js
     # padShape, which also reads a draft's noted shape, -69 B (160,863
-    # measured).
+    # measured). And RAISED, in both places together, by full screen's x
+    # toned by what lies under it (the owner's "yes on all dinge", No dinge,
+    # the last four), +346 B: lib/smartfade.js +329, the drawing's head read
+    # by the foot's own reader, app.js +17 (161,209 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_865,
+          lean_total <= 161_211,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
