@@ -1866,6 +1866,26 @@ a.post-face { text-decoration: none; }
 .cm-answers > :is(.cm, .cm-rm):not(:last-child)::after {
   content: ""; position: absolute; left: -31px; top: 0; bottom: 0; border-left: 2px solid var(--card-edge);
 }
+/* A PLACE (the owner's yes, Nov 17, to "the place stays"): a comment or a
+   reply deleted while replies hung under it: an empty ring where its face
+   was, 1.5px of the card's edge, and "This reply was deleted" (or
+   "removed") in the row's second ink (7.1:1 light, 10.1:1 dark), no bubble,
+   no row. The replies under it hang from its ring as from a face. */
+.cm-gone-face {
+  display: block; flex: none; box-sizing: border-box; width: 36px; height: 36px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--card-edge);
+}
+.cm-gone { display: flex; align-items: center; min-height: 36px; margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.3; }
+.cm-answers > .cm > .cm-gone-face { position: relative; }
+.cm-answers > .cm > .cm-gone-face::before {
+  content: ""; position: absolute; left: -31px; top: -10px; width: 23px; height: 28px;
+  border-left: 2px solid var(--card-edge); border-bottom: 2px solid var(--card-edge); border-bottom-left-radius: 12px;
+}
+/* On the way to a comment, and as a page's own. */
+.cm-way-gone { display: flex; align-items: center; min-height: 36px; color: var(--ink-2); font-size: 15px; }
+.cm-gone-head { display: flex; align-items: center; gap: 12px; }
+.cm-gone-head .cm-gone-face { width: 48px; height: 48px; }
+.cm-gone-head .cm-gone { min-height: 48px; font-size: 17px; }
 /* "READ N MORE REPLIES", on the line under a reply at the second level whose
    talk goes on: the row's second ink (7.1:1 light, 10.1:1 dark) with an
    18px circled plus, a 44px tap, to that reply's own page. */

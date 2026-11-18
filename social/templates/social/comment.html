@@ -29,7 +29,7 @@
 {% import 'social/_icons.html' as ic %}
 {% set c = it.c %}{% set who = it.who %}
 
-{% block title %}{{ who.display_name }} on Blooby{% endblock %}
+{% block title %}{% if who %}{{ who.display_name }} on Blooby{% else %}Blooby{% endif %}{% endblock %}
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
 {% if me %}<script src="{{ social_asset('mutes.js') }}" defer></script>{% endif %}
 <script src="{{ social_asset('comments.js') }}" defer></script>{% endblock %}
@@ -40,24 +40,33 @@
 {% endblock %}
 
 {% block main %}
-<article class="post-page cm-page" data-cm-subject="{{ c.public_id }}" data-comment="{{ c.public_id }}"
-         data-first="{{ who.display_name.split(' ')[0] }}" data-url="{{ url_for('social.comment_page', public_id=c.public_id) }}"
+<article class="post-page cm-page{% if it.gone %} is-gone{% endif %}" data-cm-subject="{{ c.public_id }}" data-comment="{{ c.public_id }}"
+         data-first="{{ who.display_name.split(' ')[0] if who else '' }}" data-url="{{ url_for('social.comment_page', public_id=c.public_id) }}"
          data-up="{{ way[-1].href }}"{% if me and me.id == c.person_id %} data-mine{% endif %}
          {%- if c.skribl_id %} data-autoplay{% else %} data-no-art{% endif %} aria-labelledby="postWho">
   <ol class="cm-way" aria-label="The way to it">
     {%- for w in way %}
     <li class="cm-way-item">
       <a class="cm-way-link" href="{{ w.href }}">
+        {%- if w.gone %}
+        <span class="cm-gone-face" aria-hidden="true"></span>
+        <span class="cm-way-main"><span class="cm-way-gone">{{ w.gone }}</span></span>
+        {%- else %}
         {{ face(w.who, 'cm-way-face', initial=true) }}
         <span class="cm-way-main">
           <span class="cm-way-head"><b>{{ w.who.display_name }}</b>{% if w.when %}<time datetime="{{ when_iso(w.when) }}" data-when="ago">{{ when_day(w.when) }}</time>{% endif %}</span>
           {%- if w.words %}<span class="cm-way-words">{{ w.words }}</span>{% endif %}
         </span>
+        {%- endif %}
         {%- if w.pic %}<span class="cm-way-pic" style="width: {{ w.pic.w }}px; background-image: url('{{ w.pic.src }}'); background-size: {{ w.pic.size }}; background-position: {{ w.pic.at }}" aria-hidden="true"></span>{% endif %}
       </a>
     </li>
     {%- endfor %}
   </ol>
+  {%- if it.gone %}
+  {#- A PLACE as the page's own: its ring and what it says; nothing to reply to, nothing in its ⋯. #}
+  <header class="post-head cm-gone-head"><span class="cm-gone-face" aria-hidden="true"></span><p class="cm-gone" id="postWho">{{ it.gone }}</p></header>
+  {%- else %}
   <header class="post-head">
     <a class="post-face" href="{{ url_for('social.profile', handle=who.handle) }}" tabindex="-1" aria-hidden="true">{{ face(who, initial=true) }}</a>
     <a class="post-who" href="{{ url_for('social.profile', handle=who.handle) }}">
@@ -78,6 +87,7 @@
             aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>
   </footer>
   <p class="post-meta"><time datetime="{{ when_iso(c.created_at) }}" data-when="at">{{ when_day(c.created_at) }}</time></p>
+  {%- endif %}
   {{ comments_section(cm) }}
 </article>
 <p class="say" data-page-say role="status" hidden></p>

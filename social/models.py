@@ -425,7 +425,16 @@ class Comment(SocialBase):
     #: comment on what they owned, and a block either way with them closes it.
     owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE",
                                               name="fk_social_comments_owner_id"), nullable=False)
-    person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: Who wrote it; nobody for a place (gone, below).
+    person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=True)
+    #: A PLACE (the comment thread; the owner's yes, Nov 17, to "the place
+    #: stays"): a comment or a reply deleted while replies hung under it keeps
+    #: its row as a quiet place, so they stay where they are: "deleted" (by
+    #: its author, or with their account) or "removed" (from their post or
+    #: drawing, by its author). Its words, its drawing, its mentions and whose
+    #: it was are gone (person_id none); a place with nothing left under it
+    #: goes (comments.retire). None for a comment.
+    gone = sa.Column(sa.String(8), nullable=True)
     #: The top-level comment a reply's conversation hangs under, at any depth;
     #: None for a comment. A page reads a conversation by it.
     parent_id = sa.Column(BigId, sa.ForeignKey("social_comments.id", ondelete="CASCADE"), nullable=True)
@@ -460,6 +469,8 @@ class Comment(SocialBase):
         #: On a post or on a drawing: exactly one.
         sa.CheckConstraint("(post_id IS NOT NULL AND drawing_id IS NULL) OR (post_id IS NULL AND drawing_id IS NOT NULL)",
                            name="ck_social_comments_on_one"),
+        #: Somebody's, or a place.
+        sa.CheckConstraint("person_id IS NOT NULL OR gone IS NOT NULL", name="ck_social_comments_someones"),
         sa.Index("ix_social_comments_public_id", "public_id", unique=True),
         sa.Index("ix_social_comments_post_created", "post_id", "created_at"),
         sa.Index("ix_social_comments_drawing_created", "drawing_id", "created_at"),

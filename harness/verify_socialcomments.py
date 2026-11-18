@@ -21,9 +21,11 @@ authenticator for the site's people.
      Share…, then Delete comment on your own; somebody else's on your own
      post Remove from my post and Report this comment; anybody else's, and
      signed out, Report this comment.
-  5. DELETE AND REMOVE: your own comment goes, its answers with it, fading
-     out; on your own post anybody's is removed the same way; nobody else
-     can; an answer goes alone.
+  5. DELETE AND REMOVE: your own comment with replies under it keeps its
+     place ("This comment was deleted", nobody's) and theirs stay, its room
+     gliding to the place's line; on your own post anybody's is removed the
+     same way ("removed"); one without replies goes; nobody else can; a
+     place goes with the last reply under it.
   6. WHO MAY COMMENT: the token, signed in, not taken down, no block either
      way with the post's author (or, answering, the comment's), words tidied
      and checked as a post's, the flood limit.
@@ -34,8 +36,9 @@ authenticator for the site's people.
      site's queue; Your Reports' comment card (its words, whose, a link to
      it); Take it down hides it from everybody but its author, who sees the
      note; Keep it hides nothing.
-  9. DELETING A POST OR AN ACCOUNT takes its comments, and an account the
-     answers under its own, in code (shown with the database's cascade off).
+  9. DELETING A POST OR AN ACCOUNT takes its comments; an account's own with
+     somebody's reply under them keep their places, in code (shown with the
+     database's cascade off).
  10. LOAD MORE: twenty comments a page, the next in place, none twice.
  11. HOME'S CARD: how many comments beside the plays, "N comments", a way to
      them; at none the icon alone, "Comment" (the owner's yes, Nov 12).
@@ -52,7 +55,8 @@ authenticator for the site's people.
      comment; alone, or as an answer; still (not even fetched) until tapped
      while the post's own drawing plays by itself; listed nowhere.
  16. A DRAWING GOES WITH ITS COMMENT: deleted, removed, its post deleted, its
-     person's account deleted (Skribl's delete_post, as its author).
+     person's account deleted (Skribl's delete_post, as its author); a reply
+     under a place keeps its own.
  17. A DRAWING ANSWER REPORTED AND TAKEN DOWN: its picture on Your Reports'
      card, what Skribl's own link page reported of it on the same card;
      withheld in Skribl with it.
@@ -73,8 +77,9 @@ a post (made in the Pad, shown in the gallery: /social/b/<id>) has them too.
  24. THE DRAWING DELETED: through the site its comments go, in code; in the
      Library its page goes, and its comments with it, and its tile in More
      from its maker.
- 25. THE ACCOUNT DELETED: every comment on its drawings, and its own on
-     others', in code (shown with the database's cascade off).
+ 25. THE ACCOUNT DELETED: every comment on its drawings, and its words on
+     others' (a comment of theirs with a reply under it its place), in code
+     (shown with the database's cascade off).
  26. REPORTED AND TAKEN DOWN on a drawing; the row under it on its own page
      counts its comments (Home's card did until the map's step 3: Home is
      posts only).
@@ -127,14 +132,19 @@ mock; docs/SOCIAL-SITE.md section 18):
      page the box replies to it and the reply lands last.
  42. COPY LINK gives the comment's own page; Delete on its own page goes to
      what it answered.
- 43. DELETING A REPLY takes every reply under it, at any depth, and their
-     drawings.
+ 43. DELETING A REPLY with replies under it keeps its place: they stay at
+     every depth, their drawings with them.
  44. ACTIVITY lands where a reply shows (its parent's page past two levels);
      a reply under a hidden reply is nobody's row.
  45. DRAWINGS IN THE THREAD (the owner's B, Nov 17): a drawn comment's drawing
      in its bubble, as wide as the bubble's room at each level, still until
      tapped; a drawn reply's own page, its drawing as big as a post's and
      playing by itself; a drawing on the way to it its still, 48px tall.
+ 46. A PLACE (the owner's yes, Nov 17, "the place stays"): a comment deleted
+     with replies under it keeps its place, nobody's (its ring, "This reply
+     was deleted", no bubble, no row); on the way, and as its own page,
+     taking no reply; hidden with what hangs under it, never counted; the
+     chain refuses to go down while one is there.
 
 SOCIALCOMMENTS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
@@ -583,8 +593,9 @@ def row_count(pg, sid):
 
 
 # The section as the page shows it: each comment, and the answers under it.
-SECTION = """() => { const one = li => ({ id: li.dataset.comment, name: li.querySelector(':scope > .cm-main .cm-name').textContent,
-    when: li.querySelector(':scope > .cm-main .cm-when').textContent,
+SECTION = """() => { const one = li => ({ id: li.dataset.comment, name: (li.querySelector(':scope > .cm-main .cm-name') || {}).textContent || null,
+    when: (li.querySelector(':scope > .cm-main .cm-when') || {}).textContent || null,
+    gone: (li.querySelector(':scope > .cm-main .cm-gone') || {}).textContent || null,
     words: (li.querySelector(':scope > .cm-main .cm-words') || {}).textContent || '',
     down: (li.querySelector(':scope > .cm-main .cm-down') || {}).textContent || null,
     answer: !!li.querySelector(':scope > .cm-main [data-cm-answer]'),
@@ -614,17 +625,29 @@ POST_AND_WATCH = """async () => {
     requestAnimationFrame(step); });
   return { id: li ? li.dataset.comment : null, ops }; }"""
 
-# A comment's ⋯, then Delete comment or Remove from my post (act), and the
-# comment's opacity on every frame until it has gone.
+# A comment's ⋯, then Delete comment or Remove from my post (act); then, on
+# every frame until it has gone, or has become its place and rested (the
+# owner's yes, Nov 17, "the place stays"): its own part's opacity (the
+# comment's, then the place's line's) and its own room's height; and after,
+# whether it went or stayed as a place, what the place says, and the replies
+# still under it.
 DELETE_AND_WATCH = """async ([id, act]) => {
   const li = document.getElementById('c-' + id);
   li.querySelector(':scope > .cm-main [data-cm-menu]').click();
   await new Promise(r => setTimeout(r, 450));
   document.querySelector('#commentSheet [data-cm-act=' + act + ']').click();
-  const t0 = performance.now(), ops = [];
-  await new Promise(res => { const step = () => { if (li.isConnected) ops.push(Math.round(+getComputedStyle(li).opacity * 100) / 100);
-    if (!li.isConnected || performance.now() - t0 > 8000) res(); else requestAnimationFrame(step); }; requestAnimationFrame(step); });
-  return { gone: !li.isConnected, ops, count: (document.querySelector('[data-cm-count]') || {}).textContent }; }"""
+  const t0 = performance.now(), ops = [], hs = []; let rested = 0;
+  await new Promise(res => { const step = () => {
+    if (li.isConnected) { const m = li.querySelector(':scope > .cm-main'), g = m.querySelector('.cm-gone');
+      ops.push(Math.round(+getComputedStyle(li).opacity * +getComputedStyle(m).opacity * (g ? +getComputedStyle(g).opacity : 1) * 100) / 100);
+      hs.push(Math.round(m.getBoundingClientRect().height * 10) / 10);
+      if (li.classList.contains('is-gone') && !m.style.height && (!g || +getComputedStyle(g).opacity === 1)) rested++; }
+    if (!li.isConnected || rested > 10 || performance.now() - t0 > 8000) res(); else requestAnimationFrame(step); };
+    requestAnimationFrame(step); });
+  const g = li.querySelector(':scope > .cm-main .cm-gone');
+  return { gone: !li.isConnected, place: li.isConnected && li.classList.contains('is-gone'), words: g ? g.textContent : null,
+           ops, hs, count: (document.querySelector('[data-cm-count]') || {}).textContent,
+           under: [...li.querySelectorAll(':scope > .cm-answers > .cm')].map(x => x.dataset.comment) }; }"""
 
 # ---- THE COMMENT BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an
 # icon not a card"; "Yes to all"). The box is folded away behind the icon at the
@@ -1242,6 +1265,31 @@ DRAWN_PAGE = """() => { const art = document.querySelector('[data-cm-subject] > 
            stills: [...document.querySelectorAll('.cm-way-item')].map(li => { const p = li.querySelector('.cm-way-pic');
              return [!!p, p ? Math.round(p.getBoundingClientRect().height) : null]; }) }; }"""
 
+# A PLACE, read against its tokens: its ring (1.5px of the card's edge,
+# inset), its words in the row's second ink on the page, nothing of a
+# comment's own (no bubble, name, face or row), and what hangs under it.
+PLACE_LOOK = """(id) => { """ + TOKEN_JS + """
+  const li = document.getElementById('c-' + id); if (!li) return { ok: false, why: 'no place' };
+  const ring = li.querySelector(':scope > .cm-gone-face'), line = li.querySelector(':scope > .cm-main > .cm-gone');
+  const edge = tok(li, 'color', 'var(--card-edge)'), ink2 = tok(li, 'color', 'var(--ink-2)'), rs = ring ? getComputedStyle(ring) : null;
+  const out = { ring: !!rs && rs.boxShadow.includes(edge) && rs.boxShadow.includes('1.5px') && rs.boxShadow.includes('inset'),
+    words: line ? line.textContent : null, ink: !!line && getComputedStyle(line).color === ink2,
+    ratio: line ? ratio(getComputedStyle(line).color, getComputedStyle(document.body).backgroundColor) : 0,
+    bare: !li.querySelector(':scope > .cm-main .cm-bubble, :scope > .cm-main .cm-acts, :scope > .face-ring, :scope > .cm-main .cm-name'),
+    under: [...li.querySelectorAll(':scope > .cm-answers > .cm')].map(x => x.dataset.comment) };
+  out.ok = out.ring && out.words === 'This reply was deleted' && out.ink && out.ratio >= 4.5 && out.bare && out.under.length === 1;
+  return out; }"""
+
+# A place's own page: its head, the header, "Replies" and what hangs under
+# it, and that nothing there takes a reply.
+PLACE_PAGE = """() => ({ head: (document.querySelector('[data-cm-subject] > .cm-gone-head .cm-gone') || {}).textContent || null,
+  ring: !!document.querySelector('[data-cm-subject] > .cm-gone-head .cm-gone-face'),
+  title: (document.querySelector('.top-title') || {}).textContent || null,
+  heading: (document.querySelector('.comments-title span') || {}).textContent || null,
+  list: [...document.querySelectorAll('[data-cm-list] > .cm')].map(li => li.dataset.comment),
+  icon: !!document.querySelector('.cm-say'), box: !!document.querySelector('[data-cm-box]'),
+  row: !!document.querySelector('[data-cm-subject] > .cm-row') })"""
+
 PROBE = r"""
 import json, sys
 from app import create_app, db
@@ -1251,13 +1299,15 @@ with app.app_context():
     from social.models import Comment, Person, Post
     from social.posts import drop_post
     from social.accounts import delete_person
-    from social.comments import drop_comments
+    from social.comments import retire
     fk = db.session.execute(sa.text("PRAGMA foreign_keys")).scalar()
     post_pub, handle, one = sys.argv[1], sys.argv[2], sys.argv[3]
     top = db.session.execute(sa.select(Comment).where(Comment.public_id == one)).scalar_one()
-    drop_comments([top.id])
+    top_id = top.id
+    retire([top_id], "deleted")
     db.session.flush()
-    left_answers = db.session.execute(sa.select(sa.func.count()).select_from(Comment).where(Comment.parent_id == top.id)).scalar()
+    left_answers = db.session.execute(sa.select(sa.func.count()).select_from(Comment).where(Comment.parent_id == top_id)).scalar()
+    place = list(db.session.execute(sa.select(Comment.person_id, Comment.gone, Comment.words).where(Comment.id == top_id)).first() or [])
     post = db.session.execute(sa.select(Post).where(Post.public_id == post_pub)).scalar_one()
     author = db.session.get(Person, post.person_id)
     drop_post(author.public_id, post)
@@ -1269,7 +1319,9 @@ with app.app_context():
     db.session.commit()
     left_person = db.session.execute(sa.select(sa.func.count()).select_from(Comment).where(Comment.person_id == who.id)).scalar()
     left_under = db.session.execute(sa.select(sa.func.count()).select_from(Comment).where(Comment.parent_id.in_(mine or [-1]))).scalar()
-    print(json.dumps({"fk": fk, "answers": left_answers, "post": left_post, "person": left_person, "under": left_under}))
+    places = db.session.execute(sa.select(sa.func.count()).select_from(Comment).where(Comment.id.in_(mine or [-1]), Comment.gone.isnot(None))).scalar()
+    print(json.dumps({"fk": fk, "answers": left_answers, "place": place, "post": left_post, "person": left_person,
+                      "under": left_under, "places": places}))
 """
 
 # The same for a drawing's comments (section 25): delete_person for the
@@ -1556,7 +1608,7 @@ with sync_playwright() as p:
             stopped(4, exc)
 
     # ------------------------------------------------------------------ 5
-    if part(5, "delete and remove: a comment goes with its answers, fading out; nobody else can"):
+    if part(5, "delete and remove: a comment with replies keeps its place and theirs stay; one without goes; nobody else can"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
@@ -1572,26 +1624,49 @@ with sync_playwright() as p:
             tpg = theo.pg
             open_post(tpg, post)
             t_del = tpg.evaluate(DELETE_AND_WATCH, [theo_c, "delete"])
-            gone_rows = db("select public_id from social_comments where public_id in (?, ?, ?)", (theo_c, *under_theo))
-            check("Delete comment takes your own comment and every answer under it (anybody's): it fades out and is gone,"
-                  " the count with it, its rows and its answers' gone",
-                  t_del["gone"] and faded(t_del["ops"]) >= 2 and t_del["count"] == "4" and gone_rows == [],
-                  f"{t_del}; rows left {gone_rows}")
+            place = db("select words, person_id, gone, skribl_id from social_comments where public_id = ?", (theo_c,))
+            kept = sorted(r[0] for r in db("select public_id from social_comments where public_id in (?, ?)", tuple(under_theo)))
+            hs = glided(t_del["hs"])
+            check("Delete comment on your own comment with replies under it (the owner's yes, Nov 17, \"the place stays\"):"
+                  " it fades and keeps its place, \"This comment was deleted\", nobody's, its words gone, and the replies"
+                  " under it (anybody's) stay where they are; its room glides to the place's line (read on every frame);"
+                  " the count drops by it alone",
+                  t_del["place"] and t_del["words"] == "This comment was deleted" and t_del["under"] == under_theo
+                  and place == [("", None, "deleted", None)] and kept == sorted(under_theo)
+                  and faded(t_del["ops"]) >= 2 and hs["ok"] and hs["way"] < 0 and t_del["count"] == "6",
+                  f"{ {k: t_del[k] for k in ('place', 'words', 'under', 'count')} }; the row {place}; kept {kept};"
+                  f" faded {faded(t_del['ops'])}; its room {hs}")
             jpg = juno.pg
             open_post(jpg, post)
             j_rm = jpg.evaluate(DELETE_AND_WATCH, [mira_c, "remove"])
-            rm_rows = db("select public_id from social_comments where public_id in (?, ?)", (mira_c, under_mira))
-            check("on your own post, Remove from my post takes somebody else's comment, its answers with it, the same way",
-                  j_rm["gone"] and faded(j_rm["ops"]) >= 2 and j_rm["count"] == "2" and rm_rows == [],
-                  f"{j_rm}; rows left {rm_rows}")
+            rm_place = db("select person_id, gone from social_comments where public_id = ?", (mira_c,))
+            rm_kept = db("select public_id from social_comments where public_id = ?", (under_mira,))
+            check("on your own post, Remove from my post does the same with somebody else's comment: its place says"
+                  " \"This comment was removed\", and the reply under it stays",
+                  j_rm["place"] and j_rm["words"] == "This comment was removed" and rm_place == [(None, "removed")]
+                  and rm_kept == [(under_mira,)] and j_rm["count"] == "5",
+                  f"{ {k: j_rm[k] for k in ('place', 'words', 'under', 'count')} }; the row {rm_place}; kept {rm_kept}")
             tc = theo.client()
             tc.get(f"/social/p/{post}")
             other = tc.post_json(f"/social/c/{keep_c}/delete", {})
             alone = tc.post_json(f"/social/c/{lone}/delete", {})
             left = db("select public_id from social_comments where public_id in (?, ?)", (keep_c, lone))
-            check("nobody else can (somebody else's comment on somebody else's post is gone to them, 404); an answer"
-                  " deleted goes alone, the comment it was under stays",
-                  other[0] == 404 and alone[0] == 200 and left == [(keep_c,)], f"other {other}; alone {alone}; left {left}")
+            check("nobody else can (somebody else's comment on somebody else's post is gone to them, 404); a reply with"
+                  " nothing under it goes, wholly, the comment it was under staying",
+                  other[0] == 404 and alone[0] == 200 and alone[1].get("place") is False and left == [(keep_c,)],
+                  f"other {other}; alone {alone}; left {left}")
+            # A PLACE WITH NOTHING LEFT UNDER IT GOES: the replies under Theo's place deleted, one, then the last.
+            mc, jc2 = mira.client(), juno.client()
+            mc.get(f"/social/p/{post}")
+            jc2.get(f"/social/p/{post}")
+            first = mc.post_json(f"/social/c/{under_theo[0]}/delete", {})
+            still_there = db("select gone from social_comments where public_id = ?", (theo_c,))
+            last = jc2.post_json(f"/social/c/{under_theo[1]}/delete", {})
+            after_last = db("select 1 from social_comments where public_id = ?", (theo_c,))
+            check("a place stays while anything hangs under it, and goes with the last reply under it, which says so",
+                  first[0] == 200 and still_there == [("deleted",)] and first[1].get("dropped") == []
+                  and last[0] == 200 and last[1].get("dropped") == [theo_c] and after_last == [],
+                  f"first {first}; the place then {still_there}; the last {last}; after {after_last}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(5, exc)
 
@@ -1841,12 +1916,15 @@ with sync_playwright() as p:
                     "under hers": db("select count(*) from social_comments where public_id = ?", (oz_under_pia or "",))[0][0],
                     "on her post": db("select count(*) from social_comments where public_id = ?", (oz_on_pia or "",))[0][0],
                     "oz's own": db("select count(*) from social_comments where words = 'Section 9, Oz''s own'")[0][0]}
-            check("through the site: deleting a post takes every comment and answer on it; deleting an account takes the"
-                  " person's comments, every answer under them, and every comment on their posts, and leaves anybody"
-                  " else's elsewhere",
+            pia_place = db("select person_id, gone from social_comments where public_id = ?", (pia_top or "",))
+            check("through the site: deleting a post takes every comment and reply on it; deleting an account takes the"
+                  " person's words everywhere and every comment on their posts; one of theirs with somebody else's reply"
+                  " under it keeps its place, nobody's, and that reply stays (the place stays)",
                   gone[0] == 200 and left_post == 0 and pia_id is None and pia_under_oz_top
-                  and left == {"pia's": 0, "under hers": 0, "on her post": 0, "oz's own": 1},
-                  f"post delete {gone[0]}, comments left {left_post}; account gone {pia_id is None}; left {left}")
+                  and left == {"pia's": 0, "under hers": 1, "on her post": 0, "oz's own": 1}
+                  and pia_place == [(None, "deleted")],
+                  f"post delete {gone[0]}, comments left {left_post}; account gone {pia_id is None}; left {left};"
+                  f" her comment {pia_place}")
             # IN CODE, NOT BY THE CASCADE: the demo's SQLite enforces the schema's
             # ON DELETE CASCADE (Skribl's pragma hook), so the rows above would go
             # either way. A copy of the database, the two deletions run on it with
@@ -1875,9 +1953,11 @@ with sync_playwright() as p:
             except Exception:  # noqa: BLE001
                 out = {"err": (probe.stderr or probe.stdout)[-400:]}
             check("in code, not by the database's cascade: with SQLite's foreign keys off (SKRIBL_SQLITE_FOREIGN_KEYS=0),"
-                  " a comment deleted leaves none of its answers, drop_post no comment on the post, and delete_person none"
-                  " of the person's, nor any answer under them",
-                  out == {"fk": 0, "answers": 0, "post": 0, "person": 0, "under": 0}, f"{out}")
+                  " a comment deleted with replies under it keeps its place (nobody's, its words gone) and they stay;"
+                  " drop_post leaves no comment on the post; delete_person leaves nothing of the person's, a comment of"
+                  " theirs with somebody else's reply under it its place, that reply kept",
+                  out == {"fk": 0, "answers": 2, "place": [None, "deleted", ""], "post": 0, "person": 0, "under": 1,
+                          "places": 1}, f"{out}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(9, exc)
 
@@ -2294,9 +2374,9 @@ with sync_playwright() as p:
             jc = juno.client()
             jc.get(f"/social/p/{post}")
             jc.post_json(f"/social/c/{rm_c}/delete", {})
-            check("a comment deleted takes its drawing with it, and every answer's drawing under it; a comment removed from"
-                  " your post takes the commenter's drawing too (Skribl's delete_post, as its author)",
-                  before == [True, True] and there(own_s, under_s, rm_s) == [False, False, False] and own_s and rm_s,
+            check("a comment deleted takes its drawing with it (its place keeps none), and the reply under it keeps its own;"
+                  " a comment removed from your post takes the commenter's drawing too (Skribl's delete_post, as its author)",
+                  before == [True, True] and there(own_s, under_s, rm_s) == [False, True, False] and own_s and rm_s,
                   f"before {before}; after {there(own_s, under_s, rm_s)}")
             gone_post = make_post(juno, "Section 16, to be deleted", seed=175)
             on_c, on_s = drawn(mira, gone_post, "Section 16, on the post", 176)
@@ -2313,9 +2393,9 @@ with sync_playwright() as p:
             upg.fill("input[name=confirm]", "ute")
             with upg.expect_navigation(timeout=15000):
                 upg.click("form button[type=submit].btn-danger, form button[type=submit]")
-            check("a post deleted takes its comments' drawings, answers' too; an account deleted takes the drawings of its"
-                  " comments and of every answer under them, and leaves anybody else's",
-                  there(on_s, ans_s) == [False, False] and there(ute_s, ute_under, theo_own) == [False, False, True],
+            check("a post deleted takes its comments' drawings, replies' too; an account deleted takes the drawings of its"
+                  " comments, and leaves anybody else's, the reply under one of theirs too (under its place)",
+                  there(on_s, ans_s) == [False, False] and there(ute_s, ute_under, theo_own) == [False, True, True],
                   f"post's {there(on_s, ans_s)}; account's {there(ute_s, ute_under, theo_own)}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(16, exc)
@@ -2596,12 +2676,14 @@ with sync_playwright() as p:
             before = skribl_there(under_s)
             open_drawing(theo.pg, sid)
             t_del = theo.pg.evaluate(DELETE_AND_WATCH, [theo_c, "delete"])
-            left = db("select public_id from social_comments where public_id in (?, ?)", (theo_c, under or ""))
-            check("on a drawing, Delete comment takes your own comment and every answer under it, their drawings too:"
-                  " it fades out and is gone, the count with it",
-                  t_del["gone"] and faded(t_del["ops"]) >= 2 and t_del["count"] == "2" and left == []
-                  and bool(under_s) and before == [True] and skribl_there(under_s) == [False],
-                  f"{t_del}; rows left {left}; the answer's drawing {before}, then {skribl_there(under_s)}")
+            left = sorted(db("select public_id, gone from social_comments where public_id in (?, ?)", (theo_c, under or "")))
+            check("on a drawing, Delete comment on your own comment with a drawn reply under it keeps its place (\"This"
+                  " comment was deleted\") and the reply stays, its drawing with it; the count drops by it alone",
+                  t_del["place"] and t_del["words"] == "This comment was deleted" and faded(t_del["ops"]) >= 2
+                  and t_del["count"] == "3" and left == sorted([(theo_c, "deleted"), (under, None)])
+                  and bool(under_s) and before == [True] and skribl_there(under_s) == [True],
+                  f"{ {k: t_del[k] for k in ('place', 'words', 'count')} }; rows {left}; the reply's drawing {before},"
+                  f" then {skribl_there(under_s)}")
             open_drawing(juno.pg, sid)
             j_rm = juno.pg.evaluate(DELETE_AND_WATCH, [mira_c, "remove"])
             kc = kim.client()
@@ -2610,7 +2692,7 @@ with sync_playwright() as p:
             kept = db("select public_id from social_comments where public_id in (?, ?)", (mira_c, juno_c))
             check("the drawing's owner removes anybody's comment from it the same way (Remove from my post); nobody else"
                   " can (somebody else's, on somebody else's drawing, is gone to them: 404), and it stays",
-                  j_rm["gone"] and faded(j_rm["ops"]) >= 2 and j_rm["count"] == "1" and other[0] == 404
+                  j_rm["gone"] and faded(j_rm["ops"]) >= 2 and j_rm["count"] == "2" and other[0] == 404
                   and kept == [(juno_c,)],
                   f"{j_rm}; somebody else's {other}; rows {kept}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
@@ -2803,13 +2885,14 @@ with sync_playwright() as p:
             left = {"on her drawing": db("select count(*) from social_comments where drawing_id = ?", (sid,))[0][0],
                     "the drawing under it": skribl_there(sol_s)[0], "hers on rho's": n(qua_c),
                     "under hers": n(rho_under), "rho's own": n(rho_own)}
-            check("through the site: deleting an account takes every comment and answer on its drawings (their drawings"
-                  " too), its own comments on other people's drawings and every answer under them, and leaves anybody"
-                  " else's",
+            q_place = db("select person_id, gone, words from social_comments where public_id = ?", (qua_c or "",))
+            check("through the site: deleting an account takes every comment and reply on its drawings (their drawings"
+                  " too) and its words on other people's; its comment there with somebody's reply under it keeps its"
+                  " place, nobody's, and that reply stays (the place stays); anybody else's stay",
                   pid_of("qua")[0] is None and bool(sol_s) and bool(rho_own)
-                  and left == {"on her drawing": 0, "the drawing under it": False, "hers on rho's": 0, "under hers": 0,
-                               "rho's own": 1},
-                  f"account gone {pid_of('qua')[0] is None}; left {left}")
+                  and left == {"on her drawing": 0, "the drawing under it": False, "hers on rho's": 1, "under hers": 1,
+                               "rho's own": 1} and q_place == [(None, "deleted", "")],
+                  f"account gone {pid_of('qua')[0] is None}; left {left}; her comment {q_place}")
             # IN CODE, NOT BY THE CASCADE: owner_id's ON DELETE CASCADE takes these
             # with SQLite's foreign keys on, so a copy runs delete_person with them off.
             tia = someone(b, "tia", "Tia Moss")
@@ -4051,7 +4134,7 @@ with sync_playwright() as p:
             stopped(42, exc)
 
     # ------------------------------------------------------------------ 43
-    if part(43, "deleting a reply takes every reply under it, at any depth, its drawings with them"):
+    if part(43, "deleting a reply with replies under it keeps its place: they stay at every depth, its drawing goes"):
         try:
             ana = someone(b, "aria", "Aria Reyes")
             eli = someone(b, "elio", "Elio Moss")
@@ -4073,12 +4156,19 @@ with sync_playwright() as p:
             open_post(apg, post)
             gone = apg.evaluate(DELETE_AND_WATCH, [r1, "delete"])
             left = sorted(r[0] for r in db("select public_id from social_comments where post_id = ?", (post_id(post),)))
-            check("Delete comment on a reply takes it and every reply under it, at any depth (the replies past the thread's"
-                  " last level too), and their drawings in Skribl; the comment it answered and its other replies stay; the"
-                  " count follows",
-                  gone["gone"] and left == sorted([c1, r2]) and had == [True] and skribl_there(d_sid) == [False]
-                  and gone["count"] == "2",
-                  f"{gone}; left {left}; the deep drawing there before {had}, after {skribl_there(d_sid)}")
+            row = db("select person_id, gone, words from social_comments where public_id = ?", (r1,))
+            open_post(apg, post)
+            again = apg.evaluate(SECTION)
+            shown = [(a["id"], [x["id"] for x in a["answers"]]) for a in next(c for c in again["list"] if c["id"] == c1)["answers"]]
+            check("Delete comment on a reply with replies under it keeps its place (\"This reply was deleted\", nobody's)"
+                  " and every reply under it stays, at any depth (past the thread's last level too, with their drawings);"
+                  " after a reload the thread shows the place with Eli's reply under it; the count drops by it alone",
+                  gone["place"] and gone["words"] == "This reply was deleted" and gone["under"] == [r3]
+                  and left == sorted([c1, r1, r2, r3, r4, d_id]) and row == [(None, "deleted", "")]
+                  and had == [True] and skribl_there(d_sid) == [True] and gone["count"] == "5"
+                  and shown == [(r1, [r3]), (r2, [])],
+                  f"{ {k: gone[k] for k in ('place', 'words', 'under', 'count')} }; left {left}; the row {row};"
+                  f" the deep drawing there before {had}, after {skribl_there(d_sid)}; the thread {shown}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(43, exc)
 
@@ -4188,6 +4278,105 @@ with sync_playwright() as p:
                   f"{pages}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(45, exc)
+
+    # ------------------------------------------------------------------ 46
+    if part(46, "a place: its look, on the way and as a page, nothing to reply to, hidden with what hangs under it; the chain"):
+        try:
+            aria = someone(b, "aria", "Aria Reyes")
+            elio = someone(b, "elio", "Elio Moss")
+            bram = someone(b, "bram", "Bram Okafor")
+            cora = someone(b, "cora", "Cora Marsh")
+            dora = someone(b, "dora", "Dora Park")
+            post = make_post(bram, "Section 46, a ride", seed=461)
+            c1 = said(elio, post, "Section 46, Elio's comment")
+            r1 = said(aria, post, "Section 46, Aria's reply, to be deleted", answer_to=c1)
+            r3 = said(cora, post, "Section 46, Cora under Aria's", answer_to=r1)
+            ac = aria.client()
+            ac.get(f"/social/p/{post}")
+            went = ac.post_json(f"/social/c/{r1}/delete", {})
+            seen = {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    cctx, cpg = browser_as(b, dora, screen=screen, scheme=scheme)
+                    open_post(cpg, post)
+                    seen[(screen, scheme)] = cpg.evaluate(PLACE_LOOK, r1)
+                    close_ctx(cctx, cpg)
+            check("a place (the owner's yes, Nov 17, \"the place stays\"): an empty ring where its face was, 1.5px of the"
+                  " card's edge; \"This reply was deleted\" in the row's second ink, 4.5:1 or more on the page; no bubble,"
+                  " no name, no row; Cora's reply under it on the line: phone and desk, light and dark",
+                  went[0] == 200 and went[1].get("place") is True and all(v["ok"] for v in seen.values()),
+                  f"delete {went}; { {' '.join(k): v for k, v in seen.items()} }")
+            pg = dora.pg
+            pg.goto(BASE + f"/social/c/{r3}")
+            ready(pg)
+            way = pg.evaluate("() => [...document.querySelectorAll('.cm-way-item')].map(li =>"
+                              " (li.querySelector('.cm-way-gone, .cm-way-head b') || {}).textContent)")
+            pg.goto(BASE + f"/social/c/{r1}")
+            ready(pg)
+            own = pg.evaluate(PLACE_PAGE)
+            dc = dora.client()
+            dc.get(f"/social/p/{post}")
+            refused = dc.post_json(f"/social/p/{post}/comments", {"words": "Section 46, to a place", "answer_to": r1})
+            check("on the way to Cora's reply the place says \"This reply was deleted\"; its own page shows its ring and those"
+                  " words, \"Replies\" with Cora's, and takes no reply: no icon, no box, no row, and the route refuses one (404)",
+                  way == ["Bram Okafor", "Elio Moss", "This reply was deleted"]
+                  and own == {"head": "This reply was deleted", "ring": True, "title": "Reply", "heading": "Replies",
+                              "list": [r3], "icon": False, "box": False, "row": False}
+                  and refused[0] == 404,
+                  f"the way {way}; its page {own}; a reply to it {refused}")
+            dc.post_json("/social/@cora/block", {})
+            open_post(pg, post)
+            hidden = pg.evaluate(SECTION)
+            dc.post_json("/social/@cora/unblock", {})
+            top = next((c for c in hidden["list"] if c["id"] == c1), {"answers": None})
+            check("a place with nothing under it the viewer may see is not shown to them (Dora blocked Cora: only Elio's"
+                  " comment), and a place is never counted",
+                  top["answers"] == [] and hidden["count"] == "1", f"{top}; count {hidden['count']}")
+            # THE CHAIN refuses to go down while a place is there: person_id is NOT NULL down there.
+            pdb = os.path.join(TMP, "chain-places.db")
+
+            def chain(*args):
+                return subprocess.run([sys.executable, "-m", "alembic", "-c", "social/alembic.ini", *args], cwd=ROOT,
+                                      env=dict(os.environ, DATABASE_URL=f"sqlite:///{pdb}"), capture_output=True,
+                                      text=True, timeout=180)
+            up = chain("upgrade", "head")
+            con = sqlite3.connect(pdb)
+            then = "2026-11-17 10:00:00"
+            con.execute("insert into social_people (id, public_id, handle, handle_key, display_name, user_handle, is_admin,"
+                        " session_gen, age_confirmed_at, created_at) values (1, 'site:pl', 'pl', 'pl', 'Pl', x'00', 0, 1, ?, ?)",
+                        (then, then))
+            con.execute("insert into social_posts (id, public_id, person_id, words, skribl_id, created_at)"
+                        " values (10, 'P1', 1, 'hi', 'S1', ?)", (then,))
+            con.execute("insert into social_comments (id, public_id, post_id, owner_id, person_id, gone, words, created_at)"
+                        " values (100, 'G1', 10, 1, null, 'deleted', '', ?)", (then,))
+            con.execute("insert into social_comments (id, public_id, post_id, owner_id, person_id, parent_id, answers_id, words,"
+                        " created_at) values (101, 'R1', 10, 1, 1, 100, 100, 'kept', ?)", (then,))
+            nobody = True
+            try:
+                con.execute("insert into social_comments (id, public_id, post_id, owner_id, person_id, words, created_at)"
+                            " values (102, 'N1', 10, 1, null, 'x', ?)", (then,))
+                nobody = False
+            except sqlite3.IntegrityError:
+                pass
+            con.commit()
+            con.close()
+            blocked = chain("downgrade", "7db36bfedef0")
+            con = sqlite3.connect(pdb)
+            whole = (sorted(con.execute("select public_id from social_comments").fetchall()) == [("G1",), ("R1",)]
+                     and not con.execute("select 1 from sqlite_master where name like '_alembic_tmp%'").fetchone())
+            con.execute("delete from social_comments")
+            con.commit()
+            con.close()
+            down = chain("downgrade", "7db36bfedef0")
+            check("the chain: a comment is somebody's or a place (the database refuses nobody's that is no place); going"
+                  " down refuses while a place is there, saying so before it changes anything (the table whole); without"
+                  " one, it goes down",
+                  up.returncode == 0 and nobody and blocked.returncode != 0 and "places" in blocked.stderr and whole
+                  and down.returncode == 0,
+                  f"up {up.returncode}; nobody's refused {nobody}; down with a place {blocked.returncode}"
+                  f" {blocked.stderr.strip().splitlines()[-1:]}; whole {whole}; down {down.returncode}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(46, exc)
 
     # ------------------------------------------------------------------ 19
     if part(19, "no page errors, no console errors and no CSP violations"):

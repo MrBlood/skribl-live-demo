@@ -844,6 +844,51 @@
     }
   });
 
+  /* A COMMENT THAT KEEPS ITS PLACE: its face becomes an empty ring and its
+     bubble and row one quiet line, "This reply was deleted"; what hangs
+     under it stays where it is. Its own part fades (0.16s), then its room
+     glides to the line's height while the line fades in, so what is under
+     it moves up kindly. Under Reduce Motion the line is put there and
+     fades in. */
+  function becomePlace(li, words) {
+    var face = li.querySelector(':scope > .face-ring'), main = li.querySelector(':scope > .cm-main');
+    if (!main) return;
+    if (fold && li.contains(fold)) putAway();
+    var parts = [face, main].filter(Boolean);
+    function swap() {
+      var from = main.getBoundingClientRect().height;
+      var ring = doc.createElement('span');
+      ring.className = 'cm-gone-face';
+      ring.setAttribute('aria-hidden', 'true');
+      var line = doc.createElement('p');
+      line.className = 'cm-gone';
+      line.textContent = words;
+      li.classList.add('is-gone');
+      li.removeAttribute('data-mine');
+      li.removeAttribute('data-first');
+      if (face) face.replaceWith(ring);
+      main.textContent = '';
+      main.appendChild(line);
+      main.style.removeProperty('opacity');
+      main.style.removeProperty('transition');
+      var to = main.getBoundingClientRect().height;
+      line.style.opacity = '0';
+      if (!still()) { main.style.height = from + 'px'; main.style.overflow = 'hidden'; }
+      void main.offsetHeight;
+      line.style.transition = 'opacity 0.24s ease ' + (still() ? '0s' : '0.08s');
+      line.style.opacity = '1';
+      if (still()) return;
+      main.style.transition = 'height 0.32s ' + EASE;
+      main.style.height = to + 'px';
+      after(main, 'height', 600, function () {
+        ['height', 'overflow', 'transition'].forEach(function (k) { main.style.removeProperty(k); });
+      });
+    }
+    if (still()) { swap(); return; }
+    parts.forEach(function (x) { x.style.transition = 'opacity 0.16s ease'; x.style.opacity = '0'; });
+    setTimeout(swap, 170);
+  }
+
   /* A comment that goes fades first. The box, open in its conversation, is
      put away as it goes (its words kept); and the last one gone, "Say the
      first thing" comes back where the comments were. */
@@ -898,10 +943,19 @@
         menu.close(true);
         /* ON ITS OWN PAGE the comment is the page: it went, so the page goes
            to what it replied to (or what it was on). */
-        if (current.page) { window.location.assign(subjectEl.getAttribute('data-up') || '/'); return; }
-        counted(j.count, -(1 + li.querySelectorAll('.cm').length +
-          Array.prototype.reduce.call(li.querySelectorAll('.cm-rm'), function (t, r) { return t + (+r.getAttribute('data-n') || 0); }, 0)));
-        drop(li);
+        if (current.page) {
+          if (j.place) window.location.reload();
+          else window.location.assign(subjectEl.getAttribute('data-up') || '/');
+          return;
+        }
+        /* ITS PLACE STAYS when replies hang under it (the owner's yes, Nov
+           17): they stay where they are; with none, it goes. Either way it
+           alone stops being counted; a place it leaves with nothing under
+           it goes with it. */
+        counted(j.count, -1);
+        if (j.place) becomePlace(li, j.words || '');
+        else drop(li);
+        (j.dropped || []).forEach(function (id) { var x = doc.getElementById('c-' + id); if (x) drop(x); });
       });
     });
   }
