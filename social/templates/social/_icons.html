@@ -318,6 +318,12 @@
 {{ _svg('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>') }}
 {%- endmacro %}
 
+{#  "Hide replies" (the comment thread's tree, two deep): the circled plus
+    without its upright, a circled minus. #}
+{% macro less_replies() -%}
+{{ _svg('<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>') }}
+{%- endmacro %}
+
 {% macro back() -%}
 {{ _svg('<path d="M14.5 5.5 8 12l6.5 6.5"/>') }}
 {%- endmacro %}

@@ -102,17 +102,22 @@
   var tokenMeta = doc.querySelector('meta[name="social-csrf"]');
   var token = tokenMeta ? tokenMeta.getAttribute('content') : '';
 
+  function answered(p) {
+    return p.then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!j || typeof j !== 'object') j = {};
+        j.status = r.status;
+        return j;
+      });
+    }, function () { return { error: 'network' }; });
+  }
   function send(url, body) {
-    return fetch(url, { method: 'POST', credentials: 'same-origin',
-                        headers: { 'Content-Type': 'application/json', 'X-Social-CSRF': token },
-                        body: JSON.stringify(body || {}) })
-      .then(function (r) {
-        return r.json().catch(function () { return {}; }).then(function (j) {
-          if (!j || typeof j !== 'object') j = {};
-          j.status = r.status;
-          return j;
-        });
-      }, function () { return { error: 'network' }; });
+    return answered(fetch(url, { method: 'POST', credentials: 'same-origin',
+                                 headers: { 'Content-Type': 'application/json', 'X-Social-CSRF': token },
+                                 body: JSON.stringify(body || {}) }));
+  }
+  function get(url) {
+    return answered(fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } }));
   }
   function why(j) {
     if (j && j.error === 'rejected' && j.message) return j.message;
@@ -147,8 +152,36 @@
     if (!c && now) { c = doc.createElement('span'); row.appendChild(c); }
     if (c) { if (now) c.textContent = String(now); else row.removeChild(c); }
   }
-  /* The list "Read N replies" hangs in under a comment, made if it has none
-     yet. */
+  /* ---- THE TREE, TWO DEEP (the owner's "Yes on all", Nov 18) -----------------
+     A comment in a list says how many replies are under it beside its talk
+     cloud (_comments.html), and nothing hangs under it until a tap on it (its
+     bubble, or its place's line; not on a link, a button or its drawing, nor
+     a press ending a selection) opens them in place: its replies, and
+     theirs, two deep (comments.py tree()). One there whose talk goes on
+     carries "N more replies", which, or a tap on that reply, opens the rest
+     in place at that same step, each saying whom it answers ("↳ Eli":
+     rest()). The tree ends in "Hide replies"; a tap on the comment again,
+     or its own button (a keyboard's and a screen reader's way), folds it
+     away too. Its time still opens its own page. Everything glides: the
+     room opens from the comment down while the tree fades in, and folds
+     back the way it came; under Reduce Motion it is put there and fades. */
+  var treeAt = root.getAttribute('data-tree') || '', restAt = root.getAttribute('data-rest') || '';
+  function plural(n, one, many) { return n === 1 ? say(one) : say(many, { n: n }); }
+  function proto(name) {
+    var t = doc.querySelector('template[' + name + ']');
+    return t ? t.content.firstElementChild.cloneNode(true) : null;
+  }
+  function idOf(li) { return encodeURIComponent(li.getAttribute('data-comment')); }
+  function treeOf(li) { return li.querySelector(':scope > .cm-answers.is-tree'); }
+  /* In a list (the page's own, a post's comments or a comment's replies). */
+  function listed(li) { return li.parentNode === list; }
+  /* At the tree's second step: under one of a tree's own replies. */
+  function deep(li) {
+    var ol = li.parentNode;
+    return !!(ol && ol.classList && ol.classList.contains('cm-answers') && !ol.classList.contains('is-tree')
+              && ol.parentNode && ol.parentNode.parentNode && ol.parentNode.parentNode.classList.contains('is-tree'));
+  }
+  /* The list a reply's replies hang in, made if it has none yet. */
   function answersOf(top) {
     var ans = top.querySelector(':scope > .cm-answers');
     if (!ans) {
@@ -158,22 +191,180 @@
     }
     return ans;
   }
-  /* "READ N REPLIES" under the one a reply was posted to: one more counted,
-     or the row made (the page's own, [data-cm-rm-proto]), to its own page. */
-  function moreRow(top, url) {
-    var ans = answersOf(top);
-    var rm = ans.querySelector(':scope > .cm-rm');
-    if (!rm) {
-      var proto = doc.querySelector('template[data-cm-rm-proto]');
-      rm = proto.content.firstElementChild.cloneNode(true);
-      rm.setAttribute('data-rm', top.getAttribute('data-comment'));
-      rm.querySelector('.rm-link').setAttribute('href', url || top.getAttribute('data-url'));
-      ans.appendChild(rm);
+  /* What a failed opening says, under the comment it was asked of, until it
+     is asked again. */
+  function sayUnder(li, text) {
+    var main = li.querySelector(':scope > .cm-main');
+    if (!main) return;
+    var p = main.querySelector(':scope > [data-cm-tree-say]');
+    if (!p && text) {
+      p = doc.createElement('p');
+      p.className = 'say';
+      p.setAttribute('data-cm-tree-say', '');
+      p.setAttribute('role', 'status');
+      main.appendChild(p);
     }
-    var n = (+rm.getAttribute('data-n') || 0) + 1;
-    rm.setAttribute('data-n', String(n));
-    rm.querySelector('[data-rm-words]').textContent = n === 1 ? say('c_rm_one') : say('c_rm_many', { n: n });
-    return rm;
+    if (p) { if (text) p.textContent = text; else main.removeChild(p); }
+  }
+  /* The tree's own button says what it will do, and whether it is open. */
+  function openWords(li, open) {
+    var b = li.querySelector(':scope > .cm-main [data-cm-tree]');
+    if (!b) return;
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    b.querySelector('[data-open-words]').textContent = open ? say('c_hide')
+      : plural(+li.getAttribute('data-replies') || 0, 'c_show_one', 'c_show_many');
+    var mark = b.querySelector('.ic path');
+    if (mark) mark.setAttribute('d', open ? 'M8 12h8' : 'M12 8v8M8 12h8');
+  }
+  /* `el` goes the way an arrival came: its room closes from the bottom up
+     while it fades; under Reduce Motion it fades where it sits, then goes.
+     Its own height closes (clipped, its line's room left of it kept), not a
+     margin under it: the page's length goes with it a frame at a time, so a
+     page scrolled to its end follows it up, never jumping when it is gone. */
+  function leave(el, then) {
+    if (still()) {
+      el.style.transition = 'opacity 0.2s ease';
+      el.style.opacity = '0';
+      setTimeout(then, 220);
+      return;
+    }
+    el.style.height = el.getBoundingClientRect().height + 'px';
+    el.style.overflow = 'clip';
+    el.style.overflowClipMargin = '40px';
+    void el.offsetHeight;
+    el.style.transition = 'height 0.32s ' + EASE + ', opacity 0.24s ease';
+    el.style.height = '0px';
+    el.style.opacity = '0';
+    after(el, 'height', 600, then);
+  }
+  function openTree(li) {
+    if (!treeAt || li.hasAttribute('data-opening') || treeOf(li)) return;
+    li.setAttribute('data-opening', '');
+    sayUnder(li, '');
+    get(treeAt.replace('__ID__', idOf(li))).then(function (j) {
+      li.removeAttribute('data-opening');
+      if (!(j.ok && j.html)) { sayUnder(li, why(j)); return; }
+      var ol = doc.createElement('ol');
+      ol.className = 'cm-answers is-tree';
+      ol.innerHTML = j.html;
+      arrive(ol, li, fold && fold.parentNode === li ? fold : null, 0, null, 40);
+      openWords(li, true);
+    });
+  }
+  function foldTree(li) {
+    var ol = treeOf(li);
+    if (!ol || ol.hasAttribute('data-going')) return;
+    ol.setAttribute('data-going', '');
+    var home = ol.contains(doc.activeElement);
+    openWords(li, false);
+    leave(ol, function () { if (ol.parentNode) ol.parentNode.removeChild(ol); });
+    if (home) {
+      var b = li.querySelector(':scope > .cm-main [data-cm-tree]') || li.querySelector(':scope > .cm-main [data-cm-answer]');
+      if (b) b.focus({ preventScroll: true });
+    }
+  }
+  function toggleTree(li) { if (treeOf(li)) foldTree(li); else openTree(li); }
+  /* THE REST, IN PLACE (the owner's A): every reply under `li` (a reply at
+     the tree's second step), at that same step right after it, each saying
+     whom it answers. Its "N more replies" fades and its room becomes
+     theirs, so nothing under it steps. */
+  function openRest(li) {
+    var branch = li.querySelector(':scope > .cm-answers');
+    if (!restAt || !branch || li.hasAttribute('data-opening')) return;
+    li.setAttribute('data-opening', '');
+    sayUnder(li, '');
+    var link = branch.querySelector('[data-cm-rest]'), had = link && link === doc.activeElement;
+    get(restAt.replace('__ID__', idOf(li))).then(function (j) {
+      li.removeAttribute('data-opening');
+      if (!(j.ok && j.html)) { sayUnder(li, why(j)); return; }
+      var holder = doc.createElement('ol');
+      holder.innerHTML = j.html;
+      var items = Array.prototype.slice.call(holder.children), id = li.getAttribute('data-comment');
+      var room = branch.getBoundingClientRect().height, parent = li.parentNode, before = li.nextSibling;
+      li.removeChild(branch);
+      li.setAttribute('data-rest-open', '');
+      items.forEach(function (it, k) {
+        it.setAttribute('data-rest-of', id);
+        arrive(it, parent, before, k ? 0 : -room, null, 40);
+      });
+      var first = items[0] && items[0].querySelector('.cm-when');
+      if (had && first) first.focus({ preventScroll: true });
+    });
+  }
+  /* HOW MANY, after a reply came or went (the server's "counts": every one
+     on its way, each with all under it now): beside each talk cloud, in its
+     own button's words, and in "N more replies"; a comment left with none
+     under it loses all three, and its open tree folds. */
+  function tallyTo(li, n) {
+    if (n) li.setAttribute('data-replies', String(n)); else li.removeAttribute('data-replies');
+    if (li.hasAttribute('data-rest-of')) return;             // in the rest: everything under it shows
+    var acts = li.querySelector(':scope > .cm-main > .cm-acts');
+    var host = acts && (acts.querySelector('[data-cm-answer]') || acts.querySelector('.cm-tally'));
+    if (host) {
+      var c = host.querySelector('.cm-n');
+      if (n && !c && !host.classList.contains('cm-tally')) {
+        c = proto('data-cm-n-proto');
+        host.insertBefore(c, host.querySelector('.cm-word'));
+      }
+      if (c) { if (n) c.textContent = String(n); else c.parentNode.removeChild(c); }
+      if (host.hasAttribute('data-cm-answer')) {
+        if (n) host.setAttribute('aria-label', plural(n, 'c_reply_one', 'c_reply_many'));
+        else host.removeAttribute('aria-label');
+      }
+    }
+    if (listed(li)) {
+      var b = li.querySelector(':scope > .cm-main [data-cm-tree]');
+      if (n && !b && acts) { acts.appendChild(proto('data-cm-open-proto')); }
+      else if (!n && b) b.parentNode.removeChild(b);
+      openWords(li, !!treeOf(li));
+      if (!n) foldTree(li);
+    } else if (deep(li) && !li.hasAttribute('data-rest-open')) {
+      var ans = li.querySelector(':scope > .cm-answers'), rm = ans && ans.querySelector(':scope > .cm-rm');
+      if (n && !rm) {
+        rm = proto('data-cm-branch-proto');
+        rm.setAttribute('data-rm', li.getAttribute('data-comment'));
+        rm.querySelector('.rm-link').setAttribute('href', li.getAttribute('data-url'));
+        answersOf(li).appendChild(rm);
+      }
+      if (rm && n) {
+        rm.setAttribute('data-n', String(n));
+        rm.querySelector('[data-rm-words]').textContent = plural(n, 'c_more_one', 'c_more_many');
+      } else if (ans && !n) li.removeChild(ans);
+    }
+  }
+  function recount(counts) {
+    Object.keys(counts || {}).forEach(function (id) {
+      var li = doc.getElementById('c-' + id);
+      if (li) tallyTo(li, +counts[id] || 0);
+    });
+  }
+  /* A count that just took a reply glows a moment in the landing's tint, and
+     its "N more replies" with it (social.css, .is-glow). */
+  function glowCount(li) {
+    var acts = li.querySelector(':scope > .cm-main > .cm-acts');
+    var c = acts && acts.querySelector('[data-cm-answer], .cm-tally');
+    var rm = li.querySelector(':scope > .cm-answers > .cm-rm .rm-link');
+    [c, rm].forEach(function (el) {
+      if (!el) return;
+      el.classList.add('is-glow');
+      setTimeout(function () { el.classList.remove('is-glow'); }, GLOW_MS);
+    });
+  }
+  /* WHERE A REPLY TO `top` LANDS while its branch is open: at the end of
+     what shows under it (before "Hide replies"), or, in the rest, after the
+     last of the rest with whom it answers; null where its branch is closed,
+     and its count says it instead. */
+  function landing(top) {
+    var tree = treeOf(top);
+    if (tree) return { parent: tree, before: tree.querySelector(':scope > .cm-hide') };
+    if (top.parentNode && top.parentNode.classList && top.parentNode.classList.contains('is-tree')) {
+      return { parent: answersOf(top), before: null };
+    }
+    var of = top.hasAttribute('data-rest-open') ? top.getAttribute('data-comment') : top.getAttribute('data-rest-of');
+    if (!of) return null;
+    var after = doc.getElementById('c-' + of), sibs = top.parentNode.children;
+    for (var k = 0; k < sibs.length; k++) if (sibs[k].getAttribute('data-rest-of') === of) after = sibs[k];
+    return { parent: top.parentNode, before: after.nextSibling, rest: of };
   }
   /* What arrives later is said as what was there: its times, and its
      drawing's player (still until tapped, as Skribl asks of a feed that adds
@@ -636,21 +827,27 @@
      frame at a time (social.css, .is-growing), so nothing inside it moves.
      `extra`: the rule its arrival gives the comment after it (one that stops
      being first takes its rule back), given back too, so nothing steps. Under
-     Reduce Motion it is put in place and fades in. */
-  function arrive(li, parent, before, extra, then) {
+     Reduce Motion it is put in place and fades in. `out`: how far its
+     edges reach past its box (10px, the landing's tint; 40px for what
+     opens in a tree, whose line runs left of it). */
+  function arrive(li, parent, before, extra, then, out) {
+    var x = '-' + (out || 10) + 'px';
     li.style.opacity = '0';
-    li.style.clipPath = 'inset(0 -10px 100% -10px)';
+    li.style.clipPath = 'inset(0 ' + x + ' 100% ' + x + ')';
     parent.insertBefore(li, before);
+    /* Settled before it is measured: its times said as the page says them
+       ("now" for the server's day) can take a line off a narrow head. */
+    settle(li);
     var h = li.getBoundingClientRect().height;     // to the fraction: a whole pixel would step
     if (still()) li.style.clipPath = '';
     else {
       li.style.marginBottom = -(h + extra) + 'px';
-      li.style.clipPath = 'inset(0 -10px ' + h + 'px -10px)';
+      li.style.clipPath = 'inset(0 ' + x + ' ' + h + 'px ' + x + ')';
     }
     void li.offsetHeight;            // where it starts
     li.classList.add('is-growing');
     li.style.marginBottom = '';
-    if (!still()) li.style.clipPath = 'inset(0 -10px 0px -10px)';
+    if (!still()) li.style.clipPath = 'inset(0 ' + x + ' 0px ' + x + ')';
     li.style.opacity = '';
     function done() {
       li.classList.remove('is-growing');
@@ -710,10 +907,12 @@
         var li = holder.querySelector('.cm');
         if (!li) { tidy(); return; }
         var top = j.under ? doc.getElementById('c-' + j.under) : null;
-        /* ONE LEVEL, EVERYWHERE: a reply to one in the list is on that one's
-           own page, so here it joins "Read N replies" under it, which counts
-           it and glows a moment. */
-        var deep = !!top;
+        /* A REPLY TO ONE IN THE LIST OR IN ITS TREE (the tree, two deep):
+           every count on its way says it (j.counts), and it lands where it
+           was made if that branch is open, glowing there (in the rest,
+           saying whom it answers); where the branch is closed, the count by
+           the talk cloud took it and glows. */
+        var under = !!top;
         var was = answering;
         answering = null;
         afterFold = null;
@@ -723,14 +922,26 @@
            fold folds away in step with it. */
         if (sheet && sheet.isOpen()) { sheetAfter = tidy; sheet.close(true); }
         else if (!at) tidy();
-        if (deep) {
-          var rm = moreRow(top, j.page);
+        if (under) {
+          recount(j.counts);
+          var spot = landing(top);
+          if (spot) {
+            if (spot.rest) {
+              li.setAttribute('data-rest-of', spot.rest);
+              var to = proto('data-cm-to-proto'), name = li.querySelector('.cm-name');
+              if (to && name && j.to) {
+                to.querySelector('[data-to-name]').textContent = j.to;
+                name.parentNode.insertBefore(to, name.nextSibling);
+              }
+            }
+            arrive(li, spot.parent, spot.before, 0, function () { reveal(li); }, 40);
+            glow(li);
+          } else glowCount(top);
           if (at) shutFold('posted', tidy);
           else syncFirst(false);
           counted(j.count, 1);
-          glowMore(rm);
-          var link = rm.querySelector('.rm-link');
-          if (link) link.focus({ preventScroll: true });
+          var back = spot ? li.querySelector('[data-cm-answer]') : was && was.btn;
+          if (back && doc.contains(back)) back.focus({ preventScroll: true });
           return;
         }
         if (subject && j.under === subject) {
@@ -742,7 +953,6 @@
              nothing else needs to move. */
           arrive(li, list, list.firstChild, 0);
         }
-        settle(li);
         if (at) shutFold('posted', tidy);
         else syncFirst(false);
         counted(j.count, 1);
@@ -821,17 +1031,41 @@
       else if (out) out.open(n);
       return;
     }
-    /* A TAP ON A REPLY OPENS ITS OWN PAGE ("If you click the reply it opens
-       up the tree level"): on its bubble, or a place's words, but not on a
-       link, a button or the drawing (which plays), nor a press that ends a
-       selection of its words. */
+    /* THE TREE (the tree, two deep): its own button, "Hide replies" where it
+       ends, and "N more replies", which opens the rest in place (its link
+       goes to that reply's own page only where nothing runs the page). */
+    var tb = e.target.closest('[data-cm-tree]');
+    if (tb) {
+      e.preventDefault();
+      toggleTree(tb.closest('.cm'));
+      return;
+    }
+    var hide = e.target.closest('[data-cm-hide]');
+    if (hide) {
+      e.preventDefault();
+      var tree = hide.closest('.cm-answers.is-tree');
+      if (tree) foldTree(tree.parentNode);
+      return;
+    }
+    var rest = e.target.closest('[data-cm-rest]');
+    if (rest) {
+      e.preventDefault();
+      openRest(rest.closest('.cm-answers').parentNode);
+      return;
+    }
+    /* A TAP ON A COMMENT OPENS WHAT IS UNDER IT, IN PLACE (the owner, Nov
+       18: "Click replies and replies under that reply open up in the tree"):
+       in a list, its tree, two deep, or folds it again; at the tree's
+       second step, the rest. On its bubble, or a place's words, but not on
+       a link, a button or the drawing (which plays), nor a press that ends
+       a selection of its words. Its time still opens its own page. */
     var bub = e.target.closest('.cm-bubble, .cm.is-gone > .cm-main');
     if (bub && !e.target.closest('a, button, input, textarea, .cm-art') && !e.defaultPrevented) {
       var sel = window.getSelection && window.getSelection();
       var to = bub.closest('.cm');
-      if (to && to.getAttribute('data-url') && !(sel && !sel.isCollapsed && bub.contains(sel.anchorNode))) {
-        window.location.assign(to.getAttribute('data-url'));
-        return;
+      if (to && !(sel && !sel.isCollapsed && bub.contains(sel.anchorNode))) {
+        if (listed(to) && to.hasAttribute('data-replies')) { toggleTree(to); return; }
+        if (to.querySelector(':scope > .cm-answers > .cm-rm [data-cm-rest]')) { openRest(to); return; }
       }
     }
     var m = e.target.closest('[data-cm-menu]');
@@ -909,7 +1143,9 @@
 
   /* A comment that goes fades first. The box, open in its conversation, is
      put away as it goes (its words kept); and the last one gone, "Say the
-     first thing" comes back where the comments were. */
+     first thing" comes back where the comments were. In an open tree, a
+     reply's list left with nothing in it goes with it, so no line hangs
+     there (an open tree left so folds: tallyTo). */
   function drop(li) {
     if (fold && li.contains(fold)) putAway();
     li.classList.add('is-going');
@@ -917,7 +1153,10 @@
     function off() {
       if (gone) return;
       gone = true;
-      if (li.parentNode) li.parentNode.removeChild(li);
+      var ol = li.parentNode;
+      if (ol) ol.removeChild(li);
+      if (ol && ol.classList.contains('cm-answers') && !ol.classList.contains('is-tree')
+          && !ol.querySelector(':scope > li') && ol.parentNode) ol.parentNode.removeChild(ol);
       syncFirst(false);
     }
     li.addEventListener('transitionend', function (e) { if (e.target === li) off(); });
@@ -982,6 +1221,7 @@
         if (j.place) becomePlace(li, j.words || '');
         else drop(li);
         (j.dropped || []).forEach(function (id) { var x = doc.getElementById('c-' + id); if (x) drop(x); });
+        recount(j.counts);
       });
     });
   }
@@ -1067,14 +1307,6 @@
       li.addEventListener('transitionend', function (e) { if (e.target === li && e.pseudoElement === '::before') end(); });
       setTimeout(end, FADE_MS + 400);
     }, GLOW_MS);
-  }
-  /* "Read N more replies" that just counted a reply glows a moment in the
-     same tint, then fades where it sits (social.css, .rm-link.is-glow). */
-  function glowMore(rm) {
-    var a = rm.querySelector('.rm-link');
-    if (!a) return;
-    a.classList.add('is-glow');
-    setTimeout(function () { a.classList.remove('is-glow'); }, GLOW_MS);
   }
   function drawOnce(art) {
     if (still() || !window.SkriblInline) return;

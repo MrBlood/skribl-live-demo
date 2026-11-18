@@ -1844,6 +1844,15 @@ a.post-face { text-decoration: none; }
   cursor: pointer;
 }
 .cm-act .ic { width: 18px; height: 18px; }
+/* THE COUNT BY THE TALK CLOUD (the tree, two deep; the owner's yes, Nov 18):
+   how many replies are under it, beside Reply's cloud in the row's own
+   figures; on a desk it takes the word's place (the word stays for a screen
+   reader, as on a phone). Signed out, the count alone, no tap. Rounded for
+   its glow when a reply counts there. */
+.cm-act { border-radius: 14px; transition: background-color 1.5s ease; }
+.cm-act .cm-n { font-variant-numeric: tabular-nums; }
+.cm-act:has(> .cm-n) .cm-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.cm-tally { cursor: default; }
 /* A COMMENT'S HEART (the comment thread, step 2): the post's (likes.js,
    below), in the row's ink and size, 44px to a finger, its count beside it
    in the row's own figures. */
@@ -1884,27 +1893,66 @@ a.post-face { text-decoration: none; }
 .face-blank.has-initial { background: var(--tint); color: var(--accent-ink); font-size: 16px; font-weight: 700; line-height: 1; }
 /* THE THREAD'S LINE: a soft lilac, 2px of the card's edge (1.47:1 light,
    1.45:1 dark: there to be followed, not read), down from the face of a
-   comment or a reply with replies under it, curving out into its "Read N
-   replies" (one level, everywhere: the owner, Nov 17). */
+   comment or a reply whose replies are open under it (the tree, two deep:
+   the owner's yes, Nov 18), curving out into each face it answers, on past
+   each but the last, and into "N more replies" or "Hide replies" where its
+   branch ends. Nothing hangs under one at rest. A reply's curve is drawn
+   from its face (its place's ring, a muted one's eye), so the landing's
+   glow keeps the reply's own ::before. */
 .cm:has(> .cm-answers) > .cm-main { position: relative; }
 .cm:has(> .cm-answers) > .cm-main::before {
   content: ""; position: absolute; left: -31px; top: 40px; bottom: 0; border-left: 2px solid var(--card-edge);
 }
-.cm-answers > .cm-rm { position: relative; }
+.cm-answers > li { position: relative; }
+.cm-answers > .cm > :is(.face-ring, .cm-gone-face), .cm-answers > .cm > .cm-fold-line .cm-fold-ic { position: relative; }
+.cm-answers > .cm > :is(.face-ring, .cm-gone-face)::before, .cm-answers > .cm > .cm-fold-line .cm-fold-ic::before {
+  content: ""; position: absolute; left: -31px; top: -12px; width: 27px; height: 30px;
+  border-left: 2px solid var(--card-edge); border-bottom: 2px solid var(--card-edge); border-bottom-left-radius: 12px;
+}
+/* A muted one's eye sits in its line's middle: the curve meets it there. */
+.cm-answers > .cm > .cm-fold-line .cm-fold-ic::before { top: auto; bottom: 50%; height: 28px; margin-bottom: -1px; }
+.cm-answers > li:not(:last-child)::after {
+  content: ""; position: absolute; left: -31px; top: 28px; bottom: 0; border-left: 2px solid var(--card-edge);
+}
 .cm-answers > .cm-rm::before {
   content: ""; position: absolute; left: -31px; top: 0; width: 23px; height: 22px;
   border-left: 2px solid var(--card-edge); border-bottom: 2px solid var(--card-edge); border-bottom-left-radius: 12px;
 }
-/* A TAP ON A REPLY OPENS ITS OWN PAGE (comments.js), as a post's card opens
-   the post: a pointer says so on a desk, and nothing changes on a phone. */
+/* A TAP OPENS WHAT IS UNDER IT, in place (comments.js): a comment in a list,
+   or its place, with replies under it; a reply at the tree's second step
+   with "N more replies". A pointer says so on a desk, and nothing changes
+   on a phone. */
 @media (hover: hover) and (pointer: fine) {
-  .cm-bubble, .cm.is-gone > .cm-main { cursor: pointer; }
+  .cm-list > .cm[data-replies] > .cm-main > .cm-bubble, .cm-list > .cm.is-gone[data-replies] > .cm-main,
+  .cm:has(> .cm-answers > .cm-rm [data-cm-rest]) > .cm-main > .cm-bubble { cursor: pointer; }
 }
+/* THE TREE'S OWN BUTTON (comments.js; _comments.html open_tree): for a
+   keyboard and a screen reader, "Show 5 replies" or "Hide replies". Unseen
+   and taking no room until focused from the keyboard; then a pill at the
+   row's end (a place's line's end), the bubble's card and edge, over
+   nothing that moves. */
+.cm-acts, .cm.is-gone > .cm-main { position: relative; }
+.cm-open {
+  position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.cm-open:focus-visible {
+  right: 0; top: 0; z-index: 2; display: inline-flex; align-items: center; gap: 8px; width: auto; height: 44px;
+  padding: 0 14px 0 10px; overflow: visible; clip-path: none; border-radius: 14px;
+  background: var(--card); box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop);
+}
+.cm-open .ic { width: 18px; height: 18px; }
+/* WHOM A REPLY IN THE REST ANSWERS (the owner's A, Nov 18): "↳ Eli" after
+   its name, in the row's second ink, 14px (contrast as the row's). */
+.cm-to { flex: none; color: var(--ink-2); font-size: 14px; font-weight: 600; white-space: nowrap; }
+/* Where the name, whom it answers and when don't fit one line (a desk's
+   second step is 196px), when goes under them, and the name stays whole. */
+.cm-head:has(> .cm-to) { flex-wrap: wrap; }
 /* A PLACE (the owner's yes, Nov 17, to "the place stays"): a comment or a
    reply deleted while replies hung under it: an empty ring where its face
    was, 1.5px of the card's edge, and "This reply was deleted" (or
    "removed") in the row's second ink (7.1:1 light, 10.1:1 dark), no bubble,
-   no row. Its "Read N replies" hangs from its ring as from a face. */
+   no row. A tap on it opens its replies, as on a comment (the tree). */
 .cm-gone-face {
   display: block; flex: none; box-sizing: border-box; width: 36px; height: 36px; border-radius: 50%;
   box-shadow: inset 0 0 0 1.5px var(--card-edge);
@@ -1915,19 +1963,20 @@ a.post-face { text-decoration: none; }
 .cm-gone-head { display: flex; align-items: center; gap: 12px; }
 .cm-gone-head .cm-gone-face { width: 48px; height: 48px; }
 .cm-gone-head .cm-gone { min-height: 48px; font-size: 17px; }
-/* "READ N REPLIES", on the thread's line under a comment or a reply with
-   replies under it (one level, everywhere): the row's second ink (7.1:1
-   light, 10.1:1 dark) with an 18px circled plus, a 44px tap, to its own
-   page. */
+/* "N MORE REPLIES" under a reply at the tree's second step whose talk goes
+   on, and "HIDE REPLIES" where an open tree ends (the tree, two deep), on
+   the thread's line: the row's second ink (7.1:1 light, 10.1:1 dark) with
+   an 18px circled plus (Hide's a circled minus), a 44px tap. */
 .cm-rm { padding: 2px 0 6px; }
 .rm-link {
   display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-left: -10px; padding: 0 14px 0 10px;
-  border-radius: 14px; color: var(--ink-2); font-size: 15px; font-weight: 600; text-decoration: none;
-  transition: background-color 1.5s ease;
+  border: 0; border-radius: 14px; background: transparent; color: var(--ink-2); font: inherit; font-size: 15px;
+  font-weight: 600; text-decoration: none; cursor: pointer; transition: background-color 1.5s ease;
 }
-/* A REPLY PAST THE LAST LEVEL, just posted, joins it: it glows a moment in
-   the landing's tint, then the tint fades where it sits. */
-.rm-link.is-glow { background-color: var(--tint); transition: none; }
+/* A REPLY THAT LANDS UNDER A CLOSED BRANCH counts there: its "N more
+   replies", or the count by a talk cloud, glows a moment in the landing's
+   tint, then the tint fades where it sits. */
+.rm-link.is-glow, .cm-act.is-glow { background-color: var(--tint); transition: none; }
 .rm-link .ic { width: 18px; height: 18px; }
 .rm-link:hover span { text-decoration: underline; }
 .cm-more { margin-top: 12px; }
@@ -2011,8 +2060,10 @@ a.post-face { text-decoration: none; }
    start and shown from its top down (a clip, its edges 10px out for the
    landing's tint), while a negative margin under it gives its room back a
    frame at a time: nothing inside it moves. comments.js sets where it starts;
-   then it glows a moment in the landing's tint (.is-landed). */
-.cm.is-growing { transition: margin-bottom 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
+   then it glows a moment in the landing's tint (.is-landed). AN OPEN TREE
+   (the tree, two deep) opens the same way under its comment, and folds back
+   the same way, its room closing from the bottom up as it fades. */
+.cm.is-growing, .cm-answers.is-growing { transition: margin-bottom 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
   clip-path 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.24s ease; }
 /* REDUCE MOTION: nothing glides. The box is put in place and fades in; it is
    put away at once; a comment that arrives is put in place and fades in; the
@@ -2021,7 +2072,7 @@ a.post-face { text-decoration: none; }
   .cm-fold, .cm-first-fold, .cm-fold > .cm-fold-in, .cm-first-fold > .cm-fold-in, .cm-sheet { transition: none; }
   .cm-fold .cm-box, .cm-first-fold .cm-first { transition: none; }
   .cm-fold.is-open .cm-box, .cm-first-fold.is-open .cm-first { transition: opacity 0.2s ease; }
-  .cm.is-growing { transition: opacity 0.2s ease; }
+  .cm.is-growing, .cm-answers.is-growing { transition: opacity 0.2s ease; }
 }
 
 /* A COMMENT OPENED FROM ACTIVITY (#c-<id>; notifications) glows a moment in
