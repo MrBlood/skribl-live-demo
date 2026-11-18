@@ -851,8 +851,10 @@ with sync_playwright() as p:
             want = {
                 c_said: ("Eli said something on your post", f"/social/p/{pst}#c-{c_said}", skribl_of(pst), "“That spiral is so good.”"),
                 c_drew: ("Gus drew something on your post", f"/social/p/{pst}#c-{c_drew}", skribl_of_comment(c_drew), None),
-                c_ans: ("Fay replied to your comment", f"/social/p/{q}#c-{c_ans}", skribl_of(q), "“Ha, I counted too.”"),
-                c_ansd: ("Hal replied with a drawing", f"/social/p/{q}#c-{c_ansd}", skribl_of_comment(c_ansd), "“For you”"),
+                # A reply opens the page of what it answers, where it is one of that one's own (the comment
+                # thread: one level, everywhere).
+                c_ans: ("Fay replied to your comment", f"/social/c/{c_dan}#c-{c_ans}", skribl_of(q), "“Ha, I counted too.”"),
+                c_ansd: ("Hal replied with a drawing", f"/social/c/{c_dan}#c-{c_ansd}", skribl_of_comment(c_ansd), "“For you”"),
                 c_on_s: ("Eli said something on your post", f"/social/b/{sid}#c-{c_on_s}", sid, "“That wave!”"),
             }
             bad = {}
@@ -866,7 +868,7 @@ with sync_playwright() as p:
             check("each kind of row says who and what in the mock's words (\"Eli said something on your post\", \"Fay"
                   " replied to your comment\", \"Hal replied with a drawing\", \"Gus drew something on your post\"), with"
                   " their face, when as comments say it (\"now\", \"5m\"), New for a screen reader, and one link to the"
-                  " comment on its page, a post's or a drawing's",
+                  " comment on its page, a post's or a drawing's (a reply's, the page of what it answers)",
                   not bad and len(rows) == 6 and faces["eli"] == [poster(eli_face)]
                   and faces["eli on the drawing"] == [poster(eli_face)] and faces["fay"] == ["blank"],
                   f"wrong {bad}; rows {len(rows)}; faces {faces}")
@@ -979,8 +981,8 @@ with sync_playwright() as p:
                   and not any(r["href"].endswith(g1[0]) or r["href"].endswith(g1[1]) for r in new),
                   f"{row1}; New: {[r['say'] for r in new]}")
             row2 = by.get(f"/social/p/{r2}#c-{k2}")
-            row3 = by.get(f"/social/p/{m1}#c-{k_ans}")
-            row4 = by.get(f"/social/p/{m1}#c-{l_drw}")
+            row3 = by.get(f"/social/c/{mine}#c-{k_ans}")      # a reply opens the page of what it answers
+            row4 = by.get(f"/social/c/{mine}#c-{l_drw}")
             check("two are \"Kai and Jon\"; replies to your comment from two people are one row (\"Kai and Jon replied"
                   " to your comment\", opening the newest); a drawn reply beside them keeps its own row",
                   row2 is not None and row2["say"] == "Kai and Jon said something on your post"
@@ -988,7 +990,7 @@ with sync_playwright() as p:
                   and row4 is not None and row4["say"] == "Lou replied with a drawing" and row4["faces"] == [poster(fl)],
                   f"two {row2 and row2['say']}; answers {row3 and row3['say']}; drawing {row4 and row4['say']};"
                   f" New: {[r['say'] for r in new]}")
-            row5 = by.get(f"/social/p/{m2}#c-{j_to_ivy}")
+            row5 = by.get(f"/social/c/{ivy_ans}#c-{j_to_ivy}")
             to = db("select t.handle, par.public_id from social_comments c join social_people t on t.id = c.to_person_id"
                     " join social_comments par on par.id = c.parent_id where c.public_id = ?", (j_to_ivy or "",))
             check("a reply to your reply (it sits under your reply, in somebody else's conversation) reaches you as \"Jon"
@@ -1357,7 +1359,7 @@ with sync_playwright() as p:
                       const g = rgba(getComputedStyle(document.body).backgroundColor), c = rgba(getComputedStyle(m).backgroundColor),
                             a = [0, 1, 2].map(k => c[k] * c[3] + g[k] * (1 - c[3]));
                       const p = lum(a), q = lum(g); return Math.round((Math.max(p, q) + 0.05) / (Math.min(p, q) + 0.05) * 100) / 100; }""")
-                    pg.goto(BASE + f"/social/p/{post}#c-{land}")
+                    pg.goto(BASE + f"/social/c/{mine}#c-{land}")       # a reply lands on the page of what it answers
                     ready(pg)
                     pg.wait_for_timeout(250)
                     tints[(screen, scheme)] = pg.evaluate(ON_TINT, land)

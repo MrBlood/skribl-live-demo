@@ -121,25 +121,27 @@ mock; docs/SOCIAL-SITE.md section 18):
      between comments, an initial in a face not drawn yet, the count in a
      pill, the row under the bubble (Reply spelled out on a desk only, 44px):
      read against their tokens, phone and desk, light and dark.
- 39. TWO LEVELS: a reply keeps the reply it answers; the thread shows two
-     levels, then "Read N more replies" (every reply under it the viewer may
-     see); the line ends where its branch ends; 48px of room a level; a
-     block hides a reply and everything under it, counted the same way.
+ 39. ONE LEVEL, EVERYWHERE (the owner, Nov 17): a reply keeps the reply it
+     answers; a list shows only direct replies, each alone with "Read N
+     replies" (every reply under it the viewer may see) on the line, a
+     comment's room; a tap on one opens its page; a block hides a reply and
+     everything under it, counted the same way.
  40. A COMMENT'S OWN PAGE: the way to it, it as big as a post, "Replies";
      back where you were; signed out readable; hidden on the way is 404.
- 41. REPLYING AT EACH LEVEL: under the one it replies to, or past the last
-     level into "Read more", which counts it and glows; on a comment's own
-     page the box replies to it and the reply lands last.
+ 41. REPLYING FROM A LIST: the reply joins that one's "Read N replies",
+     which counts it and glows; on a comment's own page the box replies to
+     it and the reply lands last.
  42. COPY LINK gives the comment's own page; Delete on its own page goes to
      what it answered.
  43. DELETING A REPLY with replies under it keeps its place: they stay at
      every depth, their drawings with them.
- 44. ACTIVITY lands where a reply shows (its parent's page past two levels);
-     a reply under a hidden reply is nobody's row.
+ 44. ACTIVITY lands where a reply shows (the page of what it answers); a
+     reply under a hidden reply is nobody's row.
  45. DRAWINGS IN THE THREAD (the owner's B, Nov 17): a drawn comment's drawing
-     in its bubble, as wide as the bubble's room at each level, still until
-     tapped; a drawn reply's own page, its drawing as big as a post's and
-     playing by itself; a drawing on the way to it its still, 48px tall.
+     in its bubble, as wide as the bubble's room in every list, still until
+     tapped, a tap on it playing it, never opening its page; a drawn reply's
+     own page, its drawing as big as a post's and playing by itself; a
+     drawing on the way to it its still, 48px tall.
  46. A PLACE (the owner's yes, Nov 17, "the place stays"): a comment deleted
      with replies under it keeps its place, nobody's (its ring, "This reply
      was deleted", no bubble, no row); on the way, and as its own page,
@@ -647,7 +649,8 @@ DELETE_AND_WATCH = """async ([id, act]) => {
   const g = li.querySelector(':scope > .cm-main .cm-gone');
   return { gone: !li.isConnected, place: li.isConnected && li.classList.contains('is-gone'), words: g ? g.textContent : null,
            ops, hs, count: (document.querySelector('[data-cm-count]') || {}).textContent,
-           under: [...li.querySelectorAll(':scope > .cm-answers > .cm')].map(x => x.dataset.comment) }; }"""
+           under: [...li.querySelectorAll(':scope > .cm-answers > .cm')].map(x => x.dataset.comment),
+           more: (li.querySelector(':scope > .cm-answers > .cm-rm [data-rm-words]') || {}).textContent || null }; }"""
 
 # ---- THE COMMENT BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an
 # icon not a card"; "Yes to all"). The box is folded away behind the icon at the
@@ -1201,7 +1204,13 @@ LINE = """(cid) => { """ + TOKEN_JS + """
   out.ok = !out.bad.length && !!out.rm;
   return out; }"""
 
-# The words' room at each level: each one's column beside its face.
+# One with no replies under it: whether its column draws the line down, and
+# whether it carries "Read N replies" (section 39).
+BARE = """(id) => { const li = document.getElementById('c-' + id); if (!li) return { line: null, more: null };
+  const cs = getComputedStyle(li.querySelector(':scope > .cm-main'), '::before');
+  return { line: cs.content !== 'none' && cs.borderLeftStyle !== 'none', more: !!li.querySelector(':scope > .cm-answers .cm-rm') }; }"""
+
+# The words' room: each one's column beside its face.
 ROOM = """(ids) => ids.map(id => Math.round(document.querySelector('#c-' + id + ' > .cm-main').getBoundingClientRect().width))"""
 
 # A comment's own page, as it reads: its address and header, the way to it,
@@ -1241,15 +1250,9 @@ PAGE_OF = """() => { const s = document.querySelector('[data-cm-subject]'), c = 
     list: [...document.querySelectorAll('[data-cm-list] > .cm')].map(li => [li.dataset.comment,
       [...li.querySelectorAll(':scope > .cm-answers > .cm')].map(x => x.dataset.comment)]) }; }"""
 
-# Where a reply just posted was put: under which comment, at which level, and the count.
-PLACED = """(id) => { const li = document.getElementById('c-' + id); if (!li) return { under: null };
-  const up = li.parentElement.closest('.cm');
-  return { under: up ? up.dataset.comment : null, level: li.dataset.level || null,
-           count: (document.querySelector('[data-cm-count]') || {}).textContent }; }"""
-
-# Post a reply to `id`, at the thread's last level, and watch "Read more" under
-# it on every frame: what it says before and after, whether a reply came into
-# the thread, and its glow (the landing's tint on it, then gone).
+# Post a reply to `id`, one in a list, and watch its "Read N replies" on every
+# frame: what it says before and after, whether a reply came into the list
+# under it, and its glow (the landing's tint on it, then gone).
 PAST_AND_WATCH = """async (id) => { """ + TOKEN_JS + """
   const li = document.getElementById('c-' + id), tint = tok(li, 'backgroundColor', 'var(--tint)');
   const words = () => (li.querySelector(':scope > .cm-answers > .cm-rm [data-rm-words]') || {}).textContent || null;
@@ -1298,8 +1301,8 @@ PLACE_LOOK = """(id) => { """ + TOKEN_JS + """
     words: line ? line.textContent : null, ink: !!line && getComputedStyle(line).color === ink2,
     ratio: line ? ratio(getComputedStyle(line).color, getComputedStyle(document.body).backgroundColor) : 0,
     bare: !li.querySelector(':scope > .cm-main .cm-bubble, :scope > .cm-main .cm-acts, :scope > .face-ring, :scope > .cm-main .cm-name'),
-    under: [...li.querySelectorAll(':scope > .cm-answers > .cm')].map(x => x.dataset.comment) };
-  out.ok = out.ring && out.words === 'This reply was deleted' && out.ink && out.ratio >= 4.5 && out.bare && out.under.length === 1;
+    more: (li.querySelector(':scope > .cm-answers > .cm-rm [data-rm-words]') || {}).textContent || null };
+  out.ok = out.ring && out.words === 'This reply was deleted' && out.ink && out.ratio >= 4.5 && out.bare && out.more === 'Read 1 reply';
   return out; }"""
 
 # A place's own page: its head, the header, "Replies" and what hangs under
@@ -1484,7 +1487,7 @@ with sync_playwright() as p:
             stopped(2, exc)
 
     # ------------------------------------------------------------------ 3
-    if part(3, "replies: Reply opens the box for the comment, nothing jumps; a reply to a reply sits under it"):
+    if part(3, "replies: Reply opens the box for the comment, nothing jumps; a reply joins its Read N replies"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
@@ -1510,70 +1513,78 @@ with sync_playwright() as p:
                   and all(abs(f["dy"]) <= 0.5 for f in went["frames"]) and rise["ok"],
                   f"box {there}; the comment {went['now']}px then {glide(went)}; the sheet {rise}; focus {went['focus']}")
             pg.fill("[data-cm-words]", "Same! I watched it three times.")
-            mine = pg.evaluate(POST_AND_WATCH)
+            mine_w = pg.evaluate(PAST_AND_WATCH, theo_c)
             pg.wait_for_function(GONE, timeout=8000)
             pg.wait_for_timeout(300)
-            sec = pg.evaluate(SECTION)
-            theo_li = next((c for c in sec["list"] if c["id"] == theo_c), {"answers": []})
+            mine_id = (db("select public_id from social_comments where words = 'Same! I watched it three times.'")
+                       or [(None,)])[0][0]
             open_box(pg)
             back = pg.evaluate(BOX)
             pg.keyboard.press("Escape")
             pg.wait_for_function(GONE, timeout=8000)
-            # ...and as the server renders them, which the page's own insertion cannot show.
+            # ...and as the server renders them, which the page's own counting cannot show.
             open_post(pg, post)
-            again = next((c for c in pg.evaluate(SECTION)["list"] if c["id"] == theo_c), {"answers": []})
+            again = next((c for c in pg.evaluate(SECTION)["list"] if c["id"] == theo_c), {"more": None})
+            pg.goto(BASE + f"/social/c/{theo_c}")
+            ready(pg)
+            pg.wait_for_timeout(300)
+            on_page = [c["words"] for c in pg.evaluate(SECTION)["list"]]
             want = ["Thank you! It took me two tries to get the spiral right.", "Same! I watched it three times."]
-            check("the reply sits under the comment, after the ones before it (oldest first, put in place and after a"
-                  " reload), fading in; the box goes, and the icon opens it as \"Say something, or draw it…\" again",
-                  [a["words"] for a in theo_li["answers"]] == want and [a["words"] for a in again["answers"]] == want
-                  and faded(mine["ops"]) >= 2 and back["open"] == "sheet" and back["placeholder"] == "Say something, or draw it…"
+            check("the reply is on Theo's comment's own page (one level, everywhere): here his \"Read N replies\" counts it"
+                  " (2, from 1), glowing, and nothing comes into the list, after a reload the same; on his page the replies"
+                  " oldest first, hers after Juno's; the box goes, and the icon opens it as \"Say something, or draw it…\" again",
+                  mine_w["more"] == ["Read 1 reply", "Read 2 replies"] and mine_w["new"] == 0 and mine_w["glow"]
+                  and again["more"] == "Read 2 replies" and on_page == want
+                  and back["open"] == "sheet" and back["placeholder"] == "Say something, or draw it…"
                   and back["label"] == "Say something" and back["title"] == "Say something to Juno",
-                  f"answers {[a['words'][:24] for a in theo_li['answers']]}; after a reload"
-                  f" {[a['words'][:24] for a in again['answers']]}; faded {faded(mine['ops'])}; box {back}")
+                  f"{mine_w}; after a reload {again.get('more')}; his page {[w[:24] for w in on_page]}; box {back}")
+            # A REPLY TO A REPLY: on Theo's comment's page, Juno replies to Mira's.
             jpg = juno.pg
-            open_post(jpg, post)
-            jpg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", mine["id"])
+            jpg.goto(BASE + f"/social/c/{theo_c}")
+            ready(jpg)
+            jpg.wait_for_timeout(300)
+            jpg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", mine_id)
             jpg.wait_for_timeout(200)
-            jwent = jpg.evaluate(ANSWER_AND_WATCH, mine["id"])
+            jwent = jpg.evaluate(ANSWER_AND_WATCH, mine_id)
             jbox = jpg.evaluate(BOX)
             jpg.fill("[data-cm-words]", "Three times! Thank you, Mira.")
-            jpg.evaluate(POST_AND_WATCH)
+            jw = jpg.evaluate(PAST_AND_WATCH, mine_id)
+            jpg.wait_for_function(GONE, timeout=8000)
             rows = db("select c.public_id, p.public_id, a.public_id from social_comments c"
                       " left join social_comments p on p.id = c.parent_id left join social_comments a on a.id = c.answers_id"
                       " where c.words like 'Three times!%'")
-            jsec = jpg.evaluate(SECTION)
-            theo_li = next((c for c in jsec["list"] if c["id"] == theo_c), {"answers": []})
-            under = [a["words"] for a in theo_li["answers"]]
-            deeper = [a["words"] for a in next((a for a in theo_li["answers"] if a["id"] == mine["id"]), {"answers": []})["answers"]]
-            check("a reply to a reply (the comment thread, step 1): the box replies to Mira (\"Reply to Mira…\"), and the new"
-                  " reply sits under Mira's, not beside it; its row keeps the reply it answers, and the comment its"
-                  " conversation hangs under",
+            jpg.goto(BASE + f"/social/c/{mine_id}")
+            ready(jpg)
+            jpg.wait_for_timeout(300)
+            deeper = [c["words"] for c in jpg.evaluate(SECTION)["list"]]
+            check("a reply to a reply (the comment thread, step 1): on Theo's comment's page the box replies to Mira (\"Reply"
+                  " to Mira…\"), Mira's reply keeping its place; the new one is on her reply's own page, so here her \"Read 1"
+                  " reply\" comes, glowing; its row keeps the reply it answers, and the comment its conversation hangs under",
                   jbox["title"] == "Reply to Mira" and jbox["placeholder"] == "Reply to Mira…" and steady(jwent)
-                  and rows == [(rows[0][0] if rows else None, theo_c, mine["id"])]
-                  and deeper == ["Three times! Thank you, Mira."] and len(under) == 2,
-                  f"box {jbox}; rows {rows}; under Theo's {[u[:20] for u in under]}; under Mira's {deeper};"
-                  f" the move {jwent['now']}px, then {glide(jwent)}")
+                  and rows == [(rows[0][0] if rows else None, theo_c, mine_id)]
+                  and jw["more"] == [None, "Read 1 reply"] and jw["glow"] and deeper == ["Three times! Thank you, Mira."],
+                  f"box {jbox}; rows {rows}; {jw}; on her reply's page {deeper}; the move {jwent['now']}px, then {glide(jwent)}")
             # A desk: Reply opens it under the conversation; Reply again, or Esc, folds it away.
             dctx, dpg = browser_as(b, mira, "desk")
             open_post(dpg, post)
 
             def toggles():             # a box that never goes is this row's red, never a stop
-                answer_box(dpg, juno_a)
+                answer_box(dpg, theo_c)
                 t_in = dpg.evaluate(BOX)
-                dpg.click(f"#c-{juno_a} > .cm-main [data-cm-answer]")
+                dpg.click(f"#c-{theo_c} > .cm-main [data-cm-answer]")
                 dpg.wait_for_function(GONE, timeout=8000)
                 t_out = dpg.evaluate(BOX)
-                answer_box(dpg, juno_a)
+                answer_box(dpg, theo_c)
                 dpg.keyboard.press("Escape")
                 dpg.wait_for_function(GONE, timeout=8000)
                 return t_in, t_out, dpg.evaluate(BOX)
 
             got_, err = steps(toggles)
             toggled_in, toggled_out, escaped = got_ if err is None else ({}, {}, {})
-            check("on a desk, Reply opens the box under the conversation (\"Reply to Juno…\"); Reply again folds it away, and so"
+            check("on a desk, Reply opens the box under the comment (\"Reply to Theo…\"); Reply again folds it away, and so"
                   " does Esc, home under the heading",
                   err is None and toggled_in["open"] == "under" and toggled_in["under"] == theo_c
-                  and toggled_in["placeholder"] == "Reply to Juno…"
+                  and toggled_in["placeholder"] == "Reply to Theo…"
                   and toggled_out["open"] is None and toggled_out["home"] and escaped["open"] is None and escaped["home"],
                   f"in {toggled_in}; again {toggled_out}; Esc {escaped}; stopped {err}")
             long_c = said(theo, post, "Section 3, a long thread")
@@ -1581,15 +1592,16 @@ with sync_playwright() as p:
                 said(juno if k % 2 else mira, post, f"Section 3, answer {k} in a long thread, long enough to take two lines",
                      answer_to=long_c)
             open_post(dpg, post)
+            # Its foot at the screen's: the box opens below what the screen shows.
             dpg.evaluate("(id) => { const r = document.getElementById('c-' + id).getBoundingClientRect();"
-                         " window.scrollBy(0, r.top - innerHeight / 3); }", long_c)
+                         " window.scrollBy(0, r.bottom - innerHeight + 24); }", long_c)
             dpg.wait_for_timeout(300)
             far = dpg.evaluate(ANSWER_AND_WATCH, long_c)
             g = glide(far)
             close_ctx(dctx, dpg)
-            check("under a long thread, where the box opens below what the screen shows, the page glides down to it (over"
-                  " several frames, none carrying three quarters of the way) and leaves it in view; the comment does not jump"
-                  " as the box opens",
+            check("under a comment at the screen's foot, where the box opens below what the screen shows, the page glides"
+                  " down to it (over several frames, none carrying three quarters of the way) and leaves it in view; the"
+                  " comment does not jump as the box opens",
                   steady(far) and g["way"] > 60,
                   f"the move {far['now']}px; then {g}; in view {far['seen']}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
@@ -1651,12 +1663,12 @@ with sync_playwright() as p:
             hs = glided(t_del["hs"])
             check("Delete comment on your own comment with replies under it (the owner's yes, Nov 17, \"the place stays\"):"
                   " it fades and keeps its place, \"This comment was deleted\", nobody's, its words gone, and the replies"
-                  " under it (anybody's) stay where they are; its room glides to the place's line (read on every frame);"
-                  " the count drops by it alone",
-                  t_del["place"] and t_del["words"] == "This comment was deleted" and t_del["under"] == under_theo
+                  " under it (anybody's) stay, its \"Read 2 replies\" with them; its room glides to the place's line (read"
+                  " on every frame); the count drops by it alone",
+                  t_del["place"] and t_del["words"] == "This comment was deleted" and t_del["more"] == "Read 2 replies"
                   and place == [("", None, "deleted", None)] and kept == sorted(under_theo)
                   and faded(t_del["ops"]) >= 2 and hs["ok"] and hs["way"] < 0 and t_del["count"] == "6",
-                  f"{ {k: t_del[k] for k in ('place', 'words', 'under', 'count')} }; the row {place}; kept {kept};"
+                  f"{ {k: t_del[k] for k in ('place', 'words', 'more', 'count')} }; the row {place}; kept {kept};"
                   f" faded {faded(t_del['ops'])}; its room {hs}")
             jpg = juno.pg
             open_post(jpg, post)
@@ -1664,10 +1676,10 @@ with sync_playwright() as p:
             rm_place = db("select person_id, gone from social_comments where public_id = ?", (mira_c,))
             rm_kept = db("select public_id from social_comments where public_id = ?", (under_mira,))
             check("on your own post, Remove from my post does the same with somebody else's comment: its place says"
-                  " \"This comment was removed\", and the reply under it stays",
+                  " \"This comment was removed\", and the reply under it stays (\"Read 1 reply\")",
                   j_rm["place"] and j_rm["words"] == "This comment was removed" and rm_place == [(None, "removed")]
-                  and rm_kept == [(under_mira,)] and j_rm["count"] == "5",
-                  f"{ {k: j_rm[k] for k in ('place', 'words', 'under', 'count')} }; the row {rm_place}; kept {rm_kept}")
+                  and rm_kept == [(under_mira,)] and j_rm["count"] == "5" and j_rm["more"] == "Read 1 reply",
+                  f"{ {k: j_rm[k] for k in ('place', 'words', 'more', 'count')} }; the row {rm_place}; kept {rm_kept}")
             tc = theo.client()
             tc.get(f"/social/p/{post}")
             other = tc.post_json(f"/social/c/{keep_c}/delete", {})
@@ -1792,12 +1804,18 @@ with sync_playwright() as p:
             def seen_by(who):
                 open_post(who.pg, post)
                 sec = who.pg.evaluate(SECTION)
+                shown = [c["words"] for c in sec["list"]]
+                for c in sec["list"]:          # each one's replies, on its own page (one level, everywhere)
+                    if c["more"]:
+                        who.pg.goto(BASE + f"/social/c/{c['id']}")
+                        ready(who.pg)
+                        who.pg.wait_for_timeout(200)
+                        shown += [a["words"] for a in who.pg.evaluate(SECTION)["list"]]
                 who.pg.goto(BASE + "/social/")
                 who.pg.wait_for_timeout(500)
                 card = who.pg.evaluate("(id) => { const c = document.querySelector('.post-card[data-post=\"' + id + '\"] .post-count');"
                                        " return c ? c.getAttribute('aria-label') : null; }", post)
-                return {"count": sec["count"], "card": card,
-                        "shown": sorted([c["words"] for c in sec["list"]] + [a["words"] for c in sec["list"] for a in c["answers"]])}
+                return {"count": sec["count"], "card": card, "shown": sorted(shown)}
 
             before = seen_by(dee)
             dc = dee.client()
@@ -2321,13 +2339,20 @@ with sync_playwright() as p:
             fr = editor_frame(pg, "skribl-pad")
             if fr:
                 add_from_pad(pg, fr)
-            alone = pg.evaluate(POST_AND_WATCH)
-            arow = db("select c.words, c.skribl_id is not null, p.public_id from social_comments c"
-                      " left join social_comments p on p.id = c.parent_id where c.public_id = ?", (alone["id"] or "",))
-            check("a drawing alone is a comment too, and an answer can be one: under the comment it answers, its drawing"
-                  " in the player, no words",
-                  arow == [("", 1, theo_c)] and pg.evaluate(ART, alone["id"] or "") is not None,
-                  f"row {arow}")
+            went_d = pg.evaluate(PAST_AND_WATCH, theo_c)
+            arow = db("select c.words, c.skribl_id is not null, p.public_id, c.public_id from social_comments c"
+                      " left join social_comments p on p.id = c.parent_id join social_comments a on a.id = c.answers_id"
+                      " where a.public_id = ? and c.skribl_id is not null", (theo_c,))
+            alone_id = arow[0][3] if arow else ""
+            # It is on Theo's comment's own page, in its list (one level, everywhere).
+            pg.goto(BASE + f"/social/c/{theo_c}")
+            ready(pg)
+            pg.wait_for_timeout(400)
+            check("a drawing alone is a comment too, and a reply can be one: it joins the comment's \"Read N replies\", and on"
+                  " the comment's own page it is in the list, its drawing in the player, no words",
+                  [r[:3] for r in arow] == [("", 1, theo_c)] and went_d["new"] == 0 and went_d["glow"]
+                  and pg.evaluate(ART, alone_id) is not None,
+                  f"row {arow}; {went_d}")
             # STILL UNTIL TAPPED: on the post's own page only the post's drawing plays by itself.
             open_post(pg, post)
             pg.wait_for_timeout(1500)
@@ -2617,13 +2642,20 @@ with sync_playwright() as p:
             pg.wait_for_timeout(300)
             went = pg.evaluate(ANSWER_AND_WATCH, theo_c)
             there = pg.evaluate(BOX)
-            mine = steps(lambda: (pg.fill("[data-cm-words]", "Section 21, Mira under Theo's", timeout=8000),
-                                  pg.evaluate(POST_AND_WATCH))[1])[0] or {"id": None}
+            joined = steps(lambda: (pg.fill("[data-cm-words]", "Section 21, Mira under Theo's", timeout=8000),
+                                    pg.evaluate(PAST_AND_WATCH, theo_c))[1])[0] or {"more": None}
+            mine = {"id": (db("select public_id from social_comments where words = 'Section 21, Mira under Theo''s'")
+                           or [(None,)])[0][0]}
             deep = said_on(juno, sid, "Section 21, Juno answering Mira", answer_to=mine["id"])
             open_drawing(pg, sid)
-            theo_li = next((c for c in pg.evaluate(SECTION)["list"] if c["id"] == theo_c), {"answers": []})
-            under = [a["words"] for a in theo_li["answers"]]
-            nested = [a["words"] for a in next((a for a in theo_li["answers"] if a["id"] == mine["id"]), {"answers": []})["answers"]]
+            theo_li = next((c for c in pg.evaluate(SECTION)["list"] if c["id"] == theo_c), {"more": None})
+
+            def listed(cid):           # a comment's own page lists its direct replies (one level, everywhere)
+                pg.goto(BASE + f"/social/c/{cid}")
+                ready(pg)
+                pg.wait_for_timeout(300)
+                return [(c["words"], c["more"]) for c in pg.evaluate(SECTION)["list"]]
+            under, nested = listed(theo_c), listed(mine["id"])
             rows = [on_row(mine["id"]), on_row(deep)]
             # An answer is on what its comment is on: never from another drawing, nor from a post.
             elsewhere = make_drawing(juno, "Section 21, another drawing", seed=212)
@@ -2631,15 +2663,17 @@ with sync_playwright() as p:
             crossed = [say_on(mira, elsewhere, "Section 21, crossing over", answer_to=theo_c)[0],
                        say(mira, a_post, "Section 21, crossing from a post", answer_to=theo_c)[0]]
             check("on a drawing, Reply opens the box for the comment (\"Reply to Theo\", \"Reply to Theo…\"), the comment keeping its"
-                  " place; the reply sits under it, and a reply to that reply under it in turn (the comment thread), each on"
-                  " the drawing, whose the drawing is kept; a reply to it from another drawing, or from a post, is"
-                  " refused (404)",
+                  " place; the reply joins its \"Read N replies\", glowing, and is in the list on Theo's comment's own page,"
+                  " a reply to that reply on Mira's in turn (the comment thread: one level, everywhere), each on the drawing,"
+                  " whose the drawing is kept; a reply to it from another drawing, or from a post, is refused (404)",
                   there["open"] == "sheet" and there["title"] == "Reply to Theo" and there["placeholder"] == "Reply to Theo…"
-                  and steady(went)
-                  and under == ["Section 21, Mira under Theo's"] and nested == ["Section 21, Juno answering Mira"]
+                  and steady(went) and joined["more"] == [None, "Read 1 reply"] and joined["glow"]
+                  and theo_li["more"] == "Read 2 replies"
+                  and under == [("Section 21, Mira under Theo's", "Read 1 reply")]
+                  and nested == [("Section 21, Juno answering Mira", None)]
                   and rows == [(None, sid, "juno", theo_c)] * 2 and crossed == [404, 404],
-                  f"box {there}; the move {went['now']}px, then {glide(went)}; under Theo's {under}, under Mira's {nested}; rows {rows};"
-                  f" crossing over {crossed}")
+                  f"box {there}; the move {went['now']}px, then {glide(went)}; joined {joined}; on the drawing {theo_li['more']};"
+                  f" Theo's page {under}, Mira's {nested}; rows {rows}; crossing over {crossed}")
 
             def drawn():
                 open_drawing(pg, sid)
@@ -2737,8 +2771,14 @@ with sync_playwright() as p:
                 open_drawing(who.pg, sid)
                 sec = who.pg.evaluate(SECTION)
                 card = who.pg.evaluate(ROW_COUNT, sid)
-                return {"count": sec["count"], "card": (card or {}).get("label"),
-                        "shown": sorted([c["words"] for c in sec["list"]] + [a["words"] for c in sec["list"] for a in c["answers"]])}
+                shown = [c["words"] for c in sec["list"]]
+                for c in sec["list"]:          # each one's replies, on its own page (one level, everywhere)
+                    if c["more"]:
+                        who.pg.goto(BASE + f"/social/c/{c['id']}")
+                        ready(who.pg)
+                        who.pg.wait_for_timeout(200)
+                        shown += [a["words"] for a in who.pg.evaluate(SECTION)["list"]]
+                return {"count": sec["count"], "card": (card or {}).get("label"), "shown": sorted(shown)}
 
             before = seen_by(dee)
             dc = dee.client()
@@ -3516,13 +3556,15 @@ with sync_playwright() as p:
                 said(juno if k % 2 else mira, post, f"Section 32, answer {k} in a long thread, long enough to take two lines",
                      answer_to=long_c)
             open_post(dpg, post)
-            dpg.evaluate("(id) => { const r = document.getElementById('c-' + id).getBoundingClientRect(); window.scrollBy(0, r.top - innerHeight / 3); }", long_c)
+            # Its foot at the screen's: the box opens below what the screen shows.
+            dpg.evaluate("(id) => { const r = document.getElementById('c-' + id).getBoundingClientRect(); window.scrollBy(0, r.bottom - innerHeight + 24); }", long_c)
             dpg.wait_for_timeout(300)
             far = dpg.evaluate(ANSWER_AND_WATCH, long_c)
             g = glide(far)
             close_ctx(dctx, dpg)
-            check("on a desk, under a long thread below the screen, it opens there and the page glides down to it (several"
-                  " frames, none carrying three quarters of the way), the comment not jumping as it opens",
+            check("on a desk, under a comment at the screen's foot (its \"Read 7 replies\" under it), the box opens there,"
+                  " below what the screen shows, and the page glides down to it (several frames, none carrying three"
+                  " quarters of the way), the comment not jumping as it opens",
                   steady(far) and g["way"] > 60, f"the move {far['now']}px; then {g}; in view {far['seen']}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(32, exc)
@@ -3584,15 +3626,15 @@ with sync_playwright() as p:
             top_c = db("select public_id from social_comments where words = 'Section 33, the comment that was first'")[0][0]
             answer_box(dpg, top_c)
             dpg.fill("[data-cm-words]", "Section 33, an answer from a desk")
-            w = dpg.evaluate(POSTED, [1800])
-            dpg.wait_for_timeout(600)
-            sec = dpg.evaluate(SECTION)
+            w = dpg.evaluate(PAST_AND_WATCH, top_c)
+            went_home, err33 = steps(lambda: dpg.wait_for_function(GONE, timeout=8000))
+            focus = dpg.evaluate("(id) => { const a = document.activeElement;"
+                                 " return !!a && a.classList.contains('rm-link') && !!a.closest('#c-' + id); }", top_c)
             close_ctx(dctx, dpg)
-            under = [a["words"] for a in next((c for c in sec["list"] if c["id"] == top_c), {"answers": []})["answers"]]
-            check("an answer posted on a desk sits under its comment and glows; the fold folds away under the conversation and"
-                  " goes home; focus on the new answer's Answer",
-                  under[-1:] == ["Section 33, an answer from a desk"] and w["glow"][0] and w["focus"] == "cm-act",
-                  f"under {under}; glow {w['glow'][:2]}; focus {w['focus']}")
+            check("a reply posted on a desk joins its comment's \"Read N replies\" (one level, everywhere), which glows; the fold"
+                  " folds away under the comment and goes home; focus on that \"Read N replies\"",
+                  w["more"] == [None, "Read 1 reply"] and w["new"] == 0 and w["glow"] and err33 is None and focus,
+                  f"{w}; home {err33 is None}; focus {focus}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(33, exc)
 
@@ -3838,7 +3880,9 @@ with sync_playwright() as p:
     # The owner's yes, Nov 17, to the Read More Replies mock (docs/SOCIAL-SITE.md
     # section 18): bubbles, an initial in a face not drawn yet, the count in a
     # pill, the thread's lilac line, the post's row under every comment, "Reply",
-    # two levels then "Read N more replies", every comment's own page.
+    # every comment's own page; and ONE LEVEL, EVERYWHERE (the owner, Nov 17: "a
+    # list of direct replies first. If you click the reply it opens up the tree
+    # level"): each one alone in its list, with "Read N replies" to its page.
 
     # ------------------------------------------------------------------ 38
     if part(38, "the thread's look: bubbles, initials, the count's pill, no lines between; phone and desk, light and dark"):
@@ -3848,7 +3892,7 @@ with sync_playwright() as p:
             ben = someone(b, "bram", "Bram Okafor")
             post = make_post(ben, "Section 38, a bike ride", seed=381)
             e38 = said(eli, post, "Is this the ride along the river? I think I know that bridge.")
-            a38 = said(ana, post, "It is!", answer_to=e38)
+            a38 = said(ana, post, "It is!")            # beside it in the list: one level, everywhere
             seen = {}
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
@@ -3859,7 +3903,7 @@ with sync_playwright() as p:
             bad = {" ".join(k): v["bad"] for k, v in seen.items() if v["bad"]}
             check("every comment's name, time and words sit in a bubble: the site's card (--card), its lilac edge one screen"
                   " pixel (--card-edge at --edge) and its lift (--card-drop), 18px round; as wide as its words (the short"
-                  " reply's bubble narrower than its room, the long comment's reaching it); no line between comments:"
+                  " one's bubble narrower than its room, the long one's reaching it); no line between comments:"
                   " phone and desk, light and dark",
                   not bad and all(v["read"] for v in seen.values()),
                   f"{ {k: v[:3] for k, v in bad.items()} }; read {[v['read'] for v in seen.values()]}")
@@ -3879,7 +3923,7 @@ with sync_playwright() as p:
             stopped(38, exc)
 
     # ------------------------------------------------------------------ 39
-    if part(39, "two levels, then \"Read N more replies\": the data, the thread, the line, the room, the count"):
+    if part(39, "one level, everywhere: the data, the list, the line, the room, the count, a tap opens it"):
         try:
             ana = someone(b, "aria", "Aria Reyes")
             eli = someone(b, "elio", "Elio Moss")
@@ -3893,6 +3937,7 @@ with sync_playwright() as p:
             r3 = said(eli, post, "Sundays? I'll look out for you.", answer_to=r1)
             r4 = said(ana, post, "I'm the one with the red bell.", answer_to=r3)
             r5 = said(cyd, post, "I've heard that bell!", answer_to=r4)
+            c2 = said(cyd, post, "Section 39, a comment with nothing under it")
             rows = {r[0]: r[1:] for r in db(
                 "select c.public_id, p.public_id, a.public_id from social_comments c left join social_comments p"
                 " on p.id = c.parent_id left join social_comments a on a.id = c.answers_id where c.public_id in (?, ?, ?, ?, ?, ?)",
@@ -3900,40 +3945,70 @@ with sync_playwright() as p:
             check("a reply keeps the reply it answers (answers_id), at any depth, and the comment its conversation hangs"
                   " under (parent_id); a comment has neither",
                   rows == {c1: (None, None), r1: (c1, c1), r2: (c1, c1), r3: (c1, r1), r4: (c1, r3), r5: (c1, r4)}, f"{rows}")
-            # A reply from before replies kept what they answer has none: it answers its comment, the first level.
+            # A reply from before replies kept what they answer has none: it answers its comment.
             db_write("update social_comments set answers_id = null where public_id = ?", (r2,))
             seen = {}
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
                     cctx, cpg = browser_as(b, dee, screen=screen, scheme=scheme)
                     open_post(cpg, post)
-                    seen[(screen, scheme)] = {"sec": cpg.evaluate(SECTION), "line": cpg.evaluate(LINE, c1),
-                                              "room": cpg.evaluate(ROOM, [c1, r1, r3])}
+                    got = {"sec": cpg.evaluate(SECTION), "line": cpg.evaluate(LINE, c1), "room": cpg.evaluate(ROOM, [c1, c2]),
+                           "bare": cpg.evaluate(BARE, c2)}
+                    cpg.goto(BASE + f"/social/c/{c1}")
+                    ready(cpg)
+                    cpg.wait_for_timeout(300)
+                    got["page"] = cpg.evaluate(SECTION)
+                    got["page_room"] = cpg.evaluate(ROOM, [r1, r2])
+                    cpg.goto(BASE + f"/social/c/{r1}")
+                    ready(cpg)
+                    cpg.wait_for_timeout(300)
+                    got["deeper"] = cpg.evaluate(SECTION)
+                    seen[(screen, scheme)] = got
                     close_ctx(cctx, cpg)
-            sec = seen[("phone", "light")]["sec"]
-            top = next((c for c in sec["list"] if c["id"] == c1), {"answers": []})
-            shape = [(a["id"], [(x["id"], x["more"], [y["id"] for y in x["answers"]]) for x in a["answers"]], a["more"])
-                     for a in top["answers"]]
-            check("the thread shows two levels: Eli's comment, Ana's and Ben's replies under it (oldest first; Ben's from"
-                  " before replies kept what they answer, at the first level), Eli's reply to Ana under Ana's; deeper ones"
-                  " are not in the thread, and under Eli's reply \"Read 2 more replies\" (every reply under it, at any"
-                  " depth); the count says all six",
-                  shape == [(r1, [(r3, "Read 2 more replies", [])], None), (r2, [], None)] and sec["count"] == "6",
-                  f"{shape}; count {sec['count']}")
-            lines = {" ".join(k): v["line"] for k, v in seen.items()}
-            check("the thread's line: 2px of the card's edge (--card-edge), down from a face that has replies and curving"
-                  " into each reply's face; it ends where its branch ends: the last reply in a branch carries no line on"
-                  " past itself, and every other one does; \"Read 2 more replies\" hangs from it the same way",
-                  all(v["ok"] for v in lines.values()), f"{lines}")
-            rooms = {" ".join(k): v["room"] for k, v in seen.items()}
-            check("each level costs 48px of the words' room and no more: 322, 274 and 226px on a phone, 292, 244 and 196px on"
-                  " a desk",
-                  all(v == ([322, 274, 226] if k.startswith("phone") else [292, 244, 196]) for k, v in rooms.items()),
-                  f"{rooms}")
+            first = seen[("phone", "light")]
+
+            def shape(sec):
+                return [(c["id"], c["more"], [a["id"] for a in c["answers"]]) for c in sec["list"]]
+            check("ONE LEVEL, EVERYWHERE (the owner, Nov 17): a post's page lists its comments alone, nothing nested under"
+                  " them, Eli's carrying \"Read 5 replies\" (every reply under it, at any depth), Cora's with none carrying"
+                  " nothing; Eli's own page lists his direct replies, Aria's and Bram's (oldest first; Bram's from before"
+                  " replies kept what they answer), Aria's carrying \"Read 3 replies\"; hers, Elio's reply alone with \"Read"
+                  " 2 replies\"; the counts say seven, five and three",
+                  shape(first["sec"]) == [(c2, None, []), (c1, "Read 5 replies", [])] and first["sec"]["count"] == "7"
+                  and shape(first["page"]) == [(r1, "Read 3 replies", []), (r2, None, [])] and first["page"]["count"] == "5"
+                  and shape(first["deeper"]) == [(r3, "Read 2 replies", [])] and first["deeper"]["count"] == "3",
+                  f"post {shape(first['sec'])} {first['sec']['count']}; Eli's {shape(first['page'])} {first['page']['count']};"
+                  f" Aria's {shape(first['deeper'])} {first['deeper']['count']}")
+            lines = {" ".join(k): (v["line"], v["bare"]) for k, v in seen.items()}
+            check("the thread's line: 2px of the card's edge (--card-edge), down from the face of one with replies and"
+                  " curving into its \"Read N replies\"; one with none has neither: phone and desk, light and dark",
+                  all(ln["ok"] and bare["line"] is False and bare["more"] is False for ln, bare in lines.values()), f"{lines}")
+            rooms = {" ".join(k): (v["room"], v["page_room"]) for k, v in seen.items()}
+            check("every reply in a list has a comment's room, nothing nested to take it: 322px on a phone, 292 on a desk, on"
+                  " the post's page and on a comment's own",
+                  all(set(a + c) == ({322} if k.startswith("phone") else {292}) for k, (a, c) in rooms.items()), f"{rooms}")
             rm = {" ".join(k): v["line"]["rm"] for k, v in seen.items()}
-            check("\"Read 2 more replies\" is a 44px tap in the row's second ink, 4.5:1 or more on the page, opening Eli's"
-                  " reply's own page",
-                  all(v and v["h"] >= 44 and v["ratio"] >= 4.5 and v["href"] == f"/social/c/{r3}" for v in rm.values()), f"{rm}")
+            check("\"Read 5 replies\" is a 44px tap in the row's second ink, 4.5:1 or more on the page, opening Eli's comment's"
+                  " own page",
+                  all(v and v["h"] >= 44 and v["ratio"] >= 4.5 and v["href"] == f"/social/c/{c1}" for v in rm.values()), f"{rm}")
+            # A TAP ON A REPLY OPENS ITS OWN PAGE: on its words; not on its name's
+            # time link's neighbour, the Reply button.
+            pg = dee.pg
+            open_post(pg, post)
+
+            def tap_words():
+                with pg.expect_navigation(timeout=8000):
+                    pg.click(f"#c-{c1} > .cm-main .cm-words", timeout=8000)
+                return pg.evaluate("() => location.pathname")
+            went, err = steps(tap_words)
+            open_post(pg, post)
+            pg.click(f"#c-{c1} > .cm-main [data-cm-answer]", timeout=8000)
+            pg.wait_for_timeout(600)
+            stayed = pg.evaluate("() => location.pathname")
+            pg.keyboard.press("Escape")
+            check("a tap on a reply in a list (its words, in its bubble) opens its own page, as a post's card opens the post;"
+                  " Reply there opens the box and goes nowhere",
+                  err is None and went == f"/social/c/{c1}" and stayed == f"/social/p/{post}", f"went {went}; stayed {stayed}; {err}")
             # What the viewer may not see is not counted: Dee blocks Cyd, then Ana.
             dc = dee.client()
             dc.get("/social/")
@@ -3944,20 +4019,23 @@ with sync_playwright() as p:
             dc.post_json("/social/@aria/block", {})
             open_post(dee.pg, post)
             no_ana = dee.pg.evaluate(SECTION)
+            dee.pg.goto(BASE + f"/social/c/{c1}")
+            ready(dee.pg)
+            dee.pg.wait_for_timeout(300)
+            no_ana_page = dee.pg.evaluate(SECTION)
             dee.pg.goto(BASE + "/social/")
             dee.pg.wait_for_timeout(500)
             card = dee.pg.evaluate("(id) => { const c = document.querySelector('.post-card[data-post=\"' + id + '\"] .post-count');"
                                    " return c ? c.getAttribute('aria-label') : null; }", post)
             dc.post_json("/social/@aria/unblock", {})
-            t1 = next((c for c in no_cyd["list"] if c["id"] == c1), {"answers": []})
-            t2 = next((c for c in no_ana["list"] if c["id"] == c1), {"answers": []})
-            check("N counts only what the viewer may see: with Cyd blocked, \"Read 1 more reply\"; with Ana blocked, her"
-                  " replies go and everything under them at any depth (Eli's reply to her, and the rest), from the thread,"
-                  " the count and Home's card alike",
-                  [x["more"] for a in t1["answers"] for x in a["answers"]] == ["Read 1 more reply"] and no_cyd["count"] == "5"
-                  and [a["id"] for a in t2["answers"]] == [r2] and no_ana["count"] == "2" and card == "2 comments",
-                  f"Cyd blocked {[(a['id'], [x['more'] for x in a['answers']]) for a in t1['answers']]} {no_cyd['count']};"
-                  f" Ana blocked {[a['id'] for a in t2['answers']]} {no_ana['count']}, card {card}")
+            check("N counts only what the viewer may see: with Cora blocked, \"Read 4 replies\" (her comment gone too); with"
+                  " Aria blocked, her replies go and everything under them at any depth, \"Read 1 reply\" (Bram's), and on"
+                  " Eli's page Bram's alone; the count and Home's card alike",
+                  shape(no_cyd) == [(c1, "Read 4 replies", [])] and no_cyd["count"] == "5"
+                  and shape(no_ana) == [(c2, None, []), (c1, "Read 1 reply", [])] and no_ana["count"] == "3"
+                  and shape(no_ana_page) == [(r2, None, [])] and card == "3 comments",
+                  f"Cora blocked {shape(no_cyd)} {no_cyd['count']}; Aria blocked {shape(no_ana)} {no_ana['count']},"
+                  f" Eli's page {shape(no_ana_page)}, card {card}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(39, exc)
 
@@ -3974,27 +4052,33 @@ with sync_playwright() as p:
             r1 = said(ana, post, "Section 40, it is!", answer_to=c1)
             r3 = said(eli, post, "Section 40, Sundays? I'll look out for you.", answer_to=r1)
             r4 = said(ana, post, "Section 40, the red bell.", answer_to=r3)
-            r5 = said(cyd, post, "Section 40, I've heard it!", answer_to=r4)
+            said(cyd, post, "Section 40, I've heard it!", answer_to=r4)
             pg = dee.pg
             open_post(pg, post)
-            pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", r3)
-            pg.wait_for_timeout(200)
-            with pg.expect_navigation():
-                pg.click(f"#c-{r3} > .cm-answers > .cm-rm .rm-link")
-            ready(pg)
-            pg.wait_for_timeout(300)
+
+            def read_more(cid):        # its "Read N replies", as a person taps it
+                pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", cid)
+                pg.wait_for_timeout(200)
+                with pg.expect_navigation():
+                    pg.click(f"#c-{cid} > .cm-answers > .cm-rm .rm-link")
+                ready(pg)
+                pg.wait_for_timeout(300)
+                return pg.evaluate("() => location.pathname")
+            walked = [read_more(c1), read_more(r1), read_more(r3)]
             page = pg.evaluate(PAGE_OF)
-            check("\"Read 2 more replies\" opens Eli's reply's own page (/social/c/<id>): the header says Reply; the way to"
-                  " it above, small, each its own page's link: the post, Eli's comment, Ana's reply; then Eli's reply as big"
-                  " as a post (its 48px face and its words); \"Replies\" and how many, then its replies, Ana's with Cyd's"
-                  " under it",
-                  page["path"] == f"/social/c/{r3}" and page["title"] == "Reply"
+            check("\"Read N replies\" opens each one's own page in turn, down the conversation (the post's, then Elio's"
+                  " comment's, then Aria's reply's): Elio's reply's own page (/social/c/<id>) says Reply in its header; the"
+                  " way to it above, small, each its own page's link: the post, Elio's comment, Aria's reply; then Elio's"
+                  " reply as big as a post (its 48px face and its words); \"Replies\" and how many (2), then its direct"
+                  " replies, Aria's alone (one level: Cora's is on Aria's own page)",
+                  walked == [f"/social/c/{c1}", f"/social/c/{r1}", f"/social/c/{r3}"]
+                  and page["path"] == f"/social/c/{r3}" and page["title"] == "Reply"
                   and page["way"] == [["Bram Okafor", f"/social/p/{post}"], ["Elio Moss", f"/social/c/{c1}"],
                                       ["Aria Reyes", f"/social/c/{r1}"]]
                   and page["words"] == "Section 40, Sundays? I'll look out for you." and page["face"] == 48
                   and page["heading"] == "Replies" and page["count"] == "2"
-                  and page["list"] == [[r4, [r5]]],
-                  f"{page}")
+                  and page["list"] == [[r4, []]],
+                  f"walked {walked}; {page}")
             with pg.expect_navigation():
                 pg.click(".top-back")
             ready(pg)
@@ -4010,9 +4094,9 @@ with sync_playwright() as p:
             ready(pg2)
             top_page = pg2.evaluate(PAGE_OF)
             close_ctx(ctx2, pg2)
-            check("back goes where you were (the post's page you came from); come to it from elsewhere, to what it is on;"
+            check("back goes where you were (Aria's reply's page you came from); come to it from elsewhere, to what it is on;"
                   " a comment's own page says \"Comment\", the way to it the post alone",
-                  back_to == f"/social/p/{post}" and top_page["title"] == "Comment"
+                  back_to == f"/social/c/{r1}" and top_page["title"] == "Comment"
                   and top_page["way"] == [["Bram Okafor", f"/social/p/{post}"]] and cold_back == f"/social/p/{post}",
                   f"back {back_to}; the comment's {top_page}; cold back {cold_back}")
             nctx, npg = browser_as(b, None)
@@ -4058,7 +4142,7 @@ with sync_playwright() as p:
             stopped(40, exc)
 
     # ------------------------------------------------------------------ 41
-    if part(41, "replying at each level: under the one it replies to, or past the last level into Read more"):
+    if part(41, "replying from a list: it joins that one's Read N replies, which glows; on its own page it lands last"):
         try:
             ana = someone(b, "aria", "Aria Reyes")
             eli = someone(b, "elio", "Elio Moss")
@@ -4072,32 +4156,37 @@ with sync_playwright() as p:
             said(ana, post, "Section 41, deeper", answer_to=r3)
             pg = dee.pg
             open_post(pg, post)
-            answer_box(pg, r1)
-            pg.fill("[data-cm-words]", "Section 41, Dee to Ana")
-            first = pg.evaluate(POST_AND_WATCH)
+            answer_box(pg, c1)
+            pg.fill("[data-cm-words]", "Section 41, Dee to Eli")
+            went = pg.evaluate(PAST_AND_WATCH, c1)
             pg.wait_for_function(GONE, timeout=8000)
-            pg.wait_for_timeout(300)
-            placed = pg.evaluate(PLACED, first["id"])
-            answer_box(pg, r3)
-            pg.fill("[data-cm-words]", "Section 41, Dee past the last level")
-            went = pg.evaluate(PAST_AND_WATCH, r3)
-            pg.wait_for_function(GONE, timeout=8000)
-            deep = db("select a.public_id from social_comments c join social_comments a on a.id = c.answers_id"
-                      " where c.words = 'Section 41, Dee past the last level'")
+            rows1 = db("select a.public_id from social_comments c join social_comments a on a.id = c.answers_id"
+                       " where c.words = 'Section 41, Dee to Eli'")
             open_post(pg, post)
             again = pg.evaluate(SECTION)
-            check("a reply to a reply at the first level lands under it, at the second, fading in, its row's level said;"
-                  " the count goes up with it",
-                  placed["under"] == r1 and placed["level"] == "2" and faded(first["ops"]) >= 2 and placed["count"] == "5",
-                  f"{placed}; faded {faded(first['ops'])}")
-            check("a reply to a reply at the second level is past the thread's last level: no new reply in the thread, and"
-                  " \"Read N more replies\" under it counts it (2, from 1), glowing a moment in the landing's tint, which then"
-                  " fades; its row answers that reply; the count goes up; after a reload the thread says the same",
-                  went["more"] == ["Read 1 more reply", "Read 2 more replies"] and went["new"] == 0 and went["glow"]
-                  and went["tint"] and went["faded"] and deep == [(r3,)] and went["count"] == "6"
-                  and [x["more"] for a in next(c for c in again["list"] if c["id"] == c1)["answers"]
-                       for x in a["answers"] if x["id"] == r3] == ["Read 2 more replies"],
-                  f"{went}; rows {deep}")
+            check("a reply to a comment in a post's list is on the comment's own page (one level, everywhere): no new reply"
+                  " in the list, and its \"Read N replies\" counts it (4, from 3), glowing a moment in the landing's tint,"
+                  " which then fades; its row answers the comment; the count goes up; after a reload the list says the same",
+                  went["more"] == ["Read 3 replies", "Read 4 replies"] and went["new"] == 0 and went["glow"] and went["tint"]
+                  and went["faded"] and rows1 == [(c1,)] and went["count"] == "5"
+                  and [(c["id"], c["more"]) for c in again["list"]] == [(c1, "Read 4 replies")],
+                  f"{went}; rows {rows1}; again {[(c['id'], c['more']) for c in again['list']]}")
+            # On Eli's own page, a reply to Ana's (one of his replies) joins hers.
+            pg.goto(BASE + f"/social/c/{c1}")
+            ready(pg)
+            pg.wait_for_timeout(300)
+            answer_box(pg, r1)
+            pg.fill("[data-cm-words]", "Section 41, Dee to Ana")
+            went2 = pg.evaluate(PAST_AND_WATCH, r1)
+            pg.wait_for_function(GONE, timeout=8000)
+            rows2 = db("select a.public_id from social_comments c join social_comments a on a.id = c.answers_id"
+                       " where c.words = 'Section 41, Dee to Ana'")
+            p1 = pg.evaluate(PAGE_OF)
+            check("...and the same on a comment's own page: a reply to one in its list joins that one's \"Read N replies\" (3,"
+                  " from 2), glowing; the page's counts, its heading's and its row's, go up with it",
+                  went2["more"] == ["Read 2 replies", "Read 3 replies"] and went2["new"] == 0 and went2["glow"]
+                  and rows2 == [(r1,)] and p1["count"] == "5" and p1["row"] == "5",
+                  f"{went2}; rows {rows2}; page {p1}")
             # On a comment's own page its box replies to that comment, and a new reply lands at the end.
             pg.goto(BASE + f"/social/c/{r1}")
             ready(pg)
@@ -4112,10 +4201,11 @@ with sync_playwright() as p:
             p_rows = db("select a.public_id from social_comments c join social_comments a on a.id = c.answers_id"
                         " where c.words = 'Section 41, Dee on Ana''s page'")
             check("on a comment's own page the box replies to that comment (\"Reply to Aria\"), and a new reply lands at the"
-                  " end of its replies (oldest first), the counts in the heading and the row with it",
+                  " end of its list (oldest first), fading in, the counts in the heading and the row with it",
                   box["title"] == "Reply to Aria" and box["placeholder"] == "Reply to Aria…" and p_rows == [(r1,)]
-                  and p_sec["list"][-1][0] == on_page["id"] and p_sec["count"] == "5" and p_sec["row"] == "5",
-                  f"box {box}; rows {p_rows}; page {p_sec}")
+                  and p_sec["list"][-1][0] == on_page["id"] and faded(on_page["ops"]) >= 2
+                  and p_sec["count"] == "4" and p_sec["row"] == "4",
+                  f"box {box}; rows {p_rows}; page {p_sec}; faded {faded(on_page['ops'])}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(41, exc)
 
@@ -4161,7 +4251,7 @@ with sync_playwright() as p:
             stopped(42, exc)
 
     # ------------------------------------------------------------------ 43
-    if part(43, "deleting a reply with replies under it keeps its place: they stay at every depth, its drawing goes"):
+    if part(43, "deleting a reply with replies under it keeps its place: they stay at every depth, with their drawings"):
         try:
             ana = someone(b, "aria", "Aria Reyes")
             eli = someone(b, "elio", "Elio Moss")
@@ -4179,23 +4269,33 @@ with sync_playwright() as p:
             d_id = drawn[1].get("comment") if drawn[0] == 200 and isinstance(drawn[1], dict) else None
             d_sid = (db("select skribl_id from social_comments where public_id = ?", (d_id or "",)) or [(None,)])[0][0]
             had = skribl_there(d_sid)
+            # Aria's reply is in the list on Elio's comment's own page (one level, everywhere): she deletes it there.
             apg = ana.pg
-            open_post(apg, post)
+            apg.goto(BASE + f"/social/c/{c1}")
+            ready(apg)
+            apg.wait_for_timeout(300)
             gone = apg.evaluate(DELETE_AND_WATCH, [r1, "delete"])
             left = sorted(r[0] for r in db("select public_id from social_comments where post_id = ?", (post_id(post),)))
             row = db("select person_id, gone, words from social_comments where public_id = ?", (r1,))
-            open_post(apg, post)
-            again = apg.evaluate(SECTION)
-            shown = [(a["id"], [x["id"] for x in a["answers"]]) for a in next(c for c in again["list"] if c["id"] == c1)["answers"]]
-            check("Delete comment on a reply with replies under it keeps its place (\"This reply was deleted\", nobody's)"
-                  " and every reply under it stays, at any depth (past the thread's last level too, with their drawings);"
-                  " after a reload the thread shows the place with Eli's reply under it; the count drops by it alone",
-                  gone["place"] and gone["words"] == "This reply was deleted" and gone["under"] == [r3]
+            apg.goto(BASE + f"/social/c/{c1}")
+            ready(apg)
+            apg.wait_for_timeout(300)
+            again = [(c["id"], c["gone"], c["more"]) for c in apg.evaluate(SECTION)["list"]]
+            apg.goto(BASE + f"/social/c/{r1}")
+            ready(apg)
+            apg.wait_for_timeout(300)
+            its_own = [(c["id"], c["more"]) for c in apg.evaluate(SECTION)["list"]]
+            check("Delete comment on a reply with replies under it keeps its place (\"This reply was deleted\", nobody's),"
+                  " its \"Read 3 replies\" with it, and every reply under it stays, at any depth, with their drawings;"
+                  " after a reload Elio's page lists the place and Bram's reply, and the place's own page Elio's reply"
+                  " (\"Read 2 replies\"); the count drops by it alone",
+                  gone["place"] and gone["words"] == "This reply was deleted" and gone["more"] == "Read 3 replies"
                   and left == sorted([c1, r1, r2, r3, r4, d_id]) and row == [(None, "deleted", "")]
-                  and had == [True] and skribl_there(d_sid) == [True] and gone["count"] == "5"
-                  and shown == [(r1, [r3]), (r2, [])],
-                  f"{ {k: gone[k] for k in ('place', 'words', 'under', 'count')} }; left {left}; the row {row};"
-                  f" the deep drawing there before {had}, after {skribl_there(d_sid)}; the thread {shown}")
+                  and had == [True] and skribl_there(d_sid) == [True] and gone["count"] == "4"
+                  and again == [(r1, "This reply was deleted", "Read 3 replies"), (r2, None, None)]
+                  and its_own == [(r3, "Read 2 replies")],
+                  f"{ {k: gone[k] for k in ('place', 'words', 'more', 'count')} }; left {left}; the row {row};"
+                  f" the deep drawing there before {had}, after {skribl_there(d_sid)}; Elio's page {again}; the place's {its_own}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(43, exc)
 
@@ -4213,15 +4313,16 @@ with sync_playwright() as p:
             epg = eli.pg
             epg.goto(BASE + "/social/activity")        # looked: Ana's reply is Earlier now, a row of its own
             epg.wait_for_timeout(600)
-            r4 = said(ana, post, "Section 44, Ana to Eli, past the last level", answer_to=r3)
+            r4 = said(ana, post, "Section 44, Ana to Eli, deeper", answer_to=r3)
             epg.goto(BASE + "/social/activity")
             epg.wait_for_timeout(600)
             hrefs = epg.evaluate("() => [...document.querySelectorAll('a.act-row')].map(a => [a.textContent.replace(/\\s+/g, ' ').trim(), a.getAttribute('href')])")
             deep = next((h for t, h in hrefs if "Section 44, Ana to Eli" in t), None)
             near = next((h for t, h in hrefs if "Section 44, Ana's reply" in t), None)
-            check("Activity: a reply within two levels links to the post's page (#c-<id>); one deeper to the page of the"
-                  " reply it answers, where it is one of that reply's own; the rows say \"replied to your comment\"",
-                  near == f"/social/p/{post}#c-{r1}" and deep == f"/social/c/{r3}#c-{r4}"
+            check("Activity: a reply links to the page of what it answers (#c-<id>), where it is one of that one's own direct"
+                  " replies (one level, everywhere): Aria's to Elio's comment's page, her deeper one to Elio's reply's; the"
+                  " rows say \"replied to your comment\"",
+                  near == f"/social/c/{c1}#c-{r1}" and deep == f"/social/c/{r3}#c-{r4}"
                   and all("replied to your comment" in t for t, h in hrefs if "Section 44" in t),
                   f"rows {hrefs}")
 
@@ -4278,16 +4379,33 @@ with sync_playwright() as p:
                 for scheme in ("light", "dark"):
                     cctx, cpg = browser_as(b, ben, screen=screen, scheme=scheme)
                     open_post(cpg, post)
-                    seen[(screen, scheme)] = cpg.evaluate(ARTS, [d0, d1, d2])
+                    got = cpg.evaluate(ARTS, [d0])
+                    for page, one in ((c1, d1), (d1, d2)):
+                        cpg.goto(BASE + f"/social/c/{page}")
+                        ready(cpg)
+                        cpg.wait_for_timeout(300)
+                        got += cpg.evaluate(ARTS, [one])
+                    seen[(screen, scheme)] = got
                     close_ctx(cctx, cpg)
-            want = {"phone": [294, 246, 198], "desk": [264, 216, 168]}
+            want = {"phone": [294, 294, 294], "desk": [264, 264, 264]}
             widths = {" ".join(k): [a["w"] for a in v] for k, v in seen.items()}
             check("a drawn comment or reply (the owner's B, Nov 17): its drawing sits in its bubble under its words (a drawing"
-                  " alone under its name), as wide as the bubble's room at each level (294, 246 and 198px on a phone; 264,"
-                  " 216 and 168 on a desk), the bubble the room's width with it; still until tapped, with its line",
+                  " alone under its name), as wide as the bubble's room (294px on a phone, 264 on a desk), the bubble the"
+                  " room's width with it, in every list (one level, everywhere: Dora's on the post's page, Aria's on Elio's"
+                  " comment's, Elio's on Aria's); still until tapped, with its line",
                   all(widths[k] == want[k.split()[0]] for k in widths)
                   and all(a["inBubble"] and a["full"] and a["still"] for v in seen.values() for a in v),
                   f"{widths}; {[(a['inBubble'], a['full'], a['still']) for v in seen.values() for a in v][:6]}")
+            # A TAP ON THE DRAWING PLAYS IT: it never opens the comment's page, as a tap on its bubble does.
+            pg = ben.pg
+            open_post(pg, post)
+            pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", d0)
+            pg.wait_for_timeout(200)
+            pg.click(f"#c-{d0} > .cm-main .cm-art", timeout=8000)
+            pg.wait_for_timeout(900)
+            stayed = pg.evaluate("() => location.pathname")
+            check("a tap on a drawn comment's drawing plays it where it sits: it does not open the comment's page",
+                  stayed == f"/social/p/{post}", f"after the tap: {stayed}")
             pages = {}
             for screen in ("phone", "desk"):
                 cctx, cpg = browser_as(b, dee, screen=screen)
@@ -4326,12 +4444,14 @@ with sync_playwright() as p:
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
                     cctx, cpg = browser_as(b, dora, screen=screen, scheme=scheme)
-                    open_post(cpg, post)
+                    cpg.goto(BASE + f"/social/c/{c1}")          # Aria's place is in the list on Elio's comment's page
+                    ready(cpg)
+                    cpg.wait_for_timeout(300)
                     seen[(screen, scheme)] = cpg.evaluate(PLACE_LOOK, r1)
                     close_ctx(cctx, cpg)
             check("a place (the owner's yes, Nov 17, \"the place stays\"): an empty ring where its face was, 1.5px of the"
                   " card's edge; \"This reply was deleted\" in the row's second ink, 4.5:1 or more on the page; no bubble,"
-                  " no name, no row; Cora's reply under it on the line: phone and desk, light and dark",
+                  " no name, no row; its \"Read 1 reply\" (Cora's) on the line: phone and desk, light and dark",
                   went[0] == 200 and went[1].get("place") is True and all(v["ok"] for v in seen.values()),
                   f"delete {went}; { {' '.join(k): v for k, v in seen.items()} }")
             pg = dora.pg
@@ -4355,11 +4475,16 @@ with sync_playwright() as p:
             dc.post_json("/social/@cora/block", {})
             open_post(pg, post)
             hidden = pg.evaluate(SECTION)
+            pg.goto(BASE + f"/social/c/{c1}")
+            ready(pg)
+            pg.wait_for_timeout(300)
+            hidden_page = pg.evaluate(SECTION)
             dc.post_json("/social/@cora/unblock", {})
-            top = next((c for c in hidden["list"] if c["id"] == c1), {"answers": None})
-            check("a place with nothing under it the viewer may see is not shown to them (Dora blocked Cora: only Elio's"
-                  " comment), and a place is never counted",
-                  top["answers"] == [] and hidden["count"] == "1", f"{top}; count {hidden['count']}")
+            top = next((c for c in hidden["list"] if c["id"] == c1), {"more": "missing"})
+            check("a place with nothing under it the viewer may see is not shown to them (Dora blocked Cora): Elio's comment"
+                  " carries no \"Read N replies\" and his page lists nothing; a place is never counted",
+                  top["more"] is None and hidden["count"] == "1" and hidden_page["list"] == [] and hidden_page["count"] is None,
+                  f"{top}; count {hidden['count']}; Elio's page {hidden_page}")
             # THE CHAIN refuses to go down while a place is there: person_id is NOT NULL down there.
             pdb = os.path.join(TMP, "chain-places.db")
 

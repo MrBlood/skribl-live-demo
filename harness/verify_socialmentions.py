@@ -813,8 +813,10 @@ with sync_playwright() as p:
                     seen[(tag, "page")] = pg.evaluate(MENTIONS, ".post-page > .post-words")
                     heights[(tag, "page")] = pg.evaluate(HEIGHTS, ".post-page > .post-words")
                     seen[(tag, "comment")] = pg.evaluate(MENTIONS, f"#c-{c2} > .cm-main")
-                    seen[(tag, "answer")] = pg.evaluate(MENTIONS, f"#c-{a2} > .cm-main")
                     heights[(tag, "comment")] = pg.evaluate(HEIGHTS, f"#c-{c2} > .cm-main .cm-words")
+                    # A reply is in the list on the page of the comment it answers (one level, everywhere).
+                    go(pg, f"/social/c/{c2}", wait=500)
+                    seen[(tag, "answer")] = pg.evaluate(MENTIONS, f"#c-{a2} > .cm-main")
                     close_ctx(ctx, pg)
             want = {"card": [("@juno", "/social/@juno")], "page": [("@juno", "/social/@juno")],
                     "comment": [("@juno", "/social/@juno")], "answer": [("@rook", "/social/@rook")],
@@ -1335,7 +1337,7 @@ with sync_playwright() as p:
             check("one row, not two: a comment on her post that mentions her is the comment's row (\"said something"
                   " on your post\"), a reply to her the reply's, a quote of her post the quote's; and the dot is lit",
                   says3 == sorted([("Rook said something on your post", f"/social/p/{a7}#c-{ca}"),
-                                   ("Rook replied to your comment", f"/social/p/{b7}#c-{ans}"),
+                                   ("Rook replied to your comment", f"/social/c/{cb}#c-{ans}"),   # where it shows
                                    ("Rook quoted your post", f"/social/p/{q7}")]) and bell3 == "Activity, something new",
                   json.dumps([says3, bell3]))
             # GONE WITH IT: the post deleted, the comment deleted.
