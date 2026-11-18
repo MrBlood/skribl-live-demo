@@ -432,8 +432,8 @@ class Comment(SocialBase):
     #: THE REPLY IT ANSWERS (the comment thread, step 1; the owner's yes, Nov
     #: 17): the comment or the reply whose Reply was pressed, at any depth;
     #: None for a comment. A thread shows two levels of it, then "Read N more
-    #: replies" (comments.py). The replies from before it were filled with
-    #: their comment (parent_id), so they stay at the first level.
+    #: replies" (comments.py). It is empty for the replies from before it,
+    #: which answer their comment (comments.answered): the first level, as then.
     answers_id = sa.Column(BigId, sa.ForeignKey("social_comments.id", ondelete="CASCADE",
                                                 name="fk_social_comments_answers_id"), nullable=True)
     #: WHOM AN ANSWER ANSWERS (notifications): the author of the comment or the

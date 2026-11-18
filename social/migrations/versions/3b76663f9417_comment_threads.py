@@ -14,8 +14,11 @@ or altered. One column on social_comments, and its index:
 
 THE REPLIES ALREADY HERE STAY AT THE FIRST LEVEL, AS NOW: each answered
 something under its comment, and which reply is not written anywhere (only
-whom: to_person_id), so each is filled with its comment (parent_id). One
-UPDATE, every reply's own row; nothing else is read or written.
+whom: to_person_id), so their column stays empty, and the code reads an
+empty one as answering its comment (comments.answered). NO DATA WORK IN THE
+MIGRATION (v309's lesson): a column added nullable with no default, its
+foreign key and its index; no row of any table read or written, so a deploy
+waits on no data.
 
 The downgrade drops the index and the column: a reply to a reply goes back to
 sitting under its comment, as every answer did, and nothing is deleted.
@@ -40,8 +43,6 @@ def upgrade():
         t.add_column(sa.Column("answers_id", BigId, nullable=True))
         t.create_foreign_key("fk_social_comments_answers_id", "social_comments", ["answers_id"], ["id"],
                              ondelete="CASCADE")
-    comments = sa.table("social_comments", sa.column("parent_id", BigId), sa.column("answers_id", BigId))
-    op.execute(comments.update().where(comments.c.parent_id.isnot(None)).values(answers_id=comments.c.parent_id))
     op.create_index("ix_social_comments_answers_created", "social_comments", ["answers_id", "created_at"])
 
 

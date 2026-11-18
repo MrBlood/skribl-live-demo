@@ -29,24 +29,33 @@
  * drawing in it) and Remove, until Post sends it with the words. A comment's
  * drawing is still until tapped: posts.js plays only the post's own.
  *
- * ANSWER OPENS THE SAME BOX for the comment: a phone's sheet titled "Answer
+ * REPLY OPENS THE SAME BOX for the comment: a phone's sheet titled "Reply to
  * Theo", Theo's words under it; on a desk under its conversation, after its
- * answers ("Answer Theo…"), the page gliding to it if it is below the
- * screen. Answer again, Esc or a posted answer puts it away. An answer to an
- * answer sits under the same comment (the server says which). KIND, NEVER
- * JUMPY: everything that moves glides (social.css: the sheet, the fold, a
- * comment's room), the box fades in as its room opens, and under Reduce
- * Motion things are put in place and fade.
+ * replies ("Reply to Theo…"), the page gliding to it if it is below the
+ * screen. Reply again, Esc or a posted reply puts it away. KIND, NEVER JUMPY:
+ * everything that moves glides (social.css: the sheet, the fold, a comment's
+ * room), the box fades in as its room opens, and under Reduce Motion things
+ * are put in place and fade.
  *
- * A COMMENT'S ⋯ (social.js's SocialSheet, as the post's): Your comment:
- * Delete comment; somebody else's on your own post: Remove from my post and
- * Report comment; anybody else's: Report comment. Delete and Remove go at
- * once, the comment fading out with its answers; Report rises as a sheet of
- * its own with a post's reasons, into the site's own queue.
+ * THE THREAD (the comment thread, step 1; the owner's yes, Nov 17): a reply
+ * lands under the one it replies to (the server says which), at the next
+ * level (data-level); a reply to a reply at the second level is past what a
+ * thread shows, so it joins "Read N more replies" under it, which counts it
+ * and glows a moment. ON A COMMENT'S OWN PAGE (comment.html) the box replies
+ * to that comment, a new reply lands at the end of its replies (oldest
+ * first), and back goes where you were.
+ *
+ * A COMMENT'S ⋯, "This comment" (social.js's SocialSheet, as the post's):
+ * Copy link and Share… (its own page), then on your own Delete comment; on
+ * somebody else's on your own post Remove from my post and Report this
+ * comment; anybody else's Report this comment. Delete and Remove go at once,
+ * the comment fading out with every reply under it (on its own page, the
+ * page goes to what it replied to); Report rises as a sheet of its own with
+ * a post's reasons, into the site's own queue.
  *
  * LOAD MORE brings the next page of comments in place.
  *
- * SOMEBODY YOU MUTED (mutes; the owner's C): their comment or answer is one
+ * SOMEBODY YOU MUTED (mutes; the owner's C): their comment or reply is one
  * quiet line in its place, "Someone you muted said something. Show"
  * (_comments.html), its room the line's height, the comment hidden for real
  * under it. Show opens it for this visit: the line fades, the room opens to

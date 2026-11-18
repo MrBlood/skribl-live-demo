@@ -856,14 +856,26 @@ https://blooby.app`. The old address keeps working meanwhile.
 From the comments mock and the owner's "all yes on both" (Nov 12), in the
 mock's own classes, sizes and words. `social/comments.py`:
 
-    /social/p/<id>/comments           POST: a comment on a post, or an answer
-                                      to one (JSON); GET: the next page of its
-                                      comments, for Load more
+    /social/p/<id>/comments           POST: a comment on a post, or a reply
+                                      to one at any depth (JSON); GET: the
+                                      next page of its comments, for Load more
     /social/b/<skribl_id>/comments    the same, on a drawing shown outside a
                                       post (below)
-    /social/c/<id>/delete             your own comment, gone with its answers;
-                                      or, on your own post or drawing,
-                                      anybody's, removed from it (JSON)
+    /social/c/<id>                    a comment's or a reply's own page (the
+                                      comment thread, section 18): the way to
+                                      it, it as big as a post, its replies
+    /social/c/<id>/delete             your own comment, gone with every reply
+                                      under it; or, on your own post or
+                                      drawing, anybody's, removed from it (JSON)
+
+**The comment thread, step 1 (section 18, the owner's yes, Nov 17), changed
+what this section first built**: every comment sits in a bubble with its row
+under it (Reply and ⋯, the ⋯ "This comment": Copy link, Share…, then Delete
+comment, or Remove from my post and Report this comment); "Reply" is the word
+wherever the site said "Answer"; a reply keeps the reply it answers, and a
+thread shows two levels, then "Read N more replies", which opens that reply's
+own page. Where this section says "answer" below, read "reply"; section 18
+says what the thread is now.
 
 **On a post's own page** "Comments" and how many stand where "Comments open
 soon" was, and **the comment box is an icon** at the heading's end (the owner,

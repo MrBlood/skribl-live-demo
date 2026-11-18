@@ -2917,6 +2917,9 @@ with sync_playwright() as p:
             con.close()
             up2 = chain("upgrade", "head")
             filled = at("select public_id, post_id, drawing_id, owner_id from social_comments order by id")
+            # THE COMMENT THREAD (step 1): no data work going up (v309's lesson); a reply from before it keeps an
+            # empty answers_id, which the code reads as answering its comment, the first level, as then.
+            answered_ = at("select public_id, parent_id, answers_id from social_comments order by id")
             con = sqlite3.connect(mdb)
             took = {}
             for name, post, drawing_id in (("both", 10, "D1"), ("neither", None, None), ("a drawing", None, "D1")):
@@ -2933,9 +2936,10 @@ with sync_playwright() as p:
                   " post or on a drawing, never both or neither",
                   up1.returncode == 0 and up2.returncode == 0
                   and filled == [("C1", 10, None, 1), ("C2", 10, None, 1)]
+                  and answered_ == [("C1", None, None), ("C2", 100, None)]
                   and took == {"both": False, "neither": False, "a drawing": True},
                   f"up {up1.returncode}/{up2.returncode} {up2.stderr.strip().splitlines()[-1:] if up2.returncode else ''};"
-                  f" rows {filled}; taken {took}")
+                  f" rows {filled}; answering {answered_}; taken {took}")
             down = chain("downgrade", BEFORE)
             kept = at("select public_id from social_comments order by id")
             notnull = {r[1]: r[3] for r in at("pragma table_info(social_comments)")}
@@ -3760,6 +3764,8 @@ with sync_playwright() as p:
             check("a reply keeps the reply it answers (answers_id), at any depth, and the comment its conversation hangs"
                   " under (parent_id); a comment has neither",
                   rows == {c1: (None, None), r1: (c1, c1), r2: (c1, c1), r3: (c1, r1), r4: (c1, r3), r5: (c1, r4)}, f"{rows}")
+            # A reply from before replies kept what they answer has none: it answers its comment, the first level.
+            db_write("update social_comments set answers_id = null where public_id = ?", (r2,))
             seen = {}
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
@@ -3772,9 +3778,10 @@ with sync_playwright() as p:
             top = next((c for c in sec["list"] if c["id"] == c1), {"answers": []})
             shape = [(a["id"], [(x["id"], x["more"], [y["id"] for y in x["answers"]]) for x in a["answers"]], a["more"])
                      for a in top["answers"]]
-            check("the thread shows two levels: Eli's comment, Ana's and Ben's replies under it (oldest first), Eli's reply to"
-                  " Ana under Ana's; deeper ones are not in the thread, and under Eli's reply \"Read 2 more replies\""
-                  " (every reply under it, at any depth); the count says all six",
+            check("the thread shows two levels: Eli's comment, Ana's and Ben's replies under it (oldest first; Ben's from"
+                  " before replies kept what they answer, at the first level), Eli's reply to Ana under Ana's; deeper ones"
+                  " are not in the thread, and under Eli's reply \"Read 2 more replies\" (every reply under it, at any"
+                  " depth); the count says all six",
                   shape == [(r1, [(r3, "Read 2 more replies", [])], None), (r2, [], None)] and sec["count"] == "6",
                   f"{shape}; count {sec['count']}")
             lines = {" ".join(k): v["line"] for k, v in seen.items()}

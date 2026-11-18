@@ -1386,6 +1386,8 @@ with sync_playwright() as p_:
                     # Activity (notifications): whose, newest first (the owner's own index
                     # folded into it), and whom an answer answers, newest first
                     "ix_social_comments_owner_created", "ix_social_comments_to_created",
+                    # the comment thread: a reply's own replies, oldest first
+                    "ix_social_comments_answers_created",
                     # likes: once a person a thing, a thing's newest first, whose newest first,
                     # and who liked, newest first (a profile's Likes tab, the map's step 4)
                     "ix_social_likes_person_post", "ix_social_likes_person_drawing", "ix_social_likes_post_created",
@@ -1569,6 +1571,25 @@ with sync_playwright() as p_:
                          "ALTER TABLE social_posts ADD CONSTRAINT ck_social_posts_drawn_or_quote CHECK (skribl_id IS NOT NULL"
                          " OR is_quote) NOT VALID"],
               f"up {wo_up.returncode} {wu}; down {wo_down.returncode} {wd}")
+        # ...AND THE COMMENT THREAD'S (the owner's yes, Nov 17; step 1): a reply
+        # keeps the reply it answers. One column added nullable with no default,
+        # its foreign key and its index; no row of any table read or written
+        # (the replies already there stay empty, answering their comment, as the
+        # code reads them: v309's lesson); all of it dropped going down.
+        th_up, th_down = offline("upgrade", "7db36bfedef0:3b76663f9417"), offline("downgrade", "3b76663f9417:7db36bfedef0")
+        tu, td = statements(th_up.stdout), statements(th_down.stdout)
+        check("...and the comment thread's PostgreSQL DDL, read offline, is one column added nullable with no default, its"
+              " foreign key to the reply it answers and its index: no row of any table read or written; and all of it"
+              " dropped going down",
+              th_up.returncode == 0 and th_down.returncode == 0
+              and tu == ["ALTER TABLE social_comments ADD COLUMN answers_id BIGINT",
+                         "ALTER TABLE social_comments ADD CONSTRAINT fk_social_comments_answers_id FOREIGN KEY(answers_id)"
+                         " REFERENCES social_comments (id) ON DELETE CASCADE",
+                         "CREATE INDEX ix_social_comments_answers_created ON social_comments (answers_id, created_at)"]
+              and td == ["DROP INDEX ix_social_comments_answers_created",
+                         "ALTER TABLE social_comments DROP CONSTRAINT fk_social_comments_answers_id",
+                         "ALTER TABLE social_comments DROP COLUMN answers_id"],
+              f"up {th_up.returncode} {tu}; down {th_down.returncode} {td}")
         # ...and on SQLite, a chain with posts in it: up, every post kept and a
         # post of words alone taken (a post of nothing still refused); back
         # down refused while one is there, saying so before it changes

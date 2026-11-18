@@ -3,15 +3,18 @@ comments"), from the comments mock and the owner's "all yes on both" (Nov 12),
 and on every drawing since the owner's yes the same day ("Comments on every
 drawing, however it was made, so whatever you open has the comment box").
 
-    /p/<id>/comments          POST: a comment on a post, or an answer to one
-                              (JSON: {words, payload, answer_to}); its card
-                              comes back, to go in place. GET: the next page
-                              of the post's comments, for Load more
+    /p/<id>/comments          POST: a comment on a post, or a reply to one at
+                              any depth (JSON: {words, payload, answer_to});
+                              its card comes back, to go in place. GET: the
+                              next page of the post's comments, for Load more
                               ({html, next}).
     /b/<skribl_id>/comments   the same, on a drawing shown outside a post.
-    /c/<id>/delete            your own comment, gone, its answers with it; or,
-                              on your own post or drawing, anybody's, removed
-                              from it (JSON).
+    /c/<id>                   a comment's or a reply's own page (the comment
+                              thread, step 1): the way to it, it as big as a
+                              post, its replies.
+    /c/<id>/delete            your own comment, gone, every reply under it
+                              with it; or, on your own post or drawing,
+                              anybody's, removed from it (JSON).
 
 WHAT A COMMENT IS ON (On, below): a post, or a drawing shown outside a post
 (a skribl one of the site's people showed in the gallery from the Pad or Flip
@@ -29,13 +32,25 @@ the heading's end a round icon (a bubble with a plus) that opens the box
 (your face, the words, Draw, Flip, Post), folded away until asked for: a
 sheet from the bottom of a phone, gliding open under the heading on a desk
 (the owner, Nov 13: "The comment needs to be an icon not a card"). Then the
-comments newest first, each with its answers under it, oldest first; "Say
-the first thing" where they will be, at none. ANSWERS ARE ONE LEVEL DEEP:
-answering an answer puts the new one under the same comment (parent_id is
-always a top-level comment's), and Answer brings the box to that comment
-(comments.js). Each comment's ⋯: on your own, Delete comment; on somebody
-else's on your own post or drawing, Remove from my post and Report comment;
-on anybody else's, Report comment.
+comments newest first; "Say the first thing" where they will be, at none.
+
+THE THREAD (the comment thread, step 1; the owner's yes, Nov 17, to the
+Read More Replies mock; docs/SOCIAL-SITE.md section 18): every comment in a
+bubble, its row under it (Reply and ⋯). A REPLY KEEPS THE REPLY IT ANSWERS
+(answers_id, at any depth; parent_id is the comment its conversation hangs
+under, so a page reads a conversation by one index; a reply from before has
+none and answers its comment: answered()). A thread shows TWO LEVELS (LEVELS)
+under each comment, oldest first (_grow); a reply at the second level whose
+talk goes on carries "Read N more replies", N every reply under it at any
+depth that the viewer may see, and opens its own page. EVERY COMMENT AND
+REPLY HAS A PAGE (/c/<id>, comment.html): the way to it above (the_way),
+it as big as a post, its replies where a post's comments stand (replies_of),
+two levels again; the box there replies to it. Each comment's ⋯, "This
+comment": Copy link and Share… (its own page), then on your own Delete
+comment; on somebody else's on your own post or drawing, Remove from my post
+and Report this comment; on anybody else's, Report this comment. A link to a
+comment lands where it shows (landing()): its post's or drawing's page within
+two levels, deeper the page of the reply it answers.
 
 WHO MAY COMMENT: somebody signed in who is not taken down, with no block
 either way with the author of the post or the drawing; an answer also with
@@ -45,10 +60,11 @@ the comments are readable, and the icon raises a small sheet ("Say
 something?") whose Sign in comes back to the page with the box open.
 
 WHAT IS SHOWN, AND COUNTED: nothing by anybody hidden from the viewer (a
-block either way, or taken down: safety.hidden_ids), nor the answers under a
-comment that is; a comment taken down only to its author, with the note.
-The same rules count (counts(): Home's card, and the section's heading), so
-a number never promises a comment the page will not show.
+block either way, or taken down: safety.hidden_ids), nor any reply under one
+that is, at any depth; a comment taken down only to its author, with the
+note. The same rules count (counts(), a recursive read: Home's card, and the
+section's heading), and Activity's rows follow them (chain_shown), so a
+number never promises a comment the page will not show.
 
 SOMEBODY YOU MUTED (mutes; the owner's C): their comment or answer is one
 quiet line in its place, "Someone you muted said something. Show" ("…
@@ -62,8 +78,9 @@ comment's or an answer's words that is somebody is a link to their page, and
 they are told in Activity. Written with the comment, in the same
 transaction; read once a page for all its comments (named()).
 
-DELETING IS REAL, AND SAID IN CODE: a comment goes with its answers and its
-mentions (drop_comments), a post with its comments (posts.drop_post), a drawing
+DELETING IS REAL, AND SAID IN CODE: a comment or a reply goes with every reply
+under it, at any depth (branch), and their mentions (drop_comments), a post
+with its comments (posts.drop_post), a drawing
 deleted through the site with its comments (posts.bloob_delete), an account
 with its comments, every answer under them and every comment on what it
 owned (accounts.delete_person; owner_id is on the row, so nothing asks
