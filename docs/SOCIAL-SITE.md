@@ -1017,9 +1017,11 @@ for them to be on).
 
 **Counted, not kept (for now).** Section 3's rule 3 keeps counts as stored
 numbers. A comment count that hides what a block hides is each viewer's own,
-so it is counted, one grouped query a page for each kind (posts', drawings'),
-each on its own index, by the page's own rules; a kept count waits for a
-measurement that asks for it.
+so it is counted, by the page's own rules, one read a page for each kind
+(posts', drawings'); a kept count waits for a measurement that asks for it.
+Since the comment thread (section 18) that read is recursive, from the
+comments down, each step on the reply's own index, so a reply under one
+hidden from the viewer is not counted at any depth.
 
 `harness/verify_socialcomments.py` holds it through the demo's own server
 (sections 20 to 28 the drawings'), and `harness/verify_socialposts.py`
@@ -1027,6 +1029,11 @@ sections 10 and 11 the card's ways in; DECISIONS.md ("Comments at /social", and
 "Comments on every drawing") says what each check was shown red by.
 
 ## 11. Built: notifications
+
+Since the comment thread (section 18), Activity says "replied to your
+comment" and "replied with a drawing" where this section says "answered",
+and a row's link lands where the comment shows: its post's or drawing's
+page within two levels of it, deeper the page of the reply it answers.
 
 From the notifications mock and the owner's "all yes" (Nov 12), A, in the
 mock's own classes, sizes and words. `social/activity.py`:

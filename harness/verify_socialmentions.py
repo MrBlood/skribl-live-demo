@@ -56,7 +56,7 @@ people.
      Home's cards asks once.
  10. CONTRAST AND TARGETS, read off the paint: the mention on the card and on
      a comment's ground, phone and desk, light and dark (the mock's 8.26 /
-     8.39 and 7.75 / 9.89); every word of the list (its highlighted row too)
+     8.39, and the same in a comment's bubble); every word of the list (its highlighted row too)
      and of Activity's mention row at 4.5:1, the badge's @ at 3:1 or more;
      every target 44px or more but the mentions, links inside words (WCAG's
      inline exception), each painted where it is.
@@ -1703,11 +1703,13 @@ with app.app_context():
                     lows += [f"{tag} {w}: {x}" for w, r in got for x in r["low"]]
                     smalls += [f"{tag} {w}: {x}" for w, r in got for x in r["small"]]
                     inline += [(tag, w, x) for w, r in got for x in r["inline"]]
-            mock = {("light", "card"): 8.26, ("dark", "card"): 8.39, ("light", "comment"): 7.75, ("dark", "comment"): 9.89}
+            # A COMMENT SITS IN A BUBBLE since the comment thread (step 1, Nov 17): the site's card, so a mention in one
+            # reads as on a post's card (it was 7.75 and 9.89 on the page's ground).
+            mock = {("light", "card"): 8.26, ("dark", "card"): 8.39, ("light", "comment"): 8.26, ("dark", "comment"): 8.39}
             off = {" ".join(k): v for k, v in calcs.items() if k[1] in ("card", "comment")
                    and v != mock[(k[0].split()[1], k[1])]}
-            check("the mention's ink is the mock's, against what it sits on: 8.26:1 on the card light, 8.39 dark; 7.75 on"
-                  " a comment's ground light, 9.89 dark; phone and desk",
+            check("the mention's ink is the mock's, against what it sits on: 8.26:1 on the card light, 8.39 dark, and the"
+                  " same in a comment, whose bubble is the card (the comment thread); phone and desk",
                   len([k for k in calcs if k[1] in ("card", "comment")]) == 8 and not off, json.dumps({"off": off}))
             check("...and read off the paint, 4.5:1 or more against the ground beside it, on the card and on a"
                   " comment's ground, phone and desk, light and dark",

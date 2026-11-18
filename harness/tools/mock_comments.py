@@ -29,6 +29,20 @@ Run from the repository's root, with the venv's python:
 
     MOCK_OUT=/tmp/comments /tmp/skribl-venv/bin/python3 harness/tools/mock_comments.py
 
+MOCK_ROUND=drawings shoots the next round instead (Drawings in the Thread,
+Nov 17: https://claude.ai/artifact/BsQKU7AnAeDfAxxGNXCJyc): the same thread
+with real drawings in it, from artworks.py (the owner's cat and pug, How it
+works' cottage and snail), each made as the Pad records one (artdraw's hand
+and pressure) and given the still picture an editor makes as it posts
+(lib/faceframe.js card(), on the person's own page); today's look, A (the
+drawing 150px in its bubble) and B (as wide as the bubble's room), a drawn
+reply's own page with a drawing's still on the way to it, and the pictures
+for two smaller questions: deleting a reply that has replies (today, all go;
+or its place stays) and replying at the second level ("Read 3 more replies"
+glowing). It writes MOCK_OUT/shots/dr-<phone|desk>-<light|dark>-<opt>.png and
+measure.json (each drawing's size and room, its paper against what is behind
+it, the words' contrasts).
+
 It writes MOCK_OUT/shots/rm-<phone|desk>-<light|dark>-<thread|reply>.png and
 rm-phone-<light|dark>-sheet.png at 2x, and MOCK_OUT/measure.json (the room
 the words have at each depth, the icons' contrast, and an @name's when a

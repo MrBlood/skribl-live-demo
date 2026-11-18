@@ -2059,8 +2059,10 @@ with sync_playwright() as p:
                      "answering": ("Post",), "signed out": ("Comments", "Theo Lind"),
                      "say something?": ("Say something?", "Sign in, and you can reply to", "Not now", "Sign in"),
                      "home's card": ("4",), "⋯": ("Copy link", "Report this comment"), "your reports": ("Theo Lind",)}
+            # "Reply" is spelled out on a desk; a phone shows its icon alone (the comment thread, step 1).
             missing = [(" ".join(k), w) for k, v in seen.items() for w in musts.get(k[2], ())
-                       if not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
+                       if not (w == "Reply" and k[0] == "phone")
+                       and not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
             check("every word on the comments (a comment, a reply, the box replying, the count, Reply, a taken-down note,"
                   " \"Say something?\" signed out), a comment's ⋯ and its report, Home's card's count and Your Reports' comment card reads at 4.5:1"
                   " or more on what is painted behind it, every control is 44px or more each way, every text field 16px:"
@@ -3001,9 +3003,11 @@ with sync_playwright() as p:
             musts = {"comments": ("Comments", "Theo Lind", "That wave is so good.", "Reply"), "answering": ("Post",),
                      "signed out": ("Comments", "Theo Lind"), "say something?": ("Say something?", "Not now", "Sign in"),
                      "⋯": ("Copy link", "Report this comment"), "report": ("Report this comment",)}
+            # "Reply" is spelled out on a desk; a phone shows its icon alone (the comment thread, step 1).
             missing = [(" ".join(k), w) for k, v in seen.items() for w in musts.get(k[2], ())
-                       if not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
-            check("every word in a drawing's comments (a comment, an answer, the box answering, the count, Answer, \"Say something?\"),"
+                       if not (w == "Reply" and k[0] == "phone")
+                       and not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
+            check("every word in a drawing's comments (a comment, a reply, the box replying, the count, Reply, \"Say something?\"),"
                   " a comment's ⋯ and its report reads at 4.5:1 or more on what is painted behind it, every control is"
                   " 44px or more each way, every text field 16px: phone and desk, light and dark",
                   not low and not small and not fields and not missing and all(v["read"] >= 1 for v in seen.values()),
@@ -3707,9 +3711,9 @@ with sync_playwright() as p:
     # ------------------------------------------------------------------ 38
     if part(38, "the thread's look: bubbles, initials, the count's pill, no lines between; phone and desk, light and dark"):
         try:
-            ana = someone(b, "ana", "Ana Reyes")
-            eli = someone(b, "eli", "Eli Moss")
-            ben = someone(b, "ben", "Ben Okafor")
+            ana = someone(b, "aria", "Aria Reyes")
+            eli = someone(b, "elio", "Elio Moss")
+            ben = someone(b, "bram", "Bram Okafor")
             post = make_post(ben, "Section 38, a bike ride", seed=381)
             e38 = said(eli, post, "Is this the ride along the river? I think I know that bridge.")
             a38 = said(ana, post, "It is!", answer_to=e38)
@@ -3745,11 +3749,11 @@ with sync_playwright() as p:
     # ------------------------------------------------------------------ 39
     if part(39, "two levels, then \"Read N more replies\": the data, the thread, the line, the room, the count"):
         try:
-            ana = someone(b, "ana", "Ana Reyes")
-            eli = someone(b, "eli", "Eli Moss")
-            ben = someone(b, "ben", "Ben Okafor")
-            cyd = someone(b, "cyd", "Cyd Marsh")
-            dee = someone(b, "dee", "Dee Park")
+            ana = someone(b, "aria", "Aria Reyes")
+            eli = someone(b, "elio", "Elio Moss")
+            ben = someone(b, "bram", "Bram Okafor")
+            cyd = someone(b, "cora", "Cora Marsh")
+            dee = someone(b, "dora", "Dora Park")
             post = make_post(ben, "Section 39, a bike ride", seed=391)
             c1 = said(eli, post, "Is this the ride along the river? I think I know that bridge, and the mill beside it too.")
             r1 = said(ana, post, "It is! I ride it on Sundays.", answer_to=c1)
@@ -3801,18 +3805,18 @@ with sync_playwright() as p:
             # What the viewer may not see is not counted: Dee blocks Cyd, then Ana.
             dc = dee.client()
             dc.get("/social/")
-            dc.post_json("/social/@cyd/block", {})
+            dc.post_json("/social/@cora/block", {})
             open_post(dee.pg, post)
             no_cyd = dee.pg.evaluate(SECTION)
-            dc.post_json("/social/@cyd/unblock", {})
-            dc.post_json("/social/@ana/block", {})
+            dc.post_json("/social/@cora/unblock", {})
+            dc.post_json("/social/@aria/block", {})
             open_post(dee.pg, post)
             no_ana = dee.pg.evaluate(SECTION)
             dee.pg.goto(BASE + "/social/")
             dee.pg.wait_for_timeout(500)
             card = dee.pg.evaluate("(id) => { const c = document.querySelector('.post-card[data-post=\"' + id + '\"] .post-count');"
                                    " return c ? c.getAttribute('aria-label') : null; }", post)
-            dc.post_json("/social/@ana/unblock", {})
+            dc.post_json("/social/@aria/unblock", {})
             t1 = next((c for c in no_cyd["list"] if c["id"] == c1), {"answers": []})
             t2 = next((c for c in no_ana["list"] if c["id"] == c1), {"answers": []})
             check("N counts only what the viewer may see: with Cyd blocked, \"Read 1 more reply\"; with Ana blocked, her"
@@ -3828,11 +3832,11 @@ with sync_playwright() as p:
     # ------------------------------------------------------------------ 40
     if part(40, "a comment's own page: the way to it, it as big as a post, its replies; back; hidden is gone"):
         try:
-            ana = someone(b, "ana", "Ana Reyes")
-            eli = someone(b, "eli", "Eli Moss")
-            ben = someone(b, "ben", "Ben Okafor")
-            cyd = someone(b, "cyd", "Cyd Marsh")
-            dee = someone(b, "dee", "Dee Park")
+            ana = someone(b, "aria", "Aria Reyes")
+            eli = someone(b, "elio", "Elio Moss")
+            ben = someone(b, "bram", "Bram Okafor")
+            cyd = someone(b, "cora", "Cora Marsh")
+            dee = someone(b, "dora", "Dora Park")
             post = make_post(ben, "Section 40, a bike ride", seed=401)
             c1 = said(eli, post, "Section 40, is this the ride along the river?")
             r1 = said(ana, post, "Section 40, it is!", answer_to=c1)
@@ -3853,8 +3857,8 @@ with sync_playwright() as p:
                   " as a post (its 48px face and its words); \"Replies\" and how many, then its replies, Ana's with Cyd's"
                   " under it",
                   page["path"] == f"/social/c/{r3}" and page["title"] == "Reply"
-                  and page["way"] == [["Ben Okafor", f"/social/p/{post}"], ["Eli Moss", f"/social/c/{c1}"],
-                                      ["Ana Reyes", f"/social/c/{r1}"]]
+                  and page["way"] == [["Bram Okafor", f"/social/p/{post}"], ["Elio Moss", f"/social/c/{c1}"],
+                                      ["Aria Reyes", f"/social/c/{r1}"]]
                   and page["words"] == "Section 40, Sundays? I'll look out for you." and page["face"] == 48
                   and page["heading"] == "Replies" and page["count"] == "2"
                   and page["list"] == [[r4, [r5]]],
@@ -3877,31 +3881,53 @@ with sync_playwright() as p:
             check("back goes where you were (the post's page you came from); come to it from elsewhere, to what it is on;"
                   " a comment's own page says \"Comment\", the way to it the post alone",
                   back_to == f"/social/p/{post}" and top_page["title"] == "Comment"
-                  and top_page["way"] == [["Ben Okafor", f"/social/p/{post}"]] and cold_back == f"/social/p/{post}",
+                  and top_page["way"] == [["Bram Okafor", f"/social/p/{post}"]] and cold_back == f"/social/p/{post}",
                   f"back {back_to}; the comment's {top_page}; cold back {cold_back}")
             nctx, npg = browser_as(b, None)
             out = status(npg, f"/social/c/{r3}")
             close_ctx(nctx, npg)
             dc = dee.client()
             dc.get("/social/")
-            dc.post_json("/social/@ana/block", {})
+            dc.post_json("/social/@aria/block", {})
             blocked = status(pg, f"/social/c/{r3}"), status(pg, f"/social/c/{r1}")
-            dc.post_json("/social/@ana/unblock", {})
+            dc.post_json("/social/@aria/unblock", {})
             missing = status(pg, "/social/c/nothing-here")
             check("signed out it is readable; a comment hidden from the viewer, or anything on the way to it (Ana's reply,"
                   " blocked), is as gone as one not there (404)",
                   out == 200 and blocked == (404, 404) and missing == 404, f"out {out}; blocked {blocked}; missing {missing}")
+            # THE NEW SCREEN, as section 13 reads the post's: every word on it at 4.5:1 or more on what is painted behind
+            # it, every control 44px or more each way; phone and desk, light and dark.
+            seen = {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    cctx, cpg = browser_as(b, dee, screen=screen, scheme=scheme)
+                    cpg.goto(BASE + f"/social/c/{r3}")
+                    ready(cpg)
+                    cpg.wait_for_timeout(300)
+                    seen[(screen, scheme)] = cpg.evaluate(READ, "main, header.top")
+                    close_ctx(cctx, cpg)
+            low = [(k, v["low"]) for k, v in seen.items() if v["low"]]
+            small = [(k, v["small"]) for k, v in seen.items() if v["small"]]
+            musts = ("Reply", "Bram Okafor", "Section 40, is this the ride along the river?", "Elio Moss", "@elio",
+                     "Section 40, Sundays? I'll look out for you.", "Replies", "Section 40, the red bell.")
+            missing = [(" ".join(k), w) for k, v in seen.items() for w in musts
+                       if not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
+            check("every word on a comment's own page (the way to it, it, its replies) reads at 4.5:1 or more on what is"
+                  " painted behind it, and every control is 44px or more each way: phone and desk, light and dark",
+                  not low and not small and not missing and all(v["read"] >= 8 for v in seen.values()),
+                  f"{sum(v['read'] for v in seen.values())} read, the lowest {min(v['lowest'] for v in seen.values())};"
+                  f" under 4.5: {low[:3]}; small: {small[:3]}; not read: {missing[:4]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(40, exc)
 
     # ------------------------------------------------------------------ 41
     if part(41, "replying at each level: under the one it replies to, or past the last level into Read more"):
         try:
-            ana = someone(b, "ana", "Ana Reyes")
-            eli = someone(b, "eli", "Eli Moss")
-            ben = someone(b, "ben", "Ben Okafor")
-            cyd = someone(b, "cyd", "Cyd Marsh")
-            dee = someone(b, "dee", "Dee Park")
+            ana = someone(b, "aria", "Aria Reyes")
+            eli = someone(b, "elio", "Elio Moss")
+            ben = someone(b, "bram", "Bram Okafor")
+            cyd = someone(b, "cora", "Cora Marsh")
+            dee = someone(b, "dora", "Dora Park")
             post = make_post(ben, "Section 41, a bike ride", seed=411)
             c1 = said(eli, post, "Section 41, Eli's comment")
             r1 = said(ana, post, "Section 41, Ana's reply", answer_to=c1)
@@ -3948,9 +3974,9 @@ with sync_playwright() as p:
             p_sec = pg.evaluate(PAGE_OF)
             p_rows = db("select a.public_id from social_comments c join social_comments a on a.id = c.answers_id"
                         " where c.words = 'Section 41, Dee on Ana''s page'")
-            check("on a comment's own page the box replies to that comment (\"Reply to Ana\"), and a new reply lands at the"
+            check("on a comment's own page the box replies to that comment (\"Reply to Aria\"), and a new reply lands at the"
                   " end of its replies (oldest first), the counts in the heading and the row with it",
-                  box["title"] == "Reply to Ana" and box["placeholder"] == "Reply to Ana…" and p_rows == [(r1,)]
+                  box["title"] == "Reply to Aria" and box["placeholder"] == "Reply to Aria…" and p_rows == [(r1,)]
                   and p_sec["list"][-1][0] == on_page["id"] and p_sec["count"] == "5" and p_sec["row"] == "5",
                   f"box {box}; rows {p_rows}; page {p_sec}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
@@ -3959,9 +3985,9 @@ with sync_playwright() as p:
     # ------------------------------------------------------------------ 42
     if part(42, "the ⋯'s Copy link gives the comment's own page; on its own page Delete goes back to what it answered"):
         try:
-            ana = someone(b, "ana", "Ana Reyes")
-            eli = someone(b, "eli", "Eli Moss")
-            ben = someone(b, "ben", "Ben Okafor")
+            ana = someone(b, "aria", "Aria Reyes")
+            eli = someone(b, "elio", "Elio Moss")
+            ben = someone(b, "bram", "Bram Okafor")
             post = make_post(ben, "Section 42, a bike ride", seed=421)
             c1 = said(eli, post, "Section 42, Eli's comment")
             r1 = said(ana, post, "Section 42, Ana's reply", answer_to=c1)
@@ -4000,9 +4026,9 @@ with sync_playwright() as p:
     # ------------------------------------------------------------------ 43
     if part(43, "deleting a reply takes every reply under it, at any depth, its drawings with them"):
         try:
-            ana = someone(b, "ana", "Ana Reyes")
-            eli = someone(b, "eli", "Eli Moss")
-            ben = someone(b, "ben", "Ben Okafor")
+            ana = someone(b, "aria", "Aria Reyes")
+            eli = someone(b, "elio", "Elio Moss")
+            ben = someone(b, "bram", "Bram Okafor")
             post = make_post(ben, "Section 43, a bike ride", seed=431)
             c1 = said(eli, post, "Section 43, Eli's comment")
             r1 = said(ana, post, "Section 43, Ana's reply", answer_to=c1)
@@ -4032,10 +4058,10 @@ with sync_playwright() as p:
     # ------------------------------------------------------------------ 44
     if part(44, "Activity and Your Reports land where a reply shows; a reply under a hidden reply is nobody's row"):
         try:
-            ana = someone(b, "ana", "Ana Reyes")
-            eli = someone(b, "eli", "Eli Moss")
-            ben = someone(b, "ben", "Ben Okafor")
-            cyd = someone(b, "cyd", "Cyd Marsh")
+            ana = someone(b, "aria", "Aria Reyes")
+            eli = someone(b, "elio", "Elio Moss")
+            ben = someone(b, "bram", "Bram Okafor")
+            cyd = someone(b, "cora", "Cora Marsh")
             post = make_post(ben, "Section 44, a bike ride", seed=441)
             c1 = said(eli, post, "Section 44, Eli's comment")
             r1 = said(ana, post, "Section 44, Ana's reply", answer_to=c1)
@@ -4068,12 +4094,12 @@ with sync_playwright() as p:
             # Ben (the post's) blocks Ana: Eli's reply to her, and hers under it, are nobody's row for Ben.
             bc = ben.client()
             bc.get("/social/")
-            bc.post_json("/social/@ana/block", {})
+            bc.post_json("/social/@aria/block", {})
             bpg = ben.pg
             bpg.goto(BASE + "/social/activity")
             bpg.wait_for_timeout(600)
             ben_rows = bpg.evaluate("() => [...document.querySelectorAll('a.act-row')].map(a => a.textContent.replace(/\\s+/g, ' ').trim())")
-            bc.post_json("/social/@ana/unblock", {})
+            bc.post_json("/social/@aria/unblock", {})
             check("a reply under one hidden from you (Ben blocked Ana: Eli's reply to her) is nobody's row in Activity, at"
                   " any depth, as its page hides it",
                   any("Eli's comment" in t for t in ben_rows) and not any("Eli to Ana" in t for t in ben_rows),

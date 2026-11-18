@@ -1307,7 +1307,7 @@ with sync_playwright() as p:
             want = {"icon": "blooby-icon-180.png", "title": "Nothing new yet",
                     # likes (the likes mock), follows (the follow mock), reposts (the reposts
                     # mock) and mentions (the mentions mock): each is in Activity too
-                    "words": "When someone follows you, likes or reposts your post, says something on it, answers you or mentions you, you’ll see it here.",
+                    "words": "When someone follows you, likes or reposts your post, says something on it, replies to you or mentions you, you’ll see it here.",
                     "button": "Make a skribl"}
             check("with nothing yet: Blooby as his Home Screen icon (64px, painted), \"Nothing new yet\", the words, and"
                   " Make a skribl (52px); no New, no Earlier; phone and desk",

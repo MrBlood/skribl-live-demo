@@ -439,7 +439,7 @@ class Comment(SocialBase):
     #: WHOM AN ANSWER ANSWERS (notifications): the author of the comment or the
     #: answer whose Answer was pressed. parent_id cannot say it: an answer to
     #: an answer sits under the same top-level comment, whoever wrote that.
-    #: Activity's "answered your comment" reads it. None for a comment; set to
+    #: Activity's "replied to your comment" reads it. None for a comment; set to
     #: nothing, in code, when that person's account goes (ON DELETE SET NULL
     #: is the net).
     to_person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="SET NULL",
@@ -470,7 +470,7 @@ class Comment(SocialBase):
         #: Whose it is, newest first: Activity's comments on what you own, and
         #: the bell's dot (since you last looked); deleting an account by it.
         sa.Index("ix_social_comments_owner_created", "owner_id", "created_at"),
-        #: Answers to you, newest first: Activity's "answered your comment".
+        #: Replies to you, newest first: Activity's "replied to your comment".
         sa.Index("ix_social_comments_to_created", "to_person_id", "created_at"),
         sa.Index("ix_social_comments_skribl_id", "skribl_id"),
     )

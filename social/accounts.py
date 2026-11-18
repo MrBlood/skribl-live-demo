@@ -355,7 +355,7 @@ def delete_person(sess, person_id):
     from .people import drop_person_words
     drop_person_words(person_id)
     # Answers to them, by people who stay, stay too, answering nobody now
-    # (notifications: Activity's "answered your comment" reads whom).
+    # (notifications: Activity's "replied to your comment" reads whom).
     from .models import Comment
     sess.execute(sa.update(Comment).where(Comment.to_person_id == person_id).values(to_person_id=None))
     sess.execute(sa.delete(Challenge).where(Challenge.person_id == person_id))
