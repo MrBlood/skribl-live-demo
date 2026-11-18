@@ -178,7 +178,10 @@ the `line` key of the listing:
 
 Without it the line says what it can until the drawing arrives. A surface
 with a transport of its own passes `line=False` and keeps the 16:9 box with
-mute and loop on it.
+mute and loop on it. The line's parts sit on layers of their own, not
+wrapped in one: its buttons at `z-index` 1, the scrubber's bubble at 2 and
+the speed's menu at 3. A bar of yours that posts scroll under, such as a
+sticky header, wants 4 or more.
 
 **A line that waits** (Nov 13: the Skribl site's calm card). Pass
 `line_waits=True` and the line under the drawing takes no room and shows

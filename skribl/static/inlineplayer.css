@@ -375,10 +375,10 @@
 .skribl-inline-say .rl-song-k{padding-right:8px;font-weight:600}
 .skribl-inline-say .rl-song button{flex:0 0 auto;max-width:none;padding:0 12px;white-space:nowrap}
 @media (max-width:400px){.skribl-inline-say .rl-song{padding-inline:10px 6px;font-size:min(1em,3.9vw)}.skribl-inline-say .rl-song button{padding:0 8px}.skribl-inline-say .rl-song-k{padding-right:4px}}
-.skribl-inline-line .skribl-inline-controls{position:static;display:flex;gap:2px;opacity:1}
+.skribl-inline-line .skribl-inline-controls{position:static;gap:2px;opacity:1}
 /* A post's full screen (lib/postfull.js, postfull.css): its button shows only where that module runs. */
 .skribl-inline-full{display:none}
-.skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop){width:32px;height:32px;border:0;font:inherit}
+.skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop){z-index:1;width:32px;height:32px;border:0;font:inherit}
 .skribl-inline-line .skribl-inline-mute,.skribl-inline-line.is-noloop .skribl-inline-loop{color:inherit;background:none}
 .skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop)::before{inset:-6px}
 .skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop[aria-pressed="false"]) svg{opacity:.62}

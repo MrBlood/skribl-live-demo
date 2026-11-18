@@ -1885,7 +1885,14 @@ with sync_playwright() as sp:
     #   building them again (which would lay a second strip in the scrubber),
     #   and the button's dress lives in postfull.css, not here. 82,041 B
     #   measured, against 81,785 before it.
-    EMBED_RATCHET = 82_044
+    # LOWERED (a bug fix: main red after #961, CI's DejaVu Sans wrapping a
+    #   comment's line under its buttons, where the speed chip's reach took
+    #   the bottom of the full-screen button's 44px): -3 B, all
+    #   inlineplayer.css -- Mute and Repeat at z-index 1 over the words' row
+    #   (+10; Full screen's is in postfull.css, outside this sum), paid for by
+    #   the line's controls repeating the base rule's display:flex (-13).
+    #   82,038 B measured, against 82,041 before it.
+    EMBED_RATCHET = 82_041
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
