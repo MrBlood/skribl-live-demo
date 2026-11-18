@@ -46559,8 +46559,13 @@ rows red (the pill in dark 2.996:1, while it plays 2.533); here green (5.095,
 FLIP: no change. Its pill holds Play and its length, no toggle to outline,
 and Flip has no Repeat.
 
-THE SUITES, side by side (run_parallel -j 3): @@SUITES@@. NOT RUN: the full
-battery (main's run after the merge does it).
+THE SUITES, side by side (run_parallel -j 3, 31.9 min), on the final tree:
+verify_padrepeat 26/26, verify_replayspeed 192/192, verify_onepill
+2884/2884, verify_parity 436/436, verify_contrast 677/677, verify_ux
+491/491, verify_layout 257/257, verify_a11y 444/444, verify_a11ypages
+162/162, verify_sizeclass 89/89, verify_pointerpad 56/56 and verify_docs
+144/144: 12 of 12. NOT RUN: the full battery (main's run after the merge
+does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: on a desk in dark, Repeat pressed in the Play pill wears
