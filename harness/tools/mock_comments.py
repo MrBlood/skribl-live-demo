@@ -65,6 +65,16 @@ place, shown open on Eli's with "Hide replies"), and the page A opens. It
 writes MOCK_OUT/shots/tr-<phone|desk>-<light|dark>-<now|a|b|page>.png and
 measure.json (the list's height, the links' words).
 
+MOCK_ROUND=count shoots the count by the talk cloud (Count by the Talk
+Cloud, Nov 17: https://claude.ai/artifact/5JATdGYwfEGASbpGxjBDr3), from the
+owner's "You only need to show the replies not the nested 5 replies. Click
+on the reply and it shows you the nested tree. First reply just has count
+by the talk cloud": today's "Read N replies" on the thread's line beside A
+(the line gone, the count in the comment's own row beside its talk cloud),
+under a post and on a comment's own page. It writes
+MOCK_OUT/shots/ct-<list|page>-<phone|desk>-<light|dark>-<now|a>.png and
+measure.json (the list's height, each row's parts, the count's contrast).
+
 It writes MOCK_OUT/shots/rm-<phone|desk>-<light|dark>-<thread|reply>.png and
 rm-phone-<light|dark>-sheet.png at 2x, and MOCK_OUT/measure.json (the room
 the words have at each depth, the icons' contrast, and an @name's when a
@@ -1163,10 +1173,91 @@ def round_tree(b):
             print(screen, scheme, "done", flush=True)
 
 
+# ================= THE COUNT BY THE TALK CLOUD (the owner, Nov 17, after step 3) =================
+# "You only need to show the replies not the nested 5 replies. Click on the
+# reply and it shows you the nested tree. First reply just has count by the
+# talk cloud." Today a comment with replies under it carries "Read N
+# replies" on the thread's lilac line; A takes that line away and puts the
+# count in the comment's own row, beside its talk cloud, as a post's row
+# says how many comments ("💬 5"; on a desk the word Reply gives way to the
+# count, and stays at none). A tap on the comment still opens its page.
+COUNT = r"""(opt) => {
+  const out = [];
+  document.querySelectorAll('.cm').forEach(li => {
+    const ans = li.querySelector(':scope > .cm-answers'), rm = ans && ans.querySelector('.cm-rm');
+    if (!rm) return;
+    const n = rm.getAttribute('data-n');
+    out.push([li.id, n]);
+    if (opt === 'now') return;
+    ans.remove();
+    const b = li.querySelector(':scope > .cm-main .cm-act[data-cm-answer]');
+    if (b && !b.querySelector('.cm-n')) { const c = document.createElement('span'); c.className = 'cm-n'; c.textContent = n;
+      b.querySelector('svg').after(c); b.setAttribute('aria-label', n + (n === '1' ? ' reply' : ' replies') + ' · Reply'); }
+  });
+  return out; }"""
+COUNT_CSS = """
+.cm-act .cm-n { font-variant-numeric: tabular-nums; }
+.cm-act:has(.cm-n) .cm-word { display: none; }
+.nav { visibility: hidden !important; }
+"""
+COUNT_MEASURE = r"""() => {
+  const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number); const f = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return Math.round(((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)) * 100) / 100; };
+  const ground = (el) => { for (let e = el; e; e = e.parentElement) { const bg = getComputedStyle(e).backgroundColor; if (bg && !/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) return bg; } return 'rgb(255, 255, 255)'; };
+  const list = document.querySelector('.cm-list'), n = document.querySelector('.cm-act .cm-n');
+  const rows = [...document.querySelectorAll('.cm-list > .cm')].map(li => [...li.querySelectorAll(':scope > .cm-main .cm-acts > *')]
+    .filter(e => e.getClientRects().length).map(e => e.textContent.trim() || e.getAttribute('aria-label')));
+  return { listH: list ? Math.round(list.getBoundingClientRect().height) : null, rows,
+           count: n ? { ratio: ratio(getComputedStyle(n).color, ground(n)), size: getComputedStyle(n).fontSize } : null }; }"""
+
+
+def round_count(b):
+    """The count by the talk cloud: today (Read N replies on the line) and A
+    (the count in the row), the post's list and a comment's own page."""
+    import artworks
+    ben = member(b, "ben", "Ben Okafor")
+    ana = member(b, "ana", "Ana Reyes")
+    cyd = member(b, "cyd", "Cyd Marsh")
+    dee = member(b, "dee", "Dee Park")
+    eli = member(b, "eli", "Eli Moss")
+    scene = with_card(ben, art_payload(artworks.scene(), seed=2))
+    cat = with_card(ana, art_payload(artworks.cat(), seed=3))
+    post = make_post(ben, "Morning ride past the old cottage, drawn on the train", payload=scene)
+    c1 = say_(eli, post, "Is that the cottage by the river? I think I know it.")
+    r1 = say_(ana, post, "It is! Our cat lives there.", answer_to=c1, payload=cat)
+    r2 = say_(ben, post, "Yes, the one by the old mill. Good eye.", answer_to=c1)
+    r3 = say_(eli, post, "Then she needs a friend.", answer_to=r1)
+    r4 = say_(ana, post, "Ha! They'd be best friends.", answer_to=r3)
+    r5 = say_(cyd, post, "I'd watch that cartoon every Sunday.", answer_to=r4)
+    c2 = say_(cyd, post, "Love the little curl of smoke from the chimney.")
+    r6 = say_(ben, post, "Thank you! It took three tries.", answer_to=c2)
+    print("fixture", post, c1, c2, flush=True)
+    when = {c1: "5h", r1: "4h", r2: "4h", r3: "3h", r4: "2h", r5: "1h", c2: "2h", r6: "1h"}
+    TIMES = """(m) => { for (const [id, t] of Object.entries(m)) { const li = document.getElementById('c-' + id);
+      const w = li && li.querySelector(':scope > .cm-main .cm-when'); if (w) w.textContent = t; }
+      const way = document.querySelector('.cm-way-head time'); if (way) way.textContent = '6h';
+      const at = document.querySelector('.post-meta time'); if (at) at.textContent = 'Nov 17 at 2:12 PM'; }"""
+    for screen in ("phone", "desk"):
+        for scheme in ("light", "dark"):
+            for where, path, kind in (("list", f"/social/p/{post}", "thread"), ("page", f"/social/c/{c1}", "page")):
+                for opt in ("now", "a"):
+                    ctx, pg = browser_as(b, dee, screen=screen, scheme=scheme, reduced=True)
+                    go(pg, path, wait=1000)
+                    pg.evaluate(TIMES, when)
+                    pg.evaluate(STYLE, COUNT_CSS)
+                    st = pg.evaluate(COUNT, opt)
+                    pg.wait_for_timeout(400)
+                    snap(pg, f"ct-{where}-{screen}-{scheme}-{opt}", kind)
+                    meas[f"{where} {screen} {scheme} {opt}"] = dict(pg.evaluate(COUNT_MEASURE), setup=st)
+                    close_ctx(ctx, pg)
+            print(screen, scheme, "done", flush=True)
+
+
 ROUND = os.environ.get("MOCK_ROUND", "replies")
 with sync_playwright() as p:
     b = p.chromium.launch()
-    {"drawings": round_drawings, "world": round_world, "tree": round_tree}.get(ROUND, round_replies)(b)
+    {"drawings": round_drawings, "world": round_world, "tree": round_tree, "count": round_count}.get(ROUND, round_replies)(b)
     b.close()
 open(f"{OUT}/measure.json", "w").write(_json.dumps(meas, indent=1))
 if ERRS:
