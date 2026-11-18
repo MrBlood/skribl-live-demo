@@ -46087,3 +46087,37 @@ after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: every comment's row has a heart between Reply and ⋯.
+
+## After v330 -- Main red after #961: a mention's plain copy keeps its link's type
+
+WHAT WENT RED. Main's run after #961 (the comment thread, step 1): sqlite
+2/6 and postgresql 2/6 both had verify_socialmentions 50/51, "nothing else
+in the words moves": a comment's words on a desk measured 46.38px with its
+mention and 23.19 without (desk, light and dark).
+- The check (HEIGHTS) copies the words beside them with each mention made
+  plain words, and compares the two boxes. Plain words are 400; a mention
+  is 600, so the copy was narrower.
+- Since the thread's bubbles (#961) a comment's words have 264px on a desk,
+  not 292. In CI's DejaVu Sans, "@juno look at the timing on this!" is
+  263.4px plain and 268.2px with its 600 mention: the copy fit one line and
+  the comment wrapped to two. Here (Inter) it is 243.5px, and passed.
+- The app was right: a mention's weight is its look (Nov 15), and words
+  wrap where they wrap.
+
+THE FIX is in the instrument. The copy's plain words keep the link's own
+type (its face, size, weight, style and spacing), so only what a link could
+add to the box (padding, a border, a margin, a taller line, a block of its
+own) can tell the two apart.
+
+CALIBRATED (section 2, the comment's words in DejaVu Sans as CI has them):
+the old check red as CI was (46.38 and 23.19, desk light and dark); the new
+one green; the new one with a mention that moves (inline-block, 3px above
+and below) red on every surface, card, page and comment, phone and desk; as
+built green. verify_socialmentions 51/51 and verify_docs 144/144 side by
+side.
+
+ALSO RED, NOT TOUCHED: postgresql 2/6's verify_contrast read a Pad tab's
+word ("Photo", Music, dark phone) at 6.86:1 while its ground was still
+gliding (0.6s later it read the settled ink); its sqlite twin passed the
+same tree, and the tree changed nothing of the Pad's. The fixed-wait read
+named in "Main red after #958" (SETTLE is its fix) if it comes back.

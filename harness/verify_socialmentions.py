@@ -629,11 +629,23 @@ MENTIONS = r"""(sel) => { const root = document.querySelector(sel); if (!root) r
 
 # THE WORDS' BOX with the mentions and without them: a copy of the words
 # beside them, its links made plain words again, measured in the same place.
+# THE PLAIN WORDS KEEP THE LINK'S OWN TYPE (its face, size and weight: a
+# mention is meant to be 600), so only what a link could add to the box
+# (padding, a border, a margin, a taller line, a block of its own) can tell
+# the two apart. As plain 400 words they were narrower than the link, and a
+# comment's words near their bubble's edge (264px on a desk since the
+# comment thread's bubbles) wrapped with the link and not without it: in
+# CI's DejaVu Sans, "@juno look at the timing on this!" is 263.4px plain and
+# 268.2px with the 600 mention, and main went red after the thread's step 1.
 HEIGHTS = r"""(sel) => { const w = document.querySelector(sel); if (!w) return null;
-  const copy = w.cloneNode(true); copy.querySelectorAll('a.mention').forEach(a => a.replaceWith(document.createTextNode(a.textContent)));
+  const links = [...w.querySelectorAll('a.mention')], copy = w.cloneNode(true);
+  copy.querySelectorAll('a.mention').forEach((a, i) => { const s = document.createElement('span'), cs = getComputedStyle(links[i]);
+    for (const k of ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontStretch', 'fontVariant', 'letterSpacing',
+                     'wordSpacing', 'textTransform']) s.style[k] = cs[k];
+    s.textContent = a.textContent; a.replaceWith(s); });
   copy.style.visibility = 'hidden'; w.after(copy);
   const a = w.getBoundingClientRect().height, b = copy.getBoundingClientRect().height; copy.remove();
-  return { with: Math.round(a * 100) / 100, without: Math.round(b * 100) / 100, links: w.querySelectorAll('a.mention').length }; }"""
+  return { with: Math.round(a * 100) / 100, without: Math.round(b * 100) / 100, links: links.length }; }"""
 
 # THE LIST beside the composer's field (or a comment box's): whether it is
 # open, its rows (name, handle, height, the face's size, the inks and sizes),
