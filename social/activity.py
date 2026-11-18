@@ -446,6 +446,10 @@ def _drawings_shown(me, drawing_ids, sk):
 
 # ---- the dot ---------------------------------------------------------------------
 
+#: The rows that never light the dot (nothing to answer): a like, a like on a
+#: comment (the comment thread, step 2), a follow, a repost and a quote.
+QUIET_KINDS = ("like", "like_comment", "follow", "repost", "quote")
+
 def dot(me):
     """Whether anything is new for `me` since they last looked: Activity's
     own rules, a handful of rows at most; Skribl is asked only when every new
@@ -688,8 +692,8 @@ def register(bp, skribl_blueprint="skribl"):
         sess.execute(sa.update(Person).where(Person.id == me.id).values(activity_seen_at=now))
         sess.flush()
         # The rail's dot (a desk) fades as they look, where there was one: a
-        # like, a follow, a repost or a quote never lit it.
-        g.social_activity_dot = ("going" if any(r["kind"] not in ("like", "follow", "repost", "quote")
+        # like (a comment's too), a follow, a repost or a quote never lit it.
+        g.social_activity_dot = ("going" if any(r["kind"] not in QUIET_KINDS
                                                  or r.get("mentioned") for r in fresh) else None)
         return _page("activity.html", here="activity", fresh=fresh, earlier=earlier)
 

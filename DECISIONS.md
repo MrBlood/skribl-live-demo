@@ -46047,7 +46047,9 @@ WHAT CHANGED, on the site only (the Pad and Flip don't change):
   post's likes are grouped, their comment's words under it, the small
   picture of its drawing, else of what it is on, opening the comment where
   it shows (comments.landing). Only while its way up shows to them
-  (chain_shown); quiet for the muted; never the bell's dot.
+  (chain_shown); quiet for the muted; never the bell's dot, nor on
+  Activity's own page a dot fading that was never lit (activity.QUIET_KINDS:
+  found by reading before the merge; a desk's rail showed one).
 - DELETING IS SAID IN CODE: a comment that goes, or keeps its place, takes
   its likes (a place is nobody's, nothing to like): comments.retire and
   comments._drop (a post's, a drawing's, an owner's comments).
@@ -46062,7 +46064,10 @@ left out); a place liked; a comment taken down liked by its own author;
 Activity without likes on comments; the muted not quiet; a place keeping
 its likes; the chain going down without refusing; the old CHECK kept; the
 drawing's sheet ("Like this drawing?") for a comment's heart; no heart on a
-comment's own page. One went green at first: with the route's own rule for
+comment's own page; a comment's like counted as something that lit the
+dot, so Activity's own page faded a dot on a desk's rail that was never
+there (found by reading, before the merge). One went green at first: with
+the route's own rule for
 a comment taken down removed, another person's like was still refused,
 because the page already hides a comment taken down from everybody but its
 author. So the rule holds only for the author's own, and the check asks

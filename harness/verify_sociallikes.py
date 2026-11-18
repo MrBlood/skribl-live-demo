@@ -2822,6 +2822,15 @@ with sync_playwright() as p:
                   and fdot is False,
                   f"Cleo's {[(r['say'], r['peek'], r['href']) for r in crow]}; Fen's {[(r['say'], r['href']) for r in frow]};"
                   f" Fen's bell {fdot}")
+            # NO DOT TO FADE: Activity's own page fades the dot (a desk's rail) only
+            # where one was lit, and a like on a comment lit none.
+            db_write("update social_people set activity_seen_at = datetime('now', '-1 hour') where handle_key = 'fen'")
+            dctx, dpg = browser_as(b, fen, screen="desk")
+            go(dpg, "/social/activity", wait=300)
+            rail = dpg.evaluate(DOT, "nav.nav a.tab-activity")
+            close_ctx(dctx, dpg)
+            check("with only a like on their comment new, Activity's own page on a desk shows no dot fading on its rail"
+                  " (it fades only one that was lit)", rail is False, f"the rail's dot: {rail}")
             # QUIET FOR SOMEBODY MUTED: Cleo mutes Hux.
             cc.get("/social/")
             cc.post_json("/social/@hux/mute", {})
