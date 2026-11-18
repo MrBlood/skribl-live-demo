@@ -161,26 +161,26 @@
   /* was accent + glow — identical to .btn.post, so Flip had TWO primary
      buttons and the eye had nowhere to land. styles.css calls Post "the one bold
      purple moment"; this is a preview control, so it now matches the Pad's Play:
-     subtle fill, hairline border, no glow. */
+     the second button's lilac, no edge, no glow. */
   /* No min-width since the word became the Pad's "Play": it was there so "Flip
      it" and "Stop" did not change the pill's width, and Play and Stop are the
      same pill on both editors now (2px apart, as the Pad's always were). */
-  .btn.flip-play { background: rgba(var(--wash-rgb), 0.045); border: 1px solid var(--hairline-strong); color: var(--text-primary); box-shadow: none; justify-content: center; }
+  .btn.flip-play { background: var(--btn2-bg); border: 1px solid transparent; color: var(--text-primary); box-shadow: none; justify-content: center; }   /* the lilac (No dinge, the last four, Nov 18): a grey wash */
   /* Hover only where there is one (styles.css, HOVER ONLY WHERE THERE IS A
      HOVER): iOS keeps :hover on the last thing tapped. Every hover below is
      guarded the same way. */
-  @media (hover: hover) { .btn.flip-play:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; } }
-  /* Playing = stop, and a steady tint, as on the Pad (styles.css, PLAYING IS
-     A STEADY TINT): no pulse. From 641px the WRAP takes it, so the tint covers
-     the whole "Stop . 4.4s" pill rather than half of it. */
-  .btn.flip-play.playing { background: var(--seg-on-fill); border-color: transparent; color: var(--seg-on-ink); }
-  :where(body[data-size="regular"]) .flip-play-wrap:has(.btn.flip-play.playing) { background: var(--seg-on-fill); }
-  :where(body[data-size="regular"]) .flip-play-wrap:has(.btn.flip-play.playing) > .btn.flip-play { background: transparent; }
+  @media (hover: hover) { .btn.flip-play:hover:not(:disabled) { background: var(--btn2-hover); filter: none; } }
+  /* Playing = stop, and the pressed look, as on the Pad (styles.css, PLAYING
+     IS THE PRESSED LOOK): its fill and ring, no pulse. From 641px the WRAP
+     takes it, so it covers the whole "Stop . 4.4s" pill rather than half of it. */
+  .btn.flip-play.playing { background: var(--press-fill); border-color: transparent; color: var(--seg-on-ink); box-shadow: inset 0 0 0 1px var(--press-ring); }
+  :where(body[data-size="regular"]) .flip-play-wrap:has(.btn.flip-play.playing) { background: var(--press-fill); box-shadow: inset 0 0 0 1px var(--press-ring); }
+  :where(body[data-size="regular"]) .flip-play-wrap:has(.btn.flip-play.playing) > .btn.flip-play { background: transparent; box-shadow: none; }
 
   /* The wrap keeps button + badge as one pill, exactly like the Pad's. */
-  /* The Pad's hairline, not the strong one: the Pad's pill went lighter on a
-     desk (styles.css, "Sleeker desktop header") and this one never followed. */
-  .flip-play-wrap { display: inline-flex; align-items: center; border-radius: var(--r-pill); background: rgba(var(--wash-rgb), 0.045); border: 1px solid var(--hairline); overflow: hidden; }
+  /* The Pad's lilac and no edge (No dinge, the last four): the wrap is the
+     pill on a desk, its button bare inside it. */
+  .flip-play-wrap { display: inline-flex; align-items: center; border-radius: var(--r-pill); background: var(--btn2-bg); border: 1px solid transparent; overflow: hidden; }
   .flip-play-wrap .btn.flip-play { background: transparent; border: 0; }
   /* display:inline-flex beats the hidden attribute — without this the wrap
      stays visible no matter what the JS sets. */
@@ -237,6 +237,11 @@
   .flip-timeline { display: none; }
   body.playing .flip-timeline { display: block; position: absolute; left: 14px; right: 14px; top: 0; width: auto; max-width: none;
     height: 3px; border-radius: 2px; background: rgba(var(--wash-rgb), .14); z-index: 3; }
+  /* On the page, along the strip, the track is the lilac the Pad's line wears
+     (No dinge, the last four, Nov 18), where it was this 14% wash; in full
+     screen, over the drawing among its glass, it keeps the wash
+     (verify_watchfull). */
+  body.playing .strip-wrap .flip-timeline { background: var(--btn2-bg); }
   body.playing .flip-timeline .player-progress-fill { border-radius: 2px; transition: width .12s linear; }
   .flip-speeds { display: none; }
   body.playing .flip-speeds { display: flex; position: relative; z-index: 4; margin-top: 12px; padding: 0 14px 4px; }   /* margin, not padding: padding laid the row over the line on a phone */

@@ -351,9 +351,12 @@ with sync_playwright() as sp:
     # in both places together, by the calm open's part 2 (the owner's "Yes
     # calm"): the Pad's first shape left app.js for lib/chromefit.js
     # padShape, which also reads a draft's noted shape, -69 B (160,863
-    # measured).
+    # measured). And RAISED, in both places together, by full screen's x
+    # toned by what lies under it (the owner's "yes on all dinge", No dinge,
+    # the last four), +346 B: lib/smartfade.js +329, the drawing's head read
+    # by the foot's own reader, app.js +17 (161,209 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_865,
+          lean_total <= 161_211,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
@@ -635,7 +638,12 @@ with sync_playwright() as sp:
     # its ring on Loop, the round buttons' line mixed over the lilac (so
     # Increase Contrast still strengthens it), and full screen's scrubber
     # keeping its wash. The border the lit button repeated spent 26 B first.
-    _css_target = 45_630
+    #
+    # AND 59 B LESS at the owner's "yes on all dinge" to No dinge, the last
+    # four (Nov 18): the Play pill the lilac, its grey wash and edges gone,
+    # the dark glass violet, full screen's x joining its rules. 45,546
+    # measured, and 25 B again.
+    _css_target = 45_571
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")

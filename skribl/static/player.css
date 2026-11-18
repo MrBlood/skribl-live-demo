@@ -1244,8 +1244,8 @@ html[data-skribl-app] .app-edge {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: rgba(var(--wash-rgb), 0.045);
-  border: 1px solid var(--hairline-strong);
+  background: var(--btn2-bg);   /* the second button's lilac (No dinge, the last four, Nov 18): a 4.5% grey wash */
+  border: 1px solid transparent;
   border-radius: 999px;
   transition: box-shadow 0.2s ease;
 }
@@ -1514,17 +1514,29 @@ body.player-mode .app {
   pointer-events: none;
   z-index: -1;
 }
-.player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn):is(.t-dark, .t-light) {
+.player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn):is(.t-dark, .t-light),
+.player-btn.full-exit:is(.t-dark, .t-light) {
   -webkit-backdrop-filter: blur(12px) saturate(1.6);
           backdrop-filter: blur(12px) saturate(1.6);
 }
-.player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-dark {
+/* THE DARK GLASS IS VIOLET (No dinge, the last four, the owner's yes, Nov 18):
+   a 14% white over a dark drawing came out grey (chroma 0.008); a 30% violet
+   keeps the drawing showing through (chroma 0.091, 1.42:1 off it, its marks
+   13.4:1). A lit one is a stronger violet with a lilac ring, 1.67:1 off an
+   unlit one, where the 38% sat 1.08:1 off the grey. The same in fullbar.css.
+   FULL SCREEN'S X WEARS THIS GLASS TOO, toned by what lies under it in the top
+   corner (lib/smartfade.js, `also`), where it was a solid disc by the page's
+   theme: white on a dark drawing in light (19:1), the toolbar's near-black on
+   a pale one in dark (18:1). */
+.player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-dark,
+.player-btn.full-exit.t-dark {
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.26);
-  background: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.4);
+  border-color: rgba(201, 188, 255, 0.42);
+  background: rgba(124, 92, 255, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.4);
 }
-.player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-light {
+.player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-light,
+.player-btn.full-exit.t-light {
   color: var(--on-canvas-violet);
   border-color: rgba(255, 255, 255, 0.9);
   background: rgba(255, 255, 255, 0.68);
@@ -1532,14 +1544,16 @@ body.player-mode .app {
 }
 /* Lit in both, as Repeat is on the card: the violet ground, its ink by the tone. */
 .player-bar.is-smart :is(.player-btn.active, .full-btn[aria-pressed="true"]).t-dark {
-  color: #fff; border-color: #a593ff; background: rgba(124, 92, 255, 0.38);
+  color: #fff; border-color: #c9bcff; background: rgba(124, 92, 255, 0.62);
 }
 .player-bar.is-smart :is(.player-btn.active, .full-btn[aria-pressed="true"]).t-light {
   color: var(--on-canvas-violet); border-color: #7c5cff; background: rgba(124, 92, 255, 0.22);
 }
 @media (hover: hover) {
-  .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-dark:not(.active):hover { background: rgba(255, 255, 255, 0.22); }
-  .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-light:not(.active):hover { background: rgba(255, 255, 255, 0.8); }}
+  .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-dark:not(.active):hover,
+  .player-btn.full-exit.t-dark:hover { background: rgba(124, 92, 255, 0.4); }
+  .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-light:not(.active):hover,
+  .player-btn.full-exit.t-light:hover { background: rgba(255, 255, 255, 0.8); }}
 .player-bar.is-smart :is(.player-time > span, .rl-drawn, .rl-m, .rl-skip).t-dark {
   color: #fff;
   text-shadow: 0 0 2px rgba(var(--on-canvas-shade-rgb), 0.6), 0 0 7px rgba(var(--on-canvas-shade-rgb), 0.42);
@@ -2116,10 +2130,6 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   /* Mobile: no merged Play pill — the button keeps its own round shape and the
      duration is dropped entirely (no room). */
   .play-wrap { background: transparent; border: none; }
-  .play-wrap > #playBtn.btn.play {
-    border: 1px solid var(--hairline-strong);
-    background: rgba(var(--wash-rgb), 0.045);
-  }
   .duration-badge { display: none !important; }}
 
 /* ===================================================================
@@ -2128,10 +2138,11 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
    tray so the standalone magnify fits down to 360px.
    =================================================================== */
 @media (max-width: 640px) {
-  /* Bare glyphs — drop the circle chrome from Record / Play / ⋯. */
+  /* Bare glyphs — drop the circle chrome from Record and ⋯. Play keeps its
+     lilac disc (No dinge, the last four, the owner's yes, Nov 18), as the
+     desk's pill is lilac; the wrap round it stays bare. */
   .btn.record,
   .play-wrap,
-  .play-wrap > #playBtn.btn.play,
   .icon-btn {
     background: transparent;
     border-color: transparent;
@@ -2200,8 +2211,8 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   .btn { padding: 7px 14px; }                          /* ~32px tall vs 37 */
   .btn svg { width: 14px; height: 14px; }
 
-  /* Merged Play pill: lighter shell + divider to match. */
-  .play-wrap { border-color: var(--hairline); }
+  /* Merged Play pill: its divider lighter. The shell is the lilac with no
+     edge since No dinge, the last four (it was a hairline round a grey wash). */
   .duration-badge { border-left-color: var(--hairline); font-size: 12.5px; padding: 0 13px 0 11px; }
 
   /* Keep the header icon buttons at the tier-1 size (44/24) even in

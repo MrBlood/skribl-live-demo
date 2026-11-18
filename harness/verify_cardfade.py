@@ -165,6 +165,17 @@ def lum(p):
     return 0.2126 * _lin(p[0]) + 0.7152 * _lin(p[1]) + 0.0722 * _lin(p[2])
 
 
+def chroma(p):
+    """OKLCH chroma: 0 is grey; the violet glass over a dark drawing is about 0.09."""
+    r, g, bl = (_lin(v) for v in p[:3])
+    l_ = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * bl
+    m_ = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * bl
+    s_ = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * bl
+    l_, m_, s_ = (math.copysign(abs(v) ** (1 / 3), v) for v in (l_, m_, s_))
+    return math.hypot(1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+                      0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_)
+
+
 def ratio(a, b):
     la, lb = lum(a), lum(b)
     return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
@@ -409,6 +420,12 @@ with sync_playwright() as p:
     check("on a dark drawing the buttons are dark glass",
           all(v is not None and lum(v) < 0.2 for v in fills.values()),
           ", ".join(f"{k} {lum(v):.2f}" if v else f"{k} not painted" for k, v in fills.items()) + " (dark glass is under 0.2)")
+    # THE DARK GLASS IS VIOLET (No dinge, the last four, the owner's yes, Nov 18):
+    # a 14% white over the dark drawing came out grey, chroma 0.009. Read off
+    # each button's own painted fill.
+    hues = {k: chroma(v) if v else 0 for k, v in fills.items()}
+    check("...and that dark glass is violet, not grey (each button's painted fill 0.05 chroma or more)",
+          all(h >= 0.05 for h in hues.values()), ", ".join(f"{k} {h:.3f}" for k, h in hues.items()))
     tw = c.time_worst()
     check("...and the time reads on it", tw >= 4.5, f"worst {tw:.2f}:1")
     c = Card(pg, titles["sky"], phone=True)

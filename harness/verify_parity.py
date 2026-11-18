@@ -1335,11 +1335,15 @@ with sync_playwright() as p:
     # disc used to be a tint on its wrap, and the wrap is bare on a phone
     # now, as the Pad's is (the section "one Play and Stop" compares the two
     # buttons property by property).
-    print("\nPARITY — on a phone, playing is a tinted disc on both, never a ring")
+    # Since No dinge, the last four (the owner's "yes on all dinge", Nov 18),
+    # playing is the pressed look a lit toggle wears: the tint and its steady
+    # 1px ring, the lilac at rest all but matching the tint alone. Never a
+    # pulse, which is what "never a ring" was there to keep out.
+    print("\nPARITY — on a phone, playing is the pressed look on both: a tinted disc and its steady ring")
     DISC = """(o) => { const btn = document.getElementById(o.btn);
         const disc = o.wrap ? btn.closest(o.wrap) : btn;
         const bg = getComputedStyle(disc).backgroundColor.match(/[\\d.]+/g).map(Number);
-        return { playing: btn.classList.contains('playing'), bg: bg,
+        return { playing: btn.classList.contains('playing'), bg: bg, anim: getComputedStyle(disc).animationName,
                  ring: [getComputedStyle(disc).boxShadow, getComputedStyle(btn).boxShadow] }; }"""
     for _route, _btn, _wrap, _cv in (("/skribl-pad", "playBtn", None, "#canvas"),
                                      ("/flip", "play", None, "#pad")):
@@ -1364,8 +1368,9 @@ with sync_playwright() as p:
         _d = _q.evaluate(DISC, {"btn": _btn, "wrap": _wrap})
         _bg = _d["bg"]
         _tinted = (len(_bg) == 4 and _bg[3] >= 0.1 and _bg[2] > 200 and _bg[2] > _bg[0] + 80)
-        check(f"{_route}: playing at 390px is an accent-tinted disc with no ring",
-              _d["playing"] and _tinted and all(r == "none" for r in _d["ring"]), f"{_d}")
+        check(f"{_route}: playing at 390px is the pressed look, an accent-tinted disc with its steady 1px ring, no pulse",
+              _d["playing"] and _tinted and _d["anim"] == "none"
+              and all("inset" in r and r.count("px") == 4 for r in _d["ring"]), f"{_d}")
         _q.close()
 
     # The header's Tune button is a bare sliders glyph — no room for a word on

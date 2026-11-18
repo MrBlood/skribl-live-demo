@@ -75,6 +75,16 @@ under a post and on a comment's own page. It writes
 MOCK_OUT/shots/ct-<list|page>-<phone|desk>-<light|dark>-<now|a>.png and
 measure.json (the list's height, each row's parts, the count's contrast).
 
+MOCK_ROUND=nest shoots the tree in place (The Tree, Two Deep, Nov 18:
+https://claude.ai/artifact/Cq2iv1vL8sjSjPDTWDgcWV): today; the thread at rest with
+each count by its talk cloud; a tap on Eli's comment opening its replies under
+it, two deep, "2 more replies" on the deeper branch and "Hide replies" at its
+end; and what the + opens, A in place at the second step (each saying whom it
+answers) or B that reply's own page. Replies are copied in from the comments'
+own pages and started as comments.js starts them. It writes
+MOCK_OUT/shots/ne-<phone|desk>-<light|dark>-<now|closed|open|plus|page>.png
+and measure.json (the list's height, the words' room at each step, the links').
+
 It writes MOCK_OUT/shots/rm-<phone|desk>-<light|dark>-<thread|reply>.png and
 rm-phone-<light|dark>-sheet.png at 2x, and MOCK_OUT/measure.json (the room
 the words have at each depth, the icons' contrast, and an @name's when a
@@ -1254,10 +1264,156 @@ def round_count(b):
             print(screen, scheme, "done", flush=True)
 
 
+# ================= THE TREE IN PLACE, TWO DEEP (the owner, Nov 18) =================
+# "I want the replies to be normal. Comment cloud shows how many replies.
+# Click replies and replies under that reply open up in the tree (nested) two
+# deep, then click + for more replies once there is replies to replies. It
+# should go two deep before you see that branch that says hit + for more
+# replies." Read with "Click on the reply and it shows you the nested tree"
+# (Nov 17): the talk cloud says how many and still opens the reply box (Reply,
+# as today); a tap on the comment opens its replies under it, in place, two
+# deep; past that a branch on the line says "2 more replies" with its +. Its
+# time still opens its own page. The open branch ends in "Hide replies".
+# What the + opens is the question: A, the rest in place, at the second
+# step's indent, each saying whom it answers (so a phone keeps the words'
+# room); B, that reply's own page.
+NEST_CSS = """
+.cm-act .cm-n { font-variant-numeric: tabular-nums; }
+.cm-act:has(.cm-n) .cm-word { display: none; }
+.nav { visibility: hidden !important; }
+/* the tree's line: on past each reply to the next, curving into each face */
+.cm-answers > li { position: relative; }
+.cm-answers > li.cm::before { content: ""; position: absolute; left: -31px; top: 0; width: 27px; height: 30px;
+  border-left: 2px solid var(--card-edge); border-bottom: 2px solid var(--card-edge); border-bottom-left-radius: 12px; }
+.cm-answers > li:not(:last-child)::after { content: ""; position: absolute; left: -31px; top: 28px; bottom: 0;
+  border-left: 2px solid var(--card-edge); }
+.cm-answers > li.cm-rm:not(:last-child)::after { top: 20px; }
+.cm-to { color: var(--ink-2); font-size: 14px; font-weight: 600; white-space: nowrap; }
+"""
+NEST = r"""async ([state, c1, r1, r3, r4, r5]) => {
+  const parse = async (id) => new DOMParser().parseFromString(await (await fetch('/social/c/' + id)).text(), 'text/html');
+  const kids = (doc) => [...doc.querySelectorAll('.cm-list > li.cm')].map(li => document.importNode(li, true));
+  // a reply put in the list is started as comments.js starts one: its drawing's player and line
+  const start = (li) => { if (window.SkriblInline) window.SkriblInline.mount(li); };
+  const svg = (document.querySelector('.rm-link svg') || {}).outerHTML || '';
+  const minus = svg.replace(/M12 8v8/, '');
+  const link = (words, icon, n) => { const l = document.createElement('li'); l.className = 'cm-rm'; if (n) l.dataset.n = n;
+    l.innerHTML = '<a class="rm-link" href="#">' + icon + '<span>' + words + '</span></a>'; return l; };
+  // 1. every comment's count beside its talk cloud, from its "Read N replies"
+  const counted = (root) => root.querySelectorAll('li.cm').forEach(li => {
+    const rm = li.querySelector(':scope > .cm-answers > .cm-rm'); const b = li.querySelector(':scope > .cm-main .cm-act[data-cm-answer]');
+    if (!rm || !b || b.querySelector('.cm-n')) return;
+    const n = rm.getAttribute('data-n'), c = document.createElement('span'); c.className = 'cm-n'; c.textContent = n;
+    b.querySelector('svg').after(c); b.setAttribute('aria-label', n + (n === '1' ? ' reply' : ' replies') + ' · Reply'); });
+  if (state === 'now') return 'now';
+  counted(document);
+  const more = (h, n) => { h.innerHTML = ''; h.appendChild(link(n + ' more ' + (n === '1' ? 'reply' : 'replies'), svg, n)); };
+  if (state === 'page') {
+    // a reply's own page (B: where the + goes) lists its replies as the post's thread does: each closed, with its count
+    document.querySelectorAll('.cm-answers').forEach(a => a.remove());
+    return 'page';
+  }
+  const holder = (id) => document.querySelector('#c-' + id + ' > .cm-answers');
+  if (state !== 'closed') {
+    // 2. Eli's comment open, two deep: its replies, and theirs
+    const lvl1 = kids(await parse(c1));
+    const a1 = holder(c1); a1.innerHTML = ''; lvl1.forEach(li => { a1.appendChild(li); start(li); }); counted(a1);
+    const lvl2 = kids(await parse(r1));
+    const a2 = holder(r1); a2.innerHTML = ''; lvl2.forEach(li => { a2.appendChild(li); start(li); }); counted(a2);
+    // 3. past two deep: the branch with its +
+    const a3 = holder(r3); const n3 = a3.querySelector('.cm-rm').getAttribute('data-n');
+    a3.innerHTML = ''; a3.appendChild(link(n3 + ' more ' + (n3 === '1' ? 'reply' : 'replies'), svg, n3));
+    a1.appendChild(link('Hide replies', minus));
+    if (state === 'plus') {
+      // 4. A: the + opens the rest in place, at the second step's indent, each saying whom it answers
+      a3.parentElement.querySelector(':scope > .cm-answers').remove();
+      const deeper = kids(await parse(r3));
+      const r4li = deeper.find(li => li.id === 'c-' + r4);
+      const r5li = kids(await parse(r4)).find(li => li.id === 'c-' + r5);
+      const to = (li, name) => { const h = li.querySelector(':scope > .cm-main .cm-head'), t = document.createElement('span');
+        t.className = 'cm-to'; t.textContent = '↳ ' + name; h.querySelector('.cm-name').after(t);
+        const ans = li.querySelector(':scope > .cm-answers'); if (ans) ans.remove(); };
+      to(r4li, 'Eli'); to(r5li, 'Ana');
+      a2.appendChild(r4li); a2.appendChild(r5li); start(r4li); start(r5li);
+    }
+  }
+  // 5. what stays closed shows only its count
+  document.querySelectorAll('.cm-answers').forEach(a => { if (a.children.length === 1 && a.firstElementChild.classList.contains('cm-rm')
+      && !/more repl|Hide/.test(a.textContent)) a.remove(); });
+  return state; }"""
+NEST_MEASURE = r"""() => {
+  const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number); const f = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return Math.round(((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)) * 100) / 100; };
+  const ground = (el) => { for (let e = el; e; e = e.parentElement) { const bg = getComputedStyle(e).backgroundColor; if (bg && !/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) return bg; } return 'rgb(255, 255, 255)'; };
+  const list = document.querySelector('.cm-list');
+  const room = [...document.querySelectorAll('li.cm')].map(li => { let d = 0; for (let e = li.parentElement; e; e = e.parentElement) if (e.classList && e.classList.contains('cm-answers')) d++;
+    const m = li.querySelector(':scope > .cm-main'); return [li.id, d, m ? Math.round(m.getBoundingClientRect().width) : null]; });
+  const more = [...document.querySelectorAll('.rm-link')].map(a => { const r = a.getBoundingClientRect(), s = a.querySelector('span');
+    return { words: s.textContent, h: Math.round(r.height), ink: ratio(getComputedStyle(s).color, ground(a)) }; });
+  const to = document.querySelector('.cm-to');
+  return { listH: list ? Math.round(list.getBoundingClientRect().height) : null, room, more,
+           to: to ? { ink: ratio(getComputedStyle(to).color, ground(to)), size: getComputedStyle(to).fontSize } : null }; }"""
+
+
+def round_nest(b):
+    """The tree in place, two deep: today; closed (counts by the clouds);
+    Eli's comment opened two deep with the + branch; A, the + opened in place;
+    B, the page the + opens instead."""
+    import artworks
+    ben = member(b, "ben", "Ben Okafor")
+    ana = member(b, "ana", "Ana Reyes")
+    cyd = member(b, "cyd", "Cyd Marsh")
+    dee = member(b, "dee", "Dee Park")
+    eli = member(b, "eli", "Eli Moss")
+    scene = with_card(ben, art_payload(artworks.scene(), seed=2))
+    cat = with_card(ana, art_payload(artworks.cat(), seed=3))
+    post = make_post(ben, "Morning ride past the old cottage, drawn on the train", payload=scene)
+    c1 = say_(eli, post, "Is that the cottage by the river? I think I know it.")
+    r1 = say_(ana, post, "It is! Our cat lives there.", answer_to=c1, payload=cat)
+    r2 = say_(ben, post, "Yes, the one by the old mill. Good eye.", answer_to=c1)
+    r3 = say_(eli, post, "Then she needs a friend.", answer_to=r1)
+    r4 = say_(ana, post, "Ha! They'd be best friends.", answer_to=r3)
+    r5 = say_(cyd, post, "I'd watch that cartoon every Sunday.", answer_to=r4)
+    c2 = say_(cyd, post, "Love the little curl of smoke from the chimney.")
+    r6 = say_(ben, post, "Thank you! It took three tries.", answer_to=c2)
+    print("fixture", post, c1, c2, flush=True)
+    when = {c1: "5h", r1: "4h", r2: "4h", r3: "3h", r4: "2h", r5: "1h", c2: "2h", r6: "1h"}
+    TIMES = """(m) => { for (const [id, t] of Object.entries(m)) { const li = document.getElementById('c-' + id);
+      const w = li && li.querySelector(':scope > .cm-main .cm-when'); if (w) w.textContent = t; }
+      const way = document.querySelector('.cm-way-head time'); if (way) way.textContent = '6h';
+      document.querySelectorAll('.cm-way-item time').forEach((t, i) => { t.textContent = ['6h', '5h', '4h', '3h'][i] || t.textContent; });
+      const at = document.querySelector('.post-meta time'); if (at) at.textContent = 'Nov 18 at 2:12 PM'; }"""
+    for screen in ("phone", "desk"):
+        for scheme in ("light", "dark"):
+            for state in ("now", "closed", "open", "plus"):
+                ctx, pg = browser_as(b, dee, screen=screen, scheme=scheme, reduced=True)
+                go(pg, f"/social/p/{post}", wait=1000)
+                pg.evaluate(STYLE, NEST_CSS)
+                st = pg.evaluate(NEST, [state, c1, r1, r3, r4, r5])
+                pg.evaluate(TIMES, when)
+                pg.wait_for_timeout(600)
+                snap(pg, f"ne-{screen}-{scheme}-{state}", "thread")
+                meas[f"{screen} {scheme} {state}"] = dict(pg.evaluate(NEST_MEASURE), setup=st)
+                close_ctx(ctx, pg)
+            # B: the page the + opens instead, Eli's reply to Ana with its replies
+            ctx, pg = browser_as(b, dee, screen=screen, scheme=scheme, reduced=True)
+            go(pg, f"/social/c/{r3}", wait=1200)
+            pg.evaluate(STYLE, NEST_CSS)
+            pg.evaluate(NEST, ["page", c1, r1, r3, r4, r5])
+            pg.evaluate(TIMES, when)
+            pg.wait_for_timeout(600)
+            snap(pg, f"ne-{screen}-{scheme}-page", "page")
+            meas[f"{screen} {scheme} page"] = pg.evaluate(NEST_MEASURE)
+            close_ctx(ctx, pg)
+            print(screen, scheme, "done", flush=True)
+
+
 ROUND = os.environ.get("MOCK_ROUND", "replies")
 with sync_playwright() as p:
     b = p.chromium.launch()
-    {"drawings": round_drawings, "world": round_world, "tree": round_tree, "count": round_count}.get(ROUND, round_replies)(b)
+    {"drawings": round_drawings, "world": round_world, "tree": round_tree, "count": round_count,
+     "nest": round_nest}.get(ROUND, round_replies)(b)
     b.close()
 open(f"{OUT}/measure.json", "w").write(_json.dumps(meas, indent=1))
 if ERRS:

@@ -123,14 +123,14 @@
 #skriblGallery :is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-bar { display: flex; flex-direction: column; gap: 11px; position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; box-sizing: border-box; padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, rgba(var(--surface-deep-rgb), .96), rgba(var(--surface-deep-rgb), .82) 62%, rgba(var(--surface-deep-rgb), 0)); }
 #skriblGallery :is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-bar.is-smart { background: none; isolation: isolate; }
 #skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *)::before { content: ''; position: absolute; left: var(--fx-l, 0px); right: var(--fx-r, 0px); bottom: var(--fx-b, 0px); height: max(0px, calc(100% + 40px - var(--fx-b, 0px))); background: var(--fade-x, none); -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.22) 75%, transparent); mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.22) 75%, transparent); pointer-events: none; z-index: -1; }
-#skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn, .rl-speed, .full-btn):is(.t-dark, .t-light) { -webkit-backdrop-filter: blur(12px) saturate(1.6); backdrop-filter: blur(12px) saturate(1.6); }
-#skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn, .rl-speed, .full-btn).t-dark { color: #fff; border-color: rgba(255, 255, 255, 0.26); background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.4); }
-#skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn, .rl-speed, .full-btn).t-light { color: var(--on-canvas-violet); border-color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.68); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.14); }
-#skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn.active, .full-btn[aria-pressed="true"]).t-dark { color: #fff; border-color: #a593ff; background: rgba(124, 92, 255, 0.38); }
+#skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn, .rl-speed, .full-btn):is(.t-dark, .t-light), #skriblGallery .player-btn.full-exit:is(.t-dark, .t-light):where(.skfull-host, .skfull-host *) { -webkit-backdrop-filter: blur(12px) saturate(1.6); backdrop-filter: blur(12px) saturate(1.6); }
+#skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn, .rl-speed, .full-btn).t-dark, #skriblGallery .player-btn.full-exit.t-dark:where(.skfull-host, .skfull-host *) { color: #fff; border-color: rgba(201, 188, 255, 0.42); background: rgba(124, 92, 255, 0.3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.4); }
+#skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn, .rl-speed, .full-btn).t-light, #skriblGallery .player-btn.full-exit.t-light:where(.skfull-host, .skfull-host *) { color: var(--on-canvas-violet); border-color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.68); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.14); }
+#skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn.active, .full-btn[aria-pressed="true"]).t-dark { color: #fff; border-color: #c9bcff; background: rgba(124, 92, 255, 0.62); }
 #skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn.active, .full-btn[aria-pressed="true"]).t-light { color: var(--on-canvas-violet); border-color: #7c5cff; background: rgba(124, 92, 255, 0.22); }
 @media (hover: hover) {
-  #skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn, .rl-speed, .full-btn).t-dark:not(.active):hover { background: rgba(255, 255, 255, 0.22); }
-  #skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn, .rl-speed, .full-btn).t-light:not(.active):hover { background: rgba(255, 255, 255, 0.8); }
+  #skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn, .rl-speed, .full-btn).t-dark:not(.active):hover, #skriblGallery .player-btn.full-exit.t-dark:hover:where(.skfull-host, .skfull-host *) { background: rgba(124, 92, 255, 0.4); }
+  #skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-btn, .rl-speed, .full-btn).t-light:not(.active):hover, #skriblGallery .player-btn.full-exit.t-light:hover:where(.skfull-host, .skfull-host *) { background: rgba(255, 255, 255, 0.8); }
 }
 #skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-time > span, .rl-drawn, .rl-m, .rl-skip).t-dark { color: #fff; text-shadow: 0 0 2px rgba(var(--on-canvas-shade-rgb), 0.6), 0 0 7px rgba(var(--on-canvas-shade-rgb), 0.42); }
 #skriblGallery .player-bar.is-smart:where(.skfull-host, .skfull-host *) :is(.player-time > span, .rl-drawn, .rl-m, .rl-skip).t-light { color: var(--on-canvas-ink); text-shadow: 0 0 2px rgba(255, 255, 255, 0.8), 0 0 7px rgba(255, 255, 255, 0.55); }
@@ -261,12 +261,12 @@
 #skriblGallery .skfull.is-smart::before { content: ''; position: absolute; left: var(--fx-l, 0px); right: var(--fx-r, 0px); bottom: var(--fx-b, 0px); background: var(--fade-x, none); -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.22) 75%, transparent); mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.22) 75%, transparent); pointer-events: none; z-index: -1; }
 #skriblGallery .skfull.skfull-card.is-smart::before { height: calc(100% + 22px - var(--fx-b, 0px)); border-radius: 0 0 var(--fx-rr, 0px) var(--fx-rl, 0px); }
 #skriblGallery .skfull.is-smart .skfull-btn:is(.t-dark, .t-light) { -webkit-backdrop-filter: blur(12px) saturate(1.6); backdrop-filter: blur(12px) saturate(1.6); }
-#skriblGallery .skfull.is-smart .skfull-btn.t-dark { color: #fff; border-color: rgba(255, 255, 255, 0.26); background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 12px rgba(10, 6, 30, 0.4); }
+#skriblGallery .skfull.is-smart .skfull-btn.t-dark { color: #fff; border-color: rgba(201, 188, 255, 0.42); background: rgba(124, 92, 255, 0.3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 3px 12px rgba(10, 6, 30, 0.4); }
 #skriblGallery .skfull.is-smart .skfull-btn.t-light { color: #3a24a8; border-color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.68); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(10, 6, 30, 0.14); }
-#skriblGallery .skfull.is-smart .skfull-loop.on.t-dark { color: #fff; border-color: #a593ff; background: rgba(124, 92, 255, 0.38); }
+#skriblGallery .skfull.is-smart .skfull-loop.on.t-dark { color: #fff; border-color: #c9bcff; background: rgba(124, 92, 255, 0.62); }
 #skriblGallery .skfull.is-smart .skfull-loop.on.t-light { color: #3a24a8; border-color: #7c5cff; background: rgba(124, 92, 255, 0.22); }
 @media (hover: hover) {
-  #skriblGallery .skfull.is-smart .skfull-btn.t-dark:not(.on):not(:disabled):hover { background: rgba(255, 255, 255, 0.22); }
+  #skriblGallery .skfull.is-smart .skfull-btn.t-dark:not(.on):not(:disabled):hover { background: rgba(124, 92, 255, 0.4); }
   #skriblGallery .skfull.is-smart .skfull-btn.t-light:not(.on):not(:disabled):hover { background: rgba(255, 255, 255, 0.8); }
 }
 #skriblGallery .skfull.is-smart .skfull-time.t-dark { color: #fff; }
@@ -285,7 +285,7 @@
 #skriblGallery .fb-who b { font-size: 15px; font-weight: 700; }
 #skriblGallery .fb-who span { font-size: 13px; }
 #skriblGallery .fb-who span[hidden] { display: none; }
-#skriblGallery .fb-who.t-dark { color: #fff; border-color: rgba(255, 255, 255, 0.26); background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 12px rgba(10, 6, 30, 0.4); }
+#skriblGallery .fb-who.t-dark { color: #fff; border-color: rgba(201, 188, 255, 0.42); background: rgba(124, 92, 255, 0.3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 3px 12px rgba(10, 6, 30, 0.4); }
 #skriblGallery .fb-who.t-light { color: #241a52; border-color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.68); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(10, 6, 30, 0.14); }
 #skriblGallery .skfull-host.chrome-asleep .fb-who { opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {

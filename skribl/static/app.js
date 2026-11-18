@@ -4455,7 +4455,8 @@ function showPlayerError(msg, canRetry) {
       canvas: () => canvas,
       photo: () => !!(photoBgImg && photoBgImg.src && photoBgImg.style.display !== 'none'),
       glass: '.player-btn:not(.primary), .rl-speed',
-      words: '.player-time > span, .rl-drawn, .rl-m, .rl-skip'
+      words: '.player-time > span, .rl-drawn, .rl-m, .rl-skip',
+      also: [_fsExit]   // the x in the top corner wears the bar's glass (No dinge, the last four)
     }) : null;
     // `on` from the module, which answers for both ways in: our wrapper as
     // the fullscreen element, or its pinned CSS state.

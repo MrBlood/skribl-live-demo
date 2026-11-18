@@ -30,6 +30,10 @@
  *   SkriblSmartFade.tone(el, at, words)  -> sets t-dark or t-light; { dark, mixed }
  *   SkriblSmartFade.watchTheme(host, fn) -> fn after a theme turn while host is in the page
  *   SkriblSmartFade.full(bar, o)         -> a full screen's bar: { start, read, stop }
+ *
+ * WHAT LIES OUTSIDE THE BAR (o.also: full screen's x in the top corner, No
+ * dinge, the last four, Nov 18) is toned by the drawing's head, its top
+ * eighth read as the foot is, under its own box.
  */
 (function (global) {
   'use strict';
@@ -49,15 +53,15 @@
     }
     return out;
   }
-  /* A canvas's foot, over the ground under it. A tainted canvas throws on the
-     read, and is unreadable, not black. */
-  function foot(cv, under) {
+  /* A canvas's foot, over the ground under it, or with `top` its head. A
+     tainted canvas throws on the read, and is unreadable, not black. */
+  function foot(cv, under, top) {
     try {
       var c = doc.createElement('canvas'), g = c.getContext('2d');
       c.width = N * W; c.height = H;
       g.fillStyle = rgb(under || [255, 255, 255]);
       g.fillRect(0, 0, N * W, H);
-      g.drawImage(cv, cv.width * 0.01, cv.height * 0.875, cv.width * 0.98, cv.height * 0.115, 0, 0, N * W, H);
+      g.drawImage(cv, cv.width * 0.01, cv.height * (top ? 0.01 : 0.875), cv.width * 0.98, cv.height * 0.115, 0, 0, N * W, H);
       return medians(g.getImageData(0, 0, N * W, H).data);
     } catch (e) { return null; }
   }
@@ -135,7 +139,7 @@
        o.words     words, toned by their letters
        o.caps      names, which also take the capsule where they cross */
   function full(bar, o) {
-    var cols = null, on = false, ro = null, unwatch = null;
+    var cols = null, head = null, on = false, ro = null, unwatch = null;
     function each(sel, fn) {
       if (!sel) return;
       var list = bar.querySelectorAll(sel);
@@ -144,6 +148,7 @@
     function off() {
       bar.classList.remove('is-smart');
       each('.t-dark, .t-light', function (el) { el.classList.remove('t-dark', 't-light', 'cap'); });
+      (o.also || []).forEach(function (el) { el.classList.remove('t-dark', 't-light'); });
     }
     /* Where the drawing is on screen: the canvas's box, or inside it where
        object-fit: contain letterboxes it. */
@@ -157,7 +162,7 @@
     function update() {
       if (!on) return;
       var cv = o.canvas && o.canvas();
-      if (!cv || !cv.width || !bar.isConnected || (o.photo && o.photo())) { cols = null; return off(); }
+      if (!cv || !cv.width || !bar.isConnected || (o.photo && o.photo())) { cols = head = null; return off(); }
       var m = ground(cv), a = drawn(cv), b = bar.getBoundingClientRect();
       if (!cols) cols = foot(cv, m);
       if (!cols || !b.width || a.right - a.left < 8) return off();
@@ -167,19 +172,25 @@
       s.setProperty('--fx-b', Math.max(0, b.bottom - a.bottom).toFixed(1) + 'px');
       s.setProperty('--fade-x', gradient(cols));
       bar.classList.add('is-smart');
-      function at(x, y) {
-        if (x < a.left || x > a.right || y < a.top || y > a.bottom) return m;
-        return cols[Math.max(0, Math.min(n - 1, Math.floor((x - a.left) / w * n)))];
+      function by(cs) {
+        return function (x, y) {
+          if (x < a.left || x > a.right || y < a.top || y > a.bottom) return m;
+          return cs[Math.max(0, Math.min(n - 1, Math.floor((x - a.left) / w * n)))];
+        };
       }
+      var at = by(cols);
       each(o.glass, function (el) { tone(el, at, false); });
       each(o.words, function (el) { tone(el, at, true); });
       each(o.caps, function (el) { el.classList.toggle('cap', tone(el, at, true).mixed); });
+      if (o.also && (head || (head = foot(cv, m, 1)))) {
+        o.also.forEach(function (el) { if (el.getClientRects().length) tone(el, by(head), false); });
+      }
     }
     return {
       start: function () {
         if (on) return;
         on = true;
-        cols = null;
+        cols = head = null;
         if (global.ResizeObserver) {
           ro = new ResizeObserver(update);
           ro.observe(bar);
@@ -190,7 +201,7 @@
         update();
       },
       /* What shows changed (a play, a pause, the end, a page): read again. */
-      read: function () { if (on) { cols = null; update(); } },
+      read: function () { if (on) { cols = head = null; update(); } },
       stop: function () {
         on = false;
         if (ro) ro.disconnect();

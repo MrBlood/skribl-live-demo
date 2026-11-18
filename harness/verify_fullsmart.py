@@ -506,12 +506,71 @@ with sync_playwright() as p:
               st["smart"] and moved <= 1.10, f"{st['smart']}, {moved:.2f}")
         pg.close()
 
+    # FULL SCREEN'S GLASS (No dinge, the last four, the owner's "yes on all
+    # dinge", Nov 18): the dark glass is violet, where a 14% white over a dark
+    # drawing came out grey, and a lit control on it a stronger violet; and
+    # the x in the top corner wears the bar's glass for what lies under it,
+    # where it was a solid disc by the page's theme (white on a dark drawing
+    # in light, 19:1; the toolbar's near-black on a pale one in dark, 18:1).
+    # Read as the values the glass is written in, on every full screen.
+    EXIT = """() => { const x = [...document.querySelectorAll('.player-btn.full-exit')].find(e => e.getClientRects().length);
+      if (!x) return null; const c = getComputedStyle(x);
+      return { tone: x.classList.contains('t-light') ? 'light' : x.classList.contains('t-dark') ? 'dark' : null,
+               bg: c.backgroundColor, ink: c.color }; }"""
+    DARKS = """(sel) => [...document.querySelectorAll(sel + ' .t-dark')]
+      .filter(e => e.getClientRects().length && e.matches('.player-btn, .rl-speed, .rl-repeat, .full-btn'))
+      .map(e => ({ name: e.getAttribute('aria-label') || e.className,
+                   lit: e.matches('.active, .full-btn[aria-pressed="true"], .rl-repeat[aria-pressed="true"]'),
+                   bg: getComputedStyle(e).backgroundColor }))"""
+    VIOLET, VIOLET_LIT, LIGHT_GLASS = "rgba(124, 92, 255, 0.3)", "rgba(124, 92, 255, 0.62)", "rgba(255, 255, 255, 0.68)"
+
+    def glass_rows(tag, pg, bar_sel, ground, glass=True):
+        want = "dark" if ground == "dark" else "light"
+        x = pg.evaluate(EXIT)
+        check(f"{tag}: full screen's x wears the bar's {want} glass, toned by what lies under it",
+              bool(x) and x["tone"] == want and x["bg"] == (VIOLET if want == "dark" else LIGHT_GLASS), str(x))
+        if want == "dark" and glass:
+            ds = pg.evaluate(DARKS, bar_sel)
+            check(f"{tag}: the bar's dark glass is violet, not grey, and a lit control a stronger violet",
+                  bool(ds) and all(d["bg"] == (VIOLET_LIT if d["lit"] else VIOLET) for d in ds), str(ds))
+            # Loop on, a lit toggle on that glass, read again
+            pg.evaluate("""(sel) => { const l = [...document.querySelectorAll(sel + ' .player-btn')].find(e => /loop/i.test(e.getAttribute('aria-label') || '')
+                && e.getClientRects().length); if (l && !l.classList.contains('active')) l.click(); }""", bar_sel)
+            pg.wait_for_timeout(400)
+            ds = pg.evaluate(DARKS, bar_sel)
+            lit = [d for d in ds if d["lit"]]
+            check(f"{tag}: ...and with Loop on, it is the stronger violet, the rest as they were",
+                  bool(lit) and all(d["bg"] == (VIOLET_LIT if d["lit"] else VIOLET) for d in ds), str(ds))
+
+    if on("glass"):
+        print("\nFULL SCREEN'S GLASS — the dark glass violet, and the x toned by what lies under it")
+        for view, vname in ((PHONE, "phone"), (DESK, "desk")):
+            for theme, name in (("light", "dark"), ("dark", "paper")):
+                pg, bar = link(b, view, theme, ids[name])
+                glass_rows(f"Link page, {vname}, {theme} page, {'a dark' if name == 'dark' else 'a pale'} drawing", pg, "#playerBar", name)
+                pg.close()
+        for theme, name in (("light", "dark"), ("dark", "paper")):
+            pg, bar = gallery(b, PHONE, theme, f"Full fade {name} {TAG}")
+            glass_rows(f"Gallery, phone, {theme} page, {'a dark' if name == 'dark' else 'a pale'} drawing", pg, "[data-fs-probe] > .player-bar", name)
+            pg.close()
+        pg, bar = pad(b, "dark")
+        glass_rows("The Pad's full screen, desk, dark page, its paper", pg, ".watch-band", "paper")
+        pg.close()
+        # Flip's band carries Flip's own line and speeds, which are not glass:
+        # its x is the one control there toned by the drawing.
+        pg, bar = flip(b, "light")
+        glass_rows("Flip's full screen, desk, light page, its dark ground", pg, ".watch-band", "dark", glass=False)
+        pg.close()
+
     if on("photo"):
         print("\nFULL SCREEN FADE — a photo under the drawing keeps the scrim")
         pg, bar = pad(b, "dark", photo=True)
         st = bar.state()
         check("Pad with a photo: nothing is set on a guess (no is-smart, the scrim stands)",
               not st["smart"] and "gradient" in st["scrim"], f"{st['smart']}, {st['scrim'][:50]}")
+        x = pg.evaluate(EXIT)
+        check("...and the x keeps its own disc: it takes no tone on a guess either",
+              bool(x) and x["tone"] is None, str(x))
         pg.close()
     b.close()
 

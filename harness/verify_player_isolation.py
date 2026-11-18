@@ -1069,7 +1069,17 @@ with sync_playwright() as sp:
     #   new drawing's shape between app.js and editor_draft.js). -69 B;
     #   verify_jsstrip's lines move with it. 160,863 measured; the ratchet
     #   follows it down.
-    BYTES_RATCHET, BYTES_TARGET = 160_865, 153_800
+    # RAISED (the owner's "yes on all dinge" to No dinge, the last four, Nov
+    #   18: full screen's x wears the bar's glass, toned by what lies under
+    #   it), for one named cost: +346 B -- lib/smartfade.js `also` (+329: the
+    #   drawing's head read by the foot's own reader, one parameter, and toned
+    #   by the bar's own reader, by(); cleared with the rest when nothing can
+    #   be read) and app.js passing its x (+17). Spent first: the first build
+    #   sampled the x's own box with a reader of its own (+1,226 in all), which
+    #   gave way to the foot's (-897 B). WHICH CALLER PAYS: every player page,
+    #   for the x its full screen shows. verify_jsstrip's lines move with it.
+    #   161,209 measured.
+    BYTES_RATCHET, BYTES_TARGET = 161_211, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -1400,7 +1410,13 @@ with sync_playwright() as sp:
     #   frame's track it also took Flip's line). Spent first: the border the
     #   lit button repeated from its base. verify_jsstrip's line moves with
     #   it. 45,605 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_611, 119_844, 40_000
+    # LOWERED (the owner's "yes on all dinge" to No dinge, the last four, Nov
+    #   18): -59 B. The Play pill the second button's lilac, its grey wash and
+    #   the edges round it gone, the phone's Play one rule for both editors;
+    #   the dark glass violet; full screen's x joining the bar's glass rules,
+    #   one more selector in each, which the lilac's shorter values paid for.
+    #   verify_jsstrip's line moves with it. 45,546 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_552, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
