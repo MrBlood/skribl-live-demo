@@ -1652,8 +1652,9 @@ with sync_playwright() as p:
             to(pg, "#comments", 60)
             folds = {f["id"]: f for f in pg.evaluate(FOLDS)}
             count = pg.evaluate("() => (document.querySelector('[data-cm-count]') || {}).textContent")
-            # ONE LEVEL, EVERYWHERE (the comment thread): Sam's reply is in the list on Rae's comment's own page,
-            # and Tia's reply to Sam's comment on his comment's own (open to her: a mute hides no page).
+            # Bluesky's way (the comment thread): Sam's reply is the first under Rae's comment, so it folds in the
+            # conversation followed down under it, and in the list on her comment's own page; Tia's reply to Sam's
+            # comment is on his comment's own (open to her: a mute hides no page).
             go(pg, f"/social/c/{c1}", wait=600)
             to(pg, "#comments", 60)
             on_page = {f["id"]: f for f in pg.evaluate(FOLDS)}
@@ -1665,12 +1666,13 @@ with sync_playwright() as p:
             home_count = pg.evaluate("(id) => { const a = document.querySelector('.post-card[data-post=\"' + id + '\"] .post-count'); return a ? a.getAttribute('aria-label') : null; }", cat)
             fa, fc = on_page.get(f"c-{a1}"), folds.get(f"c-{c2}")
             check("on a post you read, their comment is one quiet line in its place, “Someone you muted said something."
-                  " Show”, and their reply, on the page of the comment it answers, “Someone you muted replied. Show”; on"
-                  " your own post too",
+                  " Show”, and their reply “Someone you muted replied. Show”, in the conversation followed down under"
+                  " the comment it answers (Bluesky's way) and on that comment's own page; on your own post too",
                   fa and fa["words"] == "Someone you muted replied. Show" and fc
                   and fc["words"] == "Someone you muted said something. Show" and fa["show"] == "Show"
                   and own.get(f"c-{c3}", {}).get("words") == "Someone you muted said something. Show"
-                  and len(folds) == 1 and len(on_page) == 1,
+                  and folds.get(f"c-{a1}", {}).get("words") == "Someone you muted replied. Show"
+                  and len(folds) == 2 and len(on_page) == 1,
                   json.dumps({"answer": fa and fa["words"], "comment": fc and fc["words"], "own": [f["words"] for f in own.values()]}))
             check("the eye sits where their face was (its middle on the faces' column, within 0.5px) and the words start"
                   " where the bubbles do (within 0.5px; a name sits in its bubble since the comment thread); the line 56px tall",
