@@ -46238,7 +46238,19 @@ of a reply under a comment taken down was still refused: the page already
 hides that reply from everybody but the taken-down comment's author, so
 the check asks for that author's repost too (red without the rule).
 
-@@SUITES@@
+THE AFFECTED SUITES, side by side (run_parallel -j 3, 38.0 min), on this
+tree: verify_socialreposts 98/98, verify_socialbookmarks 37/37,
+verify_socialactivity 46/46, verify_socialauth 76/76, verify_socialfollow
+79/79, verify_socialprofile 94/94, verify_composer 39/39,
+verify_socialmentions 51/51, verify_socialmute 68/68, verify_socialsearch
+32/32, verify_socialsafety 38/38, verify_docs 144/144, verify_social 45/45:
+13 of 16. Red beside the others: verify_socialcomments 123/127,
+verify_sociallikes 109/111 and verify_socialposts 98/99, each only on checks
+that listed a comment's row and its ⋯ as steps 1 and 2 left them (no
+Repost, no Bookmark): neither load nor a defect, the change itself. Updated
+to step 3's row and ⋯, then alone: verify_sociallikes 111/111,
+verify_socialposts 99/99, verify_socialcomments 127/127. NOT RUN: the full
+battery (main's run after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: every comment's row has the repost's arrows between
