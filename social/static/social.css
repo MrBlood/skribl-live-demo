@@ -1834,7 +1834,6 @@ a.post-face { text-decoration: none; }
   .cm-act .cm-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 .cm-answers { grid-column: 2; }
-.cm-answers .cm { padding-top: 10px; }
 /* THE BUBBLE (the owner's "I like B, bubbles", Nov 17): the site's card, its
    lilac edge one screen pixel and its lift, as a post's card wears them
    (in light a white card on the near-white page is 1.06:1, and Just a
@@ -1850,49 +1849,42 @@ a.post-face { text-decoration: none; }
    the small violet words' ink (6.5:1 light, 6.9:1 dark). */
 .face-blank.has-initial { background: var(--tint); color: var(--accent-ink); font-size: 16px; font-weight: 700; line-height: 1; }
 /* THE THREAD'S LINE: a soft lilac, 2px of the card's edge (1.47:1 light,
-   1.45:1 dark: there to be followed, not read), down from a face that has
-   replies, curving out into each reply's face, and ending where its
-   branch ends, so none hangs past the last reply. */
+   1.45:1 dark: there to be followed, not read), down from the face of a
+   comment or a reply with replies under it, curving out into its "Read N
+   replies" (one level, everywhere: the owner, Nov 17). */
 .cm:has(> .cm-answers) > .cm-main { position: relative; }
 .cm:has(> .cm-answers) > .cm-main::before {
   content: ""; position: absolute; left: -31px; top: 40px; bottom: 0; border-left: 2px solid var(--card-edge);
 }
-/* Each reply's curve hangs from its face (a reply's own ::before is the
-   landing's tint), from the reply's top to the face's middle; "Read more"
-   carries its own. A reply that is not the last carries the line on past
-   itself to the next. */
-.cm-answers > :is(.cm, .cm-rm), .cm-answers > .cm > .face-ring { position: relative; }
-.cm-answers > .cm > .face-ring::before, .cm-answers > .cm-rm::before {
-  content: ""; position: absolute; left: -31px; top: -10px; width: 23px; height: 28px;
+.cm-answers > .cm-rm { position: relative; }
+.cm-answers > .cm-rm::before {
+  content: ""; position: absolute; left: -31px; top: 0; width: 23px; height: 22px;
   border-left: 2px solid var(--card-edge); border-bottom: 2px solid var(--card-edge); border-bottom-left-radius: 12px;
 }
-.cm-answers > .cm-rm::before { top: 0; height: 22px; }
-.cm-answers > :is(.cm, .cm-rm):not(:last-child)::after {
-  content: ""; position: absolute; left: -31px; top: 0; bottom: 0; border-left: 2px solid var(--card-edge);
+/* A TAP ON A REPLY OPENS ITS OWN PAGE (comments.js), as a post's card opens
+   the post: a pointer says so on a desk, and nothing changes on a phone. */
+@media (hover: hover) and (pointer: fine) {
+  .cm-bubble, .cm.is-gone > .cm-main { cursor: pointer; }
 }
 /* A PLACE (the owner's yes, Nov 17, to "the place stays"): a comment or a
    reply deleted while replies hung under it: an empty ring where its face
    was, 1.5px of the card's edge, and "This reply was deleted" (or
    "removed") in the row's second ink (7.1:1 light, 10.1:1 dark), no bubble,
-   no row. The replies under it hang from its ring as from a face. */
+   no row. Its "Read N replies" hangs from its ring as from a face. */
 .cm-gone-face {
   display: block; flex: none; box-sizing: border-box; width: 36px; height: 36px; border-radius: 50%;
   box-shadow: inset 0 0 0 1.5px var(--card-edge);
 }
 .cm-gone { display: flex; align-items: center; min-height: 36px; margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.3; }
-.cm-answers > .cm > .cm-gone-face { position: relative; }
-.cm-answers > .cm > .cm-gone-face::before {
-  content: ""; position: absolute; left: -31px; top: -10px; width: 23px; height: 28px;
-  border-left: 2px solid var(--card-edge); border-bottom: 2px solid var(--card-edge); border-bottom-left-radius: 12px;
-}
 /* On the way to a comment, and as a page's own. */
 .cm-way-gone { display: flex; align-items: center; min-height: 36px; color: var(--ink-2); font-size: 15px; }
 .cm-gone-head { display: flex; align-items: center; gap: 12px; }
 .cm-gone-head .cm-gone-face { width: 48px; height: 48px; }
 .cm-gone-head .cm-gone { min-height: 48px; font-size: 17px; }
-/* "READ N MORE REPLIES", on the line under a reply at the second level whose
-   talk goes on: the row's second ink (7.1:1 light, 10.1:1 dark) with an
-   18px circled plus, a 44px tap, to that reply's own page. */
+/* "READ N REPLIES", on the thread's line under a comment or a reply with
+   replies under it (one level, everywhere): the row's second ink (7.1:1
+   light, 10.1:1 dark) with an 18px circled plus, a 44px tap, to its own
+   page. */
 .cm-rm { padding: 2px 0 6px; }
 .rm-link {
   display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-left: -10px; padding: 0 14px 0 10px;
@@ -2481,14 +2473,13 @@ button.fo-n {
    (56px at least); its words wrap if a column is narrow, and the line grows
    with them (comments.js measures it: --cm-fold-h). The comment's own parts
    wait under it, hidden for real (no tap and no screen reader reaches its
-   Answer or ⋯), in a room the line's height; the answers under it, by
-   others, stay. Show opens the room and the comment fades in (comments.js);
+   Reply or ⋯), in a room the line's height; its "Read N replies" stays.
+   Show opens the room and the comment fades in (comments.js);
    under Reduce Motion the room is put there while it can't be seen. */
 .cm.is-quiet { position: relative; }
 .cm.is-quiet > .face-ring, .cm.is-quiet > .cm-main { opacity: 0; visibility: hidden; }
-/* Its room is the line's: a comment's 12px above (a reply's 10px, below) and its own height under it. */
+/* Its room is the line's: a comment's 12px above and its own height under it. */
 .cm.is-quiet > .cm-main { height: calc(var(--cm-fold-h, 56px) - 12px); overflow: hidden; }
-.cm-answers .cm.is-quiet > .cm-main { height: calc(var(--cm-fold-h, 56px) - 10px); }
 .cm-fold-line {
   position: absolute; z-index: 1; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 12px;
   min-height: 56px; margin: 0; padding: 6px 0; border: 0; background: none; color: var(--ink-2);

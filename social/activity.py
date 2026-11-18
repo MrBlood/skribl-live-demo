@@ -7,10 +7,10 @@ rail after Explore; each with a dot when something is new.
     /activity     who followed you, liked your posts or said something on
                   them, who replied to you and who mentioned you: New, then
                   Earlier, a row each,
-                  every row one link to its comment where it shows (its
-                  post's or its drawing's page within two levels of it,
-                  deeper the page of the reply it answers: the comment
-                  thread, comments.landing), or, for
+                  every row one link to its comment where it shows (a
+                  comment on its post's or its drawing's page, a reply on
+                  the page of what it answers: the comment thread,
+                  comments.landing), or, for
                   likes, to "Liked by…" there; for a follow, to their page, or
                   for several to who follows you); opening it marks
                   everything seen.
@@ -542,8 +542,8 @@ def listing(me, skribl_blueprint="skribl"):
     def page(post_public, drawing_id):
         return (url_for("social.post_page", public_id=post_public) if post_public is not None
                 else url_for("social.bloob_page", skribl_id=drawing_id))
-    # WHERE A COMMENT SHOWS (the comment thread): its post's or its drawing's
-    # page within two levels of it, deeper the page of the reply it answers.
+    # WHERE A COMMENT SHOWS (the comment thread): a comment on its post's or
+    # its drawing's page, a reply on the page of what it answers.
     from .comments import landing
     lands = landing([(r[0], r[2]) for r in items] + [(r[3], r[4]) for r in named if r[3] is not None])
 

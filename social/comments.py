@@ -40,18 +40,21 @@ Read More Replies mock; docs/SOCIAL-SITE.md section 18): every comment in a
 bubble, its row under it (Reply and ⋯). A REPLY KEEPS THE REPLY IT ANSWERS
 (answers_id, at any depth; parent_id is the comment its conversation hangs
 under, so a page reads a conversation by one index; a reply from before has
-none and answers its comment: answered()). A thread shows TWO LEVELS (LEVELS)
-under each comment, oldest first (_grow); a reply at the second level whose
-talk goes on carries "Read N more replies", N every reply under it at any
-depth that the viewer may see, and opens its own page. EVERY COMMENT AND
-REPLY HAS A PAGE (/c/<id>, comment.html): the way to it above (the_way),
-it as big as a post, its replies where a post's comments stand (replies_of),
-two levels again; the box there replies to it. Each comment's ⋯, "This
-comment": Copy link and Share… (its own page), then on your own Delete
+none and answers its comment: answered()). ONE LEVEL, EVERYWHERE (the owner,
+Nov 17: "What I want is a list of direct replies first. If you click the
+reply it opens up the tree level", then "Yes, build it"): a list shows only
+the direct replies to what its page is about, the post's comments or a
+comment's replies, each alone (_fold); one with replies under it carries
+"Read N replies", N every reply under it at any depth that the viewer may
+see, and a tap on it (or on its bubble) opens its own page. EVERY COMMENT
+AND REPLY HAS A PAGE (/c/<id>, comment.html): the way to it above
+(the_way), it as big as a post, then its own direct replies where a post's
+comments stand (replies_of); the box there replies to it. Each comment's ⋯,
+"This comment": Copy link and Share… (its own page), then on your own Delete
 comment; on somebody else's on your own post or drawing, Remove from my post
 and Report this comment; on anybody else's, Report this comment. A link to a
-comment lands where it shows (landing()): its post's or drawing's page within
-two levels, deeper the page of the reply it answers.
+comment lands where it shows (landing()): a comment on its post's or
+drawing's page, a reply on the page of what it answers.
 
 WHO MAY COMMENT: somebody signed in who is not taken down, with no block
 either way with the author of the post or the drawing; an answer also with
@@ -223,8 +226,8 @@ def on_of(c, viewer):
 def _shown(q, viewer, hidden, c=Comment):
     """The page's rules, on a query of comments: nobody hidden from the
     viewer, and nothing taken down but the viewer's own. A PLACE (gone) is
-    nobody's and stands for what hangs under it: it passes, and the thread
-    shows it only while something it may show hangs there (_grow)."""
+    nobody's and stands for what hangs under it: it passes, and a list
+    shows it only while something it may show hangs there (_fold)."""
     mine = viewer.id if viewer is not None else -1
     ok = sa.or_(c.taken_down_at.is_(None), c.person_id == mine)
     if hidden:
@@ -255,12 +258,6 @@ def _uncursor(text):
         return None
 
 
-#: HOW DEEP A THREAD GOES (the owner's yes, Nov 17): a comment, its replies,
-#: and replies to those. A reply at the second level whose talk goes on
-#: carries "Read N more replies", which opens its own page.
-LEVELS = 2
-
-
 def answered(c):
     """The id of what reply `c` answers: the reply it was written to, or,
     for one from before replies kept that (or with nothing), its comment."""
@@ -274,14 +271,14 @@ def gone_words(reply, how):
 
 
 def _item(c, who, muted):
-    return {"c": c, "who": who, "answers": [], "sk": None, "quiet": who is not None and who.id in muted, "more": 0,
+    return {"c": c, "who": who, "sk": None, "quiet": who is not None and who.id in muted, "more": 0,
             "gone": gone_words(c.parent_id is not None, c.gone) if c.gone is not None else None}
 
 
 def _kept(item):
     """Whether an item is shown: a comment always; a place only while
     something it may show hangs under it."""
-    return item["c"].gone is None or bool(item["answers"] or item["more"])
+    return item["c"].gone is None or bool(item["more"])
 
 
 def _conversations(root_ids, viewer, hidden):
@@ -297,51 +294,31 @@ def _conversations(root_ids, viewer, hidden):
     return site().session().execute(_shown(q, viewer, hidden)).all()
 
 
-def _grow(tops, rows, muted, levels=LEVELS):
-    """THE THREAD UNDER `tops` (items), from the conversation's `rows`: each
-    top's replies under it as items, oldest first, and theirs under them,
-    `levels` deep. A reply is shown only where what it answers is: one under
-    a reply the page leaves out (somebody hidden from the viewer) is left out
-    too, and every reply under it. A reply at the last level carries "more":
-    how many replies hang under it, at any depth, that the viewer may see.
-    A PLACE (a deleted reply) is walked through and counted as nothing; one
-    with nothing shown under it is not shown (_kept). Answers every reply it
-    placed, as items."""
+def _fold(tops, rows):
+    """ONE LEVEL (the owner, Nov 17): each of `tops` (items) is shown alone,
+    nothing nested under it, with "more": how many replies hang under it, at
+    any depth, that the viewer may see, from its conversation's `rows` (the
+    page's rules already applied). A reply counts only where what it answers
+    does: one under a reply the page leaves out (somebody hidden from the
+    viewer) is left out, and every reply under it. A PLACE (a deleted reply)
+    is walked through and counted as nothing."""
     kids = {}
-    for c, who in rows:
-        kids.setdefault(answered(c), []).append((c, who))
-
-    def under(cid):
-        n, todo = 0, [cid]
+    for c, _ in rows:
+        kids.setdefault(answered(c), []).append(c)
+    for t in tops:
+        n, todo = 0, [t["c"].id]
         while todo:
-            for c, _ in kids.get(todo.pop(), ()):
+            for c in kids.get(todo.pop(), ()):
                 n += c.gone is None
                 todo.append(c.id)
-        return n
-    placed = []
-
-    def walk(it, level):
-        for c, who in kids.get(it["c"].id, ()):
-            child = _item(c, who, muted)
-            if level < levels:
-                walk(child, level + 1)
-            else:
-                child["more"] = under(c.id)
-            if _kept(child):
-                it["answers"].append(child)
-                placed.append(child)
-    for t in tops:
-        walk(t, 1)
-    return placed
+        t["more"] = n
 
 
 def thread(on, viewer, before=None, limit=PAGE):
     """A page of the comments on `on` (a post or a drawing) for `viewer`:
-    (items, next cursor or None). Newest first; each item {"c": the comment,
-    "who": its author, "answers": its replies as items, oldest first, each
-    with its own "answers" (two levels: _grow), "more": at the second level,
-    how many replies hang under it, "quiet": whether the viewer muted its
-    author (it folds to one line)}."""
+    (items, next cursor or None). Newest first, each alone (_fold): {"c":
+    the comment, "who": its author, "more": how many replies hang under it,
+    "quiet": whether the viewer muted its author (it folds to one line)}."""
     from .mutes import muted_ids
     hidden = hidden_ids(viewer)
     muted = muted_ids(viewer)
@@ -359,10 +336,10 @@ def thread(on, viewer, before=None, limit=PAGE):
     tops, more = rows[:limit], len(rows) > limit
     items = [_item(c, who, muted) for c, who in tops]
     if items:
-        placed = _grow(items, _conversations([i["c"].id for i in items], viewer, hidden), muted)
+        _fold(items, _conversations([i["c"].id for i in items], viewer, hidden))
         items = [i for i in items if _kept(i)]
-        described(items + placed, viewer)
-        named(items + placed)
+        described(items, viewer)
+        named(items)
     return items, (_cursor(tops[-1][0]) if more and tops else None)
 
 
@@ -398,7 +375,7 @@ def counts(viewer, posts=(), drawings=()):
     down but their own, and no reply under one that is not shown, at any
     depth. A RECURSIVE READ from the comments down (each step by the reply's
     own index), so a reply counts only where every one above it shows, as
-    the thread places it (_grow). A PLACE is walked through and counted as
+    a list counts it (_fold). A PLACE is walked through and counted as
     nothing. A post or a drawing with none is not in it."""
     hidden = hidden_ids(viewer)
     out = {}
@@ -424,8 +401,8 @@ def chain_shown(comments, viewer):
     """The ids among `comments` (Comment rows) whose way up the page's rules
     show `viewer`: every reply each answers, and its comment, by nobody
     hidden from them and not taken down but their own. A reply under one
-    hidden from them is hidden with it, at any depth, as the thread places
-    it (_grow). One read of the conversations they are in."""
+    hidden from them is hidden with it, at any depth, as a list counts it
+    (_fold). One read of the conversations they are in."""
     comments = list(comments)
     roots = sorted({c.parent_id for c in comments if c.parent_id is not None})
     if not roots:
@@ -451,32 +428,18 @@ def chain_shown(comments, viewer):
 
 def landing(rows):
     """WHERE A COMMENT SHOWS, for a link to it (Activity, Your Reports): {its
-    internal id: the address of the page whose thread shows it, with
+    internal id: the address of the page whose list shows it, with
     #c-<its public id>}, for comment rows `rows` (Comment, and its post's
-    public id or None). Within two levels of what it is on, that is its
-    post's or its drawing's page; deeper, the page of the reply it answers,
-    where it is one of that reply's own. One read of the conversations they
-    are in."""
+    public id or None). A comment shows on its post's or its drawing's page;
+    a reply on the page of what it answers, as one of that one's own direct
+    replies (one level, everywhere). One read for what they answer."""
     rows = list(rows)
-    roots = {c.parent_id for c, _ in rows if c.parent_id is not None}
-    up, pid = {}, {}
-    if roots:
-        for cid, public, ans, par in site().session().execute(
-                sa.select(Comment.id, Comment.public_id, Comment.answers_id, Comment.parent_id)
-                .where(sa.or_(Comment.parent_id.in_(sorted(roots)), Comment.id.in_(sorted(roots))))).all():
-            up[cid] = ans if ans is not None else par
-            pid[cid] = public
-
-    def depth(cid):
-        d, seen_ = 0, set()
-        while up.get(cid) is not None and cid not in seen_:
-            seen_.add(cid)
-            cid = up[cid]
-            d += 1
-        return d
+    ups = sorted({answered(c) for c, _ in rows if c.parent_id is not None})
+    pid = dict(site().session().execute(
+        sa.select(Comment.id, Comment.public_id).where(Comment.id.in_(ups))).all()) if ups else {}
     out = {}
     for c, post_public in rows:
-        if c.parent_id is not None and depth(c.id) > LEVELS and pid.get(answered(c)):
+        if c.parent_id is not None and pid.get(answered(c)):
             page = url_for("social.comment_page", public_id=pid[answered(c)])
         elif c.post_id is not None:
             if post_public is None:
@@ -684,20 +647,20 @@ def drop_person_comments(person_id):
 
 def replies_of(got, viewer):
     """A COMMENT'S OWN REPLIES, for its own page (seen(..., whole=True)):
-    (items, how many). Its replies stand where a post's comments do, oldest
-    first as in its thread, each with two levels under it again (_grow), a
-    reply at the second level carrying "Read N more replies"; how many is
-    every reply under it, at any depth, that the viewer may see."""
+    (items, how many). Its direct replies stand where a post's comments do,
+    oldest first, each alone with "Read N replies" (_fold: one level,
+    everywhere); how many is every reply under it, at any depth, that the
+    viewer may see."""
     from .mutes import muted_ids
     muted = muted_ids(viewer)
     rows = got["rows"]
     tops = [_item(c, who, muted) for c, who in rows if answered(c) == got["c"].id]
-    placed = _grow(tops, rows, muted)
+    _fold(tops, rows)
     tops = [t for t in tops if _kept(t)]
-    described(tops + placed, viewer)
-    named(tops + placed)
-    # A place counts as nothing (_grow's rule).
-    return tops, (len([i for i in tops + placed if i["c"].gone is None]) + sum(i["more"] for i in placed))
+    described(tops, viewer)
+    named(tops)
+    # A place counts as nothing (_fold's rule).
+    return tops, len([t for t in tops if t["c"].gone is None]) + sum(t["more"] for t in tops)
 
 
 def section(on, viewer, skribl_blueprint="skribl", focus=None):
@@ -805,11 +768,12 @@ def register(bp, skribl_blueprint="skribl"):
     def comment_page(public_id):
         """A COMMENT OR A REPLY ON A PAGE OF ITS OWN (the comment thread, step
         1; the owner's yes, Nov 17): every one has one, so any of them can be
-        linked and shared, and "Read N more replies" opens it. The way to it
-        above, small (what it is on, then each one it answers); it, as big as
-        a post, its row and its full time; its replies under it, two levels
-        again. One hidden from the viewer, or anything on the way to it, is
-        as gone as one not there."""
+        linked and shared, and "Read N replies" opens it, as a tap on it in a
+        list does. The way to it above, small (what it is on, then each one
+        it answers); it, as big as a post, its row and its full time; its
+        direct replies under it, each alone (one level, everywhere). One
+        hidden from the viewer, or anything on the way to it, is as gone as
+        one not there."""
         from .accounts import _page
         from .mutes import muted_ids
         from .security import csrf_token
@@ -895,11 +859,12 @@ def register(bp, skribl_blueprint="skribl"):
         write_comment(row)
         sess.flush()
         who = sess.get(Person, me.id)
-        html = _cards(named(described([{"c": row, "who": who, "answers": [], "sk": None}], me)), me, True,
+        html = _cards(named(described([{"c": row, "who": who, "sk": None, "more": 0}], me)), me, True,
                       me.id == on.owner.id)
-        # "under": the comment or the reply it answers, which the page puts it
-        # under (or, at the thread's last level, counts it in "Read N more
-        # replies"); "page": that reply's own page, where it shows.
+        # "under": the comment or the reply it answers: on its own page the
+        # reply lands last in its list; anywhere else its "Read N replies"
+        # counts it (one level, everywhere). "page": that one's own page,
+        # where the reply shows.
         return jsonify({"ok": True, "comment": row.public_id,
                         "under": answers.public_id if answers is not None else None,
                         "page": url_for("social.comment_page", public_id=answers.public_id) if answers is not None

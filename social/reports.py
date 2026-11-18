@@ -122,8 +122,8 @@ def queue():
         sa.select(Comment, Person, Post).join(Person, Person.id == Comment.person_id)
         .outerjoin(Post, Post.id == Comment.post_id)
         .where(Comment.public_id.in_([c["target"] for c in cards.values() if c["kind"] == "comment"]))).all()}
-    # WHERE A COMMENT SHOWS (the comment thread): its post's or its drawing's
-    # page within two levels of it, deeper the page of the reply it answers.
+    # WHERE A COMMENT SHOWS (the comment thread): a comment on its post's or
+    # its drawing's page, a reply on the page of what it answers.
     from .comments import landing
     lands = landing([(cm, post.public_id if post is not None else None) for cm, _, post in said.values()])
     seen = describe_posts(skribls) if skribls else {}

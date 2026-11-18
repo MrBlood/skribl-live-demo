@@ -37,13 +37,17 @@
  * room), the box fades in as its room opens, and under Reduce Motion things
  * are put in place and fade.
  *
- * THE THREAD (the comment thread, step 1; the owner's yes, Nov 17): a reply
- * lands under the one it replies to (the server says which), at the next
- * level (data-level); a reply to a reply at the second level is past what a
- * thread shows, so it joins "Read N more replies" under it, which counts it
- * and glows a moment. ON A COMMENT'S OWN PAGE (comment.html) the box replies
- * to that comment, a new reply lands at the end of its replies (oldest
- * first), and back goes where you were.
+ * THE THREAD (the comment thread, step 1; the owner's yes, Nov 17), ONE
+ * LEVEL, EVERYWHERE (the owner: "a list of direct replies first. If you
+ * click the reply it opens up the tree level"): a list shows only the direct
+ * replies to what its page is about. A reply posted to one of them is on
+ * that one's own page, so here it joins "Read N replies" under it (the
+ * server says which), which counts it and glows a moment. A TAP ON A
+ * REPLY'S BUBBLE OPENS ITS OWN PAGE, as a post's card opens the post: not on
+ * a link, a button or its drawing (which plays), nor when the press ends a
+ * selection. ON A COMMENT'S OWN PAGE (comment.html) the box replies to that
+ * comment, a new reply lands at the end of its replies (oldest first), and
+ * back goes where you were.
  *
  * A COMMENT'S ⋯, "This comment" (social.js's SocialSheet, as the post's):
  * Copy link and Share… (its own page), then on your own Delete comment; on
@@ -143,8 +147,8 @@
     if (!c && now) { c = doc.createElement('span'); row.appendChild(c); }
     if (c) { if (now) c.textContent = String(now); else row.removeChild(c); }
   }
-  var LEVELS = 2;
-  /* The list a comment's replies hang in, made if it has none yet. */
+  /* The list "Read N replies" hangs in under a comment, made if it has none
+     yet. */
   function answersOf(top) {
     var ans = top.querySelector(':scope > .cm-answers');
     if (!ans) {
@@ -154,9 +158,8 @@
     }
     return ans;
   }
-  /* "READ N MORE REPLIES" under a reply at the thread's last level: one more
-     counted, or the row made (the page's own, [data-cm-rm-proto]), to that
-     reply's own page. */
+  /* "READ N REPLIES" under the one a reply was posted to: one more counted,
+     or the row made (the page's own, [data-cm-rm-proto]), to its own page. */
   function moreRow(top, url) {
     var ans = answersOf(top);
     var rm = ans.querySelector(':scope > .cm-rm');
@@ -362,9 +365,6 @@
     while (t.parentNode && t.parentNode.classList && t.parentNode.classList.contains('cm-answers')) t = t.parentNode.closest('.cm');
     return t;
   }
-  /* How deep a comment sits in the thread on this page: 0 a comment (or, on
-     a comment's own page, one of its replies), then 1 and 2 (data-level). */
-  function levelOf(li) { return +(li.getAttribute('data-level') || 0); }
 
   /* Whom the box says something to: a new comment ("Say something to Mira"),
      or a reply to `li` ("Reply to Theo", and Theo's words under it); on a
@@ -710,10 +710,10 @@
         var li = holder.querySelector('.cm');
         if (!li) { tidy(); return; }
         var top = j.under ? doc.getElementById('c-' + j.under) : null;
-        /* PAST THE THREAD'S LAST LEVEL (a reply to a reply at the second
-           level): it is on that reply's own page, so here it joins "Read N
-           more replies" under it, which counts it and glows a moment. */
-        var deep = !!(top && levelOf(top) >= LEVELS);
+        /* ONE LEVEL, EVERYWHERE: a reply to one in the list is on that one's
+           own page, so here it joins "Read N replies" under it, which counts
+           it and glows a moment. */
+        var deep = !!top;
         var was = answering;
         answering = null;
         afterFold = null;
@@ -733,14 +733,7 @@
           if (link) link.focus({ preventScroll: true });
           return;
         }
-        if (top) {
-          li.setAttribute('data-level', String(levelOf(top) + 1));
-          /* A reply lands at the end of what it replies to, before "Read
-             more" if there is one, which can be below the screen: once it is
-             in place the page glides to it. */
-          var ans = answersOf(top);
-          arrive(li, ans, ans.querySelector(':scope > .cm-rm'), 0, function () { reveal(li); });
-        } else if (subject && j.under === subject) {
+        if (subject && j.under === subject) {
           /* On a comment's own page its replies are oldest first: a new one
              lands at the end, and the page glides to it. */
           arrive(li, list, null, 0, function () { reveal(li); });
@@ -754,7 +747,7 @@
         else syncFirst(false);
         counted(j.count, 1);
         glow(li);
-        var next = top || (subject && j.under === subject) ? li.querySelector('[data-cm-answer]') : icon;
+        var next = subject && j.under === subject ? li.querySelector('[data-cm-answer]') : icon;
         if (next) next.focus({ preventScroll: true });
       });
     });
@@ -827,6 +820,19 @@
       if (box) sayNew(n);
       else if (out) out.open(n);
       return;
+    }
+    /* A TAP ON A REPLY OPENS ITS OWN PAGE ("If you click the reply it opens
+       up the tree level"): on its bubble, or a place's words, but not on a
+       link, a button or the drawing (which plays), nor a press that ends a
+       selection of its words. */
+    var bub = e.target.closest('.cm-bubble, .cm.is-gone > .cm-main');
+    if (bub && !e.target.closest('a, button, input, textarea, .cm-art') && !e.defaultPrevented) {
+      var sel = window.getSelection && window.getSelection();
+      var to = bub.closest('.cm');
+      if (to && to.getAttribute('data-url') && !(sel && !sel.isCollapsed && bub.contains(sel.anchorNode))) {
+        window.location.assign(to.getAttribute('data-url'));
+        return;
+      }
     }
     var m = e.target.closest('[data-cm-menu]');
     if (m && menu) {
