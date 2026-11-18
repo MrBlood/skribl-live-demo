@@ -117,6 +117,7 @@
     </div>
     <div class="cm-acts">
       {% if can %}<button class="cm-act" type="button" data-cm-answer aria-expanded="false">{{ ic.comment() }}<span class="cm-word">Reply</span></button>{% endif %}
+      {%- if not c.taken_down_at %}{{ comment_heart(it) }}{% endif %}
       <button class="icon-btn cm-dots" type="button" data-cm-menu aria-haspopup="dialog" aria-controls="commentSheet"
               aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>
     </div>
@@ -126,6 +127,18 @@
   {%- endif %}
 </li>
 {%- endif %}
+{%- endmacro %}
+
+{#  A COMMENT'S HEART (the comment thread, step 2; the owner's yes, Nov 17,
+    "the same choices as a post"): a post's own heart (_post.html heart(),
+    likes.js), in its row between Reply and ⋯, how many beside it, none at
+    zero; signed out, the small sheet, "Like this comment?". It keeps no
+    moment (likes.js: a heart in a comment reads no player). #}
+{% macro comment_heart(it) -%}
+{%- set n = it.likes.n if it.likes else 0 %}{% set mine = it.likes.mine if it.likes else false -%}
+<button class="lk-heart{% if mine %} is-liked{% endif %}{% if not n %} is-zero{% endif %}" type="button" data-first="{{ it.who.display_name.split(' ')[0] }}"
+        {%- if me %} data-like="{{ url_for('social.like_comment', public_id=it.c.public_id) }}"{% else %} data-like-out data-like-title="Like this comment?" aria-haspopup="dialog" aria-controls="likeOutSheet" aria-expanded="false"{% endif %}
+        aria-pressed="{{ 'true' if mine else 'false' }}" aria-label="{{ 'Liked' if mine else 'Like' }}{% if n %}, {{ n }} {{ 'like' if n == 1 else 'likes' }}{% endif %}">{{ ic.heart() }}{% if n %}<span class="lk-n">{{ n }}</span>{% endif %}</button>
 {%- endmacro %}
 
 {#  "READ N MORE REPLIES", on the thread's line under a reply at the second

@@ -6,6 +6,8 @@ it is only ever the maker's to see.
                         or taken back (JSON: {ok, liked, count}; to its maker,
                         "Liked by" and its rows again: by, who)
     /b/<skribl_id>/like the same, on a drawing shown outside a post
+    /c/<id>/like        the same, on a comment or a reply (the comment thread,
+                        step 2): {ok, liked, count}; no moment, no "Liked by"
 
 THE HEART stays empty until THIS viewer likes it, whatever the count beside it
 says; the count is everyone's, and says nothing at zero. One like a person a
@@ -46,6 +48,15 @@ answers with both again, so the sheet is never stale (and the line, should
 somebody else have liked it meanwhile, says so). With no line, a like row
 in Activity lands on the post's heart instead (#liked, _post.html heart).
 
+ON A COMMENT TOO (the comment thread, step 2; the owner's yes, Nov 17, "the
+same choices as a post"): the heart in every comment's row, in a list and on
+its own page, counted the same way, its author told in Activity ("Mira liked
+your comment"). Who may: as on a post, and the comment must be one the
+person may see (comments.seen: nobody hidden on the way to it), not taken
+down and not a place (nobody's: nothing to like). A like on a comment keeps
+no moment, so its drawing's line has no dots, and nobody's page lists who
+liked a comment.
+
 WHAT YOU LIKED IS YOURS ALONE TOO (the map's step 4): your own profile's
 Likes tab lists the posts you liked, newest liked first (liked_page()), and
 nobody else's page has the tab, nor anything of it in the page or its
@@ -84,7 +95,7 @@ MARKS_MAX = 200
 
 
 def _col(kind):
-    return Like.post_id if kind == "p" else Like.drawing_id
+    return {"p": Like.post_id, "s": Like.drawing_id, "c": Like.comment_id}[kind]
 
 
 def _where(on):
@@ -92,8 +103,9 @@ def _where(on):
     return Like.post_id == on.post.id if on.post is not None else Like.drawing_id == on.drawing
 
 
-def stats(viewer, posts=(), drawings=()):
-    """{("p", a post's internal id) or ("s", a drawing's public id):
+def stats(viewer, posts=(), drawings=(), comments=()):
+    """{("p", a post's internal id), ("s", a drawing's public id) or ("c", a
+    comment's internal id):
     {"n": how many likes `viewer` is shown, "mine": whether one is theirs,
      "at": the moment theirs keeps (None for none), "marks": where they
      landed, for the dots on the drawing's line (_marks())}},
@@ -103,7 +115,7 @@ def stats(viewer, posts=(), drawings=()):
     hidden = sorted(hidden_ids(viewer))
     mine_id = viewer.id if viewer is not None else -1
     out = {}
-    for kind, ids in (("p", posts), ("s", drawings)):
+    for kind, ids in (("p", posts), ("s", drawings), ("c", comments)):
         ids = [i for i in dict.fromkeys(ids or ()) if i is not None]
         for i in ids:
             out[(kind, i)] = {"n": 0, "mine": False, "at": None, "marks": []}
@@ -308,6 +320,14 @@ def move_drawing_likes(skribl_id, post_id):
         .values(post_id=post_id, drawing_id=None).execution_options(synchronize_session=False))
 
 
+def drop_comment_likes(ids):
+    """Every like on the comments `ids` (internal ids; comments.retire and
+    comments._drop, every way a comment goes, or becomes a place)."""
+    ids = sorted(set(ids or ()))
+    if ids:
+        _drop(Like.comment_id.in_(ids))
+
+
 def drop_owner_likes(person_id):
     """Every like on what a person owned (accounts.delete_person)."""
     _drop(Like.owner_id == person_id)
@@ -372,6 +392,48 @@ def register(bp):
         """This person's like on a post, set or taken back."""
         from .comments import on_post
         return set_like(lambda me: on_post(me, public_id=public_id))
+
+    @bp.post("/c/<public_id>/like")
+    @_rests(json_answer=True)
+    def like_comment(public_id):
+        """This person's like on a comment or a reply (the comment thread,
+        step 2), set or taken back: one they may see (comments.seen), not
+        taken down, nor anything on the way to it, and not a place. No
+        moment, and no "Liked by"."""
+        if not origin_ok() or not token_ok():
+            return _json_error("stale", 403)
+        me = current_person()
+        if me is None:
+            return _json_error("signed_out", 401)
+        if over("like", "person|" + me.public_id):
+            return _json_error("limited", 429)
+        from .comments import may_comment, seen
+        if not may_comment(me):
+            return _json_error("taken_down", 403)
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or not isinstance(body.get("liked"), bool):
+            return _json_error("bad", 400)
+        got = seen(public_id, me)
+        if (got is None or not got["on"].open_to(me) or got["c"].gone is not None or got["c"].taken_down_at is not None
+                or any(c.taken_down_at is not None for c, _ in got["chain"])):
+            # Not there, hidden, taken down, or a place (nobody's): gone, as its page is.
+            return _json_error("gone", 404)
+        c = got["c"]
+        sess = site().session()
+        mine = sa.and_(Like.comment_id == c.id, Like.person_id == me.id)
+        if body["liked"]:
+            if sess.execute(sa.select(Like.id).where(mine)).first() is None:
+                try:
+                    with sess.begin_nested():
+                        sess.add(Like(person_id=me.id, comment_id=c.id, owner_id=c.person_id, at_ms=None))
+                        sess.flush()
+                except sa.exc.IntegrityError:
+                    pass            # liked a moment ago, from another tap: one like
+        else:
+            sess.execute(sa.delete(Like).where(mine).execution_options(synchronize_session=False))
+        sess.flush()
+        n = stats(me, comments=[c.id])[("c", c.id)]
+        return jsonify({"ok": True, "liked": n["mine"], "count": n["n"]})
 
     @bp.post("/b/<skribl_id>/like")
     @_rests(json_answer=True)

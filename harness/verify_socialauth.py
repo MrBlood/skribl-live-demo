@@ -1392,6 +1392,8 @@ with sync_playwright() as p_:
                     # and who liked, newest first (a profile's Likes tab, the map's step 4)
                     "ix_social_likes_person_post", "ix_social_likes_person_drawing", "ix_social_likes_post_created",
                     "ix_social_likes_drawing_created", "ix_social_likes_owner_created", "ix_social_likes_person_created",
+                    # likes on comments (the comment thread, step 2): once a person a comment, a comment's newest first
+                    "ix_social_likes_person_comment", "ix_social_likes_comment_created",
                     # bookmarks: once a person a thing, yours newest first, a post's, a drawing's, whose
                     "ix_social_bookmarks_person_post", "ix_social_bookmarks_person_drawing",
                     "ix_social_bookmarks_person_created", "ix_social_bookmarks_post_id", "ix_social_bookmarks_drawing_id",
@@ -1601,6 +1603,35 @@ with sync_playwright() as p_:
                          "ALTER TABLE social_comments DROP COLUMN gone",
                          "ALTER TABLE social_comments DROP COLUMN answers_id"],
               f"up {th_up.returncode} {tu}; down {th_down.returncode} {td}")
+        # ...AND THE COMMENT THREAD'S STEP 2 (likes on comments): a column added
+        # nullable with no default, its foreign key, the CHECK swapped for one
+        # with a third kind (added NOT VALID: nothing scanned under the lock)
+        # and two indexes; no row read or written; all of it undone going down,
+        # the old CHECK back.
+        cl_up, cl_down = offline("upgrade", "3b76663f9417:5beec18dc5fe"), offline("downgrade", "5beec18dc5fe:3b76663f9417")
+        cu, cd = statements(cl_up.stdout), statements(cl_down.stdout)
+        on_one = ("CHECK ((CASE WHEN post_id IS NULL THEN 0 ELSE 1 END + CASE WHEN drawing_id IS NULL THEN 0 ELSE 1 END"
+                  " + CASE WHEN comment_id IS NULL THEN 0 ELSE 1 END) = 1)")
+        check("...and step 2's (likes on comments) PostgreSQL DDL, read offline, is a column added nullable with no default"
+              " (the comment it is on), its foreign key, the CHECK swapped for a post, a drawing or a comment (added NOT"
+              " VALID) and two indexes: no row of any table read or written; and all of it undone going down, the old"
+              " CHECK back (the one read going down, whether a like on a comment is there, is not asked offline)",
+              cl_up.returncode == 0 and cl_down.returncode == 0
+              and cu == ["ALTER TABLE social_likes ADD COLUMN comment_id BIGINT",
+                         "ALTER TABLE social_likes ADD CONSTRAINT fk_social_likes_comment_id FOREIGN KEY(comment_id)"
+                         " REFERENCES social_comments (id) ON DELETE CASCADE",
+                         "ALTER TABLE social_likes DROP CONSTRAINT ck_social_likes_on_one",
+                         "ALTER TABLE social_likes ADD CONSTRAINT ck_social_likes_on_one " + on_one + " NOT VALID",
+                         "CREATE UNIQUE INDEX ix_social_likes_person_comment ON social_likes (person_id, comment_id)",
+                         "CREATE INDEX ix_social_likes_comment_created ON social_likes (comment_id, created_at)"]
+              and cd == ["DROP INDEX ix_social_likes_comment_created",
+                         "DROP INDEX ix_social_likes_person_comment",
+                         "ALTER TABLE social_likes DROP CONSTRAINT ck_social_likes_on_one",
+                         "ALTER TABLE social_likes ADD CONSTRAINT ck_social_likes_on_one CHECK ((post_id IS NOT NULL AND"
+                         " drawing_id IS NULL) OR (post_id IS NULL AND drawing_id IS NOT NULL))",
+                         "ALTER TABLE social_likes DROP CONSTRAINT fk_social_likes_comment_id",
+                         "ALTER TABLE social_likes DROP COLUMN comment_id"],
+              f"up {cl_up.returncode} {cu}; down {cl_down.returncode} {cd}")
         # ...and on SQLite, a chain with posts in it: up, every post kept and a
         # post of words alone taken (a post of nothing still refused); back
         # down refused while one is there, saying so before it changes

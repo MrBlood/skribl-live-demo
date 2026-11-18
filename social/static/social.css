@@ -1828,6 +1828,14 @@ a.post-face { text-decoration: none; }
   cursor: pointer;
 }
 .cm-act .ic { width: 18px; height: 18px; }
+/* A COMMENT'S HEART (the comment thread, step 2): the post's (likes.js,
+   below), in the row's ink and size, 44px to a finger, its count beside it
+   in the row's own figures. */
+.cm-acts .lk-heart {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px;
+  border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 15px; cursor: pointer;
+}
+.cm-acts .lk-heart .ic { width: 18px; height: 18px; }
 .cm-acts .icon-btn { color: var(--ink-2); }
 .cm-acts .icon-btn .ic { width: 20px; height: 20px; }
 @media (max-width: 899px) {

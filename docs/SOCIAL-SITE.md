@@ -2515,3 +2515,36 @@ decided where all of them were silent:
 `harness/verify_socialcomments.py` sections 38 to 46 hold it; sections 3,
 4, 5, 7, 9, 13, 16, 21, 22, 23, 25, 27, 28, 32, 33, 34, 36 and 37 moved to
 its words, its one level and its places.
+
+**Built: step 2, likes on comments** (Nov 17; DECISIONS.md, "The comment
+thread, step 2"). The yes showed the heart in every comment's row; nothing
+new to mock:
+
+- **The heart** in every comment's row, in a list and on a comment's own
+  page, between Reply and ⋯ (step 3's Repost will come before it): the
+  post's own heart (`_comments.html` `comment_heart`, `likes.js`), its
+  count beside it, none at zero, 44px. A like on a comment keeps no moment:
+  `likes.js` reads no player for a heart in a comment, so the post's line
+  gets no dot from it.
+- **The data.** `social_likes.comment_id` (migration `5beec18dc5fe`), its
+  foreign key, two indexes (once a person a comment; a comment's likes
+  newest first) and the CHECK widened to a post, a drawing or a comment,
+  exactly one (on PostgreSQL added NOT VALID). `owner_id` is the comment's
+  author. No data work; going down refuses while a like on a comment is
+  there.
+- **Who may** (`/social/c/<id>/like`): as on a post, on a comment the person
+  may see (`comments.seen`), not taken down and not a place. Counted by the
+  viewer (`likes.stats`, a third kind), nobody hidden from them.
+- **Activity**: the comment's author is told, "Mira liked your comment",
+  "Mira and 2 others liked your comment", grouped as a post's likes, their
+  comment's words under it, the small picture of its drawing, else of what
+  it is on, opening the comment where it shows; quiet for the muted, never
+  the bell's dot.
+- **Deleting is said in code**: a comment that goes takes its likes, and so
+  does one that keeps its place (a place is nobody's, nothing to like); a
+  post, a drawing or an account takes its comments' with them.
+- **Not in step 2**: who liked a comment is nobody's page to list (no
+  "Liked by" on a comment), and your profile's Likes tab stays posts.
+
+`harness/verify_sociallikes.py` section 16 holds it, section 11 its data;
+`verify_socialauth.py` pins its PostgreSQL DDL.
