@@ -619,17 +619,18 @@ try:
                 _edges[f"{theme} the scrubber's bubble"] = _left(pg, ".player-bar .rl-bubble", 3, top=True)
                 pg.mouse.up()
                 pg.wait_for_timeout(300)
-            pg.click("#playerFullBtn")
-            pg.wait_for_timeout(900)
-            _edges[f"{theme} the x in full screen"] = _left(pg, ".player-btn.full-exit", 3)
+            # The x in full screen is no longer counted here: since No dinge,
+            # the last four (Nov 18), it wears the bar's glass, toned by the
+            # drawing under it, which keeps its 1px edge on purpose as the
+            # bar's glass buttons do (verify_fullsmart, glass).
             ctx.close()
             ctx, pg = open_page(b, HOSTED, hosted_url, _DK2, theme)
             _edges[f"{theme} the column's side, a desk at 2x"] = _left(pg, ".app", 2, 0.6)
             ctx.close()
         check("every outline on the link page is one screen pixel, light and dark: a round button, the way back to the"
-              " site, the More card, the speed chips' card, the scrubber's bubble and the x in full screen (a phone at"
-              " 3x), and the column's sides (a desk at 2x)",
-              len(_edges) == 14 and all(v == 1 for v in _edges.values()), json.dumps(_edges) + " " + json.dumps(_why)[:1500])
+              " site, the More card, the speed chips' card and the scrubber's bubble (a phone at 3x), and the column's"
+              " sides (a desk at 2x)",
+              len(_edges) == 12 and all(v == 1 for v in _edges.values()), json.dumps(_edges) + " " + json.dumps(_why)[:1500])
         check("...and the line between the More card's rows is one screen pixel, light and dark",
               len(_rule) == 2 and all(v == 1 for v in _rule.values()), json.dumps(_rule))
 
