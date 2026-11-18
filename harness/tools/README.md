@@ -71,7 +71,7 @@ new sign-in links. `--check` reads a site and changes nothing: every post
 made shows its drawing's own picture, every face is set, and the old blank
 drawings are gone.
 
-## The site's mocks
+## Mocks
 
 `mock_comments.py` shoots the comment thread the owner said yes to on Nov 17
 (docs/SOCIAL-SITE.md section 18). It runs the site on a fresh database of its
@@ -85,6 +85,15 @@ on Home, quoted and kept in Bookmarks, today's cards made over in the page;
 `MOCK_ROUND=count` the count by the talk cloud in place of "Read N replies".
 Its docstring has the usage. Start the site's next mock from it rather than
 from nothing.
+
+`mock_dinge.py` shoots the last four No dinge spots (Nov 18): the Play pill on
+the Pad and in Flip, full screen's ✕, the dark glass over a dark drawing (full
+screen's bar and the Gallery card's), and Flip's scrub line. It serves the app
+on a fresh database, draws through the real editors, posts two drawings with
+card pictures, and lays each option over today's look as CSS, phone and desk,
+light and dark. It reads every option's paint off the screen (its fill with its
+contents hidden, what is under it, its mark) into `measure.json`. Start an
+editor's next colour mock from it.
 
 ## Measurement
 
