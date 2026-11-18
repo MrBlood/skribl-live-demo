@@ -43,6 +43,19 @@ glowing). It writes MOCK_OUT/shots/dr-<phone|desk>-<light|dark>-<opt>.png and
 measure.json (each drawing's size and room, its paper against what is behind
 it, the words' contrasts).
 
+MOCK_ROUND=world shoots step 3's (A Comment Shared, Nov 17:
+https://claude.ai/artifact/4XKrYxE3894YErstqr88NW): a comment away from its
+thread, when nothing in the app reposts, quotes or keeps one yet, so today's
+own cards are made over in the page. On Dee's Home (Following), Ana's repost
+of Ben's post becomes her repost of Eli's comment, and Ana's cat, posted as a
+stand-in, her drawn reply reposted by Cyd; Cyd's quote of Ben's post quotes
+Eli's comment; on Dee's Bookmarks, her bookmark of Ben's post keeps Eli's
+comment. Today's look, then A (the way to it above, as on the comment's own
+page) and B (alone, with "On Ben's post" or "Reply to Eli" under its name).
+It writes MOCK_OUT/shots/w<o|q|b>-<phone|desk>-<light|dark>-<now|a|b>.png and
+measure.json (the small words' contrast, the cards' heights, the way's faces
+over the card's).
+
 It writes MOCK_OUT/shots/rm-<phone|desk>-<light|dark>-<thread|reply>.png and
 rm-phone-<light|dark>-sheet.png at 2x, and MOCK_OUT/measure.json (the room
 the words have at each depth, the icons' contrast, and an @name's when a
@@ -870,10 +883,201 @@ def round_drawings(b):
             print(screen, scheme, "done", flush=True)
 
 
+# ================= STEP 3: A COMMENT OUT IN THE WORLD (repost, quote, bookmark) =================
+# Nothing in the app reposts, quotes or keeps a comment yet, so the cards are
+# today's own, made over: the repost of Ben's post becomes Ana's repost of
+# Eli's comment; Ana's cat, posted as a stand-in, becomes her drawn reply
+# reposted by Cyd (its player is the post's own, so it plays as a post's);
+# Cyd's quote of Ben's post quotes Eli's comment; Dee's bookmark of Ben's
+# post keeps Eli's comment. A: the way to it above (the post, small, its
+# still beside it; for a reply the comment too), joined by the thread's line
+# to the comment, as on its own page. B: the comment alone, a line under its
+# name saying what it is on ("On Ben's post", "Reply to Eli").
+WORLD_CSS = """
+.post-card .cm-way { margin: 0 0 4px; }
+.post-card .cm-way-link { grid-template-columns: 44px minmax(0, 1fr) auto; }
+.post-card .cm-way-link > :first-child { justify-self: center; }
+.post-card .cm-way-item::before { left: 21px; }
+.post-card .cm-way-item:last-child::before { bottom: -4px; }
+.mock-to { display: flex; align-items: center; gap: 8px; margin: 10px 0 -4px; color: var(--ink-2); font-size: 14px; font-weight: 600; line-height: 1.3; }
+.mock-to .ic { flex: none; width: 16px; height: 16px; margin-left: 14px; margin-right: 6px; }
+.qt-on { display: block; margin-top: 2px; color: var(--ink-2); font-size: 14px; }
+.nav { visibility: hidden !important; }
+"""
+
+WORLD = r"""async (d) => {
+  const parse = async (path) => new DOMParser().parseFromString(await (await fetch(path, { credentials: 'same-origin' })).text(), 'text/html');
+  const card = (id) => document.querySelector('.post-card[data-post="' + id + '"]');
+  const time = (el, t) => { if (el) { el.textContent = t; el.removeAttribute('data-when'); } };
+  const row = (c, n) => {
+    const put = (el, cls, k) => { if (!el) return; let s = el.querySelector(cls ? '.' + cls : 'span');
+      if (k) { if (!s) { s = document.createElement('span'); if (cls) s.className = cls; el.appendChild(s); } s.textContent = k; el.classList.remove('is-zero'); }
+      else if (s) s.remove(); };
+    put(c.querySelector('.post-row .post-count'), '', n[0]); put(c.querySelector('.post-row .rp-btn'), 'rp-n', n[1]);
+    put(c.querySelector('.post-row .lk-heart'), 'lk-n', n[2]); };
+  const s = document.createElement('style'); s.textContent = d.css; document.head.appendChild(s);
+  const out = {};
+  const c1 = card(d.repost), c2 = card(d.stand), q = card(d.quote), mk = card(d.mark);
+  if (c1) { time(c1.querySelector('.post-head time'), '6h'); row(c1, [3, 2, 12]); }
+  if (q) { time(q.querySelector('.post-head time'), '1h'); time(q.querySelector('.qt-card time'), '6h'); row(q, [0, 0, 3]); }
+  if (mk) { time(mk.querySelector('.post-head time'), '6h'); row(mk, [3, 2, 12]); }
+  if (c2) c2.hidden = d.opt === 'now';
+  if (d.opt === 'now') return { cards: [!!c1, !!c2, !!q, !!mk] };
+  const [p1, pr] = await Promise.all([parse('/social/c/' + d.c1), parse('/social/c/' + d.r1)]);
+  const icon = (sel) => { const e = document.querySelector(sel + ' svg'); return e ? e.outerHTML : ''; };
+  // THE COMMENT, MADE OVER FROM A CARD: its face, name, @handle, time, words, row.
+  const become = (c, page, who) => {
+    const face = page.querySelector('.post-head .post-face');
+    const f = c.querySelector('.post-head .post-face');
+    if (face && f && who.blank) f.innerHTML = face.innerHTML;
+    const nm = c.querySelector('.post-head .post-name'); if (nm) { nm.textContent = who.name; nm.href = '/social/@' + who.handle; }
+    const sub = c.querySelector('.post-head .post-sub');
+    if (sub) { const w = sub.querySelector('.post-when'); sub.firstChild.textContent = '@' + who.handle + ' · ';
+      if (w) { w.href = '/social/c/' + who.id; time(w.querySelector('time'), who.when); } }
+    if (who.words !== undefined) { const pw = c.querySelector('.post-words'); if (pw) pw.textContent = who.words; }
+    if (who.noArt) c.querySelectorAll('.post-art, .qt-card').forEach(e => e.remove());
+    const open = c.querySelector('.post-open'); if (open) open.href = '/social/c/' + who.id;
+    row(c, who.row);
+  };
+  const way = (c, page) => { const w = page.querySelector('.cm-way'); if (!w) return;
+    const n = document.importNode(w, true); n.querySelectorAll('time').forEach((t, i) => time(t, d.wayTimes[i] || '6h'));
+    c.insertBefore(n, c.querySelector('.post-head')); };
+  const to = (c, words) => { const p = document.createElement('p'); p.className = 'mock-to';
+    p.innerHTML = icon('.post-row .post-count') + '<span>' + words + '</span>';
+    c.querySelector('.post-head').after(p); };
+  const eli = { name: 'Eli Moss', handle: 'eli', id: d.c1, when: '5h', blank: true, noArt: true,
+                words: 'Is that the cottage by the river? I think I know it.', row: [2, 1, 4] };
+  if (c1) { become(c1, p1, eli); if (d.opt === 'a') way(c1, p1); else to(c1, "On Ben’s post"); }
+  if (c2) {
+    const fc = pr.querySelector('.post-head .post-face'), f2 = c2.querySelector('.post-head .post-face');
+    if (fc && f2) f2.innerHTML = fc.innerHTML;
+    const by = c1 && c1.querySelector('.rp-by');
+    if (by) { const n = by.cloneNode(true); n.querySelector('span').textContent = 'Cyd Marsh reposted'; c2.prepend(n); }
+    time(c2.querySelector('.post-head time'), '4h');
+    const open = c2.querySelector('.post-open'); if (open) open.href = '/social/c/' + d.r1;
+    row(c2, [1, 1, 9]);
+    if (d.opt === 'a') way(c2, pr); else to(c2, 'Reply to Eli');
+  }
+  if (mk) { become(mk, p1, eli); if (d.opt === 'a') way(mk, p1); else to(mk, "On Ben’s post"); }
+  if (q) {
+    const qc = q.querySelector('.qt-card');
+    if (qc) { qc.href = '/social/c/' + d.c1; qc.querySelector('.qt-name').textContent = 'Eli Moss';
+      const sub = qc.querySelector('.qt-sub'); sub.firstChild.textContent = '@eli · '; time(sub.querySelector('time'), '5h');
+      const on = document.createElement('span'); on.className = 'qt-on'; on.textContent = "On Ben’s post";
+      qc.querySelector('.qt-head').after(on);
+      const qw = qc.querySelector('.qt-words'); if (qw) qw.textContent = eli.words;
+      const pic = qc.querySelector('.qt-pic'); if (pic) pic.remove(); }
+  }
+  out.cards = [!!c1, !!c2, !!q, !!mk];
+  return out; }"""
+
+WORLD_MEASURE = r"""() => {
+  const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number); const f = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return Math.round(((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)) * 100) / 100; };
+  const ground = (el) => { for (let e = el; e; e = e.parentElement) { const bg = getComputedStyle(e).backgroundColor; if (bg && !/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) return bg; } return 'rgb(255, 255, 255)'; };
+  const read = (sel) => { const e = document.querySelector(sel); if (!e) return null; const cs = getComputedStyle(e);
+    return { ratio: ratio(cs.color, ground(e)), size: cs.fontSize, weight: cs.fontWeight }; };
+  const h = (sel) => { const e = document.querySelector(sel); return e ? Math.round(e.getBoundingClientRect().height) : null; };
+  const cards = [...document.querySelectorAll('.feed .post-card:not([hidden]), .post-card:not([hidden])')];
+  const face = document.querySelector('.post-card .post-head .post-face');
+  const wayFace = document.querySelector('.post-card .cm-way-link > :first-child');
+  const centre = (e) => { if (!e) return null; const r = e.getBoundingClientRect(); return Math.round((r.left + r.width / 2) * 10) / 10; };
+  return { reposted: read('.post-card .rp-by span'), wayWords: read('.post-card .cm-way-item:first-child .cm-way-words'),
+           wayName: read('.post-card .cm-way-head b'), wayTime: read('.post-card .cm-way-head time'), to: read('.post-card .mock-to span'),
+           quoteOn: read('.qt-card .qt-on'), quoteWords: read('.qt-card .qt-words'),
+           heights: cards.slice(0, 4).map(c => Math.round(c.getBoundingClientRect().height)),
+           centres: { face: centre(face), wayFace: centre(wayFace) } }; }"""
+
+
+def world_box(pg, sels):
+    """The box round the cards `sels` names (the first to the last), with a margin."""
+    return pg.evaluate("""(sels) => { const els = sels.map(s => document.querySelector(s)).filter(e => e && !e.hidden);
+      if (!els.length) return null; const rs = els.map(e => e.getBoundingClientRect());
+      const top = Math.min(...rs.map(r => r.top)), bottom = Math.max(...rs.map(r => r.bottom));
+      const left = Math.min(...rs.map(r => r.left)), right = Math.max(...rs.map(r => r.right));
+      return { x: Math.max(0, left - 12), y: Math.max(0, top - 12), width: Math.min(innerWidth, right + 12) - Math.max(0, left - 12), height: bottom - top + 24 }; }""", sels)
+
+
+def shoot_world(pg, name, sels):
+    pg.evaluate(f"() => document.querySelector({json.dumps(sels[0])})?.scrollIntoView({{ block: 'start' }})")
+    pg.wait_for_timeout(300)
+    box = world_box(pg, sels)
+    if not box:
+        print("nothing to shoot for", name, flush=True)
+        return
+    vp = pg.viewport_size
+    need = int(box["y"] + box["height"] + 30)
+    if need > vp["height"]:
+        pg.set_viewport_size({"width": vp["width"], "height": need})
+        pg.wait_for_timeout(400)
+        pg.evaluate(f"() => document.querySelector({json.dumps(sels[0])})?.scrollIntoView({{ block: 'start' }})")
+        pg.wait_for_timeout(200)
+        box = world_box(pg, sels)
+    pg.screenshot(path=f"{OUT}/shots/{name}.png", clip=box)
+
+
+def round_world(b):
+    """Step 3, a comment out in the world: on Home's Following (reposted),
+    quoted, and kept in Your Bookmarks; today's look, then A (the way to it
+    above) and B (alone, with what it is on)."""
+    import artworks
+    ben = member(b, "ben", "Ben Okafor")
+    ana = member(b, "ana", "Ana Reyes")
+    cyd = member(b, "cyd", "Cyd Marsh")
+    dee = member(b, "dee", "Dee Park")
+    eli = member(b, "eli", "Eli Moss")
+    scene = with_card(ben, art_payload(artworks.scene(), seed=2))
+    cat = with_card(ana, art_payload(artworks.cat(), seed=3))
+    post = make_post(ben, "Morning ride past the old cottage, drawn on the train", payload=scene)
+    c1 = say_(eli, post, "Is that the cottage by the river? I think I know it.")
+    r1 = say_(ana, post, "It is! Our cat lives there.", answer_to=c1, payload=cat)
+    say_(ben, post, "Yes, the one by the old mill. Good eye.", answer_to=c1)
+    stand = make_post(ana, "It is! Our cat lives there.", payload=cat)
+    dc = dee.client()
+    dc.get("/social/")
+    for h in ("ana", "cyd"):
+        print("follow", h, dc.post_json(f"/social/@{h}/follow", {"following": True})[0], flush=True)
+    print("home", dc.post_json("/social/home/show", {"show": "following"})[0], flush=True)
+    ac = ana.client()
+    ac.get(f"/social/p/{post}")
+    print("repost", ac.post_json(f"/social/p/{post}/repost", {"reposted": True})[0], flush=True)
+    cc = cyd.client()
+    cc.get("/social/")
+    st, j = cc.post_json("/social/posts", {"words": "This made my morning", "quote": post})
+    quote = j.get("post") if st == 200 and isinstance(j, dict) else None
+    print("quote", st, quote, flush=True)
+    dc.get(f"/social/p/{post}")
+    print("bookmark", dc.post_json(f"/social/p/{post}/bookmark", {"bookmarked": True})[0], flush=True)
+    data = {"repost": post, "stand": stand, "quote": quote, "mark": post, "c1": c1, "r1": r1,
+            "wayTimes": ["6h", "5h"], "css": WORLD_CSS}
+    for screen in ("phone", "desk"):
+        for scheme in ("light", "dark"):
+            for opt in ("now", "a", "b"):
+                ctx, pg = browser_as(b, dee, screen=screen, scheme=scheme, reduced=True)
+                go(pg, "/social/", wait=1200)
+                st = pg.evaluate(WORLD, dict(data, opt=opt, mark="-"))
+                pg.wait_for_timeout(900)
+                shoot_world(pg, f"wo-{screen}-{scheme}-{opt}", [f'.post-card[data-post="{post}"]', f'.post-card[data-post="{stand}"]'])
+                meas[f"{screen} {scheme} {opt} feed"] = dict(pg.evaluate(WORLD_MEASURE), setup=st)
+                if quote:
+                    shoot_world(pg, f"wq-{screen}-{scheme}-{opt}", [f'.post-card[data-post="{quote}"]'])
+                close_ctx(ctx, pg)
+                if screen == "phone":
+                    ctx, pg = browser_as(b, dee, screen=screen, scheme=scheme, reduced=True)
+                    go(pg, "/social/@dee/bookmarks", wait=1200)
+                    st = pg.evaluate(WORLD, dict(data, opt=opt, repost="-", stand="-", quote="-"))
+                    pg.wait_for_timeout(700)
+                    shoot_world(pg, f"wb-{screen}-{scheme}-{opt}", [f'.post-card[data-post="{post}"]'])
+                    meas[f"{screen} {scheme} {opt} bookmarks"] = dict(pg.evaluate(WORLD_MEASURE), setup=st)
+                    close_ctx(ctx, pg)
+            print(screen, scheme, "done", flush=True)
+
+
 ROUND = os.environ.get("MOCK_ROUND", "replies")
 with sync_playwright() as p:
     b = p.chromium.launch()
-    (round_drawings if ROUND == "drawings" else round_replies)(b)
+    {"drawings": round_drawings, "world": round_world}.get(ROUND, round_replies)(b)
     b.close()
 open(f"{OUT}/measure.json", "w").write(_json.dumps(meas, indent=1))
 if ERRS:
