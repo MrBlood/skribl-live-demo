@@ -520,19 +520,27 @@ with sync_playwright() as p:
     DARKS = """(sel) => [...document.querySelectorAll(sel + ' .t-dark')]
       .filter(e => e.getClientRects().length && e.matches('.player-btn, .rl-speed, .rl-repeat, .full-btn'))
       .map(e => ({ name: e.getAttribute('aria-label') || e.className,
-                   lit: e.classList.contains('active') || e.getAttribute('aria-pressed') === 'true',
+                   lit: e.matches('.active, .full-btn[aria-pressed="true"], .rl-repeat[aria-pressed="true"]'),
                    bg: getComputedStyle(e).backgroundColor }))"""
     VIOLET, VIOLET_LIT, LIGHT_GLASS = "rgba(124, 92, 255, 0.3)", "rgba(124, 92, 255, 0.62)", "rgba(255, 255, 255, 0.68)"
 
-    def glass_rows(tag, pg, bar_sel, ground):
+    def glass_rows(tag, pg, bar_sel, ground, glass=True):
         want = "dark" if ground == "dark" else "light"
         x = pg.evaluate(EXIT)
         check(f"{tag}: full screen's x wears the bar's {want} glass, toned by what lies under it",
               bool(x) and x["tone"] == want and x["bg"] == (VIOLET if want == "dark" else LIGHT_GLASS), str(x))
-        if want == "dark":
+        if want == "dark" and glass:
             ds = pg.evaluate(DARKS, bar_sel)
             check(f"{tag}: the bar's dark glass is violet, not grey, and a lit control a stronger violet",
                   bool(ds) and all(d["bg"] == (VIOLET_LIT if d["lit"] else VIOLET) for d in ds), str(ds))
+            # Loop on, a lit toggle on that glass, read again
+            pg.evaluate("""(sel) => { const l = [...document.querySelectorAll(sel + ' .player-btn')].find(e => /loop/i.test(e.getAttribute('aria-label') || '')
+                && e.getClientRects().length); if (l && !l.classList.contains('active')) l.click(); }""", bar_sel)
+            pg.wait_for_timeout(400)
+            ds = pg.evaluate(DARKS, bar_sel)
+            lit = [d for d in ds if d["lit"]]
+            check(f"{tag}: ...and with Loop on, it is the stronger violet, the rest as they were",
+                  bool(lit) and all(d["bg"] == (VIOLET_LIT if d["lit"] else VIOLET) for d in ds), str(ds))
 
     if on("glass"):
         print("\nFULL SCREEN'S GLASS — the dark glass violet, and the x toned by what lies under it")
@@ -548,8 +556,10 @@ with sync_playwright() as p:
         pg, bar = pad(b, "dark")
         glass_rows("The Pad's full screen, desk, dark page, its paper", pg, ".watch-band", "paper")
         pg.close()
+        # Flip's band carries Flip's own line and speeds, which are not glass:
+        # its x is the one control there toned by the drawing.
         pg, bar = flip(b, "light")
-        glass_rows("Flip's full screen, desk, light page, its dark ground", pg, ".watch-band", "dark")
+        glass_rows("Flip's full screen, desk, light page, its dark ground", pg, ".watch-band", "dark", glass=False)
         pg.close()
 
     if on("photo"):
