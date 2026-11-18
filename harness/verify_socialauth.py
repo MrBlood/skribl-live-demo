@@ -1572,22 +1572,33 @@ with sync_playwright() as p_:
                          " OR is_quote) NOT VALID"],
               f"up {wo_up.returncode} {wu}; down {wo_down.returncode} {wd}")
         # ...AND THE COMMENT THREAD'S (the owner's yes, Nov 17; step 1): a reply
-        # keeps the reply it answers. One column added nullable with no default,
-        # its foreign key and its index; no row of any table read or written
-        # (the replies already there stay empty, answering their comment, as the
-        # code reads them: v309's lesson); all of it dropped going down.
+        # keeps the reply it answers, and a comment deleted with replies under
+        # it keeps its place (gone, nobody's). Columns added nullable with no
+        # default, person_id let be nothing, a foreign key, a CHECK NOT VALID and
+        # an index; no row of any table read or written (the replies already
+        # there stay empty, answering their comment, as the code reads them:
+        # v309's lesson); all of it undone going down.
         th_up, th_down = offline("upgrade", "7db36bfedef0:3b76663f9417"), offline("downgrade", "3b76663f9417:7db36bfedef0")
         tu, td = statements(th_up.stdout), statements(th_down.stdout)
-        check("...and the comment thread's PostgreSQL DDL, read offline, is one column added nullable with no default, its"
-              " foreign key to the reply it answers and its index: no row of any table read or written; and all of it"
-              " dropped going down",
+        check("...and the comment thread's PostgreSQL DDL, read offline, is two columns added nullable with no default"
+              " (the reply it answers, and a place's gone), person_id let be nothing (a place is nobody's), the foreign"
+              " key, the CHECK (somebody's or a place) added NOT VALID and the index: no row of any table read or"
+              " written; and all of it undone going down (the one read going down, whether a place is there, is not"
+              " asked offline)",
               th_up.returncode == 0 and th_down.returncode == 0
               and tu == ["ALTER TABLE social_comments ADD COLUMN answers_id BIGINT",
+                         "ALTER TABLE social_comments ADD COLUMN gone VARCHAR(8)",
+                         "ALTER TABLE social_comments ALTER COLUMN person_id DROP NOT NULL",
                          "ALTER TABLE social_comments ADD CONSTRAINT fk_social_comments_answers_id FOREIGN KEY(answers_id)"
                          " REFERENCES social_comments (id) ON DELETE CASCADE",
+                         "ALTER TABLE social_comments ADD CONSTRAINT ck_social_comments_someones CHECK (person_id IS NOT NULL"
+                         " OR gone IS NOT NULL) NOT VALID",
                          "CREATE INDEX ix_social_comments_answers_created ON social_comments (answers_id, created_at)"]
               and td == ["DROP INDEX ix_social_comments_answers_created",
+                         "ALTER TABLE social_comments DROP CONSTRAINT ck_social_comments_someones",
                          "ALTER TABLE social_comments DROP CONSTRAINT fk_social_comments_answers_id",
+                         "ALTER TABLE social_comments ALTER COLUMN person_id SET NOT NULL",
+                         "ALTER TABLE social_comments DROP COLUMN gone",
                          "ALTER TABLE social_comments DROP COLUMN answers_id"],
               f"up {th_up.returncode} {tu}; down {th_down.returncode} {td}")
         # ...and on SQLite, a chain with posts in it: up, every post kept and a

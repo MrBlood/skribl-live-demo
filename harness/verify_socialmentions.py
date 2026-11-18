@@ -1363,7 +1363,7 @@ app = create_app()
 with app.app_context():
     from social.models import Comment, Mention, Person, Post
     from social.accounts import delete_person
-    from social.comments import drop_comments
+    from social.comments import retire
     from social.posts import drop_post
     fk = db.session.execute(sa.text("PRAGMA foreign_keys")).scalar()
     post_id, comment_id, person = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -1378,9 +1378,14 @@ with app.app_context():
     cid = c.id
     under = [r[0] for r in db.session.execute(sa.select(Comment.id).where(Comment.parent_id == cid))]
     before = n(Mention.comment_id.in_([cid] + under))
-    drop_comments([cid])
+    retire([cid], "deleted")
     db.session.commit()
-    out["comment"] = [before, n(Mention.comment_id.in_([cid] + under))]
+    placed = [n(Mention.comment_id == cid), n(Mention.comment_id.in_(under))]
+    retire(under, "deleted")
+    db.session.commit()
+    gone = db.session.execute(sa.select(sa.func.count()).select_from(Comment)
+                              .where(Comment.id.in_([cid] + under))).scalar()
+    out["comment"] = [before, placed, n(Mention.comment_id.in_([cid] + under)), gone]
     who = db.session.execute(sa.select(Person).where(Person.handle_key == person)).scalar_one()
     mine = sa.or_(Mention.person_id == who.id, Mention.by_id == who.id, Mention.owner_id == who.id)
     before = n(mine)
@@ -1390,8 +1395,8 @@ with app.app_context():
     print(json.dumps(out))
 """
 
-    if part(8, "deleting, in code: a post, a comment and its answers, a drawing on the site, an account; cascade off;"
-               " a drawing's comments moving into a post keep theirs"):
+    if part(8, "deleting, in code: a post, a comment (a place while its reply stays) and its reply, a drawing on the"
+               " site, an account; cascade off; a drawing's comments moving into a post keep theirs"):
         try:
             gus = someone(b, "gus", "Gus Hart")
             hal = someone(b, "hal", "Hal Ito")
@@ -1414,18 +1419,28 @@ with app.app_context():
             hc = hal.client()
             hc.get(f"/social/p/{g2}")
             s2 = hc.post_json(f"/social/c/{k1}/delete", {})[0]
+            # THE PLACE STAYS (the comment thread): Ivy's reply stays under
+            # it, her mention with it; it goes when she deletes it, and the
+            # place, with nothing left under it, goes too.
+            kept = tuple(count("join social_comments t on t.id = m.comment_id where t.public_id = ?", (k,)) for k in (k1, k2))
+            ic = ivy.client()
+            ic.get(f"/social/p/{g2}")
+            s2b = ic.post_json(f"/social/c/{k2}/delete", {})[0]
+            rows_left = db("select count(*) from social_comments where public_id in (?, ?)", (k1, k2))[0][0]
             gc.get(f"/social/b/{gd}")
             s3 = gc.post_json(f"/social/b/{gd}/delete", {})[0]
             left = db("select count(*) from social_mentions m left join social_posts t on t.id = m.post_id left join"
                       " social_comments c on c.id = m.comment_id where (m.post_id is not null and t.id is null) or"
                       " (m.comment_id is not null and c.id is null)")[0][0]
-            check("deleting a post takes its mentions; deleting a comment takes its mentions and its answers'; a"
-                  " drawing deleted through the site takes its comments' (each through its own route)",
-                  had == (2, 2, 1) and (s1, s2, s3) == (200, 200, 200) and left == 0
+            check("deleting a post takes its mentions; deleting a comment takes its own, its reply's staying with the"
+                  " reply under the place, then going with it (the place too); a drawing deleted through the site"
+                  " takes its comments' (each through its own route)",
+                  had == (2, 2, 1) and (s1, s2, s2b, s3) == (200, 200, 200, 200) and kept == (0, 1) and rows_left == 0
+                  and left == 0
                   and count("where m.typed in ('hal', 'ivy', 'gus') and (m.post_id in (select id from social_posts where"
                             " public_id = ?) or m.comment_id in (select id from social_comments where public_id in (?, ?, ?)))",
                             (g1, k1, k2, k3)) == 0,
-                  json.dumps([had, [s1, s2, s3], left]))
+                  json.dumps([had, [s1, s2, s2b, s3], kept, rows_left, left]))
             # AN ACCOUNT: every mention of it, by it, and on what it owned.
             jo = someone(b, "joss", "Jo Bell")
             j1 = post(jo, "Section 8, Jo's", seed=84)
@@ -1457,9 +1472,10 @@ with app.app_context():
             out = subprocess.run([sys.executable, "-c", PROBE, h1, hk, "kim"], cwd=ROOT, env=env, capture_output=True,
                                  text=True, timeout=180)
             got = json.loads(out.stdout.strip().splitlines()[-1]) if out.returncode == 0 and out.stdout.strip() else {"err": out.stderr[-600:]}
-            check("with SQLite's cascade off (a copy): a post's mentions (2, then 0), a comment's and its answer's"
-                  " (2, then 0), an account's of it, by it and on what it owned (2, then 0), each by the code alone",
-                  got.get("fk") == 0 and got.get("post") == [2, 0] and got.get("comment") == [2, 0]
+            check("with SQLite's cascade off (a copy): a post's mentions (2, then 0); a comment's and its reply's (2;"
+                  " the comment's place keeps none, the reply keeps its 1; the reply deleted, 0, and both rows gone);"
+                  " an account's of it, by it and on what it owned (2, then 0), each by the code alone",
+                  got.get("fk") == 0 and got.get("post") == [2, 0] and got.get("comment") == [2, [0, 1], 0, 0]
                   and got.get("person") == [2, 0], json.dumps(got)[:600])
             # ONE DRAWING, ONE CONVERSATION: a drawing's comment that mentions
             # somebody moves into the post with it, its mention with it, and
