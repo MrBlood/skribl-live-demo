@@ -474,6 +474,8 @@ STUB = """(() => {
 })();"""
 DENIED = "Object.defineProperty(Notification, 'permission', { get: () => 'denied', configurable: true });"
 NO_PUSH = "try { delete window.PushManager; } catch (e) {}"
+# When the page's own scripts have all run (DOMContentLoaded follows the last deferred one).
+DCL = "document.addEventListener('DOMContentLoaded', () => { window.__dcl = performance.now(); });"
 
 # Every word in a box against what is painted behind it, each see-through
 # layer laid over what is under it (a pressed switch's pill over its track);
@@ -1140,8 +1142,18 @@ with sync_playwright() as p:
                         close_ctx(ctx, pg)
                         ctx, pg = browser_as(b, hal, "desk", scheme, init=[NO_PUSH])
                         go(pg, "/social/you", wait=900)
-                        none = pg.evaluate("() => document.querySelector('[data-push-when=\"none\"]').hidden")
-                        check("a browser that cannot be nudged is told so", none is False, "")
+                        none = pg.evaluate("() => document.querySelector('[data-push-panel]').hidden")
+                        check("a browser that cannot be nudged shows nothing about it in Settings", none is True, "")
+                        close_ctx(ctx, pg)
+                        # Told no, the state is known at once: put there as the
+                        # page is drawn, never gliding in under the reader.
+                        ctx, pg = browser_as(b, hal, "desk", scheme, init=[stub, DENIED, DCL])
+                        pg.goto(BASE + "/social/you")
+                        pg.wait_for_function("() => window.__dcl !== undefined")
+                        hs = pg.evaluate(FRAMES_JS, ["[data-push-panel]", 500])
+                        check("a state known at once (told no) is there from the first frame the page is ready, at"
+                              " its height, never gliding in", len(hs) > 3 and min(hs) > 40 and max(hs) - min(hs) < 1,
+                              str(hs[:6]))
                         close_ctx(ctx, pg)
         except Exception as exc:  # noqa: BLE001
             stopped(7, exc)

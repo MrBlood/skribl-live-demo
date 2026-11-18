@@ -24,10 +24,11 @@
     Mentions and the number on the icon on; Likes, New followers, Reposts
     and quotes off). The choices are this device's, as the permission is
     (push.py). It is there hidden, and push.js shows the one state this
-    device is in: its switches; Turn on; told no (where to allow it); on an
-    iPhone or an iPad in a browser tab, the way to the Home Screen app
-    (_homescreen.html's steps), where nudges come; or a browser that cannot.
-    It glides open as Activity's card does. #}
+    device is in: its switches; Turn on; told no (where to allow it); or, on
+    an iPhone or an iPad in a browser tab, the way to the Home Screen app
+    (_homescreen.html's steps), where nudges come. A browser that cannot be
+    nudged shows none of it. A state known at once is there as the page is
+    drawn; one that waits on the site glides open as Activity's card does. #}
 {% extends 'social/base.html' %}
 {% import 'social/_icons.html' as ic %}
 {% from 'social/_post.html' import face with context %}
@@ -79,7 +80,6 @@
           <p class="panel-text">On an iPhone or an iPad, nudges come to Blooby on your Home Screen. Add it there, open it, and turn them on in its Settings.</p>
           <button class="btn btn-wide" type="button" data-push-home aria-haspopup="dialog" aria-controls="homeSteps">Add to Home Screen</button>
         </div>
-        <p class="panel-text" data-push-when="none" hidden>This browser can’t show notifications.</p>
         <div class="push-rows" data-push-when="on" hidden>
           {%- for kind, name, sub in [('replies', 'Replies and comments', 'Someone replies to you or says something on your post'),
                                       ('mentions', 'Mentions', 'Someone writes your @name'),

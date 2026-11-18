@@ -19,10 +19,12 @@
  * them is seen now.
  *
  * SETTINGS' PANEL shows the one state this device is in: its switches (the
- * device's own, as the permission is), Turn on, told no, the way to the
+ * device's own, as the permission is), Turn on, told no, or the way to the
  * Home Screen app (an iPhone or an iPad in a browser tab, where no browser
- * can be nudged), or a browser that cannot. A switch moves at once and says
- * so to the site; one the site did not take goes back, and says so.
+ * can be nudged); a browser that cannot be nudged shows no panel. A state
+ * known at once is put there as the page is drawn; one that waits on the
+ * site glides in. A switch moves at once and says so to the site; one the
+ * site did not take goes back, and says so.
  *
  * TURNING ON: the browser's permission, then the service worker (push-sw.js,
  * at the site's own folder), then the browser's subscription with the site's
@@ -173,8 +175,16 @@
     fold.addEventListener('transitionend', end);
     timer = setTimeout(end, 520);
   }
-  function open(fold) {
+  /* now: put there as the page is first drawn (a state known at once),
+     never gliding in under the person's eyes. */
+  function open(fold, now) {
     fold.hidden = false;
+    if (now) {
+      fold.classList.add('is-now', 'is-open', 'is-still');
+      void fold.offsetHeight;
+      fold.classList.remove('is-now');
+      return;
+    }
     void fold.offsetHeight;
     fold.classList.add('is-open');
     settle(fold, 'grid-template-rows', function () { if (fold.classList.contains('is-open')) fold.classList.add('is-still'); });
@@ -287,11 +297,11 @@
     var parts = panel.querySelectorAll('[data-push-when]');
     for (var i = 0; i < parts.length; i++) parts[i].hidden = parts[i].getAttribute('data-push-when') !== which;
   }
-  function becomes(which, on) {
+  function becomes(which, on, now) {
     var first = panel.hidden;
     if (first) {
       show(which);
-      open(panel);
+      open(panel, now);
     } else {
       resize(panel, function () { show(which); });
     }
@@ -301,9 +311,12 @@
   if (panel) {
     name(panel);
     if (!can) {
-      becomes(apple() && !installed() ? 'install' : 'none');
+      // A browser that cannot be nudged has nothing to show here, but an
+      // iPhone or an iPad in a browser tab: there nudges come to the Home
+      // Screen app.
+      if (apple() && !installed()) becomes('install', null, true);
     } else if (Notification.permission === 'denied') {
-      becomes('denied');
+      becomes('denied', null, true);
     } else {
       mine().then(function (d) {
         return state(d).then(function (on) {
