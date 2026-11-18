@@ -131,6 +131,10 @@ mock; docs/SOCIAL-SITE.md section 18):
      drawings.
  44. ACTIVITY lands where a reply shows (its parent's page past two levels);
      a reply under a hidden reply is nobody's row.
+ 45. DRAWINGS IN THE THREAD (the owner's B, Nov 17): a drawn comment's drawing
+     in its bubble, as wide as the bubble's room at each level, still until
+     tapped; a drawn reply's own page, its drawing as big as a post's and
+     playing by itself; a drawing on the way to it its still, 48px tall.
 
 SOCIALCOMMENTS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
@@ -1214,6 +1218,29 @@ PAST_AND_WATCH = """async (id) => { """ + TOKEN_JS + """
   return { more: [before, words()], new: li.querySelectorAll(':scope > .cm-answers > .cm').length - kids0, glow, tint: onTint, faded,
            count: (document.querySelector('[data-cm-count]') || {}).textContent }; }"""
 
+
+# Each drawn comment's drawing: how wide, whether it sits in its bubble and
+# fills the bubble's room (the owner's B), and whether it waits still.
+ARTS = """(ids) => ids.map(id => { const li = document.getElementById('c-' + id), a = li && li.querySelector(':scope > .cm-main .cm-art');
+  if (!a) return { w: null, inBubble: false, full: false, still: false };
+  const bub = a.closest('.cm-bubble'), room = li.querySelector(':scope > .cm-main').getBoundingClientRect().width;
+  const cs = bub ? getComputedStyle(bub) : null, inner = bub ? bub.getBoundingClientRect().width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) : 0;
+  const box = a.querySelector('.skribl-inline'), st = window.SkriblInline && box ? (SkriblInline.players().find(p => p.el === box) || null) : null;
+  return { w: Math.round(a.getBoundingClientRect().width), inBubble: !!bub && bub.parentElement === li.querySelector(':scope > .cm-main'),
+           full: !!bub && Math.abs(bub.getBoundingClientRect().width - room) <= 1 && Math.abs(a.getBoundingClientRect().width - inner) <= 1,
+           still: !st || (st.state().state !== 'playing' && !st.state().loaded) }; })"""
+
+# A drawn reply's own page: its drawing's box against the page's column, which
+# side it is on, whether it plays, and the way's stills.
+DRAWN_PAGE = """() => { const art = document.querySelector('[data-cm-subject] > .post-art'), page = document.querySelector('[data-cm-subject]');
+  const way = document.querySelector('.cm-way'), box = art && art.querySelector('.skribl-inline');
+  const ar = art ? art.getBoundingClientRect() : null, pr = page.getBoundingClientRect(), wr = way.getBoundingClientRect();
+  const players = window.SkriblInline ? SkriblInline.players() : [];
+  const me = box ? players.find(p => p.el === box) : null;
+  return { art: ar ? { full: Math.abs(ar.width - pr.width) <= 1, side: ar.right <= wr.left + 1 && ar.width > wr.width } : null,
+           playing: !!me && (me.state().state === 'playing' || me.state().elapsedMs > 0),
+           stills: [...document.querySelectorAll('.cm-way-item')].map(li => { const p = li.querySelector('.cm-way-pic');
+             return [!!p, p ? Math.round(p.getBoundingClientRect().height) : null]; }) }; }"""
 
 PROBE = r"""
 import json, sys
@@ -4106,6 +4133,61 @@ with sync_playwright() as p:
                   f"{ben_rows}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(44, exc)
+
+    # ------------------------------------------------------------------ 45
+    if part(45, "drawings in the thread: in the bubble, as wide as its room; a drawn reply's page; stills on the way"):
+        try:
+            ana = someone(b, "aria", "Aria Reyes")
+            eli = someone(b, "elio", "Elio Moss")
+            ben = someone(b, "bram", "Bram Okafor")
+            dee = someone(b, "dora", "Dora Park")
+            post = make_post(ben, "Section 45, a ride past the cottage", seed=451)
+
+            def drawn(who, words, answer_to, seed):
+                c = who.client()
+                c.get(f"/social/p/{post}")
+                body = {"words": words, "payload": drawing(seed=seed)}
+                if answer_to:
+                    body["answer_to"] = answer_to
+                st, j = c.post_json(f"/social/p/{post}/comments", body)
+                return j.get("comment") if st == 200 and isinstance(j, dict) else None
+            d0 = drawn(dee, "", None, 452)                       # a drawing alone, a comment
+            c1 = said(eli, post, "Section 45, Eli's comment")
+            d1 = drawn(ana, "Section 45, Ana's drawn reply", c1, 453)
+            d2 = drawn(eli, "Section 45, Eli's drawn reply to Ana", d1, 454)
+            seen = {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    cctx, cpg = browser_as(b, ben, screen=screen, scheme=scheme)
+                    open_post(cpg, post)
+                    seen[(screen, scheme)] = cpg.evaluate(ARTS, [d0, d1, d2])
+                    close_ctx(cctx, cpg)
+            want = {"phone": [294, 246, 198], "desk": [264, 216, 168]}
+            widths = {" ".join(k): [a["w"] for a in v] for k, v in seen.items()}
+            check("a drawn comment or reply (the owner's B, Nov 17): its drawing sits in its bubble under its words (a drawing"
+                  " alone under its name), as wide as the bubble's room at each level (294, 246 and 198px on a phone; 264,"
+                  " 216 and 168 on a desk), the bubble the room's width with it; still until tapped, with its line",
+                  all(widths[k] == want[k.split()[0]] for k in widths)
+                  and all(a["inBubble"] and a["full"] and a["still"] for v in seen.values() for a in v),
+                  f"{widths}; {[(a['inBubble'], a['full'], a['still']) for v in seen.values() for a in v][:6]}")
+            pages = {}
+            for screen in ("phone", "desk"):
+                cctx, cpg = browser_as(b, dee, screen=screen)
+                cpg.goto(BASE + f"/social/c/{d2}")
+                ready(cpg)
+                cpg.wait_for_timeout(600)
+                pages[screen] = cpg.evaluate(DRAWN_PAGE)
+                close_ctx(cctx, cpg)
+            check("a drawn reply's own page: its drawing as big as a post's (the page's whole column on a phone, the drawing's"
+                  " side on a desk, beside the way to it and its replies), playing by itself as a post's does; on the way"
+                  " to it, Ana's drawn reply is her drawing's still beside her words, 48px tall in its own shape, and the"
+                  " post's its own",
+                  pages["phone"]["art"] and pages["phone"]["art"]["full"] and pages["desk"]["art"]
+                  and pages["desk"]["art"]["side"] and all(p["playing"] for p in pages.values())
+                  and all(p["stills"] == [[True, 48], [False, None], [True, 48]] for p in pages.values()),
+                  f"{pages}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(45, exc)
 
     # ------------------------------------------------------------------ 19
     if part(19, "no page errors, no console errors and no CSP violations"):

@@ -1784,11 +1784,18 @@ a.post-face { text-decoration: none; }
 .cm-box .composer-left { order: 1; flex: 0 0 100%; margin-left: 0; text-align: right; }
 .cm-box .composer-left:empty { display: none; }
 .cm-box .chip { min-height: 44px; padding: 0 16px; }
-/* A drawing waiting in the box, and a drawing answer: the mock's 150px, in
-   the drawing's own shape (Skribl's in-post player), on the words' edge. */
+/* A drawing waiting in the box: the mock's 150px, in the drawing's own shape
+   (Skribl's in-post player), on the words' edge. */
 .cm-box .composer-draft { margin: 10px 0 0 48px; }
 .cm-box .composer-draft .skribl-inline { width: min(100%, 150px); }
-.cm-art { margin: 8px 0 3px; width: min(100%, 150px); }
+/* A DRAWN COMMENT OR REPLY (the owner's B, Nov 17, "Drawings in the
+   Thread"): its drawing in its bubble, under its words (under its name when
+   it is a drawing alone), as wide as the bubble's room, so it can be watched
+   where it sits: 294, 246 and 198px on a phone's three levels, 264, 216 and
+   168 on a desk's; the bubble the room's width with it. Its line under it
+   is the player's own, as everywhere. */
+.cm-art { margin: 8px 0 3px; width: 100%; }
+.cm-bubble:has(> .cm-art) { width: 100%; }
 .cm-list, .cm-answers { margin: 0; padding: 0; list-style: none; }
 .cm { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 12px; padding: 12px 0 0; }
 .cm .face-ring { --skribl-face-size: 36px; width: 36px; height: 36px; }
