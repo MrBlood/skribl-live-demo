@@ -1627,15 +1627,16 @@ with sync_playwright() as p:
             open_post(npg, post)
             nobody = menu_of(npg, theo_c)
             close_ctx(nctx, npg)
-            share = ["Copy link", "Share…"]
+            share = ["Bookmark", "Copy link", "Share…"]
             check("on your own post (the post's own choices, the comment thread): every comment's ⋯ is \"This comment\":"
-                  " Copy link and Share…, then on your own Delete comment, on somebody else's Remove from my post and"
-                  " Report this comment",
+                  " Bookmark (step 3), Copy link and Share…, then on your own Delete comment, on somebody else's Remove from"
+                  " my post and Report this comment",
                   on_mine == {"own": {"title": "This comment", "acts": share + ["Delete comment"]},
                               "theo's": {"title": "This comment", "acts": share + ["Remove from my post", "Report this comment"]}},
                   f"{on_mine}")
-            check("on somebody else's post: your own is Copy link, Share… and Delete comment; anybody else's Copy link,"
-                  " Share… and Report this comment; signed out the same",
+            check("on somebody else's post: your own is Bookmark, Copy link, Share… and Delete comment; anybody else's"
+                  " Bookmark, Copy link, Share… and Report this comment; signed out the same (its Bookmark the sheet that"
+                  " says how)",
                   elsewhere == {"own": {"title": "This comment", "acts": share + ["Delete comment"]},
                                 "theo's": {"title": "This comment", "acts": share + ["Report this comment"]}}
                   and nobody == {"title": "This comment", "acts": share + ["Report this comment"]},
@@ -2723,8 +2724,8 @@ with sync_playwright() as p:
             on_mine = {"own": menu_of(juno.pg, juno_c), "theo's": menu_of(juno.pg, theo_c)}
             open_drawing(mira.pg, sid)
             elsewhere = menu_of(mira.pg, theo_c)
-            share = ["Copy link", "Share…"]
-            check("on a drawing the ⋯ is a post's, \"This comment\": Copy link and Share…, then on your own drawing your own"
+            share = ["Bookmark", "Copy link", "Share…"]
+            check("on a drawing the ⋯ is a post's, \"This comment\": Bookmark, Copy link and Share…, then on your own drawing your own"
                   " comment's Delete comment, somebody else's Remove from my post and Report this comment; on somebody else's"
                   " drawing, Report this comment",
                   on_mine == {"own": {"title": "This comment", "acts": share + ["Delete comment"]},
@@ -4250,7 +4251,7 @@ with sync_playwright() as p:
             check("Copy link puts the comment's own page on the clipboard and says so; on its own page its ⋯ is the same"
                   " sheet, and Delete comment takes it and goes to what it answered",
                   copied == f"{BASE}/social/c/{r1}" and told == "Link copied."
-                  and acts == ["Copy link", "Share…", "Delete comment"] and landed_at == f"/social/c/{c1}"
+                  and acts == ["Bookmark", "Copy link", "Share…", "Delete comment"] and landed_at == f"/social/c/{c1}"
                   and db("select 1 from social_comments where public_id = ?", (r1,)) == [],
                   f"copied {copied}; said {told}; acts {acts}; went to {landed_at}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
