@@ -81,8 +81,11 @@
 {% import 'social/_icons.html' as ic %}
 {% from 'social/_mute.html' import mute_row with context %}
 
-{% macro face(who, cls='') -%}
-<span class="face-ring{{ ' ' ~ cls if cls }}{% if not who.face_id %} is-blank{% endif %}">{% if who.face_id %}{{ skribl_face(who.face_id, canvas_w=who.face_w, canvas_h=who.face_h, bp=skribl_bp) }}{% else %}<span class="face-blank" aria-hidden="true"></span>{% endif %}</span>
+{#  A face; one not drawn yet is its blank disc, or with `initial` (the
+    comment thread, the owner's yes, Nov 17) the first letter of the name
+    in it, on the site's disc (social.css, .face-blank.has-initial). #}
+{% macro face(who, cls='', initial=false) -%}
+<span class="face-ring{{ ' ' ~ cls if cls }}{% if not who.face_id %} is-blank{% endif %}">{% if who.face_id %}{{ skribl_face(who.face_id, canvas_w=who.face_w, canvas_h=who.face_h, bp=skribl_bp) }}{% elif initial %}<span class="face-blank has-initial" aria-hidden="true">{{ (who.display_name or '?')[:1]|upper }}</span>{% else %}<span class="face-blank" aria-hidden="true"></span>{% endif %}</span>
 {%- endmacro %}
 
 {#  The drawing in Skribl's player. On a card its line waits until the first

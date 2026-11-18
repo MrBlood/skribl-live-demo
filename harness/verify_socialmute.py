@@ -43,12 +43,13 @@ mock (Nov 13): C, quiet everywhere, and rule 3, mute and follow kept apart.
      visit's) leaves out their drawings; their page's listing, their
      drawing's page, its link page and its payload stay open: a mute hides
      no page.
-  7. THE FOLD: their comment or answer is one quiet line, "Someone you
-     muted said something. Show" ("… answered."), the eye where their face
-     was and the words where names start; hidden for real; the answers under
-     it by others stay; the count unchanged; on your own post too; Show opens
-     it for the visit, read on every frame (and under Reduce Motion); a page
-     brought by Load more folds too.
+  7. THE FOLD: their comment or reply is one quiet line, "Someone you
+     muted said something. Show" ("… replied.", on the page of the comment
+     it answers: one level, everywhere), the eye where their face was and
+     the words where names start; hidden for real; its "Read N replies"
+     stays, and the replies under it by others; the count unchanged; on your
+     own post too; Show opens it for the visit, read on every frame (and
+     under Reduce Motion); a page brought by Load more folds too.
   8. ACTIVITY GOES QUIET: their comments, answers, likes and follows leave
      it; a group says the rest; they never light the bell's dot (somebody
      else's comment does); unmute, and every row is back.
@@ -616,6 +617,8 @@ FOLDS = r"""() => [...document.querySelectorAll('.cm.is-quiet')].filter(li => li
   const sib = [...li.parentElement.children].find(x => x !== li && x.classList.contains('cm') && !x.classList.contains('is-quiet'));
   const face = sib ? sib.querySelector(':scope > .face-ring').getBoundingClientRect() : null;
   const name = sib ? sib.querySelector('.cm-name').getBoundingClientRect() : null;
+  // THE BUBBLES (the comment thread, step 1): a name sits in its bubble; the words start where the bubbles do.
+  const bub = sib ? (sib.querySelector(':scope > .cm-main > .cm-bubble') || sib.querySelector(':scope > .cm-main')).getBoundingClientRect() : null;
   const eye = f.querySelector('svg').getBoundingClientRect(), words = f.querySelector('.cm-fold-words').getBoundingClientRect();
   const main = li.querySelector(':scope > .cm-main'), own = li.querySelector(':scope > .face-ring');
   const ctl = [...main.querySelectorAll('button, a')];
@@ -625,9 +628,11 @@ FOLDS = r"""() => [...document.querySelectorAll('.cm.is-quiet')].filter(li => li
            h: Math.round(r.height * 10) / 10, lands, eyeMid: Math.round((eye.left + eye.width / 2) * 100) / 100,
            faceMid: face ? Math.round((face.left + face.width / 2) * 100) / 100 : null,
            wordsLeft: Math.round(words.left * 100) / 100, nameLeft: name ? Math.round(name.left * 100) / 100 : null,
+           bubbleLeft: bub ? Math.round(bub.left * 100) / 100 : null,
            hidden: getComputedStyle(main).visibility === 'hidden' && (!own || getComputedStyle(own).visibility === 'hidden'),
            checked: typeof main.checkVisibility === 'function' ? !main.checkVisibility({ visibilityProperty: true }) : null,
-           reached: reach.length, controls: ctl.length, answers: li.querySelectorAll(':scope > .cm-answers > .cm:not(.is-quiet)').length }; })"""
+           reached: reach.length, controls: ctl.length,
+           more: (li.querySelector(':scope > .cm-answers > .cm-rm [data-rm-words]') || {}).textContent || null }; })"""
 
 # Whether a comment shows whole: its words painted where they are.
 SHOWN = r"""(id) => { const li = document.getElementById(id); if (!li) return null;
@@ -1647,40 +1652,49 @@ with sync_playwright() as p:
             to(pg, "#comments", 60)
             folds = {f["id"]: f for f in pg.evaluate(FOLDS)}
             count = pg.evaluate("() => (document.querySelector('[data-cm-count]') || {}).textContent")
+            # ONE LEVEL, EVERYWHERE (the comment thread): Sam's reply is in the list on Rae's comment's own page,
+            # and Tia's reply to Sam's comment on his comment's own (open to her: a mute hides no page).
+            go(pg, f"/social/c/{c1}", wait=600)
+            to(pg, "#comments", 60)
+            on_page = {f["id"]: f for f in pg.evaluate(FOLDS)}
+            go(pg, f"/social/c/{c2}", wait=600)
             under = pg.evaluate(SHOWN, f"c-{a3}")
             go(pg, f"/social/p/{snail}", wait=600)
             own = {f["id"]: f for f in pg.evaluate(FOLDS)}
             go(pg, "/social/", wait=500)
             home_count = pg.evaluate("(id) => { const a = document.querySelector('.post-card[data-post=\"' + id + '\"] .post-count'); return a ? a.getAttribute('aria-label') : null; }", cat)
-            fa, fc = folds.get(f"c-{a1}"), folds.get(f"c-{c2}")
-            check("on a post you read, their answer is one quiet line in its place, “Someone you muted answered. Show”,"
-                  " and their comment “Someone you muted said something. Show”; on your own post too",
-                  fa and fa["words"] == "Someone you muted answered. Show" and fc
+            fa, fc = on_page.get(f"c-{a1}"), folds.get(f"c-{c2}")
+            check("on a post you read, their comment is one quiet line in its place, “Someone you muted said something."
+                  " Show”, and their reply, on the page of the comment it answers, “Someone you muted replied. Show”; on"
+                  " your own post too",
+                  fa and fa["words"] == "Someone you muted replied. Show" and fc
                   and fc["words"] == "Someone you muted said something. Show" and fa["show"] == "Show"
-                  and own.get(f"c-{c3}", {}).get("words") == "Someone you muted said something. Show" and len(folds) == 2,
+                  and own.get(f"c-{c3}", {}).get("words") == "Someone you muted said something. Show"
+                  and len(folds) == 1 and len(on_page) == 1,
                   json.dumps({"answer": fa and fa["words"], "comment": fc and fc["words"], "own": [f["words"] for f in own.values()]}))
             check("the eye sits where their face was (its middle on the faces' column, within 0.5px) and the words start"
-                  " where the names do (within 0.5px); the line 56px tall",
+                  " where the bubbles do (within 0.5px; a name sits in its bubble since the comment thread); the line 56px tall",
                   all(f and f["faceMid"] is not None and abs(f["eyeMid"] - f["faceMid"]) <= 0.5
-                      and abs(f["wordsLeft"] - f["nameLeft"]) <= 0.5 and abs(f["h"] - 56) <= 0.5 for f in (fa, fc)),
-                  json.dumps([(f["eyeMid"], f["faceMid"], f["wordsLeft"], f["nameLeft"], f["h"]) for f in (fa, fc) if f]))
-            check("hidden for real: the comment's own parts can't be seen, reached or tapped (its Answer and ⋯ under the"
+                      and abs(f["wordsLeft"] - f["bubbleLeft"]) <= 0.5 and abs(f["h"] - 56) <= 0.5 for f in (fa, fc)),
+                  json.dumps([(f["eyeMid"], f["faceMid"], f["wordsLeft"], f["bubbleLeft"], f["h"]) for f in (fa, fc) if f]))
+            check("hidden for real: the comment's own parts can't be seen, reached or tapped (its Reply and ⋯ under the"
                   " line), and a press at the line's middle and 21px out each way lands on the line",
                   all(f and f["hidden"] and f["checked"] is not False and f["reached"] == 0 and f["controls"] >= 1
                       and all(f["lands"]) for f in (fa, fc)),
                   json.dumps([(f["hidden"], f["checked"], f["reached"], f["controls"], f["lands"]) for f in (fa, fc) if f]))
-            check("the answers under their comment, by others, stay as they are (Tia's, painted); the count beside"
-                  " Comments says every one, theirs too (5), and so does Home's card (5 comments)",
-                  under and not under["quiet"] and under["painted"] and fc and fc["answers"] == 1 and count == "5"
+            check("their comment keeps its \"Read 1 reply\" under the line, and on its own page the reply by somebody else"
+                  " stays as it is (Tia's, painted); the count beside Comments says every one, theirs too (5), and so does"
+                  " Home's card (5 comments)",
+                  under and not under["quiet"] and under["painted"] and fc and fc["more"] == "Read 1 reply" and count == "5"
                   and home_count == "5 comments",
-                  f"Tia's answer {under}; count {count!r}; Home's card {home_count!r}")
-            go(pg, f"/social/p/{cat}", wait=600)
+                  f"Tia's reply {under}; their comment's {fc and fc['more']!r}; count {count!r}; Home's card {home_count!r}")
+            go(pg, f"/social/c/{c1}", wait=600)
             to(pg, f"#c-{a1}", 300)
             fr = record(pg, SHOW_GET, [f"c-{a1}"], 900, lambda: press(pg, f"#c-{a1} [data-cm-show]"))
             shown_j = judge_show(fr, False)
             pg.wait_for_timeout(300)
             after = pg.evaluate(SHOWN, f"c-{a1}")
-            go(pg, f"/social/p/{cat}", wait=600)
+            go(pg, f"/social/c/{c1}", wait=600)
             again = pg.evaluate(SHOWN, f"c-{a1}")
             close_ctx(ctx, pg)
             check("Show opens it for this visit, read on every frame: its room opens (no frame more than 30% of the way,"
@@ -1691,7 +1705,7 @@ with sync_playwright() as p:
                   and after["words"] == "Ha, I counted too." and again and again["quiet"],
                   json.dumps({"show": shown_j, "after": after, "reloaded": again}))
             ctx, pg = browser_as(b, rae, reduced=True)
-            go(pg, f"/social/p/{cat}", wait=600)
+            go(pg, f"/social/c/{c1}", wait=600)
             to(pg, f"#c-{a1}", 300)
             frr = record(pg, SHOW_GET, [f"c-{a1}"], 900, lambda: press(pg, f"#c-{a1} [data-cm-show]"))
             close_ctx(ctx, pg)
@@ -1757,7 +1771,7 @@ with sync_playwright() as p:
             go(pg, "/social/activity")
             back_rows = [r for s in pg.evaluate(ROWS) for r in s["rows"]]
             close_ctx(ctx, pg)
-            want = ["Vic said something on your post", "Vic answered your comment", "Vic followed you"]
+            want = ["Vic said something on your post", "Vic replied to your comment", "Vic followed you"]
             check("unmute, and every row of theirs is back, as it was: nothing was deleted",
                   all(any(w in r for r in back_rows) for w in want)
                   and any(re.search(r"(Vic and Wes|Wes and Vic) liked your post", r) for r in back_rows),
@@ -2148,7 +2162,7 @@ with sync_playwright() as p:
                     look(pg, tag, "their ⋯, Unmute", NEW_ROW, "#personSheet", [".mu-act"])
                     pg.keyboard.press("Escape")
                     pg.wait_for_timeout(500)
-                    go(pg, f"/social/p/{dp}", wait=600)
+                    go(pg, f"/social/c/{dc}", wait=600)          # Bix's reply, in the list on Ada's comment's page
                     to(pg, "#comments", 60)
                     look(pg, tag, "the fold", NEW_FOLD, None, [".cm-fold-line"])
                     go(pg, "/social/you")

@@ -5,9 +5,12 @@ Explore (where Sign in sits before you sign in), and Activity in a desk's
 rail after Explore; each with a dot when something is new.
 
     /activity     who followed you, liked your posts or said something on
-                  them, who answered you and who mentioned you: New, then
+                  them, who replied to you and who mentioned you: New, then
                   Earlier, a row each,
-                  every row one link to its comment on its page (or, for
+                  every row one link to its comment where it shows (a
+                  comment on its post's or its drawing's page, a reply on
+                  the page of what it answers: the comment thread,
+                  comments.landing), or, for
                   likes, to "Liked by…" there; for a follow, to their page, or
                   for several to who follows you); opening it marks
                   everything seen.
@@ -17,13 +20,15 @@ keep in step with them: the rows are the comments themselves, read by the
 rules their own pages read, so a comment deleted, removed or taken down, or
 somebody a block or a takedown hides, takes its row with it at once, and
 nothing ever has to be swept or forgotten. Two things are kept: when each
-person last looked (social_people.activity_seen_at), and whom an answer
-answers (social_comments.to_person_id), which parent_id cannot say, since an
-answer to an answer sits under the same top-level comment.
+person last looked (social_people.activity_seen_at), and whom a reply
+answers (social_comments.to_person_id), which parent_id cannot say, since
+every reply in a conversation hangs under the same top-level comment. A
+reply under one hidden from you, at any depth, is hidden with it, as its
+page has it (comments.chain_shown).
 
-WHAT A ROW IS: a comment or an answer, not yours,
-  * answering you: "Theo answered your comment", or, with a drawing, "Juno
-    answered with a drawing";
+WHAT A ROW IS: a comment or a reply, not yours,
+  * replying to you: "Theo replied to your comment", or, with a drawing,
+    "Juno replied with a drawing";
   * else on what you own, a post or a drawing shown outside a post: "Mira
     said something on your post", or, with a drawing, "Juno drew something
     on your post".
@@ -181,11 +186,16 @@ def _query(me, hidden, which, since=None, limit=READ, quiet=frozenset()):
 def _read(me, hidden, since=None, limit=READ, quiet=frozenset()):
     """Both kinds, newest first, each once (an answer to you on your own post
     is both): [(comment, author, post address, post skribl)]."""
+    from .comments import chain_shown
     sess = site().session()
     got = {}
     for which in (Comment.owner_id == me.id, Comment.to_person_id == me.id):
         for row in sess.execute(_query(me, hidden, which, since, limit, quiet)).all():
             got.setdefault(row[0].id, tuple(row))
+    # A REPLY UNDER ONE HIDDEN FROM THEM, at any depth, is hidden with it, as
+    # its page has it (the comment thread: comments.chain_shown).
+    shown = chain_shown([r[0] for r in got.values()], me)
+    got = {k: r for k, r in got.items() if k in shown}
     return sorted(got.values(), key=lambda r: (as_utc(r[0].created_at), r[0].id), reverse=True)[:limit]
 
 
@@ -344,7 +354,11 @@ def _mentions(me, hidden, since=None, limit=READ, quiet=frozenset()):
     q = q.where(sa.or_(in_post, in_comment))
     if since is not None:
         q = q.where(m.created_at > since)
-    return site().session().execute(q.order_by(m.created_at.desc(), m.id.desc()).limit(limit)).all()
+    rows = site().session().execute(q.order_by(m.created_at.desc(), m.id.desc()).limit(limit)).all()
+    # In a reply under one hidden from them, at any depth: hidden with it.
+    from .comments import chain_shown
+    shown = chain_shown([r[3] for r in rows if r[3] is not None], me)
+    return [r for r in rows if r[3] is None or r[3].id in shown]
 
 
 def _follows(me, hidden, since, owner_url):
@@ -528,6 +542,10 @@ def listing(me, skribl_blueprint="skribl"):
     def page(post_public, drawing_id):
         return (url_for("social.post_page", public_id=post_public) if post_public is not None
                 else url_for("social.bloob_page", skribl_id=drawing_id))
+    # WHERE A COMMENT SHOWS (the comment thread): a comment on its post's or
+    # its drawing's page, a reply on the page of what it answers.
+    from .comments import landing
+    lands = landing([(r[0], r[2]) for r in items] + [(r[3], r[4]) for r in named if r[3] is not None])
 
     sections = ([], [])
     groups = {}
@@ -545,7 +563,7 @@ def listing(me, skribl_blueprint="skribl"):
         row = groups.get(key)
         if row is None:
             row = {"kind": kind, "new": new, "when": c.created_at, "words": c.words, "people": [], "names": [],
-                   "href": page(post_public if c.post_id is not None else None, c.drawing_id) + "#c-" + c.public_id,
+                   "href": lands.get(c.id) or page(post_public, c.drawing_id) + "#c-" + c.public_id,
                    "pic": _pic(pics[c.id], sk.get(pics[c.id]), skribl_blueprint)}
             groups[key] = row
             sections[at].append(row)
@@ -590,7 +608,7 @@ def listing(me, skribl_blueprint="skribl"):
         if mc is not None:
             if me.id in (mc.owner_id, mc.to_person_id) or (mc.drawing_id is not None and mc.drawing_id not in shown):
                 continue
-            href = page(cpublic if mc.post_id is not None else None, mc.drawing_id) + "#c-" + mc.public_id
+            href = lands.get(mc.id) or page(cpublic, mc.drawing_id) + "#c-" + mc.public_id
             words = mc.words
         else:
             if mpost.id in rowed:

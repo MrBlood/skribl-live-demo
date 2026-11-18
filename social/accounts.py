@@ -297,8 +297,9 @@ def delete_person(sess, person_id):
     Skribl's delete_post), their posts, the words and the drawings both
     (piece 4: the site posted those too), with every comment on them, every
     comment on the drawings they showed outside a post (whose pages go with
-    them), their own comments with every answer under them (phase 2: said
-    here, never left to a cascade), and their blocks, both ways (piece 5); a
+    them), their own comments, each with somebody else's replies under it
+    keeping its place, nobody's, so those stay (comments.retire: said here,
+    never left to a cascade), and their blocks, both ways (piece 5); a
     report that names them stays, naming nobody, and an answer to them by
     somebody who stays answers nobody (notifications); their likes, and every
     like on what they owned (likes); their bookmarks, and every bookmark on
@@ -319,7 +320,7 @@ def delete_person(sess, person_id):
             drop_post(row.public_id, post)
     # Every comment on what they owned (their drawings' too: owner_id, so
     # nothing asks Skribl whose a drawing was); what they said on other
-    # people's posts and drawings, and the answers under it.
+    # people's posts and drawings, a place kept where replies hang under it.
     from .comments import drop_owner_comments, drop_person_comments
     drop_owner_comments(person_id)
     drop_person_comments(person_id)
@@ -355,7 +356,7 @@ def delete_person(sess, person_id):
     from .people import drop_person_words
     drop_person_words(person_id)
     # Answers to them, by people who stay, stay too, answering nobody now
-    # (notifications: Activity's "answered your comment" reads whom).
+    # (notifications: Activity's "replied to your comment" reads whom).
     from .models import Comment
     sess.execute(sa.update(Comment).where(Comment.to_person_id == person_id).values(to_person_id=None))
     sess.execute(sa.delete(Challenge).where(Challenge.person_id == person_id))

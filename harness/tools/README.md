@@ -76,9 +76,14 @@ drawings are gone.
 `mock_comments.py` shoots the comment thread the owner said yes to on Nov 17
 (docs/SOCIAL-SITE.md section 18). It runs the site on a fresh database of its
 own, posts a thread through the site's endpoints, and lays the mock's look
-over the real post page, on a phone and a desk, light and dark. Its
-docstring has the usage. Start the site's next mock from it rather than from
-nothing.
+over the real post page, on a phone and a desk, light and dark. Its second
+round (`MOCK_ROUND=drawings`) shot drawings in the thread, with real drawings
+from `artworks.py` and the still pictures the editors make. Its third
+(`MOCK_ROUND=world`, step 3) shoots a comment away from its thread: reposted
+on Home, quoted and kept in Bookmarks, today's cards made over in the page;
+`MOCK_ROUND=tree` shoots the thread folded to its comments. Its docstring has
+the usage. Start the site's next mock from it rather than
+from nothing.
 
 ## Measurement
 

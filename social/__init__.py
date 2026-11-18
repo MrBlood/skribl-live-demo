@@ -390,7 +390,7 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         profiles.register(bp, skribl_blueprint)
         posts.register(bp, skribl_blueprint)
         compose.register(bp, skribl_blueprint)
-        comments.register(bp)
+        comments.register(bp, skribl_blueprint)
         likes.register(bp)
         bookmarks.register(bp)
         reposts.register(bp)

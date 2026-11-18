@@ -56,7 +56,7 @@ people.
      Home's cards asks once.
  10. CONTRAST AND TARGETS, read off the paint: the mention on the card and on
      a comment's ground, phone and desk, light and dark (the mock's 8.26 /
-     8.39 and 7.75 / 9.89); every word of the list (its highlighted row too)
+     8.39, and the same in a comment's bubble); every word of the list (its highlighted row too)
      and of Activity's mention row at 4.5:1, the badge's @ at 3:1 or more;
      every target 44px or more but the mentions, links inside words (WCAG's
      inline exception), each painted where it is.
@@ -813,8 +813,10 @@ with sync_playwright() as p:
                     seen[(tag, "page")] = pg.evaluate(MENTIONS, ".post-page > .post-words")
                     heights[(tag, "page")] = pg.evaluate(HEIGHTS, ".post-page > .post-words")
                     seen[(tag, "comment")] = pg.evaluate(MENTIONS, f"#c-{c2} > .cm-main")
-                    seen[(tag, "answer")] = pg.evaluate(MENTIONS, f"#c-{a2} > .cm-main")
                     heights[(tag, "comment")] = pg.evaluate(HEIGHTS, f"#c-{c2} > .cm-main .cm-words")
+                    # A reply is in the list on the page of the comment it answers (one level, everywhere).
+                    go(pg, f"/social/c/{c2}", wait=500)
+                    seen[(tag, "answer")] = pg.evaluate(MENTIONS, f"#c-{a2} > .cm-main")
                     close_ctx(ctx, pg)
             want = {"card": [("@juno", "/social/@juno")], "page": [("@juno", "/social/@juno")],
                     "comment": [("@juno", "/social/@juno")], "answer": [("@rook", "/social/@rook")],
@@ -1333,9 +1335,9 @@ with sync_playwright() as p:
             bell3, rows3, _ = activity(ada)
             says3 = sorted((r["say"], r["href"]) for r in rows3 if r["isNew"])
             check("one row, not two: a comment on her post that mentions her is the comment's row (\"said something"
-                  " on your post\"), an answer to her the answer's, a quote of her post the quote's; and the dot is lit",
+                  " on your post\"), a reply to her the reply's, a quote of her post the quote's; and the dot is lit",
                   says3 == sorted([("Rook said something on your post", f"/social/p/{a7}#c-{ca}"),
-                                   ("Rook answered your comment", f"/social/p/{b7}#c-{ans}"),
+                                   ("Rook replied to your comment", f"/social/c/{cb}#c-{ans}"),   # where it shows
                                    ("Rook quoted your post", f"/social/p/{q7}")]) and bell3 == "Activity, something new",
                   json.dumps([says3, bell3]))
             # GONE WITH IT: the post deleted, the comment deleted.
@@ -1363,7 +1365,7 @@ app = create_app()
 with app.app_context():
     from social.models import Comment, Mention, Person, Post
     from social.accounts import delete_person
-    from social.comments import drop_comments
+    from social.comments import retire
     from social.posts import drop_post
     fk = db.session.execute(sa.text("PRAGMA foreign_keys")).scalar()
     post_id, comment_id, person = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -1378,9 +1380,15 @@ with app.app_context():
     cid = c.id
     under = [r[0] for r in db.session.execute(sa.select(Comment.id).where(Comment.parent_id == cid))]
     before = n(Mention.comment_id.in_([cid] + under))
-    drop_comments([cid])
+    retire([cid], "deleted")
     db.session.commit()
-    out["comment"] = [before, n(Mention.comment_id.in_([cid] + under))]
+    place = db.session.execute(sa.select(Comment.gone, Comment.person_id).where(Comment.id == cid)).first()
+    placed = [n(Mention.comment_id == cid), n(Mention.comment_id.in_(under)), list(place) if place else None]
+    retire(under, "deleted")
+    db.session.commit()
+    gone = db.session.execute(sa.select(sa.func.count()).select_from(Comment)
+                              .where(Comment.id.in_([cid] + under))).scalar()
+    out["comment"] = [before, placed, n(Mention.comment_id.in_([cid] + under)), gone]
     who = db.session.execute(sa.select(Person).where(Person.handle_key == person)).scalar_one()
     mine = sa.or_(Mention.person_id == who.id, Mention.by_id == who.id, Mention.owner_id == who.id)
     before = n(mine)
@@ -1390,8 +1398,8 @@ with app.app_context():
     print(json.dumps(out))
 """
 
-    if part(8, "deleting, in code: a post, a comment and its answers, a drawing on the site, an account; cascade off;"
-               " a drawing's comments moving into a post keep theirs"):
+    if part(8, "deleting, in code: a post, a comment (a place while its reply stays) and its reply, a drawing on the"
+               " site, an account; cascade off; a drawing's comments moving into a post keep theirs"):
         try:
             gus = someone(b, "gus", "Gus Hart")
             hal = someone(b, "hal", "Hal Ito")
@@ -1414,18 +1422,28 @@ with app.app_context():
             hc = hal.client()
             hc.get(f"/social/p/{g2}")
             s2 = hc.post_json(f"/social/c/{k1}/delete", {})[0]
+            # THE PLACE STAYS (the comment thread): Ivy's reply stays under
+            # it, her mention with it; it goes when she deletes it, and the
+            # place, with nothing left under it, goes too.
+            kept = tuple(count("join social_comments t on t.id = m.comment_id where t.public_id = ?", (k,)) for k in (k1, k2))
+            ic = ivy.client()
+            ic.get(f"/social/p/{g2}")
+            s2b = ic.post_json(f"/social/c/{k2}/delete", {})[0]
+            rows_left = db("select count(*) from social_comments where public_id in (?, ?)", (k1, k2))[0][0]
             gc.get(f"/social/b/{gd}")
             s3 = gc.post_json(f"/social/b/{gd}/delete", {})[0]
             left = db("select count(*) from social_mentions m left join social_posts t on t.id = m.post_id left join"
                       " social_comments c on c.id = m.comment_id where (m.post_id is not null and t.id is null) or"
                       " (m.comment_id is not null and c.id is null)")[0][0]
-            check("deleting a post takes its mentions; deleting a comment takes its mentions and its answers'; a"
-                  " drawing deleted through the site takes its comments' (each through its own route)",
-                  had == (2, 2, 1) and (s1, s2, s3) == (200, 200, 200) and left == 0
+            check("deleting a post takes its mentions; deleting a comment takes its own, its reply's staying with the"
+                  " reply under the place, then going with it (the place too); a drawing deleted through the site"
+                  " takes its comments' (each through its own route)",
+                  had == (2, 2, 1) and (s1, s2, s2b, s3) == (200, 200, 200, 200) and kept == (0, 1) and rows_left == 0
+                  and left == 0
                   and count("where m.typed in ('hal', 'ivy', 'gus') and (m.post_id in (select id from social_posts where"
                             " public_id = ?) or m.comment_id in (select id from social_comments where public_id in (?, ?, ?)))",
                             (g1, k1, k2, k3)) == 0,
-                  json.dumps([had, [s1, s2, s3], left]))
+                  json.dumps([had, [s1, s2, s2b, s3], kept, rows_left, left]))
             # AN ACCOUNT: every mention of it, by it, and on what it owned.
             jo = someone(b, "joss", "Jo Bell")
             j1 = post(jo, "Section 8, Jo's", seed=84)
@@ -1457,9 +1475,10 @@ with app.app_context():
             out = subprocess.run([sys.executable, "-c", PROBE, h1, hk, "kim"], cwd=ROOT, env=env, capture_output=True,
                                  text=True, timeout=180)
             got = json.loads(out.stdout.strip().splitlines()[-1]) if out.returncode == 0 and out.stdout.strip() else {"err": out.stderr[-600:]}
-            check("with SQLite's cascade off (a copy): a post's mentions (2, then 0), a comment's and its answer's"
-                  " (2, then 0), an account's of it, by it and on what it owned (2, then 0), each by the code alone",
-                  got.get("fk") == 0 and got.get("post") == [2, 0] and got.get("comment") == [2, 0]
+            check("with SQLite's cascade off (a copy): a post's mentions (2, then 0); a comment's and its reply's (2;"
+                  " the comment a place, nobody's, keeping none, the reply keeping its 1; the reply deleted, 0, both rows gone);"
+                  " an account's of it, by it and on what it owned (2, then 0), each by the code alone",
+                  got.get("fk") == 0 and got.get("post") == [2, 0] and got.get("comment") == [2, [0, 1, ["deleted", None]], 0, 0]
                   and got.get("person") == [2, 0], json.dumps(got)[:600])
             # ONE DRAWING, ONE CONVERSATION: a drawing's comment that mentions
             # somebody moves into the post with it, its mention with it, and
@@ -1703,11 +1722,13 @@ with app.app_context():
                     lows += [f"{tag} {w}: {x}" for w, r in got for x in r["low"]]
                     smalls += [f"{tag} {w}: {x}" for w, r in got for x in r["small"]]
                     inline += [(tag, w, x) for w, r in got for x in r["inline"]]
-            mock = {("light", "card"): 8.26, ("dark", "card"): 8.39, ("light", "comment"): 7.75, ("dark", "comment"): 9.89}
+            # A COMMENT SITS IN A BUBBLE since the comment thread (step 1, Nov 17): the site's card, so a mention in one
+            # reads as on a post's card (it was 7.75 and 9.89 on the page's ground).
+            mock = {("light", "card"): 8.26, ("dark", "card"): 8.39, ("light", "comment"): 8.26, ("dark", "comment"): 8.39}
             off = {" ".join(k): v for k, v in calcs.items() if k[1] in ("card", "comment")
                    and v != mock[(k[0].split()[1], k[1])]}
-            check("the mention's ink is the mock's, against what it sits on: 8.26:1 on the card light, 8.39 dark; 7.75 on"
-                  " a comment's ground light, 9.89 dark; phone and desk",
+            check("the mention's ink is the mock's, against what it sits on: 8.26:1 on the card light, 8.39 dark, and the"
+                  " same in a comment, whose bubble is the card (the comment thread); phone and desk",
                   len([k for k in calcs if k[1] in ("card", "comment")]) == 8 and not off, json.dumps({"off": off}))
             check("...and read off the paint, 4.5:1 or more against the ground beside it, on the card and on a"
                   " comment's ground, phone and desk, light and dark",

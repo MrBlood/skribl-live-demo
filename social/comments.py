@@ -3,15 +3,19 @@ comments"), from the comments mock and the owner's "all yes on both" (Nov 12),
 and on every drawing since the owner's yes the same day ("Comments on every
 drawing, however it was made, so whatever you open has the comment box").
 
-    /p/<id>/comments          POST: a comment on a post, or an answer to one
-                              (JSON: {words, payload, answer_to}); its card
-                              comes back, to go in place. GET: the next page
-                              of the post's comments, for Load more
+    /p/<id>/comments          POST: a comment on a post, or a reply to one at
+                              any depth (JSON: {words, payload, answer_to});
+                              its card comes back, to go in place. GET: the
+                              next page of the post's comments, for Load more
                               ({html, next}).
     /b/<skribl_id>/comments   the same, on a drawing shown outside a post.
-    /c/<id>/delete            your own comment, gone, its answers with it; or,
-                              on your own post or drawing, anybody's, removed
-                              from it (JSON).
+    /c/<id>                   a comment's or a reply's own page (the comment
+                              thread, step 1): the way to it, it as big as a
+                              post, its replies.
+    /c/<id>/delete            your own comment, gone; or, on your own post
+                              or drawing, anybody's, removed from it; one
+                              with replies under it keeps its place, so
+                              they stay (retire; JSON).
 
 WHAT A COMMENT IS ON (On, below): a post, or a drawing shown outside a post
 (a skribl one of the site's people showed in the gallery from the Pad or Flip
@@ -29,13 +33,28 @@ the heading's end a round icon (a bubble with a plus) that opens the box
 (your face, the words, Draw, Flip, Post), folded away until asked for: a
 sheet from the bottom of a phone, gliding open under the heading on a desk
 (the owner, Nov 13: "The comment needs to be an icon not a card"). Then the
-comments newest first, each with its answers under it, oldest first; "Say
-the first thing" where they will be, at none. ANSWERS ARE ONE LEVEL DEEP:
-answering an answer puts the new one under the same comment (parent_id is
-always a top-level comment's), and Answer brings the box to that comment
-(comments.js). Each comment's ⋯: on your own, Delete comment; on somebody
-else's on your own post or drawing, Remove from my post and Report comment;
-on anybody else's, Report comment.
+comments newest first; "Say the first thing" where they will be, at none.
+
+THE THREAD (the comment thread, step 1; the owner's yes, Nov 17, to the
+Read More Replies mock; docs/SOCIAL-SITE.md section 18): every comment in a
+bubble, its row under it (Reply and ⋯). A REPLY KEEPS THE REPLY IT ANSWERS
+(answers_id, at any depth; parent_id is the comment its conversation hangs
+under, so a page reads a conversation by one index; a reply from before has
+none and answers its comment: answered()). ONE LEVEL, EVERYWHERE (the owner,
+Nov 17: "What I want is a list of direct replies first. If you click the
+reply it opens up the tree level", then "Yes, build it"): a list shows only
+the direct replies to what its page is about, the post's comments or a
+comment's replies, each alone (_fold); one with replies under it carries
+"Read N replies", N every reply under it at any depth that the viewer may
+see, and a tap on it (or on its bubble) opens its own page. EVERY COMMENT
+AND REPLY HAS A PAGE (/c/<id>, comment.html): the way to it above
+(the_way), it as big as a post, then its own direct replies where a post's
+comments stand (replies_of); the box there replies to it. Each comment's ⋯,
+"This comment": Copy link and Share… (its own page), then on your own Delete
+comment; on somebody else's on your own post or drawing, Remove from my post
+and Report this comment; on anybody else's, Report this comment. A link to a
+comment lands where it shows (landing()): a comment on its post's or
+drawing's page, a reply on the page of what it answers.
 
 WHO MAY COMMENT: somebody signed in who is not taken down, with no block
 either way with the author of the post or the drawing; an answer also with
@@ -45,10 +64,11 @@ the comments are readable, and the icon raises a small sheet ("Say
 something?") whose Sign in comes back to the page with the box open.
 
 WHAT IS SHOWN, AND COUNTED: nothing by anybody hidden from the viewer (a
-block either way, or taken down: safety.hidden_ids), nor the answers under a
-comment that is; a comment taken down only to its author, with the note.
-The same rules count (counts(): Home's card, and the section's heading), so
-a number never promises a comment the page will not show.
+block either way, or taken down: safety.hidden_ids), nor any reply under one
+that is, at any depth; a comment taken down only to its author, with the
+note. The same rules count (counts(), a recursive read: Home's card, and the
+section's heading), and Activity's rows follow them (chain_shown), so a
+number never promises a comment the page will not show.
 
 SOMEBODY YOU MUTED (mutes; the owner's C): their comment or answer is one
 quiet line in its place, "Someone you muted said something. Show" ("…
@@ -62,11 +82,16 @@ comment's or an answer's words that is somebody is a link to their page, and
 they are told in Activity. Written with the comment, in the same
 transaction; read once a page for all its comments (named()).
 
-DELETING IS REAL, AND SAID IN CODE: a comment goes with its answers and its
-mentions (drop_comments), a post with its comments (posts.drop_post), a drawing
+DELETING IS REAL, AND SAID IN CODE, AND KIND (retire; the owner's yes, Nov
+17, to "the place stays"): a comment or a reply goes with its words, its
+drawing and its mentions; one with somebody's replies under it keeps a
+quiet place, nobody's ("This reply was deleted", or "removed" from a post or
+drawing by its author), and theirs stay; a place with nothing left under it
+goes. A post goes with its comments (posts.drop_post), a drawing
 deleted through the site with its comments (posts.bloob_delete), an account
-with its comments, every answer under them and every comment on what it
-owned (accounts.delete_person; owner_id is on the row, so nothing asks
+with its comments (kindly, a place where somebody else's replies hang) and
+every comment on what it owned (accounts.delete_person; owner_id is on the
+row, so nothing asks
 Skribl whose a drawing was). The schema's ON DELETE CASCADEs are a net under
 that, never the way: SQLite enforces them only where Skribl's pragma hook is
 on.
@@ -200,11 +225,14 @@ def on_of(c, viewer):
 
 def _shown(q, viewer, hidden, c=Comment):
     """The page's rules, on a query of comments: nobody hidden from the
-    viewer, and nothing taken down but the viewer's own."""
+    viewer, and nothing taken down but the viewer's own. A PLACE (gone) is
+    nobody's and stands for what hangs under it: it passes, and a list
+    shows it only while something it may show hangs there (_fold)."""
     mine = viewer.id if viewer is not None else -1
+    ok = sa.or_(c.taken_down_at.is_(None), c.person_id == mine)
     if hidden:
-        q = q.where(c.person_id.notin_(sorted(hidden)))
-    return q.where(sa.or_(c.taken_down_at.is_(None), c.person_id == mine))
+        ok = sa.and_(ok, c.person_id.notin_(sorted(hidden)))
+    return q.where(sa.or_(c.gone.isnot(None), ok))
 
 
 def may_comment(viewer):
@@ -230,16 +258,72 @@ def _uncursor(text):
         return None
 
 
+def answered(c):
+    """The id of what reply `c` answers: the reply it was written to, or,
+    for one from before replies kept that (or with nothing), its comment."""
+    return c.answers_id if c.answers_id is not None else c.parent_id
+
+
+def gone_words(reply, how):
+    """What a place says (the owner's yes, Nov 17): "This reply was deleted",
+    "This comment was removed"."""
+    return f"This {'reply' if reply else 'comment'} was {'removed' if how == 'removed' else 'deleted'}"
+
+
+def _item(c, who, muted):
+    return {"c": c, "who": who, "sk": None, "quiet": who is not None and who.id in muted, "more": 0,
+            "gone": gone_words(c.parent_id is not None, c.gone) if c.gone is not None else None}
+
+
+def _kept(item):
+    """Whether an item is shown: a comment always; a place only while
+    something it may show hangs under it."""
+    return item["c"].gone is None or bool(item["more"])
+
+
+def _conversations(root_ids, viewer, hidden):
+    """Every reply in the conversations under the top-level comments
+    `root_ids` that the page's rules show `viewer` (nobody hidden from them,
+    nothing taken down but their own), oldest first, (Comment, Person) rows:
+    one read, by the conversation's own index, at most ANSWERS_MAX."""
+    if not root_ids:
+        return []
+    q = (sa.select(Comment, Person).outerjoin(Person, Person.id == Comment.person_id)
+         .where(Comment.parent_id.in_(sorted(set(root_ids))))
+         .order_by(Comment.created_at, Comment.public_id).limit(ANSWERS_MAX))
+    return site().session().execute(_shown(q, viewer, hidden)).all()
+
+
+def _fold(tops, rows):
+    """ONE LEVEL (the owner, Nov 17): each of `tops` (items) is shown alone,
+    nothing nested under it, with "more": how many replies hang under it, at
+    any depth, that the viewer may see, from its conversation's `rows` (the
+    page's rules already applied). A reply counts only where what it answers
+    does: one under a reply the page leaves out (somebody hidden from the
+    viewer) is left out, and every reply under it. A PLACE (a deleted reply)
+    is walked through and counted as nothing."""
+    kids = {}
+    for c, _ in rows:
+        kids.setdefault(answered(c), []).append(c)
+    for t in tops:
+        n, todo = 0, [t["c"].id]
+        while todo:
+            for c in kids.get(todo.pop(), ()):
+                n += c.gone is None
+                todo.append(c.id)
+        t["more"] = n
+
+
 def thread(on, viewer, before=None, limit=PAGE):
     """A page of the comments on `on` (a post or a drawing) for `viewer`:
-    (items, next cursor or None). Newest first; each item {"c": the comment,
-    "who": its author, "answers": its answers as items, oldest first,
+    (items, next cursor or None). Newest first, each alone (_fold): {"c":
+    the comment, "who": its author, "more": how many replies hang under it,
     "quiet": whether the viewer muted its author (it folds to one line)}."""
     from .mutes import muted_ids
     hidden = hidden_ids(viewer)
     muted = muted_ids(viewer)
     sess = site().session()
-    q = (sa.select(Comment, Person).join(Person, Person.id == Comment.person_id)
+    q = (sa.select(Comment, Person).outerjoin(Person, Person.id == Comment.person_id)
          .where(on.where(), Comment.parent_id.is_(None))
          .order_by(Comment.created_at.desc(), Comment.public_id.desc()).limit(limit + 1))
     q = _shown(q, viewer, hidden)
@@ -250,17 +334,12 @@ def thread(on, viewer, before=None, limit=PAGE):
                            sa.and_(Comment.created_at == when, Comment.public_id < key)))
     rows = sess.execute(q).all()
     tops, more = rows[:limit], len(rows) > limit
-    items = [{"c": c, "who": who, "answers": [], "sk": None, "quiet": who.id in muted} for c, who in tops]
+    items = [_item(c, who, muted) for c, who in tops]
     if items:
-        by = {i["c"].id: i for i in items}
-        aq = (sa.select(Comment, Person).join(Person, Person.id == Comment.person_id)
-              .where(Comment.parent_id.in_(sorted(by)))
-              .order_by(Comment.created_at, Comment.public_id).limit(ANSWERS_MAX))
-        for c, who in sess.execute(_shown(aq, viewer, hidden)).all():
-            by[c.parent_id]["answers"].append({"c": c, "who": who, "answers": [], "sk": None,
-                                               "quiet": who.id in muted})
-        described(items + [a for i in items for a in i["answers"]], viewer)
-        named(items + [a for i in items for a in i["answers"]])
+        _fold(items, _conversations([i["c"].id for i in items], viewer, hidden))
+        items = [i for i in items if _kept(i)]
+        described(items, viewer)
+        named(items)
     return items, (_cursor(tops[-1][0]) if more and tops else None)
 
 
@@ -291,27 +370,84 @@ def described(items, viewer):
 
 def counts(viewer, posts=(), drawings=()):
     """{("p", a post's internal id) or ("s", a drawing's public id): how many
-    comments and answers `viewer` is shown on it}, by the page's own rules,
-    one grouped query for each kind asked (each on its own index): nothing
-    by anybody hidden, nothing taken down but their own, no answer under a
-    comment that is not shown. A post or a drawing with none is not in it."""
+    comments and replies `viewer` is shown on it}, by the page's own rules,
+    one query for each kind asked: nothing by anybody hidden, nothing taken
+    down but their own, and no reply under one that is not shown, at any
+    depth. A RECURSIVE READ from the comments down (each step by the reply's
+    own index), so a reply counts only where every one above it shows, as
+    a list counts it (_fold). A PLACE is walked through and counted as
+    nothing. A post or a drawing with none is not in it."""
     hidden = hidden_ids(viewer)
-    mine = viewer.id if viewer is not None else -1
     out = {}
     for kind, col, ids in (("p", Comment.post_id, posts), ("s", Comment.drawing_id, drawings)):
         ids = [i for i in dict.fromkeys(ids or ()) if i is not None]
         if not ids:
             continue
-        par = sa.orm.aliased(Comment)
-        q = (sa.select(col, sa.func.count()).select_from(Comment)
-             .outerjoin(par, par.id == Comment.parent_id)
-             .where(col.in_(ids)).group_by(col))
-        q = _shown(q, viewer, hidden)
-        under = sa.or_(par.taken_down_at.is_(None), par.person_id == mine)
-        if hidden:
-            under = sa.and_(under, par.person_id.notin_(sorted(hidden)))
-        q = q.where(sa.or_(Comment.parent_id.is_(None), under))
+        top = _shown(sa.select(Comment.id.label("id"), col.label("on"), Comment.gone.label("gone"))
+                     .where(col.in_(ids), Comment.parent_id.is_(None)), viewer, hidden)
+        shown = top.cte(f"shown_{kind}", recursive=True)
+        rep = sa.orm.aliased(Comment)
+        step = _shown(sa.select(rep.id, shown.c.on, rep.gone).join(
+            shown, sa.or_(rep.answers_id == shown.c.id,
+                          sa.and_(rep.answers_id.is_(None), rep.parent_id == shown.c.id))),
+            viewer, hidden, c=rep)
+        shown = shown.union_all(step)
+        q = sa.select(shown.c.on, sa.func.count()).where(shown.c.gone.is_(None)).group_by(shown.c.on)
         out.update({(kind, k): n for k, n in site().session().execute(q).all()})
+    return out
+
+
+def chain_shown(comments, viewer):
+    """The ids among `comments` (Comment rows) whose way up the page's rules
+    show `viewer`: every reply each answers, and its comment, by nobody
+    hidden from them and not taken down but their own. A reply under one
+    hidden from them is hidden with it, at any depth, as a list counts it
+    (_fold). One read of the conversations they are in."""
+    comments = list(comments)
+    roots = sorted({c.parent_id for c in comments if c.parent_id is not None})
+    if not roots:
+        return {c.id for c in comments}
+    hidden = hidden_ids(viewer)
+    mine = viewer.id if viewer is not None else -1
+    info = {r[0]: r for r in site().session().execute(
+        sa.select(Comment.id, Comment.answers_id, Comment.parent_id, Comment.person_id, Comment.taken_down_at)
+        .where(sa.or_(Comment.parent_id.in_(roots), Comment.id.in_(roots)))).all()}
+    out = set()
+    for c in comments:
+        up, good, steps = answered(c), True, 0
+        while up is not None and steps <= len(info):
+            r = info.get(up)
+            if r is None or r[3] in hidden or (r[4] is not None and r[3] != mine):
+                good = False
+                break
+            up, steps = (r[1] if r[1] is not None else r[2]), steps + 1
+        if good:
+            out.add(c.id)
+    return out
+
+
+def landing(rows):
+    """WHERE A COMMENT SHOWS, for a link to it (Activity, Your Reports): {its
+    internal id: the address of the page whose list shows it, with
+    #c-<its public id>}, for comment rows `rows` (Comment, and its post's
+    public id or None). A comment shows on its post's or its drawing's page;
+    a reply on the page of what it answers, as one of that one's own direct
+    replies (one level, everywhere). One read for what they answer."""
+    rows = list(rows)
+    ups = sorted({answered(c) for c, _ in rows if c.parent_id is not None})
+    pid = dict(site().session().execute(
+        sa.select(Comment.id, Comment.public_id).where(Comment.id.in_(ups))).all()) if ups else {}
+    out = {}
+    for c, post_public in rows:
+        if c.parent_id is not None and pid.get(answered(c)):
+            page = url_for("social.comment_page", public_id=pid[answered(c)])
+        elif c.post_id is not None:
+            if post_public is None:
+                continue              # its post is not there: nowhere to land
+            page = url_for("social.post_page", public_id=post_public)
+        else:
+            page = url_for("social.bloob_page", skribl_id=c.drawing_id)
+        out[c.id] = page + "#c-" + c.public_id
     return out
 
 
@@ -322,16 +458,23 @@ def count_on(on, viewer):
 
 
 def _one_shown(c, who, viewer, hidden):
+    if c.gone is not None:
+        return True               # a place is nobody's: it stands for what hangs under it
     return who.id not in hidden and (c.taken_down_at is None or (viewer is not None and viewer.id == c.person_id))
 
 
-def seen(public_id, viewer):
+def seen(public_id, viewer, whole=False):
     """One comment as `viewer` meets it on its page: {"c", "who", "on",
-    "owner", "top"} (on: what it is on; top: the comment it sits under, or
-    itself), or None for one not there, on a post or a drawing they cannot
-    see, or hidden from them (its author's, or the comment it sits under's)."""
+    "owner", "top", "chain"} (on: what it is on; top: the comment its
+    conversation hangs under, or itself; chain: the way to it, the comment
+    and each reply it answers down to the one right above it, as (Comment,
+    Person) rows), or None for one not there, on a post or a drawing they
+    cannot see, or hidden from them: its author's, or anybody's on the way
+    to it. ONE READ for the whole conversation, whatever the depth. With
+    `whole`, also "rows": every reply in it the page's rules show `viewer`
+    (_conversations), for its own page."""
     sess = site().session()
-    found = sess.execute(sa.select(Comment, Person).join(Person, Person.id == Comment.person_id)
+    found = sess.execute(sa.select(Comment, Person).outerjoin(Person, Person.id == Comment.person_id)
                          .where(Comment.public_id == str(public_id or ""))).first()
     if found is None:
         return None
@@ -342,14 +485,23 @@ def seen(public_id, viewer):
     hidden = hidden_ids(viewer)
     if not _one_shown(c, who, viewer, hidden):
         return None
-    top = c
-    if c.parent_id is not None:
-        par = sess.execute(sa.select(Comment, Person).join(Person, Person.id == Comment.person_id)
-                           .where(Comment.id == c.parent_id)).first()
-        if par is None or not _one_shown(par[0], par[1], viewer, hidden):
+    root = c.parent_id if c.parent_id is not None else c.id
+    convo = {c.id: (c, who)}
+    if c.parent_id is not None or whole:
+        q = (sa.select(Comment, Person).outerjoin(Person, Person.id == Comment.person_id)
+             .where(sa.or_(Comment.id == root, Comment.parent_id == root)))
+        convo.update({r[0].id: (r[0], r[1]) for r in sess.execute(q).all()})
+    chain, at = [], c
+    while at.parent_id is not None:
+        up = convo.get(answered(at))
+        if up is None or not _one_shown(up[0], up[1], viewer, hidden):
             return None
-        top = par[0]
-    return {"c": c, "who": who, "on": on, "owner": on.owner, "top": top}
+        chain.insert(0, up)
+        at = up[0]
+    got = {"c": c, "who": who, "on": on, "owner": on.owner, "top": chain[0][0] if chain else c, "chain": chain}
+    if whole:
+        got["rows"] = _conversations([root], viewer, hidden)
+    return got
 
 
 # ---- deleting ------------------------------------------------------------------
@@ -379,13 +531,73 @@ def _drop(where):
     site().session().execute(sa.delete(Comment).where(where).execution_options(synchronize_session=False))
 
 
-def drop_comments(ids):
-    """Comments, by their internal ids, gone with every answer under them,
-    and their drawings. Flushes nothing: the caller does, with whatever else
-    goes in the same transaction."""
-    ids = sorted(set(ids))
+def retire(ids, how="deleted"):
+    """COMMENTS THAT GO, KINDLY (the comment thread; the owner's yes, Nov 17,
+    to "the place stays"): each of `ids` (internal ids) goes, and its words,
+    its drawing (in Skribl, as its author) and its mentions with it. One with
+    replies under it that stay keeps its row as a PLACE: nobody's (person_id
+    none), its words and its drawing gone, `gone` saying how ("deleted" by
+    its author or with their account, "removed" from their post or drawing
+    by its author), so those replies stay where they are. A place with
+    nothing left under it goes too, and so on up the way. Answers {"places":
+    the public ids now places, "dropped": the public ids of places that went
+    up the way}. One read of the conversations they are in. Flushes
+    nothing: the caller does, with whatever else goes in the same
+    transaction."""
+    from .mentions import drop_comment_mentions
+    ids = set(ids)
+    out = {"places": [], "dropped": []}
+    if not ids:
+        return out
+    sess = site().session()
+    roots = {r[0] if r[0] is not None else r[1] for r in sess.execute(
+        sa.select(Comment.parent_id, Comment.id).where(Comment.id.in_(sorted(ids)))).all()}
+    rows = {r[0]: r for r in sess.execute(
+        sa.select(Comment.id, Comment.public_id, Comment.answers_id, Comment.parent_id, Comment.gone)
+        .where(sa.or_(Comment.id.in_(sorted(roots)), Comment.parent_id.in_(sorted(roots))))).all()}
+    ids &= set(rows)
+    kids = {}
+    for cid, _, ans, par, _ in rows.values():
+        if par is not None:
+            kids.setdefault(ans if ans is not None else par, []).append(cid)
+
+    def stays_under(cid):
+        """Whether a reply stays under `cid`: one not going, and not a place."""
+        todo = list(kids.get(cid, ()))
+        while todo:
+            k = todo.pop()
+            if k not in ids and rows[k][4] is None:
+                return True
+            todo.extend(kids.get(k, ()))
+        return False
+    places = {i for i in ids if stays_under(i)}
+    going = ids - places
     if ids:
-        _drop(sa.or_(Comment.id.in_(ids), Comment.parent_id.in_(ids)))
+        _drop_drawings(Comment.id.in_(sorted(ids)))
+        drop_comment_mentions(Comment.id.in_(sorted(ids)))
+    if places:
+        sess.execute(sa.update(Comment).where(Comment.id.in_(sorted(places)))
+                     .values(words="", skribl_id=None, person_id=None, gone=how, taken_down_at=None)
+                     .execution_options(synchronize_session=False))
+    if going:
+        sess.execute(sa.delete(Comment).where(Comment.id.in_(sorted(going))).execution_options(synchronize_session=False))
+    # UP THE WAY: a place with nothing left under it goes too.
+    left = {k: r for k, r in rows.items() if k not in going}
+    while True:
+        under = set()
+        for cid, _, ans, par, _ in left.values():
+            if par is not None:
+                under.add(ans if ans is not None else par)
+        empty = [k for k, r in left.items() if (r[4] is not None or k in places) and k not in under]
+        if not empty:
+            break
+        sess.execute(sa.delete(Comment).where(Comment.id.in_(sorted(empty))).execution_options(synchronize_session=False))
+        for k in empty:
+            if k not in places:
+                out["dropped"].append(left[k][1])
+            left.pop(k)
+    out["places"] = sorted(rows[k][1] for k in places if k in left)
+    return out
 
 
 def drop_post_comments(post_id):
@@ -424,20 +636,45 @@ def drop_owner_comments(person_id):
 
 
 def drop_person_comments(person_id):
-    """Everything a person said, and every answer under their comments
-    (accounts.delete_person, before the person)."""
+    """Everything a person said (accounts.delete_person, before the person),
+    kindly (retire): one with somebody else's replies under it keeps its
+    place, nobody's, and theirs stay."""
     ids = [r[0] for r in site().session().execute(sa.select(Comment.id).where(Comment.person_id == person_id))]
-    drop_comments(ids)
+    retire(ids, "deleted")
 
 
 # ---- the routes ------------------------------------------------------------------
 
-def section(on, viewer, skribl_blueprint="skribl"):
+def replies_of(got, viewer):
+    """A COMMENT'S OWN REPLIES, for its own page (seen(..., whole=True)):
+    (items, how many). Its direct replies stand where a post's comments do,
+    oldest first, each alone with "Read N replies" (_fold: one level,
+    everywhere); how many is every reply under it, at any depth, that the
+    viewer may see."""
+    from .mutes import muted_ids
+    muted = muted_ids(viewer)
+    rows = got["rows"]
+    tops = [_item(c, who, muted) for c, who in rows if answered(c) == got["c"].id]
+    _fold(tops, rows)
+    tops = [t for t in tops if _kept(t)]
+    described(tops, viewer)
+    named(tops)
+    # A place counts as nothing (_fold's rule).
+    return tops, len([t for t in tops if t["c"].gone is None]) + sum(t["more"] for t in tops)
+
+
+def section(on, viewer, skribl_blueprint="skribl", focus=None):
     """What a page needs for its comments, a post's or a drawing's: the first
     page, the cursor after it, how many there are, whether the viewer may add
     one, and the addresses its script uses (the Pad's and Flip's in compose
-    mode, for a drawing answer: no gallery tick)."""
-    items, nxt = thread(on, viewer)
+    mode, for a drawing answer: no gallery tick). On a comment's own page
+    (`focus`: seen(..., whole=True)) its replies stand where the comments
+    do (replies_of), all of them (no Load more), and the box replies to it."""
+    if focus is None:
+        items, nxt = thread(on, viewer)
+        count = count_on(on, viewer)
+    else:
+        (items, count), nxt = replies_of(focus, viewer), None
     if on.post is not None:
         new = url_for("social.comment_new", public_id=on.post.public_id)
         more = url_for("social.comments_more", public_id=on.post.public_id)
@@ -445,28 +682,111 @@ def section(on, viewer, skribl_blueprint="skribl"):
         new = url_for("social.bloob_comment_new", skribl_id=on.drawing)
         more = url_for("social.bloob_comments_more", skribl_id=on.drawing)
     return {"cards": items, "next": nxt,
-            "count": count_on(on, viewer),
-            "can": may_comment(viewer) and on.open_to(viewer),
+            "count": count,
+            # A place takes no reply: nothing is there to reply to.
+            "can": may_comment(viewer) and on.open_to(viewer) and (focus is None or focus["c"].gone is None),
             "post_mine": viewer is not None and viewer.id == on.owner.id,
-            # Whom the box says something to ("Say something to Mira"), and
-            # the signed-out sheet's "you can answer Mira": the first name, as
-            # More from and the heart's sheet say it.
-            "first": (on.owner.display_name or "").split(" ")[0],
+            # A comment's own page: what its box replies to, and whose it is.
+            "subject": focus["c"].public_id if focus is not None else None,
+            # A place's own page takes no reply from anybody: no box, no icon.
+            "closed": focus is not None and focus["c"].gone is not None,
+            # Whom the box says something to ("Say something to Mira", or on
+            # a comment's own page "Reply to Eli"), and the signed-out sheet's
+            # "you can reply to Mira": the first name, as More from and the
+            # heart's sheet say it.
+            "first": ((focus["who"] if focus is not None else on.owner).display_name or "").split(" ")[0]
+            if focus is None or focus["who"] is not None else "",
             "new": new, "more": more,
             "drop": url_for("social.comment_delete", public_id="__ID__"),
             "pad": url_for(skribl_blueprint + ".skribl_editor", compose=1),
             "flip": url_for(skribl_blueprint + ".skribl_flip", compose=1),
             # Signing in comes back to the page with the box open (#say:
             # comments.js), and nothing is posted until Post.
-            "signin": url_for("social.signin", next=on.page() + "#say")}
+            "signin": url_for("social.signin", next=(
+                url_for("social.comment_page", public_id=focus["c"].public_id) if focus is not None
+                else on.page()) + "#say")}
+
+
+def still(sid, sk, skribl_blueprint="skribl", height=48):
+    """A DRAWING'S SMALL STILL PICTURE, IN ITS OWN SHAPE, on the way to a
+    comment (its own page): its poster (the share card) behind a box
+    `height` px tall, showing the drawing's own area, as Activity cuts a
+    square from it (activity._pic: lib/sharecard.js drawingRect's sums and
+    rounding, the card 1200 x 630, the drawing's area 1092 x 492 above an
+    84px foot, the plate's hairline 3px in). None when Skribl does not
+    describe it (deleted or withheld since)."""
+    import math
+    if not sid or not sk:
+        return None
+    w, h = int(sk.get("canvas_w") or 0), int(sk.get("canvas_h") or 0)
+    if not (0 < w <= 8192 and 0 < h <= 8192):
+        w, h = 1092, 492
+    sc = min(1092 / w, 492 / h)
+    dw, dh = math.floor(w * sc + 0.5), math.floor(h * sc + 0.5)
+    if min(dw, dh) < 13:
+        dw, dh = 1092, 492
+    x, y = math.floor((1200 - dw) / 2 + 0.5) + 3, math.floor((546 - dh) / 2 + 0.5) + 3
+    cw, ch = dw - 6, dh - 6
+    k = height / ch
+    return {"src": url_for(skribl_blueprint + ".skribl_poster", public_id=sid), "w": max(1, round(cw * k)),
+            "h": height, "size": f"{1200 * k:.2f}px auto", "at": f"{-x * k:.2f}px {-y * k:.2f}px"}
+
+
+def the_way(got, viewer, skribl_blueprint="skribl"):
+    """THE WAY TO A COMMENT, above it on its own page, small: what it is on
+    (the post, or the drawing), then the comment and each reply it answers,
+    down to the one right above it. Each {"who", "when", "words", "pic" (a
+    drawing's still: still()), "href" (its own page)}."""
+    from skribl import describe_posts
+    on = got["on"]
+    if on.post is not None:
+        first = {"who": on.owner, "when": on.post.created_at, "words": on.post.words, "sid": on.post.skribl_id,
+                 "href": on.page()}
+    else:
+        sk = on.sk or {}
+        first = {"who": on.owner, "when": as_utc(datetime.fromisoformat(sk["created_at"])) if sk.get("created_at")
+                 else None, "words": sk.get("title") or "", "sid": on.drawing, "href": on.page()}
+    way = [first] + [{"who": who, "when": c.created_at if c.gone is None else None, "words": c.words, "sid": c.skribl_id,
+                      "gone": gone_words(c.parent_id is not None, c.gone) if c.gone is not None else None,
+                      "href": url_for("social.comment_page", public_id=c.public_id)} for c, who in got["chain"]]
+    sids = [w["sid"] for w in way if w["sid"]]
+    sk = describe_posts(sids, viewer_id=viewer.public_id if viewer else None) if sids else {}
+    for w in way:
+        w["pic"] = still(w["sid"], sk.get(w["sid"]), skribl_blueprint) if w["sid"] else None
+    return way
 
 
 def _cards(items, viewer, can, post_mine):
     return render_template("social/_comment_cards.html", items=items, can=can, post_mine=post_mine, me=viewer)
 
 
-def register(bp):
+def register(bp, skribl_blueprint="skribl"):
     """Add the comments' routes to the site's blueprint."""
+
+    @bp.get("/c/<public_id>")
+    @_rests()
+    def comment_page(public_id):
+        """A COMMENT OR A REPLY ON A PAGE OF ITS OWN (the comment thread, step
+        1; the owner's yes, Nov 17): every one has one, so any of them can be
+        linked and shared, and "Read N replies" opens it, as a tap on it in a
+        list does. The way to it above, small (what it is on, then each one
+        it answers); it, as big as a post, its row and its full time; its
+        direct replies under it, each alone (one level, everywhere). One
+        hidden from the viewer, or anything on the way to it, is as gone as
+        one not there."""
+        from .accounts import _page
+        from .mutes import muted_ids
+        from .security import csrf_token
+        me = current_person()
+        got = seen(public_id, me, whole=True)
+        if got is None:
+            return _page("post_gone.html", 404, here="post")
+        it = _item(got["c"], got["who"], muted_ids(me))
+        named(described([it], me))
+        cm = section(got["on"], me, skribl_blueprint, focus=got)
+        return _page("comment.html", here="post", it=it, way=the_way(got, me, skribl_blueprint), cm=cm,
+                     on_page=got["on"].page(), token=csrf_token(), on_post=got["on"].post is not None,
+                     signin_here=url_for("social.signin", next=url_for("social.comment_page", public_id=public_id)))
 
     def new_comment(find):
         """A comment, or an answer under one, on what `find(me)` says the
@@ -498,15 +818,17 @@ def register(bp):
         if on is None or not on.open_to(me):
             # Not there, taken down, or a block either way: gone, as its page is.
             return _json_error("gone", 404)
-        parent = to = None
+        parent = answers = to = None
         if body.get("answer_to") is not None:
             got = seen(body.get("answer_to"), me)
             if (got is None or got["on"].key != on.key or got["c"].taken_down_at is not None
-                    or got["top"].taken_down_at is not None):
+                    or got["c"].gone is not None or any(c.taken_down_at is not None for c, _ in got["chain"])):
+                # Not there, hidden, taken down, or a place (nothing to reply to).
                 return _json_error("gone", 404)
-            # ONE LEVEL DEEP: an answer to an answer sits under the same comment,
-            # and keeps whom it answers (notifications: Activity tells them).
-            parent, to = got["top"], got["c"].person_id
+            # A REPLY KEEPS THE REPLY IT ANSWERS (the comment thread, step 1):
+            # answers_id, at any depth; parent_id the comment its conversation
+            # hangs under; and whom it answers (notifications: Activity tells them).
+            parent, answers, to = got["top"], got["c"], got["c"].person_id
         made = None
         if payload is not None:
             from skribl import SkriblRejected, SkriblUnavailable, create_post
@@ -526,7 +848,8 @@ def register(bp):
                 return _json_error("busy", 503)
         sess = site().session()
         row = Comment(public_id=new_public_id(8), person_id=me.id,
-                      parent_id=parent.id if parent is not None else None, to_person_id=to, words=words or "",
+                      parent_id=parent.id if parent is not None else None,
+                      answers_id=answers.id if answers is not None else None, to_person_id=to, words=words or "",
                       skribl_id=made.public_id if made is not None else None, **on.row())
         sess.add(row)
         sess.flush()
@@ -536,10 +859,16 @@ def register(bp):
         write_comment(row)
         sess.flush()
         who = sess.get(Person, me.id)
-        html = _cards(named(described([{"c": row, "who": who, "answers": [], "sk": None}], me)), me, True,
+        html = _cards(named(described([{"c": row, "who": who, "sk": None, "more": 0}], me)), me, True,
                       me.id == on.owner.id)
+        # "under": the comment or the reply it answers: on its own page the
+        # reply lands last in its list; anywhere else its "Read N replies"
+        # counts it (one level, everywhere). "page": that one's own page,
+        # where the reply shows.
         return jsonify({"ok": True, "comment": row.public_id,
-                        "under": parent.public_id if parent is not None else None,
+                        "under": answers.public_id if answers is not None else None,
+                        "page": url_for("social.comment_page", public_id=answers.public_id) if answers is not None
+                        else None,
                         "html": html, "count": count_on(on, me)})
 
     def more_comments(on, me):
@@ -586,8 +915,10 @@ def register(bp):
     @bp.post("/c/<public_id>/delete")
     @_rests(json_answer=True)
     def comment_delete(public_id):
-        """Your own comment, gone with its answers; or, on your own post or
-        drawing, anybody's, removed from it."""
+        """Your own comment, gone; or, on your own post or drawing, anybody's,
+        removed from it. Kindly (retire): one with replies under it keeps its
+        place, and theirs stay. Answers whether it stayed as a place, its
+        words then, and the places that went with it up the way."""
         if not origin_ok() or not token_ok():
             return _json_error("stale", 403)
         me = current_person()
@@ -595,13 +926,17 @@ def register(bp):
             return _json_error("signed_out", 401)
         sess = site().session()
         c = sess.execute(sa.select(Comment).where(Comment.public_id == str(public_id or ""))).scalar_one_or_none()
-        if c is None or me.id not in (c.person_id, c.owner_id):
+        if c is None or c.gone is not None or me.id not in (c.person_id, c.owner_id):
             # Somebody else's, on somebody else's: as gone as one not there.
             return _json_error("gone", 404)
         asked = {"posts": [c.post_id]} if c.post_id is not None else {"drawings": [c.drawing_id]}
         key = ("p", c.post_id) if c.post_id is not None else ("s", c.drawing_id)
-        drop_comments([c.id])
+        how = "deleted" if me.id == c.person_id else "removed"
+        reply = c.parent_id is not None
+        went = retire([c.id], how)
         sess.flush()
-        return jsonify({"ok": True, "count": counts(me, **asked).get(key, 0)})
+        return jsonify({"ok": True, "count": counts(me, **asked).get(key, 0),
+                        "place": c.public_id in went["places"], "dropped": went["dropped"],
+                        "words": gone_words(reply, how)})
 
     return bp

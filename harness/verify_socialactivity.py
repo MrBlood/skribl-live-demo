@@ -15,15 +15,15 @@ virtual authenticator for the site's people.
      own page the rail's fades, and a tap on the bell fades it, read on
      every frame.
   3. EACH KIND OF ROW: "said something on your post" (on a post, and on a
-     drawing shown outside a post), "answered your comment", "answered with a
+     drawing shown outside a post), "replied to your comment", "replied with a
      drawing", "drew something on your post": the face, the time as comments
      say it, the words in quotes (two lines at most), the small picture (the
      drawing, or the post's), and the link to the comment on its page; and
      reposts and quotes, and mentions ("Hal mentioned you", since Nov 15).
   4. GROUPING: several since you last looked on one post are one row ("Lou
      and 2 others", "Kai and Jon"), the newest face in front, the newest
-     words, the newest opened; answers to your comment the same; a drawing
-     its own row; an answer to your answer reaches you; Earlier a row each.
+     words, the newest opened; replies to your comment the same; a drawing
+     its own row; a reply to your reply reaches you; Earlier a row each.
   5. NEW, EARLIER, SEEN ON OPEN: New then Earlier, a dot on each new row;
      opening Activity marks everything seen (the row's time, the bell's dot
      gone, next time Earlier); rows that were new keep their dot while you
@@ -593,8 +593,13 @@ ON_TINT = r"""(id) => { const li = document.getElementById('c-' + id); if (!li) 
   const tint = rgba(getComputedStyle(li, '::before').backgroundColor), page = rgba(getComputedStyle(document.body).backgroundColor);
   if (!tint || !li.classList.contains('is-landed')) return { landed: false };
   const g = over(tint, page);
-  const k = sel => { const e = li.querySelector(':scope > .cm-main ' + sel); return e ? ratio(over(rgba(getComputedStyle(e).color), g), g) : null; };
-  return { landed: true, words: k('.cm-words'), name: k('.cm-name'), when: k('.cm-when'), answer: k('[data-cm-answer]') }; }"""
+  // THE BUBBLE (the comment thread, step 1) is the card, opaque: the words in it read on it, and the row under
+  // it on the tint round it.
+  const bub = li.querySelector(':scope > .cm-main > .cm-bubble'), card = bub ? rgba(getComputedStyle(bub).backgroundColor) : null;
+  const k = (sel, on) => { const e = li.querySelector(':scope > .cm-main ' + sel); return e ? ratio(over(rgba(getComputedStyle(e).color), on), on) : null; };
+  if (!card || card[3] < 1) return { landed: true, bubble: false };
+  return { landed: true, bubble: true, words: k('.cm-words', card), name: k('.cm-name', card), when: k('.cm-when', card),
+           answer: k('[data-cm-answer]', g) }; }"""
 
 
 def tap_row(pg, words):
@@ -846,8 +851,10 @@ with sync_playwright() as p:
             want = {
                 c_said: ("Eli said something on your post", f"/social/p/{pst}#c-{c_said}", skribl_of(pst), "“That spiral is so good.”"),
                 c_drew: ("Gus drew something on your post", f"/social/p/{pst}#c-{c_drew}", skribl_of_comment(c_drew), None),
-                c_ans: ("Fay answered your comment", f"/social/p/{q}#c-{c_ans}", skribl_of(q), "“Ha, I counted too.”"),
-                c_ansd: ("Hal answered with a drawing", f"/social/p/{q}#c-{c_ansd}", skribl_of_comment(c_ansd), "“For you”"),
+                # A reply opens the page of what it answers, where it is one of that one's own (the comment
+                # thread: one level, everywhere).
+                c_ans: ("Fay replied to your comment", f"/social/c/{c_dan}#c-{c_ans}", skribl_of(q), "“Ha, I counted too.”"),
+                c_ansd: ("Hal replied with a drawing", f"/social/c/{c_dan}#c-{c_ansd}", skribl_of_comment(c_ansd), "“For you”"),
                 c_on_s: ("Eli said something on your post", f"/social/b/{sid}#c-{c_on_s}", sid, "“That wave!”"),
             }
             bad = {}
@@ -859,9 +866,9 @@ with sync_playwright() as p:
             faces = {"eli": rows.get(c_said, {}).get("faces"), "eli on the drawing": rows.get(c_on_s, {}).get("faces"),
                      "fay": rows.get(c_ans, {}).get("faces")}
             check("each kind of row says who and what in the mock's words (\"Eli said something on your post\", \"Fay"
-                  " answered your comment\", \"Hal answered with a drawing\", \"Gus drew something on your post\"), with"
+                  " replied to your comment\", \"Hal replied with a drawing\", \"Gus drew something on your post\"), with"
                   " their face, when as comments say it (\"now\", \"5m\"), New for a screen reader, and one link to the"
-                  " comment on its page, a post's or a drawing's",
+                  " comment on its page, a post's or a drawing's (a reply's, the page of what it answers)",
                   not bad and len(rows) == 6 and faces["eli"] == [poster(eli_face)]
                   and faces["eli on the drawing"] == [poster(eli_face)] and faces["fay"] == ["blank"],
                   f"wrong {bad}; rows {len(rows)}; faces {faces}")
@@ -874,7 +881,7 @@ with sync_playwright() as p:
                   and (lng.get("peek") or "").startswith("“This cottage"),
                   f"quotes {peeks}; the long one {lng.get('lines')}")
             pics = {cid: rows.get(cid, {}).get("pic") for cid in want}
-            check("the small picture is the drawing they answered with or drew, or else the post's (or the drawing's),"
+            check("the small picture is the drawing they replied with or drew, or else the post's (or the drawing's),"
                   " cut from its poster, 52px",
                   all(pics[cid] and poster(want[cid][2]) in pics[cid] for cid in want)
                   and all(rows[cid]["pw"] == 52 and rows[cid]["ph"] == 52 for cid in want if cid in rows),
@@ -974,21 +981,21 @@ with sync_playwright() as p:
                   and not any(r["href"].endswith(g1[0]) or r["href"].endswith(g1[1]) for r in new),
                   f"{row1}; New: {[r['say'] for r in new]}")
             row2 = by.get(f"/social/p/{r2}#c-{k2}")
-            row3 = by.get(f"/social/p/{m1}#c-{k_ans}")
-            row4 = by.get(f"/social/p/{m1}#c-{l_drw}")
-            check("two are \"Kai and Jon\"; answers to your comment from two people are one row (\"Kai and Jon answered"
-                  " your comment\", opening the newest); a drawing answer beside them keeps its own row",
+            row3 = by.get(f"/social/c/{mine}#c-{k_ans}")      # a reply opens the page of what it answers
+            row4 = by.get(f"/social/c/{mine}#c-{l_drw}")
+            check("two are \"Kai and Jon\"; replies to your comment from two people are one row (\"Kai and Jon replied"
+                  " to your comment\", opening the newest); a drawn reply beside them keeps its own row",
                   row2 is not None and row2["say"] == "Kai and Jon said something on your post"
-                  and row3 is not None and row3["say"] == "Kai and Jon answered your comment"
-                  and row4 is not None and row4["say"] == "Lou answered with a drawing" and row4["faces"] == [poster(fl)],
+                  and row3 is not None and row3["say"] == "Kai and Jon replied to your comment"
+                  and row4 is not None and row4["say"] == "Lou replied with a drawing" and row4["faces"] == [poster(fl)],
                   f"two {row2 and row2['say']}; answers {row3 and row3['say']}; drawing {row4 and row4['say']};"
                   f" New: {[r['say'] for r in new]}")
-            row5 = by.get(f"/social/p/{m2}#c-{j_to_ivy}")
+            row5 = by.get(f"/social/c/{ivy_ans}#c-{j_to_ivy}")
             to = db("select t.handle, par.public_id from social_comments c join social_people t on t.id = c.to_person_id"
                     " join social_comments par on par.id = c.parent_id where c.public_id = ?", (j_to_ivy or "",))
-            check("an answer to your answer (it sits under somebody else's comment, one level deep) reaches you as \"Jon"
-                  " answered your comment\": its row keeps whom it answers",
-                  row5 is not None and row5["say"] == "Jon answered your comment" and to == [("ivy", moe_top)],
+            check("a reply to your reply (it sits under your reply, in somebody else's conversation) reaches you as \"Jon"
+                  " replied to your comment\": its row keeps whom it answers, and the comment its conversation hangs under",
+                  row5 is not None and row5["say"] == "Jon replied to your comment" and to == [("ivy", moe_top)],
                   f"row {row5 and row5['say']}; whom and under {to}")
             go(pg, "/social/activity")
             again = pg.evaluate(ROWS)
@@ -1302,7 +1309,7 @@ with sync_playwright() as p:
             want = {"icon": "blooby-icon-180.png", "title": "Nothing new yet",
                     # likes (the likes mock), follows (the follow mock), reposts (the reposts
                     # mock) and mentions (the mentions mock): each is in Activity too
-                    "words": "When someone follows you, likes or reposts your post, says something on it, answers you or mentions you, you’ll see it here.",
+                    "words": "When someone follows you, likes or reposts your post, says something on it, replies to you or mentions you, you’ll see it here.",
                     "button": "Make a skribl"}
             check("with nothing yet: Blooby as his Home Screen icon (64px, painted), \"Nothing new yet\", the words, and"
                   " Make a skribl (52px); no New, no Earlier; phone and desk",
@@ -1352,7 +1359,7 @@ with sync_playwright() as p:
                       const g = rgba(getComputedStyle(document.body).backgroundColor), c = rgba(getComputedStyle(m).backgroundColor),
                             a = [0, 1, 2].map(k => c[k] * c[3] + g[k] * (1 - c[3]));
                       const p = lum(a), q = lum(g); return Math.round((Math.max(p, q) + 0.05) / (Math.min(p, q) + 0.05) * 100) / 100; }""")
-                    pg.goto(BASE + f"/social/p/{post}#c-{land}")
+                    pg.goto(BASE + f"/social/c/{mine}#c-{land}")       # a reply lands on the page of what it answers
                     ready(pg)
                     pg.wait_for_timeout(250)
                     tints[(screen, scheme)] = pg.evaluate(ON_TINT, land)
@@ -1367,8 +1374,8 @@ with sync_playwright() as p:
             lowest = min((v["lowest"], " ".join(k)) for k, v in seen.items())
             # What the census must have read (it keeps a word as its element's
             # first 24 characters): each row's say, the sections, the empty page's.
-            musts = {"activity": ("New", "Earlier", "Kit and Jem said something on your post", "Kit answered your comment",
-                                  "Jem answered with a drawing", "Kit said something on your post"),
+            musts = {"activity": ("New", "Earlier", "Kit and Jem said something on your post", "Kit replied to your comment",
+                                  "Jem replied with a drawing", "Kit said something on your post"),
                      "empty": ("Nothing new yet", "Make a skribl")}
             missing = [(" ".join(k), w) for k, v in seen.items() for w in musts.get(k[2], ())
                        if not any(x == w or (len(w) > 22 and x[:22] == w[:22]) for x in v["words"])]
@@ -1391,9 +1398,9 @@ with sync_playwright() as p:
                   all(v is not None and v >= 3 for v in ks.values()) and len(lines) == 4
                   and all(v >= 3 for v in lines.values()),
                   f"dots {ks}; lines {lines}")
-            check("a landed comment's words, name, time and Answer read 4.5:1 or more on the tint, phone and desk, light"
-                  " and dark",
-                  all(v and v.get("landed") and all(v[k] is not None and v[k] >= 4.5 for k in ("words", "name", "when", "answer"))
+            check("a landed comment glows round its bubble: its words, name and time read 4.5:1 or more on the bubble, and"
+                  " its Reply on the tint, phone and desk, light and dark",
+                  all(v and v.get("landed") and v.get("bubble") and all(v[k] is not None and v[k] >= 4.5 for k in ("words", "name", "when", "answer"))
                       for v in tints.values()),
                   json.dumps({" ".join(k): v for k, v in tints.items()}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop

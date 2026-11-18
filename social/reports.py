@@ -122,6 +122,10 @@ def queue():
         sa.select(Comment, Person, Post).join(Person, Person.id == Comment.person_id)
         .outerjoin(Post, Post.id == Comment.post_id)
         .where(Comment.public_id.in_([c["target"] for c in cards.values() if c["kind"] == "comment"]))).all()}
+    # WHERE A COMMENT SHOWS (the comment thread): a comment on its post's or
+    # its drawing's page, a reply on the page of what it answers.
+    from .comments import landing
+    lands = landing([(cm, post.public_id if post is not None else None) for cm, _, post in said.values()])
     seen = describe_posts(skribls) if skribls else {}
     people = {p.public_id: p for p in sess.execute(sa.select(Person).where(Person.public_id.in_(
         [c["target"] for c in cards.values() if c["kind"] == "person"]
@@ -144,10 +148,7 @@ def queue():
             # it on its page: its post's, or its drawing's.
             cm, who, on = said.get(c["target"], (None, None, None))
             c["who"], c["what"] = who, cm
-            page = (None if cm is None else
-                    url_for("social.post_page", public_id=on.public_id) if on is not None else
-                    url_for("social.bloob_page", skribl_id=cm.drawing_id) if cm.drawing_id else None)
-            c["url"] = (page + "#c-" + cm.public_id) if page else None
+            c["url"] = (None if cm is None or (on is None and not cm.drawing_id) else lands.get(cm.id))
             # A drawing answer's card shows its picture; words alone, whose face.
             c["poster"] = (url_for(site_bp() + ".skribl_poster", public_id=cm.skribl_id)
                            if cm is not None and cm.skribl_id else None)

@@ -45871,3 +45871,143 @@ CALIBRATED on both the mechanism and the property:
 NOT DONE: the same fixed-wait read lives in WEARS in verify_exportui,
 verify_menu, verify_musicdoors and verify_replayspeed. None has flaked;
 SETTLE is the fix if one does.
+
+## After v330 -- The comment thread, step 1: bubbles, one level of replies on every page, every comment's own page, the place
+
+THE ASK. The owner's yes to the Read More Replies mock (Nov 17;
+docs/SOCIAL-SITE.md section 18), then the drawings mock
+(https://claude.ai/artifact/BsQKU7AnAeDfAxxGNXCJyc), which asked the seven
+things the build needed. The owner, that evening: "All yes", "Yes to all":
+a drawing in the thread as wide as its bubble (B), a drawn reply's own page
+its drawing as big as a post's, a still on the way to it, the place stays,
+a reply at the last level joining "Read more" and glowing, Copy link the
+comment's own page, a comment's page saying "Comment". And, in the same
+answer, a change to the yes itself: "We don't want the whole tree visible
+until someone selects the reply. It just shows replies then if reply is
+clicked you see all the subs." The Folded Thread mock
+(https://claude.ai/artifact/3mefzDKSCqWZ2PuSFMhTVZ) put A (each
+conversation folded to "Read N replies", opening its page) beside B
+(opening in place); the owner: "What I want is a list of direct replies
+first. If you click the reply it opens up the tree level. Does that make
+sense?", and to the restatement (every list one level, a tap on a reply
+opening its own page, which lists its own direct replies): "Yes, build it".
+Step 3's two (A Comment Shared,
+https://claude.ai/artifact/4XKrYxE3894YErstqr88NW) were yes too, A (the way
+to it above) and quoting a comment: step 3 builds them.
+
+WHAT CHANGED, on the site only (the Pad and Flip don't change: comments
+are the site's, so not for Flip either):
+
+- THE BUBBLES. A comment's name, time and words (and its drawing) sit in the
+  site's card with its lilac edge at one screen pixel and its lift, 18px
+  round, as wide as its words; no line between comments. A face not drawn
+  yet shows its initial on the site's disc (--tint, the letter in
+  --accent-ink, 6.5:1 light, 6.9:1 dark); the count beside "Comments" sits
+  in a pill of the same.
+- THE ROW under every bubble, the post's own: Reply (the word on a desk,
+  the icon alone on a phone, the word kept for a screen reader) and ⋯, each
+  a 44px tap. The ⋯ is "This comment": Copy link and Share… (the comment's
+  own page), then Delete comment, or Remove from my post and Report this
+  comment. The heart comes with step 2, Repost and Bookmark with step 3, so
+  no button waits on a later step.
+- "REPLY" wherever the site said "Answer": the button, the box ("Reply to
+  Eli…", a phone's sheet "Reply to Eli"), the editors over the page ("Draw
+  your reply"), signed out ("you can reply to"), the muted line ("Someone
+  you muted replied."), Activity ("replied to your comment", "replied with a
+  drawing").
+- ONE LEVEL, EVERYWHERE. A reply keeps the reply it answers (answers_id, a
+  new column, its index and foreign key; parent_id stays the comment a
+  conversation hangs under, so a page reads a conversation by one index).
+  The replies already there keep an empty column and answer their comment,
+  as before: NO DATA WORK IN THE MIGRATION (v309's lesson; the plan said
+  empty too). A list shows only the direct replies to what its page is
+  about, a post's or a drawing's comments (newest first), a comment's
+  replies (oldest first), each alone, a comment's room (322px on a phone,
+  292 on a desk), nothing nested. One with replies under it carries "⊕ Read
+  N replies" on the thread's lilac line (2px of --card-edge, down from its
+  face and curving into the link), N every reply under it at any depth that
+  the viewer may see; it opens its own page, and so does a tap on its
+  bubble (not on a link, a button or its drawing, which plays; a pointer on
+  a desk). The two levels the yes had (comments.py's _grow, a line curving
+  into each reply's face, 48px of room a level) went before it was built.
+- EVERY COMMENT'S OWN PAGE (/social/c/<id>, comment.html): the way to it
+  above, small and joined by the line (the post or the drawing, then the
+  comment and each reply it answers, a drawing on the way its still beside
+  the words); it as big as a post (48px face, its words, its drawing playing
+  by itself as a post's does); its row and full time; "Replies" and how many
+  (every reply under it), then its own direct replies. The header says
+  "Comment" or "Reply"; back goes where you were (the browser's back, come
+  from this site), else to what it is on. Hidden on the way to it is 404.
+- DRAWINGS IN THE THREAD. A drawn comment's drawing sits in its bubble
+  under its words, as wide as the bubble, which takes the whole room (294px
+  on a phone, 264 on a desk), still until tapped, with its line; a tap on
+  it plays it. On its own page it is a post's drawing.
+- REPLYING. A reply to one in a list is on that one's own page, so it joins
+  its "Read N replies", which counts it and glows a moment in the landing's
+  tint, focus on it. On a comment's own page the box replies to it, and the
+  reply lands last in its list.
+- THE PLACE. A comment or reply deleted (or removed by the post's author)
+  while replies hang under it keeps its row, quietly: nobody's, its words,
+  drawing and mentions gone, a ring where the face was and "This reply was
+  deleted" (or "…removed"), so the replies stay where they are at every
+  depth. A place with nothing left under it goes, and so up the way; a
+  place is never counted, and one with nothing under it the viewer may see
+  is not shown. It glides in where the comment was. An account's deletion
+  does the same for its comments with somebody else's replies under them,
+  so the Activity check that an answer to a deleted person's comment stays,
+  answering nobody, holds. The migration adds `gone`, lets person_id be
+  nothing and adds a CHECK (somebody's or a place; NOT VALID on
+  PostgreSQL, so nothing is scanned under the lock); going down refuses
+  while a place is there.
+- COUNTED AND SHOWN THE PAGE'S WAY, AT ANY DEPTH: nothing under a reply
+  hidden from the viewer (a block, a takedown) is shown or counted. counts()
+  is a recursive read now (one per kind, each step by the reply's own
+  index; run on SQLite here and on PostgreSQL 16 in this box), Home's card
+  and the heading with it; Activity's rows follow it too (chain_shown), and
+  a link to a reply lands where it shows (landing(): a comment on its
+  post's or drawing's page, a reply on the page of what it answers), in
+  Activity and Your Reports.
+
+THE CHECKS, each shown red by breaking its one part (a worktree of its own,
+the section that should catch it run there), and green as built, on the
+tree as it stands (one level): the fold counting only direct replies, the
+old words ("Read N more replies"), no tap on a bubble, a reply posted from a
+list landing in the list, a reply's link landing on the post, no curve to
+"Read N replies", a place without its "Read N replies"; the bubble's edge,
+the initial's disc, the word on a phone, counting one level only (the
+recursive count), hidden on the way shown, the way without its chain
+(section 40 stops: the page cannot render without its way), Copy link
+giving the page's own address, the drawing at its old 150px, the way
+without its stills, the page's drawing not a post's, no places (on a post's
+page, and on a comment's for a deleted reply), places never pruned, places
+counted, the place without its glide, a reply to a place allowed, an empty
+place kept. A TAP ON A DRAWING HAS TWO GUARDS: Skribl's player takes the
+tap as its own (stopPropagation, since v316), and the site's list leaves
+the drawing's box alone too; the check goes red only with both broken, and
+stays green with either one, so neither is the only thing standing.
+Before the fold, and untouched since: the migration going down without
+refusing, and Activity without the chain's rule (section 44, its words its
+own: green with section 43 before it). The way's line run past each face
+(found by looking: 2, 2 and 3.24px; now 0 at every join). The mentions
+suite's deletion rows (through the site, and with SQLite's cascade off) go
+red without the place too. On main (main's app, these sections), every new
+section red, 38 to 46.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3), on the tree as it
+stands: verify_socialcomments 127/127, verify_socialposts 99/99,
+verify_socialprofile 94/94, verify_socialactivity 46/46, verify_socialauth
+74/74, verify_socialbookmarks 37/37, verify_socialfollow 79/79,
+verify_sociallikes 100/100, verify_socialmentions 51/51, verify_socialmute
+68/68, verify_socialreposts 56/56, verify_socialsearch 32/32,
+verify_composer 39/39, verify_docs 144/144, verify_social 45/45: 15 of 15,
+nothing red beside the others. (Before the fold the same 15 ran green but
+one, verify_socialcomments 123/124 beside the others and 124/124 alone:
+section 44's check matched Activity rows by their words, which section 43,
+leaving a place, rightly kept; a defect in the instrument, not load, fixed:
+its lookups say "Section 44, ".) NOT RUN: the full battery (main's run
+after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: a post's comments sit in rounded bubbles with nothing
+nested under them, "Read N replies" under one that has them, and a face
+not drawn yet shows its letter.
