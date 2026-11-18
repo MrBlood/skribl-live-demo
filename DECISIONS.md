@@ -46631,8 +46631,12 @@ the band an unreadable ink (--ink-2), red for the band, the ring and the
 words. Green as built. Section 40's line row went red while building it
 (the face 16px past the line's end) and green once the line ran on.
 
-THE SUITES, side by side (run_parallel -j 3): @@SUITES@@. NOT RUN: the full
-battery (main's run after the merge does it).
+THE SUITES, side by side (run_parallel -j 3, 15.9 min), on the final tree:
+verify_socialcomments 142/142, verify_sociallikes 111/111,
+verify_socialposts 99/99, verify_socialreposts 98/98, verify_socialmute
+68/68, verify_socialmentions 51/51, verify_socialactivity 46/46, verify_a11y
+444/444, verify_a11ypages 162/162 and verify_docs 144/144: 10 of 10. NOT
+RUN: the full battery (main's run after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: on a comment's own page, the comment sits on a soft
