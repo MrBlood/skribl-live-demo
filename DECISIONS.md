@@ -46080,7 +46080,9 @@ verify_socialmute 68/68, verify_socialmentions 51/51, verify_socialposts
 99/99, verify_socialprofile 94/94, verify_socialbookmarks 37/37,
 verify_socialreposts 56/56, verify_socialfollow 79/79, verify_socialsearch
 32/32, verify_composer 39/39, verify_docs 144/144, verify_social 45/45: 15
-of 15, nothing red beside the others. NOT RUN: the full battery (main's run
+of 15, nothing red beside the others. After the dot's fix (activity.py and
+its check only): verify_sociallikes 111/111, verify_socialactivity 46/46,
+verify_docs 144/144, side by side. NOT RUN: the full battery (main's run
 after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
