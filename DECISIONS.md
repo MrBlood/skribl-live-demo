@@ -45958,9 +45958,12 @@ giving the page's own address; the drawing at its old 150px, the way
 without its stills, the page's drawing not a post's; no places, places
 never pruned, places counted, the migration going down without refusing,
 the place without its glide, a reply to a place allowed, an empty place
-kept. The mentions suite's deletion rows (through the site, and with
-SQLite's cascade off) go red without the place too. On today's look (main,
-the new sections run there), every new section red.
+kept; the way's line run past each face (2px into the next on the way,
+3.24px into the comment's own, painted over a face not drawn yet: found by
+looking, fixed, now 0 at every join). The mentions suite's deletion rows
+(through the site, and with SQLite's cascade off) go red without the place
+too. On today's look (main, the new sections run there), every new section
+red.
 
 THE AFFECTED SUITES, side by side (run_parallel -j 3): verify_socialposts
 99/99, verify_socialprofile 94/94, verify_socialactivity 46/46 (its check
@@ -45974,7 +45977,9 @@ verify_social 45/45; verify_socialcomments 123/124 beside the others and
 44's check matched Activity rows by their words, and section 43, which now
 leaves a place, rightly keeps a row with the same words; its three lookups
 say "Section 44, " now (shown green with section 43 before it, and red
-without Activity's chain rule), and the alone run had the fix. NOT RUN: the
-full battery (main's run after the merge does it).NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+without Activity's chain rule), and the alone run had the fix. Then, with
+the way's line fixed and section 40's check for it, verify_socialcomments
+alone: 125/125. NOT RUN: the full battery (main's run after the merge does
+it).NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: a post's comments sit in rounded bubbles with no lines
 between them, and a face not drawn yet shows its letter.
