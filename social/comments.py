@@ -341,6 +341,7 @@ def thread(on, viewer, before=None, limit=PAGE):
         described(items, viewer)
         named(items)
         hearts(items, viewer)
+        shares(items, viewer, on.open_to(viewer))
     return items, (_cursor(tops[-1][0]) if more and tops else None)
 
 
@@ -539,11 +540,17 @@ def _drop(where):
     """Every comment `where` names, their drawings, their mentions and their
     likes (mentions.py, likes.py: said here, every way a comment goes, never
     left to a cascade)."""
+    from .bookmarks import drop_comment_bookmarks
     from .likes import drop_comment_likes
     from .mentions import drop_comment_mentions
+    from .reposts import drop_comment_reposts
     _drop_drawings(where)
     drop_comment_mentions(where)
-    drop_comment_likes([r[0] for r in site().session().execute(sa.select(Comment.id).where(where))])
+    ids = [r[0] for r in site().session().execute(sa.select(Comment.id).where(where))]
+    drop_comment_likes(ids)
+    # Its reposts and bookmarks go, its quotes let go of it (the comment thread, step 3).
+    drop_comment_reposts(ids)
+    drop_comment_bookmarks(ids)
     site().session().execute(sa.delete(Comment).where(where).execution_options(synchronize_session=False))
 
 
@@ -589,11 +596,17 @@ def retire(ids, how="deleted"):
     places = {i for i in ids if stays_under(i)}
     going = ids - places
     if ids:
+        from .bookmarks import drop_comment_bookmarks
         from .likes import drop_comment_likes
+        from .reposts import drop_comment_reposts
         _drop_drawings(Comment.id.in_(sorted(ids)))
         drop_comment_mentions(Comment.id.in_(sorted(ids)))
         # Its likes go too, a place's with them: a place is nobody's, nothing to like.
         drop_comment_likes(ids)
+        # ...and its reposts and bookmarks; its quotes let go of it, each
+        # saying it is gone (the comment thread, step 3).
+        drop_comment_reposts(ids)
+        drop_comment_bookmarks(ids)
     if places:
         sess.execute(sa.update(Comment).where(Comment.id.in_(sorted(places)))
                      .values(words="", skribl_id=None, person_id=None, gone=how, taken_down_at=None)
@@ -679,6 +692,7 @@ def replies_of(got, viewer):
     described(tops, viewer)
     named(tops)
     hearts(tops, viewer)
+    shares(tops, viewer, way_open(got, viewer) and got["c"].taken_down_at is None)
     # A place counts as nothing (_fold's rule).
     return tops, len([t for t in tops if t["c"].gone is None]) + sum(t["more"] for t in tops)
 
@@ -776,6 +790,96 @@ def the_way(got, viewer, skribl_blueprint="skribl"):
     return way
 
 
+def way_open(got, viewer):
+    """Whether what a comment (comments.seen's `got`) is on is open to
+    `viewer` and nothing on the way to it is taken down: where it, and its
+    replies, can be reposted, quoted and kept (reposts.comment_open)."""
+    return got["on"].open_to(viewer) and not any(c.taken_down_at is not None for c, _ in got["chain"])
+
+
+def shares(items, viewer, open_=True):
+    """EACH ONE'S REPOST AND BOOKMARK (the comment thread, step 3; the owner's
+    yes to "A Comment Shared", Nov 17): how many reposts and quotes `viewer`
+    is shown on it and whether a repost is theirs (reposts.stats), whether it
+    is their bookmark (bookmarks.marked, theirs alone, never a count), and
+    whether it can be shared at all ("shareable": as reposts.comment_open
+    asks, where `open_` says what it is on is open to them and nothing on the
+    way to it is taken down; never a place, nor one taken down), put on its
+    item. One read of each for the lot."""
+    from .bookmarks import marked
+    from .reposts import stats
+    ids = [i["c"].id for i in items if i["c"].gone is None]
+    got = stats(viewer, comments=ids) if ids else {}
+    kept = marked(viewer, comments=ids) if ids else set()
+    for i in items:
+        c = i["c"]
+        i["reposts"] = got.get(("c", c.id), {"n": 0, "mine": False})
+        i["marked"] = ("c", c.id) in kept
+        i["shareable"] = bool(open_) and c.gone is None and c.taken_down_at is None
+    return items
+
+
+def world_cards(entries, viewer):
+    """A COMMENT OR A REPLY OUT IN THE WORLD (the comment thread, step 3; the
+    owner's yes to A in "A Comment Shared", Nov 17), reposted on Home's
+    Following and a person's Posts tab, or kept in their Bookmarks: a card
+    for each of `entries` ("comment", "who", and a repost's "by"), in their
+    order, or None for one this viewer is not shown. Each as its own page
+    shows it to them (seen: one hidden from them, or anything on the way to
+    it, has none; never a place): THE WAY TO IT above (the_way: what it is on,
+    then each comment it answers, so nobody's words travel without what they
+    are about), it (its face, name, @handle and when; its words; its drawing
+    as a post's), and its row: how many replies (every one under it they may
+    see, at any depth), its repost and how many, its heart and how many, its
+    ⋯ and Open ›. A few reads a card; a page has few."""
+    from .accounts import profile_url
+    from .mutes import muted_ids
+    from .reports import site_bp
+    muted = muted_ids(viewer)
+    gots = []
+    for e in entries:
+        got = seen(e["comment"].public_id, viewer, whole=True)
+        gots.append(got if got is not None and got["c"].gone is None else None)
+    items = [_item(got["c"], got["who"], muted) for got in gots if got is not None]
+    if not items:
+        return [None for _ in entries]
+    for it, got in zip(items, [g_ for g_ in gots if g_ is not None]):
+        _fold([it], got["rows"])
+    described(items, viewer)
+    named(items)
+    hearts(items, viewer)
+    shares(items, viewer)
+    made = iter(items)
+    out = []
+    for e, got in zip(entries, gots):
+        if got is None:
+            out.append(None)
+            continue
+        it = next(made)
+        c, who = it["c"], it["who"]
+        down = c.taken_down_at is not None or who.taken_down_at is not None
+        it["shareable"] = it["shareable"] and not down and way_open(got, viewer)
+        by = e.get("by")
+        out.append({
+            "kind": "c", "c": c, "who": who, "it": it, "down": down,
+            "way": the_way(got, viewer, site_bp()),
+            "url": url_for("social.comment_page", public_id=c.public_id),
+            "delete": url_for("social.comment_delete", public_id=c.public_id),
+            "mine": viewer is not None and viewer.id == c.person_id,
+            "muted": who.id in muted,
+            "profile": profile_url(who.handle),
+            # Repost, Quote and Bookmark where it can be shared (as on a post:
+            # what is open to everybody); its heart wherever it is not taken
+            # down. The row's names are a post's card's, so its macros serve.
+            "markable": it["shareable"], "marked": it["marked"],
+            "reposts": it["reposts"],
+            "repost": url_for("social.repost_comment", public_id=c.public_id),
+            "quoted_url": url_for("social.quoted_comment", public_id=c.public_id),
+            "replies": it["more"],
+            "by": by, "by_me": by is not None and viewer is not None and by.id == viewer.id})
+    return out
+
+
 def _cards(items, viewer, can, post_mine):
     return render_template("social/_comment_cards.html", items=items, can=can, post_mine=post_mine, me=viewer)
 
@@ -802,7 +906,7 @@ def register(bp, skribl_blueprint="skribl"):
         if got is None:
             return _page("post_gone.html", 404, here="post")
         it = _item(got["c"], got["who"], muted_ids(me))
-        hearts(named(described([it], me)), me)
+        shares(hearts(named(described([it], me)), me), me, way_open(got, me))
         cm = section(got["on"], me, skribl_blueprint, focus=got)
         return _page("comment.html", here="post", it=it, way=the_way(got, me, skribl_blueprint), cm=cm,
                      on_page=got["on"].page(), token=csrf_token(), on_post=got["on"].post is not None,
@@ -879,8 +983,11 @@ def register(bp, skribl_blueprint="skribl"):
         write_comment(row)
         sess.flush()
         who = sess.get(Person, me.id)
+        # New, theirs, on what they may say something on: nothing on it yet,
+        # and it can be shared (shares(): no repost, no bookmark).
         html = _cards(named(described([{"c": row, "who": who, "sk": None, "more": 0,
-                                         "likes": {"n": 0, "mine": False}}], me)), me, True,
+                                         "likes": {"n": 0, "mine": False}, "reposts": {"n": 0, "mine": False},
+                                         "marked": False, "shareable": True}], me)), me, True,
                       me.id == on.owner.id)
         # "under": the comment or the reply it answers: on its own page the
         # reply lands last in its list; anywhere else its "Read N replies"

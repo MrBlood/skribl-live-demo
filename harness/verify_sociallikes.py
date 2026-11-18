@@ -586,6 +586,7 @@ ROW = r"""(sel) => { const root = document.querySelector(sel); if (!root) return
 # comment's own page's .cm-row): what it shows, in order.
 CM_ROW = r"""(sel) => { const row = document.querySelector(sel); if (!row) return null;
   return [...row.children].filter(e => e.getClientRects().length).map(e => e.classList.contains('lk-heart') ? 'heart'
+    : e.classList.contains('rp-btn') ? 'repost'
     : e.hasAttribute('data-cm-answer') || e.hasAttribute('data-cm-new') ? 'reply' : e.hasAttribute('data-cm-menu') ? 'more' : e.className); }"""
 # How many marks the post's own drawing's line carries (its dots), and whether it plays.
 POST_MARKS = r"""() => { const art = document.querySelector('.post-page > .post-art');
@@ -2712,11 +2713,12 @@ with sync_playwright() as p:
             post_likes = likes_on(("p", post))
             go(pg, f"/social/p/{post}", wait=600)
             h2 = pg.evaluate(HEART, ROW_C + " .lk-heart")
-            check("ON A COMMENT (the comment thread, step 2): the heart in its row, between Reply and ⋯, 44px to a finger,"
+            check("ON A COMMENT (the comment thread, step 2): the heart in its row, before ⋯ (step 3's repost between it and"
+                  " Reply), 44px to a finger,"
                   " the row's ink; empty and named \"Like\", no number at none; a tap likes it (\"Liked, 1 like\"), kept as"
                   " Dax's on Cleo's comment (whose: hers), no moment, the post's own likes untouched; no dot on the post's"
                   " line though its drawing played as the heart was tapped; still so after a reload",
-                  kids == ["reply", "heart", "more"] and h0 and h0["h"] >= 44 and h0["w"] >= 44 and h0["hit"]
+                  kids == ["reply", "repost", "heart", "more"] and h0 and h0["h"] >= 44 and h0["w"] >= 44 and h0["hit"]
                   and h0["pressed"] == "false" and h0["label"] == "Like" and not h0["digits"]
                   and h0["color"] == pg.evaluate("(s) => getComputedStyle(document.querySelector(s)).color", ROW_C + " [data-cm-answer]")
                   and h1 and h1["pressed"] == "true" and h1["n"] == "1" and h1["label"] == "Liked, 1 like"
@@ -2751,9 +2753,9 @@ with sync_playwright() as p:
             ph = pg.evaluate(HEART, "[data-cm-subject] > .cm-row .lk-heart")
             tap_heart(pg, f"#c-{r1} > .cm-main .cm-acts .lk-heart")
             rh = pg.evaluate(HEART, f"#c-{r1} > .cm-main .cm-acts .lk-heart")
-            check("on a comment's own page its heart is in its row (Reply, the heart, ⋯) and its replies' in theirs: Dax's"
+            check("on a comment's own page its heart is in its row (Reply, Repost, the heart, ⋯) and its replies' in theirs: Dax's"
                   " like makes Cleo's 3 there, and Fen's reply's 1, each kept",
-                  prow == ["reply", "heart", "more"] and ph and ph["pressed"] == "true" and ph["n"] == "3"
+                  prow == ["reply", "repost", "heart", "more"] and ph and ph["pressed"] == "true" and ph["n"] == "3"
                   and rh and rh["pressed"] == "true" and rh["n"] == "1"
                   and [k[0] for k in likes_on_c(c1)] == ["fen", "hux", "dax"] and likes_on_c(r1) == [("dax", "fen", None, None, None)],
                   f"row {prow}; its heart {ph and ph['n']}; the reply's {rh and rh['n']}; kept {likes_on_c(c1)} {likes_on_c(r1)}")

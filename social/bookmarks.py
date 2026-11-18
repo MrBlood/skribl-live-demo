@@ -49,7 +49,7 @@ import sqlalchemy as sa
 from flask import jsonify, request
 
 from .accounts import _json_error, _rests
-from .models import PERSON_PREFIX, Bookmark, Person, Post, as_utc
+from .models import PERSON_PREFIX, Bookmark, Comment, Person, Post, as_utc
 from .safety import hidden_ids
 from .security import current_person, origin_ok, over, site, token_ok
 
@@ -63,7 +63,7 @@ READS = 6
 
 
 def _col(kind):
-    return Bookmark.post_id if kind == "p" else Bookmark.drawing_id
+    return {"p": Bookmark.post_id, "s": Bookmark.drawing_id, "c": Bookmark.comment_id}[kind]
 
 
 def _where(on):
@@ -71,14 +71,15 @@ def _where(on):
     return Bookmark.post_id == on.post.id if on.post is not None else Bookmark.drawing_id == on.drawing
 
 
-def marked(viewer, posts=(), drawings=()):
+def marked(viewer, posts=(), drawings=(), comments=()):
     """Which of these things `viewer` keeps: a set of ("p", a post's internal
-    id) and ("s", a drawing's public id). One read a kind asked; nothing for
-    nobody signed in. Never how many, and never anybody else's."""
+    id), ("s", a drawing's public id) and ("c", a comment's internal id; the
+    comment thread, step 3). One read a kind asked; nothing for nobody signed
+    in. Never how many, and never anybody else's."""
     out = set()
     if viewer is None:
         return out
-    for kind, ids in (("p", posts), ("s", drawings)):
+    for kind, ids in (("p", posts), ("s", drawings), ("c", comments)):
         ids = [i for i in dict.fromkeys(ids or ()) if i is not None]
         if not ids:
             continue
@@ -92,10 +93,12 @@ def marked(viewer, posts=(), drawings=()):
 
 def _key():
     """What orders a page of your Bookmarks after their moment: the thing's
-    own address, p<a post's> or s<a drawing's>, so a cursor names no internal
-    id. The two letters are written into the SQL, not sent beside it."""
+    own address, p<a post's>, s<a drawing's> or c<a comment's>, so a cursor
+    names no internal id. The letters are written into the SQL, not sent
+    beside it."""
     return sa.func.coalesce(sa.literal_column("'p'", sa.String) + Post.public_id,
-                            sa.literal_column("'s'", sa.String) + Bookmark.drawing_id)
+                            sa.literal_column("'s'", sa.String) + Bookmark.drawing_id,
+                            sa.literal_column("'c'", sa.String) + Comment.public_id)
 
 
 def _cursor(when, key):
@@ -110,7 +113,7 @@ def _uncursor(text):
     try:
         raw = base64.urlsafe_b64decode((text or "") + "=" * (-len(text or "") % 4)).decode()
         us, key = raw.split(".", 1)
-        if not (2 <= len(key) <= 40 and key[0] in "ps"):
+        if not (2 <= len(key) <= 40 and key[0] in "psc"):
             return None
         return datetime.fromtimestamp(int(us) / 1_000_000, tz=timezone.utc), key
     except (ValueError, TypeError, UnicodeDecodeError, OverflowError, OSError):
@@ -123,11 +126,14 @@ def _rows(me, at, limit, hidden):
     taken down), and no post taken down but `me`'s own. One read, on the
     person's own index (ix_social_bookmarks_person_created)."""
     key = _key()
-    q = (sa.select(Bookmark.created_at, key.label("k"), Bookmark, Post, Person)
+    q = (sa.select(Bookmark.created_at, key.label("k"), Bookmark, Post, Person, Comment)
          .join(Person, Person.id == Bookmark.owner_id)
          .outerjoin(Post, Post.id == Bookmark.post_id)
+         .outerjoin(Comment, Comment.id == Bookmark.comment_id)
          .where(Bookmark.person_id == me.id)
          .where(sa.or_(Bookmark.post_id.is_(None), Post.taken_down_at.is_(None), Post.person_id == me.id))
+         # A COMMENT (the comment thread, step 3): never one taken down but your own.
+         .where(sa.or_(Bookmark.comment_id.is_(None), Comment.taken_down_at.is_(None), Comment.person_id == me.id))
          .order_by(Bookmark.created_at.desc(), key.desc()).limit(limit))
     if hidden:
         q = q.where(Bookmark.owner_id.notin_(hidden))
@@ -176,7 +182,11 @@ def marked_page(me, before=None, limit=PAGE):
     entries, last, more = [], at, False
     for _ in range(READS):
         rows = _rows(me, last, limit + 1, hidden)
-        shown = _drawings_shown(me, [r.Bookmark.drawing_id for r in rows if r.Bookmark.post_id is None])
+        shown = _drawings_shown(me, [r.Bookmark.drawing_id for r in rows if r.Bookmark.drawing_id is not None])
+        # A COMMENT kept (the comment thread, step 3): while its way up shows
+        # to you (comments.chain_shown), as a reply to it would.
+        from .comments import chain_shown
+        open_c = chain_shown([r.Comment for r in rows if r.Comment is not None], me)
         for r in rows:
             if len(entries) == limit:
                 more = True              # one is left after the last taken
@@ -185,6 +195,10 @@ def marked_page(me, before=None, limit=PAGE):
             b = r.Bookmark
             if b.post_id is not None:
                 entries.append(_entry(r.Post, r.Person))
+            elif b.comment_id is not None:
+                if r.Comment is not None and r.Comment.id in open_c:
+                    entries.append({"kind": "c", "at": as_utc(r.Comment.created_at), "key": "c" + r.Comment.public_id,
+                                    "comment": r.Comment, "who": r.Person})
             elif b.drawing_id in shown:
                 sk = shown[b.drawing_id]
                 when = as_utc(datetime.fromisoformat(sk["created_at"])) if sk.get("created_at") else as_utc(b.created_at)
@@ -227,6 +241,14 @@ def move_drawing_bookmarks(skribl_id, post_id):
     site().session().execute(
         sa.update(Bookmark).where(Bookmark.drawing_id == str(skribl_id))
         .values(post_id=post_id, drawing_id=None).execution_options(synchronize_session=False))
+
+
+def drop_comment_bookmarks(ids):
+    """Every bookmark on the comments `ids` (internal ids; comments.retire
+    and comments._drop: one that goes, or keeps its place, nobody's)."""
+    ids = sorted(set(ids or ()))
+    if ids:
+        _drop(Bookmark.comment_id.in_(ids))
 
 
 def drop_owner_bookmarks(person_id):
@@ -283,6 +305,50 @@ def register(bp):
             gone = sess.execute(sa.delete(Bookmark).where(yours(me))
                                 .execution_options(synchronize_session=False)).rowcount
             if not gone and find(me) is None:
+                return _json_error("gone", 404)
+        sess.flush()
+        return jsonify({"ok": True, "bookmarked": body["bookmarked"]})
+
+    @bp.post("/c/<public_id>/bookmark")
+    @_rests(json_answer=True)
+    def bookmark_comment(public_id):
+        """This person's bookmark on a comment or a reply (the comment thread,
+        step 3), kept or taken away: one they may see, no place, nothing
+        taken down (reposts.comment_open); taken away, their own goes
+        whatever became of it since."""
+        if not origin_ok() or not token_ok():
+            return _json_error("stale", 403)
+        me = current_person()
+        if me is None:
+            return _json_error("signed_out", 401)
+        if over("bookmark", "person|" + me.public_id):
+            return _json_error("limited", 429)
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or not isinstance(body.get("bookmarked"), bool):
+            return _json_error("bad", 400)
+        from .comments import may_comment
+        from .reposts import comment_open
+        sess = site().session()
+        got = comment_open(me, public_id)
+        if body["bookmarked"]:
+            if not may_comment(me):
+                return _json_error("taken_down", 403)
+            if got is None:
+                return _json_error("gone", 404)
+            c = got["c"]
+            mine = sa.and_(Bookmark.comment_id == c.id, Bookmark.person_id == me.id)
+            if sess.execute(sa.select(Bookmark.id).where(mine)).first() is None:
+                try:
+                    with sess.begin_nested():
+                        sess.add(Bookmark(person_id=me.id, comment_id=c.id, owner_id=c.person_id))
+                        sess.flush()
+                except sa.exc.IntegrityError:
+                    pass            # kept a moment ago, from another tap: one bookmark
+        else:
+            cid = sa.select(Comment.id).where(Comment.public_id == str(public_id)).scalar_subquery()
+            gone = sess.execute(sa.delete(Bookmark).where(Bookmark.person_id == me.id, Bookmark.comment_id == cid)
+                                .execution_options(synchronize_session=False)).rowcount
+            if not gone and got is None:
                 return _json_error("gone", 404)
         sess.flush()
         return jsonify({"ok": True, "bookmarked": body["bookmarked"]})

@@ -322,7 +322,7 @@ def person_page(person, viewer, before=None, limit=PAGE):
     return once(page), (_cursor(page[-1]) if more and page else None)
 
 
-def cards(entries, viewer, words=True):
+def cards(entries, viewer, words=True, aligned=False):
     """What each card shows: the post (a drawing shown outside a post is a
     post whose words are its title), its author, and its drawing's size, line,
     plays, ground and whether it is on a picture as Skribl describes them for
@@ -332,13 +332,23 @@ def cards(entries, viewer, words=True):
     reposted it (`by`); a QUOTE's carries the original small (`quote`).
     `words`: whether the cards show their words, whose mentions are then
     read (mentions.links, one read for the page); a tile (the Gallery's,
-    More from's) shows none, and reads none."""
+    More from's) shows none, and reads none. A COMMENT'S CARD (kind "c": a
+    comment or a reply reposted, or kept in Bookmarks; the comment thread,
+    step 3) is comments.world_cards's, in its place among them; one the
+    viewer is not shown has no card, or with `aligned` (one for each entry:
+    follows.home_cards puts its markers between them) None in its place."""
     from skribl import describe_posts
-    from .comments import counts
+    from .comments import counts, world_cards
     from .likes import stats
     from .mutes import muted_ids
     from .reposts import Quoted, makers_of, stats as repost_stats
-    entries = [e if isinstance(e, dict) else _entry(*e) for e in entries]
+    every = [e if isinstance(e, dict) else _entry(*e) for e in entries]
+    # A COMMENT OR A REPLY OUT IN THE WORLD (the comment thread, step 3:
+    # reposted, or kept in Bookmarks) is a card of its own, made by
+    # comments.world_cards (the way to it, then it); one this viewer is not
+    # shown makes none. The posts and drawings are read together below.
+    said_c = iter(world_cards([e for e in every if e["kind"] == "c"], viewer))
+    entries = [e for e in every if e["kind"] != "c"]
     # WHOM THIS VIEWER MUTED (mutes): their ⋯ says Unmute. Read once a request.
     muted = muted_ids(viewer)
     # WHAT THE QUOTES QUOTE (reposts): the originals in one read, their
@@ -373,7 +383,7 @@ def cards(entries, viewer, words=True):
     # @handle that is somebody is a link to them (a drawing's title takes none).
     from .mentions import links
     named = links(posts=[e["post"].id for e in entries if e["kind"] == "p"]) if words else {}
-    out = []
+    made = {}
     for e in entries:
         who = e["who"]
         if e["kind"] == "p":
@@ -400,38 +410,43 @@ def cards(entries, viewer, words=True):
                 or getattr(who, "taken_down_at", None) is not None)
         key = ("p", p.id) if e["kind"] == "p" else ("s", p.skribl_id)
         by = e.get("by")
-        out.append({"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
-                    "plays": plays_text(sk["views"]) if sk else None,
-                    "comments": said.get(key, 0),
-                    "likes": liked.get(key, {"n": 0, "mine": False, "at": None, "marks": []}),
-                    "like": (url_for("social.like_post", public_id=p.public_id) if e["kind"] == "p"
-                             else url_for("social.like_drawing", skribl_id=p.skribl_id)),
-                    "url": url, "delete": gone,
-                    # BOOKMARK in its ⋯ where one can be kept (bookmarks.py:
-                    # what is open to everybody, as a like): never on what is
-                    # taken down, nor a drawing kept link-only, which its maker
-                    # alone sees.
-                    "markable": not down and (e["kind"] == "p" or (sk or {}).get("visibility") == "public"),
-                    "marked": key in kept,
-                    # REPOSTS AND QUOTES (reposts.py): how many and whether a
-                    # repost is theirs; a post can be reposted and quoted, a
-                    # drawing shown outside a post quoted alone, and neither
-                    # once taken down or kept link-only (where one can be
-                    # bookmarked, one can be quoted).
-                    "reposts": shared.get(key, {"n": 0, "mine": False}),
-                    "repost": url_for("social.repost_post", public_id=p.public_id) if e["kind"] == "p" else None,
-                    "quoted_url": (url_for("social.quoted_post", public_id=p.public_id) if e["kind"] == "p"
-                                   else url_for("social.quoted_drawing", skribl_id=p.skribl_id)),
-                    # WHO REPOSTED IT, on a repost's card (Home's Following, a
-                    # Posts tab): "Mira Lopez reposted", "You reposted".
-                    "by": by, "by_me": by is not None and viewer is not None and by.id == viewer.id,
-                    "quote": (quoted.card(p, drawings, makers) if getattr(p, "is_quote", False) else None),
-                    # MENTIONS (mentions.py): {as typed, in small letters:
-                    # their handle now}, which said() makes links of.
-                    "mentions": named.get(("p", p.id), {}) if e["kind"] == "p" else {},
-                    "profile": profile_url(who.handle),
-                    "mine": viewer is not None and viewer.id == who.id,
-                    "muted": who.id in muted})
+        made[id(e)] = {"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
+                       "plays": plays_text(sk["views"]) if sk else None,
+                       "comments": said.get(key, 0),
+                       "likes": liked.get(key, {"n": 0, "mine": False, "at": None, "marks": []}),
+                       "like": (url_for("social.like_post", public_id=p.public_id) if e["kind"] == "p"
+                                else url_for("social.like_drawing", skribl_id=p.skribl_id)),
+                       "url": url, "delete": gone,
+                       # BOOKMARK in its ⋯ where one can be kept (bookmarks.py:
+                       # what is open to everybody, as a like): never on what is
+                       # taken down, nor a drawing kept link-only, which its maker
+                       # alone sees.
+                       "markable": not down and (e["kind"] == "p" or (sk or {}).get("visibility") == "public"),
+                       "marked": key in kept,
+                       # REPOSTS AND QUOTES (reposts.py): how many and whether a
+                       # repost is theirs; a post can be reposted and quoted, a
+                       # drawing shown outside a post quoted alone, and neither
+                       # once taken down or kept link-only (where one can be
+                       # bookmarked, one can be quoted).
+                       "reposts": shared.get(key, {"n": 0, "mine": False}),
+                       "repost": url_for("social.repost_post", public_id=p.public_id) if e["kind"] == "p" else None,
+                       "quoted_url": (url_for("social.quoted_post", public_id=p.public_id) if e["kind"] == "p"
+                                      else url_for("social.quoted_drawing", skribl_id=p.skribl_id)),
+                       # WHO REPOSTED IT, on a repost's card (Home's Following, a
+                       # Posts tab): "Mira Lopez reposted", "You reposted".
+                       "by": by, "by_me": by is not None and viewer is not None and by.id == viewer.id,
+                       "quote": (quoted.card(p, drawings, makers) if getattr(p, "is_quote", False) else None),
+                       # MENTIONS (mentions.py): {as typed, in small letters:
+                       # their handle now}, which said() makes links of.
+                       "mentions": named.get(("p", p.id), {}) if e["kind"] == "p" else {},
+                       "profile": profile_url(who.handle),
+                       "mine": viewer is not None and viewer.id == who.id,
+                       "muted": who.id in muted}
+    out = []
+    for e in every:
+        card = next(said_c) if e["kind"] == "c" else made[id(e)]
+        if card is not None or aligned:
+            out.append(card)
     return out
 
 
@@ -537,8 +552,9 @@ def register(bp, skribl_blueprint="skribl"):
         the words alone. The skribl and the row land in one transaction, or
         neither does. A QUOTE
         (reposts.py; the composer's Quote) names what it quotes, {"quote": a
-        post's address} or {"quote_drawing": a drawing's id}, open to them as
-        a like asks; its words, its own drawing, or both."""
+        post's address}, {"quote_drawing": a drawing's id} or (the comment
+        thread, step 3) {"quote_comment": a comment's address}, open to them
+        as a like asks; its words, its own drawing, or both."""
         if not origin_ok() or not token_ok():
             return _json_error("stale", 403)
         me = current_person()
@@ -625,16 +641,24 @@ def register(bp, skribl_blueprint="skribl"):
     def _quoting(me, body):
         """What a post quotes, as its row's columns, or None for a post that
         quotes nothing: (columns or None, refusal or None). A post (by its
-        address) or a drawing shown outside a post (by its id, under the
-        drawing's lock, so a quote never lands as it moves into a post), open
-        to them (reposts.quotable: no block either way, not taken down, a
-        drawing public); never both."""
-        from .reposts import quotable
-        post_id, drawing_id = body.get("quote"), body.get("quote_drawing")
-        if post_id is None and drawing_id is None:
+        address), a drawing shown outside a post (by its id, under the
+        drawing's lock, so a quote never lands as it moves into a post), or
+        since the comment thread's step 3 a comment or a reply (by its
+        address: reposts.comment_open), open to them (reposts.quotable: no
+        block either way, not taken down, a drawing public); one at most."""
+        from .reposts import comment_open, quotable
+        post_id, drawing_id, comment_id = body.get("quote"), body.get("quote_drawing"), body.get("quote_comment")
+        if post_id is None and drawing_id is None and comment_id is None:
             return None, None
-        if post_id is not None and drawing_id is not None:
+        if sum(x is not None for x in (post_id, drawing_id, comment_id)) > 1:
             return None, _json_error("one_quote", 400)
+        if comment_id is not None:
+            # A COMMENT OR A REPLY (the comment thread, step 3; the owner's yes
+            # to quoting one): one they may see, no place, nothing taken down.
+            got = comment_open(me, comment_id) if isinstance(comment_id, str) and 0 < len(comment_id) <= 32 else None
+            if got is None:
+                return None, _json_error("quote_gone", 404)
+            return {"is_quote": True, "quoted_comment_id": got["c"].id, "quoted_owner_id": got["c"].person_id}, None
         oid = post_id if post_id is not None else drawing_id
         if not isinstance(oid, str) or not (0 < len(oid) <= 32):
             return None, _json_error("quote_gone", 404)

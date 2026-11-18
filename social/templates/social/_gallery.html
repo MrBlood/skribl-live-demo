@@ -91,7 +91,11 @@
                         hidden from the person looking: "This post is gone.",
                         and nothing more. In the composer (_quote.html, its
                         own file) it is no link (link=false): a tap there
-                        would leave what is being written.
+                        would leave what is being written. A COMMENT OR A
+                        REPLY QUOTED (the comment thread, step 3; the owner's
+                        yes to "A Comment Shared", Nov 17): the same, with a
+                        line under its name saying what it is on ("On Ben’s
+                        post"), and once gone "This comment is gone.".
 
     Import these WITH CONTEXT: they read the page's skribl_bp. #}
 {% from 'social/_post.html' import face with context %}
@@ -144,9 +148,10 @@
 {%- endmacro %}
 
 {% macro quote_card(q, link=true) -%}
-{%- if q.gone %}<p class="qt-card is-gone" data-quote-card>This post is gone.</p>
+{%- if q.gone %}<p class="qt-card is-gone" data-quote-card>This {{ q.what or 'post' }} is gone.</p>
 {%- else %}<{{ 'a' if link else 'div' }} class="qt-card"{% if link %} href="{{ q.url }}"{% endif %} data-quote-card>
   <span class="qt-head"><b class="qt-name">{{ q.who.display_name }}</b><span class="qt-sub">@{{ q.who.handle }}{% if q.at %} · <time datetime="{{ when_iso(q.at) }}" data-when="ago">{{ when_day(q.at) }}</time>{% endif %}</span></span>
+  {%- if q.on %}<span class="qt-on">{{ q.on }}</span>{% endif %}
   {%- if q.words %}<span class="qt-words">{{ q.words }}</span>{% endif %}
   {%- if q.sk %}<span class="gal-pic qt-pic"{{ plate_ground(q.sk) }}>{{ plate_fill(q.sk) }}<span class="gal-plate" style="{{ plate_frame(q.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=q.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
     {%- if q.says %}<span class="gal-dur qt-dur">{{ ic.tri() }}<span>{{ q.says }}</span></span>{% endif %}</span>{% endif %}

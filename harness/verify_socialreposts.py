@@ -60,6 +60,35 @@ authenticator for the site's people.
  13. JUST A BORDER: on the site's pages, phone and desk, light and dark, no
      box with something in it is set apart from what it sits on by its line
      alone (the owner's question, Nov 16).
+ 14. A COMMENT'S ROW (the comment thread, step 3; "A Comment Shared", the
+     owner's yes, Nov 17): Reply · Repost · heart · ⋯ in a list and on its
+     own page; the post's repost sheet; lit and counted at once and after a
+     reload; Undo repost; Quote opens Make with it small ("On Cora’s
+     post"); signed out, "Repost this comment?".
+ 15. A COMMENT'S ⋯: Bookmark first, the post's toast and Undo; kept in
+     Bookmarks as its card (the way to it, no "reposted" line); Remove
+     bookmark; signed out, "Bookmark this comment?".
+ 16. A COMMENT OUT IN THE WORLD: on Home's Following and a Posts tab, its
+     card with the way to it (A), the way's faces over the card's and the
+     thread's line meeting its face at its edge, phone and desk, light and
+     dark; a reply's two steps; a tap opens its page; once a page; Everyone
+     posts only; muted, blocked (a reply whose way runs through somebody
+     hidden too), taken down; Load more, none twice and none missed.
+ 17. QUOTING A COMMENT: the small card with "On Tate’s post", one link to its
+     own page, a drawn reply's still; Make's; counted with its reposts;
+     deleted, a place now, or hidden by a block, "This comment is gone.".
+ 18. WHO MAY repost, quote or bookmark a comment: signed out, no token, no
+     yes or no; a place, one taken down (its author's own too), one under
+     one taken down, a block, one not there; a quote of two things; once a
+     person; your own; undone whatever became of it.
+ 19. ACTIVITY: "Flo and 2 others reposted your comment" (to where it shows,
+     its words under it), "Flo quoted your comment" (to the quote); a
+     reply's to its own place; neither lights the dot nor fades one; Undo
+     and a mute take theirs away.
+ 20. DELETING A COMMENT, in code: its reposts and bookmarks go, its quotes
+     let go (0, "This comment is gone."), a place's too, an account's; with
+     SQLite's cascade off; the CHECKs; the chain going down refuses while
+     any is there.
  12. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALREPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a
@@ -858,6 +887,148 @@ with app.app_context():
     event.remove(db.engine, "before_cursor_execute", count)
     print(json.dumps({"plans": plans, "sent": {k: len(v) for k, v in calls.items()}, "reads": seen,
                       "cards": page.get_data(as_text=True).count('class="post-card"')}))
+"""
+
+
+
+# ---- the comment thread, step 3: a comment shared ----------------------------------
+
+def say_on(who, post, words, answer_to=None, payload=None):
+    """A comment (or a reply) on a post as the box sends one: its public id, or None."""
+    c = who.client()
+    c.get(f"/social/p/{post}")
+    body = {"words": words}
+    if answer_to:
+        body["answer_to"] = answer_to
+    if payload is not None:
+        body["payload"] = payload
+    st, j = c.post_json(f"/social/p/{post}/comments", body)
+    return j.get("comment") if st == 200 and isinstance(j, dict) else None
+
+
+def on_c(who, cid, what, body=None, token=None, raw=None):
+    """A comment's repost or bookmark (`what`) as its sheet sends one, or its
+    deleting: (status, answer). Signed out with `who` None."""
+    c = who.client() if who is not None else Client()
+    c.get(f"/social/c/{cid}")
+    if not c.token:
+        c.get("/social/")      # a page they cannot open: the token from one they can
+    return c.post_json(f"/social/c/{cid}/{what}", raw if raw is not None else (body if body is not None else {}),
+                       token=token)
+
+
+def c_reposts(cid):
+    """Who reposted a comment: [handle], oldest first."""
+    return [r[0] for r in db("select p.handle from social_reposts r join social_comments c on c.id = r.comment_id"
+                             " join social_people p on p.id = r.person_id where c.public_id = ? order by r.id", (cid,))]
+
+
+def c_marks(cid):
+    """Who keeps a comment: [handle], oldest first."""
+    return [r[0] for r in db("select p.handle from social_bookmarks k join social_comments c on c.id = k.comment_id"
+                             " join social_people p on p.id = k.person_id where c.public_id = ? order by k.id", (cid,))]
+
+
+def c_quoted(post):
+    """What a quote post's quoted_comment_id holds, and its quoted owner's id: (id or None, owner or None)."""
+    got = db("select quoted_comment_id, quoted_owner_id from social_posts where public_id = ?", (post,))
+    return tuple(got[0]) if got else None
+
+
+def stamp_c_repost(cid, handle, seconds_ago):
+    db_write("update social_reposts set created_at = strftime('%Y-%m-%d %H:%M:%f000', 'now', ?) where comment_id ="
+             " (select id from social_comments where public_id = ?) and person_id = (select id from social_people where"
+             " handle_key = ?)", (f"-{int(seconds_ago)} seconds", cid, handle))
+
+
+def ccard(cid):
+    return f'.post-card[data-kind="c"][data-post="{cid}"]'
+
+
+# A COMMENT'S ROW in its thread (a list's li, or a comment's own page): its
+# parts in order, and its repost's box, icon and inks.
+CROW = r"""(sel) => { const root = document.querySelector(sel); if (!root) return null;
+  const row = root.querySelector(':scope > .cm-main > .cm-acts') || root.querySelector(':scope > .cm-row'); if (!row) return null;
+  const probe = c => { const e = document.createElement('i'); e.style.color = c; document.body.append(e);
+    const v = getComputedStyle(e).color; e.remove(); return v; };
+  const rp = row.querySelector('.rp-btn'), r = rp ? rp.getBoundingClientRect() : null, ic = rp ? rp.querySelector('svg') : null;
+  return { parts: [...row.children].filter(e => e.getClientRects().length).map(e =>
+             e.classList.contains('rp-btn') ? 'repost' : e.classList.contains('lk-heart') ? 'heart'
+             : e.matches('[data-cm-menu]') ? 'more' : e.matches('[data-cm-answer], [data-cm-new], .post-count') ? 'reply' : e.className),
+           rp: rp ? { w: Math.round(r.width), h: Math.round(r.height), icon: ic ? Math.round(ic.getBoundingClientRect().width) : null,
+                      color: getComputedStyle(rp).color, on: rp.classList.contains('is-on'),
+                      n: (rp.querySelector('.rp-n') || {}).textContent || null, label: rp.getAttribute('aria-label') } : null,
+           ink2: probe('var(--ink-2)'), accentInk: probe('var(--accent-ink)'),
+           marked: root.hasAttribute('data-marked'), markable: root.hasAttribute('data-markable') }; }"""
+
+# A COMMENT'S CARD out in the world: what it holds, in order, and how the way's
+# line meets the card's face.
+CCARD = r"""(cid) => { const c = document.querySelector('.post-card[data-kind="c"][data-post="' + cid + '"]'); if (!c) return null;
+  const items = [...c.querySelectorAll(':scope > .cm-way > .cm-way-item')], last = items[items.length - 1];
+  const face = c.querySelector(':scope > .post-head .post-face .face-ring'), fr = face ? face.getBoundingClientRect() : null;
+  let line = null;
+  if (last && fr) { const ln = getComputedStyle(last, '::before'), lr = last.getBoundingClientRect();
+    line = { bottom: Math.round((lr.bottom - parseFloat(ln.bottom)) * 100) / 100, top: Math.round(fr.top * 100) / 100,
+             centre: Math.round((lr.left + parseFloat(ln.left) + parseFloat(ln.borderLeftWidth) / 2) * 100) / 100,
+             face: Math.round((fr.left + fr.width / 2) * 100) / 100,
+             way: [...c.querySelectorAll('.cm-way-link > :first-child')].map(e => { const r = e.getBoundingClientRect(); return Math.round((r.left + r.width / 2) * 100) / 100; }) }; }
+  const by = c.querySelector(':scope > .rp-by'), open = c.querySelector('.post-open'), words = c.querySelector(':scope > .post-words');
+  return { order: [...c.children].map(e => e.matches('.rp-by') ? 'by' : e.matches('.cm-way') ? 'way' : e.matches('.post-head') ? 'head'
+                     : e.matches('.post-words') ? 'words' : e.matches('.post-art') ? 'art' : e.matches('.post-row') ? 'row' : e.tagName.toLowerCase()),
+           by: by ? by.textContent.replace(/\s+/g, ' ').trim() : null, way: items.map(i => i.querySelector('.cm-way-link').getAttribute('href')),
+           name: (c.querySelector('.post-name') || {}).textContent || null, words: words ? words.textContent : null,
+           open: open ? open.getAttribute('href') : null, url: c.getAttribute('data-url'), line,
+           row: [...c.querySelector('.post-row').children].map(e => e.classList.contains('rp-btn') ? 'repost' : e.classList.contains('lk-heart') ? 'heart'
+                  : e.classList.contains('post-count') ? 'replies' : e.classList.contains('post-more') ? 'more' : e.classList.contains('post-open') ? 'open' : e.className),
+           replies: (c.querySelector('.post-count span') || {}).textContent || null,
+           waits: !!c.querySelector('.post-art .skribl-inline-line.is-waiting') }; }"""
+
+# The site's toast (mutes.js): up, its words, Undo.
+CTOAST = r"""() => { const t = document.querySelector('.mu-toast'); if (!t) return null;
+  const u = t.querySelector('[data-mute-undo]');
+  return { up: !t.hidden && t.classList.contains('is-up'), words: t.querySelector('[data-mute-said]').textContent,
+           undo: !!u && !u.hidden && u.getClientRects().length > 0 }; }"""
+
+# A sheet's open state and its title.
+SHEET_UP = r"""(id) => { const s = document.getElementById(id); if (!s) return null;
+  return { open: s.classList.contains('is-open') && !s.hidden, title: (s.querySelector('h2') || {}).textContent || null,
+           rows: [...s.querySelectorAll('.post-act')].filter(b => !b.hidden && b.getClientRects().length).map(b => b.textContent.replace(/\s+/g, ' ').trim()) }; }"""
+
+# A QUOTE'S SMALL CARD of a comment, on a card or on the quote's own page.
+SMALLC = r"""(post) => { const c = document.querySelector('.post-card[data-post="' + post + '"], .post-page[data-post="' + post + '"]');
+  if (!c) return null; const q = c.querySelector(':scope > .qt-card'); if (!q) return { none: true };
+  const img = q.querySelector('.qt-pic img'), dur = q.querySelector('.qt-dur');
+  return { tag: q.tagName, href: q.getAttribute('href'), gone: q.classList.contains('is-gone'), text: q.innerText.replace(/\s+/g, ' ').trim(),
+    name: (q.querySelector('.qt-name') || {}).textContent || null, sub: (q.querySelector('.qt-sub') || {}).textContent || null,
+    on: (q.querySelector('.qt-on') || {}).textContent || null, words: (q.querySelector('.qt-words') || {}).textContent || null,
+    onUnderName: !!q.querySelector('.qt-head + .qt-on'), img: img ? [img.complete, img.naturalWidth] : null,
+    dur: dur ? dur.textContent.trim() : null }; }"""
+
+# A comment retired through the code on a copy with SQLite's cascade off
+# (argv: the comment's address, a quote of it): what went because the code said so.
+CPROBE = r"""
+import json, sys
+from app import create_app, db
+import sqlalchemy as sa
+app = create_app()
+with app.app_context():
+    from social.models import Bookmark, Comment, Post, Repost
+    from social.comments import retire
+    fk = db.session.execute(sa.text("PRAGMA foreign_keys")).scalar()
+    cid, quote_id = sys.argv[1], sys.argv[2]
+    c_id = db.session.execute(sa.select(Comment.id).where(Comment.public_id == cid)).scalar_one()
+    n = lambda m, w: db.session.execute(sa.select(sa.func.count()).select_from(m).where(w)).scalar()
+    out = {"fk": fk}
+    r0, b0 = n(Repost, Repost.comment_id == c_id), n(Bookmark, Bookmark.comment_id == c_id)
+    # Committed inside the request: the app rolls back at its end (app.py).
+    with app.test_request_context("/social/"):
+        retire([c_id], "deleted")
+        db.session.commit()
+    out["reposts"] = [r0, n(Repost, Repost.comment_id == c_id)]
+    out["marks"] = [b0, n(Bookmark, Bookmark.comment_id == c_id)]
+    q = db.session.execute(sa.select(Post.quoted_comment_id, Post.quoted_owner_id).where(Post.public_id == quote_id)).one()
+    out["quote"] = [q[0], q[1]]
+    print(json.dumps(out))
 """
 
 
@@ -2167,6 +2338,636 @@ with sync_playwright() as p:
                   f"unseen {sorted(set(FLOOR) - _roles)}; dingy {_dingy[:6]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(13, exc)
+
+    # ------------------------------------------------------------------ 14
+    if part(14, "a comment's row: Reply · Repost · heart · ⋯; the post's sheet; lit and counted at once, and after a"
+                " reload; Undo repost; Quote opens Make with it small; signed out, \"Repost this comment?\""):
+        try:
+            cora = someone(b, "cora", "Cora Vale")
+            dov = someone(b, "dov", "Dov Reyes")
+            esme = someone(b, "esme", "Esme Lind")
+            p14 = make_post(cora, "Section 14, Cora's post")
+            c14 = say_on(dov, p14, "Section 14, Dov's comment")
+            say_on(esme, p14, "Section 14, Esme's reply", answer_to=c14)
+            li = f"#c-{c14}"
+            ctx, pg = browser_as(b, esme)
+            go(pg, f"/social/p/{p14}", wait=600)
+            row0 = pg.evaluate(CROW, li)
+            check("a comment's row in its list: Reply, Repost, the heart, ⋯, in that order; the repost 44px, its arrows"
+                  " 18px, in the row's second ink, none counted at none",
+                  row0 and row0["parts"] == ["reply", "repost", "heart", "more"] and row0["rp"]["h"] == 44
+                  and row0["rp"]["w"] >= 44 and row0["rp"]["icon"] == 18 and row0["rp"]["color"] == row0["ink2"]
+                  and row0["rp"]["n"] is None and not row0["rp"]["on"], json.dumps(row0))
+            to(pg, li, 200)
+            open_rp(pg, li + " .cm-acts .rp-btn")
+            sheet = pg.evaluate(SHEET)
+            press_rp_row(pg, "repost")
+            row1 = pg.evaluate(CROW, li)
+            kept = c_reposts(c14)
+            pg.reload()
+            ready(pg)
+            pg.wait_for_timeout(400)
+            row2 = pg.evaluate(CROW, li)
+            to(pg, li, 200)
+            open_rp(pg, li + " .cm-acts .rp-btn")
+            undo_sheet = pg.evaluate(SHEET)
+            press_rp_row(pg, "repost")
+            row3 = pg.evaluate(CROW, li)
+            undone = c_reposts(c14)
+            to(pg, li, 200)
+            open_rp(pg, li + " .cm-acts .rp-btn")
+            press(pg, '#repostSheet [data-rp="quote"]')
+            pg.wait_for_function("() => !!window.SocialComposer && !!window.SocialComposer.quoted()", timeout=8000)
+            pg.wait_for_timeout(400)
+            made = pg.evaluate("""() => { const q = document.querySelector('[data-compose-quote]');
+              return { quoted: window.SocialComposer.quoted(), text: q ? q.innerText.replace(/\\s+/g, ' ').trim() : null,
+                       on: (q && q.querySelector('.qt-on') || {}).textContent || null }; }""")
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, esme)
+            go(pg, f"/social/c/{c14}", wait=500)
+            page_row = pg.evaluate(CROW, ".cm-page")
+            page_sheet = None
+            try:
+                open_rp(pg, ".cm-page > .cm-row .rp-btn")
+                page_sheet = pg.evaluate(SHEET)
+            except Exception:  # noqa: BLE001 -- no sheet is the row's own red
+                pass
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, None)
+            go(pg, f"/social/p/{p14}", wait=500)
+            to(pg, li, 200)
+            press(pg, li + " .cm-acts .rp-btn")
+            pg.wait_for_function("() => { const w = document.getElementById('repostOutSheet'); return !!w && w.classList.contains('is-open') && !w.hidden; }",
+                                 timeout=8000)
+            out = pg.evaluate(SHEET_UP, "repostOutSheet")
+            close_ctx(ctx, pg)
+            check("a tap raises the post's own repost sheet: Repost (\"Show it to the people who follow you\") and Quote",
+                  sheet and sheet["open"] and [r["act"] for r in sheet["rows"]] == ["repost", "quote"]
+                  and sheet["rows"][0]["name"] == "Repost" and sheet["rows"][0]["say"] == "Show it to the people who follow you",
+                  json.dumps(sheet)[:500])
+            check("Repost: it lights in the small violet ink and counts 1, the site keeping one repost, Esme's; after a"
+                  " reload, still lit and 1",
+                  row1 and row1["rp"]["on"] and row1["rp"]["n"] == "1" and row1["rp"]["color"] == row1["accentInk"]
+                  and kept == ["esme"] and row2 and row2["rp"]["on"] and row2["rp"]["n"] == "1",
+                  json.dumps([row1 and row1["rp"], kept, row2 and row2["rp"]]))
+            check("once it is theirs the sheet says Undo repost (\"Take it off your page and your followers’ Home\"); a"
+                  " tap undoes it: unlit, none counted, nothing kept",
+                  undo_sheet and undo_sheet["rows"][0]["name"] == "Undo repost" and row3 and not row3["rp"]["on"]
+                  and row3["rp"]["n"] is None and undone == [], json.dumps([undo_sheet and undo_sheet["rows"], row3 and row3["rp"], undone]))
+            check("Quote opens Make with the comment small under the words: Dov's name, \"On Cora’s post\" under it, his"
+                  " words; what it quotes is the comment",
+                  made and made["quoted"] == {"kind": "c", "id": c14} and made["on"] == "On Cora’s post"
+                  and "Dov Reyes" in (made["text"] or "") and "Section 14, Dov's comment" in (made["text"] or ""),
+                  json.dumps(made))
+            check("on the comment's own page, the same row under it: Reply, Repost, the heart, ⋯; its repost raises the"
+                  " same sheet there",
+                  page_row and page_row["parts"] == ["reply", "repost", "heart", "more"] and page_sheet and page_sheet["open"]
+                  and [r["act"] for r in page_sheet["rows"]] == ["repost", "quote"],
+                  json.dumps([page_row, page_sheet and page_sheet["rows"]])[:600])
+            check("signed out, its repost raises the small sheet that says how, \"Repost this comment?\"",
+                  out and out["open"] and out["title"] == "Repost this comment?", json.dumps(out))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(14, exc)
+
+    # ------------------------------------------------------------------ 15
+    if part(15, "a comment's ⋯: Bookmark first, the post's toast and Undo; kept in Bookmarks as its card, the way to it,"
+                " no \"reposted\" line; Remove bookmark; signed out, \"Bookmark this comment?\""):
+        try:
+            hugo = someone(b, "hugo", "Hugo Lane")
+            iris = someone(b, "iris", "Iris Fox")
+            jude = someone(b, "jude", "Jude Kerr")
+            p15 = make_post(hugo, "Section 15, Hugo's post")
+            c15 = say_on(iris, p15, "Section 15, Iris's comment")
+            li = f"#c-{c15}"
+            ctx, pg = browser_as(b, jude)
+            go(pg, f"/social/p/{p15}", wait=600)
+            to(pg, li, 200)
+            open_sheet(pg, li + " [data-cm-menu]", "commentSheet")
+            rows0 = pg.evaluate(SHEET_UP, "commentSheet")
+            check("a comment's ⋯, \"This comment\", has Bookmark first, then Copy link and Share…",
+                  rows0 and rows0["title"] == "This comment" and rows0["rows"][:3] == ["Bookmark", "Copy link", "Share…"],
+                  json.dumps(rows0))
+            with pg.expect_response(lambda r: r.url.endswith("/bookmark") and r.request.method == "POST", timeout=8000):
+                press(pg, '#commentSheet [data-cm-act="bookmark"]')
+            pg.wait_for_timeout(700)
+            t_kept = pg.evaluate(CTOAST)
+            kept = c_marks(c15)
+            li_marked = pg.evaluate("(s) => document.querySelector(s).hasAttribute('data-marked')", li)
+            open_sheet(pg, li + " [data-cm-menu]", "commentSheet")
+            rows1 = pg.evaluate(SHEET_UP, "commentSheet")
+            pg.keyboard.press("Escape")
+            pg.wait_for_timeout(500)
+            go(pg, "/social/@jude/bookmarks", wait=700)
+            kc = pg.evaluate(CCARD, c15)
+            go(pg, f"/social/p/{p15}", wait=600)
+            to(pg, li, 200)
+            open_sheet(pg, li + " [data-cm-menu]", "commentSheet")
+            with pg.expect_response(lambda r: r.url.endswith("/bookmark") and r.request.method == "POST", timeout=8000):
+                press(pg, '#commentSheet [data-cm-act="bookmark"]')
+            pg.wait_for_timeout(700)
+            t_gone = pg.evaluate(CTOAST)
+            gone = c_marks(c15)
+            with pg.expect_response(lambda r: r.url.endswith("/bookmark") and r.request.method == "POST", timeout=8000):
+                press(pg, ".mu-toast [data-mute-undo]")
+            pg.wait_for_timeout(700)
+            back = c_marks(c15)
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, None)
+            go(pg, f"/social/p/{p15}", wait=500)
+            to(pg, li, 200)
+            open_sheet(pg, li + " [data-cm-menu]", "commentSheet")
+            press(pg, '#commentSheet [data-cm-act="bookmark"]')
+            pg.wait_for_function("() => { const w = document.getElementById('bookmarkOutSheet'); return !!w && w.classList.contains('is-open') && !w.hidden; }",
+                                 timeout=8000)
+            out = pg.evaluate(SHEET_UP, "bookmarkOutSheet")
+            close_ctx(ctx, pg)
+            ADDED, REMOVED = "Bookmarked. It’s on your page, under Bookmarks.", "Removed from your bookmarks."
+            check("a tap on Bookmark keeps it: the site keeps Jude's, the toast says \"Bookmarked. It’s on your page,"
+                  " under Bookmarks.\" with Undo, the comment says it is kept, and its ⋯ then says Remove bookmark",
+                  kept == ["jude"] and t_kept and t_kept["up"] and t_kept["words"] == ADDED and t_kept["undo"] and li_marked
+                  and rows1 and rows1["rows"][0] == "Remove bookmark", json.dumps([kept, t_kept, li_marked, rows1]))
+            check("kept in Bookmarks as its card: the way to it (Hugo's post), Iris's name and words, the row, no"
+                  " \"reposted\" line; Open › its own page",
+                  kc and kc["order"] == ["way", "head", "words", "row"] and kc["way"] == [f"/social/p/{p15}"]
+                  and kc["name"] == "Iris Fox" and kc["words"] == "Section 15, Iris's comment" and kc["by"] is None
+                  and kc["open"] == f"/social/c/{c15}", json.dumps(kc))
+            check("Remove bookmark takes it away and the toast says so, with Undo, which puts it back",
+                  t_gone and t_gone["words"] == REMOVED and t_gone["undo"] and gone == [] and back == ["jude"],
+                  json.dumps([t_gone, gone, back]))
+            check("signed out, Bookmark raises the small sheet that says how, \"Bookmark this comment?\"",
+                  out and out["open"] and out["title"] == "Bookmark this comment?", json.dumps(out))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(15, exc)
+
+    # ------------------------------------------------------------------ 16
+    if part(16, "a comment out in the world: Home's Following and a Posts tab, its card with the way to it (A), the faces"
+                " over the card's, the line meeting its face; a reply's two steps; a tap opens its page; once a page;"
+                " Everyone posts only; muted, blocked, taken down; Load more"):
+        try:
+            kip = someone(b, "kip", "Kip Ross")
+            lena = someone(b, "lena", "Lena Park")
+            milo = someone(b, "milo", "Milo Hart")
+            nia = someone(b, "nia", "Nia Stone")
+            otto = someone(b, "otto", "Otto Brand")
+            pax = someone(b, "pax", "Pax Reed")
+            p16 = make_post(kip, "Section 16, Kip's post", payload=with_poster(drawing(seed=160)))
+            c16 = say_on(lena, p16, "Section 16, Lena's comment")
+            r16 = say_on(milo, p16, "Section 16, Milo's drawn reply", answer_to=c16, payload=with_poster(drawing(seed=161)))
+            follow(nia, "otto")
+            follow(nia, "pax")
+            on_c(otto, c16, "repost", {"reposted": True})
+            on_c(pax, r16, "repost", {"reposted": True})
+            seen = {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    ctx, pg = browser_as(b, nia, screen=screen, scheme=scheme)
+                    go(pg, "/social/", wait=900)
+                    seen[f"{screen} {scheme}"] = [pg.evaluate(CCARD, c16), pg.evaluate(CCARD, r16)]
+                    close_ctx(ctx, pg)
+            cc, rc = seen["phone light"]
+            check("Home's Following for somebody who follows Otto: Lena's comment as a card of its own, \"Otto Brand"
+                  " reposted\" at its top, then the way to it (Kip's post), then her face, name and words, then the row:"
+                  " its replies (1), repost, heart, ⋯ and Open ›, its own page",
+                  cc and cc["order"] == ["by", "way", "head", "words", "row"] and cc["by"] == "Otto Brand reposted"
+                  and cc["way"] == [f"/social/p/{p16}"] and cc["name"] == "Lena Park" and cc["words"] == "Section 16, Lena's comment"
+                  and cc["row"] == ["replies", "repost", "heart", "more", "open"] and cc["replies"] == "1"
+                  and cc["open"] == f"/social/c/{c16}" and cc["url"] == f"/social/c/{c16}", json.dumps(cc))
+            check("a drawn reply's card: the way two steps (Kip's post, then Lena's comment), then Milo, his words and his"
+                  " drawing as a post's card has one, its line waiting for the first play",
+                  rc and rc["order"] == ["by", "way", "head", "words", "art", "row"] and rc["by"] == "Pax Reed reposted"
+                  and rc["way"] == [f"/social/p/{p16}", f"/social/c/{c16}"] and rc["waits"], json.dumps(rc))
+            joins = {k: [(v or {}).get("line") for v in pair] for k, pair in seen.items()}
+            good = lambda ln: bool(ln) and abs(ln["centre"] - ln["face"]) < 0.5 and all(abs(w - ln["face"]) < 0.5 for w in ln["way"]) \
+                and 0 <= ln["bottom"] - ln["top"] <= 0.1
+            check("the way's faces sit over the card's own and the thread's line runs straight down through their middles"
+                  " into its face, meeting it at its edge (0.02px of its circle, never across it): phone and desk, light"
+                  " and dark, a comment's and a reply's",
+                  all(good(ln) for pair in joins.values() for ln in pair), json.dumps(joins)[:900])
+            ctx, pg = browser_as(b, nia)
+            go(pg, "/social/", wait=700)
+            to(pg, ccard(c16) + " .post-words", 200)
+            with pg.expect_navigation(timeout=8000):
+                press(pg, ccard(c16) + " .post-words")
+            landed = urllib.parse.urlparse(pg.url).path
+            close_ctx(ctx, pg)
+            check("a tap on its words opens its own page", landed == f"/social/c/{c16}", landed)
+            # ITS HEART KEEPS NO MOMENT (a comment's, step 2): no dot on its drawing's line though it plays.
+            CMARKS = r"""(sel) => { const art = document.querySelector(sel + ' > .post-art');
+              const p = art && window.SkriblInline ? SkriblInline.mount(art)[0] : null;
+              return p ? { marks: p.marks ? p.marks().length : null, playing: !!(p.playhead && p.playhead().playing) } : null; }"""
+            ctx, pg = browser_as(b, nia)
+            go(pg, "/social/", wait=700)
+            to(pg, ccard(r16) + " .post-art", 120)
+            pg.evaluate("(sel) => { const art = document.querySelector(sel + ' > .post-art'); SkriblInline.mount(art)[0].play(); }", ccard(r16))
+            pg.wait_for_timeout(500)
+            m0 = pg.evaluate(CMARKS, ccard(r16))
+            try:
+                with pg.expect_response(lambda r: r.url.endswith("/like") and r.request.method == "POST", timeout=8000):
+                    press(pg, ccard(r16) + " .post-row .lk-heart")
+            except Exception:  # noqa: BLE001 -- nothing sent is the row's own red
+                pass
+            pg.wait_for_timeout(400)
+            m1 = pg.evaluate(CMARKS, ccard(r16))
+            close_ctx(ctx, pg)
+            liked = db("select p.handle, l.at_ms from social_likes l join social_comments c on c.id = l.comment_id"
+                       " join social_people p on p.id = l.person_id where c.public_id = ?", (r16,))
+            check("its heart is a comment's: liked from its card while its drawing plays, kept with no moment, and no dot"
+                  " on its drawing's line", m0 and m0["playing"] and m1 and m1["marks"] == m0["marks"]
+                  and liked == [("nia", None)], json.dumps([m0, m1, liked]))
+            # ONCE A PAGE, THE NEWEST; THEIR POSTS TAB; EVERYONE.
+            on_c(pax, c16, "repost", {"reposted": True})
+            ctx, pg = browser_as(b, nia)
+            go(pg, "/social/", wait=700)
+            twice = pg.evaluate("(cid) => [...document.querySelectorAll('[data-feed] > .post-card[data-kind=\"c\"]')].filter(c => c.getAttribute('data-post') === cid).map(c => (c.querySelector('.rp-by') || {}).textContent.trim())", c16)
+            EVERY = r"""async () => { const r = await fetch('/social/feed?show=everyone', { credentials: 'same-origin' }); const j = await r.json();
+              const box = document.createElement('div'); box.innerHTML = j.html; return box.querySelectorAll('.post-card[data-kind="c"]').length; }"""
+            every = pg.evaluate(EVERY)
+            go(pg, "/social/@otto", wait=700)
+            tab = pg.evaluate(CCARD, c16)
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, otto)
+            go(pg, "/social/@otto", wait=700)
+            own_tab = pg.evaluate(CCARD, c16)
+            close_ctx(ctx, pg)
+            check("reposted by Otto and then Pax, Lena's comment is one card on Nia's Home, the newest (\"Pax Reed"
+                  " reposted\"); Everyone shows posts only",
+                  twice == ["Pax Reed reposted"] and every == 0, json.dumps([twice, every]))
+            check("Otto's Posts tab holds it, \"Otto Brand reposted\" (\"You reposted\" on his own)",
+                  tab and tab["by"] == "Otto Brand reposted" and own_tab and own_tab["by"] == "You reposted",
+                  json.dumps([tab and tab["by"], own_tab and own_tab["by"]]))
+            # MUTED, BLOCKED, TAKEN DOWN.
+            mute(nia, "pax")
+            ctx, pg = browser_as(b, nia)
+            go(pg, "/social/", wait=700)
+            muted = [pg.evaluate(CCARD, c16), pg.evaluate(CCARD, r16)]
+            close_ctx(ctx, pg)
+            on_c(otto, r16, "repost", {"reposted": True})
+            ctx, pg = browser_as(b, nia)
+            go(pg, "/social/", wait=700)
+            unblocked = pg.evaluate(CCARD, r16)
+            close_ctx(ctx, pg)
+            block(lena, "nia")
+            ctx, pg = browser_as(b, nia)
+            go(pg, "/social/", wait=700)
+            blocked = [pg.evaluate(CCARD, c16), pg.evaluate(CCARD, r16)]
+            close_ctx(ctx, pg)
+            quill = someone(b, "quill", "Quill Moss")
+            follow(quill, "otto")
+            ctx, pg = browser_as(b, quill)
+            go(pg, "/social/", wait=700)
+            before_down = pg.evaluate(CCARD, c16)
+            db_write("update social_comments set taken_down_at = strftime('%Y-%m-%d %H:%M:%f000', 'now') where public_id = ?", (c16,))
+            go(pg, "/social/", wait=700)
+            after_down = pg.evaluate(CCARD, c16)
+            close_ctx(ctx, pg)
+            check("Pax muted: his repost of Milo's reply leaves Nia's Home, and Lena's comment shows as Otto's repost",
+                  muted[1] is None and muted[0] and muted[0]["by"] == "Otto Brand reposted", json.dumps([m and m["by"] for m in muted]))
+            check("Lena blocks Nia: neither card on Nia's Home, Lena's comment nor Milo's reply (reposted by Otto too, there"
+                  " before), whose way runs through hers", unblocked and blocked == [None, None],
+                  json.dumps([bool(unblocked), blocked])[:300])
+            check("taken down: Lena's comment leaves Quill's Home (there before)", before_down and after_down is None,
+                  json.dumps([bool(before_down), after_down]))
+            # LOAD MORE: a comment reposted 24 times among posts, none twice and none missed.
+            rhea = someone(b, "rhea", "Rhea Cole")
+            sage = someone(b, "sage", "Sage Wynn")
+            follow(sage, "rhea")
+            p16b = make_post(kip, "Section 16, Kip's other post")
+            many = [say_on(lena, p16b, f"Section 16, Lena's comment {i}") for i in range(24)]
+            for i, cid in enumerate(many):
+                on_c(rhea, cid, "repost", {"reposted": True})
+                stamp_c_repost(cid, "rhea", 4000 - i * 60)
+            for i in range(5):
+                stamp(make_post(rhea, f"Section 16, Rhea's post {i}"), 3990 - i * 300)
+            WALK = r"""async () => { let out = [], next = null, guard = 0;
+              do { const r = await fetch('/social/feed?show=following' + (next ? '&before=' + encodeURIComponent(next) : ''), { credentials: 'same-origin' });
+                   const j = await r.json(); const box = document.createElement('div'); box.innerHTML = j.html || '';
+                   out.push(...[...box.querySelectorAll('.post-card')].map(c => (c.getAttribute('data-kind') || 'p') + ':' + c.getAttribute('data-post')));
+                   next = j.next; } while (next && ++guard < 12);
+              return out; }"""
+            ctx, pg = browser_as(b, sage)
+            go(pg, "/social/", wait=500)
+            walked = pg.evaluate(WALK)
+            close_ctx(ctx, pg)
+            got_c = [k[2:] for k in walked if k.startswith("c:")]
+            check("Load more: Rhea's 24 reposted comments among her posts, every one once over the pages, none twice and"
+                  " none missed, newest first",
+                  sorted(got_c) == sorted(many) and len(got_c) == len(set(got_c)) and got_c == list(reversed(many))
+                  and len(walked) == len(set(walked)), json.dumps([len(got_c), len(walked)]))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(16, exc)
+
+    # ------------------------------------------------------------------ 17
+    if part(17, "quoting a comment: the small card with \"On Tate’s post\", one link to its own page, a drawn reply's"
+                " still; Make shows it; counted with its reposts; gone or hidden, \"This comment is gone.\""):
+        try:
+            tate = someone(b, "tate", "Tate Ober")
+            ulla = someone(b, "ulla", "Ulla Berg")
+            vera = someone(b, "vera", "Vera Lund")
+            wren = someone(b, "wren", "Wren Hale")
+            p17 = make_post(tate, "Section 17, Tate's post")
+            c17 = say_on(ulla, p17, "Section 17, Ulla's comment")
+            r17 = say_on(vera, p17, "Section 17, Vera's drawn reply", answer_to=c17, payload=with_poster(drawing(seed=170)))
+            q17, st1, j1 = quote(wren, "Section 17, Wren quotes Ulla", extra={"quote_comment": c17})
+            qr, st2, _ = quote(wren, "Section 17, Wren quotes Vera's drawing", extra={"quote_comment": r17})
+            ctx, pg = browser_as(b, tate)
+            go(pg, f"/social/p/{q17}", wait=500)
+            g1 = pg.evaluate(SMALLC, q17)
+            go(pg, f"/social/p/{qr}", wait=900)
+            g2 = pg.evaluate(SMALLC, qr)
+            close_ctx(ctx, pg)
+            check("a quote of a comment: Wren's own words, Ulla's comment small inside, one link to its own page: her"
+                  " name and @handle, \"On Tate’s post\" under the name, her words",
+                  st1 == 200 and g1 and g1["tag"] == "A" and g1["href"] == f"/social/c/{c17}" and g1["name"] == "Ulla Berg"
+                  and (g1["sub"] or "").startswith("@ulla") and g1["on"] == "On Tate’s post" and g1["onUnderName"]
+                  and g1["words"] == "Section 17, Ulla's comment", json.dumps([st1, j1 if st1 != 200 else None, g1])[:600])
+            check("a drawn reply quoted: its still picture loaded, its ▶ saying \"drawn in\", one link to its own page",
+                  st2 == 200 and g2 and g2["href"] == f"/social/c/{r17}" and g2["img"] and g2["img"][0] and g2["img"][1] > 0
+                  and (g2["dur"] or "").startswith("drawn in "), json.dumps(g2)[:500])
+            st_q, raw = wren.client().get(f"/social/c/{c17}/quoted")
+            try:
+                made = json.loads(raw).get("html") or ""
+            except ValueError:
+                made = ""
+            check("Make shows it as the quote will: the composer's small card (/social/c/<id>/quoted), \"On Tate’s"
+                  " post\" in it, no link", st_q == 200 and 'class="qt-on"' in made and "On Tate’s post" in made
+                  and made.lstrip().startswith('<div class="qt-card"'), f"{st_q} {made[:300]}")
+            on_c(vera, c17, "repost", {"reposted": True})
+            ctx, pg = browser_as(b, tate)
+            go(pg, f"/social/p/{p17}", wait=500)
+            n17 = pg.evaluate(CROW, f"#c-{c17}")
+            close_ctx(ctx, pg)
+            check("the comment's row counts its reposts and quotes: Vera's repost and Wren's quote, 2",
+                  n17 and n17["rp"] and n17["rp"]["n"] == "2", json.dumps(n17 and n17["rp"]))
+            # GONE: deleted (no replies? it has Vera's: it keeps its place), hidden by a block.
+            c17b = say_on(ulla, p17, "Section 17, Ulla's other, to be deleted")
+            q17b, _, _ = quote(wren, "Section 17, Wren quotes one that goes", extra={"quote_comment": c17b})
+            st_del = on_c(ulla, c17b, "delete")[0]
+            st_place = on_c(ulla, c17, "delete")[0]
+            block(vera, "tate")
+            gone = {}
+            ctx, pg = browser_as(b, tate)
+            for k, v in (("deleted", q17b), ("a place now", q17), ("a block", qr)):
+                go(pg, f"/social/p/{v}", wait=400)
+                gone[k] = pg.evaluate(SMALLC, v)
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, wren)
+            go(pg, f"/social/p/{qr}", wait=400)
+            to_wren = pg.evaluate(SMALLC, qr)
+            close_ctx(ctx, pg)
+            check("a quote outlives what it quotes: deleted, kept only as a place, or hidden by a block, its small card"
+                  " says \"This comment is gone.\" and nothing more, no link; to Wren, whom nobody blocked, Vera's reply"
+                  " as ever; the quotes of what went keep saying they quoted a comment (0), nobody's",
+                  st_del == 200 and st_place == 200
+                  and all(v and v["gone"] and v["tag"] == "P" and v["href"] is None and v["text"] == "This comment is gone."
+                          for v in gone.values())
+                  and to_wren and to_wren["href"] == f"/social/c/{r17}"
+                  and c_quoted(q17b) == (0, None) and c_quoted(q17) == (0, None), json.dumps([gone, to_wren and to_wren["href"],
+                                                                                              c_quoted(q17b), c_quoted(q17)])[:800])
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(17, exc)
+
+    # ------------------------------------------------------------------ 18
+    if part(18, "who may repost, quote or bookmark a comment: signed in, the token, one they may see, no place, nothing"
+                " taken down; once; your own; undone whatever became of it"):
+        try:
+            xan = someone(b, "xan", "Xan Abel")
+            yara = someone(b, "yara", "Yara Dove")
+            zed = someone(b, "zed", "Zed Frost")
+            abe = someone(b, "abe", "Abe Gold")
+            p18 = make_post(xan, "Section 18, Xan's post")
+            c18 = say_on(yara, p18, "Section 18, Yara's comment")
+            place = say_on(yara, p18, "Section 18, Yara's, to be a place")
+            say_on(abe, p18, "Section 18, under it", answer_to=place)
+            on_c(yara, place, "delete")
+            down = say_on(abe, p18, "Section 18, Abe's, taken down")
+            under = say_on(yara, p18, "Section 18, under one taken down", answer_to=down)
+            db_write("update social_comments set taken_down_at = strftime('%Y-%m-%d %H:%M:%f000', 'now') where public_id = ?", (down,))
+            blk = say_on(abe, p18, "Section 18, Abe's, who blocks Zed")
+            block(abe, "zed")
+            rp = lambda who, cid, **kw: on_c(who, cid, "repost", {"reposted": True}, **kw)[0]
+            bm = lambda who, cid, **kw: on_c(who, cid, "bookmark", {"bookmarked": True}, **kw)[0]
+            refused = {"signed out": rp(None, c18), "no token": rp(zed, c18, token=""),
+                       "no yes or no": on_c(zed, c18, "repost", raw={"reposted": "yes"})[0],
+                       "a place": rp(zed, place), "taken down": rp(zed, down), "its author's own, taken down": rp(abe, down),
+                       "under one taken down": rp(zed, under), "under one taken down, to its author": rp(abe, under),
+                       "a block": rp(zed, blk), "not there": rp(zed, "nothing0000")}
+            refused_bm = {"signed out": bm(None, c18), "a place": bm(zed, place), "taken down": bm(zed, down),
+                          "under one taken down": bm(zed, under), "a block": bm(zed, blk)}
+            qs = {k: quote(zed, "Section 18, a quote", extra=v)[1]
+                  for k, v in (("a place", {"quote_comment": place}), ("taken down", {"quote_comment": down}),
+                               ("under one taken down", {"quote_comment": under}), ("a block", {"quote_comment": blk}),
+                               ("two things", {"quote_comment": c18, "quote": p18}))}
+            check("who may repost: signed out (401), no token (403), no yes or no (400); a place, one taken down (its"
+                  " author's own too), one under one taken down (to that one's author too, who alone still sees the way"
+                  " to it: the route's own rule), one by somebody who blocked you, one not there: gone (404); nothing kept",
+                  refused == {"signed out": 401, "no token": 403, "no yes or no": 400, "a place": 404, "taken down": 404,
+                              "its author's own, taken down": 404, "under one taken down": 404,
+                              "under one taken down, to its author": 404, "a block": 404, "not there": 404}
+                  and all(c_reposts(x) == [] for x in (place, down, under, blk)), json.dumps(refused))
+            check("...bookmark the same (401, then 404 for each), nothing kept",
+                  refused_bm == {"signed out": 401, "a place": 404, "taken down": 404, "under one taken down": 404,
+                                 "a block": 404} and all(c_marks(x) == [] for x in (place, down, under, blk)),
+                  json.dumps(refused_bm))
+            check("...and quote: each of those gone (404), and a quote of two things at once refused (400)",
+                  qs == {"a place": 404, "taken down": 404, "under one taken down": 404, "a block": 404, "two things": 400},
+                  json.dumps(qs))
+            twice = [rp(zed, c18), rp(zed, c18)]
+            own = rp(yara, c18)
+            check("one repost a person a comment (twice is once); your own comment too",
+                  twice == [200, 200] and own == 200 and c_reposts(c18) == ["zed", "yara"], json.dumps([twice, own, c_reposts(c18)]))
+            t18 = say_on(xan, p18, "Section 18, Xan's, reposted then taken down")
+            rp(zed, t18)
+            bm(zed, t18)
+            db_write("update social_comments set taken_down_at = strftime('%Y-%m-%d %H:%M:%f000', 'now') where public_id = ?", (t18,))
+            undo = on_c(zed, t18, "repost", {"reposted": False})[0]
+            unmark = on_c(zed, t18, "bookmark", {"bookmarked": False})[0]
+            check("your own repost and bookmark undone whatever became of it (taken down since): both go",
+                  undo == 200 and unmark == 200 and c_reposts(t18) == [] and c_marks(t18) == [], json.dumps([undo, unmark]))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(18, exc)
+
+    # ------------------------------------------------------------------ 19
+    if part(19, "Activity: reposted your comment (one row a comment, its words, opening it where it shows), quoted your"
+                " comment (to the quote); Undo takes it; muted quiet; never the dot"):
+        try:
+            bo = someone(b, "boh", "Bo Hart")
+            cy = someone(b, "cyl", "Cy Lund")
+            di = someone(b, "dim", "Di Moss")
+            ed = someone(b, "edr", "Ed Ray")
+            flo = someone(b, "flo", "Flo Kent")
+            p19 = make_post(bo, "Section 19, Bo's post")
+            c19 = say_on(cy, p19, "Section 19, Cy's comment")
+            r19 = say_on(di, p19, "Section 19, Di's reply", answer_to=c19)
+            db_write("update social_people set activity_seen_at = strftime('%Y-%m-%d %H:%M:%f000', 'now') where handle_key in ('cyl', 'dim')")
+            time.sleep(0.05)
+            on_c(di, c19, "repost", {"reposted": True})
+            on_c(ed, c19, "repost", {"reposted": True})
+            on_c(flo, c19, "repost", {"reposted": True})
+            on_c(ed, r19, "repost", {"reposted": True})
+            q19, _, _ = quote(flo, "Section 19, Flo quotes Cy", extra={"quote_comment": c19})
+            ROWS = r"""() => [...document.querySelectorAll('.act-row')].map(r => ({ say: r.querySelector('.act-say').textContent.replace(/\s+/g, ' ').trim(),
+              href: new URL(r.href).pathname + new URL(r.href).hash, peek: (r.querySelector('.act-peek') || {}).textContent || null,
+              isNew: r.classList.contains('is-new'), badge: !!r.querySelector('.rp-badge svg') }))"""
+            DOT = "() => { const b = document.querySelector('.top-bell'); return b ? !!b.querySelector('.act-dot') : null; }"
+            ctx, pg = browser_as(b, cy)
+            go(pg, "/social/", wait=400)
+            dot = pg.evaluate(DOT)
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, cy, screen="desk")
+            go(pg, "/social/activity", wait=400)
+            rail = pg.evaluate("() => { const a = document.querySelector('nav.nav a.tab-activity'); return a ? !!a.querySelector('.act-dot') : null; }")
+            rows = pg.evaluate(ROWS)
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, di)
+            go(pg, "/social/activity", wait=400)
+            di_rows = pg.evaluate(ROWS)
+            close_ctx(ctx, pg)
+            rp_rows = [r for r in rows if "reposted your comment" in r["say"]]
+            qt_rows = [r for r in rows if "quoted your comment" in r["say"]]
+            check("Cy's Activity: his comment's reposts one row, \"Flo and 2 others reposted your comment\", new, wearing"
+                  " the arrows, his words under it, opening it where it shows (#c-<id>); \"Flo quoted your comment\", her"
+                  " words under it, to her quote",
+                  [r["say"] for r in rp_rows] == ["Flo and 2 others reposted your comment"] and rp_rows[0]["isNew"]
+                  and rp_rows[0]["badge"] and rp_rows[0]["peek"] == "“Section 19, Cy's comment”"
+                  and rp_rows[0]["href"] == f"/social/p/{p19}#c-{c19}"
+                  and [r["say"] for r in qt_rows] == ["Flo quoted your comment"] and qt_rows[0]["href"] == f"/social/p/{q19}"
+                  and qt_rows[0]["peek"] == "“Section 19, Flo quotes Cy”" and qt_rows[0]["badge"], json.dumps(rows)[:800])
+            dr = [r for r in di_rows if "reposted your comment" in r["say"]]
+            check("Di's reply reposted: \"Ed reposted your comment\", opening Cy's comment's page, where her reply is",
+                  [r["say"] for r in dr] == ["Ed reposted your comment"] and dr[0]["href"] == f"/social/c/{c19}#c-{r19}",
+                  json.dumps(di_rows)[:500])
+            check("neither lights the bell's dot, nor fades one on Activity's own page", dot is False and rail is False,
+                  json.dumps([dot, rail]))
+            on_c(flo, c19, "repost", {"reposted": False})
+            mute(cy, "edr")
+            ctx, pg = browser_as(b, cy)
+            go(pg, "/social/activity", wait=400)
+            rows2 = [r["say"] for r in pg.evaluate(ROWS) if "your comment" in r["say"]]
+            close_ctx(ctx, pg)
+            check("Undo repost takes Flo's away and Ed, muted, leaves it: \"Di reposted your comment\"; Flo's quote stays",
+                  "Di reposted your comment" in rows2 and not any(("Flo" in s_ or "Ed" in s_) and "reposted" in s_ for s_ in rows2)
+                  and "Flo quoted your comment" in rows2, json.dumps(rows2))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(19, exc)
+
+    # ------------------------------------------------------------------ 20
+    if part(20, "deleting a comment, in code: its reposts and bookmarks go, its quotes let go (\"This comment is gone.\"),"
+                " a place's too, an account's; with SQLite's cascade off; the CHECKs; the chain going down refuses"):
+        try:
+            gil = someone(b, "gil", "Gil Shaw")
+            hoa = someone(b, "hoa", "Hoa Tran")
+            ira = someone(b, "ira", "Ira Bloom")
+            p20 = make_post(gil, "Section 20, Gil's post")
+            c20 = say_on(hoa, p20, "Section 20, Hoa's comment")
+            on_c(ira, c20, "repost", {"reposted": True})
+            on_c(gil, c20, "repost", {"reposted": True})
+            on_c(ira, c20, "bookmark", {"bookmarked": True})
+            q20, _, _ = quote(ira, "Section 20, Ira quotes Hoa", extra={"quote_comment": c20})
+            before = (c_reposts(c20), c_marks(c20), c_quoted(q20)[1] is not None)
+            st = on_c(hoa, c20, "delete")[0]
+            after = (db("select count(*) from social_reposts r join social_comments c on c.id = r.comment_id where c.public_id = ?", (c20,))[0][0],
+                     c_quoted(q20))
+            # A PLACE: one with a reply under it keeps its place, and loses its reposts and bookmarks.
+            c20b = say_on(hoa, p20, "Section 20, Hoa's, to keep its place")
+            say_on(ira, p20, "Section 20, under it", answer_to=c20b)
+            on_c(gil, c20b, "repost", {"reposted": True})
+            on_c(gil, c20b, "bookmark", {"bookmarked": True})
+            qb, _, _ = quote(gil, "Section 20, Gil quotes it", extra={"quote_comment": c20b})
+            st_b = on_c(hoa, c20b, "delete")[0]
+            place = db("select gone from social_comments where public_id = ?", (c20b,))
+            check("deleting a comment takes its reposts and bookmarks, and its quote lets go of it (0: \"This comment is"
+                  " gone.\", nobody's); one with a reply under it keeps its place, and loses its reposts, bookmarks and"
+                  " quotes the same",
+                  st == 200 and before == (["ira", "gil"], ["ira"], True) and after == (0, (0, None))
+                  and st_b == 200 and place and place[0][0] == "deleted" and c_reposts(c20b) == [] and c_marks(c20b) == []
+                  and c_quoted(qb) == (0, None), json.dumps([before, after, st_b, place, c_quoted(qb)]))
+            # AN ACCOUNT: its comments go with their reposts; its own reposts and bookmarks of comments go.
+            jo = someone(b, "jow", "Jo Wells")
+            cj = say_on(jo, p20, "Section 20, Jo's comment")
+            on_c(ira, cj, "repost", {"reposted": True})
+            qj, _, _ = quote(ira, "Section 20, Ira quotes Jo", extra={"quote_comment": cj})
+            cg = say_on(gil, p20, "Section 20, Gil's comment, Jo reposts and keeps")
+            on_c(jo, cg, "repost", {"reposted": True})
+            on_c(jo, cg, "bookmark", {"bookmarked": True})
+            jc = jo.client()
+            jc.get("/social/you/delete")
+            jst = jc.post_form("/social/you/delete", {"confirm": "jow"})[0]
+            check("deleting an account: its comment's reposts go and its quote lets go (0), and the reposts and bookmarks"
+                  " it made of comments go",
+                  c_reposts(cj) == [] and c_quoted(qj) == (0, None) and c_reposts(cg) == [] and c_marks(cg) == []
+                  and not db("select 1 from social_people where handle_key = 'jow'"),
+                  json.dumps([jst, c_reposts(cj), c_quoted(qj), c_reposts(cg), c_marks(cg)]))
+            # WITH SQLITE'S CASCADE OFF, on a copy: the code alone.
+            c20c = say_on(hoa, p20, "Section 20, Hoa's, for the copy")
+            on_c(ira, c20c, "repost", {"reposted": True})
+            on_c(ira, c20c, "bookmark", {"bookmarked": True})
+            qc, _, _ = quote(gil, "Section 20, Gil quotes it, the copy", extra={"quote_comment": c20c})
+            copy = os.path.join(TMP, "cascade-off-comments.db")
+            con = sqlite3.connect(DB)
+            con.execute("vacuum into ?", (copy,))
+            con.close()
+            env = dict(ENV, DATABASE_URL=f"sqlite:///{copy}", SKRIBL_SQLITE_FOREIGN_KEYS="0")
+            out = subprocess.run([sys.executable, "-c", CPROBE, c20c, qc], cwd=ROOT, env=env, capture_output=True,
+                                 text=True, timeout=180)
+            got = json.loads(out.stdout.strip().splitlines()[-1]) if out.returncode == 0 and out.stdout.strip() else {"err": out.stderr[-600:]}
+            check("with SQLite's cascade off (a copy): a comment retired through the code takes its repost and its"
+                  " bookmark (1 and 1, then 0 and 0), and its quote lets go (0)",
+                  got.get("fk") == 0 and got.get("reposts") == [1, 0] and got.get("marks") == [1, 0]
+                  and got.get("quote") == [0, None], json.dumps(got)[:600])
+            # THE CHECKS hold.
+            con = sqlite3.connect(DB, timeout=10)
+            refused = {}
+            ids = con.execute("select (select id from social_people where handle_key = 'gil'), (select id from social_posts where public_id = ?),"
+                              " (select id from social_comments where public_id = ?)", (p20, c20c)).fetchone()
+            for k, sql, args in (
+                    ("a repost of a post and a comment", "insert into social_reposts (person_id, post_id, comment_id, owner_id, created_at)"
+                     " values (?, ?, ?, ?, '2026-11-17 10:00:00.000000')", (ids[0], ids[1], ids[2], ids[0])),
+                    ("a repost of nothing", "insert into social_reposts (person_id, post_id, comment_id, owner_id, created_at)"
+                     " values (?, null, null, ?, '2026-11-17 10:00:00.000000')", (ids[0], ids[0])),
+                    ("a bookmark of a post and a comment", "insert into social_bookmarks (person_id, post_id, comment_id, owner_id, created_at)"
+                     " values (?, ?, ?, ?, '2026-11-17 10:00:00.000000')", (ids[0], ids[1], ids[2], ids[0])),
+                    ("a quote of a post and a comment", "insert into social_posts (public_id, person_id, words, is_quote, quoted_post_id,"
+                     " quoted_comment_id, created_at) values ('twothings01', ?, 'two', 1, ?, ?, '2026-11-17 10:00:00.000000')",
+                     (ids[0], ids[1], ids[2]))):
+                try:
+                    con.execute(sql, args)
+                    refused[k] = False
+                except sqlite3.IntegrityError:
+                    refused[k] = True
+            con.rollback()
+            con.close()
+            check("the CHECKs hold: a repost of a post and a comment, a repost of nothing, a bookmark of two things, a"
+                  " quote of two things: each refused", all(refused.values()) and len(refused) == 4, json.dumps(refused))
+            # THE CHAIN, on a copy: going down refuses while a comment's repost, bookmark or quote is there.
+            chain = os.path.join(TMP, "chain-comments.db")
+            con = sqlite3.connect(DB)
+            con.execute("vacuum into ?", (chain,))
+            con.close()
+            def alembic_on(dbfile, *args):
+                return subprocess.run([sys.executable, "-m", "alembic", "-c", "social/alembic.ini", *args], cwd=ROOT,
+                                      env=dict(os.environ, DATABASE_URL=f"sqlite:///{dbfile}"), capture_output=True,
+                                      text=True, timeout=180)
+            alembic_on(chain, "stamp", "36a8b352b347")
+            d1 = alembic_on(chain, "downgrade", "5beec18dc5fe")
+            con = sqlite3.connect(chain)
+            whole = (con.execute("select count(*) from social_reposts where comment_id is not null").fetchone()[0],
+                     [r[0] for r in con.execute("select version_num from social_alembic_version")])
+            con.execute("delete from social_reposts where comment_id is not null")
+            con.execute("delete from social_bookmarks where comment_id is not null")
+            con.execute("delete from social_posts where quoted_comment_id is not null")
+            con.commit()
+            con.close()
+            d2 = alembic_on(chain, "downgrade", "5beec18dc5fe")
+            u2 = alembic_on(chain, "upgrade", "36a8b352b347")
+            check("the chain on a copy of this database: going down refuses while a comment's repost, bookmark or quote"
+                  " is there, saying so and changing nothing (still at 36a8b352b347); without them it goes down, and up"
+                  " again",
+                  d1.returncode != 0 and "36a8b352b347" in (d1.stderr + d1.stdout) and whole[0] > 0
+                  and whole[1] == ["36a8b352b347"] and d2.returncode == 0 and u2.returncode == 0,
+                  json.dumps([d1.returncode, (d1.stderr + d1.stdout)[-300:], whole, d2.returncode, d2.stderr[-300:],
+                              u2.returncode, u2.stderr[-300:]]))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(20, exc)
 
     # ------------------------------------------------------------------ 12
     if part(12, "no page errors, no console errors and no CSP violations"):

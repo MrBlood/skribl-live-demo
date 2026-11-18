@@ -169,10 +169,11 @@
   /* The player of this heart's post (Skribl's, mounted once): the heart is
      in the post's row, under the drawing (Nov 13). A COMMENT'S HEART (the
      comment thread, step 2: in a comment's row, in a list or on its own
-     page) has none: a like on a comment keeps no moment, and its drawing's
-     line no dots (likes.py). */
+     page; since step 3 in its card out in the world, .cm-card) has none: a
+     like on a comment keeps no moment, and its drawing's line no dots
+     (likes.py). */
   function playerOf(b) {
-    if (b.closest('.cm, .cm-row')) return null;
+    if (b.closest('.cm, .cm-row, .cm-card')) return null;
     var host = b.closest('.post-card, .post-page'), art = host && host.querySelector('.post-art');
     return art && window.SkriblInline ? window.SkriblInline.mount(art)[0] || null : null;
   }

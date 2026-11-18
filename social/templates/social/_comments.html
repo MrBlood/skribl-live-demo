@@ -60,7 +60,7 @@
     page's me, skribl_bp, when_iso and when_day. comments.js holds the moving
     parts; the words are here. #}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline, skribl_inline_draft %}
-{% from 'social/_post.html' import face with context %}
+{% from 'social/_post.html' import face, repost with context %}
 {% from 'social/_mentions.html' import mention_list %}
 {% import 'social/_icons.html' as ic %}
 
@@ -68,12 +68,14 @@
     still until tapped (a post's own page plays only the post's: posts.js),
     the line under it saying what it is, and ending in the full-screen button
     as a post's does (the owner's "yes to A", Nov 16). Gone or withheld since,
-    the box says the drawing is not here anymore. #}
-{% macro comment_art(it) -%}
+    the box says the drawing is not here anymore. In a comment's card out in
+    the world (`waits`: _post.html comment_card) its line waits for the first
+    play, as a post's card's does. #}
+{% macro comment_art(it, waits=false) -%}
 {%- set sk = it.sk -%}
 {%- set fm = {'title': it.c.words or it.who.display_name, 'name': it.who.display_name if it.c.words else '', 'handle': '@' ~ it.who.handle} -%}
-{%- if sk and sk.canvas_w %}{{ skribl_inline(it.c.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, full=true, full_meta=fm) }}
-{%- else %}{{ skribl_inline(it.c.skribl_id, bp=skribl_bp, full=true, full_meta=fm) }}{% endif %}
+{%- if sk and sk.canvas_w %}{{ skribl_inline(it.c.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, line_waits=waits, full=true, full_meta=fm) }}
+{%- else %}{{ skribl_inline(it.c.skribl_id, bp=skribl_bp, line_waits=waits, full=true, full_meta=fm) }}{% endif %}
 {%- endmacro %}
 
 {#  ONE COMMENT, OR ONE REPLY (the comment thread, step 1; the owner's yes,
@@ -82,7 +84,8 @@
     site's card with its lilac edge and its lift, as wide as its words: its
     name, when (a way to its own page), its words and its drawing. Under the
     bubble its row, the post's own: Reply (the word on a desk, the icon
-    alone on a phone) and ⋯. ONE LEVEL, EVERYWHERE (the owner, Nov 17: "a
+    alone on a phone), its repost and how many (step 3), its heart and how
+    many (step 2), and ⋯. ONE LEVEL, EVERYWHERE (the owner, Nov 17: "a
     list of direct replies first. If you click the reply it opens up the
     tree level"): nothing is nested under it; one with replies under it
     carries "Read N replies" on the thread's lilac line, which opens its own
@@ -103,7 +106,7 @@
   {%- endif %}
 </li>
 {%- else %}
-<li class="cm{% if it.quiet %} is-quiet{% endif %}" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name.split(' ')[0] }}" data-url="{{ url }}"{% if me and me.id == c.person_id %} data-mine{% endif %}>
+<li class="cm{% if it.quiet %} is-quiet{% endif %}" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name.split(' ')[0] }}" data-url="{{ url }}"{% if me and me.id == c.person_id %} data-mine{% endif %}{{ share_data(it) }}>
   {%- if it.quiet %}
   <button class="cm-fold-line" type="button" data-cm-show><span class="cm-fold-ic">{{ ic.eye_closed() }}</span><span class="cm-fold-words">{{ 'Someone you muted replied.' if c.parent_id else 'Someone you muted said something.' }} <span class="cm-show">Show</span></span></button>
   {%- endif %}
@@ -117,6 +120,7 @@
     </div>
     <div class="cm-acts">
       {% if can %}<button class="cm-act" type="button" data-cm-answer aria-expanded="false">{{ ic.comment() }}<span class="cm-word">Reply</span></button>{% endif %}
+      {%- if it.shareable %}{{ repost(it) }}{% endif %}
       {%- if not c.taken_down_at %}{{ comment_heart(it) }}{% endif %}
       <button class="icon-btn cm-dots" type="button" data-cm-menu aria-haspopup="dialog" aria-controls="commentSheet"
               aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>
@@ -129,6 +133,18 @@
 {%- endif %}
 {%- endmacro %}
 
+{#  WHAT A COMMENT SAYS OF SHARING IT (the comment thread, step 3; "A
+    Comment Shared", the owner's yes, Nov 17), for posts.js and comments.js:
+    whose it is (@handle), where its repost goes and where the small card a
+    quote of it shows comes from, where it can be shared (not taken down,
+    nor a place, nor on anything taken down); and whether it is this
+    viewer's bookmark (theirs alone, never a count). #}
+{% macro share_data(it) -%}
+{%- if it.who %} data-handle="{{ it.who.handle }}"{% endif %}
+{%- if it.shareable %} data-markable data-repost="{{ url_for('social.repost_comment', public_id=it.c.public_id) }}" data-quoted="{{ url_for('social.quoted_comment', public_id=it.c.public_id) }}"{% endif %}
+{%- if it.marked %} data-marked{% endif %}
+{%- endmacro %}
+
 {#  A COMMENT'S HEART (the comment thread, step 2; the owner's yes, Nov 17,
     "the same choices as a post"): a post's own heart (_post.html heart(),
     likes.js), in its row between Reply and ⋯, how many beside it, none at
@@ -139,6 +155,36 @@
 <button class="lk-heart{% if mine %} is-liked{% endif %}{% if not n %} is-zero{% endif %}" type="button" data-first="{{ it.who.display_name.split(' ')[0] }}"
         {%- if me %} data-like="{{ url_for('social.like_comment', public_id=it.c.public_id) }}"{% else %} data-like-out data-like-title="Like this comment?" aria-haspopup="dialog" aria-controls="likeOutSheet" aria-expanded="false"{% endif %}
         aria-pressed="{{ 'true' if mine else 'false' }}" aria-label="{{ 'Liked' if mine else 'Like' }}{% if n %}, {{ n }} {{ 'like' if n == 1 else 'likes' }}{% endif %}">{{ ic.heart() }}{% if n %}<span class="lk-n">{{ n }}</span>{% endif %}</button>
+{%- endmacro %}
+
+{#  THE WAY TO A COMMENT, small and joined by the thread's line (the comment
+    thread, step 1): what it is on (the post, or the drawing), then the
+    comment and each reply it answers, down to the one right above it; each
+    opens its own page, and a drawing on the way is its still picture beside
+    the words (comments.the_way, comments.still). Above a comment on its own
+    page (comment.html), and since step 3 above a comment out in the world,
+    in its card (_post.html comment_card: "A Comment Shared", the owner's
+    yes to A, Nov 17), where its faces sit over the card's own. #}
+{% macro the_way(way) -%}
+<ol class="cm-way" aria-label="The way to it">
+    {%- for w in way %}
+    <li class="cm-way-item">
+      <a class="cm-way-link" href="{{ w.href }}">
+        {%- if w.gone %}
+        <span class="cm-gone-face" aria-hidden="true"></span>
+        <span class="cm-way-main"><span class="cm-way-gone">{{ w.gone }}</span></span>
+        {%- else %}
+        {{ face(w.who, 'cm-way-face', initial=true) }}
+        <span class="cm-way-main">
+          <span class="cm-way-head"><b>{{ w.who.display_name }}</b>{% if w.when %}<time datetime="{{ when_iso(w.when) }}" data-when="ago">{{ when_day(w.when) }}</time>{% endif %}</span>
+          {%- if w.words %}<span class="cm-way-words">{{ w.words }}</span>{% endif %}
+        </span>
+        {%- endif %}
+        {%- if w.pic %}<span class="cm-way-pic" style="width: {{ w.pic.w }}px; background-image: url('{{ w.pic.src }}'); background-size: {{ w.pic.size }}; background-position: {{ w.pic.at }}" aria-hidden="true"></span>{% endif %}
+      </a>
+    </li>
+    {%- endfor %}
+  </ol>
 {%- endmacro %}
 
 {#  "READ N MORE REPLIES", on the thread's line under a reply at the second
@@ -249,14 +295,18 @@
     owner's "B, equal lines", Nov 14): Delete comment on your own, Report
     this comment on anybody else's, and on your own post or drawing Remove
     from my post. comments.js shows the rows for whose it is. No Cancel, as
-    on the post's. Bookmark and Repost come with step 3, the heart with
-    step 2. #}
+    on the post's. BOOKMARK first (the comment thread, step 3; "A Comment
+    Shared", the owner's yes, Nov 17): "Bookmark", then "Remove bookmark" once
+    kept, its ribbon filled, with the post's toast and Undo (posts.js,
+    window.SocialMark); none where it can't be shared. The heart (step 2)
+    and the repost (step 3) are in its row. #}
 <div class="make post-sheet" id="commentSheet" hidden>
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="commentSheetTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="commentSheetTitle">This comment</h2>
     <div class="post-acts">
+      <button class="post-act bm-act" type="button" data-cm-act="bookmark"{% if not me %} aria-haspopup="dialog" aria-controls="bookmarkOutSheet"{% endif %}>{{ ic.ribbon() }}<span data-bm-words>Bookmark</span></button>
       <button class="post-act" type="button" data-cm-act="copy">{{ ic.link() }}<span>Copy link</span></button>
       <button class="post-act" type="button" data-cm-act="share">{{ ic.share() }}<span>Share…</span></button>
     </div>
@@ -345,5 +395,7 @@
   <span data-word="c_reported">Thanks. The people who run this site will look at it.</span>
   <span data-word="c_report_limited">Too many reports from here right now. Try again later.</span>
   <span data-word="c_done">Done</span>
+  <span data-word="c_bm_add">Bookmark</span>
+  <span data-word="c_bm_remove">Remove bookmark</span>
 </div>
 {%- endmacro %}

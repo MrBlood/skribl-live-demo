@@ -291,11 +291,18 @@ def home_items(me, show, before=None):
 
 def home_cards(items, me):
     """`items` with each entry made a card (posts.cards: one read of each
-    kind for all of them), the markers as they are."""
+    kind for all of them), the markers as they are. An entry the viewer is
+    shown no card for (a comment reposted whose way runs through somebody
+    hidden from them: the comment thread, step 3) leaves no gap."""
     from .posts import cards
     entries = [i for i in items if "extra" not in i]
-    made = iter(cards(entries, me)) if entries else iter(())
-    return [i if "extra" in i else next(made) for i in items]
+    made = iter(cards(entries, me, aligned=True)) if entries else iter(())
+    out = []
+    for i in items:
+        card = i if "extra" in i else next(made)
+        if card is not None:
+            out.append(card)
+    return out
 
 
 # ---- the routes ---------------------------------------------------------------------

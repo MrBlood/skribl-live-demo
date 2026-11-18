@@ -135,6 +135,17 @@
 
   /* ---- the post a control belongs to ------------------------------------- */
   function postOf(el) {
+    /* A COMMENT OR A REPLY IN ITS THREAD (the comment thread, step 3): its
+       Repost and its Bookmark (comments.js has its ⋯), as a post's own. A
+       comment's card out in the world is a card (data-kind c), below. */
+    var cm = el.closest('.cm[data-comment], .cm-page[data-comment]');
+    if (cm && !el.closest('.post-card')) {
+      return { el: cm, id: cm.getAttribute('data-comment'), url: absolute(cm.getAttribute('data-url') || ''),
+               skribl: '', mine: cm.hasAttribute('data-mine'), del: '', kind: 'c',
+               handle: cm.getAttribute('data-handle') || '', first: cm.getAttribute('data-first') || '',
+               muted: false, markable: cm.hasAttribute('data-markable'), marked: cm.hasAttribute('data-marked'),
+               repost: cm.getAttribute('data-repost') || '', quoted: cm.getAttribute('data-quoted') || '' };
+    }
     var p = el.closest('[data-post]') || doc.querySelector('.post-page[data-post]');
     if (!p) return null;
     return { el: p, id: p.getAttribute('data-post'), url: absolute(p.getAttribute('data-url')),
@@ -144,6 +155,19 @@
              muted: p.hasAttribute('data-muted'), markable: p.hasAttribute('data-markable'),
              marked: p.hasAttribute('data-marked'), repost: p.getAttribute('data-repost') || '',
              quoted: p.getAttribute('data-quoted') || '' };
+  }
+  /* What a thing is, wherever the page shows it: a comment by its address,
+     a post or a drawing by its card's (a drawing's is b-<its id>). */
+  function keyOf(p) { return (p.kind === 'c' ? 'c:' : 'p:') + p.id; }
+  /* WHAT THE SHEETS CALL IT ([data-kind-word]): "This post", or for a
+     comment (the comment thread, step 3) "This comment", and the rows and
+     sheets that name it the same way. */
+  function kindWords(p) {
+    var k = p && p.kind === 'c' ? 'c' : 'p';
+    Array.prototype.forEach.call(doc.querySelectorAll('[data-kind-word]'), function (el) {
+      var w = say('kw_' + el.getAttribute('data-kind-word') + '_' + k);
+      if (w) el.textContent = w;
+    });
   }
 
   /* ---- the ⋯ sheet, and Report and Delete -------------------------------- */
@@ -168,6 +192,7 @@
       current = postOf(m);
       if (!current) return;
       opener = m;
+      kindWords(current);
       Array.prototype.forEach.call(menuWrap.querySelectorAll('[data-mine-only]'), function (b) { b.hidden = !current.mine; });
       Array.prototype.forEach.call(menuWrap.querySelectorAll('[data-theirs]'), function (b) { b.hidden = current.mine; });
       var who = menuWrap.querySelector('[data-block-who]');
@@ -222,6 +247,19 @@
         /* Nothing asked first: the sheet goes down, focus back on the ⋯. */
         menu.close();
         window.SocialMute.act({ handle: current.handle, first: current.first, muted: current.muted, opener: opener });
+      } else if (act === 'delete' && current.kind === 'c') {
+        /* A COMMENT'S CARD (the comment thread, step 3): gone at once, as in
+           its thread (comments.js), and the card folds away where it was. */
+        var was = current;
+        a.disabled = true;
+        tell(box, say('deleting'));
+        post(was.del, {}, { 'X-Social-CSRF': token }).then(function (j) {
+          a.disabled = false;
+          if (!j.ok) { tell(box, why(j)); return; }
+          tell(box, '');
+          menu.close(true);
+          foldAway(was.el, say('deleted_c'));
+        });
       } else if (act === 'delete' && del) {
         menu.close(true);
         tell(deleteWrap.querySelector('[data-delete-say]'), '');
@@ -240,16 +278,19 @@
   }) : null;
   /* The toast waits for the sheet to go (0.3s from the tap, as Mute's), and
      keeps clear of every ⋯ on the page: the next press. */
-  var MARK_WAIT = 300, MENUS = '[data-post-menu]';
+  var MARK_WAIT = 300, MENUS = '[data-post-menu], [data-cm-menu]';
   function markUrl(p) {
-    var tpl = menuWrap.getAttribute(p.kind === 's' ? 'data-bookmark-s' : 'data-bookmark-p') || '';
+    var tpl = menuWrap.getAttribute(p.kind === 's' ? 'data-bookmark-s' : p.kind === 'c' ? 'data-bookmark-c' : 'data-bookmark-p') || '';
     return tpl.replace('__ID__', encodeURIComponent(p.kind === 's' ? p.skribl : p.id));
   }
-  /* Every place on the page that shows the post (its card, its own page)
-     says whether it is yours, so the next ⋯ says it. */
+  /* Every place on the page that shows it (its card, its own page; a
+     comment in its thread too) says whether it is yours, so the next ⋯ says
+     it. */
   function markShow(p, on) {
-    Array.prototype.forEach.call(doc.querySelectorAll('.post-card[data-post], .post-page[data-post]'), function (el) {
-      if (el.getAttribute('data-post') !== p.id) return;
+    var k = keyOf(p);
+    Array.prototype.forEach.call(doc.querySelectorAll('.post-card[data-post], .post-page[data-post], .cm[data-comment], .cm-page[data-comment]'), function (el) {
+      var o = postOf(el);
+      if (!o || keyOf(o) !== k) return;
       if (on) el.setAttribute('data-marked', ''); else el.removeAttribute('data-marked');
     });
   }
@@ -298,6 +339,20 @@
     });
   }
 
+  /* A COMMENT'S ⋯ IN ITS THREAD (comments.js; the comment thread, step 3):
+     its Bookmark is this one, the toast and Undo the post's. Signed out, the
+     small sheet that says how. */
+  window.SocialMark = {
+    out: !!markOut,
+    act: function (el, from) {
+      var p = postOf(el);
+      if (!p) return;
+      kindWords(p);
+      if (markOut) { markOut.open(from); return; }
+      if (menuWrap && menuWrap.hasAttribute('data-bookmark-c')) markAct(p, !p.marked, from, false);
+    }
+  };
+
   /* ---- REPOSTS ------------------------------------------------------------- */
   var rpWrap = doc.getElementById('repostSheet');
   var rpSheet = rpWrap && window.SocialSheet ? window.SocialSheet(rpWrap, { doorCloses: false }) : null;
@@ -308,10 +363,12 @@
   var rpNow = null, rpFrom = null;
   var GLIDE = { duration: 220, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' };
   function still() { return !!(reduced && reduced.matches); }
-  /* Every repost on the page for the post (its cards, its own page's row). */
+  /* Every repost on the page for it (its cards, its own page's row; a
+     comment's row in its thread, and on its own page). */
   function rpButtons(p) {
-    return Array.prototype.filter.call(doc.querySelectorAll('.post-card[data-post] .post-row .rp-btn, .post-page[data-post] > .post-row .rp-btn'),
-      function (b) { return b.closest('[data-post]').getAttribute('data-post') === p.id; });
+    var k = keyOf(p);
+    return Array.prototype.filter.call(doc.querySelectorAll('.post-card[data-post] .post-row .rp-btn, .post-page[data-post] > .post-row .rp-btn, .cm-acts .rp-btn, .cm-page > .cm-row .rp-btn'),
+      function (b) { var o = postOf(b); return !!o && keyOf(o) === k; });
   }
   /* WHAT MOVES, GLIDES (the heart's own, likes.js): a count that comes or
      goes fades, and the button grows or shrinks round the arrows, which keep
@@ -370,11 +427,11 @@
   }
   var rps = {};
   function rpState(p, b) {
-    var st = rps[p.id];
+    var st = rps[keyOf(p)];
     if (!st) {
       var span = b && b.querySelector('.rp-n'), on = !!b && b.classList.contains('is-on');
       var n = span ? parseInt(span.textContent, 10) || 0 : 0;
-      st = rps[p.id] = { on: on, n: n, sure: on, sureN: n, busy: false, p: p };
+      st = rps[keyOf(p)] = { on: on, n: n, sure: on, sureN: n, busy: false, p: p };
     }
     return st;
   }
@@ -460,6 +517,7 @@
     var o = e.target.closest('[data-repost-out]');
     if (o && rpOut) {
       e.preventDefault();
+      kindWords(postOf(o));
       rpOut.open(o);
     }
   });
@@ -495,10 +553,11 @@
       var picked = reportWrap.querySelector('input[name=reason]:checked');
       send.disabled = true;
       tell(box, say('sending'));
-      /* A drawing shown outside a post is reported as itself. */
+      /* A drawing shown outside a post is reported as itself, and a
+         comment's card as the comment (the comment thread, step 3). */
       var drawing = current.kind === 's';
       post(reportWrap.getAttribute('data-report'),
-           { kind: drawing ? 'drawing' : 'post', target: drawing ? current.skribl : current.id,
+           { kind: drawing ? 'drawing' : current.kind === 'c' ? 'comment' : 'post', target: drawing ? current.skribl : current.id,
              reason: picked ? picked.value : 'other', note: (reportWrap.querySelector('.post-note').value || '').trim() },
            { 'X-Social-CSRF': token })
         .then(function (j) {
@@ -528,7 +587,7 @@
      first press (mutes.js, window.SocialToast). From a post's own page, and
      Home, the site's answer leads on: Home, its note. */
   var FOLD_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
-  function foldAway(card) {
+  function foldAway(card, words) {
     var list = card.parentElement, panel = card.closest('[data-prof-panel]');
     var cards = Array.prototype.slice.call(list.querySelectorAll(':scope > .post-card'));
     var at = cards.indexOf(card), next = cards[at + 1] || cards[at - 1] || null;
@@ -543,8 +602,8 @@
         none.hidden = false;
         if (none.animate) none.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease' });
       }
-      if (window.SocialToast) window.SocialToast.rise(say('deleted'), { plain: true, clear: '[data-prof-list] .post-card [data-post-menu]' });
-      else tell(pageSay, say('deleted'));
+      if (window.SocialToast) window.SocialToast.rise(words || say('deleted'), { plain: true, clear: '[data-prof-list] .post-card [data-post-menu]' });
+      else tell(pageSay, words || say('deleted'));
     }
     if (!card.animate) { gone(); return; }
     card.style.pointerEvents = 'none';

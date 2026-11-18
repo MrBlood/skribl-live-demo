@@ -49,7 +49,8 @@
                       the repost is the viewer's, both in the small violet
                       ink. A tap raises the repost sheet (signed out, its
                       small sheet). Nothing taken down has one.
-    post_sheets()     the ⋯ sheet ("This post": Bookmark first (bookmarks:
+    post_sheets()     the ⋯ sheet ("This post", or on a comment's card "This
+                      comment": the comment thread, step 3; Bookmark first (bookmarks:
                       "Remove bookmark" once it is yours, its ribbon filled;
                       none on what is taken down), Copy link, Share…, and
                       signed in Mute @them (mutes: _mute.html, after Share…
@@ -158,7 +159,49 @@
 {%- if c.repost %} data-repost="{{ c.repost }}"{% endif %}{% if c.markable %} data-quoted="{{ c.quoted_url }}"{% endif %}
 {%- endmacro %}
 
+{#  A COMMENT OR A REPLY OUT IN THE WORLD (the comment thread, step 3; "A
+    Comment Shared", the owner's yes to A, Nov 17): reposted on Home's
+    Following and a person's Posts tab, or kept in their Bookmarks, a card of
+    a post's own shape: "Ana Reyes reposted" at its top (a repost's); THE WAY
+    TO IT, as on its own page (_comments.html the_way: what it is on, its
+    drawing's still beside it, then each comment it answers), its faces over
+    the card's own so the thread's line runs straight down into it; then it:
+    its face, name, @handle and when (its own page), its words, its drawing
+    as a post's; and the post's own row: how many replies (its page's
+    Replies), its repost, its heart (a comment's: no moment, "Like this
+    comment?"), the ⋯ ("This comment": posts.js) and "Open ›", its own page.
+    A tap on its ground opens its page, as a post's card does. `c` is
+    comments.world_cards's. #}
+{% macro comment_card(c) -%}
+{%- from 'social/_comments.html' import the_way, comment_art, comment_heart with context -%}
+{%- set cm = c.c %}{% set who = c.who %}{% set it = c.it -%}
+<article class="post-card cm-card" data-post="{{ cm.public_id }}" data-url="{{ c.url }}" data-skribl="{{ cm.skribl_id or '' }}" data-kind="c"
+         data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
+         {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %}{{ rp_data(c) }} aria-labelledby="pn-{{ cm.public_id }}">
+  {% if c.by %}{{ reposted_by(c) }}{% endif %}
+  {{ the_way(c.way) }}
+  <header class="post-head">
+    <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who, initial=true) }}</a>
+    <div class="post-who">
+      <a class="post-name" id="pn-{{ cm.public_id }}" href="{{ c.profile }}">{{ who.display_name }}</a>
+      <span class="post-sub">@{{ who.handle }} · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(cm.created_at) }}" data-when="ago">{{ when_day(cm.created_at) }}</time></a></span>
+    </div>
+  </header>
+  {% if c.down and c.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
+  {% if cm.words %}<p class="post-words">{{ said(cm.words, it.mentions) }}</p>{% endif %}
+  {% if cm.skribl_id %}<div class="post-art">{{ comment_art(it, waits=true) }}</div>{% endif %}
+  <footer class="post-row">
+    <a class="post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d repl%s' % (c.replies, 'y' if c.replies == 1 else 'ies')) if c.replies else 'Replies' }}">{{ ic.comment() }}{% if c.replies %}<span>{{ c.replies }}</span>{% endif %}</a>
+    {% if c.markable %}{{ repost(c) }}{% endif %}{% if not c.down %}{{ comment_heart(it) }}{% endif %}
+    <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
+            aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>
+    <a class="post-open" href="{{ c.url }}">Open<span class="sr"> the comment</span><span class="post-open-go" aria-hidden="true">›</span></a>
+  </footer>
+</article>
+{%- endmacro %}
+
 {% macro post_card(c) -%}
+{%- if c.kind == 'c' %}{{ comment_card(c) }}{% else -%}
 {%- set p = c.post %}{% set who = c.who -%}
 <article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id or '' }}" data-kind="{{ c.kind }}"
          data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
@@ -184,6 +227,7 @@
   {% if c.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(c.quote) }}{% endif %}
   {{ post_row(c) }}
 </article>
+{%- endif %}
 {%- endmacro %}
 
 {% macro post_sheets() -%}
@@ -193,11 +237,12 @@
     and each card always holds one. No Cancel: its grip, a tap outside it, a
     swipe down and Esc close it, as on the Pad's menu. #}
 <div class="make post-sheet" id="postSheet" hidden{% if me %} data-bookmark-p="{{ url_for('social.bookmark_post', public_id='__ID__') }}"
-     data-bookmark-s="{{ url_for('social.bookmark_drawing', skribl_id='__ID__') }}"{% endif %}>
+     data-bookmark-s="{{ url_for('social.bookmark_drawing', skribl_id='__ID__') }}"
+     data-bookmark-c="{{ url_for('social.bookmark_comment', public_id='__ID__') }}"{% endif %}>
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="postSheetTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
-    <h2 class="make-title" id="postSheetTitle">This post</h2>
+    <h2 class="make-title" id="postSheetTitle" data-kind-word="sheet">This post</h2>
     <div class="post-acts">
       {#- BOOKMARK, first (the bookmarks mock's A): its ribbon in our pen in the
           row's ink; once the post is yours to come back to, "Remove bookmark"
@@ -209,9 +254,9 @@
       {% if me %}{{ mute_row('', false, 'post') }}{% endif %}
     </div>
     <div class="post-acts">
-      <button class="post-act is-danger" type="button" data-act="report" data-theirs>{{ ic.flag() }}<span>Report this post</span></button>
+      <button class="post-act is-danger" type="button" data-act="report" data-theirs>{{ ic.flag() }}<span data-kind-word="report">Report this post</span></button>
       {% if me %}<button class="post-act is-danger" type="button" data-act="block" data-theirs>{{ ic.block() }}<span data-block-who>Block</span></button>{% endif %}
-      <button class="post-act is-danger" type="button" data-act="delete" data-mine-only>{{ ic.trash() }}<span>Delete post</span></button>
+      <button class="post-act is-danger" type="button" data-act="delete" data-mine-only>{{ ic.trash() }}<span data-kind-word="delete">Delete post</span></button>
     </div>
     <p class="say post-say" data-post-say role="status" hidden></p>
   </div>
@@ -226,7 +271,7 @@
   <div class="make-scrim" data-make-close></div>
   <form class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle" data-report-form>
     <div class="make-grip" data-make-close aria-hidden="true"></div>
-    <h2 class="make-title" id="reportTitle">Report this post</h2>
+    <h2 class="make-title" id="reportTitle" data-kind-word="report">Report this post</h2>
     <p class="post-lede">Tell us what is wrong with it. Reports go to the people who run this site; nothing is taken down automatically.</p>
     <fieldset class="post-reasons">
       <legend class="sr">Reason</legend>
@@ -270,7 +315,7 @@
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="repostOutTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
-    <h2 class="make-title" id="repostOutTitle">Repost this post?</h2>
+    <h2 class="make-title" id="repostOutTitle" data-kind-word="rp_out">Repost this post?</h2>
     <p class="post-lede">Sign in to show it to the people who follow you, or quote it with your own words.</p>
     <div class="post-sheet-acts">
       <button class="btn btn-big" type="button" data-make-close>Not now</button>
@@ -288,7 +333,7 @@
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="bookmarkOutTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
-    <h2 class="make-title" id="bookmarkOutTitle">Bookmark this post?</h2>
+    <h2 class="make-title" id="bookmarkOutTitle" data-kind-word="bm_out">Bookmark this post?</h2>
     <p class="post-lede">Sign in, and it’s kept for you on your page, where only you can see it.</p>
     <div class="post-sheet-acts">
       <button class="btn btn-big" type="button" data-make-close>Not now</button>
@@ -360,6 +405,17 @@
   <span data-word="done">Done</span>
   <span data-word="deleting">Deleting…</span>
   <span data-word="deleted">Your post is gone, its drawing with it.</span>
+  <span data-word="deleted_c">Your comment is gone.</span>
+  <span data-word="kw_sheet_p">This post</span>
+  <span data-word="kw_sheet_c">This comment</span>
+  <span data-word="kw_report_p">Report this post</span>
+  <span data-word="kw_report_c">Report this comment</span>
+  <span data-word="kw_delete_p">Delete post</span>
+  <span data-word="kw_delete_c">Delete comment</span>
+  <span data-word="kw_rp_out_p">Repost this post?</span>
+  <span data-word="kw_rp_out_c">Repost this comment?</span>
+  <span data-word="kw_bm_out_p">Bookmark this post?</span>
+  <span data-word="kw_bm_out_c">Bookmark this comment?</span>
   <span data-word="now">now</span>
   <span data-word="at">{day} at {time}</span>
 </div>
