@@ -12,9 +12,10 @@ drawing, however it was made, so whatever you open has the comment box").
     /c/<id>                   a comment's or a reply's own page (the comment
                               thread, step 1): the way to it, it as big as a
                               post, its replies.
-    /c/<id>/delete            your own comment, gone, every reply under it
-                              with it; or, on your own post or drawing,
-                              anybody's, removed from it (JSON).
+    /c/<id>/delete            your own comment, gone; or, on your own post
+                              or drawing, anybody's, removed from it; one
+                              with replies under it keeps its place, so
+                              they stay (retire; JSON).
 
 WHAT A COMMENT IS ON (On, below): a post, or a drawing shown outside a post
 (a skribl one of the site's people showed in the gallery from the Pad or Flip
@@ -85,8 +86,9 @@ quiet place, nobody's ("This reply was deleted", or "removed" from a post or
 drawing by its author), and theirs stay; a place with nothing left under it
 goes. A post goes with its comments (posts.drop_post), a drawing
 deleted through the site with its comments (posts.bloob_delete), an account
-with its comments, every answer under them and every comment on what it
-owned (accounts.delete_person; owner_id is on the row, so nothing asks
+with its comments (kindly, a place where somebody else's replies hang) and
+every comment on what it owned (accounts.delete_person; owner_id is on the
+row, so nothing asks
 Skribl whose a drawing was). The schema's ON DELETE CASCADEs are a net under
 that, never the way: SQLite enforces them only where Skribl's pragma hook is
 on.

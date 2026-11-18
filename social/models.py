@@ -406,10 +406,11 @@ class Comment(SocialBase):
     drawing is, kept on the comment either way, so deleting an account and
     a block never need to ask Skribl whose a drawing was.
 
-    DELETING IS REAL AND SAID IN CODE (comments.py, posts.drop_post,
-    posts.bloob_delete, accounts.delete_person): a comment goes with its
-    answers, a post or a drawing with its comments, an account with its
-    comments, the answers under them and every comment on what it owned.
+    DELETING IS REAL AND SAID IN CODE (comments.retire, posts.drop_post,
+    posts.bloob_delete, accounts.delete_person): a comment goes, keeping its
+    place (gone, nobody's) while replies hang under it; a post or a drawing
+    goes with its comments, an account with its comments (places, kindly,
+    the same way) and every comment on what it owned.
     The ON DELETE CASCADEs below are the database's net under that, never
     the way: SQLite enforces them only where Skribl's pragma hook is on."""
     __tablename__ = "social_comments"

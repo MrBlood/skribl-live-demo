@@ -48,10 +48,12 @@
  * A COMMENT'S ⋯, "This comment" (social.js's SocialSheet, as the post's):
  * Copy link and Share… (its own page), then on your own Delete comment; on
  * somebody else's on your own post Remove from my post and Report this
- * comment; anybody else's Report this comment. Delete and Remove go at once,
- * the comment fading out with every reply under it (on its own page, the
- * page goes to what it replied to); Report rises as a sheet of its own with
- * a post's reasons, into the site's own queue.
+ * comment; anybody else's Report this comment. Delete and Remove go at once:
+ * the comment fades out, or, with replies under it, becomes its place
+ * ("This comment was deleted"), gliding to its new height (becomePlace),
+ * and a place with nothing left under it fades too (on its own page, the
+ * page goes to what it replied to, or shows the place); Report rises as a
+ * sheet of its own with a post's reasons, into the site's own queue.
  *
  * LOAD MORE brings the next page of comments in place.
  *

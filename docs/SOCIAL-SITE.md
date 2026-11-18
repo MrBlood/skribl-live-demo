@@ -864,9 +864,10 @@ mock's own classes, sizes and words. `social/comments.py`:
     /social/c/<id>                    a comment's or a reply's own page (the
                                       comment thread, section 18): the way to
                                       it, it as big as a post, its replies
-    /social/c/<id>/delete             your own comment, gone with every reply
-                                      under it; or, on your own post or
-                                      drawing, anybody's, removed from it (JSON)
+    /social/c/<id>/delete             your own comment, gone; or, on your own
+                                      post or drawing, anybody's, removed from
+                                      it; one with replies under it keeps its
+                                      place, so they stay (JSON)
 
 **The comment thread, step 1 (section 18, the owner's yes, Nov 17), changed
 what this section first built**: every comment sits in a bubble with its row
@@ -874,7 +875,11 @@ under it (Reply and ⋯, the ⋯ "This comment": Copy link, Share…, then Delet
 comment, or Remove from my post and Report this comment); "Reply" is the word
 wherever the site said "Answer"; a reply keeps the reply it answers, and a
 thread shows two levels, then "Read N more replies", which opens that reply's
-own page. Where this section says "answer" below, read "reply"; section 18
+own page. A comment or reply deleted while replies hang under it keeps its
+place, quietly ("This comment was deleted", or "removed" from the post by
+its author), so they stay where they are; with nothing left under it, the
+place goes too. Where this section says "answer" below, read "reply"; where
+it says deleting a comment takes its answers, read the place; section 18
 says what the thread is now.
 
 **On a post's own page** "Comments" and how many stand where "Comments open
@@ -1003,10 +1008,12 @@ skribl's own public id: the site has no row of its own for it), exactly one
 `owner_id` is whose the post or the drawing is (filled from each post's
 author for the comments already there), so deleting an account and a block
 never ask Skribl whose a drawing was; indexed too, as are a drawing's
-comments newest first. Deleting a comment takes its answers, a post or a
-drawing its comments, an account its comments, every answer under them and
-every comment on what it owned: said in code (`comments.drop_comments`,
-`posts.drop_post`, `posts.bloob_delete`, `accounts.delete_person`), never
+comments newest first. Deleting a comment takes it (a place stays while
+somebody's replies hang under it: step 1, above), a post or a drawing its
+comments, an account its comments (each a place while somebody else's
+replies hang under it) and every comment on what it owned: said in code
+(`comments.retire`, `posts.drop_post`, `posts.bloob_delete`,
+`accounts.delete_person`), never
 left to the schema's ON DELETE CASCADE, which SQLite enforces only where
 Skribl's pragma hook is on. A drawing deleted in the Library (Skribl's own
 page, outside the site) takes its page, and so its comments, from everybody
