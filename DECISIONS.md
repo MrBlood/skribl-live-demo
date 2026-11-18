@@ -45969,38 +45969,43 @@ are the site's, so not for Flip either):
   Activity and Your Reports.
 
 THE CHECKS, each shown red by breaking its one part (a worktree of its own,
-the section that should catch it run there), and green as built: the
-bubble's edge, the initial's disc, the word on a phone, the line on past
-the last reply, counting one level only, Activity without the chain's rule,
-landing always on the post (its link, and its glow), the page past the
-last level, the way without the chain, hidden on the way shown, Copy link
-giving the page's own address; the drawing at its old 150px, the way
-without its stills, the page's drawing not a post's; no places, places
-never pruned, places counted, the migration going down without refusing,
-the place without its glide, a reply to a place allowed, an empty place
-kept; the way's line run past each face (2px into the next on the way,
-3.24px into the comment's own, painted over a face not drawn yet: found by
-looking, fixed, now 0 at every join). The mentions suite's deletion rows
-(through the site, and with SQLite's cascade off) go red without the place
-too. On today's look (main, the new sections run there), every new section
-red.
+the section that should catch it run there), and green as built, on the
+tree as it stands (one level): the fold counting only direct replies, the
+old words ("Read N more replies"), no tap on a bubble, a reply posted from a
+list landing in the list, a reply's link landing on the post, no curve to
+"Read N replies", a place without its "Read N replies"; the bubble's edge,
+the initial's disc, the word on a phone, counting one level only (the
+recursive count), hidden on the way shown, the way without its chain
+(section 40 stops: the page cannot render without its way), Copy link
+giving the page's own address, the drawing at its old 150px, the way
+without its stills, the page's drawing not a post's, no places (on a post's
+page, and on a comment's for a deleted reply), places never pruned, places
+counted, the place without its glide, a reply to a place allowed, an empty
+place kept. A TAP ON A DRAWING HAS TWO GUARDS: Skribl's player takes the
+tap as its own (stopPropagation, since v316), and the site's list leaves
+the drawing's box alone too; the check goes red only with both broken, and
+stays green with either one, so neither is the only thing standing.
+Before the fold, and untouched since: the migration going down without
+refusing, and Activity without the chain's rule (section 44, its words its
+own: green with section 43 before it). The way's line run past each face
+(found by looking: 2, 2 and 3.24px; now 0 at every join). The mentions
+suite's deletion rows (through the site, and with SQLite's cascade off) go
+red without the place too. On main (main's app, these sections), every new
+section red, 38 to 46.
 
-THE AFFECTED SUITES, side by side (run_parallel -j 3): verify_socialposts
-99/99, verify_socialprofile 94/94, verify_socialactivity 46/46 (its check
-that a reply to a deleted person's comment stays, answering nobody, passes
-with the place), verify_socialauth 74/74, verify_socialbookmarks 37/37,
-verify_socialfollow 79/79, verify_sociallikes 100/100, verify_socialmentions
-51/51, verify_socialmute 68/68, verify_socialreposts 56/56,
-verify_socialsearch 32/32, verify_composer 39/39, verify_docs 144/144,
-verify_social 45/45; verify_socialcomments 123/124 beside the others and
-124/124 alone. The red was a defect in the instrument, not load: section
-44's check matched Activity rows by their words, and section 43, which now
-leaves a place, rightly keeps a row with the same words; its three lookups
-say "Section 44, " now (shown green with section 43 before it, and red
-without Activity's chain rule), and the alone run had the fix. Then, with
-the way's line fixed and section 40's check for it, verify_socialcomments
-alone: 125/125. NOT RUN: the full battery (main's run after the merge does
-it).
+THE AFFECTED SUITES, side by side (run_parallel -j 3), on the tree as it
+stands: verify_socialcomments 127/127, verify_socialposts 99/99,
+verify_socialprofile 94/94, verify_socialactivity 46/46, verify_socialauth
+74/74, verify_socialbookmarks 37/37, verify_socialfollow 79/79,
+verify_sociallikes 100/100, verify_socialmentions 51/51, verify_socialmute
+68/68, verify_socialreposts 56/56, verify_socialsearch 32/32,
+verify_composer 39/39, verify_docs 144/144, verify_social 45/45: 15 of 15,
+nothing red beside the others. (Before the fold the same 15 ran green but
+one, verify_socialcomments 123/124 beside the others and 124/124 alone:
+section 44's check matched Activity rows by their words, which section 43,
+leaving a place, rightly kept; a defect in the instrument, not load, fixed:
+its lookups say "Section 44, ".) NOT RUN: the full battery (main's run
+after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: a post's comments sit in rounded bubbles with nothing
