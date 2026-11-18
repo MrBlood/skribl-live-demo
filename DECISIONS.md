@@ -46711,8 +46711,13 @@ worktree of main (089f50c0) it is red (light 2.882:1), here green (3.532);
 the pill at rest reads 4.186 in light (3.416 before). The player's CSS
 re-emitted unchanged.
 
-THE SUITES, side by side (run_parallel -j 3): @@SUITES@@. NOT RUN: the full
-battery (main's run after the merge does it).
+THE SUITES, side by side (run_parallel -j 3, 31.4 min), on the final tree:
+verify_padrepeat 26/26, verify_replayspeed 192/192, verify_onepill
+2884/2884, verify_parity 436/436, verify_contrast 677/677, verify_ux
+491/491, verify_layout 257/257, verify_a11y 444/444, verify_a11ypages
+162/162, verify_sizeclass 89/89, verify_pointerpad 56/56 and verify_docs
+144/144: 12 of 12. NOT RUN: the full battery (main's run after the merge
+does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: on a desk in light, a pressed Repeat in the Play pill
