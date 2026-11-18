@@ -77,6 +77,8 @@ sys.path.insert(0, str(ROOT))
 PART = os.environ.get("SOCIALPUSH_PART", "")
 #: SOCIALPUSH_SHOTS=<folder> keeps a picture of the card and the panel in each look (for a mock or a PR).
 SHOTS = os.environ.get("SOCIALPUSH_SHOTS", "")
+#: SOCIALPUSH_LOOKS=phone/light[,desk/dark] runs section 7 in those looks only (calibration).
+LOOKS = [x for x in os.environ.get("SOCIALPUSH_LOOKS", "").split(",") if x]
 results = []
 check = make_check(results, with_detail=True)
 
@@ -512,6 +514,34 @@ FRAMES_JS = """([sel, ms]) => new Promise(done => {
   requestAnimationFrame(step); })"""
 
 
+# On a copy of the database, the site's code with SQLite's cascade OFF
+# (SKRIBL_SQLITE_FOREIGN_KEYS=0, the documented opt-out): an account deleted
+# takes its devices because the code says so, not the cascade.
+PROBE = r"""
+import json, sys
+from app import create_app, db
+import sqlalchemy as sa
+app = create_app()
+with app.app_context():
+    from social.models import Person, PushSubscription
+    from social.accounts import delete_person
+    fk = db.session.execute(sa.text("PRAGMA foreign_keys")).scalar()
+    who = db.session.execute(sa.select(Person).where(Person.handle_key == sys.argv[1])).scalar_one()
+    had = db.session.execute(sa.select(sa.func.count()).select_from(PushSubscription)
+                             .where(PushSubscription.person_id == who.id)).scalar()
+    others = db.session.execute(sa.select(sa.func.count()).select_from(PushSubscription)
+                                .where(PushSubscription.person_id != who.id)).scalar()
+    pid = who.id
+    delete_person(db.session, pid)
+    db.session.commit()
+    left = db.session.execute(sa.select(sa.func.count()).select_from(PushSubscription)
+                              .where(PushSubscription.person_id == pid)).scalar()
+    kept = db.session.execute(sa.select(sa.func.count()).select_from(PushSubscription)
+                              .where(PushSubscription.person_id != pid)).scalar()
+    print(json.dumps({"fk": fk, "had": had, "left": left, "others": others, "kept": kept}))
+"""
+
+
 def browser_as(b, who, screen="phone", scheme="light", reduced=False, init=(), grant=False, ua=None):
     kw = {"reduced_motion": "reduce"} if reduced else {}
     if ua:
@@ -901,6 +931,21 @@ with sync_playwright() as p:
             check("turning it off there lets it go", st_u == 200 and row_of(E1) is None, str(st_u))
             gil = member(b, "gil", "Gil Ward")
             g_here, _, _ = subscribe(gil, "gil-here")
+            copy = os.path.join(TMP, "cascade-off.db")
+            src, dst = sqlite3.connect(DB), sqlite3.connect(copy)
+            src.backup(dst)
+            src.close()
+            dst.close()
+            probe = subprocess.run([sys.executable, "-c", PROBE, "gil"], cwd=ROOT, capture_output=True, text=True,
+                                   timeout=180, env=dict(ENV, DATABASE_URL=f"sqlite:///{copy}",
+                                                         SKRIBL_SQLITE_FOREIGN_KEYS="0"))
+            try:
+                out = json.loads(probe.stdout.strip().splitlines()[-1])
+            except Exception:  # noqa: BLE001
+                out = {"err": (probe.stderr or probe.stdout)[-400:]}
+            check("deleting an account, with SQLite's cascade off (on a copy), takes its devices in code, and leaves"
+                  " everybody else's", out.get("fk") == 0 and out.get("had") == 1 and out.get("left") == 0
+                  and out.get("others", 0) >= 1 and out.get("kept") == out.get("others"), json.dumps(out))
             c = gil.client()
             c.get("/social/you/delete")
             st_d = c.post_form("/social/you/delete", {"confirm": "gil"})
@@ -916,6 +961,8 @@ with sync_playwright() as p:
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
                     look = f"{screen}/{scheme}"
+                    if LOOKS and look not in LOOKS:
+                        continue
                     hal = member(b, f"h{screen[0]}{scheme[0]}", "Hal Pine")
                     ep_h, keys = device(f"{hal.handle}-page")
                     stub = STUB % (json.dumps(ep_h), json.dumps(keys["p256dh"]), json.dumps(keys["auth"]))
@@ -978,6 +1025,19 @@ with sync_playwright() as p:
                     go(pg, "/social/activity", wait=900)
                     check(f"{look}: once this device is nudged, Activity does not ask",
                           pg.evaluate("() => document.querySelector('[data-push-ask]').hidden") is True, "")
+                    # A NEW SIGN-IN on this device: its pages ask the site once
+                    # about the device (it follows the sign-in), then never again.
+                    asked = []
+                    pg.on("request", lambda r: asked.append(r.url) if r.url.endswith("/push/state") else None)
+                    go(pg, "/social/explore", wait=900)
+                    quiet_page = len(asked)
+                    pg.evaluate("() => localStorage.setItem('blooby.push.mark', 'a sign-in before')")
+                    go(pg, "/social/explore", wait=900)
+                    once = len(asked) - quiet_page
+                    go(pg, "/social/explore", wait=900)
+                    check(f"{look}: a page of a new sign-in asks the site about this device once (so it follows the"
+                          " sign-in, or stops being the last one's), and a page of the same sign-in asks nothing",
+                          quiet_page == 0 and once == 1 and len(asked) == 1, f"{quiet_page} {once} {len(asked)}")
                     # Settings: a row a kind, Theme's switch, the dot's rule pressed.
                     go(pg, "/social/you", wait=1200)
                     pan = pg.evaluate("""() => { const f = document.querySelector('[data-push-panel]');
