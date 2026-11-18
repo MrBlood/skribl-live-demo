@@ -1746,12 +1746,13 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    IS PLACED IN FULL, its column as well as its row: a part given its row
    alone goes to the first column free in it, and on a phone that was a new
    column beside the band, squeezing the page to a sliver. On a desk the
-   words' column (2) and the drawing's (1) are placed below. The way's line
-   runs on into its face, 16px lower in the band (under the ring, which
-   paints over it). */
+   words' column (2) and the drawing's (1) are placed below. THE WAY'S LINE
+   STOPS AT THE BAND'S TOP EDGE (the owner, Nov 18: "The line should not go
+   all the way to avatar, just to purple square edge above"): past the way's
+   foot (6px) and the band's own 4px, never across the band. */
 .cm-page { grid-template-rows: repeat(7, auto) 1fr; }
 .cm-page > * { grid-column: 1; }
-.cm-page .cm-way-item:last-child::before { bottom: calc(-22px - 0.76px); }
+.cm-page .cm-way-item:last-child::before { bottom: calc(-6px - 4px); }
 .cm-page > .cm-way { grid-row: 1; }
 .cm-page > .post-head { grid-row: 2; margin-top: 16px; }
 .cm-page > .post-down { grid-row: 3; }

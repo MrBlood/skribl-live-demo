@@ -46642,3 +46642,35 @@ NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: on a comment's own page, the comment sits on a soft
 lilac band with a violet ring round its face, and the heading under it says
 "Replies to" its maker.
+
+## After v330 -- The way's line stops at the band's top edge
+
+The owner, Nov 18, from their phone, of a comment's own page after The
+comment you opened merged: "The line should not go all the way to avatar,
+just to purple square edge above." The mock had it so; building C, I ran
+the way's line on across the band into the face, to keep section 40's "into
+the comment's own 48px face", and the owner saw it cross the band.
+
+WHAT CHANGED (social.css, THE COMMENT YOU OPENED): on a comment's own page
+the way's last line ends at the band's top edge, past the way's foot (6px)
+and the band's own 4px, and never paints across the band.
+
+THE CHECKS: section 40's line row measures the last line to the band's top
+edge where the page has a band (the JOIN reader reads the band's top from
+the head's row and the band's own margin, not a typed number); section 48
+gains THE LINE, read off pixels: the band's own lilac 3px under the edge
+where the line runs, the line's ink 3px over it, against the page beside
+it. On a worktree of main (089f50c0): section 40's line red (12.76px past
+the edge), THE LINE red (the line's ink under the edge: 24 off the band in
+light, 5 in dark). Here both green (0.0). The first form of THE LINE also
+asked the ink over the edge to differ from the band, and in dark it is only
+5 off it: the page beside it tells the line, so that condition went.
+
+FLIP AND THE PAD: no change.
+
+THE SUITES, side by side (run_parallel -j 3): @@SUITES@@. NOT RUN: the full
+battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: on a comment's own page, the line from the way above
+stops at the top of the lilac band.

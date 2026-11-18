@@ -2702,5 +2702,8 @@ ring too": "Yes to c". On a comment's own page:
   every row, and the band is in the words' column. The replies' row is the
   one that grows, so a drawing taller than the words' column stretches
   nothing in the band.
+- **The way's line stops at the band's top edge** (the owner, Nov 18, from
+  their phone: "The line should not go all the way to avatar, just to
+  purple square edge above"): it never crosses the band to the face.
 
 Section 48 of `verify_socialcomments.py` holds it, read off the paint.
