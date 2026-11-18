@@ -8,9 +8,12 @@
    finger, its glyph the corners every full screen in Skribl draws. Hidden
    until the module has run (inlineplayer.css keeps it out of sight
    otherwise), so a page without the module never shows a button that does
-   nothing. */
+   nothing. ITS 44 ARE ITS OWN, as Repeat's and Mute's are (z-index 1, under
+   the speed's menu at 3): where the line's words wrap under it (a narrow
+   player, a wide face: a comment's drawing in DejaVu Sans), the speed chip's
+   reach upward took the bottom of its finger's room, 4px of its drawn box. */
 html.skribl-postfull .skribl-inline-line .skribl-inline-full {
-  position: relative; display: grid; place-items: center;
+  position: relative; z-index: 1; display: grid; place-items: center;
   width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%;
   background: none; color: inherit; font: inherit; cursor: pointer;
   -webkit-tap-highlight-color: transparent; touch-action: manipulation;
