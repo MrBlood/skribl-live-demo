@@ -46679,7 +46679,10 @@ mix and judges its paint as the mix laid over the page beside it; on main
 FLIP AND THE PAD: no change. (The owner's A, Repeat's ring in light, is
 the Pad's, and comes as its own change.)
 
-THE SUITES, side by side (run_parallel -j 3): @@SUITES@@. NOT RUN: the full
+THE SUITES, side by side (run_parallel), on the final tree:
+verify_socialcomments 143/143, verify_socialreposts 98/98 (its No dinge
+census) and verify_docs 144/144; the line alone before the band,
+verify_socialcomments 143/143 and verify_docs 144/144. NOT RUN: the full
 battery (main's run after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
