@@ -441,7 +441,11 @@ with sync_playwright() as p:
         _edge = lambda img, r: img.getpixel((int(r[0] * 2) + 1, int((r[1] + r[3] / 2) * 2)))   # noqa: E731
         rings = {}
         for theme in ("light", "dark"):
+            # The pill has two looks since No dinge, the last four (Nov 18): the
+            # second button's lilac at rest, the pressed look while it plays,
+            # and Repeat is pressed in either.
             for label, opts, sel in (("desk pill", dict(DESK, device_scale_factor=2), "#padSpeed .rl-repeat"),
+                                     ("desk pill, playing", dict(DESK, device_scale_factor=2), "#padSpeed .rl-repeat"),
                                      ("desk line", dict(DESK, device_scale_factor=2), "#padLine .rl-repeat"),
                                      ("full screen", dict(PHONE), ".watch-band .rl-repeat")):
                 ctx = waits.instrument(b.new_context(color_scheme=theme, **opts))
@@ -455,10 +459,23 @@ with sync_playwright() as p:
                 pg.evaluate("(s) => document.querySelector(s).click()", sel); pg.wait_for_timeout(350)
                 r1 = pg.evaluate(_RECT, sel); a1 = _RImg.open(_rio.BytesIO(pg.screenshot())).convert("RGB")
                 on = pg.evaluate("(s) => document.querySelector(s).getAttribute('aria-pressed')", sel)
-                rings[f"{theme}, {label}"] = (round(_rr(_edge(a1, r1), _edge(a0, r0)), 2), on)
+                if label == "desk pill, playing" and not pg.evaluate("() => !!document.querySelector('.play-wrap:has(#playBtn.playing)')"):
+                    on = "not playing"   # the second shot would not be of the pressed pill
+                rings[f"{theme}, {label}"] = (_rr(_edge(a1, r1), _edge(a0, r0)), on)
                 c.close()
+        # Judged on the ratio itself, said to three places: rounded to two
+        # first, the dark pill's 2.995 (--ui-hi on the lilac) read 3.0 and
+        # passed here while CI's pixel read 2.83 and failed (main after #967).
+        rest = {k: v for k, v in rings.items() if "playing" not in k}
         check("Repeat, on, is outlined: its edge at least 3:1 against the same edge off, in the pill, the line and the full-screen band, light and dark",
-              all(v[1] == "true" and v[0] >= 3 for v in rings.values()), "; ".join(f"{k}: {v[0]}:1 ({v[1]})" for k, v in rings.items()))
+              all(v[1] == "true" and v[0] >= 3 for v in rest.values()), "; ".join(f"{k}: {v[0]:.3f}:1 ({v[1]})" for k, v in rest.items()))
+        # ...and while it plays, in dark, where No dinge's pressed pill took
+        # it from 3.20 to 2.53 under --ui-hi. Light's is said, not judged: it
+        # read 2.88 before No dinge too (--press-ring is --ui-hi's #7c5cff
+        # there), and a deeper ring is the owner's pick, not a fix's.
+        dk, lt = rings["dark, desk pill, playing"], rings["light, desk pill, playing"]
+        check("...and in the pill while it plays (the pressed look), in dark, at least 3:1",
+              dk[1] == "true" and dk[0] >= 3, f"dark: {dk[0]:.3f}:1 ({dk[1]}); light, said not judged: {lt[0]:.3f}:1 ({lt[1]})")
 
     if part("posts"):
         print("\nREPEAT — posts as they were, and not on Flip")

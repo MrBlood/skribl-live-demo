@@ -46523,3 +46523,50 @@ way answers all four, as the counts above say. With this entry, verify_docs
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: under a comment with replies, its conversation follows
 down in one column, joined by a straight lilac line.
+
+## After v330 -- Main red after #967: Repeat, on, outlined again in the Play pill
+
+WHAT WENT RED. Shard 6/6 of main's run after #967 (No dinge, the last four),
+sqlite and postgresql both: verify_padrepeat 24/25, "Repeat, on, is
+outlined": in dark the desk pill's edge on, against the same edge off, read
+2.83:1. Since #967 the pill is the second button's lilac (#332a58 in dark,
+where it was a 4.5% wash), and Repeat's on-ring, --ui-hi's #7c5cff, sits
+2.995:1 off it at best. Here the pixel read landed whole on the ring, and the
+check, rounding to two places before it judged, said 3.0 and passed; CI's
+pixel caught the ring's soft edge. The same pill while it plays (the pressed
+look, also #967's) took the ring from 3.20:1 to 2.53, which no row read.
+
+THE FIX (styles.css): in the pill, on wears --press-ring, the ring of a toggle
+that is on among second buttons (the link page's Loop and Mute, No dinge,
+the last round): #a593ff in dark, 5.10:1 on the lilac and 4.31 on the pill
+while it plays. Light's --press-ring is --ui-hi's #7c5cff, so light does not
+move. The line's Repeat, full screen's and the phone's at the bar's end are
+not on the lilac and keep theirs (measured: 3.82 and 3.95, 4.21 and 7.90,
+4.08 and 4.31, light and dark).
+
+THE CHECK, made able to fail here (verify_padrepeat): judged on the ratio
+itself and said to three places, so 2.995 is red on this box as on CI's; and
+a row for the pill while it plays, judged in dark. Light's while it plays is
+said, not judged: 2.882:1, the same before #967 (a46ee8d6), where
+--press-ring is the same #7c5cff; a deeper ring in light is the owner's pick,
+asked, not a fix's.
+
+CALIBRATED on a worktree of main (e063ffb9) with this branch's suite: both
+rows red (the pill in dark 2.996:1, while it plays 2.533); here green (5.095,
+4.308); every other reading the same. Before #967 (a46ee8d6): dark 3.651 and
+3.201.
+
+FLIP: no change. Its pill holds Play and its length, no toggle to outline,
+and Flip has no Repeat.
+
+THE SUITES, side by side (run_parallel -j 3, 31.9 min), on the final tree:
+verify_padrepeat 26/26, verify_replayspeed 192/192, verify_onepill
+2884/2884, verify_parity 436/436, verify_contrast 677/677, verify_ux
+491/491, verify_layout 257/257, verify_a11y 444/444, verify_a11ypages
+162/162, verify_sizeclass 89/89, verify_pointerpad 56/56 and verify_docs
+144/144: 12 of 12. NOT RUN: the full battery (main's run after the merge
+does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: on a desk in dark, Repeat pressed in the Play pill wears
+a light lilac ring.
