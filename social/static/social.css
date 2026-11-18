@@ -1725,6 +1725,46 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .post-card .cm-way-item::before { left: 21px; }
 .post-card .cm-way-item:last-child::before { bottom: calc(-4px - 0.02px); }
 .cm-page .post-head .face-blank.has-initial { font-size: 19px; }
+/* THE COMMENT YOU OPENED (the owner's "Yes to c", Nov 18, to The Opened
+   Comment: "it doesn't really let me know that's the reply I'm seeing the
+   replies for ... I don't want to make another bubble... but something
+   right?"). Its own page marks it three ways:
+   - A BAND behind it, from its face down to its time, in the highlight's
+     lilac (--tint, solid, as every highlight is since No dinge), with no
+     edge and no lift, so it is not a bubble.
+   - THE RING round its face: the small violet words' ink, 2px and 3px out,
+     as Skribl says "you are here" round your own face. It also outlines a
+     face that is an initial on lilac, which the band would swallow.
+   - The heading under it says whose replies follow ("Replies to Eli",
+     _comments.html).
+   THE BAND IS THE PAGE'S OWN ::before, laid in the grid's rows, and every
+   part keeps its row, so nothing moves into a box of its own (comments.js,
+   posts.js and likes.js reach the parts as the page's children). On a desk
+   with a drawing, the drawing keeps its column and the band the words'
+   column. The last row, the replies, is the one that grows, so a drawing
+   taller than the words' column stretches nothing in the band. EVERY PART
+   IS PLACED IN FULL, its column as well as its row: a part given its row
+   alone goes to the first column free in it, and on a phone that was a new
+   column beside the band, squeezing the page to a sliver. On a desk the
+   words' column (2) and the drawing's (1) are placed below. The way's line
+   runs on into its face, 16px lower in the band (under the ring, which
+   paints over it). */
+.cm-page { grid-template-rows: repeat(7, auto) 1fr; }
+.cm-page > * { grid-column: 1; }
+.cm-page .cm-way-item:last-child::before { bottom: calc(-22px - 0.76px); }
+.cm-page > .cm-way { grid-row: 1; }
+.cm-page > .post-head { grid-row: 2; margin-top: 16px; }
+.cm-page > .post-down { grid-row: 3; }
+.cm-page > .post-words { grid-row: 4; }
+.cm-page > .post-art { grid-row: 5; }
+.cm-page > .cm-row { grid-row: 6; }
+.cm-page > .post-meta { grid-row: 7; }
+.cm-page > .comments { grid-row: 8; }
+.cm-page::before {
+  content: ""; grid-column: 1 / -1; grid-row: 2 / 8; align-self: stretch;
+  margin: 4px -14px -4px; border-radius: 20px; background: var(--tint);
+}
+.cm-page > .post-head .face-ring { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
 a.post-face { text-decoration: none; }
 .post-page .post-head .face-ring { --skribl-face-size: 48px; width: 48px; height: 48px; }
 .post-page .post-words.is-big { font-size: 20px; line-height: 1.4; }
@@ -1766,6 +1806,10 @@ a.post-face { text-decoration: none; }
   .post-page > :not(.post-art) { grid-column: 2; }
   /* A quote of words alone: the original, small, where the drawing would be. */
   .post-page[data-no-art] > .qt-card { grid-column: 1; grid-row: 1 / span 8; margin-top: 0; }
+  /* The comment you opened: its drawing beside every row, its band in the
+     words' column. */
+  .cm-page > .post-art { grid-row: 1 / -1; }
+  .cm-page::before { grid-column: 2; }
 }
 
 /* COMMENTS (phase 2; the comments mock, and the owner's "all yes on both",

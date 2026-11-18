@@ -2481,9 +2481,9 @@ decided where all of them were silent:
   kind, each step on the reply's own index), not a row in Activity
   (`chain_shown`).
 - **Every comment's own page** (`/social/c/<id>`, `comment.html`): the way
-  to it (`the_way`), it as big as a post, then its own direct replies,
-  all of them (no Load more), "Replies" and how many (every reply under it,
-  at any depth). The header says "Comment" for a comment on the post and
+  to it (`the_way`), it as big as a post and marked as the one you opened
+  (below), then its own direct replies, all of them (no Load more), "Replies
+  to Eli" and how many (every reply under it, at any depth). The header says "Comment" for a comment on the post and
   "Reply" for a reply. Back is the browser's own when you came from this
   site, else what it is on. A comment hidden from the viewer, or anything on
   the way to it, is a kind 404.
@@ -2677,3 +2677,30 @@ replies show only in its count, and tapping any reply opens its own page.
 `harness/verify_socialcomments.py` section 47 holds it; sections 3, 5, 21,
 32, 33, 39, 40, 41, 43 and 46 moved to the counts and the conversations,
 and so did `verify_composer.py` and `verify_socialmute.py`.
+
+**Built: the comment you opened** (Nov 18; DECISIONS.md, "The comment you
+opened"). The owner, of a reply's own page: "it doesn't really let me know
+that's the reply I'm seeing the replies for ... I don't want to make
+another bubble... but something right?" Mocked as [The Opened
+Comment](https://claude.ai/artifact/XeEzEbnyhN9eRPbJNN1yTr): A (a ring and
+the name), B (a band and the name), and C, the owner's own "b with A's
+ring too": "Yes to c". On a comment's own page:
+- **The band**: the highlight's lilac (`--tint`, solid, the token every
+  highlight wears since No dinge), from 12px over its face to 4px under its
+  time, 14px past its column each side, rounded 20px; no edge and no lift,
+  so it is not a bubble.
+- **The ring**: 2px of `--accent-ink`, 3px round its face, as Skribl says
+  "you are here" round your own; it also outlines a face that is an initial
+  on lilac, which the band would swallow. A place has no face, and keeps its
+  own empty ring.
+- **"Replies to Eli"**: the heading under it says whose replies follow; a
+  place's says Replies, a post's page Comments.
+- **How**: the band is the page's own `::before`, laid in the grid's rows
+  (`social.css`, THE COMMENT YOU OPENED), so no part moves into a box of its
+  own and the scripts that reach the parts as the page's children don't
+  change. On a desk with a drawing, the drawing keeps its column beside
+  every row, and the band is in the words' column. The replies' row is the
+  one that grows, so a drawing taller than the words' column stretches
+  nothing in the band.
+
+Section 48 of `verify_socialcomments.py` holds it, read off the paint.
