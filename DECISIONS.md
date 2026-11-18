@@ -46570,3 +46570,75 @@ does it).
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: on a desk in dark, Repeat pressed in the Play pill wears
 a light lilac ring.
+
+## After v330 -- The comment you opened: the band behind it, the ring round its face, Replies to its maker
+
+The owner, Nov 18, of a reply's own page after Bluesky's way merged: "when I
+select a reply and it shows the replies to that reply it doesn't highlight
+the reply I selected. it has a bigger avatar circle, but it doesn't really
+let me know what that's the reply I'm seeing the replies for ... I don't
+want to make another bubble... but something right?" Mocked as The Opened
+Comment (https://claude.ai/artifact/XeEzEbnyhN9eRPbJNN1yTr): A, a violet
+ring round its face and "Replies to Eli"; B, a soft lilac band behind it
+and the same heading. The owner: "Maybe b with A's ring too?", mocked as C
+beside them, then "Yes to c".
+
+WHAT CHANGED, on a comment's own page (social.css, THE COMMENT YOU OPENED;
+_comments.html):
+- THE BAND: the highlight's lilac behind it, from 12px over its face to 4px
+  under its time, 14px past its column each side, rounded 20px, no edge and
+  no lift (not a bubble). It wears --tint, solid, the token for a
+  highlight since No dinge, where the mock laid --tint at 70% over the
+  page; on the page's cool #f6f8fa that was a see-through tint landing on a
+  grey. Off the page: 1.20:1 in light, 1.44 in dark (the mock's 1.13 and
+  1.26); the owner was told, and the mock's softer one is a line away.
+- THE RING: 2px of --accent-ink, 3px round its face (6.49:1 on the band in
+  light, 6.87 in dark), the "you are here" Skribl wears round your own
+  face; it outlines a face that is an initial on lilac, which the band
+  would swallow. A place has no face and keeps its own empty ring.
+- "REPLIES TO ELI": the heading under it says whose replies follow; a
+  place's says Replies, a post's page Comments.
+- HOW: the band is the page's own ::before, laid in the grid's rows, and
+  every part is placed in full (row and column), so no part moves into a
+  box of its own: comments.js, posts.js and likes.js reach the parts as the
+  page's children (`:scope > .cm-row`, `.post-page > .post-meta`,
+  `.cm-page > .cm-row .rp-btn`) and don't change. A wrapper would have
+  broken those, and on a desk pulled a drawing into the 340px column. On a
+  desk with a drawing, the drawing keeps its column beside every row and
+  the band is in the words' column. The replies' row is the one that grows
+  (1fr), so a drawing taller than the words' column stretches nothing in
+  the band. The way's line runs on into the face, 16px lower now, under
+  the ring.
+- The stale tree prose #969 left (comment.html's header, the Comment
+  model's docstring) now says Bluesky's way.
+
+FOUND WHILE BUILDING IT: a part given its row alone goes to the first
+column free in that row, and on a phone that was a new column beside the
+band: the page squeezed to a sliver (the way's links 0px wide, a reply one
+letter to a line). Section 48's first "nothing moved" row passed it (in
+order, inside the screen); it now reads each part's width, red on that
+page and green as built.
+
+FLIP AND THE PAD: no change; comments are the site's.
+
+CALIBRATED: on a worktree of main (e063ffb9) with this branch's suite,
+section 48's band, ring and heading rows red (no band; outline none, 1.0:1;
+"Replies"), section 40's heading red; the words and nothing-moved rows
+green there, as guards. Each broken on the branch: every part placed by
+its row alone (the squeeze) red for nothing-moved and the band; the drawing
+placed beside the row on a desk, not from the top, red for nothing-moved;
+the band an unreadable ink (--ink-2), red for the band, the ring and the
+words. Green as built. Section 40's line row went red while building it
+(the face 16px past the line's end) and green once the line ran on.
+
+THE SUITES, side by side (run_parallel -j 3, 15.9 min), on the final tree:
+verify_socialcomments 142/142, verify_sociallikes 111/111,
+verify_socialposts 99/99, verify_socialreposts 98/98, verify_socialmute
+68/68, verify_socialmentions 51/51, verify_socialactivity 46/46, verify_a11y
+444/444, verify_a11ypages 162/162 and verify_docs 144/144: 10 of 10. NOT
+RUN: the full battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: on a comment's own page, the comment sits on a soft
+lilac band with a violet ring round its face, and the heading under it says
+"Replies to" its maker.

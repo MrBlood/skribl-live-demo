@@ -252,7 +252,10 @@
 <section class="comments" id="comments" aria-labelledby="commentsTitle" data-comments data-new="{{ cm.new }}"
          data-more="{{ cm.more }}" data-drop="{{ cm.drop }}"{% if cm.post_mine %} data-post-mine{% endif %}{% if cm.subject %} data-subject="{{ cm.subject }}"{% endif %}>
   <div class="comments-head">
-    <h2 class="comments-title" id="commentsTitle">{{ ic.comment() }}<span>{{ 'Replies' if cm.subject else 'Comments' }}</span><span class="cm-count" data-cm-count{% if not cm.count %} hidden{% endif %}>{{ cm.count }}</span></h2>
+    {#- On a comment's own page the heading says whose replies follow ("Replies
+        to Eli": the owner's yes to C, Nov 18); a place, with nobody's name,
+        says Replies. #}
+    <h2 class="comments-title" id="commentsTitle">{{ ic.comment() }}<span>{{ ('Replies to ' ~ cm.first if cm.first else 'Replies') if cm.subject else 'Comments' }}</span><span class="cm-count" data-cm-count{% if not cm.count %} hidden{% endif %}>{{ cm.count }}</span></h2>
     {% if say %}<button class="icon-btn cm-say" type="button" data-cm-new aria-expanded="false" aria-label="{{ 'Reply' if cm.subject else 'Say something' }}" title="{{ 'Reply' if cm.subject else 'Say something' }}"
             {%- if not cm.can %} aria-haspopup="dialog" aria-controls="commentOutSheet"{% endif %}>{{ ic.comment_new() }}</button>{% endif %}
   </div>

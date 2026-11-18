@@ -160,6 +160,13 @@ built, tried and set aside; docs/SOCIAL-SITE.md section 18):
      the count alone; a reply to the last of a conversation continues it,
      to one whose first reply shows only counts, glowing; deleting counts
      down.
+ 48. THE COMMENT YOU OPENED (the owner's "Yes to c", Nov 18): on its own
+     page the highlight's lilac behind it, from over its face to under its
+     time, the page round it; the violet ring 3px round its face, 3:1 on
+     the band as painted; every word on the band 4.5:1, its marks 3:1;
+     "Replies to Elio" under it (a place's says Replies; a post's page
+     Comments, no band, no ring); nothing moved: the parts in the page's
+     order, a desk's words' column packed and a drawing in its own column.
 
 SOCIALCOMMENTS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
@@ -1414,6 +1421,40 @@ PLACE_PAGE = """() => ({ head: (document.querySelector('[data-cm-subject] > .cm-
   list: [...document.querySelectorAll('[data-cm-list] > .cm')].map(li => li.dataset.comment),
   icon: !!document.querySelector('.cm-say'), box: !!document.querySelector('[data-cm-box]'),
   row: !!document.querySelector('[data-cm-subject] > .cm-row') })"""
+
+# THE COMMENT YOU OPENED (section 48; the owner's "Yes to c", Nov 18), its own
+# page as laid out: the boxes of its head and face (the head spans the words'
+# column), its time and drawing and the page; the band (the page's ::before)
+# and the ring round its face as computed; the colour of every word on the band
+# and of each of the row's marks; the heading's words; whether the parts run
+# top to bottom in the page's order (a part dropped into an empty row comes out
+# of it); each part's width (none squeezed beside the band: on a phone a part
+# placed by its row alone once took a column of its own and left the rest a
+# sliver, in order and inside the screen); on a desk, the gaps down the words'
+# column from the head to the time; and how wide the page is. Section 48 reads
+# the paint itself off pixels.
+FOCUS = """() => { """ + TOKEN_JS + """
+  const s = document.querySelector('[data-cm-subject]'); if (!s) return null;
+  const box = el => { if (!el || !el.getClientRects().length) return null; const r = el.getBoundingClientRect();
+    return { l: r.left, t: r.top, r: r.right, b: r.bottom }; };
+  const head = s.querySelector(':scope > .post-head'), face = head && head.querySelector('.face-ring, .cm-gone-face');
+  const desk = innerWidth >= 900, band = getComputedStyle(s, '::before'), fs = face ? getComputedStyle(face) : null;
+  const flow = [...s.children].filter(e => e.getClientRects().length && !(desk && e.matches('.post-art')));
+  const order = flow.every((e, i) => i === 0 || e.getBoundingClientRect().top >= flow[i - 1].getBoundingClientRect().bottom - 1);
+  const parts = flow.filter(e => !e.matches('.cm-way, .comments, .post-art'));
+  const gaps = parts.slice(1).map((e, i) => Math.round(e.getBoundingClientRect().top - parts[i].getBoundingClientRect().bottom));
+  const widths = flow.map(e => [e.tagName.toLowerCase() + '.' + (e.className || '').split(' ')[0], Math.round(e.getBoundingClientRect().width)]);
+  const texts = [], named = e => e.tagName.toLowerCase() + (typeof e.className === 'string' && e.className ? '.' + e.className.split(' ')[0] : '');
+  parts.forEach(p => [p, ...p.querySelectorAll('*')].forEach(e => {
+    if ([...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && e.getClientRects().length)
+      texts.push([named(e), e.textContent.trim().slice(0, 20), getComputedStyle(e).color]); }));
+  const marks = [...s.querySelectorAll(':scope > .cm-row .ic')].filter(e => e.getClientRects().length).map(e => getComputedStyle(e).color);
+  return { head: box(head), face: box(face), meta: box(s.querySelector(':scope > .post-meta')), art: box(s.querySelector(':scope > .post-art')),
+    page: box(s), band: band.content !== 'none' ? band.backgroundColor : null, tint: tok(s, 'backgroundColor', 'var(--tint)'),
+    ring: fs ? { style: fs.outlineStyle, width: fs.outlineWidth, offset: fs.outlineOffset, color: fs.outlineColor,
+                 ink: tok(s, 'color', 'var(--accent-ink)') } : null,
+    texts, marks, order, gaps, widths, desk, heading: (document.querySelector('#commentsTitle > span:not(.cm-count)') || {}).textContent || null,
+    wide: document.scrollingElement.scrollWidth, vw: innerWidth }; }"""
 
 PROBE = r"""
 import json, sys
@@ -4191,14 +4232,14 @@ with sync_playwright() as p:
             check("each one's time opens its own page in turn, down the conversation (the post's, then Elio's"
                   " comment's, then Aria's reply's): Elio's reply's own page (/social/c/<id>) says Reply in its header; the"
                   " way to it above, small, each its own page's link: the post, Elio's comment, Aria's reply; then Elio's"
-                  " reply as big as a post (its 48px face and its words); \"Replies\" and how many (2), then its direct"
+                  " reply as big as a post (its 48px face and its words); \"Replies to Elio\" and how many (2), then its direct"
                   " replies, Aria's alone (one level: Cora's is on Aria's own page)",
                   walked == [f"/social/c/{c1}", f"/social/c/{r1}", f"/social/c/{r3}"]
                   and page["path"] == f"/social/c/{r3}" and page["title"] == "Reply"
                   and page["way"] == [["Bram Okafor", f"/social/p/{post}"], ["Elio Moss", f"/social/c/{c1}"],
                                       ["Aria Reyes", f"/social/c/{r1}"]]
                   and page["words"] == "Section 40, Sundays? I'll look out for you." and page["face"] == 48
-                  and page["heading"] == "Replies" and page["count"] == "2"
+                  and page["heading"] == "Replies to Elio" and page["count"] == "2"
                   and page["list"] == [[r4, []]],
                   f"walked {walked}; {page}")
             with pg.expect_navigation():
@@ -4797,6 +4838,139 @@ with sync_playwright() as p:
                   f"{gone}; {left}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(47, exc)
+
+    if part(48, "the comment you opened: the band behind it, the ring round its face, Replies to its maker"):
+        # The owner, Nov 18, of a reply's own page: "it doesn't really let me
+        # know that's the reply I'm seeing the replies for ... I don't want to
+        # make another bubble... but something right?"; then "Yes to c": the
+        # highlight's lilac behind it, the violet ring round its face, and
+        # "Replies to Eli". A comment of words, a drawn reply (on a desk its
+        # drawing has a column of its own) and a place; phone and desk, light
+        # and dark; the paint read off pixels.
+        try:
+            import io as _io
+            from PIL import Image as _Img
+            aria = someone(b, "aria", "Aria Reyes")
+            elio = someone(b, "elio", "Elio Moss")
+            bram = someone(b, "bram", "Bram Okafor")
+            dora = someone(b, "dora", "Dora Park")
+            post = make_post(bram, "Section 48, the cottage by the river", seed=481)
+            c1 = said(elio, post, "Section 48, is that the cottage by the river? I think I know it.")
+            said(aria, post, "Section 48, it is! Our cat lives there.", answer_to=c1)
+            ac = aria.client()
+            ac.get(f"/social/p/{post}")
+            st, j = ac.post_json(f"/social/p/{post}/comments", {"words": "Section 48, the cottage, drawn",
+                                                                 "payload": drawing(seed=482), "answer_to": c1})
+            d1 = j.get("comment") if st == 200 and isinstance(j, dict) else None
+            g1 = said(aria, post, "Section 48, a reply to be deleted", answer_to=c1)
+            said(elio, post, "Section 48, under the deleted one", answer_to=g1)
+            went = ac.post_json(f"/social/c/{g1}/delete", {})
+
+            def rgb(s):
+                n = [float(x) for x in re.findall(r"[\d.]+", s or "")]
+                if (s or "").startswith("color("):
+                    n = [v * 255 for v in n[:3]] + n[3:]
+                return n[:3] if len(n) >= 3 else [0, 0, 0]
+
+            def judge(got, shot, kind):
+                """What the paint and the boxes say for one page, each row on its own: the words, the
+                marks and the ring are read against what is painted beside its face, the band or, with
+                none, the page."""
+                if not got or not got["head"]:
+                    return {"why": "no subject"}
+                px = lambda x, y: shot.getpixel((max(0, min(shot.width - 1, int(x))), max(0, min(shot.height - 1, int(y)))))  # noqa: E731
+                h, m = got["head"], got["meta"] or got["head"]
+                mid = (h["t"] + h["b"]) / 2
+                ground = px(h["l"] - 7, mid)
+                out = {"heading": got["heading"], "gaps": got["gaps"]}
+                if got["band"]:
+                    band = rgb(got["band"])
+                    off = lambda c: max(abs(a - b) for a, b in zip(c[:3], band))  # noqa: E731
+                    inside = {"left": ground, "right": px(h["r"] + 7, mid), "over": px(h["l"] + 60, h["t"] - 6),
+                              "under": px(h["l"] + 60, m["b"] + 2)}
+                    outside = {"left": px(h["l"] - 16, mid), "right": px(h["r"] + 16, mid),
+                               "above": px(h["l"] + 60, h["t"] - 16), "below": px(h["l"] + 60, m["b"] + 12)}
+                    if got["desk"] and got["art"]:
+                        outside["by the drawing"] = px(h["l"] - 20, mid)
+                    out["band"] = got["band"] == got["tint"] and all(off(c) <= 3 for c in inside.values()) \
+                        and all(off(c) >= 6 for c in outside.values())
+                    out["inside"] = {k: off(c) for k, c in inside.items()}
+                    out["outside"] = {k: off(c) for k, c in outside.items()}
+                else:
+                    out["band"], out["why"] = False, "no band"
+                f, rg = got["face"], got["ring"]
+                if kind == "place":
+                    out["ring"] = rg is not None and rg["style"] == "none"
+                elif f and rg:
+                    fy = (f["t"] + f["b"]) / 2
+                    best = max((px(f["l"] - k, fy + dy) for k in (3, 4, 5) for dy in (-1, 0, 1)), key=lambda c: contrast(c, ground))
+                    out["ring_px"] = round(contrast(best, ground), 2)
+                    out["ring"] = (rg["style"] == "solid" and rg["width"] == "2px" and rg["offset"] == "3px"
+                                   and rg["color"] == rg["ink"] and out["ring_px"] >= 3)
+                    out["outline"] = f"{rg['style']} {rg['width']} {rg['offset']}"
+                else:
+                    out["ring"] = False
+                words = [(n, t, round(contrast(rgb(c), ground), 2)) for n, t, c in got["texts"]]
+                marks = [round(contrast(rgb(c), ground), 2) for c in got["marks"]]
+                out["words"] = bool(words) and all(r >= 4.5 for _, _, r in words) and all(r >= 3 for r in marks)
+                out["low"] = [w for w in words if w[2] < 4.5] + [r for r in marks if r < 3]
+                out["least"] = min([r for _, _, r in words] + marks) if words else None
+                col = h["r"] - h["l"]
+                out["squeezed"] = [w for w in got["widths"] if w[1] < col - 1]
+                out["moved"] = got["order"] and got["wide"] <= got["vw"] and not out["squeezed"] \
+                    and (not got["desk"] or all(g <= 16 for g in got["gaps"]))
+                if got["desk"] and kind == "drawn":
+                    a = got["art"]
+                    out["moved"] = out["moved"] and a is not None and abs(a["l"] - got["page"]["l"]) <= 1 \
+                        and a["r"] <= h["l"] - 39 and a["t"] <= h["t"] - 40
+                return out
+
+            seen, post_page = {}, {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    ctx, pg = browser_as(b, dora, screen=screen, scheme=scheme)
+                    for kind, at in (("words", c1), ("drawn", d1), ("place", g1)):
+                        pg.goto(BASE + f"/social/c/{at}")
+                        ready(pg)
+                        pg.evaluate("() => window.scrollTo(0, 0)")
+                        pg.wait_for_timeout(400)
+                        got = pg.evaluate(FOCUS)
+                        shot = _Img.open(_io.BytesIO(pg.screenshot())).convert("RGB")
+                        if os.environ.get("SOCIALCOMMENTS_SHOTS"):       # the pictures, kept for a look (not a run's)
+                            shot.save(Path(os.environ["SOCIALCOMMENTS_SHOTS"]) / f"{screen}-{scheme}-{kind}.png")
+                        seen[(screen, scheme, kind)] = judge(got, shot, kind)
+                    open_post(pg, post)
+                    post_page[(screen, scheme)] = pg.evaluate("""() => { const a = document.querySelector('.post-page'),
+                        f = a && a.querySelector(':scope > .post-head .face-ring');
+                      return { band: a ? getComputedStyle(a, '::before').content : null, ring: f ? getComputedStyle(f).outlineStyle : null,
+                               heading: (document.querySelector('#commentsTitle > span:not(.cm-count)') || {}).textContent || null }; }""")
+                    close_ctx(ctx, pg)
+            say = lambda key: {" ".join(k): {x: v.get(x) for x in key} for k, v in seen.items()}  # noqa: E731
+            check("THE BAND: the highlight's lilac (--tint) behind the comment you opened, from over its face to under its"
+                  " time and past its column each side; the page above, below and beside it, and on a desk between its"
+                  " drawing and the band: a comment, a drawn reply and a place; phone and desk, light and dark",
+                  went[0] == 200 and d1 and all(v.get("band") for v in seen.values()),
+                  f"delete {went[0]}; drawn {bool(d1)}; {say(('band', 'inside', 'outside', 'why'))}")
+            check("THE RING: 2px of the small violet words' ink (--accent-ink), 3px out round its face, 3:1 or more on the"
+                  " band as painted; a place keeps only its own empty ring",
+                  all(v.get("ring") for v in seen.values()), f"{say(('ring', 'ring_px', 'outline'))}")
+            check("every word on the band 4.5:1 or more (its name, handle, words, counts and time; a place's words), and"
+                  " the row's marks 3:1",
+                  all(v.get("words") for v in seen.values()), f"{say(('least', 'low'))}")
+            check("THE HEADING says whose replies follow: \"Replies to Elio\" on Elio's comment's page, \"Replies to Aria\" on"
+                  " Aria's drawn reply's; a place's says Replies; the post's own page still says Comments, with no band and no"
+                  " ring",
+                  all(v.get("heading") == {"words": "Replies to Elio", "drawn": "Replies to Aria", "place": "Replies"}[k[2]]
+                      for k, v in seen.items())
+                  and all(v == {"band": "none", "ring": "none", "heading": "Comments"} for v in post_page.values()),
+                  f"{say(('heading',))}; the post's {post_page}")
+            check("NOTHING MOVED: the page's parts run top to bottom in its order, each as wide as its column, nothing wider"
+                  " than the screen; on a"
+                  " desk the words' column packed as written (no gap over 16px) however tall a drawing, and the drawing in"
+                  " a column of its own from the top, beside every row",
+                  all(v.get("moved") for v in seen.values()), f"{say(('moved', 'gaps', 'squeezed'))}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(48, exc)
 
     # ------------------------------------------------------------------ 19
     if part(19, "no page errors, no console errors and no CSP violations"):
