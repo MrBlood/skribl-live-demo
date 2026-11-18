@@ -4190,8 +4190,8 @@ with sync_playwright() as p:
             epg.goto(BASE + "/social/activity")
             epg.wait_for_timeout(600)
             hrefs = epg.evaluate("() => [...document.querySelectorAll('a.act-row')].map(a => [a.textContent.replace(/\\s+/g, ' ').trim(), a.getAttribute('href')])")
-            deep = next((h for t, h in hrefs if "Ana to Eli" in t), None)
-            near = next((h for t, h in hrefs if "Ana's reply" in t), None)
+            deep = next((h for t, h in hrefs if "Section 44, Ana to Eli" in t), None)
+            near = next((h for t, h in hrefs if "Section 44, Ana's reply" in t), None)
             check("Activity: a reply within two levels links to the post's page (#c-<id>); one deeper to the page of the"
                   " reply it answers, where it is one of that reply's own; the rows say \"replied to your comment\"",
                   near == f"/social/p/{post}#c-{r1}" and deep == f"/social/c/{r3}#c-{r4}"
@@ -4219,7 +4219,8 @@ with sync_playwright() as p:
             bc.post_json("/social/@aria/unblock", {})
             check("a reply under one hidden from you (Ben blocked Ana: Eli's reply to her) is nobody's row in Activity, at"
                   " any depth, as its page hides it",
-                  any("Eli's comment" in t for t in ben_rows) and not any("Eli to Ana" in t for t in ben_rows),
+                  any("Section 44, Eli's comment" in t for t in ben_rows)
+                  and not any("Section 44, Eli to Ana" in t for t in ben_rows),
                   f"{ben_rows}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(44, exc)
