@@ -2472,7 +2472,9 @@ decided where all of them were silent:
   under it carries "⊕ Read N replies" on the thread's line (N every reply
   under it, at any depth, that the viewer may see), which opens its own
   page, as a tap on its bubble does (not on a link, a button or its
-  drawing, which plays; on a desk a pointer says so). Every reply in a list
+  drawing, which plays; on a desk a pointer says so). Since Nov 18 the
+  count stands by its talk cloud and a tap opens its tree in place
+  ("Built: the tree, two deep", below). Every reply in a list
   has a comment's room, 322px on a phone, 292 on a desk. A reply under one
   hidden from the viewer (a block, a takedown) is hidden with it, at any
   depth: not shown, not counted (`counts()` is a recursive read, one per
@@ -2487,7 +2489,7 @@ decided where all of them were silent:
   the way to it, is a kind 404.
 - **Replying.** A reply to one in a list is on that one's own page, so it
   joins its "Read N replies", which counts it and glows a moment (focus on
-  it). On a comment's own page the box replies to that comment, and a new
+  it; since Nov 18, its count by the talk cloud, below). On a comment's own page the box replies to that comment, and a new
   reply lands last in its list.
 - **Links land where a comment shows** (`comments.landing`): a comment on
   its post's or drawing's page, a reply on the page of what it answers,
@@ -2622,3 +2624,58 @@ A Comment Shared (A, and quoting):
 
 `harness/verify_socialreposts.py` sections 14 to 20 hold it;
 `verify_socialauth.py` pins its PostgreSQL DDL.
+
+**Built: the tree, two deep** (Nov 18; DECISIONS.md, "The comment
+thread's tree, two deep"). The owner, Nov 18: "I want the replies to be
+normal. Comment cloud shows how many replies. Click replies and replies
+under that reply open up in the tree (nested) two deep, then click + for
+more replies once there is replies to replies. It should go two deep before
+you see that branch that says hit + for more replies." Then, to [The Tree,
+Two Deep](https://claude.ai/artifact/Cq2iv1vL8sjSjPDTWDgcWV): "Yes on all
+for the tree" (its three picks: the counts by the clouds, the tree opening
+in place two deep, and A, the + opening the rest in place).
+
+- **At rest** a list is one level, as before, but nothing hangs under a
+  comment: no "Read N replies" and no line. The count beside its talk
+  cloud says how many replies are under it, at any depth, that the viewer
+  may see (`_fold`'s `more`, as a post's row counts its comments). On a
+  desk the count takes the word Reply's place; a comment with none still
+  says Reply. Reply still opens the box. Signed out, the count stands
+  alone. A screen reader hears "Reply, 5 replies".
+- **A tap on a comment opens its tree in place** (its bubble, or a place's
+  line; never a link, a button or its drawing): its direct replies, oldest
+  first, and theirs under them (`comments.tree`, `GET
+  /social/c/<id>/replies`). A reply at that second step whose talk goes on
+  carries "⊕ N more replies" on the thread's line. The tree ends in "⊖
+  Hide replies". A tap on the comment again folds it too, and its time
+  still opens its own page. The tree's line curves out of each face it
+  answers, drawn from the face (a place's ring, a muted reply's eye), so
+  the landing's glow keeps the reply's own `::before`.
+- **The + opens the rest in place** (the owner's A): every reply under
+  that one, at any depth, oldest first, right after it at the same second
+  step (`comments.rest`, `GET /social/c/<id>/rest`). Each says whom it
+  answers, "↳ Eli" (14px, the row's second ink; a screen reader hears
+  "replying to Eli"), so the words keep their room however deep the talk
+  goes: 322, 274 and 226px on a phone, 292, 244 and 196 on a desk.
+- **A comment's own page** lists its replies the same way, closed with
+  their counts, a tap opening two deep.
+- **Replying.** A reply lands where it was made if that branch is open: at
+  the end of what shows under the one it answers, or after the rest with
+  "↳" whom it answers, glowing. Where the branch is closed, the count by
+  that comment's talk cloud takes it and glows, with its "N more replies".
+  Posting and deleting answer every count on the way up
+  (`comments.tally`), so no count on the page goes stale.
+- **For a keyboard and a screen reader**, each comment with replies has the
+  tree's own button: "Show 5 replies", then "Hide replies", its state in
+  `aria-expanded`. It takes no room and is unseen until focused from the
+  keyboard, then a pill at the row's end.
+- **Kind transitions.** The tree opens as an arrival does: its room opens
+  from the comment down while it fades in. The rest takes the room its
+  "N more replies" had, so nothing steps. It folds by its own height, so a
+  page scrolled to its end follows it up a frame at a time. Under Reduce
+  Motion it is put in place and fades.
+- **Pad and Flip** don't change: comments are the site's.
+
+`harness/verify_socialcomments.py` section 47 holds it; sections 3, 5, 21,
+32, 33, 39, 40, 41, 43 and 46 moved to the counts, and so did
+`verify_composer.py` and `verify_socialmute.py`.
