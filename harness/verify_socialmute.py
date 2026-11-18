@@ -46,8 +46,8 @@ mock (Nov 13): C, quiet everywhere, and rule 3, mute and follow kept apart.
   7. THE FOLD: their comment or reply is one quiet line, "Someone you
      muted said something. Show" ("… replied.", on the page of the comment
      it answers: one level, everywhere), the eye where their face was and
-     the words where names start; hidden for real; its "Read N replies"
-     stays, and the replies under it by others; the count unchanged; on your
+     the words where names start; hidden for real; what hangs under it
+     stays, the replies under it by others; the count unchanged; on your
      own post too; Show opens it for the visit, read on every frame (and
      under Reduce Motion); a page brought by Load more folds too.
   8. ACTIVITY GOES QUIET: their comments, answers, likes and follows leave
@@ -632,7 +632,7 @@ FOLDS = r"""() => [...document.querySelectorAll('.cm.is-quiet')].filter(li => li
            hidden: getComputedStyle(main).visibility === 'hidden' && (!own || getComputedStyle(own).visibility === 'hidden'),
            checked: typeof main.checkVisibility === 'function' ? !main.checkVisibility({ visibilityProperty: true }) : null,
            reached: reach.length, controls: ctl.length,
-           more: (li.querySelector(':scope > .cm-answers > .cm-rm [data-rm-words]') || {}).textContent || null }; })"""
+           more: li.getAttribute('data-replies') }; })"""
 
 # Whether a comment shows whole: its words painted where they are.
 SHOWN = r"""(id) => { const li = document.getElementById(id); if (!li) return null;
@@ -1652,8 +1652,9 @@ with sync_playwright() as p:
             to(pg, "#comments", 60)
             folds = {f["id"]: f for f in pg.evaluate(FOLDS)}
             count = pg.evaluate("() => (document.querySelector('[data-cm-count]') || {}).textContent")
-            # ONE LEVEL, EVERYWHERE (the comment thread): Sam's reply is in the list on Rae's comment's own page,
-            # and Tia's reply to Sam's comment on his comment's own (open to her: a mute hides no page).
+            # Bluesky's way (the comment thread): Sam's reply is the first under Rae's comment, so it folds in the
+            # conversation followed down under it, and in the list on her comment's own page; Tia's reply to Sam's
+            # comment is on his comment's own (open to her: a mute hides no page).
             go(pg, f"/social/c/{c1}", wait=600)
             to(pg, "#comments", 60)
             on_page = {f["id"]: f for f in pg.evaluate(FOLDS)}
@@ -1665,12 +1666,13 @@ with sync_playwright() as p:
             home_count = pg.evaluate("(id) => { const a = document.querySelector('.post-card[data-post=\"' + id + '\"] .post-count'); return a ? a.getAttribute('aria-label') : null; }", cat)
             fa, fc = on_page.get(f"c-{a1}"), folds.get(f"c-{c2}")
             check("on a post you read, their comment is one quiet line in its place, “Someone you muted said something."
-                  " Show”, and their reply, on the page of the comment it answers, “Someone you muted replied. Show”; on"
-                  " your own post too",
+                  " Show”, and their reply “Someone you muted replied. Show”, in the conversation followed down under"
+                  " the comment it answers (Bluesky's way) and on that comment's own page; on your own post too",
                   fa and fa["words"] == "Someone you muted replied. Show" and fc
                   and fc["words"] == "Someone you muted said something. Show" and fa["show"] == "Show"
                   and own.get(f"c-{c3}", {}).get("words") == "Someone you muted said something. Show"
-                  and len(folds) == 1 and len(on_page) == 1,
+                  and folds.get(f"c-{a1}", {}).get("words") == "Someone you muted replied. Show"
+                  and len(folds) == 2 and len(on_page) == 1,
                   json.dumps({"answer": fa and fa["words"], "comment": fc and fc["words"], "own": [f["words"] for f in own.values()]}))
             check("the eye sits where their face was (its middle on the faces' column, within 0.5px) and the words start"
                   " where the bubbles do (within 0.5px; a name sits in its bubble since the comment thread); the line 56px tall",
@@ -1682,10 +1684,11 @@ with sync_playwright() as p:
                   all(f and f["hidden"] and f["checked"] is not False and f["reached"] == 0 and f["controls"] >= 1
                       and all(f["lands"]) for f in (fa, fc)),
                   json.dumps([(f["hidden"], f["checked"], f["reached"], f["controls"], f["lands"]) for f in (fa, fc) if f]))
-            check("their comment keeps its \"Read 1 reply\" under the line, and on its own page the reply by somebody else"
+            check("their comment keeps the 1 reply under it (the tree, two deep: its count shows with the comment), and on"
+                  " its own page the reply by somebody else"
                   " stays as it is (Tia's, painted); the count beside Comments says every one, theirs too (5), and so does"
                   " Home's card (5 comments)",
-                  under and not under["quiet"] and under["painted"] and fc and fc["more"] == "Read 1 reply" and count == "5"
+                  under and not under["quiet"] and under["painted"] and fc and fc["more"] == "1" and count == "5"
                   and home_count == "5 comments",
                   f"Tia's reply {under}; their comment's {fc and fc['more']!r}; count {count!r}; Home's card {home_count!r}")
             go(pg, f"/social/c/{c1}", wait=600)

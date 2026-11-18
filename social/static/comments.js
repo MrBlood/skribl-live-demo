@@ -37,17 +37,15 @@
  * room), the box fades in as its room opens, and under Reduce Motion things
  * are put in place and fade.
  *
- * THE THREAD (the comment thread, step 1; the owner's yes, Nov 17), ONE
- * LEVEL, EVERYWHERE (the owner: "a list of direct replies first. If you
- * click the reply it opens up the tree level"): a list shows only the direct
- * replies to what its page is about. A reply posted to one of them is on
- * that one's own page, so here it joins "Read N replies" under it (the
- * server says which), which counts it and glows a moment. A TAP ON A
- * REPLY'S BUBBLE OPENS ITS OWN PAGE, as a post's card opens the post: not on
- * a link, a button or its drawing (which plays), nor when the press ends a
- * selection. ON A COMMENT'S OWN PAGE (comment.html) the box replies to that
- * comment, a new reply lands at the end of its replies (oldest first), and
- * back goes where you were.
+ * THE THREAD (the comment thread, step 1; the owner's yes, Nov 17), BLUESKY'S
+ * WAY WITH OUR LOOK (the owner's yes, Nov 18, after reading Bluesky's own
+ * thread code): a list shows the direct replies to what its page is about,
+ * each with the count by its talk cloud and its conversation followed down
+ * under it in the same column (below). A TAP ON ONE OPENS ITS OWN PAGE: not
+ * on a link, a button or its drawing (which plays), nor when the press ends
+ * a selection. ON A COMMENT'S OWN PAGE (comment.html) the box replies to
+ * that comment, a new reply lands at the end of its replies (oldest first),
+ * and back goes where you were.
  *
  * A COMMENT'S ⋯, "This comment" (social.js's SocialSheet, as the post's):
  * Copy link and Share… (its own page), then on your own Delete comment; on
@@ -102,17 +100,22 @@
   var tokenMeta = doc.querySelector('meta[name="social-csrf"]');
   var token = tokenMeta ? tokenMeta.getAttribute('content') : '';
 
+  function answered(p) {
+    return p.then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!j || typeof j !== 'object') j = {};
+        j.status = r.status;
+        return j;
+      });
+    }, function () { return { error: 'network' }; });
+  }
   function send(url, body) {
-    return fetch(url, { method: 'POST', credentials: 'same-origin',
-                        headers: { 'Content-Type': 'application/json', 'X-Social-CSRF': token },
-                        body: JSON.stringify(body || {}) })
-      .then(function (r) {
-        return r.json().catch(function () { return {}; }).then(function (j) {
-          if (!j || typeof j !== 'object') j = {};
-          j.status = r.status;
-          return j;
-        });
-      }, function () { return { error: 'network' }; });
+    return answered(fetch(url, { method: 'POST', credentials: 'same-origin',
+                                 headers: { 'Content-Type': 'application/json', 'X-Social-CSRF': token },
+                                 body: JSON.stringify(body || {}) }));
+  }
+  function get(url) {
+    return answered(fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } }));
   }
   function why(j) {
     if (j && j.error === 'rejected' && j.message) return j.message;
@@ -147,33 +150,80 @@
     if (!c && now) { c = doc.createElement('span'); row.appendChild(c); }
     if (c) { if (now) c.textContent = String(now); else row.removeChild(c); }
   }
-  /* The list "Read N replies" hangs in under a comment, made if it has none
-     yet. */
-  function answersOf(top) {
-    var ans = top.querySelector(':scope > .cm-answers');
-    if (!ans) {
-      ans = doc.createElement('ol');
-      ans.className = 'cm-answers';
-      top.insertBefore(ans, fold && fold.parentNode === top ? fold : null);
-    }
-    return ans;
+  /* ---- BLUESKY'S WAY, OUR LOOK (the owner's yes, Nov 18) --------------------
+     A comment in a list says how many replies are under it beside its talk
+     cloud, and under it its conversation is followed down in the same
+     column (_comments.html chain_of; comments.py _chains): its first reply,
+     the first reply to that, ten deep, then "Read N more replies". A tap on
+     a comment opens its own page. A reply posted continues the conversation
+     where it is followed down to the one it answers; anywhere else the
+     count by that one's talk cloud takes it and glows. Posting and deleting
+     answer every count on the way up (j.counts). */
+  var CHAIN_MAX = 10;
+  function plural(n, one, many) { return n === 1 ? say(one) : say(many, { n: n }); }
+  function proto(name) {
+    var t = doc.querySelector('template[' + name + ']');
+    return t ? t.content.firstElementChild.cloneNode(true) : null;
   }
-  /* "READ N REPLIES" under the one a reply was posted to: one more counted,
-     or the row made (the page's own, [data-cm-rm-proto]), to its own page. */
-  function moreRow(top, url) {
-    var ans = answersOf(top);
-    var rm = ans.querySelector(':scope > .cm-rm');
-    if (!rm) {
-      var proto = doc.querySelector('template[data-cm-rm-proto]');
-      rm = proto.content.firstElementChild.cloneNode(true);
-      rm.setAttribute('data-rm', top.getAttribute('data-comment'));
-      rm.querySelector('.rm-link').setAttribute('href', url || top.getAttribute('data-url'));
-      ans.appendChild(rm);
+  /* HOW MANY, after a reply came or went: beside its talk cloud, in its
+     Reply's name, and in a "Read N more replies" after it. */
+  function tallyTo(li, n) {
+    if (n) li.setAttribute('data-replies', String(n)); else li.removeAttribute('data-replies');
+    var acts = li.querySelector(':scope > .cm-main > .cm-acts');
+    var host = acts && (acts.querySelector('[data-cm-answer]') || acts.querySelector('.cm-tally'));
+    if (host) {
+      var c = host.querySelector('.cm-n');
+      if (n && !c && !host.classList.contains('cm-tally')) {
+        c = proto('data-cm-n-proto');
+        host.insertBefore(c, host.querySelector('.cm-word'));
+      }
+      if (c) { if (n) c.textContent = String(n); else c.parentNode.removeChild(c); }
+      if (host.hasAttribute('data-cm-answer')) {
+        if (n) host.setAttribute('aria-label', plural(n, 'c_reply_one', 'c_reply_many'));
+        else host.removeAttribute('aria-label');
+      }
     }
-    var n = (+rm.getAttribute('data-n') || 0) + 1;
-    rm.setAttribute('data-n', String(n));
-    rm.querySelector('[data-rm-words]').textContent = n === 1 ? say('c_rm_one') : say('c_rm_many', { n: n });
-    return rm;
+    var rm = li.nextElementSibling;
+    if (rm && rm.classList.contains('cm-rm') && rm.getAttribute('data-rm') === li.getAttribute('data-comment')) {
+      if (n) {
+        rm.setAttribute('data-n', String(n));
+        rm.querySelector('[data-rm-words]').textContent = plural(n, 'c_more_one', 'c_more_many');
+      } else rm.parentNode.removeChild(rm);
+    }
+  }
+  function recount(counts) {
+    Object.keys(counts || {}).forEach(function (id) {
+      var li = doc.getElementById('c-' + id);
+      if (li) tallyTo(li, +counts[id] || 0);
+    });
+  }
+  /* A count that just took a reply glows a moment in the landing's tint
+     (social.css, .is-glow). */
+  function glowCount(li) {
+    var acts = li.querySelector(':scope > .cm-main > .cm-acts');
+    var c = acts && acts.querySelector('[data-cm-answer], .cm-tally');
+    if (!c) return;
+    c.classList.add('is-glow');
+    setTimeout(function () { c.classList.remove('is-glow'); }, GLOW_MS);
+  }
+  /* WHERE A REPLY TO `top` CONTINUES ITS CONVERSATION: right under it,
+     where the conversation is followed down to it (a comment in the list,
+     or the last of the conversation under one), it is its first reply (no
+     other under it: `first`), and there is room for one more (ten deep);
+     null anywhere else, where its count says it instead. */
+  function landing(top, first) {
+    if (!first || top.classList.contains('is-gone')) return null;
+    if (top.parentNode === list) {
+      if (top.querySelector(':scope > .cm-chain')) return null;
+      var ol = doc.createElement('ol');
+      ol.className = 'cm-chain';
+      top.insertBefore(ol, fold && fold.parentNode === top ? fold : null);
+      return { parent: ol, before: null };
+    }
+    var chain = top.parentNode;
+    if (!chain || !chain.classList || !chain.classList.contains('cm-chain') || top.nextElementSibling) return null;
+    if (chain.querySelectorAll(':scope > .cm').length >= CHAIN_MAX) return null;
+    return { parent: chain, before: null };
   }
   /* What arrives later is said as what was there: its times, and its
      drawing's player (still until tapped, as Skribl asks of a feed that adds
@@ -362,7 +412,7 @@
      its thread, however deep the reply. */
   function topOf(li) {
     var t = li;
-    while (t.parentNode && t.parentNode.classList && t.parentNode.classList.contains('cm-answers')) t = t.parentNode.closest('.cm');
+    while (t.parentNode && t.parentNode.classList && t.parentNode.classList.contains('cm-chain')) t = t.parentNode.closest('.cm');
     return t;
   }
 
@@ -636,21 +686,26 @@
      frame at a time (social.css, .is-growing), so nothing inside it moves.
      `extra`: the rule its arrival gives the comment after it (one that stops
      being first takes its rule back), given back too, so nothing steps. Under
-     Reduce Motion it is put in place and fades in. */
-  function arrive(li, parent, before, extra, then) {
+     Reduce Motion it is put in place and fades in. `out`: how far its
+     edges reach past its box (10px, the landing's tint). */
+  function arrive(li, parent, before, extra, then, out) {
+    var x = '-' + (out || 10) + 'px';
     li.style.opacity = '0';
-    li.style.clipPath = 'inset(0 -10px 100% -10px)';
+    li.style.clipPath = 'inset(0 ' + x + ' 100% ' + x + ')';
     parent.insertBefore(li, before);
+    /* Settled before it is measured: its times said as the page says them
+       ("now" for the server's day) can take a line off a narrow head. */
+    settle(li);
     var h = li.getBoundingClientRect().height;     // to the fraction: a whole pixel would step
     if (still()) li.style.clipPath = '';
     else {
       li.style.marginBottom = -(h + extra) + 'px';
-      li.style.clipPath = 'inset(0 -10px ' + h + 'px -10px)';
+      li.style.clipPath = 'inset(0 ' + x + ' ' + h + 'px ' + x + ')';
     }
     void li.offsetHeight;            // where it starts
     li.classList.add('is-growing');
     li.style.marginBottom = '';
-    if (!still()) li.style.clipPath = 'inset(0 -10px 0px -10px)';
+    if (!still()) li.style.clipPath = 'inset(0 ' + x + ' 0px ' + x + ')';
     li.style.opacity = '';
     function done() {
       li.classList.remove('is-growing');
@@ -710,10 +765,12 @@
         var li = holder.querySelector('.cm');
         if (!li) { tidy(); return; }
         var top = j.under ? doc.getElementById('c-' + j.under) : null;
-        /* ONE LEVEL, EVERYWHERE: a reply to one in the list is on that one's
-           own page, so here it joins "Read N replies" under it, which counts
-           it and glows a moment. */
-        var deep = !!top;
+        /* A REPLY TO ONE IN THE LIST OR IN A CONVERSATION UNDER ONE
+           (Bluesky's way): every count on its way says it (j.counts); it
+           continues the conversation where that is followed down to the
+           one it answers, glowing there; anywhere else the count by that
+           one's talk cloud took it and glows. */
+        var under = !!top;
         var was = answering;
         answering = null;
         afterFold = null;
@@ -723,14 +780,18 @@
            fold folds away in step with it. */
         if (sheet && sheet.isOpen()) { sheetAfter = tidy; sheet.close(true); }
         else if (!at) tidy();
-        if (deep) {
-          var rm = moreRow(top, j.page);
+        if (under) {
+          recount(j.counts);
+          var spot = landing(top, (+(j.counts || {})[j.under] || 0) === 1);
+          if (spot) {
+            arrive(li, spot.parent, spot.before, 0, function () { reveal(li); });
+            glow(li);
+          } else glowCount(top);
           if (at) shutFold('posted', tidy);
           else syncFirst(false);
           counted(j.count, 1);
-          glowMore(rm);
-          var link = rm.querySelector('.rm-link');
-          if (link) link.focus({ preventScroll: true });
+          var back = spot ? li.querySelector('[data-cm-answer]') : was && was.btn;
+          if (back && doc.contains(back)) back.focus({ preventScroll: true });
           return;
         }
         if (subject && j.under === subject) {
@@ -742,7 +803,6 @@
              nothing else needs to move. */
           arrive(li, list, list.firstChild, 0);
         }
-        settle(li);
         if (at) shutFold('posted', tidy);
         else syncFirst(false);
         counted(j.count, 1);
@@ -821,10 +881,10 @@
       else if (out) out.open(n);
       return;
     }
-    /* A TAP ON A REPLY OPENS ITS OWN PAGE ("If you click the reply it opens
-       up the tree level"): on its bubble, or a place's words, but not on a
-       link, a button or the drawing (which plays), nor a press that ends a
-       selection of its words. */
+    /* A TAP ON A COMMENT OPENS ITS OWN PAGE (Bluesky's way: the whole reply
+       is a way to it), as a post's card opens the post: on its bubble, or a
+       place's words, but not on a link, a button or the drawing (which
+       plays), nor a press that ends a selection of its words. */
     var bub = e.target.closest('.cm-bubble, .cm.is-gone > .cm-main');
     if (bub && !e.target.closest('a, button, input, textarea, .cm-art') && !e.defaultPrevented) {
       var sel = window.getSelection && window.getSelection();
@@ -909,7 +969,8 @@
 
   /* A comment that goes fades first. The box, open in its conversation, is
      put away as it goes (its words kept); and the last one gone, "Say the
-     first thing" comes back where the comments were. */
+     first thing" comes back where the comments were. A conversation under
+     a comment left with nothing in it goes with it, so no line hangs there. */
   function drop(li) {
     if (fold && li.contains(fold)) putAway();
     li.classList.add('is-going');
@@ -917,7 +978,11 @@
     function off() {
       if (gone) return;
       gone = true;
-      if (li.parentNode) li.parentNode.removeChild(li);
+      var ol = li.parentNode;
+      if (ol) ol.removeChild(li);
+      if (ol && ol.classList.contains('cm-chain') && !ol.querySelector(':scope > .cm') && ol.parentNode) {
+        ol.parentNode.removeChild(ol);
+      }
       syncFirst(false);
     }
     li.addEventListener('transitionend', function (e) { if (e.target === li) off(); });
@@ -982,6 +1047,7 @@
         if (j.place) becomePlace(li, j.words || '');
         else drop(li);
         (j.dropped || []).forEach(function (id) { var x = doc.getElementById('c-' + id); if (x) drop(x); });
+        recount(j.counts);
       });
     });
   }
@@ -1067,14 +1133,6 @@
       li.addEventListener('transitionend', function (e) { if (e.target === li && e.pseudoElement === '::before') end(); });
       setTimeout(end, FADE_MS + 400);
     }, GLOW_MS);
-  }
-  /* "Read N more replies" that just counted a reply glows a moment in the
-     same tint, then fades where it sits (social.css, .rm-link.is-glow). */
-  function glowMore(rm) {
-    var a = rm.querySelector('.rm-link');
-    if (!a) return;
-    a.classList.add('is-glow');
-    setTimeout(function () { a.classList.remove('is-glow'); }, GLOW_MS);
   }
   function drawOnce(art) {
     if (still() || !window.SkriblInline) return;

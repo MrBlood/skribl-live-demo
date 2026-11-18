@@ -46429,3 +46429,97 @@ verify_cardfade 28/28: 14 of 14, in 28.5 min. NOT RUN: the full battery
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: the Pad's Play pill is lilac at rest and ringed in
 violet while it plays.
+
+## After v330 -- The comment thread, Bluesky's way: counts by the clouds, each conversation followed down; the tree built, tried and set aside
+
+The owner, Nov 18: "I want the replies to be normal. Comment cloud shows
+how many replies. Click replies and replies under that reply open up in the
+tree (nested) two deep, then click + for more replies once there is replies
+to replies." Mocked as The Tree, Two Deep
+(https://claude.ai/artifact/Cq2iv1vL8sjSjPDTWDgcWV), "Yes on all for the
+tree", and built: a tap opened a comment's replies in place two deep, the +
+the rest at the second step with whom each answered, Hide folded it. Before
+it merged the owner looked at it filmed (The Tree, Built,
+https://claude.ai/artifact/GLWGff8uSi6bsHg2Y9iAxG) and tried it on a page
+of the real build (Try the Tree,
+https://claude.ai/artifact/9xufeeS3TdyiTH7oktgdeb): "if i don't like it I
+think I want to go back to the standard reply structure that bluesky uses,
+but with our look ... the tree thing gets weird with too many replies",
+asked "what do you think users would prefer?" (my view: Bluesky's; people
+know it, nothing hides behind a tap, it stays calm when busy, a drawing
+gets room on its own page), then "can you investigate bluesky's default
+comment/reply structure?", and, read from its code, "yes, build it the
+Bluesky way but keep our look for separation, right. not bluesky's look -
+ours. Also there won't be any of the tree structure right?" Tried before it
+merged: Bluesky's Way, Ours (https://claude.ai/artifact/77WAuRNwDwVr3vKYFa5xCD).
+
+BLUESKY'S DEFAULT, from its code (bluesky-social/social-app at d1dbe18,
+Nov 18): the linear view (DEFAULT_THREAD_VIEW_PREFS, lab_treeViewEnabled
+false; the tree is opt-in), sorted "top"; getPostThreadV2 with below 10 and
+branchingFactor 1 (usePostThread/const.ts): every direct reply, and under
+each one conversation followed down, its top reply each step, ten deep, in
+one column (LINEAR_AVI_WIDTH 42, a line between the avatars); "Read N more
+replies" only where a chain stops with more under its last (traversal.ts;
+the parent's is tree-view only), to that one's own page (views.ts readMore);
+a reply's other replies only in its count; a tap on a reply opens its page.
+
+WHAT CHANGED (social/comments.py, _comments.html, _comment_cards.html,
+social.css, comments.js):
+- THE COUNT BY THE TALK CLOUD: every reply under a comment, at any depth,
+  the viewer may see (_fold's more), beside Reply's cloud, on a desk in the
+  word's place (one with none still says Reply), signed out the count alone,
+  "Reply, 5 replies" to a screen reader. No "Read N replies" under a
+  comment any more.
+- EACH CONVERSATION FOLLOWED DOWN (comments._chains, CHAIN_MAX 10): under
+  each comment in a list, a post's or a comment's own page, its first reply
+  (oldest: it reads as a conversation, and we don't rank), the first reply
+  to that, ten deep, in one column, our bubbles at full width (322px of room
+  on a phone, 292 on a desk, at every depth); a place walked through as it
+  is counted. The line is ours, 2px of --card-edge, straight from face to
+  face, never curving. Past ten, "⊕ Read N more replies" (Bluesky's words),
+  its plus on the line, to the tenth's own page.
+- A TAP ON A COMMENT opens its own page, as before the tree.
+- REPLYING: a reply continues a conversation followed down to the one it
+  answers when it is that one's first, landing under it, glowing; anywhere
+  else the count by that one's cloud takes it and glows. Posting and
+  deleting answer every count on the way up (comments.tally).
+- arrive() settles a card (its times said as the page says them) before it
+  measures it: found by the tree's frame checks, where "now" in place of the
+  server's day took a line off a narrow head and the room stepped back
+  24.8px.
+- Gone with the tree: its routes (/c/<id>/replies, /rest), its own button,
+  Hide, "↳ Eli", its stepped line and its fold.
+
+FLIP AND THE PAD: no change; comments are the site's.
+
+CALIBRATED on a worktree of main (fa9566f) with this branch's suite:
+section 47 red row by row (the conversation, ten deep and Read more, the
+line, the room, the counts, the tap and its page, signed out; the replying
+rows could not start without a conversation to reply into), 11/11 here; the
+moved rows of sections 3, 21, 33, 39 and 43 red there (9 of 18 there),
+28/28 here with 47 and 19. Section 47 first crashed on main where a reply
+was not on the page at all: ROOM reads such a one as not there, so each row
+goes red on its own.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3, 26.8 min), on the
+final tree: verify_socialcomments 137/137, verify_a11y 444/444,
+verify_a11ypages 162/162, verify_sociallikes 111/111, verify_socialposts
+99/99, verify_socialreposts 98/98, verify_socialprofile 94/94,
+verify_socialfollow 79/79, verify_socialmentions 51/51,
+verify_socialactivity 46/46, verify_social 45/45, verify_socialsafety 38/38,
+verify_socialbookmarks 37/37: 13 of 15. Red beside the others:
+verify_socialmute 67/68 (Sam's muted reply, first under Rae's comment, now
+folds in the conversation under it as well: two quiet lines on the post's
+page where the check counted one) and verify_composer 38/39 (Eli's reply now
+shows under Dee's comment): the change itself, not load or a defect; the
+checks moved to it while the round ran, so the runner's alone re-runs read
+them (68/68, 39/39). The tree's own round had found the same suites red for
+it: its button in the row (verify_sociallikes, verify_socialreposts), a 1px
+target and a word gone from the census (verify_socialcomments), and nothing
+hanging under a comment at rest (verify_socialactivity's glow); Bluesky's
+way answers all four, as the counts above say. With this entry, verify_docs
+144/144. NOT RUN: the full battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: under a comment with replies, its conversation follows
+down in one column, joined by a straight lilac line.

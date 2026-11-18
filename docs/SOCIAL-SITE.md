@@ -2472,7 +2472,9 @@ decided where all of them were silent:
   under it carries "⊕ Read N replies" on the thread's line (N every reply
   under it, at any depth, that the viewer may see), which opens its own
   page, as a tap on its bubble does (not on a link, a button or its
-  drawing, which plays; on a desk a pointer says so). Every reply in a list
+  drawing, which plays; on a desk a pointer says so). Since Nov 18 the
+  count stands by its talk cloud and each conversation is followed down
+  under its comment ("Built: Bluesky's way, our look", below). Every reply in a list
   has a comment's room, 322px on a phone, 292 on a desk. A reply under one
   hidden from the viewer (a block, a takedown) is hidden with it, at any
   depth: not shown, not counted (`counts()` is a recursive read, one per
@@ -2487,7 +2489,7 @@ decided where all of them were silent:
   the way to it, is a kind 404.
 - **Replying.** A reply to one in a list is on that one's own page, so it
   joins its "Read N replies", which counts it and glows a moment (focus on
-  it). On a comment's own page the box replies to that comment, and a new
+  it; since Nov 18, its count by the talk cloud, below). On a comment's own page the box replies to that comment, and a new
   reply lands last in its list.
 - **Links land where a comment shows** (`comments.landing`): a comment on
   its post's or drawing's page, a reply on the page of what it answers,
@@ -2622,3 +2624,56 @@ A Comment Shared (A, and quoting):
 
 `harness/verify_socialreposts.py` sections 14 to 20 hold it;
 `verify_socialauth.py` pins its PostgreSQL DDL.
+
+**Built: Bluesky's way, our look** (Nov 18; DECISIONS.md, "The comment
+thread, Bluesky's way"). The owner, Nov 18: "I want the replies to be
+normal. Comment cloud shows how many replies. Click replies and replies
+under that reply open up in the tree (nested) two deep". That tree was
+mocked ([The Tree, Two Deep](https://claude.ai/artifact/Cq2iv1vL8sjSjPDTWDgcWV),
+"Yes on all"), built, filmed and tried on a page of its own. The owner
+then: "the tree thing gets weird with too many replies", "I want to go back
+to the standard reply structure that bluesky uses, but with our look", and,
+after Bluesky's own thread code was read (below), "yes, build it the
+Bluesky way but keep our look for separation ... there won't be any of the
+tree structure right?" Tried before it merged on [Bluesky's Way,
+Ours](https://claude.ai/artifact/77WAuRNwDwVr3vKYFa5xCD).
+
+**What Bluesky's default is**, read from its code (social-app, Nov 18):
+its post page uses the linear view (the tree is an opt-in "lab" setting),
+sorted "top". The post's direct replies are all listed. Under each, one
+conversation is followed down: its top reply, the top reply to that, ten
+deep (`LINEAR_VIEW_BELOW = 10`, `LINEAR_VIEW_BF = 1`), in the same column,
+the avatars joined by a line. Where that chain stops with more under its
+last, "Read N more replies" opens that one's own page. A reply's other
+replies show only in its count, and tapping any reply opens its own page.
+
+**Ours:**
+- **The count by the talk cloud** says how many replies are under a
+  comment, at any depth, that the viewer may see (`_fold`'s `more`). On a
+  desk it takes the word Reply's place; a comment with none still says
+  Reply. Reply still opens the box. Signed out, the count stands alone. A
+  screen reader hears "Reply, 5 replies".
+- **Each conversation followed down** (`comments._chains`): under each
+  comment in a list, on a post's page and on a comment's own, its first
+  reply (the oldest, so it reads as a conversation; we don't rank), the
+  first reply to that, ten deep. All of it is in one column: our bubbles,
+  every face the comment's, nothing stepping in. A drawing keeps its full
+  width at every depth: 322px of room on a phone, 292 on a desk. A place
+  (a deleted reply with replies under it) is walked through, as it is
+  counted.
+- **The line** is ours: 2px of `--card-edge`, straight down from face to
+  face, into each face from the top of its room, never curving.
+- **"⊕ Read N more replies"** (Bluesky's own words) where a conversation
+  runs past ten: its circled plus on the line, a 44px tap, to the tenth's
+  own page.
+- **A tap on a comment opens its own page**, as before the tree.
+- **Replying.** A reply continues a conversation where it is followed down
+  to the one it answers, and that one had none: it lands right under it,
+  glowing. Anywhere else the count by that one's talk cloud takes it and
+  glows. Posting and deleting answer every count on the way up
+  (`comments.tally`), so no count goes stale.
+- **Pad and Flip** don't change: comments are the site's.
+
+`harness/verify_socialcomments.py` section 47 holds it; sections 3, 5, 21,
+32, 33, 39, 40, 41, 43 and 46 moved to the counts and the conversations,
+and so did `verify_composer.py` and `verify_socialmute.py`.

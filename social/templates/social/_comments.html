@@ -11,18 +11,17 @@
                           until asked for; "Say the first thing" where the
                           comments will be, at none; the comments newest
                           first (a comment's replies, on its page, oldest
-                          first), each alone (one level, everywhere), with
-                          "Read N replies" under one that has replies; Load
-                          more for the next page.
+                          first), each with the count by its talk cloud and
+                          its conversation followed down under it (Bluesky's
+                          way, our look); Load more for the next page.
     comment(it, ...)      one comment or reply (the comment thread, step 1;
                           the owner's yes, Nov 17): its face, and beside it
                           its bubble (its name, when, in the person's own
                           time, "40m", "2h", a way to its own page; its words;
                           its drawing, Skribl's in-post player, still until
-                          tapped), under the bubble Reply and its ⋯; with
-                          replies under it, "Read N replies" (read_more) on
-                          the thread's line, to its own page, which a tap on
-                          its bubble opens too (comments.js).
+                          tapped), under the bubble Reply, with how many are
+                          under it, and its ⋯; a tap on its bubble opens its
+                          own page (comments.js).
                           SOMEBODY YOU MUTED (mutes; the owner's C): their
                           comment or reply is one quiet line in its place,
                           in Activity's own voice, "Someone you muted said
@@ -30,8 +29,8 @@
                           eye where their face was; the whole line is the
                           button, and Show opens it for that visit
                           (comments.js), the comment hidden for real until
-                          then (no tap and no screen reader reaches it). Its
-                          "Read N replies" stays as it is.
+                          then (no tap and no screen reader reaches it). What
+                          hangs under it stays as it is.
     comment_box()         Home's composer, as the mock styled it (.cm-box):
                           your face, the words, Draw and Flip, Post; a drawing
                           waits in it, in the in-post player the comment will
@@ -85,11 +84,11 @@
     name, when (a way to its own page), its words and its drawing. Under the
     bubble its row, the post's own: Reply (the word on a desk, the icon
     alone on a phone), its repost and how many (step 3), its heart and how
-    many (step 2), and ⋯. ONE LEVEL, EVERYWHERE (the owner, Nov 17: "a
-    list of direct replies first. If you click the reply it opens up the
-    tree level"): nothing is nested under it; one with replies under it
-    carries "Read N replies" on the thread's lilac line, which opens its own
-    page, as a tap on its bubble does. #}
+    many (step 2), and ⋯. BLUESKY'S WAY, OUR LOOK (the owner's yes, Nov
+    18): in a list, under it its conversation followed down in the same
+    column (chain_of: its first reply, the first reply to that, ten deep,
+    then "Read N more replies"), each this macro again; a tap on it opens
+    its own page (comments.js). #}
 {% macro comment(it, can, post_mine) -%}
 {%- set c = it.c %}{% set who = it.who -%}
 {%- set url = url_for('social.comment_page', public_id=c.public_id) -%}
@@ -97,16 +96,15 @@
 {#- A PLACE (the owner's yes, Nov 17, to "the place stays"): a comment or a
     reply deleted while replies hung under it, nobody's: an empty ring where
     its face was, "This reply was deleted" (or "removed") in the row's second
-    ink, no bubble and no row; its "Read N replies" hangs from its ring. #}
-<li class="cm is-gone" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-url="{{ url }}">
+    ink, no bubble and no row. A tap on it opens its own page, as on a
+    comment. #}
+<li class="cm is-gone" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-url="{{ url }}"{% if it.more %} data-replies="{{ it.more }}"{% endif %}>
   <span class="cm-gone-face" aria-hidden="true"></span>
   <div class="cm-main"><p class="cm-gone">{{ it.gone }}</p></div>
-  {%- if it.more %}
-  <ol class="cm-answers">{{ read_more(c, it.more) }}</ol>
-  {%- endif %}
+  {{- chain_of(it, can, post_mine) }}
 </li>
 {%- else %}
-<li class="cm{% if it.quiet %} is-quiet{% endif %}" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name.split(' ')[0] }}" data-url="{{ url }}"{% if me and me.id == c.person_id %} data-mine{% endif %}{{ share_data(it) }}>
+<li class="cm{% if it.quiet %} is-quiet{% endif %}" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name.split(' ')[0] }}" data-url="{{ url }}"{% if it.more %} data-replies="{{ it.more }}"{% endif %}{% if me and me.id == c.person_id %} data-mine{% endif %}{{ share_data(it) }}>
   {%- if it.quiet %}
   <button class="cm-fold-line" type="button" data-cm-show><span class="cm-fold-ic">{{ ic.eye_closed() }}</span><span class="cm-fold-words">{{ 'Someone you muted replied.' if c.parent_id else 'Someone you muted said something.' }} <span class="cm-show">Show</span></span></button>
   {%- endif %}
@@ -119,17 +117,34 @@
       {% if c.skribl_id %}<div class="cm-art">{{ comment_art(it) }}</div>{% endif %}
     </div>
     <div class="cm-acts">
-      {% if can %}<button class="cm-act" type="button" data-cm-answer aria-expanded="false">{{ ic.comment() }}<span class="cm-word">Reply</span></button>{% endif %}
+      {#- THE COUNT BY THE TALK CLOUD (the owner's yes, Nov 18): how many
+          replies are under it, at any depth, beside Reply's cloud (on a
+          desk in place of the word); none at zero. Reply still opens the
+          box. With no Reply to offer (signed out), the count alone. #}
+      {%- set n = it.more %}
+      {% if can %}<button class="cm-act" type="button" data-cm-answer aria-expanded="false"{% if n %} aria-label="{{ 'Reply, 1 reply' if n == 1 else 'Reply, %d replies' % n }}"{% endif %}>{{ ic.comment() }}{% if n %}<span class="cm-n">{{ n }}</span>{% endif %}<span class="cm-word">Reply</span></button>
+      {%- elif n %}<span class="cm-act cm-tally">{{ ic.comment() }}<span class="cm-n">{{ n }}</span><span class="sr">{{ ' reply' if n == 1 else ' replies' }}</span></span>{% endif %}
       {%- if it.shareable %}{{ repost(it) }}{% endif %}
       {%- if not c.taken_down_at %}{{ comment_heart(it) }}{% endif %}
       <button class="icon-btn cm-dots" type="button" data-cm-menu aria-haspopup="dialog" aria-controls="commentSheet"
               aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>
     </div>
   </div>
-  {%- if it.more %}
-  <ol class="cm-answers">{{ read_more(c, it.more) }}</ol>
-  {%- endif %}
+  {{- chain_of(it, can, post_mine) }}
 </li>
+{%- endif %}
+{%- endmacro %}
+
+{#  ITS CONVERSATION, FOLLOWED DOWN (Bluesky's way, our look; the owner's
+    yes, Nov 18): under one in a list, in the same column, never stepping
+    in, its first reply and the first reply to that, ten deep (comments.py
+    _chains), each a comment() of its own, the faces joined by the thread's
+    lilac line, straight down; where the last one still has replies under
+    it, "Read N more replies" to its own page. #}
+{% macro chain_of(it, can, post_mine) -%}
+{%- if it.chain %}
+  <ol class="cm-chain">{% for a in it.chain %}{{ comment(a, can, post_mine) }}{% endfor %}
+  {%- if it.chain_more %}{{ chain_more(it.chain_more.c, it.chain_more.more) }}{% endif %}</ol>
 {%- endif %}
 {%- endmacro %}
 
@@ -187,12 +202,12 @@
   </ol>
 {%- endmacro %}
 
-{#  "READ N MORE REPLIES", on the thread's line under a reply at the second
-    level whose talk goes on: the row's second ink and a circled plus, a 44px
-    tap, opening that reply's own page. N is every reply under it, at any
-    depth, that the viewer may see. #}
-{% macro read_more(c, n) -%}
-<li class="cm-rm" data-rm="{{ c.public_id }}" data-n="{{ n }}"><a class="rm-link" href="{{ url_for('social.comment_page', public_id=c.public_id) }}">{{ ic.more_replies() }}<span data-rm-words>Read {{ n }} {{ 'reply' if n == 1 else 'replies' }}</span></a></li>
+{#  "READ N MORE REPLIES", where a conversation followed down stops with
+    more under its last (Bluesky's own words): on the thread's line, the
+    row's second ink and a circled plus, a 44px tap, to that one's own page.
+    N is every reply under it, at any depth, that the viewer may see. #}
+{% macro chain_more(c, n) -%}
+<li class="cm-rm" data-rm="{{ c.public_id }}" data-n="{{ n }}"><a class="rm-link" href="{{ url_for('social.comment_page', public_id=c.public_id) }}">{{ ic.more_replies() }}<span data-rm-words>{{ 'Read 1 more reply' if n == 1 else 'Read %d more replies' % n }}</span></a></li>
 {%- endmacro %}
 
 {% macro comment_box() -%}
@@ -364,9 +379,10 @@
 </div>
 {% endif %}
 
-{#  "Read N replies" as comments.js makes it, when a reply posted from a
-    list is the first under the one it replies to (read_more's own markup). #}
-<template data-cm-rm-proto><li class="cm-rm" data-n="0"><a class="rm-link" href="">{{ ic.more_replies() }}<span data-rm-words></span></a></li></template>
+{#  What comments.js makes when a reply comes: the count by a talk cloud,
+    on one that had none (the page's own markup). #}
+<template data-cm-n-proto><span class="cm-n"></span></template>
+
 
 <div class="words" data-comment-words hidden>
   <span data-word="c_posting">Posting…</span>
@@ -386,8 +402,10 @@
   <span data-word="c_answer">Reply to {name}…</span>
   <span data-word="c_answer_label">Reply to {name}</span>
   <span data-word="c_quote">“{words}”</span>
-  <span data-word="c_rm_one">Read 1 reply</span>
-  <span data-word="c_rm_many">Read {n} replies</span>
+  <span data-word="c_more_one">Read 1 more reply</span>
+  <span data-word="c_more_many">Read {n} more replies</span>
+  <span data-word="c_reply_one">Reply, 1 reply</span>
+  <span data-word="c_reply_many">Reply, {n} replies</span>
   <span data-word="c_copied">Link copied.</span>
   <span data-word="c_copy_by_hand">Here’s the link to copy: {url}</span>
   <span data-word="c_deleting">Deleting…</span>
