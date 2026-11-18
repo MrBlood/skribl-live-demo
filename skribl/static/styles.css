@@ -6437,6 +6437,13 @@ a.player-btn { text-decoration: none; }
 .pad-speed .rl-speed::before { inset: -9px -2px; }   /* a 44px tap at its 26px */
 .pad-speed .rl-repeat { width: 32px; height: 26px; margin-left: 6px; }
 .pad-speed .rl-repeat::before { inset: -9px -6px; }   /* 44 by 44 at its 32 by 26 */
+/* ON, IN THE PILL, WEARS THE PRESSED RING. The pill is the second button's
+   lilac since No dinge, the last four (Nov 18), and --ui-hi's ring on it was
+   2.995:1 in dark (main's run after it read 2.83 at CI's pixel), so on was no
+   longer outlined against off. A toggle that is on among second buttons wears
+   --press-ring (5.1:1 on the lilac in dark, 4.5 on the pill while it plays);
+   light's is the same #7c5cff, so light does not move. */
+.pad-speed .rl-repeat[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--press-ring); }
 /* The desk pill's ends are 16px: each speed is at least 44px wide, its word
    centred, so, as in Tune, the room at the ends follows the face. At 14,
    Liberation Sans (CI's) and FreeSans left "¼×" a pixel nearer the edge than
