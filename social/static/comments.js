@@ -1121,6 +1121,12 @@
       if (face) face.replaceWith(ring);
       main.textContent = '';
       main.appendChild(line);
+      /* Its replies still open on a tap (the tree, two deep): its own
+         button, for a keyboard and a screen reader, comes with it. */
+      if (listed(li) && li.hasAttribute('data-replies')) {
+        var ob = proto('data-cm-open-proto');
+        if (ob) { main.appendChild(ob); openWords(li, !!treeOf(li)); }
+      }
       main.style.removeProperty('opacity');
       main.style.removeProperty('transition');
       var to = main.getBoundingClientRect().height;
