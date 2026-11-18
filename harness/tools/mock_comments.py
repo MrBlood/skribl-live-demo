@@ -56,6 +56,15 @@ It writes MOCK_OUT/shots/w<o|q|b>-<phone|desk>-<light|dark>-<now|a|b>.png and
 measure.json (the small words' contrast, the cards' heights, the way's faces
 over the card's).
 
+MOCK_ROUND=tree shoots the fold (The Folded Thread, Nov 17:
+https://claude.ai/artifact/3mefzDKSCqWZ2PuSFMhTVZ), from the owner's "We
+don't want the whole tree visible until someone selects the reply": the
+post's page as step 1 built it, then A (each conversation folded to "Read N
+replies", opening the comment's own page) and B (the same fold, opening in
+place, shown open on Eli's with "Hide replies"), and the page A opens. It
+writes MOCK_OUT/shots/tr-<phone|desk>-<light|dark>-<now|a|b|page>.png and
+measure.json (the list's height, the links' words).
+
 It writes MOCK_OUT/shots/rm-<phone|desk>-<light|dark>-<thread|reply>.png and
 rm-phone-<light|dark>-sheet.png at 2x, and MOCK_OUT/measure.json (the room
 the words have at each depth, the icons' contrast, and an @name's when a
@@ -1074,10 +1083,90 @@ def round_world(b):
             print(screen, scheme, "done", flush=True)
 
 
+# ================= THE TREE FOLDED: comments only until one is chosen =================
+# The owner, Nov 17, at the step 1 answers: "We don't want the whole tree
+# visible until someone selects the reply. It just shows replies then if
+# reply is clicked you see all the subs." On the page as step 1 built it:
+# today (two levels, then "Read N more replies"); A, each conversation folded
+# to "Read N replies", which opens that comment's own page (as built: the
+# way, it, every reply under it, two levels again); B, the same fold, which
+# unfolds in place instead (shown unfolded on the first, "Hide replies" at
+# its end).
+TREE = r"""([opt, unfold]) => {
+  const svg = (document.querySelector('.rm-link svg') || {}).outerHTML || '';
+  const minus = svg.replace(/M12 8v8/, '');
+  const row = (words, href, icon) => { const l = document.createElement('li'); l.className = 'cm-rm';
+    l.innerHTML = '<a class="rm-link" href="' + href + '">' + icon + '<span>' + words + '</span></a>'; return l; };
+  const out = [];
+  [...document.querySelectorAll('.cm-list > li.cm')].forEach((li) => {
+    const ans = li.querySelector(':scope > .cm-answers'); if (!ans) return;
+    const n = ans.querySelectorAll('li.cm:not(.is-gone)').length
+      + [...ans.querySelectorAll('.cm-rm')].reduce((a, r) => a + (+r.dataset.n || 0), 0);
+    out.push(n);
+    if (opt === 'b' && li.id === 'c-' + unfold) { ans.appendChild(row('Hide replies', '#', minus)); return; }
+    ans.innerHTML = '';
+    ans.appendChild(row('Read ' + n + (n === 1 ? ' reply' : ' replies'), '/social/c/' + li.id.replace(/^c-/, ''), svg));
+  });
+  return out; }"""
+
+TREE_MEASURE = r"""() => { const s = document.querySelector('.cm-list'); const r = s.getBoundingClientRect();
+  const rm = document.querySelector('.rm-link'); return { list: Math.round(r.height), links: [...document.querySelectorAll('.rm-link span')].map(e => e.textContent),
+  linkH: rm ? Math.round(rm.getBoundingClientRect().height) : null }; }"""
+
+
+def round_tree(b):
+    """The tree folded: today, A (folded, opening the comment's own page),
+    B (folded, unfolding in place); and the page A opens."""
+    import artworks
+    ben = member(b, "ben", "Ben Okafor")
+    ana = member(b, "ana", "Ana Reyes")
+    cyd = member(b, "cyd", "Cyd Marsh")
+    dee = member(b, "dee", "Dee Park")
+    eli = member(b, "eli", "Eli Moss")
+    scene = with_card(ben, art_payload(artworks.scene(), seed=2))
+    cat = with_card(ana, art_payload(artworks.cat(), seed=3))
+    snail = with_card(dee, art_payload(artworks.snail(), seed=5))
+    post = make_post(ben, "Morning ride past the old cottage, drawn on the train", payload=scene)
+    c1 = say_(eli, post, "Is that the cottage by the river? I think I know it.")
+    r1 = say_(ana, post, "It is! Our cat lives there.", answer_to=c1, payload=cat)
+    r2 = say_(ben, post, "Yes, the one by the old mill. Good eye.", answer_to=c1)
+    r3 = say_(eli, post, "Then she needs a friend.", answer_to=r1)
+    r4 = say_(ana, post, "Ha! They'd be best friends.", answer_to=r3)
+    r5 = say_(cyd, post, "I'd watch that cartoon every Sunday.", answer_to=r4)
+    c2 = say_(cyd, post, "Love the little curl of smoke from the chimney.")
+    r6 = say_(ben, post, "Thank you! It took three tries.", answer_to=c2)
+    c3 = say_(dee, post, "", payload=snail)
+    print("fixture", post, c1, c2, flush=True)
+    when = {c1: "5h", r1: "4h", r2: "4h", r3: "3h", r4: "2h", r5: "1h", c2: "2h", r6: "1h", c3: "25m"}
+    for screen in ("phone", "desk"):
+        for scheme in ("light", "dark"):
+            for opt in ("now", "a", "b"):
+                ctx, pg = browser_as(b, dee, screen=screen, scheme=scheme, reduced=True)
+                go(pg, f"/social/p/{post}", wait=900)
+                pg.evaluate("""(m) => { for (const [id, t] of Object.entries(m)) { const li = document.getElementById('c-' + id);
+                  const w = li && li.querySelector(':scope > .cm-main .cm-when'); if (w) w.textContent = t; } }""", when)
+                pg.evaluate(STYLE, ".nav { visibility: hidden !important; }")
+                st = pg.evaluate(TREE, [opt, c1]) if opt != "now" else None
+                pg.wait_for_timeout(400)
+                snap(pg, f"tr-{screen}-{scheme}-{opt}", "thread")
+                meas[f"{screen} {scheme} {opt}"] = dict(pg.evaluate(TREE_MEASURE), setup=st)
+                close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, dee, screen=screen, scheme=scheme, reduced=True)
+            go(pg, f"/social/c/{c1}", wait=1200)
+            pg.evaluate("""(m) => { for (const [id, t] of Object.entries(m)) { const li = document.getElementById('c-' + id);
+              const w = li && li.querySelector(':scope > .cm-main .cm-when'); if (w) w.textContent = t; }
+              const way = document.querySelector('.cm-way-head time'); if (way) way.textContent = '6h';
+              const at = document.querySelector('.post-meta time'); if (at) at.textContent = 'Nov 17 at 2:12 PM'; }""", when)
+            pg.evaluate(STYLE, ".nav { visibility: hidden !important; }")
+            snap(pg, f"tr-{screen}-{scheme}-page", "page")
+            close_ctx(ctx, pg)
+            print(screen, scheme, "done", flush=True)
+
+
 ROUND = os.environ.get("MOCK_ROUND", "replies")
 with sync_playwright() as p:
     b = p.chromium.launch()
-    {"drawings": round_drawings, "world": round_world}.get(ROUND, round_replies)(b)
+    {"drawings": round_drawings, "world": round_world, "tree": round_tree}.get(ROUND, round_replies)(b)
     b.close()
 open(f"{OUT}/measure.json", "w").write(_json.dumps(meas, indent=1))
 if ERRS:
