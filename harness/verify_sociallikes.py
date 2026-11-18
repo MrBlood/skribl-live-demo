@@ -2786,16 +2786,19 @@ with sync_playwright() as p:
             db_write("update social_comments set taken_down_at = datetime('now') where public_id = ?", (c3,))
             c4 = say_on(fen, post, "Section 16, Fen's other")
             block(fen, "dax")
-            refused = {"a place": like_c(dax, c2)[0], "taken down": like_c(dax, c3)[0], "hidden (a block)": like_c(dax, c4)[0],
+            refused = {"a place": like_c(dax, c2)[0], "taken down": like_c(dax, c3)[0],
+                       "its author's own, taken down": like_c(hux, c3)[0], "hidden (a block)": like_c(dax, c4)[0],
                        "no token": like_c(gale, c1, token="")[0], "no yes or no": like_c(gale, c1, raw={"liked": "yes"})[0],
                        "signed out": like_c(None, c1)[0]}
             fc = fen.client()
             fc.get("/social/")
             fc.post_json("/social/@dax/unblock", {})
-            check("who may: a place (nobody's), a comment taken down, one by somebody who blocked you are gone (404); no"
-                  " token (403), no yes or no (400), signed out (401); nothing kept",
-                  placed == 200 and refused == {"a place": 404, "taken down": 404, "hidden (a block)": 404, "no token": 403,
-                                                "no yes or no": 400, "signed out": 401}
+            check("who may: a place (nobody's), a comment taken down (its author's own too, as a post's maker's), one by"
+                  " somebody who blocked you are gone (404); no token (403), no yes or no (400), signed out (401); nothing"
+                  " kept",
+                  placed == 200 and refused == {"a place": 404, "taken down": 404, "its author's own, taken down": 404,
+                                                "hidden (a block)": 404, "no token": 403, "no yes or no": 400,
+                                                "signed out": 401}
                   and likes_on_c(c2) == [] and likes_on_c(c3) == [] and likes_on_c(c4) == [],
                   f"{refused}; the place made {placed}")
             # ACTIVITY: Cleo's comment's likes one row; Fen's reply's its own; a like never lights the dot.
