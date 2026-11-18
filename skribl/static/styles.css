@@ -6444,6 +6444,11 @@ a.player-btn { text-decoration: none; }
    --press-ring (5.1:1 on the lilac in dark, 4.5 on the pill while it plays);
    light's is the same #7c5cff, so light does not move. */
 .pad-speed .rl-repeat[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--press-ring); }
+/* ...AND IN LIGHT ONE STEP DEEPER, Post's violet (the owner's A, Nov 18, on
+   Two Small Picks): --press-ring's #7c5cff read 2.88:1 against off on the
+   pill while it plays, 3.42 at rest (before No dinge too); #6d4cf0 reads
+   3.53 and 4.19. Dark keeps --press-ring. */
+:root[data-theme="light"] .pad-speed .rl-repeat[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--accent-fill); }
 /* The desk pill's ends are 16px: each speed is at least 44px wide, its word
    centred, so, as in Tune, the room at the ends follows the face. At 14,
    Liberation Sans (CI's) and FreeSans left "¼×" a pixel nearer the edge than

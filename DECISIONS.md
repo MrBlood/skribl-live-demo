@@ -46688,3 +46688,32 @@ battery (main's run after the merge does it).
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: on a comment's own page, the line from the way above
 stops at the top of a softer lilac band.
+
+## After v330 -- Repeat's ring in light, one step deeper: the owner's A
+
+Found fixing main after No dinge (#970): in light, Repeat's on-ring in the
+desk's Play pill read 2.882:1 against off while the drawing plays (3.42 at
+rest), under the 3:1 "on is outlined" holds, and the same before No dinge.
+A colour pick, so it was the owner's: Two Small Picks
+(https://claude.ai/artifact/FopzPwjAkXSRnXfzJB1EyA) showed now, A (one step
+deeper, #6d4cf0, Post's violet: 3.53 and 4.19) and B (the glyph's own ink,
+#301c8c: 8.34 and 9.88), with "now" beside each. The owner, Nov 18: "I like
+above screenshot and A".
+
+WHAT CHANGED (styles.css): in light, Repeat on in the pill wears
+--accent-fill (#6d4cf0); dark keeps --press-ring (#a593ff, #970). The line's
+Repeat, full screen's and the phone's at the bar's end don't move; Flip has
+no Repeat.
+
+THE CHECK (verify_padrepeat): the row for the pill while it plays is judged
+in light too, where #970 said light's value without judging it. On a
+worktree of main (089f50c0) it is red (light 2.882:1), here green (3.532);
+the pill at rest reads 4.186 in light (3.416 before). The player's CSS
+re-emitted unchanged.
+
+THE SUITES, side by side (run_parallel -j 3): @@SUITES@@. NOT RUN: the full
+battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: on a desk in light, a pressed Repeat in the Play pill
+wears a deeper violet ring.
