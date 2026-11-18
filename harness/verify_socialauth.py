@@ -1363,7 +1363,8 @@ with sync_playwright() as p_:
                 "social_mentions",                       # mentions: the map, part two
                 "social_people_words",                   # finding people: the map, part two
                 "social_follows",                        # follows: phase 2
-                "social_mutes"}                          # mutes: phase 2
+                "social_mutes",                          # mutes: phase 2
+                "social_push_subscriptions"}             # push notifications: the map, part two
         want_idx = {"ix_social_people_public_id", "ix_social_people_handle_key", "ix_social_people_user_handle",
                     "ix_social_passkeys_credential_id", "ix_social_passkeys_public_id", "ix_social_passkeys_person_id",
                     "ix_social_invites_code_hash", "ix_social_invites_public_id", "ix_social_invites_expires_at",
@@ -1416,8 +1417,10 @@ with sync_playwright() as p_:
                     # follows: one row a pair, and newest first both ways
                     "ix_social_follows_pair", "ix_social_follows_follower_created", "ix_social_follows_followed_created",
                     # mutes: one row a pair, whose newest first, and whom
-                    "ix_social_mutes_pair", "ix_social_mutes_muter_created", "ix_social_mutes_muted_id"}
-        check("on an empty SQLite file the site's chain builds its sixteen tables with every index, stamps its own"
+                    "ix_social_mutes_pair", "ix_social_mutes_muter_created", "ix_social_mutes_muted_id",
+                    # push notifications: one device once, a person's devices
+                    "ix_social_push_subscriptions_endpoint", "ix_social_push_subscriptions_person_id"}
+        check("on an empty SQLite file the site's chain builds its seventeen tables with every index, stamps its own"
               " version table (social_alembic_version) at its head, and touches nothing of Skribl's",
               r1.returncode == 0 and names == want | {"social_alembic_version"} and want_idx <= idx
               and stamps == {"social_alembic_version": [heads]},

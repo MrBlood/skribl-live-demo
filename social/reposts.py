@@ -540,6 +540,9 @@ def register(bp):
                         sess.flush()
                 except sa.exc.IntegrityError:
                     pass            # reposted a moment ago, from another tap: one repost
+            # A NUDGE, where their device has Reposts and quotes on (push.py).
+            from .push import note
+            note(on.owner.id, me.id, "reposts")
         else:
             # YOUR OWN, UNDONE whatever became of the post since; one that was
             # never made is gone only if the post is.
@@ -587,6 +590,9 @@ def register(bp):
                         sess.flush()
                 except sa.exc.IntegrityError:
                     pass            # reposted a moment ago, from another tap: one repost
+            # A NUDGE, where their device has Reposts and quotes on (push.py).
+            from .push import note
+            note(c.person_id, me.id, "reposts")
         else:
             cid = sa.select(Comment.id).where(Comment.public_id == str(public_id)).scalar_subquery()
             gone = sess.execute(sa.delete(Repost).where(Repost.person_id == me.id, Repost.comment_id == cid)

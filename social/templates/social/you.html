@@ -16,7 +16,18 @@
     A passkey is renamed or removed in place (a details row that opens under
     it), never removed when it is the last one: an account with none could
     not be signed in to. Dates are written in UTC and shown in the person's
-    own time zone by you.js. #}
+    own time zone by you.js.
+
+    NOTIFICATIONS ON THIS PHONE (push notifications; Blooby's Nudges, the
+    owner's "All yes", Nov 18), under Theme: a row a kind, each with Theme's
+    own switch (On, Off), starting at the dot's rule (Replies and comments,
+    Mentions and the number on the icon on; Likes, New followers, Reposts
+    and quotes off). The choices are this device's, as the permission is
+    (push.py). It is there hidden, and push.js shows the one state this
+    device is in: its switches; Turn on; told no (where to allow it); on an
+    iPhone or an iPad in a browser tab, the way to the Home Screen app
+    (_homescreen.html's steps), where nudges come; or a browser that cannot.
+    It glides open as Activity's card does. #}
 {% extends 'social/base.html' %}
 {% import 'social/_icons.html' as ic %}
 {% from 'social/_post.html' import face with context %}
@@ -54,6 +65,45 @@
       </div>
     </div>
   </section>
+
+  <div class="push-fold" data-push-panel hidden>
+    <div class="push-fold-in">
+      <section class="panel push-panel" aria-labelledby="pushTitle">
+        <div class="push-head">
+          <h2 class="panel-title" id="pushTitle">Notifications on this <span data-push-device data-phone="phone" data-tablet="tablet" data-computer="computer">phone</span></h2>
+          <p class="panel-sub">What may nudge you when Blooby isn’t open.</p>
+        </div>
+        <button class="btn btn-primary btn-wide" type="button" data-push-when="off" data-push-on hidden>Turn on</button>
+        <p class="panel-text" data-push-when="denied" hidden>This browser was told not to show Blooby’s notifications. To turn them on, allow notifications for this site in the browser’s settings, then come back here.</p>
+        <div class="push-home" data-push-when="install" hidden>
+          <p class="panel-text">On an iPhone or an iPad, nudges come to Blooby on your Home Screen. Add it there, open it, and turn them on in its Settings.</p>
+          <button class="btn btn-wide" type="button" data-push-home aria-haspopup="dialog" aria-controls="homeSteps">Add to Home Screen</button>
+        </div>
+        <p class="panel-text" data-push-when="none" hidden>This browser can’t show notifications.</p>
+        <div class="push-rows" data-push-when="on" hidden>
+          {%- for kind, name, sub in [('replies', 'Replies and comments', 'Someone replies to you or says something on your post'),
+                                      ('mentions', 'Mentions', 'Someone writes your @name'),
+                                      ('likes', 'Likes', 'Someone likes your post or comment'),
+                                      ('follows', 'New followers', 'Someone starts following you'),
+                                      ('reposts', 'Reposts and quotes', 'Someone reposts or quotes you'),
+                                      ('badge', 'The number on the icon', 'How many replies, comments and mentions are new')] %}
+          <div class="push-row">
+            <div class="theme-words">
+              <h3 class="push-name" id="push-{{ kind }}">{{ name }}</h3>
+              <p class="panel-sub">{{ sub }}</p>
+            </div>
+            <div class="theme-switch push-sw" role="group" aria-labelledby="push-{{ kind }}" data-push-kind="{{ kind }}">
+              <span class="theme-pill" aria-hidden="true"></span>
+              <button type="button" data-choice="on" aria-pressed="false">On</button>
+              <button type="button" data-choice="off" aria-pressed="false">Off</button>
+            </div>
+          </div>
+          {%- endfor %}
+        </div>
+        <p class="push-said" role="status" data-failed="That didn’t work. Try again in a moment."></p>
+      </section>
+    </div>
+  </div>
 
   <section class="panel" aria-labelledby="keysTitle">
     <h2 class="panel-title" id="keysTitle">Your passkeys</h2>
@@ -184,4 +234,5 @@
   <nav class="legal-foot" aria-label="The rules"><a href="{{ url_for('social.terms') }}">Terms</a><a href="{{ url_for('social.privacy') }}">Privacy</a><a href="{{ url_for('social.rules') }}">Community rules</a></nav>
 </div>
 {% include 'social/_passkey_words.html' %}
+{% include 'social/_homescreen.html' %}
 {% endblock %}

@@ -308,7 +308,8 @@ def delete_person(sess, person_id):
     gone (reposts); every mention of them and every one they wrote, the words
     that named them staying, plain (mentions); their follows, both ways
     (follows); their mutes, both ways (mutes); the ways they were found
-    (finding people). Flushes; the request commits.
+    (finding people); the devices nudged for them (push). Flushes; the
+    request commits.
     (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
     for a host to take an author's drawings away in one go: they stay, and
     the confirm page says so.)"""
@@ -355,6 +356,10 @@ def delete_person(sess, person_id):
     # the cascade).
     from .people import drop_person_words
     drop_person_words(person_id)
+    # Their devices that were nudged (push: said here too, never left to the
+    # cascade).
+    from .push import drop_person_pushes
+    drop_person_pushes(person_id, sess)
     # Answers to them, by people who stay, stay too, answering nobody now
     # (notifications: Activity's "replied to your comment" reads whom).
     from .models import Comment
@@ -499,6 +504,11 @@ def register(bp):
         """Sign out of this browser."""
         if not origin_ok() or not token_ok():
             return _refused_page()
+        # This browser's nudges go with its sign-in (push.py).
+        person = current_person()
+        if person is not None:
+            from .push import drop_browser_pushes
+            drop_browser_pushes(person.id)
         sign_out()
         return redirect(url_for("social.signin", out="1"), 303)
 
@@ -516,6 +526,10 @@ def register(bp):
         sess.execute(sa.update(Person).where(Person.id == person.id)
                      .values(session_gen=Person.session_gen + 1)
                      .execution_options(synchronize_session=False))
+        # And every device's nudges (push.py): each was made by a sign-in
+        # that has just ended.
+        from .push import drop_person_pushes
+        drop_person_pushes(person.id)
         sign_out()
         return redirect(url_for("social.signin", out="all"), 303)
 

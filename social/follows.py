@@ -343,6 +343,10 @@ def register(bp):
                         sess.flush()
                 except sa.exc.IntegrityError:
                     pass            # followed a moment ago, from another tap: one row
+                # A NUDGE, where their device has New followers on (push.py):
+                # the first time only, as Activity says it.
+                from .push import note
+                note(who.id, me.id, "follows")
             elif row.ended_at is not None:
                 # Following again: the first time stays, so they aren't told twice.
                 row.ended_at = None

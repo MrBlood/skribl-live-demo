@@ -1053,6 +1053,11 @@ def register(bp, skribl_blueprint="skribl"):
         from .mentions import write_comment
         write_comment(row)
         sess.flush()
+        # A NUDGE, once the request commits (push.py): to whom it answers,
+        # and to whose post or drawing it is on, where Activity has a row.
+        from .push import note
+        note(on.owner.id, me.id, "replies")
+        note(to, me.id, "replies")
         who = sess.get(Person, me.id)
         # New, theirs, on what they may say something on: nothing on it yet,
         # and it can be shared (shares(): no repost, no bookmark).

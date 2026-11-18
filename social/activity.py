@@ -495,6 +495,24 @@ def _drawings_shown(me, drawing_ids, sk):
 #: comment's too: step 3).
 QUIET_KINDS = ("like", "like_comment", "follow", "repost", "repost_comment", "quote", "quote_comment")
 
+#: What each row says after who: Activity's rows and the nudges a phone shows
+#: (push.py) alike, so a nudge and its row always match (the owner's "as
+#: shown" to Blooby's Nudges, Nov 18).
+SAYS = {"comment": "said something on your post", "answer": "replied to your comment",
+        "answer_drawing": "replied with a drawing", "drawing": "drew something on your post",
+        "like": "liked your post", "like_comment": "liked your comment", "follow": "followed you",
+        "repost": "reposted your post", "repost_comment": "reposted your comment",
+        "quote": "quoted your post", "quote_comment": "quoted your comment", "mention": "mentioned you"}
+
+
+def sentence(row):
+    """A row's sentence as its page says it, in words alone: "Mira said
+    something on your post", "Mira and Theo ...", "Mira and 2 others ..."."""
+    n, names = row["n"], row["names"]
+    who = names[0] + (f" and {names[1]}" if n == 2 else f" and {n - 1} others" if n > 2 else "")
+    return f"{who} {SAYS[row['kind']]}"
+
+
 def dot(me):
     """Whether anything is new for `me` since they last looked: Activity's
     own rules, a handful of rows at most; Skribl is asked only when every new
@@ -777,6 +795,6 @@ def register(bp, skribl_blueprint="skribl"):
         # like (a comment's too), a follow, a repost or a quote never lit it.
         g.social_activity_dot = ("going" if any(r["kind"] not in QUIET_KINDS
                                                  or r.get("mentioned") for r in fresh) else None)
-        return _page("activity.html", here="activity", fresh=fresh, earlier=earlier)
+        return _page("activity.html", here="activity", fresh=fresh, earlier=earlier, says=SAYS)
 
     return bp
