@@ -16,6 +16,9 @@
     wearing a small heart: "Mira liked your post", "Mira and 4 others liked
     your post", when, and the post's small picture; no words of its own. It
     opens the post at "Liked by…" (#liked), which glows a moment (likes.js).
+    One on your comment (the comment thread, step 2) says "Mira liked your
+    comment", your comment's words under it, and opens the comment where it
+    shows, glowing.
 
     A FOLLOW (follows; the follow mock) is a row like a like's, its face
     wearing a small Follow, the action's purple and a white plus: "Mira
@@ -66,12 +69,13 @@
 {% macro row(r) -%}
 {%- set says = {'comment': 'said something on your post', 'answer': 'replied to your comment',
                 'answer_drawing': 'replied with a drawing', 'drawing': 'drew something on your post',
-                'like': 'liked your post', 'follow': 'followed you', 'repost': 'reposted your post',
+                'like': 'liked your post', 'like_comment': 'liked your comment', 'follow': 'followed you',
+                'repost': 'reposted your post',
                 'quote': 'quoted your post', 'mention': 'mentioned you'} -%}
 {%- set n = r.n -%}
 <li><a class="act-row{% if r.new %} is-new{% endif %}" href="{{ r.href }}">
   <span class="act-mark" aria-hidden="true"></span>
-  {%- if r.kind == 'like' %}<span class="act-who">{{ faces(r) }}<span class="act-badge" aria-hidden="true">{{ ic.heart() }}</span></span>
+  {%- if r.kind in ('like', 'like_comment') %}<span class="act-who">{{ faces(r) }}<span class="act-badge" aria-hidden="true">{{ ic.heart() }}</span></span>
   {%- elif r.kind == 'follow' %}<span class="act-who">{{ faces(r) }}<span class="act-badge fo-badge" aria-hidden="true"><span class="fo-disc">{{ ic.plus() }}</span></span></span>
   {%- elif r.kind in ('repost', 'quote') %}<span class="act-who">{{ faces(r) }}<span class="act-badge rp-badge" aria-hidden="true">{{ ic.repost() }}</span></span>
   {%- elif r.kind == 'mention' %}<span class="act-who">{{ faces(r) }}<span class="act-badge fo-badge mn-badge" aria-hidden="true"><span class="fo-disc mn-at">@</span></span></span>

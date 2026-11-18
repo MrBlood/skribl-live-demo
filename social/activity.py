@@ -45,6 +45,12 @@ post", and several since you last looked on one post (or drawing) one row,
 "Mira and 4 others liked your post", the newest face in front wearing a
 small heart. A like says no words, so Earlier keeps them one row a post as
 well. A like row opens the post with "Liked by…" glowing (#liked: likes.js).
+A LIKE ON YOUR COMMENT (the comment thread, step 2) is its own row, a
+comment's likes grouped as a post's: "Mira liked your comment", "Mira and 2
+others liked your comment", your comment's words under it, and the small
+picture of its drawing, else of what it is on; it opens the comment where it
+shows (comments.landing), glowing there, and goes with the comment, or when
+its way up hides from you (comments.chain_shown).
 LIKES NEVER LIGHT THE DOT: a like needs no answer, so it waits under New.
 
 FOLLOWS TOO (follows; the follow mock, the owner's "Yes to all", Nov 13),
@@ -227,7 +233,23 @@ def _likes(me, hidden, since):
         for g in groups:
             if g["post_id"] in found:
                 g["post_public"], g["skribl_id"] = found[g["post_id"]]
-    return [g for g in groups if g["drawing_id"] is not None or g["post_public"] is not None]
+    # ON A COMMENT (the comment thread, step 2): the comment, where it shows,
+    # and its picture (its own drawing, else what it is on); only while its
+    # way up shows to `me` (comments.chain_shown), as a reply to it would.
+    comment_ids = sorted({g["comment_id"] for g in groups if g["comment_id"] is not None})
+    if comment_ids:
+        from .comments import chain_shown
+        rows = {c.id: (c, pub, psk) for c, pub, psk in site().session().execute(
+            sa.select(Comment, Post.public_id, Post.skribl_id).outerjoin(Post, Post.id == Comment.post_id)
+            .where(Comment.id.in_(comment_ids), Comment.gone.is_(None))).all()}
+        ok = chain_shown([r[0] for r in rows.values()], me)
+        for g in groups:
+            got = rows.get(g["comment_id"])
+            if got is not None and got[0].id in ok and (got[0].drawing_id is not None or got[1] is not None):
+                g["comment"], g["post_public"] = got[0], got[1]
+                g["skribl_id"] = got[0].skribl_id or got[2] or got[0].drawing_id
+    return [g for g in groups if (g["comment_id"] is None and (g["drawing_id"] is not None or g["post_public"] is not None))
+            or g.get("comment") is not None]
 
 
 def _like_groups(conds, new):
@@ -237,25 +259,28 @@ def _like_groups(conds, new):
     L = Like
     sess = site().session()
     newest = sa.func.max(L.created_at)
-    q = (sa.select(L.post_id, L.drawing_id, sa.func.count(), newest).where(*conds)
-         .group_by(L.post_id, L.drawing_id).order_by(newest.desc()).limit(LIKE_GROUPS))
+    q = (sa.select(L.post_id, L.drawing_id, L.comment_id, sa.func.count(), newest).where(*conds)
+         .group_by(L.post_id, L.drawing_id, L.comment_id).order_by(newest.desc()).limit(LIKE_GROUPS))
     groups = {}
-    for post_id, drawing_id, n, at in sess.execute(q).all():
-        groups[(post_id, drawing_id)] = {"post_id": post_id, "drawing_id": drawing_id, "new": new, "n": int(n),
-                                         "at": at, "people": [], "post_public": None, "skribl_id": drawing_id}
+    for post_id, drawing_id, comment_id, n, at in sess.execute(q).all():
+        groups[(post_id, drawing_id, comment_id)] = {
+            "post_id": post_id, "drawing_id": drawing_id, "comment_id": comment_id, "new": new, "n": int(n),
+            "at": at, "people": [], "post_public": None, "skribl_id": drawing_id}
     if not groups:
         return []
     post_ids = sorted({k[0] for k in groups if k[0] is not None})
     drawing_ids = sorted({k[1] for k in groups if k[1] is not None})
-    on = ([L.post_id.in_(post_ids)] if post_ids else []) + ([L.drawing_id.in_(drawing_ids)] if drawing_ids else [])
-    rank = sa.func.row_number().over(partition_by=(L.post_id, L.drawing_id),
+    comment_ids = sorted({k[2] for k in groups if k[2] is not None})
+    on = (([L.post_id.in_(post_ids)] if post_ids else []) + ([L.drawing_id.in_(drawing_ids)] if drawing_ids else [])
+          + ([L.comment_id.in_(comment_ids)] if comment_ids else []))
+    rank = sa.func.row_number().over(partition_by=(L.post_id, L.drawing_id, L.comment_id),
                                      order_by=(L.created_at.desc(), L.id.desc()))
-    inner = (sa.select(L.post_id, L.drawing_id, L.person_id, rank.label("rank"))
+    inner = (sa.select(L.post_id, L.drawing_id, L.comment_id, L.person_id, rank.label("rank"))
              .where(*conds, sa.or_(*on)).subquery())
-    q = (sa.select(inner.c.post_id, inner.c.drawing_id, Person).join(Person, Person.id == inner.c.person_id)
-         .where(inner.c.rank <= 2).order_by(inner.c.rank))
-    for post_id, drawing_id, person in sess.execute(q).all():
-        g = groups.get((post_id, drawing_id))
+    q = (sa.select(inner.c.post_id, inner.c.drawing_id, inner.c.comment_id, Person)
+         .join(Person, Person.id == inner.c.person_id).where(inner.c.rank <= 2).order_by(inner.c.rank))
+    for post_id, drawing_id, comment_id, person in sess.execute(q).all():
+        g = groups.get((post_id, drawing_id, comment_id))
         if g is not None:
             g["people"].append(person)
     return list(groups.values())
@@ -421,6 +446,10 @@ def _drawings_shown(me, drawing_ids, sk):
 
 # ---- the dot ---------------------------------------------------------------------
 
+#: The rows that never light the dot (nothing to answer): a like, a like on a
+#: comment (the comment thread, step 2), a follow, a repost and a quote.
+QUIET_KINDS = ("like", "like_comment", "follow", "repost", "quote")
+
 def dot(me):
     """Whether anything is new for `me` since they last looked: Activity's
     own rules, a handful of rows at most; Skribl is asked only when every new
@@ -526,6 +555,7 @@ def listing(me, skribl_blueprint="skribl"):
     # MENTIONS (mentions): nobody muted either, as comments.
     named = _mentions(me, hidden, quiet=quiet)
     drawings = ([r[0].drawing_id for r in items if r[0].drawing_id] + [g["drawing_id"] for g in liked if g["drawing_id"]]
+                + [g["comment"].drawing_id for g in liked if g.get("comment") is not None and g["comment"].drawing_id]
                 + [q.quoted_drawing_id for q, *_ in quoted if q.quoted_drawing_id]
                 + [r[3].drawing_id for r in named if r[3] is not None and r[3].drawing_id])
     pics = {r[0].id: (r[0].skribl_id or r[3] or r[0].drawing_id) for r in items}
@@ -545,7 +575,8 @@ def listing(me, skribl_blueprint="skribl"):
     # WHERE A COMMENT SHOWS (the comment thread): a comment on its post's or
     # its drawing's page, a reply on the page of what it answers.
     from .comments import landing
-    lands = landing([(r[0], r[2]) for r in items] + [(r[3], r[4]) for r in named if r[3] is not None])
+    lands = landing([(r[0], r[2]) for r in items] + [(r[3], r[4]) for r in named if r[3] is not None]
+                    + [(g["comment"], g["post_public"]) for g in liked if g.get("comment") is not None])
 
     sections = ([], [])
     groups = {}
@@ -573,14 +604,24 @@ def listing(me, skribl_blueprint="skribl"):
     for row in groups.values():
         row["n"] = len(row["people"])
     # LIKES: a row a post, since you last looked and before; they open "Liked by…".
+    # ON A COMMENT (the comment thread, step 2): a row a comment, "liked your
+    # comment", its words under it, opening it where it shows (landing()).
     for g in liked:
-        if g["drawing_id"] is not None and g["drawing_id"] not in shown:
-            continue
+        c = g.get("comment")
+        if c is not None:
+            if c.drawing_id is not None and c.drawing_id not in shown:
+                continue
+            href, words, kind = lands.get(c.id), c.words or None, "like_comment"
+            if href is None:
+                continue
+        else:
+            if g["drawing_id"] is not None and g["drawing_id"] not in shown:
+                continue
+            href, words, kind = page(g["post_public"], g["drawing_id"]) + "#liked", None, "like"
         sections[0 if g["new"] else 1].append({
-            "kind": "like", "new": g["new"], "when": g["at"], "words": None, "people": g["people"],
+            "kind": kind, "new": g["new"], "when": g["at"], "words": words, "people": g["people"],
             "names": [p.display_name.split(" ")[0] for p in g["people"]], "n": g["n"],
-            "href": page(g["post_public"], g["drawing_id"]) + "#liked",
-            "pic": _pic(g["skribl_id"], sk.get(g["skribl_id"]), skribl_blueprint)})
+            "href": href, "pic": _pic(g["skribl_id"], sk.get(g["skribl_id"]), skribl_blueprint)})
     # REPOSTS: a row a post, since you last looked and before, as likes; they open the post.
     for g in shared:
         sections[0 if g["new"] else 1].append({
@@ -651,8 +692,8 @@ def register(bp, skribl_blueprint="skribl"):
         sess.execute(sa.update(Person).where(Person.id == me.id).values(activity_seen_at=now))
         sess.flush()
         # The rail's dot (a desk) fades as they look, where there was one: a
-        # like, a follow, a repost or a quote never lit it.
-        g.social_activity_dot = ("going" if any(r["kind"] not in ("like", "follow", "repost", "quote")
+        # like (a comment's too), a follow, a repost or a quote never lit it.
+        g.social_activity_dot = ("going" if any(r["kind"] not in QUIET_KINDS
                                                  or r.get("mentioned") for r in fresh) else None)
         return _page("activity.html", here="activity", fresh=fresh, earlier=earlier)
 

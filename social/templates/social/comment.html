@@ -15,7 +15,8 @@
     2. IT, as big as a post: its 48px face, its name and @handle, its words,
        its drawing as a post's (the whole width on a phone, the drawing's
        side on a desk), playing by itself as a post's does (posts.js), its
-       row (Reply, with how many, and ⋯) and its full time.
+       row (Reply, with how many, its heart: the comment thread, step 2, and
+       ⋯) and its full time.
     3. "REPLIES" and how many (every reply under it, at any depth), the
        icon that opens the box ("Reply to Eli"), then its direct replies,
        oldest first, each alone, one with replies under it carrying its own
@@ -27,14 +28,16 @@
     change. #}
 {% extends 'social/base.html' %}
 {% from 'social/_post.html' import face, post_words with context %}
-{% from 'social/_comments.html' import comments_section, comment_sheets, comment_art with context %}
+{% from 'social/_comments.html' import comments_section, comment_sheets, comment_art, comment_heart with context %}
+{% from 'social/_likes.html' import like_sheets with context %}
 {% import 'social/_icons.html' as ic %}
 {% set c = it.c %}{% set who = it.who %}
 
 {% block title %}{% if who %}{{ who.display_name }} on Blooby{% else %}Blooby{% endif %}{% endblock %}
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
 {% if me %}<script src="{{ social_asset('mutes.js') }}" defer></script>{% endif %}
-<script src="{{ social_asset('comments.js') }}" defer></script>{% endblock %}
+<script src="{{ social_asset('comments.js') }}" defer></script>
+<script src="{{ social_asset('likes.js') }}" defer></script>{% endblock %}
 
 {% block top %}
   <a class="icon-btn top-back" href="{{ on_page }}" data-cm-back aria-label="Back">{{ ic.back() }}</a>
@@ -85,6 +88,7 @@
     {%- else %}
     <span class="post-count" aria-label="{{ '%d repl%s' % (cm.count, 'y' if cm.count == 1 else 'ies') if cm.count else 'Replies' }}" role="img">{{ ic.comment() }}{% if cm.count %}<span>{{ cm.count }}</span>{% endif %}</span>
     {%- endif %}
+    {%- if not c.taken_down_at %}{{ comment_heart(it) }}{% endif %}
     <button class="icon-btn post-more" type="button" data-cm-menu aria-haspopup="dialog" aria-controls="commentSheet"
             aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>
   </footer>
@@ -96,4 +100,4 @@
 {{ post_words() }}
 {% endblock %}
 
-{% block overlays %}{{ comment_sheets(cm) }}{% endblock %}
+{% block overlays %}{{ comment_sheets(cm) }}{{ like_sheets(none, it if who else {"who": {"display_name": ""}}) }}{% endblock %}

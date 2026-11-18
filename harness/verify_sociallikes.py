@@ -57,9 +57,10 @@ authenticator for the site's people.
  10. DELETING TAKES THEM, IN CODE: a post, a drawing and an account, through
      the site's own routes, and with SQLite's cascade off (on a copy).
  11. THE DATA: the chain on a populated database (the table, its five
-     indexes, its CHECK; at its head the posts' eye column, Nov 14; back
-     down); one like a person a thing, on exactly
-     one thing; the reads on their indexes (SQLite's own plan); Home's feed
+     indexes, its CHECK; at its head the posts' eye column, Nov 14, and
+     likes on comments, the comment thread's step 2: a third kind, refused
+     going down while one is there; back down); one like a person a thing,
+     on exactly one thing; the reads on their indexes (SQLite's own plan); Home's feed
      one grouped read, its cards all posts (a drawing shown outside a post
      is not on Home since the map's step 3).
  12. WORDS AND MARKS: every word on Home, a post's page with "Liked by…", its
@@ -88,6 +89,18 @@ authenticator for the site's people.
      Reduce Motion a glow and 0px moved; no heart on a scrub; calm at 16x on
      a busy drawing (three in the air at most, a third of a second apart,
      never late); nothing else on the card moves; a heart takes no tap.
+
+ 16. ON A COMMENT (the comment thread, step 2; the owner's yes, Nov 17, "the
+     same choices as a post"): the heart in every comment's row, between
+     Reply and ⋯, in a post's list and on a comment's own page, 44px, the
+     row's ink; a tap likes it, the same tap takes it back, kept as the
+     liker's on the comment's author's, no moment and no dot on the post's
+     line though its drawing plays; counted by the viewer; signed out "Like
+     this comment?"; who may (a place, taken down, hidden, no token, no yes
+     or no, signed out: refused); Activity ("Dax and 2 others liked your
+     comment", its words, landing where it shows; a reply's on the page of
+     what it answers; never the bell's dot; quiet for the muted); deleting a
+     comment takes its likes, a place's too.
 
 SOCIALLIKES_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
@@ -442,6 +455,34 @@ def likes_on(on):
               " where l.drawing_id = ? order by l.id", (oid,))
 
 
+
+def say_on(who, post, words, answer_to=None):
+    """A comment (or a reply) on a post as the box sends one: its public id, or None."""
+    c = who.client()
+    c.get(f"/social/p/{post}")
+    body = {"words": words}
+    if answer_to:
+        body["answer_to"] = answer_to
+    st, j = c.post_json(f"/social/p/{post}/comments", body)
+    return j.get("comment") if st == 200 and isinstance(j, dict) else None
+
+
+def like_c(who, cid, liked=True, raw=None, token=None):
+    """A like (or taking it back) on a comment or a reply, as its heart sends
+    one (the comment thread, step 2): (status, answer)."""
+    c = who.client() if who is not None else Client()
+    c.get(f"/social/c/{cid}")
+    if not c.token:
+        c.get("/social/")      # a page they cannot open: the token from one they can
+    return c.post_json(f"/social/c/{cid}/like", raw if raw is not None else {"liked": liked}, token=token)
+
+
+def likes_on_c(cid):
+    """The likes kept on a comment: [(handle, whose, at_ms, post_id, drawing_id)], oldest first."""
+    return db("select p.handle, o.handle, l.at_ms, l.post_id, l.drawing_id from social_likes l"
+              " join social_people p on p.id = l.person_id join social_people o on o.id = l.owner_id"
+              " join social_comments c on c.id = l.comment_id where c.public_id = ? order by l.id", (cid,))
+
 def block(who, handle):
     c = who.client()
     c.get("/social/")
@@ -540,6 +581,16 @@ ROW = r"""(sel) => { const root = document.querySelector(sel); if (!root) return
     ink: hc.color, countInk: getComputedStyle(count).color, ground: hc.backgroundColor, icon: rd(icon.width),
     hits: [hit(r.left + 1, my), hit(r.right - 1, my), hit(mx, r.top + 1), hit(mx, r.bottom - 1)] };
   return out; }"""
+
+# A COMMENT'S ROW (the comment thread, step 2), in `sel` (its .cm-acts, or a
+# comment's own page's .cm-row): what it shows, in order.
+CM_ROW = r"""(sel) => { const row = document.querySelector(sel); if (!row) return null;
+  return [...row.children].filter(e => e.getClientRects().length).map(e => e.classList.contains('lk-heart') ? 'heart'
+    : e.hasAttribute('data-cm-answer') || e.hasAttribute('data-cm-new') ? 'reply' : e.hasAttribute('data-cm-menu') ? 'more' : e.className); }"""
+# How many marks the post's own drawing's line carries (its dots), and whether it plays.
+POST_MARKS = r"""() => { const art = document.querySelector('.post-page > .post-art');
+  const p = art && window.SkriblInline ? SkriblInline.mount(art)[0] : null;
+  return p ? { marks: p.marks ? p.marks().length : null, playing: !!(p.playhead && p.playhead().playing) } : null; }"""
 
 CARD_ROW = ["count", "repost", "heart", "more", "open"]
 PAGE_ROW = ["count", "repost", "heart", "more"]
@@ -2009,11 +2060,43 @@ with sync_playwright() as p:
                   json.dumps(errs))
             up3 = chain("upgrade", "head")
             idx3 = {r[0] for r in at("select name from sqlite_master where type = 'index' and tbl_name = 'social_likes'")}
-            check("...and up to the chain's head one index more: who liked, newest first (a profile's Likes tab, the map's"
-                  " step 4), the likes and every post kept",
-                  up3.returncode == 0 and idx3 == set(idx) | {"ix_social_likes_person_created"}
+            check("...and up to the chain's head three indexes more: who liked, newest first (a profile's Likes tab, the"
+                  " map's step 4), and for likes on comments (the comment thread, step 2) once a person a comment, and a"
+                  " comment's likes newest first; the likes and every post kept",
+                  up3.returncode == 0 and idx3 == set(idx) | {"ix_social_likes_person_created", "ix_social_likes_person_comment",
+                                                              "ix_social_likes_comment_created"}
                   and at("select count(*) from social_posts") == [(1,)],
                   f"up {up3.returncode} {up3.stderr.strip().splitlines()[-1:] if up3.returncode else ''}; indexes {sorted(idx3)}")
+            # ON A COMMENT (the comment thread, step 2): its column, the CHECK's third kind, and going down refusing
+            # while one is there.
+            con = sqlite3.connect(mdb)
+            con.execute("insert into social_comments (id, public_id, post_id, owner_id, person_id, words, created_at)"
+                        " values (100, 'C1', 10, 1, 1, 'hey', ?)", (then,))
+            con.commit()
+            c_errs = []
+            for vals in ((2, None, None, 100), (2, None, None, 100), (1, 10, None, 100), (1, None, None, None)):
+                try:
+                    con.execute("insert into social_likes (person_id, post_id, drawing_id, comment_id, owner_id, created_at)"
+                                " values (?, ?, ?, ?, 1, ?)", vals + (then,))
+                    con.commit()
+                    c_errs.append("kept")
+                except sqlite3.IntegrityError as e:
+                    con.rollback()
+                    c_errs.append(str(e).split(":")[0])
+            con.close()
+            held = chain("downgrade", "3b76663f9417")
+            whole = (at("select count(*) from social_likes where comment_id is not null") == [(1,)]
+                     and not at("select 1 from sqlite_master where name like '_alembic_tmp%'"))
+            con = sqlite3.connect(mdb)
+            con.execute("delete from social_likes where comment_id is not null")
+            con.execute("delete from social_comments")
+            con.commit()
+            con.close()
+            check("...a like on a comment: one a person a comment, on exactly one thing (a comment and a post together, or"
+                  " nothing, refused); and the chain refuses to go down while one is there, saying so, the table whole",
+                  c_errs == ["kept", "UNIQUE constraint failed", "CHECK constraint failed", "CHECK constraint failed"]
+                  and held.returncode != 0 and "stay at 5beec18dc5fe" in (held.stderr or "") and whole,
+                  f"{c_errs}; down {held.returncode} {(held.stderr or '').strip().splitlines()[-1:]}; whole {whole}")
             # THE EYE (Nov 14): the head's posts carry the site's flag for a
             # drawing hidden from the Gallery; a post there before is in it.
             post_cols3 = [r[1] for r in at("pragma table_info(social_posts)")]
@@ -2603,6 +2686,170 @@ with sync_playwright() as p:
                   json.dumps({"at": mid, "tapped": here, "then": paused, "page": nav}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(15, exc)
+
+    # ------------------------------------------------------------------ 16
+    if part(16, "on a comment: the heart in every comment's row, liked and counted; who may; Activity; deleting"):
+        try:
+            gale = someone(b, "gale", "Gale Moss")      # the post's
+            cleo = someone(b, "cleo", "Cleo Park")      # the comment's
+            dax = someone(b, "dax", "Dax Hill")         # likes it
+            fen = someone(b, "fen", "Fen Ito")          # replies, and likes it too
+            hux = someone(b, "hux", "Hux Bell")         # likes it too
+            post = make_post(gale, "Section 16, a post with a conversation", payload=drawing(n=400, seed=161))
+            c1 = say_on(cleo, post, "Section 16, Cleo's comment")
+            r1 = say_on(fen, post, "Section 16, Fen's reply", answer_to=c1)
+            ROW_C = f"#c-{c1} > .cm-main .cm-acts"
+            pg = dax.pg
+            go(pg, f"/social/p/{post}", wait=900)      # the post's own drawing plays by itself here
+            to_middle(pg, ROW_C)
+            kids = pg.evaluate(CM_ROW, ROW_C)
+            h0 = pg.evaluate(HEART, ROW_C + " .lk-heart")
+            m0 = pg.evaluate(POST_MARKS)
+            tap_heart(pg, ROW_C + " .lk-heart")
+            h1 = pg.evaluate(HEART, ROW_C + " .lk-heart")
+            m1 = pg.evaluate(POST_MARKS)
+            kept = likes_on_c(c1)
+            post_likes = likes_on(("p", post))
+            go(pg, f"/social/p/{post}", wait=600)
+            h2 = pg.evaluate(HEART, ROW_C + " .lk-heart")
+            check("ON A COMMENT (the comment thread, step 2): the heart in its row, between Reply and ⋯, 44px to a finger,"
+                  " the row's ink; empty and named \"Like\", no number at none; a tap likes it (\"Liked, 1 like\"), kept as"
+                  " Dax's on Cleo's comment (whose: hers), no moment, the post's own likes untouched; no dot on the post's"
+                  " line though its drawing played as the heart was tapped; still so after a reload",
+                  kids == ["reply", "heart", "more"] and h0 and h0["h"] >= 44 and h0["w"] >= 44 and h0["hit"]
+                  and h0["pressed"] == "false" and h0["label"] == "Like" and not h0["digits"]
+                  and h0["color"] == pg.evaluate("(s) => getComputedStyle(document.querySelector(s)).color", ROW_C + " [data-cm-answer]")
+                  and h1 and h1["pressed"] == "true" and h1["n"] == "1" and h1["label"] == "Liked, 1 like"
+                  and kept == [("dax", "cleo", None, None, None)] and post_likes == []
+                  and m0 and m0["playing"] and m1 and m1["marks"] == m0["marks"]
+                  and h2 and h2["pressed"] == "true" and h2["n"] == "1",
+                  f"row {kids}; before {h0 and {k: h0[k] for k in ('w', 'h', 'pressed', 'label', 'n')}};"
+                  f" after {h1 and {k: h1[k] for k in ('pressed', 'label', 'n')}}; kept {kept}; the post's {post_likes};"
+                  f" its line {m0} -> {m1}; reloaded {h2 and {k: h2[k] for k in ('pressed', 'n')}}")
+            tap_heart(pg, ROW_C + " .lk-heart")
+            h3 = pg.evaluate(HEART, ROW_C + " .lk-heart")
+            check("the same tap takes it back: empty, no number, nothing kept",
+                  h3 and h3["pressed"] == "false" and h3["n"] is None and likes_on_c(c1) == [],
+                  f"{h3 and {k: h3[k] for k in ('pressed', 'n')}}; kept {likes_on_c(c1)}")
+            # COUNTED BY THE VIEWER: Fen's and Hux's, then Hux blocked.
+            like_c(fen, c1)
+            like_c(hux, c1)
+            go(pg, f"/social/p/{post}", wait=500)
+            two = pg.evaluate(HEART, ROW_C + " .lk-heart")
+            block(dax, "hux")
+            go(pg, f"/social/p/{post}", wait=500)
+            one = pg.evaluate(HEART, ROW_C + " .lk-heart")
+            dc = dax.client()
+            dc.get("/social/")
+            dc.post_json("/social/@hux/unblock", {})
+            check("counted by the viewer: Fen's and Hux's are \"2 likes\" to Dax; with Hux blocked, \"1 like\"",
+                  two and two["n"] == "2" and one and one["n"] == "1", f"{two and two['n']} then {one and one['n']}")
+            # ON A COMMENT'S OWN PAGE: its heart in its row (Reply, the heart, ⋯), and its replies' in theirs.
+            go(pg, f"/social/c/{c1}", wait=600)
+            prow = pg.evaluate(CM_ROW, "[data-cm-subject] > .cm-row")
+            tap_heart(pg, "[data-cm-subject] > .cm-row .lk-heart")
+            ph = pg.evaluate(HEART, "[data-cm-subject] > .cm-row .lk-heart")
+            tap_heart(pg, f"#c-{r1} > .cm-main .cm-acts .lk-heart")
+            rh = pg.evaluate(HEART, f"#c-{r1} > .cm-main .cm-acts .lk-heart")
+            check("on a comment's own page its heart is in its row (Reply, the heart, ⋯) and its replies' in theirs: Dax's"
+                  " like makes Cleo's 3 there, and Fen's reply's 1, each kept",
+                  prow == ["reply", "heart", "more"] and ph and ph["pressed"] == "true" and ph["n"] == "3"
+                  and rh and rh["pressed"] == "true" and rh["n"] == "1"
+                  and [k[0] for k in likes_on_c(c1)] == ["fen", "hux", "dax"] and likes_on_c(r1) == [("dax", "fen", None, None, None)],
+                  f"row {prow}; its heart {ph and ph['n']}; the reply's {rh and rh['n']}; kept {likes_on_c(c1)} {likes_on_c(r1)}")
+            # SIGNED OUT: "Like this comment?", then the post's own "Like this drawing?".
+            nctx, npg = browser_as(b, None)
+            go(npg, f"/social/p/{post}", wait=500)
+            to_middle(npg, ROW_C)
+            npg.locator(ROW_C + " .lk-heart").first.tap(timeout=5000)
+            npg.wait_for_timeout(500)
+            o1 = npg.evaluate(OUT)
+            npg.keyboard.press("Escape")
+            npg.wait_for_timeout(500)
+            to_middle(npg, PAGE_HEART)
+            npg.locator(PAGE_HEART).first.tap(timeout=5000)
+            npg.wait_for_timeout(500)
+            o2 = npg.evaluate(OUT)
+            close_ctx(nctx, npg)
+            check("signed out, a comment's heart raises \"Like this comment?\", naming its author (\"…lets Cleo know you like"
+                  " it\"); the post's own heart then still says \"Like this drawing?\", naming the post's maker",
+                  o1 and o1["open"] and o1["title"] == "Like this comment?" and "lets Cleo know" in o1["lede"]
+                  and o2 and o2["open"] and o2["title"] == "Like this drawing?" and "lets Gale know" in o2["lede"],
+                  f"{o1 and (o1['title'], o1['lede'])}; {o2 and (o2['title'], o2['lede'])}")
+            # WHO MAY: a place, a comment hidden from you, one taken down, no token, a body that is no yes or no.
+            c2 = say_on(cleo, post, "Section 16, Cleo's, to be a place")
+            say_on(fen, post, "Section 16, under it", answer_to=c2)
+            cc = cleo.client()
+            cc.get(f"/social/p/{post}")
+            placed = cc.post_json(f"/social/c/{c2}/delete", {})[0]
+            c3 = say_on(hux, post, "Section 16, Hux's, to be taken down")
+            db_write("update social_comments set taken_down_at = datetime('now') where public_id = ?", (c3,))
+            c4 = say_on(fen, post, "Section 16, Fen's other")
+            block(fen, "dax")
+            refused = {"a place": like_c(dax, c2)[0], "taken down": like_c(dax, c3)[0],
+                       "its author's own, taken down": like_c(hux, c3)[0], "hidden (a block)": like_c(dax, c4)[0],
+                       "no token": like_c(gale, c1, token="")[0], "no yes or no": like_c(gale, c1, raw={"liked": "yes"})[0],
+                       "signed out": like_c(None, c1)[0]}
+            fc = fen.client()
+            fc.get("/social/")
+            fc.post_json("/social/@dax/unblock", {})
+            check("who may: a place (nobody's), a comment taken down (its author's own too, as a post's maker's), one by"
+                  " somebody who blocked you are gone (404); no token (403), no yes or no (400), signed out (401); nothing"
+                  " kept",
+                  placed == 200 and refused == {"a place": 404, "taken down": 404, "its author's own, taken down": 404,
+                                                "hidden (a block)": 404, "no token": 403, "no yes or no": 400,
+                                                "signed out": 401}
+                  and likes_on_c(c2) == [] and likes_on_c(c3) == [] and likes_on_c(c4) == [],
+                  f"{refused}; the place made {placed}")
+            # ACTIVITY: Cleo's comment's likes one row; Fen's reply's its own; a like never lights the dot.
+            db_write("update social_people set activity_seen_at = datetime('now', '-1 hour') where handle_key in ('cleo', 'fen')")
+            cpg = cleo.pg
+            go(cpg, "/social/activity", wait=500)
+            crow = [r for s_ in cpg.evaluate(ROWS) for r in s_["rows"] if "liked your comment" in r["say"]]
+            fpg = fen.pg
+            go(fpg, "/social/", wait=400)
+            fdot = fpg.evaluate(DOT, ".top-bell")
+            go(fpg, "/social/activity", wait=500)
+            frow = [r for s_ in fpg.evaluate(ROWS) for r in s_["rows"] if "liked your comment" in r["say"]]
+            check("Activity: Cleo's comment's likes are one row, \"Dax and 2 others liked your comment\" (the newest face in"
+                  " front wearing the heart), her comment's words under it, opening it where it shows (#c-<id>); Fen's"
+                  " reply's its own, \"Dax liked your comment\", opening Cleo's comment's page, where the reply is; a"
+                  " like never lights the bell's dot",
+                  [r["say"] for r in crow] == ["Dax and 2 others liked your comment"]
+                  and crow[0]["peek"] == "“Section 16, Cleo's comment”" and crow[0]["href"] == f"/social/p/{post}#c-{c1}"
+                  and crow[0]["badge"] and crow[0]["badge"]["painted"]
+                  and [r["say"] for r in frow] == ["Dax liked your comment"] and frow[0]["href"] == f"/social/c/{c1}#c-{r1}"
+                  and fdot is False,
+                  f"Cleo's {[(r['say'], r['peek'], r['href']) for r in crow]}; Fen's {[(r['say'], r['href']) for r in frow]};"
+                  f" Fen's bell {fdot}")
+            # NO DOT TO FADE: Activity's own page fades the dot (a desk's rail) only
+            # where one was lit, and a like on a comment lit none.
+            db_write("update social_people set activity_seen_at = datetime('now', '-1 hour') where handle_key = 'fen'")
+            dctx, dpg = browser_as(b, fen, screen="desk")
+            go(dpg, "/social/activity", wait=300)
+            rail = dpg.evaluate(DOT, "nav.nav a.tab-activity")
+            close_ctx(dctx, dpg)
+            check("with only a like on their comment new, Activity's own page on a desk shows no dot fading on its rail"
+                  " (it fades only one that was lit)", rail is False, f"the rail's dot: {rail}")
+            # QUIET FOR SOMEBODY MUTED: Cleo mutes Hux.
+            cc.get("/social/")
+            cc.post_json("/social/@hux/mute", {})
+            go(cpg, "/social/activity", wait=500)
+            quiet = [r["say"] for s_ in cpg.evaluate(ROWS) for r in s_["rows"] if "liked your comment" in r["say"]]
+            cc.post_json("/social/@hux/unmute", {})
+            check("quiet for somebody muted: Cleo muted Hux, and her row says \"Dax and Fen liked your comment\"",
+                  quiet == ["Dax and Fen liked your comment"], f"{quiet}")
+            # DELETING TAKES THEM, IN CODE: Cleo's comment deleted keeps its place (Fen's reply under it): its likes go,
+            # the reply's stay.
+            cc.get(f"/social/p/{post}")
+            went = cc.post_json(f"/social/c/{c1}/delete", {})
+            check("deleting a comment takes its likes, a place's too (nobody's, nothing to like): Cleo's, deleted with Fen's"
+                  " reply under it, keeps its place and none of its three likes; the reply keeps its own",
+                  went[0] == 200 and (went[1] or {}).get("place") is True and likes_on_c(c1) == []
+                  and likes_on_c(r1) == [("dax", "fen", None, None, None)],
+                  f"{went}; left {likes_on_c(c1)}; the reply's {likes_on_c(r1)}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(16, exc)
 
     # ------------------------------------------------------------------ 13
     if part(13, "no page errors, no console errors and no CSP violations"):

@@ -46011,3 +46011,79 @@ NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: a post's comments sit in rounded bubbles with nothing
 nested under them, "Read N replies" under one that has them, and a face
 not drawn yet shows its letter.
+
+## After v330 -- The comment thread, step 2: likes on comments, with Activity
+
+THE ASK. The owner's yes to the Read More Replies mock (Nov 17;
+docs/SOCIAL-SITE.md section 18), "the same choices as a post", built in
+three steps; step 2 is likes on comments, counted, and shown in Activity.
+The yes mock showed the heart in every comment's row, so there was no new
+look to mock.
+
+WHAT CHANGED, on the site only (the Pad and Flip don't change):
+
+- THE HEART in every comment's row, in a list and on a comment's own page,
+  between Reply and ⋯ (step 3's Repost will come before it): the post's
+  own heart (_comments.html comment_heart, likes.js), how many beside it,
+  none at zero, 44px, the row's ink. Signed out, the small sheet says "Like
+  this comment?" (the post's own heart still "Like this drawing?").
+- NO MOMENT: a like on a comment keeps none. likes.js read the playhead of
+  the post's own drawing for any heart under a post, so a comment's heart
+  would have put a dot on the post's line; a heart in a comment (.cm, or a
+  comment's own page's .cm-row) now reads no player.
+- THE DATA (migration 5beec18dc5fe): social_likes.comment_id, its foreign
+  key (ON DELETE CASCADE, the net), once a person a comment (unique), a
+  comment's likes newest first, and the CHECK widened from "a post or a
+  drawing" to a post, a drawing or a comment, exactly one (on PostgreSQL the
+  old CHECK dropped and the new added NOT VALID: nothing scanned under the
+  lock). owner_id is the comment's author. NO DATA WORK. Going down refuses
+  while a like on a comment is there, saying so before it changes anything.
+- WHO MAY (/social/c/<id>/like): as on a post, on a comment the person may
+  see (comments.seen: nobody hidden on the way to it), not taken down
+  (nor anything on the way), and not a place. Counted by the viewer
+  (likes.stats, a third kind), nobody hidden from them.
+- ACTIVITY tells the comment's author: "Mira liked your comment", several
+  on one comment one row ("Mira and 2 others liked your comment"), as a
+  post's likes are grouped, their comment's words under it, the small
+  picture of its drawing, else of what it is on, opening the comment where
+  it shows (comments.landing). Only while its way up shows to them
+  (chain_shown); quiet for the muted; never the bell's dot, nor on
+  Activity's own page a dot fading that was never lit (activity.QUIET_KINDS:
+  found by reading before the merge; a desk's rail showed one).
+- DELETING IS SAID IN CODE: a comment that goes, or keeps its place, takes
+  its likes (a place is nobody's, nothing to like): comments.retire and
+  comments._drop (a post's, a drawing's, an owner's comments).
+- NOT IN STEP 2: nobody's page lists who liked a comment (no "Liked by"),
+  and a profile's Likes tab stays posts.
+
+THE CHECKS, each shown red by breaking its one part (a worktree of its own,
+the section that should catch it run there), and green as built: no heart
+in a comment's row; a dot on the post's line (likes.js reading the post's
+player for a comment's heart); likes counted for everybody (nobody hidden
+left out); a place liked; a comment taken down liked by its own author;
+Activity without likes on comments; the muted not quiet; a place keeping
+its likes; the chain going down without refusing; the old CHECK kept; the
+drawing's sheet ("Like this drawing?") for a comment's heart; no heart on a
+comment's own page; a comment's like counted as something that lit the
+dot, so Activity's own page faded a dot on a desk's rail that was never
+there (found by reading, before the merge). One went green at first: with
+the route's own rule for
+a comment taken down removed, another person's like was still refused,
+because the page already hides a comment taken down from everybody but its
+author. So the rule holds only for the author's own, and the check asks
+that too now (red without the rule).
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3, 17.2 min), on the
+tree as it stands: verify_sociallikes 110/110, verify_socialcomments
+127/127, verify_socialactivity 46/46, verify_socialauth 75/75,
+verify_socialmute 68/68, verify_socialmentions 51/51, verify_socialposts
+99/99, verify_socialprofile 94/94, verify_socialbookmarks 37/37,
+verify_socialreposts 56/56, verify_socialfollow 79/79, verify_socialsearch
+32/32, verify_composer 39/39, verify_docs 144/144, verify_social 45/45: 15
+of 15, nothing red beside the others. After the dot's fix (activity.py and
+its check only): verify_sociallikes 111/111, verify_socialactivity 46/46,
+verify_docs 144/144, side by side. NOT RUN: the full battery (main's run
+after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: every comment's row has a heart between Reply and ⋯.

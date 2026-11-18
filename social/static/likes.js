@@ -167,8 +167,12 @@
   }
 
   /* The player of this heart's post (Skribl's, mounted once): the heart is
-     in the post's row, under the drawing (Nov 13). */
+     in the post's row, under the drawing (Nov 13). A COMMENT'S HEART (the
+     comment thread, step 2: in a comment's row, in a list or on its own
+     page) has none: a like on a comment keeps no moment, and its drawing's
+     line no dots (likes.py). */
   function playerOf(b) {
+    if (b.closest('.cm, .cm-row')) return null;
     var host = b.closest('.post-card, .post-page'), art = host && host.querySelector('.post-art');
     return art && window.SkriblInline ? window.SkriblInline.mount(art)[0] || null : null;
   }
@@ -367,6 +371,13 @@
       if (!out) return;
       var first = outWrap.querySelector('[data-like-first]');
       if (first && o.getAttribute('data-first')) first.textContent = o.getAttribute('data-first');
+      /* "Like this comment?" for a comment's heart, the sheet's own words
+         for anything else. */
+      var title = outWrap.querySelector('.make-title');
+      if (title) {
+        if (!title.hasAttribute('data-own')) title.setAttribute('data-own', title.textContent);
+        title.textContent = o.getAttribute('data-like-title') || title.getAttribute('data-own');
+      }
       out.open(o);
       return;
     }

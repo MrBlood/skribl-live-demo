@@ -340,6 +340,7 @@ def thread(on, viewer, before=None, limit=PAGE):
         items = [i for i in items if _kept(i)]
         described(items, viewer)
         named(items)
+        hearts(items, viewer)
     return items, (_cursor(tops[-1][0]) if more and tops else None)
 
 
@@ -365,6 +366,19 @@ def described(items, viewer):
         seen_sk.update(describe_posts(ids[k:k + 200], viewer_id=viewer.public_id if viewer else None))
     for i in items:
         i["sk"] = seen_sk.get(i["c"].skribl_id) if i["c"].skribl_id else None
+    return items
+
+
+def hearts(items, viewer):
+    """EACH ONE'S HEART (the comment thread, step 2): how many likes `viewer`
+    is shown on it and whether one is theirs (likes.stats, one read for the
+    lot), put on its item as "likes". A place has none: nobody's, nothing to
+    like."""
+    from .likes import stats
+    ids = [i["c"].id for i in items if i["c"].gone is None]
+    got = stats(viewer, comments=ids) if ids else {}
+    for i in items:
+        i["likes"] = got.get(("c", i["c"].id), {"n": 0, "mine": False})
     return items
 
 
@@ -522,12 +536,14 @@ def _drop_drawings(where):
 
 
 def _drop(where):
-    """Every comment `where` names, their drawings and their mentions
-    (mentions.py: said here, every way a comment goes, never left to a
-    cascade)."""
+    """Every comment `where` names, their drawings, their mentions and their
+    likes (mentions.py, likes.py: said here, every way a comment goes, never
+    left to a cascade)."""
+    from .likes import drop_comment_likes
     from .mentions import drop_comment_mentions
     _drop_drawings(where)
     drop_comment_mentions(where)
+    drop_comment_likes([r[0] for r in site().session().execute(sa.select(Comment.id).where(where))])
     site().session().execute(sa.delete(Comment).where(where).execution_options(synchronize_session=False))
 
 
@@ -573,8 +589,11 @@ def retire(ids, how="deleted"):
     places = {i for i in ids if stays_under(i)}
     going = ids - places
     if ids:
+        from .likes import drop_comment_likes
         _drop_drawings(Comment.id.in_(sorted(ids)))
         drop_comment_mentions(Comment.id.in_(sorted(ids)))
+        # Its likes go too, a place's with them: a place is nobody's, nothing to like.
+        drop_comment_likes(ids)
     if places:
         sess.execute(sa.update(Comment).where(Comment.id.in_(sorted(places)))
                      .values(words="", skribl_id=None, person_id=None, gone=how, taken_down_at=None)
@@ -659,6 +678,7 @@ def replies_of(got, viewer):
     tops = [t for t in tops if _kept(t)]
     described(tops, viewer)
     named(tops)
+    hearts(tops, viewer)
     # A place counts as nothing (_fold's rule).
     return tops, len([t for t in tops if t["c"].gone is None]) + sum(t["more"] for t in tops)
 
@@ -782,7 +802,7 @@ def register(bp, skribl_blueprint="skribl"):
         if got is None:
             return _page("post_gone.html", 404, here="post")
         it = _item(got["c"], got["who"], muted_ids(me))
-        named(described([it], me))
+        hearts(named(described([it], me)), me)
         cm = section(got["on"], me, skribl_blueprint, focus=got)
         return _page("comment.html", here="post", it=it, way=the_way(got, me, skribl_blueprint), cm=cm,
                      on_page=got["on"].page(), token=csrf_token(), on_post=got["on"].post is not None,
@@ -859,7 +879,8 @@ def register(bp, skribl_blueprint="skribl"):
         write_comment(row)
         sess.flush()
         who = sess.get(Person, me.id)
-        html = _cards(named(described([{"c": row, "who": who, "sk": None, "more": 0}], me)), me, True,
+        html = _cards(named(described([{"c": row, "who": who, "sk": None, "more": 0,
+                                         "likes": {"n": 0, "mine": False}}], me)), me, True,
                       me.id == on.owner.id)
         # "under": the comment or the reply it answers: on its own page the
         # reply lands last in its list; anywhere else its "Read N replies"
