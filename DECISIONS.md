@@ -46643,7 +46643,7 @@ The one-glance tell: on a comment's own page, the comment sits on a soft
 lilac band with a violet ring round its face, and the heading under it says
 "Replies to" its maker.
 
-## After v330 -- The way's line stops at the band's top edge
+## After v330 -- The way's line stops at the band's top edge, and the band is the mock's softer lilac
 
 The owner, Nov 18, from their phone, of a comment's own page after The
 comment you opened merged: "The line should not go all the way to avatar,
@@ -46666,11 +46666,22 @@ light, 5 in dark). Here both green (0.0). The first form of THE LINE also
 asked the ink over the edge to differ from the band, and in dark it is only
 5 off it: the page beside it tells the line, so that condition went.
 
-FLIP AND THE PAD: no change.
+THE BAND, the owner's pick. Shown the band as built (solid --tint, 1.20:1
+off the page in light, 1.44 in dark) beside the mock's (--tint at 70% over
+the page, 1.13 and 1.26) on Two Small Picks
+(https://claude.ai/artifact/FopzPwjAkXSRnXfzJB1EyA), the owner sent the
+mock's in dark: "I like above screenshot and A". The band is --tint at 70%
+over the page again (social.css), a highlight the owner chose see-through,
+where every other one is solid since No dinge. Section 48 reads it as the
+mix and judges its paint as the mix laid over the page beside it; on main
+(solid) the band row is red, here green.
+
+FLIP AND THE PAD: no change. (The owner's A, Repeat's ring in light, is
+the Pad's, and comes as its own change.)
 
 THE SUITES, side by side (run_parallel -j 3): @@SUITES@@. NOT RUN: the full
 battery (main's run after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: on a comment's own page, the line from the way above
-stops at the top of the lilac band.
+stops at the top of a softer lilac band.

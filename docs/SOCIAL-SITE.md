@@ -2685,10 +2685,12 @@ another bubble... but something right?" Mocked as [The Opened
 Comment](https://claude.ai/artifact/XeEzEbnyhN9eRPbJNN1yTr): A (a ring and
 the name), B (a band and the name), and C, the owner's own "b with A's
 ring too": "Yes to c". On a comment's own page:
-- **The band**: the highlight's lilac (`--tint`, solid, the token every
-  highlight wears since No dinge), from 12px over its face to 4px under its
-  time, 14px past its column each side, rounded 20px; no edge and no lift,
-  so it is not a bubble.
+- **The band**: the highlight's lilac at 70% over the page, from 12px over
+  its face to 4px under its time, 14px past its column each side, rounded
+  20px; no edge and no lift, so it is not a bubble. It was built solid
+  (`--tint`, the token every highlight wears since No dinge); shown both,
+  the owner picked the mock's softer one (Nov 18: "I like above
+  screenshot"): 1.13:1 off the page in light, 1.26 in dark.
 - **The ring**: 2px of `--accent-ink`, 3px round its face, as Skribl says
   "you are here" round your own; it also outlines a face that is an initial
   on lilac, which the band would swallow. A place has no face, and keeps its

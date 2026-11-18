@@ -1462,7 +1462,8 @@ FOCUS = """() => { """ + TOKEN_JS + """
     x: last.getBoundingClientRect().left + parseFloat(ls.left) + parseFloat(ls.borderLeftWidth) / 2,
     top: head.getBoundingClientRect().top - parseFloat(getComputedStyle(head).marginTop) + parseFloat(band.marginTop) } : null;
   return { head: box(head), face: box(face), line, meta: box(s.querySelector(':scope > .post-meta')), art: box(s.querySelector(':scope > .post-art')),
-    page: box(s), band: band.content !== 'none' ? band.backgroundColor : null, tint: tok(s, 'backgroundColor', 'var(--tint)'),
+    page: box(s), band: band.content !== 'none' ? band.backgroundColor : null,
+    tint: tok(s, 'backgroundColor', 'color-mix(in srgb, var(--tint) 70%, transparent)'),
     ring: fs ? { style: fs.outlineStyle, width: fs.outlineWidth, offset: fs.outlineOffset, color: fs.outlineColor,
                  ink: tok(s, 'color', 'var(--accent-ink)') } : null,
     texts, marks, order, gaps, widths, desk, heading: (document.querySelector('#commentsTitle > span:not(.cm-count)') || {}).textContent || null,
@@ -4885,6 +4886,12 @@ with sync_playwright() as p:
                     n = [v * 255 for v in n[:3]] + n[3:]
                 return n[:3] if len(n) >= 3 else [0, 0, 0]
 
+            def rgba(s):
+                n = [float(x) for x in re.findall(r"[\d.]+", s or "")]
+                if (s or "").startswith("color("):
+                    n = [v * 255 for v in n[:3]] + n[3:]
+                return (n[:3] if len(n) >= 3 else [0, 0, 0]) + [n[3] if len(n) > 3 else 1.0]
+
             def judge(got, shot, kind):
                 """What the paint and the boxes say for one page, each row on its own: the words, the
                 marks and the ring are read against what is painted beside its face, the band or, with
@@ -4897,7 +4904,9 @@ with sync_playwright() as p:
                 ground = px(h["l"] - 7, mid)
                 out = {"heading": got["heading"], "gaps": got["gaps"]}
                 if got["band"]:
-                    band = rgb(got["band"])
+                    # The band is see-through (the owner's pick): what it paints is it over the page beside it.
+                    bc, under_it = rgba(got["band"]), px(h["l"] - 16, mid)
+                    band = [bc[k] * bc[3] + under_it[k] * (1 - bc[3]) for k in range(3)]
                     off = lambda c: max(abs(a - b) for a, b in zip(c[:3], band))  # noqa: E731
                     inside = {"left": ground, "right": px(h["r"] + 7, mid), "over": px(h["l"] + 60, h["t"] - 6),
                               "under": px(h["l"] + 60, m["b"] + 2)}
@@ -4967,7 +4976,8 @@ with sync_playwright() as p:
                                heading: (document.querySelector('#commentsTitle > span:not(.cm-count)') || {}).textContent || null }; }""")
                     close_ctx(ctx, pg)
             say = lambda key: {" ".join(k): {x: v.get(x) for x in key} for k, v in seen.items()}  # noqa: E731
-            check("THE BAND: the highlight's lilac (--tint) behind the comment you opened, from over its face to under its"
+            check("THE BAND: the highlight's lilac at 70% over the page (the owner's pick, the mock's softer one) behind the"
+                  " comment you opened, from over its face to under its"
                   " time and past its column each side; the page above, below and beside it, and on a desk between its"
                   " drawing and the band: a comment, a drawn reply and a place; phone and desk, light and dark",
                   went[0] == 200 and d1 and all(v.get("band") for v in seen.values()),

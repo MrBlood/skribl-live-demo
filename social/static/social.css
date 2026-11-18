@@ -1729,9 +1729,12 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    Comment: "it doesn't really let me know that's the reply I'm seeing the
    replies for ... I don't want to make another bubble... but something
    right?"). Its own page marks it three ways:
-   - A BAND behind it, from its face down to its time, in the highlight's
-     lilac (--tint, solid, as every highlight is since No dinge), with no
-     edge and no lift, so it is not a bubble.
+   - A BAND behind it, from its face down to its time, the highlight's
+     lilac at 70% over the page, the mock's softer one (the owner's pick,
+     Nov 18, "I like above screenshot", over the solid --tint every other
+     highlight wears since No dinge: 1.13:1 off the page in light, 1.26 in
+     dark, where solid read 1.20 and 1.44), with no edge and no lift, so it
+     is not a bubble.
    - THE RING round its face: the small violet words' ink, 2px and 3px out,
      as Skribl says "you are here" round your own face. It also outlines a
      face that is an initial on lilac, which the band would swallow.
@@ -1763,7 +1766,7 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .cm-page > .comments { grid-row: 8; }
 .cm-page::before {
   content: ""; grid-column: 1 / -1; grid-row: 2 / 8; align-self: stretch;
-  margin: 4px -14px -4px; border-radius: 20px; background: var(--tint);
+  margin: 4px -14px -4px; border-radius: 20px; background: color-mix(in srgb, var(--tint) 70%, transparent);
 }
 .cm-page > .post-head .face-ring { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
 a.post-face { text-decoration: none; }
