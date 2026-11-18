@@ -1591,6 +1591,8 @@ with sync_playwright() as p:
             for k in range(7):
                 said(juno if k % 2 else mira, post, f"Section 3, answer {k} in a long thread, long enough to take two lines",
                      answer_to=long_c)
+            for k in range(8):         # newer ones over it (newest first), so it sits low on the page
+                said(juno, post, f"Section 3, newer {k}, so the comment sits low")
             open_post(dpg, post)
             # Its foot at the screen's: the box opens below what the screen shows.
             dpg.evaluate("(id) => { const r = document.getElementById('c-' + id).getBoundingClientRect();"
@@ -3555,6 +3557,8 @@ with sync_playwright() as p:
             for k in range(7):
                 said(juno if k % 2 else mira, post, f"Section 32, answer {k} in a long thread, long enough to take two lines",
                      answer_to=long_c)
+            for k in range(8):         # newer ones over it (newest first), so it sits low on the page
+                said(juno, post, f"Section 32, newer {k}, so the comment sits low")
             open_post(dpg, post)
             # Its foot at the screen's: the box opens below what the screen shows.
             dpg.evaluate("(id) => { const r = document.getElementById('c-' + id).getBoundingClientRect(); window.scrollBy(0, r.bottom - innerHeight + 24); }", long_c)
@@ -4220,7 +4224,9 @@ with sync_playwright() as p:
             r1 = said(ana, post, "Section 42, Ana's reply", answer_to=c1)
             cctx, cpg = browser_as(b, ana)
             cctx.grant_permissions(["clipboard-read", "clipboard-write"], origin=BASE)
-            open_post(cpg, post)
+            cpg.goto(BASE + f"/social/c/{c1}")              # Aria's reply, in the list on Elio's comment's page
+            ready(cpg)
+            cpg.wait_for_timeout(300)
             cpg.click(f"#c-{r1} > .cm-main [data-cm-menu]")
             cpg.wait_for_function(OPEN, arg="commentSheet", timeout=10000)
             cpg.wait_for_timeout(450)
