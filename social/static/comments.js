@@ -38,16 +38,16 @@
  * are put in place and fade.
  *
  * THE THREAD (the comment thread, step 1; the owner's yes, Nov 17), ONE
- * LEVEL, EVERYWHERE (the owner: "a list of direct replies first. If you
- * click the reply it opens up the tree level"): a list shows only the direct
- * replies to what its page is about. A reply posted to one of them is on
- * that one's own page, so here it joins "Read N replies" under it (the
- * server says which), which counts it and glows a moment. A TAP ON A
- * REPLY'S BUBBLE OPENS ITS OWN PAGE, as a post's card opens the post: not on
- * a link, a button or its drawing (which plays), nor when the press ends a
- * selection. ON A COMMENT'S OWN PAGE (comment.html) the box replies to that
- * comment, a new reply lands at the end of its replies (oldest first), and
- * back goes where you were.
+ * LEVEL AT REST (the owner: "a list of direct replies first. If you click
+ * the reply it opens up the tree level"): a list shows only the direct
+ * replies to what its page is about, each with the count by its talk cloud.
+ * A TAP ON ONE OPENS ITS TREE IN PLACE, two deep (the tree, two deep: the
+ * owner's yes, Nov 18; below): not on a link, a button or its drawing
+ * (which plays), nor when the press ends a selection; its time opens its
+ * own page. A reply posted lands where it was made if that branch is open,
+ * else its count takes it and glows. ON A COMMENT'S OWN PAGE (comment.html)
+ * the box replies to that comment, a new reply lands at the end of its
+ * replies (oldest first), and back goes where you were.
  *
  * A COMMENT'S ⋯, "This comment" (social.js's SocialSheet, as the post's):
  * Copy link and Share… (its own page), then on your own Delete comment; on

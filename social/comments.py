@@ -44,9 +44,12 @@ none and answers its comment: answered()). ONE LEVEL, EVERYWHERE (the owner,
 Nov 17: "What I want is a list of direct replies first. If you click the
 reply it opens up the tree level", then "Yes, build it"): a list shows only
 the direct replies to what its page is about, the post's comments or a
-comment's replies, each alone (_fold); one with replies under it carries
-"Read N replies", N every reply under it at any depth that the viewer may
-see, and a tap on it (or on its bubble) opens its own page. EVERY COMMENT
+comment's replies, each alone (_fold), with the count by its talk cloud,
+every reply under it at any depth that the viewer may see; since THE TREE,
+TWO DEEP (the owner's "Yes on all", Nov 18), a tap on it opens its replies
+in place, two deep (tree, /c/<id>/replies), "N more replies" past that
+opening the rest in place (rest, /c/<id>/rest), and its time its own
+page. EVERY COMMENT
 AND REPLY HAS A PAGE (/c/<id>, comment.html): the way to it above
 (the_way), it as big as a post, then its own direct replies where a post's
 comments stand (replies_of); the box there replies to it. Each comment's ⋯,
@@ -688,9 +691,9 @@ def drop_person_comments(person_id):
 def replies_of(got, viewer):
     """A COMMENT'S OWN REPLIES, for its own page (seen(..., whole=True)):
     (items, how many). Its direct replies stand where a post's comments do,
-    oldest first, each alone with "Read N replies" (_fold: one level,
-    everywhere); how many is every reply under it, at any depth, that the
-    viewer may see."""
+    oldest first, each alone with its count (_fold: one level at rest; a
+    tap opens its tree, tree()); how many is every reply under it, at any
+    depth, that the viewer may see."""
     from .mutes import muted_ids
     muted = muted_ids(viewer)
     rows = got["rows"]
@@ -988,8 +991,8 @@ def register(bp, skribl_blueprint="skribl"):
     def comment_page(public_id):
         """A COMMENT OR A REPLY ON A PAGE OF ITS OWN (the comment thread, step
         1; the owner's yes, Nov 17): every one has one, so any of them can be
-        linked and shared, and "Read N replies" opens it, as a tap on it in a
-        list does. The way to it above, small (what it is on, then each one
+        linked and shared, and its time opens it, in a list and in a tree.
+        The way to it above, small (what it is on, then each one
         it answers); it, as big as a post, its row and its full time; its
         direct replies under it, each alone (one level, everywhere). One
         hidden from the viewer, or anything on the way to it, is as gone as

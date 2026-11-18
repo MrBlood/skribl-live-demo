@@ -407,8 +407,9 @@ class Comment(SocialBase):
     comment thread, step 1; the owner's yes, Nov 17): answers_id, at any
     depth, while parent_id is always the top-level comment its conversation
     hangs under, so a page reads a whole conversation by one index. A list
-    shows one level, the direct replies to what its page is about, each
-    with "Read N replies" to its own page (comments.py).
+    shows one level at rest, the direct replies to what its page is about,
+    each with the count by its talk cloud, a tap opening its tree in place,
+    two deep (comments.py: tree, rest).
     The post's own page reads its comments newest first and each
     conversation oldest first, each by an index of its own.
 

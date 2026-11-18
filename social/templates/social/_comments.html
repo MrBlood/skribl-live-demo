@@ -11,18 +11,18 @@
                           until asked for; "Say the first thing" where the
                           comments will be, at none; the comments newest
                           first (a comment's replies, on its page, oldest
-                          first), each alone (one level, everywhere), with
-                          "Read N replies" under one that has replies; Load
-                          more for the next page.
+                          first), each alone (one level at rest), with the
+                          count by its talk cloud, a tap opening its tree in
+                          place (the tree, two deep); Load more for the next
+                          page.
     comment(it, ...)      one comment or reply (the comment thread, step 1;
                           the owner's yes, Nov 17): its face, and beside it
                           its bubble (its name, when, in the person's own
                           time, "40m", "2h", a way to its own page; its words;
                           its drawing, Skribl's in-post player, still until
-                          tapped), under the bubble Reply and its ⋯; with
-                          replies under it, "Read N replies" (read_more) on
-                          the thread's line, to its own page, which a tap on
-                          its bubble opens too (comments.js).
+                          tapped), under the bubble Reply, with how many are
+                          under it, and its ⋯; a tap on its bubble opens its
+                          tree in place (below, and comments.js).
                           SOMEBODY YOU MUTED (mutes; the owner's C): their
                           comment or reply is one quiet line in its place,
                           in Activity's own voice, "Someone you muted said
@@ -30,8 +30,8 @@
                           eye where their face was; the whole line is the
                           button, and Show opens it for that visit
                           (comments.js), the comment hidden for real until
-                          then (no tap and no screen reader reaches it). Its
-                          "Read N replies" stays as it is.
+                          then (no tap and no screen reader reaches it). What
+                          hangs under it stays as it is.
     comment_box()         Home's composer, as the mock styled it (.cm-box):
                           your face, the words, Draw and Flip, Post; a drawing
                           waits in it, in the in-post player the comment will
@@ -85,11 +85,12 @@
     name, when (a way to its own page), its words and its drawing. Under the
     bubble its row, the post's own: Reply (the word on a desk, the icon
     alone on a phone), its repost and how many (step 3), its heart and how
-    many (step 2), and ⋯. ONE LEVEL, EVERYWHERE (the owner, Nov 17: "a
-    list of direct replies first. If you click the reply it opens up the
-    tree level"): nothing is nested under it; one with replies under it
-    carries "Read N replies" on the thread's lilac line, which opens its own
-    page, as a tap on its bubble does. #}
+    many (step 2), and ⋯. ONE LEVEL AT REST (the owner, Nov 17: "a list of
+    direct replies first. If you click the reply it opens up the tree
+    level"): nothing is nested under it until THE TREE, TWO DEEP (the
+    owner's "Yes on all", Nov 18) opens in place under it at a tap: its
+    replies and theirs, each this macro again (below), "N more replies" past
+    that, "Hide replies" at the end. #}
 {% macro comment(it, can, post_mine) -%}
 {%- set c = it.c %}{% set who = it.who -%}
 {%- set url = url_for('social.comment_page', public_id=c.public_id) -%}

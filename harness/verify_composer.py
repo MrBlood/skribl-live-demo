@@ -1172,7 +1172,7 @@ with sync_playwright() as p:
                   f" likes {before_likes} -> {after_likes}; comments {len(before_cms)} -> {len(after_cms)};"
                   f" bookmarks {marks_st} {before_marks} -> {after_marks}; left {left_on}")
             page = pg.evaluate("""() => ({ said: [...document.querySelectorAll('[data-comments] .cm-words')].map(w => w.textContent.trim()),
-              more: [...document.querySelectorAll('[data-comments] [data-rm-words]')].map(w => w.textContent.trim()),
+              more: [...document.querySelectorAll('[data-comments] [data-cm-list] > .cm .cm-acts .cm-n')].map(w => w.textContent.trim()),
               count: (document.getElementById('commentsTitle') || {}).innerText })""")
             close_ctx(ctx, pg)
             old = {}
@@ -1191,10 +1191,10 @@ with sync_playwright() as p:
             refused = [dee.api("POST", f"/social/b/{sid}/like", {"liked": False})[0],
                        dee.api("POST", f"/social/b/{sid}/comments", {"words": "Late"})[0],
                        dee.api("POST", f"/social/b/{sid}/bookmark", {"bookmarked": True})[0]]
-            check("the post's page holds the conversation (Dee's comment, Eli's reply under it as its \"Read 1 reply\": one"
-                  " level, everywhere; 2 comments); the drawing's old page sends Dee and nobody signed in to the post (a"
+            check("the post's page holds the conversation (Dee's comment, Eli's reply under it, counted 1 by its talk"
+                  " cloud: one level at rest; 2 comments); the drawing's old page sends Dee and nobody signed in to the post (a"
                   " redirect), and its old like, comment and bookmark addresses take nothing new",
-                  page["said"] == ["Love the shell."] and page["more"] == ["Read 1 reply"]
+                  page["said"] == ["Love the shell."] and page["more"] == ["1"]
                   and (page["count"] or "").strip().startswith("Comments")
                   and "2" in (page["count"] or "")
                   and all(v and v[0] in (302, 303) and v[1] and v[1].endswith(url) for v in old.values()) and refused == [404, 404, 404],

@@ -2558,7 +2558,7 @@ button.fo-n {
    (56px at least); its words wrap if a column is narrow, and the line grows
    with them (comments.js measures it: --cm-fold-h). The comment's own parts
    wait under it, hidden for real (no tap and no screen reader reaches its
-   Reply or ⋯), in a room the line's height; its "Read N replies" stays.
+   Reply or ⋯), in a room the line's height; what hangs under it stays.
    Show opens the room and the comment fades in (comments.js);
    under Reduce Motion the room is put there while it can't be seen. */
 .cm.is-quiet { position: relative; }
