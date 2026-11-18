@@ -45962,7 +45962,19 @@ kept. The mentions suite's deletion rows (through the site, and with
 SQLite's cascade off) go red without the place too. On today's look (main,
 the new sections run there), every new section red.
 
-THE AFFECTED SUITES, side by side: @@SUITES@@ NOT RUN: the full battery
-(main's run after the merge does it).NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+THE AFFECTED SUITES, side by side (run_parallel -j 3): verify_socialposts
+99/99, verify_socialprofile 94/94, verify_socialactivity 46/46 (its check
+that a reply to a deleted person's comment stays, answering nobody, passes
+with the place), verify_socialauth 74/74, verify_socialbookmarks 37/37,
+verify_socialfollow 79/79, verify_sociallikes 100/100, verify_socialmentions
+51/51, verify_socialmute 68/68, verify_socialreposts 56/56,
+verify_socialsearch 32/32, verify_composer 39/39, verify_docs 144/144,
+verify_social 45/45; verify_socialcomments 123/124 beside the others and
+124/124 alone. The red was a defect in the instrument, not load: section
+44's check matched Activity rows by their words, and section 43, which now
+leaves a place, rightly keeps a row with the same words; its three lookups
+say "Section 44, " now (shown green with section 43 before it, and red
+without Activity's chain rule), and the alone run had the fix. NOT RUN: the
+full battery (main's run after the merge does it).NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: a post's comments sit in rounded bubbles with no lines
 between them, and a face not drawn yet shows its letter.
