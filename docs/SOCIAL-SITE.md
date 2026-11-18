@@ -10,9 +10,10 @@ what Explore and a profile show, no follower counts), section 16 is the
 decision. **Its part two, since Nov 14, is section 17**: what any social site
 has (bookmarks, reposts and quote posts, mentions, finding people, open
 sign-up, push notifications, direct messages), in the owner's order, and one
-drawing, one conversation. **Next, since Nov 17, is section 18**: the
-comment thread (bubbles, the post's choices on every comment, two levels and
-then a reply's own page), the owner's yes, not built yet.
+drawing, one conversation. **Since Nov 17, section 18**: the comment
+thread (bubbles, the post's choices on every comment, every list one level
+of direct replies, each opening its own page), the owner's yes; step 1
+built.
 
 The owner, Nov 10: "we are beginning to build the social media site, so we
 need to take care to keep it straight. This may be the beginning of a social
@@ -873,9 +874,10 @@ mock's own classes, sizes and words. `social/comments.py`:
 what this section first built**: every comment sits in a bubble with its row
 under it (Reply and ⋯, the ⋯ "This comment": Copy link, Share…, then Delete
 comment, or Remove from my post and Report this comment); "Reply" is the word
-wherever the site said "Answer"; a reply keeps the reply it answers, and a
-thread shows two levels, then "Read N more replies", which opens that reply's
-own page. A comment or reply deleted while replies hang under it keeps its
+wherever the site said "Answer"; a reply keeps the reply it answers, and
+every list shows one level, the direct replies to what its page is about,
+each with "Read N replies" to its own page, which a tap on it opens too. A
+comment or reply deleted while replies hang under it keeps its
 place, quietly ("This comment was deleted", or "removed" from the post by
 its author), so they stay where they are; with nothing left under it, the
 place goes too. Where this section says "answer" below, read "reply"; where
@@ -1039,8 +1041,8 @@ sections 10 and 11 the card's ways in; DECISIONS.md ("Comments at /social", and
 
 Since the comment thread (section 18), Activity says "replied to your
 comment" and "replied with a drawing" where this section says "answered",
-and a row's link lands where the comment shows: its post's or drawing's
-page within two levels of it, deeper the page of the reply it answers.
+and a row's link lands where the comment shows: a comment on its post's or
+drawing's page, a reply on the page of what it answers.
 
 From the notifications mock and the owner's "all yes" (Nov 12), A, in the
 mock's own classes, sizes and words. `social/activity.py`:
@@ -2345,8 +2347,10 @@ the next mock from it.
 - **Icons alone on a phone** ("no need to show the words on a phone"). On a
   desk, "Reply" is spelled out beside its icon. Every button stays a 44px
   tap.
-- **Two levels, then "Read more".** A comment, its replies, and replies to
-  those: that is as deep as a thread goes. Each level costs 48px of the
+- **Two levels, then "Read more".** (The owner turned this to one level,
+  everywhere, at the step 1 answers, before it was built: "Built: step 1",
+  below.) A comment, its replies, and replies to those: that is as deep as
+  a thread goes. Each level costs 48px of the
   words' room: 322, 274 and 226px on a phone, 292, 244 and 196px on a desk.
   It never gets less, however long the talk goes. Under a second-level
   reply whose talk goes on, "⊕ Read N more replies" sits on the thread's
@@ -2434,11 +2438,17 @@ words never squeeze.
 - **Playful:** following a conversation down is a tap, not a squint.
 
 **Built: step 1, the thread and its pages** (Nov 17; DECISIONS.md, "The
-comment thread, step 1"). What the yes said, as above; what the drawings
-mock ([Drawings in the
+comment thread, step 1"). What the yes said, as above, but for its two
+levels; what the drawings mock ([Drawings in the
 Thread](https://claude.ai/artifact/BsQKU7AnAeDfAxxGNXCJyc), Nov 17) asked
-and the owner answered (@@ANSWERED@@); and what the build decided where both
-were silent:
+and the owner answered ("All yes", "Yes to all": each as the mock picked);
+then, at that answer, ONE LEVEL, EVERYWHERE, in place of the two levels:
+"We don't want the whole tree visible until someone selects the reply. It
+just shows replies then if reply is clicked you see all the subs", and,
+after [The Folded Thread](https://claude.ai/artifact/3mefzDKSCqWZ2PuSFMhTVZ)
+mock, "What I want is a list of direct replies first. If you click the
+reply it opens up the tree level", "Yes, build it"; and what the build
+decided where all of them were silent:
 
 - **The data.** On `social_comments` (migration `3b76663f9417`):
   `answers_id`, the comment or reply a reply answers, at any depth, with its
@@ -2450,35 +2460,41 @@ were silent:
   keep an empty `answers_id` and answer their comment: no data work in the
   migration (v309's lesson), the first level, as before. Going down refuses
   while a place is there.
-- **The thread** (`comments.thread`, `_grow`): two levels under each
-  comment, oldest first; under a reply at the second level whose talk goes
-  on, "Read N more replies", N every reply under it at any depth that the
-  viewer may see. A reply under one hidden from the viewer (a block, a
-  takedown) is hidden with it, at any depth: not shown, not counted
-  (`counts()` is a recursive read, one per kind, each step on the reply's
-  own index), not a row in Activity (`chain_shown`).
+- **One level, everywhere** (`comments.thread`, `replies_of`, `_fold`): a
+  list shows only the direct replies to what its page is about, a post's or
+  a drawing's comments (newest first), a comment's replies (oldest first),
+  each alone in its bubble with nothing nested under it. One with replies
+  under it carries "⊕ Read N replies" on the thread's line (N every reply
+  under it, at any depth, that the viewer may see), which opens its own
+  page, as a tap on its bubble does (not on a link, a button or its
+  drawing, which plays; on a desk a pointer says so). Every reply in a list
+  has a comment's room, 322px on a phone, 292 on a desk. A reply under one
+  hidden from the viewer (a block, a takedown) is hidden with it, at any
+  depth: not shown, not counted (`counts()` is a recursive read, one per
+  kind, each step on the reply's own index), not a row in Activity
+  (`chain_shown`).
 - **Every comment's own page** (`/social/c/<id>`, `comment.html`): the way
-  to it (`the_way`), it as big as a post, its replies two levels again
-  (`replies_of`), oldest first, all of them (no Load more). The header says
-  "Comment" for a comment on the post and "Reply" for a reply. Back is the
-  browser's own when you came from this site, else what it is on. A tap on
-  a comment's time opens its page. A comment hidden from the viewer, or
-  anything on the way to it, is a kind 404.
-- **Replying.** A reply lands under the one it replies to, at the next
-  level; past the last level it joins "Read N more replies", which counts
-  it and glows a moment. On a comment's own page the box replies to that
-  comment, and a new reply lands last.
-- **Links land where a comment shows** (`comments.landing`): its post's or
-  drawing's page within two levels of it, deeper the page of the reply it
-  answers, `#c-<id>` glowing there (Activity, Your Reports).
+  to it (`the_way`), it as big as a post, then its own direct replies,
+  all of them (no Load more), "Replies" and how many (every reply under it,
+  at any depth). The header says "Comment" for a comment on the post and
+  "Reply" for a reply. Back is the browser's own when you came from this
+  site, else what it is on. A comment hidden from the viewer, or anything on
+  the way to it, is a kind 404.
+- **Replying.** A reply to one in a list is on that one's own page, so it
+  joins its "Read N replies", which counts it and glows a moment (focus on
+  it). On a comment's own page the box replies to that comment, and a new
+  reply lands last in its list.
+- **Links land where a comment shows** (`comments.landing`): a comment on
+  its post's or drawing's page, a reply on the page of what it answers,
+  `#c-<id>` glowing there (Activity, Your Reports).
 - **The row** in step 1 is Reply and ⋯ ("This comment": Copy link and
   Share…, both the comment's own page, then Delete comment, or Remove from
   my post and Report this comment). The heart is step 2's, Repost and
   Bookmark step 3's.
-- **Drawings in a thread.** In the thread a drawing sits in its bubble under
-  the words, as wide as the bubble, which takes the level's whole room (the
-  drawing 294, 246 and 198px wide on a phone, 264, 216 and 168 on a desk),
-  in its own shape, still played only when tapped. On a drawn comment's own page its drawing is a post's
+- **Drawings in a thread.** In a list a drawing sits in its bubble under
+  the words, as wide as the bubble, which takes the whole room (the drawing
+  294px wide on a phone, 264 on a desk), in its own shape, still, played
+  only when tapped. On a drawn comment's own page its drawing is a post's
   (the whole width on a phone, the drawing's side on a desk), playing by
   itself as a post's does. On the way to a comment, a drawn one shows a
   small still beside its words (`comments.still`, the drawing's own still).
@@ -2486,15 +2502,16 @@ were silent:
   (`comments.retire`): its words, its drawing, its mentions and whose it
   was go, and a quiet row stays, nobody's, a ring where the face was and
   "This reply was deleted" ("This comment…"; "…removed" when the post's or
-  the drawing's author took it off), so the replies under it stay where
-  they are, at every depth. A place with nothing left under it goes, and so
-  on up the way; one with nothing under it the viewer may see is not shown,
-  and a place is never counted. It has a page of its own (the place as its
-  head, its replies under it), nothing to reply to and nothing in a ⋯. In
-  the thread the place glides in where the comment was (`becomePlace`).
+  the drawing's author took it off), its "Read N replies" with it, so the
+  replies under it stay where they are, at every depth. A place with nothing
+  left under it goes, and so on up the way; one with nothing under it the
+  viewer may see is not shown, and a place is never counted. It has a page
+  of its own (the place as its head, its replies listed under it), nothing
+  to reply to and nothing in a ⋯. In a list the place glides in where the
+  comment was (`becomePlace`).
   Deleting an account does the same for each of its comments with somebody
   else's replies under it.
 
 `harness/verify_socialcomments.py` sections 38 to 46 hold it; sections 3,
-4, 5, 9, 13, 16, 21, 22, 25, 27, 28, 32, 34, 36, 37 and 43 moved to its
-words, its levels and its places.
+4, 5, 7, 9, 13, 16, 21, 22, 23, 25, 27, 28, 32, 33, 34, 36 and 37 moved to
+its words, its one level and its places.

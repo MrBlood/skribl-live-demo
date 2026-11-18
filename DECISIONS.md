@@ -45872,12 +45872,28 @@ NOT DONE: the same fixed-wait read lives in WEARS in verify_exportui,
 verify_menu, verify_musicdoors and verify_replayspeed. None has flaked;
 SETTLE is the fix if one does.
 
-## After v330 -- The comment thread, step 1: bubbles, two levels and "Read more", every comment's own page, the place
+## After v330 -- The comment thread, step 1: bubbles, one level of replies on every page, every comment's own page, the place
 
 THE ASK. The owner's yes to the Read More Replies mock (Nov 17;
 docs/SOCIAL-SITE.md section 18), then the drawings mock
 (https://claude.ai/artifact/BsQKU7AnAeDfAxxGNXCJyc), which asked the seven
-things the build needed: @@ANSWERS@@
+things the build needed. The owner, that evening: "All yes", "Yes to all":
+a drawing in the thread as wide as its bubble (B), a drawn reply's own page
+its drawing as big as a post's, a still on the way to it, the place stays,
+a reply at the last level joining "Read more" and glowing, Copy link the
+comment's own page, a comment's page saying "Comment". And, in the same
+answer, a change to the yes itself: "We don't want the whole tree visible
+until someone selects the reply. It just shows replies then if reply is
+clicked you see all the subs." The Folded Thread mock
+(https://claude.ai/artifact/3mefzDKSCqWZ2PuSFMhTVZ) put A (each
+conversation folded to "Read N replies", opening its page) beside B
+(opening in place); the owner: "What I want is a list of direct replies
+first. If you click the reply it opens up the tree level. Does that make
+sense?", and to the restatement (every list one level, a tap on a reply
+opening its own page, which lists its own direct replies): "Yes, build it".
+Step 3's two (A Comment Shared,
+https://claude.ai/artifact/4XKrYxE3894YErstqr88NW) were yes too, A (the way
+to it above) and quoting a comment: step 3 builds them.
 
 WHAT CHANGED, on the site only (the Pad and Flip don't change: comments
 are the site's, so not for Flip either):
@@ -45899,33 +45915,37 @@ are the site's, so not for Flip either):
   your reply"), signed out ("you can reply to"), the muted line ("Someone
   you muted replied."), Activity ("replied to your comment", "replied with a
   drawing").
-- TWO LEVELS, THEN "READ N MORE REPLIES". A reply keeps the reply it answers
-  (answers_id, a new column, its index and foreign key; parent_id stays the
-  comment a conversation hangs under, so a page reads a conversation by one
-  index). The replies already there keep an empty column and answer their
-  comment, the first level, as before: NO DATA WORK IN THE MIGRATION (v309's
-  lesson; the plan said empty too). The thread shows a comment, its replies
-  and theirs, oldest first, on the thread's lilac line (2px of --card-edge,
-  curving into each reply's face, ending where its branch ends); each level
-  costs 48px of the words' room. Under a reply at the second level whose
-  talk goes on, "⊕ Read N more replies", N every reply under it at any
-  depth that the viewer may see.
+- ONE LEVEL, EVERYWHERE. A reply keeps the reply it answers (answers_id, a
+  new column, its index and foreign key; parent_id stays the comment a
+  conversation hangs under, so a page reads a conversation by one index).
+  The replies already there keep an empty column and answer their comment,
+  as before: NO DATA WORK IN THE MIGRATION (v309's lesson; the plan said
+  empty too). A list shows only the direct replies to what its page is
+  about, a post's or a drawing's comments (newest first), a comment's
+  replies (oldest first), each alone, a comment's room (322px on a phone,
+  292 on a desk), nothing nested. One with replies under it carries "⊕ Read
+  N replies" on the thread's lilac line (2px of --card-edge, down from its
+  face and curving into the link), N every reply under it at any depth that
+  the viewer may see; it opens its own page, and so does a tap on its
+  bubble (not on a link, a button or its drawing, which plays; a pointer on
+  a desk). The two levels the yes had (comments.py's _grow, a line curving
+  into each reply's face, 48px of room a level) went before it was built.
 - EVERY COMMENT'S OWN PAGE (/social/c/<id>, comment.html): the way to it
   above, small and joined by the line (the post or the drawing, then the
   comment and each reply it answers, a drawing on the way its still beside
   the words); it as big as a post (48px face, its words, its drawing playing
-  by itself as a post's does); its row and full time; "Replies" and its
-  replies, two levels again. The header says "Comment" or "Reply"; back goes
-  where you were (the browser's back, come from this site), else to what it
-  is on. A tap on a comment's time opens it. Hidden on the way to it is 404.
+  by itself as a post's does); its row and full time; "Replies" and how many
+  (every reply under it), then its own direct replies. The header says
+  "Comment" or "Reply"; back goes where you were (the browser's back, come
+  from this site), else to what it is on. Hidden on the way to it is 404.
 - DRAWINGS IN THE THREAD. A drawn comment's drawing sits in its bubble
-  under its words, as wide as the bubble, which takes the level's room
-  (294, 246 and 198px on a phone; 264, 216 and 168 on a desk), still until
-  tapped, with its line. On its own page it is a post's drawing.
-- REPLYING. A reply lands under the one it replies to; a reply to a reply at
-  the second level is past the thread's last level, so it joins "Read N more
-  replies", which counts it and glows a moment in the landing's tint. On a
-  comment's own page the box replies to it, and the reply lands last.
+  under its words, as wide as the bubble, which takes the whole room (294px
+  on a phone, 264 on a desk), still until tapped, with its line; a tap on
+  it plays it. On its own page it is a post's drawing.
+- REPLYING. A reply to one in a list is on that one's own page, so it joins
+  its "Read N replies", which counts it and glows a moment in the landing's
+  tint, focus on it. On a comment's own page the box replies to it, and the
+  reply lands last in its list.
 - THE PLACE. A comment or reply deleted (or removed by the post's author)
   while replies hang under it keeps its row, quietly: nobody's, its words,
   drawing and mentions gone, a ring where the face was and "This reply was
@@ -45944,9 +45964,9 @@ are the site's, so not for Flip either):
   is a recursive read now (one per kind, each step by the reply's own
   index; run on SQLite here and on PostgreSQL 16 in this box), Home's card
   and the heading with it; Activity's rows follow it too (chain_shown), and
-  a link to a reply lands where it shows (landing(): its post's or
-  drawing's page within two levels, deeper the page of the reply it
-  answers), in Activity and Your Reports.
+  a link to a reply lands where it shows (landing(): a comment on its
+  post's or drawing's page, a reply on the page of what it answers), in
+  Activity and Your Reports.
 
 THE CHECKS, each shown red by breaking its one part (a worktree of its own,
 the section that should catch it run there), and green as built: the
@@ -45980,6 +46000,9 @@ say "Section 44, " now (shown green with section 43 before it, and red
 without Activity's chain rule), and the alone run had the fix. Then, with
 the way's line fixed and section 40's check for it, verify_socialcomments
 alone: 125/125. NOT RUN: the full battery (main's run after the merge does
-it).NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
-The one-glance tell: a post's comments sit in rounded bubbles with no lines
-between them, and a face not drawn yet shows its letter.
+it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: a post's comments sit in rounded bubbles with nothing
+nested under them, "Read N replies" under one that has them, and a face
+not drawn yet shows its letter.
