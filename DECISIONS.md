@@ -46068,7 +46068,15 @@ because the page already hides a comment taken down from everybody but its
 author. So the rule holds only for the author's own, and the check asks
 that too now (red without the rule).
 
-@@SUITES@@
+THE AFFECTED SUITES, side by side (run_parallel -j 3, 17.2 min), on the
+tree as it stands: verify_sociallikes 110/110, verify_socialcomments
+127/127, verify_socialactivity 46/46, verify_socialauth 75/75,
+verify_socialmute 68/68, verify_socialmentions 51/51, verify_socialposts
+99/99, verify_socialprofile 94/94, verify_socialbookmarks 37/37,
+verify_socialreposts 56/56, verify_socialfollow 79/79, verify_socialsearch
+32/32, verify_composer 39/39, verify_docs 144/144, verify_social 45/45: 15
+of 15, nothing red beside the others. NOT RUN: the full battery (main's run
+after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: every comment's row has a heart between Reply and ⋯.
