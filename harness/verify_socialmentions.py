@@ -1380,7 +1380,8 @@ with app.app_context():
     before = n(Mention.comment_id.in_([cid] + under))
     retire([cid], "deleted")
     db.session.commit()
-    placed = [n(Mention.comment_id == cid), n(Mention.comment_id.in_(under))]
+    place = db.session.execute(sa.select(Comment.gone, Comment.person_id).where(Comment.id == cid)).first()
+    placed = [n(Mention.comment_id == cid), n(Mention.comment_id.in_(under)), list(place) if place else None]
     retire(under, "deleted")
     db.session.commit()
     gone = db.session.execute(sa.select(sa.func.count()).select_from(Comment)
@@ -1473,9 +1474,9 @@ with app.app_context():
                                  text=True, timeout=180)
             got = json.loads(out.stdout.strip().splitlines()[-1]) if out.returncode == 0 and out.stdout.strip() else {"err": out.stderr[-600:]}
             check("with SQLite's cascade off (a copy): a post's mentions (2, then 0); a comment's and its reply's (2;"
-                  " the comment's place keeps none, the reply keeps its 1; the reply deleted, 0, and both rows gone);"
+                  " the comment a place, nobody's, keeping none, the reply keeping its 1; the reply deleted, 0, both rows gone);"
                   " an account's of it, by it and on what it owned (2, then 0), each by the code alone",
-                  got.get("fk") == 0 and got.get("post") == [2, 0] and got.get("comment") == [2, [0, 1], 0, 0]
+                  got.get("fk") == 0 and got.get("post") == [2, 0] and got.get("comment") == [2, [0, 1, ["deleted", None]], 0, 0]
                   and got.get("person") == [2, 0], json.dumps(got)[:600])
             # ONE DRAWING, ONE CONVERSATION: a drawing's comment that mentions
             # somebody moves into the post with it, its mention with it, and
