@@ -46255,3 +46255,55 @@ battery (main's run after the merge does it).
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: every comment's row has the repost's arrows between
 Reply and the heart, and its ⋯ starts with Bookmark.
+
+## After v330 -- Main red after #961, the other shard: the line's buttons keep their 44px
+
+WHAT WENT RED. Shard 4/6 of main's run after #961, sqlite and postgresql
+both, and the same after #962 and #964: verify_socialposts 98/99, "...and a
+comment's drawing ends its line in the same button": the full-screen
+button's reach false. In the run after #964 it was the sqlite shard's one
+red, and the other ten shards were green. "Main red after #961" (#964)
+named shard 2 alone: this shard was still running when that run was read,
+and was missed.
+- In CI's DejaVu Sans the line under a comment's drawing (294px in its
+  bubble on a phone, since #961) wraps its words to a second row ("Drawn in
+  15 sec · watching at 1×"), and the speed chip sits under the full-screen
+  button. The chip's reach upward (10px: 44 to a finger) and the button's
+  downward (6px) overlapped by 10px, and the chip, later in the page, took
+  the bottom of the button's room: 4px of its drawn box. Here (Inter) the
+  words end left of the button.
+- A real overlap, if a small one: a tap on the bottom of the full-screen
+  button, or just under it, opened the speed's menu. Windows' Segoe UI is
+  wider than Inter; not tested here.
+
+THE FIX is in the player. The line's three buttons (Mute, Repeat, Full
+screen) stack at z-index 1, over the words row and its chip and under the
+speed's menu (3) and the scrubber's bubble (2), so each keeps its 44 where
+they meet; the chip keeps its own drawn box and the rest of its reach.
+inlineplayer.css +10 B (Mute, Repeat), paid for in the same file: the
+line's controls repeated the base rule's display:flex (-13 B), so the
+in-post player is 3 B lighter and its ratchet is pinned again just above
+the floor (verify_inline). postfull.css (Full screen) says why. The line's
+layers were never wrapped in one (the bubble at 2, the speed's menu at 3),
+so the buttons at 1 now pass over a host's bar at 1 that a post scrolls
+under: docs/INTEGRATION.md says so, and asks 4 or more of such a bar
+(the bars Skribl's own posts scroll under already are: the feed page's
+header at 5, the site's bars at 25 and up).
+
+CALIBRATED: verify_socialposts section 18 with every face DejaVu Sans, as
+CI draws: before the fix red (the point under the button the speed chip's),
+after it green; as built (Inter) green.
+
+THE SUITES, side by side (harness/run_parallel.py, three at a time). The
+fix as first written: verify_socialapp 55/55, verify_replayspeed 190/190,
+verify_docs 144/144, verify_a11y 444/444, verify_seam 518/518,
+verify_socialposts 99/99, and verify_inline 221/222, beside the others and
+alone: the player 7 B over its ratchet, the cost itself, not load or a
+defect. Paid for: verify_inline 222/222, verify_socialposts 99/99,
+verify_gallery 234/234. The ratchet pinned: verify_inline 222/222 (82,038 B
+under 82,041), verify_seam 518/518, verify_example 59/59, verify_a11y
+444/444, verify_replayspeed 190/190; with this entry, verify_docs 144/144.
+NOT RUN: the full battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+Nothing changes to the eye.
