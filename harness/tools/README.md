@@ -82,7 +82,9 @@ from `artworks.py` and the still pictures the editors make. Its third
 (`MOCK_ROUND=world`, step 3) shoots a comment away from its thread: reposted
 on Home, quoted and kept in Bookmarks, today's cards made over in the page;
 `MOCK_ROUND=tree` shoots the thread folded to its comments, and
-`MOCK_ROUND=count` the count by the talk cloud in place of "Read N replies".
+`MOCK_ROUND=count` the count by the talk cloud in place of "Read N replies",
+and `MOCK_ROUND=nest` the tree opening in place under a tapped comment, two
+deep, with its + for more.
 Its docstring has the usage. Start the site's next mock from it rather than
 from nothing.
 
