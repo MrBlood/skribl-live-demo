@@ -46307,3 +46307,125 @@ NOT RUN: the full battery (main's run after the merge does it).
 
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 Nothing changes to the eye.
+
+## After v330 -- No dinge, the last four: Play the lilac and pressed, the dark glass violet, full screen's x toned, Flip's line lilac
+
+The owner's "yes on all dinge" (Nov 18) to No Dinge, the Last Four
+(https://claude.ai/artifact/4TxE4Y1PsvuSAyW6GfKpU1), my pick in each: the
+four the last round left on the list (the entry "The comment thread: the
+owner's yes (Nov 17), not built yet", STILL ON THE LIST). The mock's tool is
+harness/tools/mock_dinge.py.
+
+WHAT CHANGED (styles.css, flip.css, fullbar.css, lib/smartfade.js and the
+three full screens that use it; player.css, fullband.css and
+gallerysection.css re-emitted):
+
+- THE PLAY PILL, the Pad's and Flip's: the second button's lilac at rest
+  (--btn2-bg), where it was a 4.5% grey wash (chroma 0.018 light, 0.030
+  dark; 1.11:1 off the header on a desk): now 0.042 and 0.080, 1.10:1 light
+  and 1.36:1 dark, its words 14.3 and 12.2:1. On a phone a lilac disc, where
+  Play was a bare glyph with Record and the menu's dots, which stay bare.
+  The mock's words called the phone's Play an unseen wash; its shots showed
+  the bare glyph beside the disc, and the yes was to them. While playing,
+  the pressed look a lit toggle wears (--press-fill and its ring,
+  --press-ring: the link page's Loop on), since the tint alone all but
+  matched the lilac (1.19:1 off it); never solid violet, which is Post's.
+  On a phone its mark takes the "on" ink: the accent on the tint was 2.88:1
+  in light and 3.16:1 in dark, now 8.34 and 7.74:1. Flip's hover is the
+  lilac's own (--btn2-hover), where it was the control grey.
+- THE DARK GLASS over a dark drawing (full screen's bar on the link page,
+  the Pad, Flip, the Gallery and the Library; the Gallery card's bar; the
+  name in the corner): a 30% violet with a lilac edge, where a 14% white
+  came out grey (chroma 0.008, now 0.091; 1.48:1 off the drawing, now 1.42;
+  its marks 12.8:1, now 13.4). A lit control on it a 62% violet with a lilac
+  ring, 1.67:1 off an unlit one, where the 38% sat 1.08:1 off the grey; its
+  hover 40%. The light glass is as it was.
+- FULL SCREEN'S X wears the bar's glass, toned by what lies under it in the
+  top corner, where it was a solid disc by the page's theme (white on a dark
+  drawing in light, 19:1; the toolbar's near-black on a pale one in dark,
+  18:1). lib/smartfade.js full() takes `also`: controls outside the bar,
+  toned under their own box by the drawing's head (its top eighth, read into
+  sixteen middle values by the foot's own reader; beyond the drawing, its
+  ground), cleared with the rest when nothing can be read. app.js,
+  lib/watchfull.js and lib/fullbar.js pass their x. Over a photo nothing is
+  set on a guess, and the x keeps its disc.
+  Its rules are the bar's glass rules, one more selector each, so the
+  generated sheets carry it as they carry the bar.
+- FLIP'S SCRUB LINE, the 3px track along its strip while it plays: the
+  lilac the Pad's line wears, where it was a 14% wash (chroma 0.000 light,
+  0.033 dark; now 0.042 and 0.080); the violet bar on it 3.14:1 to 3.42:1
+  light, 2.78:1 to 3.00:1 dark.
+
+FLIP: shared wherever both editors have the thing: the Play pill (styles.css
+for the Pad's and both phones', flip.css for Flip's desk pill and hover),
+and full screen's glass and x (one full screen). The line is Flip's alone,
+and takes the Pad line's lilac.
+
+THE BUDGET: the link page's sheet 45,546 B, 59 less than before: the
+lilac's values are shorter than the wash's and its edges went, which paid
+for the x's four selectors. Its ratchet is pinned again at 45,552
+(verify_player_isolation), the strip's line at 45,571 (verify_jsstrip).
+The player's JS is RAISED for one named cost, +346 B (161,209 measured,
+pinned at 161,211 in both suites): smartfade.js's `also` (+329) and app.js
+passing its x (+17). Spent first: the x's first reader, a sampler of its
+own, cost 1,226 B and gave way to the foot's. Every player page pays it, for
+the x its full screen shows.
+
+FOUND ON THE WAY, by the first side-by-side round, each fixed and run again:
+- the JS budget above (verify_player_isolation 84/85, verify_jsstrip 33/35);
+- Flip's line in full screen (verify_watchfull 84/86): the lilac reached it
+  where full screen's band carries the line over the drawing among its
+  glass, where the last round kept its wash on purpose. The lilac is the
+  strip's alone (body.playing .strip-wrap .flip-timeline);
+- verify_parity (434/436): its phone rows asked Play playing for no ring,
+  the tint alone. They ask for the pressed look now, the tint with its
+  steady 1px ring and no pulse: on main 0/2, here 2/2.
+
+CALIBRATED, each new check run against a server built from main (today's
+look) and against this branch:
+- verify_onepill, section 10 (TINTS): the twelve Play rows (at rest the
+  lilac; playing the pressed look with its ring and, on a phone, the "on"
+  ink; the Pad's phone and desk and Flip's, light and dark), where the old
+  rows asked for the tint and no ring: on main 16/28 (a bare glyph and a
+  grey wash at rest, the tint with no ring playing), here 28/28.
+- verify_fullsmart, a new glass section: every full screen's x toned (the
+  link page's on a phone and a desk, the Gallery's, the Pad's, Flip's),
+  the dark glass violet and Loop on a stronger violet: on main 0/14, here
+  14/14. Its first cut counted the link page's pressed full-screen button
+  lit, which the sheet does not light, and asked Flip's band, which
+  carries Flip's own line and speeds and no glass, for dark glass: the
+  instrument, fixed before believing either colour. Over a photo the x
+  keeps its disc: red with a break that toned it on a guess, green as
+  built.
+- verify_cardfade: the dark card's glass violet, read off each button's
+  painted fill: chroma 0.009 on main (27/28), 0.093 here (28/28).
+- verify_replayspeed: Flip's line the lilac, phone and desk: on main
+  190/192, here 192/192.
+- verify_linkpage: the x leaves its census of one-pixel outlines, since the
+  glass it now wears keeps its 1px edge on purpose, as the bar's glass
+  buttons' does (START-HERE's edges row says so).
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3). The first round, on
+the tree as first pushed (4c1638b): verify_onepill 2884/2884,
+verify_contrast 677/677, verify_seam 518/518, verify_ux 491/491, verify_a11y
+444/444, verify_layout 257/257, verify_gallery 234/234, verify_a11ypages
+162/162, verify_socialposts 99/99, verify_sizeclass 89/89, verify_fullfade
+70/70, verify_linkpage 61/61, verify_onefull 57/57, verify_pointerpad 56/56,
+verify_fullsmart 45/45: 15 of 19. Red beside the others, the four FOUND ON
+THE WAY: verify_player_isolation 84/85, verify_jsstrip 33/35,
+verify_watchfull 84/86, verify_parity 434/436; defects of the change, not
+load, each fixed while the round ran, so the runner's alone re-runs read the
+fixed files (verify_player_isolation 85/85, verify_watchfull 86/86,
+verify_parity 436/436) and its INTERMITTENT was the fixes landing between
+the two. The second round, on the final tree (d6d5ef2), every suite those
+fixes reach and the two the calibration alone had run: verify_contrast
+677/677, verify_seam 518/518, verify_parity 436/436, verify_gallery 234/234,
+verify_replayspeed 192/192, verify_socialposts 99/99, verify_watchfull
+86/86, verify_player_isolation 85/85, verify_fullfade 70/70, verify_linkpage
+61/61, verify_onefull 57/57, verify_fullsmart 45/45, verify_jsstrip 35/35,
+verify_cardfade 28/28: 14 of 14, in 28.5 min. NOT RUN: the full battery
+(main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: the Pad's Play pill is lilac at rest and ringed in
+violet while it plays.
