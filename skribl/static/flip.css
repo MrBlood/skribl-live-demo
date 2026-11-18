@@ -236,7 +236,12 @@
   .strip-wrap { position: relative; }
   .flip-timeline { display: none; }
   body.playing .flip-timeline { display: block; position: absolute; left: 14px; right: 14px; top: 0; width: auto; max-width: none;
-    height: 3px; border-radius: 2px; background: var(--btn2-bg); z-index: 3; }   /* the lilac track the Pad's line wears (No dinge, the last four, Nov 18): a 14% wash */
+    height: 3px; border-radius: 2px; background: rgba(var(--wash-rgb), .14); z-index: 3; }
+  /* On the page, along the strip, the track is the lilac the Pad's line wears
+     (No dinge, the last four, Nov 18), where it was this 14% wash; in full
+     screen, over the drawing among its glass, it keeps the wash
+     (verify_watchfull). */
+  body.playing .strip-wrap .flip-timeline { background: var(--btn2-bg); }
   body.playing .flip-timeline .player-progress-fill { border-radius: 2px; transition: width .12s linear; }
   .flip-speeds { display: none; }
   body.playing .flip-speeds { display: flex; position: relative; z-index: 4; margin-top: 12px; padding: 0 14px 4px; }   /* margin, not padding: padding laid the row over the line on a phone */
