@@ -45,10 +45,10 @@ Nov 17: "What I want is a list of direct replies first. If you click the
 reply it opens up the tree level", then "Yes, build it"): a list shows only
 the direct replies to what its page is about, the post's comments or a
 comment's replies, each alone (_fold), with the count by its talk cloud,
-every reply under it at any depth that the viewer may see; since THE TREE,
-TWO DEEP (the owner's "Yes on all", Nov 18), a tap on it opens its replies
-in place, two deep (tree, /c/<id>/replies), "N more replies" past that
-opening the rest in place (rest, /c/<id>/rest), and its time its own
+every reply under it at any depth that the viewer may see, and under it
+its conversation followed down in the same column, BLUESKY'S WAY with our
+look (the owner's yes, Nov 18: _chains): its first reply, the first reply
+to that, ten deep, then "Read N more replies"; a tap on it opens its own
 page. EVERY COMMENT
 AND REPLY HAS A PAGE (/c/<id>, comment.html): the way to it above
 (the_way), it as big as a post, then its own direct replies where a post's
@@ -313,8 +313,8 @@ def _fold(tops, rows):
     page's rules already applied). A reply counts only where what it answers
     does: one under a reply the page leaves out (somebody hidden from the
     viewer) is left out, and every reply under it. A PLACE (a deleted reply)
-    is walked through and counted as nothing. Since the tree, two deep (Nov
-    18), "more" is the count beside its talk cloud, and what a tap opens."""
+    is walked through and counted as nothing. Since Nov 18 "more" is the
+    count beside its talk cloud too."""
     kids = _kids(rows)
     for t in tops:
         n, todo = 0, [t["c"].id]
@@ -347,12 +347,14 @@ def thread(on, viewer, before=None, limit=PAGE):
     tops, more = rows[:limit], len(rows) > limit
     items = [_item(c, who, muted) for c, who in tops]
     if items:
-        _fold(items, _conversations([i["c"].id for i in items], viewer, hidden))
+        convo = _conversations([i["c"].id for i in items], viewer, hidden)
+        _fold(items, convo)
         items = [i for i in items if _kept(i)]
-        described(items, viewer)
-        named(items)
-        hearts(items, viewer)
-        shares(items, viewer, on.open_to(viewer))
+        every = items + _chains(items, convo, muted)
+        described(every, viewer)
+        named(every)
+        hearts(every, viewer)
+        shares(every, viewer, on.open_to(viewer))
     return items, (_cursor(tops[-1][0]) if more and tops else None)
 
 
@@ -691,94 +693,67 @@ def drop_person_comments(person_id):
 def replies_of(got, viewer):
     """A COMMENT'S OWN REPLIES, for its own page (seen(..., whole=True)):
     (items, how many). Its direct replies stand where a post's comments do,
-    oldest first, each alone with its count (_fold: one level at rest; a
-    tap opens its tree, tree()); how many is every reply under it, at any
-    depth, that the viewer may see."""
+    oldest first, each with its count and its conversation followed down
+    under it (_chains: Bluesky's way); how many is every reply under it, at
+    any depth, that the viewer may see."""
     from .mutes import muted_ids
     muted = muted_ids(viewer)
     rows = got["rows"]
     tops = [_item(c, who, muted) for c, who in rows if answered(c) == got["c"].id]
     _fold(tops, rows)
     tops = [t for t in tops if _kept(t)]
-    described(tops, viewer)
-    named(tops)
-    hearts(tops, viewer)
-    shares(tops, viewer, way_open(got, viewer) and got["c"].taken_down_at is None)
+    every = tops + _chains(tops, rows, muted)
+    described(every, viewer)
+    named(every)
+    hearts(every, viewer)
+    shares(every, viewer, way_open(got, viewer) and got["c"].taken_down_at is None)
     # A place counts as nothing (_fold's rule).
     return tops, len([t for t in tops if t["c"].gone is None]) + sum(t["more"] for t in tops)
 
 
-def _who(rows, got):
-    """Each one's author in a conversation's `rows`, and that of the one
-    `got` is about, by internal id: a place's is None."""
+#: How far a conversation is followed down under a comment, before "Read N
+#: more replies" (Bluesky's default, its linear view: LINEAR_VIEW_BELOW).
+CHAIN_MAX = 10
+
+
+def _chains(items, rows, muted):
+    """BLUESKY'S WAY, OUR LOOK (the owner's yes, Nov 18, after reading
+    Bluesky's own thread code): under each of `items` (a list's comments or
+    a comment's replies, already folded), its conversation followed down in
+    the same column, never stepping in: its first reply (oldest, so it reads
+    as a conversation; Bluesky picks its "top"), then the first reply to
+    that, and so on, CHAIN_MAX deep ("chain"). A place in the way is walked
+    through while something hangs under it (_kept). Where the last one
+    there still has replies under it, "Read N more replies" opens its own
+    page ("chain_more": that one, with its "more"). Its other replies show
+    only in their count, as on Bluesky. Answers every item it made, for
+    reading their cards at once."""
     who = {c.id: p for c, p in rows}
-    who[got["c"].id] = got["who"]
-    return who
-
-
-def _dressed(items, got, viewer):
-    """What a card shows beyond its comment, for all of `items` at once, as
-    replies_of reads it: its drawing's shape, names, hearts, and what may be
-    shared, where the way to `got` is open."""
-    described(items, viewer)
-    named(items)
-    hearts(items, viewer)
-    shares(items, viewer, way_open(got, viewer) and got["c"].taken_down_at is None)
-    return items
-
-
-def tree(got, viewer):
-    """THE TREE, TWO DEEP (the owner's "Yes on all", Nov 18, to The Tree, Two
-    Deep): what a tap on a comment opens in place under it, `got` being
-    seen(..., whole=True)'s. Its direct replies, oldest first, each with its
-    own direct replies under it ("answers"), the second step ("deep"); one
-    there with talk going on under it carries "N more replies" ("more", as
-    everywhere: every reply under it, at any depth, that the viewer may
-    see). The page's rules, as replies_of: hidden at any depth, a place
-    walked through and kept while something hangs under it."""
-    from .mutes import muted_ids
-    muted = muted_ids(viewer)
-    rows = got["rows"]
-    who, kids = _who(rows, got), _kids(rows)
-    first = [_item(c, who[c.id], muted) for c in kids.get(got["c"].id, ())]
-    for t in first:
-        t["answers"] = [dict(_item(c, who[c.id], muted), deep=True) for c in kids.get(t["c"].id, ())]
-    _fold(first + [s for t in first for s in t["answers"]], rows)
-    first = [t for t in first if _kept(t)]
-    for t in first:
-        t["answers"] = [s for s in t["answers"] if _kept(s)]
-    _dressed(first + [s for t in first for s in t["answers"]], got, viewer)
-    return first
-
-
-def rest(got, viewer):
-    """THE REST, IN PLACE (the owner's A, Nov 18): what "N more replies" under
-    a reply at the tree's second step opens. Every reply under it, at any
-    depth, oldest first, each at that same step ("flat") and saying whom it
-    answers ("to": that one's first name, as "Reply to Eli" says it; none
-    under a place), so the words keep their room however deep the talk
-    goes. The page's rules, as tree()."""
-    from .mutes import muted_ids
-    muted = muted_ids(viewer)
-    rows = got["rows"]
-    who, kids = _who(rows, got), _kids(rows)
-    under, todo = set(), [got["c"].id]
-    while todo:
-        for c in kids.get(todo.pop(), ()):
-            under.add(c.id)
-            todo.append(c.id)
-    out = []
-    for c, p in rows:
-        if c.id in under:
-            up = who.get(answered(c))
-            out.append(dict(_item(c, p, muted), flat=True,
-                            to=(up.display_name or "").split(" ")[0] if up is not None else None))
-    _fold(out, rows)
-    return _dressed([t for t in out if _kept(t)], got, viewer)
+    kids = _kids(rows)
+    made = []
+    for it in items:
+        chain, cur = [], it
+        while len(chain) < CHAIN_MAX:
+            nxt = None
+            for c in kids.get(cur["c"].id, ()):
+                cand = _item(c, who.get(c.id), muted)
+                _fold([cand], rows)
+                if _kept(cand):
+                    nxt = cand
+                    break
+            if nxt is None:
+                break
+            chain.append(nxt)
+            cur = nxt
+        last = chain[-1] if chain else it
+        it["chain"] = chain
+        it["chain_more"] = last if len(chain) == CHAIN_MAX and last["more"] else None
+        made += chain
+    return made
 
 
 def tally(way, viewer):
-    """HOW MANY UNDER EACH, ALL THE WAY UP (the tree, two deep): {public id:
+    """HOW MANY UNDER EACH, ALL THE WAY UP (Nov 18): {public id:
     every reply under it, at any depth, that `viewer` may see} for each of
     `way` (Comments of one conversation, its comment first), read once a
     reply has come or gone, so a list shows every count it holds rightly.
@@ -827,10 +802,6 @@ def section(on, viewer, skribl_blueprint="skribl", focus=None):
             if focus is None or focus["who"] is not None else "",
             "new": new, "more": more,
             "drop": url_for("social.comment_delete", public_id="__ID__"),
-            # What a tap on a comment opens in place, and "N more replies"
-            # (the tree, two deep).
-            "tree": url_for("social.comment_tree", public_id="__ID__"),
-            "rest": url_for("social.comment_rest", public_id="__ID__"),
             "pad": url_for(skribl_blueprint + ".skribl_editor", compose=1),
             "flip": url_for(skribl_blueprint + ".skribl_flip", compose=1),
             # Signing in comes back to the page with the box open (#say:
@@ -991,8 +962,9 @@ def register(bp, skribl_blueprint="skribl"):
     def comment_page(public_id):
         """A COMMENT OR A REPLY ON A PAGE OF ITS OWN (the comment thread, step
         1; the owner's yes, Nov 17): every one has one, so any of them can be
-        linked and shared, and its time opens it, in a list and in a tree.
-        The way to it above, small (what it is on, then each one
+        linked and shared, and a tap on it opens it, in a list and in a
+        conversation followed down under one. The way to it above, small
+        (what it is on, then each one
         it answers); it, as big as a post, its row and its full time; its
         direct replies under it, each alone (one level, everywhere). One
         hidden from the viewer, or anything on the way to it, is as gone as
@@ -1010,33 +982,6 @@ def register(bp, skribl_blueprint="skribl"):
         return _page("comment.html", here="post", it=it, way=the_way(got, me, skribl_blueprint), cm=cm,
                      on_page=got["on"].page(), token=csrf_token(), on_post=got["on"].post is not None,
                      signin_here=url_for("social.signin", next=url_for("social.comment_page", public_id=public_id)))
-
-    def opened(public_id, how, hide):
-        """What opens in place under a comment, as its cards: `how` (tree or
-        rest) of the comment, read as its own page reads it (seen, whole: one
-        hidden from the viewer, or anything on the way to it, is gone), with
-        "Hide replies" at the tree's end (`hide`)."""
-        me = current_person()
-        got = seen(public_id, me, whole=True)
-        if got is None:
-            return _json_error("gone", 404)
-        on = got["on"]
-        return jsonify({"ok": True, "html": render_template(
-            "social/_comment_cards.html", items=how(got, me), me=me, hide=hide,
-            can=may_comment(me) and on.open_to(me), post_mine=me is not None and me.id == on.owner.id)})
-
-    @bp.get("/c/<public_id>/replies")
-    @_rests(json_answer=True)
-    def comment_tree(public_id):
-        """THE TREE, TWO DEEP (the owner's "Yes on all", Nov 18): what a tap on
-        a comment opens in place under it (tree())."""
-        return opened(public_id, tree, True)
-
-    @bp.get("/c/<public_id>/rest")
-    @_rests(json_answer=True)
-    def comment_rest(public_id):
-        """THE REST, IN PLACE: what "N more replies" opens (rest())."""
-        return opened(public_id, rest, False)
 
     def new_comment(find):
         """A comment, or an answer under one, on what `find(me)` says the
@@ -1116,18 +1061,16 @@ def register(bp, skribl_blueprint="skribl"):
                                          "marked": False, "shareable": True}], me)), me, True,
                       me.id == on.owner.id)
         # "under": the comment or the reply it answers: on its own page the
-        # reply lands last in its list; anywhere else it lands where it was
-        # made if that branch is open, or its count goes up (the tree, two
-        # deep). "page": that one's own page, where the reply shows.
-        # "counts": every reply under it and under each one above it, now,
-        # for the counts beside their talk clouds; "to": whom it answers, as
-        # a reply in the rest says it ("↳ Eli").
+        # reply lands last in its list; anywhere else it continues that one's
+        # conversation where it is followed down to it (Bluesky's way), or
+        # its count takes it. "page": that one's own page, where the reply
+        # shows. "counts": every reply under it and under each one above it,
+        # now, for the counts beside their talk clouds.
         return jsonify({"ok": True, "comment": row.public_id,
                         "under": answers.public_id if answers is not None else None,
                         "page": url_for("social.comment_page", public_id=answers.public_id) if answers is not None
                         else None,
                         "counts": tally([c for c, _ in got["chain"]] + [got["c"]], me) if answers is not None else {},
-                        "to": (got["who"].display_name or "").split(" ")[0] if answers is not None else None,
                         "html": html, "count": count_on(on, me)})
 
     def more_comments(on, me):
@@ -1194,7 +1137,7 @@ def register(bp, skribl_blueprint="skribl"):
         how = "deleted" if me.id == c.person_id else "removed"
         reply = c.parent_id is not None
         # The way to it, read before it goes: each one above it shows how
-        # many are under it, and one fewer counts now (the tree, two deep).
+        # many are under it, and one fewer counts now.
         pre = seen(c.public_id, me)
         way = [x for x, _ in pre["chain"]] if pre is not None else []
         went = retire([c.id], how)

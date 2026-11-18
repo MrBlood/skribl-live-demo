@@ -615,7 +615,7 @@ SECTION = """() => { const one = li => ({ id: li.dataset.comment, name: (li.quer
     down: (li.querySelector(':scope > .cm-main .cm-down') || {}).textContent || null,
     answer: !!li.querySelector(':scope > .cm-main [data-cm-answer]'),
     more: li.getAttribute('data-replies'),
-    answers: [...li.querySelectorAll(':scope > .cm-answers > .cm')].map(one) });
+    answers: [...li.querySelectorAll(':scope > .cm-chain > .cm')].map(one) });
   return { count: (() => { const c = document.querySelector('[data-cm-count]'); return c && !c.hidden ? c.textContent : null; })(),
     list: [...document.querySelectorAll('[data-cm-list] > .cm')].map(one) }; }"""
 OPEN = "(id) => document.getElementById(id).classList.contains('is-open')"
@@ -1249,41 +1249,50 @@ WHEN_LINK = """(id) => { """ + TOKEN_JS + """
   return { h: Math.round(r.height), href: a.getAttribute('href'),
            ratio: ratio(getComputedStyle(a).color, getComputedStyle(document.body).backgroundColor) }; }"""
 
-# THE TREE, TWO DEEP (section 47): what hangs under comment `id`, as the page
-# shows it: each reply's id, its count by the talk cloud, whom it answers
-# ("↳ Eli", in the rest), and what is under it; "N more replies" and "Hide
-# replies" as what they say and do.
-TREE = """(id) => { const li = document.getElementById('c-' + id); if (!li) return null;
-  const one = x => x.classList.contains('cm-rm')
-    ? { rm: ((x.querySelector('[data-rm-words]') || x.querySelector('.rm-link span') || {}).textContent || '').trim(),
-        rest: !!x.querySelector('[data-cm-rest]'), hide: !!x.querySelector('[data-cm-hide]') }
-    : { id: x.dataset.comment, n: (x.querySelector(':scope > .cm-main .cm-acts .cm-n') || {}).textContent || null,
-        to: (x.querySelector(':scope > .cm-main .cm-to [data-to-name]') || {}).textContent || null,
-        under: [...x.querySelectorAll(':scope > .cm-answers > li')].map(one) };
-  return one(li); }"""
-# At rest: how many lists hang anywhere and how many "more" links; for each of
-# `ids`, its count by the cloud, Reply's name, the word (shown, or clipped for
-# a screen reader), whether it is the count alone (signed out), the count's ink
-# on the page.
-TREE_REST = """(ids) => { """ + TOKEN_JS + """
+# BLUESKY'S WAY (section 47): the conversation followed down under comment
+# `id`, as the page shows it: each reply's id and its count by the talk cloud,
+# every face's centre (one column: all the same), and "Read N more replies"
+# after it (its words, where it goes, its height, its circled plus's centre).
+CHAIN = """(id) => { const li = document.getElementById('c-' + id); if (!li) return null;
+  const ch = li.querySelector(':scope > .cm-chain'), items = ch ? [...ch.querySelectorAll(':scope > .cm')] : [];
+  const n = x => (x.querySelector(':scope > .cm-main .cm-acts .cm-n') || {}).textContent || null;
+  const face = x => { const f = x.querySelector(':scope > .face-ring, :scope > .cm-gone-face'); if (!f) return null;
+    const r = f.getBoundingClientRect(); return Math.round((r.left + r.width / 2) * 100) / 100; };
+  const rm = ch && ch.querySelector(':scope > .cm-rm'), a = rm && rm.querySelector('.rm-link'), ic = a && a.querySelector('.ic');
+  return { n: n(li), chain: items.map(x => [x.dataset.comment, n(x)]), faces: [li, ...items].map(face),
+           more: a ? { words: a.textContent.trim(), href: a.getAttribute('href'), h: Math.round(a.getBoundingClientRect().height),
+                       mid: Math.round((ic.getBoundingClientRect().left + ic.getBoundingClientRect().width / 2) * 100) / 100 } : null }; }"""
+# The line down the conversation under comment `id`: from the comment's face
+# down, into each reply's face and on from it but the last (or on into "Read
+# more"), each 2px of --card-edge and straight; and no curve anywhere in the
+# list (no line of the thread with a bottom edge).
+STRAIGHT = """(id) => { """ + TOKEN_JS + """
+  const li = document.getElementById('c-' + id), edge = tok(li, 'color', 'var(--card-edge)'), bad = [];
+  const ch = li.querySelector(':scope > .cm-chain'); if (!ch) return { ok: false, bad: ['no conversation'] };
+  const items = [...ch.querySelectorAll(':scope > .cm')], rm = ch.querySelector(':scope > .cm-rm');
+  const straight = cs => cs.content !== 'none' && cs.borderLeftColor === edge && cs.borderLeftWidth === '2px'
+    && cs.borderBottomStyle === 'none';
+  const down = x => straight(getComputedStyle(x.querySelector(':scope > .cm-main'), '::before'));
+  const into = x => straight(getComputedStyle(x.querySelector(':scope > .face-ring, :scope > .cm-gone-face'), '::before'));
+  if (!down(li)) bad.push('no line down from the comment');
+  items.forEach((x, i) => { if (!into(x)) bad.push(x.dataset.comment + ': no line into its face');
+    const last = i === items.length - 1 && !rm;
+    if (down(x) === last) bad.push(x.dataset.comment + (last ? ': a line past the last' : ': no line on')); });
+  if (rm && !straight(getComputedStyle(rm, '::before'))) bad.push('no straight line into Read more');
+  document.querySelectorAll('[data-cm-list] :is(.cm, .cm > .cm-main, .cm > .face-ring, .cm > .cm-gone-face, .cm-rm)').forEach(e =>
+    ['::before', '::after'].forEach(p => { const cs = getComputedStyle(e, p);
+      if (cs.content !== 'none' && cs.borderBottomStyle !== 'none' && cs.borderBottomWidth !== '0px') bad.push('a curve: ' + e.className); }));
+  return { ok: !bad.length, bad: bad.slice(0, 6) }; }"""
+# The count by each talk cloud, for each of `ids`: what it says, Reply's name,
+# the word (shown, or clipped for a screen reader), whether it is the count
+# alone (signed out), and its ink on the page.
+COUNTS = """(ids) => { """ + TOKEN_JS + """
   const ground = getComputedStyle(document.body).backgroundColor;
-  return { answers: document.querySelectorAll('.cm-answers').length, rm: document.querySelectorAll('.rm-link').length,
-    rows: ids.map(id => { const li = document.getElementById('c-' + id), b = li.querySelector(':scope > .cm-main [data-cm-answer]'),
-      t = li.querySelector(':scope > .cm-main .cm-tally'), n = (b || t) && (b || t).querySelector('.cm-n'), w = b && b.querySelector('.cm-word');
-      return { n: n ? n.textContent : null, label: b ? b.getAttribute('aria-label') : null, tally: !!t,
-               word: w ? { text: w.textContent, shown: getComputedStyle(w).clipPath === 'none' && w.getBoundingClientRect().width > 2 } : null,
-               ink: n ? ratio(getComputedStyle(n).color, ground) : null }; }) }; }"""
-# A marker under the list, to read on every frame what is under a tree.
-TREE_MARK = """() => { const m = document.createElement('div'); m.id = 'treeMark'; m.style.height = '1px';
-  document.querySelector('[data-cm-list]').after(m); }"""
-# The tree's own button under comment `id`: its size, whether it is painted where
-# it sits (asked of what is painted there), focused, its words and state.
-TREE_BTN = """(id) => { const li = document.getElementById('c-' + id), b = li.querySelector(':scope > .cm-main [data-cm-tree]');
-  if (!b) return null;
-  const r = b.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-  return { w: Math.round(r.width), h: Math.round(r.height), painted: !!at && b.contains(at), focused: document.activeElement === b,
-           words: b.querySelector('[data-open-words]').textContent, expanded: b.getAttribute('aria-expanded'),
-           tree: !!li.querySelector(':scope > .cm-answers.is-tree') }; }"""
+  return ids.map(id => { const li = document.getElementById('c-' + id), b = li.querySelector(':scope > .cm-main [data-cm-answer]'),
+    t = li.querySelector(':scope > .cm-main .cm-tally'), n = (b || t) && (b || t).querySelector('.cm-n'), w = b && b.querySelector('.cm-word');
+    return { n: n ? n.textContent : null, label: b ? b.getAttribute('aria-label') : null, tally: !!t,
+             word: w ? getComputedStyle(w).clipPath === 'none' && w.getBoundingClientRect().width > 2 : null,
+             ink: n ? ratio(getComputedStyle(n).color, ground) : null }; }); }"""
 # Press Post in the open box and watch for 2.5s: the new comment if it shows
 # (and whether it took the landing's tint), and whether a count glowed.
 POST_WATCH = """async () => {
@@ -1338,22 +1347,22 @@ PAGE_OF = """() => { const s = document.querySelector('[data-cm-subject]'), c = 
     list: [...document.querySelectorAll('[data-cm-list] > .cm')].map(li => [li.dataset.comment,
       [...li.querySelectorAll(':scope > .cm-answers > .cm')].map(x => x.dataset.comment)]) }; }"""
 
-# Post a reply to `id`, one in a list with its tree closed, and watch the count
-# by its talk cloud on every frame (the tree, two deep): what it says before
-# and after, whether a reply came in under it, and its glow (the landing's
-# tint on its Reply, then gone).
+# Post a reply to `id` and watch the count by its talk cloud on every frame:
+# what it says before and after, how many replies came into the list (one
+# continuing a conversation followed down: Bluesky's way), and its glow (the
+# landing's tint on its Reply, then gone).
 PAST_AND_WATCH = """async (id) => { """ + TOKEN_JS + """
   const li = document.getElementById('c-' + id), tint = tok(li, 'backgroundColor', 'var(--tint)');
   const btn = () => li.querySelector(':scope > .cm-main .cm-acts [data-cm-answer]');
   const words = () => ((btn() || li).querySelector('.cm-n') || {}).textContent || null;
-  const before = words(), kids0 = li.querySelectorAll(':scope > .cm-answers .cm').length;
+  const all = () => document.querySelectorAll('[data-cm-list] .cm').length, before = words(), kids0 = all();
   document.querySelector('[data-cm-post]').click();
   const t0 = performance.now(); let glow = false, onTint = false, faded = false;
   await new Promise(res => { const step = () => { const a = btn();
     if (a && a.classList.contains('is-glow')) { glow = true; if (getComputedStyle(a).backgroundColor === tint) onTint = true; }
     if (glow && a && !a.classList.contains('is-glow')) faded = true;
     if (performance.now() - t0 > 4000) res(); else requestAnimationFrame(step); }; requestAnimationFrame(step); });
-  return { more: [before, words()], new: li.querySelectorAll(':scope > .cm-answers .cm').length - kids0, glow, tint: onTint, faded,
+  return { more: [before, words()], new: all() - kids0, glow, tint: onTint, faded,
            count: (document.querySelector('[data-cm-count]') || {}).textContent }; }"""
 
 
@@ -4653,7 +4662,7 @@ with sync_playwright() as p:
             stopped(46, exc)
 
     # ------------------------------------------------------------------ 47
-    if part(47, "the tree, two deep: counts by the clouds, a tap opens it in place, + the rest, Hide; replies land"):
+    if part(47, "Bluesky's way, our look: each conversation followed down in one column, ten deep, then Read more"):
         try:
             ana = someone(b, "aria", "Aria Reyes")
             eli = someone(b, "elio", "Elio Moss")
@@ -4672,166 +4681,88 @@ with sync_playwright() as p:
             r4 = said(ana, post, "Ha! They'd be best friends.", answer_to=r3)
             r5 = said(cyd, post, "I'd watch that cartoon every Sunday.", answer_to=r4)
             c2 = said(cyd, post, "Love the little curl of smoke from the chimney.")
+            c3 = said(dee, post, "Section 47, a long talk")
+            deep, up = [], c3
+            for k in range(12):
+                up = said((ana, eli)[k % 2], post, f"Section 47, step {k + 1}", answer_to=up)
+                deep.append(up)
             out = os.environ.get("TREE_SHOTS")
-            want_open = {"id": c1, "n": "5", "to": None, "under": [
-                {"id": r1, "n": "3", "to": None, "under": [
-                    {"id": r3, "n": "2", "to": None, "under": [{"rm": "2 more replies", "rest": True, "hide": False}]}]},
-                {"id": r2, "n": None, "to": None, "under": []},
-                {"rm": "Hide replies", "rest": False, "hide": True}]}
-            looks, opens, rests, lines_, rooms, glides = {}, {}, {}, {}, {}, {}
+            seen = {}
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
-                    k = f"{screen} {scheme}"
                     cctx, cpg = browser_as(b, dee, screen=screen, scheme=scheme)
                     open_post(cpg, post)
-                    looks[k] = cpg.evaluate(TREE_REST, [c1, c2])
+                    seen[f"{screen} {scheme}"] = {
+                        "c1": cpg.evaluate(CHAIN, c1), "c2": cpg.evaluate(CHAIN, c2), "c3": cpg.evaluate(CHAIN, c3),
+                        "line1": cpg.evaluate(STRAIGHT, c1), "line3": cpg.evaluate(STRAIGHT, c3),
+                        "room": cpg.evaluate(ROOM, [c1, r1, r3, r4, r5, deep[9]]),
+                        "counts": cpg.evaluate(COUNTS, [c1, c2])}
                     if out:
-                        cpg.locator("#comments").screenshot(path=f"{out}/{screen}-{scheme}-rest.png")
-                    cpg.evaluate(TREE_MARK)
-                    cpg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'start' })", c1)
-                    fr = cpg.evaluate(FRAMES, [f"document.querySelector('#c-{c1} > .cm-main .cm-words').click()",
-                                               ["#treeMark"], [f"#c-{c1} > .cm-answers"], 1600])
-                    opens[k] = {"tree": cpg.evaluate(TREE, c1), "path": cpg.evaluate("() => location.pathname"),
-                                "art": cpg.evaluate("(id) => !!document.querySelector('#c-' + id + ' .cm-art .skribl-inline canvas')", r1)}
-                    lines_[k] = cpg.evaluate(LINE, c1)
-                    glides[k] = {"open": kind(fr), "fade": fades_of(fr, 0)}
-                    if out:
-                        cpg.locator("#comments").screenshot(path=f"{out}/{screen}-{scheme}-open.png")
-                    fr = cpg.evaluate(FRAMES, [f"document.querySelector('#c-{r3} > .cm-answers [data-cm-rest]').click()",
-                                               ["#treeMark"], [], 1600])
-                    glides[k]["rest"] = kind(fr)
-                    rests[k] = cpg.evaluate(TREE, r1)
-                    rooms[k] = cpg.evaluate(ROOM, [c1, r1, r3, r4, r5])
-                    if out:
-                        cpg.locator("#comments").screenshot(path=f"{out}/{screen}-{scheme}-plus.png")
-                    fr = cpg.evaluate(FRAMES, [f"document.querySelector('#c-{c1} [data-cm-hide]').click()",
-                                               ["#treeMark"], [], 1200])
-                    glides[k]["hide"] = kind(fr)
-                    glides[k]["after"] = cpg.evaluate("(id) => document.querySelectorAll('#c-' + id + ' .cm-answers').length", c1)
+                        cpg.locator("#comments").screenshot(path=f"{out}/{screen}-{scheme}-bsky.png")
                     close_ctx(cctx, cpg)
-            first = looks["phone light"]
-            check("AT REST (the tree, two deep: the owner's yes, Nov 18): nothing hangs under any comment, no \"Read N"
-                  " replies\" anywhere; the count by each talk cloud says every reply under it, at any depth (Elio's 5,"
-                  " Cora's none), and Reply says so to a screen reader (\"Reply, 5 replies\"): phone and desk, light and dark",
-                  all(v["answers"] == 0 and v["rm"] == 0 and v["rows"][0]["n"] == "5" and v["rows"][1]["n"] is None
-                      and v["rows"][0]["label"] == "Reply, 5 replies" and v["rows"][1]["label"] is None
-                      for v in looks.values()), f"{first}")
-            check("the count in the row's own ink, 4.5:1 or more on the page; on a desk it takes the word Reply's place"
-                  " (the word clipped, still in the button) and one with none still says Reply; on a phone the icon and"
-                  " the count alone, as before",
-                  all(v["rows"][0]["ink"] >= 4.5 and not v["rows"][0]["word"]["shown"]
-                      and v["rows"][1]["word"]["shown"] == k.startswith("desk") for k, v in looks.items()),
-                  f"{ {k: [(r['ink'], r['word']) for r in v['rows']] for k, v in looks.items()} }")
-            check("A TAP ON ELIO'S COMMENT OPENS ITS TREE IN PLACE, two deep: Aria's and Bram's replies (oldest first),"
-                  " Elio's answer to Aria under hers carrying \"2 more replies\" (every reply under it), the tree ending in"
-                  " \"Hide replies\"; their counts 3 and 2 by their clouds; the page goes nowhere, and Aria's drawing is"
-                  " its player there: phone and desk, light and dark",
-                  all(v["tree"] == want_open and v["path"] == f"/social/p/{post}" and v["art"] for v in opens.values()),
-                  f"{opens['phone light']}")
-            check("the tree's line: down from each face with replies open under it, curving into each reply's face and into"
-                  " \"2 more replies\" and \"Hide replies\", on past each but the last, 2px of --card-edge; \"2 more"
-                  " replies\" a 44px tap at 4.5:1, its link Elio's answer's own page",
-                  all(v["ok"] and v["rm"]["h"] >= 44 and v["rm"]["ratio"] >= 4.5 and v["rm"]["href"] == f"/social/c/{r3}"
-                      for v in lines_.values()), f"{lines_}")
-            want_rest = {"id": r1, "n": "3", "to": None, "under": [
-                {"id": r3, "n": "2", "to": None, "under": []},
-                {"id": r4, "n": None, "to": "Elio", "under": []},
-                {"id": r5, "n": None, "to": "Aria", "under": []}]}
-            check("\"2 MORE REPLIES\" OPENS THE REST IN PLACE (the owner's A): right after Elio's answer, at its same step,"
-                  " Aria's saying \"↳ Elio\" and Cora's \"↳ Aria\", oldest first, no count where all shows; the branch"
-                  " gone",
-                  all(v == want_rest for v in rests.values()), f"{rests['phone light']}")
-            check("the words keep their room however deep the talk goes: 322, 274 and 226px on a phone, 292, 244 and 196"
-                  " on a desk, the rest at the second step's",
-                  all(v == ([322, 274, 226, 226, 226] if k.startswith("phone") else [292, 244, 196, 196, 196])
-                      for k, v in rooms.items()), f"{rooms}")
-            check("KIND, NEVER JUMPY, READ ON EVERY FRAME: what is under the tree glides down the page as it opens (the"
-                  " tree fading in), down again as the rest opens in the branch's room, and back up as Hide folds it all"
-                  " away, nothing left under Elio's comment; no frame jumps it on the screen, nor scrolls the page, by"
-                  " more than three quarters of the way: phone and desk, light and dark",
-                  all(v["open"]["ok"] and v["rest"]["ok"] and v["hide"]["ok"] and v["after"] == 0
-                      and v["fade"] and min(v["fade"]) < 0.5 and v["fade"][-1] == 1 for v in glides.values()),
-                  f"{ {k: (v['open'], v['rest'], v['hide'], v['after']) for k, v in glides.items()} }")
-
-            # THE TREE'S OWN BUTTON, from the keyboard (a desk, light).
+            first = seen["phone light"]
+            check("BLUESKY'S WAY, OUR LOOK (the owner's yes, Nov 18): under Elio's comment its conversation followed down"
+                  " in the same column, each the first reply to the one above (Aria's, Elio's, Aria's, Cora's), each with"
+                  " its count by its talk cloud (3, 2, 1, none); Bram's reply, its second, not shown but counted (5);"
+                  " Cora's comment, with none, nothing under it; every face in one column, nothing stepping in: phone"
+                  " and desk, light and dark",
+                  all(v["c1"]["n"] == "5" and v["c1"]["chain"] == [[r1, "3"], [r3, "2"], [r4, "1"], [r5, None]]
+                      and v["c1"]["more"] is None and len(set(v["c1"]["faces"])) == 1
+                      and v["c2"]["chain"] == [] and v["c2"]["n"] is None for v in seen.values()),
+                  f"{first['c1']}; {first['c2']}")
+            check("ten deep, then \"Read 2 more replies\" (Bluesky's own words) to the tenth's own page, a 44px tap, its"
+                  " circled plus on the line, centred under the faces: phone and desk, light and dark",
+                  all(v["c3"]["n"] == "12" and [x[0] for x in v["c3"]["chain"]] == deep[:10]
+                      and [x[1] for x in v["c3"]["chain"]] == [str(n) for n in range(11, 1, -1)]
+                      and v["c3"]["more"] and v["c3"]["more"]["words"] == "Read 2 more replies"
+                      and v["c3"]["more"]["href"] == f"/social/c/{deep[9]}" and v["c3"]["more"]["h"] >= 44
+                      and abs(v["c3"]["more"]["mid"] - v["c3"]["faces"][0]) <= 1 and len(set(v["c3"]["faces"])) == 1
+                      for v in seen.values()), f"{first['c3']}")
+            check("the thread's line runs straight down the conversation, face to face, 2px of --card-edge, into Read"
+                  " more where there is one, none past the last, and no curve anywhere (nothing of the tree): phone and"
+                  " desk, light and dark",
+                  all(v["line1"]["ok"] and v["line3"]["ok"] for v in seen.values()),
+                  f"{ {k: (v['line1'], v['line3']) for k, v in seen.items()} }")
+            check("the words keep a comment's room at every depth, the drawing its full width: 322px on a phone, 292 on a"
+                  " desk",
+                  all(set(v["room"]) == ({322} if k.startswith("phone") else {292}) for k, v in seen.items()),
+                  f"{ {k: v['room'] for k, v in seen.items()} }")
+            check("the count by the talk cloud in the row's own ink, 4.5:1 or more; Reply says it (\"Reply, 5 replies\");"
+                  " on a desk in the word's place (the word clipped, still in the button), one with none saying Reply;"
+                  " on a phone the icon and the count alone",
+                  all(v["counts"][0]["n"] == "5" and v["counts"][0]["label"] == "Reply, 5 replies"
+                      and v["counts"][0]["ink"] >= 4.5 and not v["counts"][0]["word"]
+                      and v["counts"][1]["n"] is None and v["counts"][1]["word"] == k.startswith("desk")
+                      for k, v in seen.items()), f"{ {k: v['counts'] for k, v in seen.items()} }")
+            # A TAP ON A REPLY IN THE CONVERSATION OPENS ITS OWN PAGE.
             pg = dee.pg
             pg.set_viewport_size({"width": 1280, "height": 860})
             open_post(pg, post)
-            pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", c1)
-            unseen = pg.evaluate(TREE_BTN, c1)
-            pg.focus(f"#c-{c1} > .cm-main [data-cm-menu]")
-            pg.keyboard.press("Tab")
-            pg.wait_for_timeout(150)
-            focused = pg.evaluate(TREE_BTN, c1)
-            pg.keyboard.press("Enter")
-            pg.wait_for_function("(id) => document.querySelectorAll('#c-' + id + ' > .cm-answers .cm').length >= 3",
-                                 arg=c1, timeout=8000)
-            pg.wait_for_timeout(700)
-            opened = pg.evaluate(TREE_BTN, c1)
-            pg.keyboard.press("Enter")
-            pg.wait_for_timeout(900)
-            shut = pg.evaluate(TREE_BTN, c1)
-            check("THE TREE'S OWN BUTTON, for a keyboard and a screen reader: unseen and taking no room until focused"
-                  " (\"Show 5 replies\", aria-expanded false); Tab from the ⋯ shows it, painted, a 44px pill; Enter opens"
-                  " the tree (\"Hide replies\", true), Enter again folds it, focus kept",
-                  not unseen["painted"] and unseen["w"] <= 1 and unseen["words"] == "Show 5 replies"
-                  and unseen["expanded"] == "false" and focused["focused"] and focused["painted"] and focused["h"] >= 44
-                  and opened["expanded"] == "true" and opened["words"] == "Hide replies" and opened["tree"]
-                  and shut["expanded"] == "false" and shut["words"] == "Show 5 replies" and not shut["tree"]
-                  and shut["focused"],
-                  f"unseen {unseen}; focused {focused}; opened {opened}; shut {shut}")
 
-            # A COMMENT'S OWN PAGE lists its replies the same way.
+            def tap_r3():
+                pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", r3)
+                with pg.expect_navigation(timeout=8000):
+                    pg.click(f"#c-{r3} > .cm-main .cm-words", timeout=8000)
+                return pg.evaluate("() => location.pathname")
+            went, err = steps(tap_r3)
             pg.goto(BASE + f"/social/c/{c1}")
             ready(pg)
             pg.wait_for_timeout(300)
-            listed = [(x["id"], x["n"]) for x in [pg.evaluate(TREE, r1), pg.evaluate(TREE, r2)]]
-            pg.click(f"#c-{r1} > .cm-main .cm-words")
-            pg.wait_for_function("(id) => !!document.querySelector('#c-' + id + ' > .cm-answers .cm')", arg=r1, timeout=8000)
-            pg.wait_for_timeout(700)
-            page_tree = pg.evaluate(TREE, r1)
-            check("A COMMENT'S OWN PAGE lists its replies the same way: each closed with its count (Aria's 3, Bram's"
-                  " none), a tap opening Aria's two deep: Elio's answer, Aria's under it carrying \"1 more reply\"",
-                  listed == [(r1, "3"), (r2, None)] and page_tree == {"id": r1, "n": "3", "to": None, "under": [
-                      {"id": r3, "n": "2", "to": None, "under": [
-                          {"id": r4, "n": "1", "to": None, "under": [{"rm": "1 more reply", "rest": True, "hide": False}]}]},
-                      {"rm": "Hide replies", "rest": False, "hide": True}]},
-                  f"listed {listed}; tree {page_tree}")
-
-            # SIGNED OUT: the count alone; a tap still opens the tree.
+            listed = [(c["id"], c["more"], [a["id"] for a in c["answers"]]) for c in pg.evaluate(SECTION)["list"]]
+            check("a tap on a reply in a conversation opens its own page; a comment's own page lists its replies the"
+                  " same way, oldest first, each with its conversation followed down (Aria's: Elio's, Aria's, Cora's)",
+                  err is None and went == f"/social/c/{r3}" and listed == [(r1, "3", [r3, r4, r5]), (r2, None, [])],
+                  f"went {went} {err}; Elio's page {listed}")
             nctx, npg = browser_as(b, None, screen="phone")
             open_post(npg, post)
-            alone = npg.evaluate(TREE_REST, [c1, c2])["rows"][0]
-            npg.click(f"#c-{c1} > .cm-main .cm-words")
-            npg.wait_for_function("(id) => document.querySelectorAll('#c-' + id + ' > .cm-answers .cm').length >= 3",
-                                  arg=c1, timeout=8000)
-            nobody_tree = npg.evaluate(TREE, c1)
+            alone = npg.evaluate(CHAIN, c1)
+            tally = npg.evaluate(COUNTS, [c1])[0]
             close_ctx(nctx, npg)
-            check("signed out: the count alone by the cloud (no Reply to offer), 4.5:1, and a tap opens the tree the same",
-                  alone["tally"] and alone["n"] == "5" and alone["label"] is None and alone["ink"] >= 4.5
-                  and [x.get("id") for x in nobody_tree["under"]] == [r1, r2, None],
-                  f"{alone}; {nobody_tree}")
-
-            # UNDER REDUCE MOTION it is put in place and fades.
-            rctx, rpg = browser_as(b, dee, screen="phone", reduced=True)
-            open_post(rpg, post)
-            rpg.evaluate(TREE_MARK)
-            rpg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'start' })", c1)
-            fr = rpg.evaluate(FRAMES, [f"document.querySelector('#c-{c1} > .cm-main .cm-words').click()",
-                                       ["#treeMark"], [f"#c-{c1} > .cm-answers"], 1200])
-            close_ctx(rctx, rpg)
-            calm = {"moves": moved_by(track(fr, 0)), "fade": fades_of(fr, 0)}
-            check("under Reduce Motion the tree is put in place (one step) and fades in",
-                  one_step(track(fr, 0)) and calm["fade"] and min(calm["fade"]) < 0.5 and calm["fade"][-1] == 1, f"{calm}")
-
-            # REPLYING IN THE TREE (a desk): where the branch is open the reply lands there; closed, the count takes it.
-            pg.goto(BASE + f"/social/p/{post}")
-            ready(pg)
-            pg.wait_for_timeout(300)
-            pg.click(f"#c-{c1} > .cm-main .cm-words")
-            pg.wait_for_function("(id) => document.querySelectorAll('#c-' + id + ' > .cm-answers .cm').length >= 3",
-                                 arg=c1, timeout=8000)
-            pg.wait_for_timeout(700)
+            check("signed out: the same conversations, the count alone by the cloud (no Reply to offer), 4.5:1",
+                  [x[0] for x in alone["chain"]] == [r1, r3, r4, r5] and tally["tally"] and tally["n"] == "5"
+                  and tally["ink"] >= 4.5, f"{alone}; {tally}")
+            # REPLYING (a desk): where the conversation is followed down to it, a reply continues it.
+            open_post(pg, post)
 
             def post_reply(to, words):
                 answer_box(pg, to)
@@ -4840,44 +4771,31 @@ with sync_playwright() as p:
                 found = db("select public_id from social_comments where words = ?", (words,))
                 got["id"] = found[0][0] if found else None
                 return got
-            to_bram = post_reply(r2, "Section 47, Dora to Bram")
-            after_bram = {"tree": pg.evaluate(TREE, c1)}
-            to_elio = post_reply(r3, "Section 47, Dora to Elio")
-            after_elio = pg.evaluate(TREE, c1)
-            pg.click(f"#c-{r3} > .cm-answers [data-cm-rest]")
-            pg.wait_for_function("(id) => !!document.querySelector('[data-rest-of=\"' + id + '\"]')", arg=r3, timeout=8000)
-            pg.wait_for_timeout(700)
             to_cora = post_reply(r5, "Section 47, Dora to Cora")
-            after_cora = pg.evaluate(TREE, r1)
-            b1 = after_bram["tree"]["under"][1]
-            check("REPLYING WHERE THE BRANCH IS OPEN: a reply to Bram's, in Elio's open tree, lands under his, glowing a"
-                  " moment in the landing's tint; Bram's count says 1, Elio's 6",
-                  to_bram["id"] and to_bram["shown"] == to_bram["id"] and to_bram["landed"] and b1["id"] == r2 and b1["n"] == "1"
-                  and [x.get("id") for x in b1["under"]] == [to_bram["id"]] and after_bram["tree"]["n"] == "6",
-                  f"{to_bram}; {after_bram}")
-            e3 = after_elio["under"][0]["under"][0]
-            check("REPLYING WHERE IT IS CLOSED: a reply to Elio's answer at the second step lands under its closed branch:"
-                  " its count says 3 and glows, its \"3 more replies\" with it; Aria's says 4, Elio's comment 7; it is not"
-                  " shown until the rest is opened",
-                  to_elio["id"] and not to_elio["shown"] and to_elio["glow"] and e3["n"] == "3"
-                  and e3["under"] == [{"rm": "3 more replies", "rest": True, "hide": False}]
-                  and after_elio["under"][0]["n"] == "4" and after_elio["n"] == "7",
-                  f"{to_elio}; {after_elio}")
-            tail = after_cora["under"][-1]
-            check("REPLYING IN THE REST: a reply to Cora's, with the rest open, lands after the last of the rest, at its"
-                  " step, saying \"↳ Cora\"; Elio's answer's count says 4, Aria's 5",
-                  to_cora["id"] and to_cora["shown"] == to_cora["id"] and to_cora["landed"] and tail["id"] == to_cora["id"] and tail["to"] == "Cora"
-                  and after_cora["under"][0]["n"] == "4" and after_cora["n"] == "5",
+            after_cora = pg.evaluate(CHAIN, c1)
+            to_elio = post_reply(c1, "Section 47, Dora to Elio")
+            after_elio = pg.evaluate(CHAIN, c1)
+            to_c2 = post_reply(c2, "Section 47, Dora to Cora's comment")
+            after_c2 = pg.evaluate(CHAIN, c2)
+            check("REPLYING to the last of a conversation continues it: under Cora's, glowing a moment in the landing's"
+                  " tint, every count on the way up saying it (Elio's 6, Aria's 4, Elio's 3, Aria's 2, Cora's 1)",
+                  to_cora["id"] and to_cora["shown"] == to_cora["id"] and to_cora["landed"]
+                  and after_cora["n"] == "6" and after_cora["chain"] == [[r1, "4"], [r3, "3"], [r4, "2"], [r5, "1"],
+                                                                         [to_cora["id"], None]],
                   f"{to_cora}; {after_cora}")
-
-            # DELETING IN THE TREE: the counts go down all the way up.
-            gone = pg.evaluate(DELETE_AND_WATCH, [to_bram["id"], "delete"])
+            check("...a reply to one whose first reply already shows (Elio's comment) doesn't show: the count by its"
+                  " cloud takes it (7) and glows; and a reply to a comment with none (Cora's) starts its conversation,"
+                  " under it",
+                  to_elio["id"] and not to_elio["shown"] and to_elio["glow"] and after_elio["n"] == "7"
+                  and to_c2["id"] and to_c2["shown"] == to_c2["id"] and after_c2["chain"] == [[to_c2["id"], None]],
+                  f"{to_elio}; Elio's {after_elio['n']}; {to_c2}; Cora's {after_c2}")
+            gone = pg.evaluate(DELETE_AND_WATCH, [to_cora["id"], "delete"])
             pg.wait_for_timeout(500)
-            left = pg.evaluate(TREE, c1)
-            check("deleting a reply in the tree: it goes, and every count on its way says so: Bram's none, its list gone"
-                  " with it, Elio's comment back to 7",
-                  gone["gone"] and left["under"][1] == {"id": r2, "n": None, "to": None, "under": []}
-                  and left["n"] == "7", f"{gone}; {left}")
+            left = pg.evaluate(CHAIN, c1)
+            check("deleting the last of a conversation: it goes, and every count on its way says so (Elio's 6, Cora's"
+                  " none)",
+                  gone["gone"] and left["n"] == "6" and left["chain"][-1] == [r5, None] and len(left["chain"]) == 4,
+                  f"{gone}; {left}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(47, exc)
 
