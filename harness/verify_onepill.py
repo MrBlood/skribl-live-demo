@@ -837,6 +837,16 @@ with sync_playwright() as p:
         # token on the page being measured, so a theme's own value is compared.
         TINT = """() => { const d = document.createElement('div'); d.style.background = 'var(--seg-on-fill)';
             document.body.appendChild(d); const v = getComputedStyle(d).backgroundColor; d.remove(); return v; }"""
+        # PLAY IS THE LILAC AT REST AND THE PRESSED LOOK WHILE PLAYING (No dinge,
+        # the last four, the owner's "yes on all dinge", Nov 18): the tint all
+        # but matched the lilac, so playing wears what a lit toggle wears, its
+        # fill and its ring (a ring where a tint cannot show), and its mark the
+        # "on" ink. Each token resolved on the page being measured.
+        LILAC = """() => { const d = document.createElement('div'); d.style.background = 'var(--btn2-bg)';
+            document.body.appendChild(d); const v = getComputedStyle(d).backgroundColor; d.remove(); return v; }"""
+        PRESS = """() => { const d = document.createElement('div'); d.style.background = 'var(--press-fill)';
+            d.style.boxShadow = 'inset 0 0 0 1px var(--press-ring)'; d.style.color = 'var(--seg-on-ink)'; document.body.appendChild(d);
+            const c = getComputedStyle(d), v = { bg: c.backgroundColor, ring: c.boxShadow, ink: c.color }; d.remove(); return v; }"""
         def long_draw(q, canvas):
             # A take long enough to still be playing when it is measured.
             bb = q.query_selector(canvas).bounding_box()
@@ -846,7 +856,7 @@ with sync_playwright() as p:
             q.mouse.up(); settle(q, 300)
         LOOK = """(sel) => { const e = document.querySelector(sel); if (!e) return null; const c = getComputedStyle(e);
             return { shadow: c.boxShadow, bg: c.backgroundColor, anim: c.animationName, r: parseFloat(c.borderTopLeftRadius) || 0,
-                     left: c.borderLeftColor, top: c.borderTopColor, border: c.borderTopColor }; }"""
+                     left: c.borderLeftColor, top: c.borderTopColor, border: c.borderTopColor, ink: c.color }; }"""
         for theme in ("dark", "light"):
             c = ctx_for(theme, "phone"); q = c.new_page()
             browsing.goto(q, BASE, "/skribl-pad"); settle(q)
@@ -862,10 +872,15 @@ with sync_playwright() as p:
                   md and md["bg"] == tint and md["shadow"] == "none" and md["r"] >= 10, f"{md}, tint {tint}")
             q.click("#mediaOpenBtn"); browsing.wait_scroll_still(q); settle(q, 300)
             long_draw(q, "#canvas"); q.click("#recordBtn"); settle(q, 600)
+            lilac, press = q.evaluate(LILAC), q.evaluate(PRESS)
+            pr = q.evaluate(LOOK, "#playBtn")
+            check(f"TINTS [{theme}]: Play at rest is the second button's lilac, a disc (phone)",
+                  pr and pr["bg"] == lilac, f"{pr}, lilac {lilac}")
             q.click("#playBtn"); settle(q, 600)
             pb = q.evaluate(LOOK, "#playBtn"); pw = q.evaluate(LOOK, "#playWrap")
-            check(f"TINTS [{theme}]: Play while playing is a steady tint, no pulse (phone)",
-                  pb and pb["bg"] == tint and pb["anim"] == "none" and pw["anim"] == "none", f"{pb} / wrap {pw}")
+            check(f"TINTS [{theme}]: Play while playing wears the pressed look, its fill and ring and the on ink, no pulse (phone)",
+                  pb and pb["bg"] == press["bg"] and pb["shadow"] == press["ring"] and pb["ink"] == press["ink"]
+                  and pb["anim"] == "none" and pw["anim"] == "none", f"{pb} / wrap {pw}, pressed {press}")
             q.click("#menuBtn"); settle(q, 500)
             f = q.evaluate(LOOK, ".menu-item.menu-feature")
             # Its one shadow, since the edges' part three, is its own tint a
@@ -883,11 +898,15 @@ with sync_playwright() as p:
             check(f"TINTS [{theme}]: Magnify while on wears the selected tool's tile (owner, B), rounded like it",
                   mg and mg["bg"] == tint and mg["shadow"] == "none" and mg["r"] >= 10, f"{mg}, tint {tint}")
             q.click("#magnifyBtn"); settle(q, 400)
-            long_draw(q, "#canvas"); q.click("#recordBtn"); settle(q, 600)
+            long_draw(q, "#canvas"); q.click("#recordBtn"); q.mouse.move(5, 5); settle(q, 600)
+            lilac, press = q.evaluate(LILAC), q.evaluate(PRESS)
+            pr = q.evaluate(LOOK, "#playWrap")
+            check(f"TINTS [{theme}]: from 641px the Play pill at rest is the second button's lilac, no grey wash",
+                  pr and pr["bg"] == lilac, f"{pr}, lilac {lilac}")
             q.click("#playBtn"); q.mouse.move(5, 5); settle(q, 600)   # off the pill: hover films it
             pw = q.evaluate(LOOK, "#playWrap")
-            check(f"TINTS [{theme}]: from 641px the whole Stop pill takes the tint, no pulse",
-                  pw and pw["bg"] == tint and pw["anim"] == "none" and pw["shadow"] == "none", f"{pw}, tint {tint}")
+            check(f"TINTS [{theme}]: from 641px the whole Stop pill wears the pressed look, its fill and ring, no pulse",
+                  pw and pw["bg"] == press["bg"] and pw["anim"] == "none" and pw["shadow"] == press["ring"], f"{pw}, pressed {press}")
             c.close()
 
             c = ctx_for(theme, "phone"); q = c.new_page()
@@ -907,11 +926,16 @@ with sync_playwright() as p:
             check(f"TINTS [{theme}]: Flip's current page keeps one 1px ring, without the second outside it",
                   fr and fr["shadow"] == "none" and fr["border"] not in ("rgba(0, 0, 0, 0)",), str(fr))
             draw(q, "#pad"); q.click("#addcopy"); settle(q, 500)   # Play shows from two pages
+            lilac, press = q.evaluate(LILAC), q.evaluate(PRESS)
+            fr0 = q.evaluate(LOOK, "#play"); fw0 = q.evaluate(LOOK, "#flipPlayWrap")
+            check(f"TINTS [{theme}]: Flip's Play at rest is the second button's lilac, as the Pad's",
+                  fr0 and lilac in (fr0["bg"], fw0["bg"]), f"{fr0} / wrap {fw0}, lilac {lilac}")
             q.click("#play"); settle(q, 300)
             fp = q.evaluate(LOOK, ".btn.flip-play.playing"); fw = q.evaluate(LOOK, "#flipPlayWrap")
-            check(f"TINTS [{theme}]: Flip's Play while playing is a steady tint, no pulse",
-                  fp and fp["anim"] == "none" and fw["anim"] == "none" and tint in (fp["bg"], fw["bg"]),
-                  f"{fp} / wrap {fw}, tint {tint}")
+            on = fp if fp and fp["bg"] == press["bg"] else fw
+            check(f"TINTS [{theme}]: Flip's Play while playing wears the pressed look, its fill and ring, no pulse",
+                  fp and fp["anim"] == "none" and fw["anim"] == "none" and on and on["bg"] == press["bg"] and on["shadow"] == press["ring"],
+                  f"{fp} / wrap {fw}, pressed {press}")
             c.close()
 
         # The Library's playing row: R1, the tint and no edge line (owner).

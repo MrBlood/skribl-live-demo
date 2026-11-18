@@ -1400,7 +1400,13 @@ with sync_playwright() as sp:
     #   frame's track it also took Flip's line). Spent first: the border the
     #   lit button repeated from its base. verify_jsstrip's line moves with
     #   it. 45,605 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_611, 119_844, 40_000
+    # LOWERED (the owner's "yes on all dinge" to No dinge, the last four, Nov
+    #   18): -59 B. The Play pill the second button's lilac, its grey wash and
+    #   the edges round it gone, the phone's Play one rule for both editors;
+    #   the dark glass violet; full screen's x joining the bar's glass rules,
+    #   one more selector in each, which the lilac's shorter values paid for.
+    #   verify_jsstrip's line moves with it. 45,546 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_552, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

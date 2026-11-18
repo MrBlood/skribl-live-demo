@@ -30,6 +30,10 @@
  *   SkriblSmartFade.tone(el, at, words)  -> sets t-dark or t-light; { dark, mixed }
  *   SkriblSmartFade.watchTheme(host, fn) -> fn after a theme turn while host is in the page
  *   SkriblSmartFade.full(bar, o)         -> a full screen's bar: { start, read, stop }
+ *
+ * WHAT LIES OUTSIDE THE BAR (o.also: full screen's x in the top corner, No
+ * dinge, the last four, Nov 18) is toned by the drawing under its own box,
+ * read where it lies, not by the foot.
  */
 (function (global) {
   'use strict';
@@ -76,6 +80,25 @@
     }).join(', ') + ')';
   }
   function luma(v) { return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; }
+  /* The middle colour of what the drawing paints under a box on screen (a
+     drawn at `a`, its ground `m` beyond it); null where it cannot be read. */
+  function under(cv, a, r, m) {
+    var cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
+    if (cx < a.left || cx > a.right || cy < a.top || cy > a.bottom) return m;
+    try {
+      var sx = cv.width / (a.right - a.left), sy = cv.height / (a.bottom - a.top);
+      var x0 = Math.max(0, (r.left - a.left) * sx), y0 = Math.max(0, (r.top - a.top) * sy);
+      var w = Math.max(1, Math.min(cv.width, (r.right - a.left) * sx) - x0), h = Math.max(1, Math.min(cv.height, (r.bottom - a.top) * sy) - y0);
+      var c = doc.createElement('canvas'), g = c.getContext('2d');
+      c.width = W; c.height = H;
+      g.fillStyle = rgb(m);
+      g.fillRect(0, 0, W, H);
+      g.drawImage(cv, x0, y0, w, h, 0, 0, W, H);
+      var px = g.getImageData(0, 0, W, H).data, ch = [[], [], []];
+      for (var i = 0; i < px.length; i += 4) for (var k = 0; k < 3; k++) ch[k].push(px[i + k]);
+      return ch.map(function (v) { v.sort(function (p, q) { return p - q; }); return v[v.length >> 1]; });
+    } catch (e) { return null; }
+  }
   /* Light or dark by what is under a control's box, or a word's letters. */
   function tone(el, at, words) {
     var q = el.getBoundingClientRect();
@@ -144,6 +167,7 @@
     function off() {
       bar.classList.remove('is-smart');
       each('.t-dark, .t-light', function (el) { el.classList.remove('t-dark', 't-light', 'cap'); });
+      (o.also || []).forEach(function (el) { el.classList.remove('t-dark', 't-light'); });
     }
     /* Where the drawing is on screen: the canvas's box, or inside it where
        object-fit: contain letterboxes it. */
@@ -174,6 +198,11 @@
       each(o.glass, function (el) { tone(el, at, false); });
       each(o.words, function (el) { tone(el, at, true); });
       each(o.caps, function (el) { el.classList.toggle('cap', tone(el, at, true).mixed); });
+      (o.also || []).forEach(function (el) {
+        if (!el.isConnected || !el.getClientRects().length) return;
+        var v = under(cv, a, el.getBoundingClientRect(), m);
+        if (v) tone(el, function () { return v; }, false);
+      });
     }
     return {
       start: function () {

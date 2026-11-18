@@ -91,7 +91,8 @@
       canvas: o.canvas,
       photo: o.photo,
       glass: '.player-btn:not(.primary), .rl-speed, .rl-repeat, .full-btn',
-      words: '.rl-drawn, .rl-m, .rl-skip'
+      words: '.rl-drawn, .rl-m, .rl-skip',
+      also: [exit]   // the x in the top corner wears the band's glass (No dinge, the last four)
     }) : null, was = null;
 
     function sync() {

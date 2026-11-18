@@ -674,7 +674,8 @@
       },
       contain: true,
       glass: '.player-btn:not(.primary), .rl-speed',
-      words: '.player-time > span, .rl-drawn, .rl-m, .rl-skip'
+      words: '.player-time > span, .rl-drawn, .rl-m, .rl-skip',
+      also: [x]   // the x in the top corner wears the band's glass (No dinge, the last four)
     }) : null, smartWas = null;
 
     /* THE DRAWING'S GROUND TO THE SCREEN'S EDGES, as the link page paints

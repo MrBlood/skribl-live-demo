@@ -808,6 +808,14 @@ with sync_playwright() as p:
               st["inStrip"] and st["lineH"] <= 4 and st["band"] >= 44 and st["linePainted"], str(st))
         check(f"[{label}] ...and the speeds, ¼x to 4x, take the Duplicate / Blank row while it plays",
               st["speeds"] == ["¼×", "½×", "1×", "2×", "4×"] and st["speedsPainted"] and st["addHidden"], str(st))
+        # THE LINE'S TRACK IS THE LILAC (No dinge, the last four, the owner's yes,
+        # Nov 18): the track the Pad's line wears, where it was a 14% wash, grey.
+        # Its own token, resolved where the line sits, so a theme's value counts.
+        lt = pg.evaluate("""() => { const l = document.getElementById('flipProgress'), p = document.createElement('i');
+            p.style.cssText = 'position:absolute;width:0;height:0;background-color:var(--btn2-bg)'; l.parentElement.appendChild(p);
+            const want = getComputedStyle(p).backgroundColor; p.remove(); return { got: getComputedStyle(l).backgroundColor, want }; }""")
+        check(f"[{label}] ...and the line's track is the lilac the Pad's line wears, not a grey wash",
+              lt["got"] == lt["want"], str(lt))
         beats = pg.evaluate("() => [0.1, 0.3, 0.6, 0.7, 0.95].map(_flipPageAt)")
         check(f"[{label}] a place on the line lands on the page holding that beat (page 2 holds beats 2 to 4 of 6)",
               beats == [0, 1, 1, 2, 3], str(beats))
