@@ -10,6 +10,9 @@ with your own words, or your own drawing.
                         words of a quote (JSON {html}); 404 to anybody who
                         may not quote it
     /b/<skribl_id>/quoted   the same, for a drawing shown outside a post
+    /c/<public_id>/repost   POST {reposted}: a comment's or a reply's (the
+                        comment thread, step 3), as a post's
+    /c/<public_id>/quoted   a comment or a reply, small, for the composer
 
 THE ROW UNDER A POST: comment · repost · heart · ⋯ · Open ›, the repost
 saying how many reposts and quotes there are (none at zero), lit in the
@@ -79,32 +82,36 @@ from .security import current_person, origin_ok, over, site, token_ok
 
 # ---- how many, and whether one is yours ----------------------------------------
 
-def stats(viewer, posts=(), drawings=()):
-    """{("p", a post's internal id) or ("s", a drawing's public id): {"n": how
-    many reposts and quotes `viewer` is shown, "mine": whether a repost is
-    theirs}}, for every thing asked: one grouped read of reposts (posts
-    only), one of a post's quotes and one of a drawing's, nobody hidden from
-    `viewer` counted, a quote taken down only for its own author."""
+def stats(viewer, posts=(), drawings=(), comments=()):
+    """{("p", a post's internal id), ("s", a drawing's public id) or ("c", a
+    comment's internal id; the comment thread, step 3): {"n": how many
+    reposts and quotes `viewer` is shown, "mine": whether a repost is
+    theirs}}, for every thing asked: one grouped read of reposts for posts
+    and one for comments, one of a post's quotes, one of a drawing's and one
+    of a comment's, nobody hidden from `viewer` counted, a quote taken down
+    only for its own author."""
     hidden = sorted(hidden_ids(viewer))
     mine_id = viewer.id if viewer is not None else -1
     out = {}
     pids = [i for i in dict.fromkeys(posts or ()) if i is not None]
     sids = [i for i in dict.fromkeys(drawings or ()) if i]
-    for i in pids:
-        out[("p", i)] = {"n": 0, "mine": False}
-    for i in sids:
-        out[("s", i)] = {"n": 0, "mine": False}
+    cids = [i for i in dict.fromkeys(comments or ()) if i is not None]
+    for kind, ids in (("p", pids), ("s", sids), ("c", cids)):
+        for i in ids:
+            out[(kind, i)] = {"n": 0, "mine": False}
     sess = site().session()
-    if pids:
-        q = (sa.select(Repost.post_id, sa.func.count(),
-                       sa.func.max(sa.case((Repost.person_id == mine_id, 1), else_=0)))
-             .where(Repost.post_id.in_(pids)).group_by(Repost.post_id))
+    for kind, col, ids in (("p", Repost.post_id, pids), ("c", Repost.comment_id, cids)):
+        if not ids:
+            continue
+        q = (sa.select(col, sa.func.count(), sa.func.max(sa.case((Repost.person_id == mine_id, 1), else_=0)))
+             .where(col.in_(ids)).group_by(col))
         if hidden:
             q = q.where(Repost.person_id.notin_(hidden))
-        for pid, n, m in sess.execute(q).all():
-            out[("p", pid)]["n"] += int(n)
-            out[("p", pid)]["mine"] = bool(m)
-    for kind, col, ids in (("p", Post.quoted_post_id, pids), ("s", Post.quoted_drawing_id, sids)):
+        for k, n, m in sess.execute(q).all():
+            out[(kind, k)]["n"] += int(n)
+            out[(kind, k)]["mine"] = bool(m)
+    for kind, col, ids in (("p", Post.quoted_post_id, pids), ("s", Post.quoted_drawing_id, sids),
+                           ("c", Post.quoted_comment_id, cids)):
         if not ids:
             continue
         q = (sa.select(col, sa.func.count()).where(col.in_(ids))
@@ -127,43 +134,60 @@ def stat_on(on, viewer):
 def reposts_before(at, limit, viewer, hidden=frozenset(), among=None, person=None):
     """A page of reposts older than `at`, newest first, as feed entries:
     (entries, more). Each entry is the ORIGINAL's card ("kind" "p", its post
-    and author) with "by", who reposted it, at the repost's time, keyed r<the
-    post's address> (posts._cursor). `among` (Home's Following, a subquery of
-    people's ids): theirs, and the viewer's own; `person` (their Posts tab):
-    theirs. Never a post taken down, nor anybody in `hidden` on either end
-    (the caller's: a block either way and taken down; on Home, the muted
-    too, so a repost by somebody you muted, or of their post, stays away)."""
+    and author; a comment's, "kind" "c", the comment and its author) with
+    "by", who reposted it, at the repost's time, keyed r<the post's address>
+    (or the comment's: posts._cursor). `among` (Home's Following, a subquery
+    of people's ids): theirs, and the viewer's own; `person` (their Posts
+    tab): theirs. Never a post taken down, nor anybody in `hidden` on either
+    end (the caller's: a block either way and taken down; on Home, the muted
+    too, so a repost by somebody you muted, or of their post, stays away).
+    A COMMENT OR A REPLY REPOSTED (the comment thread, step 3; the owner's yes
+    to "A Comment Shared", Nov 17) comes in the same read, by the same rules:
+    never a place (nobody's), nor one taken down; the way to it, and what it
+    is on, its card reads by the page's rules (comments.world_cards)."""
+    from .models import Comment
     by = sa.orm.aliased(Person)
-    q = (sa.select(Repost.created_at, Post, Person, by)
-         .join(Post, Post.id == Repost.post_id)
-         .join(Person, Person.id == Post.person_id)
+    # What a repost is of, the post's or the comment's: its address, its author.
+    addr = sa.func.coalesce(Post.public_id, Comment.public_id)
+    q = (sa.select(Repost.created_at, Post, Comment, Person, by)
+         .outerjoin(Post, Post.id == Repost.post_id)
+         .outerjoin(Comment, Comment.id == Repost.comment_id)
+         .join(Person, Person.id == sa.func.coalesce(Post.person_id, Comment.person_id))
          .join(by, by.id == Repost.person_id)
-         .where(Post.taken_down_at.is_(None))
-         .order_by(Repost.created_at.desc(), Post.public_id.desc()).limit(limit + 1))
+         .where(sa.or_(sa.and_(Repost.post_id.isnot(None), Post.taken_down_at.is_(None)),
+                       sa.and_(Repost.comment_id.isnot(None), Comment.taken_down_at.is_(None), Comment.gone.is_(None))))
+         .order_by(Repost.created_at.desc(), addr.desc()).limit(limit + 1))
     if person is not None:
         q = q.where(Repost.person_id == person.id)
     if among is not None:
         q = q.where(sa.or_(Repost.person_id.in_(among), Repost.person_id == (viewer.id if viewer is not None else -1)))
     hid = sorted(hidden)
     if hid:
-        q = q.where(Repost.person_id.notin_(hid), Post.person_id.notin_(hid))
+        q = q.where(Repost.person_id.notin_(hid), Person.id.notin_(hid))
     if at is not None:
         # The one cursor (posts._cursor), Home's order: newest first, and at
         # one moment a drawing shown outside a post (s), then the reposts
         # (r), then the posts (p), each by its address (gallery._after).
-        q = q.where(_after(Repost.created_at, Post.public_id, "r", at))
+        q = q.where(_after(Repost.created_at, addr, "r", at))
     rows = site().session().execute(q).all()
-    return ([{"kind": "p", "at": as_utc(when), "key": "r" + post.public_id, "post": post, "who": who, "by": rb}
-             for when, post, who, rb in rows[:limit]], len(rows) > limit)
+    out = []
+    for when, post, c, who, rb in rows[:limit]:
+        if post is not None:
+            out.append({"kind": "p", "at": as_utc(when), "key": "r" + post.public_id, "post": post, "who": who, "by": rb})
+        else:
+            out.append({"kind": "c", "at": as_utc(when), "key": "r" + c.public_id, "comment": c, "who": who, "by": rb})
+    return out, len(rows) > limit
 
 
 def once(page):
     """THE SAME POST TWICE IN ONE PAGE SHOWS ONCE, the newest: a post, and its
     reposts by the people you follow (or two of theirs), are one card, the
-    first of them in the page's own order (newest first)."""
+    first of them in the page's own order (newest first). A comment reposted
+    twice too (the comment thread, step 3)."""
     seen, out = set(), []
     for e in page:
-        k = ("p", e["post"].id) if e.get("kind") == "p" and "post" in e else None
+        k = (("p", e["post"].id) if e.get("kind") == "p" and "post" in e
+             else ("c", e["comment"].id) if e.get("kind") == "c" else None)
         if k is not None and k in seen:
             continue
         if k is not None:
@@ -229,8 +253,22 @@ class Quoted:
                 break
         self.drawing_ids = sorted({p.quoted_drawing_id for p in quotes if p.quoted_drawing_id}
                                   | {sid for kind, sid in self.leads.values() if kind == "s"})
+        # A QUOTED COMMENT OR REPLY (the comment thread, step 3) shows as its
+        # page would show it to this viewer (comments.seen: nobody hidden on
+        # the way to it, what it is on theirs to see, nothing taken down but
+        # their own), never a place. A few reads each; a page has few.
+        self.comments = {}               # a quoted comment's id -> comments.seen's
+        cids = sorted({p.quoted_comment_id for p in quotes if getattr(p, "quoted_comment_id", None)})
+        if cids:
+            from .comments import seen
+            from .models import Comment
+            for cid, pid in sess.execute(sa.select(Comment.id, Comment.public_id).where(Comment.id.in_(cids))).all():
+                got = seen(pid, viewer)
+                if got is not None and got["c"].gone is None:
+                    self.comments[cid] = got
         self.skribls = ([post.skribl_id for post, _ in self.posts.values() if post.skribl_id] + self.drawing_ids
-                        + [sid for kind, sid in self.leads.values() if kind == "p"])
+                        + [sid for kind, sid in self.leads.values() if kind == "p"]
+                        + [got["c"].skribl_id for got in self.comments.values() if got["c"].skribl_id])
 
     def _shown_post(self, post, who):
         """The page's rule (comments.on_post): no block either way, nobody
@@ -241,12 +279,22 @@ class Quoted:
         return mine or (post.taken_down_at is None and who.taken_down_at is None)
 
     def card(self, quote, described, makers):
-        """The small card of one quote post: {"gone": True}, or {"url", "who",
-        "words", "at", "sk" (its drawing as Skribl describes it, or None),
-        "says" (what its ▶ says: "drawn in 15 sec", "3 pages", or "")}.
+        """The small card of one quote post: {"gone": True} ("what":
+        "comment" for a comment's), or {"url", "who", "words", "at", "sk" (its
+        drawing as Skribl describes it, or None), "says" (what its ▶ says:
+        "drawn in 15 sec", "3 pages", or ""), and for a comment "on" (what
+        it is on: on_words)}.
         `described` is the page's describe_posts, `makers` {public id: person}
         for the drawings' makers."""
         from .gallery import says
+        cid = getattr(quote, "quoted_comment_id", None)
+        if cid is not None:
+            # A comment or a reply: gone once it went (GONE_COMMENT) or is
+            # hidden from them, "This comment is gone." (the mock's words).
+            got = self.comments.get(cid)
+            if got is None:
+                return {"gone": True, "what": "comment"}
+            return _comment_small(got, described.get(got["c"].skribl_id) if got["c"].skribl_id else None)
         if quote.quoted_post_id is not None and quote.quoted_post_id in self.posts:
             post, who = self.posts[quote.quoted_post_id]
             if not self._shown_post(post, who):
@@ -283,6 +331,14 @@ class Quoted:
 
 #: How many quotes deep a quote's small card looks for the drawing it leads to.
 LEAD_DEPTH = 12
+
+#: WHAT A QUOTE OF A COMMENT KEEPS ONCE THE COMMENT HAS GONE (the comment
+#: thread, step 3): no comment is 0 (ids start at 1), so it reads as gone and
+#: still says what it quoted: "This comment is gone." (A quoted post's own key
+#: goes to NULL, and its card says "This post is gone."; a comment's has no
+#: key to let it go, a cycle the host's create_all cannot sort, and SQLite
+#: may give a deleted comment's id to the next one, so it is never left.)
+GONE_COMMENT = 0
 
 
 def _says(sk, says):
@@ -356,6 +412,45 @@ def small_of(on, me):
             "at": _made(sk or {}), "sk": sk, "says": _says(sk, says)}
 
 
+def comment_open(me, public_id):
+    """A comment or a reply `me` may repost or quote (the comment thread,
+    step 3), as comments.seen gives it, or None: one they may see (nobody
+    hidden on the way to it), on a post or a drawing open to them, neither
+    it nor anything on the way to it taken down, and no place (nobody's)."""
+    from .comments import seen
+    got = seen(public_id, me)
+    if (got is None or not got["on"].open_to(me) or got["c"].gone is not None or got["c"].taken_down_at is not None
+            or any(c.taken_down_at is not None for c, _ in got["chain"])):
+        return None
+    return got
+
+
+def on_words(on):
+    """What a comment out in the world says it is on (the comment thread,
+    step 3): "On Ben’s post", "On Ben’s drawing"."""
+    first = (on.owner.display_name or "").split(" ")[0]
+    return f"On {first}\u2019s {'post' if on.post is not None else 'drawing'}"
+
+
+def comment_small(got, me):
+    """A comment or a reply, small, as a quote of it shows it (A Comment
+    Shared, the owner's yes, Nov 17): its author's name and @handle and when,
+    what it is on ("On Ben’s post"), its words (two lines at most), and its
+    drawing's still with "drawn in", one link to its own page."""
+    from skribl import describe_posts
+    c = got["c"]
+    return _comment_small(got, describe_posts([c.skribl_id], viewer_id=me.public_id if me else None).get(c.skribl_id)
+                          if c.skribl_id else None)
+
+
+def _comment_small(got, sk):
+    """comment_small's card, its drawing `sk` as Skribl describes it."""
+    from .gallery import says
+    c = got["c"]
+    return {"gone": False, "url": url_for("social.comment_page", public_id=c.public_id), "who": got["who"],
+            "words": c.words or "", "at": c.created_at, "sk": sk, "says": _says(sk, says), "on": on_words(got["on"])}
+
+
 # ---- deleting, and one drawing's moving into a post ------------------------------
 
 def _drop(where):
@@ -387,10 +482,24 @@ def move_drawing_quotes(skribl_id, post_id):
     _let_go(Post.quoted_drawing_id == str(skribl_id), quoted_post_id=post_id, quoted_drawing_id=None)
 
 
+def drop_comment_reposts(ids):
+    """The comments `ids` (internal ids) going, or keeping their places (the
+    comment thread, step 3; comments.retire and comments._drop): their
+    reposts go, and their quotes let go of them (GONE_COMMENT), each saying
+    "This comment is gone.". A place is nobody's, nothing to repost or
+    quote."""
+    ids = sorted(set(ids or ()))
+    if ids:
+        _drop(Repost.comment_id.in_(ids))
+        _let_go(Post.quoted_comment_id.in_(ids), quoted_comment_id=GONE_COMMENT, quoted_owner_id=None)
+
+
 def drop_person_reposts(person_id):
     """Every repost a person made, and every repost of what they owned; the
     quotes of what they owned letting go of it (accounts.delete_person)."""
     _drop(sa.or_(Repost.person_id == person_id, Repost.owner_id == person_id))
+    _let_go(sa.and_(Post.quoted_owner_id == person_id, Post.quoted_comment_id.isnot(None)),
+            quoted_comment_id=GONE_COMMENT, quoted_owner_id=None)
     _let_go(Post.quoted_owner_id == person_id, quoted_post_id=None, quoted_drawing_id=None, quoted_owner_id=None)
 
 
@@ -442,6 +551,67 @@ def register(bp):
         sess.flush()
         n = stat_on(on, me)["n"] if on is not None else 0
         return jsonify({"ok": True, "reposted": body["reposted"], "n": n})
+
+    @bp.post("/c/<public_id>/repost")
+    @_rests(json_answer=True)
+    def repost_comment(public_id):
+        """This person's repost of a comment or a reply (the comment thread,
+        step 3), made or undone: {reposted}. One they may see, no place,
+        nothing taken down (comment_open); undone, their own goes whatever
+        became of it since."""
+        if not origin_ok() or not token_ok():
+            return _json_error("stale", 403)
+        me = current_person()
+        if me is None:
+            return _json_error("signed_out", 401)
+        if over("repost", "person|" + me.public_id):
+            return _json_error("limited", 429)
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or not isinstance(body.get("reposted"), bool):
+            return _json_error("bad", 400)
+        from .comments import may_comment
+        from .models import Comment
+        sess = site().session()
+        got = comment_open(me, public_id)
+        if body["reposted"]:
+            if not may_comment(me):
+                return _json_error("taken_down", 403)
+            if got is None:
+                return _json_error("gone", 404)
+            c = got["c"]
+            mine = sa.and_(Repost.comment_id == c.id, Repost.person_id == me.id)
+            if sess.execute(sa.select(Repost.id).where(mine)).first() is None:
+                try:
+                    with sess.begin_nested():
+                        sess.add(Repost(person_id=me.id, comment_id=c.id, owner_id=c.person_id))
+                        sess.flush()
+                except sa.exc.IntegrityError:
+                    pass            # reposted a moment ago, from another tap: one repost
+        else:
+            cid = sa.select(Comment.id).where(Comment.public_id == str(public_id)).scalar_subquery()
+            gone = sess.execute(sa.delete(Repost).where(Repost.person_id == me.id, Repost.comment_id == cid)
+                                .execution_options(synchronize_session=False)).rowcount
+            if not gone and got is None:
+                return _json_error("gone", 404)
+        sess.flush()
+        n = stats(me, comments=[got["c"].id])[("c", got["c"].id)]["n"] if got is not None else 0
+        return jsonify({"ok": True, "reposted": body["reposted"], "n": n})
+
+    @bp.get("/c/<public_id>/quoted")
+    @_rests(json_answer=True)
+    def quoted_comment(public_id):
+        """A comment or a reply, small, as a quote of it shows it (the
+        composer's; the comment thread, step 3)."""
+        me = current_person()
+        if me is None:
+            return _json_error("signed_out", 401)
+        got = comment_open(me, public_id)
+        if got is None:
+            return _json_error("gone", 404)
+        html = render_template("social/_quote.html", q=comment_small(got, me), me=me)
+        resp = jsonify({"html": html.strip()})
+        resp.headers["Cache-Control"] = "private, no-store"
+        return resp
 
     def quoted(kind, oid):
         """The small card a quote of it shows, for the composer: {html}."""

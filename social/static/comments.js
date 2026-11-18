@@ -843,6 +843,16 @@
                   page: li === subjectEl };
       opener = m;
       var postMine = root.hasAttribute('data-post-mine');
+      /* BOOKMARK (the comment thread, step 3): Bookmark, or Remove bookmark
+         with its ribbon filled, as the comment says; none where it can't be
+         shared, nor without the post's own (posts.js, window.SocialMark). */
+      var bm = menuWrap.querySelector('[data-cm-act=bookmark]');
+      if (bm) {
+        var kept = li.hasAttribute('data-marked');
+        bm.hidden = !li.hasAttribute('data-markable') || !window.SocialMark;
+        bm.classList.toggle('is-marked', kept);
+        bm.querySelector('[data-bm-words]').textContent = say(kept ? 'c_bm_remove' : 'c_bm_add');
+      }
       menuWrap.querySelector('[data-cm-act=delete]').hidden = !current.mine;
       menuWrap.querySelector('[data-cm-act=remove]').hidden = current.mine || !postMine;
       menuWrap.querySelector('[data-cm-act=report]').hidden = current.mine;
@@ -922,6 +932,14 @@
       /* COPY LINK AND SHARE…: the comment's own page, as a post's are its
          own (posts.js says them the same way). */
       if (act === 'copy') { copy(current.url, sayIt); return; }
+      /* BOOKMARK: nothing asked first, as a post's: the sheet goes down, the
+         toast says so with Undo, focus back on the ⋯ (signed out, the small
+         sheet that says how). */
+      if (act === 'bookmark' && window.SocialMark) {
+        menu.close(!!window.SocialMark.out);
+        window.SocialMark.act(current.li, opener);
+        return;
+      }
       if (act === 'share') {
         if (navigator.share) navigator.share({ url: current.url }).catch(function () { /* closed: nothing to say */ });
         else copy(current.url, sayIt);

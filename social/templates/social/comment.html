@@ -15,8 +15,10 @@
     2. IT, as big as a post: its 48px face, its name and @handle, its words,
        its drawing as a post's (the whole width on a phone, the drawing's
        side on a desk), playing by itself as a post's does (posts.js), its
-       row (Reply, with how many, its heart: the comment thread, step 2, and
-       ⋯) and its full time.
+       row (Reply, with how many, its repost: the comment thread, step 3,
+       its heart: step 2, and ⋯) and its full time. The repost's sheet,
+       and signed out the small sheets its repost and its ⋯'s Bookmark
+       raise, are a post's (post_sheets, posts.js).
     3. "REPLIES" and how many (every reply under it, at any depth), the
        icon that opens the box ("Reply to Eli"), then its direct replies,
        oldest first, each alone, one with replies under it carrying its own
@@ -27,8 +29,8 @@
     else, to what it is on. Comments are the site's: the Pad and Flip don't
     change. #}
 {% extends 'social/base.html' %}
-{% from 'social/_post.html' import face, post_words with context %}
-{% from 'social/_comments.html' import comments_section, comment_sheets, comment_art, comment_heart with context %}
+{% from 'social/_post.html' import face, post_words, post_sheets, repost with context %}
+{% from 'social/_comments.html' import comments_section, comment_sheets, comment_art, comment_heart, the_way, share_data with context %}
 {% from 'social/_likes.html' import like_sheets with context %}
 {% import 'social/_icons.html' as ic %}
 {% set c = it.c %}{% set who = it.who %}
@@ -47,27 +49,9 @@
 {% block main %}
 <article class="post-page cm-page{% if it.gone %} is-gone{% endif %}" data-cm-subject="{{ c.public_id }}" data-comment="{{ c.public_id }}"
          data-first="{{ who.display_name.split(' ')[0] if who else '' }}" data-url="{{ url_for('social.comment_page', public_id=c.public_id) }}"
-         data-up="{{ way[-1].href }}"{% if me and me.id == c.person_id %} data-mine{% endif %}
+         data-up="{{ way[-1].href }}"{% if me and me.id == c.person_id %} data-mine{% endif %}{{ share_data(it) }}
          {%- if c.skribl_id %} data-autoplay{% else %} data-no-art{% endif %} aria-labelledby="postWho">
-  <ol class="cm-way" aria-label="The way to it">
-    {%- for w in way %}
-    <li class="cm-way-item">
-      <a class="cm-way-link" href="{{ w.href }}">
-        {%- if w.gone %}
-        <span class="cm-gone-face" aria-hidden="true"></span>
-        <span class="cm-way-main"><span class="cm-way-gone">{{ w.gone }}</span></span>
-        {%- else %}
-        {{ face(w.who, 'cm-way-face', initial=true) }}
-        <span class="cm-way-main">
-          <span class="cm-way-head"><b>{{ w.who.display_name }}</b>{% if w.when %}<time datetime="{{ when_iso(w.when) }}" data-when="ago">{{ when_day(w.when) }}</time>{% endif %}</span>
-          {%- if w.words %}<span class="cm-way-words">{{ w.words }}</span>{% endif %}
-        </span>
-        {%- endif %}
-        {%- if w.pic %}<span class="cm-way-pic" style="width: {{ w.pic.w }}px; background-image: url('{{ w.pic.src }}'); background-size: {{ w.pic.size }}; background-position: {{ w.pic.at }}" aria-hidden="true"></span>{% endif %}
-      </a>
-    </li>
-    {%- endfor %}
-  </ol>
+  {{ the_way(way) }}
   {%- if it.gone %}
   {#- A PLACE as the page's own: its ring and what it says; nothing to reply to, nothing in its ⋯. #}
   <header class="post-head cm-gone-head"><span class="cm-gone-face" aria-hidden="true"></span><p class="cm-gone" id="postWho">{{ it.gone }}</p></header>
@@ -88,6 +72,7 @@
     {%- else %}
     <span class="post-count" aria-label="{{ '%d repl%s' % (cm.count, 'y' if cm.count == 1 else 'ies') if cm.count else 'Replies' }}" role="img">{{ ic.comment() }}{% if cm.count %}<span>{{ cm.count }}</span>{% endif %}</span>
     {%- endif %}
+    {%- if it.shareable %}{{ repost(it) }}{% endif %}
     {%- if not c.taken_down_at %}{{ comment_heart(it) }}{% endif %}
     <button class="icon-btn post-more" type="button" data-cm-menu aria-haspopup="dialog" aria-controls="commentSheet"
             aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>
@@ -100,4 +85,4 @@
 {{ post_words() }}
 {% endblock %}
 
-{% block overlays %}{{ comment_sheets(cm) }}{{ like_sheets(none, it if who else {"who": {"display_name": ""}}) }}{% endblock %}
+{% block overlays %}{{ comment_sheets(cm) }}{{ like_sheets(none, it if who else {"who": {"display_name": ""}}) }}{{ post_sheets() }}{% endblock %}

@@ -1564,6 +1564,10 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .qt-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 15px; line-height: 1.3; }
 .qt-name { flex: none; max-width: 60%; overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .qt-sub { min-width: 0; overflow: hidden; color: var(--ink-2); text-overflow: ellipsis; white-space: nowrap; }
+/* A COMMENT QUOTED (the comment thread, step 3; "A Comment Shared", the
+   owner's yes, Nov 17): what it is on, "On Ben’s post", under its name in the
+   second ink, the mock's 14px (6.5:1 on the light well, 9.9:1 on the dark). */
+.qt-on { display: block; margin-top: 2px; overflow: hidden; color: var(--ink-2); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .qt-words {
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
   margin-top: 6px; font-size: 15px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere;
@@ -1708,6 +1712,18 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
   background-color: var(--draw-wait); background-repeat: no-repeat;
   box-shadow: 0 0 0 var(--edge) var(--draw-edge);
 }
+/* THE WAY IN A COMMENT'S CARD (the comment thread, step 3; "A Comment
+   Shared", the owner's yes to A, Nov 17): a comment out in the world brings
+   the way to it, as on its own page, its faces centred in the card's own
+   44px column so the thread's line runs straight down through their middles
+   into the card's face, and meets it at its top: the line's 2px sit 1px
+   either side of the face's middle, where its circle's edge lies 0.02px
+   down (22 - √(22² - 1²)), past the way's 4px foot. */
+.post-card .cm-way { margin: 0 0 4px; }
+.post-card .cm-way-link { grid-template-columns: 44px minmax(0, 1fr) auto; }
+.post-card .cm-way-link > :first-child { justify-self: center; }
+.post-card .cm-way-item::before { left: 21px; }
+.post-card .cm-way-item:last-child::before { bottom: calc(-4px - 0.02px); }
 .cm-page .post-head .face-blank.has-initial { font-size: 19px; }
 a.post-face { text-decoration: none; }
 .post-page .post-head .face-ring { --skribl-face-size: 48px; width: 48px; height: 48px; }
@@ -1836,6 +1852,16 @@ a.post-face { text-decoration: none; }
   border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 15px; cursor: pointer;
 }
 .cm-acts .lk-heart .ic { width: 18px; height: 18px; }
+/* A COMMENT'S REPOST (the comment thread, step 3): the post's (posts.js), in
+   the row's ink and size beside the heart, lit in the small violet ink once
+   the repost is yours, as a post's is. */
+.cm-acts .rp-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px;
+  border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 15px; white-space: nowrap;
+  cursor: pointer; transition: color 0.2s ease;
+}
+.cm-acts .rp-btn .ic { width: 18px; height: 18px; }
+.cm-acts .rp-btn.is-on { color: var(--accent-ink); }
 .cm-acts .icon-btn { color: var(--ink-2); }
 .cm-acts .icon-btn .ic { width: 20px; height: 20px; }
 @media (max-width: 899px) {

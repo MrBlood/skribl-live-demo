@@ -28,12 +28,14 @@
  *
  * A QUOTE (reposts; the owner's "All yes", Nov 14): the repost sheet's Quote
  * opens this sheet through window.SocialComposer.quote, the post (or a
- * drawing shown outside a post) small under the words, which say "Add your
- * words, or draw something…"; a drawing added sits between them. Words
- * alone are enough (the original brings its drawing), so POST wakes once
- * there are words or a drawing, and sends what it quotes ({quote: the
- * post's address}, or {quote_drawing: the drawing's id}) with them. Make
- * opens the sheet without the quote: a quote is the Quote door's.
+ * drawing shown outside a post, or since the comment thread's step 3 a
+ * comment or a reply) small under the words, which say "Add your words, or
+ * draw something…"; a drawing added sits between them. Words alone are
+ * enough (the original brings its drawing), so POST wakes once there are
+ * words or a drawing, and sends what it quotes ({quote: the post's
+ * address}, {quote_drawing: the drawing's id}, or {quote_comment: the
+ * comment's address}) with them. Make opens the sheet without the quote: a
+ * quote is the Quote door's.
  *
  * POST is dim until there are words or a drawing (aria-disabled: still a
  * button, so a press says what is missing, as the editors' Add does in
@@ -97,7 +99,7 @@
   var LIMIT = +(words.getAttribute('maxlength')) || 500;
 
   var att = null;       // what is attached: { kind: 'payload', payload, over } or { kind: 'skribl', id }
-  var quoted = null;    // what is quoted: { kind: 'p' (a post) or 's' (a drawing), id }
+  var quoted = null;    // what is quoted: { kind: 'p' (a post), 's' (a drawing) or 'c' (a comment), id }
   var quoteBox = q('[data-compose-quote]');
   var player = null;    // its player (SkriblInline)
   var sending = false;
@@ -233,7 +235,7 @@
     var body = { words: words.value };
     if (att && att.kind === 'skribl') body.skribl = att.id;
     else if (att) body.payload = att.payload;
-    if (quoted) body[quoted.kind === 's' ? 'quote_drawing' : 'quote'] = quoted.id;
+    if (quoted) body[quoted.kind === 's' ? 'quote_drawing' : quoted.kind === 'c' ? 'quote_comment' : 'quote'] = quoted.id;
     post(wrap.getAttribute('data-post-new'), body).then(function (j) {
       if (j.ok && j.go) { window.location.assign(j.go); return; }
       sending = false;
@@ -394,14 +396,16 @@
 
   /* What a later step reads (verify_composer), and where a quote comes in
      (posts.js, the repost sheet's Quote): whether it is open, what is
-     attached and what is quoted. quote({kind, id, html, from}): `html` the
-     post small (the site's /p/<id>/quoted), `from` what takes focus back. */
+     attached and what is quoted. quote({kind, id, html, from}): `kind` 'p'
+     (a post), 's' (a drawing) or 'c' (a comment: the comment thread, step
+     3), `html` it small (the site's /p/<id>/quoted, /b/..., /c/...), `from`
+     what takes focus back. */
   window.SocialComposer = {
     open: function (from) { sheet.open(from || null); lift(); grow(); },
     quote: function (o) {
       if (sending || !o || !o.id) return;
       if (view !== 'write') show('write', true);
-      setQuote({ kind: o.kind === 's' ? 's' : 'p', id: o.id }, o.html || '');
+      setQuote({ kind: o.kind === 's' || o.kind === 'c' ? o.kind : 'p', id: o.id }, o.html || '');
       sheet.open(o.from || null);
       lift();
       grow();

@@ -1394,6 +1394,11 @@ with sync_playwright() as p_:
                     "ix_social_likes_drawing_created", "ix_social_likes_owner_created", "ix_social_likes_person_created",
                     # likes on comments (the comment thread, step 2): once a person a comment, a comment's newest first
                     "ix_social_likes_person_comment", "ix_social_likes_comment_created",
+                    # a comment reposted, quoted and kept (the comment thread, step 3): once a person a
+                    # comment, a comment's reposts, its quotes, its bookmarks
+                    "ix_social_reposts_person_comment", "ix_social_reposts_comment_id",
+                    "ix_social_posts_quoted_comment_id", "ix_social_bookmarks_person_comment",
+                    "ix_social_bookmarks_comment_id",
                     # bookmarks: once a person a thing, yours newest first, a post's, a drawing's, whose
                     "ix_social_bookmarks_person_post", "ix_social_bookmarks_person_drawing",
                     "ix_social_bookmarks_person_created", "ix_social_bookmarks_post_id", "ix_social_bookmarks_drawing_id",
@@ -1632,6 +1637,65 @@ with sync_playwright() as p_:
                          "ALTER TABLE social_likes DROP CONSTRAINT fk_social_likes_comment_id",
                          "ALTER TABLE social_likes DROP COLUMN comment_id"],
               f"up {cl_up.returncode} {cu}; down {cl_down.returncode} {cd}")
+        # ...AND STEP 3'S (repost, quote and bookmark a comment): on the reposts a
+        # column added nullable with no default, post_id let be nothing, the
+        # foreign key, a CHECK (a post or a comment) added NOT VALID and two
+        # indexes; on the posts the quoted comment's column (no foreign key: a
+        # cycle), the quote CHECK swapped for one with a third kind (NOT VALID)
+        # and its index; on the bookmarks a column, its foreign key, the CHECK
+        # swapped (NOT VALID) and two indexes. No row read or written; all of it
+        # undone going down, the old CHECKs back.
+        cr_up, cr_down = offline("upgrade", "5beec18dc5fe:36a8b352b347"), offline("downgrade", "36a8b352b347:5beec18dc5fe")
+        ru, rd = statements(cr_up.stdout), statements(cr_down.stdout)
+        three = lambda a, b_, c, op: (f"CHECK ((CASE WHEN {a} IS NULL THEN 0 ELSE 1 END + CASE WHEN {b_} IS NULL THEN 0 ELSE 1 END"
+                                      f" + CASE WHEN {c} IS NULL THEN 0 ELSE 1 END) {op})")
+        check("...and step 3's (repost, quote and bookmark a comment) PostgreSQL DDL, read offline: the reposts' comment"
+              " column added nullable with no default, post_id let be nothing, its foreign key, a post or a comment"
+              " (NOT VALID) and two indexes; the posts' quoted comment column (no foreign key), the quote CHECK widened"
+              " to three (NOT VALID) and its index; the bookmarks' comment column, its foreign key, the CHECK widened"
+              " (NOT VALID) and two indexes: no row of any table read or written; and all of it undone going down, the"
+              " old CHECKs back (the one read going down, whether any is there, is not asked offline)",
+              cr_up.returncode == 0 and cr_down.returncode == 0
+              and ru == ["ALTER TABLE social_reposts ADD COLUMN comment_id BIGINT",
+                         "ALTER TABLE social_reposts ALTER COLUMN post_id DROP NOT NULL",
+                         "ALTER TABLE social_reposts ADD CONSTRAINT fk_social_reposts_comment_id FOREIGN KEY(comment_id)"
+                         " REFERENCES social_comments (id) ON DELETE CASCADE",
+                         "ALTER TABLE social_reposts ADD CONSTRAINT ck_social_reposts_on_one CHECK ((post_id IS NULL) <>"
+                         " (comment_id IS NULL)) NOT VALID",
+                         "CREATE UNIQUE INDEX ix_social_reposts_person_comment ON social_reposts (person_id, comment_id)",
+                         "CREATE INDEX ix_social_reposts_comment_id ON social_reposts (comment_id)",
+                         "ALTER TABLE social_posts ADD COLUMN quoted_comment_id BIGINT",
+                         "ALTER TABLE social_posts DROP CONSTRAINT ck_social_posts_quotes_one",
+                         "ALTER TABLE social_posts ADD CONSTRAINT ck_social_posts_quotes_one "
+                         + three("quoted_post_id", "quoted_drawing_id", "quoted_comment_id", "<= 1") + " NOT VALID",
+                         "CREATE INDEX ix_social_posts_quoted_comment_id ON social_posts (quoted_comment_id)",
+                         "ALTER TABLE social_bookmarks ADD COLUMN comment_id BIGINT",
+                         "ALTER TABLE social_bookmarks ADD CONSTRAINT fk_social_bookmarks_comment_id FOREIGN KEY(comment_id)"
+                         " REFERENCES social_comments (id) ON DELETE CASCADE",
+                         "ALTER TABLE social_bookmarks DROP CONSTRAINT ck_social_bookmarks_on_one",
+                         "ALTER TABLE social_bookmarks ADD CONSTRAINT ck_social_bookmarks_on_one "
+                         + three("post_id", "drawing_id", "comment_id", "= 1") + " NOT VALID",
+                         "CREATE UNIQUE INDEX ix_social_bookmarks_person_comment ON social_bookmarks (person_id, comment_id)",
+                         "CREATE INDEX ix_social_bookmarks_comment_id ON social_bookmarks (comment_id)"]
+              and rd == ["DROP INDEX ix_social_bookmarks_comment_id",
+                         "DROP INDEX ix_social_bookmarks_person_comment",
+                         "ALTER TABLE social_bookmarks DROP CONSTRAINT ck_social_bookmarks_on_one",
+                         "ALTER TABLE social_bookmarks ADD CONSTRAINT ck_social_bookmarks_on_one CHECK ((post_id IS NOT NULL"
+                         " AND drawing_id IS NULL) OR (post_id IS NULL AND drawing_id IS NOT NULL))",
+                         "ALTER TABLE social_bookmarks DROP CONSTRAINT fk_social_bookmarks_comment_id",
+                         "ALTER TABLE social_bookmarks DROP COLUMN comment_id",
+                         "DROP INDEX ix_social_posts_quoted_comment_id",
+                         "ALTER TABLE social_posts DROP CONSTRAINT ck_social_posts_quotes_one",
+                         "ALTER TABLE social_posts ADD CONSTRAINT ck_social_posts_quotes_one CHECK (quoted_post_id IS NULL"
+                         " OR quoted_drawing_id IS NULL)",
+                         "ALTER TABLE social_posts DROP COLUMN quoted_comment_id",
+                         "DROP INDEX ix_social_reposts_comment_id",
+                         "DROP INDEX ix_social_reposts_person_comment",
+                         "ALTER TABLE social_reposts DROP CONSTRAINT ck_social_reposts_on_one",
+                         "ALTER TABLE social_reposts DROP CONSTRAINT fk_social_reposts_comment_id",
+                         "ALTER TABLE social_reposts ALTER COLUMN post_id SET NOT NULL",
+                         "ALTER TABLE social_reposts DROP COLUMN comment_id"],
+              f"up {cr_up.returncode} {ru}; down {cr_down.returncode} {rd}")
         # ...and on SQLite, a chain with posts in it: up, every post kept and a
         # post of words alone taken (a post of nothing still refused); back
         # down refused while one is there, saying so before it changes

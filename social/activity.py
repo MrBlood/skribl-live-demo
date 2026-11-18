@@ -73,7 +73,13 @@ others reposted your post"), Earlier one row a post, as likes; it opens the
 post. "Rook quoted your post", a row each, their words under it in quotes,
 the small picture the quote's own drawing, else yours; it opens the quote.
 Undo repost takes its row with it, and a quote of something since gone (or
-gone itself) is not in it. NEITHER LIGHTS THE DOT: nothing to answer.
+gone itself) is not in it. NEITHER LIGHTS THE DOT: nothing to answer. A
+COMMENT OR A REPLY TOO (the comment thread, step 3; "A Comment Shared", the
+owner's yes, Nov 17): "Ana reposted your comment", grouped as a post's, and
+"Cyd quoted your comment", a row each, their words under it; the first opens
+the comment where it shows (comments.landing), its words under it, the
+second the quote; only while its way up shows to them (chain_shown), never
+for a place or one taken down.
 
 MENTIONS TOO (mentions; the mentions mock, the owner's "All yes", Nov 15),
 read from the mentions, never kept as rows of their own: "Rook mentioned
@@ -321,18 +327,56 @@ def _reposts(me, hidden, since):
     return sorted((g for g in groups if g["people"]), key=lambda g: as_utc(g["at"]), reverse=True)[:LIKE_GROUPS]
 
 
+def _comment_reposts(me, hidden, since):
+    """The reposts of a comment or a reply `me` wrote (the comment thread,
+    step 3), as _reposts() has a post's: one group a comment, since you last
+    looked and before, newest first, LIKE_GROUPS at most: [{"comment_id",
+    "new", "n", "at", "people" (the newest two)}]; never of one taken down,
+    nor of a place (nobody's)."""
+    hid = sorted(hidden)
+    base = [Repost.owner_id == me.id, Repost.person_id != me.id, Repost.comment_id.isnot(None),
+            Comment.taken_down_at.is_(None), Comment.gone.is_(None)]
+    if hid:
+        base.append(Repost.person_id.notin_(hid))
+    parts = ([(True, base)] if since is None else
+             [(True, base + [Repost.created_at > since]), (False, base + [Repost.created_at <= since])])
+    sess = site().session()
+    groups = []
+    for new, conds in parts:
+        newest = sa.func.max(Repost.created_at)
+        q = (sa.select(Repost.comment_id, sa.func.count(), newest)
+             .join(Comment, Comment.id == Repost.comment_id).where(*conds)
+             .group_by(Repost.comment_id).order_by(newest.desc()).limit(LIKE_GROUPS))
+        found = {cid: {"comment_id": cid, "new": new, "n": int(n), "at": at, "people": []}
+                 for cid, n, at in sess.execute(q).all()}
+        if not found:
+            continue
+        rank = sa.func.row_number().over(partition_by=Repost.comment_id,
+                                         order_by=(Repost.created_at.desc(), Repost.id.desc()))
+        inner = (sa.select(Repost.comment_id, Repost.person_id, rank.label("rank"))
+                 .join(Comment, Comment.id == Repost.comment_id)
+                 .where(*conds, Repost.comment_id.in_(sorted(found))).subquery())
+        for cid, person in sess.execute(sa.select(inner.c.comment_id, Person).join(Person, Person.id == inner.c.person_id)
+                                        .where(inner.c.rank <= 2).order_by(inner.c.rank)).all():
+            found[cid]["people"].append(person)
+        groups += list(found.values())
+    return sorted((g for g in groups if g["people"]), key=lambda g: as_utc(g["at"]), reverse=True)[:LIKE_GROUPS]
+
+
 def _quotes(me, hidden, limit=READ):
     """The quotes of what `me` made as Activity's rows would have them, newest
     first: not theirs, nobody hidden from them, none taken down, and only of
     what is still there (a quote of something since gone has let go of it):
     [(quote, its author, the original post's address and skribl, or the
-    drawing's id)]."""
+    drawing's id)]. A comment's quotes too (the comment thread, step 3:
+    quoted_comment_id; listing() reads the comments)."""
     orig = sa.orm.aliased(Post)
     q = (sa.select(Post, Person, orig.public_id, orig.skribl_id)
          .join(Person, Person.id == Post.person_id)
          .outerjoin(orig, orig.id == Post.quoted_post_id)
          .where(Post.quoted_owner_id == me.id, Post.person_id != me.id, Post.taken_down_at.is_(None),
-                sa.or_(Post.quoted_post_id.isnot(None), Post.quoted_drawing_id.isnot(None)))
+                sa.or_(Post.quoted_post_id.isnot(None), Post.quoted_drawing_id.isnot(None),
+                       Post.quoted_comment_id.isnot(None)))
          .order_by(Post.created_at.desc(), Post.id.desc()).limit(limit))
     hid = sorted(hidden)
     if hid:
@@ -447,8 +491,9 @@ def _drawings_shown(me, drawing_ids, sk):
 # ---- the dot ---------------------------------------------------------------------
 
 #: The rows that never light the dot (nothing to answer): a like, a like on a
-#: comment (the comment thread, step 2), a follow, a repost and a quote.
-QUIET_KINDS = ("like", "like_comment", "follow", "repost", "quote")
+#: comment (the comment thread, step 2), a follow, a repost and a quote (a
+#: comment's too: step 3).
+QUIET_KINDS = ("like", "like_comment", "follow", "repost", "repost_comment", "quote", "quote_comment")
 
 def dot(me):
     """Whether anything is new for `me` since they last looked: Activity's
@@ -552,21 +597,41 @@ def listing(me, skribl_blueprint="skribl"):
     # REPOSTS AND QUOTES (reposts): nobody muted either, as likes.
     shared = _reposts(me, hidden | quiet, since)
     quoted = _quotes(me, hidden | quiet)
+    # A COMMENT OR A REPLY OF THEIRS REPOSTED OR QUOTED (the comment thread,
+    # step 3): the comments, where they show and their pictures, only while
+    # their way up shows to `me` (chain_shown), as a reply to them would.
+    shared_c = _comment_reposts(me, hidden | quiet, since)
+    cids = sorted({g["comment_id"] for g in shared_c} | {q.quoted_comment_id for q, *_ in quoted if q.quoted_comment_id})
+    said_c = {}
+    if cids:
+        from .comments import chain_shown
+        got = {c.id: (c, pub, psk) for c, pub, psk in site().session().execute(
+            sa.select(Comment, Post.public_id, Post.skribl_id).outerjoin(Post, Post.id == Comment.post_id)
+            .where(Comment.id.in_(cids), Comment.gone.is_(None))).all()}
+        ok = chain_shown([r[0] for r in got.values()], me)
+        said_c = {cid: r for cid, r in got.items() if cid in ok and (r[0].drawing_id is not None or r[1] is not None)}
     # MENTIONS (mentions): nobody muted either, as comments.
     named = _mentions(me, hidden, quiet=quiet)
     drawings = ([r[0].drawing_id for r in items if r[0].drawing_id] + [g["drawing_id"] for g in liked if g["drawing_id"]]
                 + [g["comment"].drawing_id for g in liked if g.get("comment") is not None and g["comment"].drawing_id]
                 + [q.quoted_drawing_id for q, *_ in quoted if q.quoted_drawing_id]
+                + [r[0].drawing_id for r in said_c.values() if r[0].drawing_id]
                 + [r[3].drawing_id for r in named if r[3] is not None and r[3].drawing_id])
     pics = {r[0].id: (r[0].skribl_id or r[3] or r[0].drawing_id) for r in items}
-    # A quote's small picture: its own drawing, else what it quotes.
-    qpics = {q.id: (q.skribl_id or osid or q.quoted_drawing_id) for q, _, _, osid in quoted}
+    # A quote's small picture: its own drawing, else what it quotes (a
+    # comment's own drawing, else what that is on).
+    def cpic(cid):
+        c, _pub, psk = said_c.get(cid, (None, None, None))
+        return (c.skribl_id or psk or c.drawing_id) if c is not None else None
+    qpics = {q.id: (q.skribl_id or osid or q.quoted_drawing_id or cpic(q.quoted_comment_id)) for q, _, _, osid in quoted}
+    rpics = {g["comment_id"]: cpic(g["comment_id"]) for g in shared_c}
     # A mention's: the comment's own drawing, else what it is on; a post's own,
     # else what it quotes.
     mpics = {r[0].id: ((r[3].skribl_id or r[5] or r[3].drawing_id) if r[3] is not None
                        else (r[2].skribl_id or r[6] or r[2].quoted_drawing_id)) for r in named}
     sk = _described(me, drawings + list(pics.values()) + [g["skribl_id"] for g in liked]
-                    + [g["skribl_id"] for g in shared] + list(qpics.values()) + list(mpics.values()))
+                    + [g["skribl_id"] for g in shared] + list(qpics.values()) + list(mpics.values())
+                    + list(rpics.values()))
     shown = _drawings_shown(me, drawings, sk)
 
     def page(post_public, drawing_id):
@@ -576,7 +641,8 @@ def listing(me, skribl_blueprint="skribl"):
     # its drawing's page, a reply on the page of what it answers.
     from .comments import landing
     lands = landing([(r[0], r[2]) for r in items] + [(r[3], r[4]) for r in named if r[3] is not None]
-                    + [(g["comment"], g["post_public"]) for g in liked if g.get("comment") is not None])
+                    + [(g["comment"], g["post_public"]) for g in liked if g.get("comment") is not None]
+                    + [(r[0], r[1]) for r in said_c.values()])
 
     sections = ([], [])
     groups = {}
@@ -629,13 +695,29 @@ def listing(me, skribl_blueprint="skribl"):
             "names": [p.display_name.split(" ")[0] for p in g["people"]], "n": g["n"],
             "href": url_for("social.post_page", public_id=g["post_public"]),
             "pic": _pic(g["skribl_id"], sk.get(g["skribl_id"]), skribl_blueprint)})
+    # A COMMENT'S REPOSTS (step 3): a row a comment, as a post's, its words
+    # under it, opening it where it shows.
+    for g in shared_c:
+        c = said_c.get(g["comment_id"], (None,))[0]
+        if c is None or (c.drawing_id is not None and c.drawing_id not in shown) or lands.get(c.id) is None:
+            continue
+        sections[0 if g["new"] else 1].append({
+            "kind": "repost_comment", "new": g["new"], "when": g["at"], "words": c.words or None,
+            "people": g["people"], "names": [p.display_name.split(" ")[0] for p in g["people"]], "n": g["n"],
+            "href": lands[c.id], "pic": _pic(rpics[c.id], sk.get(rpics[c.id]), skribl_blueprint)})
     # QUOTES: a row each, their words under it; they open the quote.
     for q, who, opublic, _ in quoted:
         if q.quoted_drawing_id is not None and q.quoted_drawing_id not in shown:
             continue
+        if q.quoted_comment_id is not None:
+            # A comment's (step 3): while it shows to them.
+            c = said_c.get(q.quoted_comment_id, (None,))[0]
+            if c is None or (c.drawing_id is not None and c.drawing_id not in shown):
+                continue
         new = since is None or as_utc(q.created_at) > since
         row = rowed[q.id] = {
-            "kind": "quote", "new": new, "when": q.created_at, "words": q.words or None, "people": [who],
+            "kind": "quote_comment" if q.quoted_comment_id is not None else "quote", "new": new,
+            "when": q.created_at, "words": q.words or None, "people": [who],
             "names": [who.display_name.split(" ")[0]], "n": 1,
             "href": url_for("social.post_page", public_id=q.public_id),
             "pic": _pic(qpics[q.id], sk.get(qpics[q.id]), skribl_blueprint)}

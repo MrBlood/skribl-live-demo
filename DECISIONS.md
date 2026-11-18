@@ -46121,3 +46121,125 @@ word ("Photo", Music, dark phone) at 6.86:1 while its ground was still
 gliding (0.6s later it read the settled ink); its sqlite twin passed the
 same tree, and the tree changed nothing of the Pad's. The fixed-wait read
 named in "Main red after #958" (SETTLE is its fix) if it comes back.
+
+## After v330 -- The comment thread, step 3: repost, quote and bookmark a comment
+
+THE ASK. The owner's yes to the Read More Replies mock (Nov 17;
+docs/SOCIAL-SITE.md section 18), "the same choices as a post", built in
+three steps; step 3 is repost and bookmark. Its new look was mocked first
+(A Comment Shared, https://claude.ai/artifact/4XKrYxE3894YErstqr88NW: a
+comment away from its thread, on Home, in a quote, in Bookmarks; A, the way
+to it above, or B, alone with "On Ben's post"; quoting a comment, or Repost
+only), and the owner said "All yes": A, and quoting.
+
+WHAT CHANGED, on the site only (the Pad and Flip don't change):
+
+- THE ROW under every comment, in a list and on its own page, is Reply ·
+  Repost · the heart · ⋯. The repost is the post's (_post.html repost,
+  posts.js): how many reposts and quotes, none at zero, 44px, its arrows
+  18px in the row's ink, lit in --accent-ink once yours; a tap raises the
+  post's own sheet, Repost (or Undo repost) and Quote. Signed out, "Repost
+  this comment?". None on a place, on one taken down, or under anything
+  taken down.
+- THE ⋯ HAS BOOKMARK FIRST ("This comment": Bookmark, Copy link, Share…, then
+  Delete comment, or Remove from my post and Report this comment):
+  "Bookmark", then "Remove bookmark" once kept, the post's toast and Undo
+  (posts.js window.SocialMark, which comments.js calls, so the two never
+  drift); signed out, "Bookmark this comment?". Nobody told, nothing
+  counted, as a post's.
+- A COMMENT OUT IN THE WORLD (A): reposted on Home's Following and the
+  reposter's Posts tab, or kept in Bookmarks, a card of a post's shape
+  (_post.html comment_card; comments.world_cards): "Ana Reyes reposted" (a
+  repost's), THE WAY TO IT as on its own page (_comments.html the_way, one
+  macro for both now), its faces centred in the card's 44px column so the
+  thread's line runs straight down and meets the card's face at its edge
+  (0.02px of the circle, the line's 2px sitting 1px either side of its
+  middle); then it, its words, its drawing as a post card's (its line
+  waiting for the first play), and the post's row: replies (every one under
+  it the viewer may see), repost, heart, ⋯ and Open ›, its own page, which
+  a tap on its ground opens too. Its ⋯ is the post's sheet in a comment's
+  words ("This comment", "Report this comment" into the queue as a comment,
+  "Delete comment" at once as in its thread, the card folding away, "Your
+  comment is gone."). A card is drawn only while the comment's page would
+  show it to the viewer (comments.seen), so a reply whose way runs through
+  somebody hidden from them makes none. Home reads posts' and comments'
+  reposts in one query (reposts_before), so a page still reads its reposts
+  once (verify_socialreposts section 10); the same comment twice in a page
+  shows once, the newest; Everyone holds posts only.
+- QUOTING A COMMENT: the composer's Quote ({quote_comment}), the quote's
+  small card the post's with "On Ben’s post" under the name (.qt-on, 14px,
+  the second ink: 6.5:1 on the light well, 9.9:1 dark, the mock's), one
+  link to its own page, a drawn one's still. Once it is gone or hidden from
+  the viewer, "This comment is gone." (the mock's words). A QUOTE OF A
+  COMMENT THAT WENT KEEPS quoted_comment_id 0 (reposts.GONE_COMMENT; no
+  comment is 0), so it still says what it quoted: the column has no foreign
+  key to let it go (social_comments points at social_posts already, a cycle
+  a host's create_all cannot sort) and SQLite may give a deleted comment's
+  id to the next one, so a dangling id is never left; every way a comment
+  goes sets it, in code.
+- WHO MAY (/social/c/<id>/repost, /bookmark, /quoted): as a post's, on a
+  comment the person may see, nothing taken down on the way to it, never a
+  place (reposts.comment_open); once a person; your own; your own undone
+  whatever became of it.
+- ACTIVITY tells the comment's author: "Ana and 2 others reposted your
+  comment" (grouped as a post's reposts, its words under it, opening it
+  where it shows: comments.landing) and "Cyd quoted your comment" (the
+  quote's words, opening the quote); only while its way up shows to them;
+  quiet for the muted; never the bell's dot, nor one fading on Activity's
+  own page (activity.QUIET_KINDS).
+- THE DATA (migration 36a8b352b347, on 5beec18dc5fe): social_reposts.comment_id
+  (its foreign key, ON DELETE CASCADE, the net), post_id let be nothing, a
+  CHECK a post or a comment exactly one, once a person a comment (unique),
+  a comment's index; social_posts.quoted_comment_id (no foreign key, above)
+  and its index, the quote CHECK widened from "a post or a drawing" to at
+  most one of a post, a drawing or a comment; social_bookmarks.comment_id
+  (its foreign key), its CHECK widened to exactly one of three, once a
+  person a comment, a comment's index. On PostgreSQL every CHECK added NOT
+  VALID; NO DATA WORK. Going down refuses while a comment's repost,
+  bookmark or quote is there, saying so before it changes anything.
+- DELETING IS SAID IN CODE: a comment that goes, or keeps its place, takes
+  its reposts and bookmarks and lets go of its quotes (comments.retire,
+  comments._drop: a post's, a drawing's, an account's comments); an account
+  its own reposts and bookmarks too, and its comments' quotes let go
+  (reposts.drop_person_reposts).
+
+FOUND ON THE WAY, each by its own check, red before the fix: the composer
+turned a comment's quote into a post's (compose.js kept only 'p' and 's';
+a comment's quote would have been refused as gone), and Home failed (a
+500) when a reposted comment was one the viewer may not see, a block on
+the way to it (follows.home_cards gave every entry a card; posts.cards
+now says None in its place when asked, aligned). And by reading: the first
+build read a comment's reposts for Home in a second query, which section
+10's "a page asks for its reposts once" would have caught; one query reads
+both.
+
+THE CHECKS (verify_socialreposts sections 14 to 20; verify_socialauth
+14, the DDL), each shown red by breaking its one part (a worktree of its
+own, the section that should catch it run there), and green as built: no
+repost in a comment's row; a comment's repost taken for its post's
+(posts.js); Make quoting a post (compose.js); the post's words signed out
+("Repost this post?"); no post sheets on a comment's page; no Bookmark in
+its ⋯; Bookmark doing nothing; the thread not told it is kept; no way in a
+comment's card; the way's faces off the card's; the page's own line in the
+card (2.76px into the face); Home without comments reposted; the same
+comment twice in a page; a card asked as nobody (a reply whose way runs
+through somebody hidden); Home's cards out of step with its markers (the
+500); a comment card's heart reading its player; a quoted comment shown as
+a post's gone; no "On Tate's post"; a gone comment's quote let go to
+nothing ("This post is gone."); a place reposted; Activity without them; a
+dot fading for them; the muted not quiet; a comment's reposts and
+bookmarks kept when it goes (with the cascade off too); going down without
+refusing; no CHECK on the reposts; a CHECK scanned under the lock. THREE
+NEEDED A SECOND LOOK. The row's and the menu's checks read after a press,
+so with the button gone the section stopped before them (red, not on its
+own row): they read first now, red on their own rows. And with
+comment_open's rule for anything taken down on the way removed, a repost
+of a reply under a comment taken down was still refused: the page already
+hides that reply from everybody but the taken-down comment's author, so
+the check asks for that author's repost too (red without the rule).
+
+@@SUITES@@
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: every comment's row has the repost's arrows between
+Reply and the heart, and its ⋯ starts with Bookmark.

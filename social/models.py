@@ -310,6 +310,12 @@ class RateEvent(SocialBase):
     )
 
 
+#: A quote shows one thing small, at most: a post, a drawing or a comment
+#: (the comment thread, step 3; migration 36a8b352b347 says the same).
+QUOTES_ONE = ("(CASE WHEN quoted_post_id IS NULL THEN 0 ELSE 1 END + CASE WHEN quoted_drawing_id IS NULL THEN 0 ELSE 1 END"
+              " + CASE WHEN quoted_comment_id IS NULL THEN 0 ELSE 1 END) <= 1")
+
+
 class Post(SocialBase):
     """A post (piece 4): a person's words and a skribl. The skribl is Skribl's,
     posted through create_post in the same request as this row, which keeps
@@ -363,15 +369,21 @@ class Post(SocialBase):
     #: while it is one: posted through the composer's Yours, it is the post's
     #: (quoted_post_id), as its hearts and comments are.
     quoted_drawing_id = sa.Column(sa.String(32), nullable=True)
-    #: Whose the post or the drawing it quotes is (its maker).
+    #: The comment or reply it quotes (the comment thread, step 3), while it
+    #: is there. No foreign key (social_comments points at social_posts
+    #: already, and a host's create_all sorts the two by them): every way a
+    #: comment goes lets go of it in code (reposts.let_go_of_comments), as a
+    #: quoted drawing's id is let go of.
+    quoted_comment_id = sa.Column(BigId, nullable=True)
+    #: Whose the post, the drawing or the comment it quotes is (its maker).
     quoted_owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="SET NULL",
                                                      name="fk_social_posts_quoted_owner_id"), nullable=True)
 
     __table_args__ = (
         #: A drawing, a quote (whose words may be all it has), or words.
         sa.CheckConstraint("skribl_id IS NOT NULL OR is_quote OR words <> ''", name="ck_social_posts_drawn_quoted_or_said"),
-        #: A quote shows one thing small: a post, or a drawing.
-        sa.CheckConstraint("quoted_post_id IS NULL OR quoted_drawing_id IS NULL", name="ck_social_posts_quotes_one"),
+        #: A quote shows one thing small: a post, a drawing or a comment.
+        sa.CheckConstraint(QUOTES_ONE, name="ck_social_posts_quotes_one"),
         sa.Index("ix_social_posts_public_id", "public_id", unique=True),
         sa.Index("ix_social_posts_created", "created_at", "public_id"),
         sa.Index("ix_social_posts_person_created", "person_id", "created_at"),
@@ -380,6 +392,8 @@ class Post(SocialBase):
         sa.Index("ix_social_posts_quoted_post_id", "quoted_post_id"),
         #: A drawing's quotes: its count, and its moving into a post.
         sa.Index("ix_social_posts_quoted_drawing_id", "quoted_drawing_id"),
+        #: A comment's quotes: its count, and its going (step 3).
+        sa.Index("ix_social_posts_quoted_comment_id", "quoted_comment_id"),
         #: Quotes of what a person made, newest first: Activity, and deleting
         #: an account.
         sa.Index("ix_social_posts_quoted_owner_created", "quoted_owner_id", "created_at"),
@@ -557,6 +571,12 @@ class Like(SocialBase):
     )
 
 
+#: A bookmark keeps a post, a drawing or a comment: exactly one (the comment
+#: thread, step 3; migration 36a8b352b347 says the same).
+BOOKMARK_ON_ONE = ("(CASE WHEN post_id IS NULL THEN 0 ELSE 1 END + CASE WHEN drawing_id IS NULL THEN 0 ELSE 1 END"
+                   " + CASE WHEN comment_id IS NULL THEN 0 ELSE 1 END) = 1")
+
+
 class Bookmark(SocialBase):
     """A bookmark (the map, part two, item 2; the owner's "All yes" on the
     bookmarks mock, Nov 14): one person keeping a post, or a drawing shown
@@ -566,7 +586,9 @@ class Bookmark(SocialBase):
     (ck_social_bookmarks_on_one), and owner_id is whose that post or drawing
     is, kept on the row so a block and deleting an account never ask Skribl.
     A person keeps a thing once: the two unique indexes (an id is empty on
-    the other kind, and empties never collide).
+    the other kind, and empties never collide). Since the comment thread's
+    step 3, a comment or a reply too (comment_id; the ⋯'s Bookmark on it),
+    exactly one of the three.
 
     YOURS ALONE, AND NOBODY IS TOLD (bookmarks.py): your own page's
     Bookmarks tab reads them, newest first, by the person's own index; no
@@ -583,19 +605,24 @@ class Bookmark(SocialBase):
     post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=True)
     #: The drawing it keeps (shown outside a post), by its skribl's public id.
     drawing_id = sa.Column(sa.String(32), nullable=True)
-    #: Whose the post or the drawing is (its maker).
+    #: The comment or reply it keeps (the comment thread, step 3), or None.
+    comment_id = sa.Column(BigId, sa.ForeignKey("social_comments.id", ondelete="CASCADE",
+                                                name="fk_social_bookmarks_comment_id"), nullable=True)
+    #: Whose the post, the drawing or the comment is (its maker).
     owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
     #: Who kept it.
     person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
     created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
 
     __table_args__ = (
-        #: On a post or on a drawing: exactly one.
-        sa.CheckConstraint("(post_id IS NOT NULL AND drawing_id IS NULL) OR (post_id IS NULL AND drawing_id IS NOT NULL)",
-                           name="ck_social_bookmarks_on_one"),
+        #: On a post, on a drawing or on a comment: exactly one.
+        sa.CheckConstraint(BOOKMARK_ON_ONE, name="ck_social_bookmarks_on_one"),
         #: Once a person, once a thing.
         sa.Index("ix_social_bookmarks_person_post", "person_id", "post_id", unique=True),
         sa.Index("ix_social_bookmarks_person_drawing", "person_id", "drawing_id", unique=True),
+        sa.Index("ix_social_bookmarks_person_comment", "person_id", "comment_id", unique=True),
+        #: A comment's: its going (step 3).
+        sa.Index("ix_social_bookmarks_comment_id", "comment_id"),
         #: Yours, newest first: your own page's Bookmarks tab.
         sa.Index("ix_social_bookmarks_person_created", "person_id", "created_at"),
         #: A thing's: deleting a post or a drawing, and a drawing's moving
@@ -622,6 +649,12 @@ class Repost(SocialBase):
     Activity ("Mira reposted your post") and deleting an account never ask
     anything else. A person reposts a post once (the unique pair).
 
+    A COMMENT TOO (the comment thread, step 3; the owner's yes, Nov 17, to
+    "A Comment Shared": A, the way to it above): comment_id instead of
+    post_id, exactly one of the two (ck_social_reposts_on_one); its card on
+    Home and the reposter's Posts tab is the comment's, the way to it above
+    it; owner_id the comment's author. Once a person a comment.
+
     DELETING IS REAL AND SAID IN CODE (reposts.py, from posts.drop_post and
     accounts.delete_person): a post goes with its reposts, an account with
     its own and every repost of what it owned. The ON DELETE CASCADEs are
@@ -631,15 +664,23 @@ class Repost(SocialBase):
     id = sa.Column(BigId, primary_key=True)
     #: Who reposted it.
     person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
-    #: The post reposted (the original).
-    post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=False)
+    #: The post reposted (the original), or None for a comment's.
+    post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=True)
+    #: The comment or reply reposted (the comment thread, step 3), or None.
+    comment_id = sa.Column(BigId, sa.ForeignKey("social_comments.id", ondelete="CASCADE",
+                                                name="fk_social_reposts_comment_id"), nullable=True)
     #: Whose the post is (its author).
     owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
     created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
 
     __table_args__ = (
-        #: Once a person, once a post.
+        #: Of a post or of a comment: exactly one.
+        sa.CheckConstraint("(post_id IS NULL) <> (comment_id IS NULL)", name="ck_social_reposts_on_one"),
+        #: Once a person, once a post; once a person, once a comment.
         sa.Index("ix_social_reposts_person_post", "person_id", "post_id", unique=True),
+        sa.Index("ix_social_reposts_person_comment", "person_id", "comment_id", unique=True),
+        #: A comment's: its count, and its going.
+        sa.Index("ix_social_reposts_comment_id", "comment_id"),
         #: A person's, newest first: their Posts tab, and Home's Following.
         sa.Index("ix_social_reposts_person_created", "person_id", "created_at"),
         #: A post's: its count, and its going.

@@ -2276,16 +2276,16 @@ nothing changes in either (Skribl's own /gallery keeps its own search).
                                     pick's /explore/more brings {people}, its
                                     People section
 
-## 18. The comment thread (the owner's yes, Nov 17; step 1 built)
+## 18. The comment thread (the owner's yes, Nov 17; built in three steps)
 
 The owner, Nov 17, with a picture of another site's comments: "take a look
 at this comment format. does it look like it would work for what we are
 doing? ours looks a little sloppy?", then, with a second picture of bordered
 comments, "also consider the bordered comment to show separation?". Three
 mocks followed, each answered, and a yes to the last. The owner's weekly
-limit ran out at the yes, so this section began as the plan; step 1 is
-built now ("Built: step 1", at the end), and section 10 says what it
-changed there. Each mock shoots the site's own post page on a phone and a
+limit ran out at the yes, so this section began as the plan; its three
+steps are built now ("Built: step 1", "step 2" and "step 3", at the end),
+and section 10 says what step 1 changed there. Each mock shoots the site's own post page on a phone and a
 desk, light and dark, with now beside the options:
 
 - [The Comment Thread](https://claude.ai/artifact/QmpBByK9hUwrZLxn317sCa):
@@ -2305,6 +2305,11 @@ desk, light and dark, with now beside the options:
   own page, built in three steps. The owner: "I like it. not sure how you'll
   handle drawings in there, but.. what I would like to do is say yes to this
   most recent mock".
+- [A Comment Shared](https://claude.ai/artifact/4XKrYxE3894YErstqr88NW),
+  step 3's own (Nov 17): a comment away from its thread, reposted on Home,
+  quoted, kept in Bookmarks. A (the way to it above, as on its own page) or
+  B (alone, with "On Ben's post" under its name), and quoting a comment or
+  Repost only. The owner: "All yes" (A, and quoting).
 
 `harness/tools/mock_comments.py` shot the last one and shoots it again: the
 mock's look laid over today's page, with nothing in the app changed. Start
@@ -2547,4 +2552,73 @@ new to mock:
   "Liked by" on a comment), and your profile's Likes tab stays posts.
 
 `harness/verify_sociallikes.py` section 16 holds it, section 11 its data;
+`verify_socialauth.py` pins its PostgreSQL DDL.
+
+**Built: step 3, repost, quote and bookmark a comment** (Nov 17;
+DECISIONS.md, "The comment thread, step 3"), from the owner's "All yes" to
+A Comment Shared (A, and quoting):
+
+- **The row** under every comment, in a list and on its own page, is Reply ·
+  Repost · the heart · ⋯. The repost is the post's (`_post.html` `repost`,
+  `posts.js`): how many reposts and quotes, none at zero, lit in
+  `--accent-ink` once yours; a tap raises the post's own sheet, Repost (or
+  Undo repost) and Quote; signed out "Repost this comment?". None on a place,
+  on one taken down, or on anything taken down on the way to it.
+- **The ⋯ has Bookmark first** ("This comment": Bookmark, Copy link,
+  Share…, then Delete comment, or Remove from my post and Report this
+  comment): "Bookmark", then "Remove bookmark" once kept, with the post's
+  toast and Undo (`posts.js` `window.SocialMark`, which `comments.js`
+  calls); signed out "Bookmark this comment?". Nobody is told and nothing is
+  counted, as a post's.
+- **A comment out in the world** (A): reposted on Home's Following and the
+  reposter's Posts tab, or kept in Bookmarks, it is a card of a post's
+  shape (`_post.html` `comment_card`, `comments.world_cards`): "Ana Reyes
+  reposted" at its top (a repost's), then THE WAY TO IT as on its own page
+  (`_comments.html` `the_way`: what it is on with its drawing's still, then
+  each comment it answers), its faces centred in the card's 44px column so
+  the thread's line runs straight down into the card's face and meets it at
+  its edge; then its face, name, @handle and when, its words, its drawing as
+  a post's card's (its line waiting for the first play), and the post's row:
+  its replies (every one under it the viewer may see), repost, heart, ⋯
+  ("This comment", the post's sheet with a comment's words and routes:
+  Report into the queue as a comment, Delete at once and the card folds
+  away) and Open ›, its own page, which a tap on its ground opens too.
+  Home reads posts' and comments' reposts in one query
+  (`reposts.reposts_before`), the same comment twice in a page once, the
+  newest; Everyone holds posts only. A comment's card is drawn only while
+  its page would show it to the viewer (`comments.seen`): nobody hidden on
+  the way to it, nothing taken down, never a place.
+- **Quoting a comment**: the composer's Quote (`quote_comment`), the quote's
+  small card the post's (`_gallery.html` `quote_card`) with "On Ben’s post"
+  under its name (`.qt-on`, the second ink), one link to its own page, a
+  drawn one's still; once it is gone or hidden from the viewer, "This
+  comment is gone." A quote of a comment that went keeps
+  `quoted_comment_id` 0 (`reposts.GONE_COMMENT`, no comment is 0), so it
+  still says what it quoted; the column has no foreign key (a cycle the
+  host's `create_all` cannot sort, and SQLite may give a deleted comment's
+  id to the next), and every way a comment goes lets go of it in code.
+- **Who may** (`/social/c/<id>/repost`, `/social/c/<id>/bookmark`, and for
+  the composer's small card `/social/c/<id>/quoted`): as a post's, on a
+  comment the person may see, nothing taken down on the way, no place
+  (`reposts.comment_open`); once a person; your own; undone whatever became
+  of it.
+- **Activity tells the comment's author**: "Ana and 2 others reposted your
+  comment" (grouped as a post's reposts, its words under it, opening it
+  where it shows) and "Cyd quoted your comment" (the quote's words, opening
+  the quote); never the bell's dot, nor a dot fading on Activity's own page
+  (`activity.QUIET_KINDS`); quiet for the muted.
+- **The data** (migration `36a8b352b347`): `social_reposts.comment_id` (its
+  foreign key, `post_id` let be nothing, a post or a comment exactly one,
+  once a person a comment, a comment's index); `social_posts.quoted_comment_id`
+  and its index, the quote CHECK widened to a post, a drawing or a comment,
+  at most one; `social_bookmarks.comment_id` (its foreign key, a post, a
+  drawing or a comment exactly one, once a person a comment, a comment's
+  index). CHECKs NOT VALID on PostgreSQL; no data work; going down refuses
+  while a comment's repost, bookmark or quote is there.
+- **Deleting is said in code**: a comment that goes, or keeps its place,
+  takes its reposts and bookmarks and lets go of its quotes
+  (`comments.retire`, `comments._drop`); an account its own reposts and
+  bookmarks too (`reposts.drop_person_reposts`).
+
+`harness/verify_socialreposts.py` sections 14 to 20 hold it;
 `verify_socialauth.py` pins its PostgreSQL DDL.
