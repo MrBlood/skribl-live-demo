@@ -1207,6 +1207,28 @@ ROOM = """(ids) => ids.map(id => Math.round(document.querySelector('#c-' + id + 
 # A comment's own page, as it reads: its address and header, the way to it,
 # it (its words and its face's size), "Replies" and how many, its row's count,
 # and its replies with theirs.
+# Where the way's line ends against the face it runs into (section 40): for
+# each way item, its line's foot less that circle's edge at the line's middle
+# (the next face on the way, then the comment's own), in px: 0 is a join, more
+# paints across the face.
+JOIN = r"""() => {
+  const items = [...document.querySelectorAll('.cm-way > .cm-way-item')];
+  const head = document.querySelector('.cm-page > .post-head .face-ring, .cm-page > .cm-gone-head .cm-gone-face');
+  const out = [];
+  items.forEach((it, i) => {
+    const cs = getComputedStyle(it, '::before');
+    if (cs.content === 'none') return;
+    const r = it.getBoundingClientRect();
+    const x = r.left + parseFloat(cs.left) + parseFloat(cs.borderLeftWidth) / 2;
+    const foot = r.bottom - parseFloat(cs.bottom);
+    const next = i + 1 < items.length ? items[i + 1].querySelector(':scope > .cm-way-link > :first-child') : head;
+    if (!next) return;
+    const f = next.getBoundingClientRect(), rad = f.width / 2, cx = f.left + rad;
+    const edge = f.top + rad - Math.sqrt(Math.max(0, rad * rad - (x - cx) * (x - cx)));
+    out.push(Math.round((foot - edge) * 100) / 100);
+  });
+  return out; }"""
+
 PAGE_OF = """() => { const s = document.querySelector('[data-cm-subject]'), c = document.querySelector('[data-cm-count]');
   const f = s ? s.querySelector(':scope > .post-head .face-ring') : null;
   return { path: location.pathname, title: (document.querySelector('.top-title') || {}).textContent || null,
@@ -4007,7 +4029,7 @@ with sync_playwright() as p:
                   out == 200 and blocked == (404, 404) and missing == 404, f"out {out}; blocked {blocked}; missing {missing}")
             # THE NEW SCREEN, as section 13 reads the post's: every word on it at 4.5:1 or more on what is painted behind
             # it, every control 44px or more each way; phone and desk, light and dark.
-            seen = {}
+            seen, joins = {}, {}
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
                     cctx, cpg = browser_as(b, dee, screen=screen, scheme=scheme)
@@ -4015,7 +4037,12 @@ with sync_playwright() as p:
                     ready(cpg)
                     cpg.wait_for_timeout(300)
                     seen[(screen, scheme)] = cpg.evaluate(READ, "main, header.top")
+                    joins[(screen, scheme)] = cpg.evaluate(JOIN)
                     close_ctx(cctx, cpg)
+            check("the way's line meets each face at its edge, never painting across it: down to the next face on the"
+                  " way, and into the comment's own 48px face (within half a pixel of the circle's edge each time)",
+                  all(len(v) == 3 and all(abs(d) <= 0.5 for d in v) for v in joins.values()),
+                  f"past the edge, px: {joins}")
             low = [(k, v["low"]) for k, v in seen.items() if v["low"]]
             small = [(k, v["small"]) for k, v in seen.items() if v["small"]]
             musts = ("Reply", "Bram Okafor", "Section 40, is this the ride along the river?", "Elio Moss", "@elio",

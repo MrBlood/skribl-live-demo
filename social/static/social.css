@@ -1681,9 +1681,13 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .cm-way { margin: 4px 0 6px; padding: 0; list-style: none; }
 .cm-way-item { position: relative; }
 .cm-way-item::before {
-  content: ""; position: absolute; left: 17px; top: 40px; bottom: -2px; border-left: 2px solid var(--card-edge);
+  content: ""; position: absolute; left: 17px; top: 40px; bottom: 0; border-left: 2px solid var(--card-edge);
 }
-.cm-way-item:last-child::before { bottom: -10px; }
+/* THE LINE MEETS EACH FACE AT ITS EDGE and never paints across it: down to
+   the next face's top (the line runs through its middle), and into the
+   comment's own 48px face past the way's foot (6px), to where that circle's
+   edge lies 6px left of its middle: 0.76px down (24 - √(24² - 6²)). */
+.cm-way-item:last-child::before { bottom: calc(-6px - 0.76px); }
 .cm-way-link {
   display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; column-gap: 12px; min-height: 44px;
   padding-bottom: 14px; color: inherit; text-decoration: none;
