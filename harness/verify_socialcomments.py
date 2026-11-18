@@ -162,7 +162,8 @@ built, tried and set aside; docs/SOCIAL-SITE.md section 18):
      down.
  48. THE COMMENT YOU OPENED (the owner's "Yes to c", Nov 18): on its own
      page the highlight's lilac behind it, from over its face to under its
-     time, the page round it; the violet ring 3px round its face, 3:1 on
+     time, the page round it, the way's line stopping at its top edge (the
+     owner: "just to purple square edge above"); the violet ring 3px round its face, 3:1 on
      the band as painted; every word on the band 4.5:1, its marks 3:1;
      "Replies to Elio" under it (a place's says Replies; a post's page
      Comments, no band, no ring); nothing moved: the parts in the page's
@@ -1328,6 +1329,12 @@ POST_WATCH = """async () => {
 JOIN = r"""() => {
   const items = [...document.querySelectorAll('.cm-way > .cm-way-item')];
   const head = document.querySelector('.cm-page > .post-head .face-ring, .cm-page > .cm-gone-head .cm-gone-face');
+  // The comment you opened sits on a band (the page's ::before): the last line stops at its top edge (the owner,
+  // Nov 18), which lies the band's own margin under where the head's row begins.
+  const page = document.querySelector('.cm-page'), bs = page ? getComputedStyle(page, '::before') : null;
+  const hd = document.querySelector('.cm-page > .post-head');
+  const bandTop = bs && bs.content !== 'none' && hd
+    ? hd.getBoundingClientRect().top - parseFloat(getComputedStyle(hd).marginTop) + parseFloat(bs.marginTop) : null;
   const out = [];
   items.forEach((it, i) => {
     const cs = getComputedStyle(it, '::before');
@@ -1335,6 +1342,7 @@ JOIN = r"""() => {
     const r = it.getBoundingClientRect();
     const x = r.left + parseFloat(cs.left) + parseFloat(cs.borderLeftWidth) / 2;
     const foot = r.bottom - parseFloat(cs.bottom);
+    if (i + 1 === items.length && bandTop !== null) { out.push(Math.round((foot - bandTop) * 100) / 100); return; }
     const next = i + 1 < items.length ? items[i + 1].querySelector(':scope > .cm-way-link > :first-child') : head;
     if (!next) return;
     const f = next.getBoundingClientRect(), rad = f.width / 2, cx = f.left + rad;
@@ -1449,8 +1457,13 @@ FOCUS = """() => { """ + TOKEN_JS + """
     if ([...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && e.getClientRects().length)
       texts.push([named(e), e.textContent.trim().slice(0, 20), getComputedStyle(e).color]); }));
   const marks = [...s.querySelectorAll(':scope > .cm-row .ic')].filter(e => e.getClientRects().length).map(e => getComputedStyle(e).color);
-  return { head: box(head), face: box(face), meta: box(s.querySelector(':scope > .post-meta')), art: box(s.querySelector(':scope > .post-art')),
-    page: box(s), band: band.content !== 'none' ? band.backgroundColor : null, tint: tok(s, 'backgroundColor', 'var(--tint)'),
+  const last = [...s.querySelectorAll('.cm-way > .cm-way-item')].pop(), ls = last ? getComputedStyle(last, '::before') : null;
+  const line = last && ls.content !== 'none' && band.content !== 'none' && head ? {
+    x: last.getBoundingClientRect().left + parseFloat(ls.left) + parseFloat(ls.borderLeftWidth) / 2,
+    top: head.getBoundingClientRect().top - parseFloat(getComputedStyle(head).marginTop) + parseFloat(band.marginTop) } : null;
+  return { head: box(head), face: box(face), line, meta: box(s.querySelector(':scope > .post-meta')), art: box(s.querySelector(':scope > .post-art')),
+    page: box(s), band: band.content !== 'none' ? band.backgroundColor : null,
+    tint: tok(s, 'backgroundColor', 'color-mix(in srgb, var(--tint) 70%, transparent)'),
     ring: fs ? { style: fs.outlineStyle, width: fs.outlineWidth, offset: fs.outlineOffset, color: fs.outlineColor,
                  ink: tok(s, 'color', 'var(--accent-ink)') } : null,
     texts, marks, order, gaps, widths, desk, heading: (document.querySelector('#commentsTitle > span:not(.cm-count)') || {}).textContent || null,
@@ -4287,7 +4300,8 @@ with sync_playwright() as p:
                     joins[(screen, scheme)] = cpg.evaluate(JOIN)
                     close_ctx(cctx, cpg)
             check("the way's line meets each face at its edge, never painting across it: down to the next face on the"
-                  " way, and into the comment's own 48px face (within half a pixel of the circle's edge each time)",
+                  " way, and on to the top edge of the band round the comment you opened, never across it (the owner,"
+                  " Nov 18), within half a pixel each time",
                   all(len(v) == 3 and all(abs(d) <= 0.5 for d in v) for v in joins.values()),
                   f"past the edge, px: {joins}")
             low = [(k, v["low"]) for k, v in seen.items() if v["low"]]
@@ -4872,6 +4886,12 @@ with sync_playwright() as p:
                     n = [v * 255 for v in n[:3]] + n[3:]
                 return n[:3] if len(n) >= 3 else [0, 0, 0]
 
+            def rgba(s):
+                n = [float(x) for x in re.findall(r"[\d.]+", s or "")]
+                if (s or "").startswith("color("):
+                    n = [v * 255 for v in n[:3]] + n[3:]
+                return (n[:3] if len(n) >= 3 else [0, 0, 0]) + [n[3] if len(n) > 3 else 1.0]
+
             def judge(got, shot, kind):
                 """What the paint and the boxes say for one page, each row on its own: the words, the
                 marks and the ring are read against what is painted beside its face, the band or, with
@@ -4884,7 +4904,9 @@ with sync_playwright() as p:
                 ground = px(h["l"] - 7, mid)
                 out = {"heading": got["heading"], "gaps": got["gaps"]}
                 if got["band"]:
-                    band = rgb(got["band"])
+                    # The band is see-through (the owner's pick): what it paints is it over the page beside it.
+                    bc, under_it = rgba(got["band"]), px(h["l"] - 16, mid)
+                    band = [bc[k] * bc[3] + under_it[k] * (1 - bc[3]) for k in range(3)]
                     off = lambda c: max(abs(a - b) for a, b in zip(c[:3], band))  # noqa: E731
                     inside = {"left": ground, "right": px(h["r"] + 7, mid), "over": px(h["l"] + 60, h["t"] - 6),
                               "under": px(h["l"] + 60, m["b"] + 2)}
@@ -4896,8 +4918,16 @@ with sync_playwright() as p:
                         and all(off(c) >= 6 for c in outside.values())
                     out["inside"] = {k: off(c) for k, c in inside.items()}
                     out["outside"] = {k: off(c) for k, c in outside.items()}
+                    ln = got["line"]
+                    if ln:                     # the way's line: its ink just over the band's edge, the band just under it
+                        over, under, beside = px(ln["x"], ln["top"] - 3), px(ln["x"], ln["top"] + 3), px(ln["x"] + 10, ln["top"] - 3)
+                        gap = max(abs(a - b) for a, b in zip(over[:3], beside[:3]))
+                        out["line"] = off(under) <= 3 and gap >= 6     # in dark the line's ink is 5 off the band: the page tells it
+                        out["line_px"] = {"under, off the band": off(under), "over, off the band": off(over), "over, off the page": gap}
+                    else:
+                        out["line"] = False
                 else:
-                    out["band"], out["why"] = False, "no band"
+                    out["band"], out["why"], out["line"] = False, "no band", False
                 f, rg = got["face"], got["ring"]
                 if kind == "place":
                     out["ring"] = rg is not None and rg["style"] == "none"
@@ -4946,11 +4976,16 @@ with sync_playwright() as p:
                                heading: (document.querySelector('#commentsTitle > span:not(.cm-count)') || {}).textContent || null }; }""")
                     close_ctx(ctx, pg)
             say = lambda key: {" ".join(k): {x: v.get(x) for x in key} for k, v in seen.items()}  # noqa: E731
-            check("THE BAND: the highlight's lilac (--tint) behind the comment you opened, from over its face to under its"
+            check("THE BAND: the highlight's lilac at 70% over the page (the owner's pick, the mock's softer one) behind the"
+                  " comment you opened, from over its face to under its"
                   " time and past its column each side; the page above, below and beside it, and on a desk between its"
                   " drawing and the band: a comment, a drawn reply and a place; phone and desk, light and dark",
                   went[0] == 200 and d1 and all(v.get("band") for v in seen.values()),
                   f"delete {went[0]}; drawn {bool(d1)}; {say(('band', 'inside', 'outside', 'why'))}")
+            check("THE LINE from the way stops at the band's top edge, never crossing it to the face (the owner, Nov 18:"
+                  " \"The line should not go all the way to avatar, just to purple square edge above\"): the band's own"
+                  " lilac 3px under the edge where the line runs, the line's ink 3px over it (off the page beside it)",
+                  all(v.get("line") for v in seen.values()), f"{say(('line', 'line_px'))}")
             check("THE RING: 2px of the small violet words' ink (--accent-ink), 3px out round its face, 3:1 or more on the"
                   " band as painted; a place keeps only its own empty ring",
                   all(v.get("ring") for v in seen.values()), f"{say(('ring', 'ring_px', 'outline'))}")

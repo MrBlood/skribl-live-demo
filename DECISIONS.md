@@ -46642,3 +46642,49 @@ NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: on a comment's own page, the comment sits on a soft
 lilac band with a violet ring round its face, and the heading under it says
 "Replies to" its maker.
+
+## After v330 -- The way's line stops at the band's top edge, and the band is the mock's softer lilac
+
+The owner, Nov 18, from their phone, of a comment's own page after The
+comment you opened merged: "The line should not go all the way to avatar,
+just to purple square edge above." The mock had it so; building C, I ran
+the way's line on across the band into the face, to keep section 40's "into
+the comment's own 48px face", and the owner saw it cross the band.
+
+WHAT CHANGED (social.css, THE COMMENT YOU OPENED): on a comment's own page
+the way's last line ends at the band's top edge, past the way's foot (6px)
+and the band's own 4px, and never paints across the band.
+
+THE CHECKS: section 40's line row measures the last line to the band's top
+edge where the page has a band (the JOIN reader reads the band's top from
+the head's row and the band's own margin, not a typed number); section 48
+gains THE LINE, read off pixels: the band's own lilac 3px under the edge
+where the line runs, the line's ink 3px over it, against the page beside
+it. On a worktree of main (089f50c0): section 40's line red (12.76px past
+the edge), THE LINE red (the line's ink under the edge: 24 off the band in
+light, 5 in dark). Here both green (0.0). The first form of THE LINE also
+asked the ink over the edge to differ from the band, and in dark it is only
+5 off it: the page beside it tells the line, so that condition went.
+
+THE BAND, the owner's pick. Shown the band as built (solid --tint, 1.20:1
+off the page in light, 1.44 in dark) beside the mock's (--tint at 70% over
+the page, 1.13 and 1.26) on Two Small Picks
+(https://claude.ai/artifact/FopzPwjAkXSRnXfzJB1EyA), the owner sent the
+mock's in dark: "I like above screenshot and A". The band is --tint at 70%
+over the page again (social.css), a highlight the owner chose see-through,
+where every other one is solid since No dinge. Section 48 reads it as the
+mix and judges its paint as the mix laid over the page beside it; on main
+(solid) the band row is red, here green.
+
+FLIP AND THE PAD: no change. (The owner's A, Repeat's ring in light, is
+the Pad's, and comes as its own change.)
+
+THE SUITES, side by side (run_parallel), on the final tree:
+verify_socialcomments 143/143, verify_socialreposts 98/98 (its No dinge
+census) and verify_docs 144/144; the line alone before the band,
+verify_socialcomments 143/143 and verify_docs 144/144. NOT RUN: the full
+battery (main's run after the merge does it).
+
+NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: on a comment's own page, the line from the way above
+stops at the top of a softer lilac band.
