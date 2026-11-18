@@ -1333,9 +1333,9 @@ with sync_playwright() as p:
             bell3, rows3, _ = activity(ada)
             says3 = sorted((r["say"], r["href"]) for r in rows3 if r["isNew"])
             check("one row, not two: a comment on her post that mentions her is the comment's row (\"said something"
-                  " on your post\"), an answer to her the answer's, a quote of her post the quote's; and the dot is lit",
+                  " on your post\"), a reply to her the reply's, a quote of her post the quote's; and the dot is lit",
                   says3 == sorted([("Rook said something on your post", f"/social/p/{a7}#c-{ca}"),
-                                   ("Rook answered your comment", f"/social/p/{b7}#c-{ans}"),
+                                   ("Rook replied to your comment", f"/social/p/{b7}#c-{ans}"),
                                    ("Rook quoted your post", f"/social/p/{q7}")]) and bell3 == "Activity, something new",
                   json.dumps([says3, bell3]))
             # GONE WITH IT: the post deleted, the comment deleted.

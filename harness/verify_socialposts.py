@@ -3387,7 +3387,7 @@ print("PLAN " + json.dumps(out))
                          (".post-page .post-row [data-post-menu]", "#postSheet [data-act=report]"), "reportSheet", False, False))
             WANT16 = {"your post's ⋯": [["Bookmark", "Copy link", "Share…"], ["Delete post"]],
                       "their post's ⋯": [["Bookmark", "Copy link", "Share…", "Mute @ben"], ["Report this post", "Block @ben"]],
-                      "a comment's ⋯": [["Remove from my post", "Report comment"]],
+                      "a comment's ⋯": [["Copy link", "Share…"], ["Remove from my post", "Report this comment"]],
                       "a person's ⋯": [["Mute @ben"], ["Report @ben", "Block @ben"]],
                       "Report's reasons": [["Spam or misleading", "Abusive or hateful", "Copies someone else’s work",
                                             "A child’s safety", "Something else"]]}

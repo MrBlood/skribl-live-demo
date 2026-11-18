@@ -2455,7 +2455,8 @@ button.fo-n {
    under Reduce Motion the room is put there while it can't be seen. */
 .cm.is-quiet { position: relative; }
 .cm.is-quiet > .face-ring, .cm.is-quiet > .cm-main { opacity: 0; visibility: hidden; }
-.cm.is-quiet > .cm-main { height: calc(var(--cm-fold-h, 56px) - 16px); overflow: hidden; }
+/* Its room is the line's: a comment's 12px above (a reply's 10px, below) and its own height under it. */
+.cm.is-quiet > .cm-main { height: calc(var(--cm-fold-h, 56px) - 12px); overflow: hidden; }
 .cm-answers .cm.is-quiet > .cm-main { height: calc(var(--cm-fold-h, 56px) - 10px); }
 .cm-fold-line {
   position: absolute; z-index: 1; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 12px;

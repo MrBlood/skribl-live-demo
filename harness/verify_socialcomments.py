@@ -3722,7 +3722,7 @@ with sync_playwright() as p:
                   " reply's bubble narrower than its room, the long comment's reaching it); no line between comments:"
                   " phone and desk, light and dark",
                   not bad and all(v["read"] for v in seen.values()),
-                  f"{ {k: v['bad'][:3] for k, v in bad.items()} }; read {[v['read'] for v in seen.values()]}")
+                  f"{ {k: v[:3] for k, v in bad.items()} }; read {[v['read'] for v in seen.values()]}")
             faces = {" ".join(k): v["faces"] for k, v in seen.items()}
             check("a face not drawn yet shows its initial: the name's first letter, in the small violet words' ink"
                   " (--accent-ink) on the site's disc (--tint), at 4.5:1 or more; and the count beside \"Comments\" sits in a"
@@ -4042,18 +4042,22 @@ with sync_playwright() as p:
             hrefs = epg.evaluate("() => [...document.querySelectorAll('a.act-row')].map(a => [a.textContent.replace(/\\s+/g, ' ').trim(), a.getAttribute('href')])")
             deep = next((h for t, h in hrefs if "Ana to Eli" in t), None)
             near = next((h for t, h in hrefs if "Ana's reply" in t), None)
-            with epg.expect_navigation():
-                epg.click(f"a.act-row[href='{deep or '-'}']", timeout=8000)
-            ready(epg)
-            epg.wait_for_function("(id) => { const li = document.getElementById('c-' + id); return !!li && li.classList.contains('is-landed'); }",
-                                  arg=r4, timeout=8000)
-            there = epg.evaluate("() => location.pathname + location.hash")
-            check("Activity: a reply within two levels lands on the post's page (#c-<id>); one deeper lands on the page of"
-                  " the reply it answers, where it is one of that reply's own, and glows there; the rows say \"replied to"
-                  " your comment\"",
-                  near == f"/social/p/{post}#c-{r1}" and deep == f"/social/c/{r3}#c-{r4}" and there == deep
+            check("Activity: a reply within two levels links to the post's page (#c-<id>); one deeper to the page of the"
+                  " reply it answers, where it is one of that reply's own; the rows say \"replied to your comment\"",
+                  near == f"/social/p/{post}#c-{r1}" and deep == f"/social/c/{r3}#c-{r4}"
                   and all("replied to your comment" in t for t, h in hrefs if "Section 44" in t),
-                  f"rows {hrefs}; landed {there}")
+                  f"rows {hrefs}")
+
+            def lands():
+                with epg.expect_navigation():
+                    epg.click(f"a.act-row[href='{deep}']", timeout=8000)
+                ready(epg)
+                epg.wait_for_function("(id) => { const li = document.getElementById('c-' + id); return !!li && li.classList.contains('is-landed'); }",
+                                      arg=r4, timeout=8000)
+                return epg.evaluate("() => location.pathname + location.hash")
+            there, err = steps(lands)
+            check("...and the deeper row opens there, the reply glowing in the landing's tint",
+                  err is None and there == f"/social/c/{r3}#c-{r4}", f"landed {there}; stopped {err}")
             # Ben (the post's) blocks Ana: Eli's reply to her, and hers under it, are nobody's row for Ben.
             bc = ben.client()
             bc.get("/social/")
