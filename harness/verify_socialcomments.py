@@ -1240,7 +1240,8 @@ BARE = """(id) => { const li = document.getElementById('c-' + id); if (!li) retu
   return { line: cs.content !== 'none' && cs.borderLeftStyle !== 'none', more: !!li.querySelector(':scope > .cm-answers .cm-rm') }; }"""
 
 # The words' room: each one's column beside its face.
-ROOM = """(ids) => ids.map(id => Math.round(document.querySelector('#c-' + id + ' > .cm-main').getBoundingClientRect().width))"""
+ROOM = """(ids) => ids.map(id => { const m = document.querySelector('#c-' + id + ' > .cm-main');
+  return m ? Math.round(m.getBoundingClientRect().width) : null; })"""
 
 # A comment's time, the way to its own page: its tap's height, where it goes,
 # its ink on the page.
