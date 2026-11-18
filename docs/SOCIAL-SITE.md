@@ -2274,15 +2274,16 @@ nothing changes in either (Skribl's own /gallery keeps its own search).
                                     pick's /explore/more brings {people}, its
                                     People section
 
-## 18. Next: the comment thread (the owner's yes, Nov 17; not built)
+## 18. The comment thread (the owner's yes, Nov 17; step 1 built)
 
 The owner, Nov 17, with a picture of another site's comments: "take a look
 at this comment format. does it look like it would work for what we are
 doing? ours looks a little sloppy?", then, with a second picture of bordered
 comments, "also consider the bordered comment to show separation?". Three
 mocks followed, each answered, and a yes to the last. The owner's weekly
-limit ran out at the yes, so this section is the plan; section 10 is still
-what is built. Each mock shoots the site's own post page on a phone and a
+limit ran out at the yes, so this section began as the plan; step 1 is
+built now ("Built: step 1", at the end), and section 10 says what it
+changed there. Each mock shoots the site's own post page on a phone and a
 desk, light and dark, with now beside the options:
 
 - [The Comment Thread](https://claude.ai/artifact/QmpBByK9hUwrZLxn317sCa):
@@ -2431,3 +2432,69 @@ words never squeeze.
 - **Powerful:** any reply, however deep, has a page of its own to link and
   share.
 - **Playful:** following a conversation down is a tap, not a squint.
+
+**Built: step 1, the thread and its pages** (Nov 17; DECISIONS.md, "The
+comment thread, step 1"). What the yes said, as above; what the drawings
+mock ([Drawings in the
+Thread](https://claude.ai/artifact/BsQKU7AnAeDfAxxGNXCJyc), Nov 17) asked
+and the owner answered (@@ANSWERED@@); and what the build decided where both
+were silent:
+
+- **The data.** On `social_comments` (migration `3b76663f9417`):
+  `answers_id`, the comment or reply a reply answers, at any depth, with its
+  index (`ix_social_comments_answers_created`) and a foreign key; `gone`, a
+  place's "deleted" or "removed"; `person_id` may be nothing now (a place is
+  nobody's), and a CHECK says a comment is somebody's or a place.
+  `parent_id` stays the top-level comment a conversation hangs under, so a
+  page reads a whole conversation by one index. The replies already there
+  keep an empty `answers_id` and answer their comment: no data work in the
+  migration (v309's lesson), the first level, as before. Going down refuses
+  while a place is there.
+- **The thread** (`comments.thread`, `_grow`): two levels under each
+  comment, oldest first; under a reply at the second level whose talk goes
+  on, "Read N more replies", N every reply under it at any depth that the
+  viewer may see. A reply under one hidden from the viewer (a block, a
+  takedown) is hidden with it, at any depth: not shown, not counted
+  (`counts()` is a recursive read, one per kind, each step on the reply's
+  own index), not a row in Activity (`chain_shown`).
+- **Every comment's own page** (`/social/c/<id>`, `comment.html`): the way
+  to it (`the_way`), it as big as a post, its replies two levels again
+  (`replies_of`), oldest first, all of them (no Load more). The header says
+  "Comment" for a comment on the post and "Reply" for a reply. Back is the
+  browser's own when you came from this site, else what it is on. A tap on
+  a comment's time opens its page. A comment hidden from the viewer, or
+  anything on the way to it, is a kind 404.
+- **Replying.** A reply lands under the one it replies to, at the next
+  level; past the last level it joins "Read N more replies", which counts
+  it and glows a moment. On a comment's own page the box replies to that
+  comment, and a new reply lands last.
+- **Links land where a comment shows** (`comments.landing`): its post's or
+  drawing's page within two levels of it, deeper the page of the reply it
+  answers, `#c-<id>` glowing there (Activity, Your Reports).
+- **The row** in step 1 is Reply and ⋯ ("This comment": Copy link and
+  Share…, both the comment's own page, then Delete comment, or Remove from
+  my post and Report this comment). The heart is step 2's, Repost and
+  Bookmark step 3's.
+- **Drawings in a thread.** In the thread a drawing sits in its bubble under
+  the words, as wide as the bubble, which takes the level's whole room (the
+  drawing 294, 246 and 198px wide on a phone, 264, 216 and 168 on a desk),
+  in its own shape, still played only when tapped. On a drawn comment's own page its drawing is a post's
+  (the whole width on a phone, the drawing's side on a desk), playing by
+  itself as a post's does. On the way to a comment, a drawn one shows a
+  small still beside its words (`comments.still`, the drawing's own still).
+- **Deleting a comment or reply with replies under it keeps its place**
+  (`comments.retire`): its words, its drawing, its mentions and whose it
+  was go, and a quiet row stays, nobody's, a ring where the face was and
+  "This reply was deleted" ("This comment…"; "…removed" when the post's or
+  the drawing's author took it off), so the replies under it stay where
+  they are, at every depth. A place with nothing left under it goes, and so
+  on up the way; one with nothing under it the viewer may see is not shown,
+  and a place is never counted. It has a page of its own (the place as its
+  head, its replies under it), nothing to reply to and nothing in a ⋯. In
+  the thread the place glides in where the comment was (`becomePlace`).
+  Deleting an account does the same for each of its comments with somebody
+  else's replies under it.
+
+`harness/verify_socialcomments.py` sections 38 to 46 hold it; sections 3,
+4, 5, 9, 13, 16, 21, 22, 25, 27, 28, 32, 34, 36, 37 and 43 moved to its
+words, its levels and its places.

@@ -45871,3 +45871,98 @@ CALIBRATED on both the mechanism and the property:
 NOT DONE: the same fixed-wait read lives in WEARS in verify_exportui,
 verify_menu, verify_musicdoors and verify_replayspeed. None has flaked;
 SETTLE is the fix if one does.
+
+## After v330 -- The comment thread, step 1: bubbles, two levels and "Read more", every comment's own page, the place
+
+THE ASK. The owner's yes to the Read More Replies mock (Nov 17;
+docs/SOCIAL-SITE.md section 18), then the drawings mock
+(https://claude.ai/artifact/BsQKU7AnAeDfAxxGNXCJyc), which asked the seven
+things the build needed: @@ANSWERS@@
+
+WHAT CHANGED, on the site only (the Pad and Flip don't change: comments
+are the site's, so not for Flip either):
+
+- THE BUBBLES. A comment's name, time and words (and its drawing) sit in the
+  site's card with its lilac edge at one screen pixel and its lift, 18px
+  round, as wide as its words; no line between comments. A face not drawn
+  yet shows its initial on the site's disc (--tint, the letter in
+  --accent-ink, 6.5:1 light, 6.9:1 dark); the count beside "Comments" sits
+  in a pill of the same.
+- THE ROW under every bubble, the post's own: Reply (the word on a desk,
+  the icon alone on a phone, the word kept for a screen reader) and ⋯, each
+  a 44px tap. The ⋯ is "This comment": Copy link and Share… (the comment's
+  own page), then Delete comment, or Remove from my post and Report this
+  comment. The heart comes with step 2, Repost and Bookmark with step 3, so
+  no button waits on a later step.
+- "REPLY" wherever the site said "Answer": the button, the box ("Reply to
+  Eli…", a phone's sheet "Reply to Eli"), the editors over the page ("Draw
+  your reply"), signed out ("you can reply to"), the muted line ("Someone
+  you muted replied."), Activity ("replied to your comment", "replied with a
+  drawing").
+- TWO LEVELS, THEN "READ N MORE REPLIES". A reply keeps the reply it answers
+  (answers_id, a new column, its index and foreign key; parent_id stays the
+  comment a conversation hangs under, so a page reads a conversation by one
+  index). The replies already there keep an empty column and answer their
+  comment, the first level, as before: NO DATA WORK IN THE MIGRATION (v309's
+  lesson; the plan said empty too). The thread shows a comment, its replies
+  and theirs, oldest first, on the thread's lilac line (2px of --card-edge,
+  curving into each reply's face, ending where its branch ends); each level
+  costs 48px of the words' room. Under a reply at the second level whose
+  talk goes on, "⊕ Read N more replies", N every reply under it at any
+  depth that the viewer may see.
+- EVERY COMMENT'S OWN PAGE (/social/c/<id>, comment.html): the way to it
+  above, small and joined by the line (the post or the drawing, then the
+  comment and each reply it answers, a drawing on the way its still beside
+  the words); it as big as a post (48px face, its words, its drawing playing
+  by itself as a post's does); its row and full time; "Replies" and its
+  replies, two levels again. The header says "Comment" or "Reply"; back goes
+  where you were (the browser's back, come from this site), else to what it
+  is on. A tap on a comment's time opens it. Hidden on the way to it is 404.
+- DRAWINGS IN THE THREAD. A drawn comment's drawing sits in its bubble
+  under its words, as wide as the bubble, which takes the level's room
+  (294, 246 and 198px on a phone; 264, 216 and 168 on a desk), still until
+  tapped, with its line. On its own page it is a post's drawing.
+- REPLYING. A reply lands under the one it replies to; a reply to a reply at
+  the second level is past the thread's last level, so it joins "Read N more
+  replies", which counts it and glows a moment in the landing's tint. On a
+  comment's own page the box replies to it, and the reply lands last.
+- THE PLACE. A comment or reply deleted (or removed by the post's author)
+  while replies hang under it keeps its row, quietly: nobody's, its words,
+  drawing and mentions gone, a ring where the face was and "This reply was
+  deleted" (or "…removed"), so the replies stay where they are at every
+  depth. A place with nothing left under it goes, and so up the way; a
+  place is never counted, and one with nothing under it the viewer may see
+  is not shown. It glides in where the comment was. An account's deletion
+  does the same for its comments with somebody else's replies under them,
+  so the Activity check that an answer to a deleted person's comment stays,
+  answering nobody, holds. The migration adds `gone`, lets person_id be
+  nothing and adds a CHECK (somebody's or a place; NOT VALID on
+  PostgreSQL, so nothing is scanned under the lock); going down refuses
+  while a place is there.
+- COUNTED AND SHOWN THE PAGE'S WAY, AT ANY DEPTH: nothing under a reply
+  hidden from the viewer (a block, a takedown) is shown or counted. counts()
+  is a recursive read now (one per kind, each step by the reply's own
+  index; run on SQLite here and on PostgreSQL 16 in this box), Home's card
+  and the heading with it; Activity's rows follow it too (chain_shown), and
+  a link to a reply lands where it shows (landing(): its post's or
+  drawing's page within two levels, deeper the page of the reply it
+  answers), in Activity and Your Reports.
+
+THE CHECKS, each shown red by breaking its one part (a worktree of its own,
+the section that should catch it run there), and green as built: the
+bubble's edge, the initial's disc, the word on a phone, the line on past
+the last reply, counting one level only, Activity without the chain's rule,
+landing always on the post (its link, and its glow), the page past the
+last level, the way without the chain, hidden on the way shown, Copy link
+giving the page's own address; the drawing at its old 150px, the way
+without its stills, the page's drawing not a post's; no places, places
+never pruned, places counted, the migration going down without refusing,
+the place without its glide, a reply to a place allowed, an empty place
+kept. The mentions suite's deletion rows (through the site, and with
+SQLite's cascade off) go red without the place too. On today's look (main,
+the new sections run there), every new section red.
+
+THE AFFECTED SUITES, side by side: @@SUITES@@ NOT RUN: the full battery
+(main's run after the merge does it).NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
+The one-glance tell: a post's comments sit in rounded bubbles with no lines
+between them, and a face not drawn yet shows its letter.
