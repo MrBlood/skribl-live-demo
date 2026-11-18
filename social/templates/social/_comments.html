@@ -3,46 +3,52 @@
     since the owner's yes the same day). comments.py says the rules; this is
     what they look like, the mock's own classes and words, the same on both.
 
-    comments_section(cm)  "Comments" and how many, and at the heading's end
-                          the icon that opens the box (a bubble with a plus,
-                          round, 44px, lilac), for somebody who may comment
-                          and for nobody signed in; the box folded away under
-                          the heading until asked for; "Say the first thing"
-                          where the comments will be, at none; the comments
-                          newest first, each with its answers oldest first,
-                          one level under it; Load more for the next page.
-    comment(it, ...)      one comment: its author's face and name, when (in
-                          the person's own time: "40m", "2h"), its words, its
-                          drawing (Skribl's in-post player, still until
-                          tapped), Answer and its ⋯; its answers under it.
+    comments_section(cm)  "Comments" and how many (on a comment's own page,
+                          "Replies"), and at the heading's end the icon that
+                          opens the box (a bubble with a plus, round, 44px,
+                          lilac), for somebody who may comment and for nobody
+                          signed in; the box folded away under the heading
+                          until asked for; "Say the first thing" where the
+                          comments will be, at none; the comments newest
+                          first (a comment's replies, on its page, oldest
+                          first), each with its replies two levels under it;
+                          Load more for the next page.
+    comment(it, ...)      one comment or reply (the comment thread, step 1;
+                          the owner's yes, Nov 17): its face, and beside it
+                          its bubble (its name, when, in the person's own
+                          time, "40m", "2h", a way to its own page; its words;
+                          its drawing, Skribl's in-post player, still until
+                          tapped), under the bubble Reply and its ⋯; its
+                          replies under it, two levels deep, then "Read N
+                          more replies" (read_more), to the reply's own page.
                           SOMEBODY YOU MUTED (mutes; the owner's C): their
-                          comment or answer is one quiet line in its place,
+                          comment or reply is one quiet line in its place,
                           in Activity's own voice, "Someone you muted said
-                          something. Show" ("… answered." for an answer),
-                          the eye where their face was; the whole line is the
+                          something. Show" ("… replied." for a reply), the
+                          eye where their face was; the whole line is the
                           button, and Show opens it for that visit
                           (comments.js), the comment hidden for real until
                           then (no tap and no screen reader reaches it). The
-                          answers under it, by others, stay as they are.
+                          replies under it, by others, stay as they are.
     comment_box()         Home's composer, as the mock styled it (.cm-box):
                           your face, the words, Draw and Flip, Post; a drawing
                           waits in it, in the in-post player the comment will
                           have, with Edit drawing and Remove, until Post. ONE
                           BOX, WHEREVER IT OPENS: on a phone it rides Make's
                           own sheet from the bottom ("Say something to Mira",
-                          or "Answer Theo" with Theo's words under it); on a
+                          or "Reply to Theo" with Theo's words under it); on a
                           desk it glides open in place, under the heading or
-                          under the conversation it answers ("Answer Theo…").
-                          Put away, it keeps what was typed. An @ typed in it
-                          shows the list of people under the line (mentions:
-                          _mentions.html, mentions.js), answers too.
+                          under the conversation it replies to ("Reply to
+                          Theo…"). Put away, it keeps what was typed. An @
+                          typed in it shows the list of people under the line
+                          (mentions: _mentions.html, mentions.js), replies too.
     comment_sheets(cm)    the box's sheet (a phone's), the signed-out sheet
-                          ("Say something?"), a comment's ⋯ sheet (Your
-                          comment: Delete comment; Theo’s comment: Remove from
-                          my post and Report comment, or Report comment
-                          alone), its report sheet (the post's reasons), the
-                          Pad and Flip over the page for a drawing answer, and
-                          comments.js's words.
+                          ("Say something?"), a comment's ⋯ sheet ("This
+                          comment": Copy link and Share…, then Delete comment
+                          on your own, or Remove from my post and Report this
+                          comment, or Report this comment alone), its report
+                          sheet (the post's reasons), the Pad and Flip over
+                          the page for a drawn reply, and comments.js's words.
 
     THE COMMENT BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an
     icon not a card. It takes up too much room sitting there", then "Yes to
@@ -68,26 +74,52 @@
 {%- else %}{{ skribl_inline(it.c.skribl_id, bp=skribl_bp, full=true, full_meta=fm) }}{% endif %}
 {%- endmacro %}
 
-{% macro comment(it, can, post_mine) -%}
+{#  ONE COMMENT, OR ONE REPLY (the comment thread, step 1; the owner's yes,
+    Nov 17, to the Read More Replies mock): its face (one not drawn yet
+    shows its initial, on the site's disc), and beside it a BUBBLE, the
+    site's card with its lilac edge and its lift, as wide as its words: its
+    name, when (a way to its own page), its words and its drawing. Under the
+    bubble its row, the post's own: Reply (the word on a desk, the icon
+    alone on a phone) and ⋯. Its replies hang under it on the thread's lilac
+    line, oldest first, two levels deep (`level`: 0 a comment, then 1 and 2
+    its replies); a reply at the second level whose talk goes on carries
+    "Read N more replies", which opens its own page. #}
+{% macro comment(it, can, post_mine, level=0) -%}
 {%- set c = it.c %}{% set who = it.who -%}
-<li class="cm{% if it.quiet %} is-quiet{% endif %}" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if me and me.id == c.person_id %} data-mine{% endif %}>
+{%- set url = url_for('social.comment_page', public_id=c.public_id) -%}
+<li class="cm{% if it.quiet %} is-quiet{% endif %}" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name.split(' ')[0] }}" data-url="{{ url }}" data-level="{{ level }}"{% if me and me.id == c.person_id %} data-mine{% endif %}>
   {%- if it.quiet %}
-  <button class="cm-fold-line" type="button" data-cm-show><span class="cm-fold-ic">{{ ic.eye_closed() }}</span><span class="cm-fold-words">{{ 'Someone you muted answered.' if c.parent_id else 'Someone you muted said something.' }} <span class="cm-show">Show</span></span></button>
+  <button class="cm-fold-line" type="button" data-cm-show><span class="cm-fold-ic">{{ ic.eye_closed() }}</span><span class="cm-fold-words">{{ 'Someone you muted replied.' if c.parent_id else 'Someone you muted said something.' }} <span class="cm-show">Show</span></span></button>
   {%- endif %}
-  {{ face(who) }}
+  {{ face(who, initial=true) }}
   <div class="cm-main">
-    <div class="cm-head"><b class="cm-name">{{ who.display_name }}</b><time class="cm-when" datetime="{{ when_iso(c.created_at) }}" data-when="ago">{{ when_day(c.created_at) }}</time></div>
-    {% if c.taken_down_at and me and me.id == c.person_id %}<p class="post-down cm-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
-    {% if c.words %}<p class="cm-words">{{ said(c.words, it.mentions) }}</p>{% endif %}
-    {% if c.skribl_id %}<div class="cm-art">{{ comment_art(it) }}</div>{% endif %}
+    <div class="cm-bubble">
+      <div class="cm-head"><b class="cm-name">{{ who.display_name }}</b><a class="cm-when" href="{{ url }}"><time datetime="{{ when_iso(c.created_at) }}" data-when="ago">{{ when_day(c.created_at) }}</time></a></div>
+      {% if c.taken_down_at and me and me.id == c.person_id %}<p class="post-down cm-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
+      {% if c.words %}<p class="cm-words">{{ said(c.words, it.mentions) }}</p>{% endif %}
+      {% if c.skribl_id %}<div class="cm-art">{{ comment_art(it) }}</div>{% endif %}
+    </div>
     <div class="cm-acts">
-      {% if can %}<button class="cm-act" type="button" data-cm-answer aria-expanded="false">{{ ic.comment() }}<span>Answer</span></button>{% endif %}
-      <button class="icon-btn" type="button" data-cm-menu aria-haspopup="dialog" aria-controls="commentSheet"
+      {% if can %}<button class="cm-act" type="button" data-cm-answer aria-expanded="false">{{ ic.comment() }}<span class="cm-word">Reply</span></button>{% endif %}
+      <button class="icon-btn cm-dots" type="button" data-cm-menu aria-haspopup="dialog" aria-controls="commentSheet"
               aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>
     </div>
   </div>
-  {% if it.answers %}<ol class="cm-answers">{% for a in it.answers %}{{ comment(a, can, post_mine) }}{% endfor %}</ol>{% endif %}
+  {%- if it.answers or it.more %}
+  <ol class="cm-answers">
+    {%- for a in it.answers %}{{ comment(a, can, post_mine, level + 1) }}{% endfor %}
+    {%- if it.more %}{{ read_more(c, it.more) }}{% endif %}
+  </ol>
+  {%- endif %}
 </li>
+{%- endmacro %}
+
+{#  "READ N MORE REPLIES", on the thread's line under a reply at the second
+    level whose talk goes on: the row's second ink and a circled plus, a 44px
+    tap, opening that reply's own page. N is every reply under it, at any
+    depth, that the viewer may see. #}
+{% macro read_more(c, n) -%}
+<li class="cm-rm" data-rm="{{ c.public_id }}" data-n="{{ n }}"><a class="rm-link" href="{{ url_for('social.comment_page', public_id=c.public_id) }}">{{ ic.more_replies() }}<span data-rm-words>Read {{ n }} more {{ 'reply' if n == 1 else 'replies' }}</span></a></li>
 {%- endmacro %}
 
 {% macro comment_box() -%}
@@ -130,10 +162,10 @@
 {% macro comments_section(cm) -%}
 {%- set say = cm.can or not me -%}
 <section class="comments" id="comments" aria-labelledby="commentsTitle" data-comments data-new="{{ cm.new }}"
-         data-more="{{ cm.more }}" data-drop="{{ cm.drop }}"{% if cm.post_mine %} data-post-mine{% endif %}>
+         data-more="{{ cm.more }}" data-drop="{{ cm.drop }}"{% if cm.post_mine %} data-post-mine{% endif %}{% if cm.subject %} data-subject="{{ cm.subject }}"{% endif %}>
   <div class="comments-head">
-    <h2 class="comments-title" id="commentsTitle">{{ ic.comment() }}<span>Comments</span><span class="cm-count" data-cm-count{% if not cm.count %} hidden{% endif %}>{{ cm.count }}</span></h2>
-    {% if say %}<button class="icon-btn cm-say" type="button" data-cm-new aria-expanded="false" aria-label="Say something" title="Say something"
+    <h2 class="comments-title" id="commentsTitle">{{ ic.comment() }}<span>{{ 'Replies' if cm.subject else 'Comments' }}</span><span class="cm-count" data-cm-count{% if not cm.count %} hidden{% endif %}>{{ cm.count }}</span></h2>
+    {% if say %}<button class="icon-btn cm-say" type="button" data-cm-new aria-expanded="false" aria-label="{{ 'Reply' if cm.subject else 'Say something' }}" title="{{ 'Reply' if cm.subject else 'Say something' }}"
             {%- if not cm.can %} aria-haspopup="dialog" aria-controls="commentOutSheet"{% endif %}>{{ ic.comment_new() }}</button>{% endif %}
   </div>
   {% if cm.can %}<div class="cm-fold" id="commentFold" data-cm-fold><div class="cm-fold-in" hidden>{{ comment_box() }}</div></div>{% endif %}
@@ -158,7 +190,7 @@
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="commentBoxTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
-    <h2 class="make-title" id="commentBoxTitle" data-cm-sheet-title>{% if cm.post_mine %}Say something{% else %}Say something to {{ cm.first }}{% endif %}</h2>
+    <h2 class="make-title" id="commentBoxTitle" data-cm-sheet-title>{% if cm.subject %}Reply to {{ cm.first }}{% elif cm.post_mine %}Say something{% else %}Say something to {{ cm.first }}{% endif %}</h2>
     <p class="cm-quote" data-cm-quote hidden></p>
     <div class="cm-slot" data-cm-slot></div>
   </div>
@@ -174,7 +206,7 @@
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="commentOutTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="commentOutTitle">Say something?</h2>
-    <p class="post-lede">Sign in, and you can answer {{ cm.first }} in words or with a drawing.</p>
+    <p class="post-lede">Sign in, and you can reply to {{ cm.first }} in words or with a drawing.</p>
     <div class="post-sheet-acts">
       <button class="btn btn-big" type="button" data-make-close>Not now</button>
       <a class="btn btn-primary btn-big" href="{{ cm.signin }}">Sign in</a>
@@ -183,19 +215,28 @@
 </div>
 {% endif %}
 
-{#  A COMMENT'S ⋯, Make's own sheet (social.js), as the post's: comments.js
-    shows the rows for whose comment it is, and titles it. Every row here is
-    a risky one, so the one card is theirs (the owner's "B, equal lines",
-    Nov 14); no Cancel, as on the post's. #}
+{#  A COMMENT'S ⋯, "THIS COMMENT" (the comment thread, step 1; the owner's
+    yes, Nov 17: "the same choices as a post"), Make's own sheet (social.js)
+    in the post's own shape: Copy link and Share… (the comment's own page)
+    in one card, and the risky rows in a card of their own under it (the
+    owner's "B, equal lines", Nov 14): Delete comment on your own, Report
+    this comment on anybody else's, and on your own post or drawing Remove
+    from my post. comments.js shows the rows for whose it is. No Cancel, as
+    on the post's. Bookmark and Repost come with step 3, the heart with
+    step 2. #}
 <div class="make post-sheet" id="commentSheet" hidden>
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="commentSheetTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
-    <h2 class="make-title" id="commentSheetTitle">Your comment</h2>
+    <h2 class="make-title" id="commentSheetTitle">This comment</h2>
+    <div class="post-acts">
+      <button class="post-act" type="button" data-cm-act="copy">{{ ic.link() }}<span>Copy link</span></button>
+      <button class="post-act" type="button" data-cm-act="share">{{ ic.share() }}<span>Share…</span></button>
+    </div>
     <div class="post-acts">
       <button class="post-act is-danger" type="button" data-cm-act="delete">{{ ic.trash() }}<span>Delete comment</span></button>
       <button class="post-act is-danger" type="button" data-cm-act="remove">{{ ic.trash() }}<span>Remove from my post</span></button>
-      <button class="post-act is-danger" type="button" data-cm-act="report">{{ ic.flag() }}<span>Report comment</span></button>
+      <button class="post-act is-danger" type="button" data-cm-act="report">{{ ic.flag() }}<span>Report this comment</span></button>
     </div>
     <p class="say post-say" data-cm-sheet-say role="status" hidden></p>
   </div>
@@ -232,19 +273,23 @@
 {% if cm.can %}
 <div class="facepad" id="commentPad" hidden data-compose="{{ cm.pad }}">
   <div class="facepad-scrim"></div>
-  <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Draw your answer">
+  <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Draw your reply">
     <p class="facepad-wait">Opening the Pad…</p>
-    <iframe class="facepad-frame" title="The Pad: draw your answer"></iframe>
+    <iframe class="facepad-frame" title="The Pad: draw your reply"></iframe>
   </div>
 </div>
 <div class="facepad" id="commentFlip" hidden data-compose="{{ cm.flip }}">
   <div class="facepad-scrim"></div>
-  <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Make a flip for your answer">
+  <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Make a flip for your reply">
     <p class="facepad-wait">Opening Flip…</p>
-    <iframe class="facepad-frame" title="Flip: make a flip book for your answer"></iframe>
+    <iframe class="facepad-frame" title="Flip: make a flip book for your reply"></iframe>
   </div>
 </div>
 {% endif %}
+
+{#  "Read N more replies" as comments.js makes it, when a reply to a reply at
+    the thread's last level is the first under it (read_more's own markup). #}
+<template data-cm-rm-proto><li class="cm-rm" data-n="0"><a class="rm-link" href="">{{ ic.more_replies() }}<span data-rm-words></span></a></li></template>
 
 <div class="words" data-comment-words hidden>
   <span data-word="c_posting">Posting…</span>
@@ -254,18 +299,20 @@
   <span data-word="c_words_chars">That has a character we can’t show. Try another?</span>
   <span data-word="c_limited">Lots of comments in a short while. Wait a little, then try again.</span>
   <span data-word="c_stale">This page went stale. Reload it, then try again.</span>
-  <span data-word="c_signed_out">You’ve been signed out. Sign in again to answer.</span>
+  <span data-word="c_signed_out">You’ve been signed out. Sign in again to reply.</span>
   <span data-word="c_taken_down">Your account was taken down, so nothing new can be shared from it.</span>
   <span data-word="c_gone">That isn’t here anymore. Reload the page to see what’s new.</span>
   <span data-word="c_network">That didn’t reach us. Check your connection and try again.</span>
   <span data-word="c_failed">That didn’t go through. Try again?</span>
   <span data-word="c_left">{n} left</span>
   <span data-word="c_say">Say something</span>
-  <span data-word="c_answer">Answer {name}…</span>
-  <span data-word="c_answer_label">Answer {name}</span>
+  <span data-word="c_answer">Reply to {name}…</span>
+  <span data-word="c_answer_label">Reply to {name}</span>
   <span data-word="c_quote">“{words}”</span>
-  <span data-word="c_yours">Your comment</span>
-  <span data-word="c_theirs">{name}’s comment</span>
+  <span data-word="c_rm_one">Read 1 more reply</span>
+  <span data-word="c_rm_many">Read {n} more replies</span>
+  <span data-word="c_copied">Link copied.</span>
+  <span data-word="c_copy_by_hand">Here’s the link to copy: {url}</span>
   <span data-word="c_deleting">Deleting…</span>
   <span data-word="c_sending">Sending…</span>
   <span data-word="c_reported">Thanks. The people who run this site will look at it.</span>

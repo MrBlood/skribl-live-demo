@@ -7,7 +7,7 @@
     link to its comment on its page (#c-<id>), where it glows a moment
     (comments.js): their face (two faces, the newest in front, for several
     people), who and what ("Mira and 2 others said something on your post",
-    "Theo answered your comment", "Juno answered with a drawing", "Juno drew
+    "Theo replied to your comment", "Juno replied with a drawing", "Juno drew
     something on your post"), when, as comments say it ("5m"), their words
     under it in quotes, two lines at most, and the small picture: the
     drawing they answered with, or the post's.
@@ -64,8 +64,8 @@
 {%- endmacro %}
 
 {% macro row(r) -%}
-{%- set says = {'comment': 'said something on your post', 'answer': 'answered your comment',
-                'answer_drawing': 'answered with a drawing', 'drawing': 'drew something on your post',
+{%- set says = {'comment': 'said something on your post', 'answer': 'replied to your comment',
+                'answer_drawing': 'replied with a drawing', 'drawing': 'drew something on your post',
                 'like': 'liked your post', 'follow': 'followed you', 'repost': 'reposted your post',
                 'quote': 'quoted your post', 'mention': 'mentioned you'} -%}
 {%- set n = r.n -%}
@@ -88,7 +88,7 @@
 <div class="act">
   <header class="page-head act-head">
     <h1 class="page-title">Activity</h1>
-    <p class="page-sub">Who followed you, liked or reposted your posts or said something on them, and who answered or mentioned you.</p>
+    <p class="page-sub">Who followed you, liked or reposted your posts or said something on them, and who replied to you or mentioned you.</p>
   </header>
   {% if fresh %}
   <h2 class="act-sec" id="actNew">New</h2>
@@ -102,7 +102,7 @@
   <section class="act-empty" aria-labelledby="actEmptyTitle">
     <img class="si-icon" src="{{ social_asset('blooby-icon-180.png') }}" alt="" width="64" height="64">
     <h2 class="act-empty-title" id="actEmptyTitle">Nothing new yet</h2>
-    <p class="act-empty-words">When someone follows you, likes or reposts your post, says something on it, answers you or mentions you, you’ll see it here.</p>
+    <p class="act-empty-words">When someone follows you, likes or reposts your post, says something on it, replies to you or mentions you, you’ll see it here.</p>
     <button class="btn btn-primary btn-big" type="button" data-make aria-haspopup="dialog" aria-controls="composeSheet"
             aria-expanded="false">{{ ic.pen() }}<span>Make a skribl</span></button>
   </section>

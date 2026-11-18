@@ -387,13 +387,15 @@ class Post(SocialBase):
 
 
 class Comment(SocialBase):
-    """A comment on a post, or an answer to one (phase 2, comments; the
+    """A comment on a post, or a reply to one (phase 2, comments; the
     owner's "all yes on both", Nov 12): a person's words and, since its
-    second part, maybe a drawing. Answers sit ONE level under a comment:
-    parent_id is always a top-level comment's id, so answering an answer
-    puts the new one under the same comment (comments.py). The post's own
-    page reads its comments newest first and each comment's answers oldest
-    first, each by an index of its own.
+    second part, maybe a drawing. A REPLY KEEPS THE REPLY IT ANSWERS (the
+    comment thread, step 1; the owner's yes, Nov 17): answers_id, at any
+    depth, while parent_id is always the top-level comment its conversation
+    hangs under, so a page reads a whole conversation by one index. A thread
+    shows two levels of replies, then "Read N more replies" (comments.py).
+    The post's own page reads its comments newest first and each
+    conversation oldest first, each by an index of its own.
 
     ON A POST, OR ON A DRAWING (the owner's yes, Nov 12: "Comments on every
     drawing, however it was made"): a comment belongs to a post (post_id),
@@ -424,8 +426,16 @@ class Comment(SocialBase):
     owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE",
                                               name="fk_social_comments_owner_id"), nullable=False)
     person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
-    #: The top-level comment an answer sits under; None for a comment.
+    #: The top-level comment a reply's conversation hangs under, at any depth;
+    #: None for a comment. A page reads a conversation by it.
     parent_id = sa.Column(BigId, sa.ForeignKey("social_comments.id", ondelete="CASCADE"), nullable=True)
+    #: THE REPLY IT ANSWERS (the comment thread, step 1; the owner's yes, Nov
+    #: 17): the comment or the reply whose Reply was pressed, at any depth;
+    #: None for a comment. A thread shows two levels of it, then "Read N more
+    #: replies" (comments.py). The replies from before it were filled with
+    #: their comment (parent_id), so they stay at the first level.
+    answers_id = sa.Column(BigId, sa.ForeignKey("social_comments.id", ondelete="CASCADE",
+                                                name="fk_social_comments_answers_id"), nullable=True)
     #: WHOM AN ANSWER ANSWERS (notifications): the author of the comment or the
     #: answer whose Answer was pressed. parent_id cannot say it: an answer to
     #: an answer sits under the same top-level comment, whoever wrote that.
@@ -454,6 +464,8 @@ class Comment(SocialBase):
         sa.Index("ix_social_comments_post_created", "post_id", "created_at"),
         sa.Index("ix_social_comments_drawing_created", "drawing_id", "created_at"),
         sa.Index("ix_social_comments_parent_created", "parent_id", "created_at"),
+        #: A reply's own replies, oldest first.
+        sa.Index("ix_social_comments_answers_created", "answers_id", "created_at"),
         sa.Index("ix_social_comments_person_id", "person_id"),
         #: Whose it is, newest first: Activity's comments on what you own, and
         #: the bell's dot (since you last looked); deleting an account by it.

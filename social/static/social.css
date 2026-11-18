@@ -1672,6 +1672,40 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    drawing on the left and everything else beside it. */
 .top-back { margin-left: -10px; }
 .post-page { display: grid; grid-template-columns: minmax(0, 1fr); padding-top: 4px; }
+/* A COMMENT'S OWN PAGE (comment.html; the comment thread, step 1): the way
+   to it above the comment, small and joined by the thread's line, each a
+   way to its own page: a 36px face, the name and when, the words (three
+   lines at most; the post's in the second ink) and a drawing's still beside
+   them, 48px tall in its own shape with the drawing's own ring. Then the
+   comment as big as a post: its 48px face carries its initial a size up. */
+.cm-way { margin: 4px 0 6px; padding: 0; list-style: none; }
+.cm-way-item { position: relative; }
+.cm-way-item::before {
+  content: ""; position: absolute; left: 17px; top: 40px; bottom: -2px; border-left: 2px solid var(--card-edge);
+}
+.cm-way-item:last-child::before { bottom: -10px; }
+.cm-way-link {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; column-gap: 12px; min-height: 44px;
+  padding-bottom: 14px; color: inherit; text-decoration: none;
+}
+.cm-way-link .face-ring { --skribl-face-size: 36px; width: 36px; height: 36px; }
+.cm-way-main { min-width: 0; }
+.cm-way-head { display: flex; align-items: baseline; gap: 6px; line-height: 1.3; }
+.cm-way-head b { min-width: 0; overflow: hidden; color: var(--ink); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.cm-way-head time { flex: none; color: var(--ink-2); font-size: 14px; }
+.cm-way-words {
+  display: -webkit-box; margin-top: 2px; overflow: hidden; color: var(--ink); font-size: 15px; line-height: 1.4;
+  overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3;
+}
+.cm-way-item:first-child .cm-way-words { color: var(--ink-2); }
+.cm-way-link:hover .cm-way-words { text-decoration: underline; }
+.cm-way-pic {
+  display: block; align-self: start; height: 48px; margin: 2px 0 0 4px; border-radius: 8px;
+  background-color: var(--draw-wait); background-repeat: no-repeat;
+  box-shadow: 0 0 0 var(--edge) var(--draw-edge);
+}
+.cm-page .post-head .face-blank.has-initial { font-size: 19px; }
+a.post-face { text-decoration: none; }
 .post-page .post-head .face-ring { --skribl-face-size: 48px; width: 48px; height: 48px; }
 .post-page .post-words.is-big { font-size: 20px; line-height: 1.4; }
 .post-caption { margin: 8px 0 0; color: var(--ink-2); font-size: 15px; }
@@ -1722,7 +1756,12 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    post's first ink, when, the count, Answer and ⋯ the second; "Sign in to
    answer" the small violet words Sign in wears at the top of a phone. Every
    target 44px; the words' field the composer's 17px. */
-.comments-title .cm-count { margin-left: 2px; color: var(--ink-2); font-size: 18px; font-weight: 600; }
+/* THE COUNT IN A PILL (the comment thread; the owner's yes, Nov 17): the
+   site's lilac disc's colours, the small violet words on it. */
+.comments-title .cm-count {
+  margin-left: 4px; padding: 2px 9px; border-radius: 999px; background: var(--tint); color: var(--accent-ink);
+  font-size: 14px; font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums;
+}
 .cm-box { margin: 0 0 8px; padding: 14px; border-radius: 20px; }
 .cm-box .face-ring.composer-face { --skribl-face-size: 36px; width: 36px; height: 36px; }
 .cm-box .composer-acts { margin-top: 10px; flex-wrap: wrap; row-gap: 6px; }
@@ -1749,30 +1788,91 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    the drawing's own shape (Skribl's in-post player), on the words' edge. */
 .cm-box .composer-draft { margin: 10px 0 0 48px; }
 .cm-box .composer-draft .skribl-inline { width: min(100%, 150px); }
-.cm-art { margin-top: 8px; width: min(100%, 150px); }
+.cm-art { margin: 8px 0 3px; width: min(100%, 150px); }
 .cm-list, .cm-answers { margin: 0; padding: 0; list-style: none; }
-.cm {
-  display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 12px; padding: 14px 0 2px;
-  border-top: 1px solid transparent; box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--rule);
-}
-.cm-list > .cm:first-child { border-top: 0; }
+.cm { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 12px; padding: 12px 0 0; }
 .cm .face-ring { --skribl-face-size: 36px; width: 36px; height: 36px; }
 .cm-main { min-width: 0; }
 .cm-head { display: flex; align-items: baseline; gap: 6px; min-height: 22px; line-height: 1.3; }
-.cm-name { color: var(--ink); font-size: 16px; font-weight: 700; }
-.cm-when { color: var(--ink-2); font-size: 15px; }
+.cm-name { min-width: 0; color: var(--ink); font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+/* WHEN IS A WAY TO ITS OWN PAGE, a 44px tap that reaches into the room
+   round its line and over the name's end (nothing there has a job of its
+   own), so the bubble keeps its size and the words their place. */
+.cm-when {
+  position: relative; flex: none; display: inline-block; padding: 12px 0 12px 28px; margin: -12px 0 -12px -28px;
+  color: var(--ink-2); font-size: 15px; line-height: 20px; text-decoration: none;
+}
+.cm-when:hover { text-decoration: underline; }
 /* The words as typed: their line breaks kept, a long word broken before the page is. */
 .cm-words { margin: 3px 0 0; font-size: 16px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
 .cm-down { margin: 6px 0 0; }
-.cm-acts { display: flex; align-items: center; margin: 2px 0 0 -12px; }
+/* THE ROW UNDER THE BUBBLE, the post's own (the owner's yes, Nov 17):
+   Reply, the word beside its icon on a desk and the icon alone on a phone
+   ("no need to show the words on a phone"; the word stays for a screen
+   reader), then ⋯; each a 44px tap, in the row's second ink. */
+.cm-acts { display: flex; align-items: center; margin: 2px 0 0 -10px; }
 .cm-act {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 0;
-  background: none; color: var(--ink-2); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 44px; min-height: 44px;
+  padding: 0 10px; border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 15px; font-weight: 600;
+  cursor: pointer;
 }
 .cm-act .ic { width: 18px; height: 18px; }
-.cm-acts .icon-btn { margin-left: auto; margin-right: -10px; color: var(--ink-2); }
+.cm-acts .icon-btn { color: var(--ink-2); }
+.cm-acts .icon-btn .ic { width: 20px; height: 20px; }
+@media (max-width: 899px) {
+  .cm-act .cm-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 .cm-answers { grid-column: 2; }
-.cm-answers .cm { padding-top: 8px; border-top: 0; }
+.cm-answers .cm { padding-top: 10px; }
+/* THE BUBBLE (the owner's "I like B, bubbles", Nov 17): the site's card, its
+   lilac edge one screen pixel and its lift, as a post's card wears them
+   (in light a white card on the near-white page is 1.06:1, and Just a
+   Border asks for 1.08:1 or a lift), 18px round and as wide as its words;
+   the name, when, the words and the drawing in it. No lines between
+   comments: the bubbles set them apart. */
+.cm-bubble {
+  box-sizing: border-box; width: fit-content; max-width: 100%; padding: 7px 14px 9px; border-radius: 18px;
+  background: var(--card); box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop);
+}
+.cm-bubble .cm-words { margin-top: 1px; }
+/* A FACE NOT DRAWN YET shows its initial on the site's disc, the letter in
+   the small violet words' ink (6.5:1 light, 6.9:1 dark). */
+.face-blank.has-initial { background: var(--tint); color: var(--accent-ink); font-size: 16px; font-weight: 700; line-height: 1; }
+/* THE THREAD'S LINE: a soft lilac, 2px of the card's edge (1.47:1 light,
+   1.45:1 dark: there to be followed, not read), down from a face that has
+   replies, curving out into each reply's face, and ending where its
+   branch ends, so none hangs past the last reply. */
+.cm:has(> .cm-answers) > .cm-main { position: relative; }
+.cm:has(> .cm-answers) > .cm-main::before {
+  content: ""; position: absolute; left: -31px; top: 40px; bottom: 0; border-left: 2px solid var(--card-edge);
+}
+/* Each reply's curve hangs from its face (a reply's own ::before is the
+   landing's tint), from the reply's top to the face's middle; "Read more"
+   carries its own. A reply that is not the last carries the line on past
+   itself to the next. */
+.cm-answers > :is(.cm, .cm-rm), .cm-answers > .cm > .face-ring { position: relative; }
+.cm-answers > .cm > .face-ring::before, .cm-answers > .cm-rm::before {
+  content: ""; position: absolute; left: -31px; top: -10px; width: 23px; height: 28px;
+  border-left: 2px solid var(--card-edge); border-bottom: 2px solid var(--card-edge); border-bottom-left-radius: 12px;
+}
+.cm-answers > .cm-rm::before { top: 0; height: 22px; }
+.cm-answers > :is(.cm, .cm-rm):not(:last-child)::after {
+  content: ""; position: absolute; left: -31px; top: 0; bottom: 0; border-left: 2px solid var(--card-edge);
+}
+/* "READ N MORE REPLIES", on the line under a reply at the second level whose
+   talk goes on: the row's second ink (7.1:1 light, 10.1:1 dark) with an
+   18px circled plus, a 44px tap, to that reply's own page. */
+.cm-rm { padding: 2px 0 6px; }
+.rm-link {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-left: -10px; padding: 0 14px 0 10px;
+  border-radius: 14px; color: var(--ink-2); font-size: 15px; font-weight: 600; text-decoration: none;
+  transition: background-color 1.5s ease;
+}
+/* A REPLY PAST THE LAST LEVEL, just posted, joins it: it glows a moment in
+   the landing's tint, then the tint fades where it sits. */
+.rm-link.is-glow { background-color: var(--tint); transition: none; }
+.rm-link .ic { width: 18px; height: 18px; }
+.rm-link:hover span { text-decoration: underline; }
 .cm-more { margin-top: 12px; }
 .cm.is-going { opacity: 0; transition: opacity 0.2s ease; }
 

@@ -66,6 +66,10 @@
   var doc = document;
   var root = doc.querySelector('[data-comments]');
   if (!root) return;
+  /* A COMMENT'S OWN PAGE (comment.html): the comment it is about, and whose
+     replies stand where a post's comments do. Its box replies to it. */
+  var subject = root.getAttribute('data-subject') || '';
+  var subjectEl = subject ? doc.querySelector('[data-cm-subject]') : null;
   var WORDS = {};
   Array.prototype.forEach.call(doc.querySelectorAll('[data-comment-words] [data-word]'), function (w) {
     WORDS[w.getAttribute('data-word')] = w.textContent;
@@ -114,6 +118,48 @@
     if (!countEl || typeof n !== 'number') return;
     countEl.textContent = String(n);
     countEl.hidden = !n;
+  }
+  /* HOW MANY, after one came or went: the server's count of the post's or
+     the drawing's (`n`); on a comment's own page its own replies, counted
+     here by `by`, and the count in its row with them. */
+  function counted(n, by) {
+    if (!subjectEl) { setCount(n); return; }
+    var now = Math.max(0, (+(countEl && countEl.textContent) || 0) + by);
+    setCount(now);
+    var row = subjectEl.querySelector(':scope > .cm-row .post-count');
+    if (!row) return;
+    var c = row.querySelector('span');
+    if (!c && now) { c = doc.createElement('span'); row.appendChild(c); }
+    if (c) { if (now) c.textContent = String(now); else row.removeChild(c); }
+  }
+  var LEVELS = 2;
+  /* The list a comment's replies hang in, made if it has none yet. */
+  function answersOf(top) {
+    var ans = top.querySelector(':scope > .cm-answers');
+    if (!ans) {
+      ans = doc.createElement('ol');
+      ans.className = 'cm-answers';
+      top.insertBefore(ans, fold && fold.parentNode === top ? fold : null);
+    }
+    return ans;
+  }
+  /* "READ N MORE REPLIES" under a reply at the thread's last level: one more
+     counted, or the row made (the page's own, [data-cm-rm-proto]), to that
+     reply's own page. */
+  function moreRow(top, url) {
+    var ans = answersOf(top);
+    var rm = ans.querySelector(':scope > .cm-rm');
+    if (!rm) {
+      var proto = doc.querySelector('template[data-cm-rm-proto]');
+      rm = proto.content.firstElementChild.cloneNode(true);
+      rm.setAttribute('data-rm', top.getAttribute('data-comment'));
+      rm.querySelector('.rm-link').setAttribute('href', url || top.getAttribute('data-url'));
+      ans.appendChild(rm);
+    }
+    var n = (+rm.getAttribute('data-n') || 0) + 1;
+    rm.setAttribute('data-n', String(n));
+    rm.querySelector('[data-rm-words]').textContent = n === 1 ? say('c_rm_one') : say('c_rm_many', { n: n });
+    return rm;
   }
   /* What arrives later is said as what was there: its times, and its
      drawing's player (still until tapped, as Skribl asks of a feed that adds
@@ -247,7 +293,7 @@
   var fold = root.querySelector('[data-cm-fold]');
   var foldIn = fold ? fold.querySelector('.cm-fold-in') : null;
   var firstFold = root.querySelector('[data-cm-first-fold]');
-  var sayers = Array.prototype.slice.call(root.querySelectorAll('[data-cm-new]'));
+  var sayers = Array.prototype.slice.call((subjectEl || root).querySelectorAll('[data-cm-new]'));
   var icon = root.querySelector('.cm-say');
   var words = box ? box.querySelector('[data-cm-words]') : null;
   var label = box ? box.querySelector('[data-cm-label]') : null;
@@ -298,20 +344,29 @@
   if (words && window.SocialMentions) window.SocialMentions(words, box.querySelector('#cmMentions'));
 
   function pressed(btn, on) { if (btn) btn.setAttribute('aria-expanded', on ? 'true' : 'false'); }
-  /* The comment a comment sits under: itself, or the one its answers hang from. */
+  /* The conversation a comment or a reply is in: the comment at the top of
+     its thread, however deep the reply. */
   function topOf(li) {
-    return li.parentNode && li.parentNode.classList.contains('cm-answers') ? li.parentNode.closest('.cm') : li;
+    var t = li;
+    while (t.parentNode && t.parentNode.classList && t.parentNode.classList.contains('cm-answers')) t = t.parentNode.closest('.cm');
+    return t;
   }
+  /* How deep a comment sits in the thread on this page: 0 a comment (or, on
+     a comment's own page, one of its replies), then 1 and 2 (data-level). */
+  function levelOf(li) { return +(li.getAttribute('data-level') || 0); }
 
   /* Whom the box says something to: a new comment ("Say something to Mira"),
-     or an answer to `li` ("Answer Theo", and Theo's words under it). */
+     or a reply to `li` ("Reply to Theo", and Theo's words under it); on a
+     comment's own page, a new one replies to that comment. */
   function aim(li) {
+    if (!li && subjectEl) li = subjectEl;
     var name = li ? li.getAttribute('data-first') || '' : '';
     words.setAttribute('placeholder', li ? say('c_answer', { name: name }) : hint);
     label.textContent = li ? say('c_answer_label', { name: name }) : say('c_say');
     if (sheetTitle) sheetTitle.textContent = li ? say('c_answer_label', { name: name }) : homeTitle;
     if (quote) {
-      var w = li ? li.querySelector(':scope > .cm-main > .cm-words') : null;
+      var w = !li ? null : li === subjectEl ? li.querySelector(':scope > .post-words')
+        : li.querySelector(':scope > .cm-main .cm-words');
       var text = w ? w.textContent.replace(/\s+/g, ' ').trim() : '';
       quote.textContent = text ? say('c_quote', { words: text }) : '';
       quote.hidden = !text;
@@ -347,7 +402,8 @@
   function rise(li, btns) {
     if (!sheet || sheet.isOpen()) return;
     house();
-    answering = li ? { id: li.getAttribute('data-comment'), btn: btns[0] } : null;
+    var to = li || subjectEl;
+    answering = to ? { id: to.getAttribute('data-comment'), btn: btns[0] } : null;
     aim(li);
     tell(sayBox, '');
     sheetOpeners.length = 0;
@@ -471,7 +527,7 @@
     if (!onDesk()) { rise(null, btn === icon ? [icon] : [btn, icon]); return; }
     if (at === root) { putAway(); return; }
     if (answering) pressed(answering.btn, false);
-    answering = null;
+    answering = subjectEl ? { id: subject, btn: btn } : null;
     aim(null);
     tell(sayBox, '');
     pressed(icon, true);
@@ -643,6 +699,10 @@
         var li = holder.querySelector('.cm');
         if (!li) { tidy(); return; }
         var top = j.under ? doc.getElementById('c-' + j.under) : null;
+        /* PAST THE THREAD'S LAST LEVEL (a reply to a reply at the second
+           level): it is on that reply's own page, so here it joins "Read N
+           more replies" under it, which counts it and glows a moment. */
+        var deep = !!(top && levelOf(top) >= LEVELS);
         var was = answering;
         answering = null;
         afterFold = null;
@@ -652,27 +712,38 @@
            fold folds away in step with it. */
         if (sheet && sheet.isOpen()) { sheetAfter = tidy; sheet.close(true); }
         else if (!at) tidy();
+        if (deep) {
+          var rm = moreRow(top, j.page);
+          if (at) shutFold('posted', tidy);
+          else syncFirst(false);
+          counted(j.count, 1);
+          glowMore(rm);
+          var link = rm.querySelector('.rm-link');
+          if (link) link.focus({ preventScroll: true });
+          return;
+        }
         if (top) {
-          var ans = top.querySelector(':scope > .cm-answers');
-          if (!ans) {
-            ans = doc.createElement('ol');
-            ans.className = 'cm-answers';
-            top.insertBefore(ans, fold && fold.parentNode === top ? fold : null);
-          }
-          /* An answer lands at the end of its conversation, which can be below
-             the screen: once it is in place the page glides to it. */
-          arrive(li, ans, null, 0, function () { reveal(li); });
+          li.setAttribute('data-level', String(levelOf(top) + 1));
+          /* A reply lands at the end of what it replies to, before "Read
+             more" if there is one, which can be below the screen: once it is
+             in place the page glides to it. */
+          var ans = answersOf(top);
+          arrive(li, ans, ans.querySelector(':scope > .cm-rm'), 0, function () { reveal(li); });
+        } else if (subject && j.under === subject) {
+          /* On a comment's own page its replies are oldest first: a new one
+             lands at the end, and the page glides to it. */
+          arrive(li, list, null, 0, function () { reveal(li); });
         } else {
           /* A new comment lands right under the icon that was pressed, so
              nothing else needs to move. */
-          arrive(li, list, list.firstChild, list.querySelector(':scope > .cm') ? 1 : 0);
+          arrive(li, list, list.firstChild, 0);
         }
         settle(li);
         if (at) shutFold('posted', tidy);
         else syncFirst(false);
-        setCount(j.count);
+        counted(j.count, 1);
         glow(li);
-        var next = top ? li.querySelector('[data-cm-answer]') : icon;
+        var next = top || (subject && j.under === subject) ? li.querySelector('[data-cm-answer]') : icon;
         if (next) next.focus({ preventScroll: true });
       });
     });
@@ -684,6 +755,28 @@
     openers: sayers, doorCloses: false,
     first: function () { return outWrap.querySelector('.post-sheet-acts [data-make-close]'); }
   }) : null;
+
+  /* ---- a link: copied, or the device's own share sheet ------------------- */
+  function absolute(url) { return new URL(url, window.location.href).href; }
+  function copy(url, box) {
+    function byHand() { tell(box, say('c_copy_by_hand', { url: url })); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () { tell(box, say('c_copied')); }, byHand);
+    } else byHand();
+  }
+
+  /* ---- BACK GOES WHERE YOU WERE (a comment's own page): the page you came
+     from on this site, as the browser's own back; come from anywhere else,
+     the link's own address, what it is on. */
+  var back = doc.querySelector('[data-cm-back]');
+  if (back) {
+    back.addEventListener('click', function (e) {
+      var from = doc.referrer || '';
+      if (from.indexOf(window.location.origin + '/') !== 0 || window.history.length < 2) return;
+      e.preventDefault();
+      window.history.back();
+    });
+  }
 
   /* ---- a comment's ⋯ ------------------------------------------------------ */
   var menuWrap = doc.getElementById('commentSheet');
@@ -700,7 +793,11 @@
     : null;
   var current = null, opener = null;
 
-  root.addEventListener('click', function (e) {
+  /* THE CLICKS: the comments' own, and on a comment's own page the Reply and
+     ⋯ under that comment, which sit above the comments. */
+  doc.addEventListener('click', function (e) {
+    if (!e.target || !e.target.closest) return;
+    if (!root.contains(e.target) && !(subjectEl && subjectEl.contains(e.target))) return;
     var q = e.target.closest('[data-cm-show]');
     if (q) {
       e.preventDefault();
@@ -723,13 +820,12 @@
     var m = e.target.closest('[data-cm-menu]');
     if (m && menu) {
       e.preventDefault();
-      var li = m.closest('.cm');
+      var li = m.closest('.cm') || m.closest('[data-cm-subject]');
       current = { li: li, id: li.getAttribute('data-comment'), first: li.getAttribute('data-first') || '',
-                  mine: li.hasAttribute('data-mine') };
+                  mine: li.hasAttribute('data-mine'), url: absolute(li.getAttribute('data-url') || ''),
+                  page: li === subjectEl };
       opener = m;
       var postMine = root.hasAttribute('data-post-mine');
-      menuWrap.querySelector('#commentSheetTitle').textContent =
-        current.mine ? say('c_yours') : say('c_theirs', { name: current.first });
       menuWrap.querySelector('[data-cm-act=delete]').hidden = !current.mine;
       menuWrap.querySelector('[data-cm-act=remove]').hidden = current.mine || !postMine;
       menuWrap.querySelector('[data-cm-act=report]').hidden = current.mine;
@@ -761,6 +857,14 @@
       var b = e.target.closest('[data-cm-act]');
       if (!b || !current) return;
       var act = b.getAttribute('data-cm-act'), sayIt = menuWrap.querySelector('[data-cm-sheet-say]');
+      /* COPY LINK AND SHARE…: the comment's own page, as a post's are its
+         own (posts.js says them the same way). */
+      if (act === 'copy') { copy(current.url, sayIt); return; }
+      if (act === 'share') {
+        if (navigator.share) navigator.share({ url: current.url }).catch(function () { /* closed: nothing to say */ });
+        else copy(current.url, sayIt);
+        return;
+      }
       if (act === 'report' && report) {
         menu.close(true);
         var form = reportWrap.querySelector('[data-report-form]');
@@ -783,7 +887,11 @@
         if (!j.ok) { tell(sayIt, why(j)); return; }
         tell(sayIt, '');
         menu.close(true);
-        setCount(j.count);
+        /* ON ITS OWN PAGE the comment is the page: it went, so the page goes
+           to what it replied to (or what it was on). */
+        if (current.page) { window.location.assign(subjectEl.getAttribute('data-up') || '/'); return; }
+        counted(j.count, -(1 + li.querySelectorAll('.cm').length +
+          Array.prototype.reduce.call(li.querySelectorAll('.cm-rm'), function (t, r) { return t + (+r.getAttribute('data-n') || 0); }, 0)));
         drop(li);
       });
     });
@@ -870,6 +978,14 @@
       li.addEventListener('transitionend', function (e) { if (e.target === li && e.pseudoElement === '::before') end(); });
       setTimeout(end, FADE_MS + 400);
     }, GLOW_MS);
+  }
+  /* "Read N more replies" that just counted a reply glows a moment in the
+     same tint, then fades where it sits (social.css, .rm-link.is-glow). */
+  function glowMore(rm) {
+    var a = rm.querySelector('.rm-link');
+    if (!a) return;
+    a.classList.add('is-glow');
+    setTimeout(function () { a.classList.remove('is-glow'); }, GLOW_MS);
   }
   function drawOnce(art) {
     if (still() || !window.SkriblInline) return;

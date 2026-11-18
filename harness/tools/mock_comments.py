@@ -436,14 +436,14 @@ MORE_CSS = """
 """
 
 SETUP = r"""(opt) => {
-  const times = {0: '25m', 1: '5h', 2: '4h', 3: '3h', 4: '2h', 5: '1h', 6: '40m'};
+  const times = window.__mockTimes || {0: '25m', 1: '5h', 2: '4h', 3: '3h', 4: '2h', 5: '1h', 6: '40m'};
   const cms = [...document.querySelectorAll('.cm')];
   cms.forEach((c, i) => { const t = c.querySelector(':scope > .cm-main .cm-when'); if (t) { t.textContent = times[i] || '1h'; t.removeAttribute('data-when'); } });
   cms.forEach(c => { const f = c.querySelector(':scope > .face-ring.is-blank .face-blank'); if (f) f.setAttribute('data-initial', (c.dataset.first || '?')[0]); });
   const s = document.createElement('style'); s.id = 'mock-cm'; s.textContent = @@BASE@@ + @@BUB@@ + @@MORE@@; document.head.appendChild(s);
   const icon = (sel) => { const e = document.querySelector('.post-row ' + sel + ' svg'); return e ? e.outerHTML : ''; };
   const IC = { reply: icon('.post-count'), repost: icon('.rp-btn'), heart: icon('.lk-heart'), dots: icon('.post-more') };
-  const counts = [[0, 12, 1], [0, 3, 0], [0, 1, 0], [0, 2, 0], [0, 4, 0], [0, 0, 0], [0, 6, 0]];
+  const counts = window.__mockCounts || [[0, 12, 1], [0, 3, 0], [0, 1, 0], [0, 2, 0], [0, 4, 0], [0, 0, 0], [0, 6, 0]];
   cms.forEach((c, i) => {
     const acts = c.querySelector(':scope > .cm-main .cm-acts'); if (!acts) return;
     const [rp, lk, mine] = counts[i] || [0, 0, 0];
@@ -523,12 +523,16 @@ SHEET = r"""() => {
   return 'ok'; }"""
 
 
-def say_(who, post, words, answer_to=None):
+def say_(who, post, words, answer_to=None, payload=None):
     c = who.client(); c.get(f"/social/p/{post}")
     body = {"words": words}
     if answer_to:
         body["answer_to"] = answer_to
+    if payload is not None:
+        body["payload"] = payload
     st, j = c.post_json(f"/social/p/{post}/comments", body)
+    if st != 200:
+        print("say_ refused", st, str(j)[:200], flush=True)
     return j.get("comment") if st == 200 and isinstance(j, dict) else None
 
 
@@ -539,8 +543,11 @@ def section_box(pg):
 
 
 meas = {}
-with sync_playwright() as p:
-    b = p.chromium.launch()
+
+
+def round_replies(b):
+    """The yes (Read More Replies): the thread, a reply's own page, and a
+    comment's sheet."""
     ben = member(b, "ben", "Ben Okafor")
     ana = member(b, "ana", "Ana Reyes")
     cyd = member(b, "cyd", "Cyd Marsh")
@@ -592,6 +599,269 @@ with sync_playwright() as p:
                 meas[f"{screen} {scheme} sheet"] = st
                 close_ctx(ctx, pg)
             print(screen, scheme, "done", flush=True)
+
+
+# ================= THE DRAWINGS ROUND: a drawn reply in the thread, on its own page, in the way to it =================
+# The owner, at the yes: "not sure how you'll handle drawings in there". The
+# same thread, its drawings real ones from artworks.py (the owner's cat and
+# pug, How it works' cottage and snail), each with the still picture an
+# editor makes as it posts; and the three smaller questions the build needs.
+sys.path.insert(0, str(ROOT / "harness" / "tools"))
+
+
+def art_payload(strokes, seed=1, every=2, ground="#f6f2ea", size=(816, 612)):
+    """A drawing from artworks.py as the Pad records one: artdraw.plan()'s
+    hand (its timing and its pressure), every `every`th sample of the
+    stylus's 240 a second, each point's size the brush's under that pressure
+    (lib/pressure.js: 35% at the lightest touch), and a pause between strokes
+    as a hand lifts and moves (handmotion.pause). Posted straight to the API
+    it has no still picture; with_card() gives it the one an editor makes."""
+    import artdraw
+    import handmotion
+    planned = artdraw.plan(strokes, seed=seed)
+    pts, groups, t0, prev = [], [], 0.0, None
+    for i, (st, sp) in enumerate(zip(strokes, planned)):
+        sp = sp[::every] if len(sp) > 2 * every else sp
+        if prev is not None:
+            t0 += handmotion.pause(prev, sp[0][:2], seed=seed * 7 + i)
+        last = None
+        for k, (x, y, ms, pr) in enumerate(sp):
+            t = int(round(t0 + ms))
+            if last is not None and t <= last:
+                t = last + 1
+            last = t
+            pts.append({"x": round(x, 1), "y": round(y, 1), "color": st.color,
+                        "size": round(st.size * (0.35 + 0.65 * pr), 2), "t": t, "start": k == 0})
+        groups.append(len(sp))
+        t0 = last
+        prev = sp[-1][:2]
+    return {"version": 2, "schemaVersion": 2, "playbackMode": "replay", "playSpeed": "auto",
+            "canvasSize": {"cssWidth": size[0], "cssHeight": size[1]},
+            "frames": [{"strokes": pts, "strokeGroups": groups, "background": {"color": ground}}]}
+
+
+CARD = r"""async (payload) => {
+  const maker = document.querySelector('[data-skribl-face-maker]');
+  if (!maker || !window.SkriblFaceFrame) return 'no maker';
+  const box = maker.querySelector('.skribl-inline');
+  const w = payload.canvasSize.cssWidth, h = payload.canvasSize.cssHeight;
+  for (const e of [maker, box]) { e.style.width = w + 'px'; e.style.height = h + 'px'; }
+  try { return await SkriblFaceFrame.card(payload, box); } catch (e) { return 'error ' + e.message; }
+}"""
+
+
+def with_card(who, payload):
+    """The payload with the still picture an editor makes as it posts
+    (lib/faceframe.js card(): the in-post player's own engine paints the
+    drawing whole, lib/postedcard.js composes the card), made on the
+    person's own page, which carries the face maker's box."""
+    who.pg.goto(BASE + f"/social/@{who.handle}")
+    who.pg.wait_for_function("() => document.readyState === 'complete' && !!window.SkriblFaceFrame && !!window.SkriblInline",
+                             timeout=15000)
+    url = who.pg.evaluate(CARD, payload)
+    if not (isinstance(url, str) and url.startswith("data:image/")):
+        print("no card:", str(url)[:120], flush=True)
+        return payload
+    return dict(payload, thumbnail=url)
+
+
+STYLE = "(css) => { const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); return 'ok'; }"
+
+NOW_TIMES = r"""() => {
+  const times = {0: '25m', 1: '5h', 2: '4h', 3: '3h', 4: '2h', 5: '1h', 6: '40m'};
+  [...document.querySelectorAll('.cm')].forEach((c, i) => { const t = c.querySelector(':scope > .cm-main .cm-when'); if (t) { t.textContent = times[i] || '1h'; t.removeAttribute('data-when'); } });
+  return 'ok'; }"""
+
+# A drawn reply in its bubble: A, the 150px it is today, under its words;
+# B, as wide as the bubble's room.
+ART_CSS = {
+    "a": ".cm-bubble .cm-art { width: 150px; max-width: 100%; margin: 8px 0 3px; }",
+    "b": ".cm-bubble:has(> .cm-art) { width: 100%; } .cm-bubble .cm-art { width: 100%; margin: 8px 0 3px; }",
+}
+GONE_CSS = """
+.cm-gone-face { display: block; width: 36px; height: 36px; border-radius: 50%; box-sizing: border-box; box-shadow: inset 0 0 0 1.5px var(--card-edge); }
+.cm-gone { margin: 0; min-height: 36px; display: flex; align-items: center; color: var(--ink-2); font-size: 15px; line-height: 1.3; }
+.ctx-item.has-pic { grid-template-columns: 36px minmax(0, 1fr) auto; }
+.ctx-pic { position: relative; display: block; overflow: hidden; border-radius: 8px; align-self: start; margin: 2px 0 0 4px;
+  background: var(--draw-wait, #fff); box-shadow: 0 0 0 var(--edge, 1px) var(--draw-edge, var(--card-edge)); }
+.ctx-pic img { position: absolute; display: block; max-width: none; height: auto; }
+/* The landing's tint, on the link itself: the line's curve is the row's ::before. */
+.rm-link.is-glow { background: var(--tint); border-radius: 14px; padding: 0 14px 0 10px; margin-left: -10px; }
+"""
+
+# Deleting Ana's reply, which has Eli's drawn reply under it: today it goes
+# with everything under it; or its place stays, quietly, and theirs stay.
+GONE = r"""(how) => {
+  const c1 = [...document.querySelectorAll('.cm-list > .cm')].find(c => c.querySelector(':scope > .cm-answers'));
+  const r1 = c1 && c1.querySelector(':scope > .cm-answers > .cm');
+  if (!r1) return 'no reply';
+  if (how === 'goes') { r1.remove(); return 'ok'; }
+  r1.classList.add('is-gone');
+  const face = r1.querySelector(':scope > .face-ring');
+  if (face) face.outerHTML = '<span class="cm-gone-face" aria-hidden="true"></span>';
+  const main = r1.querySelector(':scope > .cm-main');
+  main.innerHTML = '<p class="cm-gone">This reply was deleted</p>';
+  return 'ok'; }"""
+
+# Replying at the second level: the new reply is past the thread's two
+# levels, so it joins "Read N more replies", which counts it and glows.
+DEEP = r"""() => {
+  const li = document.querySelector('.cm-readmore'); if (!li) return 'no read more';
+  li.querySelector('.rm-link span').textContent = 'Read 3 more replies';
+  li.querySelector('.rm-link').classList.add('is-glow');
+  return 'ok'; }"""
+
+# A DRAWN REPLY'S OWN PAGE, shot from a post that is that reply (Eli's, the
+# pug, with its two replies under it): the way to it above, small, each
+# drawing in it a still picture beside its words, cropped from its card as
+# the in-post player crops its poster (lib/sharecard.js drawingRect).
+PAGE_D = r"""(way) => {
+  const title = document.querySelector('.top-title'); if (title) title.textContent = 'Reply';
+  const art = document.querySelector('.post-page');
+  art.querySelectorAll(':scope > .liked-by, :scope > .more-from').forEach(e => e.hidden = true);
+  const cap = art.querySelector('.post-caption'); if (cap) cap.hidden = true;
+  const disc = (n) => '<span class="face-ring is-blank ctx-face"><span class="face-blank" data-initial="' + n + '"></span></span>';
+  const pic = (sid) => { if (!sid) return '';
+    const W = 816, H = 612, s = Math.min(1092 / W, 492 / H), dw = Math.round(W * s), dh = Math.round(H * s);
+    const x = Math.round((1200 - dw) / 2), y = Math.round((630 - 84 - dh) / 2), bh = 48, k = bh / dh, bw = Math.round(dw * k);
+    return '<span class="ctx-pic" style="width:' + bw + 'px;height:' + bh + 'px"><img alt="" src="/s/' + sid + '/poster" style="width:'
+      + (1200 * k).toFixed(2) + 'px;left:' + (-x * k).toFixed(2) + 'px;top:' + (-y * k).toFixed(2) + 'px"></span>'; };
+  const item = (it) => '<div class="ctx-item' + (it.kind ? ' ' + it.kind : '') + (it.pic ? ' has-pic' : '') + '">' + disc(it.n)
+    + '<div class="ctx-main"><div class="ctx-head"><b>' + it.name + '</b><span>' + it.when + '</span></div>'
+    + (it.words ? '<p>' + it.words + '</p>' : '') + '</div>' + pic(it.pic) + '</div>';
+  const ctx = document.createElement('div'); ctx.className = 'reply-ctx'; ctx.innerHTML = way.map(item).join('');
+  art.insertBefore(ctx, art.firstElementChild);
+  const head = art.querySelector('.post-head');
+  head.querySelector('.post-face').innerHTML = disc('E');
+  const meta = art.querySelector(':scope > .post-meta'); if (meta) meta.textContent = 'Today at 6:12 AM';
+  const icon = (sel) => { const e = document.querySelector('.cm-acts ' + sel + ' svg') || document.querySelector('.post-row ' + sel + ' svg'); return e ? e.outerHTML : ''; };
+  const pc = art.querySelector('.post-row .post-count'); if (pc) { const svg = pc.querySelector('svg'); pc.innerHTML = (svg ? svg.outerHTML : '') + '<span>2</span>'; }
+  const hn = art.querySelector('.post-row .lk-heart'); if (hn) { const svg = hn.querySelector('svg'); hn.classList.remove('is-zero'); hn.innerHTML = (svg ? svg.outerHTML : '') + '<span class="lk-n">4</span>'; }
+  const ct = document.querySelector('.comments-title'); if (ct) { const n = ct.querySelector('.cm-count'); const sp = [...ct.querySelectorAll('span')].find(x => x.textContent.trim() === 'Comments'); if (sp) sp.textContent = 'Replies'; if (n) { n.hidden = false; n.textContent = '2'; } }
+  return 'ok'; }"""
+
+MEASURE_D = r"""() => {
+  const lum = (c) => { const v = c.slice(0, 3).map(x => x / 255).map(x => x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+  const rgb = (s) => { const m = s.match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)/); if (m) return [+m[1] * 255, +m[2] * 255, +m[3] * 255]; return (s.match(/[\d.]+/g) || []).map(Number).slice(0, 3); };
+  const ratio = (a, b) => { const x = lum(rgb(a)), y = lum(rgb(b)); return Math.round(((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)) * 100) / 100; };
+  const page = getComputedStyle(document.body).backgroundColor;
+  const out = { arts: [], gone: null, pics: [], page };
+  document.querySelectorAll('.cm-art').forEach(a => {
+    let d = 0, e = a.closest('.cm'); while (e && e.parentElement.closest('.cm')) { d++; e = e.parentElement.closest('.cm'); }
+    const r = a.getBoundingClientRect(), bub = a.closest('.cm-bubble'), box = a.querySelector('.skribl-inline');
+    const holder = bub || a.closest('.cm-main');
+    out.arts.push({ depth: d, w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10,
+      room: holder ? Math.round(holder.parentElement.getBoundingClientRect().width) : null,
+      behind: bub ? getComputedStyle(bub).backgroundColor : page,
+      paper_vs_behind: ratio('rgb(246, 242, 234)', bub ? getComputedStyle(bub).backgroundColor : page),
+      ring: box ? getComputedStyle(box).boxShadow.slice(0, 80) : null });
+  });
+  const g = document.querySelector('.cm-gone'); if (g) out.gone = ratio(getComputedStyle(g).color, page);
+  document.querySelectorAll('.ctx-pic').forEach(p => { const r = p.getBoundingClientRect(); out.pics.push([Math.round(r.width), Math.round(r.height)]); });
+  const rm = document.querySelector('.rm-link'); if (rm) out.readmore = ratio(getComputedStyle(rm).color, page);
+  return out; }"""
+
+PAGE_BOX = """() => { const a = document.querySelector('.post-page'), r = a.getBoundingClientRect(), t = document.querySelector('.top, header.top, .site-top');
+    const top = t ? Math.max(0, t.getBoundingClientRect().top) : 0;
+    let bottom = r.top; a.querySelectorAll(':scope > *:not([hidden])').forEach(e => { const b = e.getBoundingClientRect(); if (b.height) bottom = Math.max(bottom, b.bottom); });
+    return { x: Math.max(0, r.left - 10), y: top, width: Math.min(innerWidth - Math.max(0, r.left - 10), r.width + 20), height: bottom - top + 16 }; }"""
+
+
+def snap(pg, name, kind):
+    """The comments section (kind "thread"), or the whole post page from the
+    top bar down ("page"), the window grown to hold it, at 2x."""
+    if kind == "page":
+        pg.evaluate("() => window.scrollTo(0, 0)")
+        pg.wait_for_timeout(250)
+        box = pg.evaluate(PAGE_BOX)
+    else:
+        pg.evaluate("() => { const s = document.querySelector('.cm').closest('section') || document.querySelector('.cm-list').parentElement; s.scrollIntoView({ block: 'start' }); }")
+        pg.wait_for_timeout(250)
+        box = section_box(pg)
+    vp = pg.viewport_size
+    need = int(box["y"] + box["height"] + 30)
+    if need > vp["height"]:
+        pg.set_viewport_size({"width": vp["width"], "height": need})
+        pg.wait_for_timeout(300)
+        box = pg.evaluate(PAGE_BOX) if kind == "page" else section_box(pg)
+    pg.screenshot(path=f"{OUT}/shots/{name}.png", clip=box)
+
+
+def round_drawings(b):
+    """Drawings in a thread: today's look, then the plan (A: 150px in its
+    bubble; B: as wide as the bubble's room), a drawn reply's own page with
+    the way to it, and the smaller questions' pictures (deleting a reply
+    with replies under it; replying at the second level)."""
+    import artworks
+    ben = member(b, "ben", "Ben Okafor")
+    ana = member(b, "ana", "Ana Reyes")
+    cyd = member(b, "cyd", "Cyd Marsh")
+    dee = member(b, "dee", "Dee Park")
+    eli = member(b, "eli", "Eli Moss")
+    scene = with_card(ben, art_payload(artworks.scene(), seed=2))
+    cat = with_card(ana, art_payload(artworks.cat(), seed=3))
+    pug = with_card(eli, art_payload(artworks.pug(), seed=4))
+    snail = with_card(dee, art_payload(artworks.snail(), seed=5))
+    print("payloads", {k: len(json.dumps(v)) for k, v in (("scene", scene), ("cat", cat), ("pug", pug), ("snail", snail))},
+          flush=True)
+    post = make_post(ben, "Morning ride past the old cottage, drawn on the train", payload=scene)
+    c1 = say_(eli, post, "Is that the cottage by the river? I think I know it.")
+    r1 = say_(ana, post, "It is! Our cat lives there.", answer_to=c1, payload=cat)
+    say_(ben, post, "Yes, the one by the old mill. Good eye.", answer_to=c1)
+    r3 = say_(eli, post, "Then she needs a friend.", answer_to=r1, payload=pug)
+    r4 = say_(ana, post, "Ha! They'd be best friends.", answer_to=r3)
+    say_(cyd, post, "I'd watch that cartoon every Sunday.", answer_to=r4)
+    say_(dee, post, "", payload=snail)
+    own = make_post(eli, "Then she needs a friend.", payload=pug)
+    a1 = say_(ana, own, "Ha! They'd be best friends.")
+    say_(cyd, own, "I'd watch that cartoon every Sunday.", answer_to=a1)
+    print("fixture", post, own, flush=True)
+
+    def sid(cid):
+        got = db("select skribl_id from social_comments where public_id = ?", (cid or "",))
+        return got[0][0] if got else None
+    way = [{"n": "B", "name": "Ben Okafor", "when": "6h", "words": "Morning ride past the old cottage, drawn on the train",
+            "pic": skribl_of(post), "kind": "is-post"},
+           {"n": "E", "name": "Eli Moss", "when": "5h", "words": "Is that the cottage by the river? I think I know it.",
+            "pic": None},
+           {"n": "A", "name": "Ana Reyes", "when": "4h", "words": "It is! Our cat lives there.", "pic": sid(r1)}]
+    for screen in ("phone", "desk"):
+        for scheme in ("light", "dark"):
+            for opt in ("now", "a", "b", "goes", "keeps", "deep"):
+                ctx, pg = browser_as(b, ana, screen=screen, scheme=scheme)
+                go(pg, f"/social/p/{post}", wait=900)
+                if opt == "now":
+                    st = pg.evaluate(NOW_TIMES)
+                else:
+                    st = pg.evaluate(SETUP, "thread")
+                    pg.evaluate(STYLE, ART_CSS["b" if opt == "b" else "a"] + GONE_CSS)
+                    if opt in ("goes", "keeps"):
+                        st = pg.evaluate(GONE, opt)
+                    elif opt == "deep":
+                        st = pg.evaluate(DEEP)
+                pg.wait_for_timeout(500)
+                snap(pg, f"dr-{screen}-{scheme}-{opt}", "thread")
+                meas[f"{screen} {scheme} {opt}"] = dict(pg.evaluate(MEASURE_D), setup=st)
+                close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, ana, screen=screen, scheme=scheme, reduced=True)
+            go(pg, f"/social/p/{own}", wait=1200)
+            pg.evaluate("() => { window.__mockTimes = {0: '1h', 1: '40m'}; window.__mockCounts = [[0, 0, 0], [0, 6, 0]]; }")
+            pg.evaluate(SETUP, "thread")
+            pg.evaluate(STYLE, ART_CSS["a"] + GONE_CSS)
+            st = pg.evaluate(PAGE_D, way)
+            pg.wait_for_timeout(900)
+            snap(pg, f"dr-{screen}-{scheme}-page", "page")
+            meas[f"{screen} {scheme} page"] = dict(pg.evaluate(MEASURE_D), setup=st)
+            close_ctx(ctx, pg)
+            print(screen, scheme, "done", flush=True)
+
+
+ROUND = os.environ.get("MOCK_ROUND", "replies")
+with sync_playwright() as p:
+    b = p.chromium.launch()
+    (round_drawings if ROUND == "drawings" else round_replies)(b)
     b.close()
 open(f"{OUT}/measure.json", "w").write(_json.dumps(meas, indent=1))
+if ERRS:
+    print("page errors:", *ERRS[:12], sep="\n  ")
 print("ok")
