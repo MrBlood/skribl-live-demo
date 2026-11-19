@@ -172,6 +172,99 @@ def join(original, answer):
     return out
 
 
+# ---- WHAT A DRAW-BACK SAYS OF ITSELF (the walkthrough's mocks, choice 6; the
+# owner's "all yes", Nov 19) -------------------------------------------------
+# Its line and its play button said "drawn in 8 sec" under a cat that took
+# 15: they counted the joined drawing, in which hers plays squeezed to three
+# seconds. Each hand's own drawing time is kept when the draw-back is made
+# (hands, on the post: models.Post.hands_json), and the line says them,
+# "Drawn in 15 sec + 5 sec", the play button who and the whole, "Ana + Theo ·
+# 20 sec".
+
+#: How many names a play button says one by one; past them, "Ana + 4 others".
+NAMED = 4
+
+
+def _whole(ms):
+    """A hand's time in whole seconds, a second at least, as its words are
+    said ("15 sec"): kept so, the parts a line says add up to the whole its
+    play button says ("15 sec + 5 sec", "20 sec"), which two roundings of
+    14.6 and 4.6 would not."""
+    return max(1000, int(ms / 1000 + 0.5) * 1000)
+
+
+def drawn_ms(points):
+    """How long `points` took to draw, as a drawing's line counts it
+    (lib/replayline.js drawnMs, skribl/validation.py _payload_line): every
+    positive gap between consecutive points, uncapped; a gap back in time (a
+    new take) adds nothing."""
+    total = 0
+    for a, b in zip(points, points[1:]):
+        gap = _t(b) - _t(a)
+        if gap > 0:
+            total += gap
+    return int(round(total))
+
+
+def hands(original, answer, theirs, owner_id, me_id):
+    """A draw-back's hands, [[person id, ms], ...] in the order they play:
+    the original's (`theirs`, its own list, when it is a draw-back itself: a
+    jam; else its maker `owner_id` and how long its drawing took), then
+    `me_id` and how long the answer took. `original` and `answer` as join()
+    takes them, before it."""
+    before = read_hands(theirs) or [[owner_id, _whole(drawn_ms(_points(_frame0(original))))]]
+    return before + [[me_id, _whole(drawn_ms(_points(answer["frames"][0])))]]
+
+
+def read_hands(raw):
+    """hands_json read back, or a list as hands() made it: [[person id, ms],
+    ...], or None when it is not one (a column never written, a row
+    hand-edited): a person's id may be None, once they are gone."""
+    import json
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(raw, list) or not raw:
+        return None
+    out = []
+    for h in raw:
+        if (not isinstance(h, (list, tuple)) or len(h) != 2 or isinstance(h[1], bool)
+                or not isinstance(h[1], (int, float)) or h[1] < 0
+                or not (h[0] is None or (isinstance(h[0], int) and not isinstance(h[0], bool)))):
+            return None
+        out.append([h[0], int(h[1])])
+    return out
+
+
+def hands_from_lines(orig_line, line, owner_id, me_id):
+    """A draw-back from before its hands were kept, said from the two
+    drawings' stored lines (Skribl's: "drawn", the artist's time, and
+    "play", how long the replay runs): the original's own drawn time; and
+    for the answer, the joined drawing's drawn time less the original's
+    part as join() laid it down (its replay, squeezed to OVERTURE_MS at
+    most) and the one beat between the two. None when either line is not
+    there, or the sum does not come out (the original changed hands since)."""
+    try:
+        theirs, play, both = int(orig_line["drawn"]), int(orig_line["play"]), int(line["drawn"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    mine = both - min(play, OVERTURE_MS) - PAUSE_CAPS["tight"]
+    if theirs <= 0 or mine < 0:
+        return None
+    return [[owner_id, _whole(theirs)], [me_id, _whole(mine)]]
+
+
+def by_words(names):
+    """Who drew it, for the play button: "Ana + Theo", "Ana + Theo + Mira",
+    and past NAMED names "Ana + 4 others". `names` in the order they play."""
+    names = [n for n in names if n]
+    if len(names) <= NAMED:
+        return " + ".join(names)
+    return f"{names[0]} + {len(names) - 1} others"
+
+
 def same_shape(original, answer):
     """The answer was drawn on the original's canvas (the Pad opens on its
     shape), so its strokes sit where the original's do."""

@@ -409,6 +409,16 @@ class Post(SocialBase):
     #: so the row offers no pen where the Pad can't do it. None: it can, or a
     #: post from before the column, whose pen stays and is answered when opened.
     undrawable = sa.Column(sa.String(12), nullable=True)
+    #: WHOSE HANDS, AND HOW LONG EACH DREW (the walkthrough's mocks, choice 6,
+    #: the owner's "all yes", Nov 19). A draw-back's drawing is the
+    #: original's strokes, squeezed to three seconds, and then its own, so
+    #: its "drawn in" counted the quick replay of hers: 8 sec under a cat
+    #: that took 15. JSON, [[person id, ms], ...] in the order they play: the
+    #: original's hands first (its own list when it is a draw-back itself, a
+    #: jam), this post's maker last. None: not a draw-back, or one from
+    #: before the column, said from the two drawings' stored lines while the
+    #: original is there (drawback.hands_from_lines).
+    hands_json = sa.Column(sa.Text(), nullable=True)
 
     __table_args__ = (
         #: A drawing, a quote (whose words may be all it has), or words.

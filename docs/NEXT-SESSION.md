@@ -192,16 +192,23 @@ repository with its own copy of the editors, about 61,000 lines and most of
 the suites to keep in step for good; C was deciding now for the site alone
 and taking the standalone side out.)
 
-"ALL YES" (the owner, Nov 19, about noon) to the ten choices below, built
-in three pieces (`DECISIONS.md`, the entries after "One repository"): 1 and
-2 (the menu inside a post, no gallery tick: merged, #992); then 3, 4, 5 and
-7 to 10 together (a post's page and the small ones); then 6 (what a
+"ALL YES" (the owner, Nov 19, about noon) to the ten choices below, ALL TEN
+BUILT, in three pieces (`DECISIONS.md`, the entries after "One
+repository"): 1 and 2 (the menu inside a post, no gallery tick: #992); 3,
+4, 5 and 7 to 10 (a post's page and the small ones: #993); 6 (what a
 draw-back says: each hand's drawing time kept on the post, a migration, and
-two optional numbers the site hands Skribl's player). Read DECISIONS for
-which have merged. TO TELL THE OWNER with the second piece: a drawn
-comment's play button is the card's own pill, not the mock's corner mark;
-the initial on cards changes their Nov 13 "never an initial"; Export's GIF
-row wears the infinity sign too. STILL THE OWNER'S TO ANSWER: the Text drawer's way out of
+numbers the site hands Skribl's player: the pull request after #993). Read
+DECISIONS and main's runs for what has merged and how it ran.
+PUT TO THE OWNER, THEIRS TO ANSWER (each built the way named first):
+- a drawn comment's play button is the card's own pill at its foot, saying
+  the time; the mock drew a small round mark in the corner;
+- the initial on cards changes their Nov 13 "never an initial"; lists of
+  people (followers, who liked it, search) still show the blank circle;
+- Export's GIF row wears the infinity sign with the players' loop;
+- the Text drawer's way out of a post ("Yours" with no hand yet, and "Edit
+  your hand", leave the composer's frame and the drawing is gone): not
+  fixed; the answer offered is that inside a post "Edit your hand" is not
+  shown and "Yours" with no hand says where to make one. STILL THE OWNER'S TO ANSWER: the Text drawer's way out of
 a post ("Yours" with no hand yet, and "Edit your hand", leave the composer's
 frame and the drawing is gone).
 

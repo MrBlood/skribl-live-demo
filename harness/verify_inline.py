@@ -1901,7 +1901,19 @@ with sync_playwright() as sp:
     #   WHICH CALLER PAYS: every page that shows a post, for an event any host
     #   can answer. Spent first: the line written without spaces. 82,119 B
     #   measured, against 82,038 before it.
-    EMBED_RATCHET = 82_119
+    # RAISED (the owner's "all yes", Nov 19, to the walkthrough's mocks, choice
+    #   6: what a draw-back says), for one named cost: +393 B, all
+    #   inlineplayer.js -- a host's own numbers for a drawing of several hands
+    #   (docs/INTEGRATION.md, "A drawing of several hands"): `parts`, `people`
+    #   and `by` in the line it hands over, said by the line ("Drawn in 15 sec +
+    #   5 sec") and the play button ("Ana + Theo · 20 sec"), the button's words
+    #   written as text now that a host's words can be in them. Whose hands,
+    #   and whose names are said to whom, are the site's own (social/posts.py),
+    #   outside this sum; lib/replayline.js is not touched (the line's lead
+    #   carries the words). WHICH CALLER PAYS: every page that shows a post,
+    #   for words any host that joins drawings can use. 82,512 B measured,
+    #   against 82,119 before it.
+    EMBED_RATCHET = 82_512
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -2695,6 +2707,93 @@ with sync_playwright() as sp:
           json.dumps({"jumps": _jumps[:6], "lastOpacity": _ops[-1], "end": _rend}))
     check("no page errors with a waiting line under Reduce Motion", not _rerrs, "; ".join(_rerrs[:2]))
     _rc.close()
+
+    # A DRAWING OF SEVERAL HANDS (docs/INTEGRATION.md, "A drawing of several
+    # hands"; Nov 19, the Skribl site's draw-backs, the walkthrough's mocks,
+    # choice 6). A host that joins drawings hands over each part's own drawing
+    # time in the same line_info: `parts` (ms, in the order they play), `drawn`
+    # their sum, `people` how many people, `by` who. The line says the parts,
+    # the play button who and the whole. `by` is a host's words: text, never
+    # markup. Without `parts`, everything as it was.
+    print("\nTHE POST — a drawing of several hands (line_info's parts, people and by)")
+    _HT = ("{% from 'skribl/_skribl_inline_player.html' import skribl_inline %}"
+           "{{ skribl_inline(i, canvas_w=w, canvas_h=h, line_info=li, line_waits=wt) }}")
+    _hline = dict(_litems.get(_wait_pad, {}).get("line") or {})
+
+    def _hands(li, waits):
+        _it = _litems.get(_wait_pad) or {}
+        with _app_l.test_request_context():
+            return _rts_l(_HT, i=_wait_pad, w=_it.get("canvas_w"), h=_it.get("canvas_h"), li=li, wt=waits)
+    _two = dict(_hline, drawn=20000, parts=[15000, 5000], people=2, by="Ana + Theo")
+    _five = dict(_hline, drawn=185000, parts=[60000, 45000, 30000, 30000, 20000], people=5, by="Ana + 4 others")
+    _tag = dict(_hline, drawn=20000, parts=[15000, 5000], people=2, by="<b>Ana</b> + <i>Theo</i>")
+    _long = dict(_hline, drawn=20000, parts=[15000, 5000], people=2,
+                 by="Bartholomew the Elder + Maximiliana of the Very Long Name")
+    _hc2 = b.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+    _hp = _hc2.new_page()
+    _herrs = []
+    _hp.on("pageerror", lambda e: _herrs.append(str(e)))
+    browsing.goto(_hp, BASE, "/feed")
+    _hp.wait_for_timeout(600)
+    # WATCHED FROM BEFORE THE PLAYERS MOUNT: any <b> or <i> that is ever made
+    # or taken away under a play button. Reading the button afterwards cannot
+    # tell: the player fits its words a moment later and writes them as text
+    # then, so words put in as markup look the same by the time anybody
+    # looks (this row's first version passed with the names put in as markup).
+    _hp.evaluate("""(posts) => {
+        window.__made = [];
+        new MutationObserver(rs => { for (const r of rs) for (const n of [...r.addedNodes, ...r.removedNodes]) {
+          if (n.nodeType !== 1 || !(r.target.closest && r.target.closest('.skribl-inline-play'))) continue;
+          if (/^(B|I)$/.test(n.tagName)) window.__made.push(n.tagName);
+          for (const k of n.querySelectorAll('b, i')) window.__made.push(k.tagName); } })
+          .observe(document.body, { childList: true, subtree: true });
+        const feed = document.querySelector('.skribl-inline').parentElement.parentElement;
+        for (const [key, html] of posts.reverse()) {
+          const a = document.createElement('article'); a.id = key; a.className = 'hands-probe'; a.style.padding = '0 16px 12px';
+          a.innerHTML = html; feed.prepend(a); SkriblInline.mount(a); } }""",
+                 [["twoWait", _hands(_two, True)], ["twoLine", _hands(_two, False)], ["fiveLine", _hands(_five, False)],
+                  ["tagWait", _hands(_tag, True)], ["longWait", _hands(_long, True)], ["bareLine", _hands(_hline, False)]])
+    _hp.wait_for_timeout(600)
+    _HREAD = """(id) => { const a = document.getElementById(id), box = a.querySelector('.skribl-inline'), line = a.querySelector('.skribl-inline-line');
+      const play = box.querySelector('.skribl-inline-play'), sp = play.querySelector('span'), d = line.querySelector('.rl-drawn'), sk = line.querySelector('.rl-skip');
+      const pr = play.getBoundingClientRect(), br = box.getBoundingClientRect();
+      return { words: play.textContent.trim(), kids: sp ? sp.children.length : null, name: box.getAttribute('aria-label'),
+               inside: pr.left >= br.left && pr.right <= br.right, drawn: d ? d.textContent.replace(/\\s+/g, ' ').trim() : null,
+               skip: sk ? !sk.hidden && sk.getClientRects().length > 0 : null }; }"""
+    _hr = {k: _hp.evaluate(_HREAD, k) for k in ("twoWait", "twoLine", "fiveLine", "tagWait", "longWait", "bareLine")}
+    _bare_words = _hp.evaluate("(ms) => SkriblReplayLine.words(ms)", _hline.get("drawn", 0))
+    check("the play button of a line that waits says who and the whole (\"Ana + Theo · 20 sec\"), in its name too; a"
+          " drawing too narrow for the names keeps the time alone, inside the drawing",
+          _hr["twoWait"]["words"] == "Ana + Theo · 20 sec" and _hr["twoWait"]["name"].endswith(", Ana + Theo · 20 sec")
+          and _hr["longWait"]["words"] == "20 sec" and _hr["longWait"]["inside"] and _hr["twoWait"]["inside"],
+          json.dumps({k: _hr[k] for k in ("twoWait", "longWait")}))
+    _made = _hp.evaluate("() => window.__made")
+    check("who drew it is a host's words, written as text: markup in it is shown as it was typed and no element of it"
+          " is ever made, not for a moment",
+          _hr["tagWait"]["kids"] == 0 and _hr["tagWait"]["words"] == "<b>Ana</b> + <i>Theo</i> · 20 sec" and _made == [],
+          json.dumps({"read": _hr["tagWait"], "made": _made}))
+    check("the line says each hand's own time (\"Drawn in 15 sec + 5 sec\"), and past three parts the whole and how many"
+          " people (\"Drawn in 3 min by 5 people\"); it never says long pauses were skipped; a drawing with no parts says"
+          " its own time, as before",
+          _hr["twoLine"]["drawn"] == "Drawn in 15 sec + 5 sec ·" and _hr["twoLine"]["skip"] is False
+          and _hr["fiveLine"]["drawn"] == "Drawn in 3 min by 5 people ·" and _hr["fiveLine"]["skip"] is False
+          and _hr["bareLine"]["drawn"] == f"Drawn in {_bare_words} ·",
+          json.dumps({k: [_hr[k]["drawn"], _hr[k]["skip"]] for k in ("twoLine", "fiveLine", "bareLine")}))
+    # Played: the drawing arrives with its own numbers, and the line still says the hands'.
+    _hp.evaluate("document.getElementById('twoWait').scrollIntoView({ block: 'start' })")
+    _hp.wait_for_timeout(250)
+    _hb = _hp.evaluate("""() => { const r = document.querySelector('#twoWait .skribl-inline').getBoundingClientRect();
+        return [r.left + r.width / 2, r.top + r.height / 3]; }""")
+    _hp.touchscreen.tap(_hb[0], _hb[1])
+    _hp.wait_for_timeout(1800)
+    _played = _hp.evaluate(_HREAD, "twoWait")
+    _hstate = _hp.evaluate("() => { const s = SkriblInline.mount(document.getElementById('twoWait'))[0].state(); return [s.loaded, s.state]; }")
+    check("played, its line opens saying the hands' times still (the drawing's own number never takes their place), and"
+          " the play button's words are gone",
+          _hstate[0] and _played["drawn"] == "Drawn in 15 sec + 5 sec ·" and _played["skip"] is False and _played["words"] == "",
+          json.dumps({"state": _hstate, "read": _played}))
+    check("no page errors with a drawing of several hands", not _herrs, "; ".join(_herrs[:2]))
+    _hc2.close()
 
     # NO STICKY HOVER. iOS keeps :hover on the last thing tapped, so a hover
     # outside (hover: hover) stays lit on a phone. Asked of the sheet's rules,

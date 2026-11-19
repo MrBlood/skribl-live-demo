@@ -2070,9 +2070,21 @@
     /* No line under it (the Gallery's cards), or one that waits: the play
      * button says it, and so does its name, which the words in the pill are
      * not part of. */
-    var says = (!line || waits) && RL && info && playEl && (info.pages > 1 ? info.pages + ' pages' : info.drawn > 0 ? 'drawn in ' + RL.words(info.drawn) : '');
+    /* A HOST'S OWN NUMBERS FOR A DRAWING OF SEVERAL HANDS (the Skribl site's
+     * draw-backs: the first hand's part plays squeezed there, so the drawing's
+     * own "drawn in" is not how long it took). The line a host hands over may
+     * carry `parts`, each hand's drawing time in the order they play, with
+     * `drawn` their sum, `people` how many people they are, and `by`, who
+     * they are. The line under it then says "Drawn in 15 sec + 5 sec" (past
+     * three parts, the sum and how many people) and the play button "Ana +
+     * Theo · 20 sec". Without them, everything as it was. `by` is a host's
+     * words: text, never markup. */
+    var brief = RL && info && !(info.pages > 1) && info.drawn > 0 ? RL.words(info.drawn) : '';
+    var ps = brief && Array.isArray(info.parts) ? info.parts : [];
+    var hands = ps.length < 2 ? '' : ps.length > 3 ? brief + (info.people > 1 ? ' by ' + info.people + ' people' : '') : ps.map(RL.words).join(' + ');
+    var says = (!line || waits) && RL && info && playEl && (info.pages > 1 ? info.pages + ' pages' : brief ? (info.by ? info.by + ' \u00b7 ' : 'drawn in ') + brief : '');
     if (says) {
-      playEl.insertAdjacentHTML('beforeend', '<span>' + says + '</span>');
+      playEl.appendChild(document.createElement('span')).textContent = says;
       mark('is-says', true);
       el.setAttribute('aria-label', label = (label || 'Play this Skribl') + ', ' + says);
       fitSays(); tone();
@@ -2089,7 +2101,7 @@
       var sp = playEl.lastChild, w = playEl.parentNode.clientWidth - 24;
       if (w <= 0) return;
       sp.textContent = says;
-      if (playEl.offsetWidth > w && says.indexOf('drawn in ') === 0) sp.textContent = says.slice(9);
+      if (playEl.offsetWidth > w && brief) sp.textContent = brief;
     }
     /* THE PILL IS GLASS, dark or light by the drawing under it (the owner's
      * pick D after v324), read where it sits, the middle of the drawing's
@@ -2201,10 +2213,14 @@
           // Restarted as a new speed restarts it (applyRate, at the rate it has).
           pickSong: function (p) { songPick = p; applyRate(rate); },
           playMs: function () { return payload ? totalMs : info ? info.play : 0; },
-          drawnMs: function () { return payload ? drawnMs : info ? info.drawn : null; },
+          /* Several hands (a host's `parts`, above): the line's own "Drawn in"
+             steps aside (no number, so no "long pauses skipped" either) and
+             the lead says each hand's time. */
+          drawnMs: function () { return hands ? null : payload ? drawnMs : info ? info.drawn : null; },
           lead: function () {
             var n = flipFrames ? flipFrames.length : payload ? 0 : pagesN;
-            return n > 1 ? '<b>' + n + ' pages</b><span class="rl-m"> · </span>' : '';
+            return n > 1 ? '<b>' + n + ' pages</b><span class="rl-m"> · </span>'
+              : hands ? '<span class="rl-m">Drawn in </span><b>' + hands + '</b><span class="rl-m"> · </span>' : '';
           }
         });
         var fit0 = sayEl.querySelector('[data-r="fit"]');
