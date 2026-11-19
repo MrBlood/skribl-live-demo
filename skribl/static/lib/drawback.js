@@ -21,6 +21,15 @@
  * One button, Theirs: faint, full, hidden. A pill under the header says what
  * is happening, in Draw along's pill.
  *
+ * WHAT STEPS ASIDE WHILE DRAWING BACK (the owner's "All yes", Nov 19): the
+ * eraser (a draw-back replays as one drawing, so an eraser over her lines
+ * would erase them too: "you add, never erase"; Undo still takes back a line
+ * of yours), Recolour, and the background: her paper's colour and the
+ * picture and music drawer ("the original reserves the right for a
+ * background", the owner's own words). Each is dimmed and, tapped, says why
+ * in the editor's own toast. The eraser is held at the one switch every way
+ * to it goes through (setTool: its button, its key, Tune's), so none slips by.
+ *
  * Pad and Flip: one module. The Pad uses it now; drawing back on a Flip,
  * page for page, is Flip next (its own mock). */
 (function () {
@@ -129,6 +138,47 @@
     document.body.setAttribute('data-drawback', st.key);
   }
 
+  /* ---- what steps aside --------------------------------------------------- */
+  var guarded = false;
+  function tell(words, near) {
+    if (typeof window.showToast === 'function') window.showToast(words, near || null);
+    else if (typeof window.chip === 'function') window.chip(words);
+  }
+  function hers() { return run && run.first ? run.first + '\u2019s' : 'theirs'; }
+  var ASIDE = [
+    { sel: '#recolorBtn', words: function () { return 'Recolour is off while drawing back.'; } },
+    { sel: '.bg-swatch[data-bg], #customBgBtn, #customBgInput', words: function () { return 'The background is ' + hers() + '.'; } },
+    { sel: '#mediaOpenBtn', words: function () { return 'The background and music are ' + hers() + '.'; } }
+  ];
+  function guard() {
+    if (guarded) return;
+    guarded = true;
+    if (typeof window.setTool === 'function') {
+      var real = window.setTool;
+      window.setTool = function (t) {
+        if (run && t === 'eraser') {
+          tell('The eraser is off while drawing back. Undo takes back your last line.',
+               document.getElementById('eraserToolBtn'));
+          return;
+        }
+        return real.apply(this, arguments);
+      };
+    }
+    ['click', 'input', 'pointerdown'].forEach(function (type) {
+      document.addEventListener(type, function (e) {
+        if (!run || !e.target || !e.target.closest) return;
+        for (var i = 0; i < ASIDE.length; i++) {
+          var hit = e.target.closest(ASIDE[i].sel);
+          if (!hit) continue;
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          if (type === 'click') tell(ASIDE[i].words(), hit);
+          return;
+        }
+      }, true);
+    });
+  }
+
   function stop() {
     if (!run) return;
     run.guide.remove();
@@ -184,7 +234,10 @@
     document.body.appendChild(pill);
     document.body.classList.add('drawback');
     run = { strokes: strokesOf(payload), size: size, guide: guide, pill: pill, btn: btn, state: 0, off: null,
-            onResize: function () { place(); paint(); } };
+            first: first, onResize: function () { place(); paint(); } };
+    guard();
+    // If the eraser was in hand, the pen takes over.
+    if (typeof tool !== 'undefined' && tool === 'eraser' && typeof window.setTool === 'function') window.setTool('pen');
     btn.addEventListener('click', function () {
       if (!run) return;
       run.state = (run.state + 1) % STATES.length;

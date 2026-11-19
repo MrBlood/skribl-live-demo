@@ -46,7 +46,7 @@
 {% from 'social/_post.html' import face with context %}
 
 {% macro follow_button(who, following) -%}
-{%- set first = who.display_name.split(' ')[0] -%}
+{%- set first = who.display_name|first_name -%}
 <button class="btn fo-btn{% if following %} is-following{% endif %}" type="button" data-first="{{ first }}" data-name="{{ who.display_name }}"
         {%- if me %} data-follow="{{ url_for('social.follow', handle=who.handle) }}"{% if following %} aria-haspopup="dialog" aria-controls="unfollowSheet" aria-expanded="false"{% endif %}
         {%- else %} data-follow-out aria-haspopup="dialog" aria-controls="followOutSheet" aria-expanded="false"{% endif %}
@@ -116,7 +116,7 @@
 {%- endmacro %}
 
 {% macro follow_sheets(who, fl, mine, many=false) -%}
-{%- set first = who.display_name.split(' ')[0] if who else '' -%}
+{%- set first = who.display_name|first_name if who else '' -%}
 {% if mine and fl %}
 {#  WHO FOLLOWS YOU, AND WHOM YOU FOLLOW: yours alone, opened by your
     counts. Make's own sheet (social.js), the one pill, the people on one

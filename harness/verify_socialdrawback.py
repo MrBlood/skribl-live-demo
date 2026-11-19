@@ -639,10 +639,15 @@ with sync_playwright() as p:
             mine_ph["frames"][0]["photo"] = {"data": PNG, "fit": "cover"}
             yp = draw_back(theo, cat, mine_ph)
             theirs = got["photo"]
+            # ERASING IN HIS (the owner's "All yes", Nov 19: the eraser is off
+            # while drawing back; the server holds the line too).
+            mine_er = answer()
+            mine_er["frames"][0]["strokes"][5]["erase"] = True
+            er = draw_back(theo, cat, mine_er)
             ctx, pg = browser_as(b, theo)
             pg.goto(BASE + "/social/")
             ready(pg)
-            words = pg.evaluate("""() => Object.fromEntries(['photo', 'music', 'recolors'].map(k => [k,
+            words = pg.evaluate("""() => Object.fromEntries(['photo', 'music', 'recolors', 'erase'].map(k => [k,
               (document.querySelector('[data-compose-said] [data-word="cmp_drawback_' + k + '"]') || {}).textContent || null]))""")
             close_ctx(ctx, pg)
             check("a picture under HIS answer is refused saying it is his (why photo, on yours), hers on a photo saying it"
@@ -652,6 +657,9 @@ with sync_playwright() as p:
                   and (theirs[1] or {}).get("on") == "theirs"
                   and all(w and "Edit drawing" in w for w in words.values()),
                   json.dumps({"yours": yp, "theirs": theirs[1], "words": words})[:500])
+            check("an answer with erasing in it is refused (why erase, on yours): a draw-back replays as one drawing, so"
+                  " his eraser would erase hers too",
+                  er[0] == 400 and (er[1] or {}).get("why") == "erase" and (er[1] or {}).get("on") == "yours", json.dumps(er))
             # Behind a block, either way, the original is not there.
             c = ana.client()
             c.get("/social/")
@@ -746,6 +754,30 @@ with sync_playwright() as p:
                   " where it stands, her face small at the foot of his (phone and desk)",
                   all(v == {"on": "Drew back on Ana’s", "href": f"/social/p/{cat}", "hit": True, "face": True} for v in page.values()),
                   json.dumps(page))
+            # ON YOUR OWN DRAWING (the owner's "All yes", Nov 19): "Drew back on
+            # their own drawing", the link to it, one face. AND A NAME THAT
+            # STARTS WITH A TITLE is said whole: "Dr. Kai Moss", never "Dr.".
+            mine3 = post_payload(theo, "Section 3, Theo's own", CAT)
+            own = (draw_back(theo, mine3, answer(n=10, seed=40))[1] or {}).get("post")
+            kai = someone(b, "drkai", "Dr. Kai Moss")
+            k1 = post_payload(kai, "Section 3, Dr. Kai's first", CAT)
+            post_payload(kai, "Section 3, Dr. Kai's second", drawing(n=20, seed=41))
+            onkai = (draw_back(theo, k1, answer(n=10, seed=42))[1] or {}).get("post")
+            ctx, pg = browser_as(b, theo)
+            home(pg)
+            own_card, kai_card = pg.evaluate(CARD, own), pg.evaluate(CARD, onkai)
+            pg.goto(BASE + f"/social/p/{k1}")
+            ready(pg)
+            more = pg.evaluate("() => (document.querySelector('#moreTitle') || {}).textContent || null")
+            close_ctx(ctx, pg)
+            check("a draw-back on its maker's own drawing says \"Drew back on their own drawing\", the link to it, and one"
+                  " face (never their own twice)",
+                  own_card and own_card["on"] == "Drew back on their own drawing" and not own_card["face"]
+                  and (own_card["who"] or {}).get("href") == f"/social/p/{mine3}", json.dumps(own_card))
+            check("a name that starts with a title is said whole: \"Drew back on Dr. Kai Moss’s\" and \"More from Dr. Kai"
+                  " Moss\", never \"Dr.\"",
+                  kai_card and kai_card["on"] == "Drew back on Dr. Kai Moss’s" and more == "More from Dr. Kai Moss",
+                  json.dumps({"card": kai_card and kai_card["on"], "more": more}))
             c = ana.client()
             c.get("/social/")
             dst, _ = c.post_json(f"/social/p/{cat}/delete", {})
@@ -814,6 +846,26 @@ with sync_playwright() as p:
                   [c_[0] for c_ in cycle] == ["full", "hidden", "faint"] and cycle[0][1] == 255 and cycle[1][1] == 0
                   and abs(cycle[2][1] - 82) <= 3 and [c_[2] for c_ in cycle] == ["Theirs: full", "Theirs: hidden", "Theirs: faint"],
                   json.dumps(cycle))
+            # WHAT STEPS ASIDE (the owner's "All yes", Nov 19): the eraser, the
+            # picture and music, Recolour; each says why, in the editor's toast.
+            aside = {}
+            fr.click("#eraserToolBtn")
+            pg.wait_for_timeout(150)
+            aside["eraser"] = fr.evaluate("() => [tool, document.getElementById('toast').textContent]")
+            fr.click("#mediaOpenBtn")
+            pg.wait_for_timeout(150)
+            aside["media"] = fr.evaluate("() => [document.getElementById('mediaOpenBtn').getAttribute('aria-expanded'), document.getElementById('toast').textContent]")
+            fr.evaluate("() => document.getElementById('recolorBtn').click()")
+            pg.wait_for_timeout(150)
+            aside["recolor"] = fr.evaluate("() => document.getElementById('toast').textContent")
+            aside["dim"] = fr.evaluate("() => ['eraserToolBtn', 'mediaOpenBtn'].map(i => getComputedStyle(document.getElementById(i)).opacity)")
+            check("while drawing back the eraser stays aside (the pen stays in hand: \"The eraser is off while drawing back."
+                  " Undo takes back your last line.\"), the picture and music drawer stays shut (\"The background and music"
+                  " are Ana’s.\"), and Recolour says it is off; each dimmed",
+                  aside["eraser"] == ["pen", "The eraser is off while drawing back. Undo takes back your last line."]
+                  and aside["media"] == ["false", "The background and music are Ana’s."]
+                  and aside["recolor"] == "Recolour is off while drawing back." and aside["dim"] == ["0.4", "0.4"],
+                  json.dumps(aside))
             box = fr.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return [r.left, r.top, r.width]; }")
             fb = fe.bounding_box()
             k = box[2] / 816

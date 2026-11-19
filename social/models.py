@@ -76,6 +76,20 @@ class SocialBase(DeclarativeBase):
     nothing else, which is what social/migrations/env.py migrates."""
 
 
+def first_name(name):
+    """What the site calls a person in a sentence ("Ana’s comment", "More
+    from Ana", "Drew back on Ana’s"): the first word of their name, or the
+    whole name when that word is a title ending in a period, "Mr. Bloob" or
+    "Dr. Ana Ruiz" (the owner's "All yes", Nov 19, after "Drew back on
+    Mr.’s" and "More from Mr."). A name of one word is itself."""
+    words = (name or "").split()
+    if not words:
+        return name or ""
+    if len(words) > 1 and words[0].endswith("."):
+        return " ".join(words)
+    return words[0]
+
+
 def utcnow():
     return datetime.now(timezone.utc)
 

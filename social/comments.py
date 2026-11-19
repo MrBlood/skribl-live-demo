@@ -122,7 +122,7 @@ import sqlalchemy.orm  # noqa: F401  (sa.orm.aliased)
 from flask import jsonify, render_template, request, url_for
 
 from .accounts import _json_error, _rests
-from .models import Comment, Person, Post, as_utc, new_public_id
+from .models import Comment, Person, Post, as_utc, first_name, new_public_id
 from .safety import between, hidden_ids
 from .security import current_person, origin_ok, over, site, token_ok
 
@@ -798,7 +798,7 @@ def section(on, viewer, skribl_blueprint="skribl", focus=None):
             # a comment's own page "Reply to Eli"), and the signed-out sheet's
             # "you can reply to Mira": the first name, as More from and the
             # heart's sheet say it.
-            "first": ((focus["who"] if focus is not None else on.owner).display_name or "").split(" ")[0]
+            "first": first_name((focus["who"] if focus is not None else on.owner).display_name)
             if focus is None or focus["who"] is not None else "",
             "new": new, "more": more,
             "drop": url_for("social.comment_delete", public_id="__ID__"),

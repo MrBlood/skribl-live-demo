@@ -75,7 +75,7 @@ from flask import jsonify, render_template, request, url_for
 
 from .accounts import _json_error, _rests
 from .gallery import _after
-from .models import PERSON_PREFIX, Person, Post, Repost, as_utc
+from .models import PERSON_PREFIX, Person, Post, Repost, as_utc, first_name
 from .safety import hidden_ids
 from .security import current_person, origin_ok, over, site, token_ok
 
@@ -428,7 +428,7 @@ def comment_open(me, public_id):
 def on_words(on):
     """What a comment out in the world says it is on (the comment thread,
     step 3): "On Ben’s post", "On Ben’s drawing"."""
-    first = (on.owner.display_name or "").split(" ")[0]
+    first = first_name(on.owner.display_name)
     return f"On {first}\u2019s {'post' if on.post is not None else 'drawing'}"
 
 

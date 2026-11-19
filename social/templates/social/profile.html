@@ -86,7 +86,7 @@
 {% endblock %}
 
 {% block main %}
-<div class="prof-page" data-profile data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}" data-share-url="{{ share_url }}"
+<div class="prof-page" data-profile data-handle="{{ who.handle }}" data-first="{{ who.display_name|first_name }}" data-share-url="{{ share_url }}"
      data-share-title="{{ who.display_name }} (@{{ who.handle }}) on Blooby">
   {% if mine and who.taken_down_at %}<p class="prof-down" role="note">Your profile was taken down: it broke the rules. Only you can see it, and what you made.</p>{% endif %}
   {% if note == 'saved' %}<p class="note" role="status">Saved. This is your profile as everyone sees it.</p>
@@ -143,7 +143,7 @@
   </section>
 
   {% if not blocked_them %}
-  {{ profile_tabs(tabs, tab, 'Your page' if mine else who.display_name.split(' ')[0] ~ '’s page') }}
+  {{ profile_tabs(tabs, tab, 'Your page' if mine else who.display_name|first_name ~ '’s page') }}
   <div class="prof-swap" data-prof-swap data-more="{{ url_for('social.profile_more', handle=who.handle) }}">
     {{ tab_panel(p, who, mine) }}
   </div>

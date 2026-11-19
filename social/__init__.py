@@ -424,6 +424,14 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
                 if (request.content_length or 0) > cap:
                     abort(413)
 
+    # A PERSON'S FIRST NAME in a sentence (models.first_name), as a filter so
+    # a macro imported without the page's context has it too.
+    from .models import first_name as _first_name
+
+    @bp.app_template_filter("first_name")
+    def _first_name_filter(name):
+        return _first_name(name)
+
     # Context for the site's own pages only (a blueprint processor, not an
     # app-wide one): Skribl's pages never see these names.
     @bp.context_processor
