@@ -488,15 +488,16 @@ def cards(entries, viewer, words=True, aligned=False):
                        "mine": viewer is not None and viewer.id == who.id,
                        "muted": who.id in muted,
                        # DRAW BACK: the pen in the row where it can be done
-                       # (a drawing of one page, no music: drawback.drawable), how many there are, and on
+                       # (a drawing of one page, no recolours: drawback.drawable), how many there are, and on
                        # a draw-back the post it answers and whose that is.
-                       # (on_photo is not read: every Pad drawing carries a
-                       # picture of its blank paper, which a draw-back drops.
-                       # A real photo, music or recolours are the post's
-                       # `undrawable`, read when it was made; a post from
-                       # before that keeps its pen, answered when opened.)
+                       # (A photo or music is no bar since the owner's yes,
+                       # Nov 19: a draw-back keeps the author's. Recolours
+                       # are the post's `undrawable`, read when it was made;
+                       # a post from before that keeps its pen, answered when
+                       # opened. "photo" and "music" recorded before the yes
+                       # bar nothing now.)
                        "drawable": (e["kind"] == "p" and not down and sk is not None and sk.get("kind") == "pad"
-                                    and not sk.get("has_audio") and not getattr(p, "undrawable", None)),
+                                    and getattr(p, "undrawable", None) not in ("pages", "recolors")),
                        "drawbacks": backs["n"].get(p.id, 0) if e["kind"] == "p" else 0,
                        "drawn_on": backs["on"].get(p.id) if e["kind"] == "p" else None}
     out = []
@@ -740,7 +741,9 @@ def register(bp, skribl_blueprint="skribl"):
         on = quotable(me, "p", oid)
         if on is None or on.post is None or not on.post.skribl_id:
             return None, _json_error("drawback_gone", 404)
-        original = read_payload(on.post.skribl_id, viewer_id=me.public_id)
+        # Her photo and song as data, to post again with the two (the
+        # author's background and music: the owner's yes, Nov 19).
+        original = read_payload(on.post.skribl_id, viewer_id=me.public_id, inline_media=True)
         if original is None:
             return None, _json_error("drawback_gone", 404)
         if not isinstance(payload, dict) or not _points((payload.get("frames") or [{}])[0]
@@ -751,7 +754,7 @@ def register(bp, skribl_blueprint="skribl"):
         why = drawable(original)
         if why:
             return None, _json_error("drawback_unsupported", 400, why=why, on="theirs")
-        why = drawable(payload)
+        why = drawable(payload, answer=True)
         if why:
             return None, _json_error("drawback_unsupported", 400, why=why, on="yours")
         # YOU ADD, NEVER ERASE (the owner's "All yes", Nov 19): a draw-back

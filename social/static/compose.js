@@ -413,9 +413,12 @@
       if (i) { var g = (p.t || 0) - (mp[i - 1].t || 0); if (g > 0) t += g; }
       var c = Object.assign({}, p); c.t = Math.round(t); if (!i) c.start = true; out.push(c);
     });
+    /* Her photo and her song, the author's (the owner's yes, Nov 19). */
+    var has = function (m) { return !!(m && m.data); };
     return Object.assign({}, mine, { canvasSize: orig.canvasSize,
       frames: [Object.assign({}, mf, { strokes: out, strokeGroups: [], background: of.background || null,
-                                       photo: null, music: null })] });
+                                       photo: has(of.photo) ? of.photo : has(orig.photo) ? orig.photo : null,
+                                       music: has(of.music) ? of.music : has(orig.music) ? orig.music : null })] });
   }
   function drawingBack(next) {
     back = next;

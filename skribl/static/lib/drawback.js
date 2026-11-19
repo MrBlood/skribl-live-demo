@@ -21,6 +21,14 @@
  * One button, Theirs: faint, full, hidden. A pill under the header says what
  * is happening, in Draw along's pill.
  *
+ * HER PICTURE AND HER MUSIC (the owner's yes, Nov 19: "only let a drawback be
+ * on author's background and music"). Her photo lies under the canvas, where
+ * the Pad's own photo would (a canvas of its own, never the Pad's photo, so
+ * nothing of hers is recorded as his), placed by the player's own rule
+ * (lib/photofit.js), at her opacity and blur; and under his lines in the
+ * picture the post rests on (paintUnder). Her song is not played here: it
+ * plays under both drawings in the posted draw-back, which the site joins.
+ *
  * WHAT STEPS ASIDE WHILE DRAWING BACK (the owner's "All yes", Nov 19): the
  * eraser (a draw-back replays as one drawing, so an eraser over her lines
  * would erase them too: "you add, never erase"; Undo still takes back a line
@@ -54,6 +62,43 @@
     });
     return out;
   }
+  function photoOf(payload) {
+    var f0 = payload && payload.frames && payload.frames[0];
+    var ph = (f0 && f0.photo && f0.photo.data) ? f0.photo : (payload && payload.photo && payload.photo.data) ? payload.photo : null;
+    return ph && typeof ph.data === 'string' ? ph : null;
+  }
+  /* Her photo on `ctx`, `w` x `h` pixels, as the player lays it. */
+  function lay(ctx, w, h) {
+    var ph = run && run.photo, img = run && run.photoImg;
+    if (!ph || !img || !img.complete || !img.naturalWidth) return;
+    var F = window.SkriblPhotoFit;
+    var off = ph.offset || {};
+    var r = F ? F.rect(img.naturalWidth, img.naturalHeight, w, h, { fit: ph.fit, zoom: ph.zoom, offX: off.x, offY: off.y })
+              : { x: 0, y: 0, w: w, h: h };
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = typeof ph.opacity === 'number' ? Math.max(0, Math.min(1, ph.opacity)) : 1;
+    var blur = Number(ph.blur) || 0;
+    if (blur > 0 && 'filter' in ctx) ctx.filter = 'blur(' + (blur * w / run.size.w) + 'px)';
+    ctx.drawImage(img, r.x, r.y, r.w, r.h);
+    ctx.restore();
+  }
+  function paintPhoto() {
+    if (!run || !run.photoCanvas) return;
+    var cv = target(), g = run.photoCanvas;
+    if (!cv) return;
+    var w = cv.offsetWidth, h = cv.offsetHeight, dpr = window.devicePixelRatio || 1;
+    g.style.left = cv.offsetLeft + 'px';
+    g.style.top = cv.offsetTop + 'px';
+    g.style.width = w + 'px';
+    g.style.height = h + 'px';
+    g.width = Math.max(1, Math.round(w * dpr));
+    g.height = Math.max(1, Math.round(h * dpr));
+    var c = g.getContext('2d');
+    c.clearRect(0, 0, g.width, g.height);
+    lay(c, g.width, g.height);
+  }
+
   function groundOf(payload) {
     var f0 = payload && payload.frames && payload.frames[0];
     var c = (f0 && f0.background && f0.background.color) || (payload && payload.background && payload.background.color);
@@ -118,6 +163,7 @@
      image on the drawbacks"). `w`: the drawing's own pixels across. */
   function paintUnder(ctx, w) {
     if (!run || !ctx || !w) return false;
+    lay(ctx, w, w * run.size.h / run.size.w);
     ink(ctx, w / run.size.w);
     return true;
   }
@@ -181,6 +227,7 @@
 
   function stop() {
     if (!run) return;
+    if (run.photoCanvas) run.photoCanvas.remove();
     run.guide.remove();
     run.pill.remove();
     document.body.classList.remove('drawback');
@@ -237,7 +284,20 @@
     document.body.appendChild(pill);
     document.body.classList.add('drawback');
     run = { strokes: strokesOf(payload), size: size, guide: guide, pill: pill, btn: btn, state: 0, off: null,
-            first: first, own: !!(o && o.own), onResize: function () { place(); paint(); } };
+            first: first, own: !!(o && o.own), onResize: function () { place(); paint(); paintPhoto(); } };
+    // HER PHOTO, under the canvas where the Pad's own would lie.
+    var ph = photoOf(payload);
+    if (ph) {
+      var pc = document.createElement('canvas');
+      pc.className = 'photo-bg-img db-photo';
+      pc.setAttribute('aria-hidden', 'true');
+      cv.parentNode.insertBefore(pc, cv);
+      run.photo = ph;
+      run.photoCanvas = pc;
+      run.photoImg = new Image();
+      run.photoImg.onload = function () { if (run && run.photoCanvas === pc) paintPhoto(); };
+      run.photoImg.src = ph.data;
+    }
     guard();
     // If the eraser was in hand, the pen takes over.
     if (typeof tool !== 'undefined' && tool === 'eraser' && typeof window.setTool === 'function') window.setTool('pen');
@@ -251,7 +311,7 @@
     // The canvas changes size as the Pad lays itself out (zoom, a phone
     // turned): the original follows it.
     if (window.ResizeObserver) {
-      run.ro = new ResizeObserver(function () { paint(); });
+      run.ro = new ResizeObserver(function () { paint(); paintPhoto(); });
       run.ro.observe(cv);
     }
     say();
@@ -262,6 +322,6 @@
 
   window.SkriblDrawBack = {
     take: take, stop: stop, paintUnder: paintUnder,
-    state: function () { return run ? { theirs: STATES[run.state].key, strokes: run.strokes.length, size: run.size } : null; }
+    state: function () { return run ? { theirs: STATES[run.state].key, strokes: run.strokes.length, size: run.size, photo: !!run.photo } : null; }
   };
 }());

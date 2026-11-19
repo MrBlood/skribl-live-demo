@@ -468,6 +468,92 @@ PNG = ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADU
        "AABJRU5ErkJggg==")
 
 
+def red_png():
+    import io as _io
+    from PIL import Image as _Image
+    buf = _io.BytesIO()
+    _Image.new("RGB", (64, 48), (230, 40, 60)).save(buf, "PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def short_wav():
+    import struct
+    n = 800
+    data = b"".join(struct.pack("<h", (i % 40 - 20) * 400) for i in range(n))
+    head = (b"RIFF" + struct.pack("<I", 36 + len(data)) + b"WAVEfmt " + struct.pack("<IHHIIHH", 16, 1, 1, 8000, 16000, 2, 16)
+            + b"data" + struct.pack("<I", len(data)))
+    return "data:audio/wav;base64," + base64.b64encode(head + data).decode()
+
+
+def on_photo_with_music(seed=50):
+    d = drawing(n=24, seed=seed)
+    d["frames"][0]["photo"] = {"data": red_png(), "fit": "cover", "opacity": 1, "blur": 0, "offset": {"x": 0.5, "y": 0.5}, "zoom": 1}
+    d["frames"][0]["music"] = {"data": short_wav(), "name": None, "trimStart": 0, "trimEnd": 0}
+    return d
+
+
+def media_of(payload):
+    """A drawing's photo and song as stored: [photo, song], each its data."""
+    f0 = ((payload or {}).get("frames") or [{}])[0]
+    return [(f0.get(slot) or {}).get("data") if isinstance(f0.get(slot), dict) else None for slot in ("photo", "music")]
+
+
+# WHERE THE SITE KEEPS MEDIA APART (SKRIBL_MEDIA_BACKEND=local or s3: a
+# deployed site may), a stored drawing names its photo and song by key, and a
+# draw-back reads them back from the store as data to post them again
+# (skribl.read_payload's inline_media). Checked in a process of its own, on a
+# database and a store of its own, with no site in between: on SQLite the
+# site's own reads hold the lock the store's claim commits under, and a post
+# with media then answers busy, which is a property of SQLite beside a store,
+# not of draw back (docs/NEXT-SESSION.md). The server above keeps media in
+# the drawing, as the live site does.
+STORE = r"""
+import base64, json, sys
+import sqlalchemy as sa
+from app import app, db
+from skribl import create_post, read_payload
+from social.drawback import drawable, join
+inp = json.load(open(sys.argv[1]))
+def data(payload, slot):
+    v = ((payload.get("frames") or [{}])[0]).get(slot)
+    return v.get("data") if isinstance(v, dict) else None
+def raw(d):
+    return base64.b64decode(d.split(",", 1)[1]) if isinstance(d, str) and d.startswith("data:") else None
+def kept(pid):
+    return json.loads(db.session.execute(sa.text("select payload_json from skribl_posts where public_id = :p"), {"p": pid}).scalar())
+out = {}
+with app.app_context():
+    db.create_all()
+    with app.test_request_context("/"):
+        a = create_post(dict(inp["orig"], visibility="unlisted"), author_id="site:ana")
+        db.session.commit()
+        out["hers"] = [data(kept(a.public_id), s) for s in ("photo", "music")]
+        got = read_payload(a.public_id, inline_media=True)
+        out["read"] = [raw(data(got, s)) == raw(data(inp["orig"], s)) for s in ("photo", "music")]
+        out["drawable"] = drawable(got)
+        db.session.commit()
+        b = create_post(dict(join(got, inp["answer"]), visibility="unlisted"), author_id="site:theo")
+        db.session.commit()
+        out["back"] = [data(kept(b.public_id), s) for s in ("photo", "music")]
+print(json.dumps(out))
+"""
+
+
+def store_probe(orig, ans):
+    """STORE, run on its own database and store: what it found."""
+    d = tempfile.mkdtemp(prefix="store-", dir=TMP)
+    with open(os.path.join(d, "in.json"), "w") as f:
+        json.dump({"orig": orig, "answer": ans}, f)
+    env = dict(ENV, DATABASE_URL=f"sqlite:///{os.path.join(d, 'store.db')}", SKRIBL_MEDIA_BACKEND="local",
+               SKRIBL_MEDIA_ROOT=os.path.join(d, "media"))
+    r = subprocess.run([sys.executable, "-c", STORE, os.path.join(d, "in.json")], cwd=ROOT, env=env,
+                       capture_output=True, text=True, timeout=180)
+    try:
+        return json.loads(r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return {"error": (r.stderr or r.stdout)[-600:]}
+
+
 def answer(n=30, seed=3, size=(816, 612)):
     """The strokes an answer hands back: the Pad's drawing, on the original's shape."""
     d = drawing(n=n, seed=seed, size=size)
@@ -479,6 +565,8 @@ def post_payload(who, words, payload):
     c = who.client()
     c.get("/social/")
     st, j = c.post_json("/social/posts", {"words": words, "payload": payload})
+    if not (st == 200 and isinstance(j, dict)):
+        print(f"  (post_payload {words!r}: {st} {str(j)[:200]})")
     return j.get("post") if st == 200 and isinstance(j, dict) else None
 
 
@@ -591,6 +679,23 @@ with sync_playwright() as p:
             check("a draw-back can be drawn back on (a jam), by its own maker or anyone: the whole of it first (both"
                   " hands), then the new one, on its row",
                   all(v[0] == 200 and v[1] == len(pts) + 8 and v[2] and v[3] for v in jams.values()), json.dumps(jams))
+            # THE AUTHOR'S BACKGROUND AND MUSIC (the owner's yes, Nov 19): her photo
+            # and song come with it.
+            ph = post_payload(ana, "Section 1, on a photo with music", on_photo_with_music())
+            stp, jp = draw_back(theo, ph, answer(n=12, seed=51))
+            rb, ro = stored((jp or {}).get("post") if isinstance(jp, dict) else None), stored(ph)
+            kb, ko = media_of((rb or {}).get("payload")), media_of((ro or {}).get("payload"))
+            check("a drawing on a photo with music can be drawn back on: the draw-back keeps her photo and her song",
+                  stp == 200 and all(isinstance(v, str) and v.startswith("data:") for v in ko) and kb == ko,
+                  json.dumps({"status": stp, "err": (jp or {}).get("error") if isinstance(jp, dict) else jp,
+                              "back": [v and v[:30] for v in kb], "hers": [v and v[:30] for v in ko]}))
+            sp = store_probe(on_photo_with_music(), answer(n=12, seed=51))
+            keyed = [isinstance(v, str) and not v.startswith("data:") and len(v.split("?")[0].rsplit("/", 1)[-1].split(".")[0]) == 64
+                     for v in sp.get("hers") or [None, None]]
+            check("where media is kept apart in a store, her photo and song are read back from it as they were and"
+                  " posted again: the draw-back names the very same stored files (each named by its content)",
+                  all(keyed) and sp.get("read") == [True, True] and sp.get("drawable") is None
+                  and sp.get("back") == sp.get("hers"), json.dumps(sp)[:600])
             # A short original plays as she drew it: nothing to squeeze.
             short = post_payload(ana, "Section 1, short", drawing(n=20, seed=5))
             st2, j2 = draw_back(theo, short, answer(n=10, seed=6))
@@ -619,18 +724,16 @@ with sync_playwright() as p:
             got = {
                 "shape": draw_back(theo, cat, answer(size=(612, 816))),
                 "flip": draw_back(theo, fl, answer()),
-                "photo": draw_back(theo, photo, answer()),
                 "nothing": draw_back(theo, "nosuchpost00", answer()),
                 "quote": draw_back(theo, cat, answer(), quote=cat),
             }
             said = {k: (v[0], (v[1] or {}).get("error") if isinstance(v[1], dict) else v[1], (v[1] or {}).get("why") if isinstance(v[1], dict) else None)
                     for k, v in got.items()}
-            check("refused, saying why: an answer drawn on another shape (drawback_shape), a Flip of two pages and a"
-                  " drawing on a photo (drawback_unsupported: pages, photo), a post not there (drawback_gone), and a"
-                  " draw-back beside a quote (one_drawing)",
+            check("refused, saying why: an answer drawn on another shape (drawback_shape), a Flip of two pages"
+                  " (drawback_unsupported: pages), a post not there (drawback_gone), and a draw-back beside a quote"
+                  " (one_drawing); a drawing on a photo is not refused (the author's background, the owner's yes)",
                   said == {"shape": (400, "drawback_shape", None), "flip": (400, "drawback_unsupported", "pages"),
-                           "photo": (400, "drawback_unsupported", "photo"), "nothing": (404, "drawback_gone", None),
-                           "quote": (400, "one_drawing", None)} and fl and photo,
+                           "nothing": (404, "drawback_gone", None), "quote": (400, "one_drawing", None)} and fl and photo,
                   json.dumps(said))
             # A PICTURE UNDER HIS ANSWER (the owner's first try, Nov 19: "I tried
             # to put a picture in the background"): refused saying it is his,
@@ -638,7 +741,7 @@ with sync_playwright() as p:
             mine_ph = answer()
             mine_ph["frames"][0]["photo"] = {"data": PNG, "fit": "cover"}
             yp = draw_back(theo, cat, mine_ph)
-            theirs = got["photo"]
+            theirs = got["flip"]
             # ERASING IN HIS (the owner's "All yes", Nov 19: the eraser is off
             # while drawing back; the server holds the line too).
             mine_er = answer()
@@ -650,8 +753,8 @@ with sync_playwright() as p:
             words = pg.evaluate("""() => Object.fromEntries(['photo', 'music', 'recolors', 'erase'].map(k => [k,
               (document.querySelector('[data-compose-said] [data-word="cmp_drawback_' + k + '"]') || {}).textContent || null]))""")
             close_ctx(ctx, pg)
-            check("a picture under HIS answer is refused saying it is his (why photo, on yours), hers on a photo saying it"
-                  " is hers (on theirs); and the composer has words for each thing of his it can't carry yet, saying what"
+            check("a picture under HIS answer is refused saying it is his (why photo, on yours), a Flip of hers saying it"
+                  " is hers (on theirs); and the composer has words for each thing of his it can't carry, saying what"
                   " to take out",
                   yp[0] == 400 and (yp[1] or {}).get("why") == "photo" and (yp[1] or {}).get("on") == "yours"
                   and (theirs[1] or {}).get("on") == "theirs"
@@ -723,9 +826,9 @@ with sync_playwright() as p:
                   " \"Draw back, 1 draw-back\" with its count beside it (light and dark)",
                   st == 200 and ok, json.dumps({k: v["cat"] for k, v in seen.items()})[:600])
             # A draw-back can itself be drawn back on (a jam): its card has the pen.
-            check("no pen on a Flip of two pages, nor on a drawing made on a photo (read when it was posted), nor for"
-                  " somebody signed out (the card's row as it was); a draw-back's own card has one (a jam)",
-                  all(v["flip"] and v["flip"]["pen"] is None and v["photo"] and v["photo"]["pen"] is None
+            check("no pen on a Flip of two pages, nor for somebody signed out (the card's row as it was); a drawing made"
+                  " on a photo has one (the author's background, the owner's yes), and so has a draw-back's own card (a jam)",
+                  all(v["flip"] and v["flip"]["pen"] is None and v["photo"] and v["photo"]["pen"]
                       and v["back"] and v["back"]["pen"] for v in seen.values()) and out and out["pen"] is None
                   and "pen" not in out["kids"] and len(out["kids"]) == 4,
                   json.dumps({"flip": seen["light"]["flip"] and seen["light"]["flip"]["kids"],
@@ -941,6 +1044,80 @@ with sync_playwright() as p:
             own_pill = fr4.evaluate("() => document.querySelector('.db-pill .db-where').textContent")
             own_line = pg.evaluate("() => { const l = document.querySelector('[data-compose-backline]'); return l && !l.hidden ? l.textContent : null; }")
             close_ctx(ctx, pg)
+            # HER PHOTO UNDER THE PEN (the owner's yes, Nov 19).
+            ph4 = post_payload(ana, "Section 4, on a photo with music", on_photo_with_music(seed=52))
+            ctx, pg = browser_as(b, theo)
+            home(pg)
+            pen5 = f'.post-card[data-post="{ph4}"] .db-pen'
+            pg.locator(pen5).scroll_into_view_if_needed()
+            pg.click(pen5)
+            fe5 = pg.wait_for_selector("#composePad .facepad-frame", state="attached", timeout=15000)
+            pg.wait_for_function("() => document.querySelector('#composePad').classList.contains('is-ready')", timeout=30000)
+            fr5 = fe5.content_frame()
+            fr5.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state()", timeout=15000)
+            pg.wait_for_timeout(600)
+            under = fr5.evaluate("""() => { const p = document.querySelector('.db-photo'), c = document.getElementById('canvas');
+              if (!p) return null; const d = p.getContext('2d').getImageData(Math.round(p.width / 2), Math.round(p.height / 2), 1, 1).data;
+              return { rgb: [d[0], d[1], d[2]], below: !!(p.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING),
+                       same: Math.abs(p.offsetWidth - c.offsetWidth) < 0.5, mine: !!(document.getElementById('photoBgImg') || {})._draftData }; }""")
+            # A line of his, Done and Add: the composer's preview plays the two
+            # as they will post, on her photo (compose.js joined).
+            box5 = fr5.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return [r.left, r.top, r.width]; }")
+            fb5 = fe5.bounding_box()
+            k5 = box5[2] / 816
+            x0, y0 = fb5["x"] + box5[0] + 700 * k5, fb5["y"] + box5[1] + 500 * k5
+            pg.mouse.move(x0, y0)
+            pg.mouse.down()
+            for s_ in range(1, 10):
+                pg.mouse.move(x0 + s_ * 3 * k5, y0 + (s_ % 3) * 5 * k5)
+            pg.mouse.up()
+            pg.wait_for_timeout(150)
+            fr5.click("#recordBtn")
+            pg.wait_for_timeout(500)
+            fr5.click("#postBtn")
+            pg.wait_for_timeout(600)
+            sub5 = fr5.query_selector("#postSubmitBtn")
+            if sub5 and sub5.is_visible():
+                sub5.click()
+            pg.wait_for_function("() => !!window.SocialComposer.attached()", timeout=20000)
+            pg.wait_for_timeout(1200)
+            red = pg.evaluate("""() => { const c = document.querySelector('[data-compose-draft] .skribl-inline canvas'); if (!c) return null;
+              const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0, all = 0;
+              for (let i = 0; i < d.length; i += 4 * 97) { all++; if (d[i] > 180 && d[i + 1] < 90 && d[i + 2] < 110) n++; }
+              return all ? Math.round(n / all * 100) / 100 : 0; }""")
+            # Posted, it rests on a picture of both on her photo (paintUnder).
+            with pg.expect_navigation(timeout=20000):
+                pg.click("[data-compose-post]")
+            pg.wait_for_timeout(600)
+            poster5 = pg.evaluate("() => { const i = document.querySelector('.post-page .skribl-inline-poster'); return i ? i.getAttribute('src') : null; }")
+            close_ctx(ctx, pg)
+            red_card = None
+            try:
+                with urllib.request.urlopen(BASE + poster5 if poster5 and poster5.startswith("/") else (poster5 or ""), timeout=20) as r:
+                    raw5 = r.read()
+                from PIL import Image
+                import io
+                im5 = Image.open(io.BytesIO(raw5)).convert("RGB")
+                k_ = im5.width / 1200
+                px5 = im5.load()
+                n5 = all5 = 0
+                for y in range(int(200 * k_), int(430 * k_), 3):
+                    for x in range(int(480 * k_), int(720 * k_), 3):
+                        all5 += 1
+                        r_, g_, b_ = px5[x, y]
+                        if r_ > 180 and g_ < 90 and b_ < 110:
+                            n5 += 1
+                red_card = round(n5 / all5, 2) if all5 else 0
+            except Exception as exc:  # noqa: BLE001 -- no picture is this row's red
+                red_card = str(exc)[:80]
+            check("on a drawing with a photo, her photo lies under the pen, under the canvas where the Pad's own would,"
+                  " as big as the drawing, never the Pad's own photo (nothing of hers recorded as his)",
+                  under and under["rgb"][0] > 180 and under["rgb"][1] < 90 and under["below"] and under["same"] and not under["mine"],
+                  json.dumps(under))
+            check("drawn, Done and Add: the composer's preview plays the two on her photo, as they will post",
+                  isinstance(red, (int, float)) and red > 0.5, f"share of the preview that is her photo's red: {red}")
+            check("posted, the draw-back rests on a picture of the two on her photo",
+                  isinstance(red_card, (int, float)) and red_card > 0.5, f"poster {poster5}; share of its middle that is her photo's red: {red_card}")
             check("on your own drawing the composer and the Pad's pill say \"Drawing back on your own drawing\"",
                   own_pill == "Drawing back on your own drawing" and own_line == "Drawing back on your own drawing",
                   json.dumps({"pill": own_pill, "line": own_line}))

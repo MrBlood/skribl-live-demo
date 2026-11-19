@@ -10,6 +10,13 @@ player there is, and plays on when the original goes. A draw-back on a
 draw-back (a jam) is the same join: its original already holds every hand
 before it.
 
+THE AUTHOR'S BACKGROUND AND MUSIC (the owner's yes, Nov 19): a draw-back
+keeps her paper, her photo and her song, and the answer adds none of its own
+(drawable's `answer`); the Pad keeps its own picture and music drawer aside
+while drawing back (lib/drawback.js). Her photo and song come as data, read
+back from Skribl's store (skribl.read_payload inline_media), and the store
+keeps content once, so the draw-back costs no more room for them.
+
 HOW IT PLAYS (choice 4, "hers first, quick"): the original as it plays (its
 own pause rule), squeezed to about OVERTURE_MS when it is longer, then the
 answer at its own pace. Its own pause rule and starting speed are the
@@ -22,11 +29,10 @@ keeps the original's ground (its colour) and neither picture, so ink laid
 down before a take began (rare: the Pad starts a take with the first
 stroke) is not carried. A photo under a drawing is: see below.
 
-WHAT CAN BE DRAWN BACK ON, FOR NOW: a drawing of one page, with no photo
-under it, no music and no recolours. Those carry media or indexes into the
-strokes that a join would have to carry over too; each comes with a step of
-its own. drawable() says which, and the row offers Draw back only where it
-can be done (posts.py, the pen)."""
+WHAT CAN BE DRAWN BACK ON, FOR NOW: a drawing of one page with no
+recolours (recolours index the strokes by number and time, which a join would
+have to carry over too: a step of its own). drawable() says which, and the
+row offers Draw back only where it can be done (posts.py, the pen)."""
 
 #: How long the original plays before the answer, at most (choice 4's B).
 OVERTURE_MS = 3000
@@ -51,10 +57,14 @@ def _truthy(v):
     return bool(v)
 
 
-def drawable(payload):
-    """None when `payload` can be drawn back on (or be the strokes of an
-    answer), else why not: "pages" (a Flip of more than one page, or no
-    frames), "photo" (a picture under it), "music", "recolors"."""
+def drawable(payload, answer=False):
+    """None when `payload` can be drawn back on, else why not: "pages" (a
+    Flip of more than one page, or no frames), "recolors". With `answer`,
+    whether it can be the strokes of an answer: then a picture under it
+    ("photo") or music ("music") are refused too, since a draw-back keeps the
+    author's background and music and the answer adds neither (the owner,
+    Nov 19: "why not just only let a drawback be on author's background and
+    music?", and their yes)."""
     f0 = _frame0(payload)
     if f0 is None:
         return "pages"
@@ -63,9 +73,9 @@ def drawable(payload):
     for k in ("loop", "under", "beat"):
         if payload.get(k) is not None:
             return "pages"
-    if _truthy(f0.get("photo")) or _truthy(payload.get("photo")):
+    if answer and (_truthy(f0.get("photo")) or _truthy(payload.get("photo"))):
         return "photo"
-    if _truthy(f0.get("music")) or _truthy(payload.get("music")):
+    if answer and (_truthy(f0.get("music")) or _truthy(payload.get("music"))):
         return "music"
     if f0.get("recolors") or payload.get("recolors"):
         return "recolors"
@@ -136,9 +146,15 @@ def join(original, answer):
         strokes.append(q)
     if strokes:
         strokes[0]["start"] = True
+    # THE AUTHOR'S BACKGROUND AND MUSIC (the owner's yes, Nov 19): her photo
+    # and her song, as Skribl handed them (read_payload's inline_media: data,
+    # ready to post again), on her page or, for a drawing from before pages,
+    # at the top.
+    photo = of.get("photo") if _truthy(of.get("photo")) else original.get("photo") if _truthy(original.get("photo")) else None
+    music = of.get("music") if _truthy(of.get("music")) else original.get("music") if _truthy(original.get("music")) else None
     frame = {"strokes": strokes,
              "strokeGroups": _groups(of, len(ops)) + _groups(af, len(aps)),
-             "background": of.get("background"), "photo": None, "music": None}
+             "background": of.get("background"), "photo": photo, "music": music}
     out = {"version": answer.get("version", 2), "schemaVersion": answer.get("schemaVersion", 2),
            "playbackMode": "replay", "pauseMode": answer.get("pauseMode") or "tight", "fps": None,
            "frames": [frame], "canvasSize": original.get("canvasSize")}

@@ -39,13 +39,17 @@ rules and its own cursor, and never a query of Skribl's tables.
 
 Reads only, on the host's session: it flushes nothing and commits nothing.
 """
+import base64
 import copy
 from datetime import datetime, timedelta, timezone
 
 import sqlalchemy as sa
 
 from .core import HOT_DAYS
+from .creation import _installed_media_store
 from .mediameta import STRIPPED, strip_payload
+from .storage import _MEDIA_LABEL_RE, KEY_RE, is_data_url
+from .validation import _iter_media_items
 from .models import SkriblPost, SkriblView, apply_feed_filter, normalise_user_id, session
 # The one spelling of a ground a page may use, the rule creation.py writes the
 # column by (validation.py, beside the payload's other columns).
@@ -124,7 +128,7 @@ def describe_posts(public_ids, *, viewer_id=None):
 
 
 
-def read_payload(public_id, *, viewer_id=None):
+def read_payload(public_id, *, viewer_id=None, inline_media=False):
     """A skribl's drawing (its payload, as the player is handed it), for a
     host that builds on one: the Skribl site's Draw back, which lays the
     original under a new drawing and posts the two as one (DECISIONS.md,
@@ -135,7 +139,17 @@ def read_payload(public_id, *, viewer_id=None):
     A copy, never the row's own JSON, and stripped as the payload route
     strips one (strip_payload: a photo's location, a file's name), so what
     a host builds from it carries nothing the route would not have served.
-    No play is counted: reading is not watching."""
+    No play is counted: reading is not watching.
+
+    inline_media  its picture and its music as data (data URLs) where the
+                  store keeps them apart, read back from the store by their
+                  keys, so a host can post them again in a new drawing (the
+                  Skribl site's Draw back on a drawing with a photo or music:
+                  the author's background and music, the owner's yes, Nov 19).
+                  The store keeps content once, so posting them again costs no
+                  more room. The picture of the paper a take began on
+                  (baseSnapshot) is left as it is. One that cannot be read is
+                  left as its address."""
     if not isinstance(public_id, str) or not public_id or len(public_id) > 32:
         return None
     post = session().query(SkriblPost).filter_by(public_id=public_id).first()
@@ -147,7 +161,30 @@ def read_payload(public_id, *, viewer_id=None):
     if not payload.get(STRIPPED):
         payload = strip_payload(payload)
     payload.pop("thumbnail", None)
+    if inline_media:
+        _inline_media(payload)
     return payload
+
+
+def _inline_media(payload):
+    """Each photo's and song's address in Skribl's store, in `payload`, back
+    as a data URL (read_payload's inline_media), in place."""
+    store = _installed_media_store()
+    if not callable(getattr(store, "read", None)):
+        return
+    for value, _kind, _cap, label in list(_iter_media_items(payload)):
+        pm = _MEDIA_LABEL_RE.match(label)
+        if pm is None or pm.group("snap") or not isinstance(value, str) or not value or is_data_url(value):
+            continue
+        key = value.split("?", 1)[0].rstrip("/").rsplit("/", 1)[-1]
+        if not KEY_RE.match(key):
+            continue
+        got = store.read(key)
+        if not got:
+            continue
+        raw, content_type = got
+        container = payload["frames"][int(pm.group("frame"))] if pm.group("frame") is not None else payload
+        container[pm.group("slot")]["data"] = "data:%s;base64,%s" % (content_type, base64.b64encode(raw).decode("ascii"))
 
 #: The most one call to list_public_posts returns: a page of a feed, with room.
 MAX_LIST = 100
