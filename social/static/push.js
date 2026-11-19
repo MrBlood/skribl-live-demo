@@ -381,7 +381,7 @@
       if (!device || tester.getAttribute('aria-busy') === 'true') return;
       tester.setAttribute('aria-busy', 'true');
       say(panel, null);
-      post('push/test', { endpoint: device.sub.endpoint }).then(function (j) {
+      post('push/test', { endpoint: device.sub.endpoint, device: called() }).then(function (j) {
         tester.removeAttribute('aria-busy');
         if (j.ok) {
           say(panel, 'test-sent', { who: j.who });

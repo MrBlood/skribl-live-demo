@@ -2809,8 +2809,11 @@ cleared by opening Activity.
 
 **Send me a test nudge** (the owner's yes, Nov 18, after testing with their
 own likes, which never nudge you): a button under the switches. It sends one
-nudge to this device at once, "Hello from Blooby", "Nudges work here. Tap to
-open Activity." (`/push/test`), and the line under it says what the
+nudge to this device at once, "Hello from Blooby", "Nudges work on this
+phone." (tablet, computer: push.js's word for the device), a tap opening
+Settings, where it was sent from, never Activity, which has nothing of it
+(the owner, after the first one on their iPhone: "it doesn't show in
+activity"); `/push/test`. The line under the button says what the
 device's push service answered, by name: "Sent, and Apple took it. Look in
 your notifications.", or "It didn't go through: Apple answered 403,
 BadJwtToken." with the service's own word, so a phone can be checked alone

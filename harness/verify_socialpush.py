@@ -839,16 +839,21 @@ with sync_playwright() as p:
             # SEND ME A TEST NUDGE (the owner's yes, Nov 18): one to this device
             # now, and what its push service answered.
             n10 = len(CAPTURED)
-            st_t, j_t = c.post_json("/social/push/test", {"endpoint": E1})
+            st_t, j_t = c.post_json("/social/push/test", {"endpoint": E1, "device": "phone"})
             test = (nudges(E1, n10) or [{}])[0]
             check("a test nudge goes to this device at once, sealed and signed as any: \"Hello from Blooby\", \"Nudges"
-                  " work here. Tap to open Activity.\", opening Activity, the number on the icon left alone; and the page"
-                  " is told its push service took it (201)",
+                  " work on this phone.\", opening Settings, where it was sent from (never Activity, which has nothing"
+                  " of it), the number on the icon left alone; and the page is told its push service took it (201)",
                   st_t == 200 and j_t == {"ok": True, "who": "the push service", "status": 201}
-                  and test.get("title") == "Hello from Blooby" and test.get("body") == "Nudges work here. Tap to open Activity."
-                  and test.get("url") == "/social/activity" and test.get("tag") == "test" and "badge" in test
+                  and test.get("title") == "Hello from Blooby" and test.get("body") == "Nudges work on this phone."
+                  and test.get("url") == "/social/you" and test.get("tag") == "test" and "badge" in test
                   and test.get("badge") is None and signed(test.get("_cap", {"headers": {}}), E1)[0],
                   f"{st_t} {j_t} {str({k: v for k, v in test.items() if k != '_cap'})[:200]}")
+            n11 = len(CAPTURED)
+            c.post_json("/social/push/test", {"endpoint": E1, "device": "<b>toaster</b>"})
+            other = (nudges(E1, n11) or [{}])[0]
+            check("a device word it does not know is never said: \"Nudges work here.\"",
+                  other.get("body") == "Nudges work here.", repr(other.get("body")))
             refuse, rk = device("refused", f"{CAP_ORIGIN}/refuse/ann")
             gone_t, gk = device("gone-test", f"{CAP_ORIGIN}/gone/ann-test")
             c.post_json("/social/push/subscribe", {"endpoint": refuse, "keys": rk})
@@ -868,7 +873,7 @@ with sync_playwright() as p:
             st_s, _ = nob.post_json("/social/push/test", {"endpoint": E1})
             check("a test nudge only to your own device (somebody else's: 404), with the page's token (403), signed in"
                   " (401)", (st_o, st_n, st_s) == (404, 403, 401), str((st_o, st_n, st_s)))
-            used = 3                       # Ann's three above; the refusals without a token never count
+            used = 4                       # Ann's four above; the refusals without a token never count
             lim = [c.post_json("/social/push/test", {"endpoint": E1})[0] for _ in range(20)]
             check("test nudges are limited a person: 20 an hour (each one asks the push service), then 429",
                   lim.count(200) == 20 - used and lim[20 - used:] == [429] * used, str(lim))
@@ -1162,9 +1167,12 @@ with sync_playwright() as p:
                         pg.screenshot(path=os.path.join(SHOTS, f"test-{screen}-{scheme}.png"))
                         pg.evaluate("() => document.querySelectorAll('.nav').forEach(n => { n.style.visibility = ''; })")
                     arrived = nudges(ep_h, n_ui)
-                    check(f"{look}: a tap sends a test nudge to this device, and the line under the button says the push"
-                          " service took it", told == "Sent, and the push service took it. Look in your notifications."
-                          and len(arrived) == 1 and arrived[0].get("title") == "Hello from Blooby", f"{told!r} {len(arrived)}")
+                    check(f"{look}: a tap sends a test nudge to this device, naming it (\"Nudges work on this {word}.\"),"
+                          " and the line under the button says the push service took it",
+                          told == "Sent, and the push service took it. Look in your notifications."
+                          and len(arrived) == 1 and arrived[0].get("title") == "Hello from Blooby"
+                          and arrived[0].get("body") == f"Nudges work on this {word}.",
+                          f"{told!r} {len(arrived)} {arrived[0].get('body') if arrived else None!r}")
                     pg.route("**/push/test", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(
                         {"ok": False, "who": "Apple", "status": 403, "reason": "BadJwtToken"})))
                     pg.click("[data-push-test]")

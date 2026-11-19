@@ -46891,3 +46891,26 @@ fixed. NOT RUN: the full battery (main's run after the merge does it).
 NOT TESTED HERE: Apple's push service and a real iPhone: that is what the
 button is for. The one-glance tell: Settings' "Notifications on this phone"
 ends with Send me a test nudge.
+
+## After v330 -- The test nudge names this device and opens Settings
+
+The owner's first test nudge on their iPhone (Nov 18): "It says Sent, and
+Apple took it and I got it, but it doesn't show in activity. Is that
+right?" Right: Activity lists what people do, and the test is a hello from
+the site. But the nudge said "Tap to open Activity", which promised
+something there. Offered: say "Nudges work on this phone." and open
+Settings, where it was sent from. The owner: "Yes, make that change."
+
+The test nudge now says "Nudges work on this phone." (tablet, computer:
+push.js's own word for the device, sent with the tap; any other word is
+never said, "Nudges work here.") and a tap opens Settings. Real nudges are
+unchanged.
+
+THE CHECKS: verify_socialpush sections 3 and 7, the words on a phone and on
+a computer and where a tap goes; a word it does not know. Calibrated, four
+parts broken one at a time: 4 of 4 red (the word not sent, the word
+ignored, any word said, a tap opening Activity), green as built.
+
+FIRST TRUE TEST: the owner's iPhone, from the Home Screen app, got a test
+nudge through Apple's push service ("Sent, and Apple took it", and it
+arrived): sealing, signing and Apple's acceptance hold on a real device.
