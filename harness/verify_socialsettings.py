@@ -370,7 +370,8 @@ LINE_OF = r"""const lineOf = (cs) => { const t = cs.borderTopColor;
   """
 
 ROW = r"""() => { """ + LINE_OF + r"""const sw = document.querySelector('[data-theme-switch]'); if (!sw || !sw.getClientRects().length) return null;
-  const panel = sw.closest('section.panel'), panels = [...document.querySelectorAll('.acct > section.panel')];
+  const panel = sw.closest('section.panel'), panels = [...document.querySelectorAll('.acct > section.panel, .acct > .push-fold > .push-fold-in > section.panel')]
+    .filter(p => p.getClientRects().length);
   const q = e => { const r = e.getBoundingClientRect(); return [Math.round(r.left * 100) / 100, Math.round(r.top * 100) / 100,
                                                                 Math.round(r.width * 100) / 100, Math.round(r.height * 100) / 100]; };
   const pill = sw.querySelector('.theme-pill'), on = sw.querySelector('button[aria-pressed="true"]');

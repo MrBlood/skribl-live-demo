@@ -903,6 +903,68 @@ class Report(SocialBase):
     )
 
 
+#: What a device may be nudged for (push.py), each its own row in Settings,
+#: and what a new one starts with: the dot's rule (the owner's "All yes" to
+#: Blooby's Nudges, Nov 18): what needs an answer buzzes, the rest waits in
+#: Activity; the number on the icon on.
+PUSH_KINDS = ("replies", "mentions", "likes", "follows", "reposts", "badge")
+PUSH_DEFAULTS = {"replies": True, "mentions": True, "likes": False, "follows": False, "reposts": False,
+                 "badge": True}
+
+
+class PushSubscription(SocialBase):
+    """A device that may be nudged (push notifications; the owner's "All yes"
+    to Blooby's Nudges, Nov 18): one browser's, or one Home Screen app's,
+    push subscription, as the browser hands it over when the person turns
+    nudges on. The endpoint is the push service's address for that device
+    (Apple's, Google's, Mozilla's or Microsoft's; push.py sends nothing
+    anywhere else), p256dh and auth the keys a nudge is sealed with for it.
+
+    EACH DEVICE KEEPS ITS OWN CHOICES: the permission belongs to the device,
+    so the switches do too, a column a kind (PUSH_KINDS), starting at
+    PUSH_DEFAULTS.
+
+    IT LIVES WITH THE SIGN-IN THAT MADE IT: gen is the person's session_gen
+    then (Sign out everywhere moves it on, and a device of an older one is
+    never nudged), and browser a hash of that browser's sign-in, so signing
+    out there takes its nudges with it (accounts.signout). An endpoint is one
+    device's, so it is once in the table: a second account signing in on the
+    same device takes it over.
+
+    DELETING IS SAID IN CODE (push.drop_person_pushes, from
+    accounts.delete_person); the ON DELETE CASCADE is the net under it. A
+    device the push service says is gone (404 or 410) is deleted when a nudge
+    finds it so."""
+    __tablename__ = "social_push_subscriptions"
+
+    id = sa.Column(BigId, primary_key=True)
+    person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    endpoint = sa.Column(sa.String(1024), nullable=False)
+    p256dh = sa.Column(sa.String(128), nullable=False)
+    auth = sa.Column(sa.String(64), nullable=False)
+    gen = sa.Column(sa.Integer(), nullable=False)
+    browser = sa.Column(sa.String(64), nullable=False)
+    replies = sa.Column(sa.Boolean(), nullable=False, default=True, server_default=sa.true())
+    mentions = sa.Column(sa.Boolean(), nullable=False, default=True, server_default=sa.true())
+    likes = sa.Column(sa.Boolean(), nullable=False, default=False, server_default=sa.false())
+    follows = sa.Column(sa.Boolean(), nullable=False, default=False, server_default=sa.false())
+    reposts = sa.Column(sa.Boolean(), nullable=False, default=False, server_default=sa.false())
+    badge = sa.Column(sa.Boolean(), nullable=False, default=True, server_default=sa.true())
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    #: The time of the newest Activity row a nudge has told this device about:
+    #: a row no newer is never told again (push._tell), so something that
+    #: makes no row of its own (a muted person's comment) cannot buzz an older
+    #: one a second time.
+    told_up_to = sa.Column(sa.DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        #: One device, once.
+        sa.Index("ix_social_push_subscriptions_endpoint", "endpoint", unique=True),
+        #: A person's devices: a nudge's, signing out's, deleting an account's.
+        sa.Index("ix_social_push_subscriptions_person_id", "person_id"),
+    )
+
+
 def attach_to_metadata(metadata):
     """Put the site's tables on a host's metadata, so its create_all() makes
     them too (the demo's `flask init-db` and the harness's fresh databases).

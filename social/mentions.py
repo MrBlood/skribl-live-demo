@@ -128,6 +128,11 @@ def _write(words, by_id, owner_id, when, post_id=None, comment_id=None):
              "post_id": post_id, "comment_id": comment_id} for pid, typed in _people_named(words)]
     if rows:
         site().session().execute(sa.insert(Mention), rows)
+        # A NUDGE, once the request commits (push.py): Activity's "mentioned
+        # you" row, or the comment's or the quote's that says it.
+        from .push import note
+        for row in rows:
+            note(row["person_id"], by_id, "mentions")
 
 
 # ---- the words, as a page shows them -------------------------------------------------

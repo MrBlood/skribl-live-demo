@@ -1970,8 +1970,8 @@ follow step 7.
 5. Finding people: search by name or @handle. Built (below).
 6. Open sign-up, with what it needs to stay kind (limits for new accounts,
    the admins' tools); the owner's rules asked when it is mocked.
-7. Add to Home Screen (part one's step 7), then push notifications. Add to
-   Home Screen built (below).
+7. Add to Home Screen (part one's step 7), then push notifications. Both
+   built: Add to Home Screen below, push notifications in section 19.
 8. Direct messages: one to one, a drawing as easily as words, who may
    message you, and a requests inbox.
 9. The smaller things most sites have: pin a post to your profile, edit a
@@ -2709,3 +2709,107 @@ ring too": "Yes to c". On a comment's own page:
   purple square edge above"): it never crosses the band to the face.
 
 Section 48 of `verify_socialcomments.py` holds it, read off the paint.
+
+## 19. Built: push notifications (nudges)
+
+The owner, Nov 18, asked what other things a typical social site has that
+Blooby doesn't; push notifications came first, and the mock, [Blooby's
+Nudges](https://claude.ai/artifact/JmZrCBievKeNREBNAyzMTk), asked four
+things. The answer was "All yes": A, the dot's rule; A, a card in Activity,
+asked once; a Settings card with a switch a kind; the number on the icon,
+on; the words as shown. `social/push.py`, `social/static/push.js` and
+`push-sw.js`:
+
+    /social/sw.js               the service worker: shows a nudge, the number
+    /social/push/subscribe      this device may be nudged
+    /social/push/state          what this device is nudged for, if anything
+    /social/push/prefs          one of its switches
+    /social/push/unsubscribe    this device, no longer
+
+**What buzzes is what lights the bell's dot**: a reply to you, something
+said on your post or a drawing of yours, a mention. Likes, follows,
+reposts and quotes wait in Activity, unless a device's own switch says
+otherwise. **A nudge is Activity's row, word for word**: after something
+happens to somebody, their Activity is read as their page reads it, and the
+newest new row of that kind is the nudge (`activity.sentence`, the words
+`activity.SAYS` that the page shows too: "Ana replied to your comment",
+"Mira and 2 others said something on your post"), with their words under it
+in quotes, or a drawn reply's "Tap to watch it draw.", and a tap opens the
+row's own link, where the comment glows. So whatever Activity leaves out (a
+block either way, a takedown, somebody muted, a comment deleted meanwhile)
+never buzzes either. Several on one post keep one tag, so the phone puts
+the newest in the place of the last, and one Topic, so a phone that was off
+is handed the newest only. A device is never told about a row older than
+the newest it was told about, so something that makes no row of its own (a
+muted person's comment) cannot buzz the row before it again.
+
+**When it is sent.** The host commits a request's work once, at its end;
+who should hear about it is noted on the session as the work is done
+(`push.note`, from the places that write a comment, a mention, a like, a
+follow, a repost and a quote), and only a commit that went through sends
+anything, from two threads of the process's own, so a reply never waits on
+Apple or Google and a request that failed tells nobody. The sending reads,
+then lets go of the database (on SQLite a read holds the file's lock), then
+talks to the push service, then writes what it learned.
+
+**Where it may go.** Only to the push services browsers use (Apple's,
+Google's, Mozilla's, Microsoft's), over https, never following a redirect:
+nobody can make the site send to an address of their choosing. A push
+service that says a device is gone (404 or 410) takes it away.
+
+**Sealed and signed.** Each nudge is sealed for its device alone (RFC 8291,
+aes128gcm; `verify_socialpush` holds it to the RFC's own worked example,
+byte for byte) and signed as the site (VAPID, RFC 8292), with the
+`cryptography` package the passkeys already brought: nothing new to
+install. The signing key is the deployment's `SOCIAL_VAPID_KEY` where it
+sets one (a PEM, or 32 bytes in base64url), else made from its
+`SECRET_KEY`, the same every time for the same secret: nothing new to keep.
+A new `SECRET_KEY` is a new key: the old devices go as their push services
+refuse them, and each is made again the next time its person turns nudges
+on. Push services charge nothing.
+
+**It lives with the sign-in** (`social_push_subscriptions`, on the site's
+own chain). Signing out here takes this browser's devices; Sign out
+everywhere takes them all (and a device from before it is never nudged);
+deleting the account takes them, in code. A device somebody else signs in
+on stops being nudged for the one before: each new sign-in's pages ask
+`/push/state` once (push.js keeps a mark of the sign-in, never the
+person's), and a device kept for anybody else is let go. Somebody who turns
+nudges on there takes it, starting at the dot's rule again. Ten devices a
+person at most; the oldest goes.
+
+**Asked once, in Activity** (A). A card under Activity's heading: Blooby's
+Home Screen icon, "Hear when someone answers you", what buzzes and what
+waits "on this phone" (tablet, computer: this device's word), Not now and
+Turn on. It shows only where this device can be nudged, was never told no,
+is not nudged already, and nobody said Not now on it. Not now puts it away
+for good on this device; Turn on asks the browser from the tap (an iPhone
+asks only then), and the card goes. It glides open over the list and away
+again (the comments' fold); under Reduce Motion it is put there and taken
+away at once. Opening Activity also clears the number on the icon and the
+nudges already shown: everything in them is seen.
+
+**Settings: you choose each kind.** "Notifications on this phone" under
+Theme, "What may nudge you when Blooby isn't open.", then a row a kind with
+Theme's own switch (On, Off): Replies and comments, Mentions, Likes, New
+followers, Reposts and quotes, and The number on the icon, the dot's rule
+pressed. The choices are this device's, as the permission is. Before it is
+on, the card offers Turn on; told no, it says to allow notifications for
+the site in the browser's settings; an iPhone or an iPad in a browser tab,
+where no web page is nudged, is told that nudges come to Blooby on the
+Home Screen, with Add to Home Screen (the ☰'s own steps); a browser that
+cannot, says so. A switch moves at once; one the site did not take goes
+back, and says so. The rows' thin line is the passkeys' (`--rule`), a shade
+softer than the mock's.
+
+**The number on the icon** is how many new things light the dot, set by
+the service worker as each nudge arrives (where its switch is on), and
+cleared by opening Activity.
+
+**Not tested here**: a real push service and a real phone. The suite's
+stand-in push service is handed exactly what Apple's or Google's would be,
+opens each nudge with the device's own keys and checks its signature; the
+service worker is the real one, handed pushes through Chromium's own
+DevTools. Nudges travel only from the live site; an iPhone needs Blooby on
+its Home Screen. `verify_socialpush.py` holds the rest.
+

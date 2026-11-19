@@ -637,6 +637,11 @@ def register(bp, skribl_blueprint="skribl"):
         from .mentions import write_post
         write_post(row)
         site().session().flush()
+        # A QUOTE'S NUDGE, where its maker's device has Reposts and quotes on
+        # (push.py), or Mentions where it names them too.
+        if row.quoted_owner_id is not None:
+            from .push import note
+            note(row.quoted_owner_id, row.person_id, "reposts")
 
     def _quoting(me, body):
         """What a post quotes, as its row's columns, or None for a post that

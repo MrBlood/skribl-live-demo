@@ -374,6 +374,9 @@ def register(bp):
                         sess.flush()
                 except sa.exc.IntegrityError:
                     pass            # liked a moment ago, from another tap: one like
+            # A NUDGE, where their device has Likes on (push.py).
+            from .push import note
+            note(on.owner.id, me.id, "likes")
         else:
             sess.execute(sa.delete(Like).where(mine).execution_options(synchronize_session=False))
         sess.flush()
@@ -429,6 +432,9 @@ def register(bp):
                         sess.flush()
                 except sa.exc.IntegrityError:
                     pass            # liked a moment ago, from another tap: one like
+            # A NUDGE, where their device has Likes on (push.py).
+            from .push import note
+            note(c.person_id, me.id, "likes")
         else:
             sess.execute(sa.delete(Like).where(mine).execution_options(synchronize_session=False))
         sess.flush()

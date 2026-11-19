@@ -384,7 +384,7 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
 
     if site is not None:
         from . import (accounts, activity, bookmarks, comments, compose, follows, gallery, likes, mentions, mutes,
-                       posts, profiles, reports, reposts, rules, safety)
+                       posts, profiles, push, reports, reposts, rules, safety)
         accounts.register(bp)
         gallery.register(bp)
         profiles.register(bp, skribl_blueprint)
@@ -398,6 +398,7 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         follows.register(bp)
         mutes.register(bp)
         activity.register(bp, skribl_blueprint)
+        push.register(bp, skribl_blueprint)
         safety.register(bp)
         reports.register(bp, skribl_blueprint)
         rules.register(bp)
@@ -452,6 +453,12 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             if ctx["me"] is not None:
                 from .security import csrf_token
                 ctx["token"] = csrf_token()
+                # NUDGES (push.py), on every page of somebody signed in: the
+                # key a device subscribes with, the service worker, and this
+                # sign-in's mark (push.js asks /push/state once a new one).
+                from .push import page_mark, public_key
+                ctx["push"] = {"key": public_key(), "mark": page_mark(),
+                               "sw": url_for("social.push_worker"), "scope": url_for("social.home")}
             # Activity's dot (notifications): asked only by a page that shows
             # the bell or the rail, and then once a request.
             ctx["activity_dot"] = dot_for_request

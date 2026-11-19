@@ -98,6 +98,10 @@
 <meta name="theme-color" content="{{ site_ground.dark }}" media="(prefers-color-scheme: dark)" data-light="{{ site_ground.light }}" data-dark="{{ site_ground.dark }}">
 <title>{% block title %}Blooby{% endblock %}</title>
 {% if token %}<meta name="social-csrf" content="{{ token }}">{% endif %}
+{# NUDGES (push notifications; the owner's "All yes", Nov 18), for somebody
+   signed in: the key a device subscribes with, the service worker, and this
+   sign-in's mark (push.py, push.js). #}
+{% if push %}<meta name="social-push" content="{{ push.key }}" data-mark="{{ push.mark }}" data-sw="{{ push.sw }}" data-scope="{{ push.scope }}">{% endif %}
 {# BLOOBY ON THE HOME SCREEN (the owner, Nov 15): the site's own icon, his
    name and its own manifest (social/__init__.py, manifest): Blooby, opening
    on Home, full screen, with Skribl's Pad, Flip and Library inside it. The
@@ -131,6 +135,7 @@
 {% if composing %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endif %}
 <script src="{{ social_asset('social.js') }}" defer></script>
 <script src="{{ social_asset('splash.js') }}" defer></script>
+{% if push %}<script src="{{ social_asset('push.js') }}" defer></script>{% endif %}
 {% if composing %}<script src="{{ social_asset('mentions.js') }}" defer></script>
 <script src="{{ social_asset('compose.js') }}" defer></script>{% endif %}
 {% block scripts %}{% endblock %}
