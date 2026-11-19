@@ -24,7 +24,8 @@
  * can be nudged); a browser that cannot be nudged shows no panel. A state
  * known at once is put there as the page is drawn; one that waits on the
  * site glides in. A switch moves at once and says so to the site; one the
- * site did not take goes back, and says so.
+ * site did not take goes back, and says so. Send me a test nudge sends one
+ * to this device now and says what its push service answered.
  *
  * TURNING ON: the browser's permission, then the service worker (push-sw.js,
  * at the site's own folder), then the browser's subscription with the site's
@@ -100,9 +101,12 @@
     var w = called(), spans = root.querySelectorAll('[data-push-device]');
     for (var i = 0; i < spans.length; i++) spans[i].textContent = spans[i].getAttribute('data-' + w) || spans[i].textContent;
   }
-  function say(root, which) {
+  function say(root, which, vars) {
     var p = root.querySelector('.push-said');
-    if (p) p.textContent = which ? (p.getAttribute('data-' + which) || '') : '';
+    if (!p) return;
+    var words = which ? (p.getAttribute('data-' + which) || '') : '';
+    if (vars) words = words.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] != null ? String(vars[k]) : m; });
+    p.textContent = words;
   }
 
   /* This device's subscription, where nudges were turned on here: {reg, sub}, or null. */
@@ -368,6 +372,37 @@
         }
         press(sw, was ? was.getAttribute('data-choice') : (want ? 'off' : 'on'));
         say(panel, 'failed');
+      });
+    });
+    /* SEND ME A TEST NUDGE: one to this device now; the line under it says
+       what its push service answered, in the page's own words. */
+    var tester = panel.querySelector('[data-push-test]');
+    if (tester) tester.addEventListener('click', function () {
+      if (!device || tester.getAttribute('aria-busy') === 'true') return;
+      tester.setAttribute('aria-busy', 'true');
+      say(panel, null);
+      post('push/test', { endpoint: device.sub.endpoint }).then(function (j) {
+        tester.removeAttribute('aria-busy');
+        if (j.ok) {
+          say(panel, 'test-sent', { who: j.who });
+        } else if (j.gone) {
+          device = null;
+          becomes('off');
+          say(panel, 'test-gone');
+        } else if (j.status) {
+          say(panel, 'test-refused', { who: j.who, code: j.status + (j.reason ? ', ' + j.reason : '') });
+        } else {
+          say(panel, 'test-unreached', { who: j.who });
+        }
+      }, function (j) {
+        tester.removeAttribute('aria-busy');
+        if (j && j.error === 'gone') {
+          device = null;
+          becomes('off');
+          say(panel, 'test-gone');
+        } else {
+          say(panel, j && j.error === 'limited' ? 'limited' : 'failed');
+        }
       });
     });
     var home = panel.querySelector('[data-push-home]'), steps = doc.getElementById('homeSteps');

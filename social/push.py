@@ -7,6 +7,8 @@ The alerts a phone or a computer shows when Blooby isn't open.
     /push/subscribe     this device may be nudged (Activity's card, Settings)
     /push/state         what this device is nudged for, if anything
     /push/prefs         one of its switches
+    /push/test          a nudge to this device now (Settings' Send me a test
+                        nudge), and what its push service answered
     /push/unsubscribe   this device, no longer
 
 THE DOT'S RULE (A). What buzzes is what lights the bell's dot: a reply to
@@ -100,6 +102,9 @@ WORDS_MAX = 160
 TTL = 86400
 #: A row as new as the event that asked for it: the request's few moments.
 FRESH = timedelta(seconds=30)
+#: What a test nudge says (Settings' Send me a test nudge; the owner's yes, Nov 18).
+TEST_TITLE = "Hello from Blooby"
+TEST_BODY = "Nudges work here. Tap to open Activity."
 
 _HERE = Path(__file__).resolve().parent
 _P256_ORDER = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
@@ -231,9 +236,23 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def _reason(raw):
+    """A push service's own word for a refusal, short: Apple's and Google's
+    "reason" (BadJwtToken, ...), else the start of what it said."""
+    text = raw.decode("utf-8", "replace") if isinstance(raw, bytes) else str(raw or "")
+    try:
+        got = json.loads(text)
+        text = str(got.get("reason") or got.get("error") or got.get("message") or text) if isinstance(got, dict) else text
+    except ValueError:
+        pass
+    text = " ".join("".join(ch for ch in text if ch.isprintable()).split())
+    return text[:80]
+
+
 def _send(endpoint, p256dh, auth, payload, topic, subject):
-    """One nudge to one device: its push service's answer (201 when taken),
-    or None when it could not be asked."""
+    """One nudge to one device: (its push service's answer, 201 when taken,
+    or None when it could not be asked; the service's own word when it said
+    no)."""
     data = seal(p256dh, auth, json.dumps(payload, separators=(",", ":")).encode())
     headers = {"TTL": str(TTL), "Content-Encoding": "aes128gcm", "Content-Type": "application/octet-stream",
                "Urgency": "normal", "Topic": topic, "Authorization": vapid_header(endpoint, subject)}
@@ -244,11 +263,26 @@ def _send(endpoint, p256dh, auth, payload, topic, subject):
     req = urllib.request.Request(endpoint, data=data, headers=headers, method="POST")
     try:
         with urllib.request.build_opener(*handlers).open(req, timeout=10) as resp:
-            return resp.status
+            return resp.status, ""
     except urllib.error.HTTPError as exc:
-        return exc.code
-    except (urllib.error.URLError, OSError, ValueError):
-        return None
+        try:
+            said = exc.read(1024)
+        except OSError:
+            said = b""
+        return exc.code, _reason(said)
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        return None, _reason(getattr(exc, "reason", exc))
+
+
+#: Whose push service an address is, for the words a test nudge says.
+SERVICES = (("push.apple.com", "Apple"), ("fcm.googleapis.com", "Google"), ("android.googleapis.com", "Google"),
+            ("push.services.mozilla.com", "Mozilla"), ("notify.windows.com", "Microsoft"))
+
+
+def service_of(endpoint):
+    """"Apple", "Google", "Mozilla" or "Microsoft", else "the push service"."""
+    host = (urllib.parse.urlsplit(endpoint or "").hostname or "").lower()
+    return next((name for h, name in SERVICES if host == h or host.endswith("." + h)), "the push service")
 
 
 # ---- what a nudge says ------------------------------------------------------------
@@ -373,11 +407,13 @@ def _work(app, base, subject, plan, since):
             for sub_id, endpoint, p256dh, auth, payload, topic, when in sends:
                 if sub_id in gone:
                     continue
-                status = _send(endpoint, p256dh, auth, payload, topic, subject)
+                status, reason = _send(endpoint, p256dh, auth, payload, topic, subject)
                 if status in (404, 410):       # the device is gone
                     gone.add(sub_id)
                 elif status is not None and 200 <= status < 300:
                     told.append((sub_id, when))
+                else:                          # said no, or could not be asked: in the log, never on a page
+                    app.logger.warning("push: %s answered %s %s", service_of(endpoint), status, reason)
             if not (told or gone):
                 return
             t = PushSubscription.__table__
@@ -565,6 +601,41 @@ def register(bp, skribl_blueprint="skribl"):
         setattr(sub, kind, on)
         site().session().flush()
         return jsonify({"ok": True, "on": _prefs(sub)})
+
+    @bp.post("/push/test")
+    @_rests(json_answer=True)
+    def push_test():
+        """A nudge to this device now, to see one arrive (Settings' Send me a
+        test nudge): what its push service answered, said on the page. It
+        asks the push service while the request waits, holding nothing of
+        the database's while it does; a device the service says is gone goes."""
+        if not origin_ok() or not token_ok():
+            return _json_error("stale", 403)
+        me = current_person()
+        if me is None:
+            return _json_error("signed_out", 401)
+        if over("push-test", "person|" + me.public_id):
+            return _json_error("limited", 429)
+        body = request.get_json(silent=True)
+        sub = _device((body if isinstance(body, dict) else {}).get("endpoint"))
+        if sub is None or sub.person_id != me.id or sub.gen != me.session_gen:
+            return _json_error("gone", 404)
+        endpoint, p256dh, auth = sub.endpoint, sub.p256dh, sub.auth
+        sess = site().session()
+        sess.rollback()                     # nothing written yet: let go of the database meanwhile
+        payload = {"title": TEST_TITLE, "body": TEST_BODY, "url": url_for("social.activity"), "tag": "test",
+                   "icon": url_for("social.static", filename="blooby-icon-192.png"), "badge": None}
+        status, reason = _send(endpoint, p256dh, auth, payload, "test", public_origin() + url_for("social.home"))
+        who = service_of(endpoint)
+        if status in (404, 410):
+            sess.execute(sa.delete(PushSubscription).where(PushSubscription.endpoint == endpoint)
+                         .execution_options(synchronize_session=False))
+            sess.flush()
+            return jsonify({"ok": False, "gone": True, "who": who, "status": status})
+        if status is not None and 200 <= status < 300:
+            return jsonify({"ok": True, "who": who, "status": status})
+        current_app.logger.warning("push: a test nudge: %s answered %s %s", who, status, reason)
+        return jsonify({"ok": False, "who": who, "status": status, "reason": reason})
 
     @bp.post("/push/unsubscribe")
     @_rests(json_answer=True)

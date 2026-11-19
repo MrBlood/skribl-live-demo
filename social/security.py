@@ -405,6 +405,7 @@ LIMITS = {
     "gallery": (120, 3600),        # the eye on your own Gallery tab, a drawing hidden or shown, per person: the same tap does both
     "people": (600, 3600),         # the list under an @ asked, per person (mentions): a few asks a mention as it is typed
     "push": (600, 3600),           # nudges (push): a device turned on or off, its switches, its state asked by Activity and Settings, per person
+    "push-test": (20, 3600),       # test nudges (push), per person: each one asks Apple, Google or whoever is the device's push service
 }
 _SWEEP_EVERY = 64
 

@@ -130,7 +130,8 @@ def free_port():
 
 # ---- the stand-in push service --------------------------------------------------
 # Every POST is kept as it came; /gone/... answers 410 and /lost/... 404, as a
-# push service says a device is no more.
+# push service says a device is no more, and /refuse/... 403 with Apple's own
+# kind of reason (BadJwtToken).
 CAPTURED = []
 
 
@@ -140,10 +141,13 @@ class _Cap(http.server.BaseHTTPRequestHandler):
         body = self.rfile.read(n)
         CAPTURED.append({"path": self.path, "headers": {k.lower(): v for k, v in self.headers.items()},
                          "body": body, "at": time.time()})
-        code = 410 if self.path.startswith("/gone/") else 404 if self.path.startswith("/lost/") else 201
+        code = (410 if self.path.startswith("/gone/") else 404 if self.path.startswith("/lost/")
+                else 403 if self.path.startswith("/refuse/") else 201)
+        said = b'{"reason":"BadJwtToken"}' if code == 403 else b""
         self.send_response(code)
-        self.send_header("Content-Length", "0")
+        self.send_header("Content-Length", str(len(said)))
         self.end_headers()
+        self.wfile.write(said)
 
     def log_message(self, *a):
         pass
@@ -645,6 +649,13 @@ with sync_playwright() as p:
                   " worker's address and the site's own folder as its scope", KEY == one and
                   re.search(r'<meta name="social-push" content="[^"]+" data-mark="[0-9a-f]{16}" data-sw="/social/sw.js"'
                             r' data-scope="/social/">', ann.client().get("/social/")[1]) is not None, KEY[:16])
+            names = [push.service_of(e) for e in ("https://web.push.apple.com/QGx", "https://fcm.googleapis.com/fcm/send/a",
+                                                  "https://updates.push.services.mozilla.com/wpush/v2/x",
+                                                  "https://wns2-par02p.notify.windows.com/w/?token=x",
+                                                  "https://push.apple.com.example/x", CAP_ORIGIN + "/ep/x")]
+            check("a test nudge names whose push service answered: Apple, Google, Mozilla, Microsoft, else \"the push"
+                  " service\" (a host that only ends like one is nobody's)",
+                  names == ["Apple", "Google", "Mozilla", "Microsoft", "the push service", "the push service"], str(names))
             st, text = Client().get("/social/")
             check("a page for somebody signed out hands out nothing of the kind, nor push.js",
                   st == 200 and "social-push" not in text and "push.js" not in text, str(st))
@@ -825,6 +836,42 @@ with sync_playwright() as p:
                   (st_x, st_y) == (400, 400), str((st_x, st_y)))
             c.post_json("/social/push/prefs", {"endpoint": E1, "kind": "badge", "on": True})
             c.post_json("/social/push/prefs", {"endpoint": E1, "kind": "likes", "on": False})
+            # SEND ME A TEST NUDGE (the owner's yes, Nov 18): one to this device
+            # now, and what its push service answered.
+            n10 = len(CAPTURED)
+            st_t, j_t = c.post_json("/social/push/test", {"endpoint": E1})
+            test = (nudges(E1, n10) or [{}])[0]
+            check("a test nudge goes to this device at once, sealed and signed as any: \"Hello from Blooby\", \"Nudges"
+                  " work here. Tap to open Activity.\", opening Activity, the number on the icon left alone; and the page"
+                  " is told its push service took it (201)",
+                  st_t == 200 and j_t == {"ok": True, "who": "the push service", "status": 201}
+                  and test.get("title") == "Hello from Blooby" and test.get("body") == "Nudges work here. Tap to open Activity."
+                  and test.get("url") == "/social/activity" and test.get("tag") == "test" and "badge" in test
+                  and test.get("badge") is None and signed(test.get("_cap", {"headers": {}}), E1)[0],
+                  f"{st_t} {j_t} {str({k: v for k, v in test.items() if k != '_cap'})[:200]}")
+            refuse, rk = device("refused", f"{CAP_ORIGIN}/refuse/ann")
+            gone_t, gk = device("gone-test", f"{CAP_ORIGIN}/gone/ann-test")
+            c.post_json("/social/push/subscribe", {"endpoint": refuse, "keys": rk})
+            c.post_json("/social/push/subscribe", {"endpoint": gone_t, "keys": gk})
+            st_r, j_r = c.post_json("/social/push/test", {"endpoint": refuse})
+            st_g, j_g = c.post_json("/social/push/test", {"endpoint": gone_t})
+            check("one its push service refuses says so with the service's own word (403, BadJwtToken), and the device"
+                  " stays; one the service says is gone (410) is taken away, and the page is told",
+                  st_r == 200 and j_r == {"ok": False, "who": "the push service", "status": 403, "reason": "BadJwtToken"}
+                  and row_of(refuse) is not None and st_g == 200 and j_g.get("gone") is True and row_of(gone_t) is None,
+                  f"{st_r} {j_r}; {st_g} {j_g}")
+            db_write("delete from social_push_subscriptions where endpoint = ?", (refuse,))
+            st_o, _ = bea.client().post_json("/social/push/test", {"endpoint": E1})
+            st_n, _ = c.post_json("/social/push/test", {"endpoint": E1}, token="")
+            nob = Client()
+            nob.get("/social/signin")
+            st_s, _ = nob.post_json("/social/push/test", {"endpoint": E1})
+            check("a test nudge only to your own device (somebody else's: 404), with the page's token (403), signed in"
+                  " (401)", (st_o, st_n, st_s) == (404, 403, 401), str((st_o, st_n, st_s)))
+            used = 3                       # Ann's three above; the refusals without a token never count
+            lim = [c.post_json("/social/push/test", {"endpoint": E1})[0] for _ in range(20)]
+            check("test nudges are limited a person: 20 an hour (each one asks the push service), then 429",
+                  lim.count(200) == 20 - used and lim[20 - used:] == [429] * used, str(lim))
         except Exception as exc:  # noqa: BLE001
             stopped(3, exc)
 
@@ -1092,6 +1139,38 @@ with sync_playwright() as p:
                     check(f"{look}: one the site did not take goes back, and says so kindly", back[0] == "Off"
                           and back[1] == "That didn’t work. Try again in a moment.", str(back))
                     pg.unroute("**/push/prefs")
+                    # SEND ME A TEST NUDGE: under the switches, painted, 44px;
+                    # the line under it says what the push service answered.
+                    btn = pg.evaluate("""() => { const b = document.querySelector('[data-push-test]'); const r = b.getBoundingClientRect();
+                      const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                      const last = [...document.querySelectorAll('.push-row')].pop().getBoundingClientRect();
+                      return { words: b.textContent.trim(), h: Math.round(r.height), hit: !!e && !!e.closest('[data-push-test]'),
+                               below: r.top >= last.bottom }; }""")
+                    n_ui = len(CAPTURED)
+                    with pg.expect_response(lambda r: r.url.endswith("/push/test"), timeout=15000):
+                        pg.click("[data-push-test]")
+                    pg.wait_for_timeout(300)
+                    told = pg.evaluate("() => document.querySelector('[data-push-panel] .push-said').textContent")
+                    if SHOTS:
+                        pg.evaluate("() => document.querySelectorAll('.nav').forEach(n => { n.style.visibility = 'hidden'; })")
+                        pg.evaluate("() => document.querySelector('[data-push-test]').scrollIntoView({block: 'center'})")
+                        pg.wait_for_timeout(300)
+                        pg.screenshot(path=os.path.join(SHOTS, f"test-{screen}-{scheme}.png"))
+                        pg.evaluate("() => document.querySelectorAll('.nav').forEach(n => { n.style.visibility = ''; })")
+                    arrived = nudges(ep_h, n_ui)
+                    check(f"{look}: Send me a test nudge sits under the switches, painted and 44px tall; a tap sends one"
+                          " to this device, and the line under it says the push service took it",
+                          btn["words"] == "Send me a test nudge" and btn["h"] >= 44 and btn["hit"] and btn["below"]
+                          and told == "Sent, and the push service took it. Look in your notifications."
+                          and len(arrived) == 1 and arrived[0].get("title") == "Hello from Blooby", f"{btn} {told!r} {len(arrived)}")
+                    pg.route("**/push/test", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(
+                        {"ok": False, "who": "Apple", "status": 403, "reason": "BadJwtToken"})))
+                    pg.click("[data-push-test]")
+                    pg.wait_for_timeout(400)
+                    no = pg.evaluate("() => document.querySelector('[data-push-panel] .push-said').textContent")
+                    check(f"{look}: one turned away says who and what, plainly (\"It didn’t go through: Apple answered"
+                          " 403, BadJwtToken.\")", no == "It didn’t go through: Apple answered 403, BadJwtToken.", repr(no))
+                    pg.unroute("**/push/test")
                     close_ctx(ctx, pg)
                     # Settings before it is on: Turn on, and the rows glide in.
                     db_write("delete from social_push_subscriptions where endpoint = ?", (ep_h,))
@@ -1226,6 +1305,10 @@ with sync_playwright() as p:
             log = open(LOG).read()
             check("the server said nothing went wrong sending a nudge", "push: nudges were not sent" not in log
                   and "Traceback" not in log, log[-400:] if "Traceback" in log else "")
+            if not PART or "3" in PART.split(","):
+                check("a refusal is in the server's log with the push service's own word, never on anybody's page"
+                      " but the one that asked", "push: a test nudge: the push service answered 403 BadJwtToken" in log,
+                      "")
         except Exception as exc:  # noqa: BLE001
             stopped(9, exc)
     b.close()
