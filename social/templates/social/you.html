@@ -28,7 +28,11 @@
     an iPhone or an iPad in a browser tab, the way to the Home Screen app
     (_homescreen.html's steps), where nudges come. A browser that cannot be
     nudged shows none of it. A state known at once is there as the page is
-    drawn; one that waits on the site glides open as Activity's card does. #}
+    drawn; one that waits on the site glides open as Activity's card does.
+    Under the switches, Send me a test nudge (the owner's yes, Nov 18): one
+    nudge to this device now, and the line under it says what its push
+    service answered (Apple's, Google's, ...), so a phone can be checked
+    alone. #}
 {% extends 'social/base.html' %}
 {% import 'social/_icons.html' as ic %}
 {% from 'social/_post.html' import face with context %}
@@ -99,8 +103,16 @@
             </div>
           </div>
           {%- endfor %}
+          <div class="push-test">
+            <button class="btn btn-wide" type="button" data-push-test>Send me a test nudge</button>
+          </div>
         </div>
-        <p class="push-said" role="status" data-failed="That didn’t work. Try again in a moment."></p>
+        <p class="push-said" role="status" data-failed="That didn’t work. Try again in a moment."
+           data-limited="Lots of that in a short while. Wait a little, then try again."
+           data-test-sent="Sent, and {who} took it. Look in your notifications."
+           data-test-refused="It didn’t go through: {who} answered {code}."
+           data-test-unreached="It didn’t go through: {who} couldn’t be reached. Try again in a moment."
+           data-test-gone="This device’s nudges had ended, so they’re off now. Turn them on again here."></p>
       </section>
     </div>
   </div>

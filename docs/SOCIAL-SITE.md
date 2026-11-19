@@ -2724,6 +2724,7 @@ on; the words as shown. `social/push.py`, `social/static/push.js` and
     /social/push/subscribe      this device may be nudged
     /social/push/state          what this device is nudged for, if anything
     /social/push/prefs          one of its switches
+    /social/push/test           a nudge to this device now, and the answer
     /social/push/unsubscribe    this device, no longer
 
 **What buzzes is what lights the bell's dot**: a reply to you, something
@@ -2805,6 +2806,17 @@ softer than the mock's.
 **The number on the icon** is how many new things light the dot, set by
 the service worker as each nudge arrives (where its switch is on), and
 cleared by opening Activity.
+
+**Send me a test nudge** (the owner's yes, Nov 18, after testing with their
+own likes, which never nudge you): a button under the switches. It sends one
+nudge to this device at once, "Hello from Blooby", "Nudges work here. Tap to
+open Activity." (`/push/test`), and the line under it says what the
+device's push service answered, by name: "Sent, and Apple took it. Look in
+your notifications.", or "It didn't go through: Apple answered 403,
+BadJwtToken." with the service's own word, so a phone can be checked alone
+and a refusal is never silent. A device its service says is gone is let
+go, and the card offers Turn on again. Twenty an hour a person. A refusal of
+a real nudge goes to the server's log, with the service's own word.
 
 **Not tested here**: a real push service and a real phone. The suite's
 stand-in push service is handed exactly what Apple's or Google's would be,
