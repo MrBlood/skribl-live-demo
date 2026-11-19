@@ -2931,7 +2931,11 @@ where it lives above; this is the index.
   page's 48, 11 in the small face at the foot of a draw-back's), in the
   small violet ink on the site's disc. A Gallery tile's 22px face stays
   plain. Lists of people (followers, who liked it, search, the blocked) are
-  as they were: not in the mock, the owner's to say.
+  as they were: not in the mock, the owner's to say. Two faces sharing a
+  row of Activity ("Juno and 3 others liked your post") stay plain too:
+  they overlap, and a letter there was cut, the one behind by the face in
+  front and a wide one in front by the heart (found taking the pictures of
+  what was built; the mock showed rows of one face).
 - **10, the Gallery's head:** Following | Everyone and New | Hot share one
   line, 8px apart, and the search box takes the next line whole, so
   "Search people and drawings" fits a 402px phone (217px of words in 304;

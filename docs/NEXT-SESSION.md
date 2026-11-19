@@ -197,20 +197,22 @@ BUILT, in three pieces (`DECISIONS.md`, the entries after "One
 repository"): 1 and 2 (the menu inside a post, no gallery tick: #992); 3,
 4, 5 and 7 to 10 (a post's page and the small ones: #993); 6 (what a
 draw-back says: each hand's drawing time kept on the post, a migration, and
-numbers the site hands Skribl's player: the pull request after #993). Read
-DECISIONS and main's runs for what has merged and how it ran.
+numbers the site hands Skribl's player: #994). Read DECISIONS and main's
+runs for what has merged and how it ran.
 PUT TO THE OWNER, THEIRS TO ANSWER (each built the way named first):
 - a drawn comment's play button is the card's own pill at its foot, saying
   the time; the mock drew a small round mark in the corner;
 - the initial on cards changes their Nov 13 "never an initial"; lists of
   people (followers, who liked it, search) still show the blank circle;
+- two faces sharing a row of Activity stay plain (a letter there was cut:
+  the one behind by the face in front, a wide one in front by the heart);
+  letters for a pair would need the faces or the badge to sit differently,
+  and so a mock;
 - Export's GIF row wears the infinity sign with the players' loop;
 - the Text drawer's way out of a post ("Yours" with no hand yet, and "Edit
   your hand", leave the composer's frame and the drawing is gone): not
   fixed; the answer offered is that inside a post "Edit your hand" is not
-  shown and "Yours" with no hand says where to make one. STILL THE OWNER'S TO ANSWER: the Text drawer's way out of
-a post ("Yours" with no hand yet, and "Edit your hand", leave the composer's
-frame and the drawing is gone).
+  shown and "Yours" with no hand says where to make one.
 
 THE SIX MOCKS, as they were put up:
 https://claude.ai/artifact/MxPYZyHAtdR4hEg9YiXAuR, ten choices with a

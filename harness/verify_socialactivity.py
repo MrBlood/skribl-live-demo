@@ -464,6 +464,21 @@ ROWS = r"""() => [...document.querySelectorAll('.act-list')].map(ul => {
              mark: getComputedStyle(mark).backgroundColor, h: Math.round(r.height * 10) / 10,
              sr: (a.querySelector('.sr') || {}).textContent || null }; }) }; })"""
 
+# Every initial painted in Activity (a face not drawn yet): is its letter whole?
+# Asked of what is painted, not of its box: the element hit at the four corners
+# and the middle of its capital's ink (its advance wide, 0.72em tall about the
+# line's middle, a pixel in from each edge) must be the letter itself. A face in
+# front, or a badge on the corner, is hit there instead.
+WHOLE = r"""() => [...document.querySelectorAll('a.act-row .face-blank.has-initial')].map(l => {
+  l.scrollIntoView({ block: 'center', behavior: 'instant' });
+  const rg = document.createRange(); rg.selectNodeContents(l);
+  const r = rg.getBoundingClientRect(), half = parseFloat(getComputedStyle(l).fontSize) * 0.36, cy = r.top + r.height / 2;
+  const pts = [[r.left + 1, cy - half + 1], [r.right - 1, cy - half + 1], [r.left + 1, cy + half - 1], [r.right - 1, cy + half - 1],
+               [(r.left + r.right) / 2, cy]];
+  const hit = pts.map(([x, y]) => { const e = document.elementFromPoint(x, y); return !!e && (e === l || l.contains(e)); });
+  return { t: l.textContent.trim(), whole: r.width > 2 && hit.every(Boolean), hit, pair: !!l.closest('.act-faces'),
+           badge: !!l.closest('a.act-row').querySelector('.act-badge') }; })"""
+
 # A bell (the phone's top, or the rail's Activity): its box, whether it is
 # painted where it stands, its icon, its name, its line against its ground;
 # and its dot, when it has one: its paint, its colours and its contrast.
@@ -1010,6 +1025,52 @@ with sync_playwright() as p:
                                       "Lou said something on your post"]
                   and not section_named(again, "New") and not any(" others" in r["say"] or " and " in r["say"] for r in early),
                   f"r1 under Earlier {r1_rows}; New {section_named(again, 'New')[:1]}")
+            # TWO FACES SHARING A ROW, NEITHER DRAWN YET (after the walkthrough's
+            # mocks, choice 9: the initial of a face not drawn yet). The two
+            # overlap, so the face in front covered half of a letter behind it,
+            # and the heart on its corner cut a wide letter in front: a pair
+            # stays plain, and one face alone says its initial, whole. Wil and
+            # Mab have drawn no face ("W" and "M", the widest letters): both
+            # like one post, both say something on another, Mab alone likes a
+            # third and Wil alone says something on a fourth.
+            zoe = someone(b, "zoe", "Zoe Hale")
+            wil = someone(b, "wil", "Wil Marsh")
+            mab = someone(b, "mab", "Mab Stone")
+            z1 = make_post(zoe, "Section 4, liked by two with no face", seed=141)
+            z2 = make_post(zoe, "Section 4, said on by two with no face", seed=142)
+            z3 = make_post(zoe, "Section 4, liked by one with no face", seed=143)
+            z4 = make_post(zoe, "Section 4, said on by one with no face", seed=144)
+
+            def like(who, post):
+                c = who.client()
+                c.get("/social/")
+                return c.post_json(f"/social/p/{post}/like", {"liked": True})[0]
+            liked = [like(mab, z1), like(wil, z1), like(mab, z3)]
+            comment(mab, ("p", z2), "Mab on z2")
+            w2 = comment(wil, ("p", z2), "Wil on z2, the newest")
+            w4 = comment(wil, ("p", z4), "Wil on z4")
+            ctx, pg = browser_as(b, zoe)
+            go(pg, "/social/activity")
+            zrows = {r["href"]: r for r in section_named(pg.evaluate(ROWS), "New")}
+            whole = pg.evaluate(WHOLE)
+            close_ctx(ctx, pg)
+            pair_h, pair_c = zrows.get(f"/social/p/{z1}#liked") or {}, zrows.get(f"/social/p/{z2}#c-{w2}") or {}
+            one_h, one_c = zrows.get(f"/social/p/{z3}#liked") or {}, zrows.get(f"/social/p/{z4}#c-{w4}") or {}
+            check("two faces not drawn yet sharing a row stay plain, under a heart (\"Wil and Mab liked your post\") or"
+                  " not (\"Wil and Mab said something on your post\"); one alone says its initial (\"M\", \"W\")",
+                  liked == [200, 200, 200] and pair_h.get("say") == "Wil and Mab liked your post"
+                  and pair_c.get("say") == "Wil and Mab said something on your post"
+                  and pair_h.get("faces") == ["blank", "blank"] and pair_c.get("faces") == ["blank", "blank"]
+                  and one_h.get("say") == "Mab liked your post" and one_h.get("faces") == ["blank M 16px"]
+                  and one_c.get("say") == "Wil said something on your post" and one_c.get("faces") == ["blank W 16px"],
+                  json.dumps({"likes": liked, "pair, heart": [pair_h.get("say"), pair_h.get("faces")],
+                              "pair": [pair_c.get("say"), pair_c.get("faces")], "one, heart": [one_h.get("say"), one_h.get("faces")],
+                              "one": [one_c.get("say"), one_c.get("faces")]}))
+            check("no initial in Activity is cut: each one painted is itself what is hit at the four corners and the"
+                  " middle of its capital's ink (not the face in front, not the heart on its corner), and both are there"
+                  " to read",
+                  sorted(w["t"] for w in whole) == ["M", "W"] and all(w["whole"] for w in whole),
+                  json.dumps(whole))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(4, exc)
 
