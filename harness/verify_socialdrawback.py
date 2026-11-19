@@ -1430,6 +1430,159 @@ with app.test_request_context("/social/"):
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(7, exc)
 
+    # ------------------------------------------------------------------ 8
+    # WHAT A DRAW-BACK SAYS OF ITSELF (the walkthrough's mocks, choice 6; the
+    # owner's "all yes", Nov 19). Its line and its play button said "drawn in
+    # 8 sec" under a cat that took 15: they counted the joined drawing, in
+    # which hers plays squeezed to three seconds. Each hand's own drawing time
+    # is kept when a draw-back is made, and the line says them, the play
+    # button who and the whole. The expected words are worked out here from
+    # the drawings themselves, never from the site's own sum.
+    if part(8, "what a draw-back says: each hand's time on its line, who and the whole on its play button"):
+        try:
+            def drew(payload):
+                pts = payload["frames"][0]["strokes"]
+                return sum(max(0, q["t"] - p["t"]) for p, q in zip(pts, pts[1:]))
+
+            def secs(ms):
+                return max(1, int(ms / 1000 + 0.5))
+
+            def slow(payload, ms):
+                """The same answer, drawn slower: its points `ms` apart."""
+                for i, pt in enumerate(payload["frames"][0]["strokes"]):
+                    pt["t"] = i * ms
+                return payload
+
+            ana = someone(b, "ana", "Ana Ruiz")
+            theo = someone(b, "theo", "Theo Lin")
+            ori = someone(b, "ori", "Ori Vance")
+            nia = someone(b, "nia", "Nia Brandt")
+            pid = {h: db("select id from social_people where handle_key = ?", (h,))[0][0] for h in ("ana", "theo", "ori")}
+            cat = post_payload(ana, "Section 8, the cat", CAT)
+            c_s = secs(drew(CAT))
+            his = slow(answer(n=40, seed=81), 130)                      # 39 gaps of 130ms: 5 sec
+            back = (draw_back(theo, cat, his)[1] or {}).get("post")
+            row = db("select hands_json from social_posts where public_id = ?", (back or "",))
+            kept = json.loads(row[0][0]) if row and row[0][0] else None
+            check("a draw-back keeps whose hands it holds and how long each drew, in whole seconds, hers first: read from"
+                  " the two drawings before hers is squeezed",
+                  bool(cat) and bool(back) and c_s >= 10 and kept == [[pid["ana"], c_s * 1000], [pid["theo"], 5000]],
+                  f"kept {kept}; the cat took {drew(CAT)}ms, his {drew(his)}ms")
+            CARD = """(post) => { const c = document.querySelector('.post-card[data-post="' + post + '"]'); if (!c) return null;
+              const box = c.querySelector('[data-skribl-inline]'), play = box.querySelector('.skribl-inline-play');
+              const pr = play.getBoundingClientRect(), br = box.getBoundingClientRect();
+              return { words: play.textContent.trim(), name: box.getAttribute('aria-label'), inside: pr.left >= br.left && pr.right <= br.right,
+                       on: (c.querySelector('.post-on') || {}).textContent || null }; }"""
+            LINE = """() => { const l = document.querySelector('.post-page > .post-art .skribl-inline-line'), d = l && l.querySelector('.rl-drawn'), k = l && l.querySelector('.rl-skip');
+              return { drawn: d ? d.textContent.replace(/\\s+/g, ' ').trim() : null, skip: k ? !k.hidden && k.getClientRects().length > 0 : null }; }"""
+            ctx, pg = browser_as(b, ori)
+            home(pg)
+            pg.evaluate("""(p) => { const c = document.querySelector('.post-card[data-post="' + p + '"]'); if (c) c.scrollIntoView({ block: 'center' }); }""", back)
+            pg.wait_for_timeout(500)
+            card = pg.evaluate(CARD, back)
+            pg.goto(BASE + f"/social/p/{back}")
+            ready(pg)
+            pg.wait_for_timeout(1500)
+            line = pg.evaluate(LINE)
+            pg.goto(BASE + "/social/explore")
+            pg.wait_for_timeout(800)
+            tile = pg.evaluate("""(p) => { const t = document.querySelector('.gal-tile[data-post="' + p + '"]'); if (!t) return null;
+              return { says: (t.querySelector('.gal-dur span') || {}).textContent || '', label: t.getAttribute('aria-label') }; }""", back)
+            close_ctx(ctx, pg)
+            both = f"{c_s + 5} sec"
+            check(f"its card's play button says who and the whole: \"Ana + Theo · {both}\" (its name too), inside the drawing;"
+                  " never the joined drawing's own time, in which hers plays squeezed",
+                  card and card["words"] == f"Ana + Theo · {both}" and card["name"].endswith(f", Ana + Theo · {both}") and card["inside"],
+                  json.dumps(card))
+            check(f"on its own page its line says each hand's own time, \"Drawn in {c_s} sec + 5 sec\", and nothing about"
+                  " pauses skipped; and its Gallery tile says the whole",
+                  line["drawn"] == f"Drawn in {c_s} sec + 5 sec ·" and line["skip"] is False
+                  and tile and tile["says"].strip() == both and f"drawn in {both}" in (tile["label"] or ""),
+                  json.dumps({"line": line, "tile": tile}))
+            # A JAM: a draw-back on a draw-back holds every hand before it.
+            hers2 = slow(answer(n=31, seed=82), 300)                    # 30 gaps of 300ms: 9 sec
+            jam = (draw_back(ori, back, hers2)[1] or {}).get("post")
+            jrow = db("select hands_json from social_posts where public_id = ?", (jam or "",))
+            jkept = json.loads(jrow[0][0]) if jrow and jrow[0][0] else None
+            # ON YOUR OWN DRAWING: two sittings, one person: nobody to name.
+            own = (draw_back(ana, cat, slow(answer(n=11, seed=83), 300))[1] or {}).get("post")   # 3 sec
+            # SOMEBODY WHO BLOCKED HER is not told whose hand the first is.
+            nc = nia.client()
+            nc.get("/social/")
+            bst, _ = nc.post_json("/social/@ana/block", {})
+            seen = {}
+            for who, key in ((theo, "theo"), (nia, "nia")):
+                ctx, pg = browser_as(b, who)
+                home(pg)
+                pg.wait_for_timeout(500)
+                seen[key] = {k: pg.evaluate(CARD, v) for k, v in (("back", back), ("jam", jam), ("own", own))}
+                if key == "theo":
+                    pg.goto(BASE + f"/social/p/{jam}")
+                    ready(pg)
+                    pg.wait_for_timeout(1500)
+                    seen["jam line"] = pg.evaluate(LINE)
+                    pg.goto(BASE + f"/social/p/{own}")
+                    ready(pg)
+                    pg.wait_for_timeout(1500)
+                    seen["own line"] = pg.evaluate(LINE)
+                close_ctx(ctx, pg)
+            check(f"a jam holds every hand: three kept, its play button \"Ana + Theo + Ori · {c_s + 14} sec\", its line"
+                  f" \"Drawn in {c_s} sec + 5 sec + 9 sec\"",
+                  bool(jam) and jkept == [[pid["ana"], c_s * 1000], [pid["theo"], 5000], [pid["ori"], 9000]]
+                  and (seen["theo"]["jam"] or {}).get("words") == f"Ana + Theo + Ori · {c_s + 14} sec"
+                  and seen["jam line"]["drawn"] == f"Drawn in {c_s} sec + 5 sec + 9 sec ·",
+                  json.dumps({"kept": jkept, "card": seen["theo"].get("jam"), "line": seen.get("jam line")}))
+            check(f"on your own drawing there is nobody else to name: the play button says \"drawn in {c_s + 3} sec\", the"
+                  f" line the two sittings, \"Drawn in {c_s} sec + 3 sec\"",
+                  bool(own) and (seen["theo"]["own"] or {}).get("words") == f"drawn in {c_s + 3} sec"
+                  and seen["own line"]["drawn"] == f"Drawn in {c_s} sec + 3 sec ·",
+                  json.dumps({"card": seen["theo"].get("own"), "line": seen.get("own line")}))
+            check("to somebody who blocked her, nobody is named: his card says \"Drew back on a drawing\" and its play button"
+                  f" the time alone, \"drawn in {both}\", still the hands' own",
+                  bst == 200 and (seen["nia"]["back"] or {}).get("words") == f"drawn in {both}"
+                  and "Ana" not in ((seen["nia"]["back"] or {}).get("on") or "Ana"),
+                  json.dumps(seen["nia"].get("back")))
+            # A QUOTE OF IT says the same whole, in the small card.
+            qc = ori.client()
+            qc.get("/social/")
+            qst, qj = qc.post_json("/social/posts", {"words": "Section 8, look at these two", "quote": back})
+            quoted = qj.get("post") if qst == 200 and isinstance(qj, dict) else None
+            ctx, pg = browser_as(b, theo)
+            pg.goto(BASE + f"/social/p/{quoted}")
+            ready(pg)
+            qsays = pg.evaluate("() => { const q = document.querySelector('.qt-card'); return q ? q.textContent.replace(/\\s+/g, ' ') : null; }")
+            close_ctx(ctx, pg)
+            check(f"a quote of it says the same whole in its small card: \"drawn in {both}\"",
+                  bool(quoted) and f"drawn in {both}" in (qsays or ""), f"{qst}; {qsays}")
+            # FROM BEFORE THE HANDS WERE KEPT: said from the two drawings' stored
+            # lines while hers is there; once it is gone, what its drawing says.
+            db_write("update social_posts set hands_json = null where public_id = ?", (back,))
+            ctx, pg = browser_as(b, ori)
+            home(pg)
+            pg.wait_for_timeout(500)
+            before = pg.evaluate(CARD, back)
+            close_ctx(ctx, pg)
+            ac = ana.client()
+            ac.get(f"/social/p/{cat}")
+            dst, _ = ac.post_json(f"/social/p/{cat}/delete", {})
+            ctx, pg = browser_as(b, ori)
+            home(pg)
+            pg.wait_for_timeout(500)
+            after = pg.evaluate(CARD, back)
+            jam_after = pg.evaluate(CARD, jam)
+            close_ctx(ctx, pg)
+            joined = secs(min(played(CAT["frames"][0]["strokes"])[-1], 3000) + 50 + drew(his))
+            check(f"a draw-back from before its hands were kept says them from the two drawings' own lines while hers is there"
+                  f" (\"Ana + Theo · {both}\"); once hers is gone it says what its drawing says (\"drawn in {joined} sec\"),"
+                  " as it did; and the jam, whose hands are kept and whose own original is still there, says its three"
+                  " hands as before",
+                  (before or {}).get("words") == f"Ana + Theo · {both}" and dst == 200
+                  and (after or {}).get("words") == f"drawn in {joined} sec"
+                  and (jam_after or {}).get("words") == f"Ana + Theo + Ori · {c_s + 14} sec",
+                  json.dumps({"before": before, "deleted": dst, "after": after, "the jam": jam_after}))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(8, exc)
+
     # ------------------------------------------------------------------ 9
     if part(9, "no page errors, no console errors and no CSP violations"):
         try:

@@ -367,6 +367,82 @@ def drawbacks(posts, viewer):
     return out
 
 
+def hands_said(posts, drawings, viewer):
+    """WHAT A DRAW-BACK SAYS OF ITS HANDS (drawback.py; the walkthrough's
+    mocks, choice 6, the owner's "all yes", Nov 19), for a page of posts:
+    {a draw-back's id: {"parts": [ms, ...] in the order they play, "total":
+    their sum, "people": how many people they are, "by": "Ana + Theo" for
+    its play button, or None}}. Its line
+    says the parts ("Drawn in 15 sec + 5 sec"), its play button who and the
+    whole ("Ana + Theo · 20 sec").
+
+    THE NAMES ARE SAID ONLY WHEN EVERY HAND CAN BE NAMED TO THIS VIEWER: each
+    still here, not taken down, and no block either way; otherwise the play
+    button says the time as any card does. One person's own two sittings
+    (a draw-back on their own drawing) name nobody: the card says whose it is.
+
+    FROM BEFORE THE HANDS WERE KEPT (hands_json empty), said from the two
+    drawings' stored lines while the original is there and is one hand's
+    (drawback.hands_from_lines; `drawings` is the page's describe_posts, the
+    original's asked for when it is not on the page); otherwise nothing, and
+    the card says what its drawing says, as before."""
+    from .drawback import by_words, hands_from_lines, read_hands
+    answers = [p for p in posts if getattr(p, "is_drawback", False) and getattr(p, "id", None) is not None]
+    if not answers:
+        return {}
+    sess = site().session()
+    got = {p.id: read_hands(getattr(p, "hands_json", None)) for p in answers}
+    old = [p for p in answers if not got[p.id] and p.drawn_on_id is not None and p.drawn_on_owner_id is not None]
+    if old:
+        origs = {o.id: o for o in sess.execute(sa.select(Post).where(Post.id.in_({p.drawn_on_id for p in old}))).scalars()}
+        lines = dict(drawings)
+        ask = [o.skribl_id for o in origs.values() if o.skribl_id and not o.is_drawback and o.skribl_id not in lines]
+        if ask:
+            from skribl import describe_posts
+            lines.update(describe_posts(ask, viewer_id=viewer.public_id if viewer else None))
+        for p in old:
+            o = origs.get(p.drawn_on_id)
+            if o is None or o.is_drawback or o.taken_down_at is not None:
+                continue
+            got[p.id] = hands_from_lines((lines.get(o.skribl_id) or {}).get("line"), (lines.get(p.skribl_id) or {}).get("line"),
+                                         p.drawn_on_owner_id, p.person_id)
+    ids = {pid for h in got.values() if h for pid, _ in h if pid is not None}
+    people = {x.id: x for x in sess.execute(sa.select(Person).where(Person.id.in_(ids))).scalars()} if ids else {}
+    out = {}
+    for p in answers:
+        h = got.get(p.id)
+        if not h or len(h) < 2:
+            continue
+        names, seen = [], set()
+        for pid, _ in h:
+            who = people.get(pid)
+            if who is None or who.taken_down_at is not None or (viewer is not None and between(viewer, who)):
+                names = None
+                break
+            if pid not in seen:
+                seen.add(pid)
+                names.append(first_name(who.display_name))
+        out[p.id] = {"parts": [ms for _, ms in h], "total": sum(ms for _, ms in h),
+                     # How many people the hands are, for a line with too many
+                     # parts to say one by one (one gone counts as one more).
+                     "people": len({pid for pid, _ in h if pid is not None}) + sum(1 for pid, _ in h if pid is None),
+                     "by": by_words(names) if names and len(names) > 1 else None}
+    return out
+
+
+def said_line(line, said):
+    """A draw-back's line as its players are handed it (Skribl's line, with
+    what hands_said found): "drawn" the hands' own times together, "parts"
+    each of them, "by" who they are. None stays None: Skribl does not know
+    the drawing's line."""
+    if not line or not said:
+        return line
+    out = dict(line, drawn=said["total"], parts=said["parts"], people=said["people"])
+    if said.get("by"):
+        out["by"] = said["by"]
+    return out
+
+
 def cards(entries, viewer, words=True, aligned=False):
     """What each card shows: the post (a drawing shown outside a post is a
     post whose words are its title), its author, and its drawing's size, line,
@@ -431,12 +507,22 @@ def cards(entries, viewer, words=True, aligned=False):
     # DRAW BACK (drawback.py): how many draw-backs each post has, and on a
     # draw-back whose drawing it answers; one read each for the page.
     backs = drawbacks([e["post"] for e in entries if e["kind"] == "p"], viewer)
+    # ...and what each draw-back says of its hands (hands_said): its line's
+    # "drawn in" is their own times, never the joined drawing's, in which
+    # hers plays squeezed.
+    whose = hands_said([e["post"] for e in entries if e["kind"] == "p"], drawings, viewer)
     made = {}
     for e in entries:
         who = e["who"]
         if e["kind"] == "p":
             p = e["post"]
             sk = drawings.get(p.skribl_id)
+            if sk is not None and p.id in whose:
+                # Nobody is named once the drawing it answers is gone for this
+                # viewer: its card says "Drew back on a drawing" then, and its
+                # play button the time alone.
+                gone_ = (backs["on"].get(p.id) or {}).get("gone")
+                sk = dict(sk, line=said_line(sk.get("line"), dict(whose[p.id], by=None) if gone_ else whose[p.id]))
             url = url_for("social.post_page", public_id=p.public_id)
             gone = url_for("social.post_delete", public_id=p.public_id)
         else:
@@ -737,8 +823,9 @@ def register(bp, skribl_blueprint="skribl"):
         refusal: the post `oid` names, open to `me` as a like asks
         (reposts.quotable), its drawing one they may see and one that can
         be drawn back on, and `payload` the strokes drawn on its shape."""
+        import json
         from skribl import read_payload
-        from .drawback import _points, drawable, join, same_shape
+        from .drawback import _points, drawable, hands, join, same_shape
         from .reposts import quotable
         if not isinstance(oid, str) or not (0 < len(oid) <= 32):
             return None, _json_error("drawback_gone", 404)
@@ -768,8 +855,13 @@ def register(bp, skribl_blueprint="skribl"):
             return None, _json_error("drawback_unsupported", 400, why="erase", on="yours")
         if not same_shape(original, payload):
             return None, _json_error("drawback_shape", 400)
+        # WHOSE HANDS, AND HOW LONG EACH DREW (drawback.hands; the walkthrough's
+        # mocks, choice 6): read from the two drawings before the join squeezes
+        # hers, so the line can say "Drawn in 15 sec + 5 sec".
+        whose = hands(original, payload, getattr(on.post, "hands_json", None), on.owner.id, me.id)
         return {"payload": join(original, payload),
-                "columns": {"is_drawback": True, "drawn_on_id": on.post.id, "drawn_on_owner_id": on.owner.id}}, None
+                "columns": {"is_drawback": True, "drawn_on_id": on.post.id, "drawn_on_owner_id": on.owner.id,
+                            "hands_json": json.dumps(whose)}}, None
 
     def mentioned(row):
         """MENTIONS (mentions.py): the people its words name, written beside

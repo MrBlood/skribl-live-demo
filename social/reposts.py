@@ -300,6 +300,7 @@ class Quoted:
             if not self._shown_post(post, who):
                 return {"gone": True}
             sk = described.get(post.skribl_id) if post.skribl_id else self.lead(post.id, described, makers)
+            sk = _hands_line(post, sk)
             return {"gone": False, "url": url_for("social.post_page", public_id=post.public_id), "who": who,
                     "words": post.words or "", "at": post.created_at, "sk": sk, "says": _says(sk, says)}
         sid = quote.quoted_drawing_id
@@ -339,6 +340,18 @@ LEAD_DEPTH = 12
 #: key to let it go, a cycle the host's create_all cannot sort, and SQLite
 #: may give a deleted comment's id to the next one, so it is never left.)
 GONE_COMMENT = 0
+
+
+def _hands_line(post, sk):
+    """A quoted draw-back says its hands' own times together, as its card
+    does (posts.hands_said; the walkthrough's mocks, choice 6), never the
+    joined drawing's, in which the first hand's part plays squeezed. One from
+    before the hands were kept says what its drawing says."""
+    from .drawback import read_hands
+    h = read_hands(getattr(post, "hands_json", None)) if getattr(post, "is_drawback", False) else None
+    if not h or len(h) < 2 or not sk or not sk.get("line"):
+        return sk
+    return dict(sk, line=dict(sk["line"], drawn=sum(ms for _, ms in h)))
 
 
 def _says(sk, says):
@@ -406,6 +419,7 @@ def small_of(on, me):
         described = describe_posts(q.skribls, viewer_id=me.public_id) if q.skribls else {}
         sk = q.lead(on.post.id, described, makers_of(described, q.drawing_ids))
     if on.post is not None:
+        sk = _hands_line(on.post, sk)
         return {"gone": False, "url": on.page(), "who": on.owner, "words": on.post.words or "",
                 "at": on.post.created_at, "sk": sk, "says": _says(sk, says)}
     return {"gone": False, "url": on.page(), "who": on.owner, "words": _title_words((sk or {}).get("title")),
