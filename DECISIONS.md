@@ -47328,3 +47328,113 @@ pen); the store's keys not read back, red; her photo not laid under the pen,
 red on the Pad's row and on the posted picture's row; the composer's preview
 without her photo, red; his own photo let through in an answer, red. The
 own-drawing words gone, red on both rows. As built, 38/38.
+
+## After v330 -- The walkthrough of the site: three bugs, "Post draw-back", and words that say what is there
+
+THE ASK. The owner, Nov 19, after Draw back went in: "can you do a run on
+the social site and draw, draw-back, comments, etc and do a logic test? does
+everything flow the way it should? ... I feel like we are getting convoluted
+and it's simplicity is slipping away. I would be confused using this app I
+think." Done on a fresh copy of the site, as a new member on a touch phone,
+then a desk and dark (the report: https://claude.ai/artifact/C3mVr5QGaZ969wHwvLp9Ek).
+
+WHAT THE OWNER THEN DECIDED. The first list of suggestions was half wrong
+(it would have undone choices of theirs: "do all your suggestions make
+sense? double check and make sure we're not changing anything that needs to
+be there"), and was cut to what removes nothing. To that list: "I'd say yes
+to your suggestions, but the comment row stays (maybe even add bookmark)",
+and "I do want to fix the bugs and logic flaws also." So: THE COMMENT'S ROW
+STAYS as the owner chose it on Nov 17 (the post's choices on every
+comment); a bookmark in it was a maybe, not asked for.
+
+BUILT HERE, none of it a new design:
+
+- A DRAW-BACK'S OWN PAGE SHOWS ITS POSTER'S FACE. Her face (`.db-face`) was
+  as big as his and lay over it: "Theo Lin", wearing Ana's face. The page's
+  own rule for a face (48px) is as strong as the card's rule for the small
+  one and comes later in the sheet. Now 24px at the foot of his, as on the
+  card (22 of 44), and ringed in the page's ground as the card's is in the
+  card's (in the card's colour the ring showed on the page: looked at, light
+  and dark). The row that should have caught it asked only whether
+  her face was THERE; the new one reads what is painted at the middle of
+  his.
+- THE DRAW-BACKS STRIP KEEPS THE PAGE'S GUTTER. Long enough to scroll (three
+  on a phone), its snap brought the first drawing to the screen's edge, 0
+  where the page keeps 16: `scroll-padding-inline`.
+- A NOTE GOES UNDER THE PILL, on the Pad and in Flip. The Pad's toast and
+  Flip's chip fall back to just under the header (A TOAST NEVER COVERS A
+  CONTROL), which is where Draw along and Draw back put their pill: "The
+  eraser is off while drawing back" covered "Drawing back on Ana's" and its
+  Theirs button. Both now go under a pill that is up (`.da-pill`), by one
+  wrap of the two in lib/drawalong.js (keepNotesClear, asked for when a
+  pill goes up; Draw back's asks it too). Shared: Draw along's pill is both
+  editors', and it had the same overlap on both since v323. NOT IN app.js:
+  the first try put it in showToast, and verify_jsstrip went red (the
+  player loads app.js and counts its parsed bytes: 161,379 against its
+  ratchet). The player has no pill; the lesson module, which it does not
+  load, is where the pill is made.
+- "POST DRAW-BACK" on the composer's button while drawing back (the owner's
+  "All yes" to the Draw back mock, choice 3, not built until now), "Post"
+  again for a post of your own.
+- WORDS. An empty Home and an empty profile said "Tap Make", and a phone's
+  bar has no names (the owner took them off, Nov 15): "Tap the pencil".
+  Activity's "drew something on your post" (a drawn comment) read like
+  "drew back on your drawing": now "commented with a drawing", beside
+  "replied with a drawing" (the nudge says the same, as its row). Activity's
+  heading line and its empty words name draw-backs.
+
+NOT BUILT, AND WHY. "On a post's own page Draw back carries its words at
+the row's end" (the same mock's choice 2) is not built either, and cannot go
+in as mocked: the mock's post was new, with no counts in its row; with
+counts the pill does not fit a 402px row, nor a desk's column. It needs a
+mock with real counts. The Gallery's search words are cut off at 402
+("Search people and drawir"), but they are the owner's ("All yes", Nov 15):
+the box needs room, not other words; a mock. With them, as agreed: a drawn
+comment no taller than its post's drawing and more room between
+conversations; the "Ana + Theo" words; another picture for loop, a quote
+mark for Quote, an initial in a blank face.
+
+THE BIGGER QUESTION, asked by the owner and not answered yet: "since we are
+developing the social site with them inside it, maybe we should start a
+separate repo that would fully integrate them ... we may go with blooby.app
+in which case ... it would be important for them not to have a totally
+separate world like they are right now." The answer given: one repository,
+and a switch the site turns on, with which Pad and Flip drop their own doors
+(Skribl's own gallery and its tick on the Add sheet, the Library) and use
+the site's places and words; a second repository would be a second copy of
+the editors to keep in step; and deciding for the site alone, the day the
+owner is sure, is then a small job. The gallery tick is this in one
+checkbox: it feeds Skribl's own gallery, which the site's Gallery replaced.
+
+THE CHECKS, each shown red without its fix in a copy of its own
+(verify_socialdrawback 3, 4 and 6; verify_book 5):
+her face at his size, red (hers 48, the middle of his face hers), and its
+ring in the card's colour, red; the
+strip's snap without its padding, red (its first drawing at 0); notes not
+kept clear, red on all three rows (drawing back, the note at 82 to 136 over
+the pill at 84 to 142; verify_book's Pad row and its Flip row); the
+button's words not set, red ("Post"). As built: verify_socialdrawback
+42/42, verify_book 60/60, verify_jsstrip 35/35. (Copies of one suite run at
+once through run_parallel write one log between them: a copy's own red row
+is read from a run alone.)
+
+MAIN'S RED AFTER #989, FOUND TO BE A DEFECT AND FIXED HERE (sqlite 6/6:
+verify_socialdrawback "section 4 ran to its end: Frame.wait_for_function:
+Timeout 15000ms exceeded"; the same suite green on PostgreSQL 6/6 and on
+every run here but two under load). Not load: THE PAD SAID "READY" BEFORE
+ALL ITS OWN SCRIPTS HAD RUN. editor_compose.js called ready() at once
+whenever the page was past 'loading', and a deferred script always is, so
+ready went out as that script ran, with lib/drawback.js, editor_face.js and
+editor_draft.js (the paper) still to come after it in the page. The host
+answers ready at once with what it holds; when a later script arrived a
+moment after that answer (a slow line, a busy runner), the answer was
+dropped: tap the pen, and the Pad opened on blank paper under "Drawing back
+on Ana's"; a face's photo to trace could go the same way. Now ready is
+said at DOMContentLoaded, after the last deferred script ('load' as the
+net). Both editors' compose mode and the face Pad share the script, so all
+three have it.
+THE CHECK (verify_socialdrawback 4): Draw back's script and the paper's
+held back a second and a half, as a slow line would have them. As main had
+it, red (no drawing laid down: 0 strokes, no guide, no pill); with only the
+script's place in the page moved earlier, the paper's script late still
+left the ground unset; as built, green (her 33 strokes, on her paper).

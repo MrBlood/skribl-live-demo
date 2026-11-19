@@ -834,7 +834,7 @@ with sync_playwright() as p:
               " field ready; an empty feed says to tap Make, kindly; there Post with nothing said or drawn says what is"
               " missing and sends nothing; signed out, Home is the first visit, as before",
               home["box"] == 0 and sheet == {"open": True, "field": True}
-              and home["none"] == "No posts yet. Tap Make to share your first one."
+              and home["none"] == "No posts yet. Tap the pencil to share your first one."
               and not home["hello"] and said == "Say something or draw something first, then Post." and not sent
               and nobody["hello"] and not nobody["composer"],
               f"home {home}; sheet {sheet}; said {said!r}; posted {len(sent)}; signed out {nobody}")

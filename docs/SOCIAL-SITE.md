@@ -1070,7 +1070,7 @@ stands clear of the bell's line, and each new row in the list wears it too.
 **A row** is a comment or an answer, not yours: answering you ("Theo answered
 your comment", or with a drawing, "Juno answered with a drawing"), or else on
 what you own, a post or a drawing shown outside a post ("Mira said something
-on your post", or with a drawing, "Juno drew something on your post"). Their
+on your post", or with a drawing, "Juno commented with a drawing"). Their
 face, who and what, when as comments say it ("5m", "2h"), their words under it
 in quotes (two lines at most), and the small picture: the drawing they
 answered with or drew, else the post's (or the drawing's), cut from its poster

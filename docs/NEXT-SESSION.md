@@ -81,17 +81,137 @@ author's background and music?" A draw-back keeps her photo and her song;
 the answer adds none. `DECISIONS.md`, "your own drawing, and the author's
 background and music".
 
-## Asked by the owner, next
+## The walkthrough (Nov 19, 8:40 AM): done, and waiting on the owner's answer
 
-**A walkthrough of the whole site** (Nov 19, 7:30 AM): "can you do a run on
-the social site and draw, draw-back, comments, etc and do a logic test? does
-everything flow the way it should? does everything make sense? is anything
-cluttered? does the comment setup look good? ... I feel like we are getting
-convoluted and it's simplicity is slipping away. I would be confused using
-this app I think." They asked to be told before it starts, to turn Fable on
-for it. Look, with pictures (phone and desk, light and dark), say plainly
-what confuses, and recommend what to simplify; change nothing without
-their OK. Her say (item 1 above) adds controls, so it waits for that look.
+The owner: "can you do a run on the social site and draw, draw-back,
+comments, etc and do a logic test? ... I feel like we are getting convoluted
+and it's simplicity is slipping away. I would be confused using this app I
+think." Done on a fresh copy of the site (five people, ten posts, comments,
+draw-backs, all through the real screens), as a new member on a touch phone
+(402 wide), then a desk and dark. Nothing was changed. The report, with
+pictures: https://claude.ai/artifact/C3mVr5QGaZ969wHwvLp9Ek
+
+The verdict given: the look holds up; what is slipping is the number of
+ways to do one thing. What was found, biggest first:
+
+1. Three ways to answer a drawing with a drawing: Draw back, Draw (and
+   Flip) in the comment box, and Quote "with your own words, or a drawing".
+   Activity then says "drew back on your drawing" or "drew something on your
+   post".
+2. Every comment is a small post: four buttons under each (reply, repost,
+   like, more), its own page, repost, quote, bookmark, share; seven comments
+   put 40 things to press in the thread. A drawn comment made on a phone
+   shows 294 by 601 with its own scrubber and speed; the post's drawing is
+   370 by 278.
+3. Four buttons to post a drawing from the composer: Done, Add, Add to post
+   (the Pad's own sheet), Post. That sheet's "Show in the Skribls gallery /
+   Off, it shows in your post only" is not true on the site: with it off for
+   every drawing, all nine were on the Gallery tab, signed out (the site's
+   Gallery shows a post's drawing unless its maker hides it with the eye;
+   the tick is Skribl's own visibility, and Skribl's own gallery was empty).
+4. Draw-backs repeat the original: Home's first four cards and the Gallery's
+   first four tiles were the same cat; a card does not show what was added
+   until it plays; its play button says "drawn in 4 sec" (the squeezed
+   replay) on a cat that took 15.
+5. Pictures without words: a phone's four tabs have no names while empty
+   pages say "Tap Make"; the loop button and the repost button are nearly
+   the same picture, one above the other; a pen means Make, Draw back, Edit
+   drawing and Quote.
+6. The Pad inside a post is the whole standalone Pad: its menu has New,
+   Save, Export, Library, a switch to Flip and "Public gallery".
+7. Small: blank faces on cards and Activity, an initial in comments; the
+   Gallery has Following and Everyone as well as New and Hot, and its search
+   words are cut off at 402; Activity's empty words leave out draw-backs.
+
+THREE BUGS, found and not fixed (the owner was told nothing would change):
+- A draw-back's own page: the original artist's face (`.db-face`) is as big
+  as the poster's and lies over it (48 by 48 both; on the card 22 at the
+  foot of 44).
+- The draw-backs strip: its first tile at 0 from the screen's edge with
+  three tiles, the page's gutter 16.
+- The "eraser is off" toast lands on the "Drawing back on Ana’s" pill.
+
+THE FIRST LIST OF CHOICES WAS WRONG IN HALF, and was taken back the same
+hour. The owner: "do all your suggestions make sense? double check and make
+sure we're not changing anything that needs to be there." Checked against
+the code and this record, about half would have undone a choice of the
+owner's or removed something needed. Check the record BEFORE recommending a
+removal: most of what is on the site is there by a decision.
+
+WHAT HOLDS UP (removes nothing, undoes nothing; the report's page now says
+this):
+- the three bugs;
+- TWO DETAILS OF THE OWNER'S "ALL YES" TO DRAW BACK THAT ARE NOT BUILT
+  (`DECISIONS.md`, "Draw back, mocked", choices 2 and 3): on a post's own
+  page Draw back carries its words at the row's end (the page shows the pen
+  alone), and the composer's button says "Post draw-back" (it says "Post");
+  and choice 4's "Ana + Theo" words, in place of "drawn in 4 sec";
+- words: empty pages say "Tap Make" where a phone's bar has no names (the
+  owner took them off, Nov 15); Activity's "drew something on your post"
+  beside "drew back on your drawing" (a drawn reply already says "replied
+  with a drawing"); Activity's empty words leave out draw-backs; the
+  Gallery's search words are cut off at 402;
+- a drawn comment no taller than the post's own drawing (the owner's B,
+  Nov 17, is "as wide as the bubble": a phone's tall drawing was not in
+  that mock), and more room between conversations than inside one;
+- a mock each: another picture for loop (Skribl's player, so Pad, Flip and
+  the link page with it, and the in-post player's byte budget), a quote mark
+  for Quote, an initial in a blank face on cards and in Activity (a
+  Gallery tile's 22px face is "never an initial", by an earlier decision).
+
+THE OWNER'S ANSWER (Nov 19, about 9 AM): "I'd say yes to your suggestions,
+but the comment row stays (maybe even add bookmark)", and "I do want to fix
+the bugs and logic flaws also."
+- THE COMMENT'S ROW STAYS, as chosen on Nov 17. A bookmark in it was a
+  maybe: the answer given was to leave it under the dots (a phone's post row
+  is full, and a comment would have a button a post does not), with a mock
+  on offer. Not asked for since.
+- BUILT, in the PR after #989 (`DECISIONS.md`, "The walkthrough of the
+  site"): the three bugs; "Post draw-back"; "Tap the pencil", "commented
+  with a drawing", draw-backs in Activity's words.
+- AND MAIN'S RED AFTER #989, a real defect: the Pad said "ready" before all
+  its own scripts had run, so on a slow line the drawing to lay under the
+  pen was dropped and the Pad opened blank. Fixed in the same PR
+  (`editor_compose.js`: ready at DOMContentLoaded), with a check that holds
+  the scripts back. A timeout in section 4 of `verify_socialdrawback` seen
+  under load before that fix was this, not the load.
+- STILL TO MOCK, each agreed as an idea: "Draw back" in words on a post's
+  own page (choice 2; it does not fit the row once the row has counts: the
+  mock's post had none); a drawn comment no taller than its post's drawing,
+  and more room between conversations; the "Ana + Theo" words; another
+  picture for loop, a quote mark for Quote, an initial in a blank face; room
+  for the Gallery's search words at 402 (the words are the owner's).
+
+THE BIGGER QUESTION, the owner's, waiting on their answer: a separate
+repository where Pad and Flip are "totally a part of" the site (blooby.app),
+this one keeping them independent for skribls.net. The answer given, three
+ways: A, one repository and a switch the site turns on, with which the
+editors drop their own doors (Skribl's own gallery and its tick, the
+Library) and use the site's places and words (recommended; its first step
+would be the Add sheet's gallery tick and the Pad menu's Library and Public
+gallery, mocked first); B, a second repository with its own copy of the
+editors (about 61,000 lines and most of the suites, to keep in step for
+good); C, deciding now for the site alone and taking the standalone side
+out (closes the skribls.net door; a small job after A). THE GALLERY TICK
+waits on this: the site's composer asks for it (`gallery=1` in
+`_compose.html`), and with A it would stop asking.
+
+TAKEN BACK, and why: Quote without a drawing (the only way to answer a Flip
+or a post of words with a drawing in a post of your own); Flip out of the
+comment box (Pad and Flip do not drift); no Add sheet (the owner's pick,
+and "Viewers start at" is the author's speed, a root; Tune's Watching speed
+is the preview's); names under a phone's tabs (the owner's own choice,
+Nov 15); a draw-back's card with the original faint (washed-out ink on
+every card: "no dinge"); one Gallery tile a drawing (the test site's ten
+posts held four draw-backs; wait for the live site); a three-item Pad menu
+in the composer (New, Your drafts and the Pad and Flip switch are there on
+purpose; only Library and Public gallery lead out, read in the template and
+not tried on screen); the Gallery without Following and Everyone (the map);
+leaving "Who can draw back" for later (the artist's say over her own art:
+build both parts of choice 7).
+
+The walkthrough's copy of the site is gone (its server did not outlive the
+turn); its scripts were scratch.
 
 ## Open threads
 
@@ -134,6 +254,11 @@ their OK. Her say (item 1 above) adds controls, so it waits for that look.
   red, take both away.
 - After a branch's PR merges, merge main into the branch and push; a force
   push was refused here.
+- A post made through the site's own requests carries no picture (the
+  Pad makes it), so it rests as a blank box: for a site that looks real,
+  open the composer's Pad and call `loadSkribl(payload)` in its frame
+  (Flip's is `window.SkriblComposeLoad`), then Add and Post, as the
+  walkthrough did with the drawings under `skribl/static/help/demos/`.
 - Mocks are made by driving the real site with Playwright and laying the
   option over it; the suites' fixtures (`harness/verify_socialcomments.py`'s
   head) make a site with people in a minute. Scratch files do not survive a

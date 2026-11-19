@@ -850,13 +850,29 @@ with sync_playwright() as p:
                 ready(pg)
                 page[screen] = pg.evaluate("""() => { const l = document.querySelector('.post-page .post-on'), a = l && l.querySelector('.post-on-who');
                   const r = a && a.getBoundingClientRect(), at = r && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                  const f = document.querySelector('.post-page .post-face'), his = f && f.querySelector(':scope > .face-ring'),
+                        hers = f && f.querySelector('.db-face .face-ring');
+                  const hr = his && his.getBoundingClientRect(), sr = hers && hers.getBoundingClientRect();
+                  const mid = hr && document.elementFromPoint(hr.left + hr.width / 2, hr.top + hr.height / 2);
                   return { on: l ? l.textContent.replace(/\\s+/g, ' ').trim() : null, href: a ? new URL(a.href).pathname : null,
-                           hit: !!at && !!a && a.contains(at), face: !!document.querySelector('.post-page .post-face .db-face .face-ring') }; }""")
+                           hit: !!at && !!a && a.contains(at), face: !!hers,
+                           faces: hr && sr ? { his: Math.round(hr.width), hers: Math.round(sr.width), middleHis: !!mid && !mid.closest('.db-face'),
+                                               foot: sr.left >= hr.left + hr.width / 2 - 1 && sr.top >= hr.top + hr.height / 2 - 1,
+                                               ring: (() => { const pr = document.createElement('i'); pr.style.color = 'var(--page)'; document.body.appendChild(pr);
+                                                 const ground = getComputedStyle(pr).color; pr.remove();
+                                                 return getComputedStyle(f.querySelector('.db-face')).boxShadow.startsWith(ground); })() } : null }; }""")
                 close_ctx(ctx, pg)
             check("a draw-back's own page says it too, under its header: \"Drew back on Ana’s\", her post the link, painted"
                   " where it stands, her face small at the foot of his (phone and desk)",
-                  all(v == {"on": "Drew back on Ana’s", "href": f"/social/p/{cat}", "hit": True, "face": True} for v in page.values()),
-                  json.dumps(page))
+                  all({k: v[k] for k in ("on", "href", "hit", "face")} == {"on": "Drew back on Ana’s", "href": f"/social/p/{cat}", "hit": True, "face": True}
+                      for v in page.values()), json.dumps(page))
+            # READ WHERE IT IS PAINTED (the owner's walkthrough, Nov 19): the row
+            # above asked only whether her face was there, and it was, as big
+            # as his and lying over it: "Theo Lin", wearing Ana's face.
+            check("on that page his face is the one you see (48px, and what is painted at its middle is his), hers half its"
+                  " size (24px) at its foot, ringed in the page's own ground, as the card's is in the card's (phone and desk)",
+                  all(v.get("faces") == {"his": 48, "hers": 24, "middleHis": True, "foot": True, "ring": True} for v in page.values()),
+                  json.dumps({k: v.get("faces") for k, v in page.items()}))
             # ON YOUR OWN DRAWING (the owner's "All yes", Nov 19): "Drew back on
             # their own drawing", the link to it, one face. AND A NAME THAT
             # STARTS WITH A TITLE is said whole: "Dr. Kai Moss", never "Dr.".
@@ -955,6 +971,9 @@ with sync_playwright() as p:
             fr.click("#eraserToolBtn")
             pg.wait_for_timeout(150)
             aside["eraser"] = fr.evaluate("() => [tool, document.getElementById('toast').textContent]")
+            over = fr.evaluate("""() => { const t = document.getElementById('toast').getBoundingClientRect(), p = document.querySelector('.db-pill').getBoundingClientRect();
+              return { hit: t.top < p.bottom && t.bottom > p.top && t.left < p.right && t.right > p.left, toast: [Math.round(t.top), Math.round(t.bottom)],
+                       pill: [Math.round(p.top), Math.round(p.bottom)], shown: getComputedStyle(document.getElementById('toast')).visibility !== 'hidden' && t.height > 0 }; }""")
             fr.click("#mediaOpenBtn")
             pg.wait_for_timeout(150)
             aside["media"] = fr.evaluate("() => [document.getElementById('mediaOpenBtn').getAttribute('aria-expanded'), document.getElementById('toast').textContent]")
@@ -969,6 +988,9 @@ with sync_playwright() as p:
                   and aside["media"] == ["false", "The background and music are Ana’s."]
                   and aside["recolor"] == "Recolour is off while drawing back." and aside["dim"] == ["0.4", "0.4"],
                   json.dumps(aside))
+            check("what the eraser says does not land on the pill: it sits under \"Drawing back on Ana’s\" and its Theirs"
+                  " button, never over them",
+                  over and over["shown"] and not over["hit"] and over["toast"][0] >= over["pill"][1], json.dumps(over))
             box = fr.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return [r.left, r.top, r.width]; }")
             fb = fe.bounding_box()
             k = box[2] / 816
@@ -989,13 +1011,21 @@ with sync_playwright() as p:
                 sub.click()
             pg.wait_for_function("() => !!window.SocialComposer.attached()", timeout=20000)
             line = pg.evaluate("() => { const l = document.querySelector('[data-compose-backline]'); return l && !l.hidden ? l.textContent : null; }")
+            says = pg.evaluate("() => { const b = document.querySelector('[data-compose-post]'), r = b.getBoundingClientRect(); return [b.textContent.trim(), r.right <= innerWidth, Math.round(r.height)]; }")
             with pg.expect_navigation(timeout=20000):
                 pg.click("[data-compose-post]")
             pg.wait_for_timeout(600)
             landed = urllib.parse.urlparse(pg.url).path
             pg.wait_for_timeout(400)
             poster = pg.evaluate("() => { const i = document.querySelector('.post-page .skribl-inline-poster'); return i ? i.getAttribute('src') : null; }")
+            # A post of your own, after: the button is "Post" again.
+            pg.locator("nav.nav .tab-make").first.tap()
+            pg.wait_for_timeout(700)
+            plain = pg.evaluate("() => document.querySelector('[data-compose-post]').textContent.trim()")
             close_ctx(ctx, pg)
+            check("the composer's button says what it makes: \"Post draw-back\" while drawing back (whole on a phone, 44px),"
+                  " and \"Post\" for a post of your own",
+                  says[0] == "Post draw-back" and says[1] and says[2] >= 44 and plain == "Post", f"{says}; then {plain!r}")
             row = stored(landed.rsplit("/", 1)[-1])
             pts = ((row or {}).get("payload") or {}).get("frames", [{}])[0].get("strokes") or []
             check("drawn, Done, Add and Post (the sheet saying \"Drawing back on Ana’s\" at its top): it lands on the new"
@@ -1044,6 +1074,40 @@ with sync_playwright() as p:
             own_pill = fr4.evaluate("() => document.querySelector('.db-pill .db-where').textContent")
             own_line = pg.evaluate("() => { const l = document.querySelector('[data-compose-backline]'); return l && !l.hidden ? l.textContent : null; }")
             close_ctx(ctx, pg)
+            # ON A SLOW LINE (main's red after #989, sqlite 6/6: "section 4 ran
+            # to its end: Timeout 15000ms"). The Pad said it was ready as its
+            # compose script ran, with scripts still to come after it in the
+            # page: Draw back's own, and the one that sets the paper
+            # (editor_draft.js). When one arrived a moment later, the host's
+            # answer (her drawing) reached a Pad that could not take it yet
+            # and was dropped, and the Pad opened on blank paper under
+            # "Drawing back on Ana’s". Here both are held back a second and a
+            # half, as a phone on a slow line would have them.
+            ctx, pg = browser_as(b, theo)
+            held = []
+            def late(route):
+                held.append(route.request.url.rsplit("/", 1)[-1].split("?")[0])
+                time.sleep(1.5)
+                route.continue_()
+            ctx.route("**/lib/drawback.js*", late)
+            ctx.route("**/editor_draft.js*", late)
+            home(pg)
+            pg.locator(pen4).scroll_into_view_if_needed()
+            pg.click(pen4)
+            fe6 = pg.wait_for_selector("#composePad .facepad-frame", state="attached", timeout=15000)
+            pg.wait_for_function("() => document.querySelector('#composePad').classList.contains('is-ready')", timeout=30000)
+            fr6 = fe6.content_frame()
+            try:
+                fr6.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state()", timeout=8000)
+                pg.wait_for_timeout(300)
+                slow = fr6.evaluate("() => ({ strokes: SkriblDrawBack.state().strokes, guide: !!document.querySelector('.db-under'), pill: !!document.querySelector('.db-pill'), ground: String(bgColor).toLowerCase() })")
+            except Exception:  # noqa: BLE001 -- her drawing never laid down is this row's red
+                slow = fr6.evaluate("() => ({ strokes: 0, guide: !!document.querySelector('.db-under'), pill: !!document.querySelector('.db-pill'), module: !!window.SkriblDrawBack })")
+            close_ctx(ctx, pg)
+            check("on a slow line (Draw back's own script and the paper's a second and a half late) her drawing is still laid"
+                  " under the pen, on her paper: the Pad says it is ready only once every script of its own has run",
+                  sorted(held) == ["drawback.js", "editor_draft.js"] and slow.get("strokes", 0) > 0 and slow["guide"] and slow["pill"]
+                  and slow.get("ground") == "#f6f2ea", json.dumps({"held": held, **slow}))
             # HER PHOTO UNDER THE PEN (the owner's yes, Nov 19).
             ph4 = post_payload(ana, "Section 4, on a photo with music", on_photo_with_music(seed=52))
             ctx, pg = browser_as(b, theo)
@@ -1207,7 +1271,9 @@ with app.test_request_context("/social/"):
               return { title: s.querySelector('.db-title').innerText.trim(), icon: !!s.querySelector('.db-title svg'),
                        tiles: [...s.querySelectorAll('.db-tile')].map(t => [new URL(t.href).pathname, t.querySelector('.db-by').textContent,
                                                                            !!t.querySelector('.more-plate img')]),
-                       wide: document.documentElement.scrollWidth <= innerWidth }; }"""
+                       wide: document.documentElement.scrollWidth <= innerWidth,
+                       lefts: [s.querySelector('.db-title'), s.querySelector('.db-tile')].map(e => Math.round(e.getBoundingClientRect().left * 10) / 10),
+                       scrolls: (r => r.scrollWidth > r.clientWidth + 1)(s.querySelector('.db-row')) }; }"""
             seen = {}
             for who in (ana, theo):
                 ctx, pg = browser_as(b, who)
@@ -1220,6 +1286,10 @@ with app.test_request_context("/social/"):
                   " drew back, newest first, each opening its own page; nothing past the screen",
                   seen["ana"] and seen["ana"]["title"] == "3 draw-backs" and seen["ana"]["icon"] and seen["ana"]["tiles"] == want
                   and seen["ana"]["wide"], json.dumps(seen["ana"]))
+            check("a strip long enough to scroll (three on a phone) keeps the page's gutter: its first drawing starts where"
+                  " its title does, never on the screen's edge",
+                  seen["ana"] and seen["ana"]["scrolls"] and abs(seen["ana"]["lefts"][0] - seen["ana"]["lefts"][1]) < 0.6
+                  and seen["ana"]["lefts"][0] >= 15.5, json.dumps({k: [v["lefts"], v["scrolls"]] for k, v in seen.items() if v}))
             check("behind a block (Theo blocked Lea) Lea's is not on the strip Theo sees: \"2 draw-backs\"",
                   bst == 200 and seen["theo"] and seen["theo"]["title"] == "2 draw-backs" and seen["theo"]["tiles"] == want[1:],
                   json.dumps(seen["theo"]))

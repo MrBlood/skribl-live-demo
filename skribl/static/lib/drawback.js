@@ -299,6 +299,8 @@
       run.photoImg.src = ph.data;
     }
     guard();
+    // What the editor says goes under the pill, never over it (lib/drawalong.js).
+    if (window.SkriblDrawAlong && window.SkriblDrawAlong.keepNotesClear) window.SkriblDrawAlong.keepNotesClear();
     // If the eraser was in hand, the pen takes over.
     if (typeof tool !== 'undefined' && tool === 'eraser' && typeof window.setTool === 'function') window.setTool('pen');
     btn.addEventListener('click', function () {

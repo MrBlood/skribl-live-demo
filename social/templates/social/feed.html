@@ -6,7 +6,7 @@
     we need post at top?", then "All yes" to the mock without it): Make is
     the way to post, the bar's on a phone and the rail's on a desk, and it
     opens the composer (_compose.html, base.html's). Home opens on its pill
-    and its posts, the drawings first; an empty Home says to tap Make.
+    and its posts, the drawings first; an empty Home says to tap the pencil (a phone's bar has no names: the owner took them off, Nov 15, so "Tap Make" named a word nobody could see).
 
     THE PILL (follows; the owner's "Yes to all", Nov 13): Following |
     Everyone at the top, the Gallery's New / Hot (social/_follow.html,
@@ -51,7 +51,7 @@
 <div class="feed" data-feed data-more="{{ url_for('social.feed_more') }}">
   {% for c in cards %}{% if c.extra %}{{ feed_extra(c.extra) }}{% else %}{{ post_card(c) }}{% endif %}{% endfor %}
 </div>
-<p class="feed-none" data-feed-none{% if cards %} hidden{% endif %}>No posts yet. Tap Make to share your first one.</p>
+<p class="feed-none" data-feed-none{% if cards %} hidden{% endif %}>No posts yet. Tap the pencil to share your first one.</p>
 <button class="btn btn-wide feed-more" type="button" data-feed-next="{{ next or '' }}"{% if not next %} hidden{% endif %}>Load more</button>
 </div>
 <p class="say" data-feed-say role="status" hidden></p>

@@ -223,6 +223,24 @@
     send('skribl:compose:ready', { editor: EDITOR });
   }
 
-  if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', ready);
-  else ready();
+  /* READY ONCE EVERY SCRIPT OF THE EDITOR'S OWN HAS RUN: at DOMContentLoaded,
+     which comes after the last deferred script. This used to call ready() at
+     once whenever the page was past 'loading', and a deferred script always
+     is (the page is 'interactive' while its deferred scripts run): so ready
+     was said as THIS script ran, with scripts still to come after it in the
+     page (Draw back's lib/drawback.js, a face's editor_face.js, and
+     editor_draft.js, which sets the paper). The host answers ready at once
+     with what it holds (a drawing to lay under the pen, a photo to trace),
+     and on a slow line that answer reached a Pad that could not take it yet
+     and was dropped: the Pad opened on blank paper under "Drawing back on
+     Ana’s" (main's red after #989; verify_socialdrawback 4, with those
+     scripts held back). 'load' is the net for a page that has had its
+     DOMContentLoaded already. */
+  if (doc.readyState === 'complete') ready();
+  else {
+    var said = false;
+    var once = function () { if (!said) { said = true; ready(); } };
+    doc.addEventListener('DOMContentLoaded', once);
+    global.addEventListener('load', once);
+  }
 })(typeof window !== 'undefined' ? window : this);
