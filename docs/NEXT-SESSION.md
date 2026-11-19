@@ -64,22 +64,21 @@ Then the owner's list from Nov 18 resumes: messages as drawn letters, then
 watching first everywhere (the old handoff's items 2 and 3; `docs/SOCIAL-SITE.md`
 section 17 for messages).
 
-## Asked, not decided
+## Decided since, and built
 
-- **The eraser while drawing back.** It seems to erase only his lines
-  (hers are on their own canvas), but the posted drawing is one list of
-  strokes, so the replay erases hers too where he erased over them. Options
-  put to the owner: the eraser off while drawing back (Undo still there), or
-  his erasing kept to his own lines in the replay (a layer the replay does
-  not have yet). `DECISIONS.md`, "the picture a draw-back rests on".
+The owner's "All yes" (7:09 AM) to the four questions: the background is
+the original artist's; the eraser off while drawing back; "Drew back on
+their own drawing"; a name that starts with a title said whole.
+`DECISIONS.md`, "the owner's All yes to the four questions".
 
-- **A picture in a draw-back.** Refused for now; the composer says so and
-  how to take it out. The owner's own framing: "the original reserves the
-  right for a background" (the ground is hers). Other answers: his picture
-  under both, or his picture arriving with his hand.
-- **A draw-back on your own drawing** says "Drew back on Mr.’s" today, and
-  the site's first-name rule makes "Mr." of "Mr. Bloob" everywhere.
-  `DECISIONS.md`, "what the owner's first tries found".
+## Asked, not yet answered
+
+- **The author's background and music in a draw-back** (the owner's own
+  idea: "why not just only let a drawback be on author's background and
+  music?"). Recommended yes. It needs a way for the site to copy her picture
+  and music files into the joined drawing (Skribl keeps them beside the
+  drawing, not in it), the Pad showing her picture under the pen, and her
+  music under both drawings when it plays.
 
 ## Open threads
 

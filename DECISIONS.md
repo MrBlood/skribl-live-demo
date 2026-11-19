@@ -47234,3 +47234,44 @@ one answer: the ground is hers.
 
 CALIBRATION (verify_socialdrawback): the page's line taken out, red; the
 refusal without whose, red. As built, sections 2 and 3 whole.
+
+## After v330 -- Draw back: the owner's "All yes" to the four questions
+
+The owner, Nov 19, 7:09 AM: "All yes." To the four questions asked after
+their first tries:
+
+1. THE BACKGROUND IS THE ORIGINAL ARTIST'S (their own words: "the original
+   reserves the right for a background"). While drawing back, the Pad's
+   paper colours and its picture and music drawer step aside, dimmed; tapped,
+   they say "The background is Ana’s." and "The background and music are
+   Ana’s." (lib/drawback.js, in the editor's own toast).
+2. THE ERASER IS OFF WHILE DRAWING BACK, Undo still there: a draw-back
+   replays as one drawing, so his eraser over her lines erased them too.
+   Held at the one switch every way to the eraser goes through (setTool:
+   its button, its key, Tune's): "The eraser is off while drawing back. Undo
+   takes back your last line." Recolour steps aside the same way. The server
+   holds the line too: an answer with erasing in it is refused (why
+   "erase"), and the composer says how to fix it. The Pad's other tools add
+   ink (pen, shapes, text, stamps); smudge, blur, fill and liquify are
+   Flip's.
+3. A DRAW-BACK ON YOUR OWN DRAWING says "Drew back on their own drawing",
+   the link to it, and one face.
+4. A NAME THAT STARTS WITH A TITLE is said whole: models.first_name, the
+   first word of a name unless it ends in a period ("Mr. Bloob", "Dr. Ana
+   Ruiz"), everywhere the site said a first name (31 places, Python and
+   templates, now one function and its filter): "More from Mr. Bloob",
+   "Drew back on Mr. Bloob’s".
+
+And the owner's own next step, asked and not yet answered: "why not just
+only let a drawback be on author's background and music?" The answer given:
+it is not a can't. Her picture and music are files kept beside her drawing,
+and nothing copies them into the joined one yet, so it was refused rather
+than lose them. Their rule (a draw-back always on the author's background
+and music, the answerer adding none) is the right shape and follows from 1;
+it waits on a plain yes. It would give the owner's drawing with music, which
+has no pen today, its pen.
+
+CALIBRATION (verify_socialdrawback, each part broken in its own copy): the
+eraser guard and the drawer's step-aside gone, red (the eraser was taken
+up); the own-drawing words gone and the first-name rule back to the first
+word, red on both rows; the server's erase line gone, red. As built, 32/32.
