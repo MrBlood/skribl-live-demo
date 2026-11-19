@@ -2860,6 +2860,11 @@ your drawing", the dot and the nudge (Replies); her post's strip of
 draw-backs, newest first; and "Watch again" and Draw back rising at a
 drawing's foot when its replay ends (Skribl's player says `skribl:ended`).
 
+NO PEN WHERE IT CAN'T BE DONE YET (DECISIONS.md, "Draw back: no pen where it
+can't be done yet"): a drawing on a photo, with music or recolours, read
+when its post is made (`undrawable`); a post from before keeps its pen,
+answered when opened.
+
 STILL TO COME, in the decided order: her say (hide one from her post; who
 can draw back); the line's "Ana + Theo" words; drawing back on a Flip, page
 for page. `verify_socialdrawback.py` holds

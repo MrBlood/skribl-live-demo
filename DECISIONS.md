@@ -47155,3 +47155,21 @@ socialcomments 143/143, verify_docs 144/144.
 
 Pad and Flip: neither editor changes. The event is the shared player's, so a
 Flip sends it too; the pills come only where a draw-back can be made.
+
+## After v330 -- Draw back: no pen where it can't be done yet
+
+After step 2, the pen still showed on a drawing made on a photo; opening it
+said "That drawing can't be drawn back on yet." A pen that leads to a no is
+the unkindness to take away. Skribl's `on_photo` could not tell: every Pad
+drawing carries a picture of its blank paper (baseSnapshot), so it is true
+for nearly every Pad drawing. The site has the drawing whole when a post is
+made, so it says then: `undrawable` on the post (migration `e5c1f7a2d903`),
+drawback.drawable's reason ("photo", "music", "pages", "recolors") or None.
+Set in post_new before Skribl stores its media apart, and for one of your
+older drawings from Skribl's own copy (read_payload). The row's pen needs it
+None. A post from before the column keeps its pen, answered when opened, as
+before; a draw-back's own card keeps its pen (a jam).
+
+CALIBRATION (verify_socialdrawback 3): the card not reading the column, red;
+post_new not writing it, red (the photo's card had the pen both times). As
+built, the whole suite 24/24.
