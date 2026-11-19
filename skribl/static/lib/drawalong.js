@@ -123,6 +123,38 @@
     run = null;
   }
 
+  /* A NOTE NEVER LANDS ON THE PILL. The editors' note (the Pad's toast,
+     app.js showToast; Flip's chip) falls back to just under the header, which
+     is where this pill sits, and Draw back's (lib/drawback.js): "The eraser
+     is off while drawing back" covered "Drawing back on Ana’s" and its
+     Theirs button (the walkthrough of the site, Nov 19). So a note that
+     lands on a pill that is up goes under it. Here, not in app.js: the
+     player loads app.js too, has neither pill, and counts its bytes
+     (verify_jsstrip). Asked for when a pill goes up, by which time the
+     editor's own script has run. */
+  var noted = false;
+  function keepNotesClear() {
+    if (noted) return;
+    noted = true;
+    [['showToast', 'toast'], ['chip', 'flipChip']].forEach(function (pair) {
+      var real = window[pair[0]];
+      if (typeof real !== 'function') return;
+      window[pair[0]] = function () {
+        var out = real.apply(this, arguments);
+        var el = document.getElementById(pair[1]), p = document.querySelector('.da-pill');
+        if (el && p) {
+          var t = el.getBoundingClientRect(), r = p.getBoundingClientRect();
+          if (t.height && r.height && t.top < r.bottom && t.bottom > r.top && t.left < r.right && t.right > r.left) {
+            el.style.position = 'fixed';
+            el.style.bottom = 'auto';
+            el.style.top = Math.round(r.bottom + 8) + 'px';
+          }
+        }
+        return out;
+      };
+    });
+  }
+
   function start(name) {
     stop();
     // Its own address on the little book (both editors), else the example's.
@@ -148,6 +180,7 @@
         + '<button type="button" class="da-skip">Skip</button><button type="button" class="da-done">Done</button>';
       document.body.appendChild(pill);
       document.body.classList.add('drawalong');
+      keepNotesClear();
       var down = null;
       run = {
         name: NAMES[name] || name, strokes: strokes, size: size, k: 0, guide: guide, pill: pill,
@@ -181,7 +214,7 @@
   }
 
   window.SkriblDrawAlong = {
-    start: start, stop: stop, skip: advance,
+    start: start, stop: stop, skip: advance, keepNotesClear: keepNotesClear,
     state: function () { return run ? { k: run.k, n: run.strokes.length } : null; }
   };
 }());

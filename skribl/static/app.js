@@ -2484,17 +2484,10 @@ function showToast(msg, anchorEl, action) {
   // there (lib/drawerdetent.js), and the fallback sat on its tools, the
   // other place this rule keeps clear. (The player has no toolbar:
   // toolBarEl is null there.)
-  // AND UNDER THE PILL that Draw along and Draw back put just under the
-  // header (lib/drawalong.js, lib/drawback.js: "Drawing back on Ana’s" and its
-  // Theirs button). The fallback's place is the pill's own, so "The eraser is
-  // off while drawing back" landed on the pill and covered Theirs (the
-  // walkthrough, Nov 19).
-  const pillEl = () => document.querySelector('.da-pill');
   const belowHeader = () => {
-    const h = box(head), d = box(toolBarEl), p = box(pillEl());
+    const h = box(head), d = box(toolBarEl);
     let y = h && h.bottom > 0 ? h.bottom : 0;
     if (y && d && d.top < y + 8 + toast.offsetHeight) y = Math.max(y, d.bottom);
-    if (p && p.bottom > y && p.top < y + 8 + toast.offsetHeight) y = p.bottom;
     toast.style.position = 'fixed';
     toast.style.top = y ? Math.round(y + 8) + 'px' : 'calc(16px + env(safe-area-inset-top))';
   };
@@ -2510,7 +2503,7 @@ function showToast(msg, anchorEl, action) {
       const r = box(el);
       return r && t.top < r.bottom && t.bottom > r.top && t.left < r.right && t.right > r.left;
     };
-    if (hits(head) || hits(toolBarEl) || hits(pillEl())) belowHeader();
+    if (hits(head) || hits(toolBarEl)) belowHeader();
   } else {
     belowHeader();
   }
