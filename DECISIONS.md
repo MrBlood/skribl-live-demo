@@ -46939,3 +46939,33 @@ Written into WORKING-AGREEMENTS.md (the roots: "Blooby is where people talk
 in drawings"), and into docs/NEXT-SESSION.md for the session that mocks Draw
 back. Bluesky's open app is named there as a reference for behaviour, never
 for look. Nothing is built yet: Draw back is mocked first.
+
+## After v330 -- Main red after #976: the beat marks' glide timed on its own clock
+
+Main's run after #976 went red once in verify_musictempo (sqlite 1/6): "the
+beat marks glide to the new beat frame by frame, the one at the end drawing
+in to it" read 17 frames on the way, always onward, and "there at None". The
+glide was sound; the check was not. It read the glide on the wall's clock
+from just before the finger lifted, for 700ms, and wanted the marks there by
+600ms. On this box they are there about 437ms after the lift. The timeline
+counts a frame as long as it took, up to 64ms (lib/musictimeline.js
+frame()), so a frame a busy machine holds up moves the glide on 64ms and
+never jumps: kind, and slower on the wall. A runner that held a few frames
+up let the window run out first. Not the product; #976 touched none of it.
+
+THE FIX (harness/verify_musictempo.py, NEAR): the glide is timed from the
+lift on its own clock (each frame up to 64ms, as the timeline counts it),
+recorded until 700ms on that clock, and must be there by 600ms on it, as
+before. Both glides use it: the start let go zoomed in, and the end that sets
+the tempo. The row also says the wall's time, for a reader.
+
+CALIBRATION, on a page made to hold three frames up 160ms each during the
+glide: main's check red on all four glide rows (the end's reading as main's
+did, 15 or 16 frames on the way, always on, there at None); the new check
+green, there 428 to 444ms after the lift on the glide's clock (687 to 733ms
+on the wall's). Each part undone, with the frames held up: the 64ms count
+(the wall's clock from the lift) red, the window as it was red. A glide
+truly slower (the timeline's ease 120ms, not 70) red on all four rows, there
+at 685ms on both clocks or not at all. As built, alone: 56/56.
+
+Flip and the Pad: no change; the check reads both.
