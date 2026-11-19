@@ -1559,13 +1559,14 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    mocked"). A DRAW-BACK'S CREDIT, its own line under the name and when:
    "Drew back on Ana’s", the second ink, her name the small violet words and
    the link to her post, 44px tall to a finger (it reaches into the room
-   above and below, as the time's does). THE TWO HANDS: the original's maker
+   above and below, as the time's does; 45 in the sum, as the name's is, since
+   a box worked out to 44 exactly lays out at 43.97). THE TWO HANDS: the original's maker
    small at the foot of the face, ringed in the card's colour, so the face
    keeps its place. */
 .post-on { display: block; margin-top: 2px; color: var(--ink-2); font-size: 14px; line-height: 1.3; }
 .post-on-who {
-  position: relative; z-index: 1; display: inline-block; padding: calc((44px - 14px * 1.3) / 2) 4px;
-  margin: calc((14px * 1.3 - 44px) / 2) -4px; color: var(--accent-ink); font-weight: 600; text-decoration: none;
+  position: relative; z-index: 1; display: inline-block; padding: calc((45px - 14px * 1.3) / 2) 4px;
+  margin: calc((14px * 1.3 - 45px) / 2) -4px; color: var(--accent-ink); font-weight: 600; text-decoration: none;
   pointer-events: auto;
 }
 .post-on-who:focus-visible { outline: 2px solid var(--focus); outline-offset: -8px; border-radius: 10px; }
