@@ -790,6 +790,8 @@ with sync_playwright() as p:
                 pg.click("[data-compose-post]")
             pg.wait_for_timeout(600)
             landed = urllib.parse.urlparse(pg.url).path
+            pg.wait_for_timeout(400)
+            poster = pg.evaluate("() => { const i = document.querySelector('.post-page .skribl-inline-poster'); return i ? i.getAttribute('src') : null; }")
             close_ctx(ctx, pg)
             row = stored(landed.rsplit("/", 1)[-1])
             pts = ((row or {}).get("payload") or {}).get("frames", [{}])[0].get("strokes") or []
@@ -798,6 +800,31 @@ with sync_playwright() as p:
                   line == "Drawing back on Ana’s" and landed.startswith("/social/p/") and row and row["is_drawback"]
                   and row["on"] == post_id(cat) and len(pts) > 726 and xy(pts[:726]) == xy(CAT["frames"][0]["strokes"]),
                   f"line {line!r}; landed {landed}; {len(pts)} points")
+            # THE PICTURE IT RESTS ON (the owner, Nov 19: "there's no image on
+            # the drawbacks"): the poster is the Pad's card, her drawing under
+            # his. Read off the picture: her dark ink where her cat is (the
+            # card's drawing area, 1200 x 630, the cat's left half), where his
+            # strokes never went (he drew right of x 640).
+            dark, kind = 0, None
+            try:
+                with urllib.request.urlopen(BASE + poster if poster and poster.startswith("/") else (poster or ""), timeout=20) as r:
+                    kind = r.headers.get("Content-Type")
+                    raw = r.read()
+                from PIL import Image
+                import io
+                im = Image.open(io.BytesIO(raw)).convert("RGB")
+                k = im.width / 1200
+                px = im.load()
+                for y in range(int(120 * k), int(470 * k)):
+                    for x in range(int(380 * k), int(560 * k)):
+                        r_, g_, b_ = px[x, y]
+                        if r_ < 90 and g_ < 90 and b_ < 110:
+                            dark += 1
+            except Exception as exc:  # noqa: BLE001 -- no picture is this row's red
+                kind = kind or str(exc)[:80]
+            check("the posted draw-back rests on a picture of both: its poster is the Pad's card, her ink there where her"
+                  " cat is (his lines were drawn elsewhere), never the blank stand-in",
+                  dark > 150 and kind and "svg" not in kind, f"poster {poster}; {kind}; {dark} dark pixels in her cat's half")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(4, exc)
 

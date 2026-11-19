@@ -147,6 +147,12 @@ def join(original, answer):
     for k2 in ("visibility", "caption"):
         if k2 in answer:
             out[k2] = answer[k2]
+    # THE PICTURE IT RESTS ON (a post's card: what a feed and a strip show
+    # before it plays). The Pad makes it with her drawing under his
+    # (lib/drawback.js paintUnder); without it a draw-back rested as an
+    # empty box (the owner, Nov 19: "there's no image on the drawbacks").
+    if isinstance(answer.get("thumbnail"), str) and answer["thumbnail"]:
+        out["thumbnail"] = answer["thumbnail"]
     return out
 
 

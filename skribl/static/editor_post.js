@@ -321,6 +321,9 @@
         }
         octx.restore();
       }
+      /* DRAWING BACK (lib/drawback.js): her drawing under his lines, as the
+         site posts the two, so the picture a draw-back rests on is both. */
+      if (window.SkriblDrawBack && window.SkriblDrawBack.paintUnder) window.SkriblDrawBack.paintUnder(octx, w);
       octx.drawImage(src, 0, 0, w, h);
       return out;
     } catch (e) {
