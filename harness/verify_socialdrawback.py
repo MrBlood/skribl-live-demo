@@ -1074,6 +1074,40 @@ with sync_playwright() as p:
             own_pill = fr4.evaluate("() => document.querySelector('.db-pill .db-where').textContent")
             own_line = pg.evaluate("() => { const l = document.querySelector('[data-compose-backline]'); return l && !l.hidden ? l.textContent : null; }")
             close_ctx(ctx, pg)
+            # ON A SLOW LINE (main's red after #989, sqlite 6/6: "section 4 ran
+            # to its end: Timeout 15000ms"). The Pad said it was ready as its
+            # compose script ran, with scripts still to come after it in the
+            # page: Draw back's own, and the one that sets the paper
+            # (editor_draft.js). When one arrived a moment later, the host's
+            # answer (her drawing) reached a Pad that could not take it yet
+            # and was dropped, and the Pad opened on blank paper under
+            # "Drawing back on Ana’s". Here both are held back a second and a
+            # half, as a phone on a slow line would have them.
+            ctx, pg = browser_as(b, theo)
+            held = []
+            def late(route):
+                held.append(route.request.url.rsplit("/", 1)[-1].split("?")[0])
+                time.sleep(1.5)
+                route.continue_()
+            ctx.route("**/lib/drawback.js*", late)
+            ctx.route("**/editor_draft.js*", late)
+            home(pg)
+            pg.locator(pen4).scroll_into_view_if_needed()
+            pg.click(pen4)
+            fe6 = pg.wait_for_selector("#composePad .facepad-frame", state="attached", timeout=15000)
+            pg.wait_for_function("() => document.querySelector('#composePad').classList.contains('is-ready')", timeout=30000)
+            fr6 = fe6.content_frame()
+            try:
+                fr6.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state()", timeout=8000)
+                pg.wait_for_timeout(300)
+                slow = fr6.evaluate("() => ({ strokes: SkriblDrawBack.state().strokes, guide: !!document.querySelector('.db-under'), pill: !!document.querySelector('.db-pill'), ground: String(bgColor).toLowerCase() })")
+            except Exception:  # noqa: BLE001 -- her drawing never laid down is this row's red
+                slow = fr6.evaluate("() => ({ strokes: 0, guide: !!document.querySelector('.db-under'), pill: !!document.querySelector('.db-pill'), module: !!window.SkriblDrawBack })")
+            close_ctx(ctx, pg)
+            check("on a slow line (Draw back's own script and the paper's a second and a half late) her drawing is still laid"
+                  " under the pen, on her paper: the Pad says it is ready only once every script of its own has run",
+                  sorted(held) == ["drawback.js", "editor_draft.js"] and slow.get("strokes", 0) > 0 and slow["guide"] and slow["pill"]
+                  and slow.get("ground") == "#f6f2ea", json.dumps({"held": held, **slow}))
             # HER PHOTO UNDER THE PEN (the owner's yes, Nov 19).
             ph4 = post_payload(ana, "Section 4, on a photo with music", on_photo_with_music(seed=52))
             ctx, pg = browser_as(b, theo)

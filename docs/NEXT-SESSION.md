@@ -169,6 +169,12 @@ the bugs and logic flaws also."
 - BUILT, in the PR after #989 (`DECISIONS.md`, "The walkthrough of the
   site"): the three bugs; "Post draw-back"; "Tap the pencil", "commented
   with a drawing", draw-backs in Activity's words.
+- AND MAIN'S RED AFTER #989, a real defect: the Pad said "ready" before all
+  its own scripts had run, so on a slow line the drawing to lay under the
+  pen was dropped and the Pad opened blank. Fixed in the same PR
+  (`editor_compose.js`: ready at DOMContentLoaded), with a check that holds
+  the scripts back. A timeout in section 4 of `verify_socialdrawback` seen
+  under load before that fix was this, not the load.
 - STILL TO MOCK, each agreed as an idea: "Draw back" in words on a post's
   own page (choice 2; it does not fit the row once the row has counts: the
   mock's post had none); a drawn comment no taller than its post's drawing,

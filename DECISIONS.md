@@ -47417,3 +47417,24 @@ button's words not set, red ("Post"). As built: verify_socialdrawback
 42/42, verify_book 60/60, verify_jsstrip 35/35. (Copies of one suite run at
 once through run_parallel write one log between them: a copy's own red row
 is read from a run alone.)
+
+MAIN'S RED AFTER #989, FOUND TO BE A DEFECT AND FIXED HERE (sqlite 6/6:
+verify_socialdrawback "section 4 ran to its end: Frame.wait_for_function:
+Timeout 15000ms exceeded"; the same suite green on PostgreSQL 6/6 and on
+every run here but two under load). Not load: THE PAD SAID "READY" BEFORE
+ALL ITS OWN SCRIPTS HAD RUN. editor_compose.js called ready() at once
+whenever the page was past 'loading', and a deferred script always is, so
+ready went out as that script ran, with lib/drawback.js, editor_face.js and
+editor_draft.js (the paper) still to come after it in the page. The host
+answers ready at once with what it holds; when a later script arrived a
+moment after that answer (a slow line, a busy runner), the answer was
+dropped: tap the pen, and the Pad opened on blank paper under "Drawing back
+on Ana's"; a face's photo to trace could go the same way. Now ready is
+said at DOMContentLoaded, after the last deferred script ('load' as the
+net). Both editors' compose mode and the face Pad share the script, so all
+three have it.
+THE CHECK (verify_socialdrawback 4): Draw back's script and the paper's
+held back a second and a half, as a slow line would have them. As main had
+it, red (no drawing laid down: 0 strokes, no guide, no pill); with only the
+script's place in the page moved earlier, the paper's script late still
+left the ground unset; as built, green (her 33 strokes, on her paper).
