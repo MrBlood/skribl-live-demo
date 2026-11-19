@@ -442,6 +442,29 @@ with sync_playwright() as pw:
     # fifth of a second late, past the tenth that once kept the first beat
     # from ticking twice (main red after #723: sqlite 6/6, the Pad, a box slow
     # enough that 40 came out 43; at the CPU 4x slower, red two runs in three).
+    #
+    # EARLY OR LATE AS THE CLICK WAS TOLD (main red after #979, sqlite 2/6,
+    # the Pad). The engine started the loop again 0.4ms before the old one
+    # came round, by its reading of the clock; the click, told a moment later
+    # (lib/musicdrawer.js beatsAgain), read the clock again and found it past,
+    # for the clock moves on in steps (2.9 or 11.6ms here) and can between
+    # two reads. The old loop's tick for its top had begun, so it stood
+    # (called off then, it would have sounded cut short) and the new first
+    # beat was not set: one tick at the join, as when the timer fires late.
+    # The row read that start as early by the engine's reading and wanted the
+    # other tick. So which it is goes by the click's reading: the first one
+    # after a loop's source is started (TOLD), one entry a start, [when its
+    # sound starts, that reading].
+    TOLD = r"""(() => {
+      const told = window.__told = [], P = (window.BaseAudioContext || window.AudioContext).prototype,
+            d = Object.getOwnPropertyDescriptor(P, 'currentTime'), S = AudioBufferSourceNode.prototype, st = S.start;
+      let open = null;
+      S.start = function (when, ...r) { if (this.context instanceof AudioContext) { open = { when: when, read: null }; told.push(open); }
+        return st.call(this, when, ...r); };
+      if (d && d.get) Object.defineProperty(P, 'currentTime', { configurable: true, get() { const v = d.get.call(this);
+        if (open && this instanceof AudioContext) { open.read = v; open = null; } return v; } });
+    })();"""
+
     def restart(pg, held):
         press(pg, "#musicClickBtn", 100)
         press(pg, "#previewLoopBtn", 1000)
@@ -460,7 +483,11 @@ with sync_playwright() as pw:
         sounded = sorted((t for t in made if not t["off"]), key=lambda t: t["at"])
         press(pg, "#previewLoopBtn", 100)
         again = new["s0"] - new["lead"]            # where it started again, on the audio clock
-        early = again < came
+        # The click's reading as it was told of this start: the source whose
+        # sound starts as the new loop's does.
+        told = next((e["read"] for e in reversed(pg.evaluate("() => window.__told || []"))
+                     if e["read"] is not None and abs(e["when"] - new["s0"]) < 1e-4), None)
+        early = (told if told is not None else again) < came
         # The old loop's tick for its top (made before it started again):
         # called off when it started again before; sounding (the join's one
         # tick) when it started again after.
@@ -473,10 +500,11 @@ with sync_playwright() as pw:
         rest = [t for t in sounded if t["at"] >= hi]
         want = new["s0"] if early else came
         close = [round(z["at"] - a["at"], 4) for a, z in zip(sounded, sounded[1:]) if z["at"] - a["at"] < 0.3]
-        ok = (abs(old["dur"] - 4.0) < 0.01 and abs(new["dur"] - 3.0) < 0.01 and len(join) == 1 and abs(join[0]["at"] - want) < 0.0015
+        ok = (told is not None and abs(old["dur"] - 4.0) < 0.01 and abs(new["dur"] - 3.0) < 0.01 and len(join) == 1 and abs(join[0]["at"] - want) < 0.0015
               and join[0]["f"] == 1568 and len(rest) >= 2 and all(grid(t["at"], again, new["dur"])[1] < 0.0015 for t in rest) and not close
               and (all(top_tick) if early else top_tick == [False]))
-        why = (f"the loop {old['dur']:.2f}s then {new['dur']:.2f}s, started again {(again - came) * 1000:+.1f}ms from when the old one came round; "
+        why = (f"the loop {old['dur']:.2f}s then {new['dur']:.2f}s, started again {(again - came) * 1000:+.1f}ms from when the old one came round, "
+               f"the click told at {'%+.1fms' % ((told - came) * 1000) if told is not None else 'no reading'}; "
                f"at the join {[(round((t['at'] - new['s0']) * 1000, 1), t['f']) for t in join]} (ms from the new sound's start), "
                f"the old loop's tick for its top called off {top_tick}; "
                f"{len(rest)} after, on the new loop's beats {all(grid(t['at'], again, new['dur'])[1] < 0.0015 for t in rest)}; ticks closer than 0.3s: {close}")
@@ -487,6 +515,7 @@ with sync_playwright() as pw:
         for held in (0, 40, 160):
             c = waits.instrument(b.new_context(**DESK))
             c.add_init_script(OSC)
+            c.add_init_script(TOLD)
             c, pg, errs = editor(b, _n, _p, door="exact", ctx=c)
             pg.evaluate(CLICK_LOOP)
             pg.wait_for_timeout(300)

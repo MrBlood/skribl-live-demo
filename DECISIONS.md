@@ -46969,3 +46969,38 @@ truly slower (the timeline's ease 120ms, not 70) red on all four rows, there
 at 685ms on both clocks or not at all. As built, alone: 56/56.
 
 Flip and the Pad: no change; the check reads both.
+
+## After v330 -- Main red after #979: the click's join, early or late as the click was told
+
+Main's run after #979 (docs only) went red once in verify_musicclick (sqlite
+2/6, the Pad): "an end moved while the click plays ... the loop's first beat
+ticks once at the join, never twice" read "started again -0.4ms from when
+the old one came round", the join's one tick on the old loop's top, not the
+new sound's start. One tick, never two; the row wanted the other one.
+
+The engine started the loop again 0.4ms before the old one came round, by
+its own reading of the audio clock. The click, told a moment later
+(lib/musicdrawer.js beatsAgain), read the clock again, and it had moved on
+past that top: it moves in steps (2.9 or 11.6ms here) and can between two
+reads. The old loop's tick for its top had begun, so it stood (called off
+then, it would have sounded cut short, a click and then a tick) and the new
+first beat was not set, being within most of a beat of it: one tick at the
+join, as when the timer fires late. Right for the ear. The row judged the
+start early by the engine's reading, before the clock moved.
+
+THE FIX (harness/verify_musicclick.py, TOLD): early or late goes by the
+click's own reading, the first one after a loop's source is started, and the
+row says both. A start with no such reading is red. No change to the Pad or
+Flip.
+
+CALIBRATION (the Pad, the click's rows): with the clock moved on 15ms at the
+click's reading after the start, as a step between two reads, main's row red
+as main's read (started again -9.1ms, the old top's tick kept, the one tick
+20.9ms before the new sound) and the new row green (the click told +5.9ms,
+late, that tick right). As built, green and still early: the click told
+-9.1ms, the old top's tick called off, the one tick on the new sound's start.
+A click keeping ticks set up to 20ms ahead red (told -0.4ms, the old top's
+tick kept). The reading never kept: all three join rows red. As built,
+alone: 28/28.
+
+Flip and the Pad: no change; the drawer is one module for both.
