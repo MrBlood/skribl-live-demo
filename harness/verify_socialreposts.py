@@ -13,7 +13,7 @@ authenticator for the site's people.
      Inter, Liberation Sans and FreeSans where the box has them.
   2. THE SHEET: a tap raises #repostSheet, the ⋯'s shape, one card: Repost
      ("Show it to the people who follow you") and Quote ("Repost it with your
-     own words, or a drawing"), the arrows and the bar's Make pencil; once
+     own words, or a drawing"), the arrows and Quote's own quote marks; once
      yours, Undo repost ("Take it off your page and your followers’ Home"); a
      drawing shown outside a post, Quote alone; signed out, "Repost this
      post?"; it rises gliding, read on every frame.
@@ -679,8 +679,13 @@ SHEET = r"""() => { const s = document.getElementById('repostSheet'); if (!s) re
         saySize: getComputedStyle(sy).fontSize, sayColor: getComputedStyle(sy).color,
         h: Math.round(r.height * 10) / 10, hit: !!at && (at === b || b.contains(at)) }; }) }; }"""
 
-# The bar's Make pencil (the Quote row's icon is it).
+# The bar's Make pencil. The Quote row wore it until Nov 19 (the walkthrough's
+# mocks, choice 8, the owner's "all yes"): a pen also says Make, Draw back and
+# Edit drawing. Quote has its own mark now, a pair of quote marks (_icons.html
+# quote()), and the row is held to it and to NOT being the pencil.
 PEN = "() => [...document.querySelectorAll('.tab-make svg path')].map(p => p.getAttribute('d'))"
+QUOTE_MARK = ["M9.25 6.5C6.35 7.6 4.75 9.9 4.75 13v4.5h5.5V12h-2.5c.1-1.6.8-2.7 2.3-3.5z",
+              "M18.25 6.5c-2.9 1.1-4.5 3.4-4.5 6.5v4.5h5.5V12h-2.5c.1-1.6.8-2.7 2.3-3.5z"]
 
 
 def open_rp(pg, sel):
@@ -1183,13 +1188,14 @@ with sync_playwright() as p:
             looks = []
             for k, v in sheets.items():
                 for r in (v or {}).get("rows", []):
-                    icon = ARROWS if r["act"] == "repost" else pens[k[0]]
-                    if not (r["d"] == icon and r["nameSize"] == "17px" and r["nameWeight"] == "600" and r["nameColor"] == v["ink"]
+                    icon = ARROWS if r["act"] == "repost" else QUOTE_MARK
+                    if not (r["d"] == icon and r["d"] != pens[k[0]] and r["nameSize"] == "17px" and r["nameWeight"] == "600" and r["nameColor"] == v["ink"]
                             and r["saySize"] == "15px" and r["sayColor"] == v["ink2"] and r["h"] >= 56 and r["hit"]):
-                        looks.append((" ".join(k), r["act"], {x: r[x] for x in ("nameSize", "nameWeight", "saySize", "h", "hit")}))
+                        looks.append((" ".join(k), r["act"], {x: r[x] for x in ("nameSize", "nameWeight", "saySize", "h", "hit")},
+                                      "the bar's Make pencil" if r["d"] == pens[k[0]] else r["d"][:1]))
             check("each row the ⋯'s own with the mute row's two lines: its name 17px 600 in the ink, what it does 15px in"
-                  " the second ink, 56px or more, painted where it stands; Repost's icon the arrows, Quote's the bar's"
-                  " Make pencil", pens.get("phone") and not looks, json.dumps(looks)[:600])
+                  " the second ink, 56px or more, painted where it stands; Repost's icon the arrows, Quote's a pair of quote"
+                  " marks of its own, never the bar's Make pencil", pens.get("phone") and not looks, json.dumps(looks)[:600])
             # SIGNED OUT: the small sheet that says how; nothing is done.
             out = {}
             ctx, pg = browser_as(b, None)

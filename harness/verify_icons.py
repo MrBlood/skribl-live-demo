@@ -316,7 +316,10 @@ _left += sorted(f"{p.relative_to(_ROOT)}: the line-drawn mute cross" for p, t in
                 if 'x1="23" y1="9"' in t)
 check("no retired player icon is drawn anywhere (templates and scripts)", not _left, "; ".join(_left[:4]))
 _ICON = {"restart": ["M3 12a9 9 0 1 0 3-6.7L3 8", "M3 3v5h5"],
-         "loop": ["M17 2l4 4-4 4", "M3 11V9a4 4 0 0 1 4-4h14", "M7 22l-4-4 4-4", "M21 13v2a4 4 0 0 1-4 4H3"],
+         # LOOP IS THE INFINITY SIGN (the walkthrough's mocks, choice 7, the owner's
+         # "all yes", Nov 19). It was two arrows in a ring, which on the site sat
+         # 38px above repost's two arrows in a ring: one picture, two meanings.
+         "loop": ["M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z"],
          "sound": ["M11 5 6 9H2v6h4l5 4z", "M15.5 8.5a5 5 0 0 1 0 7", "M19 5a9 9 0 0 1 0 14"],
          "muted": ["M11 5 6 9H2v6h4l5 4z", "m16 9 5 6", "m21 9-5 6"],
          "link": ["M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71",
@@ -338,6 +341,17 @@ for _rel, _roles in _PSITES.items():
     _have = _drawn(_SRC.get(_ROOT / _rel, ""))
     _short += [f"{_rel}: {r}" for r in _roles if not set(_ICON[r]) <= _have]
 check("every player draws the one restart, loop, sound, muted, link and play", not _short, "; ".join(_short))
+# ...AND NONE OF THEM STILL DRAWS THE ARROWS FOR IT. The two arrows in a ring
+# stay where they mean something else, outside these files: Flip's "Loop this
+# page" (a page repeated twice, three times, for some seconds) and the music
+# drawer's loop preview. The Pad's Repeat is the players' loop, so it is held
+# to the same picture.
+_ARROWS = "M17 2l4 4-4 4"
+_loops = [r for r, roles in _PSITES.items() if "loop" in roles] + ["static/editor_draw.js"]
+_still = [r for r in _loops if _ARROWS in _drawn(_SRC.get(_ROOT / r, ""))]
+_lacks = [r for r in _loops if not set(_ICON["loop"]) <= _drawn(_SRC.get(_ROOT / r, ""))]
+check("no player's loop (nor the Pad's Repeat, nor Export's looping GIF) still draws the two arrows in a ring; each"
+      " draws the infinity sign", not _still and not _lacks, f"still the arrows: {_still}; no infinity sign: {_lacks}")
 
 print("\nCENTRING — the marks that read off-centre sit in the middle by their ink")
 # The owner: "Some buttons with regular ascii or Unicode doesn't get centered".

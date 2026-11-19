@@ -193,10 +193,15 @@ the suites to keep in step for good; C was deciding now for the site alone
 and taking the standalone side out.)
 
 "ALL YES" (the owner, Nov 19, about noon) to the ten choices below, built
-in four pieces (`DECISIONS.md`, the entries after "One repository"): 1 and 2
-first (the menu inside a post, no gallery tick), then 5 and 7 to 10, then 3
-and 4 (a post's page), then 6 (what a draw-back says). Read DECISIONS for
-which have merged. STILL THE OWNER'S TO ANSWER: the Text drawer's way out of
+in three pieces (`DECISIONS.md`, the entries after "One repository"): 1 and
+2 (the menu inside a post, no gallery tick: merged, #992); then 3, 4, 5 and
+7 to 10 together (a post's page and the small ones); then 6 (what a
+draw-back says: each hand's drawing time kept on the post, a migration, and
+two optional numbers the site hands Skribl's player). Read DECISIONS for
+which have merged. TO TELL THE OWNER with the second piece: a drawn
+comment's play button is the card's own pill, not the mock's corner mark;
+the initial on cards changes their Nov 13 "never an initial"; Export's GIF
+row wears the infinity sign too. STILL THE OWNER'S TO ANSWER: the Text drawer's way out of
 a post ("Yours" with no hand yet, and "Edit your hand", leave the composer's
 frame and the drawing is gone).
 

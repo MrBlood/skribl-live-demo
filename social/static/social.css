@@ -590,11 +590,14 @@ html.is-app .app-edge {
 
 /* ---- THE GALLERY OF EVERYONE (Explore; the map's step 3) -------------------
  * The Gallery mock's B, "drawings first", and the owner's "Your picks are
- * great" (Nov 13), in the site's own tokens. On top, signed in, Home's own
- * pill (.fo-home); under it New | Hot, the one pill, and the search box as
- * Skribl's gallery had them (44px, beside each other, the box taking the
- * rest; a field's own ground and edge, 16px words so a phone does not
- * magnify the page). Then the tiles: two across on a phone, three on a desk.
+ * great" (Nov 13), in the site's own tokens. On top the pills on one line
+ * (.gal-pills): signed in, Home's own pill (.fo-home), then New | Hot, the
+ * one pill, 8px apart, wrapping if a screen is narrower than both. Under
+ * them the search box, the line's whole width (44px; a field's own ground
+ * and edge, 16px words so a phone does not magnify the page). It shared New
+ * | Hot's line until Nov 19 (the walkthrough's mocks, choice 10, the owner's
+ * "all yes"), where a 402px phone left it 178px for words that need 217.
+ * Then the tiles: two across on a phone, three on a desk.
  * A tile is one link: the drawing whole (_gallery.html plate_frame: a 4:3
  * drawing fills the 650 x 486, another shape sits whole in its middle, the
  * box around it its own ground, --plate-ground, from plate_ground: a tall
@@ -604,8 +607,10 @@ html.is-app .app-edge {
  * it ("Mr. Blood", cut with … only when it doesn't fit), the hearts and
  * comments at the right only when there are some. A change of pick fades the
  * tiles out and back (explore.js), as Home's pill does its posts. */
+.gal-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0 10px; }
+.gal-pills .fo-seg { flex: none; }
+.gal-pills .fo-home { margin: 0; }
 .gal-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0 0 18px; }
-.gal-bar .fo-seg { flex: none; }
 .gal-find { flex: 1 1 220px; min-width: 0; margin: 0; }
 .gal-find input {
   width: 100%; min-height: 44px; margin: 0; padding: 0 16px; border: 1px solid transparent; border-radius: 12px;
@@ -1573,6 +1578,10 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .post-face.has-back { position: relative; }
 .post-face .db-face { position: absolute; right: -5px; bottom: -5px; border-radius: 50%; box-shadow: 0 0 0 2px var(--card); }
 .post-face .db-face .face-ring { --skribl-face-size: 22px; width: 22px; height: 22px; }
+/* The small face's initial, when hers is not drawn yet: 11px in its 22px
+   (24px on the page) disc, where the card's own face has 16 (and a page's
+   19, further down: this rule names the ring too so it outweighs that one). */
+.post-face .db-face .face-ring .face-blank.has-initial { font-size: 11px; }
 /* On a draw-back's own page the line sits under the header, in its column. */
 .post-on-page { margin: 6px 0 0; }
 /* Drawing back, the composer says on whose, where a quote would sit. */
@@ -1800,7 +1809,8 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .post-card .cm-way-link > :first-child { justify-self: center; }
 .post-card .cm-way-item::before { left: 21px; }
 .post-card .cm-way-item:last-child::before { bottom: calc(-4px - 0.02px); }
-.cm-page .post-head .face-blank.has-initial { font-size: 19px; }
+/* An initial in a page's own 48px face, a comment's and a post's alike. */
+.post-page .post-head .face-blank.has-initial { font-size: 19px; }
 /* THE COMMENT YOU OPENED (the owner's "Yes to c", Nov 18, to The Opened
    Comment: "it doesn't really let me know that's the reply I'm seeing the
    replies for ... I don't want to make another bubble... but something
@@ -1890,8 +1900,14 @@ a.post-face { text-decoration: none; }
    it, the row scrolling sideways past the page's width (it reaches the
    page's edges on a phone, so the last one is not cut by the gutter). */
 .db-strip { margin-top: 20px; }
-.db-title { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 18px; font-weight: 700; }
-.db-title .ic { color: var(--accent-ink); }
+/* ITS LINE: how many, and at its end "Draw back" in words (the walkthrough's
+   mocks, choice 3, the owner's "all yes", Nov 19), the site's second button
+   as Edit drawing is (44px, 15px), ending at the page's edge, where the
+   drawing ends. The count gives way before the words do. */
+.db-head { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+.db-title { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; font-size: 18px; font-weight: 700; }
+.db-title .ic { flex: none; color: var(--accent-ink); }
+.db-word { flex: none; margin-left: auto; }
 .db-row {
   display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity;
   margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none;
@@ -1985,14 +2001,55 @@ a.post-face { text-decoration: none; }
 .cm-box .composer-draft .skribl-inline { width: min(100%, 150px); }
 /* A DRAWN COMMENT OR REPLY (the owner's B, Nov 17, "Drawings in the
    Thread"): its drawing in its bubble, under its words (under its name when
-   it is a drawing alone), as wide as the bubble's room, so it can be watched
-   where it sits: 294, 246 and 198px on a phone's three levels, 264, 216 and
-   168 on a desk's; the bubble the room's width with it. Its line under it
-   is the player's own, as everywhere. */
-.cm-art { margin: 8px 0 3px; width: 100%; }
-.cm-bubble:has(> .cm-art) { width: 100%; }
+   it is a drawing alone), as wide as the bubble's room (294px on a phone,
+   264 on a desk), so it can be watched where it sits. Its line under it is
+   the player's own, as everywhere.
+   AND NO TALLER THAN THE PAGE'S OWN DRAWING, UNTIL IT PLAYS (the
+   walkthrough's mocks, choice 4, the owner's "all yes", Nov 19). A comment
+   drawn on a phone stood 294 by 523 with its line under it, 674 from top to
+   bottom, under a post's drawing of 370 by 278. At rest it is now as tall
+   as that drawing at most (156 by 277 there), its line waiting for the
+   first play as a card's does (_comments.html, line_waits), the bubble as
+   wide as it is. The first play opens the line and the drawing grows to its
+   room, gliding with it (the player's 0.3s); it stays. One drawn wide is in
+   its room from the start, as before. Under Reduce Motion nothing grows: it
+   plays where it sits.
+   WHY LENGTHS, NOT PERCENTAGES: a box that hugs its drawing has no width
+   for a percentage to be of, so the room and the page's drawing are said
+   from the page's own layout (.col's 16px gutters; a face's 36px and 12px
+   beside the bubble's 14px sides; a desk's 248px rail, its 28px gutters
+   and the 340px column with 40px before it), and verify_socialcomments
+   holds them to what is painted. A desk gives up 17px for a scrollbar the
+   viewport's width may or may not count, so a drawn comment there can be
+   13px under the post's drawing and is never over it. --art-w and --art-h
+   are the page's drawing's shape (post.html, comment.html; a page with no
+   drawing of its own, the Pad's 4:3), --ar the comment's (_comments.html),
+   and 70vh and 640px are the player's own ceiling for a drawing's height
+   (inlineplayer.css, .is-shaped), which the page's drawing keeps to too. */
+.post-page { --art-w: 4; --art-h: 3; --page-art: calc(100vw - 32px); --cm-room: calc(100vw - 108px); }
+@media (min-width: 900px) {
+  .post-page { --page-art: calc(min(100vw - 265px, 1100px) - 436px); --cm-room: 264px; }
+}
+.cm-art {
+  --ar: 1.77778;
+  --cm-rest: min(var(--cm-room, 100%), calc(min(var(--page-art, 100vw) * var(--art-h, 3) / var(--art-w, 4), 70vh, 640px) * var(--ar)));
+  margin: 8px 0 3px; max-width: 100%; width: var(--cm-rest); transition: width 0.3s;
+}
+/* Played once, the line is no longer waiting (Skribl's line_waits), and the
+   drawing has its room. */
+.cm-art:has(> .skribl-inline-line:not(.is-waiting)) { width: var(--cm-room, 100%); }
+@media (prefers-reduced-motion: reduce) {
+  .cm-art { transition: none; }
+  .cm-art:has(> .skribl-inline-line:not(.is-waiting)) { width: var(--cm-rest); }
+}
 .cm-list, .cm-chain { margin: 0; padding: 0; list-style: none; }
 .cm { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 12px; padding: 12px 0 0; }
+/* MORE ROOM BEFORE A NEW CONVERSATION THAN INSIDE ONE (the walkthrough's
+   mocks, choice 5, the owner's "all yes", Nov 19): 30px between one
+   comment's conversation and the next comment, 12 between a comment and the
+   replies followed down under it. It was 12 everywhere, and a long thread
+   read as one run. */
+.cm-list > .cm + .cm { margin-top: 18px; }
 .cm .face-ring { --skribl-face-size: 36px; width: 36px; height: 36px; }
 .cm-main { min-width: 0; }
 .cm-head { display: flex; align-items: baseline; gap: 6px; min-height: 22px; line-height: 1.3; }

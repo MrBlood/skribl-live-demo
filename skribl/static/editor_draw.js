@@ -1081,9 +1081,9 @@ function makeRepeat() {
   b.type = 'button';
   b.className = 'rl-repeat';
   b.setAttribute('aria-label', 'Repeat');
-  // The posts' own arrows (_skribl_inline_player.html, the loop button).
-  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>'
-    + '<path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
+  // The posts' own loop (_skribl_inline_player.html, the loop button): the
+  // infinity sign since Nov 19, where it was two arrows in a ring.
+  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z"/></svg>';
   b.addEventListener('click', () => {
     padRepeat = !padRepeat;
     try { localStorage.setItem(REPEAT_KEY, padRepeat ? '1' : '0'); } catch (e) {}

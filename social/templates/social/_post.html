@@ -86,7 +86,12 @@
 
 {#  A face; one not drawn yet is its blank disc, or with `initial` (the
     comment thread, the owner's yes, Nov 17) the first letter of the name
-    in it, on the site's disc (social.css, .face-blank.has-initial). #}
+    in it, on the site's disc (social.css, .face-blank.has-initial). ON A
+    POST'S CARD, ITS OWN PAGE AND IN ACTIVITY TOO (the walkthrough's mocks,
+    choice 9, the owner's "all yes", Nov 19): a row of blank lilac circles
+    said nothing about who. A Gallery tile's 22px face stays without one, as
+    decided there; lists of people (followers, who liked it, search) are as
+    they were. #}
 {% macro face(who, cls='', initial=false) -%}
 <span class="face-ring{{ ' ' ~ cls if cls }}{% if not who.face_id %} is-blank{% endif %}">{% if who.face_id %}{{ skribl_face(who.face_id, canvas_w=who.face_w, canvas_h=who.face_h, bp=skribl_bp) }}{% elif initial %}<span class="face-blank has-initial" aria-hidden="true">{{ (who.display_name or '?')[:1]|upper }}</span>{% else %}<span class="face-blank" aria-hidden="true"></span>{% endif %}</span>
 {%- endmacro %}
@@ -231,8 +236,8 @@
          {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %}{{ rp_data(c) }} aria-labelledby="pn-{{ p.public_id }}">
   {% if c.by %}{{ reposted_by(c) }}{% endif %}
   <header class="post-head">
-    <a class="post-face{% if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %} has-back{% endif %}" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}
-      {%- if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %}<span class="db-face">{{ face(c.drawn_on.who) }}</span>{% endif %}</a>
+    <a class="post-face{% if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %} has-back{% endif %}" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who, initial=true) }}
+      {%- if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %}<span class="db-face">{{ face(c.drawn_on.who, initial=true) }}</span>{% endif %}</a>
     {#- Their page, the size of a finger: the name's link lies under the name and
         the @handle both, as the whole line's did; when it was is a link of its
         own, to the post's page, over it (social.css, "EASY TO OPEN"). #}
@@ -329,7 +334,7 @@
     <h2 class="make-title" id="repostSheetTitle">Repost</h2>
     <div class="post-acts">
       <button class="post-act mu-act rp-act" type="button" data-rp="repost">{{ ic.repost() }}<span class="mu-words"><b data-rp-name>Repost</b><span class="mu-say" data-rp-say>Show it to the people who follow you</span></span></button>
-      <button class="post-act mu-act rp-act" type="button" data-rp="quote">{{ ic.pen() }}<span class="mu-words"><b>Quote</b><span class="mu-say">Repost it with your own words, or a drawing</span></span></button>
+      <button class="post-act mu-act rp-act" type="button" data-rp="quote">{{ ic.quote() }}<span class="mu-words"><b>Quote</b><span class="mu-say">Repost it with your own words, or a drawing</span></span></button>
     </div>
   </div>
 </div>

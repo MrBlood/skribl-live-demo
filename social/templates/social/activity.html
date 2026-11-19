@@ -77,7 +77,7 @@
 {% endblock %}
 
 {% macro faces(r) -%}
-{%- if r.people|length > 1 %}<span class="act-faces">{{ face(r.people[1]) }}{{ face(r.people[0]) }}</span>{% else %}{{ face(r.people[0]) }}{% endif -%}
+{%- if r.people|length > 1 %}<span class="act-faces">{{ face(r.people[1], initial=true) }}{{ face(r.people[0], initial=true) }}</span>{% else %}{{ face(r.people[0], initial=true) }}{% endif -%}
 {%- endmacro %}
 
 {% macro row(r) -%}

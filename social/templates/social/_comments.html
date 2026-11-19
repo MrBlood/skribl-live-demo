@@ -69,7 +69,9 @@
     as a post's does (the owner's "yes to A", Nov 16). Gone or withheld since,
     the box says the drawing is not here anymore. In a comment's card out in
     the world (`waits`: _post.html comment_card) its line waits for the first
-    play, as a post's card's does. #}
+    play, as a post's card's does; and in a thread too, since Nov 19 (the
+    walkthrough's mocks, choice 4). Only the comment a page is about (its own
+    page: comment.html) has its line from the start, as a post's page has. #}
 {% macro comment_art(it, waits=false) -%}
 {%- set sk = it.sk -%}
 {%- set fm = {'title': it.c.words or it.who.display_name, 'name': it.who.display_name if it.c.words else '', 'handle': '@' ~ it.who.handle} -%}
@@ -114,7 +116,11 @@
       <div class="cm-head"><b class="cm-name">{{ who.display_name }}</b><a class="cm-when" href="{{ url }}"><time datetime="{{ when_iso(c.created_at) }}" data-when="ago">{{ when_day(c.created_at) }}</time></a></div>
       {% if c.taken_down_at and me and me.id == c.person_id %}<p class="post-down cm-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
       {% if c.words %}<p class="cm-words">{{ said(c.words, it.mentions) }}</p>{% endif %}
-      {% if c.skribl_id %}<div class="cm-art">{{ comment_art(it) }}</div>{% endif %}
+      {#- ITS DRAWING, NO TALLER THAN THE PAGE'S OWN (the walkthrough's mocks,
+          choice 4, the owner's "all yes", Nov 19): --ar is its shape, which
+          social.css (.cm-art) needs to size its box; its line waits for the
+          first play, as a card's does, and then it grows to its room. #}
+      {% if c.skribl_id %}<div class="cm-art"{% if it.sk and it.sk.canvas_w and it.sk.canvas_h %} style="--ar: {{ '%.5f'|format(it.sk.canvas_w|float / it.sk.canvas_h|float) }}"{% endif %}>{{ comment_art(it, waits=true) }}</div>{% endif %}
     </div>
     <div class="cm-acts">
       {#- THE COUNT BY THE TALK CLOUD (the owner's yes, Nov 18): how many
