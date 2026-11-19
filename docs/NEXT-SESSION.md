@@ -131,19 +131,59 @@ THREE BUGS, found and not fixed (the owner was told nothing would change):
   three tiles, the page's gutter 16.
 - The "eraser is off" toast lands on the "Drawing back on Ana’s" pill.
 
-THE CHOICES PUT TO THE OWNER (recommended yes to each; a mock first for B,
-C, D and E): the three bugs; A, Quote words only and no Flip in the comment
-box; B, Reply and the heart under a comment, the rest under its dots, a
-drawn comment small and still, more room between conversations; C, Add
-hands the drawing straight back (no sheet in the composer), the viewers'
-speed in Tune, the gallery tick gone; D, the Gallery showing a drawing once
-with its draw-backs counted, a draw-back's card showing the original faint
-and the new lines full until it plays, "Ana, then Theo" on its play button;
-E, names under a phone's tabs, another picture for loop, "Draw back" in
-words beside its pen; F, the Pad's menu in the composer down to Save, How it
-works and Settings; G, the small ones; H, of her say, build "Hide from my
-post" and leave "Who can draw back" (less than the owner's earlier yes: it
-is a suggestion, theirs to take or not).
+THE FIRST LIST OF CHOICES WAS WRONG IN HALF, and was taken back the same
+hour. The owner: "do all your suggestions make sense? double check and make
+sure we're not changing anything that needs to be there." Checked against
+the code and this record, about half would have undone a choice of the
+owner's or removed something needed. Check the record BEFORE recommending a
+removal: most of what is on the site is there by a decision.
+
+WHAT HOLDS UP (removes nothing, undoes nothing; the report's page now says
+this):
+- the three bugs;
+- TWO DETAILS OF THE OWNER'S "ALL YES" TO DRAW BACK THAT ARE NOT BUILT
+  (`DECISIONS.md`, "Draw back, mocked", choices 2 and 3): on a post's own
+  page Draw back carries its words at the row's end (the page shows the pen
+  alone), and the composer's button says "Post draw-back" (it says "Post");
+  and choice 4's "Ana + Theo" words, in place of "drawn in 4 sec";
+- words: empty pages say "Tap Make" where a phone's bar has no names (the
+  owner took them off, Nov 15); Activity's "drew something on your post"
+  beside "drew back on your drawing" (a drawn reply already says "replied
+  with a drawing"); Activity's empty words leave out draw-backs; the
+  Gallery's search words are cut off at 402;
+- a drawn comment no taller than the post's own drawing (the owner's B,
+  Nov 17, is "as wide as the bubble": a phone's tall drawing was not in
+  that mock), and more room between conversations than inside one;
+- a mock each: another picture for loop (Skribl's player, so Pad, Flip and
+  the link page with it, and the in-post player's byte budget), a quote mark
+  for Quote, an initial in a blank face on cards and in Activity (a
+  Gallery tile's 22px face is "never an initial", by an earlier decision).
+
+THE OWNER'S TO CALL (each undoes a choice of theirs):
+- the comment's row: "the post's choices on every comment" was the owner's
+  yes (Nov 17); repost under the dots would remove nothing;
+- the Add sheet's gallery tick (the owner's pick A, from before the site
+  had a Gallery of its own): its line is untrue on the site; reword it, or
+  the site stops asking for it (`?gallery=1`). An earlier entry asked the
+  same and was not answered ("should the editors' tick say what it does now
+  that every post is in the site's Gallery?").
+
+TAKEN BACK, and why: Quote without a drawing (the only way to answer a Flip
+or a post of words with a drawing in a post of your own); Flip out of the
+comment box (Pad and Flip do not drift); no Add sheet (the owner's pick,
+and "Viewers start at" is the author's speed, a root; Tune's Watching speed
+is the preview's); names under a phone's tabs (the owner's own choice,
+Nov 15); a draw-back's card with the original faint (washed-out ink on
+every card: "no dinge"); one Gallery tile a drawing (the test site's ten
+posts held four draw-backs; wait for the live site); a three-item Pad menu
+in the composer (New, Your drafts and the Pad and Flip switch are there on
+purpose; only Library and Public gallery lead out, read in the template and
+not tried on screen); the Gallery without Following and Everyone (the map);
+leaving "Who can draw back" for later (the artist's say over her own art:
+build both parts of choice 7).
+
+The walkthrough's copy of the site is gone (its server did not outlive the
+turn); its scripts were scratch.
 
 ## Open threads
 
