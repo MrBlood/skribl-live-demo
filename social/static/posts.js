@@ -499,6 +499,68 @@
         rpSay(rpWhy(j));
       });
   }
+  /* WHEN A REPLAY ENDS (Draw back, the mock's choice 2): where the row has
+     Draw back's pen, "Watch again" and Draw back rise where the play button
+     was, over the finished drawing: you have just watched it, so that is the
+     moment to answer. They go as it plays again, by either. A glide up and a
+     fade (social.css .db-end); under Reduce Motion a fade where they sit. */
+  doc.addEventListener('skribl:ended', function (e) {
+    var box = e.target, art = box && box.closest ? box.closest('.post-art') : null;
+    var root = art && art.closest('[data-post], .post-page');
+    var pen = root && root.querySelector('.post-row .db-pen');
+    if (!art || !pen || box.querySelector('.db-end')) return;
+    var end = doc.createElement('div');
+    end.className = 'db-end';
+    var again = doc.createElement('button');
+    again.type = 'button';
+    again.className = 'db-again';
+    again.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 2.5l9 5.5-9 5.5z" fill="currentColor"/></svg>';
+    again.appendChild(doc.createTextNode(say('db_again') || 'Watch again'));
+    var go = doc.createElement('button');
+    go.type = 'button';
+    go.className = 'db-go';
+    go.setAttribute('data-drawback', pen.getAttribute('data-drawback'));
+    go.setAttribute('data-drawback-first', pen.getAttribute('data-drawback-first') || '');
+    go.innerHTML = (pen.querySelector('svg') || { outerHTML: '' }).outerHTML;
+    go.appendChild(doc.createTextNode(say('db_go') || 'Draw back'));
+    end.appendChild(again);
+    end.appendChild(go);
+    /* In the drawing's own box, at its foot; the box's own replay button
+       steps aside while they are up (they say it in words). */
+    box.appendChild(end);
+    /* The box can run taller than the drawing (room for its line): the pills
+       stand 12px above the drawing's own foot, measured. */
+    var cv = box.querySelector('canvas, img'), br = box.getBoundingClientRect(), cr = cv ? cv.getBoundingClientRect() : br;
+    end.style.bottom = Math.max(12, br.bottom - cr.bottom + 12) + 'px';
+    box.classList.add('db-ended');
+    void end.offsetHeight;
+    end.classList.add('is-up');
+    function away() {
+      if (!end.parentNode) return;
+      watch.disconnect();
+      end.remove();
+      box.classList.remove('db-ended');
+    }
+    again.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      away();
+      var p = box._skriblInline;
+      if (p && p.play) p.play();
+    });
+    /* Its own click, so the box's tap (play or pause) never takes it first. */
+    go.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      away();
+      if (window.SocialComposer && window.SocialComposer.drawBack) {
+        window.SocialComposer.drawBack({ id: go.getAttribute('data-drawback'), first: go.getAttribute('data-drawback-first'), from: pen });
+      }
+    });
+    var watch = new MutationObserver(function () { if (box.classList.contains('is-playing')) away(); });
+    watch.observe(box, { attributes: true, attributeFilter: ['class'] });
+  });
+
   /* DRAW BACK (the owner's "All yes", Nov 19): the row's pen opens the
      composer, and the Pad over it with the drawing faint under the pen
      (compose.js drawBack). */

@@ -23,6 +23,14 @@ each in a browser with a virtual passkey.
      pill "Drawing back on Ana’s"; Theirs goes faint, full, hidden and round
      again; drawn, Done, Add and Post land on the new post, whose drawing
      holds hers and then his.
+  5. ACTIVITY: "Theo drew back on your drawing", new, his words, Draw
+     back's pen on his face, opening his draw-back; none from somebody she
+     muted, none of her own; the nudge's words, under Replies.
+  6. HER POST'S STRIP: "3 draw-backs", newest first, each its drawing and
+     who, opening its page; behind a block, not on the strip.
+  7. WHEN A REPLAY ENDS: "Watch again" and "Draw back" in the drawing's own
+     box, 12px above its foot, 44px, the box's replay mark aside; Watch
+     again plays it and they go; Draw back opens the composer on hers.
   9. No page errors, no console errors and no CSP violations.
 
 SOCIALDRAWBACK_PART=<n>[,<m>] runs those sections only (calibration). Every
@@ -782,6 +790,156 @@ with sync_playwright() as p:
                   f"line {line!r}; landed {landed}; {len(pts)} points")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(4, exc)
+
+    # ------------------------------------------------------------------ 5
+    if part(5, "Activity: her row, the dot, the nudge's words; nobody muted, never your own"):
+        try:
+            ana = someone(b, "ana", "Ana Ruiz")
+            theo = someone(b, "theo", "Theo Lin")
+            mo = someone(b, "mona", "Mona Vale")
+            cat = post_payload(ana, "Section 5, the cat", CAT)
+            # Ana mutes Mona: her draw-back is no row of Ana's.
+            c = ana.client()
+            c.get("/social/")
+            mst, _ = c.post_json("/social/@mona/mute", {})
+            draw_back(mo, cat, answer(n=12, seed=11))
+            st, j = draw_back(theo, cat, answer())
+            back = (j or {}).get("post")
+            mine = draw_back(ana, cat, answer(n=8, seed=12))     # her own, on her own: never a row of hers
+            # Asked before she looks: what a nudge says is what is new.
+            NUDGE = r"""
+import json, sys
+from datetime import timedelta
+from app import create_app
+app = create_app()
+with app.test_request_context("/social/"):
+    from social.models import Person, utcnow
+    from social.push import nudges_for
+    import sqlalchemy as sa
+    from social.security import site
+    me = site().session().execute(sa.select(Person).where(Person.handle_key == "ana")).scalar_one()
+    got = nudges_for(me, utcnow() - timedelta(minutes=10), {"replies"})
+    print(json.dumps([[p["title"], p["body"], p["url"], sorted(sw)] for p, sw, _ in got]))
+"""
+            probe = subprocess.run([sys.executable, "-c", NUDGE], cwd=ROOT, capture_output=True, text=True, timeout=180, env=ENV)
+            try:
+                nudged = json.loads(probe.stdout.strip().splitlines()[-1])
+            except Exception:  # noqa: BLE001
+                nudged = probe.stderr[-300:]
+            ctx, pg = browser_as(b, ana)
+            pg.goto(BASE + "/social/")
+            ready(pg)
+            pg.goto(BASE + "/social/activity")
+            ready(pg)
+            rows = pg.evaluate("""() => [...document.querySelectorAll('.act-row')].map(a => ({ text: a.innerText.replace(/\\s+/g, ' ').trim(),
+              href: new URL(a.href).pathname, badge: !!a.querySelector('.db-badge svg'), isNew: a.classList.contains('is-new') }))""")
+            close_ctx(ctx, pg)
+            # Only this section's: earlier sections drew back on Ana's too.
+            db_rows = [r for r in rows if "drew back on your drawing" in r["text"] and r["href"] == f"/social/p/{back}"]
+            others = [r for r in rows if "drew back on your drawing" in r["text"] and r["text"].startswith(("Mona", "New: Mona", "Ana", "New: Ana"))]
+            check("Ana's Activity has Theo's draw-back, new: \"Theo drew back on your drawing\", Draw back's"
+                  " pen on his face, opening his draw-back; none of Mona, whom she muted, and none of her own",
+                  st == 200 and mst == 200 and len(db_rows) == 1 and not others
+                  and db_rows[0]["text"].startswith("New: Theo drew back on your drawing")
+                  and db_rows[0]["href"] == f"/social/p/{back}" and db_rows[0]["badge"] and db_rows[0]["isNew"],
+                  json.dumps(rows)[:500])
+            check("it nudges as a reply does (Replies): \"Theo drew back on your drawing\", and with no words of his"
+                  " \"Tap to watch yours, then theirs.\", to his draw-back",
+                  isinstance(nudged, list) and any(n[0] == "Theo drew back on your drawing" and n[2].endswith(f"/social/p/{back}")
+                                                   and n[1] == "Tap to watch yours, then theirs." and n[3] == ["replies"]
+                                                   for n in nudged),
+                  json.dumps(nudged)[:400])
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(5, exc)
+
+    # ------------------------------------------------------------------ 6
+    if part(6, "her post's strip: how many, newest first, each opening its draw-back; nothing a block hides"):
+        try:
+            ana = someone(b, "ana", "Ana Ruiz")
+            theo = someone(b, "theo", "Theo Lin")
+            uma = someone(b, "uma", "Uma Sato")
+            # (Lea: nobody Ana blocked; Kim is blocked by Ana in section 2.)
+            kim = someone(b, "lea", "Lea Fox")
+            cat = post_payload(ana, "Section 6, the cat", CAT)
+            first = (draw_back(theo, cat, answer(n=10, seed=21))[1] or {}).get("post")
+            time.sleep(0.02)
+            second = (draw_back(uma, cat, answer(n=10, seed=22))[1] or {}).get("post")
+            time.sleep(0.02)
+            third = (draw_back(kim, cat, answer(n=10, seed=23))[1] or {}).get("post")
+            # Theo blocks Lea: hers is not on the strip Theo sees.
+            c = theo.client()
+            c.get("/social/")
+            bst, _ = c.post_json("/social/@lea/block", {})
+            STRIP = """() => { const s = document.querySelector('.db-strip'); if (!s) return null;
+              return { title: s.querySelector('.db-title').innerText.trim(), icon: !!s.querySelector('.db-title svg'),
+                       tiles: [...s.querySelectorAll('.db-tile')].map(t => [new URL(t.href).pathname, t.querySelector('.db-by').textContent,
+                                                                           !!t.querySelector('.more-plate img')]),
+                       wide: document.documentElement.scrollWidth <= innerWidth }; }"""
+            seen = {}
+            for who in (ana, theo):
+                ctx, pg = browser_as(b, who)
+                pg.goto(BASE + f"/social/p/{cat}")
+                ready(pg)
+                seen[who.handle] = pg.evaluate(STRIP)
+                close_ctx(ctx, pg)
+            want = [[f"/social/p/{x}", n, True] for x, n in ((third, "Lea"), (second, "Uma"), (first, "Theo"))]
+            check("on her post, under the row: \"3 draw-backs\" with Draw back's pen, then each draw-back's drawing and who"
+                  " drew back, newest first, each opening its own page; nothing past the screen",
+                  seen["ana"] and seen["ana"]["title"] == "3 draw-backs" and seen["ana"]["icon"] and seen["ana"]["tiles"] == want
+                  and seen["ana"]["wide"], json.dumps(seen["ana"]))
+            check("behind a block (Theo blocked Lea) Lea's is not on the strip Theo sees: \"2 draw-backs\"",
+                  bst == 200 and seen["theo"] and seen["theo"]["title"] == "2 draw-backs" and seen["theo"]["tiles"] == want[1:],
+                  json.dumps(seen["theo"]))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(6, exc)
+
+    # ------------------------------------------------------------------ 7
+    if part(7, "when a replay ends: Watch again and Draw back at the drawing's foot; they go as it plays"):
+        try:
+            ana = someone(b, "ana", "Ana Ruiz")
+            theo = someone(b, "theo", "Theo Lin")
+            short = post_payload(ana, "Section 7, short", drawing(n=20, seed=31))
+            END = """(post) => { const c = document.querySelector('.post-card[data-post="' + post + '"]'); if (!c) return null;
+              const e = c.querySelector('.db-end'), box = c.querySelector('[data-skribl-inline]');
+              if (!e) return { none: true };
+              const cv = box.querySelector('canvas, img'), cr = cv.getBoundingClientRect();
+              return { up: e.classList.contains('is-up'), parent: e.parentElement === box,
+                       buttons: [...e.querySelectorAll('button')].map(b => { const r = b.getBoundingClientRect();
+                         const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                         return { words: b.textContent.trim(), h: r.height, inside: r.bottom <= cr.bottom - 11.5 && r.top >= cr.top,
+                                  hit: !!at && b.contains(at), font: getComputedStyle(b).fontFamily }; }),
+                       playAside: getComputedStyle(c.querySelector('.skribl-inline-play')).visibility }; }"""
+            seen = {}
+            for scheme in ("light", "dark"):
+                ctx, pg = browser_as(b, theo, scheme=scheme)
+                home(pg)
+                sel = f'.post-card[data-post="{short}"]'
+                pg.locator(sel).scroll_into_view_if_needed()
+                pg.click(sel + " .skribl-inline-play")
+                pg.wait_for_function("(s) => !!document.querySelector(s + ' .db-end.is-up')", arg=sel, timeout=20000)
+                pg.wait_for_timeout(300)
+                seen[scheme] = pg.evaluate(END, short)
+                if scheme == "light":
+                    pg.click(sel + " .db-again")
+                    pg.wait_for_timeout(250)
+                    seen["again"] = {"gone": pg.evaluate("(s) => !document.querySelector(s + ' .db-end')", sel),
+                                     "playing": pg.evaluate("(s) => document.querySelector(s + ' [data-skribl-inline]').classList.contains('is-playing')", sel)}
+                    pg.wait_for_function("(s) => !!document.querySelector(s + ' .db-end.is-up')", arg=sel, timeout=20000)
+                    pg.click(sel + " .db-go")
+                    pg.wait_for_function("() => window.SocialComposer && !!SocialComposer.drawingBack()", timeout=10000)
+                    seen["go"] = pg.evaluate("() => SocialComposer.drawingBack()")
+                close_ctx(ctx, pg)
+            ok = all(v and v.get("up") and v.get("parent") and [x["words"] for x in v["buttons"]] == ["Watch again", "Draw back"]
+                     and all(x["h"] >= 44 and x["inside"] and x["hit"] and "monospace" not in x["font"] for x in v["buttons"])
+                     and v["playAside"] == "hidden" for v in (seen["light"], seen["dark"]))
+            check("when a replay ends, \"Watch again\" and \"Draw back\" rise in the drawing's own box, 12px or more above"
+                  " its foot, 44px each, painted where they stand, in the site's face; the box's own replay mark aside"
+                  " (light and dark)", ok, json.dumps({k: seen.get(k) for k in ("light", "dark")})[:600])
+            check("Watch again plays it again and they go; Draw back opens the composer drawing back on hers",
+                  seen.get("again") == {"gone": True, "playing": True} and (seen.get("go") or {}).get("id") == short,
+                  json.dumps({k: seen.get(k) for k in ("again", "go")}))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(7, exc)
 
     # ------------------------------------------------------------------ 9
     if part(9, "no page errors, no console errors and no CSP violations"):

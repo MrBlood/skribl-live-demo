@@ -384,6 +384,24 @@ def _quotes(me, hidden, limit=READ):
     return site().session().execute(q).all()
 
 
+def _drawbacks(me, hidden, since=None, limit=READ):
+    """DRAW BACK (the owner's "All yes", Nov 19): the draw-backs on what `me`
+    made, newest first, as Activity's rows would have them: not theirs,
+    nobody hidden from them (blocks, takedowns and mutes, in `hidden`), none
+    taken down, on a post of theirs still there; with `since`, only newer.
+    [(draw-back, its author)]."""
+    q = (sa.select(Post, Person).join(Person, Person.id == Post.person_id)
+         .where(Post.drawn_on_owner_id == me.id, Post.person_id != me.id, Post.taken_down_at.is_(None),
+                Post.drawn_on_id.isnot(None), Post.is_drawback.is_(True))
+         .order_by(Post.created_at.desc(), Post.id.desc()).limit(limit))
+    if since is not None:
+        q = q.where(Post.created_at > since)
+    hid = sorted(hidden)
+    if hid:
+        q = q.where(Post.person_id.notin_(hid))
+    return site().session().execute(q).all()
+
+
 def _mentions(me, hidden, since=None, limit=READ, quiet=frozenset()):
     """The mentions of `me` that may be Activity's rows, newest first (on the
     mentions' own index, (person_id, created_at)): not by themselves, nobody
@@ -502,7 +520,8 @@ SAYS = {"comment": "said something on your post", "answer": "replied to your com
         "answer_drawing": "replied with a drawing", "drawing": "drew something on your post",
         "like": "liked your post", "like_comment": "liked your comment", "follow": "followed you",
         "repost": "reposted your post", "repost_comment": "reposted your comment",
-        "quote": "quoted your post", "quote_comment": "quoted your comment", "mention": "mentioned you"}
+        "quote": "quoted your post", "quote_comment": "quoted your comment", "mention": "mentioned you",
+        "drawback": "drew back on your drawing"}
 
 
 def sentence(row):
@@ -525,6 +544,10 @@ def dot(me):
     # index, by the same rules.
     named = _mentions(me, hidden, since, DOT_READ, quiet=quiet)
     if any(c.drawing_id is None for c, *_ in rows) or any(r[3] is None or r[3].drawing_id is None for r in named):
+        return True
+    # A DRAW-BACK lights it as a reply does (somebody talking to you, in a
+    # drawing), nobody muted.
+    if _drawbacks(me, hidden | quiet, since, 1):
         return True
     drawings = [c.drawing_id for c, *_ in rows] + [r[3].drawing_id for r in named]
     return bool(drawings) and bool(_drawings_shown(me, drawings, _described(me, drawings)))
@@ -630,6 +653,8 @@ def listing(me, skribl_blueprint="skribl"):
         said_c = {cid: r for cid, r in got.items() if cid in ok and (r[0].drawing_id is not None or r[1] is not None)}
     # MENTIONS (mentions): nobody muted either, as comments.
     named = _mentions(me, hidden, quiet=quiet)
+    # DRAW-BACKS: nobody muted either; their own drawing is the picture.
+    drawn = _drawbacks(me, hidden | quiet)
     drawings = ([r[0].drawing_id for r in items if r[0].drawing_id] + [g["drawing_id"] for g in liked if g["drawing_id"]]
                 + [g["comment"].drawing_id for g in liked if g.get("comment") is not None and g["comment"].drawing_id]
                 + [q.quoted_drawing_id for q, *_ in quoted if q.quoted_drawing_id]
@@ -649,7 +674,7 @@ def listing(me, skribl_blueprint="skribl"):
                        else (r[2].skribl_id or r[6] or r[2].quoted_drawing_id)) for r in named}
     sk = _described(me, drawings + list(pics.values()) + [g["skribl_id"] for g in liked]
                     + [g["skribl_id"] for g in shared] + list(qpics.values()) + list(mpics.values())
-                    + list(rpics.values()))
+                    + list(rpics.values()) + [d.skribl_id for d, _ in drawn if d.skribl_id])
     shown = _drawings_shown(me, drawings, sk)
 
     def page(post_public, drawing_id):
@@ -762,6 +787,15 @@ def listing(me, skribl_blueprint="skribl"):
             "kind": "mention", "new": new, "when": m.created_at, "words": words or None, "people": [who],
             "names": [who.display_name.split(" ")[0]], "n": 1, "href": href,
             "pic": _pic(mpics[m.id], sk.get(mpics[m.id]), skribl_blueprint)})
+    # DRAW-BACKS: a row each, "Theo drew back on your drawing", their words
+    # under it; they open the draw-back, which plays yours and then theirs.
+    for d, who in drawn:
+        new = since is None or as_utc(d.created_at) > since
+        sections[0 if new else 1].append({
+            "kind": "drawback", "new": new, "when": d.created_at, "words": d.words or None, "people": [who],
+            "names": [who.display_name.split(" ")[0]], "n": 1,
+            "href": url_for("social.post_page", public_id=d.public_id),
+            "pic": _pic(d.skribl_id, sk.get(d.skribl_id), skribl_blueprint) if d.skribl_id else None})
     # FOLLOWS: since you last looked one row, before a row a day; they open
     # their page, or several, who follows you.
     from .accounts import profile_url

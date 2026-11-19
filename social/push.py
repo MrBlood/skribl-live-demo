@@ -87,7 +87,10 @@ from .security import current_person, origin_ok, over, public_origin, read_cooki
 #: The switch each of Activity's rows is under (models.PUSH_KINDS).
 SWITCH_OF = {"comment": "replies", "answer": "replies", "answer_drawing": "replies", "drawing": "replies",
              "mention": "mentions", "like": "likes", "like_comment": "likes", "follow": "follows",
-             "repost": "reposts", "repost_comment": "reposts", "quote": "reposts", "quote_comment": "reposts"}
+             "repost": "reposts", "repost_comment": "reposts", "quote": "reposts", "quote_comment": "reposts",
+             # A draw-back answers you, in a drawing: Replies (the mock's "it
+             # nudges as a reply does").
+             "drawback": "replies"}
 SWITCHES = ("replies", "mentions", "likes", "follows", "reposts")
 
 #: The push services browsers use: a nudge goes to one of these, or nowhere.
@@ -297,6 +300,8 @@ def body_of(row):
     quotes as Activity shows them, cut short for a lock screen."""
     if row["kind"] in ("answer_drawing", "drawing"):
         return "Tap to watch it draw."
+    if row["kind"] == "drawback" and not row.get("words"):
+        return "Tap to watch yours, then theirs."
     words = " ".join((row.get("words") or "").split())
     if not words:
         return ""
@@ -309,7 +314,7 @@ def tag_of(row):
     """What a nudge takes the place of: the same kind on the same page (a
     post's comments, a conversation's answers, a post's likes); a mention, a
     quote and a drawing each their own."""
-    one = row["kind"] in ("mention", "quote", "quote_comment", "answer_drawing", "drawing")
+    one = row["kind"] in ("mention", "quote", "quote_comment", "answer_drawing", "drawing", "drawback")
     return f"{row['kind']}:{row['href'] if one else row['href'].split('#', 1)[0]}"
 
 

@@ -1892,7 +1892,16 @@ with sync_playwright() as sp:
     #   (+10; Full screen's is in postfull.css, outside this sum), paid for by
     #   the line's controls repeating the base rule's display:flex (-13).
     #   82,038 B measured, against 82,041 before it.
-    EMBED_RATCHET = 82_041
+    # RAISED (the owner's "All yes", Nov 19, to the Draw back mock: Draw back
+    #   rising when a replay ends, its choice 2), for one named cost: +81 B,
+    #   all inlineplayer.js -- the box sends `skribl:ended`, bubbling, once a
+    #   replay that does not repeat comes to its end (docs/INTEGRATION.md, beside
+    #   `skribl:mark`). What rises (the pills, their placing and words) is the
+    #   site's own (social/static/posts.js, social.css), outside this sum.
+    #   WHICH CALLER PAYS: every page that shows a post, for an event any host
+    #   can answer. Spent first: the line written without spaces. 82,119 B
+    #   measured, against 82,038 before it.
+    EMBED_RATCHET = 82_119
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
