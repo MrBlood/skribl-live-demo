@@ -46722,3 +46722,98 @@ does it).
 NOT TESTED HERE: an iPhone (WebKit), Windows' own rendering, the live site.
 The one-glance tell: on a desk in light, a pressed Repeat in the Play pill
 wears a deeper violet ring.
+
+## After v330 -- Nudges: push notifications on the dot's rule, asked once in Activity, a switch a kind in Settings
+
+The owner, Nov 18, asked what a typical social site has that Blooby doesn't;
+push notifications came first. The mock, Blooby's Nudges
+(https://claude.ai/artifact/JmZrCBievKeNREBNAyzMTk), asked four things, and
+the owner said "All yes": A, the dot's rule (what buzzes is what lights the
+bell's dot); A, a card in Activity, asked once; Settings' "Notifications on
+this phone" with Theme's switch for each kind, the number on the icon on; the
+words as shown. docs/SOCIAL-SITE.md section 19 says what was built.
+
+A NUDGE IS ACTIVITY'S ROW. Nothing new is kept about what happened: after a
+request commits, the person's Activity is read as their page reads it, and
+the newest new row of the kind that happened is the nudge, in the page's own
+words (activity.SAYS and sentence(), which the template now takes from the
+view, so the two can never drift), its link the row's. So blocks, takedowns,
+mutes and deletions need no rule of their own here: no row, no nudge. Two
+things were found while building it and are held by the suite:
+- THE ROW OF ITS OWN KIND. The first form took the newest new row of any
+  kind; a like landing a moment after a comment would have taken the
+  comment's nudge. Each event now names its switch (push.note), and the
+  newest row under that switch is taken.
+- NEVER TOLD TWICE. Something that makes no row (a muted person's comment)
+  still names a switch, and the newest row under it could be one already
+  told, moments old. Each device keeps told_up_to, the time of the newest
+  row it was told about; nothing older or as old is sent again. Section 4
+  shows it red without the rule.
+
+NO LOCK HELD ACROSS THE NETWORK. On SQLite a read holds the file's lock to
+its transaction's end (Skribl's BEGIN recipe), and a push service can take
+seconds. The sender reads (the devices, the rows), rolls back, sends, then
+opens a short write for what it learned (told_up_to, devices gone). Two
+threads a process, made after gunicorn's fork.
+
+WHERE IT MAY GO. Only Apple's, Google's, Mozilla's and Microsoft's push
+services, over https, port 443, no name in the address, no redirect
+followed: an address of somebody's choosing is refused at subscribe (and the
+harness's stand-in is honoured only where SOCIAL_PUSH_TEST_ORIGIN names an
+http origin on this machine, never where Render's RENDER is set).
+
+SEALED AND SIGNED WITH WHAT WAS THERE. RFC 8291 and RFC 8292 with the
+cryptography package passkeys already brought; the signing key made from
+SECRET_KEY by HKDF (or SOCIAL_VAPID_KEY), so nothing new to keep, install or
+pay for. seal() makes RFC 8291's worked example byte for byte.
+
+THE SIGN-IN. A device keeps the generation and a mark of the sign-in that
+made it: signing out here and Sign out everywhere take devices in code, a
+device of an older generation is never nudged, and deleting an account
+takes them in code (shown with SQLite's cascade off). push.js asks
+/push/state once a new sign-in on every page, so a device somebody else
+signs in on stops being nudged for the one before.
+
+THE PAGES. The card and the panel are sent hidden and shown by push.js; both
+glide open in the comments' fold's timing, and a state known at once (told
+no, an iPhone in a browser tab) is there as the page is drawn instead. A
+browser that cannot be nudged shows no panel. The rows' line is the
+passkeys' --rule, a shade softer than the mock's. Settings' first build drew
+Turn on above switches that were on (the button's display beat [hidden]);
+the screenshot showed it, the suite had not, and now asks what is drawn.
+
+CHROMIUM'S OWN HEADLESS. The headless shell says no to every notification
+and grants none, so verify_socialpush launches channel "chromium", as
+verify_social's back button does. In every other suite (the shell) Settings
+shows the told-no card; verify_socialsettings now counts that card among
+Settings' cards when it measures the gap after Theme.
+
+CALIBRATION. Each part broken in a worktree of its own, its section run:
+31 of 31 red (the seal's info string, the key ignoring its secret, any
+https host, any key, the comment's note, the switches, told twice, a 410
+kept, sign out here, Sign out everywhere, an old generation, another's
+device kept, a takeover keeping its switches, deletion in code, two names,
+the drawn words, a tag with its anchor, the number always, the JWT's aud,
+no Topic, asking again, no glide, every state drawn, dim words, small
+buttons, no revert, always "phone", no new sign-in's ask, an off-site link,
+the shown nudges kept, a known state gliding in); green as built.
+
+FLIP AND THE PAD: no change; nudges are the site's.
+
+THE SUITES, side by side (run_parallel -j 3, on f037f820): verify_socialpush
+99/99, verify_socialauth 76/76, verify_migrations 86/86,
+verify_socialactivity 46/46, verify_socialsettings 45/45, verify_socialapp
+55/55, verify_sociallikes 111/111, verify_socialfollow 79/79,
+verify_socialreposts 98/98, verify_socialmentions 51/51, verify_socialposts
+99/99, verify_socialmute 68/68, verify_socialsafety 38/38, verify_social
+45/45, verify_a11y 444/444, verify_a11ypages 162/162, verify_contrast
+677/677, verify_docs 144/144, and verify_socialcomments 142/143 beside the
+others (its desk Reply glide, read on every frame, which nudges do not
+touch), 143/143 alone: INTERMITTENT, load, not a defect. NOT RUN: the full battery (main's run after the merge
+does it).
+
+NOT TESTED HERE: a real push service, an iPhone (WebKit, and Blooby on its
+Home Screen), Windows' own notifications and fonts, the live site. The
+one-glance tell: Activity shows "Hear when someone answers you" at its top
+(on a device that has not been asked), and Settings has "Notifications on
+this phone" under Theme.
