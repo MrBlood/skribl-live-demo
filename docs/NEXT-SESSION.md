@@ -220,7 +220,14 @@ PUT TO THE OWNER, THEIRS TO ANSWER (each built the way named first):
 - the Text drawer's way out of a post ("Yours" with no hand yet, and "Edit
   your hand", leave the composer's frame and the drawing is gone): not
   fixed; the answer offered is that inside a post "Edit your hand" is not
-  shown and "Yours" with no hand says where to make one.
+  shown and "Yours" with no hand says where to make one;
+- THE OWNER'S OWN QUESTION (about 4:10 PM): what comes next to make the
+  site smooth with the editors, whether anything in their menu belongs in
+  the site's, "somehow link to how it works?". Answered, not decided
+  (`DECISIONS.md`, the newest entry): the site has no door to How it works
+  today; offered, a row in the site's menu (a mock first), and a walk of
+  Save and Drafts between the editors and the profile, which was not
+  walked.
 
 THE SIX MOCKS, as they were put up:
 https://claude.ai/artifact/MxPYZyHAtdR4hEg9YiXAuR, ten choices with a
