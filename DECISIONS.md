@@ -46914,3 +46914,28 @@ ignored, any word said, a tap opening Activity), green as built.
 FIRST TRUE TEST: the owner's iPhone, from the Home Screen app, got a test
 nudge through Apple's push service ("Sent, and Apple took it", and it
 arrived): sealing, signing and Apple's acceptance hold on a real device.
+
+## After v330 -- The thread, found again: Blooby is where people talk in drawings
+
+Nov 18, evening, after nudges: the owner asked whether the site had lost its
+way ("Are we kind? Have we lost the thread? ... This needs to flow"). The
+honest answer: a little. For a week it gained what any social site has, each
+piece kind in its own right (the dot's rule, quiet mutes, real deletion, no
+algorithm), with the drawing riding along instead of leading, while the rare
+thing is the performance ("drawings that draw themselves", FUTURE.md §1).
+
+Proposed, and the owner's yes ("I like your recommendation ... Let's figure
+out how to make this social, art communication and art for art, but look
+good as a social site. It has to work intuitively. Be powerful, simple, kind
+and.. this is new. Let's harness it"), in this order:
+
+1. Draw back: answering a drawing by drawing with it, theirs faint under the
+   pen, the answer playing theirs and then yours; draw-backs on draw-backs
+   a jam (FUTURE.md §4, idea 7).
+2. Messages as drawn letters (the map's item 8, reshaped).
+3. Watching first everywhere ("drawn in 47 min · watching at 8×").
+
+Written into WORKING-AGREEMENTS.md (the roots: "Blooby is where people talk
+in drawings"), and into docs/NEXT-SESSION.md for the session that mocks Draw
+back. Bluesky's open app is named there as a reference for behaviour, never
+for look. Nothing is built yet: Draw back is mocked first.

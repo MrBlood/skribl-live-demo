@@ -89,6 +89,21 @@ option makes watching a drawing better.
   right icon showing each time (the owner asked for this on the editing canvas).
 - It must work for a 20-second doodle and for an artist's two-hour piece.
 
+**Blooby is where people talk in drawings** (the owner, Nov 18, after a week
+of building "what any social site has" and asking "Are we kind? Have we lost
+the thread?"): "Let's figure out how to make this social, art communication
+and art for art, but look good as a social site. It has to work intuitively.
+Be powerful, simple, kind and.. this is new. Let's harness it." So the site
+looks like a social site (cards, faces, a feed, Activity) and the drawing
+leads. Its one new verb is **Draw back**: answering a drawing by drawing with
+it, theirs faint under your pen, the answer playing theirs and then yours
+(FUTURE.md §4, idea 7: "the feature that would make a network worth
+having"). Then messages as drawn letters, and watching first everywhere.
+Before any feature that every social site has, ask how it serves talking in
+drawings; one that only imitates is the drift to catch. Bluesky's open app
+(github.com/bluesky-social/social-app) is a reference for how a social site
+behaves, never for its look.
+
 **What "good" looks like in a replay** (the owner's spec for the demo drawings,
 and the bar for anything that shows Pad off):
 - Draw through the real app with real pointer events: pressure that changes along

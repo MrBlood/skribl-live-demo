@@ -6,18 +6,69 @@ newest entries at the bottom of `DECISIONS.md`, and how to work is
 `WORKING-AGREEMENTS.md`. Read this after `START-HERE.md`; once you have,
 replace it with your own handoff or delete it, so it never goes stale here.
 
-## The owner's next ask
+## Read this first: the thread, found again
 
-**Mock direct messages**, the map's part two, item 8 (`docs/SOCIAL-SITE.md`,
-section 17): "one to one, a drawing as easily as words, who may message you,
-and a requests inbox". The owner said yes to mocking it next (Nov 18) and to
-starting it in a fresh session. Mock first, as always: light and dark, a
-touch phone (402) and a desk, "now" beside each option, measured contrast
-and 44px targets, two or three options with one recommended, the choices
-batched so "All yes" is a whole answer, and a line on what it does to Pad and
-Flip.
+At the end of the evening the owner stepped back: "We're not sure if
+skribls.net want us so we're designing a platform, maybe losing our way a
+little.. we have a historical philosophy and pillars and roots. A vibe. Are
+we kind? Have we lost the thread? How can we build this site to be unique
+and kind and integrate skribl pad/flip into this independent social site?
+This needs to flow."
 
-Questions the mock will likely need to ask (offer, recommend one):
+The answer they agreed with: a little, yes. For a week the site gained "what
+any social site has", each piece done well and kind (the dot's rule, quiet
+mutes, real deletion, no algorithm), but the drawing rode along instead of
+leading. The rare thing is the performance, "drawings that draw themselves"
+(`FUTURE.md` §1). Then the owner: "I like your recommendation. Good job
+bringing it back. Let's figure out how to make this social, art
+communication and art for art, but look good as a social site. It has to
+work intuitively. Be powerful, simple, kind and.. this is new. Let's harness
+it." The roots section of `WORKING-AGREEMENTS.md` now says it too.
+
+## The owner's next ask, in their chosen order
+
+1. **Draw back** (next, the first mock): answering a drawing by drawing with
+   it. `FUTURE.md` §4, idea 7, "Skribl as a reply": "the feature that would
+   make a network worth having", needing almost nothing new (the Pad's onion
+   skin and backgrounds already do the work). The first sketch, for the mock
+   to test against other options:
+   - "Draw back" beside Reply on every drawing: the Pad opens with their
+     drawing faint underneath, so you draw with them, never over them.
+   - The draw-back plays theirs, then yours: one performance, two hands.
+     Credited both ways ("Drawn back on Ana's").
+   - Draw-backs on draw-backs make a jam that plays from the first stroke to
+     the last: art for art.
+   - It looks like a social site (cards, faces, the feed, Activity); the
+     drawing leads, and Draw back is the one new verb to learn.
+   - Kind: you add, never erase; what the first artist may do about a
+     draw-back of theirs (hide it from their post?) is the owner's call.
+   Questions the mock will likely ask: is a draw-back a comment, a post of
+   its own linked to the original, or both; how it shows in the feed and in
+   Activity (and whether it nudges, as a reply does); how a jam plays; what
+   Flip does (a page that stays underneath, `FUTURE.md` 6i, may be its
+   twin); and the replay's own speed and "drawn in · watching at" words.
+2. **Messages as drawn letters** (the map's part two, item 8,
+   `docs/SOCIAL-SITE.md` section 17): the same Pad, privately, draw first
+   with words welcome, a letter drawing itself when opened; kind defaults
+   (no "seen", no "typing…", strangers wait in requests).
+3. **Watching first, everywhere**: every drawing says "drawn in 47 min ·
+   watching at 8×" and plays when looked at.
+
+**Bluesky as a reference** (the owner asked for it): their open app,
+github.com/bluesky-social/social-app, for how a social site behaves
+(threads, chat requests, who may message you, moderation), never for its
+look. `FUTURE.md` §3 also names a bigger door, for another day: Bluesky's
+open network (AT Protocol) would let people already there see and follow
+Blooby's drawings without the site running everything. Blooby must stay
+able to be its own site either way.
+
+Mock first, as always: light and dark, a touch phone (402) and a desk, "now"
+beside each option, measured contrast and 44px targets, two or three options
+with one recommended, the choices batched so "All yes" is a whole answer,
+and a line on what it does to Pad and Flip, which it touches this time.
+
+For messages, when they come, questions the mock will likely ask (offer,
+recommend one):
 - Where messages live: the phone's bar keeps four places, and Activity is
   not in it (a bell at the top of Home and Explore; the rail on a desk).
 - Who may message you: everyone, people you follow, or nobody; a requests
