@@ -47590,3 +47590,135 @@ DRAWER HAS A THIRD DOOR OUT. Composing, "Yours" with no hand made yet, and
 page comes back to the editor on its own, not in the post. The drawing goes
 the same way. It is outside the menu and outside the choice; what the
 drawer should do and say inside a post is the owner's.
+
+## After v330 -- The walkthrough's small ones: room between conversations, Quote's own mark, an initial in a blank face, the Gallery's search box
+
+Choices 5, 8, 9 and 10 of the mock page, the owner's "all yes" (Nov 19). The
+site's own; nothing of Skribl's changed.
+
+5. MORE ROOM BEFORE A NEW CONVERSATION THAN INSIDE ONE. In a thread, 30px
+   between one comment's conversation and the next comment, 12 between a
+   comment and the replies followed down under it (`social.css`, the list's
+   own children). It was 12 everywhere, and a long thread read as one run.
+8. QUOTE HAS ITS OWN MARK, a pair of quote marks (`_icons.html` quote()), in
+   the repost sheet. It wore the pen, which also says Make, Draw back and
+   Edit drawing.
+9. A FACE NOT DRAWN YET SHOWS ITS INITIAL on a post's card, on a post's own
+   page and in Activity, as a comment's has since Nov 17: the name's first
+   letter in the small violet ink on the site's disc, 16px in a card's 44px
+   face, 19 in a page's 48, 11 in the small face at the foot of a
+   draw-back's (hers, when she has drawn none). A Gallery tile's 22px face
+   stays plain, as decided there. THIS CHANGES THE MAP'S "the empty circle
+   before somebody draws one, never an initial" (Nov 13, the calm card):
+   the owner chose the initial on Nov 19 with the circle beside it, and the
+   mock did not say it was their own earlier pick, so it is said to them
+   now. NOT DONE, the owner to say: lists of people (followers, who liked
+   it, search, the blocked) still show the blank disc; the mock showed
+   cards and Activity.
+10. THE GALLERY'S PILLS SHARE A LINE AND THE SEARCH BOX TAKES THE NEXT ONE
+    WHOLE (`explore.html`, `.gal-pills`). The box shared New | Hot's line
+    since the Gallery mock's B (Nov 13), and a 402px phone left it 178px
+    for words that need 217: "Search people and drawir". Signed out, the
+    one pill has the line.
+
+7. LOOP IS THE INFINITY SIGN, in every one of Skribl's players (the in-post
+   player, the link page's, the Library's, the full-screen bar) and, the
+   same picture by `verify_icons`' own list, the Pad's Repeat and Export's
+   looping GIF. It was two arrows in a ring, which on the site sat 38px
+   above repost's two arrows in a ring. NOT CHANGED, other verbs: Flip's
+   "Loop this page" (a page repeated twice, three times, for some seconds)
+   and the music drawer's loop preview keep the arrows. EXPORT'S GIF ROW
+   was not in the mock: it is held to the players' loop by the icon suite,
+   so it changed with it, and is shown to the owner.
+
+THE CHECKS, each shown red on the tree before and green on the tree after:
+verify_socialcomments 38 (the gaps read between what is painted: 12 and 12,
+then 30 and 12); verify_socialreposts 2 (the Quote row draws its own mark
+and never the bar's Make pencil: red, "the bar's Make pencil");
+verify_socialposts 20 (the letter on a card and a page, light and dark, at
+4.5:1 and more, a tile's face plain: red, no letter; signed in, the two
+pills on one line and the words fitting: red, 217 in 178);
+verify_socialactivity 3 (a row's face: red, "blank"); verify_socialdrawback
+3 (his and hers on a draw-back's page); verify_social 5 (signed out, the box
+under the pill with room for its words); verify_icons (every player's loop
+the one picture, none still the arrows: red on six files).
+
+## After v330 -- A post's page: "Draw back" in words on its own line; a drawn comment no taller than the post's drawing
+
+Choices 3 and 4 of the mock page, the owner's "all yes" (Nov 19).
+
+3. "DRAW BACK", IN WORDS, AT THE END OF THE DRAW-BACKS' LINE on a post's own
+   page (`post.html`, `.db-head`): the site's second button, the pen and
+   the words, 44px, ending where the line ends, which on a phone is the
+   drawing's edge. Approved on Nov 19 morning at the end of the row of
+   buttons; once the row has counts it ran 10px past the drawing's edge
+   there and was cut off on a desk. THE ROW IS NOT TOUCHED: its pen and
+   count stay, the row every card has. The line is there from the start
+   wherever the pen is ("No draw-backs yet"), so the words always have a
+   home; where it cannot be drawn back on, or nobody is signed in, there
+   are no words, and with nothing drawn back no line. A tap is the pen's
+   own (`posts.js`, anything that names a post to draw back on).
+
+4. A DRAWN COMMENT IS NO TALLER THAN ITS PAGE'S DRAWING UNTIL IT PLAYS
+   (`social.css`, `.cm-art`; `_comments.html`). One drawn on a phone stood
+   294 by 523 with its line under it, 674 from top to bottom, under a
+   post's drawing of 370 by 278. At rest it is 156 by 277 there, its line
+   waiting for the first play as a card's does, its bubble as wide as it
+   and its words need. A tap plays it and it grows to its room (294),
+   gliding with the line as it opens (0.3s), and stays. One drawn wide is
+   in its room from the start, as the owner chose on Nov 17 ("as wide as
+   its bubble"). Under Reduce Motion nothing grows: it plays where it sits.
+   On a comment's own page the cap is that comment's drawing; a page with
+   no drawing of its own, the Pad's 4:3.
+   THE PLAY BUTTON IS THE CARD'S OWN, NOT THE MOCK'S. The mock drew a small
+   round mark in the lower-left corner, because the round mark in the
+   middle covered the drawing's middle at this size. A line that waits
+   already has its play button on this site: Home's cards' glass pill at
+   the drawing's foot, saying how long it took ("2 sec"), centred there by
+   the owner's own pick after v326 ("it sat in the lower-left corner... the
+   drawing read as shifted"). So a drawn comment wears that pill: the
+   middle of the drawing is clear, as the mock wanted, with one play
+   button for one state and nothing new in Skribl's player. Said to the
+   owner with a picture; the round corner mark is theirs to ask for.
+   WHY LENGTHS: a bubble that hugs its drawing has no width for a
+   percentage to be of, so the room (a phone's 100vw less 108px, a desk's
+   264px) and the page's drawing (100vw less 32px; on a desk the column
+   left of the 340px one) are said from the page's own layout, and the
+   suite holds them to what is painted. A desk gives up 17px for a
+   scrollbar the viewport's width may or may not count: a drawn comment
+   there can be 13px under the post's drawing and is never over it.
+
+WHAT THE FIRST FULL RUN FOUND, AND WHAT WAS DONE (the social suites, the
+editors' own that hold a player, side by side):
+- A DEFECT OF CHOICE 5'S: on a desk, what was under a comment as it was
+  posted stepped 18px in one frame and then glided (verify_socialcomments
+  33, "the old first" a step of 18.0). The new room before a conversation
+  landed on the comment pushed down, all at once. A comment's arrival
+  (`comments.js` arrive) now measures what the list grows by beyond the
+  comment's own height and gives that back with it, a frame at a time, so
+  any room the stylesheet adds glides with the comment. Red before, green
+  after.
+- THREE CHECKS MOVED WITH WHAT WAS BUILT, and say so: on a desk the
+  comments sit right under the draw-backs' line where a post has one
+  (signed out, under the time-and-plays line, as before: verify_socialcomments
+  12); an Activity row's words are what is said, and the initial in a face
+  not drawn yet, hidden from a screen reader, is no word of them
+  (verify_socialdrawback 5, whose "none of Mona" had been reading the
+  letter first); a comment's full-screen button waits with its line, so the
+  drawing is played first (verify_socialposts 18).
+- TWO RED BESIDE OTHERS AND GREEN ALONE, both frame counts on a busy box
+  (four cores, three suites and their browsers): verify_social (Make's
+  sheet gliding up, one long frame of 180px in 320) and verify_sociallikes
+  (a landing's tint fading, no frame caught between). Load, not this
+  change: neither page is touched by it.
+
+THE CHECKS (verify_socialdrawback 6, verify_socialcomments 15), each shown
+red first. The words: on the tree before, three rows red (no words on the
+line; nothing to tap; no line on a drawing with none); with the pen taken
+out of the row, the row's own check red; as built, green. The drawn
+comment: on the tree before, red at rest (294 by 522.7 under a post's 277.5,
+its line there), red on the glide (nothing moved) and red on a desk (469.3
+over 447); with the transition taken out, the glide alone red (one frame
+carried all 137.91px); with Reduce Motion's rule taken out, its row red (156
+to 294 at once); as built, green (156.1 by 277.5 under 277.5; the width
+read on every frame).

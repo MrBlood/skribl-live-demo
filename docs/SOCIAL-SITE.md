@@ -1700,7 +1700,11 @@ first thing the owner saw of it.
      does today), and one row. Press play and the drawing's line (scrubbing,
      speed, loop, the likes' dots) glides open under it and stays. A post's
      own page shows the line from the start. Faces are the site's: the
-     empty circle before somebody draws one, never an initial.
+     empty circle before somebody draws one, never an initial. (CHANGED
+     Nov 19, the owner's "all yes" to the walkthrough's mocks, choice 9,
+     with today's circle beside it: a face not drawn yet shows its initial
+     on a card, a post's own page and Activity, as a comment's has since
+     Nov 17. A Gallery tile's small face is still plain. Section 21.)
    - **One row under every card** (its B): 💬 count, ♡ count, Share, ⋯, and
      Open › at the end (taken off Nov 19, the owner's "completely remove
      open": a tap on a card opens it; DECISIONS.md, "Draw back, mocked").
@@ -2886,3 +2890,49 @@ STILL TO COME, in the decided order: her say (hide one from her post; who
 can draw back); the line's "Ana + Theo" words; drawing back on a Flip, page
 for page; recolours. `verify_socialdrawback.py` holds
 what is built.
+
+---
+
+## 21. Built: the walkthrough's mocks (the owner's "all yes", Nov 19)
+
+A walkthrough of the site on a fresh copy (five made-up people, eleven
+posts) put ten choices to the owner as a mock page
+(https://claude.ai/artifact/MxPYZyHAtdR4hEg9YiXAuR), each with today beside
+it; DECISIONS.md, "One repository (the owner's yes to A), and the
+walkthrough's six mocks", lists them. "All yes." What each one built is said
+where it lives above; this is the index.
+
+- **1 and 2, inside a post:** the editors' menu has no Library and no Public
+  gallery while composing, and the site's composer asks for no gallery tick
+  ("A post is a drawing and words", above; docs/INTEGRATION.md).
+- **3, "Draw back" in words:** on a post's own page the draw-backs' line
+  ends in the words, the site's second button with the pen, there from the
+  start ("No draw-backs yet") wherever the pen is offered; the row of
+  buttons above it is not touched.
+- **4, a drawn comment:** at rest no taller than its page's own drawing (156
+  by 277 under a post's 370 by 278 on a phone, where it stood 294 by 523),
+  its line waiting and its play button the card's glass pill at its foot; a
+  tap plays it and it grows to its room, gliding, and stays; one drawn wide
+  is in its room from the start; under Reduce Motion it plays where it
+  sits. Section 18's "as wide as the bubble, with its line" is what it
+  grows to.
+- **5, the thread:** 30px before a new conversation, 12 inside one (it was 12
+  everywhere).
+- **8, the repost sheet:** Quote wears a pair of quote marks of its own; the
+  pen says Make, Draw back and Edit drawing.
+- **9, faces:** one not drawn yet shows its initial on a post's card, a
+  post's own page and in Activity (16px in a card's 44px disc, 19 in a
+  page's 48, 11 in the small face at the foot of a draw-back's), in the
+  small violet ink on the site's disc. A Gallery tile's 22px face stays
+  plain. Lists of people (followers, who liked it, search, the blocked) are
+  as they were: not in the mock, the owner's to say.
+- **10, the Gallery's head:** Following | Everyone and New | Hot share one
+  line, 8px apart, and the search box takes the next line whole, so
+  "Search people and drawings" fits a 402px phone (217px of words in 304;
+  it had 178). Signed out, New | Hot has the line.
+- **7, loop:** Skribl's players draw the infinity sign for loop (the in-post
+  player, the link page's, the Library's, the full-screen bar, the Pad's
+  Repeat and Export's looping GIF: one picture by `verify_icons`). On the
+  site it sat 38px above repost's two arrows in a ring, the same picture.
+  Flip's "Loop this page" and the music drawer's loop keep the arrows:
+  other verbs.
