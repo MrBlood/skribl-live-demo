@@ -74,25 +74,43 @@
     o.width = bw;
     o.height = bh;
     var oc = o.getContext('2d');
-    var s = (w / run.size.w) * dpr;
-    oc.setTransform(s, 0, 0, s, 0, 0);
-    oc.lineCap = 'round';
-    oc.lineJoin = 'round';
+    ink(oc, (w / run.size.w) * dpr);
+    c.globalAlpha = a;
+    c.drawImage(o, 0, 0);
+    c.globalAlpha = 1;
+  }
+
+  /* Her strokes, opaque, at `s` canvas pixels to one of hers. */
+  function ink(ctx, s) {
+    ctx.save();
+    ctx.setTransform(s, 0, 0, s, 0, 0);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     run.strokes.forEach(function (st) {
       for (var j = 0; j < st.length; j++) {
         var p = st[j], q = j ? st[j - 1] : p;
         if (p.erase) continue;
-        oc.strokeStyle = p.color || '#1f1b2e';
-        oc.lineWidth = Math.max(0.6, p.size || 4);
-        oc.beginPath();
-        oc.moveTo(q.x, q.y);
-        oc.lineTo(p.x + (q === p ? 0.01 : 0), p.y);
-        oc.stroke();
+        ctx.strokeStyle = p.color || '#1f1b2e';
+        ctx.lineWidth = Math.max(0.6, p.size || 4);
+        ctx.beginPath();
+        ctx.moveTo(q.x, q.y);
+        ctx.lineTo(p.x + (q === p ? 0.01 : 0), p.y);
+        ctx.stroke();
       }
     });
-    c.globalAlpha = a;
-    c.drawImage(o, 0, 0);
-    c.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  /* THE PICTURE A DRAW-BACK RESTS ON (editor_post.js buildPreviewCanvas):
+     her drawing whole, whatever Theirs is showing, under his lines, as the
+     site posts the two (social/drawback.py). Without it the card was his
+     lines alone, and the site's join kept no picture at all: a draw-back
+     rested as an empty box until played (the owner, Nov 19: "there's no
+     image on the drawbacks"). `w`: the drawing's own pixels across. */
+  function paintUnder(ctx, w) {
+    if (!run || !ctx || !w) return false;
+    ink(ctx, w / run.size.w);
+    return true;
   }
 
   function place() {
@@ -187,7 +205,7 @@
   }
 
   window.SkriblDrawBack = {
-    take: take, stop: stop,
+    take: take, stop: stop, paintUnder: paintUnder,
     state: function () { return run ? { theirs: STATES[run.state].key, strokes: run.strokes.length, size: run.size } : null; }
   };
 }());

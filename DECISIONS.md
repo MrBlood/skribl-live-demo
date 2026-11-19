@@ -47155,3 +47155,82 @@ socialcomments 143/143, verify_docs 144/144.
 
 Pad and Flip: neither editor changes. The event is the shared player's, so a
 Flip sends it too; the pills come only where a draw-back can be made.
+
+## After v330 -- Draw back: no pen where it can't be done yet
+
+After step 2, the pen still showed on a drawing made on a photo; opening it
+said "That drawing can't be drawn back on yet." A pen that leads to a no is
+the unkindness to take away. Skribl's `on_photo` could not tell: every Pad
+drawing carries a picture of its blank paper (baseSnapshot), so it is true
+for nearly every Pad drawing. The site has the drawing whole when a post is
+made, so it says then: `undrawable` on the post (migration `e5c1f7a2d903`),
+drawback.drawable's reason ("photo", "music", "pages", "recolors") or None.
+Set in post_new before Skribl stores its media apart, and for one of your
+older drawings from Skribl's own copy (read_payload). The row's pen needs it
+None. A post from before the column keeps its pen, answered when opened, as
+before; a draw-back's own card keeps its pen (a jam).
+
+CALIBRATION (verify_socialdrawback 3): the card not reading the column, red;
+post_new not writing it, red (the photo's card had the pen both times). As
+built, the whole suite 24/24.
+
+## After v330 -- Draw back: the picture a draw-back rests on is both drawings
+
+The owner, Nov 19, on the live site after #987: "I see the pen now. but
+there's no image on the drawbacks. Click them and they work." A drawing's
+resting picture (its poster, the card a feed and a strip show before it
+plays) is made by the Pad when it posts (editor_post.js buildPreviewCanvas,
+then lib/postedcard.js) and travels as `thumbnail`. Drawing back, her drawing
+was on a canvas of its own, so the Pad's card was his lines alone; and the
+site's join built a new drawing and kept no picture at all, so the poster was
+the blank stand-in and the card an empty box.
+
+THE FIX: the Pad paints her drawing whole, opaque, under his lines when it
+flattens a draw-back (lib/drawback.js paintUnder, whatever Theirs is
+showing), and the join keeps the picture (social/drawback.py). A draw-back
+posted before this keeps the blank (it has no picture to keep); a new one
+rests on both.
+
+CALIBRATION (verify_socialdrawback 4, read off the poster itself, her dark
+ink in her cat's half of the card, where his lines never went): the join
+dropping the picture, red (the blank stand-in, an SVG); the Pad not painting
+hers under, red (0 of her pixels). As built, 3,820.
+
+A QUESTION FOR THE OWNER, found on the way: the Pad's eraser. While drawing
+back it seems to erase only his lines (hers are on their own canvas), but
+the posted drawing is one list of strokes, so where he erased over her lines
+the replay erases hers too, against "you add, never erase". Asked, not
+decided.
+
+## After v330 -- Draw back: what the owner's first tries found
+
+The owner tried Draw back on the live site, Nov 19, morning, and said what
+they saw.
+
+1. "it says can't draw back yet. is that because I was trying to draw back
+   on my own draw-back? also, I tried to put a picture in the background and
+   it didn't work." Not the own draw-back: a draw-back on a draw-back (a jam)
+   posts, by its own maker or anyone (verify_socialdrawback 1 now posts one
+   each way; until now only the pen on it was checked). The picture was it:
+   the join can't carry a photo yet, and the composer said only "That drawing
+   can't be drawn back on yet", at Post, after the drawing. Now the refusal
+   says whose (`on`: "yours" or "theirs") and the composer says what of his
+   to take out and how ("A picture can't go under a draw-back yet. Edit
+   drawing, take the picture out, then Post"; music and Recolour the same).
+   Fill, shapes and text are strokes, and carry. The owner then took the
+   drawing out, drew again without the picture, and posted.
+2. "clicked the gallery and clicked the drawing and it shows the new drawing,
+   but not that it's a drawback": the post's own page had no credit line
+   (only the card did). It has now, under the header (the name and handle
+   there are one link, hers another), with her face at the foot of his.
+3. "it shows me responding to me": right in fact (a draw-back on your own
+   drawing), but "Drew back on Mr.’s" reads oddly. Two questions, asked:
+   what a draw-back on your own drawing says, and the site's first-name rule
+   (the first word of the name: "Mr.", as "More from Mr." already said).
+
+ASKED, NOT DECIDED (with the eraser, above): a picture in a draw-back. The
+owner's own framing, "the original reserves the right for a background", is
+one answer: the ground is hers.
+
+CALIBRATION (verify_socialdrawback): the page's line taken out, red; the
+refusal without whose, red. As built, sections 2 and 3 whole.

@@ -14,7 +14,9 @@ each in a browser with a virtual passkey.
      draw-back beside a quote; signed out the original is not handed over;
      the route hands the composer the original, as Skribl serves it.
   3. THE CARD: the pen after the heart, 44px to a finger, "Draw back" and
-     how many; none signed out, none on a Flip; a draw-back's card says
+     how many; none signed out, none on a Flip, none on a drawing made on a
+     photo (the post's `undrawable`, read when it was posted); a draw-back's
+     own card has one (a jam); a draw-back's card says
      "Drew back on Ana’s" (her post the link, 44px tall), her face small at
      the foot of his; once her post is gone, "Drew back on a drawing".
   4. THE WHOLE WAY, IN A BROWSER: the pen opens the composer and the Pad
@@ -577,6 +579,18 @@ with sync_playwright() as p:
             check("its row says it is a draw-back, on her post, and whose that is",
                   row and row["is_drawback"] and row["on"] == cat_id and row["owner"] == ana_id, json.dumps(
                       {k: (row or {}).get(k) for k in ("is_drawback", "on", "owner")}))
+            # A JAM: a draw-back on a draw-back, here by its own maker (the owner's
+            # first try on the live site, Nov 19), and by the first artist.
+            jams = {}
+            for who, seed in ((theo, 13), (ana, 14)):
+                st3, j3 = draw_back(who, back, answer(n=8, seed=seed))
+                r3 = stored((j3 or {}).get("post") if isinstance(j3, dict) else None) or {}
+                p3 = ((r3.get("payload") or {}).get("frames") or [{}])[0].get("strokes") or []
+                jams[who.handle] = (st3, len(p3), xy(p3[:len(pts)]) == xy(pts), r3.get("on") == post_id(back),
+                                    (j3 or {}).get("error") if isinstance(j3, dict) else j3)
+            check("a draw-back can be drawn back on (a jam), by its own maker or anyone: the whole of it first (both"
+                  " hands), then the new one, on its row",
+                  all(v[0] == 200 and v[1] == len(pts) + 8 and v[2] and v[3] for v in jams.values()), json.dumps(jams))
             # A short original plays as she drew it: nothing to squeeze.
             short = post_payload(ana, "Section 1, short", drawing(n=20, seed=5))
             st2, j2 = draw_back(theo, short, answer(n=10, seed=6))
@@ -618,6 +632,26 @@ with sync_playwright() as p:
                            "photo": (400, "drawback_unsupported", "photo"), "nothing": (404, "drawback_gone", None),
                            "quote": (400, "one_drawing", None)} and fl and photo,
                   json.dumps(said))
+            # A PICTURE UNDER HIS ANSWER (the owner's first try, Nov 19: "I tried
+            # to put a picture in the background"): refused saying it is his,
+            # and the composer has words that say what to take out.
+            mine_ph = answer()
+            mine_ph["frames"][0]["photo"] = {"data": PNG, "fit": "cover"}
+            yp = draw_back(theo, cat, mine_ph)
+            theirs = got["photo"]
+            ctx, pg = browser_as(b, theo)
+            pg.goto(BASE + "/social/")
+            ready(pg)
+            words = pg.evaluate("""() => Object.fromEntries(['photo', 'music', 'recolors'].map(k => [k,
+              (document.querySelector('[data-compose-said] [data-word="cmp_drawback_' + k + '"]') || {}).textContent || null]))""")
+            close_ctx(ctx, pg)
+            check("a picture under HIS answer is refused saying it is his (why photo, on yours), hers on a photo saying it"
+                  " is hers (on theirs); and the composer has words for each thing of his it can't carry yet, saying what"
+                  " to take out",
+                  yp[0] == 400 and (yp[1] or {}).get("why") == "photo" and (yp[1] or {}).get("on") == "yours"
+                  and (theirs[1] or {}).get("on") == "theirs"
+                  and all(w and "Edit drawing" in w for w in words.values()),
+                  json.dumps({"yours": yp, "theirs": theirs[1], "words": words})[:500])
             # Behind a block, either way, the original is not there.
             c = ana.client()
             c.get("/social/")
@@ -655,13 +689,17 @@ with sync_playwright() as p:
             flip["frames"] = [flip["frames"][0], dict(flip["frames"][0])]
             flip["fps"] = 8
             fl = post_payload(ana, "Section 3, a flip", flip)
+            ph = drawing(n=20, seed=10)
+            ph["frames"][0]["photo"] = {"data": PNG, "fit": "cover"}
+            photo = post_payload(ana, "Section 3, on a photo", ph)
             st, j = draw_back(theo, cat, answer())
             back = (j or {}).get("post")
             seen = {}
             for scheme in ("light", "dark"):
                 ctx, pg = browser_as(b, theo, scheme=scheme)
                 home(pg)
-                seen[scheme] = {"cat": pg.evaluate(CARD, cat), "flip": pg.evaluate(CARD, fl), "back": pg.evaluate(CARD, back)}
+                seen[scheme] = {"cat": pg.evaluate(CARD, cat), "flip": pg.evaluate(CARD, fl), "back": pg.evaluate(CARD, back),
+                                "photo": pg.evaluate(CARD, photo)}
                 close_ctx(ctx, pg)
             ctx, pg = browser_as(b, None)
             pg.goto(BASE + f"/social/p/{cat}")
@@ -676,10 +714,14 @@ with sync_playwright() as p:
             check("on Home's card the pen sits after the heart, 44px to a finger and painted where it stands, named"
                   " \"Draw back, 1 draw-back\" with its count beside it (light and dark)",
                   st == 200 and ok, json.dumps({k: v["cat"] for k, v in seen.items()})[:600])
-            check("no pen on a Flip of two pages, nor for somebody signed out (the card's row as it was)",
-                  all(v["flip"] and v["flip"]["pen"] is None for v in seen.values()) and out and out["pen"] is None
+            # A draw-back can itself be drawn back on (a jam): its card has the pen.
+            check("no pen on a Flip of two pages, nor on a drawing made on a photo (read when it was posted), nor for"
+                  " somebody signed out (the card's row as it was); a draw-back's own card has one (a jam)",
+                  all(v["flip"] and v["flip"]["pen"] is None and v["photo"] and v["photo"]["pen"] is None
+                      and v["back"] and v["back"]["pen"] for v in seen.values()) and out and out["pen"] is None
                   and "pen" not in out["kids"] and len(out["kids"]) == 4,
-                  json.dumps({"flip": seen["light"]["flip"] and seen["light"]["flip"]["kids"], "out": out and out["kids"]}))
+                  json.dumps({"flip": seen["light"]["flip"] and seen["light"]["flip"]["kids"],
+                              "photo": seen["light"]["photo"] and seen["light"]["photo"]["kids"], "out": out and out["kids"]}))
             bk = seen["light"]["back"] or {}
             check("a draw-back's card says \"Drew back on Ana’s\" under his name, her name the link to her post, 44px tall"
                   " and painted where it stands, and her face small at the foot of his (light and dark)",
@@ -688,6 +730,22 @@ with sync_playwright() as p:
                       and ((v["back"] or {}).get("who") or {}).get("h", 0) >= 44 and ((v["back"] or {}).get("who") or {}).get("hit")
                       for v in seen.values()),
                   json.dumps(bk)[:500])
+            # ITS OWN PAGE SAYS SO TOO (the owner, Nov 19, from the Gallery: "it
+            # shows the new drawing, but not that it's a drawback").
+            page = {}
+            for screen in ("phone", "desk"):
+                ctx, pg = browser_as(b, theo, screen=screen)
+                pg.goto(BASE + f"/social/p/{back}")
+                ready(pg)
+                page[screen] = pg.evaluate("""() => { const l = document.querySelector('.post-page .post-on'), a = l && l.querySelector('.post-on-who');
+                  const r = a && a.getBoundingClientRect(), at = r && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                  return { on: l ? l.textContent.replace(/\\s+/g, ' ').trim() : null, href: a ? new URL(a.href).pathname : null,
+                           hit: !!at && !!a && a.contains(at), face: !!document.querySelector('.post-page .post-face .db-face .face-ring') }; }""")
+                close_ctx(ctx, pg)
+            check("a draw-back's own page says it too, under its header: \"Drew back on Ana’s\", her post the link, painted"
+                  " where it stands, her face small at the foot of his (phone and desk)",
+                  all(v == {"on": "Drew back on Ana’s", "href": f"/social/p/{cat}", "hit": True, "face": True} for v in page.values()),
+                  json.dumps(page))
             c = ana.client()
             c.get("/social/")
             dst, _ = c.post_json(f"/social/p/{cat}/delete", {})
@@ -780,6 +838,8 @@ with sync_playwright() as p:
                 pg.click("[data-compose-post]")
             pg.wait_for_timeout(600)
             landed = urllib.parse.urlparse(pg.url).path
+            pg.wait_for_timeout(400)
+            poster = pg.evaluate("() => { const i = document.querySelector('.post-page .skribl-inline-poster'); return i ? i.getAttribute('src') : null; }")
             close_ctx(ctx, pg)
             row = stored(landed.rsplit("/", 1)[-1])
             pts = ((row or {}).get("payload") or {}).get("frames", [{}])[0].get("strokes") or []
@@ -788,6 +848,31 @@ with sync_playwright() as p:
                   line == "Drawing back on Ana’s" and landed.startswith("/social/p/") and row and row["is_drawback"]
                   and row["on"] == post_id(cat) and len(pts) > 726 and xy(pts[:726]) == xy(CAT["frames"][0]["strokes"]),
                   f"line {line!r}; landed {landed}; {len(pts)} points")
+            # THE PICTURE IT RESTS ON (the owner, Nov 19: "there's no image on
+            # the drawbacks"): the poster is the Pad's card, her drawing under
+            # his. Read off the picture: her dark ink where her cat is (the
+            # card's drawing area, 1200 x 630, the cat's left half), where his
+            # strokes never went (he drew right of x 640).
+            dark, kind = 0, None
+            try:
+                with urllib.request.urlopen(BASE + poster if poster and poster.startswith("/") else (poster or ""), timeout=20) as r:
+                    kind = r.headers.get("Content-Type")
+                    raw = r.read()
+                from PIL import Image
+                import io
+                im = Image.open(io.BytesIO(raw)).convert("RGB")
+                k = im.width / 1200
+                px = im.load()
+                for y in range(int(120 * k), int(470 * k)):
+                    for x in range(int(380 * k), int(560 * k)):
+                        r_, g_, b_ = px[x, y]
+                        if r_ < 90 and g_ < 90 and b_ < 110:
+                            dark += 1
+            except Exception as exc:  # noqa: BLE001 -- no picture is this row's red
+                kind = kind or str(exc)[:80]
+            check("the posted draw-back rests on a picture of both: its poster is the Pad's card, her ink there where her"
+                  " cat is (his lines were drawn elsewhere), never the blank stand-in",
+                  dark > 150 and kind and "svg" not in kind, f"poster {poster}; {kind}; {dark} dark pixels in her cat's half")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(4, exc)
 

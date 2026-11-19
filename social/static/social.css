@@ -1573,6 +1573,8 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .post-face.has-back { position: relative; }
 .post-face .db-face { position: absolute; right: -5px; bottom: -5px; border-radius: 50%; box-shadow: 0 0 0 2px var(--card); }
 .post-face .db-face .face-ring { --skribl-face-size: 22px; width: 22px; height: 22px; }
+/* On a draw-back's own page the line sits under the header, in its column. */
+.post-on-page { margin: 6px 0 0; }
 /* Drawing back, the composer says on whose, where a quote would sit. */
 .cmp-back { margin: 0 0 10px; color: var(--ink-2); font-size: 15px; }
 .cmp-back b { color: var(--ink); font-weight: 650; }

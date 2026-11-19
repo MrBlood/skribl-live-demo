@@ -37,7 +37,7 @@
     what you went to, so it stays as it is. Somebody you muted has their
     comments folded to one line with Show (_comments.html). #}
 {% extends 'social/base.html' %}
-{% from 'social/_post.html' import post_sheets, post_words, face, player, post_row, rp_data with context %}
+{% from 'social/_post.html' import post_sheets, post_words, face, player, post_row, rp_data, drawn_on with context %}
 {% from 'social/_likes.html' import liked_by, like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% from 'social/_comments.html' import comments_section, comment_sheets with context %}
@@ -67,12 +67,18 @@
          data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if card.mine %} data-mine data-del="{{ card.delete }}"{% endif %}
          {%- if card.muted %} data-muted{% endif %}{% if card.markable %} data-markable{% endif %}{% if card.marked %} data-marked{% endif %}{{ rp_data(card) }} data-kind="{{ card.kind }}"{% if p.skribl_id %} data-autoplay{% else %} data-no-art{% endif %} aria-labelledby="postWho">
   <header class="post-head">
-    <a class="post-face" href="{{ card.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
+    <a class="post-face{% if card.drawn_on and not card.drawn_on.gone %} has-back{% endif %}" href="{{ card.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}
+      {%- if card.drawn_on and not card.drawn_on.gone %}<span class="db-face">{{ face(card.drawn_on.who) }}</span>{% endif %}</a>
     <a class="post-who" href="{{ card.profile }}">
       <b class="post-name" id="postWho">{{ who.display_name }}</b>
       <span class="post-sub">@{{ who.handle }}</span>
     </a>
   </header>
+  {#- A DRAW-BACK SAYS SO ON ITS OWN PAGE TOO (the owner, Nov 19, from the
+      Gallery: "it shows the new drawing, but not that it's a drawback"): the
+      card's line, under the header, since the name and handle here are one
+      link and hers is another. #}
+  {% if card.drawn_on %}<p class="post-on-page">{{ drawn_on(card) }}</p>{% endif %}
   {% if card.down and card.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
   {% if p.words %}<p class="post-words is-big">{{ said(p.words, card.mentions) }}</p>{% endif %}
   {% if p.skribl_id %}<div class="post-art">{{ player(card, waits=false) }}

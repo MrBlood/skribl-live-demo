@@ -488,10 +488,12 @@ def cards(entries, viewer, words=True, aligned=False):
                        # (a drawing of one page, no music: drawback.drawable), how many there are, and on
                        # a draw-back the post it answers and whose that is.
                        # (on_photo is not read: every Pad drawing carries a
-                       # picture of its blank paper, which a draw-back drops;
-                       # a real photo is refused with its reason when opened.)
+                       # picture of its blank paper, which a draw-back drops.
+                       # A real photo, music or recolours are the post's
+                       # `undrawable`, read when it was made; a post from
+                       # before that keeps its pen, answered when opened.)
                        "drawable": (e["kind"] == "p" and not down and sk is not None and sk.get("kind") == "pad"
-                                    and not sk.get("has_audio")),
+                                    and not sk.get("has_audio") and not getattr(p, "undrawable", None)),
                        "drawbacks": backs["n"].get(p.id, 0) if e["kind"] == "p" else 0,
                        "drawn_on": backs["on"].get(p.id) if e["kind"] == "p" else None}
     out = []
@@ -702,6 +704,10 @@ def register(bp, skribl_blueprint="skribl"):
             drawing["caption"] = caption
         else:
             drawing.pop("caption", None)
+        # WHETHER IT CAN BE DRAWN BACK ON (drawback.drawable), read from the
+        # drawing as it is sent, before Skribl stores its media apart.
+        from .drawback import drawable
+        undrawable = drawable(drawing)
         try:
             made = create_post(drawing, author_id=me.public_id)
         except SkriblRejected as exc:
@@ -710,7 +716,7 @@ def register(bp, skribl_blueprint="skribl"):
         except SkriblUnavailable:
             return _json_error("busy", 503)
         row = Post(public_id=new_public_id(8), person_id=me.id, words=words or "",
-                   skribl_id=made.public_id, **(quoting or {}))
+                   skribl_id=made.public_id, undrawable=undrawable, **(quoting or {}))
         sess = site().session()
         sess.add(row)
         sess.flush()
@@ -737,9 +743,14 @@ def register(bp, skribl_blueprint="skribl"):
         if not isinstance(payload, dict) or not _points((payload.get("frames") or [{}])[0]
                                                         if isinstance(payload.get("frames"), list) else {}):
             return None, _json_error("no_drawing", 400)
-        why = drawable(original) or drawable(payload)
+        # Whose drawing it is that can't be joined yet, so the composer can
+        # say how to fix it (a picture of yours can come out; hers can't).
+        why = drawable(original)
         if why:
-            return None, _json_error("drawback_unsupported", 400, why=why)
+            return None, _json_error("drawback_unsupported", 400, why=why, on="theirs")
+        why = drawable(payload)
+        if why:
+            return None, _json_error("drawback_unsupported", 400, why=why, on="yours")
         if not same_shape(original, payload):
             return None, _json_error("drawback_shape", 400)
         return {"payload": join(original, payload),
@@ -832,10 +843,16 @@ def register(bp, skribl_blueprint="skribl"):
         if quoting is not None and quoting.get("quoted_drawing_id") == sid:
             # A post can't quote its own drawing.
             return _json_error("quote_gone", 404)
+        # Whether it can be drawn back on (drawback.drawable), read from the
+        # drawing as Skribl keeps it.
+        from skribl import read_payload
+        from .drawback import drawable
+        kept = read_payload(sid, viewer_id=me.public_id)
         row = Post(public_id=new_public_id(8), person_id=me.id, words=words or "", skribl_id=sid,
                    # Hidden from the Gallery by its maker (link-only): the
                    # post's drawing stays out of it, as the eye said.
-                   gallery_hidden_at=None if sk.get("visibility") == "public" else utcnow(), **(quoting or {}))
+                   gallery_hidden_at=None if sk.get("visibility") == "public" else utcnow(),
+                   undrawable=drawable(kept) if kept is not None else None, **(quoting or {}))
         sess.add(row)
         sess.flush()
         move_drawing_comments(sid, row.id)
