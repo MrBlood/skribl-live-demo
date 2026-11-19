@@ -43,6 +43,7 @@ from .creation import (CreatedPost, SkriblIdempotencyRace, SkriblRejected,
 from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
                        set_post_visibility)
 from .describing import describe_posts, list_public_posts, recent_plays, shared_skribls
+from .describing import read_payload
 from .drafts import list_drafts
 from .moderation import close_reports, list_reports
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
@@ -74,7 +75,7 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            # Reading them for a host's own feed: each skribl's size, line and
            # plays by public id, for the person looking (skribl/describing.py,
            # docs/INTEGRATION.md "Putting a Skribl inside your own posts").
-           "describe_posts",
+           "describe_posts", "read_payload",
            # ...and the newest public ones, by author (skribl/describing.py,
            # docs/INTEGRATION.md "A feed of your own people's drawings").
            "list_public_posts",

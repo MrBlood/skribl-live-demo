@@ -378,6 +378,18 @@ class Post(SocialBase):
     #: Whose the post, the drawing or the comment it quotes is (its maker).
     quoted_owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="SET NULL",
                                                      name="fk_social_posts_quoted_owner_id"), nullable=True)
+    #: DRAW BACK (the owner's "All yes", Nov 19; DECISIONS.md, "Draw back,
+    #: mocked"): the post whose drawing this one draws back on, while that
+    #: post is there. Its drawing holds the original's strokes first and its
+    #: own after (posts.post_new builds it), so it plays on as one when the
+    #: original goes. is_drawback is kept for good, as is_quote is.
+    is_drawback = sa.Column(sa.Boolean(), nullable=False, default=False, server_default=sa.false())
+    drawn_on_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="SET NULL",
+                                                 name="fk_social_posts_drawn_on_id"), nullable=True)
+    #: Whose the original is (its maker): the credit, Activity's "Theo drew
+    #: back on your drawing", and the nudge.
+    drawn_on_owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="SET NULL",
+                                                       name="fk_social_posts_drawn_on_owner_id"), nullable=True)
 
     __table_args__ = (
         #: A drawing, a quote (whose words may be all it has), or words.
@@ -397,6 +409,10 @@ class Post(SocialBase):
         #: Quotes of what a person made, newest first: Activity, and deleting
         #: an account.
         sa.Index("ix_social_posts_quoted_owner_created", "quoted_owner_id", "created_at"),
+        #: A post's draw-backs: its count, its strip, and its going.
+        sa.Index("ix_social_posts_drawn_on_id", "drawn_on_id"),
+        #: Draw-backs on what a person made, newest first: Activity.
+        sa.Index("ix_social_posts_drawn_on_owner_created", "drawn_on_owner_id", "created_at"),
     )
 
 

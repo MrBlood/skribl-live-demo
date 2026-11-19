@@ -565,7 +565,7 @@ HEART = r"""(sel) => { const el = document.querySelector(sel); if (!el || !el.ge
 ROW = r"""(sel) => { const root = document.querySelector(sel); if (!root) return null;
   const row = root.querySelector('.post-row'); if (!row) return null;
   const rd = v => Math.round(v * 100) / 100;
-  const name = e => e.classList.contains('post-count') ? 'count' : e.classList.contains('lk-heart') ? 'heart'
+  const name = e => e.classList.contains('db-pen') ? 'pen' : e.classList.contains('post-count') ? 'count' : e.classList.contains('lk-heart') ? 'heart'
     : e.classList.contains('rp-btn') ? 'repost' : e.classList.contains('post-share') ? 'share'
     : e.classList.contains('post-more') ? 'more' : e.classList.contains('post-open') ? 'open' : e.className;
   const out = { kids: [...row.children].filter(e => e.getClientRects().length).map(name),
@@ -594,9 +594,12 @@ POST_MARKS = r"""() => { const art = document.querySelector('.post-page > .post-
   return p ? { marks: p.marks ? p.marks().length : null, playing: !!(p.playhead && p.playhead().playing) } : null; }"""
 
 # No Open › on a card since Nov 19 (the owner's "completely remove open"): a
-# card's row is a page's.
-CARD_ROW = ["count", "repost", "heart", "more"]
-PAGE_ROW = ["count", "repost", "heart", "more"]
+# card's row is a page's. DRAW BACK's pen (Nov 19) after the heart, under a
+# post's drawing for somebody signed in; a drawing shown outside a post has
+# none (verify_socialdrawback).
+CARD_ROW = ["count", "repost", "heart", "pen", "more"]
+PAGE_ROW = ["count", "repost", "heart", "pen", "more"]
+DRAWING_ROW = ["count", "repost", "heart", "more"]
 
 
 def to_middle(pg, sel):
@@ -1143,7 +1146,7 @@ with sync_playwright() as p:
             check("nothing else moves: a row with the heart is the height of one without (its maker's taken-down card,"
                   " which has none, nor a repost), and the rest keep their order",
                   with_h and without and with_h["h"] == without["h"] == 44
-                  and without["kids"] == [k for k in CARD_ROW if k not in ("heart", "repost")] and with_h["kids"] == CARD_ROW,
+                  and without["kids"] == [k for k in CARD_ROW if k not in ("heart", "repost", "pen")] and with_h["kids"] == CARD_ROW,
                   f"with {with_h and (with_h['kids'], with_h['h'])}; without {without and (without['kids'], without['h'])}")
             go(pg, f"/social/p/{p1}")
             to_middle(pg, ".post-page > .post-row")
@@ -1160,7 +1163,7 @@ with sync_playwright() as p:
             rd_ = pg.evaluate(ROW, ".post-page")
             hd = pg.evaluate(HEART, PAGE_HEART)
             check("on a drawing's own page (/social/b/<id>) the same row, the heart in the same place, to its own like",
-                  placed(rd_, PAGE_ROW) and hd and hd["like"] == f"/social/b/{d1}/like" and hd["label"] == "Like",
+                  placed(rd_, DRAWING_ROW) and hd and hd["like"] == f"/social/b/{d1}/like" and hd["label"] == "Like",
                   told(rd_) + f"; like {hd and hd['like']}")
             st1, _ = like(cyd, ("p", p1))
             go(pg, "/social/")

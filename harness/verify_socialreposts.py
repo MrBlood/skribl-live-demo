@@ -627,7 +627,7 @@ ROW = r"""(sel) => { const root = document.querySelector(sel); if (!root) return
   const row = root.querySelector(':scope > .post-row') || root.querySelector('.post-row'); if (!row) return null;
   const probe = c => { const e = document.createElement('i'); e.style.color = c; document.body.append(e);
     const v = getComputedStyle(e).color; e.remove(); return v; };
-  const name = e => e.classList.contains('post-count') ? 'comment' : e.classList.contains('rp-btn') ? 'repost'
+  const name = e => e.classList.contains('db-pen') ? 'pen' : e.classList.contains('post-count') ? 'comment' : e.classList.contains('rp-btn') ? 'repost'
     : e.classList.contains('lk-heart') ? 'heart' : e.classList.contains('post-share') ? 'share'
     : e.classList.contains('post-more') ? 'more' : e.classList.contains('post-open') ? 'open' : e.className;
   const out = { kids: [...row.children].filter(e => e.getClientRects().length).map(name), ink2: probe('var(--ink-2)'),
@@ -1063,11 +1063,14 @@ with sync_playwright() as p:
             kids = {" ".join(k): (v or {}).get("kids") for k, v in seen.items()}
             # NO OPEN › (the owner's "completely remove open", Nov 19): a card
             # opens from a tap on its own ground (verify_socialposts), so its
-            # row is a page's: nothing after the ⋯.
+            # row is a page's: nothing after the ⋯. DRAW BACK's pen (Nov 19)
+            # after the heart under a post's drawing, signed in; a drawing
+            # shown outside a post has none.
             check("the row: comment · repost · heart · ⋯ on Home's card, and the same on a post's page and a"
                   " drawing's: no Open › anywhere; Share gone from it, and Share… and Copy link in the ⋯ (phone and"
                   " desk, Kai and Pia)",
-                  len(seen) == 16 and all(v and v["kids"] == ["comment", "repost", "heart", "more"]
+                  len(seen) == 16 and all(v and v["kids"] == (["comment", "repost", "heart", "pen", "more"] if k[2] != "drawing"
+                                                              else ["comment", "repost", "heart", "more"])
                                           and {"share", "copy"} <= set(v["menu"]) for k, v in seen.items()),
                   json.dumps(kids)[:700])
             looks = []

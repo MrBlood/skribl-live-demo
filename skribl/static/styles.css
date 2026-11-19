@@ -10005,6 +10005,16 @@ body.drawalong .canvas-empty-hint { display: none; }
 .da-skip[hidden] { display: none; }
 .da-done { background: var(--accent-fill); color: #fff; }
 .da-pill button:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+/* DRAW BACK (lib/drawback.js): Draw along's guide and pill, the original
+   under the pen whole and in place. The pill's one button, Theirs, 44px to a
+   finger (faint, full, hidden: its circle half filled, whole, empty), and the
+   canvas's starter words step aside as Draw along's do. */
+body.drawback .canvas-empty-hint { display: none; }
+.db-pill .db-where { color: var(--text-primary); }
+.db-pill .db-where b { color: var(--accent-ink); }
+.db-theirs { display: inline-flex; align-items: center; gap: 6px; min-height: 44px !important; }
+.db-theirs[data-state="full"] .db-half { d: path("M10 2.75a7.25 7.25 0 0 1 0 14.5a7.25 7.25 0 0 1 0-14.5z"); }
+.db-theirs[data-state="hidden"] .db-half { opacity: 0; }
 
 /* KIND TRANSITIONS (owner, after v323: "The transition should be smooth. No
    transitions should be jumpy. Kind transitions right"). Between Skribl's

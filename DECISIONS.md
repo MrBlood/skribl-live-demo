@@ -47050,3 +47050,61 @@ verify_socialreposts (1, and the comment cards in 15 and 16, whose time is now
 the link checked) and verify_socialbookmarks (1) say no Open; the tap on a
 card's ground (verify_socialposts 11 and 12) lands in the row's open space
 past the ⋯, where Open was.
+
+## After v330 -- Draw back, step 1: the pen, the Pad with theirs faint underneath, the joined post
+
+The first piece of Draw back as decided ("Draw back, mocked"): the whole way,
+end to end. docs/SOCIAL-SITE.md section 20 says what is built and what comes
+next.
+
+THE PEN after the heart under a post's drawing of one page with no music,
+signed in, with how many draw-backs. It opens the composer ("Drawing back on
+Ana’s" at its top) and the Pad over it, handed her drawing by a new route
+(/social/p/<id>/drawback: open to you as a like asks) through composehost's
+new `underlay`. The Pad (lib/drawback.js, Draw along's guide grown up) takes
+her shape and her paper, and lays her drawing over the canvas in the zoom
+layer, in her own colours, each stroke painted whole on a canvas of its own
+and laid down at 0.32 at once, so a line crossing itself does not bead.
+Theirs: faint, full, hidden.
+
+THE SERVER JOINS THE TWO (social/drawback.py), from her drawing as Skribl
+stores it (skribl.read_payload, new: a copy, stripped as the payload route
+strips one, counting no play), never as a browser says it was. Hers first as
+it plays (her pause rule), squeezed to three seconds when longer; then his
+at his own pace, one beat on; her shape and ground; her takes then his. A
+draw-back is a post with is_drawback, drawn_on_id and drawn_on_owner_id (SET
+NULL when hers goes: his plays on, both hands in it). Its card: "Drew back
+on Ana’s" under his name (her post the link, 44px: 45 in the sum, as the
+name's, since 44 laid out at 43.97), her face small at the foot of his;
+"Drew back on a drawing" once hers is gone.
+
+LEARNED ON THE WAY: every Pad drawing carries a picture of its blank paper
+(baseSnapshot, captureCurrentFrame), so "on a photo" is the photo's data,
+never the base; the join keeps her ground and neither base. The faint ink
+vanished on the Pad's dark canvas, which is why the Pad opens on her paper.
+A block is held twice: by the site (reposts.quotable) and by Skribl's own
+read (visible_to, through the site's hook), and the row went red only with
+both taken away.
+
+FOR NOW (each its own step): a Flip of pages, a photo, music and recolours
+are refused with why; the strip on her post, Draw back when a replay ends,
+Activity and the nudge, her say, the line's "Ana + Theo" words.
+
+MAIN RED AFTER #984, FOUND HERE: verify_socialposts 7's census floors how
+many words it reads on each screen, and Home on a desk read 6 with Open ›,
+5 without it. #984's calibration ran its parts 4, 11 and 12, not 7. The
+floor is 5 now, the reason beside it.
+
+CALIBRATION (verify_socialdrawback, each part broken in its own copy): his
+strokes first, red on the four join rows; no squeeze, red on its row; no
+credit line and a pen on a Flip, red on theirs; her strokes beaded (each at
+its alpha), red on the faint row; the underlay never sent, red (section 4
+stops); Theirs stuck and the Pad keeping its own shape, red on theirs; the
+block taken from both locks, red. As built 18/18. Beside it: socialposts
+98/99 then 99/99 with the floor (part 7 alone 1/1), sociallikes 112/112,
+socialreposts 99/99, socialbookmarks 37/37, socialauth 76/76, compose 88/88,
+composer 39/39, socialmute 68/68, inline 222/222, socialprofile 94/94,
+contrast 677/677; verify_docs 144/144.
+
+Pad and Flip: the module is one for both; drawing back on a Flip, page for
+page, is Flip next (its own mock). Flip itself is unchanged.

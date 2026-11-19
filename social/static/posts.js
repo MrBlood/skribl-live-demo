@@ -499,6 +499,15 @@
         rpSay(rpWhy(j));
       });
   }
+  /* DRAW BACK (the owner's "All yes", Nov 19): the row's pen opens the
+     composer, and the Pad over it with the drawing faint under the pen
+     (compose.js drawBack). */
+  doc.addEventListener('click', function (e) {
+    var d = e.target.closest('[data-drawback]');
+    if (!d || !window.SocialComposer || !window.SocialComposer.drawBack) return;
+    e.preventDefault();
+    window.SocialComposer.drawBack({ id: d.getAttribute('data-drawback'), first: d.getAttribute('data-drawback-first'), from: d });
+  });
   doc.addEventListener('click', function (e) {
     var b = e.target.closest('[data-repost-menu]');
     if (b && rpSheet) {
