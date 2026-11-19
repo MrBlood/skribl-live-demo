@@ -47201,3 +47201,36 @@ back it seems to erase only his lines (hers are on their own canvas), but
 the posted drawing is one list of strokes, so where he erased over her lines
 the replay erases hers too, against "you add, never erase". Asked, not
 decided.
+
+## After v330 -- Draw back: what the owner's first tries found
+
+The owner tried Draw back on the live site, Nov 19, morning, and said what
+they saw.
+
+1. "it says can't draw back yet. is that because I was trying to draw back
+   on my own draw-back? also, I tried to put a picture in the background and
+   it didn't work." Not the own draw-back: a draw-back on a draw-back (a jam)
+   posts, by its own maker or anyone (verify_socialdrawback 1 now posts one
+   each way; until now only the pen on it was checked). The picture was it:
+   the join can't carry a photo yet, and the composer said only "That drawing
+   can't be drawn back on yet", at Post, after the drawing. Now the refusal
+   says whose (`on`: "yours" or "theirs") and the composer says what of his
+   to take out and how ("A picture can't go under a draw-back yet. Edit
+   drawing, take the picture out, then Post"; music and Recolour the same).
+   Fill, shapes and text are strokes, and carry. The owner then took the
+   drawing out, drew again without the picture, and posted.
+2. "clicked the gallery and clicked the drawing and it shows the new drawing,
+   but not that it's a drawback": the post's own page had no credit line
+   (only the card did). It has now, under the header (the name and handle
+   there are one link, hers another), with her face at the foot of his.
+3. "it shows me responding to me": right in fact (a draw-back on your own
+   drawing), but "Drew back on Mr.’s" reads oddly. Two questions, asked:
+   what a draw-back on your own drawing says, and the site's first-name rule
+   (the first word of the name: "Mr.", as "More from Mr." already said).
+
+ASKED, NOT DECIDED (with the eraser, above): a picture in a draw-back. The
+owner's own framing, "the original reserves the right for a background", is
+one answer: the ground is hers.
+
+CALIBRATION (verify_socialdrawback): the page's line taken out, red; the
+refusal without whose, red. As built, sections 2 and 3 whole.

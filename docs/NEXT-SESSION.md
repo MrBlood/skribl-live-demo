@@ -73,6 +73,14 @@ section 17 for messages).
   his erasing kept to his own lines in the replay (a layer the replay does
   not have yet). `DECISIONS.md`, "the picture a draw-back rests on".
 
+- **A picture in a draw-back.** Refused for now; the composer says so and
+  how to take it out. The owner's own framing: "the original reserves the
+  right for a background" (the ground is hers). Other answers: his picture
+  under both, or his picture arriving with his hand.
+- **A draw-back on your own drawing** says "Drew back on Mr.’s" today, and
+  the site's first-name rule makes "Mr." of "Mr. Bloob" everywhere.
+  `DECISIONS.md`, "what the owner's first tries found".
+
 ## Open threads
 
 - Main's full runs after #986, #987 and the PR after them were still going
