@@ -1264,7 +1264,9 @@ with sync_playwright() as p:
         # with nothing else made (this section alone: Home 7, a post 13, its
         # ⋯ 5, Report 10), so a reader that missed a screen says so. It was a
         # total of 150 once, met only with the sections before it run first.
-        FLOOR = {"home": 6, "post": 10, "menu": 4, "report": 8}
+        # Home on a desk reads 5 since Open › came off every card (Nov 19, the
+        # owner's "completely remove open"): its word was one of the six.
+        FLOOR = {"home": 5, "post": 10, "menu": 4, "report": 8}
         # A post's page on a phone reads 7 this section alone since the phone's bar went to its icons alone
         # (Nov 15), their names for VoiceOver: the bar's words are a desk's alone now.
         FLOOR_PHONE = dict(FLOOR, post=6)
