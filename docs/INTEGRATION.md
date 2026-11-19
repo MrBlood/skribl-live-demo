@@ -875,6 +875,14 @@ two fight over every generic class name. Set the `src` when the button is
 pressed, not in your markup — otherwise every visitor downloads a drawing tool
 they never opened.
 
+**Nothing in the editor's ⋯ menu leaves your composer without asking.**
+Composing, the editor keeps no draft of its own (you hold the drawing once it
+is added), so a link out of the frame would take the drawing on the canvas
+with it. The menu therefore has no Library and no Public gallery inside a
+post (on the editors' own pages it has both); the switch between Pad and
+Flip stays, and asks first when there is anything on the canvas. Drafts and
+`.skribl` files (Your drafts) are in the menu either way.
+
 **You do not have to write the lifecycle.** `lib/composehost.js` is it —
 load it on your composer page and wire your own buttons to the handle:
 

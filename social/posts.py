@@ -46,11 +46,14 @@ post's link.
 A POST IS WORDS AND A SKRIBL. The skribl is posted through Skribl's
 create_post (docs/INTEGRATION.md, "When your composer is a form") in the same
 request, and so the same transaction, as the row that names it: kept together
-or not at all. Its visibility is what the author ticked in the editor's
-sheet (?gallery=1, "Show in the Skribls gallery"): public with the tick,
-unlisted (reachable by its link, listed nowhere but here) without. Its title
-is the post's first words, its caption only what the author wrote under the
-tick ("say the post's words once", the owner, Nov 10).
+or not at all. It is unlisted in Skribl (reachable by its link, listed
+nowhere but here): the site's Gallery shows a post's drawing by the site's
+own flag, and the composer no longer asks the editors for Skribl's gallery
+tick (the walkthrough's mocks, choice 2, the owner's "all yes", Nov 19:
+the tick fed Skribl's own gallery, which the site has no door to). The
+route still keeps what a payload says, public with its caption, as the
+posts made with the tick before that are. Its title is the post's first
+words ("say the post's words once", the owner, Nov 10).
 
 ONE DRAWING, ONE CONVERSATION (docs/SOCIAL-SITE.md section 17; the owner's
 "Yes", Nov 14). A post can be one of your older drawings, one you shared
@@ -697,8 +700,9 @@ def register(bp, skribl_blueprint="skribl"):
             return _json_error("no_drawing", 400)
         from skribl import SkriblRejected, SkriblUnavailable, create_post
         drawing = dict(payload)
-        # WHAT THE AUTHOR TICKED, AND NOTHING ELSE: public only with the
-        # editor's "Show in the Skribls gallery", its caption only with it;
+        # WHAT THE PAYLOAD SAYS, AND NOTHING ELSE: public only if it says so
+        # (the editor's "Show in the Skribls gallery", which this site's
+        # composer no longer asks for: the header), its caption only with it;
         # the title is the post's own first words (set here, not trusted).
         gallery = drawing.get("visibility") == "public"
         drawing["visibility"] = "public" if gallery else "unlisted"

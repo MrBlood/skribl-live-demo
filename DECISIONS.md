@@ -47540,3 +47540,53 @@ editors on their own, and any host that asks for the tick, are as they
 were.
 
 Main's full run after #990 came back green.
+
+## After v330 -- "All yes" to the six mocks; inside a post the menu has no door out, and no gallery tick
+
+THE OWNER, Nov 19, to the ten choices of the mock page
+(https://claude.ai/artifact/MxPYZyHAtdR4hEg9YiXAuR; the entry above lists
+them with their defaults): "all yes". Built in four pieces, this the first:
+choices 1 and 2. Then the small ones (5, 7 to 10), a post's page (3, 4), and
+what a draw-back says (6).
+
+CHOICE 1, AND THE DEFECT IT MENDS: COMPOSING, THE ⋯ MENU HAS NO LIBRARY AND
+NO PUBLIC GALLERY (`skribl/templates/skribl/_skribl_menu.html`, one partial,
+so Pad, Flip and the face Pad alike). They were plain links: the host's
+frame left the editor for Skribl's own page, and since compose keeps no
+draft (v315) the drawing on the canvas went with it, nothing asked, the page
+it landed on with no way back to the post. On the editors' own pages both
+doors are where they were. The switch to the other editor stays and asks
+first, as since v316. The tiles share their row equally, three or four
+(`.menu-tiles`, columns by flow where it was four fixed ones, which left the
+fourth place empty).
+THE CHECKS (verify_compose, Pad and Flip, in the feed's composer): with a
+drawing on the canvas EVERY painted link in the menu is followed, whatever it
+is called, and the frame must still be the composing editor with the drawing
+on it. As main had it, red on both ("left by Library -> /library", the
+switch having asked); as built, green (one link, the switch, which asks; the
+ink the same before and after). And the three tiles fill the row: with only
+the stylesheet's rule put back, red (a 94px gap at the row's end); as built,
+green (117px each, 8px apart, edge to edge with the list).
+
+CHOICE 2: THE SITE'S COMPOSER ASKS FOR NO GALLERY TICK
+(`social/templates/social/_compose.html`: the editors' frames open with
+compose=1 alone). "Show in the Skribls gallery" fed Skribl's own gallery, a
+page the site has no door to, and said "Off, it shows in your post only"
+where the site's Gallery shows every post's drawing by the site's own flag.
+The Pad's sheet still asks "Viewers start at" (the owner's pick after v330),
+and still says when a drawing is too long to add; Flip's sheet, which asked
+the tick alone, keeps its picture and its button. Nothing in Skribl changed
+for this: a host that asks (`gallery=1`, the example host) is asked as
+before. The site's route still keeps a payload that says public, as the
+posts made with the tick are. Storing every post unlisted whatever it said
+was tried and taken back: nobody can reach the difference from the site,
+and the suites make "a post whose drawing is public", which the older posts
+are, through that route.
+
+FOUND WHILE WIDENING THE CHECK, NOT FIXED, THE OWNER TO BE ASKED: THE TEXT
+DRAWER HAS A THIRD DOOR OUT. Composing, "Yours" with no hand made yet, and
+"Edit your hand", go to the page where a hand is drawn
+(`skribl/static/lib/textwrite.js` toHand), in the host's frame, and that
+page comes back to the editor on its own, not in the post. The drawing goes
+the same way. It is outside the menu and outside the choice; what the
+drawer should do and say inside a post is the owner's.

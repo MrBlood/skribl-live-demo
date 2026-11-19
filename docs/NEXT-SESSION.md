@@ -192,7 +192,15 @@ repository with its own copy of the editors, about 61,000 lines and most of
 the suites to keep in step for good; C was deciding now for the site alone
 and taking the standalone side out.)
 
-THE SIX MOCKS ARE UP AND WAITING ON THE OWNER, NOTHING BUILT:
+"ALL YES" (the owner, Nov 19, about noon) to the ten choices below, built
+in four pieces (`DECISIONS.md`, the entries after "One repository"): 1 and 2
+first (the menu inside a post, no gallery tick), then 5 and 7 to 10, then 3
+and 4 (a post's page), then 6 (what a draw-back says). Read DECISIONS for
+which have merged. STILL THE OWNER'S TO ANSWER: the Text drawer's way out of
+a post ("Yours" with no hand yet, and "Edit your hand", leave the composer's
+frame and the drawing is gone).
+
+THE SIX MOCKS, as they were put up:
 https://claude.ai/artifact/MxPYZyHAtdR4hEg9YiXAuR, ten choices with a
 default each (`DECISIONS.md`, "One repository (the owner's yes to A), and
 the walkthrough's six mocks", lists them and what was measured). Build only

@@ -27,8 +27,13 @@
     before the other fades in; the sheet keeps its size, so nothing moves.
 
     THE EDITORS, OVER IT: the Pad, and Flip, each in a frame whose address is
-    set when it is first opened, never here (lib/composehost.js, rule 1), with
-    the gallery's choice in their sheet (?gallery=1). A draft opens in the
+    set when it is first opened, never here (lib/composehost.js, rule 1). NO
+    GALLERY TICK IN THEIR SHEET (the walkthrough's mocks, choice 2, the
+    owner's "all yes", Nov 19): the site asked for "Show in the Skribls
+    gallery" (?gallery=1), which fed Skribl's own gallery, a page the site
+    has no door to, while the site's Gallery shows every post's drawing
+    whatever the box said; its "Off, it shows in your post only" was not
+    true here. The Pad's sheet still asks "Viewers start at". A draft opens in the
     editor that made it, ?draft=<id> (composehost's openDraft). The face's
     overlay's own parts (.facepad), as Home's composer had them.
 
@@ -106,14 +111,14 @@
     </section>
   </div>
 </div>
-<div class="facepad" id="composePad" hidden data-compose="{{ url_for(skribl_bp ~ '.skribl_editor', compose=1, gallery=1) }}">
+<div class="facepad" id="composePad" hidden data-compose="{{ url_for(skribl_bp ~ '.skribl_editor', compose=1) }}">
   <div class="facepad-scrim"></div>
   <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Draw for your post">
     <p class="facepad-wait">Opening the Pad…</p>
     <iframe class="facepad-frame" title="The Pad: draw for your post"></iframe>
   </div>
 </div>
-<div class="facepad" id="composeFlip" hidden data-compose="{{ url_for(skribl_bp ~ '.skribl_flip', compose=1, gallery=1) }}">
+<div class="facepad" id="composeFlip" hidden data-compose="{{ url_for(skribl_bp ~ '.skribl_flip', compose=1) }}">
   <div class="facepad-scrim"></div>
   <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Make a flip for your post">
     <p class="facepad-wait">Opening Flip…</p>

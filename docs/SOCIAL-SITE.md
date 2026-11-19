@@ -601,15 +601,23 @@ and the owner's "all yes" to piece 4's choices (Nov 11). `social/posts.py`:
     /social/b/<skribl_id>/delete  your own such drawing, gone (JSON)
 
 **A post is a drawing and words** (the words optional, up to 500
-characters). Draw and Flip open Skribl's editor over Home in compose mode,
-with "Show in the Skribls gallery" in its sheet (`?gallery=1`); its Add hands
-the drawing back, and the composer shows it in the in-post player, the same
-player the post will have, with Edit drawing and Remove. Post sends both: the
-skribl through `create_post` and the site's row (`social_posts`, on the
-site's own chain) in one transaction. The skribl is public with the gallery
-tick and unlisted without (reachable by its link, listed nowhere but the
-site's feed); its title is the post's first words, its caption only what was
-written under the tick. A press on Post with nothing said or drawn says so.
+characters). Draw and Flip open Skribl's editor over Home in compose mode;
+its Add hands the drawing back, and the composer shows it in the in-post
+player, the same player the post will have, with Edit drawing and Remove.
+Post sends both: the skribl through `create_post` and the site's row
+(`social_posts`, on the site's own chain) in one transaction. The skribl is
+unlisted (reachable by its link, listed nowhere but the site); its title is
+the post's first words. NO GALLERY TICK since Nov 19 (the walkthrough's
+mocks, choice 2, the owner's "all yes"): the composer asked the editors for
+"Show in the Skribls gallery" (`?gallery=1`), which fed Skribl's own
+gallery, a page the site has no door to, and said "Off, it shows in your
+post only" where the site's Gallery shows every post's drawing. The Pad's
+sheet still asks "Viewers start at"; the route still keeps a payload that
+says public, as the posts made with the tick are. AND THE EDITORS' MENU
+INSIDE A POST has no Library and no Public gallery (choice 1): they took the
+frame to Skribl's own pages and the drawing on the canvas with it, nothing
+asked (docs/INTEGRATION.md, "Nothing in the editor's ⋯ menu leaves your
+composer without asking"). A press on Post with nothing said or drawn says so.
 
 **A post can be its words alone** (the owner's "I like your pick", Nov 16, to
 A on the words-only mock: "a person should be allowed to post without a

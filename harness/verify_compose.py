@@ -770,6 +770,93 @@ with sync_playwright() as sp:
           _pb["path"].endswith("/skribl-pad?compose=1") and _pb["blank"], str(_pb))
     check("no page errors across the switch", not _ferrs, "; ".join(_ferrs[:2]))
     _fc.close()
+
+    # NO LINK IN THE ⋯ MENU LEAVES A POST WITHOUT ASKING (the walkthrough's
+    # mocks, choice 1, the owner's "all yes", Nov 19). Compose keeps no draft
+    # (v315), so a link that takes the frame somewhere else takes the drawing
+    # with it. The switch to the other editor has asked first since v316; the
+    # menu's Library and Public gallery were plain links and did not: a
+    # drawing, Library, and the canvas was empty when the browser's Back
+    # brought the post up again, the page in between with no way back to it.
+    # Inside a post those two are not in the menu now. The check follows EVERY
+    # painted link the menu holds, whatever it is called, with a drawing on
+    # the canvas: the frame is still the composing editor afterwards and the
+    # drawing still on it, or the editor asked and "Keep drawing" kept both.
+    print("\nCOMPOSE — no link in the ⋯ menu leaves the post without asking")
+    _LINKS = """() => { const s = document.getElementById('menuSheet') || document.getElementById('moreMenu');
+        return [...s.querySelectorAll('a[href]')].filter(a => { if (!a.getClientRects().length || a.closest('[hidden]')) return false;
+            const r = a.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return !!at && (at === a || a.contains(at)); })
+          .map(a => ({ id: a.id, says: a.textContent.replace(/\\s+/g, ' ').trim().slice(0, 24) })); }"""
+    for _ed, _mbtn, _cv in (("Pad", "menuBtn", "#canvas"), ("Flip", "moreBtn", "#pad")):
+        _mc = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+        _mp = _mc.new_page()
+        browsing.goto(_mp, BASE, "/feed")
+        _mp.click("#padBtn")
+        frame_booted(_mp, "pad")
+        _mf = _cur(_mp)
+        _mf.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        if _ed == "Flip":
+            _mf.evaluate("() => { localStorage.removeItem('skribl_flip_autosave_v1'); document.getElementById('menuBtn').click(); }")
+            _mp.wait_for_timeout(400)
+            _mf.evaluate("() => document.getElementById('flipBtn').click()")
+            frame_booted(_mp, "flip")
+            _mf = _cur(_mp)
+            _mf.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _mbx = _mp.frame_locator("#padFrame").locator(_cv).bounding_box()
+        _mx, _my = _mbx["x"] + _mbx["width"] / 2, _mbx["y"] + _mbx["height"] / 2
+        _mp.mouse.move(_mx - 60, _my); _mp.mouse.down()
+        for _i in range(30):
+            _mp.mouse.move(_mx - 60 + _i * 4, _my + math.sin(_i / 5) * 30); _mp.wait_for_timeout(15)
+        _mp.mouse.up()
+        _mp.wait_for_timeout(500)
+        if _ed == "Pad":
+            _mf.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }")
+            _mp.wait_for_timeout(500)
+        _home = _mf.evaluate("() => location.pathname + location.search")
+        _ink0 = _mf.evaluate(INK, _cv)
+        _mf.evaluate(f"() => document.getElementById('{_mbtn}').click()")
+        _mp.wait_for_timeout(700)
+        _links = _mf.evaluate(_LINKS)
+        # THE TILES FILL THEIR ROW, three of them here (Library is not one):
+        # the row was four fixed columns, which would leave the fourth empty.
+        _tiles = _mf.evaluate("""() => { const s = document.getElementById('menuSheet') || document.getElementById('moreMenu');
+            const row = s.querySelector('.menu-tiles').getBoundingClientRect(), list = s.querySelector('.menu-list').getBoundingClientRect();
+            const t = [...s.querySelectorAll('.menu-tiles > .menu-tile')].map(e => e.getBoundingClientRect());
+            return { n: t.length, widths: t.map(r => Math.round(r.width)), left: Math.round(t[0].left - list.left),
+                     right: Math.round(list.right - t[t.length - 1].right), gaps: t.slice(1).map((r, i) => Math.round(r.left - t[i].right)),
+                     tall: t.map(r => Math.round(r.height)) }; }""")
+        check(f"{_ed}, composing: the menu's three tiles (New, Save, Export) share the row equally, edge to edge with the"
+              " list under them, 8px apart, none under 44px",
+              _tiles["n"] == 3 and max(_tiles["widths"]) - min(_tiles["widths"]) <= 1 and abs(_tiles["left"]) <= 1
+              and abs(_tiles["right"]) <= 1 and _tiles["gaps"] == [8, 8] and min(_tiles["tall"]) >= 44, str(_tiles))
+        _left, _asked = [], []
+        for _l in _links:
+            _mf = _cur(_mp)
+            if not _mf.evaluate(f"() => {{ const m = document.getElementById('menuSheet') || document.getElementById('moreMenu'); return !!m && !m.hidden && m.getClientRects().length > 0; }}"):
+                _mf.evaluate(f"() => document.getElementById('{_mbtn}').click()")
+                _mp.wait_for_timeout(700)
+            _mp.frame_locator("#padFrame").locator("#" + _l["id"]).click()
+            _mp.wait_for_timeout(1500)
+            _mf = _cur(_mp)
+            _now = _mf.evaluate("() => location.pathname + location.search")
+            if _now != _home:
+                _left.append(f"{_l['says']} -> {_now}")
+                break
+            if _mf.evaluate("() => { const s = document.getElementById('leaveSheet'); return !!s && !s.hidden; }"):
+                _asked.append(_l["says"])
+                _mf.evaluate("() => document.getElementById('leaveCancel').click()")
+                _mp.wait_for_timeout(500)
+        _mf = _cur(_mp)
+        _end = _mf.evaluate("() => location.pathname + location.search")
+        _ink1 = _mf.evaluate(INK, _cv) if _end == _home else -1
+        check(f"{_ed}, composing with a drawing on the canvas: every link in the ⋯ menu was followed, and the frame is"
+              " still the composing editor with the drawing on it (a link that leaves asks first, and Keep drawing keeps it)",
+              bool(_links) and not _left and _end == _home and _ink0 > 200 and _ink1 >= _ink0 * 0.9,
+              f"links {[_l['says'] for _l in _links]}; left by {_left}; asked {_asked}; ink {_ink0} -> {_ink1}")
+        _mc.close()
+    # And on their own, the editors keep both doors: verify_gallery (the
+    # menus' hrefs) and verify_posted (the Library tile) pin them there.
     _sf = b.new_page(viewport={"width": 1280, "height": 900})
     browsing.goto(_sf, BASE, "/flip")
     check("the standalone Flip has no × and still says Post",
