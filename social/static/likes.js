@@ -107,10 +107,14 @@
     var a = b._grow = b.animate([{ width: w0 + 'px' }, { width: w1 + 'px' }], GLIDE);
     a.onfinish = a.oncancel = function () { if (b._grow === a) { b._grow = null; b.style.overflow = ''; } };
   }
+  /* A fade, its end handed to `done` with the fade itself: a fade that
+     puts away its own effect puts away only its own, never a fade begun
+     since (main's run after #972: a like refused while its count was
+     still fading in kept the count, its fade out cancelled with the rest). */
   function fade(el, from, to, done) {
     if (!el.animate) { if (done) done(); return null; }
     var a = el.animate([{ opacity: from }, { opacity: to }], { duration: to ? 200 : 150, easing: 'ease', fill: 'forwards' });
-    a.onfinish = function () { if (done) done(); };
+    a.onfinish = function () { if (done) done(a); };
     return a;
   }
   /* ---- the heart ---------------------------------------------------------- */
@@ -123,7 +127,7 @@
           var was = parseFloat(getComputedStyle(span).opacity);
           span._going.cancel();
           span._going = null;
-          fade(span, isFinite(was) ? was : 0, 1, function () { span.getAnimations().forEach(function (a) { a.cancel(); }); });
+          fade(span, isFinite(was) ? was : 0, 1, function (a) { if (a) a.cancel(); });
         }
         return;
       }
@@ -131,7 +135,7 @@
       span.className = 'lk-n';
       span.textContent = String(n);
       grow(b, function () { b.appendChild(span); b.classList.remove('is-zero'); });
-      fade(span, 0, 1, function () { span.getAnimations().forEach(function (a) { a.cancel(); }); });
+      fade(span, 0, 1, function (a) { if (a) a.cancel(); });
     } else if (span && !span._going) {
       span._going = fade(span, 1, 0, function () {
         if (!span._going) return;
@@ -334,7 +338,7 @@
      above it grow from nothing, or shrink to it, as it fades. */
   function room(el, on) {
     if (still() || !el.animate) {
-      if (on) fade(el, 0, 1, function () { el.getAnimations().forEach(function (a) { a.cancel(); }); });
+      if (on) fade(el, 0, 1, function (a) { if (a) a.cancel(); });
       else fade(el, 1, 0, function () { el.remove(); });
       return;
     }

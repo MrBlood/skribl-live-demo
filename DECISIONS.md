@@ -46817,3 +46817,25 @@ Home Screen), Windows' own notifications and fonts, the live site. The
 one-glance tell: Activity shows "Hear when someone answers you" at its top
 (on a device that has not been asked), and Settings has "Notifications on
 this phone" under Theme.
+
+## After v330 -- Main red after #972: a refused like kept its count
+
+Main's run after #972 went red once in verify_sociallikes (sqlite 4/6): "refused
+in the page (blocked after it opened), the heart goes back and the page says
+why, kindly" read ('false', '1'): the heart went back and its "1" stayed. The
+next run (#973) was green. Not a flake: a race in the page. A tap shows the
+count at once and fades it in over 0.2s; the fade in's end cancelled every
+animation on the count (fill: forwards, put away). A refusal landing inside
+those 0.2s started the fade out, and the fade in's end cancelled that too, so
+its end never came and the count was never taken away: a "1" on a heart that
+is not liked. Its twin is in posts.js, the repost count, same code.
+
+THE FIX (likes.js fade, posts.js rpFade): a fade hands its end the fade
+itself, and the three that put their effect away cancel only themselves.
+
+THE CHECKS: the refusal held (a route of the suite's own) to land 60, 110 and
+160 ms after the tap, inside the fade in. verify_sociallikes section 3 for the
+heart and verify_socialreposts section 3 for the repost: with main's likes.js
+and posts.js each red at all three ("1" stays), green with the fix.
+
+Flip and the Pad: no change; the site's own pages.

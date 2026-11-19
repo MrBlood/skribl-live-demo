@@ -1347,6 +1347,29 @@ with sync_playwright() as p:
                   back and back["pressed"] == "false" and back["n"] is None
                   and said == "That isn’t here anymore. Reload the page to see what’s new." and likes_on(("p", p3)) == [],
                   f"{back and (back['pressed'], back['n'])}; said {said!r}")
+            # REFUSED WHILE THE COUNT IS STILL FADING IN (main's run after
+            # #972: the heart went back and its "1" stayed). The count fades
+            # in over 0.2s; a refusal landing inside that used to start the
+            # fade out, and the fade in's end cancelled it with every other
+            # animation on the count, so the count was never taken away. The
+            # refusal is held here to land 60, 110 and 160 ms after the tap.
+            stuck = {}
+            for ms in (60, 110, 160):
+                ctx, pg = browser_as(b, lim)
+                go(pg, f"/social/p/{p3}")
+
+                def holding(wait):
+                    def held(route):
+                        time.sleep(wait / 1000)
+                        route.fulfill(status=404, content_type="application/json", body='{"error": "gone"}')
+                    return held
+                pg.route("**/like", holding(ms))
+                tap_heart(pg, sel, after=1200)
+                h = pg.evaluate(HEART, sel)
+                stuck[ms] = [h and h["pressed"], h and h["n"]]
+                close_ctx(ctx, pg)
+            check("refused while its count is still fading in (60, 110 and 160 ms after the tap), the heart goes back"
+                  " and no count stays", all(v == ["false", None] for v in stuck.values()), json.dumps(stuck))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(3, exc)
 

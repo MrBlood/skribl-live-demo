@@ -1328,6 +1328,31 @@ with sync_playwright() as p:
                   " one request at a time, then the next; unlit, and no repost kept",
                   mid_words == "Undo repost" and asked_first == 1 and not last["on"] and last["n"] is None and last["db"] == [],
                   json.dumps([mid_words, asked_first, last]))
+            # REFUSED WHILE THE COUNT IS STILL FADING IN (the heart's twin:
+            # main's run after #972 left a liked heart's "1" behind). The count
+            # fades in over 0.2s; a refusal landing inside that used to start
+            # the fade out, and the fade in's end cancelled it with every other
+            # animation on the count. Held here to land 60, 110 and 160 ms
+            # after the press, each on a post of its own.
+            def holding(wait):
+                def held_(route):
+                    time.sleep(wait / 1000)
+                    route.fulfill(status=404, content_type="application/json", body='{"error": "gone"}')
+                return held_
+            stuck = {}
+            for ms in (60, 110, 160):
+                pq = make_post(pia, f"Section 3, Pia's, refused at {ms} ms")
+                ctx, pg = browser_as(b, kai)
+                go(pg, "/social/", wait=500)
+                to(pg, card(pq), 160)
+                pg.route("**/repost", holding(ms))
+                open_rp(pg, card(pq) + " .rp-btn")
+                press_rp_row(pg, "repost", after=1200)
+                st = pg.evaluate(STATE, card(pq))
+                stuck[ms] = [st["on"], st["n"]]
+                close_ctx(ctx, pg)
+            check("refused while its count is still fading in (60, 110 and 160 ms after the press), the repost goes"
+                  " back and no count stays", all(v == [False, None] for v in stuck.values()), json.dumps(stuck))
             # UNDER REDUCE MOTION nothing grows: the count fades where it sits.
             ctx, pg = browser_as(b, kai, reduced=True)
             go(pg, "/social/", wait=500)
