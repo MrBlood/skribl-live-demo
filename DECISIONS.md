@@ -47353,7 +47353,9 @@ BUILT HERE, none of it a new design:
   as big as his and lay over it: "Theo Lin", wearing Ana's face. The page's
   own rule for a face (48px) is as strong as the card's rule for the small
   one and comes later in the sheet. Now 24px at the foot of his, as on the
-  card (22 of 44). The row that should have caught it asked only whether
+  card (22 of 44), and ringed in the page's ground as the card's is in the
+  card's (in the card's colour the ring showed on the page: looked at, light
+  and dark). The row that should have caught it asked only whether
   her face was THERE; the new one reads what is painted at the middle of
   his.
 - THE DRAW-BACKS STRIP KEEPS THE PAGE'S GUTTER. Long enough to scroll (three
@@ -47363,8 +47365,14 @@ BUILT HERE, none of it a new design:
   Flip's chip fall back to just under the header (A TOAST NEVER COVERS A
   CONTROL), which is where Draw along and Draw back put their pill: "The
   eraser is off while drawing back" covered "Drawing back on Ana's" and its
-  Theirs button. Both now go under a pill that is up (`.da-pill`: app.js
-  showToast, flip.js chip). Shared: Draw along's pill is both editors'.
+  Theirs button. Both now go under a pill that is up (`.da-pill`), by one
+  wrap of the two in lib/drawalong.js (keepNotesClear, asked for when a
+  pill goes up; Draw back's asks it too). Shared: Draw along's pill is both
+  editors', and it had the same overlap on both since v323. NOT IN app.js:
+  the first try put it in showToast, and verify_jsstrip went red (the
+  player loads app.js and counts its parsed bytes: 161,379 against its
+  ratchet). The player has no pill; the lesson module, which it does not
+  load, is where the pill is made.
 - "POST DRAW-BACK" on the composer's button while drawing back (the owner's
   "All yes" to the Draw back mock, choice 3, not built until now), "Post"
   again for a post of your own.
@@ -47400,11 +47408,12 @@ checkbox: it feeds Skribl's own gallery, which the site's Gallery replaced.
 
 THE CHECKS, each shown red without its fix in a copy of its own
 (verify_socialdrawback 3, 4 and 6; verify_book 5):
-her face at his size, red (hers 48, the middle of his face hers); the
-strip's snap without its padding, red (its first drawing at 0); the Pad's
-toast without the pill, red there (the note at 82 to 136 over the pill at 84
-to 142) and in verify_book's Pad row; Flip's chip without it, red in
-verify_book's Flip row; the button's words not set, red ("Post"). As built:
-verify_socialdrawback 3, 4 and 6 with the four new rows, 23/23;
-verify_book 60/60. (Three copies of verify_book run at once write one log
-between them: the copy's own red row was read from a run alone.)
+her face at his size, red (hers 48, the middle of his face hers), and its
+ring in the card's colour, red; the
+strip's snap without its padding, red (its first drawing at 0); notes not
+kept clear, red on all three rows (drawing back, the note at 82 to 136 over
+the pill at 84 to 142; verify_book's Pad row and its Flip row); the
+button's words not set, red ("Post"). As built: verify_socialdrawback
+42/42, verify_book 60/60, verify_jsstrip 35/35. (Copies of one suite run at
+once through run_parallel write one log between them: a copy's own red row
+is read from a run alone.)

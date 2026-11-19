@@ -1853,6 +1853,10 @@ a.post-face { text-decoration: none; }
    her face was as big as his and lay over it (the owner's walkthrough,
    Nov 19: "Theo Lin", wearing Ana's face). */
 .post-page .post-head .db-face .face-ring { --skribl-face-size: 24px; width: 24px; height: 24px; }
+/* ...and ringed in the page's ground there, as the card's is in the card's:
+   in the card's colour the ring showed, white on the page's tint in light
+   and one with the faces in dark. */
+.post-page .post-head .db-face { box-shadow: 0 0 0 2px var(--page); }
 .post-page .post-words.is-big { font-size: 20px; line-height: 1.4; }
 .post-caption { margin: 8px 0 0; color: var(--ink-2); font-size: 15px; }
 .post-meta { margin: 12px 0 0; color: var(--ink-2); font-size: 15px; }

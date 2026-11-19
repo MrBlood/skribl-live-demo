@@ -857,7 +857,10 @@ with sync_playwright() as p:
                   return { on: l ? l.textContent.replace(/\\s+/g, ' ').trim() : null, href: a ? new URL(a.href).pathname : null,
                            hit: !!at && !!a && a.contains(at), face: !!hers,
                            faces: hr && sr ? { his: Math.round(hr.width), hers: Math.round(sr.width), middleHis: !!mid && !mid.closest('.db-face'),
-                                               foot: sr.left >= hr.left + hr.width / 2 - 1 && sr.top >= hr.top + hr.height / 2 - 1 } : null }; }""")
+                                               foot: sr.left >= hr.left + hr.width / 2 - 1 && sr.top >= hr.top + hr.height / 2 - 1,
+                                               ring: (() => { const pr = document.createElement('i'); pr.style.color = 'var(--page)'; document.body.appendChild(pr);
+                                                 const ground = getComputedStyle(pr).color; pr.remove();
+                                                 return getComputedStyle(f.querySelector('.db-face')).boxShadow.startsWith(ground); })() } : null }; }""")
                 close_ctx(ctx, pg)
             check("a draw-back's own page says it too, under its header: \"Drew back on Ana’s\", her post the link, painted"
                   " where it stands, her face small at the foot of his (phone and desk)",
@@ -867,8 +870,8 @@ with sync_playwright() as p:
             # above asked only whether her face was there, and it was, as big
             # as his and lying over it: "Theo Lin", wearing Ana's face.
             check("on that page his face is the one you see (48px, and what is painted at its middle is his), hers half its"
-                  " size (24px) at its foot, as on the card (phone and desk)",
-                  all(v.get("faces") == {"his": 48, "hers": 24, "middleHis": True, "foot": True} for v in page.values()),
+                  " size (24px) at its foot, ringed in the page's own ground, as the card's is in the card's (phone and desk)",
+                  all(v.get("faces") == {"his": 48, "hers": 24, "middleHis": True, "foot": True, "ring": True} for v in page.values()),
                   json.dumps({k: v.get("faces") for k, v in page.items()}))
             # ON YOUR OWN DRAWING (the owner's "All yes", Nov 19): "Drew back on
             # their own drawing", the link to it, one face. AND A NAME THAT
