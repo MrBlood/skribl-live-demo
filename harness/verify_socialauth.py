@@ -1419,7 +1419,9 @@ with sync_playwright() as p_:
                     # mutes: one row a pair, whose newest first, and whom
                     "ix_social_mutes_pair", "ix_social_mutes_muter_created", "ix_social_mutes_muted_id",
                     # push notifications: one device once, a person's devices
-                    "ix_social_push_subscriptions_endpoint", "ix_social_push_subscriptions_person_id"}
+                    "ix_social_push_subscriptions_endpoint", "ix_social_push_subscriptions_person_id",
+                    # draw back (Nov 19): a post's draw-backs, and draw-backs on what a person made, newest first
+                    "ix_social_posts_drawn_on_id", "ix_social_posts_drawn_on_owner_created"}
         check("on an empty SQLite file the site's chain builds its seventeen tables with every index, stamps its own"
               " version table (social_alembic_version) at its head, and touches nothing of Skribl's",
               r1.returncode == 0 and names == want | {"social_alembic_version"} and want_idx <= idx

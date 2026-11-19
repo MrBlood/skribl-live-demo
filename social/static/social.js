@@ -284,6 +284,8 @@
    *   over.guide(file, back)   // a face's photo to trace (composehost guide)
    *   over.openDraft(id, back) // a saved draft on its canvas (the composer's
    *                            // Yours; composehost openDraft)
+   *   over.underlay(o, back)   // draw back: a drawing faint under the pen
+   *                            // ({payload, first}; composehost underlay)
    *
    * `wrap` is the overlay (.facepad: its scrim, its sheet, its frame, and the
    * editor's address in data-compose); `openers` are marked aria-expanded. */
@@ -359,6 +361,7 @@
       open: function (back) { from = back || null; pad.open(); },
       guide: function (file, back) { from = back || null; pad.guide(file); },
       openDraft: function (id, back) { from = back || null; wrap.classList.remove('is-ready'); pad.openDraft(id); },
+      underlay: function (o, back) { from = back || null; wrap.classList.remove('is-ready'); pad.underlay(o); },
       isOpen: function () { return open; }
     };
   }

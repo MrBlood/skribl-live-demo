@@ -1555,6 +1555,26 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .post-when:focus-visible { outline: none; }
 .post-when:focus-visible > time { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 .post-card .post-more { position: relative; z-index: 2; }
+/* DRAW BACK (the owner's "All yes", Nov 19; DECISIONS.md, "Draw back,
+   mocked"). A DRAW-BACK'S CREDIT, its own line under the name and when:
+   "Drew back on Ana’s", the second ink, her name the small violet words and
+   the link to her post, 44px tall to a finger (it reaches into the room
+   above and below, as the time's does). THE TWO HANDS: the original's maker
+   small at the foot of the face, ringed in the card's colour, so the face
+   keeps its place. */
+.post-on { display: block; margin-top: 2px; color: var(--ink-2); font-size: 14px; line-height: 1.3; }
+.post-on-who {
+  position: relative; z-index: 1; display: inline-block; padding: calc((44px - 14px * 1.3) / 2) 4px;
+  margin: calc((14px * 1.3 - 44px) / 2) -4px; color: var(--accent-ink); font-weight: 600; text-decoration: none;
+  pointer-events: auto;
+}
+.post-on-who:focus-visible { outline: 2px solid var(--focus); outline-offset: -8px; border-radius: 10px; }
+.post-face.has-back { position: relative; }
+.post-face .db-face { position: absolute; right: -5px; bottom: -5px; border-radius: 50%; box-shadow: 0 0 0 2px var(--card); }
+.post-face .db-face .face-ring { --skribl-face-size: 22px; width: 22px; height: 22px; }
+/* Drawing back, the composer says on whose, where a quote would sit. */
+.cmp-back { margin: 0 0 10px; color: var(--ink-2); font-size: 15px; }
+.cmp-back b { color: var(--ink); font-weight: 650; }
 .post-card .post-words { display: block; margin: 2px 0 -10px; padding: 10px 0; color: inherit; text-decoration: none; }
 /* ...and they select as words when pressed and pulled (a link drags itself
    otherwise, and selects nothing): with draggable="false" on the link, the

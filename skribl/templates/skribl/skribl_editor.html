@@ -634,6 +634,9 @@
   {# Compose only. It is an editor_*.js carve, so verify_player_isolation.py's
      glob enrols it automatically and fails if the player ever loads it. #}
   <script src="{{ skribl_asset('editor_compose.js') }}" defer></script>
+  {# Draw back: somebody's drawing faint under the pen, when a host's composer
+     hands one over (composehost underlay). Compose only. #}
+  <script src="{{ skribl_asset('lib/drawback.js') }}" defer></script>
   {% endif %}
   {% if face %}
   {# A face's guide (a photo to trace, never kept): face mode only. An

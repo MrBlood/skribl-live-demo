@@ -121,6 +121,34 @@ def describe_posts(public_ids, *, viewer_id=None):
             for p, g, o in rows if p.visible_to(viewer_id)}
 
 
+
+def read_payload(public_id, *, viewer_id=None):
+    """A skribl's drawing (its payload, as the player is handed it), for a
+    host that builds on one: the Skribl site's Draw back, which lays the
+    original under a new drawing and posts the two as one (DECISIONS.md,
+    "Draw back, mocked"). None for an id that is not there, or that
+    `viewer_id` may not see (SkriblPost.visible_to, the rule every read
+    follows), saying nothing of which.
+
+    A copy, never the row's own JSON, and stripped as the payload route
+    strips one (strip_payload: a photo's location, a file's name), so what
+    a host builds from it carries nothing the route would not have served.
+    No play is counted: reading is not watching."""
+    from .mediameta import STRIPPED, strip_payload
+    if not isinstance(public_id, str) or not public_id or len(public_id) > 32:
+        return None
+    post = session().query(SkriblPost).filter_by(public_id=public_id).first()
+    if post is None or not post.visible_to(viewer_id):
+        return None
+    import copy
+    payload = copy.deepcopy(post.payload_json or {})
+    if not isinstance(payload, dict):
+        return None
+    if not payload.get(STRIPPED):
+        payload = strip_payload(payload)
+    payload.pop("thumbnail", None)
+    return payload
+
 #: The most one call to list_public_posts returns: a page of a feed, with room.
 MAX_LIST = 100
 

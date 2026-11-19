@@ -10,6 +10,7 @@
  *
  *   pad.guide(file);   // a face's only: open it with a photo to trace
  *   pad.openDraft(id); // one of the person's saved drafts, in the editor
+ *   pad.underlay({payload, first}); // draw back: a drawing faint under the pen
  *
  * A SAVED DRAFT, OPENED IN YOUR COMPOSER (Nov 14, the Skribl site's "Use one
  * you made"). openDraft(id) opens the editor at its own address with
@@ -110,6 +111,10 @@
     var open_ = false;
     /* A face's photo to trace, waiting for the editor to be ready. */
     var guideFile = null;
+    /* DRAW BACK: the drawing under the pen ({payload, first}), sent on every
+       `ready` (before a re-edit's load, so the drawing comes back onto its
+       shape) until clear(). */
+    var under = null;
     /* The address this handle last gave the frame: `src`, or a draft's
        (openDraft). A frame holding either is this handle's own editor. */
     var current = null;
@@ -135,6 +140,7 @@
       if (kind === 'ready') {
         loaded = true;
         frameEditor = d.editor || 'pad';
+        if (under) post('underlay', under);
         /* Re-editing: hand back what the draft is holding. A first open has no
            payload and sends nothing, which is what leaves the canvas blank. */
         if (payload && payloadEditor === frameEditor) post('load', { payload: payload });
@@ -181,6 +187,20 @@
       sendGuide();
     }
 
+    /* DRAW BACK (lib/drawback.js): a fresh editor with `o.payload` faint under
+       the pen. Whatever the frame held goes, as openDraft's does. */
+    function underlay(o) {
+      under = (o && o.payload) ? { payload: o.payload, first: o.first || '' } : null;
+      payload = null;
+      guideFile = null;
+      payloadEditor = frameEditor = 'pad';
+      loaded = false;
+      current = src;
+      frame.setAttribute('src', src);
+      open_ = true;
+      if (opts.onOpen) opts.onOpen();
+    }
+
     function close() {
       if (!open_) return;
       open_ = false;
@@ -204,6 +224,7 @@
     function clear() {
       payload = null;
       guideFile = null;
+      under = null;
       payloadEditor = frameEditor = 'pad';
       loaded = false;
       current = null;
@@ -216,6 +237,7 @@
       open: open,
       guide: guide,
       openDraft: openDraft,
+      underlay: underlay,
       close: close,
       clear: clear,
       isOpen: function () { return open_; },
@@ -228,6 +250,7 @@
         frame.setAttribute('src', BLANK);
         payload = null;
         guideFile = null;
+        under = null;
         loaded = false;
         current = null;
       }

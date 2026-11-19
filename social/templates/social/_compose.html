@@ -53,7 +53,7 @@
 {% from 'social/_post.html' import face with context %}
 {% from 'social/_follow.html' import compose_pill with context %}
 {% from 'social/_mentions.html' import mention_list %}
-<div class="make cmp" id="composeSheet" hidden data-post-new="{{ url_for('social.post_new') }}"
+<div class="make cmp" id="composeSheet" hidden data-post-new="{{ url_for('social.post_new') }}" data-drawback-url="{{ url_for('social.post_drawback', public_id='__ID__') }}"
      data-yours="{{ url_for('social.compose_yours') }}" data-skribl-api="{{ url_for(skribl_bp ~ '.create_skribl') }}">
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet cmp-sheet" role="dialog" aria-modal="true" aria-labelledby="composeTitle">
@@ -64,6 +64,7 @@
         <button class="btn btn-primary cmp-post" type="button" data-compose-post aria-disabled="true">Post</button>
       </div>
       <div class="cmp-scroll">
+        <p class="cmp-back" data-compose-backline hidden></p>
         <div class="cmp-body">
           {{ face(me, 'cmp-face') }}
           <label class="sr" for="composeWords">Say something</label>
@@ -142,4 +143,10 @@
   <span data-word="cmp_quote_empty">Add your words, or a drawing, first.</span>
   <span data-word="cmp_quote_gone">That post isn’t here to quote anymore.</span>
   <span data-word="cmp_one_quote">A post quotes one thing at a time.</span>
+  <span data-word="cmp_say_drawback">Add your words, if you like…</span>
+  <span data-word="cmp_drawback_empty">Draw back first, then Post.</span>
+  <span data-word="cmp_drawback_gone">That drawing isn’t here to draw back on anymore.</span>
+  <span data-word="cmp_drawback_unsupported">That drawing can’t be drawn back on yet.</span>
+  <span data-word="cmp_drawback_shape">Your drawing didn’t land on theirs. Open Draw back again?</span>
+  <span data-word="cmp_drawback_on">Drawing back on</span>
 </div>

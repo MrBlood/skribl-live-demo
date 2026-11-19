@@ -66,6 +66,9 @@
  * so the payload cannot say which it is, and the message does.
  *   editor -> host   skribl:compose:cancel   closed without attaching
  *   host   -> editor skribl:compose:guide    {file} a face's photo to trace
+ *   host   -> editor skribl:compose:underlay {payload, first} draw back: a
+ *                                            drawing faint under the pen
+ *                                            (lib/drawback.js)
  *
  * `guide` is a face's only (?face=1, after v330): a photo the host's page
  * picked, under the canvas as a guide to trace (editor_face.js). It is never
@@ -145,6 +148,13 @@
        is loaded only there), so anywhere else this does nothing. */
     if (d && d.type === 'skribl:compose:guide') {
       if (d.file && global.SkriblFaceGuide) global.SkriblFaceGuide.take(d.file);
+      return;
+    }
+    /* DRAW BACK (lib/drawback.js): somebody's drawing faint under the pen,
+       its shape and paper the canvas's. Sent before a re-edit's `load`, so
+       the drawing comes back onto the original's shape. */
+    if (d && d.type === 'skribl:compose:underlay') {
+      if (d.payload && global.SkriblDrawBack) global.SkriblDrawBack.take({ payload: d.payload, first: d.first });
       return;
     }
     if (!d || d.type !== 'skribl:compose:load' || !d.payload) return;

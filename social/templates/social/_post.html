@@ -131,6 +131,17 @@
         aria-label="{{ 'Reposted' if mine else 'Repost' }}{% if n %}, {{ n }} {{ 'repost' if n == 1 else 'reposts' }}{% endif %}">{{ ic.repost() }}{% if n %}<span class="rp-n">{{ n }}</span>{% endif %}</button>
 {%- endmacro %}
 
+{#  DRAW BACK's pen (the owner's "All yes", Nov 19; DECISIONS.md, "Draw back,
+    mocked"): after the heart, how many draw-backs beside it, none at zero.
+    A tap opens the composer with the Pad, the drawing faint under the pen
+    (compose.js drawBack). Only where it can be done (posts.cards
+    `drawable`), and signed in. #}
+{% macro drawback_pen(c) -%}
+{%- set n = c.drawbacks -%}
+<button class="post-count db-pen" type="button" data-drawback="{{ c.post.public_id }}" data-drawback-first="{{ c.who.display_name.split(' ')[0] }}"
+        aria-label="Draw back{% if n %}, {{ n }} {{ 'draw-back' if n == 1 else 'draw-backs' }}{% endif %}">{{ ic.drawback() }}{% if n %}<span>{{ n }}</span>{% endif %}</button>
+{%- endmacro %}
+
 {#  THE ROW under every post (the quick-patterns mock's B; the owner's "Yes
     on everything", Nov 13; the reposts mock, the owner's "All yes", Nov 14):
     the comments, even at none (the icon alone, "Comment", a way to the box),
@@ -142,6 +153,7 @@
 <footer class="post-row">
   <a class="post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d comment%s' % (c.comments, '' if c.comments == 1 else 's')) if c.comments else 'Comment' }}">{{ ic.comment() }}{% if c.comments %}<span>{{ c.comments }}</span>{% endif %}</a>
   {% if c.markable %}{{ repost(c) }}{% endif %}{% if not c.down %}{{ heart(c, landing) }}{% endif %}
+  {% if c.drawable and me %}{{ drawback_pen(c) }}{% endif %}
   <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
           aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
 </footer>
@@ -202,6 +214,13 @@
 </article>
 {%- endmacro %}
 
+{#  A DRAW-BACK'S CREDIT, under its maker's name (the mock: "drew back on
+    Ana's", her name the link to her post); "drew back on a drawing" once
+    that post is not there for this viewer. #}
+{% macro drawn_on(c) -%}
+<span class="post-on">{% if c.drawn_on.gone %}Drew back on a drawing{% else %}Drew back on <a class="post-on-who" href="{{ c.drawn_on.url }}">{{ c.drawn_on.first }}’s</a>{% endif %}</span>
+{%- endmacro %}
+
 {% macro post_card(c) -%}
 {%- if c.kind == 'c' %}{{ comment_card(c) }}{% else -%}
 {%- set p = c.post %}{% set who = c.who -%}
@@ -210,13 +229,15 @@
          {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %}{{ rp_data(c) }} aria-labelledby="pn-{{ p.public_id }}">
   {% if c.by %}{{ reposted_by(c) }}{% endif %}
   <header class="post-head">
-    <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
+    <a class="post-face{% if c.drawn_on and not c.drawn_on.gone %} has-back{% endif %}" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}
+      {%- if c.drawn_on and not c.drawn_on.gone %}<span class="db-face">{{ face(c.drawn_on.who) }}</span>{% endif %}</a>
     {#- Their page, the size of a finger: the name's link lies under the name and
         the @handle both, as the whole line's did; when it was is a link of its
         own, to the post's page, over it (social.css, "EASY TO OPEN"). #}
     <div class="post-who">
       <a class="post-name" id="pn-{{ p.public_id }}" href="{{ c.profile }}">{{ who.display_name }}</a>
       <span class="post-sub">@{{ who.handle }} · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(p.created_at) }}" data-when="ago">{{ when_day(p.created_at) }}</time>{% if c.plays %}<span class="post-plays-n"> · {{ c.plays }}</span>{% endif %}</a></span>
+      {%- if c.drawn_on %}{{ drawn_on(c) }}{% endif %}
     </div>
   </header>
   {% if c.down and c.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}

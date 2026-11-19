@@ -100,6 +100,7 @@
 
   var att = null;       // what is attached: { kind: 'payload', payload, over } or { kind: 'skribl', id }
   var quoted = null;    // what is quoted: { kind: 'p' (a post), 's' (a drawing) or 'c' (a comment), id }
+  var back = null;      // DRAW BACK: what is drawn back on, { id, first, payload } (drawBack below)
   var quoteBox = q('[data-compose-quote]');
   var player = null;    // its player (SkriblInline)
   var sending = false;
@@ -138,6 +139,7 @@
   /* ---- what is attached ----------------------------------------------------- */
   /* Ready to post: a drawing; or quoting, words or a drawing. */
   function can() {
+    if (back) return !!att;
     return !!att || !!words.value.trim();
   }
   function ready() {
@@ -153,7 +155,10 @@
     if (view !== 'write') show('write', true);
     shown(true);
     editBtn.hidden = false;
-    player = window.SkriblInline ? window.SkriblInline.attach(draftBox, payload) : null;
+    /* A draw-back plays as it will be posted: theirs, then yours (the site
+       joins the two when it posts: drawback.py; joined() is its preview). */
+    var shows = back && back.payload ? joined(back.payload, payload) : payload;
+    player = window.SkriblInline ? window.SkriblInline.attach(draftBox, shows) : null;
     playIt();
     editBtn.focus({ preventScroll: true });
   }
@@ -201,6 +206,8 @@
       if (!over || sending) return;
       if (att) { tell(sayBox, say('one_drawing')); return; }
       tell(sayBox, '');
+      /* Drawing back, Draw opens the Pad with theirs under the pen again. */
+      if (back && back.payload && kind === 'pad') { over.underlay({ payload: back.payload, first: back.first }, chip); return; }
       over.open(chip);
     });
   });
@@ -228,7 +235,7 @@
   }
   postBtn.addEventListener('click', function () {
     if (sending) return;
-    if (!can()) { tell(sayBox, say(quoted ? 'quote_empty' : 'empty')); return; }
+    if (!can()) { tell(sayBox, say(back ? 'drawback_empty' : quoted ? 'quote_empty' : 'empty')); return; }
     sending = true;
     postBtn.setAttribute('aria-busy', 'true');
     tell(sayBox, say('posting'));
@@ -236,6 +243,7 @@
     if (att && att.kind === 'skribl') body.skribl = att.id;
     else if (att) body.payload = att.payload;
     if (quoted) body[quoted.kind === 's' ? 'quote_drawing' : quoted.kind === 'c' ? 'quote_comment' : 'quote'] = quoted.id;
+    if (back) body.draw_back = back.id;
     post(wrap.getAttribute('data-post-new'), body).then(function (j) {
       if (j.ok && j.go) { window.location.assign(j.go); return; }
       sending = false;
@@ -382,11 +390,86 @@
     ready();
   }
 
+  /* ---- draw back: theirs faint under your pen -------------------------------- */
+  /* The preview of what the site will post (social/drawback.py join, which
+     is the one that counts): theirs as it plays, squeezed to about three
+     seconds, then yours at your pace, on their shape and paper. */
+  var OVERTURE = 3000, CAPS = { keep: Infinity, trim: 250, tight: 50 };
+  function joined(orig, mine) {
+    var of = (orig.frames && orig.frames[0]) || {}, mf = (mine.frames && mine.frames[0]) || {};
+    var op = of.strokes || [], mp = mf.strokes || [];
+    var cap = CAPS[orig.pauseMode] || CAPS.tight, at = 0, times = [];
+    op.forEach(function (p, i) {
+      if (i) { var g = (p.t || 0) - (op[i - 1].t || 0); if (g > 0) at += Math.min(g, cap); }
+      times.push(at);
+    });
+    var k = at > 0 ? Math.min(1, OVERTURE / at) : 1, out = [];
+    op.forEach(function (p, i) { var c = Object.assign({}, p); c.t = Math.round(times[i] * k); out.push(c); });
+    var t = (out.length ? out[out.length - 1].t : 0) + CAPS.tight;
+    mp.forEach(function (p, i) {
+      if (i) { var g = (p.t || 0) - (mp[i - 1].t || 0); if (g > 0) t += g; }
+      var c = Object.assign({}, p); c.t = Math.round(t); if (!i) c.start = true; out.push(c);
+    });
+    return Object.assign({}, mine, { canvasSize: orig.canvasSize,
+      frames: [Object.assign({}, mf, { strokes: out, strokeGroups: [], background: of.background || null,
+                                       photo: null, music: null })] });
+  }
+  function drawingBack(next) {
+    back = next;
+    tools.forEach(function (chip) { chip.hidden = !!next && chip.getAttribute('data-compose-open') !== 'pad'; });
+    if (yoursBtn) yoursBtn.hidden = !!next;
+    /* "Drawing back on Ana’s", at the sheet's top, over the words. */
+    var line = q('[data-compose-backline]');
+    if (line) {
+      line.textContent = '';
+      if (next) {
+        line.appendChild(doc.createTextNode(say('drawback_on') + ' '));
+        var b = doc.createElement('b');
+        b.textContent = next.first + '\u2019s';
+        line.appendChild(b);
+      }
+      line.hidden = !next;
+    }
+    words.setAttribute('placeholder', say(next ? 'say_drawback' : quoted ? 'say_quote' : 'say'));
+    ready();
+  }
+  /* drawBack({ id, first, from }): a post's address and its maker's first
+     name (posts.js, the row's pen). The sheet opens, then the Pad over it
+     with their drawing under the pen, read from the site (/p/<id>/drawback:
+     open to you as a like asks, and one that can be drawn back on). */
+  var asking = false;
+  function drawBack(o) {
+    if (sending || asking || !o || !o.id) return;
+    if (att) unattach();
+    if (quoted) setQuote(null);
+    if (view !== 'write') show('write', true);
+    drawingBack({ id: o.id, first: o.first || '', payload: null });
+    sheet.open(o.from || null);
+    lift();
+    grow();
+    asking = true;
+    tell(sayBox, say('opening'));
+    fetch(wrap.getAttribute('data-drawback-url').replace('__ID__', encodeURIComponent(o.id)), { credentials: 'same-origin' })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) { j.status = r.status; return j; });
+      }, function () { return { error: 'network' }; })
+      .then(function (j) {
+        asking = false;
+        if (!back || back.id !== o.id) return;
+        if (!j || !j.payload) { tell(sayBox, why(j)); return; }
+        tell(sayBox, '');
+        back.payload = j.payload;
+        if (j.first) back.first = j.first;
+        if (overs.pad) overs.pad.underlay({ payload: back.payload, first: back.first }, o.from || null);
+      });
+  }
+
   /* ---- opening it ----------------------------------------------------------- */
   openers.forEach(function (o) {
     o.addEventListener('click', function (e) {
       e.preventDefault();
-      /* Make is a post of your own: no quote. */
+      /* Make is a post of your own: no quote, nothing drawn back on. */
+      if (back && !sending) { if (att) unattach(); drawingBack(null); }
       if (quoted && !sending) setQuote(null);
       sheet.open(o);
       lift();
@@ -402,8 +485,11 @@
      what takes focus back. */
   window.SocialComposer = {
     open: function (from) { sheet.open(from || null); lift(); grow(); },
+    drawBack: drawBack,
+    drawingBack: function () { return back ? { id: back.id, first: back.first, ready: !!back.payload } : null; },
     quote: function (o) {
       if (sending || !o || !o.id) return;
+      if (back) { if (att) unattach(); drawingBack(null); }
       if (view !== 'write') show('write', true);
       setQuote({ kind: o.kind === 's' || o.kind === 'c' ? o.kind : 'p', id: o.id }, o.html || '');
       sheet.open(o.from || null);

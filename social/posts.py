@@ -322,6 +322,41 @@ def person_page(person, viewer, before=None, limit=PAGE):
     return once(page), (_cursor(page[-1]) if more and page else None)
 
 
+def drawbacks(posts, viewer):
+    """DRAW BACK, for a page of posts (`posts`, the site's rows): {"n": {post
+    id: how many draw-backs it has}, "on": {a draw-back's id: {"url", "first",
+    "who"} of the post it answers, or {"gone": True} once that post is not
+    there for this viewer}}. Counted as the comments are counted: nothing
+    taken down, and nobody either side of a block with the viewer."""
+    from .models import Block
+    ids = [p.id for p in posts if getattr(p, "id", None) is not None]
+    out = {"n": {}, "on": {}}
+    if not ids:
+        return out
+    sess = site().session()
+    q = (sa.select(Post.drawn_on_id, sa.func.count(Post.id))
+         .join(Person, Person.id == Post.person_id)
+         .where(Post.drawn_on_id.in_(ids), Post.taken_down_at.is_(None), Person.taken_down_at.is_(None)))
+    if viewer is not None:
+        q = q.where(~sa.exists().where(sa.or_(sa.and_(Block.blocker_id == viewer.id, Block.blocked_id == Post.person_id),
+                                              sa.and_(Block.blocker_id == Post.person_id, Block.blocked_id == viewer.id))))
+    out["n"] = dict(sess.execute(q.group_by(Post.drawn_on_id)).all())
+    answers = [p for p in posts if getattr(p, "is_drawback", False)]
+    on_ids = {p.drawn_on_id for p in answers if p.drawn_on_id is not None}
+    rows = {}
+    if on_ids:
+        for orig, owner in sess.execute(sa.select(Post, Person).join(Person, Person.id == Post.person_id)
+                                        .where(Post.id.in_(on_ids))).all():
+            hidden = (orig.taken_down_at is not None or owner.taken_down_at is not None
+                      or (viewer is not None and between(viewer, owner)))
+            rows[orig.id] = None if hidden else {"url": url_for("social.post_page", public_id=orig.public_id),
+                                                 "first": owner.display_name.split(" ")[0], "who": owner}
+    for p in answers:
+        got = rows.get(p.drawn_on_id) if p.drawn_on_id is not None else None
+        out["on"][p.id] = got or {"gone": True}
+    return out
+
+
 def cards(entries, viewer, words=True, aligned=False):
     """What each card shows: the post (a drawing shown outside a post is a
     post whose words are its title), its author, and its drawing's size, line,
@@ -383,6 +418,9 @@ def cards(entries, viewer, words=True, aligned=False):
     # @handle that is somebody is a link to them (a drawing's title takes none).
     from .mentions import links
     named = links(posts=[e["post"].id for e in entries if e["kind"] == "p"]) if words else {}
+    # DRAW BACK (drawback.py): how many draw-backs each post has, and on a
+    # draw-back whose drawing it answers; one read each for the page.
+    backs = drawbacks([e["post"] for e in entries if e["kind"] == "p"], viewer)
     made = {}
     for e in entries:
         who = e["who"]
@@ -441,7 +479,17 @@ def cards(entries, viewer, words=True, aligned=False):
                        "mentions": named.get(("p", p.id), {}) if e["kind"] == "p" else {},
                        "profile": profile_url(who.handle),
                        "mine": viewer is not None and viewer.id == who.id,
-                       "muted": who.id in muted}
+                       "muted": who.id in muted,
+                       # DRAW BACK: the pen in the row where it can be done
+                       # (a drawing of one page, no music: drawback.drawable), how many there are, and on
+                       # a draw-back the post it answers and whose that is.
+                       # (on_photo is not read: every Pad drawing carries a
+                       # picture of its blank paper, which a draw-back drops;
+                       # a real photo is refused with its reason when opened.)
+                       "drawable": (e["kind"] == "p" and not down and sk is not None and sk.get("kind") == "pad"
+                                    and not sk.get("has_audio")),
+                       "drawbacks": backs["n"].get(p.id, 0) if e["kind"] == "p" else 0,
+                       "drawn_on": backs["on"].get(p.id) if e["kind"] == "p" else None}
     out = []
     for e in every:
         card = next(said_c) if e["kind"] == "c" else made[id(e)]
@@ -545,6 +593,32 @@ def home_page(skribl_blueprint="skribl"):
 def register(bp, skribl_blueprint="skribl"):
     """Add the posts' routes to the site's blueprint."""
 
+    @bp.get("/p/<public_id>/drawback")
+    @_rests(json_answer=True)
+    def post_drawback(public_id):
+        """DRAW BACK, for the composer: the drawing to lay under the pen
+        ({payload, first}), open to the person signed in as a like asks
+        (reposts.quotable) and one that can be drawn back on
+        (drawback.drawable); "drawback_gone" or "drawback_unsupported"
+        otherwise. Only what Skribl would serve this viewer (read_payload)."""
+        from skribl import read_payload
+        from .drawback import drawable
+        from .reposts import quotable
+        me = current_person()
+        if me is None:
+            return _json_error("signed_out", 401)
+        on = quotable(me, "p", public_id) if 0 < len(public_id) <= 32 else None
+        original = (read_payload(on.post.skribl_id, viewer_id=me.public_id)
+                    if on is not None and on.post is not None and on.post.skribl_id else None)
+        if original is None:
+            return _json_error("drawback_gone", 404)
+        why = drawable(original)
+        if why:
+            return _json_error("drawback_unsupported", 400, why=why)
+        resp = jsonify({"payload": original, "first": on.owner.display_name.split(" ")[0]})
+        resp.headers["Cache-Control"] = "private, no-store"
+        return resp
+
     @bp.post("/posts")
     @_rests(json_answer=True)
     def post_new():
@@ -574,6 +648,16 @@ def register(bp, skribl_blueprint="skribl"):
         quoting, refusal = _quoting(me, body)
         if refusal is not None:
             return refusal
+        if body.get("draw_back") is not None:
+            # DRAW BACK (drawback.py): the answer's strokes, joined here to
+            # the original's, never beside a quote or an older drawing.
+            if quoting is not None or body.get("skribl") is not None:
+                return _json_error("one_drawing", 400)
+            joined, refusal = _drawing_back(me, body.get("draw_back"), body.get("payload"))
+            if refusal is not None:
+                return refusal
+            body = dict(body, payload=joined["payload"])
+            quoting = joined["columns"]
         if body.get("skribl") is not None:
             # ONE OF YOUR OLDER DRAWINGS (the composer's Yours, Drawings),
             # never beside a new one: a post holds one drawing.
@@ -629,6 +713,33 @@ def register(bp, skribl_blueprint="skribl"):
         mentioned(row)
         return jsonify({"ok": True, "post": row.public_id,
                         "go": url_for("social.post_page", public_id=row.public_id)})
+
+    def _drawing_back(me, oid, payload):
+        """A draw-back's drawing and columns ({"payload", "columns"}), or a
+        refusal: the post `oid` names, open to `me` as a like asks
+        (reposts.quotable), its drawing one they may see and one that can
+        be drawn back on, and `payload` the strokes drawn on its shape."""
+        from skribl import read_payload
+        from .drawback import _points, drawable, join, same_shape
+        from .reposts import quotable
+        if not isinstance(oid, str) or not (0 < len(oid) <= 32):
+            return None, _json_error("drawback_gone", 404)
+        on = quotable(me, "p", oid)
+        if on is None or on.post is None or not on.post.skribl_id:
+            return None, _json_error("drawback_gone", 404)
+        original = read_payload(on.post.skribl_id, viewer_id=me.public_id)
+        if original is None:
+            return None, _json_error("drawback_gone", 404)
+        if not isinstance(payload, dict) or not _points((payload.get("frames") or [{}])[0]
+                                                        if isinstance(payload.get("frames"), list) else {}):
+            return None, _json_error("no_drawing", 400)
+        why = drawable(original) or drawable(payload)
+        if why:
+            return None, _json_error("drawback_unsupported", 400, why=why)
+        if not same_shape(original, payload):
+            return None, _json_error("drawback_shape", 400)
+        return {"payload": join(original, payload),
+                "columns": {"is_drawback": True, "drawn_on_id": on.post.id, "drawn_on_owner_id": on.owner.id}}, None
 
     def mentioned(row):
         """MENTIONS (mentions.py): the people its words name, written beside

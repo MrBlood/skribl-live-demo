@@ -215,6 +215,13 @@
          'M 10.0,12.0 C 13.4,11.9 16.8,12.1 19.6,12.0', 'M 16.4,8.6 L 19.8,12.0 L 16.4,15.4']) }}
 {%- endmacro %}
 
+{# DRAW BACK (the owner's "All yes", Nov 19, to the Draw back mock): a pen
+   drawing a little line, the one new verb, after the heart in the row under
+   a post. Its ink centred in its box (3.5 to 20.5 across, 3.6 to 20.6 down). #}
+{% macro drawback() -%}
+{{ _svg('<path d="M15.9 3.6l3.6 3.6-8.4 8.4-4.6.9.9-4.6z"/><path d="M3.5 19.6c1.9-1.4 3.8-1.4 5.7 0s3.8 1.4 5.7 0"/>') }}
+{%- endmacro %}
+
 {% macro pen() -%}
 {{ _svg('<path d="M15 5.5 18.5 9"/><path d="M4.5 19.5l1-4.2L16.2 4.6a2.4 2.4 0 0 1 3.4 3.4L8.9 18.7z"/>') }}
 {%- endmacro %}

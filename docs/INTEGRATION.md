@@ -254,6 +254,12 @@ drawings = skribl.describe_posts([p.skribl_id for p in posts], viewer_id=me_id)
                  line_info=sk.line) if sk else skribl_inline(post.skribl_id) }}
 ```
 
+**Building on one** (Nov 19). `skribl.read_payload(id, viewer_id=...)` is
+one drawing's payload, as the player is handed it (a copy, stripped as the
+payload route strips one), or None for one that is not there or not this
+viewer's to see. The Skribl site's Draw back lays an original under a new
+drawing and posts the two as one with it. It counts no play.
+
 `viewer_id` is the person looking, as you hand Skribl its current user id; the
 rule is the one every read of a skribl follows (public and unlisted for
 anyone, anything else for its author alone). A skribl deleted, withheld or
