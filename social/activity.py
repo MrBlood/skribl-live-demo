@@ -30,8 +30,9 @@ WHAT A ROW IS: a comment or a reply, not yours,
   * replying to you: "Theo replied to your comment", or, with a drawing,
     "Juno replied with a drawing";
   * else on what you own, a post or a drawing shown outside a post: "Mira
-    said something on your post", or, with a drawing, "Juno drew something
-    on your post".
+    said something on your post", or, with a drawing, "Juno commented with a
+    drawing" (it said "drew something on your post" until Nov 19, which
+    read like a draw-back's "drew back on your drawing").
 Several since you last looked on one post (or answering you in one
 conversation) are one row, the newest face in front and the newest words
 under it, and the row opens the newest: "Mira and 2 others said something
@@ -517,7 +518,7 @@ QUIET_KINDS = ("like", "like_comment", "follow", "repost", "repost_comment", "qu
 #: (push.py) alike, so a nudge and its row always match (the owner's "as
 #: shown" to Blooby's Nudges, Nov 18).
 SAYS = {"comment": "said something on your post", "answer": "replied to your comment",
-        "answer_drawing": "replied with a drawing", "drawing": "drew something on your post",
+        "answer_drawing": "replied with a drawing", "drawing": "commented with a drawing",
         "like": "liked your post", "like_comment": "liked your comment", "follow": "followed you",
         "repost": "reposted your post", "repost_comment": "reposted your comment",
         "quote": "quoted your post", "quote_comment": "quoted your comment", "mention": "mentioned you",

@@ -444,6 +444,9 @@
       line.hidden = !next;
     }
     words.setAttribute('placeholder', say(next ? 'say_drawback' : quoted ? 'say_quote' : 'say'));
+    /* The button says what it makes (the owner's "All yes", Nov 19, choice 3:
+       Post says "Post draw-back"). */
+    postBtn.textContent = say(next ? 'post_drawback' : 'post');
     ready();
   }
   /* drawBack({ id, first, from }): a post's address and its maker's first

@@ -16,7 +16,7 @@ virtual authenticator for the site's people.
      every frame.
   3. EACH KIND OF ROW: "said something on your post" (on a post, and on a
      drawing shown outside a post), "replied to your comment", "replied with a
-     drawing", "drew something on your post": the face, the time as comments
+     drawing", "commented with a drawing": the face, the time as comments
      say it, the words in quotes (two lines at most), the small picture (the
      drawing, or the post's), and the link to the comment on its page; and
      reposts and quotes, and mentions ("Hal mentioned you", since Nov 15).
@@ -850,7 +850,7 @@ with sync_playwright() as p:
             rows = {r["href"].split("#c-")[-1]: r for s in secs for r in s["rows"]}
             want = {
                 c_said: ("Eli said something on your post", f"/social/p/{pst}#c-{c_said}", skribl_of(pst), "“That spiral is so good.”"),
-                c_drew: ("Gus drew something on your post", f"/social/p/{pst}#c-{c_drew}", skribl_of_comment(c_drew), None),
+                c_drew: ("Gus commented with a drawing", f"/social/p/{pst}#c-{c_drew}", skribl_of_comment(c_drew), None),
                 # A reply opens the page of what it answers, where it is one of that one's own (the comment
                 # thread: one level, everywhere).
                 c_ans: ("Fay replied to your comment", f"/social/c/{c_dan}#c-{c_ans}", skribl_of(q), "“Ha, I counted too.”"),
@@ -866,7 +866,7 @@ with sync_playwright() as p:
             faces = {"eli": rows.get(c_said, {}).get("faces"), "eli on the drawing": rows.get(c_on_s, {}).get("faces"),
                      "fay": rows.get(c_ans, {}).get("faces")}
             check("each kind of row says who and what in the mock's words (\"Eli said something on your post\", \"Fay"
-                  " replied to your comment\", \"Hal replied with a drawing\", \"Gus drew something on your post\"), with"
+                  " replied to your comment\", \"Hal replied with a drawing\", \"Gus commented with a drawing\"), with"
                   " their face, when as comments say it (\"now\", \"5m\"), New for a screen reader, and one link to the"
                   " comment on its page, a post's or a drawing's (a reply's, the page of what it answers)",
                   not bad and len(rows) == 6 and faces["eli"] == [poster(eli_face)]
@@ -1309,7 +1309,7 @@ with sync_playwright() as p:
             want = {"icon": "blooby-icon-180.png", "title": "Nothing new yet",
                     # likes (the likes mock), follows (the follow mock), reposts (the reposts
                     # mock) and mentions (the mentions mock): each is in Activity too
-                    "words": "When someone follows you, likes or reposts your post, says something on it, replies to you or mentions you, you’ll see it here.",
+                    "words": "When someone follows you, likes or reposts your post, says something on it, draws back on it, replies to you or mentions you, you’ll see it here.",
                     "button": "Make a skribl"}
             check("with nothing yet: Blooby as his Home Screen icon (64px, painted), \"Nothing new yet\", the words, and"
                   " Make a skribl (52px); no New, no Earlier; phone and desk",

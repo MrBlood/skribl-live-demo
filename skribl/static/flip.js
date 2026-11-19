@@ -1567,6 +1567,10 @@ function chip(msg, action){
   const d = document.querySelector('.flip-tools'), dr = d && d.getClientRects().length ? d.getBoundingClientRect() : null;
   let y = r && r.bottom > 0 ? r.bottom : 0;
   if (y && dr && dr.top < y + 8 + el.offsetHeight) y = Math.max(y, dr.bottom);
+  /* And under Draw along's pill, which sits just under the header too
+     (lib/drawalong.js), as the Pad's toast goes under it (app.js showToast). */
+  const pl = document.querySelector('.da-pill'), pr = pl && pl.getClientRects().length ? pl.getBoundingClientRect() : null;
+  if (pr && pr.bottom > y && pr.top < y + 8 + el.offsetHeight) y = pr.bottom;
   el.style.top = y ? Math.round(y + 8) + 'px' : '';
   el.classList.add('show');
   clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), holdMs);

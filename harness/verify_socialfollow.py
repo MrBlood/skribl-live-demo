@@ -1973,11 +1973,12 @@ with sync_playwright() as p:
             close_ctx(qctx, qpg)
             # (Since reposts, the reposts mock, Nov 14, the same lines say reposts too, and
             # since mentions, the mentions mock, Nov 15, mentions.)
-            check("Activity's words say follows: 'Who followed you, liked or reposted your posts or said something on"
-                  " them, and who replied to you or mentioned you.', and with nothing yet 'When someone follows you, likes or"
-                  " reposts your post, says something on it, replies to you or mentions you, you’ll see it here.'",
-                  sub == "Who followed you, liked or reposted your posts or said something on them, and who replied to you or mentioned you."
-                  and empty == "When someone follows you, likes or reposts your post, says something on it, replies to you or mentions you, you’ll see it here.",
+            check("Activity's words say follows (and, since Nov 19, draw-backs): 'Who followed you, liked or reposted your"
+                  " posts, said something on them or drew back on them, and who replied to you or mentioned you.', and with"
+                  " nothing yet 'When someone follows you, likes or reposts your post, says something on it, draws back on"
+                  " it, replies to you or mentions you, you’ll see it here.'",
+                  sub == "Who followed you, liked or reposted your posts, said something on them or drew back on them, and who replied to you or mentioned you."
+                  and empty == "When someone follows you, likes or reposts your post, says something on it, draws back on it, replies to you or mentions you, you’ll see it here.",
                   f"{sub!r}; {empty!r}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(9, exc)
