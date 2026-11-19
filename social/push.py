@@ -104,7 +104,12 @@ TTL = 86400
 FRESH = timedelta(seconds=30)
 #: What a test nudge says (Settings' Send me a test nudge; the owner's yes, Nov 18).
 TEST_TITLE = "Hello from Blooby"
-TEST_BODY = "Nudges work here. Tap to open Activity."
+#: Its words name the device as push.js does (the owner, Nov 18, after the
+#: first one on their iPhone: "it doesn't show in activity"): a tap opens
+#: Settings, where it was sent from, never Activity, which has nothing of it.
+TEST_BODY = "Nudges work on this {device}."
+TEST_BODY_ANY = "Nudges work here."
+TEST_DEVICES = ("phone", "tablet", "computer")
 
 _HERE = Path(__file__).resolve().parent
 _P256_ORDER = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
@@ -617,13 +622,15 @@ def register(bp, skribl_blueprint="skribl"):
         if over("push-test", "person|" + me.public_id):
             return _json_error("limited", 429)
         body = request.get_json(silent=True)
-        sub = _device((body if isinstance(body, dict) else {}).get("endpoint"))
+        body = body if isinstance(body, dict) else {}
+        sub = _device(body.get("endpoint"))
         if sub is None or sub.person_id != me.id or sub.gen != me.session_gen:
             return _json_error("gone", 404)
+        said = (TEST_BODY.format(device=body["device"]) if body.get("device") in TEST_DEVICES else TEST_BODY_ANY)
         endpoint, p256dh, auth = sub.endpoint, sub.p256dh, sub.auth
         sess = site().session()
         sess.rollback()                     # nothing written yet: let go of the database meanwhile
-        payload = {"title": TEST_TITLE, "body": TEST_BODY, "url": url_for("social.activity"), "tag": "test",
+        payload = {"title": TEST_TITLE, "body": said, "url": url_for("social.you"), "tag": "test",
                    "icon": url_for("social.static", filename="blooby-icon-192.png"), "badge": None}
         status, reason = _send(endpoint, p256dh, auth, payload, "test", public_origin() + url_for("social.home"))
         who = service_of(endpoint)
