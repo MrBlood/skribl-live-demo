@@ -5,8 +5,8 @@ authenticator for the site's people.
   1. THE HEART AND THE COUNT, WHERE THEY ARE (Nov 13, the quick-patterns
      mock's B; until then the owner's way 3, at the start of the drawing's
      line): in the row under the drawing, on Home's cards and on a post's page
-     and a drawing's, after the comments and before Share, the ⋯ and (on a
-     card) Open ›: 44px to a finger, a 20px pen heart in the comments' ink and
+     and a drawing's, after the comments and before the ⋯ (Share in it, and
+     no Open › since Nov 19): 44px to a finger, a 20px pen heart in the comments' ink and
      on their middle, 14px after them, nothing else moving (the time-and-plays
      line as it was); empty until liked, named "Like"; no number at zero; the
      count everyone's, "1 like", "2 likes".
@@ -593,7 +593,9 @@ POST_MARKS = r"""() => { const art = document.querySelector('.post-page > .post-
   const p = art && window.SkriblInline ? SkriblInline.mount(art)[0] : null;
   return p ? { marks: p.marks ? p.marks().length : null, playing: !!(p.playhead && p.playhead().playing) } : null; }"""
 
-CARD_ROW = ["count", "repost", "heart", "more", "open"]
+# No Open › on a card since Nov 19 (the owner's "completely remove open"): a
+# card's row is a page's.
+CARD_ROW = ["count", "repost", "heart", "more"]
 PAGE_ROW = ["count", "repost", "heart", "more"]
 
 
@@ -607,7 +609,7 @@ def to_middle(pg, sel):
 def placed(rw, kids=CARD_ROW):
     """The heart's place in the row (ROW's reading), as the quick-patterns
     mock's B has it, and the reposts mock since Nov 14: after the comments
-    and the repost, before the ⋯ and (on a card) Open ›; 44px to a finger
+    and the repost, before the ⋯ (no Open › since Nov 19); 44px to a finger
     with a 20px pen heart, in the comments' own ink and on their middle, 14px
     after the repost, on no ground of its own; a press lands on it at every
     edge; none left on the drawing's line."""
@@ -942,7 +944,7 @@ RISE_PAINT = r"""(sel) => { const h = document.querySelector(sel + ' .lk-rise');
 CARD_FRAMES = r"""([sel, ms]) => { window.__cf = []; const c = document.querySelector(sel), t0 = performance.now();
   const parts = { head: '.post-head', words: '.post-words', drawing: '.skribl-inline', heart: '.lk-heart',
                   scrubber: '.skribl-inline-scrub', line: '.skribl-inline-line', words2: '.skribl-inline-say', row: '.post-row',
-                  repost: '.post-row .rp-btn', more: '.post-row .post-more', open: '.post-row .post-open' };
+                  repost: '.post-row .rp-btn', more: '.post-row .post-more' };
   const step = () => { const boxes = {};
     for (const [k, s] of Object.entries(parts)) { const e = c.querySelector(s); if (!e) continue;
       const r = e.getBoundingClientRect(); boxes[k] = [r.left, r.top, r.width, r.height]; }
@@ -1128,7 +1130,7 @@ with sync_playwright() as p:
             rw = pg.evaluate(ROW, card(p1))
             h = pg.evaluate(HEART, card(p1) + " .lk-heart")
             check("on Home's card the heart is in the row under the drawing, after the comments and the repost and before"
-                  " the ⋯ and Open ›: 44px to a finger, the pen's heart 20px, in the comments' own ink and on their"
+                  " the ⋯ (nothing after it): 44px to a finger, the pen's heart 20px, in the comments' own ink and on their"
                   " middle, 14px after the repost, on no ground of its own, a press landing at every edge; none on the"
                   " drawing's line",
                   placed(rw), told(rw))
@@ -1148,8 +1150,8 @@ with sync_playwright() as p:
             m = pg.evaluate(META)
             rp = pg.evaluate(ROW, ".post-page")
             hp = pg.evaluate(HEART, PAGE_HEART)
-            check("on a post's page the same row under its drawing, the heart in the same place and dress (no Open ›:"
-                  " it is the post); the time-and-plays line as it was, one line, no heart in it",
+            check("on a post's page the same row under its drawing, the heart in the same place and dress;"
+                  " the time-and-plays line as it was, one line, no heart in it",
                   placed(rp, PAGE_ROW) and m and not m["heart"] and abs(m["h"] - m["lh"]) < 0.6 and hp
                   and hp["pressed"] == "false" and hp["label"] == "Like" and hp["n"] is None,
                   told(rp) + f"; meta {m and (m['h'], m['lh'], m['heart'])}")

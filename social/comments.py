@@ -901,7 +901,7 @@ def world_cards(entries, viewer):
     are about), it (its face, name, @handle and when; its words; its drawing
     as a post's), and its row: how many replies (every one under it they may
     see, at any depth), its repost and how many, its heart and how many, its
-    ⋯ and Open ›. A few reads a card; a page has few."""
+    ⋯ (a tap on its ground opens its page). A few reads a card; a page has few."""
     from .accounts import profile_url
     from .mutes import muted_ids
     from .reports import site_bp

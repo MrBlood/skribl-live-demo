@@ -9,7 +9,7 @@
     Reduce Motion, its line there from the start (you went there to watch).
     Its author, its words, the row every post has (_post.html post_row: the
     comments, a way down to them here, the heart, Share and the ⋯, the one ⋯
-    on the page; not Open ›, as this is the post), when and its plays; its
+    on the page), when and its plays; its
     comments (phase 2: _comments.html, comments.py), on a desk beside the
     drawing; on a desk, More from its author beside it. NO "MAKE YOUR OWN"
     HERE (the owner's "Yes, remove it", Nov 14): it was the bar's Make by
@@ -79,7 +79,7 @@
     {% if card.sk and card.sk.caption %}<p class="post-caption">{{ card.sk.caption }}</p>{% endif %}
   </div>{% endif %}
   {% if card.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(card.quote) }}{% endif %}
-  {{ post_row(card, open=false, landing=(lk is not none and not lk.line)) }}
+  {{ post_row(card, landing=(lk is not none and not lk.line)) }}
   <p class="post-meta"><time datetime="{{ when_iso(p.created_at) }}" data-when="at">{{ when_day(p.created_at) }}</time>{% if card.plays %} · {{ card.plays }}{% endif %}</p>
   {% if lk and lk.line %}{{ liked_by(lk) }}{% endif %}
   {% if cm %}{{ comments_section(cm) }}{% endif %}

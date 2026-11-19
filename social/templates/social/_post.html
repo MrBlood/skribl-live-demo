@@ -14,8 +14,10 @@
                       mock's B; the reposts mock, the owner's "All yes", Nov
                       14): how many comments (a way to them, the icon alone
                       at none), the repost and how many, the heart and how
-                      many, the ⋯ (Share is in it), and "Open ›", the post,
-                      at the end. A REPOST's card is the original's, with
+                      many, and the ⋯ (Share is in it). No "Open ›" (the
+                      owner's "completely remove open", Nov 19): a tap on the
+                      card's own ground opens the post, and its time is the
+                      link to it. A REPOST's card is the original's, with
                       "Mira Lopez reposted" at its top ("You reposted" for
                       yours); a QUOTE's holds the original small under its
                       words and its own drawing (_gallery.html quote_card). EASY TO OPEN
@@ -133,15 +135,15 @@
     on everything", Nov 13; the reposts mock, the owner's "All yes", Nov 14):
     the comments, even at none (the icon alone, "Comment", a way to the box),
     the repost and how many, the heart and how many, the ⋯ (Share… and Copy
-    link are in it), and on a card "Open ›", the post, at the end. Each 44px
-    to a finger. `landing`: heart()'s, on a post's own page. #}
-{% macro post_row(c, open=true, landing=false) -%}
+    link are in it). Each 44px to a finger. No "Open ›" at the end (the
+    owner's "completely remove open", Nov 19): a card opens from a tap on its
+    own ground, and its time is the link. `landing`: heart()'s, on a post's own page. #}
+{% macro post_row(c, landing=false) -%}
 <footer class="post-row">
   <a class="post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d comment%s' % (c.comments, '' if c.comments == 1 else 's')) if c.comments else 'Comment' }}">{{ ic.comment() }}{% if c.comments %}<span>{{ c.comments }}</span>{% endif %}</a>
   {% if c.markable %}{{ repost(c) }}{% endif %}{% if not c.down %}{{ heart(c, landing) }}{% endif %}
   <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
           aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
-  {% if open %}<a class="post-open" href="{{ c.url }}">Open<span class="sr"> the post</span><span class="post-open-go" aria-hidden="true">›</span></a>{% endif %}
 </footer>
 {%- endmacro %}
 
@@ -169,8 +171,9 @@
     its face, name, @handle and when (its own page), its words, its drawing
     as a post's; and the post's own row: how many replies (its page's
     Replies), its repost, its heart (a comment's: no moment, "Like this
-    comment?"), the ⋯ ("This comment": posts.js) and "Open ›", its own page.
-    A tap on its ground opens its page, as a post's card does. `c` is
+    comment?") and the ⋯ ("This comment": posts.js). A tap on its ground
+    opens its page, as a post's card does, and its time is the link to it
+    (no "Open ›" since Nov 19, as on a post's card). `c` is
     comments.world_cards's. #}
 {% macro comment_card(c) -%}
 {%- from 'social/_comments.html' import the_way, comment_art, comment_heart with context -%}
@@ -195,7 +198,6 @@
     {% if c.markable %}{{ repost(c) }}{% endif %}{% if not c.down %}{{ comment_heart(it) }}{% endif %}
     <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
             aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>
-    <a class="post-open" href="{{ c.url }}">Open<span class="sr"> the comment</span><span class="post-open-go" aria-hidden="true">›</span></a>
   </footer>
 </article>
 {%- endmacro %}

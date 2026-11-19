@@ -1567,8 +1567,9 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .post-art { margin-top: 12px; }
 /* THE ROW under every post (the quick-patterns mock's B; the owner's "Yes on
    everything", Nov 13; the reposts mock, the owner's "All yes", Nov 14): the
-   comments, the repost, the heart, the ⋯ and, on a card, "Open ›" at the
-   end, in the small violet words; Share is in the ⋯. Each 44px to a finger,
+   comments, the repost, the heart and the ⋯; Share is in the ⋯. No "Open ›"
+   at the end (the owner's "completely remove open", Nov 19): a card opens
+   from a tap on its own ground, and its time is the link. Each 44px to a finger,
    its icon 20px, 14px apart; the row starts 10px out, so the first icon sits
    where the words above it start. THREE COUNTS IN THE HUNDREDS STILL FIT A
    PHONE: the counted three give a little of the room past their counts
@@ -1632,11 +1633,6 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .qt-pic { margin-top: 10px; border-radius: 12px; box-shadow: 0 0 0 var(--edge) var(--card-line); }   /* in a card: its ring, no lift */
 .qt-dur { left: 50%; transform: translateX(-50%); }
 .qt-card.is-gone { margin-bottom: 0; color: var(--ink-2); font-size: 15px; line-height: 1.4; }
-.post-open {
-  display: inline-flex; align-items: center; gap: 2px; min-height: 44px; margin-left: auto; padding: 0 10px;
-  color: var(--accent-ink); font-size: 15px; font-weight: 600; text-decoration: none;
-}
-.post-open-go { font-size: 18px; line-height: 1; transform: translateY(-1px); }
 .feed-none { margin: 24px 4px; color: var(--ink-2); text-align: center; }
 .feed-more { margin-top: 16px; }
 .feed-more[hidden] { display: none; }

@@ -4,8 +4,8 @@ docs/SOCIAL-SITE.md section 17; the owner's "All yes" on the reposts mock,
 Nov 14), through the demo's own server, with Chromium's virtual
 authenticator for the site's people.
 
-  1. THE ROW: comment · repost · heart · ⋯ · Open › on Home's card (a post's
-     page and a drawing's without Open ›), Share gone from it (Share… and Copy
+  1. THE ROW: comment · repost · heart · ⋯ on Home's card, a post's page
+     and a drawing's (no Open ›, since Nov 19), Share gone from it (Share… and Copy
      link in the ⋯); the repost 44px, the mock's arrows at 20px in the row's
      ink, how many reposts and quotes beside them, none at zero; lit in the
      small violet ink once yours; three counts in the hundreds fitting a 402px
@@ -978,6 +978,7 @@ CCARD = r"""(cid) => { const c = document.querySelector('.post-card[data-kind="c
            by: by ? by.textContent.replace(/\s+/g, ' ').trim() : null, way: items.map(i => i.querySelector('.cm-way-link').getAttribute('href')),
            name: (c.querySelector('.post-name') || {}).textContent || null, words: words ? words.textContent : null,
            open: open ? open.getAttribute('href') : null, url: c.getAttribute('data-url'), line,
+           when: (c.querySelector('.post-head .post-when') || { getAttribute: () => null }).getAttribute('href'),
            row: [...c.querySelector('.post-row').children].map(e => e.classList.contains('rp-btn') ? 'repost' : e.classList.contains('lk-heart') ? 'heart'
                   : e.classList.contains('post-count') ? 'replies' : e.classList.contains('post-more') ? 'more' : e.classList.contains('post-open') ? 'open' : e.className),
            replies: (c.querySelector('.post-count span') || {}).textContent || null,
@@ -1036,7 +1037,7 @@ with sync_playwright() as p:
     b = p.chromium.launch()
 
     # ------------------------------------------------------------------ 1
-    if part(1, "the row: comment · repost · heart · ⋯ · Open ›, Share in the ⋯; the repost's count, lit once yours;"
+    if part(1, "the row: comment · repost · heart · ⋯ (no Open ›), Share in the ⋯; the repost's count, lit once yours;"
                " three counts in the hundreds on a phone"):
         try:
             pia = someone(b, "pia", "Pia Lund")
@@ -1060,11 +1061,13 @@ with sync_playwright() as p:
                     seen[(screen, who.handle, "drawing")] = pg.evaluate(ROW, ".post-page")
                     close_ctx(ctx, pg)
             kids = {" ".join(k): (v or {}).get("kids") for k, v in seen.items()}
-            check("the row: comment · repost · heart · ⋯ · Open › on Home's card; a post's page and a drawing's the"
-                  " same without Open ›; Share gone from it, and Share… and Copy link in the ⋯ (phone and desk, Kai"
-                  " and Pia)",
-                  len(seen) == 16 and all(v and v["kids"] == (["comment", "repost", "heart", "more", "open"]
-                                                              if k[2] in ("card", "zero") else ["comment", "repost", "heart", "more"])
+            # NO OPEN › (the owner's "completely remove open", Nov 19): a card
+            # opens from a tap on its own ground (verify_socialposts), so its
+            # row is a page's: nothing after the ⋯.
+            check("the row: comment · repost · heart · ⋯ on Home's card, and the same on a post's page and a"
+                  " drawing's: no Open › anywhere; Share gone from it, and Share… and Copy link in the ⋯ (phone and"
+                  " desk, Kai and Pia)",
+                  len(seen) == 16 and all(v and v["kids"] == ["comment", "repost", "heart", "more"]
                                           and {"share", "copy"} <= set(v["menu"]) for k, v in seen.items()),
                   json.dumps(kids)[:700])
             looks = []
@@ -1121,12 +1124,12 @@ with sync_playwright() as p:
                   " the paint, light and dark, in the page's own face and in DejaVu Sans, Inter, Liberation Sans and"
                   " FreeSans where the box has them: every part's ink inside the card (in its own box, but in DejaVu"
                   " Sans, the page's own face too where it is drawn in that), 8px or more of ground between two parts'"
-                  " ink, Open › whole, every part 44px, nothing past the screen",
+                  " ink, every part 44px, nothing past the screen",
                   len(fit) >= 4 and all(fits(v, own_box=not wide[k]) for k, v in fit.items())
                   and all([q["n"] for q in v["parts"][:3]] == ["120", "140", "130"] for v in fit.values() if v),
                   json.dumps({" ".join(k): v and {"wide": wide[k], "gaps": [round(bb["ink"][0] - a["ink"][1], 1) for a, bb in zip(v["parts"], v["parts"][1:])
                                                           if a["ink"] and bb["ink"]],
-                                                 "open": v["parts"][-1]["ink"], "card": v["card"], "stray": v["stray"],
+                                                 "last": v["parts"][-1]["ink"], "card": v["card"], "stray": v["stray"],
                                                  "w": [q["w"] for q in v["parts"]]} for k, v in fit.items()})[:900])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(1, exc)
@@ -2512,10 +2515,10 @@ with sync_playwright() as p:
                   kept == ["jude"] and t_kept and t_kept["up"] and t_kept["words"] == ADDED and t_kept["undo"] and li_marked
                   and rows1 and rows1["rows"][0] == "Remove bookmark", json.dumps([kept, t_kept, li_marked, rows1]))
             check("kept in Bookmarks as its card: the way to it (Hugo's post), Iris's name and words, the row, no"
-                  " \"reposted\" line; Open › its own page",
+                  " \"reposted\" line; no Open ›, its time the link to its own page",
                   kc and kc["order"] == ["way", "head", "words", "row"] and kc["way"] == [f"/social/p/{p15}"]
                   and kc["name"] == "Iris Fox" and kc["words"] == "Section 15, Iris's comment" and kc["by"] is None
-                  and kc["open"] == f"/social/c/{c15}", json.dumps(kc))
+                  and kc["open"] is None and kc["when"] == f"/social/c/{c15}", json.dumps(kc))
             check("Remove bookmark takes it away and the toast says so, with Undo, which puts it back",
                   t_gone and t_gone["words"] == REMOVED and t_gone["undo"] and gone == [] and back == ["jude"],
                   json.dumps([t_gone, gone, back]))
@@ -2552,11 +2555,11 @@ with sync_playwright() as p:
             cc, rc = seen["phone light"]
             check("Home's Following for somebody who follows Otto: Lena's comment as a card of its own, \"Otto Brand"
                   " reposted\" at its top, then the way to it (Kip's post), then her face, name and words, then the row:"
-                  " its replies (1), repost, heart, ⋯ and Open ›, its own page",
+                  " its replies (1), repost, heart and ⋯ (no Open ›: its time is the link to its own page)",
                   cc and cc["order"] == ["by", "way", "head", "words", "row"] and cc["by"] == "Otto Brand reposted"
                   and cc["way"] == [f"/social/p/{p16}"] and cc["name"] == "Lena Park" and cc["words"] == "Section 16, Lena's comment"
-                  and cc["row"] == ["replies", "repost", "heart", "more", "open"] and cc["replies"] == "1"
-                  and cc["open"] == f"/social/c/{c16}" and cc["url"] == f"/social/c/{c16}", json.dumps(cc))
+                  and cc["row"] == ["replies", "repost", "heart", "more"] and cc["replies"] == "1"
+                  and cc["open"] is None and cc["when"] == f"/social/c/{c16}" and cc["url"] == f"/social/c/{c16}", json.dumps(cc))
             check("a drawn reply's card: the way two steps (Kip's post, then Lena's comment), then Milo, his words and his"
                   " drawing as a post's card has one, its line waiting for the first play",
                   rc and rc["order"] == ["by", "way", "head", "words", "art", "row"] and rc["by"] == "Pax Reed reposted"
