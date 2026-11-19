@@ -47932,3 +47932,32 @@ log, 1,300 lines from its end.
 THE RUNS AFTER #994 AND #995 never ran: the workflow keeps one run
 waiting, and each next push took its place (cancelled, not red). The run
 on the tree after #996 holds all of it.
+
+## After v330 -- The owner asks what comes next between the site and the editors, and about a door to How it works
+
+THE OWNER (Nov 19, about 4:10 PM, while main's red was being read): "what is
+next? to make blooby smooth with pad and flip? does anything from inside
+pad/flip need to come to a menu in blooby? somehow link to how it works?"
+
+AN ANSWER GIVEN, NOT A DECISION (a question is not an OK). Read in the code
+before answering:
+- THE SITE HAS NO DOOR TO HOW IT WORKS. It is a drawer inside each editor
+  (`openHelpDrawer`, `editor_menu.js` and `flip.js`), reached only through
+  the editor's own menu. The site's menu
+  (`social/templates/social/_menu.html`) holds Settings, Add to Home
+  Screen, Reload, Community rules, Privacy, Your reports and Sign out.
+- THE THEME IS ALREADY ONE: the site's Settings and the editors' both go
+  through `lib/theme.js`. Read, not tried on a screen for this answer.
+- THE PROFILE HAS A DRAFTS TAB. Whether Save inside a post lands there was
+  NOT walked; said so.
+- The rest of the editors' menu inside a post (New, Export, tips, canvas)
+  acts on the drawing in hand.
+
+THE VIEW OFFERED. Tools stay in the editor; what is a place, or is about
+the whole thing, belongs to the site too. How it works is the one to
+bring: a row in the site's menu, three of the site's own things to watch
+first (post a drawing, draw back, comment with a drawing) and the editors'
+help under them. A mock first. THE ORDER OFFERED: the Text drawer's door
+out of a post (the fifth of the five calls), then that mock, then a walk
+of Save and Drafts between the editors and the profile. Put to the owner
+as a sixth and a seventh line under the five, so "all yes" answers all.
