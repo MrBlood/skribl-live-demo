@@ -384,10 +384,12 @@
     var a = b._grow = b.animate([{ width: w0 + 'px' }, { width: w1 + 'px' }], GLIDE);
     a.onfinish = a.oncancel = function () { if (b._grow === a) { b._grow = null; b.style.overflow = ''; } };
   }
+  /* As likes.js's fade: its end hands `done` the fade itself, so one that
+     puts away its own effect never puts away a fade begun since. */
   function rpFade(el, from, to, done) {
     if (!el.animate) { if (done) done(); return null; }
     var a = el.animate([{ opacity: from }, { opacity: to }], { duration: to ? 200 : 150, easing: 'ease', fill: 'forwards' });
-    a.onfinish = function () { if (done) done(); };
+    a.onfinish = function () { if (done) done(a); };
     return a;
   }
   function rpCount(b, n) {
@@ -399,7 +401,7 @@
           var was = parseFloat(getComputedStyle(span).opacity);
           span._going.cancel();
           span._going = null;
-          rpFade(span, isFinite(was) ? was : 0, 1, function () { span.getAnimations().forEach(function (a) { a.cancel(); }); });
+          rpFade(span, isFinite(was) ? was : 0, 1, function (a) { if (a) a.cancel(); });
         }
         return;
       }
@@ -407,7 +409,7 @@
       span.className = 'rp-n';
       span.textContent = String(n);
       rpGrow(b, function () { b.appendChild(span); b.classList.remove('is-zero'); });
-      rpFade(span, 0, 1, function () { span.getAnimations().forEach(function (a) { a.cancel(); }); });
+      rpFade(span, 0, 1, function (a) { if (a) a.cancel(); });
     } else if (span && !span._going) {
       span._going = rpFade(span, 1, 0, function () {
         if (!span._going) return;
