@@ -2855,8 +2855,12 @@ to three seconds when longer, then his at his own pace. A draw-back is a
 post (`is_drawback`, `drawn_on_id`, `drawn_on_owner_id`); its card says
 "Drew back on Ana’s", her face small at the foot of his.
 
-STILL TO COME, in the decided order: Draw back rising when a replay ends,
-and the strip of draw-backs on her post; Activity and the nudge; her say
-(hide one from her post; who can draw back); the line's "Ana + Theo" words;
-drawing back on a Flip, page for page. `verify_socialdrawback.py` holds
+STEP 2 (DECISIONS.md, "Draw back, step 2"): Activity's "Theo drew back on
+your drawing", the dot and the nudge (Replies); her post's strip of
+draw-backs, newest first; and "Watch again" and Draw back rising at a
+drawing's foot when its replay ends (Skribl's player says `skribl:ended`).
+
+STILL TO COME, in the decided order: her say (hide one from her post; who
+can draw back); the line's "Ana + Theo" words; drawing back on a Flip, page
+for page. `verify_socialdrawback.py` holds
 what is built.

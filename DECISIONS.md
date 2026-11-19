@@ -47108,3 +47108,50 @@ contrast 677/677; verify_docs 144/144.
 
 Pad and Flip: the module is one for both; drawing back on a Flip, page for
 page, is Flip next (its own mock). Flip itself is unchanged.
+
+## After v330 -- Draw back, step 2: Activity and the nudge, her post's strip, Draw back when a replay ends
+
+The mock's choices 2 and 5, the parts that shape how a draw-back is found.
+
+ACTIVITY: "Theo drew back on your drawing", Draw back's pen on his face,
+his words under it, opening his draw-back (activity._drawbacks). It lights
+the dot and nudges under Replies, as a reply does: somebody talking to you,
+in a drawing (push.SWITCH_OF; with no words, "Tap to watch yours, then
+theirs."). Nobody muted, never your own.
+
+HER POST'S STRIP (posts._post_page `backs`, post.html): "3 draw-backs" under
+the row, then each draw-back's drawing as More from's plate with who drew
+back, newest first, each opening its own page, scrolling sideways past the
+page's width. Nothing a block hides: held by the site and, again, by
+Skribl's own read, so taking the site's filter away alone stays green (as in
+step 1).
+
+WHEN A REPLAY ENDS (posts.js, social.css .db-end): where the row has the
+pen, "Watch again" and Draw back rise in the drawing's own box, 12px above
+the drawing's foot (measured: the box runs taller than the drawing, room for
+its line), 44px each, a glide of 8px and a fade (a fade under Reduce
+Motion); the box's replay mark steps aside while they are up. Watch again
+plays it again and they go; Draw back opens the composer on it, on its own
+click (the box's tap took it first otherwise). Skribl's player says
+`skribl:ended` when a replay that does not repeat ends: +81 B to what a host
+pays for the in-post player (verify_inline's ratchet, raised for that named
+cost, 82,119 B).
+
+LEARNED: the site warms its static files at start, so a change to social.css
+or posts.js is not served until the server restarts; the pills looked
+unmoved until it did. And the box's own face is the player's (monospace):
+the pills take the site's.
+
+CALIBRATION (verify_socialdrawback 5 to 7, each broken in its own copy): no
+Activity row, red (and the nudge with it); mutes not read, red; the nudge
+under Reposts, red; the strip oldest first, red; no `skribl:ended`, red;
+the pills unmeasured with the replay mark showing, red; Draw back's own
+click gone, red. A whole run first went red twice where a row read another
+section's draw-backs and a block (Ana blocked Kim in section 2): each row
+now reads its own section's. As built 24/24. Beside it: socialpush 118/118,
+socialactivity 46/46, seam 521/521, jsstrip 35/35, player_isolation 85/85,
+inline 222/222 (221/222 before the ratchet), socialposts 99/99,
+socialcomments 143/143, verify_docs 144/144.
+
+Pad and Flip: neither editor changes. The event is the shared player's, so a
+Flip sends it too; the pills come only where a draw-back can be made.

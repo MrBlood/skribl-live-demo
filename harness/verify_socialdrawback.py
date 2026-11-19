@@ -834,10 +834,13 @@ with app.test_request_context("/social/"):
             rows = pg.evaluate("""() => [...document.querySelectorAll('.act-row')].map(a => ({ text: a.innerText.replace(/\\s+/g, ' ').trim(),
               href: new URL(a.href).pathname, badge: !!a.querySelector('.db-badge svg'), isNew: a.classList.contains('is-new') }))""")
             close_ctx(ctx, pg)
-            db_rows = [r for r in rows if "drew back on your drawing" in r["text"]]
+            # Only this section's: earlier sections drew back on Ana's too.
+            db_rows = [r for r in rows if "drew back on your drawing" in r["text"] and r["href"] == f"/social/p/{back}"]
+            others = [r for r in rows if "drew back on your drawing" in r["text"] and r["text"].startswith(("Mona", "New: Mona", "Ana", "New: Ana"))]
             check("Ana's Activity has Theo's draw-back, new: \"Theo drew back on your drawing\", Draw back's"
                   " pen on his face, opening his draw-back; none of Mona, whom she muted, and none of her own",
-                  st == 200 and mst == 200 and len(db_rows) == 1 and db_rows[0]["text"].startswith("New: Theo drew back on your drawing")
+                  st == 200 and mst == 200 and len(db_rows) == 1 and not others
+                  and db_rows[0]["text"].startswith("New: Theo drew back on your drawing")
                   and db_rows[0]["href"] == f"/social/p/{back}" and db_rows[0]["badge"] and db_rows[0]["isNew"],
                   json.dumps(rows)[:500])
             check("it nudges as a reply does (Replies): \"Theo drew back on your drawing\", and with no words of his"
@@ -855,17 +858,18 @@ with app.test_request_context("/social/"):
             ana = someone(b, "ana", "Ana Ruiz")
             theo = someone(b, "theo", "Theo Lin")
             uma = someone(b, "uma", "Uma Sato")
-            kim = someone(b, "kim", "Kim Ode")
+            # (Lea: nobody Ana blocked; Kim is blocked by Ana in section 2.)
+            kim = someone(b, "lea", "Lea Fox")
             cat = post_payload(ana, "Section 6, the cat", CAT)
             first = (draw_back(theo, cat, answer(n=10, seed=21))[1] or {}).get("post")
             time.sleep(0.02)
             second = (draw_back(uma, cat, answer(n=10, seed=22))[1] or {}).get("post")
             time.sleep(0.02)
             third = (draw_back(kim, cat, answer(n=10, seed=23))[1] or {}).get("post")
-            # Theo blocks Kim: Kim's is not on the strip Theo sees.
+            # Theo blocks Lea: hers is not on the strip Theo sees.
             c = theo.client()
             c.get("/social/")
-            bst, _ = c.post_json("/social/@kim/block", {})
+            bst, _ = c.post_json("/social/@lea/block", {})
             STRIP = """() => { const s = document.querySelector('.db-strip'); if (!s) return null;
               return { title: s.querySelector('.db-title').innerText.trim(), icon: !!s.querySelector('.db-title svg'),
                        tiles: [...s.querySelectorAll('.db-tile')].map(t => [new URL(t.href).pathname, t.querySelector('.db-by').textContent,
@@ -878,12 +882,12 @@ with app.test_request_context("/social/"):
                 ready(pg)
                 seen[who.handle] = pg.evaluate(STRIP)
                 close_ctx(ctx, pg)
-            want = [[f"/social/p/{x}", n, True] for x, n in ((third, "Kim"), (second, "Uma"), (first, "Theo"))]
+            want = [[f"/social/p/{x}", n, True] for x, n in ((third, "Lea"), (second, "Uma"), (first, "Theo"))]
             check("on her post, under the row: \"3 draw-backs\" with Draw back's pen, then each draw-back's drawing and who"
                   " drew back, newest first, each opening its own page; nothing past the screen",
                   seen["ana"] and seen["ana"]["title"] == "3 draw-backs" and seen["ana"]["icon"] and seen["ana"]["tiles"] == want
                   and seen["ana"]["wide"], json.dumps(seen["ana"]))
-            check("behind a block (Theo blocked Kim) Kim's is not on the strip Theo sees: \"2 draw-backs\"",
+            check("behind a block (Theo blocked Lea) Lea's is not on the strip Theo sees: \"2 draw-backs\"",
                   bst == 200 and seen["theo"] and seen["theo"]["title"] == "2 draw-backs" and seen["theo"]["tiles"] == want[1:],
                   json.dumps(seen["theo"]))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
