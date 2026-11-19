@@ -199,6 +199,11 @@ repository"): 1 and 2 (the menu inside a post, no gallery tick: #992); 3,
 draw-back says: each hand's drawing time kept on the post, a migration, and
 numbers the site hands Skribl's player: #994). Read DECISIONS and main's
 runs for what has merged and how it ran.
+MAIN AFTER #993 WAS RED ON ONE ROW (verify_socialcomments 33, "the tint
+fading", sqlite 4 of 6): the check's clock, not the site (`DECISIONS.md`,
+"Main's red after #993"); its watch now starts when the comment arrives.
+READ THE RUN ON THE TREE AFTER THAT FIX before believing main is green:
+the runs after #994 and #995 were cancelled by the queue, not run.
 THE PICTURES OF ALL TEN AS BUILT, on the page the owner was sent:
 https://claude.ai/artifact/4BFRLCBk6cB8BMg8VZQt68 (`DECISIONS.md`, "The ten
 as built", has what was read on the built pages and main's runs).

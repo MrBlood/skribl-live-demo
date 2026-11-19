@@ -944,11 +944,19 @@ KEYBOARD = """(() => { const t = new EventTarget(); let h = null, off = 0, scale
   window.__keyboard = (px, zoom) => { scale = zoom || 1; h = innerHeight - px; off = 0; t.dispatchEvent(new Event('resize')); };
   window.__keyboardQuiet = (px) => { h = innerHeight - px; }; })();"""
 
-# Press Post in the open box and read on every frame, until `ms`: the old first
-# comment's name (painted), the new comment's top, opacity and glow (the landing's
-# tint on it, and that tint's own fade), a phone's sheet, and the box's height
-# while it is seen (it must not change on its way out: emptied once gone); what
-# Post says meanwhile, and whether a line was shown in the box.
+# Press Post in the open box and read on every frame, until `ms` AFTER THE
+# COMMENT ARRIVES: the old first comment's name (painted), the new comment's
+# top, opacity and glow (the landing's tint on it, and that tint's own fade), a
+# phone's sheet, and the box's height while it is seen (it must not change on
+# its way out: emptied once gone); what Post says meanwhile, and whether a line
+# was shown in the box.
+# THE CLOCK STARTS AT THE ARRIVAL, NOT AT THE PRESS. It ran from the press, and
+# what it watches (the glow's 900ms, then a fade of a second and a half) only
+# begins once the site has answered: on main after #993 a shard's answer took
+# about 700ms longer than here, the 1800ms ran out 100ms into the fade, and the
+# row said "fading 6 frames" of a tint that was fading as it should (the same
+# row green on the other database in that run, and here ten times of ten). A
+# comment that never arrives ends the watch eight seconds after the press.
 POSTED = """async ([ms]) => {
   const q = s => document.querySelector(s);
   const oldName = q('[data-cm-list] > .cm > .cm-main .cm-name');
@@ -962,9 +970,10 @@ POSTED = """async ([ms]) => {
   const fold = q('[data-cm-fold]'), room = fold ? Math.round(fold.getBoundingClientRect().height * 100) / 100 : 0;
   post.click();
   out.label = post.textContent.trim();
-  let li = null; const t0 = performance.now();
+  let li = null, t1 = null; const t0 = performance.now();
   await new Promise(res => { const step = () => {
     li = li || [...document.querySelectorAll('.cm')].find(e => !before.has(e.id));
+    if (li && t1 === null) t1 = performance.now();
     if (oldName) out.old.push(top(oldName));
     if (li) { out.new.push(top(li)); out.ops.push(Math.round(+getComputedStyle(li).opacity * 100) / 100);
               out.glow.push(li.classList.contains('is-landed'));
@@ -974,9 +983,11 @@ POSTED = """async ([ms]) => {
     if (sheet) { const t = top(sheet); if (t !== null) out.sheet.push(t); }
     if (seen(box)) out.heights.push(Math.round(box.getBoundingClientRect().height * 100) / 100);
     if (!say.hidden && !say.classList.contains('sr')) out.line = true;
-    if (performance.now() - t0 < ms) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); });
+    const now = performance.now();
+    if (t1 === null ? now - t0 < 8000 : now - t1 < ms) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); });
   const head = q('.comments-head').getBoundingClientRect(), hs = out.heights;
-  return { id: li ? li.id : null, room, old: out.old, new: out.new, ops: out.ops, sheet: out.sheet, glow: out.glow,
+  return { id: li ? li.id : null, room, waited: t1 === null ? null : Math.round(t1 - t0),
+           old: out.old, new: out.new, ops: out.ops, sheet: out.sheet, glow: out.glow,
            tint: out.tint, fade: out.tints.filter(o => o > 0.03 && o < 0.97).length,
            step: hs.some((h, i) => i && Math.abs(h - hs[i - 1]) > 0.5), label: out.label, line: out.line,
            focus: document.activeElement ? document.activeElement.className : null,
@@ -3871,7 +3882,7 @@ with sync_playwright() as p:
                             f" (the box's room {w['room']}); sheet {glided(w['sheet']) if w['sheet'] else None}; fade in"
                             f" {w['ops'][:4]}..{w['ops'][-1:]}; the tint {w['tint']}, fading {w['fade']} frames; Post said"
                             f" {w['label']!r}, a line {w['line']}, a step {w['step']}; box {v['box']['open']} {v['box']['words']!r};"
-                            f" focus {w['focus']}")
+                            f" focus {w['focus']}; it arrived {w['waited']}ms after the press")
             check("posted, the box goes (a phone's sheet glides down; a desk's fold folds away in step as the comment opens its"
                   " room where the box was) and the comment sits at the top, fading in and glowing in the landing's tint, which"
                   " fades; what was under it moves only as a glide (read on every frame); Post says \"Posting…\" meanwhile and no"

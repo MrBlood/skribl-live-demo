@@ -47889,3 +47889,46 @@ MAIN'S FULL RUNS, as this was written: after #992 green. After #993
 running. The run after #994 never ran: the workflow keeps one run waiting,
 and #995's push took its place (cancelled, not red); the run after #995
 covers both trees' changes and was still waiting its turn.
+
+## After v330 -- Main's red after #993: the watch on a posted comment ran out before its tint faded (the check's clock, not the site)
+
+MAIN'S FULL RUN AFTER #993 WAS RED ON ONE ROW (run 2357, sqlite 4 of 6;
+every other shard on both databases, Firefox, WebKit and the MP4 lane
+green): verify_socialcomments 33, "posted, the box goes ... glowing in the
+landing's tint, which fades", saying "phone: not ['the tint fading'] ...
+fading 6 frames", with the desk beside it "fading 41 frames". The same row
+was green on PostgreSQL's shard in that run.
+
+NOT A DEFECT, AND NOT #993's. A posted comment glows 900ms and its tint
+then fades over a second and a half (comments.js, social.css). The check's
+watch (POSTED) ran 1800ms FROM THE PRESS, and none of that begins until the
+site has answered. Here the answer takes about 30ms, so the watch saw 800ms
+of the fade (44 to 50 frames). On that shard it took about 700ms longer,
+the watch ended 100ms into the fade, and 6 frames is under the 10 the row
+asks for. The tint was fading as it should.
+
+SHOWN HERE, WITH THE SAME WORDS. The site's answer held back 0.7s on the
+phone, in a scratch copy: the check as it was says "phone: not ['the tint
+fading'] ... fading 6 frames", the run's own number. Without the delay it
+was green ten times of ten here, four at a time.
+
+THE CLOCK NOW STARTS WHEN THE COMMENT ARRIVES (one line in POSTED, so its
+four other uses get it too); one that never arrives ends the watch eight
+seconds after the press, and the row says how long the answer took ("it
+arrived 730ms after the press"). CALIBRATED: as it was, slow answer, red (6
+frames); as it is, the same slow answer, green (49 frames); as it is, with
+the tint made never to fade, red on both screens (0 frames).
+
+A FIRST GUESS THAT WAS WRONG, kept so it is not guessed again. Before the
+run's own words were read, the desk was suspected: since #993's 18px, what
+was under a comment posted on a desk moves 2.56px here where it moved
+15.44, and only 4 frames of that pass the rule's 0.3px floor where it
+wants 3. It held ten times of ten, and on CI's fonts the same move is 47px,
+so it was not this. If the row is ever red here with the desk named, read
+"the old first" in it. The run's log could not be fetched whole from here
+(its host is not allowed); the row's words were read through the job's
+log, 1,300 lines from its end.
+
+THE RUNS AFTER #994 AND #995 never ran: the workflow keeps one run
+waiting, and each next push took its place (cancelled, not red). The run
+on the tree after #996 holds all of it.
