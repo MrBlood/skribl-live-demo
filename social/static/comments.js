@@ -684,19 +684,27 @@
      under it slides down. It is laid out whole from the start and shown from
      its top down (a clip), a negative margin under it giving its room back a
      frame at a time (social.css, .is-growing), so nothing inside it moves.
-     `extra`: the rule its arrival gives the comment after it (one that stops
-     being first takes its rule back), given back too, so nothing steps. Under
+     `extra`: room its arrival adds beyond its own height that the caller
+     knows of; what the stylesheet adds is measured here (below), and both
+     are given back too, so nothing steps. Under
      Reduce Motion it is put in place and fades in. `out`: how far its
      edges reach past its box (10px, the landing's tint). */
   function arrive(li, parent, before, extra, then, out) {
     var x = '-' + (out || 10) + 'px';
     li.style.opacity = '0';
     li.style.clipPath = 'inset(0 ' + x + ' 100% ' + x + ')';
+    var was = parent.getBoundingClientRect().height;
     parent.insertBefore(li, before);
     /* Settled before it is measured: its times said as the page says them
        ("now" for the server's day) can take a line off a narrow head. */
     settle(li);
     var h = li.getBoundingClientRect().height;     // to the fraction: a whole pixel would step
+    /* WHAT ELSE ITS ARRIVAL ADDS, MEASURED: the room before a new conversation
+       (social.css: 18px on a comment that follows another, so on the one this
+       pushes down, or on this one at a list's end). The list grows by that as
+       well as by the comment, and it is given back with it. Left out, what
+       was under a new comment stepped 18px in one frame and then glided. */
+    extra = (extra || 0) + Math.max(0, parent.getBoundingClientRect().height - was - h);
     if (still()) li.style.clipPath = '';
     else {
       li.style.marginBottom = -(h + extra) + 'px';

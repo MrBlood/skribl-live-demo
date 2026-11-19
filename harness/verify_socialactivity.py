@@ -445,7 +445,9 @@ ROWS = r"""() => [...document.querySelectorAll('.act-list')].map(ul => {
     const peek = a.querySelector('.act-peek'), when = a.querySelector('.act-when'), pic = a.querySelector('.act-pic'),
           mark = a.querySelector('.act-mark');
     const faces = [...a.querySelectorAll('.face-ring')].map(f => { const i = f.querySelector('img.skribl-face-still');
-                                                                   return i ? new URL(i.src).pathname : 'blank'; });
+      if (i) return new URL(i.src).pathname;
+      const l = f.querySelector('.face-blank.has-initial');   // one not drawn yet: its initial, and how big
+      return l ? 'blank ' + l.textContent.trim() + ' ' + getComputedStyle(l).fontSize : 'blank'; });
     const pr = pic.getBoundingClientRect(), r = a.getBoundingClientRect();
     let lines = null;
     if (peek) { const lh = parseFloat(getComputedStyle(peek).lineHeight), ph = peek.getBoundingClientRect().height;
@@ -867,10 +869,11 @@ with sync_playwright() as p:
                      "fay": rows.get(c_ans, {}).get("faces")}
             check("each kind of row says who and what in the mock's words (\"Eli said something on your post\", \"Fay"
                   " replied to your comment\", \"Hal replied with a drawing\", \"Gus commented with a drawing\"), with"
-                  " their face, when as comments say it (\"now\", \"5m\"), New for a screen reader, and one link to the"
+                  " their face (one not drawn yet its initial, \"F\" for Fay: the walkthrough's mocks, choice 9), when as"
+                  " comments say it (\"now\", \"5m\"), New for a screen reader, and one link to the"
                   " comment on its page, a post's or a drawing's (a reply's, the page of what it answers)",
                   not bad and len(rows) == 6 and faces["eli"] == [poster(eli_face)]
-                  and faces["eli on the drawing"] == [poster(eli_face)] and faces["fay"] == ["blank"],
+                  and faces["eli on the drawing"] == [poster(eli_face)] and faces["fay"] == ["blank F 16px"],
                   f"wrong {bad}; rows {len(rows)}; faces {faces}")
             peeks = {cid: rows.get(cid, {}).get("peek") for cid in want}
             lng = rows.get(c_long, {})

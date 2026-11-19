@@ -49,14 +49,18 @@
   <h1 class="page-title">Gallery</h1>
   <p class="page-sub">Everyone’s drawings and Flips. Tap one to watch it come alive.</p>
 </div>
-{% if me %}{{ gallery_show_pill(show) }}{% endif %}
+{#  THE PILLS SHARE A LINE, AND THE SEARCH BOX TAKES THE NEXT ONE WHOLE (the
+    walkthrough's mocks, choice 10, the owner's "all yes", Nov 19). New | Hot
+    and the box shared a line, and on a 402px phone the box had 178px for
+    words that need 217: "Search people and drawir". Signed out there is one
+    pill on the line, New | Hot. #}
+<div class="gal-pills">{% if me %}{{ gallery_show_pill(show) }}{% endif %}{{ gallery_sort_pill(sort) }}</div>
 {% endif %}
 {#  What a screen reader hears when a Follow takes (follows.js), ABOVE what
     changes: after it, it was where the browser held the page still from (its
     scroll anchor), and Load more's rows moved the page by what they added. #}
 <p class="sr" data-follow-said role="status"></p>
 <div class="gal-bar">
-  {% if not who %}{{ gallery_sort_pill(sort) }}{% endif %}
   <form class="gal-find" role="search" action="{{ url_for('social.explore') }}" method="get" data-gal-find>
     {% if show != 'everyone' %}<input type="hidden" name="show" value="{{ show }}">{% endif %}
     {%- if sort != 'new' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}

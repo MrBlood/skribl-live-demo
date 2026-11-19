@@ -3861,6 +3861,14 @@ print("PLAN " + json.dumps(out))
             check("...nothing of the full screen's sheets reaches the post's own line: its scrubber's tint and its words' size"
                   " as they are with no full screen on the page",
                   after["scrubBg"] == before["scrubBg"] and after["wordsSize"] == before["wordsSize"] == "14px", f"{before} -> {after}")
+            # A COMMENT'S LINE WAITS FOR THE FIRST PLAY (the walkthrough's mocks,
+            # choice 4, Nov 19), as a card's does, and its full-screen button with
+            # it: the drawing is played first, as somebody would.
+            pg.evaluate("() => { const b = document.querySelector('.cm .cm-art .skribl-inline'); if (b) b.scrollIntoView({ block: 'center' }); }")
+            pg.wait_for_timeout(300)
+            waited18 = pg.evaluate("() => { const l = document.querySelector('.cm .cm-art .skribl-inline-line'); return !!l && l.classList.contains('is-waiting'); }")
+            pg.click(".cm .cm-art .skribl-inline")
+            pg.wait_for_timeout(900)
             pg.evaluate("() => { const b = document.querySelector('.cm .skribl-inline-full'); if (b) b.scrollIntoView({ block: 'center' }); }")
             pg.wait_for_timeout(400)
             cm = pg.evaluate(BTN, ".cm .skribl-inline-line .skribl-inline-full")
@@ -3872,9 +3880,9 @@ print("PLAN " + json.dumps(out))
                     return { on: !!st && st.classList.contains('is-immersive-page'), who: who ? [who.querySelector('b').textContent, who.querySelector('span').textContent] : null }; }""")
                 pg.keyboard.press("Escape")
                 pg.wait_for_timeout(400)
-            check("...and a comment's drawing ends its line in the same button, which opens the same full screen, its"
-                  " own words over its maker",
-                  stc == 200 and bool(cm) and cm["shown"] and cm["w"] == 32 and cm["reach"] and bool(cmf) and cmf["on"]
+            check("...and a comment's drawing, once played (its line waits till then), ends its line in the same button,"
+                  " which opens the same full screen, its own words over its maker",
+                  stc == 200 and waited18 and bool(cm) and cm["shown"] and cm["w"] == 32 and cm["reach"] and bool(cmf) and cmf["on"]
                   and cmf["who"] == ["And an answer, drawn.", "Fulla Screen · @fulla"], f"{cm} {cmf}")
             close_ctx(ctx, pg)
         except Exception as exc:  # noqa: BLE001
@@ -3934,6 +3942,74 @@ print("PLAN " + json.dumps(out))
                   f"card {card}; gallery {tiles}")
         except Exception as exc:  # noqa: BLE001
             check("section 19 ran to its end", False, str(exc).splitlines()[0][:200])
+
+    if part(20, "the walkthrough's small ones: an initial in a face not drawn yet; the Gallery's pills on one line"):
+        # Choices 9 and 10 of the walkthrough's mocks (the owner's "all yes",
+        # Nov 19). A FACE NOT DRAWN YET was a blank lilac circle on a card and
+        # on a post's own page; it shows its person's initial there now, as a
+        # comment's has since Nov 17 (a Gallery tile's 22px face stays plain,
+        # as decided there). THE GALLERY'S SEARCH BOX shared New | Hot's line,
+        # and a 402px phone left it 178px for words that need 217; the two
+        # pills share a line now and the box takes the next one whole.
+        try:
+            op = someone(b, "opaln", "Opal Nakamura")
+            st20, j20 = make_post(op, "Section 20, no face drawn yet", seed=201)
+            p20 = j20.get("post") if st20 == 200 and isinstance(j20, dict) else None
+            FACE20 = """(sel) => { const f = document.querySelector(sel); if (!f) return null;
+              const lum = c => { const v = (c.match(/[\\d.]+/g) || []).slice(0, 3).map(Number).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+                                 return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+              const bl = f.querySelector('.face-blank'), cs = bl ? getComputedStyle(bl) : null, r = f.getBoundingClientRect();
+              const a = cs ? lum(cs.color) : 0, g = cs ? lum(cs.backgroundColor) : 0;
+              const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              return { disc: Math.round(r.width), letter: bl ? bl.textContent.trim() : null, font: cs ? cs.fontSize : null,
+                       bold: !!cs && parseInt(cs.fontWeight, 10) >= 700, painted: !!at && f.contains(at),
+                       ratio: cs ? Math.round((Math.max(a, g) + 0.05) / (Math.min(a, g) + 0.05) * 100) / 100 : 0 }; }"""
+            ROOM20 = """() => { const i = document.querySelector('[data-gal-q]'), cs = getComputedStyle(i), r = i.getBoundingClientRect();
+              const c = document.createElement('canvas').getContext('2d'); c.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+              const words = Math.ceil(c.measureText(i.placeholder).width);
+              const room = Math.floor(i.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+              const pills = [...document.querySelectorAll('[data-gal-show], [data-gal-sort]')].map(e => e.getBoundingClientRect());
+              const col = document.querySelector('.gal-bar').getBoundingClientRect();
+              return { words, room, fits: words <= room, n: pills.length, oneLine: pills.every(p => Math.abs(p.top - pills[0].top) < 1),
+                       apart: pills.length > 1 ? Math.round(pills[1].left - pills[0].right) : null,
+                       under: pills.length > 0 && pills.every(p => r.top >= p.bottom), whole: Math.abs(r.width - col.width) <= 1,
+                       below: pills.length ? Math.round(r.top - pills[0].bottom) : null,
+                       pageScrolls: document.documentElement.scrollWidth > innerWidth }; }"""
+            faces20, rooms20 = {}, {}
+            for scheme in ("light", "dark"):
+                ctx, pg = browser_as(b, op, "phone", scheme)
+                pg.goto(BASE + "/social/")
+                pg.wait_for_timeout(700)
+                faces20[f"card {scheme}"] = pg.evaluate(FACE20, f'.post-card[data-post="{p20}"] .post-face > .face-ring')
+                pg.goto(BASE + f"/social/p/{p20}")
+                pg.wait_for_timeout(700)
+                faces20[f"page {scheme}"] = pg.evaluate(FACE20, ".post-page .post-head .post-face > .face-ring")
+                pg.goto(BASE + "/social/explore")
+                pg.wait_for_timeout(700)
+                faces20[f"tile {scheme}"] = pg.evaluate(FACE20, f'.gal-tile[data-post="{p20}"] .gal-by .face-ring')
+                rooms20[f"phone {scheme}"] = pg.evaluate(ROOM20)
+                close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, op, "desk", "light")
+            pg.goto(BASE + "/social/explore")
+            pg.wait_for_timeout(700)
+            rooms20["desk light"] = pg.evaluate(ROOM20)
+            close_ctx(ctx, pg)
+            want20 = {"card": (44, "O", "16px"), "page": (48, "O", "19px")}
+            check("a face not drawn yet says whose it is: her initial on her post's card (16px in the 44px disc) and on the"
+                  " post's own page (19px in the 48px one), bold, painted, at 4.5:1 or more on its disc, light and dark; a"
+                  " Gallery tile's small face stays plain, no letter",
+                  bool(p20) and all((v or {}).get("disc") == want20[k.split()[0]][0] and v.get("letter") == want20[k.split()[0]][1]
+                                    and v.get("font") == want20[k.split()[0]][2] and v.get("bold") and v.get("painted")
+                                    and v.get("ratio", 0) >= 4.5 for k, v in faces20.items() if not k.startswith("tile"))
+                  and all((v or {}).get("letter") == "" and v.get("disc") == 22 for k, v in faces20.items() if k.startswith("tile")),
+                  json.dumps(faces20))
+            check("the Gallery, signed in: Following | Everyone and New | Hot share one line, 8px apart, and the search box"
+                  " takes the next line whole, 10px under them, with room for all of its words (a phone, light and dark; a"
+                  " desk); nothing makes the page scroll sideways",
+                  all(v["n"] == 2 and v["oneLine"] and v["apart"] == 8 and v["under"] and v["whole"] and v["below"] == 10
+                      and v["fits"] and not v["pageScrolls"] for v in rooms20.values()), json.dumps(rooms20))
+        except Exception as exc:  # noqa: BLE001
+            check("section 20 ran to its end", False, str(exc).splitlines()[0][:200])
 
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):

@@ -854,8 +854,9 @@ with sync_playwright() as p:
                         hers = f && f.querySelector('.db-face .face-ring');
                   const hr = his && his.getBoundingClientRect(), sr = hers && hers.getBoundingClientRect();
                   const mid = hr && document.elementFromPoint(hr.left + hr.width / 2, hr.top + hr.height / 2);
+                  const letter = e => { const b = e && e.querySelector('.face-blank.has-initial'); return b ? [b.textContent.trim(), getComputedStyle(b).fontSize] : null; };
                   return { on: l ? l.textContent.replace(/\\s+/g, ' ').trim() : null, href: a ? new URL(a.href).pathname : null,
-                           hit: !!at && !!a && a.contains(at), face: !!hers,
+                           hit: !!at && !!a && a.contains(at), face: !!hers, letters: [letter(his), letter(hers)],
                            faces: hr && sr ? { his: Math.round(hr.width), hers: Math.round(sr.width), middleHis: !!mid && !mid.closest('.db-face'),
                                                foot: sr.left >= hr.left + hr.width / 2 - 1 && sr.top >= hr.top + hr.height / 2 - 1,
                                                ring: (() => { const pr = document.createElement('i'); pr.style.color = 'var(--page)'; document.body.appendChild(pr);
@@ -873,6 +874,13 @@ with sync_playwright() as p:
                   " size (24px) at its foot, ringed in the page's own ground, as the card's is in the card's (phone and desk)",
                   all(v.get("faces") == {"his": 48, "hers": 24, "middleHis": True, "foot": True, "ring": True} for v in page.values()),
                   json.dumps({k: v.get("faces") for k, v in page.items()}))
+            # A FACE NOT DRAWN YET SHOWS ITS INITIAL (the walkthrough's mocks,
+            # choice 9, the owner's "all yes", Nov 19), his and hers: two blank
+            # lilac circles, one on the other, said nothing about who.
+            check("neither has drawn a face yet, and each disc says whose it is: his initial at 19px in his 48px disc, hers"
+                  " at 11px in her 24px one (phone and desk)",
+                  all(v.get("letters") == [["T", "19px"], ["A", "11px"]] for v in page.values()),
+                  json.dumps({k: v.get("letters") for k, v in page.items()}))
             # ON YOUR OWN DRAWING (the owner's "All yes", Nov 19): "Drew back on
             # their own drawing", the link to it, one face. AND A NAME THAT
             # STARTS WITH A TITLE is said whole: "Dr. Kai Moss", never "Dr.".
@@ -1228,7 +1236,11 @@ with app.test_request_context("/social/"):
             ready(pg)
             pg.goto(BASE + "/social/activity")
             ready(pg)
-            rows = pg.evaluate("""() => [...document.querySelectorAll('.act-row')].map(a => ({ text: a.innerText.replace(/\\s+/g, ' ').trim(),
+            # The row's words as they are said: what a face not drawn yet shows (its
+            # initial, hidden from a screen reader: _post.html face) is no word of the row's.
+            rows = pg.evaluate("""() => [...document.querySelectorAll('.act-row')].map(a => ({
+              text: (() => { const c = a.cloneNode(true); c.querySelectorAll('[aria-hidden="true"]').forEach(e => e.remove());
+                             return c.textContent.replace(/\\s+/g, ' ').trim(); })(),
               href: new URL(a.href).pathname, badge: !!a.querySelector('.db-badge svg'), isNew: a.classList.contains('is-new') }))""")
             close_ctx(ctx, pg)
             # Only this section's: earlier sections drew back on Ana's too.
@@ -1293,6 +1305,80 @@ with app.test_request_context("/social/"):
             check("behind a block (Theo blocked Lea) Lea's is not on the strip Theo sees: \"2 draw-backs\"",
                   bst == 200 and seen["theo"] and seen["theo"]["title"] == "2 draw-backs" and seen["theo"]["tiles"] == want[1:],
                   json.dumps(seen["theo"]))
+            # "DRAW BACK", IN WORDS, AT THE END OF THEIR LINE (the walkthrough's
+            # mocks, choice 3, the owner's "all yes", Nov 19). Approved at the end
+            # of the row of buttons, it ran 10px past the drawing's edge once the
+            # row had counts and was cut off on a desk; here it ends where the
+            # line does, which on a phone is the drawing's edge. THE ROW IS NOT
+            # TOUCHED: its pen and count stay.
+            WORD = """() => { const s = document.querySelector('.post-page .db-strip'), b = s && s.querySelector('.db-word');
+              const art = document.querySelector('.post-page .post-art').getBoundingClientRect();
+              const row = [...document.querySelectorAll('.post-page > .post-row > *')].map(e => e.classList.contains('db-pen') ? 'pen ' + e.textContent.trim()
+                            : e.classList.contains('rp-btn') ? 'repost' : e.classList.contains('post-more') ? 'more' : e.classList.contains('lk-heart') || e.querySelector('.lk-heart') ? 'heart' : 'comments');
+              if (!b) return { strip: !!s, there: false, row, title: s ? s.querySelector('.db-title').innerText.trim() : null, tiles: s ? !!s.querySelector('.db-row') : false };
+              const r = b.getBoundingClientRect(), cs = getComputedStyle(b), t = s.querySelector('.db-title').getBoundingClientRect(), sr = s.getBoundingClientRect();
+              const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              return { strip: true, there: true, says: b.textContent.trim(), icon: !!b.querySelector('svg'), h: Math.round(r.height * 10) / 10, font: cs.fontSize, weight: cs.fontWeight,
+                       painted: !!at && b.contains(at), lineEnd: Math.round((sr.right - r.right) * 10) / 10, artEdge: Math.round((art.right - r.right) * 10) / 10,
+                       sameLine: Math.abs((r.top + r.height / 2) - (t.top + t.height / 2)) < 1.5, clear: r.left >= t.right + 7.5,
+                       title: s.querySelector('.db-title').innerText.trim(), tiles: !!s.querySelector('.db-row'), row,
+                       wide: document.documentElement.scrollWidth <= innerWidth,
+                       attrs: [b.getAttribute('data-drawback'), b.getAttribute('data-drawback-first'), b.hasAttribute('data-drawback-own')] }; }"""
+            words = {}
+            for who, screen in ((theo, "phone"), (theo, "desk"), (ana, "phone")):
+                ctx, pg = browser_as(b, who, screen=screen)
+                pg.goto(BASE + f"/social/p/{cat}")
+                ready(pg)
+                words[f"{who.handle} {screen}"] = pg.evaluate(WORD)
+                if who is theo and screen == "phone" and words[f"{who.handle} {screen}"].get("there"):
+                    pg.evaluate("() => document.querySelector('.db-word').scrollIntoView({ block: 'center' })")
+                    pg.wait_for_timeout(200)
+                    pg.click(".post-page .db-word")
+                    try:
+                        pg.wait_for_function("() => window.SocialComposer && !!SocialComposer.drawingBack()", timeout=10000)
+                        words["tapped"] = pg.evaluate("() => SocialComposer.drawingBack()")
+                    except Exception as exc:  # noqa: BLE001
+                        words["tapped"] = {"stopped": str(exc).splitlines()[0][:120]}
+                close_ctx(ctx, pg)
+            wt, wd, wa = words["theo phone"], words["theo desk"], words["ana phone"]
+            check("at the end of the draw-backs' line, \"Draw back\" in words with its pen: the site's second button (44px,"
+                  " 15px, 600), painted, on the count's own line and clear of it, ending where the line ends (a phone and a"
+                  " desk), which on a phone is the drawing's edge; nothing past the screen",
+                  all(w.get("there") and w["says"] == "Draw back" and w["icon"] and w["h"] >= 44 and w["font"] == "15px" and w["weight"] == "600"
+                      and w["painted"] and w["sameLine"] and w["clear"] and abs(w["lineEnd"]) <= 1 and w["wide"] for w in (wt, wd, wa))
+                  and abs(wt.get("artEdge", 99)) <= 1 and wt["title"] == "2 draw-backs" and wa["title"] == "3 draw-backs",
+                  json.dumps({k: v for k, v in words.items() if k != "tapped"})[:900])
+            check("the row of buttons above it is not touched: comments, repost, heart, the pen with its count, and ⋯",
+                  wt.get("row") == ["comments", "repost", "heart", "pen 2", "more"] and wa.get("row") == ["comments", "repost", "heart", "pen 3", "more"],
+                  json.dumps({"theo": wt.get("row"), "ana": wa.get("row")}))
+            check("a tap on the words is the pen's own: the composer opens drawing back on hers; on her own post it says so"
+                  " (your own drawing)",
+                  (words.get("tapped") or {}).get("id") == cat and wt.get("attrs") == [cat, "Ana", False] and wa.get("attrs") == [cat, "Ana", True],
+                  json.dumps({"tapped": words.get("tapped"), "theo": wt.get("attrs"), "ana": wa.get("attrs")}))
+            # THE LINE IS THERE FROM THE START, so the words always have a home;
+            # and where it cannot be done there are no words, and with nothing
+            # drawn back no line either: signed out, and a Flip of two pages.
+            fresh = post_payload(ana, "Section 6, nobody has drawn back on this", drawing(n=24, seed=61))
+            pages2 = dict(drawing(n=12, seed=62))
+            pages2["frames"] = [dict(pages2["frames"][0]), dict(pages2["frames"][0])]
+            pages2["playbackMode"], pages2["fps"] = "flip", 8
+            flipped = post_payload(ana, "Section 6, a Flip of two pages", pages2)
+            zero = {}
+            for key, who, post in (("fresh", theo, fresh), ("signed out", None, fresh), ("a Flip", theo, flipped)):
+                ctx, pg = browser_as(b, who)
+                pg.goto(BASE + f"/social/p/{post}")
+                ready(pg)
+                zero[key] = pg.evaluate(WORD)
+                close_ctx(ctx, pg)
+            check("on a drawing nobody has drawn back on, the line is there from the start: \"No draw-backs yet\" and Draw"
+                  " back at its end, no row of drawings under it; signed out, or on a Flip of two pages (which can't be"
+                  " drawn back on yet), no words and no line",
+                  bool(fresh) and bool(flipped) and zero["fresh"].get("there") and zero["fresh"]["title"] == "No draw-backs yet"
+                  and not zero["fresh"]["tiles"] and abs(zero["fresh"].get("lineEnd", 99)) <= 1 and zero["fresh"].get("h", 0) >= 44
+                  and zero["signed out"] == {"strip": False, "there": False, "row": zero["signed out"]["row"], "title": None, "tiles": False}
+                  and "pen" not in " ".join(zero["signed out"]["row"])
+                  and zero["a Flip"].get("strip") is False and zero["a Flip"].get("there") is False,
+                  json.dumps(zero)[:900])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(6, exc)
 

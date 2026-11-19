@@ -338,6 +338,20 @@ def press(pg, sel):
     pg.evaluate("(s) => { const e = document.querySelector(s); if (e) e.click(); }", sel)
 
 
+# The Gallery's search box: do its words fit, is it under the pills, and is it
+# the column's width? (Sections 5 here, signed out; verify_socialposts 13,
+# signed in, where Following | Everyone shares New | Hot's line.)
+GAL_ROOM = """() => { const i = document.querySelector('[data-gal-q]'), cs = getComputedStyle(i), r = i.getBoundingClientRect();
+  const c = document.createElement('canvas').getContext('2d'); c.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+  const words = Math.ceil(c.measureText(i.placeholder).width);
+  const room = Math.floor(i.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+  const pills = [...document.querySelectorAll('[data-gal-show], [data-gal-sort]')].map(e => e.getBoundingClientRect());
+  const col = document.querySelector('.gal-bar').getBoundingClientRect();
+  return { words, room, fits: words <= room, pills: pills.map(p => [Math.round(p.left), Math.round(p.top), Math.round(p.right)]),
+           oneLine: pills.every(p => Math.abs(p.top - pills[0].top) < 1), apart: pills.length > 1 ? Math.round(pills[1].left - pills[0].right) : null,
+           under: pills.length > 0 && pills.every(p => r.top >= p.bottom), whole: Math.abs(r.width - col.width) <= 1,
+           pageScrolls: document.documentElement.scrollWidth > innerWidth }; }"""
+
 with sync_playwright() as p:
     b = p.chromium.launch()
     errs = []
@@ -1028,6 +1042,15 @@ with sync_playwright() as p:
               and sec["sorts"] == [["New", "true", "Newest first"], ["Hot", "false", "Most played in the last seven days"]]
               and bool(sec["box"]) and sec["box"][:3] == ["search", "Search people and drawings", "Search people and drawings"]
               and sec["box"][3] >= 16 and sec["box"][4] >= 44, json.dumps(sec))
+        # THE BOX HAS ROOM FOR ITS WORDS (the walkthrough's mocks, choice 10, the
+        # owner's "all yes", Nov 19): it shared New | Hot's line, and on a phone
+        # its words ended at "drawir". Now the pill has a line and the box the
+        # next one, whole. The words are measured in the box's own font against
+        # the room inside its padding.
+        room = pg.evaluate(GAL_ROOM)
+        check("on a phone the search box sits under New | Hot on a line of its own, as wide as the column, with room for"
+              " all of \"Search people and drawings\"; nothing makes the page scroll sideways",
+              room["fits"] and room["under"] and room["whole"] and not room["pageScrolls"], json.dumps(room))
         c.close()
 
     # ------------------------------------------------------------------ 6

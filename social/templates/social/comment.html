@@ -52,7 +52,7 @@
 {% endblock %}
 
 {% block main %}
-<article class="post-page cm-page{% if it.gone %} is-gone{% endif %}" data-cm-subject="{{ c.public_id }}" data-comment="{{ c.public_id }}"
+<article class="post-page cm-page{% if it.gone %} is-gone{% endif %}"{% if c.skribl_id and it.sk and it.sk.canvas_w and it.sk.canvas_h %} style="--art-w: {{ it.sk.canvas_w }}; --art-h: {{ it.sk.canvas_h }}"{% endif %} data-cm-subject="{{ c.public_id }}" data-comment="{{ c.public_id }}"
          data-first="{{ who.display_name|first_name if who else '' }}" data-url="{{ url_for('social.comment_page', public_id=c.public_id) }}"
          data-up="{{ way[-1].href }}"{% if me and me.id == c.person_id %} data-mine{% endif %}{{ share_data(it) }}
          {%- if c.skribl_id %} data-autoplay{% else %} data-no-art{% endif %} aria-labelledby="postWho">

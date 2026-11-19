@@ -50,8 +50,7 @@
     play: svg('<path d="M8 5v14l11-7z"/>', 'currentColor'),
     pause: svg('<rect x="6" y="5" width="4" height="14" rx="1"/>'
                + '<rect x="14" y="5" width="4" height="14" rx="1"/>', 'currentColor'),
-    loop: svg('<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>'
-              + '<path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>'),
+    loop: svg('<path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z"/>'),
     sound: svg('<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>'
                + '<path d="M19 5a9 9 0 0 1 0 14"/>'),
     muted: svg('<path d="M11 5 6 9H2v6h4l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/>'),

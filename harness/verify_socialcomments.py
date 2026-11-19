@@ -1118,6 +1118,34 @@ DRAFT = """() => { const d = document.querySelector('[data-cm-draft]'); const bo
 ART = """(id) => { const li = document.getElementById('c-' + id);
   const a = li && li.querySelector(':scope > .cm-main .cm-art [data-skribl-inline]');
   return a ? a.getAttribute('data-skribl-id') : null; }"""
+# A drawn comment's drawing in its thread: its box, the post's own drawing,
+# its bubble and its room, its line and its play button (section 15).
+REST15 = """(id) => { const r1 = x => Math.round(x * 10) / 10;
+  const li = document.getElementById('c-' + id), art = li.querySelector(':scope > .cm-main .cm-art');
+  const boxEl = art.querySelector('.skribl-inline'), box = boxEl.getBoundingClientRect(), line = art.querySelector('.skribl-inline-line');
+  const post = document.querySelector('.post-page > .post-art .skribl-inline').getBoundingClientRect();
+  const bub = li.querySelector(':scope > .cm-main > .cm-bubble').getBoundingClientRect(), room = li.querySelector(':scope > .cm-main').getBoundingClientRect();
+  const play = art.querySelector('.skribl-inline-play'), pr = play.getBoundingClientRect();
+  // The play button takes no taps of its own (the whole drawing is the tap), so the point under it answers
+  // with the drawing: painted means it is shown, and nothing else of the page lies over that spot.
+  const at = document.elementFromPoint(pr.left + pr.width / 2, pr.top + pr.height / 2), ps = getComputedStyle(play);
+  return { w: r1(box.width), h: r1(box.height), postW: r1(post.width), postH: r1(post.height), ar: +art.style.getPropertyValue('--ar') || 0,
+           line: line ? [line.classList.contains('is-waiting'), r1(line.getBoundingClientRect().height)] : null,
+           bubble: r1(bub.width), room: r1(room.width), says: play.textContent.trim(),
+           playPainted: !!at && boxEl.contains(at) && ps.visibility === 'visible' && ps.display !== 'none' && +ps.opacity > 0.5 && pr.width > 20,
+           playInside: pr.left >= box.left - 0.5 && pr.right <= box.right + 0.5 && pr.bottom <= box.bottom + 0.5, playFoot: r1(box.bottom - pr.bottom) }; }"""
+# A tap on it, and on every frame after: its drawing's width, its bubble's, its top on the screen.
+GROW15 = """async ([id, ms]) => { const li = document.getElementById('c-' + id), art = li.querySelector(':scope > .cm-main .cm-art'), box = art.querySelector('.skribl-inline');
+  const read = () => { const r = box.getBoundingClientRect(), b = li.querySelector(':scope > .cm-main > .cm-bubble').getBoundingClientRect();
+                       return [Math.round(r.width * 100) / 100, Math.round(b.width * 100) / 100, Math.round(r.top * 100) / 100]; };
+  const frames = [read()];
+  const r0 = box.getBoundingClientRect(), o = { bubbles: true, cancelable: true, clientX: r0.left + r0.width / 2, clientY: r0.top + r0.height / 2, view: window };
+  const at = document.elementFromPoint(o.clientX, o.clientY) || box;
+  at.dispatchEvent(new PointerEvent('pointerdown', o)); at.dispatchEvent(new PointerEvent('pointerup', o)); at.dispatchEvent(new MouseEvent('click', o));
+  frames.push(read());
+  const t0 = performance.now();
+  await new Promise(res => { const step = () => { frames.push(read()); if (performance.now() - t0 < ms) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); });
+  return frames; }"""
 STATES = """() => (window.SkriblInline ? SkriblInline.players() : []).map(p => { const s = p.state();
   return [s.id, { state: s.state, loaded: s.loaded, ms: Math.round(s.elapsedMs || 0) }]; })"""
 
@@ -2243,15 +2271,25 @@ with sync_playwright() as p:
             cid = said(theo, post, "Section 12, beside the drawing")
             dctx, dpg = browser_as(b, juno, "desk", "light")
             open_post(dpg, post)
+            # WHAT IS RIGHT ABOVE THEM: the draw-backs' line where the post has one
+            # (from the start, wherever it can be drawn back on by somebody signed in:
+            # the walkthrough's mocks, choice 3, Nov 19), else the time-and-plays line.
             WHERE = """() => { const r = s => document.querySelector(s).getBoundingClientRect();
-              const art = r('.post-art'), meta = r('.post-page > .post-meta'), sec = r('#comments'), box = r('[data-cm-box]'), icon = r('.cm-say');
-              return { right: Math.round(sec.left - art.right), under: Math.round(sec.top - meta.bottom),
+              const strip = document.querySelector('.post-page > .db-strip');
+              const art = r('.post-art'), meta = strip ? strip.getBoundingClientRect() : r('.post-page > .post-meta'), sec = r('#comments'), box = r('[data-cm-box]'), icon = r('.cm-say');
+              return { strip: !!strip, right: Math.round(sec.left - art.right), under: Math.round(sec.top - meta.bottom),
                        left: Math.round(sec.left - meta.left), width: Math.round(sec.width), box: Math.round(box.width),
                        boxTop: Math.round(box.top - r('.comments-head').bottom), icon: Math.round(sec.right - icon.right),
                        onscreen: icon.bottom < innerHeight }; }"""
             where = dpg.evaluate(WHERE)
             _, err = steps(lambda: open_box(dpg))
             opened = dpg.evaluate(WHERE)
+            octx, opg = browser_as(b, None, "desk", "light")
+            open_post(opg, post)
+            out12 = opg.evaluate("""() => { const r = s => document.querySelector(s).getBoundingClientRect();
+              return { strip: !!document.querySelector('.post-page > .db-strip'),
+                       under: Math.round(r('#comments').top - r('.post-page > .post-meta').bottom) }; }""")
+            close_ctx(octx, opg)
             # TYPING TO THE LAST HUNDRED (the counter, "5 left"), in the box and in
             # an answer's: the box keeps to its column (main's run after #883 read it
             # 350 in a 340 column in GitHub's wider font, and here the counter pushed
@@ -2268,13 +2306,14 @@ with sync_playwright() as p:
             dpg.wait_for_timeout(200)
             answering = dpg.evaluate(NEAR_LIMIT)
             close_ctx(dctx, dpg)
-            check("on a desk the comments sit beside the drawing, right under the time-and-plays line (Make your own is off"
-                  " a post's page since Nov 14), in the same column, the icon at"
-                  " the end of their heading within reach; the box opens right under the heading, as wide as the column",
-                  where["right"] >= 24 and 0 < where["under"] <= 40 and where["left"] == 0 and where["width"] >= 300
+            check("on a desk the comments sit beside the drawing, right under the draw-backs' line (which her own drawing"
+                  " has from the start; signed out there is none, and they sit right under the time-and-plays line), in the"
+                  " same column, the icon at the end of their heading within reach; the box opens right under the heading,"
+                  " as wide as the column",
+                  where["strip"] and where["right"] >= 24 and 0 < where["under"] <= 40 and where["left"] == 0 and where["width"] >= 300
                   and where["icon"] == 0 and where["onscreen"] and err is None and opened["box"] == opened["width"]
-                  and opened["boxTop"] == 10,
-                  f"{where}; opened {opened}; stopped {err}")
+                  and opened["boxTop"] == 10 and out12["strip"] is False and 0 < out12["under"] <= 40,
+                  f"{where}; opened {opened}; signed out {out12}; stopped {err}")
             check("the box keeps to its column whatever is in it (a wider font, larger words, something far too wide):"
                   " Post at its right edge, nothing past it, no gap under Post, and as wide saying \"Posting…\" (named"
                   " Post all the same); typing to the last hundred characters,"
@@ -2520,15 +2559,70 @@ with sync_playwright() as p:
             post_sid = db("select skribl_id from social_posts where public_id = ?", (post,))[0][0]
             mine = states.get(sid) or {}
             pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", got["id"])
-            pg.click(f"#c-{got['id']} > .cm-main .cm-art .skribl-inline")
-            pg.wait_for_timeout(1200)
+            # NO TALLER THAN THE POST'S DRAWING UNTIL IT PLAYS (the walkthrough's
+            # mocks, choice 4, the owner's "all yes", Nov 19). Drawn on a phone it
+            # stood 294 by 523 with its line under it, under a post's drawing of
+            # 370 by 278. Read at rest, then on every frame as a tap plays it.
+            rest15 = pg.evaluate(REST15, got["id"])
+            grow15 = pg.evaluate(GROW15, [got["id"], 900])
+            pg.wait_for_timeout(600)
             tapped = dict(pg.evaluate(STATES)).get(sid) or {}
+            after15 = pg.evaluate(REST15, got["id"])
             own = states.get(post_sid) or {}
             check("on the post's page the post's own drawing plays by itself, and a comment's drawing waits, still and not"
                   " even fetched, until it is tapped; tapped, it plays",
                   own.get("loaded") and own.get("ms", 0) > 0 and mine.get("state") == "idle" and not mine.get("loaded")
                   and tapped.get("loaded") and tapped.get("ms", 0) > 0,
                   f"post {own}; comment's before {mine}, tapped {tapped}")
+            tall = rest15["ar"] and (rest15["room"] - 28) / rest15["ar"] > rest15["postH"] + 1
+            check("at rest a drawn comment is no taller than the post's own drawing: one drawn on a phone exactly as tall"
+                  " (to a pixel), in its own shape, its bubble as wide as it and its words need and no wider than its room;"
+                  " its line waits (no room for it yet), and its play button says how long it took, painted inside the"
+                  " drawing at its foot",
+                  tall and abs(rest15["h"] - rest15["postH"]) <= 1 and abs(rest15["w"] - rest15["h"] * rest15["ar"]) <= 1
+                  and rest15["w"] + 27 <= rest15["bubble"] <= rest15["room"] + 0.5 and rest15["line"] == [True, 0]
+                  and rest15["says"].endswith("sec") and rest15["playPainted"] and rest15["playInside"] and rest15["playFoot"] >= 11,
+                  json.dumps(rest15))
+            g15 = glided([f[0] for f in grow15], want=rest15["room"] - 28 - rest15["w"])
+            check("a tap plays it and it grows to its room, gliding: its width read on every frame, three frames or more"
+                  " carrying the move and none most of it, nothing going back; its top holds still on the screen; then its"
+                  " line is open under it and it is as wide as the bubble's room, as before",
+                  g15["ok"] and still_([f[2] for f in grow15]) and abs(after15["w"] - (after15["room"] - 28)) <= 1
+                  and after15["line"] and after15["line"][0] is False and after15["line"][1] > 20,
+                  f"{g15}; top {min(f[2] for f in grow15)} to {max(f[2] for f in grow15)}; after {after15}")
+            # ONE DRAWN WIDE is in its room from the start, as before; and under
+            # Reduce Motion nothing grows: it plays where it sits.
+            wc = mira.client()
+            wc.get(f"/social/p/{post}")
+            st_w, j_w = wc.post_json(f"/social/p/{post}/comments", {"words": "", "payload": drawing(n=40, seed=165)})
+            wide_id = j_w.get("comment") if st_w == 200 and isinstance(j_w, dict) else None
+            open_post(pg, post)
+            pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", wide_id)
+            wide15 = pg.evaluate(REST15, wide_id)
+            rctx, rpg = browser_as(b, mira, reduced=True)
+            open_post(rpg, post)
+            rpg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", got["id"])
+            r_rest = rpg.evaluate(REST15, got["id"])
+            r_grow = rpg.evaluate(GROW15, [got["id"], 700])
+            rpg.wait_for_timeout(500)
+            r_after = rpg.evaluate(REST15, got["id"])
+            r_state = dict(rpg.evaluate(STATES)).get(sid) or {}
+            close_ctx(rctx, rpg)
+            check("a comment drawn wide is in its room from the start (as wide as the bubble's room, shorter than the post's"
+                  " drawing); under Reduce Motion a tall one plays where it sits: its width the same on every frame, its line"
+                  " there once it plays",
+                  bool(wide_id) and abs(wide15["w"] - (wide15["room"] - 28)) <= 1 and wide15["h"] <= wide15["postH"] + 0.5
+                  and still_([f[0] for f in r_grow]) and abs(r_after["w"] - r_rest["w"]) <= 0.5 and r_after["line"][0] is False
+                  and r_state.get("loaded"),
+                  f"wide {wide15}; reduced: rest {r_rest['w']}, frames {min(f[0] for f in r_grow)} to {max(f[0] for f in r_grow)}, after {r_after}")
+            dctx, dpg = browser_as(b, mira, screen="desk")
+            open_post(dpg, post)
+            desk15 = dpg.evaluate(REST15, got["id"])
+            close_ctx(dctx, dpg)
+            check("on a desk too it is never taller than the post's drawing (and within 14px of it: the page's width there"
+                  " may or may not count a scrollbar)",
+                  desk15["h"] <= desk15["postH"] + 0.5 and desk15["h"] >= min(desk15["postH"], (desk15["room"] - 28) / desk15["ar"]) - 14
+                  and desk15["line"] == [True, 0], json.dumps(desk15))
             listed = [i["id"] for i in json.loads(urllib.request.urlopen(BASE + "/api/skribls?limit=100", timeout=20)
                                                   .read().decode())["items"]]
             pg.goto(BASE + "/social/")
@@ -4085,6 +4179,26 @@ with sync_playwright() as p:
                   all(r["ok"] for r in rows.values())
                   and all(r["word"] == ("shown" if k.startswith("desk") else "unseen") for k, r in rows.items()),
                   f"{rows}")
+            # MORE ROOM BEFORE A NEW CONVERSATION THAN INSIDE ONE (the
+            # walkthrough's mocks, choice 5, the owner's "all yes", Nov 19): it
+            # was 12px between every two, a reply under its comment or a new
+            # comment. Read between what is painted: the foot of one's own
+            # part (its bubble and its row) and the top of the next one's.
+            r38 = said(ben, post, "The very one. Mind the cobbles.", answer_to=e38)
+            said(eli, post, "Noted!", answer_to=r38)
+            gaps = {}
+            for screen in ("phone", "desk"):
+                cctx, cpg = browser_as(b, ben, screen=screen)
+                open_post(cpg, post)
+                gaps[screen] = cpg.evaluate("""() => { const all = [...document.querySelectorAll('[data-cm-list] .cm')];
+                  const main = e => e.querySelector(':scope > .cm-main').getBoundingClientRect();
+                  return all.slice(1).map((e, i) => [e.parentElement.matches('[data-cm-list]') ? 'new' : 'same',
+                                                    Math.round(main(e).top - main(all[i]).bottom)]); }""")
+                close_ctx(cctx, cpg)
+            check("there is more room before a new conversation than inside one: 30px between a conversation's end and the"
+                  " next comment, 12px between a comment and each reply followed down under it; a phone and a desk",
+                  all(sorted(set(k for k, _ in g)) == ["new", "same"] and all(abs(v - (30 if k == "new" else 12)) <= 1 for k, v in g)
+                      for g in gaps.values()) and bool(r38), f"{gaps}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(38, exc)
 
