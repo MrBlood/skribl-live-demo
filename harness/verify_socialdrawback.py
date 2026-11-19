@@ -579,6 +579,18 @@ with sync_playwright() as p:
             check("its row says it is a draw-back, on her post, and whose that is",
                   row and row["is_drawback"] and row["on"] == cat_id and row["owner"] == ana_id, json.dumps(
                       {k: (row or {}).get(k) for k in ("is_drawback", "on", "owner")}))
+            # A JAM: a draw-back on a draw-back, here by its own maker (the owner's
+            # first try on the live site, Nov 19), and by the first artist.
+            jams = {}
+            for who, seed in ((theo, 13), (ana, 14)):
+                st3, j3 = draw_back(who, back, answer(n=8, seed=seed))
+                r3 = stored((j3 or {}).get("post") if isinstance(j3, dict) else None) or {}
+                p3 = ((r3.get("payload") or {}).get("frames") or [{}])[0].get("strokes") or []
+                jams[who.handle] = (st3, len(p3), xy(p3[:len(pts)]) == xy(pts), r3.get("on") == post_id(back),
+                                    (j3 or {}).get("error") if isinstance(j3, dict) else j3)
+            check("a draw-back can be drawn back on (a jam), by its own maker or anyone: the whole of it first (both"
+                  " hands), then the new one, on its row",
+                  all(v[0] == 200 and v[1] == len(pts) + 8 and v[2] and v[3] for v in jams.values()), json.dumps(jams))
             # A short original plays as she drew it: nothing to squeeze.
             short = post_payload(ana, "Section 1, short", drawing(n=20, seed=5))
             st2, j2 = draw_back(theo, short, answer(n=10, seed=6))
@@ -620,6 +632,26 @@ with sync_playwright() as p:
                            "photo": (400, "drawback_unsupported", "photo"), "nothing": (404, "drawback_gone", None),
                            "quote": (400, "one_drawing", None)} and fl and photo,
                   json.dumps(said))
+            # A PICTURE UNDER HIS ANSWER (the owner's first try, Nov 19: "I tried
+            # to put a picture in the background"): refused saying it is his,
+            # and the composer has words that say what to take out.
+            mine_ph = answer()
+            mine_ph["frames"][0]["photo"] = {"data": PNG, "fit": "cover"}
+            yp = draw_back(theo, cat, mine_ph)
+            theirs = got["photo"]
+            ctx, pg = browser_as(b, theo)
+            pg.goto(BASE + "/social/")
+            ready(pg)
+            words = pg.evaluate("""() => Object.fromEntries(['photo', 'music', 'recolors'].map(k => [k,
+              (document.querySelector('[data-compose-said] [data-word="cmp_drawback_' + k + '"]') || {}).textContent || null]))""")
+            close_ctx(ctx, pg)
+            check("a picture under HIS answer is refused saying it is his (why photo, on yours), hers on a photo saying it"
+                  " is hers (on theirs); and the composer has words for each thing of his it can't carry yet, saying what"
+                  " to take out",
+                  yp[0] == 400 and (yp[1] or {}).get("why") == "photo" and (yp[1] or {}).get("on") == "yours"
+                  and (theirs[1] or {}).get("on") == "theirs"
+                  and all(w and "Edit drawing" in w for w in words.values()),
+                  json.dumps({"yours": yp, "theirs": theirs[1], "words": words})[:500])
             # Behind a block, either way, the original is not there.
             c = ana.client()
             c.get("/social/")
@@ -698,6 +730,22 @@ with sync_playwright() as p:
                       and ((v["back"] or {}).get("who") or {}).get("h", 0) >= 44 and ((v["back"] or {}).get("who") or {}).get("hit")
                       for v in seen.values()),
                   json.dumps(bk)[:500])
+            # ITS OWN PAGE SAYS SO TOO (the owner, Nov 19, from the Gallery: "it
+            # shows the new drawing, but not that it's a drawback").
+            page = {}
+            for screen in ("phone", "desk"):
+                ctx, pg = browser_as(b, theo, screen=screen)
+                pg.goto(BASE + f"/social/p/{back}")
+                ready(pg)
+                page[screen] = pg.evaluate("""() => { const l = document.querySelector('.post-page .post-on'), a = l && l.querySelector('.post-on-who');
+                  const r = a && a.getBoundingClientRect(), at = r && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                  return { on: l ? l.textContent.replace(/\\s+/g, ' ').trim() : null, href: a ? new URL(a.href).pathname : null,
+                           hit: !!at && !!a && a.contains(at), face: !!document.querySelector('.post-page .post-face .db-face .face-ring') }; }""")
+                close_ctx(ctx, pg)
+            check("a draw-back's own page says it too, under its header: \"Drew back on Ana’s\", her post the link, painted"
+                  " where it stands, her face small at the foot of his (phone and desk)",
+                  all(v == {"on": "Drew back on Ana’s", "href": f"/social/p/{cat}", "hit": True, "face": True} for v in page.values()),
+                  json.dumps(page))
             c = ana.client()
             c.get("/social/")
             dst, _ = c.post_json(f"/social/p/{cat}/delete", {})

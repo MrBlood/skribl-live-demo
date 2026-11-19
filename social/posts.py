@@ -743,9 +743,14 @@ def register(bp, skribl_blueprint="skribl"):
         if not isinstance(payload, dict) or not _points((payload.get("frames") or [{}])[0]
                                                         if isinstance(payload.get("frames"), list) else {}):
             return None, _json_error("no_drawing", 400)
-        why = drawable(original) or drawable(payload)
+        # Whose drawing it is that can't be joined yet, so the composer can
+        # say how to fix it (a picture of yours can come out; hers can't).
+        why = drawable(original)
         if why:
-            return None, _json_error("drawback_unsupported", 400, why=why)
+            return None, _json_error("drawback_unsupported", 400, why=why, on="theirs")
+        why = drawable(payload)
+        if why:
+            return None, _json_error("drawback_unsupported", 400, why=why, on="yours")
         if not same_shape(original, payload):
             return None, _json_error("drawback_shape", 400)
         return {"payload": join(original, payload),

@@ -226,6 +226,9 @@
       }, function () { return { error: 'network' }; });
   }
   function why(j) {
+    /* A draw-back that can't be joined yet because of something in YOUR
+       drawing says what and how to fix it (Edit drawing, take it out). */
+    if (j && j.error === 'drawback_unsupported' && j.on === 'yours' && say('drawback_' + j.why)) return say('drawback_' + j.why);
     if (j && j.error && say(j.error)) return say(j.error);
     if (j && j.status === 413) return say('too_big');
     if (j && j.status === 429) return say('limited');
