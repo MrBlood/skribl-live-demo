@@ -1694,7 +1694,9 @@ first thing the owner saw of it.
      own page shows the line from the start. Faces are the site's: the
      empty circle before somebody draws one, never an initial.
    - **One row under every card** (its B): 💬 count, ♡ count, Share, ⋯, and
-     Open › at the end. The heart moves into the row from the drawing's line
+     Open › at the end (taken off Nov 19, the owner's "completely remove
+     open": a tap on a card opens it; DECISIONS.md, "Draw back, mocked").
+     The heart moves into the row from the drawing's line
      (the line keeps the likes' dots, and the hearts still rise from them);
      the ⋯ moves from the head into the row; the plays sit beside the time,
      and nothing is said at none.

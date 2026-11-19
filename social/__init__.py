@@ -88,7 +88,7 @@ there is no count anywhere.
 
 REPOSTS AND QUOTE POSTS (reposts.py; the map, part two, item 3: the reposts
 mock, the owner's "All yes", Nov 14). The row under a post: comment · repost
-· heart · ⋯ · Open ›, Share in the ⋯; a tap on the repost raises a small
+· heart · ⋯ (no Open ›: a tap on a card opens it), Share in the ⋯; a tap on the repost raises a small
 sheet, Repost (Undo repost once yours) and Quote. A repost shows the
 original's own card with "Mira Lopez reposted" at its top, on Home's
 Following and the reposter's Posts tab: one drawing, one conversation. A

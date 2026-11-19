@@ -760,8 +760,9 @@ with sync_playwright() as p:
                               " .concat([document.querySelectorAll(s + ' .post-row .ic-mark').length + ' ribbons'])", card(p1))
             close_ctx(ctx, pg)
             # (Since reposts, the reposts mock, Nov 14: the repost where Share was, after the 💬, Share in the ⋯.)
-            check("the row under a post as it is: 💬, the repost, the heart, the ⋯ and Open ›, and no ribbon in it",
-                  row == ["post-count", "rp-btn", "lk-heart", "post-more", "post-open", "0 ribbons"], json.dumps(row))
+            # (No Open › since Nov 19, the owner's "completely remove open".)
+            check("the row under a post as it is: 💬, the repost, the heart and the ⋯, and no ribbon in it",
+                  row == ["post-count", "rp-btn", "lk-heart", "post-more", "0 ribbons"], json.dumps(row))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(1, exc)
 

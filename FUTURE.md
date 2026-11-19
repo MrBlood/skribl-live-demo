@@ -252,6 +252,9 @@ and puts the tool in front of people who already exist.
    as an onion-skinned underlay. This is the feature that would make a network
    worth having, and it needs almost nothing new — onion skin and background
    images already do the work.
+   **Decided Nov 19** ("All yes" to the Draw back mock): its name, where it
+   lives, the Pad's faint underlay, how it plays, jams and the first
+   artist's say are in DECISIONS.md, "Draw back, mocked". Next to build.
 
 **Deliberately not doing:**
 

@@ -14,7 +14,7 @@ with your own words, or your own drawing.
                         comment thread, step 3), as a post's
     /c/<public_id>/quoted   a comment or a reply, small, for the composer
 
-THE ROW UNDER A POST: comment · repost · heart · ⋯ · Open ›, the repost
+THE ROW UNDER A POST: comment · repost · heart · ⋯ (no Open ›), the repost
 saying how many reposts and quotes there are (none at zero), lit in the
 small violet ink once the repost is yours. Share is in the ⋯ (Share… and Copy
 link were there already). A tap raises a small sheet, one card: "Repost"

@@ -47004,3 +47004,49 @@ tick kept). The reading never kept: all three join rows red. As built,
 alone: 28/28.
 
 Flip and the Pad: no change; the drawer is one module for both.
+
+## After v330 -- Draw back, mocked; and Open › taken off every card
+
+The owner, Nov 19, to the Draw back mock
+(https://claude.ai/artifact/Sa9HeL7MyFyRiUmRtoRc2W): "All yes and
+completely remove open". The mock was made on the real site (Ana's cat on
+Home and her post, the Pad), light and dark, a touch phone and a desk.
+
+DRAW BACK, AS DECIDED (to build next, in steps; FUTURE.md 4 idea 7):
+1. The name is "Draw back", two words; what it makes is "a draw-back".
+2. A pen in every post's row, after the heart, with its count; and when a
+   replay ends, "Watch again" and Draw back rise where the play button was.
+   On a post's own page Draw back carries its words at the row's end.
+3. The Pad opens on the original's shape and paper, the original underneath
+   in its own colours, faded (about 2:1 on its paper; your ink about 15:1);
+   one "Theirs" button: faint, full, hidden. The original cannot be erased or
+   moved. Post says "Post draw-back". On the Pad's dark canvas the faint ink
+   vanished, which is why it opens on the original's paper.
+4. It plays the original first, quickly (about 3 seconds), then the answer at
+   its own speed; the speeds and Fit still apply. "Ana + Theo · drawn in
+   15 sec + 9 sec · watching at 1×".
+5. A draw-back is a post of its own, linked to the original: on Home one card
+   with both faces ("drew back on Ana's"), on the original a strip ("1
+   draw-back"), in Activity, and it nudges as a reply does.
+6. Jams: a draw-back on a draw-back plays the chain from the first stroke to
+   the last ("Ana + Theo + Mira", then "+ 4 others").
+7. The first artist may hide a draw-back from her post (it stays on its
+   maker's page; nothing deleted, nobody told), and each post has "Who can
+   draw back: Everyone · People I follow · Nobody", starting at Everyone.
+8. The faint underlay is Draw along's guide (lib/drawalong.js) grown up, one
+   module for both editors; drawing back on a Flip, page for page, is Flip
+   next and its own mock.
+
+OPEN › TAKEN OFF (choice 9; the mock offered "› alone" and the owner chose
+none): the row under a post's card and a comment's card is 💬 · repost · ♡ ·
+⋯, as on a post's page. A tap on a card's own ground opened it already
+(posts.js openCard), and its time is the link to it, so nothing becomes
+unreachable, by finger or by keyboard. On a 402px phone it gives the row the
+room the pen needs (with Open ›, the pen pushed it 2.4px past the drawing's
+edge).
+
+THE CHECKS: the rows in verify_socialposts (4), verify_sociallikes (1),
+verify_socialreposts (1, and the comment cards in 15 and 16, whose time is now
+the link checked) and verify_socialbookmarks (1) say no Open; the tap on a
+card's ground (verify_socialposts 11 and 12) lands in the row's open space
+past the ⋯, where Open was.
