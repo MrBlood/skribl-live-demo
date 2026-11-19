@@ -14,7 +14,9 @@ each in a browser with a virtual passkey.
      draw-back beside a quote; signed out the original is not handed over;
      the route hands the composer the original, as Skribl serves it.
   3. THE CARD: the pen after the heart, 44px to a finger, "Draw back" and
-     how many; none signed out, none on a Flip; a draw-back's card says
+     how many; none signed out, none on a Flip, none on a drawing made on a
+     photo (the post's `undrawable`, read when it was posted); a draw-back's
+     own card has one (a jam); a draw-back's card says
      "Drew back on Ana’s" (her post the link, 44px tall), her face small at
      the foot of his; once her post is gone, "Drew back on a drawing".
   4. THE WHOLE WAY, IN A BROWSER: the pen opens the composer and the Pad
@@ -655,13 +657,17 @@ with sync_playwright() as p:
             flip["frames"] = [flip["frames"][0], dict(flip["frames"][0])]
             flip["fps"] = 8
             fl = post_payload(ana, "Section 3, a flip", flip)
+            ph = drawing(n=20, seed=10)
+            ph["frames"][0]["photo"] = {"data": PNG, "fit": "cover"}
+            photo = post_payload(ana, "Section 3, on a photo", ph)
             st, j = draw_back(theo, cat, answer())
             back = (j or {}).get("post")
             seen = {}
             for scheme in ("light", "dark"):
                 ctx, pg = browser_as(b, theo, scheme=scheme)
                 home(pg)
-                seen[scheme] = {"cat": pg.evaluate(CARD, cat), "flip": pg.evaluate(CARD, fl), "back": pg.evaluate(CARD, back)}
+                seen[scheme] = {"cat": pg.evaluate(CARD, cat), "flip": pg.evaluate(CARD, fl), "back": pg.evaluate(CARD, back),
+                                "photo": pg.evaluate(CARD, photo)}
                 close_ctx(ctx, pg)
             ctx, pg = browser_as(b, None)
             pg.goto(BASE + f"/social/p/{cat}")
@@ -676,10 +682,14 @@ with sync_playwright() as p:
             check("on Home's card the pen sits after the heart, 44px to a finger and painted where it stands, named"
                   " \"Draw back, 1 draw-back\" with its count beside it (light and dark)",
                   st == 200 and ok, json.dumps({k: v["cat"] for k, v in seen.items()})[:600])
-            check("no pen on a Flip of two pages, nor for somebody signed out (the card's row as it was)",
-                  all(v["flip"] and v["flip"]["pen"] is None for v in seen.values()) and out and out["pen"] is None
+            # A draw-back can itself be drawn back on (a jam): its card has the pen.
+            check("no pen on a Flip of two pages, nor on a drawing made on a photo (read when it was posted), nor for"
+                  " somebody signed out (the card's row as it was); a draw-back's own card has one (a jam)",
+                  all(v["flip"] and v["flip"]["pen"] is None and v["photo"] and v["photo"]["pen"] is None
+                      and v["back"] and v["back"]["pen"] for v in seen.values()) and out and out["pen"] is None
                   and "pen" not in out["kids"] and len(out["kids"]) == 4,
-                  json.dumps({"flip": seen["light"]["flip"] and seen["light"]["flip"]["kids"], "out": out and out["kids"]}))
+                  json.dumps({"flip": seen["light"]["flip"] and seen["light"]["flip"]["kids"],
+                              "photo": seen["light"]["photo"] and seen["light"]["photo"]["kids"], "out": out and out["kids"]}))
             bk = seen["light"]["back"] or {}
             check("a draw-back's card says \"Drew back on Ana’s\" under his name, her name the link to her post, 44px tall"
                   " and painted where it stands, and her face small at the foot of his (light and dark)",
