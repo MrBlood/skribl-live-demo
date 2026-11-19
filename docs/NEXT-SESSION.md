@@ -27,8 +27,8 @@ it." The roots section of `WORKING-AGREEMENTS.md` now says it too.
 
 ## The owner's next ask, in their chosen order
 
-1. **Draw back** (next, the first mock): answering a drawing by drawing with
-   it. `FUTURE.md` §4, idea 7, "Skribl as a reply": "the feature that would
+1. **Draw back** (next, the first mock; the owner: "Drawback is genius"):
+   answering a drawing by drawing with it. `FUTURE.md` §4, idea 7, "Skribl as a reply": "the feature that would
    make a network worth having", needing almost nothing new (the Pad's onion
    skin and backgrounds already do the work). The first sketch, for the mock
    to test against other options:
@@ -42,6 +42,9 @@ it." The roots section of `WORKING-AGREEMENTS.md` now says it too.
      drawing leads, and Draw back is the one new verb to learn.
    - Kind: you add, never erase; what the first artist may do about a
      draw-back of theirs (hide it from their post?) is the owner's call.
+   Its name, for the mock to show: the owner wrote it as one word,
+   "Drawback", which in English also means a downside; on a button, "Draw
+   back" (two words) reads as the thing you do. Show both, recommend one.
    Questions the mock will likely ask: is a draw-back a comment, a post of
    its own linked to the original, or both; how it shows in the feed and in
    Activity (and whether it nudges, as a reply does); how a jam plays; what
