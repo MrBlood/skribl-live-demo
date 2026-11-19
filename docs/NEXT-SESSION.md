@@ -159,14 +159,36 @@ this):
   for Quote, an initial in a blank face on cards and in Activity (a
   Gallery tile's 22px face is "never an initial", by an earlier decision).
 
-THE OWNER'S TO CALL (each undoes a choice of theirs):
-- the comment's row: "the post's choices on every comment" was the owner's
-  yes (Nov 17); repost under the dots would remove nothing;
-- the Add sheet's gallery tick (the owner's pick A, from before the site
-  had a Gallery of its own): its line is untrue on the site; reword it, or
-  the site stops asking for it (`?gallery=1`). An earlier entry asked the
-  same and was not answered ("should the editors' tick say what it does now
-  that every post is in the site's Gallery?").
+THE OWNER'S ANSWER (Nov 19, about 9 AM): "I'd say yes to your suggestions,
+but the comment row stays (maybe even add bookmark)", and "I do want to fix
+the bugs and logic flaws also."
+- THE COMMENT'S ROW STAYS, as chosen on Nov 17. A bookmark in it was a
+  maybe: the answer given was to leave it under the dots (a phone's post row
+  is full, and a comment would have a button a post does not), with a mock
+  on offer. Not asked for since.
+- BUILT, in the PR after #989 (`DECISIONS.md`, "The walkthrough of the
+  site"): the three bugs; "Post draw-back"; "Tap the pencil", "commented
+  with a drawing", draw-backs in Activity's words.
+- STILL TO MOCK, each agreed as an idea: "Draw back" in words on a post's
+  own page (choice 2; it does not fit the row once the row has counts: the
+  mock's post had none); a drawn comment no taller than its post's drawing,
+  and more room between conversations; the "Ana + Theo" words; another
+  picture for loop, a quote mark for Quote, an initial in a blank face; room
+  for the Gallery's search words at 402 (the words are the owner's).
+
+THE BIGGER QUESTION, the owner's, waiting on their answer: a separate
+repository where Pad and Flip are "totally a part of" the site (blooby.app),
+this one keeping them independent for skribls.net. The answer given, three
+ways: A, one repository and a switch the site turns on, with which the
+editors drop their own doors (Skribl's own gallery and its tick, the
+Library) and use the site's places and words (recommended; its first step
+would be the Add sheet's gallery tick and the Pad menu's Library and Public
+gallery, mocked first); B, a second repository with its own copy of the
+editors (about 61,000 lines and most of the suites, to keep in step for
+good); C, deciding now for the site alone and taking the standalone side
+out (closes the skribls.net door; a small job after A). THE GALLERY TICK
+waits on this: the site's composer asks for it (`gallery=1` in
+`_compose.html`), and with A it would stop asking.
 
 TAKEN BACK, and why: Quote without a drawing (the only way to answer a Flip
 or a post of words with a drawing in a post of your own); Flip out of the

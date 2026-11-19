@@ -295,6 +295,17 @@ with sync_playwright() as p:
         check(f"{name}: ...with the pill under the header, painted, at the first of the cat's strokes",
               a["pill"] and a["pillTop"] >= a["headBottom"] and q.evaluate(PAINTED, ".da-pill .da-done")
               and a["where"] == f"the cat · 1 of {a['state']['n']}" and a["state"]["n"] > 20, str(a))
+        # A NOTE NEVER LANDS ON THE PILL (the walkthrough of the site, Nov 19:
+        # drawing back, "The eraser is off..." covered the pill and its
+        # button). The Pad's toast and Flip's chip fall back to just under
+        # the header, which is the pill's own place: they go under it.
+        over = q.evaluate("""(pad) => { (pad ? showToast : chip)('A note, while drawing along');
+          const t = document.getElementById(pad ? 'toast' : 'flipChip').getBoundingClientRect(), p = document.querySelector('.da-pill').getBoundingClientRect();
+          return { hit: t.top < p.bottom && t.bottom > p.top && t.left < p.right && t.right > p.left, note: [Math.round(t.top), Math.round(t.bottom)],
+                   pill: [Math.round(p.top), Math.round(p.bottom)], there: t.height > 0 }; }""", name == "Pad")
+        check(f"{name}: a note that comes up while drawing along sits under the pill, never over it",
+              over["there"] and not over["hit"] and over["note"][0] >= over["pill"][1], str(over))
+        q.wait_for_timeout(300)
         r = q.locator(cv).bounding_box()
         cx, cy = r["x"] + r["width"] * 0.3, r["y"] + r["height"] * 0.7
         stroke(q, cdp, [(cx + i * 6, cy - i * 4) for i in range(12)])
