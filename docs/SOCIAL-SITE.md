@@ -2830,3 +2830,33 @@ service worker is the real one, handed pushes through Chromium's own
 DevTools. Nudges travel only from the live site; an iPhone needs Blooby on
 its Home Screen. `verify_socialpush.py` holds the rest.
 
+
+## 20. Built: Draw back, step 1
+
+From the Draw back mock and the owner's "All yes", Nov 19 (DECISIONS.md,
+"Draw back, mocked", which holds the eight choices). The one new verb:
+answering a drawing by drawing with it. `social/drawback.py`, `posts.py`:
+
+    /social/p/<public_id>/drawback    GET: the drawing to lay under the pen
+                                      ({payload, first}), for the composer;
+                                      open to you as a like asks, and one
+                                      that can be drawn back on
+    /social/posts                     POST with {draw_back: a post's
+                                      address, payload: the answer's
+                                      strokes}: the server joins the two
+
+THE PEN after the heart under a post's drawing (one page, no music), signed
+in, with how many draw-backs. It opens the composer, which says "Drawing
+back on Ana’s" at its top, and the Pad over it with her drawing faint under
+the pen on her shape and paper (Skribl's `lib/drawback.js`, handed over by
+`lib/composehost.js` underlay). THE SERVER JOINS THE TWO from her drawing as
+Skribl stores it (`skribl.read_payload`): hers first as it plays, squeezed
+to three seconds when longer, then his at his own pace. A draw-back is a
+post (`is_drawback`, `drawn_on_id`, `drawn_on_owner_id`); its card says
+"Drew back on Ana’s", her face small at the foot of his.
+
+STILL TO COME, in the decided order: Draw back rising when a replay ends,
+and the strip of draw-backs on her post; Activity and the nudge; her say
+(hide one from her post; who can draw back); the line's "Ana + Theo" words;
+drawing back on a Flip, page for page. `verify_socialdrawback.py` holds
+what is built.

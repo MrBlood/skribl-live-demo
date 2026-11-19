@@ -1050,9 +1050,10 @@ with sync_playwright() as p:
         # THE ROW under every card (the reposts mock, the owner's "All yes", Nov 14):
         # the 💬, the repost (nothing reposted: no count, "Repost"), the heart and
         # the ⋯; Share is in the ⋯. No Open › (the owner's "completely remove
-        # open", Nov 19): a tap on the card's ground opens it.
+        # open", Nov 19): a tap on the card's ground opens it. DRAW BACK's pen
+        # (Nov 19) after the heart, for Juno, signed in, under every drawing here.
         rows4 = pg.evaluate("""() => [...document.querySelectorAll('.post-card .post-row')].map(r => [...r.children].map(e =>
-          e.classList.contains('post-count') ? 'comment' : e.classList.contains('rp-btn') ? 'repost:' + e.getAttribute('aria-label')
+          e.classList.contains('db-pen') ? 'pen' : e.classList.contains('post-count') ? 'comment' : e.classList.contains('rp-btn') ? 'repost:' + e.getAttribute('aria-label')
           : e.classList.contains('lk-heart') ? 'heart' : e.classList.contains('post-share') ? 'share'
           : e.classList.contains('post-more') ? 'more' : e.classList.contains('post-open') ? 'open' : e.className).join(' '))""")
         cursor = pg.evaluate("() => document.querySelector('[data-feed-next]').getAttribute('data-feed-next')")
@@ -1074,9 +1075,9 @@ with sync_playwright() as p:
               and all(c["when"] in ("now",) or c["when"].endswith("m") for c in first)
               and idle and all(s != "playing" for s in idle),
               f"{len(first)} cards; first {first[:2]}; idle {set(idle)}")
-        check("the row under every card: the 💬, the repost (\"Repost\", none reposted), the heart and the ⋯, no"
-              " Open ›; Share in the ⋯, not the row",
-              rows4 and set(rows4) == {"comment repost:Repost heart more"}, json.dumps(sorted(set(rows4 or []))))
+        check("the row under every card: the 💬, the repost (\"Repost\", none reposted), the heart, Draw back's pen"
+              " and the ⋯, no Open ›; Share in the ⋯, not the row",
+              rows4 and set(rows4) == {"comment repost:Repost heart pen more"}, json.dumps(sorted(set(rows4 or []))))
         check("Load more brings the rest in place, each player mounted, and goes away at the end; its cursor names"
               " a time and the card (p and a post's public id, or s and a drawing's), never an internal id",
               after["n"] == total and total > 20 and after["more"] and after["mounted"]
