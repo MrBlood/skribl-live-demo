@@ -39,11 +39,13 @@ rules and its own cursor, and never a query of Skribl's tables.
 
 Reads only, on the host's session: it flushes nothing and commits nothing.
 """
+import copy
 from datetime import datetime, timedelta, timezone
 
 import sqlalchemy as sa
 
 from .core import HOT_DAYS
+from .mediameta import STRIPPED, strip_payload
 from .models import SkriblPost, SkriblView, apply_feed_filter, normalise_user_id, session
 # The one spelling of a ground a page may use, the rule creation.py writes the
 # column by (validation.py, beside the payload's other columns).
@@ -134,13 +136,11 @@ def read_payload(public_id, *, viewer_id=None):
     strips one (strip_payload: a photo's location, a file's name), so what
     a host builds from it carries nothing the route would not have served.
     No play is counted: reading is not watching."""
-    from .mediameta import STRIPPED, strip_payload
     if not isinstance(public_id, str) or not public_id or len(public_id) > 32:
         return None
     post = session().query(SkriblPost).filter_by(public_id=public_id).first()
     if post is None or not post.visible_to(viewer_id):
         return None
-    import copy
     payload = copy.deepcopy(post.payload_json or {})
     if not isinstance(payload, dict):
         return None

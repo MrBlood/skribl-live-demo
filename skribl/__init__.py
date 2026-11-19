@@ -42,7 +42,8 @@ from .creation import (CreatedPost, SkriblIdempotencyRace, SkriblRejected,
                        SkriblUnavailable, create_post)
 from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
                        set_post_visibility)
-from .describing import describe_posts, list_public_posts, read_payload, recent_plays, shared_skribls
+from .describing import describe_posts, list_public_posts, recent_plays, shared_skribls
+from .describing import read_payload
 from .drafts import list_drafts
 from .moderation import close_reports, list_reports
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
