@@ -46839,3 +46839,55 @@ heart and verify_socialreposts section 3 for the repost: with main's likes.js
 and posts.js each red at all three ("1" stays), green with the fix.
 
 Flip and the Pad: no change; the site's own pages.
+
+## After v330 -- Send me a test nudge: one to this device now, and what its push service answered
+
+The owner, Nov 18, the evening nudges went live: "I liked, reposted my own
+stuff and got no notifications." By design (your own never nudge you, and
+likes and reposts start off), but it showed the gap: the one part this box
+cannot test is Apple's push service taking our nudges, and a phone could
+only be checked by asking somebody else to reply. Offered a test button that
+says what Apple answered; the owner: "Yes on the test nudge".
+
+WHAT IT DOES. Under the switches in "Notifications on this phone", Send me
+a test nudge: one nudge to this device at once ("Hello from Blooby",
+"Nudges work here. Tap to open Activity.", opening Activity, the number left
+alone), and the line under it says what the device's push service answered,
+by name (Apple, Google, Mozilla, Microsoft, else "the push service"):
+"Sent, and Apple took it. Look in your notifications." or "It didn't go
+through: Apple answered 403, BadJwtToken.", the service's own word, so a
+screenshot says what to fix. A device the service says is gone is let go
+and the card offers Turn on. Twenty an hour a person.
+
+A REFUSAL IS NEVER SILENT. _send returns the service's reason with its
+answer; a real nudge refused goes to the server's log, the service's own
+word with it (it used to go nowhere).
+
+THE ROUTE (/push/test) asks the push service while the request waits; it
+rolls the request's reads back first (nothing written yet), so SQLite's lock
+is never held across the network, as the sender's reads are not.
+
+CALIBRATION, each part broken in a worktree of its own: 12 of 12 red (the
+send skipped, the words, a gone device kept, the reason dropped, the limit
+the general one, anybody's device, every service Apple, the refusal
+unlogged, the page always saying sent, the names left as {who}, the button
+covered, the button hidden); green as built.
+
+MY CHECK WAS WRONG ONCE, NOT THE BUTTON. Run beside the others, the row
+for the button read its paint before scrolling to it, and on a phone the
+button sits below the fold: elementFromPoint found nothing (phone, light
+and dark, 111/113). The run that had passed it took screenshots, which
+scroll first. The row now scrolls the button into view, and is two rows
+(drawn; a tap that sends), so a covered button turns its own row red.
+
+FLIP AND THE PAD: no change; nudges are the site's.
+
+THE SUITES, side by side (run_parallel -j 3): verify_socialauth 76/76,
+verify_socialsettings 45/45, verify_a11y 444/444, verify_a11ypages 162/162,
+verify_contrast 677/677, verify_docs 144/144; verify_socialpush 111/113
+beside them (the check above, not load), and 117/117 alone with the check
+fixed. NOT RUN: the full battery (main's run after the merge does it).
+
+NOT TESTED HERE: Apple's push service and a real iPhone: that is what the
+button is for. The one-glance tell: Settings' "Notifications on this phone"
+ends with Send me a test nudge.
