@@ -47275,3 +47275,56 @@ CALIBRATION (verify_socialdrawback, each part broken in its own copy): the
 eraser guard and the drawer's step-aside gone, red (the eraser was taken
 up); the own-drawing words gone and the first-name rule back to the first
 word, red on both rows; the server's erase line gone, red. As built, 32/32.
+
+## After v330 -- Draw back: your own drawing, and the author's background and music
+
+YOUR OWN DRAWING. The owner, Nov 19, drawing back on their own drawing: "it
+says draw-back on Mrs. but it's Mr. Blood's drawing (mine) and a drawback on
+my own drawing." The whole-name rule (the All yes, 4) mends "Mr."; and on
+your own drawing the Pad's pill and the composer's line now say "Drawing
+back on your own drawing" (the route hands `own`, `lib/composehost.js`
+underlay carries it to `lib/drawback.js`).
+
+THE AUTHOR'S BACKGROUND AND MUSIC. The owner, the same morning: "why not just
+only let a drawback be on author's background and music?" Asked whether to
+build it: "yes". What it is:
+
+- A drawing on a photo or with music can be drawn back on (drawable() no
+  longer refuses them in the original; `undrawable` holds only pages and
+  recolours, so the pen shows). With `answer`, drawable() still refuses them
+  in the answer: the answerer adds none, and the composer says so, as
+  before.
+- The join carries her photo and her song (her frame's, else her
+  drawing's), so it plays under both.
+- The Pad shows her photo under the canvas, where its own photo would lie: a
+  canvas of its own (`.db-photo`), placed by the player's rule
+  (`lib/photofit.js`), at her opacity and blur; never the Pad's own photo,
+  so nothing of hers is recorded as his. Her song does not play while
+  drawing back; it plays in the posted draw-back.
+- The composer's preview (`compose.js` joined) and the picture the post
+  rests on (`paintUnder`) show her photo.
+- `skribl.read_payload(..., inline_media=True)`: where Skribl keeps media in
+  a store (`SKRIBL_MEDIA_BACKEND` local or s3), a stored drawing names its
+  photo and song by key, and `create_post` takes media only as data. Read
+  back as data and posted again, the store keeps each file once (named by
+  its content): the draw-back names the very same files and costs no more
+  room. The paper's picture (`baseSnapshot`) is left as it is.
+
+FOUND ON THE WAY, NOT FIXED. With `SKRIBL_MEDIA_BACKEND=local` on SQLite,
+the site's post route answered "busy" (503) for a drawing with a photo and
+music; the same drawing made through `create_post` with nothing read first
+was stored. The likely cause: the route reads through the request's session
+before Skribl stores the post, and the store's claim commits on a connection
+of its own (`skribl/creation.py`, H3), which waits on SQLite's lock and gives
+up. Not draw back's doing, not the live site's (it posts music), and not
+PostgreSQL's. So the suite's server keeps media in the drawing, as the live
+site does, and the store's path is checked in a process of its own
+(`verify_socialdrawback.py` STORE). `docs/NEXT-SESSION.md` holds it.
+
+CALIBRATION (verify_socialdrawback, each part broken in its own copy):
+originals with a photo or music refused again, red (the site's row answered
+400 drawback_unsupported, the store's row too, and section 4 stopped at the
+pen); the store's keys not read back, red; her photo not laid under the pen,
+red on the Pad's row and on the posted picture's row; the composer's preview
+without her photo, red; his own photo let through in an answer, red. The
+own-drawing words gone, red on both rows. As built, 38/38.

@@ -27,9 +27,13 @@ back, mocked", holds the eight choices.
   dot and the nudge (Replies); her post's strip of draw-backs; "Watch again"
   and Draw back rising when a replay ends (Skribl's player says
   `skribl:ended`).
-- The PR after it: no pen where it can't be done yet (a photo, music,
-  recolours), read when the post is made (`undrawable`); and the picture a
-  draw-back rests on is both drawings (the owner had seen empty boxes).
+- #988: no pen where it can't be done yet, read when the post is made
+  (`undrawable`); the picture a draw-back rests on is both drawings (the
+  owner had seen empty boxes); its own page says it is one.
+- The PR after it: the owner's "All yes" to four questions (the background
+  is the original artist's; the eraser off while drawing back; your own
+  drawing said so; a name that starts with a title said whole), and the
+  author's background and music (below).
 
 `docs/SOCIAL-SITE.md` section 20 says what is built. The code: the join in
 `social/drawback.py`; the route, the posting and the counts in
@@ -57,8 +61,9 @@ section 4 drives the whole way in a browser: the quickest look at it.
    words at 402px with long names were never measured: mock the layout.
 3. **Flip, page for page**: its own mock. The page that stays underneath
    (`FUTURE.md` 6i) is its twin.
-4. **A photo, music and recolours**: refused with why for now
-   (`social/drawback.py` drawable); each a step of its own.
+4. **Recolours**: refused with why for now (`social/drawback.py`
+   drawable): they index the strokes by number and time, which the join
+   would have to carry over.
 
 Then the owner's list from Nov 18 resumes: messages as drawn letters, then
 watching first everywhere (the old handoff's items 2 and 3; `docs/SOCIAL-SITE.md`
@@ -71,16 +76,35 @@ the original artist's; the eraser off while drawing back; "Drew back on
 their own drawing"; a name that starts with a title said whole.
 `DECISIONS.md`, "the owner's All yes to the four questions".
 
-## Asked, not yet answered
+Then their own idea, and their yes: "why not just only let a drawback be on
+author's background and music?" A draw-back keeps her photo and her song;
+the answer adds none. `DECISIONS.md`, "your own drawing, and the author's
+background and music".
 
-- **The author's background and music in a draw-back** (the owner's own
-  idea: "why not just only let a drawback be on author's background and
-  music?"). Recommended yes. It needs a way for the site to copy her picture
-  and music files into the joined drawing (Skribl keeps them beside the
-  drawing, not in it), the Pad showing her picture under the pen, and her
-  music under both drawings when it plays.
+## Asked by the owner, next
+
+**A walkthrough of the whole site** (Nov 19, 7:30 AM): "can you do a run on
+the social site and draw, draw-back, comments, etc and do a logic test? does
+everything flow the way it should? does everything make sense? is anything
+cluttered? does the comment setup look good? ... I feel like we are getting
+convoluted and it's simplicity is slipping away. I would be confused using
+this app I think." They asked to be told before it starts, to turn Fable on
+for it. Look, with pictures (phone and desk, light and dark), say plainly
+what confuses, and recommend what to simplify; change nothing without
+their OK. Her say (item 1 above) adds controls, so it waits for that look.
 
 ## Open threads
+
+- **On SQLite with media kept in a store, a post with a photo or music
+  answers "busy"** (503). Found while testing the author's background and
+  music: the site's post route reads through the request's session before
+  Skribl stores the post (the taken-down check, a quote's reads), and the
+  store's claim commits on a connection of its own (`skribl/creation.py`,
+  H3), which waits on SQLite's lock and gives up. The same post made
+  through `create_post` with nothing read first is stored. Not the live
+  site (it posts music), and PostgreSQL has no such lock. Not fixed:
+  ending the request's read before `create_post` would likely mend it,
+  but it touches every post, so it wants its own look.
 
 - Main's full runs after #986, #987 and the PR after them were still going
   when this was written. Look at the newest runs on main first.
