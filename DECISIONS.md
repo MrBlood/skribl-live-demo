@@ -47173,3 +47173,31 @@ before; a draw-back's own card keeps its pen (a jam).
 CALIBRATION (verify_socialdrawback 3): the card not reading the column, red;
 post_new not writing it, red (the photo's card had the pen both times). As
 built, the whole suite 24/24.
+
+## After v330 -- Draw back: the picture a draw-back rests on is both drawings
+
+The owner, Nov 19, on the live site after #987: "I see the pen now. but
+there's no image on the drawbacks. Click them and they work." A drawing's
+resting picture (its poster, the card a feed and a strip show before it
+plays) is made by the Pad when it posts (editor_post.js buildPreviewCanvas,
+then lib/postedcard.js) and travels as `thumbnail`. Drawing back, her drawing
+was on a canvas of its own, so the Pad's card was his lines alone; and the
+site's join built a new drawing and kept no picture at all, so the poster was
+the blank stand-in and the card an empty box.
+
+THE FIX: the Pad paints her drawing whole, opaque, under his lines when it
+flattens a draw-back (lib/drawback.js paintUnder, whatever Theirs is
+showing), and the join keeps the picture (social/drawback.py). A draw-back
+posted before this keeps the blank (it has no picture to keep); a new one
+rests on both.
+
+CALIBRATION (verify_socialdrawback 4, read off the poster itself, her dark
+ink in her cat's half of the card, where his lines never went): the join
+dropping the picture, red (the blank stand-in, an SVG); the Pad not painting
+hers under, red (0 of her pixels). As built, 3,820.
+
+A QUESTION FOR THE OWNER, found on the way: the Pad's eraser. While drawing
+back it seems to erase only his lines (hers are on their own canvas), but
+the posted drawing is one list of strokes, so where he erased over her lines
+the replay erases hers too, against "you add, never erase". Asked, not
+decided.

@@ -28,7 +28,8 @@ back, mocked", holds the eight choices.
   and Draw back rising when a replay ends (Skribl's player says
   `skribl:ended`).
 - The PR after it: no pen where it can't be done yet (a photo, music,
-  recolours), read when the post is made (`undrawable`).
+  recolours), read when the post is made (`undrawable`); and the picture a
+  draw-back rests on is both drawings (the owner had seen empty boxes).
 
 `docs/SOCIAL-SITE.md` section 20 says what is built. The code: the join in
 `social/drawback.py`; the route, the posting and the counts in
@@ -62,6 +63,15 @@ section 4 drives the whole way in a browser: the quickest look at it.
 Then the owner's list from Nov 18 resumes: messages as drawn letters, then
 watching first everywhere (the old handoff's items 2 and 3; `docs/SOCIAL-SITE.md`
 section 17 for messages).
+
+## Asked, not decided
+
+- **The eraser while drawing back.** It seems to erase only his lines
+  (hers are on their own canvas), but the posted drawing is one list of
+  strokes, so the replay erases hers too where he erased over them. Options
+  put to the owner: the eraser off while drawing back (Undo still there), or
+  his erasing kept to his own lines in the replay (a layer the replay does
+  not have yet). `DECISIONS.md`, "the picture a draw-back rests on".
 
 ## Open threads
 
