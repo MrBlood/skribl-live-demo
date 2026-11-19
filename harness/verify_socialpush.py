@@ -1147,6 +1147,9 @@ with sync_playwright() as p:
                       const last = [...document.querySelectorAll('.push-row')].pop().getBoundingClientRect();
                       return { words: b.textContent.trim(), h: Math.round(r.height), hit: !!e && !!e.closest('[data-push-test]'),
                                below: r.top >= last.bottom }; }""")
+                    check(f"{look}: Send me a test nudge sits under the switches, painted (what is drawn at its middle is"
+                          " it) and 44px tall", btn["words"] == "Send me a test nudge" and btn["h"] >= 44 and btn["hit"]
+                          and btn["below"], str(btn))
                     n_ui = len(CAPTURED)
                     with pg.expect_response(lambda r: r.url.endswith("/push/test"), timeout=15000):
                         pg.click("[data-push-test]")
@@ -1159,11 +1162,9 @@ with sync_playwright() as p:
                         pg.screenshot(path=os.path.join(SHOTS, f"test-{screen}-{scheme}.png"))
                         pg.evaluate("() => document.querySelectorAll('.nav').forEach(n => { n.style.visibility = ''; })")
                     arrived = nudges(ep_h, n_ui)
-                    check(f"{look}: Send me a test nudge sits under the switches, painted and 44px tall; a tap sends one"
-                          " to this device, and the line under it says the push service took it",
-                          btn["words"] == "Send me a test nudge" and btn["h"] >= 44 and btn["hit"] and btn["below"]
-                          and told == "Sent, and the push service took it. Look in your notifications."
-                          and len(arrived) == 1 and arrived[0].get("title") == "Hello from Blooby", f"{btn} {told!r} {len(arrived)}")
+                    check(f"{look}: a tap sends a test nudge to this device, and the line under the button says the push"
+                          " service took it", told == "Sent, and the push service took it. Look in your notifications."
+                          and len(arrived) == 1 and arrived[0].get("title") == "Hello from Blooby", f"{told!r} {len(arrived)}")
                     pg.route("**/push/test", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(
                         {"ok": False, "who": "Apple", "status": 403, "reason": "BadJwtToken"})))
                     pg.click("[data-push-test]")
