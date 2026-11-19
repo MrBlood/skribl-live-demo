@@ -881,13 +881,15 @@ with sync_playwright() as p:
         # it shows in your post only" of a site whose Gallery shows every
         # post's drawing. Read by the mechanism: the flag in the frame's
         # address and the sheet's own checkbox, and "Viewers start at" still
-        # asked.
+        # asked. (Not by the word: the gallery caption's field is in every
+        # sheet, hidden, and its label says "Gallery". This row's first
+        # version asked for no label with that word and failed on it.)
         check("Home's Draw opens Skribl's Pad over the composer in compose mode, asking for no gallery tick (compose=1,"
               " no gallery=1): its sheet says Add to post, holds no gallery checkbox and still asks Viewers start at;"
               " Add hands the drawing back into the composer's own in-post player, Draw and Flip still along its foot"
               " (a post holds one: they say so), and focus lands on Edit drawing",
               bool(fr) and "compose=1" in (src or "") and "gallery=1" not in (src or "")
-              and sheet.get("label") == "Add to post" and sheet.get("box") is False and not sheet.get("tick")
+              and sheet.get("label") == "Add to post" and sheet.get("box") is False
               and sheet.get("speed") is True
               and drafted["shown"] and drafted["attached"] and drafted["chips"] == [False, False] and drafted["overlay"]
               and drafted["focus"] == "Edit drawing",
