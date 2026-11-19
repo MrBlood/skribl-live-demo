@@ -297,10 +297,42 @@ with sync_playwright() as pw:
     # at 16x the start is let go on the music's beat at 2.0, between the
     # marks. The mark nearest 2.0 is read on every frame from just before the
     # finger lifts.
-    NEAR = """(o) => { const out = window.__recb = [], t0 = performance.now();
-      (function f() { const b = ((document.getElementById('musicTimeline')._painted || {}).beats || []).map((m) => m[2]);
-        out.push([performance.now() - t0, b.length ? b.reduce((a, c) => Math.abs(c - o.at) < Math.abs(a - o.at) ? c : a) : null]);
-        if (performance.now() - t0 < o.ms) requestAnimationFrame(f); })(); }"""
+    #
+    # Each frame is kept as [ms since the recording began, ms on THE GLIDE'S
+    # OWN CLOCK since the finger lifted (null before), the mark nearest
+    # o.at]. The glide's clock is the timeline's: each frame counts as long
+    # as it took, up to 64ms (lib/musictimeline.js frame()), so a frame a
+    # busy machine holds up moves the glide on 64ms and never jumps. Read on
+    # the wall's clock from before the lift, a runner that held frames up
+    # saw a sound glide (17 frames on the way, always onward) not yet there
+    # when 700ms ran out: main red after #976, sqlite 1/6, where this box
+    # has it there 437ms after the lift. It records until o.ms on that clock
+    # after the lift (5s more at most, if the lift never comes); __recbDone
+    # says it has stopped.
+    NEAR = """(o) => { const out = window.__recb = [], t0 = performance.now(); let up = null, clock = null, last = 0;
+      window.__recbDone = false;
+      window.addEventListener('pointerup', () => { up = performance.now(); }, { capture: true, once: true });
+      (function f(ts) { const now = ts === undefined ? performance.now() : ts;
+        if (up !== null) clock = clock === null ? Math.min(64, Math.max(0, now - up)) : clock + Math.min(64, Math.max(0, now - last));
+        last = now;
+        const b = ((document.getElementById('musicTimeline')._painted || {}).beats || []).map((m) => m[2]);
+        out.push([performance.now() - t0, clock, b.length ? b.reduce((a, c) => Math.abs(c - o.at) < Math.abs(a - o.at) ? c : a) : null]);
+        if ((clock === null || clock < o.ms) && performance.now() - t0 < o.ms + 5000) requestAnimationFrame(f); else window.__recbDone = true; })(); }"""
+
+    def near_done(pg):
+        """Until NEAR has stopped recording: at once on a quiet box, which the
+        wait after the lift already covers; longer where frames were held up."""
+        try:
+            pg.wait_for_function("() => window.__recbDone", timeout=10000)
+        except Exception:
+            pass                        # the rows then read what was kept
+
+    def arrival(rec, fin):
+        """The first frame after the lift with the mark within 1.5e-4 of `fin`:
+        (ms on the glide's clock, ms on the wall's since the lift), or None."""
+        up = next((f[0] for f in rec if f[1] is not None), None)
+        return next(((f[1], f[0] - up) for f in rec
+                     if f[1] is not None and f[2] is not None and fin is not None and abs(f[2] - fin) < 1.5e-4), None)
     for _n, _p in eds("zoomed"):
         for still in (False, True):
             ctx = waits.instrument(b.new_context(reduced_motion="reduce", **DESK)) if still else None
@@ -315,13 +347,13 @@ with sync_playwright() as pw:
             pg.mouse.move(at["x"] + (2.0 - at["v0"]) / at["span"] * at["w"], at["hy"], steps=8); pg.wait_for_timeout(100)
             let_go = pg.evaluate(TRIM)
             pg.evaluate(NEAR, {"at": 2.0, "ms": 700})
-            pg.mouse.up(); pg.wait_for_timeout(900)
+            pg.mouse.up(); pg.wait_for_timeout(900); near_done(pg)
             got, rec, tp = pg.evaluate(TRIM), pg.evaluate("() => window.__recb"), pg.evaluate("() => musicTempo")
             # Where the beat nearest 2.0 belongs now: on the start let go.
             fin = tp["phase"] + round((2.0 - tp["phase"]) / 0.5) * 0.5 if tp else None
-            seen = [f[1] for f in rec if f[1] is not None]
+            seen = [f[2] for f in rec if f[2] is not None]
             between = [v for v in seen if fin is not None and fin + 1.5e-4 < v < 2.045 - 1.5e-4]
-            there = next((f[0] for f in rec if f[1] is not None and fin is not None and abs(f[1] - fin) < 1.5e-4), None)
+            there, wall = arrival(rec, fin) or (None, None)
             if not still:
                 k = tp and (tp["phase"] - got["s"]) / 0.5
                 check(f"{_n}: zoomed in, a start let go stays exactly where it was let go, and a beat falls on it, the tempo's beats a minute kept",
@@ -334,7 +366,7 @@ with sync_playwright() as pw:
                 check(f"{_n}: the beat marks glide there, frame by frame, the shorter way round",
                       len(between) >= 4 and all(b2 <= a2 + 1.5e-4 for a2, b2 in zip(seen, seen[1:])) and there is not None and there < 600,
                       f"{len(between)} frames on the way from 2.045 to {fin}; always back {all(b2 <= a2 + 1.5e-4 for a2, b2 in zip(seen, seen[1:]))}; "
-                      f"there at {there and round(there)}ms")
+                      f"there {there and round(there)}ms after the lift on the glide's clock ({wall and round(wall)}ms on the wall's)")
                 # Then at 1x a start let go lands on the new beat, not the taps' (2.045 + k/2).
                 for _ in range(4):
                     press(pg, "#musicTlOut", 260)
@@ -354,7 +386,7 @@ with sync_playwright() as pw:
             else:
                 check(f"{_n}: under Reduce Motion the start stays and the beat marks are there at once",
                       abs(got["s"] - let_go["s"]) < 1e-6 and not between and there is not None,
-                      f"let go at {let_go['s']:.4f}: {got['s']:.4f}; {len(between)} frames on the way; there at {there and round(there)}ms")
+                      f"let go at {let_go['s']:.4f}: {got['s']:.4f}; {len(between)} frames on the way; there {there and round(there)}ms after the lift")
             check(f"{_n}: no page errors zoomed in{' under Reduce Motion' if still else ''}", not errs, "; ".join(errs[:2]))
             c.close()
 
@@ -433,6 +465,8 @@ with sync_playwright() as pw:
         if near is not None:
             pg.evaluate(NEAR, {"at": near, "ms": 700})
         pg.mouse.up(); pg.wait_for_timeout(900)
+        if near is not None:
+            near_done(pg)
         return g, pg.evaluate(TRIM)
 
     for _n, _p in eds("end"):
@@ -447,9 +481,9 @@ with sync_playwright() as pw:
             n = heard(t) * tp["bpm"] / 60 if tp else 0
             # Where the beat on the end belongs now: the 8th from the loop's start.
             fin = tp["phase"] + 8 * 60 / tp["bpm"] if tp else None
-            seen = [f[1] for f in rec if f[1] is not None]
+            seen = [f[2] for f in rec if f[2] is not None]
             between = [v for v in seen if fin is not None and 6.0 + 1.5e-4 < v < fin - 1.5e-4]
-            there = next((f[0] for f in rec if f[1] is not None and fin is not None and abs(f[1] - fin) < 1.5e-4), None)
+            there, wall = arrival(rec, fin) or (None, None)
             if not still:
                 check(f"{_n}: zoomed in, an end let go within an eighth of a beat of 8 stays exactly where it was let go, "
                       "and the beat becomes the one that makes the loop exactly 8 beats, counted from its start",
@@ -465,7 +499,7 @@ with sync_playwright() as pw:
                 check(f"{_n}: the beat marks glide to the new beat frame by frame, the one at the end drawing in to it",
                       len(between) >= 4 and all(b2 >= a2 - 1.5e-4 for a2, b2 in zip(seen, seen[1:])) and there is not None and there < 600,
                       f"{len(between)} frames on the way from 6.0 to {fin}; always on {all(b2 >= a2 - 1.5e-4 for a2, b2 in zip(seen, seen[1:]))}; "
-                      f"there at {there and round(there)}ms")
+                      f"there {there and round(there)}ms after the lift on the glide's clock ({wall and round(wall)}ms on the wall's)")
                 ok = press(pg, UNDO[_n], 300)
                 back, t2, beat2 = pg.evaluate("() => musicTempo"), pg.evaluate(TRIM), pg.evaluate(BEAT_SAYS)
                 # Flip took the chip's Undo for a tap away from the drawer, and closed it.
@@ -488,7 +522,7 @@ with sync_playwright() as pw:
             else:
                 check(f"{_n}: under Reduce Motion the end stays and the beat marks are there at once",
                       abs(t["e"] - g["e"]) < 1e-6 and tp is not None and tp.get("by") == "end" and not between and there is not None,
-                      f"let go at {g['e']:.4f}: {t['e']:.4f}; {len(between)} frames on the way; there at {there and round(there)}ms")
+                      f"let go at {g['e']:.4f}: {t['e']:.4f}; {len(between)} frames on the way; there {there and round(there)}ms after the lift")
             check(f"{_n}: no page errors as the end sets the tempo{' under Reduce Motion' if still else ''}", not errs, "; ".join(errs[:2]))
             c.close()
 
