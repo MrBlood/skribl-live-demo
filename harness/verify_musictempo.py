@@ -298,17 +298,17 @@ with sync_playwright() as pw:
     # marks. The mark nearest 2.0 is read on every frame from just before the
     # finger lifts.
     #
-    # Each frame is kept as [ms since the recording began, ms on THE GLIDE'S
-    # OWN CLOCK since the finger lifted (null before), the mark nearest
-    # o.at]. The glide's clock is the timeline's: each frame counts as long
-    # as it took, up to 64ms (lib/musictimeline.js frame()), so a frame a
-    # busy machine holds up moves the glide on 64ms and never jumps. Read on
-    # the wall's clock from before the lift, a runner that held frames up
-    # saw a sound glide (17 frames on the way, always onward) not yet there
-    # when 700ms ran out: main red after #976, sqlite 1/6, where this box
-    # has it there 437ms after the lift. It records until o.ms on that clock
-    # after the lift (5s more at most, if the lift never comes); __recbDone
-    # says it has stopped.
+    # Each frame is kept as [ms on the wall's clock since the finger lifted,
+    # ms on THE GLIDE'S OWN CLOCK since then (both null before), the mark
+    # nearest o.at]. The glide's clock is the timeline's: each frame counts
+    # as long as it took, up to 64ms (lib/musictimeline.js frame()), so a
+    # frame a busy machine holds up moves the glide on 64ms and never jumps.
+    # Read on the wall's clock from before the lift, a runner that held
+    # frames up saw a sound glide (17 frames on the way, always onward) not
+    # yet there when 700ms ran out: main red after #976, sqlite 1/6, where
+    # this box has it there 437ms after the lift. It records until o.ms on
+    # the glide's clock after the lift (5s more at most, if the lift never
+    # comes); __recbDone says it has stopped.
     NEAR = """(o) => { const out = window.__recb = [], t0 = performance.now(); let up = null, clock = null, last = 0;
       window.__recbDone = false;
       window.addEventListener('pointerup', () => { up = performance.now(); }, { capture: true, once: true });
@@ -316,7 +316,7 @@ with sync_playwright() as pw:
         if (up !== null) clock = clock === null ? Math.min(64, Math.max(0, now - up)) : clock + Math.min(64, Math.max(0, now - last));
         last = now;
         const b = ((document.getElementById('musicTimeline')._painted || {}).beats || []).map((m) => m[2]);
-        out.push([performance.now() - t0, clock, b.length ? b.reduce((a, c) => Math.abs(c - o.at) < Math.abs(a - o.at) ? c : a) : null]);
+        out.push([up === null ? null : performance.now() - up, clock, b.length ? b.reduce((a, c) => Math.abs(c - o.at) < Math.abs(a - o.at) ? c : a) : null]);
         if ((clock === null || clock < o.ms) && performance.now() - t0 < o.ms + 5000) requestAnimationFrame(f); else window.__recbDone = true; })(); }"""
 
     def near_done(pg):
@@ -329,10 +329,10 @@ with sync_playwright() as pw:
 
     def arrival(rec, fin):
         """The first frame after the lift with the mark within 1.5e-4 of `fin`:
-        (ms on the glide's clock, ms on the wall's since the lift), or None."""
-        up = next((f[0] for f in rec if f[1] is not None), None)
-        return next(((f[1], f[0] - up) for f in rec
+        (ms on the glide's clock, ms on the wall's), both since the lift; or None."""
+        return next(((f[1], f[0]) for f in rec
                      if f[1] is not None and f[2] is not None and fin is not None and abs(f[2] - fin) < 1.5e-4), None)
+
     for _n, _p in eds("zoomed"):
         for still in (False, True):
             ctx = waits.instrument(b.new_context(reduced_motion="reduce", **DESK)) if still else None
