@@ -1141,7 +1141,8 @@ with sync_playwright() as p:
                     pg.unroute("**/push/prefs")
                     # SEND ME A TEST NUDGE: under the switches, painted, 44px;
                     # the line under it says what the push service answered.
-                    btn = pg.evaluate("""() => { const b = document.querySelector('[data-push-test]'); const r = b.getBoundingClientRect();
+                    btn = pg.evaluate("""() => { const b = document.querySelector('[data-push-test]'); b.scrollIntoView({ block: 'center' });
+                      const r = b.getBoundingClientRect();
                       const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
                       const last = [...document.querySelectorAll('.push-row')].pop().getBoundingClientRect();
                       return { words: b.textContent.trim(), h: Math.round(r.height), hit: !!e && !!e.closest('[data-push-test]'),
