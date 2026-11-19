@@ -47438,3 +47438,155 @@ held back a second and a half, as a slow line would have them. As main had
 it, red (no drawing laid down: 0 strokes, no guide, no pill); with only the
 script's place in the page moved earlier, the paper's script late still
 left the ground unset; as built, green (her 33 strokes, on her paper).
+
+## After v330 -- One repository (the owner's yes to A), and the walkthrough's six mocks
+
+THE OWNER'S YES (Nov 19, late morning): "yes to A, go ahead with the mocks."
+A is one repository. Pad and Flip stay able to stand alone (skribls.net, or
+Skribl as its own site), and inside the site they give up their own doors
+and use the site's places and words. No second repository, no second copy
+of the editors. Asked in the same message, "just curious", which parts of
+the editors' menu belong on the site's side: the answer given was the
+places (the Library, Skribl's own gallery, where drafts are listed) and
+never the tools. An answer, not a decision; and its "Viewers start at" is
+taken back below.
+
+THE MOCKS, NOT BUILT, WAITING ON THE OWNER:
+https://claude.ai/artifact/MxPYZyHAtdR4hEg9YiXAuR. Six mocks, each with
+today beside its options, the real site on a touch phone at 402 with the
+option laid over it, light and dark (a switch on the page flips every
+picture), a desk where it differs, measured; and one list of ten choices,
+each with a default, so "all yes" is a whole answer:
+1. The editors' menu inside a post. A (default): Library and Public gallery
+   leave it; New, Save, Export, How it works, Your drafts, Settings and the
+   switch to the other editor stay. B: the two stay and ask first.
+2. The Add sheet. A (default): it stays, without the gallery tick. B: no
+   sheet, "Viewers start at" beside the composer's preview.
+3. "Draw back" in words on a post's own page. B (default): on the
+   draw-backs' own line, there from the start ("No draw-backs yet"), the
+   row of buttons not touched. As approved, at the row's end, it runs 10px
+   past the drawing's edge on a phone once the row has counts, and is cut
+   off on a desk.
+4. A drawn comment. A (default): no taller than its post's drawing (156 by
+   277 where today is 294 by 523, its bubble 351 where today is 674), its
+   line waiting until it plays as on Home's cards, its play mark small in a
+   corner, and a tap gliding it to today's size to play. The owner's B of
+   Nov 17, "as wide as its bubble", stays for a drawing drawn wide.
+5. Room between conversations: 30px before a new one, 12 inside one
+   (today 12 everywhere).
+6. What a draw-back says: its line "Drawn in 15 sec + 5 sec · watching at
+   1×" (308 of 370px, one line; the approved words with the names need all
+   370 and wrap), and its play button "Ana + Theo · 20 sec" (184 of the
+   drawing's 336). Needs each hand's drawing time kept when a draw-back is
+   made, which is new.
+7. Loop: the infinity sign (today two arrows in a ring, 38px above
+   repost's two arrows in a ring). Skribl's player's button, so Pad, Flip
+   and the link page with it.
+8. Quote: a quote mark, where a pen also means Draw back, Make and Edit
+   drawing.
+9. A face not drawn yet: the person's initial on cards and in Activity, as
+   comments have (6.49:1 light, 6.87:1 dark). A Gallery tile's small face
+   stays as decided.
+10. The Gallery's search box: New, Hot, Following and Everyone share one
+    line and the box takes the next whole (304px for words that need 217;
+    today 178).
+
+THE OWNER, WHILE THE PAGE WAS BEING PUT TOGETHER: "why take out library?
+you're taking out the ability to load .skribls into the pad?" No. A
+`.skribl` file is opened and saved in Your drafts ("Open a file…" and
+"Save as a file", moved there by `skribl/static/lib/savedrafts.js`), never
+in the Library, and Your drafts stays in the menu. Tried inside the site's
+composer before answering: a drawing saved as a file, a fresh post begun,
+the file opened, every stroke back and the button still "Add to post"; Flip
+has the same two rows. The Library is the page of what somebody has posted,
+and on the site that is the profile (Posts, Gallery, Drafts: the owner's
+own map of Nov 13, "library drafts as part of profile").
+
+A DEFECT FOUND ANSWERING IT, NOT FIXED: FROM A HOST'S COMPOSER, THE MENU'S
+LIBRARY AND PUBLIC GALLERY LOSE THE DRAWING. They are plain links
+(`skribl/templates/skribl/_skribl_menu.html`), so the composer's frame
+leaves the Pad for Skribl's own page; compose keeps no draft (v315), so the
+drawing on the canvas is gone, and nothing asks first. The switch to the
+other editor does ask (v316, "Anything you haven't added to your post yet
+will be lost"); these two were missed. The page it lands on has no way back
+to the post: its "Make one" opens the Pad on its own, whose button posts to
+Skribl. Walked on a copy of the site: a drawing, Library, Make one, the
+browser's Back twice, an empty canvas under "Add". It is every host's composer, not this site's
+alone, and either answer to choice 1 mends it, which is why it waits for
+that answer and would be built first.
+
+TWO PICKS CHANGED BEFORE THE PAGE WENT OUT, by reading the record before
+recommending a removal (the walkthrough's first list was half wrong for
+want of it):
+- THE ADD SHEET STAYS. No sheet was the draft's pick. The sheet is where
+  "Viewers start at" lives in full (Auto, As drawn, Fit, Speed and its
+  seven speeds: the owner's pick after v330, "comes back"), and where a
+  drawing too long for a post is told so and offered as a file before
+  anything is sent (`skribl/static/editor_post.js`). One press fewer is not
+  worth folding four choices into one button.
+- THE ROW UNDER A POST IS NOT TOUCHED. The draft took the pen out of the
+  row on a post's own page when the words went to the draw-backs' line.
+  The row keeps its pen and count, the same row as on every card.
+And one thing the pictures showed: at 156px wide the play mark (52px) in
+the middle of a drawn comment covers the middle of the drawing (the
+heart's face), so the mock puts it small in a corner; the whole drawing is
+the tap.
+
+THE FIRST STEP OF A NEEDS NO SWITCH. The menu already knows it is inside a
+post (it leaves out Add to Home Screen and Reload there), and the gallery
+tick is asked for by the site's own composer
+(`social/templates/social/_compose.html`), which would stop asking. The
+editors on their own, and any host that asks for the tick, are as they
+were.
+
+Main's full run after #990 came back green.
+
+## After v330 -- "All yes" to the six mocks; inside a post the menu has no door out, and no gallery tick
+
+THE OWNER, Nov 19, to the ten choices of the mock page
+(https://claude.ai/artifact/MxPYZyHAtdR4hEg9YiXAuR; the entry above lists
+them with their defaults): "all yes". Built in four pieces, this the first:
+choices 1 and 2. Then the small ones (5, 7 to 10), a post's page (3, 4), and
+what a draw-back says (6).
+
+CHOICE 1, AND THE DEFECT IT MENDS: COMPOSING, THE ⋯ MENU HAS NO LIBRARY AND
+NO PUBLIC GALLERY (`skribl/templates/skribl/_skribl_menu.html`, one partial,
+so Pad, Flip and the face Pad alike). They were plain links: the host's
+frame left the editor for Skribl's own page, and since compose keeps no
+draft (v315) the drawing on the canvas went with it, nothing asked, the page
+it landed on with no way back to the post. On the editors' own pages both
+doors are where they were. The switch to the other editor stays and asks
+first, as since v316. The tiles share their row equally, three or four
+(`.menu-tiles`, columns by flow where it was four fixed ones, which left the
+fourth place empty).
+THE CHECKS (verify_compose, Pad and Flip, in the feed's composer): with a
+drawing on the canvas EVERY painted link in the menu is followed, whatever it
+is called, and the frame must still be the composing editor with the drawing
+on it. As main had it, red on both ("left by Library -> /library", the
+switch having asked); as built, green (one link, the switch, which asks; the
+ink the same before and after). And the three tiles fill the row: with only
+the stylesheet's rule put back, red (a 94px gap at the row's end); as built,
+green (117px each, 8px apart, edge to edge with the list).
+
+CHOICE 2: THE SITE'S COMPOSER ASKS FOR NO GALLERY TICK
+(`social/templates/social/_compose.html`: the editors' frames open with
+compose=1 alone). "Show in the Skribls gallery" fed Skribl's own gallery, a
+page the site has no door to, and said "Off, it shows in your post only"
+where the site's Gallery shows every post's drawing by the site's own flag.
+The Pad's sheet still asks "Viewers start at" (the owner's pick after v330),
+and still says when a drawing is too long to add; Flip's sheet, which asked
+the tick alone, keeps its picture and its button. Nothing in Skribl changed
+for this: a host that asks (`gallery=1`, the example host) is asked as
+before. The site's route still keeps a payload that says public, as the
+posts made with the tick are. Storing every post unlisted whatever it said
+was tried and taken back: nobody can reach the difference from the site,
+and the suites make "a post whose drawing is public", which the older posts
+are, through that route.
+
+FOUND WHILE WIDENING THE CHECK, NOT FIXED, THE OWNER TO BE ASKED: THE TEXT
+DRAWER HAS A THIRD DOOR OUT. Composing, "Yours" with no hand made yet, and
+"Edit your hand", go to the page where a hand is drawn
+(`skribl/static/lib/textwrite.js` toHand), in the host's frame, and that
+page comes back to the editor on its own, not in the post. The drawing goes
+the same way. It is outside the menu and outside the choice; what the
+drawer should do and say inside a post is the owner's.

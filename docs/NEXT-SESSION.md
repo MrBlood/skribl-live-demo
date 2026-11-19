@@ -182,19 +182,45 @@ the bugs and logic flaws also."
   picture for loop, a quote mark for Quote, an initial in a blank face; room
   for the Gallery's search words at 402 (the words are the owner's).
 
-THE BIGGER QUESTION, the owner's, waiting on their answer: a separate
-repository where Pad and Flip are "totally a part of" the site (blooby.app),
-this one keeping them independent for skribls.net. The answer given, three
-ways: A, one repository and a switch the site turns on, with which the
-editors drop their own doors (Skribl's own gallery and its tick, the
-Library) and use the site's places and words (recommended; its first step
-would be the Add sheet's gallery tick and the Pad menu's Library and Public
-gallery, mocked first); B, a second repository with its own copy of the
-editors (about 61,000 lines and most of the suites, to keep in step for
-good); C, deciding now for the site alone and taking the standalone side
-out (closes the skribls.net door; a small job after A). THE GALLERY TICK
-waits on this: the site's composer asks for it (`gallery=1` in
-`_compose.html`), and with A it would stop asking.
+THE BIGGER QUESTION, the owner's, ANSWERED (Nov 19, late morning): "yes to
+A, go ahead with the mocks." It was a separate repository where Pad and
+Flip are "totally a part of" the site (blooby.app), this one keeping them
+independent for skribls.net; the answer given had three ways, and A is one
+repository, the editors still able to stand alone, giving up their own
+doors inside the site and using its places and words. (B was a second
+repository with its own copy of the editors, about 61,000 lines and most of
+the suites to keep in step for good; C was deciding now for the site alone
+and taking the standalone side out.)
+
+"ALL YES" (the owner, Nov 19, about noon) to the ten choices below, built
+in four pieces (`DECISIONS.md`, the entries after "One repository"): 1 and 2
+first (the menu inside a post, no gallery tick), then 5 and 7 to 10, then 3
+and 4 (a post's page), then 6 (what a draw-back says). Read DECISIONS for
+which have merged. STILL THE OWNER'S TO ANSWER: the Text drawer's way out of
+a post ("Yours" with no hand yet, and "Edit your hand", leave the composer's
+frame and the drawing is gone).
+
+THE SIX MOCKS, as they were put up:
+https://claude.ai/artifact/MxPYZyHAtdR4hEg9YiXAuR, ten choices with a
+default each (`DECISIONS.md`, "One repository (the owner's yes to A), and
+the walkthrough's six mocks", lists them and what was measured). Build only
+what the owner answers, the editors' menu first:
+- A DEFECT WAITS ON CHOICE 1. From a host's composer the menu's Library and
+  Public gallery are plain links: the frame leaves the Pad, compose keeps
+  no draft, the drawing is gone and nothing asks. A takes the two doors out
+  inside a post; B keeps them behind the question the switch to the other
+  editor already asks. Either mends it; show it red first (a drawing, the
+  door, the canvas after).
+- THE OWNER ASKED "why take out library? you're taking out the ability to
+  load .skribls into the pad?" A `.skribl` file is opened and saved in Your
+  drafts, never in the Library, and that stays (tried inside the composer:
+  saved, opened again, every stroke back). Say so first if it comes up
+  again, and never mock that door away.
+- THE ADD SHEET STAYS (minus the gallery tick) and THE ROW UNDER A POST IS
+  NOT TOUCHED: both were the other way in the page's draft and were changed
+  by reading the record first.
+- The first step needs no switch: the menu already knows it is inside a
+  post, and the tick is asked for by the site's own composer.
 
 TAKEN BACK, and why: Quote without a drawing (the only way to answer a Flip
 or a post of words with a drawing in a post of your own); Flip out of the
@@ -210,8 +236,9 @@ not tried on screen); the Gallery without Following and Everyone (the map);
 leaving "Who can draw back" for later (the artist's say over her own art:
 build both parts of choice 7).
 
-The walkthrough's copy of the site is gone (its server did not outlive the
-turn); its scripts were scratch.
+The walkthrough's copy of the site, and the mocks' (five made-up people,
+eleven posts), were scratch and are gone with the session; the pictures are
+in the mock page.
 
 ## Open threads
 

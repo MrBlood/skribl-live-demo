@@ -24,8 +24,8 @@ Skribl's real Pad.
      Draw, Flip and Yours along the bottom and the characters left at their
      end, 500, counting down as words are typed. On a phone's keyboard
      (stood in) the sheet rides above it, and a pinch's zoom is no keyboard.
-  4. DRAW AND FLIP: Draw opens Skribl's Pad over the sheet in compose mode
-     with the gallery's choice; Add hands the drawing back, PLAYING in the
+  4. DRAW AND FLIP: Draw opens Skribl's Pad over the sheet in compose mode,
+     asking for no gallery tick; Add hands the drawing back, PLAYING in the
      sheet's in-post player, Post lit and focus on Edit drawing; Edit drawing
      reopens it with the drawing put back; Remove takes it away and lets the
      frame go; Flip opens Flip the same way; with a drawing attached a tool
@@ -398,7 +398,9 @@ def add_from_pad(pg, fr):
     fr.click("#postBtn")
     pg.wait_for_timeout(700)
     sheet = fr.evaluate("""() => ({ label: (document.getElementById('postSubmitLabel') || {}).textContent,
-      tick: [...document.querySelectorAll('#postSheet label')].map(l => l.textContent.trim()).filter(t => /gallery/i.test(t)) })""")
+      tick: [...document.querySelectorAll('#postSheet label')].map(l => l.textContent.trim()).filter(t => /gallery/i.test(t)),
+      box: !!document.getElementById('postPublicInput'),
+      speed: (() => { const g = document.getElementById('postSpeedSeg'); return !!g && g.getClientRects().length > 0; })() })""")
     fr.click("#postSubmitBtn")
     pg.wait_for_timeout(1400)
     return sheet
@@ -893,10 +895,12 @@ with sync_playwright() as p:
             got = pg.evaluate(SHEET)
             state, played = pg.evaluate(STATE), pg.evaluate(PLAYED)
             parts_ = pg.evaluate(PARTS)
-            check("Draw opens Skribl's Pad over the sheet in compose mode with the gallery's choice (compose=1&gallery=1), its"
-                  " sheet saying Add to post; Add hands the drawing back into the sheet's own in-post player, PLAYING, Post"
+            check("Draw opens Skribl's Pad over the sheet in compose mode, asking for no gallery tick (compose=1, no"
+                  " gallery=1; the walkthrough's mocks, choice 2), its sheet saying Add to post with no gallery checkbox and"
+                  " Viewers start at still asked; Add hands the drawing back into the sheet's own in-post player, PLAYING, Post"
                   " lit, Edit drawing and Remove under it, focus on Edit drawing, the editor gone",
-                  bool(fr) and "compose=1" in (src or "") and "gallery=1" in (src or "") and sheet.get("label") == "Add to post"
+                  bool(fr) and "compose=1" in (src or "") and "gallery=1" not in (src or "") and sheet.get("label") == "Add to post"
+                  and sheet.get("box") is False and sheet.get("speed") is True
                   and got["open"] and got["att"] == {"kind": "payload", "id": None} and (state == "playing" or played)
                   and parts_["disabled"] == "false" and got["focus"] == "Edit drawing"
                   and pg.evaluate("() => document.getElementById('composePad').hidden"),
@@ -931,9 +935,9 @@ with sync_playwright() as p:
             if ffr:
                 ffr.click("#composeCloseBtn")
                 pg.wait_for_timeout(700)
-            check("Flip opens Skribl's Flip over the sheet the same way (compose=1&gallery=1), and its × puts it away, the sheet"
+            check("Flip opens Skribl's Flip over the sheet the same way (compose=1, no gallery=1), and its × puts it away, the sheet"
                   " still there",
-                  bool(ffr) and fopen and "compose=1" in (fsrc or "") and "gallery=1" in (fsrc or "")
+                  bool(ffr) and fopen and "compose=1" in (fsrc or "") and "gallery=1" not in (fsrc or "")
                   and pg.evaluate("() => document.getElementById('composeFlip').hidden") and pg.evaluate(SHEET)["open"],
                   f"frame {bool(ffr)}; src {fsrc}; open {fopen}")
             tap(pg, "#composeSheet [data-compose-open=pad]")

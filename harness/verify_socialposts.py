@@ -8,15 +8,16 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      Post says so and sends nothing; an empty feed says to tap Make. Signed
      out, Home is the first visit, as before.
   2. COMPOSING FROM HOME: Make, then the composer's Draw, opens Skribl's Pad over the
-     composer in compose mode, with the gallery choice in its sheet
-     (compose=1&gallery=1); Add hands the drawing back into the composer's
-     own in-post player; Edit drawing reopens it with the drawing in it;
+     composer in compose mode, asking for no gallery tick (compose=1, no
+     gallery=1; its sheet still asks Viewers start at); Add hands the
+     drawing back into the composer's own in-post player; Edit drawing reopens it with the drawing in it;
      Remove takes it away. Flip opens Flip the same.
   3. POSTING: the words and the drawing, one post: its row on the site's
      chain, its skribl through create_post (unlisted without the tick, its
      title the first words, no caption), and the post's own page, where the
-     drawing plays by itself; under Reduce Motion it rests still. With the
-     tick, the skribl is public and Skribl's listing shows it. No Make your
+     drawing plays by itself; under Reduce Motion it rests still. A payload
+     that says public (the tick the composer asked for until Nov 19) is
+     still kept public, and Skribl's listing shows it. No Make your
      own on the page (Nov 14): the bar's and the rail's Make opens the
      composer there. On
      a desk, More from shows each other drawing alone, cut out of its share
@@ -527,7 +528,9 @@ def add_from_pad(pg, fr, tick=False):
     pg.wait_for_timeout(700)
     sheet = fr.evaluate("""() => ({ label: (document.getElementById('postSubmitLabel') || {}).textContent,
       tick: [...document.querySelectorAll('#postSheet label')].map(l => l.textContent.trim())
-              .filter(t => /gallery/i.test(t)) })""")
+              .filter(t => /gallery/i.test(t)),
+      box: !!document.getElementById('postPublicInput'),
+      speed: (() => { const g = document.getElementById('postSpeedSeg'); return !!g && g.getClientRects().length > 0; })() })""")
     if tick:
         fr.evaluate("() => { const b = document.getElementById('postPublic') || document.querySelector('#postSheet input[type=checkbox]');"
                     " if (b && !b.checked) b.click(); }")
@@ -872,12 +875,22 @@ with sync_playwright() as p:
         removed = pg.evaluate("""() => ({ draft: document.querySelector('[data-compose-draft]').hidden,
           chips: [...document.querySelectorAll('#composeSheet [data-compose-open]')].map(c => c.hidden),
           frame: document.querySelector('#composePad iframe').getAttribute('src') })""")
-        check("Home's Draw opens Skribl's Pad over the composer in compose mode with the gallery choice"
-              " (compose=1&gallery=1); its sheet says Add to post and offers Show in the Skribls gallery; Add hands the"
-              " drawing back into the composer's own in-post player, Draw and Flip still along its foot (a post holds"
-              " one: they say so), and focus lands on Edit drawing",
-              bool(fr) and "compose=1" in (src or "") and "gallery=1" in (src or "")
-              and sheet.get("label") == "Add to post" and any("Skribls gallery" in t for t in sheet.get("tick", []))
+        # NO GALLERY TICK (the walkthrough's mocks, choice 2, the owner's "all
+        # yes", Nov 19): the site asked the editors for "Show in the Skribls
+        # gallery" (gallery=1), which fed Skribl's own gallery and said "Off,
+        # it shows in your post only" of a site whose Gallery shows every
+        # post's drawing. Read by the mechanism: the flag in the frame's
+        # address and the sheet's own checkbox, and "Viewers start at" still
+        # asked. (Not by the word: the gallery caption's field is in every
+        # sheet, hidden, and its label says "Gallery". This row's first
+        # version asked for no label with that word and failed on it.)
+        check("Home's Draw opens Skribl's Pad over the composer in compose mode, asking for no gallery tick (compose=1,"
+              " no gallery=1): its sheet says Add to post, holds no gallery checkbox and still asks Viewers start at;"
+              " Add hands the drawing back into the composer's own in-post player, Draw and Flip still along its foot"
+              " (a post holds one: they say so), and focus lands on Edit drawing",
+              bool(fr) and "compose=1" in (src or "") and "gallery=1" not in (src or "")
+              and sheet.get("label") == "Add to post" and sheet.get("box") is False
+              and sheet.get("speed") is True
               and drafted["shown"] and drafted["attached"] and drafted["chips"] == [False, False] and drafted["overlay"]
               and drafted["focus"] == "Edit drawing",
               f"src {src}; sheet {sheet}; drafted {drafted}")
@@ -893,8 +906,8 @@ with sync_playwright() as p:
         if ffr:
             ffr.click("#composeCloseBtn")
             pg.wait_for_timeout(700)
-        check("Flip opens Skribl's Flip over the composer the same way (compose=1&gallery=1), and its × puts it away",
-              bool(ffr) and fopen and "compose=1" in (fsrc or "") and "gallery=1" in (fsrc or "")
+        check("Flip opens Skribl's Flip over the composer the same way (compose=1, no gallery=1), and its × puts it away",
+              bool(ffr) and fopen and "compose=1" in (fsrc or "") and "gallery=1" not in (fsrc or "")
               and pg.evaluate("() => document.getElementById('composeFlip').hidden"),
               f"frame {bool(ffr)}; src {fsrc}; open {fopen}")
 
@@ -948,8 +961,9 @@ with sync_playwright() as p:
         st, j = make_post(mira, "For the gallery", gallery=True, seed=3)
         gsk = skribl_row(post_row(j.get("post"))[1]) if st == 200 and isinstance(j, dict) else None
         listed = json.loads(urllib.request.urlopen(BASE + "/api/skribls?limit=50", timeout=20).read().decode())["items"]
-        check("under Reduce Motion the post's page leaves the drawing still; with the gallery tick the skribl is"
-              " public, keeps its caption, and Skribl's own listing shows it",
+        check("under Reduce Motion the post's page leaves the drawing still; a payload that says public (the gallery"
+              " tick, which the composer no longer asks for) is kept public with its caption, and Skribl's own listing"
+              " shows it",
               still and still[0] != "playing" and gsk is not None and gsk[0] == "public"
               and gsk[2] == "From the gallery tick"
               and any(i["id"] == post_row(j["post"])[1] for i in listed),

@@ -64,8 +64,14 @@
     <button type="button" class="menu-tile" data-menu-go="new" id="menuNewTile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>New</span></button>
     <button type="button" class="menu-tile" id="saveCloudDraftItem" aria-label="Save draft {{ 'to your account' if skribl_signed_in else 'on this browser' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4.5 13 3 3 0 0 0 6 19z"/><path d="M12 12v6"/><path d="M9.5 14.5 12 12l2.5 2.5"/></svg><span>Save</span></button>
     <button type="button" class="menu-tile" id="{{ ids.export }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Export</span></button>
-    {# YOUR SKRIBLS IS THE PROFILE PAGE (v304): a link to /library. #}
-    <a href="{{ url_for('.skribl_library') }}" class="menu-tile" id="{{ ids.lib }}" aria-label="Your Skribl Library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Library</span></a>
+    {# YOUR SKRIBLS IS THE PROFILE PAGE (v304): a link to /library.
+       NOT INSIDE A POST (the walkthrough's mocks, choice 1, the owner's "all
+       yes", Nov 19): composing, this link and Public gallery below took the
+       host's frame to Skribl's own page, and compose keeps no draft, so the
+       drawing on the canvas went with it, nothing asked, and that page has
+       no way back to the post. A host has its own place for what somebody
+       posted. The tiles share the row equally, three or four. #}
+    {% if not compose %}<a href="{{ url_for('.skribl_library') }}" class="menu-tile" id="{{ ids.lib }}" aria-label="Your Skribl Library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Library</span></a>{% endif %}
   </div>
 
   <div class="menu-list">
@@ -77,7 +83,7 @@
        choice"): the drafts sheet holds this drawing's name and Save, every
        saved draft, and the .skribl file both ways. #}
     <button type="button" class="menu-item" id="openCloudDraftItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 13h8M8 16h5"/></svg><span class="menu-item-text">Your drafts<span class="menu-item-sub">Open, rename, keep as a file</span></span>{{ chev }}</button>
-    <a href="{{ url_for('.skribl_gallery') }}" id="{{ ids.gal }}" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="menu-item-text">Public gallery<span class="menu-item-sub">What people chose to show</span></span>{{ chev }}</a>
+    {% if not compose %}<a href="{{ url_for('.skribl_gallery') }}" id="{{ ids.gal }}" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="menu-item-text">Public gallery<span class="menu-item-sub">What people chose to show</span></span>{{ chev }}</a>{% endif %}
     <button type="button" class="menu-item" data-menu-go="settings" id="menuSettingsItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.09 2.59 L13.91 2.59 L14.13 5.12 L15.36 5.63 L17.30 4.00 L20.00 6.70 L18.37 8.64 L18.88 9.87 L21.41 10.09 L21.41 13.91 L18.88 14.13 L18.37 15.36 L20.00 17.30 L17.30 20.00 L15.36 18.37 L14.13 18.88 L13.91 21.41 L10.09 21.41 L9.87 18.88 L8.64 18.37 L6.70 20.00 L4.00 17.30 L5.63 15.36 L5.12 14.13 L2.59 13.91 L2.59 10.09 L5.12 9.87 L5.63 8.64 L4.00 6.70 L6.70 4.00 L8.64 5.63 L9.87 5.12Z"/><circle cx="12" cy="12" r="3"/></svg><span class="menu-item-text">Settings<span class="menu-item-sub">Theme, tips and canvas</span></span>{{ chev }}</button>
   </div>
 
