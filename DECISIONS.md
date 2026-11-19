@@ -47722,3 +47722,90 @@ over 447); with the transition taken out, the glide alone red (one frame
 carried all 137.91px); with Reduce Motion's rule taken out, its row red (156
 to 294 at once); as built, green (156.1 by 277.5 under 277.5; the width
 read on every frame).
+
+## After v330 -- What a draw-back says: each hand's own time on its line, who and the whole on its play button
+
+Choice 6 of the mock page, the owner's "all yes" (Nov 19), and the last of
+the ten.
+
+THE DEFECT IT MENDS. A draw-back's drawing is the original's strokes,
+squeezed to three seconds, and then the answer's. Its line and its play
+button read that drawing, so they said "drawn in 8 sec" under a cat that
+took 15: hers counted as the quick replay of it.
+
+WHAT IS KEPT (`social_posts.hands_json`, migration `f2a6d4c81b57`; no data
+work). When a draw-back is made, the site reads how long each of the two
+drawings took, before it joins them (`drawback.hands`: the line's own
+count, every positive gap between points), and keeps [[person, ms], ...]
+in the order they play, in whole seconds, so the parts a line says add up
+to the whole its play button says. A draw-back on a draw-back (a jam)
+starts from the original's own list, so it holds every hand before it.
+
+WHAT IT SAYS.
+- ITS LINE, the times and no names: "Drawn in 15 sec + 5 sec · watching at
+  1×" (the mock's B: with the names the approved words needed all of a
+  phone's 370px and wrapped; they are right above it, in "Drew back on
+  Ana's"). Past three parts, the whole and how many people: "Drawn in 3 min
+  by 5 people". Never "long pauses skipped": hers playing fast is the
+  design, not a pause.
+- ITS PLAY BUTTON, who and the whole: "Ana + Theo · 20 sec"; three and four
+  hands by name, past four "Ana + 4 others"; where the drawing is too
+  narrow for the names, the time alone, as a card does today.
+- A Gallery tile's ▶ and a quote's small card say the whole too.
+
+WHO IS NAMED, AND TO WHOM (`posts.hands_said`). Only when every hand can be
+named to this viewer: each still here, not taken down, no block either way,
+and the drawing it answers still there for them (once it is not, its card
+says "Drew back on a drawing", and its play button the time alone). One
+person's own two sittings name nobody: the card says whose it is. The times
+are said either way.
+
+A DRAW-BACK FROM BEFORE THE HANDS WERE KEPT is said from the two drawings'
+stored lines while its original is there and is one hand's
+(`drawback.hands_from_lines`: hers is her drawing's own time; his is the
+joined drawing's less her part as the join laid it down, three seconds at
+most, and the one beat between). Once the original is gone it says what
+its drawing says, as it did.
+
+SKRIBL'S SIDE IS A SEAM, NOT A RULE (docs/INTEGRATION.md, "A drawing of
+several hands"): the line a host hands the in-post player may carry
+`parts`, `people` and `by` beside `drawn`. The player says them; what a
+hand is and whose names are said to whom are the host's. `by` is written
+as text: the play button's words were put in as markup, which was safe
+while they were numbers and would not be with a name in them. Without
+`parts` everything is as it was. Pad and Flip: nothing of theirs changes;
+the link page and the full screen read the same line a post lends them.
+
+THE BYTES. The in-post player costs a host 393 B more (82,512, from
+82,119), all `inlineplayer.js`, the ratchet raised for that named cost
+(verify_inline). `lib/replayline.js` is not touched: the line's own lead
+carries the words.
+
+THE CHECKS. verify_socialdrawback 8, the expected words worked out from the
+drawings themselves: the hands kept ([[Ana, 15000], [Theo, 5000]] from a
+cat of 14,780ms and an answer of 5,070); the card's "Ana + Theo · 20 sec";
+the page's "Drawn in 15 sec + 5 sec" with nothing about pauses; the tile's
+"20 sec"; a jam's three hands; your own drawing naming nobody; somebody who
+blocked her told no names; a quote's "drawn in 20 sec"; and a draw-back
+from before, said from the lines and then, its original gone, "drawn in 8
+sec". SHOWN RED PIECE BY PIECE: with Skribl's player as it was, five rows
+(the button "drawn in 20 sec", the line "Drawn in 8 sec" and "long pauses
+skipped"); with the card not handed the hands' numbers, six ("drawn in 8
+sec", the tile "8 sec"); with the naming rule taken out, the blocked
+viewer's row ("Ana + Theo" said to her); with the quote's line left alone,
+the quote's row ("drawn in 8 sec"). verify_inline, the player's own side
+with nobody's site: the button's words, the line's, past three parts, a
+drawing too narrow for the names, and after it has played.
+
+AN INSTRUMENT THAT COULD NOT TELL, CAUGHT BY ITS OWN CALIBRATION. The row
+for "written as text, never as markup" first read the button after the
+fact, and passed with the names put in as markup: the player fits its
+words a moment later and writes them as text then, so by the time anybody
+looks the two are the same, and an element had still been made. It watches
+now from before the players mount for any element of the words ever made
+or taken away under a play button. With markup: red ("made": B, I). As
+built: green.
+
+SUITES. Beside others, verify_inline had one row red, "scrolling a playing
+post out of view pauses it where it was" (a timing read), and was 227/227
+alone: load.

@@ -2886,10 +2886,16 @@ Skribl keeps media in a store, the site reads hers back as data
 (`skribl.read_payload(..., inline_media=True)`); the store keeps content
 once, so the draw-back costs no more room.
 
+WHAT IT SAYS OF ITSELF (DECISIONS.md, "What a draw-back says"; section 21,
+choice 6): each hand's own drawing time is kept when it is made
+(`social_posts.hands_json`), its line says them ("Drawn in 15 sec + 5 sec"),
+its play button who and the whole ("Ana + Theo · 20 sec"), a Gallery tile
+and a quote the whole. Nobody is named to a viewer any of them is hidden
+from, nor once the drawing it answers is gone.
+
 STILL TO COME, in the decided order: her say (hide one from her post; who
-can draw back); the line's "Ana + Theo" words; drawing back on a Flip, page
-for page; recolours. `verify_socialdrawback.py` holds
-what is built.
+can draw back); drawing back on a Flip, page for page; recolours.
+`verify_socialdrawback.py` holds what is built.
 
 ---
 
@@ -2930,6 +2936,15 @@ where it lives above; this is the index.
   line, 8px apart, and the search box takes the next line whole, so
   "Search people and drawings" fits a 402px phone (217px of words in 304;
   it had 178). Signed out, New | Hot has the line.
+- **6, what a draw-back says:** its line each hand's own time ("Drawn in 15
+  sec + 5 sec · watching at 1×"; past three parts, the whole and how many
+  people), its play button who and the whole ("Ana + Theo · 20 sec"; past
+  four names, "Ana + 4 others"; the time alone where the drawing is too
+  narrow), a Gallery tile and a quote's small card the whole. It said
+  "drawn in 8 sec" under a cat that took 15. Kept on the post when it is
+  made; one from before is said from the two drawings' own lines while its
+  original is there. Skribl's player is handed the numbers (docs/INTEGRATION.md,
+  "A drawing of several hands") and knows nothing of who.
 - **7, loop:** Skribl's players draw the infinity sign for loop (the in-post
   player, the link page's, the Library's, the full-screen bar, the Pad's
   Repeat and Export's looping GIF: one picture by `verify_icons`). On the

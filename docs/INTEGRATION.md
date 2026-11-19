@@ -201,6 +201,30 @@ opening frame by frame; `verify_seam.py` holds the source.
                  line_info=post.line, line_waits=True) }}
 ```
 
+**A drawing of several hands** (Nov 19: the Skribl site's draw-backs). Some
+hosts join drawings, so that one plays after another in one post, and may
+replay the first one faster than it was drawn. The joined drawing's own
+"drawn in" is then not how long it took. A host that knows each part's own
+drawing time says so in the same `line_info`, with three more keys, all
+optional:
+
+```jinja
+{{ skribl_inline(post.skribl_id, canvas_w=post.canvas_w, canvas_h=post.canvas_h,
+                 line_info=dict(post.line, drawn=20000, parts=[15000, 5000],
+                                people=2, by="Ana + Theo"),
+                 line_waits=True) }}
+```
+
+`parts` is each hand's drawing time, in milliseconds, in the order they play,
+and `drawn` their sum. The line then says "Drawn in 15 sec + 5 sec · watching
+at 1×"; with more than three parts, the sum and `people` ("Drawn in 3 min by
+5 people"). It never says "long pauses skipped" for such a drawing. `by` is
+who they are, for the play button of a line that waits or a card with no
+line: "Ana + Theo · 20 sec", and the time alone where the drawing is too
+narrow for the names. It is your words, written as text, never as markup.
+Without `parts` everything is as it was. What a hand is, and whose names
+are said to whom, are the host's: Skribl never knows.
+
 **Full screen on a post** (Nov 16: the owner's "yes to A", full screen on the
 Skribl site's posts). Pass `full=True` and the line ends in a full-screen
 button, after loop, that opens the link page's own full screen around this
