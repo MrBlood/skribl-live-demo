@@ -16,7 +16,7 @@
 {#  `can_mute`: signed in, and no block standing between you (muting waits
     for an unblock, as the route says). #}
 {% macro person_sheet(who, muted=false, can_mute=true) -%}
-<div class="make post-sheet" id="personSheet" hidden data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}">
+<div class="make post-sheet" id="personSheet" hidden data-handle="{{ who.handle }}" data-first="{{ who.display_name|first_name }}">
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="personSheetTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>

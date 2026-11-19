@@ -77,7 +77,7 @@ import sqlalchemy as sa
 from flask import jsonify, render_template, request
 
 from .accounts import _json_error, _rests
-from .models import Like, Person, Post, as_utc
+from .models import Like, Person, Post, as_utc, first_name
 from .safety import hidden_ids
 from .security import current_person, origin_ok, over, site, token_ok
 
@@ -208,7 +208,7 @@ def by_line(rows, viewer, n=None, mine=None):
     n = max(0, n - (1 if mine else 0))
     if not n:
         return None
-    names = [p.display_name.split(" ")[0] for p in others]
+    names = [first_name(p.display_name) for p in others]
     shown = names[:3] if n <= 3 else names[:2]
     return {"names": shown, "more": max(0, n - len(shown)), "faces": others[:3]}
 

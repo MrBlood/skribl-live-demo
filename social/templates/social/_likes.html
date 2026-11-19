@@ -65,7 +65,7 @@
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="likeOutTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="likeOutTitle">Like this drawing?</h2>
-    <p class="post-lede">Sign in, and a tap on the heart lets <span data-like-first>{{ c.who.display_name.split(' ')[0] }}</span> know you like it.</p>
+    <p class="post-lede">Sign in, and a tap on the heart lets <span data-like-first>{{ c.who.display_name|first_name }}</span> know you like it.</p>
     <div class="post-sheet-acts">
       <button class="btn btn-big" type="button" data-make-close>Not now</button>
       <a class="btn btn-primary btn-big" href="{{ signin_here }}">Sign in</a>

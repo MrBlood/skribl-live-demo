@@ -136,7 +136,7 @@ import sqlalchemy.orm  # noqa: F401  (sa.orm.aliased)
 from flask import g, redirect, request, url_for
 
 from .accounts import _page, _rests
-from .models import PERSON_PREFIX, Comment, Like, Mention, Person, Post, Repost, as_utc, utcnow
+from .models import PERSON_PREFIX, Comment, Like, Mention, Person, Post, Repost, as_utc, first_name, utcnow
 from .safety import hidden_ids
 from .security import current_person, site
 
@@ -465,7 +465,7 @@ def _follows(me, hidden, since, owner_url):
                    "pic": None}
             rows.append(row)
         row["people"].append(who)
-        row["names"].append(who.display_name.split(" ")[0])
+        row["names"].append(first_name(who.display_name))
     for row in rows:
         row["n"] = len(row["people"])
         row["href"] = profile_url(row["people"][0].handle) if row["n"] == 1 else owner_url + "#followers"
@@ -709,7 +709,7 @@ def listing(me, skribl_blueprint="skribl"):
             sections[at].append(row)
         if all(p.id != who.id for p in row["people"]):
             row["people"].append(who)
-            row["names"].append(who.display_name.split(" ")[0])
+            row["names"].append(first_name(who.display_name))
     for row in groups.values():
         row["n"] = len(row["people"])
     # LIKES: a row a post, since you last looked and before; they open "Liked by…".
@@ -729,13 +729,13 @@ def listing(me, skribl_blueprint="skribl"):
             href, words, kind = page(g["post_public"], g["drawing_id"]) + "#liked", None, "like"
         sections[0 if g["new"] else 1].append({
             "kind": kind, "new": g["new"], "when": g["at"], "words": words, "people": g["people"],
-            "names": [p.display_name.split(" ")[0] for p in g["people"]], "n": g["n"],
+            "names": [first_name(p.display_name) for p in g["people"]], "n": g["n"],
             "href": href, "pic": _pic(g["skribl_id"], sk.get(g["skribl_id"]), skribl_blueprint)})
     # REPOSTS: a row a post, since you last looked and before, as likes; they open the post.
     for g in shared:
         sections[0 if g["new"] else 1].append({
             "kind": "repost", "new": g["new"], "when": g["at"], "words": None, "people": g["people"],
-            "names": [p.display_name.split(" ")[0] for p in g["people"]], "n": g["n"],
+            "names": [first_name(p.display_name) for p in g["people"]], "n": g["n"],
             "href": url_for("social.post_page", public_id=g["post_public"]),
             "pic": _pic(g["skribl_id"], sk.get(g["skribl_id"]), skribl_blueprint)})
     # A COMMENT'S REPOSTS (step 3): a row a comment, as a post's, its words
@@ -746,7 +746,7 @@ def listing(me, skribl_blueprint="skribl"):
             continue
         sections[0 if g["new"] else 1].append({
             "kind": "repost_comment", "new": g["new"], "when": g["at"], "words": c.words or None,
-            "people": g["people"], "names": [p.display_name.split(" ")[0] for p in g["people"]], "n": g["n"],
+            "people": g["people"], "names": [first_name(p.display_name) for p in g["people"]], "n": g["n"],
             "href": lands[c.id], "pic": _pic(rpics[c.id], sk.get(rpics[c.id]), skribl_blueprint)})
     # QUOTES: a row each, their words under it; they open the quote.
     for q, who, opublic, _ in quoted:
@@ -761,7 +761,7 @@ def listing(me, skribl_blueprint="skribl"):
         row = rowed[q.id] = {
             "kind": "quote_comment" if q.quoted_comment_id is not None else "quote", "new": new,
             "when": q.created_at, "words": q.words or None, "people": [who],
-            "names": [who.display_name.split(" ")[0]], "n": 1,
+            "names": [first_name(who.display_name)], "n": 1,
             "href": url_for("social.post_page", public_id=q.public_id),
             "pic": _pic(qpics[q.id], sk.get(qpics[q.id]), skribl_blueprint)}
         sections[0 if new else 1].append(row)
@@ -785,7 +785,7 @@ def listing(me, skribl_blueprint="skribl"):
         new = since is None or as_utc(m.created_at) > since
         sections[0 if new else 1].append({
             "kind": "mention", "new": new, "when": m.created_at, "words": words or None, "people": [who],
-            "names": [who.display_name.split(" ")[0]], "n": 1, "href": href,
+            "names": [first_name(who.display_name)], "n": 1, "href": href,
             "pic": _pic(mpics[m.id], sk.get(mpics[m.id]), skribl_blueprint)})
     # DRAW-BACKS: a row each, "Theo drew back on your drawing", their words
     # under it; they open the draw-back, which plays yours and then theirs.
@@ -793,7 +793,7 @@ def listing(me, skribl_blueprint="skribl"):
         new = since is None or as_utc(d.created_at) > since
         sections[0 if new else 1].append({
             "kind": "drawback", "new": new, "when": d.created_at, "words": d.words or None, "people": [who],
-            "names": [who.display_name.split(" ")[0]], "n": 1,
+            "names": [first_name(who.display_name)], "n": 1,
             "href": url_for("social.post_page", public_id=d.public_id),
             "pic": _pic(d.skribl_id, sk.get(d.skribl_id), skribl_blueprint) if d.skribl_id else None})
     # FOLLOWS: since you last looked one row, before a row a day; they open

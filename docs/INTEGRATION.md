@@ -259,6 +259,12 @@ one drawing's payload, as the player is handed it (a copy, stripped as the
 payload route strips one), or None for one that is not there or not this
 viewer's to see. The Skribl site's Draw back lays an original under a new
 drawing and posts the two as one with it. It counts no play.
+`inline_media=True` hands its photo and music back as data (data URLs)
+where your media store keeps them apart (`SKRIBL_MEDIA_BACKEND` local or
+s3), read from the store by their keys, so you can post them again in a new
+drawing: `create_post` takes media only as data, and the store keeps
+content once, so posting the same file again costs no more room. The
+picture of the paper a take began on (`baseSnapshot`) is left as it is.
 
 `viewer_id` is the person looking, as you hand Skribl its current user id; the
 rule is the one every read of a skribl follows (public and unlisted for

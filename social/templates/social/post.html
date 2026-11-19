@@ -64,11 +64,11 @@
 
 {% block main %}
 <article class="post-page" data-post="{{ p.public_id }}" data-url="{{ card.url }}" data-skribl="{{ p.skribl_id or '' }}"
-         data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if card.mine %} data-mine data-del="{{ card.delete }}"{% endif %}
+         data-handle="{{ who.handle }}" data-first="{{ who.display_name|first_name }}"{% if card.mine %} data-mine data-del="{{ card.delete }}"{% endif %}
          {%- if card.muted %} data-muted{% endif %}{% if card.markable %} data-markable{% endif %}{% if card.marked %} data-marked{% endif %}{{ rp_data(card) }} data-kind="{{ card.kind }}"{% if p.skribl_id %} data-autoplay{% else %} data-no-art{% endif %} aria-labelledby="postWho">
   <header class="post-head">
-    <a class="post-face{% if card.drawn_on and not card.drawn_on.gone %} has-back{% endif %}" href="{{ card.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}
-      {%- if card.drawn_on and not card.drawn_on.gone %}<span class="db-face">{{ face(card.drawn_on.who) }}</span>{% endif %}</a>
+    <a class="post-face{% if card.drawn_on and not card.drawn_on.gone and not card.drawn_on.own %} has-back{% endif %}" href="{{ card.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}
+      {%- if card.drawn_on and not card.drawn_on.gone and not card.drawn_on.own %}<span class="db-face">{{ face(card.drawn_on.who) }}</span>{% endif %}</a>
     <a class="post-who" href="{{ card.profile }}">
       <b class="post-name" id="postWho">{{ who.display_name }}</b>
       <span class="post-sub">@{{ who.handle }}</span>
@@ -98,7 +98,7 @@
       {% for m in backs %}
       <a class="db-tile" href="{{ m.url }}">
         <span class="more-pic db-pic"{{ plate_ground(m.sk) }}>{{ plate_fill(m.sk) }}<span class="more-plate" style="{{ plate_frame(m.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=m.post.skribl_id) }}" alt="" loading="lazy" decoding="async"></span></span>
-        <span class="db-by">{{ m.who.display_name.split(' ')[0] }}</span>
+        <span class="db-by">{{ m.who.display_name|first_name }}</span>
       </a>
       {% endfor %}
     </div>
@@ -108,7 +108,7 @@
   {% if cm %}{{ comments_section(cm) }}{% endif %}
   {% if more %}
   <section class="more-from" aria-labelledby="moreTitle">
-    <h2 class="more-title" id="moreTitle">More from {{ who.display_name.split(' ')[0] }}</h2>
+    <h2 class="more-title" id="moreTitle">More from {{ who.display_name|first_name }}</h2>
     <div class="more-grid">
       {% for m in more %}
       <a class="more-tile" href="{{ m.url }}">

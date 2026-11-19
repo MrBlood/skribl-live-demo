@@ -113,7 +113,7 @@
     no "Liked by" line to land on (they are the only one: _likes.html). #}
 {% macro heart(c, landing=false) -%}
 {%- set n = c.likes.n %}{% set mine = c.likes.mine -%}
-<button class="lk-heart{% if mine %} is-liked{% endif %}{% if not n %} is-zero{% endif %}" type="button"{% if landing %} id="liked"{% endif %} data-first="{{ c.who.display_name.split(' ')[0] }}"
+<button class="lk-heart{% if mine %} is-liked{% endif %}{% if not n %} is-zero{% endif %}" type="button"{% if landing %} id="liked"{% endif %} data-first="{{ c.who.display_name|first_name }}"
         {%- if mine and c.likes.at is not none %} data-like-at="{{ c.likes.at }}"{% endif %}
         {%- if me %} data-like="{{ c.like }}"{% else %} data-like-out aria-haspopup="dialog" aria-controls="likeOutSheet" aria-expanded="false"{% endif %}
         aria-pressed="{{ 'true' if mine else 'false' }}" aria-label="{{ 'Liked' if mine else 'Like' }}{% if n %}, {{ n }} {{ 'like' if n == 1 else 'likes' }}{% endif %}">{{ ic.heart() }}{% if n %}<span class="lk-n">{{ n }}</span>{% endif %}</button>
@@ -138,7 +138,7 @@
     `drawable`), and signed in. #}
 {% macro drawback_pen(c) -%}
 {%- set n = c.drawbacks -%}
-<button class="post-count db-pen" type="button" data-drawback="{{ c.post.public_id }}" data-drawback-first="{{ c.who.display_name.split(' ')[0] }}"
+<button class="post-count db-pen" type="button" data-drawback="{{ c.post.public_id }}" data-drawback-first="{{ c.who.display_name|first_name }}"{% if c.mine %} data-drawback-own{% endif %}
         aria-label="Draw back{% if n %}, {{ n }} {{ 'draw-back' if n == 1 else 'draw-backs' }}{% endif %}">{{ ic.drawback() }}{% if n %}<span>{{ n }}</span>{% endif %}</button>
 {%- endmacro %}
 
@@ -191,7 +191,7 @@
 {%- from 'social/_comments.html' import the_way, comment_art, comment_heart with context -%}
 {%- set cm = c.c %}{% set who = c.who %}{% set it = c.it -%}
 <article class="post-card cm-card" data-post="{{ cm.public_id }}" data-url="{{ c.url }}" data-skribl="{{ cm.skribl_id or '' }}" data-kind="c"
-         data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
+         data-handle="{{ who.handle }}" data-first="{{ who.display_name|first_name }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
          {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %}{{ rp_data(c) }} aria-labelledby="pn-{{ cm.public_id }}">
   {% if c.by %}{{ reposted_by(c) }}{% endif %}
   {{ the_way(c.way) }}
@@ -216,21 +216,23 @@
 
 {#  A DRAW-BACK'S CREDIT, under its maker's name (the mock: "drew back on
     Ana's", her name the link to her post); "drew back on a drawing" once
-    that post is not there for this viewer. #}
+    that post is not there for this viewer; on its maker's own drawing "Drew
+    back on their own drawing", the link to it (the owner's "All yes", Nov
+    19), and one face. #}
 {% macro drawn_on(c) -%}
-<span class="post-on">{% if c.drawn_on.gone %}Drew back on a drawing{% else %}Drew back on <a class="post-on-who" href="{{ c.drawn_on.url }}">{{ c.drawn_on.first }}’s</a>{% endif %}</span>
+<span class="post-on">{% if c.drawn_on.gone %}Drew back on a drawing{% elif c.drawn_on.own %}Drew back on <a class="post-on-who" href="{{ c.drawn_on.url }}">their own drawing</a>{% else %}Drew back on <a class="post-on-who" href="{{ c.drawn_on.url }}">{{ c.drawn_on.first }}’s</a>{% endif %}</span>
 {%- endmacro %}
 
 {% macro post_card(c) -%}
 {%- if c.kind == 'c' %}{{ comment_card(c) }}{% else -%}
 {%- set p = c.post %}{% set who = c.who -%}
 <article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id or '' }}" data-kind="{{ c.kind }}"
-         data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
+         data-handle="{{ who.handle }}" data-first="{{ who.display_name|first_name }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
          {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %}{{ rp_data(c) }} aria-labelledby="pn-{{ p.public_id }}">
   {% if c.by %}{{ reposted_by(c) }}{% endif %}
   <header class="post-head">
-    <a class="post-face{% if c.drawn_on and not c.drawn_on.gone %} has-back{% endif %}" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}
-      {%- if c.drawn_on and not c.drawn_on.gone %}<span class="db-face">{{ face(c.drawn_on.who) }}</span>{% endif %}</a>
+    <a class="post-face{% if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %} has-back{% endif %}" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}
+      {%- if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %}<span class="db-face">{{ face(c.drawn_on.who) }}</span>{% endif %}</a>
     {#- Their page, the size of a finger: the name's link lies under the name and
         the @handle both, as the whole line's did; when it was is a link of its
         own, to the post's page, over it (social.css, "EASY TO OPEN"). #}

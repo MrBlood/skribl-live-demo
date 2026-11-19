@@ -2845,8 +2845,8 @@ answering a drawing by drawing with it. `social/drawback.py`, `posts.py`:
                                       address, payload: the answer's
                                       strokes}: the server joins the two
 
-THE PEN after the heart under a post's drawing (one page, no music), signed
-in, with how many draw-backs. It opens the composer, which says "Drawing
+THE PEN after the heart under a post's drawing (one page), signed in, with
+how many draw-backs. It opens the composer, which says "Drawing
 back on Ana’s" at its top, and the Pad over it with her drawing faint under
 the pen on her shape and paper (Skribl's `lib/drawback.js`, handed over by
 `lib/composehost.js` underlay). THE SERVER JOINS THE TWO from her drawing as
@@ -2861,11 +2861,20 @@ draw-backs, newest first; and "Watch again" and Draw back rising at a
 drawing's foot when its replay ends (Skribl's player says `skribl:ended`).
 
 NO PEN WHERE IT CAN'T BE DONE YET (DECISIONS.md, "Draw back: no pen where it
-can't be done yet"): a drawing on a photo, with music or recolours, read
-when its post is made (`undrawable`); a post from before keeps its pen,
-answered when opened.
+can't be done yet"): a Flip of pages or a drawing with recolours, read when
+its post is made (`undrawable`); a post from before keeps its pen, answered
+when opened.
+
+THE AUTHOR'S BACKGROUND AND MUSIC (DECISIONS.md, "Draw back: your own
+drawing, and the author's background and music"): a draw-back keeps her
+paper, her photo and her song, and the answer adds none of its own (refused
+with why). The Pad shows her photo under the pen, the composer's preview and
+the picture the post rests on show it, and her song plays under both. Where
+Skribl keeps media in a store, the site reads hers back as data
+(`skribl.read_payload(..., inline_media=True)`); the store keeps content
+once, so the draw-back costs no more room.
 
 STILL TO COME, in the decided order: her say (hide one from her post; who
 can draw back); the line's "Ana + Theo" words; drawing back on a Flip, page
-for page. `verify_socialdrawback.py` holds
+for page; recolours. `verify_socialdrawback.py` holds
 what is built.

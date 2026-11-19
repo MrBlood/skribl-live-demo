@@ -10010,6 +10010,9 @@ body.drawalong .canvas-empty-hint { display: none; }
    finger (faint, full, hidden: its circle half filled, whole, empty), and the
    canvas's starter words step aside as Draw along's do. */
 body.drawback .canvas-empty-hint { display: none; }
+/* What steps aside while drawing back (lib/drawback.js): dimmed, still there
+   to say why when tapped. */
+body.drawback :is(#eraserToolBtn, #recolorBtn, #mediaOpenBtn, #customBgBtn, .bg-swatch[data-bg]) { opacity: .4; }
 .db-pill .db-where { color: var(--text-primary); }
 .db-pill .db-where b { color: var(--accent-ink); }
 .db-theirs { display: inline-flex; align-items: center; gap: 6px; min-height: 44px !important; }

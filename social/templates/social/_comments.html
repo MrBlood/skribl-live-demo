@@ -104,7 +104,7 @@
   {{- chain_of(it, can, post_mine) }}
 </li>
 {%- else %}
-<li class="cm{% if it.quiet %} is-quiet{% endif %}" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name.split(' ')[0] }}" data-url="{{ url }}"{% if it.more %} data-replies="{{ it.more }}"{% endif %}{% if me and me.id == c.person_id %} data-mine{% endif %}{{ share_data(it) }}>
+<li class="cm{% if it.quiet %} is-quiet{% endif %}" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name|first_name }}" data-url="{{ url }}"{% if it.more %} data-replies="{{ it.more }}"{% endif %}{% if me and me.id == c.person_id %} data-mine{% endif %}{{ share_data(it) }}>
   {%- if it.quiet %}
   <button class="cm-fold-line" type="button" data-cm-show><span class="cm-fold-ic">{{ ic.eye_closed() }}</span><span class="cm-fold-words">{{ 'Someone you muted replied.' if c.parent_id else 'Someone you muted said something.' }} <span class="cm-show">Show</span></span></button>
   {%- endif %}
@@ -167,7 +167,7 @@
     moment (likes.js: a heart in a comment reads no player). #}
 {% macro comment_heart(it) -%}
 {%- set n = it.likes.n if it.likes else 0 %}{% set mine = it.likes.mine if it.likes else false -%}
-<button class="lk-heart{% if mine %} is-liked{% endif %}{% if not n %} is-zero{% endif %}" type="button" data-first="{{ it.who.display_name.split(' ')[0] }}"
+<button class="lk-heart{% if mine %} is-liked{% endif %}{% if not n %} is-zero{% endif %}" type="button" data-first="{{ it.who.display_name|first_name }}"
         {%- if me %} data-like="{{ url_for('social.like_comment', public_id=it.c.public_id) }}"{% else %} data-like-out data-like-title="Like this comment?" aria-haspopup="dialog" aria-controls="likeOutSheet" aria-expanded="false"{% endif %}
         aria-pressed="{{ 'true' if mine else 'false' }}" aria-label="{{ 'Liked' if mine else 'Like' }}{% if n %}, {{ n }} {{ 'like' if n == 1 else 'likes' }}{% endif %}">{{ ic.heart() }}{% if n %}<span class="lk-n">{{ n }}</span>{% endif %}</button>
 {%- endmacro %}

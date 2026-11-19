@@ -87,7 +87,7 @@ from flask import current_app, jsonify, redirect, render_template, request, url_
 
 from .accounts import _hidden_in, _json_error, _page, _rests, profile_url
 from .safety import between
-from .models import PERSON_PREFIX, WORDS_MAX, Person, Post, as_utc, new_public_id, utcnow
+from .models import PERSON_PREFIX, WORDS_MAX, Person, Post, as_utc, first_name, new_public_id, utcnow
 from .security import csrf_token, current_person, origin_ok, over, public_origin, site, token_ok
 
 #: The most a post may weigh on its way here: the editor's whole payload (a
@@ -330,7 +330,8 @@ def drawbacks(posts, viewer):
     """DRAW BACK, for a page of posts (`posts`, the site's rows): {"n": {post
     id: how many draw-backs it has}, "on": {a draw-back's id: {"url", "first",
     "who"} of the post it answers, or {"gone": True} once that post is not
-    there for this viewer}}. Counted as the comments are counted: nothing
+    there for this viewer; with "own" when it is its maker's own}}. Counted
+    as the comments are counted: nothing
     taken down, and nobody either side of a block with the viewer."""
     from .models import Block
     ids = [p.id for p in posts if getattr(p, "id", None) is not None]
@@ -354,10 +355,12 @@ def drawbacks(posts, viewer):
             hidden = (orig.taken_down_at is not None or owner.taken_down_at is not None
                       or (viewer is not None and between(viewer, owner)))
             rows[orig.id] = None if hidden else {"url": url_for("social.post_page", public_id=orig.public_id),
-                                                 "first": owner.display_name.split(" ")[0], "who": owner}
+                                                 "first": first_name(owner.display_name), "who": owner}
     for p in answers:
         got = rows.get(p.drawn_on_id) if p.drawn_on_id is not None else None
-        out["on"][p.id] = got or {"gone": True}
+        # ON YOUR OWN DRAWING (the owner's "All yes", Nov 19, after "it shows
+        # me responding to me"): "Drew back on their own drawing", one face.
+        out["on"][p.id] = dict(got, own=got["who"].id == p.person_id) if got else {"gone": True}
     return out
 
 
@@ -485,15 +488,16 @@ def cards(entries, viewer, words=True, aligned=False):
                        "mine": viewer is not None and viewer.id == who.id,
                        "muted": who.id in muted,
                        # DRAW BACK: the pen in the row where it can be done
-                       # (a drawing of one page, no music: drawback.drawable), how many there are, and on
+                       # (a drawing of one page, no recolours: drawback.drawable), how many there are, and on
                        # a draw-back the post it answers and whose that is.
-                       # (on_photo is not read: every Pad drawing carries a
-                       # picture of its blank paper, which a draw-back drops.
-                       # A real photo, music or recolours are the post's
-                       # `undrawable`, read when it was made; a post from
-                       # before that keeps its pen, answered when opened.)
+                       # (A photo or music is no bar since the owner's yes,
+                       # Nov 19: a draw-back keeps the author's. Recolours
+                       # are the post's `undrawable`, read when it was made;
+                       # a post from before that keeps its pen, answered when
+                       # opened. "photo" and "music" recorded before the yes
+                       # bar nothing now.)
                        "drawable": (e["kind"] == "p" and not down and sk is not None and sk.get("kind") == "pad"
-                                    and not sk.get("has_audio") and not getattr(p, "undrawable", None)),
+                                    and getattr(p, "undrawable", None) not in ("pages", "recolors")),
                        "drawbacks": backs["n"].get(p.id, 0) if e["kind"] == "p" else 0,
                        "drawn_on": backs["on"].get(p.id) if e["kind"] == "p" else None}
     out = []
@@ -621,7 +625,7 @@ def register(bp, skribl_blueprint="skribl"):
         why = drawable(original)
         if why:
             return _json_error("drawback_unsupported", 400, why=why)
-        resp = jsonify({"payload": original, "first": on.owner.display_name.split(" ")[0]})
+        resp = jsonify({"payload": original, "first": first_name(on.owner.display_name), "own": on.owner.id == me.id})
         resp.headers["Cache-Control"] = "private, no-store"
         return resp
 
@@ -737,7 +741,9 @@ def register(bp, skribl_blueprint="skribl"):
         on = quotable(me, "p", oid)
         if on is None or on.post is None or not on.post.skribl_id:
             return None, _json_error("drawback_gone", 404)
-        original = read_payload(on.post.skribl_id, viewer_id=me.public_id)
+        # Her photo and song as data, to post again with the two (the
+        # author's background and music: the owner's yes, Nov 19).
+        original = read_payload(on.post.skribl_id, viewer_id=me.public_id, inline_media=True)
         if original is None:
             return None, _json_error("drawback_gone", 404)
         if not isinstance(payload, dict) or not _points((payload.get("frames") or [{}])[0]
@@ -748,9 +754,14 @@ def register(bp, skribl_blueprint="skribl"):
         why = drawable(original)
         if why:
             return None, _json_error("drawback_unsupported", 400, why=why, on="theirs")
-        why = drawable(payload)
+        why = drawable(payload, answer=True)
         if why:
             return None, _json_error("drawback_unsupported", 400, why=why, on="yours")
+        # YOU ADD, NEVER ERASE (the owner's "All yes", Nov 19): a draw-back
+        # replays as one drawing, so an eraser in his would erase hers too.
+        # The Pad turns the eraser off while drawing back; this holds the line.
+        if any(p.get("erase") for p in _points(payload["frames"][0])):
+            return None, _json_error("drawback_unsupported", 400, why="erase", on="yours")
         if not same_shape(original, payload):
             return None, _json_error("drawback_shape", 400)
         return {"payload": join(original, payload),

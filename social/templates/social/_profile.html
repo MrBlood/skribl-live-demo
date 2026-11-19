@@ -51,7 +51,7 @@
     there, or for anybody else's page, that it comes when they share one.
     The Gallery's own words are the Gallery of everyone's. #}
 {% macro _none(p, who, mine) -%}
-{%- set first = who.display_name.split(' ')[0] -%}
+{%- set first = who.display_name|first_name -%}
 {%- if p.tab == 'posts' -%}
 {{ 'No posts yet. Tap Make to share one, and your posts show up here.' if mine else 'No posts from ' ~ first ~ ' yet. When ' ~ first ~ ' shares one, it shows up here.' }}
 {%- elif p.tab == 'gallery' -%}
