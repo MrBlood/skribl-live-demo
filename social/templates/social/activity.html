@@ -76,8 +76,13 @@
   <span class="top-title">Activity</span>
 {% endblock %}
 
+{# One face alone says the initial of somebody who has not drawn one yet (the
+   walkthrough's mocks, choice 9). Two sharing a row stay plain: they overlap,
+   so the face in front covers half of a letter behind it, and the heart or the
+   pen on its corner cuts a wide letter ("M", "W") in front. The mock showed
+   one face alone; a cut letter is nobody's choice. #}
 {% macro faces(r) -%}
-{%- if r.people|length > 1 %}<span class="act-faces">{{ face(r.people[1], initial=true) }}{{ face(r.people[0], initial=true) }}</span>{% else %}{{ face(r.people[0], initial=true) }}{% endif -%}
+{%- if r.people|length > 1 %}<span class="act-faces">{{ face(r.people[1]) }}{{ face(r.people[0]) }}</span>{% else %}{{ face(r.people[0], initial=true) }}{% endif -%}
 {%- endmacro %}
 
 {% macro row(r) -%}

@@ -91,7 +91,8 @@
     choice 9, the owner's "all yes", Nov 19): a row of blank lilac circles
     said nothing about who. A Gallery tile's 22px face stays without one, as
     decided there; lists of people (followers, who liked it, search) are as
-    they were. #}
+    they were; and two faces sharing a row of Activity stay plain, where a
+    letter would be cut (activity.html). #}
 {% macro face(who, cls='', initial=false) -%}
 <span class="face-ring{{ ' ' ~ cls if cls }}{% if not who.face_id %} is-blank{% endif %}">{% if who.face_id %}{{ skribl_face(who.face_id, canvas_w=who.face_w, canvas_h=who.face_h, bp=skribl_bp) }}{% elif initial %}<span class="face-blank has-initial" aria-hidden="true">{{ (who.display_name or '?')[:1]|upper }}</span>{% else %}<span class="face-blank" aria-hidden="true"></span>{% endif %}</span>
 {%- endmacro %}

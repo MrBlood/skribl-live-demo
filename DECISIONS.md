@@ -47809,3 +47809,38 @@ built: green.
 SUITES. Beside others, verify_inline had one row red, "scrolling a playing
 post out of view pauses it where it was" (a timing read), and was 227/227
 alone: load.
+
+## After v330 -- Two faces sharing a row of Activity stay plain: a letter there was cut
+
+FOUND TAKING THE PICTURES OF WHAT WAS BUILT (Nov 19, the afternoon the ten
+choices merged). Choice 9 put the initial of a face not drawn yet on cards,
+a post's page and in Activity; its mock showed Activity's rows of one
+face. A row of several people ("Juno and 3 others liked your post") shows
+two faces, 32px each in a 44px box, the newer in front, and the heart or
+the pen of the row on that one's corner. With letters in them: the face in
+front covered half of the letter behind it, and the badge cut the foot of a
+wide letter in front ("M" and "W" lost about a tenth of their ink, counted
+in pixels with the badge there and hidden; "J" less). By the geometry, no
+size of letter down to 11px clears the badge on a 32px face (worked out,
+not measured).
+
+WHAT IS BUILT. A pair stays plain, as it was before choice 9; one face
+alone says its initial, heart or no heart (on a 44px face the badge is
+clear of the widest letter). One line in `activity.html`. This is the
+smallest thing that leaves no cut letter, and it takes nothing the mock
+showed. PUT TO THE OWNER: whether a pair should say its letters too, which
+would need the faces or the badge to sit differently, and so a mock.
+
+Pad and Flip: not for them. This is the site's Activity.
+
+THE CHECKS (verify_socialactivity 4). Wil and Mab have drawn no face. Both
+like one post, both say something on another, Mab alone likes a third, Wil
+alone says something on a fourth. TWO ROWS, BECAUSE ONE COULD NOT PIN BOTH:
+(a) the pairs are plain and each face alone says its letter; (b) no
+initial in Activity is cut, asked of what is painted: the element hit at
+the four corners and the middle of its capital's ink is the letter itself.
+ON MAIN: both red ((a) the pairs said "M" and "W"; (b) the letter behind
+was hit at three points of five, the "W" in front under the heart at four).
+AS BUILT: both green. WITH THE FIX IN AND THE BADGE MOVED 12px ONTO THE
+FACE: (b) alone red (the "M" under the heart hit at one point of five), (a)
+green: (b) is not (a) said twice.
