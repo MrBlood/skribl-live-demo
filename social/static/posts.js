@@ -521,6 +521,7 @@
     go.className = 'db-go';
     go.setAttribute('data-drawback', pen.getAttribute('data-drawback'));
     go.setAttribute('data-drawback-first', pen.getAttribute('data-drawback-first') || '');
+    if (pen.hasAttribute('data-drawback-own')) go.setAttribute('data-drawback-own', '');
     go.innerHTML = (pen.querySelector('svg') || { outerHTML: '' }).outerHTML;
     go.appendChild(doc.createTextNode(say('db_go') || 'Draw back'));
     end.appendChild(again);
@@ -554,7 +555,8 @@
       ev.stopPropagation();
       away();
       if (window.SocialComposer && window.SocialComposer.drawBack) {
-        window.SocialComposer.drawBack({ id: go.getAttribute('data-drawback'), first: go.getAttribute('data-drawback-first'), from: pen });
+        window.SocialComposer.drawBack({ id: go.getAttribute('data-drawback'), first: go.getAttribute('data-drawback-first'),
+                                         own: go.hasAttribute('data-drawback-own'), from: pen });
       }
     });
     var watch = new MutationObserver(function () { if (box.classList.contains('is-playing')) away(); });
@@ -568,7 +570,8 @@
     var d = e.target.closest('[data-drawback]');
     if (!d || !window.SocialComposer || !window.SocialComposer.drawBack) return;
     e.preventDefault();
-    window.SocialComposer.drawBack({ id: d.getAttribute('data-drawback'), first: d.getAttribute('data-drawback-first'), from: d });
+    window.SocialComposer.drawBack({ id: d.getAttribute('data-drawback'), first: d.getAttribute('data-drawback-first'),
+                                     own: d.hasAttribute('data-drawback-own'), from: d });
   });
   doc.addEventListener('click', function (e) {
     var b = e.target.closest('[data-repost-menu]');

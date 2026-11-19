@@ -144,7 +144,7 @@
     if (typeof window.showToast === 'function') window.showToast(words, near || null);
     else if (typeof window.chip === 'function') window.chip(words);
   }
-  function hers() { return run && run.first ? run.first + '\u2019s' : 'theirs'; }
+  function hers() { return run && run.own ? 'the original\u2019s' : run && run.first ? run.first + '\u2019s' : 'theirs'; }
   var ASIDE = [
     { sel: '#recolorBtn', words: function () { return 'Recolour is off while drawing back.'; } },
     { sel: '.bg-swatch[data-bg], #customBgBtn, #customBgInput', words: function () { return 'The background is ' + hers() + '.'; } },
@@ -190,8 +190,9 @@
     run = null;
   }
 
-  /* take({ payload, first }): `payload` the original, as its player is handed
-     it; `first` its maker's first name, for the pill. */
+  /* take({ payload, first, own }): `payload` the original, as its player is
+     handed it; `first` its maker's first name, for the pill; `own` when it is
+     the person's own drawing ("Drawing back on your own drawing"). */
   function take(o) {
     var payload = o && o.payload;
     var cv = target();
@@ -222,7 +223,9 @@
     var b = document.createElement('b');
     b.textContent = 'Drawing back';
     words.appendChild(b);
-    words.appendChild(document.createTextNode(first ? ' on ' + first + '’s' : ''));
+    // On your own drawing: "Drawing back on your own drawing" (the owner,
+    // Nov 19: "it's Mr. Blood's drawing (mine)").
+    words.appendChild(document.createTextNode(o && o.own ? ' on your own drawing' : first ? ' on ' + first + '’s' : ''));
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'da-skip db-theirs';
@@ -234,7 +237,7 @@
     document.body.appendChild(pill);
     document.body.classList.add('drawback');
     run = { strokes: strokesOf(payload), size: size, guide: guide, pill: pill, btn: btn, state: 0, off: null,
-            first: first, onResize: function () { place(); paint(); } };
+            first: first, own: !!(o && o.own), onResize: function () { place(); paint(); } };
     guard();
     // If the eraser was in hand, the pen takes over.
     if (typeof tool !== 'undefined' && tool === 'eraser' && typeof window.setTool === 'function') window.setTool('pen');

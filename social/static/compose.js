@@ -207,7 +207,7 @@
       if (att) { tell(sayBox, say('one_drawing')); return; }
       tell(sayBox, '');
       /* Drawing back, Draw opens the Pad with theirs under the pen again. */
-      if (back && back.payload && kind === 'pad') { over.underlay({ payload: back.payload, first: back.first }, chip); return; }
+      if (back && back.payload && kind === 'pad') { over.underlay({ payload: back.payload, first: back.first, own: !!back.own }, chip); return; }
       over.open(chip);
     });
   });
@@ -425,7 +425,14 @@
     var line = q('[data-compose-backline]');
     if (line) {
       line.textContent = '';
-      if (next) {
+      if (next && next.own) {
+        /* On your own drawing (the owner, Nov 19: "it's Mr. Blood's drawing
+           (mine) and a drawback on my own drawing"). */
+        line.appendChild(doc.createTextNode(say('drawback_on') + ' '));
+        var bo = doc.createElement('b');
+        bo.textContent = say('drawback_own');
+        line.appendChild(bo);
+      } else if (next) {
         line.appendChild(doc.createTextNode(say('drawback_on') + ' '));
         var b = doc.createElement('b');
         b.textContent = next.first + '\u2019s';
@@ -446,7 +453,7 @@
     if (att) unattach();
     if (quoted) setQuote(null);
     if (view !== 'write') show('write', true);
-    drawingBack({ id: o.id, first: o.first || '', payload: null });
+    drawingBack({ id: o.id, first: o.first || '', own: !!o.own, payload: null });
     sheet.open(o.from || null);
     lift();
     grow();
@@ -463,7 +470,9 @@
         tell(sayBox, '');
         back.payload = j.payload;
         if (j.first) back.first = j.first;
-        if (overs.pad) overs.pad.underlay({ payload: back.payload, first: back.first }, o.from || null);
+        if (j.own) back.own = true;
+        drawingBack(back);
+        if (overs.pad) overs.pad.underlay({ payload: back.payload, first: back.first, own: !!back.own }, o.from || null);
       });
   }
 
@@ -489,7 +498,7 @@
   window.SocialComposer = {
     open: function (from) { sheet.open(from || null); lift(); grow(); },
     drawBack: drawBack,
-    drawingBack: function () { return back ? { id: back.id, first: back.first, ready: !!back.payload } : null; },
+    drawingBack: function () { return back ? { id: back.id, first: back.first, own: !!back.own, ready: !!back.payload } : null; },
     quote: function (o) {
       if (sending || !o || !o.id) return;
       if (back) { if (att) unattach(); drawingBack(null); }

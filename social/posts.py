@@ -624,7 +624,7 @@ def register(bp, skribl_blueprint="skribl"):
         why = drawable(original)
         if why:
             return _json_error("drawback_unsupported", 400, why=why)
-        resp = jsonify({"payload": original, "first": first_name(on.owner.display_name)})
+        resp = jsonify({"payload": original, "first": first_name(on.owner.display_name), "own": on.owner.id == me.id})
         resp.headers["Cache-Control"] = "private, no-store"
         return resp
 

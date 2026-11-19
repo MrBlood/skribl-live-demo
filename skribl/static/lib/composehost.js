@@ -190,7 +190,7 @@
     /* DRAW BACK (lib/drawback.js): a fresh editor with `o.payload` faint under
        the pen. Whatever the frame held goes, as openDraft's does. */
     function underlay(o) {
-      under = (o && o.payload) ? { payload: o.payload, first: o.first || '' } : null;
+      under = (o && o.payload) ? { payload: o.payload, first: o.first || '', own: !!o.own } : null;
       payload = null;
       guideFile = null;
       payloadEditor = frameEditor = 'pad';

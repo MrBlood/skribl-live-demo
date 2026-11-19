@@ -138,7 +138,7 @@
     `drawable`), and signed in. #}
 {% macro drawback_pen(c) -%}
 {%- set n = c.drawbacks -%}
-<button class="post-count db-pen" type="button" data-drawback="{{ c.post.public_id }}" data-drawback-first="{{ c.who.display_name|first_name }}"
+<button class="post-count db-pen" type="button" data-drawback="{{ c.post.public_id }}" data-drawback-first="{{ c.who.display_name|first_name }}"{% if c.mine %} data-drawback-own{% endif %}
         aria-label="Draw back{% if n %}, {{ n }} {{ 'draw-back' if n == 1 else 'draw-backs' }}{% endif %}">{{ ic.drawback() }}{% if n %}<span>{{ n }}</span>{% endif %}</button>
 {%- endmacro %}
 

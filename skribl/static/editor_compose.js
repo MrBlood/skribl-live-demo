@@ -154,7 +154,7 @@
        its shape and paper the canvas's. Sent before a re-edit's `load`, so
        the drawing comes back onto the original's shape. */
     if (d && d.type === 'skribl:compose:underlay') {
-      if (d.payload && global.SkriblDrawBack) global.SkriblDrawBack.take({ payload: d.payload, first: d.first });
+      if (d.payload && global.SkriblDrawBack) global.SkriblDrawBack.take({ payload: d.payload, first: d.first, own: !!d.own });
       return;
     }
     if (!d || d.type !== 'skribl:compose:load' || !d.payload) return;

@@ -925,6 +925,25 @@ with sync_playwright() as p:
             check("the posted draw-back rests on a picture of both: its poster is the Pad's card, her ink there where her"
                   " cat is (his lines were drawn elsewhere), never the blank stand-in",
                   dark > 150 and kind and "svg" not in kind, f"poster {poster}; {kind}; {dark} dark pixels in her cat's half")
+            # ON YOUR OWN DRAWING the composer and the Pad say so (the owner,
+            # Nov 19: "it's Mr. Blood's drawing (mine) and a drawback on my own
+            # drawing"), never "on Theo's".
+            mine4 = post_payload(theo, "Section 4, Theo's own", CAT)
+            ctx, pg = browser_as(b, theo)
+            home(pg)
+            pen4 = f'.post-card[data-post="{mine4}"] .db-pen'
+            pg.locator(pen4).scroll_into_view_if_needed()
+            pg.click(pen4)
+            fe4 = pg.wait_for_selector("#composePad .facepad-frame", state="attached", timeout=15000)
+            pg.wait_for_function("() => document.querySelector('#composePad').classList.contains('is-ready')", timeout=30000)
+            fr4 = fe4.content_frame()
+            fr4.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state()", timeout=15000)
+            own_pill = fr4.evaluate("() => document.querySelector('.db-pill .db-where').textContent")
+            own_line = pg.evaluate("() => { const l = document.querySelector('[data-compose-backline]'); return l && !l.hidden ? l.textContent : null; }")
+            close_ctx(ctx, pg)
+            check("on your own drawing the composer and the Pad's pill say \"Drawing back on your own drawing\"",
+                  own_pill == "Drawing back on your own drawing" and own_line == "Drawing back on your own drawing",
+                  json.dumps({"pill": own_pill, "line": own_line}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(4, exc)
 
