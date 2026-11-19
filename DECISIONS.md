@@ -47844,3 +47844,48 @@ was hit at three points of five, the "W" in front under the heart at four).
 AS BUILT: both green. WITH THE FIX IN AND THE BADGE MOVED 12px ONTO THE
 FACE: (b) alone red (the "M" under the heart hit at one point of five), (a)
 green: (b) is not (a) said twice.
+
+## After v330 -- The ten as built: the pictures, and what is the owner's to say
+
+THE PAGE (Nov 19, about 3:45 PM): https://claude.ai/artifact/4BFRLCBk6cB8BMg8VZQt68
+("Blooby Walkthrough Built"). Pictures of the site itself after #992 to
+#995, from a fresh copy filled through its own screens (five made-up
+people), a touch phone at 402 in light and dark and a desk where the
+layout differs; nothing laid over them. Its one-glance tell for a stale
+page: the loop button beside a scrubber is an infinity sign.
+
+READ ON THE BUILT PAGES, not carried over from the mocks. The "Draw back"
+button's right edge and the drawing's, both 386 at 402 wide; the button 44
+tall, its words 14.11:1 light and 11.50:1 dark on the ground painted
+behind them. A drawn comment at rest 156 x 277 under a post's drawing 277
+tall, its bubble 351; tapped, 294 x 523; on a desk 244 x 434 under a
+drawing 447 tall (the sheet's estimate of the desk's drawing is 13px
+short of it, on the safe side). In a thread, 30 before each new
+conversation and 12 before each reply. A draw-back's card "Ana + Theo · 20
+sec", its line "Drawn in 15 sec + 5 sec"; a draw-back on that one, Ana's
+again, "Ana + Theo · 21 sec" and "Drawn in 15 sec + 5 sec + 1 sec" (three
+turns, her name once). An initial 6.49:1 light and 6.87:1 dark, 16px on a
+card and in Activity, 19 on a post's page. The Gallery's search words 216
+in a box 370 wide.
+
+PUT TO THE OWNER, five things, each with the answer "all yes" would take:
+1. A drawn comment's play button is the card's own pill at its foot,
+   saying the time; the mock drew a small round mark in the corner. Kept
+   unless they say "corner".
+2. The initial on cards, a post's page and in Activity changes their Nov
+   13 "the empty circle, never an initial"; lists of people stay plain
+   unless they say "lists too" (a mock first).
+3. Two faces sharing a row of Activity stay plain (the entry above);
+   letters there would start with a mock.
+4. Export's GIF row wears the infinity sign with the players' loop; "arrows"
+   puts it back for Export alone.
+5. NOT FIXED, theirs to approve: in the Text drawer inside a post, "Edit
+   your hand", and "Yours" with no hand made yet, open the letters page in
+   the composer's frame and the drawing is lost, as Library's door did. The
+   answer offered: inside a post "Edit your hand" is not shown and "Yours"
+   with no hand says where to make one; a mock first.
+
+MAIN'S FULL RUNS, as this was written: after #992 green. After #993
+running. The run after #994 never ran: the workflow keeps one run waiting,
+and #995's push took its place (cancelled, not red); the run after #995
+covers both trees' changes and was still waiting its turn.

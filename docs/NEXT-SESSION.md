@@ -199,6 +199,9 @@ repository"): 1 and 2 (the menu inside a post, no gallery tick: #992); 3,
 draw-back says: each hand's drawing time kept on the post, a migration, and
 numbers the site hands Skribl's player: #994). Read DECISIONS and main's
 runs for what has merged and how it ran.
+THE PICTURES OF ALL TEN AS BUILT, on the page the owner was sent:
+https://claude.ai/artifact/4BFRLCBk6cB8BMg8VZQt68 (`DECISIONS.md`, "The ten
+as built", has what was read on the built pages and main's runs).
 PUT TO THE OWNER, THEIRS TO ANSWER (each built the way named first):
 - a drawn comment's play button is the card's own pill at its foot, saying
   the time; the mock drew a small round mark in the corner;
