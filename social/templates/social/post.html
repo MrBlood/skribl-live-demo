@@ -81,6 +81,23 @@
   {% if card.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(card.quote) }}{% endif %}
   {{ post_row(card, landing=(lk is not none and not lk.line)) }}
   <p class="post-meta"><time datetime="{{ when_iso(p.created_at) }}" data-when="at">{{ when_day(p.created_at) }}</time>{% if card.plays %} · {{ card.plays }}{% endif %}</p>
+  {#- DRAW-BACKS ON IT (Draw back, step 2; the mock's strip): how many, then
+      their drawings, newest first, each with who drew back, opening its own
+      page (which plays hers, then theirs). A row that scrolls sideways when
+      they pass the page's width; a drawing's plate as More from's. #}
+  {% if backs %}
+  <section class="db-strip" aria-labelledby="dbTitle">
+    <h2 class="db-title" id="dbTitle">{{ ic.drawback() }}<span>{{ backs|length }} {{ 'draw-back' if backs|length == 1 else 'draw-backs' }}</span></h2>
+    <div class="db-row">
+      {% for m in backs %}
+      <a class="db-tile" href="{{ m.url }}">
+        <span class="more-pic db-pic"{{ plate_ground(m.sk) }}>{{ plate_fill(m.sk) }}<span class="more-plate" style="{{ plate_frame(m.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=m.post.skribl_id) }}" alt="" loading="lazy" decoding="async"></span></span>
+        <span class="db-by">{{ m.who.display_name.split(' ')[0] }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
   {% if lk and lk.line %}{{ liked_by(lk) }}{% endif %}
   {% if cm %}{{ comments_section(cm) }}{% endif %}
   {% if more %}

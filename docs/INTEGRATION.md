@@ -522,6 +522,10 @@ document.addEventListener('skribl:mark', (e) => {
 });
 ```
 
+When a replay that does not repeat comes to its end, the box sends
+`skribl:ended`, bubbling, its `detail` `{ id }` (the Skribl site raises Draw
+back then). A repeating one never ends, and sends none.
+
 What a mark means, and what happens when one is reached, are yours: Skribl
 never knows. With `line=False` there is no line, so no marks. A Pad drawing
 and a Flip carry them alike. `verify_inline.py` draws, presses and plays

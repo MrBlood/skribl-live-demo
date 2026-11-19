@@ -1916,6 +1916,10 @@
            * to loop wants to look at the finished drawing. pause() computes
            * elapsed from the clock, so pin it after. */
           elapsed = totalMs;
+          /* AND SAYS SO (Nov 19, for the Skribl site's Draw back, which rises
+           * when a replay ends): `skribl:ended` from the box, bubbling, once a
+           * replay that does not repeat comes to its end. */
+          el.dispatchEvent(new CustomEvent('skribl:ended', { bubbles: true, detail: { id: id } }));
           return;
         }
         /* Again from what this frame came late by: from zero, each pass lost

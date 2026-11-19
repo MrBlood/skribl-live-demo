@@ -187,6 +187,10 @@ def _uncursor(text):
         return None
 
 
+#: The most draw-backs a post's page shows in its strip (Draw back, step 2).
+BACKS = 12
+
+
 def _entry(post, who):
     return {"kind": "p", "at": as_utc(post.created_at), "key": "p" + post.public_id, "post": post, "who": who}
 
@@ -753,6 +757,10 @@ def register(bp, skribl_blueprint="skribl"):
         if row.quoted_owner_id is not None:
             from .push import note
             note(row.quoted_owner_id, row.person_id, "reposts")
+        # A DRAW-BACK'S NUDGE, under Replies: it answers them, in a drawing.
+        if getattr(row, "drawn_on_owner_id", None) is not None:
+            from .push import note
+            note(row.drawn_on_owner_id, row.person_id, "replies")
 
     def _quoting(me, body):
         """What a post quotes, as its row's columns, or None for a post that
@@ -923,8 +931,23 @@ def register(bp, skribl_blueprint="skribl"):
         # rows; nothing of likes on what is taken down.
         from .likes import for_maker
         lk = for_maker(on, me) if not card["down"] else None
+        # DRAW-BACKS ON IT (Draw back, step 2): newest first, a strip of their
+        # drawings under the row, each opening its own page; nobody hidden
+        # from this viewer, nothing taken down.
+        backs = []
+        if card["kind"] == "p":
+            from .safety import hidden_ids
+            hid = sorted(hidden_ids(me))
+            q = (sa.select(Post, Person).join(Person, Person.id == Post.person_id)
+                 .where(Post.drawn_on_id == card["post"].id, Post.taken_down_at.is_(None))
+                 .order_by(Post.created_at.desc(), Post.id.desc()).limit(BACKS))
+            if hid:
+                q = q.where(Post.person_id.notin_(hid))
+            got = site().session().execute(q).all()
+            backs = [c for c in cards([_entry(pp, who) for pp, who in got], me, words=False) if c and c["sk"]]
         # The page's token for everybody: Report is anybody's (piece 5).
         return _page("post.html", here="post", card=card, more=cards(others, me, words=False) if others else [],
+                     backs=backs,
                      share_url=public_origin() + card["url"], token=csrf_token(), cm=cm, lk=lk,
                      signin_here=url_for("social.signin", next=card["url"]))
 

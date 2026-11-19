@@ -87,6 +87,7 @@
   {%- if r.kind in ('like', 'like_comment') %}<span class="act-who">{{ faces(r) }}<span class="act-badge" aria-hidden="true">{{ ic.heart() }}</span></span>
   {%- elif r.kind == 'follow' %}<span class="act-who">{{ faces(r) }}<span class="act-badge fo-badge" aria-hidden="true"><span class="fo-disc">{{ ic.plus() }}</span></span></span>
   {%- elif r.kind in ('repost', 'repost_comment', 'quote', 'quote_comment') %}<span class="act-who">{{ faces(r) }}<span class="act-badge rp-badge" aria-hidden="true">{{ ic.repost() }}</span></span>
+  {%- elif r.kind == 'drawback' %}<span class="act-who">{{ faces(r) }}<span class="act-badge rp-badge db-badge" aria-hidden="true">{{ ic.drawback() }}</span></span>
   {%- elif r.kind == 'mention' %}<span class="act-who">{{ faces(r) }}<span class="act-badge fo-badge mn-badge" aria-hidden="true"><span class="fo-disc mn-at">@</span></span></span>
   {%- else %}{{ faces(r) }}{% endif %}
   <span class="act-text">{% if r.new %}<span class="sr">New: </span>{% endif %}<span class="act-say"><b>{{ r.names[0] }}</b>
