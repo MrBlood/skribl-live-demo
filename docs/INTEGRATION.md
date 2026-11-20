@@ -974,6 +974,17 @@ still there on the next press. Do not float a close of your own over the
 frame: on a phone it lands on the editor's ⋯ button. On a phone, give the
 overlay the whole screen, as a phone composer does; the header needs the room.
 
+**Your hand opens inside the editor's own frame.** In the Text drawer, "Make
+yours" and "Edit your hand" open Your hand (the page where a person draws
+their own letters) in a layer over the editor, in a frame of its own inside
+the frame you hold (`lib/handover.js`). Your page and your frame do not
+change, the drawing stays under it, and nothing is asked of you. Before
+Nov 19 the frame you hold went to Your hand instead, and came back as the
+editor by itself with the drawing gone. It is the one place Skribl frames one
+of its own pages, so a framing header of yours that covers Skribl's pages has
+to allow the same origin, as Skribl's own policy does (`frame-ancestors
+'self'`); a header that already lets you frame the editor lets it frame this.
+
 **The handshake** underneath it, five messages, all `postMessage` — you need
 this only if you are not using the module:
 

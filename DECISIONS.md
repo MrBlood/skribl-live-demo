@@ -48223,3 +48223,78 @@ stands somewhere new OR is more solid than the frame before, four or more
 FLIP AND THE PAD: no change to either editor; `social.js`'s overlay and
 the site's composer only. A Flip draft opens in Flip the same way.
 NOT TESTED: Safari on an iPhone (the keyboard there, above all).
+
+## After v330 -- Your hand opens over the post, and the drawing waits (choice 1)
+
+THE TRAP, AS WALKED (two entries up): inside a host's composer, the Text
+drawer's "+ Make yours" and "Edit your hand" took the composer's frame to
+Your hand (`/skribl-pad?letters=1`). Compose keeps no draft: 126 strokes,
+then none; and Close came back to the editor BY ITSELF, "Post to Skribl"
+where "Add to post" had been, with no way back to the post. THE OWNER'S
+"All yes" (Nov 19) to B: "Your hand opens over your post, and your drawing
+waits for you."
+
+HOW IT IS BUILT, WHICH THE MOCK LEFT OPEN: THE EDITOR NEVER LEAVES. Of the
+two ways written down then (Your hand over the editor; or the frame's own
+trip with the drawing kept for it), the first, because the second has to
+put a drawing back and cannot put back all of it: its Undo, a take half
+recorded, a photo or a song past what a browser's store will hold, and a
+host's own `load` on `ready` arriving over the top. With nothing unloaded
+there is nothing to put back. `lib/handover.js` (compose mode alone, both
+editors) opens Your hand in a frame of its own in a layer over the editor;
+`textwrite.js`'s `toHand` asks it first and goes as it always did where it
+is not there. Your hand keeps its letters in this device's store, and the
+Text drawer reads that store each time it is asked, so nothing has to be
+told when the layer goes.
+
+YOUR HAND, TOLD IT IS OVER AN EDITOR (`?over=1`, the route's
+`letters_over`, `editor_letters.js` OVER):
+- every page of it says "Your drawing is waiting in your post." under its
+  own line, in the small violet ink, 14px and 600 (the mock's; 7.36:1 on the
+  light paper and 9.47:1 on the dark, read off the pixels);
+- Post your letters is not offered: it posts to Skribl, not to that post;
+- Close, Done, Finish later and Write with it ask the editor to close the
+  layer (one message, `skribl:hand:close`, taken only from this origin and
+  only from the frame the editor opened) and go nowhere: going anywhere
+  would put an editor by itself inside the layer.
+- With the flag and no editor over it (a link somebody kept) it is Your
+  hand as it always was: it looks for a parent before believing the flag.
+
+THREE THINGS THE MOCK DID NOT SHOW, DECIDED HERE AND TOLD TO THE OWNER:
+- A FACE'S PAD HAS THE SAME DOOR, and there is no post to name there, so
+  its line is "Your drawing is waiting for you." (`over=face`). The same
+  holds less exactly for a drawn comment's Pad, which says "in your post"
+  as that Pad's own Close already says "back to your post".
+- UNDER REDUCE MOTION IT FADES WHERE IT SITS. The editors' sheet stops
+  every transition there (`* { transition: none !important }`: its drawers
+  are simply there and simply gone), and the first read on every frame
+  found the whole screen swapped at a stroke. `handover.css` says its three
+  fades with `!important`, the only way past that rule.
+- A NEW FRAME EACH TIME, taken out when the layer has gone: Your hand is
+  the whole Pad again, so it is not kept loaded, and a frame's first
+  address takes the place of its empty one where a second address in a
+  kept frame would be a step the browser's Back could undo.
+
+ON THE EDITORS' OWN PAGES NOTHING CHANGES: the page goes to Your hand and
+its draft keeps the drawing. No layer, no module and no sheet are there.
+
+THE CHECKS, EVERY ROW SHOWN RED. `verify_text` 23, on the editor in compose
+mode (all the editor's side of it is): the Pad and Flip, with and without
+a hand, a phone and a desk, light and dark, Reduce Motion; the address and
+the drawing point for point before, under and after; the layer on every
+frame; the line's words, ink, size, weight, one line, clear of Close, and
+4.5:1 off what is painted; a letter drawn in the layer counted by the
+drawer after; a stranger's message closing nothing; Your hand by itself as
+it was. `verify_composer` 10, the scenario itself through the site's
+composer, three frames deep, ending in Add attaching the drawing. Red
+thirteen ways in scratch copies: the door not asked (the page leaves:
+seventeen rows); the editor left in reach; Your hand going somewhere
+(the layer never closes); no line, the line in the plain ink, Post your
+letters offered; the layer made to jump; its frame kept; the route's flag
+dropped; a message taken from any frame; the flag believed with no editor
+over it (Done then goes nowhere); Text not chosen after; a face told it is
+a post; and Reduce Motion's fades, red before they were written.
+
+FLIP AND THE PAD: one module, one partial, one sheet, loaded by both in
+compose mode; the layer's markup is in `_skribl_text.html`, which both
+include. NOT TESTED: Safari on an iPhone, SF or Segoe UI.

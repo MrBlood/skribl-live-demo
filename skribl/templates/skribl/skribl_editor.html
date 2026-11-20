@@ -19,6 +19,9 @@
 {# letters.css: the letter sheet's own rules (editor_letters.js), on that page
    only, so nothing about it reaches the Pad, Flip or the player. #}
 {% if letters %}<link rel="stylesheet" href="{{ skribl_asset('letters.css') }}">{% endif %}
+{# handover.css: Your hand's layer over the editor (lib/handover.js), inside a
+   post only, so nothing about it reaches the Pad's own page or the player. #}
+{% if compose %}<link rel="stylesheet" href="{{ skribl_asset('handover.css') }}">{% endif %}
   {% include 'skribl/_skribl_app_identity.html' %}
 {# The Home Screen app only (lib/offline.js): opening with no signal, and
    offering a reload when the server has a newer build than this page. #}
@@ -434,6 +437,10 @@
     {# The letter sheet (editor_letters.js). editor_draft.js reads it to keep
        no Pad draft there, as compose keeps none. #}
     {% if letters %}window.SKRIBL_LETTERS = true;{% endif %}
+    {# ...opened over an editor inside a post ("post"), or one drawing a face
+       ("face"): it says the drawing is waiting, and asks to be closed where
+       it used to go somewhere (lib/handover.js). #}
+    {% if letters and letters_over %}window.SKRIBL_LETTERS_OVER = {{ letters_over | tojson }};{% endif %}
     window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
   window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
     window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};
@@ -637,6 +644,9 @@
   {# Draw back: somebody's drawing faint under the pen, when a host's composer
      hands one over (composehost underlay). Compose only. #}
   <script src="{{ skribl_asset('lib/drawback.js') }}" defer></script>
+  {# Your hand, over the editor: Make yours and Edit your hand inside a post
+     (lib/textwrite.js toHand asks it first). Compose only; Flip loads it too. #}
+  <script src="{{ skribl_asset('lib/handover.js') }}" defer></script>
   {% endif %}
   {% if face %}
   {# A face's guide (a photo to trace, never kept): face mode only. An

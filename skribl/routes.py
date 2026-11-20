@@ -391,13 +391,22 @@ def register_routes(bp, *, index_route=False):
         # and the root ask the same, once a page.
         compose = request.args.get("compose") == "1"
         face = compose and request.args.get("face") == "1"
+        letters = not compose and request.args.get("letters") == "1"
+        # YOUR HAND, OVER AN EDITOR. ?over=1 (with letters=1) is Your hand
+        # opened in a layer over the Pad or Flip inside a host's post
+        # (lib/handover.js), where going to it used to lose the drawing. The
+        # page says the drawing is waiting, leaves out Post your letters (it
+        # posts to Skribl, not to that post), and asks to be closed where it
+        # used to go somewhere. over=face is the same over a face's Pad, where
+        # there is no post to name. Anything else is Your hand as it was.
+        over = request.args.get("over")
         return render_template("skribl/skribl_editor.html", compose=compose,
                                skribl_brand=page_brand(),
                                gallery_choice=(compose and not face
                                                and request.args.get("gallery") == "1"),
                                face=face,
-                               letters=(not compose
-                                        and request.args.get("letters") == "1"))
+                               letters=letters,
+                               letters_over=(letters and {"1": "post", "face": "face"}.get(over)) or None)
 
     @bp.get("/flip")
     def skribl_flip():

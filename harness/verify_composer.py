@@ -63,6 +63,14 @@ Skribl's real Pad.
      new post, a quote of words alone; a drawing shown outside a post quoted
      the same way; Make, on the same page once the quote was put away with
      Cancel, opens the sheet without it.
+ 10. YOUR HAND INSIDE A POST (the owner's "All yes", Nov 19): in the Pad the
+     composer opened, Text's "+ Make yours" used to take the composer's
+     frame to Your hand, the drawing gone and the way back to the post with
+     it. Now Your hand opens over the Pad, in a frame of its own inside the
+     composer's: the page, the sheet and the composer's frame stay where
+     they are, the drawing is there after Close, and Add attaches it
+     (Skribl's side, both editors and every frame of the glide:
+     verify_text 23).
   8. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 COMPOSER_PART=<n>[,<m>] runs those sections only (calibration); a section
@@ -1424,6 +1432,88 @@ with sync_playwright() as p:
                   json.dumps([rows_, od, sent_d])[:600])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(9, exc)
+
+    # ------------------------------------------------------------------ 10
+    # YOUR HAND INSIDE A POST (the owner's "All yes", Nov 19): THE SCENARIO AS
+    # IT WAS WALKED, through the site's own composer. Skribl's side of it
+    # (lib/handover.js, both editors, the glide on every frame) is
+    # verify_text 23; this is the part only a host's page can show: three
+    # frames deep (the page, the composer's Pad, Your hand over it), the
+    # composer's frame never leaves, and what Add brings back is the drawing.
+    if part(10, "Your hand inside a post: it opens over the composer's Pad, the drawing waits, Add attaches it"):
+        try:
+            hana = someone(b, "hana", "Hana Bell")
+            ctx, pg = browser_as(b, hana)
+            go(pg, "/social/")
+            open_composer(pg)
+            tap(pg, "#composeSheet [data-compose-open=pad]")
+            fr = editor_frame(pg, "skribl-pad")
+            fr.evaluate("() => { if (window.SkriblHints) window.SkriblHints.hide(); setTool('pen');"
+                        " if (window.SkriblPressure) SkriblPressure.setEnabled(true); }")
+            artdraw.draw(InFrame(pg, fr), CIRCLE, tempo=2.5, pause_tempo=3)
+            pg.wait_for_timeout(400)
+            if fr.evaluate("() => typeof recording !== 'undefined' && !!recording"):
+                fr.click("#recordBtn")
+                pg.wait_for_timeout(400)
+            IN_PAD = """() => ({ strokes: strokes.length, at: location.pathname + location.search,
+              add: document.getElementById('postBtn').textContent.replace(/\\s+/g, ' ').trim(),
+              hand: !!window.SkriblHandOver && SkriblHandOver.isOpen(), text: !!window.SkriblText && SkriblText.isOpen() })"""
+            HOST = """() => ({ at: location.pathname, sheet: SocialComposer.isOpen(), pad: !document.getElementById('composePad').hidden,
+              src: document.querySelector('#composePad iframe').getAttribute('src'), attached: SocialComposer.attached() })"""
+            before = fr.evaluate(IN_PAD)
+            fr.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
+            fr.wait_for_function("() => SkriblText.isOpen()", timeout=10000)
+            pg.wait_for_timeout(400)
+            fr.click('#txStyles [data-style="yours"]')
+            hand = None
+            end = time.time() + 25
+            while time.time() < end and hand is None:
+                hand = next((f for f in pg.frames if "letters=1" in (f.url or "")), None)
+                if hand is None:
+                    pg.wait_for_timeout(200)
+            hand.wait_for_function("() => !!window.SkriblLetters && SkriblLetters.view() === 'start'", timeout=20000)
+            pg.wait_for_timeout(900)
+            up = {"host": pg.evaluate(HOST), "pad": fr.evaluate(IN_PAD), "depth": 0,
+                  "hand": hand.evaluate("() => ({ at: location.pathname + location.search, over: window.SKRIBL_LETTERS_OVER || null,"
+                                        " wait: (document.getElementById('ltPageWait') || {}).textContent || null })")}
+            f = hand
+            while f.parent_frame:
+                up["depth"] += 1
+                f = f.parent_frame
+            hand.click(".lt-ptop .lt-pdone")
+            pg.wait_for_function("() => true", timeout=1000)
+            pg.wait_for_timeout(1500)
+            after = {"host": pg.evaluate(HOST), "pad": fr.evaluate(IN_PAD),
+                     "hands": len([f for f in pg.frames if "letters=1" in (f.url or "")])}
+            # The Text drawer put away, then Add, as anybody adds a drawing.
+            fr.evaluate("() => { SkriblText.close(); setTool('pen'); }")
+            pg.wait_for_timeout(400)
+            fr.click("#postBtn")
+            pg.wait_for_timeout(700)
+            fr.click("#postSubmitBtn")
+            pg.wait_for_function("() => !!window.SocialComposer.attached()", timeout=25000)
+            pg.wait_for_timeout(600)
+            added = pg.evaluate(HOST)
+            added["post"] = pg.evaluate("() => document.querySelector('[data-compose-post]').getAttribute('aria-disabled')")
+            close_ctx(ctx, pg)
+            check("Make yours, in the Pad the composer opened: Your hand opens over that Pad, three frames deep (the page,"
+                  " the composer's Pad, Your hand), saying \"Your drawing is waiting in your post.\"; the page, the sheet and"
+                  " the composer's frame are where they were, the Pad still at compose=1 with every stroke and Add its button",
+                  before["strokes"] > 20 and up["host"] == {"at": "/social/", "sheet": True, "pad": True, "src": "/skribl-pad?compose=1",
+                                                            "attached": None}
+                  and up["pad"] == dict(before, hand=True, text=False) and up["depth"] == 2
+                  and up["hand"] == {"at": "/skribl-pad?letters=1&back=pad&over=1", "over": "post",
+                                     "wait": "Your drawing is waiting in your post."},
+                  json.dumps({"before": before, "up": up})[:800])
+            check("Close takes Your hand away and the Pad is as it was, in the composer still: the same strokes, Add its"
+                  " button, Text chosen again; and Add then attaches the drawing to the post, Post lit, the editor gone",
+                  after["hands"] == 0 and after["host"] == up["host"]
+                  and after["pad"] == dict(before, hand=False, text=True)
+                  and added["attached"] == {"kind": "payload", "id": None} and added["sheet"] and not added["pad"]
+                  and added["post"] == "false",
+                  json.dumps({"after": after, "added": added})[:800])
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(10, exc)
 
     # ------------------------------------------------------------------ 8
     if part(8, "no page errors, no console errors, no CSP violations"):
