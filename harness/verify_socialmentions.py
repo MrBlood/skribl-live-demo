@@ -700,11 +700,17 @@ def wait_list(pg, list_id, open_=True, timeout=6000):
 
 def open_composer(pg):
     """Make, the bar's on a phone and the rail's on a desk: the composer up,
-    its words' field in focus."""
+    its words' field in focus. On a desk it takes focus as the sheet opens; a
+    touch phone opens calm (the owner, Nov 20: no keyboard until the words
+    are tapped), so there the field is tapped, as a person would."""
     press(pg, "nav.nav .tab-make")
     pg.wait_for_function("() => { const w = document.getElementById('composeSheet'); return !!w && w.classList.contains('is-open')"
-                         " && document.activeElement === document.getElementById('composeWords'); }", timeout=8000)
+                         " && w.querySelector('.make-sheet').contains(document.activeElement); }", timeout=8000)
     pg.wait_for_timeout(450)
+    if not pg.evaluate("() => document.activeElement === document.getElementById('composeWords')"):
+        press(pg, "#composeWords")
+    pg.wait_for_function("() => document.activeElement === document.getElementById('composeWords')", timeout=8000)
+    pg.wait_for_timeout(150)
 
 
 def handles(rows):

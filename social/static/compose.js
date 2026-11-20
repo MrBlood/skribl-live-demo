@@ -122,10 +122,25 @@
   var view = 'write';
   var tiled = null;     // the editor a draft's tile ON THE PAGE opened with this sheet (draft, below)
 
+  /* A PHONE OPENS IT CALM (the owner, Nov 20, with two pictures of it on
+     their iPhone: "Ours opens like 1st shot and should start like 2nd
+     screenshot. That part looks great."). The words took focus as the sheet
+     rose, so a phone raised its keyboard before anybody had chosen to type:
+     the sheet at half its height, Home showing between its foot and the
+     keys, and Draw, Flip and Yours squeezed against them. On a device whose
+     keyboard is on its screen (a finger's: no hover, a coarse pointer),
+     focus goes to the sheet itself, so a screen reader is in the dialog and
+     hears its name, and the keyboard comes when the words are tapped. With
+     a keyboard of its own (a desk, a laptop, a tablet with one attached) the
+     words take focus as they did: you can type at once. */
+  var fingers = window.matchMedia ? window.matchMedia('(hover: none) and (pointer: coarse)') : null;
+  var paper = q('.make-sheet');
+  function calm() { return !!(fingers && fingers.matches && paper); }
+
   var openers = all('[data-make]', doc);
   var sheet = window.SocialSheet(wrap, {
     openers: openers, doorCloses: false, ownTouch: '.cmp-scroll, .cmp-lists',
-    first: function () { return view === 'pick' ? backBtn : words; },
+    first: function () { return view === 'pick' ? backBtn : (calm() ? paper : words); },
     onSettled: function () {
       /* Gone with a draft's editor, unseen to the end: seen again next time. */
       wrap.classList.remove('is-under');

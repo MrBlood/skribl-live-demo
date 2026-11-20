@@ -52,7 +52,13 @@
     (posts.post_new; one drawing, one conversation). The player plays it from
     the address every in-post player reads a posted drawing from (the macro's
     data-skribl-api, written here for the composer's box, which is a draft's
-    and carries none). #}
+    and carries none).
+
+    ON A PHONE IT OPENS CALM (the owner, Nov 20: "should start like 2nd
+    screenshot", the sheet at its full height and no keyboard): the sheet
+    itself takes focus there (its tabindex below; compose.js, "A PHONE OPENS
+    IT CALM"), and the keyboard comes when the words are tapped. On a desk
+    the words take focus as it opens. #}
 {% import 'social/_icons.html' as ic %}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
 {% from 'social/_post.html' import face with context %}
@@ -61,7 +67,7 @@
 <div class="make cmp" id="composeSheet" hidden data-post-new="{{ url_for('social.post_new') }}" data-drawback-url="{{ url_for('social.post_drawback', public_id='__ID__') }}"
      data-yours="{{ url_for('social.compose_yours') }}" data-skribl-api="{{ url_for(skribl_bp ~ '.create_skribl') }}">
   <div class="make-scrim" data-make-close></div>
-  <div class="make-sheet cmp-sheet" role="dialog" aria-modal="true" aria-labelledby="composeTitle">
+  <div class="make-sheet cmp-sheet" role="dialog" aria-modal="true" aria-labelledby="composeTitle" tabindex="-1">
     <section class="cmp-view" data-compose-view="write" data-composer>
       <h2 class="sr" id="composeTitle">Make a post</h2>
       <div class="cmp-top">

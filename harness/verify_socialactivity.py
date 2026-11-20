@@ -1366,8 +1366,8 @@ with sync_playwright() as p:
                 pg.wait_for_timeout(600)
                 got[screen]["sheet"] = pg.evaluate("() => { const m = document.getElementById('composeSheet');"
                                                    " return !!m && !m.hidden && m.classList.contains('is-open')"
-                                                   " && document.activeElement === m.querySelector('[data-compose-words]')"
-                                                   " && document.activeElement.getAttribute('placeholder'); }")
+                                                   " && m.querySelector('.make-sheet').contains(document.activeElement)"
+                                                   " && m.querySelector('[data-compose-words]').getAttribute('placeholder'); }")
                 close_ctx(ctx, pg)
             # blooby.app's own icon, the site's Home Screen app's (the owner's "All yes", Nov 15; verify_socialapp 3)
             want = {"icon": "blooby-icon-180.png", "title": "Nothing new yet",
@@ -1380,7 +1380,7 @@ with sync_playwright() as p:
                   all(got[s] and all(got[s][k] == v for k, v in want.items()) and got[s]["w"] == 64 and got[s]["h"] == 64
                       and got[s]["painted"] and got[s]["bh"] >= 52 and got[s]["lists"] == 0 for s in ("phone", "desk")),
                   json.dumps({s: {k: v for k, v in (got[s] or {}).items() if k != 'sheet'} for s in got}))
-            check("Make a skribl opens the composer, Make's own since Nov 14, its words' field ready (a tap on a phone,"
+            check("Make a skribl opens the composer, Make's own since Nov 14, focus in it and its words' field there (a tap on a phone,"
                   " a click on a desk)",
                   all(got[s]["sheet"] == "Say something…" for s in ("phone", "desk")),
                   f"{got['phone']['sheet']} / {got['desk']['sheet']}")

@@ -1446,6 +1446,9 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
  * page's two inks. Post is dim (0.45) until a drawing is attached, an
  * inactive control, as the mock drew it. */
 .make.cmp { bottom: var(--cmp-kb, 0px); transition: bottom 0.25s ease; }
+/* On a phone the sheet itself takes focus as it opens (compose.js, "A PHONE
+   OPENS IT CALM"): a ring round the whole sheet says nothing, so none. */
+.cmp-sheet:focus { outline: 0; }
 /* WHATEVER A KEYBOARD SAYS ON THE WAY (the owner's iPhone, Nov 14: a size a
    keyboard passed through left the sheet a sliver, its rows drawn over Home
    and the page under it undimmed, until a touch): the scrim reaches the
