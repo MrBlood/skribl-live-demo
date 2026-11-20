@@ -171,6 +171,15 @@ def following_ids(me, ids):
     return {row[0] for row in site().session().execute(q).all()}
 
 
+def followers_among(me, ids):
+    """Which of `ids` follow `me` now: one read, on the follows' other index
+    (Her say's "People I follow": whether a post's maker follows the viewer)."""
+    if me is None or not ids:
+        return set()
+    q = sa.select(Follow.follower_id).where(Follow.followed_id == me.id, Follow.follower_id.in_(list(ids)), _on())
+    return {row[0] for row in site().session().execute(q).all()}
+
+
 def own_counts(me):
     """Your own page's counts, as it shows them (your lists' lengths): what a
     follow or an unfollow from your own sheet changes there."""

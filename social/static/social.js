@@ -465,6 +465,53 @@
     if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(again);
   });
 
+  /* SETTINGS' PILL, WHERE A SHEET HOLDS ONE (window.SocialSwitch): the tint
+   * under the pressed choice of a .theme-switch outside Settings: "Who can
+   * draw back", in the composer and in your own post's ⋯ (_who.html; the
+   * owner's "All yes to everything", Nov 20). Settings' own two place theirs
+   * as they always have (you.js, push.js); this is their place(), word for
+   * word, so the three move alike: from the rendered boxes, to the hundredth
+   * of a pixel; the first time it fades in where it belongs and never
+   * slides in; after that it slides (social.css, 0.26s), and under Reduce
+   * Motion it is put there. press() presses a choice and moves the tint;
+   * says() writes the line under it from the words that line carries. */
+  function swPlace(sw, first) {
+    var pill = sw.querySelector('.theme-pill');
+    var on = sw.querySelector('button[aria-pressed="true"]');
+    var g = sw.getBoundingClientRect(), b = on ? on.getBoundingClientRect() : null;
+    if (!pill || !b || !b.width || !g.width) { sw.removeAttribute('data-pill'); return; }
+    var x = Math.round((b.left - g.left - sw.clientLeft - (parseFloat(getComputedStyle(pill).left) || 0)) * 100) / 100;
+    if (first) pill.style.transition = 'opacity 0.18s ease';
+    pill.style.transform = 'translateX(' + x + 'px)';
+    pill.style.width = (Math.round(b.width * 100) / 100) + 'px';
+    if (first) {
+      sw.setAttribute('data-pill', '');
+      void pill.offsetWidth;
+      pill.style.transition = '';
+    }
+  }
+  function swPress(sw, choice, first) {
+    Array.prototype.forEach.call(sw.querySelectorAll('button[data-choice]'), function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-choice') === choice ? 'true' : 'false');
+    });
+    swPlace(sw, first || !sw.hasAttribute('data-pill'));
+  }
+  function swSays(line, choice) {
+    if (line) line.textContent = line.getAttribute('data-says-' + choice) || '';
+  }
+  /* Watched, so a late font or a turned phone still has its tint where its
+     choice is (put there, never slid: nothing was chosen). */
+  function swWatch(sw) {
+    if (!window.ResizeObserver) return;
+    var wide = 0;
+    new ResizeObserver(function () {
+      var w = sw.getBoundingClientRect().width;
+      if (w && wide && w !== wide && sw.hasAttribute('data-pill')) swPlace(sw, true);
+      wide = w;
+    }).observe(sw);
+  }
+  window.SocialSwitch = { place: swPlace, press: swPress, says: swSays, watch: swWatch };
+
   /* TIMES, IN THE PERSON'S OWN (window.SocialWhen): every <time data-when>
    * under `root` said as the site says a time: "now", "35m", "2h", "3d", then
    * the day ("Nov 3"); data-when="at", the day and the hour ("Nov 10 at 8:20

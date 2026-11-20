@@ -1986,6 +1986,47 @@ a.post-face { text-decoration: none; }
 .db-note { margin: -4px 0 10px; color: var(--ink-2); font-size: 14px; line-height: 1.35; font-variant-numeric: tabular-nums; }
 .db-note[hidden] { display: none; }
 .db-title[hidden] + .db-note { margin-top: 22px; }
+/* HER SAY, WHO CAN DRAW BACK (the owner's "All yes to everything", Nov 20, to
+   the Her say mock; _who.html). Every piece is one the site has.
+   THE QUIET LINE ON HER OWN POST'S PAGE, while it is not Everyone: the
+   hidden-count line's own type, with Change in the small violet words (14px,
+   600; 44px to a finger, its room taken back from the line so the line
+   stays one line tall). Under the label where there are draw-backs; alone
+   under the date where there are none (.db-alone: a label's own room). */
+.db-who { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; }
+.db-change {
+  min-height: 44px; margin: -12px 0; padding: 0 2px; border: 0; border-radius: 6px; background: none;
+  color: var(--accent-ink); font: 600 14px/1 var(--font); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.db-title[hidden] + .db-note[hidden] + .db-who, .db-alone > .db-who { margin-top: 22px; }
+.db-alone > .db-who { margin-bottom: 0; }
+/* THE PILL AND ITS LINE (who_switch): Settings' own switch (.theme-switch)
+   the width of its card, each choice as wide as its words ask and never
+   under 44px, under its name (a row's 17px, the pen in the row's second
+   ink) and over one line saying what the choice means (14px, second ink).
+   In a card of its own in her post's ⋯ (.post-acts.who-acts), and in the
+   composer (.cmp-who-open). */
+.who-acts[hidden], .cmp-who-wrap[hidden], .cmp-who[hidden], .cmp-who-open[hidden] { display: none; }
+.who-block { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 16px; }
+.who-head { display: flex; align-items: center; gap: 14px; margin: 0; color: var(--ink); font-size: 17px; font-weight: 600; line-height: 1.3; }
+.who-head .ic { flex: none; width: 22px; height: 22px; color: var(--ink-2); }
+.who-switch { width: 100%; }
+.who-switch > button { flex: 1 1 auto; padding: 0 6px; white-space: nowrap; }
+.who-say { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.35; }
+@media (max-width: 359.98px) { .who-switch > button { padding: 0 3px; font-size: 14px; } }
+/* IN THE COMPOSER, under the drawing: the quiet line (15px, second ink, the
+   pen at its start, Change in the small violet words; the whole line is the
+   button, 44px tall), and where it stood once Change is pressed, the pill's
+   card: a row's paper and line on the sheet's (the ⋯'s own card). It grows
+   into its room (compose.js whoOpen). */
+.cmp-who {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; margin: 6px 0 0; padding: 0 2px;
+  border: 0; border-radius: 8px; background: none; color: var(--ink-2); font: 400 15px/1.3 var(--font);
+  text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.cmp-who .ic { flex: none; width: 20px; height: 20px; }
+.cmp-who b { color: var(--accent-ink); font-weight: 600; }
+.cmp-who-open { margin: 6px 0 0; border-radius: 16px; background: var(--row-bg); box-shadow: 0 0 0 var(--edge) var(--card-line); }
 /* The drawing whole, in its own shape, on the tile's ground: the plate as
    large as the tile allows less 8px each side; the poster behind it placed so
    only the drawing shows (none of the share card's

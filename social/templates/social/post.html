@@ -58,6 +58,7 @@
 {% from 'social/_comments.html' import answer_bar, comments_section, comment_sheets with context %}
 {% from 'social/_mute.html' import mute_parts with context %}
 {% from 'social/_gallery.html' import plate_frame, plate_ground, plate_fill with context %}
+{% from 'social/_who.html' import who_note %}
 {% import 'social/_icons.html' as ic %}
 {% set p = card.post %}{% set who = card.who %}
 
@@ -84,7 +85,7 @@
     under it, which is no taller than this drawing (social.css, .cm-art). #}
 <article class="post-page"{% if card.sk and card.sk.canvas_w and card.sk.canvas_h %} style="--art-w: {{ card.sk.canvas_w }}; --art-h: {{ card.sk.canvas_h }}"{% endif %} data-post="{{ p.public_id }}" data-url="{{ card.url }}" data-skribl="{{ p.skribl_id or '' }}"
          data-handle="{{ who.handle }}" data-first="{{ who.display_name|first_name }}"{% if card.mine %} data-mine data-del="{{ card.delete }}"{% endif %}
-         {%- if card.muted %} data-muted{% endif %}{% if card.markable %} data-markable{% endif %}{% if card.marked %} data-marked{% endif %}{{ rp_data(card) }} data-kind="{{ card.kind }}"{% if p.skribl_id %} data-autoplay{% else %} data-no-art{% endif %} aria-labelledby="postWho">
+         {%- if card.muted %} data-muted{% endif %}{% if card.markable %} data-markable{% endif %}{% if card.marked %} data-marked{% endif %}{% if card.who_draws %} data-who="{{ card.who_draws }}"{% endif %}{{ rp_data(card) }} data-kind="{{ card.kind }}"{% if p.skribl_id %} data-autoplay{% else %} data-no-art{% endif %} aria-labelledby="postWho">
   <header class="post-head">
     <a class="post-face{% if card.drawn_on and not card.drawn_on.gone and not card.drawn_on.own %} has-back{% endif %}" href="{{ card.profile }}" tabindex="-1" aria-hidden="true">{{ face(who, initial=true) }}
       {%- if card.drawn_on and not card.drawn_on.gone and not card.drawn_on.own %}<span class="db-face">{{ face(card.drawn_on.who, initial=true) }}</span>{% endif %}</a>
@@ -130,10 +131,18 @@
       draw-backs"), and one quiet line under it how many are hidden, hers
       alone ("1 hidden from your post"). Nobody else has an eye, a hidden
       tile, that line, or eye.js: not in the page and not in its source. #}
+  {#- HER SAY, WHO CAN DRAW BACK (the owner's "All yes to everything", Nov
+      20; _who.html who_note): on her own post that can be drawn back on, one
+      quiet line while it is not Everyone ("Only people you follow can draw
+      back. Change"), under the label where there are draw-backs, and alone
+      under the date where there are none yet (on Nobody, that is where it
+      would stay: nobody else can make the first). Change opens her post's ⋯,
+      where the pill is. Nobody else is shown it, or told. #}
   {% if backs %}
   <section class="db-strip" aria-labelledby="dbTitle"{% if card.mine %} data-db-strip{% endif %}>
     <h2 class="pp-label db-title" id="dbTitle"{% if not backs_shown %} hidden{% endif %}><span data-db-n>{{ backs_shown }}</span> <span data-db-noun data-one="draw-back" data-many="draw-backs">{{ 'draw-back' if backs_shown == 1 else 'draw-backs' }}</span></h2>
     {% if card.mine %}<p class="db-note" data-db-note{% if not backs_hidden %} hidden{% endif %}><span data-db-hidden>{{ backs_hidden }}</span> hidden from your post</p>{% endif %}
+    {% if card.who_draws %}{{ who_note(card) }}{% endif %}
     <div class="db-row">
       {% for m in backs %}
       {%- set first = m.who.display_name|first_name -%}
@@ -149,6 +158,8 @@
       {% endfor %}
     </div>
   </section>
+  {% elif card.who_draws %}
+  <div class="db-alone">{{ who_note(card) }}</div>
   {% endif %}
   {% if lk and lk.line %}{{ liked_by(lk) }}{% endif %}
   {% if cm %}{{ comments_section(cm) }}{% endif %}

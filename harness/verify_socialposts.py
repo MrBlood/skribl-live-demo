@@ -616,7 +616,7 @@ ONECARD = r"""(root) => {
     const rows = [...l.children].filter(x => shown(x) && !x.matches('legend')).map(x => {
       const q = x.getBoundingClientRect(), c = getComputedStyle(x);
       const face = x.matches('form') ? x.querySelector('.post-act') : x;
-      const out = { words: (x.querySelector('.mu-words b') || x).textContent.trim().replace(/\s+/g, ' ').slice(0, 32),
+      const out = { words: (x.querySelector('.mu-words b') || x.querySelector('.who-head') || x).textContent.trim().replace(/\s+/g, ' ').slice(0, 32),
         risky: x.matches('.is-danger') || !!x.querySelector('.is-danger'), own: getComputedStyle(face).backgroundColor,
         gap: prev ? Math.round((q.top - prev.bottom) * 10) / 10 : null,
         line: thin(x, c), words_at: wordsAt(x),
@@ -3382,7 +3382,9 @@ print("PLAN " + json.dumps(out))
                         ("a person's ⋯", "/social/@ben", ("[data-person-menu]",), "personSheet", True, False),
                         ("Report's reasons", f"/social/p/{theirs16}",
                          (".post-page .post-row [data-post-menu]", "#postSheet [data-act=report]"), "reportSheet", False, False))
-            WANT16 = {"your post's ⋯": [["Bookmark", "Copy link", "Share…"], ["Delete post"]],
+            # Your own post that can be drawn back on has a card between the two since Her say (Nov 20): "Who can
+            # draw back", Settings' pill in it (verify_socialdrawback 12 holds what it does).
+            WANT16 = {"your post's ⋯": [["Bookmark", "Copy link", "Share…"], ["Who can draw back"], ["Delete post"]],
                       "their post's ⋯": [["Bookmark", "Copy link", "Share…", "Mute @ben"], ["Report this post", "Block @ben"]],
                       "a comment's ⋯": [["Bookmark", "Copy link", "Share…"], ["Remove from my post", "Report this comment"]],
                       "a person's ⋯": [["Mute @ben"], ["Report @ben", "Block @ben"]],
@@ -3537,10 +3539,11 @@ print("PLAN " + json.dumps(out))
             check("...and that line is one screen pixel on a 3x phone, the owner's (the ☰'s lines: three, or four"
                   " for an admin, whose ☰ holds Your reports)",
                   len(px3) >= 3 and all(isinstance(v, (int, float)) and abs(v - 1) <= 0.05 for v in px3), f"{px3}")
-            check("the risky rows (Report, Block, Delete, Remove) are a card of their own, 12px under the other, its"
-                  " rows the risky ones alone: your post's Copy link, Share… | Delete post; somebody else's Copy link,"
-                  " Share…, Mute | Report, Block; a comment's ⋯ only its risky card; a person's Mute | Report, Block;"
-                  " the ☰ one card with nothing risky; Report's reasons one card",
+            check("the risky rows (Report, Block, Delete, Remove) are a card of their own, the last, 12px under the one"
+                  " before, its rows the risky ones alone: your post's Copy link, Share… | Who can draw back (a card of"
+                  " its own between the two, on a post that can be drawn back on) | Delete post; somebody else's Copy"
+                  " link, Share…, Mute | Report, Block; a comment's ⋯ only its risky card; a person's Mute | Report,"
+                  " Block; the ☰ one card with nothing risky; Report's reasons one card",
                   read16 == 22 and not bad_risky, "; ".join(bad_risky)[:1400])
             check("no Cancel under a menu sheet (the ☰'s, a post's ⋯, a comment's ⋯, a person's ⋯); Report keeps"
                   " its Cancel | Send report", read16 == 22 and not bad_cancel, "; ".join(bad_cancel)[:900])
