@@ -409,6 +409,13 @@ class Post(SocialBase):
     #: so the row offers no pen where the Pad can't do it. None: it can, or a
     #: post from before the column, whose pen stays and is answered when opened.
     undrawable = sa.Column(sa.String(12), nullable=True)
+    #: HER SAY (the owner's "All yes to everything", Nov 20, to the Her say
+    #: mock): HIDDEN FROM THE POST IT DRAWS BACK ON, by that post's maker
+    #: (the eye on her own strip): when. It leaves her post's strip and its
+    #: count, for everybody; it stays its maker's post everywhere else (their
+    #: page, Home, its own page, still saying whose it draws back on), and
+    #: nobody is told. Nothing is deleted. None: on her post.
+    drawn_on_hidden_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
     #: WHOSE HANDS, AND HOW LONG EACH DREW (the walkthrough's mocks, choice 6,
     #: the owner's "all yes", Nov 19). A draw-back's drawing is the
     #: original's strokes, squeezed to three seconds, and then its own, so

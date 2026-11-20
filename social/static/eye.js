@@ -17,8 +17,16 @@
  * Loaded on your own page alone, as the eye is drawn there alone: nobody else
  * sees it, in the page or its source.
  *
- * The words are the page's ([data-eye-words]): this file says nothing of its
- * own.
+ * AND ON YOUR OWN POST'S STRIP OF DRAW-BACKS (Her say; the owner's "All yes to
+ * everything", Nov 20): the same eye beside each draw-back's name hides it
+ * from your post (posts.py: /p/<id>/shown) and brings it back. The eye says
+ * what differs there: the word it asks in (data-eye-key, "shown"), and what
+ * the toast says, which names who ("Hidden. Sam isn’t told."). Each change of
+ * a tile is told to the page (a "social:eye" event on its cell), which keeps
+ * its own counts (posts.js).
+ *
+ * The words are the page's ([data-eye-words]) and the eye's own: this file
+ * says nothing of its own.
  */
 (function () {
   'use strict';
@@ -58,11 +66,13 @@
   /* What a tile shows: hidden from the Gallery, or in it; its eye pressed
      while it is in, and its link's words saying which. */
   function show(cell, hidden) {
+    var was = cell.classList.contains('is-hidden');
     cell.classList.toggle('is-hidden', hidden);
-    var eye = cell.querySelector('[data-eye]'), a = cell.querySelector('.gal-tile');
+    var eye = cell.querySelector('[data-eye]'), a = cell.querySelector('[data-label-shown]');
     if (eye) eye.setAttribute('aria-pressed', hidden ? 'false' : 'true');
     var words = a && a.getAttribute(hidden ? 'data-label-hidden' : 'data-label-shown');
     if (words) a.setAttribute('aria-label', words);
+    if (was !== hidden && window.CustomEvent) cell.dispatchEvent(new CustomEvent('social:eye', { bubbles: true, detail: { hidden: hidden } }));
   }
 
   /* `want`: in the Gallery (true) or hidden from it. */
@@ -75,12 +85,14 @@
     var eye = cell.querySelector('[data-eye]'), want = cell.__eyeWant;
     if (!eye) return;
     cell.__eyeBusy = true;
-    post(eye.getAttribute('data-eye'), { gallery: want }).then(function (j) {
+    var body = {};
+    body[eye.getAttribute('data-eye-key') || 'gallery'] = want;
+    post(eye.getAttribute('data-eye'), body).then(function (j) {
       cell.__eyeBusy = false;
       if (j.ok && cell.__eyeWant !== want) { send(cell); return; }
       if (j.ok) {
-        if (want) say(WORDS.eye_back);
-        else say(WORDS.eye_hidden, function () {
+        if (want) say(eye.getAttribute('data-eye-back-words') || WORDS.eye_back);
+        else say(eye.getAttribute('data-eye-hidden-words') || WORDS.eye_hidden, function () {
           /* Undo hands the focus back to the eye it began from. */
           if (eye.isConnected) eye.focus({ preventScroll: true });
           act(cell, true);

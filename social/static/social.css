@@ -1960,6 +1960,32 @@ a.post-face { text-decoration: none; }
   text-decoration: none; scroll-snap-align: start; }
 .db-tile:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 14px; }
 .db-by { overflow: hidden; font-size: 15px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+/* HER SAY, THE EYE ON HER OWN STRIP (the owner's "All yes to everything", Nov
+   20, to the Her say mock's A): on her own post each draw-back's tile and
+   its eye sit side by side in one cell, the Gallery tab's own eye (.gal-eye,
+   above: a 30px chip in a button 44px to a finger) BESIDE THE NAME, never on
+   the picture: the tiles are small, and what somebody drew back is often in
+   a corner (on the picture it lay on a butterfly, and "Hidden" on a cat).
+   The name's line is the eye's 44px, so her tile is 147px tall where
+   everyone else's stays 125. The chip is on the page here, not on a
+   picture: the second button's lilac and its ring, the eye and "Hidden" in
+   the small violet ink (6.49:1 light, 6.87:1 dark; the glass's own ink read
+   1.24:1 in dark). Hidden, the drawing fades to 55%, as on her Gallery tab,
+   and the name gives the chip its room. */
+.db-cell { flex: none; width: 132px; scroll-snap-align: start; }
+.db-cell .db-tile { width: 100%; }
+.db-cell .db-by { line-height: 44px; padding-right: 44px; }
+.db-cell.is-hidden .db-by { padding-right: 90px; }
+.db-cell .db-eye { top: auto; right: -7px; bottom: 0; color: var(--accent-ink); }
+.db-cell .gal-eye-chip { background: var(--btn2-bg); box-shadow: 0 0 0 var(--edge) var(--btn2-line); }
+.db-cell .more-plate, .db-cell .plate-fill > span { transition: opacity 0.2s ease; }
+.db-cell.is-hidden .more-plate, .db-cell.is-hidden .plate-fill > span { opacity: 0.55; }
+/* HOW MANY ARE HIDDEN, hers alone, one quiet line under the label, which
+   says what everyone else sees: 14px in the row's second ink (7.1:1 light,
+   10.12:1 dark). With every one hidden it is the strip's only line. */
+.db-note { margin: -4px 0 10px; color: var(--ink-2); font-size: 14px; line-height: 1.35; font-variant-numeric: tabular-nums; }
+.db-note[hidden] { display: none; }
+.db-title[hidden] + .db-note { margin-top: 22px; }
 /* The drawing whole, in its own shape, on the tile's ground: the plate as
    large as the tile allows less 8px each side; the poster behind it placed so
    only the drawing shows (none of the share card's

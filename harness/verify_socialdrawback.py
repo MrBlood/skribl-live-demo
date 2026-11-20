@@ -48,6 +48,14 @@ each in a browser with a virtual passkey.
      that rises on a card when a replay ends, and the bar's Draw back lit)
      the wave stays white.
  10. No page errors, no console errors and no CSP violations.
+ 11. HER SAY, THE EYE ON HER OWN STRIP (the owner's "All yes to everything",
+     Nov 20): on her own post each draw-back's tile wears the Gallery tab's
+     eye beside its name, hers alone (not in anybody else's page or its
+     source); one tap hides that draw-back from her post, for everybody and
+     counted for nobody, her label saying what everyone else sees and one
+     line how many are hidden; its maker's page, Home, its own page and
+     his Activity as they were; Undo and the eye bring it back; its guards;
+     its words and the eye at 4.5:1.
 
 SOCIALDRAWBACK_PART=<n>[,<m>] runs those sections only (calibration). Every
 row was shown red by breaking one part and green as built: DECISIONS.md,
@@ -1309,7 +1317,7 @@ with app.test_request_context("/social/"):
               probe.style.color = 'var(--ink-2)'; document.body.appendChild(probe);
               const ink2 = getComputedStyle(probe).color; probe.remove();
               return { title: t.innerText.trim(), icon: !!t.querySelector('svg'), tag: t.tagName, type: [cs.fontSize, cs.fontWeight],
-                       quiet: cs.color === ink2, buttons: s.querySelectorAll('button').length,
+                       quiet: cs.color === ink2, buttons: t.querySelectorAll('button').length + (t.nextElementSibling && t.nextElementSibling.matches('button') ? 1 : 0),
                        under: (() => { const a = document.querySelector('.post-page .ans'); return !!a && !!(a.compareDocumentPosition(s) & 4); })(),
                        tiles: [...s.querySelectorAll('.db-tile')].map(t => [new URL(t.href).pathname, t.querySelector('.db-by').textContent,
                                                                            !!t.querySelector('.more-plate img')]),
@@ -1646,7 +1654,9 @@ with app.test_request_context("/social/"):
                   " the two drawings before hers is squeezed",
                   bool(cat) and bool(back) and c_s >= 10 and kept == [[pid["ana"], c_s * 1000], [pid["theo"], 5000]],
                   f"kept {kept}; the cat took {drew(CAT)}ms, his {drew(his)}ms")
-            CARD = """(post) => { const c = document.querySelector('.post-card[data-post="' + post + '"]'); if (!c) return null;
+            # A reader of its own, under its own name: `CARD` is the row's reader for every section (section 11 reads a
+            # card's pen with it after this one has run; named CARD here, it left 11 a reader with no pen in a whole run).
+            HANDS_CARD = """(post) => { const c = document.querySelector('.post-card[data-post="' + post + '"]'); if (!c) return null;
               const box = c.querySelector('[data-skribl-inline]'), play = box.querySelector('.skribl-inline-play');
               const pr = play.getBoundingClientRect(), br = box.getBoundingClientRect();
               return { words: play.textContent.trim(), name: box.getAttribute('aria-label'), inside: pr.left >= br.left && pr.right <= br.right,
@@ -1657,7 +1667,7 @@ with app.test_request_context("/social/"):
             home(pg)
             pg.evaluate("""(p) => { const c = document.querySelector('.post-card[data-post="' + p + '"]'); if (c) c.scrollIntoView({ block: 'center' }); }""", back)
             pg.wait_for_timeout(500)
-            card = pg.evaluate(CARD, back)
+            card = pg.evaluate(HANDS_CARD, back)
             pg.goto(BASE + f"/social/p/{back}")
             ready(pg)
             pg.wait_for_timeout(1500)
@@ -1693,7 +1703,7 @@ with app.test_request_context("/social/"):
                 ctx, pg = browser_as(b, who)
                 home(pg)
                 pg.wait_for_timeout(500)
-                seen[key] = {k: pg.evaluate(CARD, v) for k, v in (("back", back), ("jam", jam), ("own", own))}
+                seen[key] = {k: pg.evaluate(HANDS_CARD, v) for k, v in (("back", back), ("jam", jam), ("own", own))}
                 if key == "theo":
                     pg.goto(BASE + f"/social/p/{jam}")
                     ready(pg)
@@ -1738,7 +1748,7 @@ with app.test_request_context("/social/"):
             ctx, pg = browser_as(b, ori)
             home(pg)
             pg.wait_for_timeout(500)
-            before = pg.evaluate(CARD, back)
+            before = pg.evaluate(HANDS_CARD, back)
             close_ctx(ctx, pg)
             ac = ana.client()
             ac.get(f"/social/p/{cat}")
@@ -1746,8 +1756,8 @@ with app.test_request_context("/social/"):
             ctx, pg = browser_as(b, ori)
             home(pg)
             pg.wait_for_timeout(500)
-            after = pg.evaluate(CARD, back)
-            jam_after = pg.evaluate(CARD, jam)
+            after = pg.evaluate(HANDS_CARD, back)
+            jam_after = pg.evaluate(HANDS_CARD, jam)
             close_ctx(ctx, pg)
             joined = secs(min(played(CAT["frames"][0]["strokes"])[-1], 3000) + 50 + drew(his))
             check(f"a draw-back from before its hands were kept says them from the two drawings' own lines while hers is there"
@@ -1901,6 +1911,281 @@ with app.test_request_context("/social/"):
                   json.dumps({f"{s}: {k}": short(seen[s].get(k)) for s in seen for k in FILL})[:900])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(9, exc)
+
+    # ----------------------------------------------------------------- 11
+    # HER SAY, THE EYE ON HER OWN STRIP (the owner's "All yes to everything",
+    # Nov 20, to the Her say mock, its picks A: "she may hide a draw-back from
+    # her post"). On her own post each draw-back's tile wears the eye her
+    # Gallery tab has, beside the name. One tap hides it from her post: for
+    # everybody, counted for nobody, and nothing else of it changes. Nobody is
+    # told, nothing is deleted, and the eye brings it back.
+    if part(11, "her say: the eye on her own strip hides a draw-back from her post; nobody told, nothing deleted"):
+        try:
+            ana = someone(b, "ana", "Ana Ruiz")
+            theo = someone(b, "theo", "Theo Lin")
+            uma = someone(b, "uma", "Uma Sato")
+            sam = someone(b, "sam", "Sam Rivera")
+            cat = post_payload(ana, "Section 11, the cat", CAT)
+            b_theo = (draw_back(theo, cat, answer(n=10, seed=111))[1] or {}).get("post")
+            time.sleep(0.02)
+            b_uma = (draw_back(uma, cat, answer(n=10, seed=112))[1] or {}).get("post")
+            time.sleep(0.02)
+            b_sam = (draw_back(sam, cat, answer(n=10, seed=113))[1] or {}).get("post")
+            flag = lambda pid: db("select drawn_on_hidden_at is not null from social_posts where public_id = ?", (pid or "",))  # noqa: E731
+            STRIP11 = """() => { const s = document.querySelector('.post-page .db-strip'), page = document.querySelector('.post-page');
+              const pen = page.querySelector(':scope > .post-row .db-pen'), seen = e => !!e && !e.hidden && e.getClientRects().length > 0;
+              const base = { strip: !!s, eyejs: !!document.querySelector('script[src*="eye.js"]'), eyes: document.querySelectorAll('[data-eye]').length,
+                             pen: pen ? (pen.querySelector('span') || {}).textContent || '' : null, penName: pen ? pen.getAttribute('aria-label') : null };
+              if (!s) return base;
+              const label = s.querySelector('.db-title'), note = s.querySelector('.db-note'), one = n => Math.round(n * 10) / 10;
+              return Object.assign(base, { label: seen(label) ? label.innerText.replace(/\\s+/g, ' ').trim() : null,
+                note: seen(note) ? note.innerText.replace(/\\s+/g, ' ').trim() : null,
+                tiles: [...s.querySelectorAll('.db-tile')].map(t => { const cell = t.closest('.db-cell'), eye = cell && cell.querySelector('.db-eye');
+                  // The row scrolls sideways: a third tile is past a phone's edge until it is brought in.
+                  (cell || t).scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'instant' });
+                  const pic = t.querySelector('.more-pic').getBoundingClientRect(), tr = (cell || t).getBoundingClientRect();
+                  const out = { who: t.querySelector('.db-by').textContent.trim(), href: new URL(t.href).pathname, h: one(tr.height), w: one(tr.width),
+                                hidden: !!cell && cell.classList.contains('is-hidden'), name: t.getAttribute('aria-label'),
+                                plate: one(+getComputedStyle(t.querySelector('.more-plate')).opacity * 100) / 100 };
+                  if (eye) { const r = eye.getBoundingClientRect(), chip = eye.querySelector('.gal-eye-chip').getBoundingClientRect(), word = eye.querySelector('.gal-eye-word').getBoundingClientRect();
+                    const at = document.elementFromPoint(chip.left + chip.width / 2, chip.top + chip.height / 2);
+                    out.eye = { pressed: eye.getAttribute('aria-pressed'), says: eye.getAttribute('aria-label'), w: one(r.width), h: one(r.height), chip: one(chip.height),
+                                under: one(chip.top - pic.bottom), inCell: r.right <= tr.right + 8 && r.bottom <= tr.bottom + 0.5, hit: !!at && eye.contains(at),
+                                word: one(word.width) }; }
+                  return out; }) }); }"""
+
+            def strip_of(who, screen="phone", post=None):
+                ctx, pg = browser_as(b, who, screen=screen)
+                open_post(pg, post or cat)
+                pg.evaluate("() => { const s = document.querySelector('.db-strip'); if (s) s.scrollIntoView({ block: 'center' }); }")
+                pg.wait_for_timeout(300)
+                got = pg.evaluate(STRIP11)
+                close_ctx(ctx, pg)
+                return got
+
+            hers = {sc: strip_of(ana, sc) for sc in ("phone", "desk")}
+            theirs = {"Theo": strip_of(theo), "Sam": strip_of(sam), "nobody": strip_of(None)}
+            src = {"Theo": theo.client().get(f"/social/p/{cat}")[1], "nobody": Client().get(f"/social/p/{cat}")[1]}
+            marks = {k: [w for w in ("data-eye", "eye.js", "db-note", "hidden from your post", "/shown") if w in v] for k, v in src.items()}
+
+            def eyed(v):
+                return bool(v and v["label"] == "3 draw-backs" and v["note"] is None and v["eyejs"] and v["eyes"] == 3 and len(v["tiles"]) == 3
+                            and [t["who"] for t in v["tiles"]] == ["Sam", "Uma", "Theo"]
+                            and all(t["h"] == 147 and t["w"] == 132 and not t["hidden"] and t["plate"] == 1 and t["name"] == t["who"]
+                                    and t.get("eye") and t["eye"]["pressed"] == "true" and t["eye"]["says"] == f"On your post: {t['who']}’s draw-back"
+                                    and t["eye"]["w"] >= 44 and t["eye"]["h"] == 44 and t["eye"]["chip"] == 30 and t["eye"]["under"] >= 10
+                                    and t["eye"]["inCell"] and t["eye"]["hit"] and t["eye"]["word"] == 0 for t in v["tiles"]))
+            check("HER OWN STRIP HAS THE EYES: on her own post each draw-back's tile wears the Gallery tab's eye beside its"
+                  " name, clear of the drawing (its 30px chip 10px or more under the picture, in a button 44px to a finger,"
+                  " painted where it stands), named \"On your post: Sam’s draw-back\" and pressed; her tile 147px tall, a"
+                  " touch phone and a desk",
+                  bool(b_theo and b_uma and b_sam) and all(eyed(v) for v in hers.values()), json.dumps(hers)[:1300])
+            check("...and nobody else's: Theo, Sam (whose draw-back it is) and nobody signed in see the strip as it was, no"
+                  " eye, no line about hidden ones, tiles 125px tall, and none of it in the page's source (no eye, no"
+                  " eye.js, no address to hide one)",
+                  all(v and v["label"] == "3 draw-backs" and v["note"] is None and not v["eyejs"] and v["eyes"] == 0
+                      and all(abs(t["h"] - 125) <= 0.5 and "eye" not in t for t in v["tiles"]) for v in theirs.values())
+                  and marks == {"Theo": [], "nobody": []},
+                  json.dumps({"seen": {k: [v["label"], v["eyes"], v["eyejs"], [t["h"] for t in v["tiles"]]] for k, v in theirs.items()},
+                              "in the source": marks}))
+
+            # ONE TAP: hidden, for her at once and for the site.
+            ACT11 = "() => [...document.querySelectorAll('a.act-row')].map(a => a.textContent.replace(/\\s+/g, ' ').trim())"
+
+            def sam_hears():
+                """Sam's Activity as he would read it now, and whether the bell's dot is lit for him."""
+                ctx_, pg_ = browser_as(b, sam)
+                home(pg_)
+                dot = pg_.evaluate("() => [...document.querySelectorAll('[data-activity]')].map(a => a.getAttribute('aria-label') || '')")
+                pg_.goto(BASE + "/social/activity")
+                ready(pg_)
+                rows = pg_.evaluate(ACT11)
+                close_ctx(ctx_, pg_)
+                return {"rows": rows, "dot": dot}
+            sam_before = sam_hears()
+            ctx, pg = browser_as(b, ana)
+            open_post(pg, cat)
+            pg.evaluate("() => document.querySelector('.db-strip').scrollIntoView({ block: 'center' })")
+            pg.wait_for_timeout(300)
+            eye = f'.db-cell:has(a[href="/social/p/{b_sam}"]) .db-eye'
+            pg.tap(eye)
+            pg.wait_for_timeout(120)
+            at_once = pg.evaluate(STRIP11)
+            pg.wait_for_function("() => !!document.querySelector('.mu-toast.is-up')", timeout=8000)
+            pg.wait_for_timeout(450)
+            rested = pg.evaluate(STRIP11)
+            toast = pg.evaluate("""() => { const t = document.querySelector('.mu-toast.is-up'), u = t && t.querySelector('.mu-undo');
+              return t ? { words: t.querySelector('.mu-toast-words').textContent.trim(), undo: !!u && !u.hidden } : null; }""")
+            covered = pg.evaluate("""() => [...document.querySelectorAll('.db-eye')].filter(e => { const r = e.getBoundingClientRect();
+              const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!at && !!at.closest('.mu-toast'); }).length""")
+            flagged = flag(b_sam)
+
+            def tile(v, who):
+                return next((t for t in (v or {}).get("tiles", []) if t["who"] == who), {})
+            s1, s2 = tile(at_once, "Sam"), tile(rested, "Sam")
+            check("ONE TAP HIDES IT: at once the eye crosses and is no longer pressed, and the page's own counts follow (the"
+                  " label says what everyone else sees, \"2 draw-backs\"; one quiet line under it, \"1 hidden from your post\";"
+                  " the row's pen 2, named so); then the chip says \"Hidden\", the drawing has faded to 55%, the tile's link"
+                  " says \"Sam, hidden from your post\", and the site's toast says \"Hidden. Sam isn’t told.\" with Undo, over"
+                  " no eye; the site has kept it (the draw-back's own flag)",
+                  s1.get("hidden") and s1["eye"]["pressed"] == "false" and at_once["label"] == "2 draw-backs"
+                  and at_once["note"] == "1 hidden from your post" and at_once["pen"] == "2" and at_once["penName"] == "Draw back, 2 draw-backs"
+                  and s2.get("hidden") and s2["plate"] == 0.55 and s2["eye"]["word"] >= 30 and s2["name"] == "Sam, hidden from your post"
+                  and s2["h"] == 147 and all(tile(rested, w).get("plate") == 1 and not tile(rested, w).get("hidden") for w in ("Uma", "Theo"))
+                  and toast == {"words": "Hidden. Sam isn’t told.", "undo": True} and covered == 0 and flagged == [(1,)],
+                  json.dumps({"at once": [s1, at_once["label"], at_once["note"], at_once["pen"], at_once["penName"]], "rested": s2,
+                              "toast": toast, "eyes under the toast": covered, "kept": flagged})[:1300])
+
+            # WHAT EVERYONE ELSE SEES: it is simply not on her post.
+            seen_theo, seen_out, seen_sam = strip_of(theo), strip_of(None), strip_of(sam)
+            ctx2, pg2 = browser_as(b, theo)
+            home(pg2)
+            home_card = pg2.evaluate(CARD, cat)
+            close_ctx(ctx2, pg2)
+            check("FOR EVERYONE ELSE it is not on her post: Theo, nobody signed in and Sam himself see two draw-backs (Uma's"
+                  " and Theo's), the label \"2 draw-backs\", the pen 2 where there is one, on her post's page and on Home's"
+                  " card; no eye, no line about hidden ones",
+                  all(v and v["label"] == "2 draw-backs" and [t["who"] for t in v["tiles"]] == ["Uma", "Theo"] and v["note"] is None
+                      and v["eyes"] == 0 for v in (seen_theo, seen_out, seen_sam))
+                  and seen_theo["pen"] == "2" and seen_sam["pen"] == "2" and home_card and home_card["pen"] and home_card["pen"]["n"] == "2"
+                  and home_card["pen"]["label"] == "Draw back, 2 draw-backs",
+                  json.dumps({"Theo": [seen_theo["label"], [t["who"] for t in seen_theo["tiles"]], seen_theo["pen"]],
+                              "nobody": [seen_out["label"], [t["who"] for t in seen_out["tiles"]]],
+                              "Sam": [seen_sam["label"], [t["who"] for t in seen_sam["tiles"]], seen_sam["pen"]],
+                              "Home's card": home_card and home_card["pen"]}))
+            # WHAT SAM SEES OF HIS OWN: everything it was. Nobody told him.
+            sc = sam.client()
+            his_page, his_post = sc.get("/social/@sam")[1], sc.get(f"/social/p/{b_sam}")
+            ctx3, pg3 = browser_as(b, sam)
+            home(pg3)
+            sam_card = pg3.evaluate(CARD, b_sam)
+            close_ctx(ctx3, pg3)
+            sam_after = sam_hears()
+            check("NOTHING ELSE OF IT CHANGES, AND NOBODY IS TOLD: Sam's draw-back is on his page and on Home, its own page"
+                  " opens (200), its card still says \"Drew back on Ana’s\" with the way to her post; and his Activity"
+                  " reads as it did before she hid it, row for row, the bell's dot as it was",
+                  f"/social/p/{b_sam}" in his_page and his_post[0] == 200 and sam_card and sam_card["on"] == "Drew back on Ana’s"
+                  and (sam_card["who"] or {}).get("href") == f"/social/p/{cat}"
+                  and sam_before == sam_after and not any("hid" in r.lower() for r in sam_after["rows"]),
+                  json.dumps({"on his page": f"/social/p/{b_sam}" in his_page, "its page": his_post[0], "card": sam_card and [sam_card["on"], sam_card["who"]],
+                              "his Activity before": sam_before, "after": sam_after})[:900])
+
+            # UNDO, A RELOAD, AND THE EYE AGAIN.
+            pg.tap(".mu-toast.is-up .mu-undo")
+            pg.wait_for_timeout(900)
+            undone = pg.evaluate(STRIP11)
+            undo_toast = pg.evaluate("() => { const t = document.querySelector('.mu-toast.is-up'); return t ? t.querySelector('.mu-toast-words').textContent.trim() : null; }")
+            undo_flag = flag(b_sam)
+            pg.wait_for_timeout(400)
+            pg.tap(eye)
+            pg.wait_for_function("() => !!document.querySelector('.mu-toast.is-up')", timeout=8000)
+            pg.wait_for_timeout(300)
+            open_post(pg, cat)
+            reloaded = pg.evaluate(STRIP11)
+            pg.evaluate("() => document.querySelector('.db-strip').scrollIntoView({ block: 'center' })")
+            pg.wait_for_timeout(300)
+            pg.tap(eye)
+            pg.wait_for_timeout(900)
+            again = pg.evaluate(STRIP11)
+            again_flag = flag(b_sam)
+            check("UNDO BRINGS IT BACK (\"Back on your post.\", the label 3 again, the line gone, the pen 3, the flag cleared);"
+                  " hidden again it stays hidden through a reload, on her strip alone, faded with its eye crossed, so she"
+                  " can find it; and the eye brings it back any time after",
+                  not tile(undone, "Sam").get("hidden") and undone["label"] == "3 draw-backs" and undone["note"] is None and undone["pen"] == "3"
+                  and undo_toast == "Back on your post." and undo_flag == [(0,)]
+                  and tile(reloaded, "Sam").get("hidden") and tile(reloaded, "Sam")["plate"] == 0.55 and tile(reloaded, "Sam")["eye"]["pressed"] == "false"
+                  and reloaded["label"] == "2 draw-backs" and reloaded["note"] == "1 hidden from your post" and reloaded["pen"] == "2"
+                  and len(reloaded["tiles"]) == 3
+                  and not tile(again, "Sam").get("hidden") and again["label"] == "3 draw-backs" and again_flag == [(0,)],
+                  json.dumps({"undone": [tile(undone, "Sam").get("hidden"), undone["label"], undone["note"], undone["pen"], undo_toast, undo_flag],
+                              "reloaded": [tile(reloaded, "Sam"), reloaded["label"], reloaded["note"], reloaded["pen"]],
+                              "again": [tile(again, "Sam").get("hidden"), again["label"], again_flag]})[:1300])
+
+            # EVERY ONE HIDDEN: nothing on her post for anybody else; hers to bring back.
+            for who_ in (b_theo, b_uma, b_sam):
+                c_ = ana.client()
+                c_.get(f"/social/p/{cat}")
+                c_.post_json(f"/social/p/{who_}/shown", {"shown": False})
+            all_hers, all_theirs = strip_of(ana), strip_of(theo)
+            check("WITH EVERY ONE HIDDEN nobody else has a strip on her post at all (no label over nothing, the pen with no"
+                  " number); she has no label either, the one line \"3 hidden from your post\" and the three, faded, each"
+                  " with its eye",
+                  all_theirs["strip"] is False and all_theirs["pen"] == "" and all_theirs["penName"] == "Draw back"
+                  and all_hers["strip"] and all_hers["label"] is None and all_hers["note"] == "3 hidden from your post"
+                  and len(all_hers["tiles"]) == 3 and all(t["hidden"] and t["plate"] == 0.55 and t.get("eye") for t in all_hers["tiles"])
+                  and all_hers["pen"] == "",
+                  json.dumps({"hers": [all_hers["label"], all_hers["note"], [t["hidden"] for t in all_hers["tiles"]], all_hers["pen"]],
+                              "Theo's": all_theirs}))
+            c_ = ana.client()
+            c_.get(f"/social/p/{cat}")
+            for who_ in (b_theo, b_uma):
+                c_.post_json(f"/social/p/{who_}/shown", {"shown": True})
+
+            # ITS GUARDS: hers alone, and only a draw-back that is on a post.
+            ac, tc, smc, nc = ana.client(), theo.client(), sam.client(), Client()
+            for c_ in (ac, tc, smc, nc):
+                c_.get(f"/social/p/{cat}")
+            plain = post_payload(ana, "Section 11, not a draw-back", drawing(n=12, seed=114))
+            gone_orig = post_payload(ana, "Section 11, an original to delete", drawing(n=12, seed=115))
+            orphan = (draw_back(theo, gone_orig, answer(n=8, seed=116))[1] or {}).get("post")
+            ac.post_json(f"/social/p/{gone_orig}/delete", {})
+            asked = {"no token": ac.post_json(f"/social/p/{b_sam}/shown", {"shown": True}, token=False)[0],
+                     "signed out": nc.post_json(f"/social/p/{b_sam}/shown", {"shown": True})[0],
+                     "somebody else": tc.post_json(f"/social/p/{b_sam}/shown", {"shown": True})[0],
+                     "its own maker": smc.post_json(f"/social/p/{b_sam}/shown", {"shown": True})[0],
+                     "not a draw-back": ac.post_json(f"/social/p/{plain}/shown", {"shown": False})[0],
+                     "its original gone": tc.post_json(f"/social/p/{orphan}/shown", {"shown": False})[0],
+                     "no true or false": ac.post_json(f"/social/p/{b_sam}/shown", {})[0],
+                     "words": ac.post_json(f"/social/p/{b_sam}/shown", {"shown": "no"})[0],
+                     "the Gallery's word": ac.post_json(f"/social/p/{b_sam}/shown", {"gallery": False})[0]}
+            kept = [flag(b_sam), flag(plain), flag(orphan)]
+            db_write("update social_posts set taken_down_at = datetime('now') where public_id = ?", (b_sam,))
+            asked["taken down"] = ac.post_json(f"/social/p/{b_sam}/shown", {"shown": True})[0]
+            db_write("update social_posts set taken_down_at = null where public_id = ?", (b_sam,))
+            good = ac.post_json(f"/social/p/{b_sam}/shown", {"shown": True})
+            check("its guards: the page's token (403), signed in (401), hers alone (somebody else, and the draw-back's own"
+                  " maker: 404), only a draw-back that is on a post (a plain post, one whose original is gone: 404), a true"
+                  " or false in its own word (400), never what was taken down (404); none of them changing anything; and"
+                  " hers answers how many her post shows",
+                  asked == {"no token": 403, "signed out": 401, "somebody else": 404, "its own maker": 404, "not a draw-back": 404,
+                            "its original gone": 404, "no true or false": 400, "words": 400, "the Gallery's word": 400, "taken down": 404}
+                  and kept == [[(1,)], [(0,)], [(0,)]] and good[0] == 200 and good[1] == {"ok": True, "shown": True, "n": 3},
+                  f"{asked}; kept {kept}; hers {good}")
+
+            # THE WORDS AND THE EYE AS PAINTED, light and dark.
+            import io as _io11
+            from PIL import Image as _Im11
+
+            def lum11(c):
+                v = [x / 255 for x in c[:3]]
+                v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+                return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+            def best11(pg_, sel):
+                """The most contrasting pixel in `sel` against the colour most of it is."""
+                im = _Im11.open(_io11.BytesIO(pg_.locator(sel).first.screenshot(animations="disabled"))).convert("RGB")
+                ground = max(im.getcolors(im.size[0] * im.size[1]))[1]
+                top = 0.0
+                for _n, c in im.getcolors(im.size[0] * im.size[1]):
+                    hi, lo = max(lum11(c), lum11(ground)), min(lum11(c), lum11(ground))
+                    top = max(top, (hi + 0.05) / (lo + 0.05))
+                return round(top, 2)
+            ac.post_json(f"/social/p/{b_sam}/shown", {"shown": False})
+            paint = {}
+            for scheme in ("light", "dark"):
+                ctx4, pg4 = browser_as(b, ana, scheme=scheme, reduced=True, dpr=2)
+                open_post(pg4, cat)
+                pg4.evaluate("() => document.querySelector('.db-strip').scrollIntoView({ block: 'center' })")
+                pg4.wait_for_timeout(400)
+                paint[scheme] = {"hidden chip": best11(pg4, ".db-cell.is-hidden .gal-eye-chip"), "open eye": best11(pg4, ".db-cell:not(.is-hidden) .gal-eye-chip"),
+                                 "the line": best11(pg4, ".db-note"), "the label": best11(pg4, ".db-strip .db-title")}
+                close_ctx(ctx4, pg4)
+            ac.post_json(f"/social/p/{b_sam}/shown", {"shown": True})
+            check("the eye and \"Hidden\" read at 4.5:1 or more on their chip, and \"1 hidden from your post\" and the label on"
+                  " the page, off the painted pixels, light and dark",
+                  all(v >= 4.5 for d in paint.values() for v in d.values()), json.dumps(paint))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(11, exc)
 
     # ----------------------------------------------------------------- 10
     if part(10, "no page errors, no console errors and no CSP violations"):

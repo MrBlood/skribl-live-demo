@@ -297,7 +297,9 @@ def drawbacks(posts, viewer):
     "who"} of the post it answers, or {"gone": True} once that post is not
     there for this viewer; with "own" when it is its maker's own}}. Counted
     as the comments are counted: nothing
-    taken down, and nobody either side of a block with the viewer."""
+    taken down, and nobody either side of a block with the viewer. AND
+    NOTHING ITS MAKER HID FROM HER POST (Her say, Nov 20: drawn_on_hidden_at),
+    for anybody, her too: the count is what everyone sees."""
     from .models import Block
     ids = [p.id for p in posts if getattr(p, "id", None) is not None]
     out = {"n": {}, "on": {}}
@@ -306,7 +308,8 @@ def drawbacks(posts, viewer):
     sess = site().session()
     q = (sa.select(Post.drawn_on_id, sa.func.count(Post.id))
          .join(Person, Person.id == Post.person_id)
-         .where(Post.drawn_on_id.in_(ids), Post.taken_down_at.is_(None), Person.taken_down_at.is_(None)))
+         .where(Post.drawn_on_id.in_(ids), Post.taken_down_at.is_(None), Person.taken_down_at.is_(None),
+                Post.drawn_on_hidden_at.is_(None)))
     if viewer is not None:
         q = q.where(~sa.exists().where(sa.or_(sa.and_(Block.blocker_id == viewer.id, Block.blocked_id == Post.person_id),
                                               sa.and_(Block.blocker_id == Post.person_id, Block.blocked_id == viewer.id))))
@@ -1017,8 +1020,11 @@ def register(bp, skribl_blueprint="skribl"):
         lk = for_maker(on, me) if not card["down"] else None
         # DRAW-BACKS ON IT (Draw back, step 2): newest first, a strip of their
         # drawings under the row, each opening its own page; nobody hidden
-        # from this viewer, nothing taken down.
-        backs = []
+        # from this viewer, nothing taken down. HER SAY (Nov 20): one its
+        # maker hid from her post (drawn_on_hidden_at) is on nobody's strip
+        # but her own, where it stays, faded, with its eye, so she can bring
+        # it back. `shown` is how many everyone sees, `hidden` hers alone.
+        backs, shown, hidden = [], 0, 0
         if card["kind"] == "p":
             from .safety import hidden_ids
             hid = sorted(hidden_ids(me))
@@ -1027,10 +1033,14 @@ def register(bp, skribl_blueprint="skribl"):
                  .order_by(Post.created_at.desc(), Post.id.desc()).limit(BACKS))
             if hid:
                 q = q.where(Post.person_id.notin_(hid))
+            if not card["mine"]:
+                q = q.where(Post.drawn_on_hidden_at.is_(None))
             got = site().session().execute(q).all()
             backs = [c for c in cards([_entry(pp, who) for pp, who in got], me, words=False) if c and c["sk"]]
+            hidden = sum(1 for c in backs if c["post"].drawn_on_hidden_at is not None)
+            shown = len(backs) - hidden
         # The page's token for everybody: Report is anybody's (piece 5).
-        return _page("post.html", here="post", card=card, backs=backs,
+        return _page("post.html", here="post", card=card, backs=backs, backs_shown=shown, backs_hidden=hidden,
                      share_url=public_origin() + card["url"], token=csrf_token(), cm=cm, lk=lk,
                      signin_here=url_for("social.signin", next=card["url"]))
 
@@ -1051,10 +1061,11 @@ def register(bp, skribl_blueprint="skribl"):
         sess.flush()
         return jsonify({"ok": True, "go": url_for("social.home", note="deleted")})
 
-    def _eye_asked():
+    def _eye_asked(key="gallery"):
         """(me, in the Gallery or not), or the refusal: the eye's guards, as
         every change's (the token and Origin, signed in, the limit), and a
-        body that says {"gallery": true} or false."""
+        body that says {"gallery": true} or false (`key`: a draw-back's eye
+        on her strip says {"shown": ...})."""
         if not origin_ok() or not token_ok():
             return None, None, _json_error("stale", 403)
         me = current_person()
@@ -1063,10 +1074,36 @@ def register(bp, skribl_blueprint="skribl"):
         if over("gallery", "person|" + me.public_id):
             return None, None, _json_error("limited", 429)
         body = request.get_json(silent=True)
-        want = body.get("gallery") if isinstance(body, dict) else None
+        want = body.get(key) if isinstance(body, dict) else None
         if not isinstance(want, bool):
             return None, None, _json_error("bad", 400)
         return me, want, None
+
+    @bp.post("/p/<public_id>/shown")
+    @_rests(json_answer=True)
+    def drawback_shown(public_id):
+        """HER SAY, THE EYE ON HER OWN STRIP (the owner's "All yes to
+        everything", Nov 20, to the Her say mock): a draw-back shown on the
+        post it draws back on, or hidden from it ({"shown": false}), by that
+        post's maker alone. The site's own flag on the draw-back
+        (drawn_on_hidden_at): it leaves her post's strip and its count, for
+        everybody, and nothing else of it changes (its maker's page, Home,
+        its own page, its credit). Nobody is told. One taken down is
+        nobody's to change; one whose original is gone has no post to be
+        on. Answers how many her post shows now."""
+        me, want, refusal = _eye_asked("shown")
+        if refusal is not None:
+            return refusal
+        sess = site().session()
+        row = sess.execute(sa.select(Post).where(Post.public_id == public_id)).scalar_one_or_none()
+        if (row is None or not row.is_drawback or row.drawn_on_id is None or row.drawn_on_owner_id != me.id
+                or row.taken_down_at is not None):
+            return _json_error("gone", 404)
+        row.drawn_on_hidden_at = None if want else (row.drawn_on_hidden_at or utcnow())
+        sess.flush()
+        orig = sess.get(Post, row.drawn_on_id)
+        n = drawbacks([orig], me)["n"].get(orig.id, 0) if orig is not None else 0
+        return jsonify({"ok": True, "shown": want, "n": n})
 
     @bp.post("/p/<public_id>/gallery")
     @_rests(json_answer=True)

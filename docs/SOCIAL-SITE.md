@@ -3129,3 +3129,53 @@ Draw back, the strip and the replay's end (6, 7, 9), `verify_socialposts`
 that More from is gone (3, 9). NOT TESTED HERE: Safari on an iPhone, where
 the bar stands on the bottom bar above the home indicator and the keyboard
 rises under the sheet; the owner's phone is the test.
+
+## 24. Built: Her say, hiding a draw-back from your own post (Nov 20)
+
+Approved on Nov 19 ("she may hide a draw-back from her post"), mocked on Nov
+20 (the artifact "Her Say"), and answered that morning: "All yes to
+everything." Four of its seven picks are this section; the other three (who
+can draw back) are the next.
+
+**The eye, on your own strip.** On your own post's page each draw-back's
+tile wears the eye your Gallery tab has, the same button and the same two
+drawings (`_gallery.html`'s, `eye.js`). It sits BESIDE THE NAME, never on the
+picture: the tiles are 132px wide and what somebody drew back is often in a
+corner. So your tile is 147px tall (the name's line is the eye's 44px) where
+everyone else's stays 125. Here the chip is on the page, not on a drawing, so
+it wears the second button's lilac with the eye in the small violet ink.
+
+**One tap** hides that draw-back from your post. At once the eye crosses,
+its chip says "Hidden", the drawing fades to 55%, and your page's own counts
+follow: the label says what everyone else sees ("2 draw-backs"), one quiet
+line under it says how many are hidden, yours alone ("1 hidden from your
+post"), and the row's pen says one fewer. The site's toast says "Hidden. Sam
+isn’t told." with Undo, never over an eye. The hidden one stays on your own
+strip, faded, so you can find it: its eye brings it back any time ("Back on
+your post.").
+
+**For everyone else it is simply not on your post**: not in the strip, not
+in its label, not in the pen's count, on your post's page and on Home's
+card. With every one hidden nobody else has a strip there at all; you have
+the one line and the faded tiles.
+
+**Nothing else of it changes, and nobody is told.** It is still its maker's
+post: on their page, on Home, on its own page, still saying "Drew back on
+Ana’s" with the way to yours, still playing yours and then theirs. Its
+maker sees it gone from your strip, as everyone does. No Activity row, no
+dot, no nudge. Nothing is deleted.
+
+**How it is kept:** the site's own flag on the draw-back
+(`social_posts.drawn_on_hidden_at`, migration `a4c9e1b7d352`), set through
+`/social/p/<its id>/shown` (`posts.drawback_shown`) with `{"shown": false}`.
+Yours alone: the maker of the post it draws back on, with the page's token;
+anybody else, its own maker among them, is answered 404, as is a post that
+is no draw-back, one whose original is gone, and one taken down. `drawbacks()`
+leaves it out of every count; the strip's read leaves it out for everybody
+but you.
+
+**Nobody else has any of it:** no eye, no hidden tile, no line, no `eye.js`,
+no address to hide one, in the page or its source.
+
+`verify_socialdrawback` 11 holds it. The Pad and Flip: nothing of theirs.
+NOT TESTED HERE: Safari on an iPhone.
