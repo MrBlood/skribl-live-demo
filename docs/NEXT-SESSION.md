@@ -236,6 +236,12 @@ AFTER THAT FIX before believing main is green.
 THE OWNER'S "ALL YES, GO" (Nov 20, about 6:50 AM): the eight calls no mock
 showed are decided as built (`DECISIONS.md`, "The owner's All yes to the
 eight"), and Her say is mocked (item 1 of "What is still to build", above).
+A POST WITH NOTHING UNDER IT YET, MOCKED (the owner's picture of Nov 20,
+"busy and disorganized"; `DECISIONS.md`, "A post with nothing under it
+yet"; https://claude.ai/artifact/1aQvBWEmTpBaMReRM8nEmD): three ways, the
+pick one quiet line and two buttons where two empty headings stand. WAITING
+ON THE OWNER'S ANSWER; nothing built. The owner's words are in
+`WORKING-AGREEMENTS.md` ("Never busy, never confusing").
 THE SESSION STOPPED ON THE OWNER'S USAGE LIMIT at about 10:25 PM, with
 those two runs unread, and nothing moved until the owner wrote at 5:56 AM.
 The owner's rule since: come back and finish without being asked

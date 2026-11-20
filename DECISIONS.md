@@ -48616,3 +48616,58 @@ post of words alone, cannot be drawn back on yet and would not show the
 setting.
 
 NOT TESTED: Safari on an iPhone, SF or Segoe UI.
+
+## After v330 -- A post with nothing under it yet, mocked ("busy and disorganized")
+
+THE OWNER, Nov 20, about 7:15 AM, with a picture of a post's page on their
+iPhone in dark (a replay just ended, no draw-backs, no comments, "More from"
+under it): "This page has no drawbacks or comments. It seems busy and
+disorganized. When there are comments and drawbacks it looks better and
+makes sense. What are some ways we can make it feel better when no comments
+or drawbacks are present. I don't want anything to ever look busy and
+confusing". A QUESTION, SO A MOCK: nothing is built.
+
+THE TARGET, said first: the foot of a post's page when it has no draw-backs
+and no comments (the "No draw-backs yet" line and its button, the
+"Comments" heading and its round button, "Say the first thing").
+
+WHY IT READS BUSY, counted on the page (a touch phone, 402): between the
+time-and-plays line and "More from" there are two bold headings with
+nothing under them and three things to press, a pill, a round button and a
+link, each a different shape in a different place, in 213px. With the
+replay ended, "Draw back" is on the screen three times (the purple pill on
+the drawing, the pen in the row, the strip's button) and commenting three
+times (the row's bubble, the round button, the link). On a desk the heading
+"No draw-backs yet" breaks onto two lines beside its button.
+
+THE PAGE THE OWNER WAS SENT: https://claude.ai/artifact/1aQvBWEmTpBaMReRM8nEmD
+("Empty Post Page"). The owner's own screen first (the test copy's page with
+its replay let run to the end, as theirs was), then three ways:
+- A, ONE INVITATION (the pick): the two empty sections fold into one quiet
+  line, "Nobody’s answered yet.", and the two ways to answer side by side in
+  one shape, Say something and Draw back (the site's small button, which
+  "Draw back" wears today). No headings. 119px.
+- B, TWO QUIET LINES: "No draw-backs yet · Draw back" and "No comments yet ·
+  Say the first thing", small grey words and the small violet link. 124px.
+- C, NOTHING AT ALL: the row's bubble and pen are the ways in. It gives up
+  "Draw back" in words on a fresh post, the owner's own choice of Nov 19.
+AND WHEN ONLY ONE IS EMPTY, the same rule: the one with something in it as
+today, the empty one a single quiet line (pictured for comments and no
+draw-backs).
+
+THE RULE UNDER ALL THREE, put to the owner as such: a heading shows only
+when there is something under it; an empty section is an invitation, said
+once, quietly. It would hold for a drawing shown outside a post and for a
+comment's own page ("Replies"), which are the same template.
+
+SAID PLAINLY ON THE PAGE: with A, "Draw back" is still on the screen three
+times once a replay ends (C makes it two); commenting goes from three to
+two.
+
+THREE CHOICES ARE WITH THE OWNER, each with a pick: which way when both are
+empty; the quiet line when one is; the words. Every new word reads 9.89:1
+or more in dark and 7.1:1 or more in light on what is painted behind it;
+every target is 44px to a finger; no colour or token is new.
+
+FLIP AND THE PAD: not for either. NOT TESTED: Safari on an iPhone, SF or
+Segoe UI.
