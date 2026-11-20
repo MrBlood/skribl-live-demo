@@ -822,7 +822,7 @@ with sync_playwright() as p:
         pg.click("nav.nav .tab-make")
         pg.wait_for_timeout(700)
         sheet = pg.evaluate("""() => ({ open: document.getElementById('composeSheet').classList.contains('is-open'),
-          field: document.activeElement === document.querySelector('#composeSheet [data-compose-words]') })""")
+          field: document.activeElement === document.querySelector('#composeSheet .make-sheet') })""")
         # The button's own click: a sheet that never opened is this row's red,
         # not a stop at a hidden button.
         pg.evaluate("() => document.querySelector('#composeSheet [data-compose-post]').click()")
@@ -833,8 +833,8 @@ with sync_playwright() as p:
         npg.wait_for_timeout(400)
         nobody = npg.evaluate("() => ({ hello: !!document.querySelector('.hello'), composer: !!document.querySelector('[data-compose-row], #composeSheet') })")
         close_ctx(nctx, npg)
-        check("Home signed in has no box at the top (the owner's \"All yes\", Nov 14): Make opens the composer, its"
-              " field ready; an empty feed says to tap Make, kindly; there Post with nothing said or drawn says what is"
+        check("Home signed in has no box at the top (the owner's \"All yes\", Nov 14): Make opens the composer, on a"
+              " touch phone calm, focus on the sheet itself; an empty feed says to tap Make, kindly; there Post with nothing said or drawn says what is"
               " missing and sends nothing; signed out, Home is the first visit, as before",
               home["box"] == 0 and sheet == {"open": True, "field": True}
               and home["none"] == "No posts yet. Tap the pencil to share your first one."

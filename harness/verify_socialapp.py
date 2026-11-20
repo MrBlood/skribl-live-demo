@@ -1430,7 +1430,7 @@ with sync_playwright() as pw:
             pg.evaluate("() => document.querySelector('.how-rows .how-row').scrollIntoView({ block: 'center' })")
             pg.tap(".how-rows .how-row >> nth=0")
             pg.wait_for_timeout(900)
-            made = pg.evaluate("() => ({ open: SocialComposer.isOpen(), at: location.pathname, focus: document.activeElement.hasAttribute('data-compose-words'),"
+            made = pg.evaluate("() => ({ open: SocialComposer.isOpen(), at: location.pathname, focus: document.querySelector('#composeSheet .make-sheet').contains(document.activeElement),"
                                " seen: getComputedStyle(document.querySelector('#composeSheet .make-sheet')).visibility })")
             close_ctx(ctx, pg)
             ctx, pg = browser_as(b, None)
@@ -1442,7 +1442,7 @@ with sync_playwright() as pw:
             ask = [["Post a drawing", "The pencil, then Draw"], ["Answer a drawing with a drawing", "Draw back: the pen under any drawing"],
                    ["Comment with a drawing", "The speech bubble, then Draw"], ["Draw your face", "On your profile"]]
             check("People often ask, signed in: four rows, the question over its answer, each 60px and more with a chevron,"
-                  " each going where it is done: Post a drawing opens the composer on this page, its words in focus; the"
+                  " each going where it is done: Post a drawing opens the composer on this page, focus in it; the"
                   " two about answering go to Home's Everyone; Draw your face to your profile",
                   [r["words"] for r in rows_in[0]] == ask and all(r["h"] >= 60 and r["go"] for r in rows_in[0])
                   and [(r["tag"], r["href"], r["make"]) for r in rows_in[0]] == [("BUTTON", None, True), ("A", "/social/?tab=everyone", False),

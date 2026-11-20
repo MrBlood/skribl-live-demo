@@ -2010,7 +2010,11 @@ a phone it rises almost to the top and rides above the keyboard (social.js's
 SocialKeyboard, which a comment's sheet shares: it reads the keyboard again
 until it rests, since a phone can report a size the keyboard only passes
 through and then say nothing; the owner's iPhone, Nov 14); on a desk it is
-a 600px card in the middle. Cancel at the top left, Post at the top
+a 600px card in the middle. ON A PHONE IT OPENS CALM (the owner, Nov 20, with
+two pictures: "Ours opens like 1st shot and should start like 2nd
+screenshot"): the sheet itself takes focus, at its full height, and the
+keyboard comes when the words are tapped; with a keyboard of its own (a
+desk) the words take focus as it opens. Cancel at the top left, Post at the top
 right, dim until there are words or a drawing; your face beside "Say something…";
 the drawing under the words, playing, with Edit drawing and Remove; Draw,
 Flip and Yours along the bottom, and the characters left (500). Draw and

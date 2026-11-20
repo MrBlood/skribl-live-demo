@@ -420,7 +420,7 @@ SHEET = """() => { const w = document.getElementById('composeSheet'); if (!w) re
   const att = window.SocialComposer ? SocialComposer.attached() : null;
   return { open: !w.hidden && w.classList.contains('is-open'), hidden: w.hidden, role: s.getAttribute('role'),
     modal: s.getAttribute('aria-modal'), focusIn: !!a && s.contains(a),
-    focus: !a ? null : a.matches('[data-compose-words]') ? 'words' : (a.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 24) || a.tagName,
+    focus: !a ? null : a === s ? 'the sheet' : a.matches('[data-compose-words]') ? 'words' : (a.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 24) || a.tagName,
     inert: ['body > .top', 'body > .nav', '#main'].map(q => { const e = document.querySelector(q); return !!e && e.hasAttribute('inert'); }),
     top: Math.round(r.top * 10) / 10, bottom: Math.round(r.bottom * 10) / 10, left: Math.round(r.left), right: Math.round(r.right),
     width: Math.round(r.width), opacity: +getComputedStyle(s).opacity, att,
@@ -627,7 +627,8 @@ with sync_playwright() as p:
                         got = pg.evaluate(SHEET)
                         where[(screen, path)] = (before is not None and not before["open"] and not before["two"]
                                                  and got["open"] and got["role"] == "dialog" and got["modal"] == "true"
-                                                 and got["focus"] == "words" and all(got["inert"]) and got["expanded"]
+                                                 and got["focus"] == ("the sheet" if screen == "phone" else "words")
+                                                 and all(got["inert"]) and got["expanded"]
                                                  and all(x == "true" for x in got["expanded"]))
                         if not where[(screen, path)]:
                             where[(screen, path)] = {"before": before, "after": got}
@@ -635,10 +636,59 @@ with sync_playwright() as p:
                         where[(screen, path)] = {"stopped": str(exc).splitlines()[0][:100]}
                 close_ctx(ctx, pg)
             check("signed in, every page with the bar carries the composer and no two-door sheet, and Make opens it: the"
-                  " bar's on a touch phone, the rail's on a desk; a modal dialog, the words' field focused, the page behind"
+                  " bar's on a touch phone, the rail's on a desk; a modal dialog; focus on the sheet itself on a touch phone"
+                  " (no keyboard asked for: the owner, Nov 20) and on the words' field on a desk; the page behind"
                   " inert (Home, the Gallery, Activity, your page, a post's page, Settings)",
                   len(where) == 12 and all(v is True for v in where.values()),
                   json.dumps({f"{k[0]} {k[1]}": v for k, v in where.items() if v is not True})[:900])
+            # A PHONE OPENS IT CALM (the owner, Nov 20, with two pictures of
+            # the composer on their iPhone: "Ours opens like 1st shot and
+            # should start like 2nd screenshot"). The words took focus as the
+            # sheet rose, so the phone raised its keyboard over half of it
+            # before anybody had chosen to type. What can be asked here, with
+            # no phone keyboard in this box: WHAT HAS FOCUS. A keyboard comes
+            # for a field in focus and for nothing else, so on a touch phone
+            # nothing that takes typing may hold it as the sheet opens.
+            CALM = """() => { const w = document.getElementById('composeSheet'), s = w.querySelector('.make-sheet'), a = document.activeElement;
+              const words = w.querySelector('[data-compose-words]'), r = s.getBoundingClientRect(), foot = w.querySelector('.cmp-tools').getBoundingClientRect();
+              return { open: w.classList.contains('is-open'), on: a === s ? 'the sheet' : a === words ? 'the words' : a ? a.tagName : null,
+                       typing: !!a && (a.matches('input, textarea, select') || a.isContentEditable),
+                       named: (document.getElementById(s.getAttribute('aria-labelledby')) || {}).textContent || null,
+                       ring: getComputedStyle(s).outlineStyle !== 'none' && parseFloat(getComputedStyle(s).outlineWidth) > 0,
+                       kb: getComputedStyle(w).getPropertyValue('--cmp-kb').trim() || '0',
+                       foot: Math.round(innerHeight - foot.bottom), bottom: Math.round(innerHeight - r.bottom), tall: Math.round(r.height), screen: innerHeight }; }"""
+            calm = {}
+            for screen in ("phone", "desk"):
+                ctx, pg = browser_as(b, mira, screen)
+                try:
+                    go(pg, "/social/")
+                    open_composer(pg, screen)
+                    calm[screen] = pg.evaluate(CALM)
+                    if screen == "phone":
+                        # ...and the words take it when they are tapped, as a person would.
+                        pg.tap("#composeSheet [data-compose-words]")
+                        pg.wait_for_timeout(300)
+                        calm["tapped"] = pg.evaluate(CALM)["on"]
+                        # Put away and opened again: calm again, not where it was left.
+                        pg.keyboard.press("Escape")
+                        pg.wait_for_timeout(700)
+                        open_composer(pg, screen)
+                        calm["again"] = pg.evaluate(CALM)["on"]
+                except Exception as exc:  # noqa: BLE001 -- the row's red
+                    calm[screen] = {"stopped": str(exc).splitlines()[0][:120]}
+                close_ctx(ctx, pg)
+            ph, dk = calm.get("phone") or {}, calm.get("desk") or {}
+            check("a touch phone opens the composer CALM (the owner, Nov 20): focus is on the sheet itself, the dialog \"Make a"
+                  " post\", so nothing that takes typing holds it and no keyboard is asked for; no ring round the sheet; it"
+                  " stands at its full height, its foot on the screen's own, the tools within a row of it; a tap on the words"
+                  " gives them focus, and opened again it is calm again",
+                  bool(ph.get("open") and ph.get("on") == "the sheet" and ph.get("typing") is False and ph.get("named") == "Make a post"
+                       and ph.get("ring") is False and ph.get("kb") in ("0", "0px") and ph.get("bottom") == 0
+                       and 0 <= (ph.get("foot") if ph.get("foot") is not None else -1) <= 40 and (ph.get("tall") or 0) >= 0.85 * (ph.get("screen") or 1e9)
+                       and calm.get("tapped") == "the words" and calm.get("again") == "the sheet"),
+                  json.dumps({k: calm.get(k) for k in ("phone", "tapped", "again")}))
+            check("...and on a desk, where the keyboard is its own, the words take focus as the composer opens, as they did",
+                  bool(dk.get("open") and dk.get("on") == "the words" and dk.get("typing") is True), json.dumps(dk))
             rests = {}
             for screen in ("phone", "desk"):
                 ctx, pg = browser_as(b, mira, screen)
@@ -669,10 +719,10 @@ with sync_playwright() as p:
             by_make = pg.evaluate(SHEET)
             close_ctx(ctx, pg)
             check("Home has no box at the top: nothing of one in the page, its pill the first thing under the header and its"
-                  " posts under the pill, and the bar's Make opens the composer with the field focused (the owner's \"All"
-                  " yes\", Nov 14)",
+                  " posts under the pill, and the bar's Make opens the composer (the owner's \"All yes\", Nov 14), on a"
+                  " touch phone with focus on the sheet itself",
                   home["box"] == 0 and not home["say"] and home["pill"] is not None and 0 <= home["pill"] <= 24
-                  and home["card"] is not None and 0 <= home["card"] <= 24 and by_make["open"] and by_make["focus"] == "words",
+                  and home["card"] is not None and 0 <= home["card"] <= 24 and by_make["open"] and by_make["focus"] == "the sheet",
                   f"Home {home}; by Make {by_make and {k: by_make[k] for k in ('open', 'focus')}}")
             nctx, npg = browser_as(b, None)
             go(npg, "/social/")
@@ -1338,7 +1388,8 @@ with sync_playwright() as p:
             qsid = quinn.skribl("Quinn's drawing, outside a post", seed=92)
             OPEN = """() => { const w = document.getElementById('composeSheet'), q = w.querySelector('[data-compose-quote]');
               const c = q.querySelector('.qt-card'), words = w.querySelector('[data-compose-words]'), post = w.querySelector('[data-compose-post]');
-              return { open: w.classList.contains('is-open') && !w.hidden, focus: document.activeElement === words,
+              return { open: w.classList.contains('is-open') && !w.hidden,
+                focus: document.activeElement === words ? 'the words' : document.activeElement === w.querySelector('.make-sheet') ? 'the sheet' : 'elsewhere',
                 placeholder: words.getAttribute('placeholder'), shown: !q.hidden, tag: c ? c.tagName : null,
                 href: c ? c.getAttribute('href') : null, name: c ? (c.querySelector('.qt-name') || {}).textContent : null,
                 words: c ? (c.querySelector('.qt-words') || {}).textContent : null, pic: !!(c && c.querySelector('.qt-pic img')),
@@ -1380,9 +1431,11 @@ with sync_playwright() as p:
                 close_ctx(ctx, pg)
             o, d, w = got[("phone", "opened")], got[("phone", "pressed dim")], got[("phone", "with words")]
             check("the repost sheet's Quote opens the composer with the post small under the words (Quinn's name, words"
-                  " and drawing, no link there), the words' field focused, \"Add your words, or draw something…\", Post"
+                  " and drawing, no link there), calm on a touch phone (focus on the sheet itself, as Make opens it) and"
+                  " the words' field focused on a desk, \"Add your words, or draw something…\", Post"
                   " dim; a press on it says what is missing and sends nothing; words wake it (phone and desk)",
-                  all(got[(s, "opened")]["open"] and got[(s, "opened")]["focus"] and got[(s, "opened")]["shown"]
+                  all(got[(s, "opened")]["open"] and got[(s, "opened")]["focus"] == ("the sheet" if s == "phone" else "the words")
+                      and got[(s, "opened")]["shown"]
                       and got[(s, "opened")]["placeholder"] == "Add your words, or draw something…"
                       and got[(s, "opened")]["tag"] == "DIV" and got[(s, "opened")]["href"] is None
                       and got[(s, "opened")]["name"] == "Quinn Ash" and got[(s, "opened")]["words"] == "Quinn's to be quoted"
