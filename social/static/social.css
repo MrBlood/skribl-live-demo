@@ -1454,6 +1454,14 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   display: flex; flex-direction: column; max-width: 640px; overflow: hidden;
   height: calc(100% - max(5vh, env(safe-area-inset-top) + 8px));
 }
+/* UNDER A DRAFT'S EDITOR (compose.js, draft; the owner's "All yes", Nov 19):
+   a draft's tile on your profile opens this sheet with the editor over it.
+   The sheet is there to hold what Add brings, so until then it is not
+   painted, and neither is its scrim (the page dims once, by the editor's).
+   On a desk the two cards faded in together and this one showed through the
+   editor's for a moment; on a phone it would under Reduce Motion. */
+.cmp.is-under .make-sheet { visibility: hidden; }
+.cmp.is-under .make-scrim { opacity: 0; }
 .cmp-view { display: flex; flex: 1; flex-direction: column; min-height: 0; }
 .cmp-view[hidden] { display: none; }
 .cmp-top { display: flex; flex: none; align-items: center; gap: 8px; height: 64px; }

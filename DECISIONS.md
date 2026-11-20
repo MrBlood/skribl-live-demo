@@ -48153,3 +48153,73 @@ pill at all), and `--brand` made a pale lilac (row two: 2.12 on a card,
 
 NOT FOR FLIP OR THE PAD: the site's own icon; the editors have no Draw
 back pen. NOT TESTED: Safari on an iPhone.
+
+## After v330 -- A draft's tile on your profile opens inside a post (choice 4); a posted draft stays a draft (choice 5)
+
+THE SEAM THE WALK FOUND (the entry before last): a draft's tile on the
+profile's Drafts tab was a plain link to `/skribl-pad?draft=...` (or
+`/flip?draft=...`), the editor by itself: no bar of the site's, no way
+back, its button "Post to Skribl", which makes a drawing outside any post.
+THE OWNER'S "All yes" (Nov 19): it opens the draft inside a post, as the
+same tile already does in "Use one you made".
+
+BUILT (`compose.js`, `SocialComposer.draft`; one delegated click on
+`a.gal-tile.is-draft[data-draft]`). A tap opens the composer's sheet with
+the editor that made the draft over it, `openDraft` as the picker's tile
+uses it, Pad or Flip. The tile is still a link to the editor's own address:
+a new tab, a new window, or a page without the script opens it there, and
+`verify_socialprofile` 16 still reads that address by going to it.
+
+THREE THINGS THE MOCK DID NOT SPELL OUT, DECIDED HERE AND TOLD TO THE OWNER:
+- PUT AWAY WITHOUT ADD, THE SHEET GOES TOO, and you are on your drafts as
+  you were (the editor's own ×; on a desk a tap beside its card). The
+  picker's tile comes back to the picker because that is where you were;
+  from the profile, an empty "Say something..." sheet under the editor you
+  just closed is a place you never asked for. `SocialPadOverlay` has a new
+  `onAway` for it (composehost's cancel, and the scrim's tap).
+- ONLY THE EDITOR IS SEEN RISING. As first built the sheet and the editor
+  rose together, and on a phone the editor covers the sheet on every frame
+  (same curve, and the sheet's top never above the editor's). On a desk the
+  two are cards that fade in at once, and at a seventh of the speed the
+  sheet's "Say something..." showed through the editor's card for a
+  moment. So the sheet is NOT PAINTED until Add brings something, nor its
+  scrim (`.cmp.is-under`; the page dims once, by the editor's), and it is
+  seen the moment the draft comes back, under the editor as it goes. It
+  cannot take focus either while unseen, so a phone's keyboard does not
+  come up under the editor: a flag written for that first never changed a
+  reading and was taken out.
+- WITH A DRAWING ATTACHED ALREADY the tile opens the sheet on it and says
+  "A post holds one drawing. Remove this one to use another.", the words a
+  tool already says there.
+STILL TRUE AND NOT CHANGED: the editor's × is labelled "Close -- back to
+your post" for a screen reader, and from a tile it goes back to your
+drafts; the label is the editor's own and does not know which door opened
+it.
+
+A POSTED DRAFT STAYS A DRAFT (5): the owner's yes to leaving it as it is.
+Nothing built.
+
+THE CHECK (`verify_socialprofile`, a new section 20), EVERY ROW SHOWN RED:
+a tap keeps the address and opens the right editor with the draft on its
+canvas, Add its button, the words never focused (counted); on every frame
+from the tap until it rests nothing of the sheet is painted, and the
+editor moves one way over many frames (a phone, a desk, Reduce Motion, the
+Pad and Flip); put away without Add both are gone, focus on the tile, and
+Make after that opens the sheet seen; Add brings it attached and seen; a
+second tile says a post holds one. Red: the click not taken (all four
+rows); no `onAway` (the sheet left open and unseen over a page out of
+reach: rows three and four); the hold off, and each of its two rules off
+the sheet (row two, and row one once the words could take focus); the hold
+kept after Add (row four) and after the sheet has gone (row three: Make
+opened it unseen); the second tile opening an editor (row four); the
+scrim's tap not said (rows two and three); and the editor made to jump,
+its transitions off (row two: no frame between closed and open).
+ONE RED THAT WAS THE CHECK'S: beside two other copies of the suite the
+desk's rise failed "six frames in a new place" with five: its card moves
+28px in 0.28s. The reading now counts a frame as changing when the editor
+stands somewhere new OR is more solid than the frame before, four or more
+(a jump has one), and passed twice under that same load.
+
+FLIP AND THE PAD: no change to either editor; `social.js`'s overlay and
+the site's composer only. A Flip draft opens in Flip the same way.
+NOT TESTED: Safari on an iPhone (the keyboard there, above all).

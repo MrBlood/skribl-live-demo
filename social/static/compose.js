@@ -57,6 +57,21 @@
  * it back attached, the words in place under the editor as it goes. A
  * drawing is attached at once, as it is.
  *
+ * A DRAFT'S TILE ON YOUR PROFILE (the owner's "All yes", Nov 19, to the walk
+ * of Save and Drafts): the tile on your Drafts tab was a plain link to the
+ * editor by itself, out of the site with no way back, its button "Post to
+ * Skribl". A tap on it now opens the draft INSIDE A POST, as the picker's
+ * own tile does (window.SocialComposer.draft, below): this sheet opens with
+ * the editor over it, and until Add brings something the sheet is NOT
+ * PAINTED, nor its scrim (.is-under, social.css): the editor is all that is
+ * seen rising, on a phone and on a desk, where two cards fading in at once
+ * showed this one through the editor's for a moment. Add brings the draft
+ * back attached, the sheet there under the editor as it goes; put away
+ * without Add (its ×, a tap beside a desk's card) the sheet goes with it,
+ * still unseen, and you are back on your drafts, where you were. The tile
+ * is still a link to the editor's own address: a new tab, or a page without
+ * this script, opens it there.
+ *
  * MENTIONS (the owner's "All yes", Nov 15): an @ typed in the words shows the
  * list of people under the line, mentions.js's, as in a comment's box.
  *
@@ -105,12 +120,15 @@
   var player = null;    // its player (SkriblInline)
   var sending = false;
   var view = 'write';
+  var tiled = null;     // the editor a draft's tile ON THE PAGE opened with this sheet (draft, below)
 
   var openers = all('[data-make]', doc);
   var sheet = window.SocialSheet(wrap, {
     openers: openers, doorCloses: false, ownTouch: '.cmp-scroll, .cmp-lists',
     first: function () { return view === 'pick' ? backBtn : words; },
     onSettled: function () {
+      /* Gone with a draft's editor, unseen to the end: seen again next time. */
+      wrap.classList.remove('is-under');
       /* Put away, it opens on the words next time. */
       if (view !== 'write') show('write', true);
       tell(pickSay, '');
@@ -199,7 +217,20 @@
     var kind = chip.getAttribute('data-compose-open');
     var over = window.SocialPadOverlay ? window.SocialPadOverlay(doc.getElementById(kind === 'flip' ? 'composeFlip' : 'composePad'), {
       openers: [chip],
-      onDone: function (payload) { attachPayload(payload, over); }
+      onDone: function (payload) {
+        /* What a draft's tile opened this sheet to hold has come: seen now,
+           under the editor as it goes. */
+        tiled = null;
+        wrap.classList.remove('is-under');
+        attachPayload(payload, over);
+      },
+      /* Put away without Add. A draft's tile on the page opened this sheet
+         only to hold what Add brings: with nothing brought, it goes too. */
+      onAway: function () {
+        if (tiled !== over) return;
+        tiled = null;
+        sheet.close();
+      }
     }) : null;
     overs[kind] = over;
     chip.addEventListener('click', function () {
@@ -482,6 +513,41 @@
       });
   }
 
+  /* ---- a draft's tile on the page: the draft, inside a post -------------------- */
+  /* draft({ id, kind, from }): a draft's id, the editor that made it ('pad'
+     or 'flip') and the tile. A post of your own, as Make's is: nothing
+     quoted, nothing drawn back on. With a drawing attached already the sheet
+     opens on it and says a post holds one. True when it took the tap. */
+  function draft(o) {
+    if (sending || !o || !o.id) return false;
+    var over = overs[o.kind === 'flip' ? 'flip' : 'pad'];
+    if (!over) return false;
+    if (back) { if (att) unattach(); drawingBack(null); }
+    if (quoted) setQuote(null);
+    if (view !== 'write') show('write', true);
+    tell(sayBox, '');
+    tiled = att ? null : over;
+    /* Under the editor, the sheet is not painted until Add (the header):
+       set before it opens, so its words cannot take focus either (nothing
+       unseen can), and a phone's keyboard does not come up under the
+       editor. */
+    wrap.classList.toggle('is-under', !!tiled);
+    sheet.open(o.from || null);
+    lift();
+    grow();
+    if (att) { tell(sayBox, say('one_drawing')); return true; }
+    over.openDraft(o.id, o.from || null);
+    return true;
+  }
+  /* The tile is a link (the editor's own address with ?draft=<id>): a plain
+     tap or click is taken here; a new tab, a new window or a download is the
+     link's own. */
+  doc.addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('a.gal-tile.is-draft[data-draft]') : null;
+    if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (draft({ id: a.getAttribute('data-draft'), kind: a.getAttribute('data-kind'), from: a })) e.preventDefault();
+  });
+
   /* ---- opening it ----------------------------------------------------------- */
   openers.forEach(function (o) {
     o.addEventListener('click', function (e) {
@@ -503,6 +569,7 @@
      what takes focus back. */
   window.SocialComposer = {
     open: function (from) { sheet.open(from || null); lift(); grow(); },
+    draft: draft,
     drawBack: drawBack,
     drawingBack: function () { return back ? { id: back.id, first: back.first, own: !!back.own, ready: !!back.payload } : null; },
     quote: function (o) {
