@@ -18,6 +18,9 @@
    lives on the profile page since v304. #}
 <link rel="stylesheet" href="{{ skribl_asset('posted.css') }}">
 <link rel="stylesheet" href="{{ skribl_asset('flip.css') }}">
+{# handover.css: Your hand's layer over the editor (lib/handover.js), inside a
+   post only, as on the Pad. #}
+{% if compose %}<link rel="stylesheet" href="{{ skribl_asset('handover.css') }}">{% endif %}
 {% include 'skribl/_skribl_app_identity.html' %}
 {# The Home Screen app only (lib/offline.js): opening with no signal, and
    offering a reload when the server has a newer build than this page. #}
@@ -671,7 +674,9 @@
   <script src="{{ skribl_asset('lib/savedrafts.js') }}" defer></script>
   {# lib/chromefit.js and lib/canvassizes.js load in the head (_skribl_fit_boot.html): the canvas is laid out before it paints. #}
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
-  {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>{% endif %}
+  {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>
+  {# Your hand, over the editor, inside a post: as on the Pad (lib/handover.js). #}
+  <script src="{{ skribl_asset('lib/handover.js') }}" defer></script>{% endif %}
   {% if not compose %}{{ hs.steps() }}{% endif %}
 {{ mark_templates() }}
 </body>

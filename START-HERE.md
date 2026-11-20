@@ -73,7 +73,7 @@ here is the rule you can break tomorrow.
 | A 404 from DELETE means UNKNOWN. The client must not turn it into success. | `verify_posted.py` |
 | The player carries no editor-only module. | `verify_player_isolation.py` |
 | Your hand (`/skribl-pad?letters=1`) keeps no Pad draft and leaves the Pad's brush and mirror as they were; a letter changed (put back as ink, fitted to the screen; the eraser cuts its points, every point left keeping its time) replaces the old one only on Done; a posted set, whole or not, reads back to its letters by the one layout rule `editor_letters.js` and `harness/tools/letterfont.py` share. | `verify_letters.py` |
-| Text is ink, not type: nothing is drawn or recorded until Write it; the words go in as ordinary strokes, each point at the time the plan gave it on the editor's clock, forward only; one Undo takes the line back; Mirror never copies them. One module (`lib/textwrite.js`) for both editors. | `verify_text.py` |
+| Text is ink, not type: nothing is drawn or recorded until Write it; the words go in as ordinary strokes, each point at the time the plan gave it on the editor's clock, forward only; one Undo takes the line back; Mirror never copies them. One module (`lib/textwrite.js`) for both editors. INSIDE A POST (compose mode) MAKE YOURS AND EDIT YOUR HAND GO NOWHERE (the owner's "All yes", Nov 19): Your hand opens in a layer OVER the editor (`lib/handover.js`, `handover.css`, both editors), so the editor's address and its drawing are the same before, under and after, its button still Add; Your hand, told it is over one (`?over=1`, a face's Pad `over=face`), says where the drawing is, leaves out Post your letters, and every way out of it asks that editor to close the layer (one message, taken only from the frame it opened); the layer glides up and down, and fades where it sits under Reduce Motion, past the editors' own rule that stops every transition there. On the editors' own pages the page still goes to Your hand, its draft keeping the drawing. | `verify_text.py` (23 for the layer), `verify_composer.py` (10) |
 | The player's JS stays under its ratchet, measured on what is SERVED (comments stripped), not what is on disk. | `verify_jsstrip.py`, `verify_player_isolation.py` |
 | `[hidden]` is honoured on every control that uses it. | `verify_layout.py`, `verify_help.py`, `verify_move.py` |
 | No readable text uses a token that fails WCAG AA. | `verify_a11ypages.py` |
@@ -872,6 +872,7 @@ rather than a shared rule.
 | `framebitmap.js` | Flip+player | Frame bitmaps — a painted page is rasterised once per playback, shared rule. |
 | `fullbar.js` | library+gallery+in-post+host gallery | The full-screen bar: one transport, and the SAME one on both surfaces. |
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
+| `handover.js` | Pad+Flip | YOUR HAND, OVER THE EDITOR: for the Pad or Flip inside a host's post (compose mode). |
 | `handwords.js` | Pad+Flip | YOUR HAND'S WORDS on an empty canvas (the owner's pick after the "Empty canvas ideas" mock): "Draw anything" on the Pad and "Draw page 1" on Flip, in the owner's own hand. |
 | `headerglass.js` | Pad+Flip | The header's ground, only while the drawing is under it. |
 | `hello.js` | Pad+Flip | Skribl says hi: the first time Skribl opens, on any screen (FUTURE.md 6m). |

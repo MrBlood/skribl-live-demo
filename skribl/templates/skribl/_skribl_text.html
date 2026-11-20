@@ -10,13 +10,25 @@
    The lettering is fetched the first time the drawer opens, from the files
    named here (harness/tools/make_textfonts.py makes them). Make yours and
    Edit your hand go to Your hand (editor_letters.js), which comes back here
-   with Write with it. `text_from` is the editor this is in. #}
+   with Write with it. `text_from` is the editor this is in.
+
+   INSIDE A POST (compose) they do not go anywhere: Your hand opens over the
+   editor, in the layer at the foot of this file, and the drawing under it is
+   never unloaded (lib/handover.js; the owner's "All yes", Nov 19). #}
 {% set part = part|default('drawer') %}
 {% if part == 'place' %}
 <div class="tx-place" id="txPlace" hidden>
   <span class="tx-drag" aria-hidden="true">Drag to move</span>
   <canvas class="tx-preview" id="txPreview" aria-hidden="true"></canvas>
 </div>
+{% if compose %}
+{# YOUR HAND, OVER THE EDITOR (lib/handover.js, handover.css): compose mode
+   alone. Its frame is made when it opens and taken out when it has gone, so
+   nobody who never opens Your hand loads it. #}
+<div class="hand-over" id="handOver" role="dialog" aria-modal="true" aria-label="Your hand" data-title="Your hand" hidden>
+  <p class="hand-over-wait">Opening Your hand&hellip;</p>
+</div>
+{% endif %}
 {% else %}
 {# While the words are typed on a phone the drawer sits on the keyboard, out
    of the page's flow; this keeps its room, so the page does not move. #}

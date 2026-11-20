@@ -1,0 +1,42 @@
+/* YOUR HAND, OVER THE EDITOR (lib/handover.js; the owner's "All yes", Nov 19).
+ * Compose mode alone, so this sheet is linked there alone, by the Pad and by
+ * Flip: none of it reaches the editors' own pages or the player, and the
+ * player's stylesheet budget never sees it (as letters.css and labels.css).
+ *
+ * The layer covers the editor's whole frame (a phone's screen, a desk's
+ * card) on the paper Your hand's own pages wear, so what is under it does
+ * not show through while Your hand loads. It glides up from the foot and
+ * back down, as the editor itself rose over the post (the same curve, 0.34s
+ * up and 0.24s down); under Reduce Motion it fades where it sits. Until Your
+ * hand has loaded it says so, quietly, in the middle, and Your hand then
+ * fades in over the words: nothing appears at a stroke. */
+.hand-over {
+  position: fixed; inset: 0; z-index: 2147483000; overflow: hidden;
+  background: var(--menu-paper); color: var(--text-secondary);
+  transform: translateY(100%); transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hand-over[hidden] { display: none; }
+.hand-over.is-open { transform: none; }
+.hand-over.is-closing { transition-duration: 0.24s; transition-timing-function: cubic-bezier(0.4, 0, 1, 1); }
+.hand-over-wait {
+  position: absolute; top: 50%; left: 16px; right: 16px; margin: 0; transform: translateY(-50%);
+  font-size: 16px; line-height: 1.45; text-align: center; transition: opacity 0.2s ease;
+}
+.hand-over.is-ready .hand-over-wait { opacity: 0; }
+.hand-over-frame {
+  position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent;
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.hand-over.is-ready .hand-over-frame { opacity: 1; }
+/* REDUCE MOTION: it stays where it sits and fades. The editors' own sheet
+   stops every transition there (styles.css, "Reduced motion": its drawers
+   are simply there and simply gone), which for this layer would swap the
+   whole screen at a stroke, and did when it was first read on every frame.
+   !important is the only way past that rule, and it is used for these three
+   fades alone. */
+@media (prefers-reduced-motion: reduce) {
+  .hand-over, .hand-over.is-open { transform: none; }
+  .hand-over { opacity: 0; transition: opacity 0.2s ease !important; }
+  .hand-over.is-open { opacity: 1; }
+  .hand-over-wait, .hand-over-frame { transition: opacity 0.2s ease !important; }
+}

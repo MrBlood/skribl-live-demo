@@ -114,12 +114,29 @@ Thickness and Speed as tiles. Each row holds a promise:
      snail and the rabbit either side of it in the tile's grey; the pictures
      follow the theme and the pen, and a white pen on the light tile still
      shows. Pad and Flip.
+ 23. YOUR HAND INSIDE A POST (the owner's "All yes", Nov 19: "Your hand
+     opens over your post, and your drawing waits for you"). In compose mode
+     Make yours and Edit your hand used to GO to Your hand: the drawing was
+     gone and Close came back to the editor by itself. Now Your hand opens
+     in a layer OVER the editor (lib/handover.js): the editor's address and
+     its drawing are the same before, under and after, point for point, its
+     button still Add; the layer glides up and back down, read on every
+     frame (a fade under Reduce Motion), the editor under it out of reach;
+     Your hand says "Your drawing is waiting in your post." in the small
+     violet ink, 14px and 600, one line, clear of Close, 4.5:1 or more off
+     what is painted, and does not offer Post your letters; Close, Done and
+     Finish later take the layer away, its frame with it, and Text is chosen
+     again, Yours once there is a hand, a letter drawn there counted; a
+     message from anywhere but that frame closes nothing; and Your hand
+     opened by itself, with or without the flag, is as it always was. Pad
+     and Flip, one module.
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
 """
 import json
 import os
+import re
 import sys
 import urllib.request
 from pathlib import Path
@@ -1612,6 +1629,278 @@ with sync_playwright() as p:
                   all(v and v["dark"] > 40 for v in pics.values()),
                   "; ".join(f"{k}: {v['dark']} places darker than the tile" for k, v in pics.items() if v))
             c.close()
+
+    # ------------------------------------------------------------------ 23
+    # YOUR HAND INSIDE A POST (the owner's "All yes", Nov 19). The trap, as
+    # walked: inside a host's composer "+ Make yours" (and "Edit your hand")
+    # took the frame to Your hand; compose keeps no draft, so 126 strokes
+    # became none, and Close came back to the editor by itself, "Post to
+    # Skribl" where "Add to post" was. Now Your hand opens OVER the editor
+    # and the editor never leaves. Read here on the editor in compose mode,
+    # which is all the editor's side of it is (the frame a host holds it in
+    # changes nothing of this); the site's own composer has its row in
+    # verify_composer.
+    if part("TEXT 23 — your hand inside a post"):
+        import io
+        from PIL import Image
+        WAITING = "Your drawing is waiting in your post."
+        # Every frame: [ms, the layer's top (None while it is not shown), how solid]
+        WATCH = """() => { window.__hand = []; const t0 = performance.now(), l = document.getElementById('handOver');
+          (function step() { window.__hand.push([Math.round(performance.now() - t0), l.hidden ? null : Math.round(l.getBoundingClientRect().top * 10) / 10,
+                                                 l.hidden ? null : Math.round(+getComputedStyle(l).opacity * 100) / 100]);
+            if (performance.now() - t0 < 1300) requestAnimationFrame(step); })(); }"""
+        EDITOR = """() => { const l = document.getElementById('handOver'), fr = l.querySelector('iframe'), head = document.querySelector('.header, .flip-header, header');
+          const mid = document.elementFromPoint(innerWidth / 2, innerHeight / 2), on = document.querySelector('#txStyles .on');
+          return { at: location.pathname + location.search, add: document.getElementById('postBtn').textContent.replace(/\\s+/g, ' ').trim(),
+                   up: !!window.SkriblHandOver && SkriblHandOver.isOpen(), shown: !l.hidden, frames: l.querySelectorAll('iframe').length,
+                   src: fr ? fr.getAttribute('src') : null, front: !!fr && mid === fr,
+                   inert: [...document.body.children].filter(e => e !== l && e.tagName !== 'SCRIPT' && e.getClientRects().length && !e.hasAttribute('inert')).map(e => e.id || e.className).slice(0, 4),
+                   held: document.querySelectorAll('body > [inert]').length,
+                   waitInk: getComputedStyle(l.querySelector('.hand-over-wait')).color, paper: getComputedStyle(l).backgroundColor,
+                   waitSays: l.querySelector('.hand-over-wait').textContent, waitSize: getComputedStyle(l.querySelector('.hand-over-wait')).fontSize,
+                   text: !!window.SkriblText && SkriblText.isOpen(), style: on ? on.getAttribute('data-style') : null,
+                   note: document.getElementById('txNote').textContent, focus: document.activeElement === fr ? 'Your hand' : (document.activeElement.id || document.activeElement.tagName) }; }"""
+        HANDPAGE = """() => { const w = document.getElementById('ltPageWait'), d = document.querySelector('.lt-ptop .lt-pdone'), sub = document.getElementById('ltPageSub');
+          const cs = w && getComputedStyle(w), wr = w && w.getBoundingClientRect(), dr = d && d.getBoundingClientRect();
+          const probe = document.createElement('i'); probe.style.color = 'var(--accent-ink)'; document.body.appendChild(probe);
+          const violet = getComputedStyle(probe).color; probe.remove();
+          return { view: SkriblLetters.view(), over: window.SKRIBL_LETTERS_OVER || null, at: location.pathname + location.search,
+                   wait: w ? w.textContent : null, size: cs ? cs.fontSize : null, weight: cs ? cs.fontWeight : null, ink: cs ? cs.color : null, violet,
+                   lines: w ? Math.round(wr.height / parseFloat(cs.lineHeight)) : null, clear: w && d ? Math.round(dr.left - wr.right) : null,
+                   under: w && sub ? wr.top >= sub.getBoundingClientRect().bottom - 0.5 : null,
+                   done: d ? d.textContent : null, quiet: [...document.querySelectorAll('.lt-quiet button')].map(b => b.textContent) }; }"""
+
+        def lum(c):
+            v = [x / 255 for x in c[:3]]
+            v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+            return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+        def painted_ratio(fr, sel):
+            """The words' ink (computed) against the colour most of their own
+            picture is: what is painted behind them."""
+            el = fr.locator(sel).first
+            im = Image.open(io.BytesIO(el.screenshot(animations="disabled"))).convert("RGB")
+            ground = max(im.getcolors(im.size[0] * im.size[1]))[1]
+            ink = [float(x) for x in fr.evaluate("(s) => getComputedStyle(document.querySelector(s)).color.match(/[\\d.]+/g)", sel)[:3]]
+            a, g = lum(ink), lum(ground)
+            return round((max(a, g) + 0.05) / (min(a, g) + 0.05), 2)
+
+        def hand_frame(q, timeout=20):
+            """Your hand, in the layer: its frame once the page in it is up."""
+            import time as _t
+            end = _t.time() + timeout
+            while _t.time() < end:
+                fr = next((f for f in q.frames if f != q.main_frame and "letters=1" in (f.url or "")), None)
+                if fr:
+                    try:
+                        fr.wait_for_function("() => !!window.SkriblLetters && ['start', 'tiles', 'ready', 'draw'].includes(SkriblLetters.view())",
+                                             timeout=1500)
+                        return fr
+                    except Exception:  # noqa: BLE001 -- not up yet
+                        pass
+                q.wait_for_timeout(150)
+            return None
+
+        def judged(frames, rising, glide=True):
+            """The layer on every frame: up, it ends at the top and solid;
+            away, it ends gone; one way all the way, never a leap (the suite's
+            own glides); under Reduce Motion it stays where it sits and fades
+            over several frames."""
+            shown = [f for f in frames if f[1] is not None]
+            end_ok = (bool(shown) and frames[-1][1] is not None and abs(frames[-1][1]) <= 0.5 and frames[-1][2] == 1) if rising \
+                else (bool(shown) and frames[-1][1] is None)
+            if glide:
+                ok, why = glides([(f[1], f[0]) for f in shown], not rising)
+            else:
+                fades = len({f[2] for f in shown})
+                ok, why = (all(abs(f[1]) <= 0.5 for f in shown) and fades >= 4), f"{fades} strengths, never moved"
+            return {"ok": bool(ok and end_ok), "why": why, "frames": len(frames), "ends": frames[-1]}
+
+        seen = {}
+        for key, ed, hand, dev, theme, reduce in (
+                ("pad, no hand yet", "pad", None, PHONE, "light", False),
+                ("flip, a hand of 30", "flip", hand_seed(QUICK), PHONE, "light", False),
+                ("pad, a hand, a desk in dark", "pad", hand_seed(QUICK), DESK, "dark", False),
+                ("flip, no hand, Reduce Motion", "flip", None, PHONE, "light", True)):
+            got = seen[key] = {"ed": ed, "hand": hand is not None}
+            c, q = open_editor(b, ed, theme=theme, dev=dev, hand=hand, reduce=reduce, query="compose=1")
+            try:
+                draw_line(q, 0.25, 0.3, 0.7, 0.42)
+                draw_line(q, 0.3, 0.5, 0.75, 0.36)
+                got["drawn"] = q.evaluate(POINTS[ed], 0)
+                got["before"] = q.evaluate(EDITOR)
+                choose_text(q)
+                waited(q, "() => SkriblText.isOpen()")
+                q.wait_for_timeout(300)
+                q.evaluate(WATCH)
+                q.click("#txEdit" if hand else '#txStyles [data-style="yours"]')
+                fr = hand_frame(q)
+                q.wait_for_timeout(1400)
+                got["rise"] = judged(q.evaluate("() => window.__hand"), True, glide=not reduce)
+                got["up"] = q.evaluate(EDITOR)
+                got["under"] = q.evaluate(POINTS[ed], 0) == got["drawn"]
+                got["page"] = fr.evaluate(HANDPAGE) if fr else None
+                got["ratio"] = painted_ratio(fr, "#ltPageWait") if fr and got["page"]["wait"] else None
+                # A message that is not Your hand's own closes nothing.
+                q.evaluate("() => window.postMessage({ type: 'skribl:hand:close' }, location.origin)")
+                q.wait_for_timeout(700)
+                got["stranger"] = q.evaluate(EDITOR)["up"]
+                if key == "flip, a hand of 30":
+                    # A letter drawn there, kept: the 31st.
+                    fr.click('.lt-tile[data-id="A"]')
+                    fr.wait_for_function("() => SkriblLetters.view() === 'draw' && !!SkriblLetters.box()", timeout=10000)
+                    bx = fr.evaluate("""() => { const b = SkriblLetters.box(), r = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize();
+                      return [r.left + (b.x + b.w * 0.5) * r.width / lg.width, r.top + (b.y + b.h * 0.3) * r.height / lg.height, b.h * r.height / lg.height]; }""")
+                    q.mouse.move(bx[0], bx[1])
+                    q.mouse.down()
+                    for i in range(1, 12):
+                        q.mouse.move(bx[0] + i, bx[1] + bx[2] * 0.04 * i)
+                        q.wait_for_timeout(8)
+                    q.mouse.up()
+                    q.wait_for_timeout(200)
+                    fr.click("#ltNext")
+                    fr.wait_for_function("() => SkriblLetters.view() === 'tiles'", timeout=10000)
+                    got["tiles after a letter"] = fr.evaluate(HANDPAGE)
+                if key == "pad, no hand yet":
+                    # Start with a, then Finish later: that way out too.
+                    fr.click("text=Start with a")
+                    fr.wait_for_function("() => SkriblLetters.view() === 'draw'", timeout=10000)
+                    q.wait_for_timeout(300)
+                    q.evaluate(WATCH)
+                    fr.click("#ltLater")
+                else:
+                    q.evaluate(WATCH)
+                    fr.click(".lt-ptop .lt-pdone")
+                q.wait_for_timeout(1500)
+                got["fall"] = judged(q.evaluate("() => window.__hand"), False, glide=not reduce)
+                waited(q, "() => SkriblText.isOpen()", 6000)
+                q.wait_for_timeout(300)
+                got["after"] = q.evaluate(EDITOR)
+                got["kept"] = q.evaluate(POINTS[ed], 0) == got["drawn"]
+                got["errors"] = q._tx_errors[:3]
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                got["stopped"] = str(exc).splitlines()[0][:200]
+            c.close()
+
+        def nice(v, *keys):
+            return {k: v.get(k) for k in keys}
+        for key, v in seen.items():
+            ed, up, after, page = v["ed"], v.get("up") or {}, v.get("after") or {}, v.get("page") or {}
+            home = ROUTE[ed] + "?theme=" + ("dark" if "dark" in key else "light") + "&compose=1"
+            check(f"{key}: Your hand opens OVER the editor: the editor's address is the same, its drawing under the layer"
+                  " point for point, its button still Add; the layer in front, holding focus, its one frame Your hand"
+                  " saying which editor and that it is over one; everything of the editor under it out of reach",
+                  bool(len(v.get("drawn") or []) > 20 and up.get("at") == home and v.get("under") and up.get("add", "").startswith("Add")
+                       and up.get("up") and up.get("shown") and up.get("frames") == 1 and up.get("front") and up.get("focus") == "Your hand"
+                       and "letters=1" in (up.get("src") or "") and f"back={ed}" in up["src"] and up["src"].endswith("over=1")
+                       and up.get("inert") == [] and up.get("held", 0) > 0 and not v.get("stopped")),
+                  json.dumps({"points": len(v.get("drawn") or []), "same under": v.get("under"), "up": up, "stopped": v.get("stopped")})[:700])
+            check(f"{key}: it glides up over the editor and back down, read on every frame"
+                  + (" (under Reduce Motion a fade where it sits)" if "Reduce" in key else "")
+                  + ": one way all the way, never a leap, ending at rest and then gone",
+                  bool((v.get("rise") or {}).get("ok") and (v.get("fall") or {}).get("ok")), json.dumps(nice(v, "rise", "fall")))
+            want_view = "tiles" if v["hand"] else "start"
+            check(f"{key}: Your hand says \"{WAITING}\" under its own line, in the small violet ink, 14px and 600, one line,"
+                  " 8px or more clear of its button, 4.5:1 or more off what is painted; and Post your letters is not offered"
+                  " (it posts to Skribl, not to this post)",
+                  bool(page.get("view") == want_view and page.get("over") == "post" and page.get("wait") == WAITING and page.get("under")
+                       and page.get("size") == "14px" and page.get("weight") == "600" and page.get("ink") == page.get("violet")
+                       and page.get("lines") == 1 and (page.get("clear") or 0) >= 8 and (v.get("ratio") or 0) >= 4.5
+                       and "Post your letters" not in (page.get("quiet") or ["Post your letters"])
+                       and (not v["hand"] or page.get("quiet") == ["Save a copy", "Open a copy", "Start over"])),
+                  json.dumps({"page": page, "ratio": v.get("ratio")})[:700])
+            want_note = "" if not v["hand"] else f"Your hand, {31 if key == 'flip, a hand of 30' else 30} of 92 letters"
+            check(f"{key}: " + ("Finish later" if key == "pad, no hand yet" else "Done") + " takes the layer away, its frame"
+                  " with it, nothing left out of reach; the editor is where it was, the drawing point for point, Add its"
+                  " button, and Text is chosen again" + (", Yours with it and its letters counted" if v["hand"] else "")
+                  + "; a message from anywhere but Your hand's frame had closed nothing; no errors",
+                  bool(after.get("at") == home and v.get("kept") and after.get("add", "").startswith("Add") and not after.get("up")
+                       and not after.get("shown") and after.get("frames") == 0 and after.get("held") == 0 and after.get("text")
+                       and after.get("style") == ("yours" if v["hand"] else after.get("style")) and after.get("note") == want_note
+                       and v.get("stranger") is True and not v.get("errors") and not v.get("stopped")),
+                  json.dumps({"same after": v.get("kept"), "after": after, "a stranger's message left it up": v.get("stranger"),
+                              "errors": v.get("errors"), "stopped": v.get("stopped")})[:700])
+        # While Your hand loads the layer says so, on its own solid paper.
+        waits = {}
+        for key, v in seen.items():
+            u = v.get("up") or {}
+            ink = [float(x) for x in re.findall(r"[\d.]+", u.get("waitInk") or "")[:4]]
+            paper = [float(x) for x in re.findall(r"[\d.]+", u.get("paper") or "")[:4]]
+            solid = len(paper) == 3 or (len(paper) == 4 and paper[3] == 1)
+            a, g = (lum(ink), lum(paper)) if len(ink) >= 3 and len(paper) >= 3 else (0, 0)
+            waits[key] = {"says": u.get("waitSays"), "size": u.get("waitSize"), "paper solid": solid,
+                          "ratio": round((max(a, g) + 0.05) / (min(a, g) + 0.05), 2)}
+        check("while Your hand loads, the layer says \"Opening Your hand…\" at 16px on its own solid paper, 4.5:1 or more"
+              " (light and dark)",
+              all(w["says"] == "Opening Your hand…" and w["size"] == "16px" and w["paper solid"] and w["ratio"] >= 4.5
+                  for w in waits.values()) and len(waits) == 4, json.dumps(waits))
+        letter = seen["flip, a hand of 30"].get("tiles after a letter") or {}
+        check("a letter drawn in the layer is kept (31 of 92 on its own page, the line still there), and the Text drawer"
+              " counts it once the layer has gone: the two read one store",
+              (letter.get("view") == "tiles" and letter.get("wait") == WAITING
+               and (seen["flip, a hand of 30"].get("after") or {}).get("note") == "Your hand, 31 of 92 letters"),
+              json.dumps({"its page": nice(letter, "view", "wait"), "the drawer": (seen["flip, a hand of 30"].get("after") or {}).get("note")}))
+        # OVER A FACE BEING DRAWN (a host's ?face=1, compose too): no post to
+        # name, so the line does not name one.
+        c, q = open_editor(b, "pad", query="compose=1&face=1")
+        face = {}
+        try:
+            draw_line(q, 0.3, 0.3, 0.7, 0.6)
+            n0 = q.evaluate(COUNT["pad"])
+            choose_text(q)
+            waited(q, "() => SkriblText.isOpen()")
+            q.wait_for_timeout(300)
+            q.click('#txStyles [data-style="yours"]')
+            fr = hand_frame(q)
+            q.wait_for_timeout(900)
+            face = fr.evaluate(HANDPAGE) if fr else {}
+            face["src"] = q.evaluate("() => (document.querySelector('#handOver iframe') || { getAttribute: () => null }).getAttribute('src')")
+            fr.click(".lt-ptop .lt-pdone")
+            q.wait_for_timeout(1300)
+            face["same"] = q.evaluate(COUNT["pad"]) == n0 and n0[0] > 5
+            face["gone"] = q.evaluate("() => document.getElementById('handOver').hidden")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            face["stopped"] = str(exc).splitlines()[0][:160]
+        c.close()
+        check("over a face being drawn (a host's ?face=1) it is the same layer, and its line names no post: \"Your drawing"
+              " is waiting for you.\"; Close leaves the face's drawing as it was",
+              bool(face.get("over") == "face" and face.get("wait") == "Your drawing is waiting for you."
+                   and (face.get("src") or "").endswith("over=face") and face.get("same") and face.get("gone")),
+              json.dumps(nice(face, "over", "wait", "src", "same", "gone", "stopped")))
+        # BY ITSELF, AS IT ALWAYS WAS: Your hand's own page, and the same page
+        # given the flag with no editor over it (a link somebody kept): no
+        # line, Post your letters offered, and Done GOES back to the Pad.
+        alone = {}
+        for key, query in (("its own address", "letters=1&back=pad"), ("the flag, no editor over it", "letters=1&back=pad&over=1")):
+            c = b.new_context(**PHONE)
+            c.add_init_script("if (!sessionStorage.getItem('tx-seeded')) { sessionStorage.setItem('tx-seeded', '1');"
+                              + "localStorage.setItem(%s, %s);}" % (json.dumps(HAND), json.dumps(json.dumps(hand_seed(QUICK)))))
+            q = c.new_page()
+            try:
+                browsing.goto(q, BASE, "/skribl-pad?" + query)
+                q.wait_for_function("() => !!window.SkriblLetters && SkriblLetters.view() === 'tiles'", timeout=15000)
+                alone[key] = q.evaluate(HANDPAGE)
+                q.click(".lt-ptop .lt-pdone")
+                alone[key]["went"] = waited(q, "() => !window.SkriblLetters && !!window.SkriblText && typeof shapeKind !== 'undefined' && shapeKind === 'text'")
+                alone[key]["to"] = q.evaluate("() => location.pathname + location.search")
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                alone[key] = dict(alone.get(key) or {}, stopped=str(exc).splitlines()[0][:160])
+            c.close()
+        check("Your hand by itself is as it always was, at its own address and with the flag but no editor over it: no"
+              " line about a post, Post your letters offered, and Done goes back to the Pad with Text chosen",
+              all(v.get("wait") is None and v.get("quiet") == ["Save a copy", "Open a copy", "Start over", "Post your letters"]
+                  and v.get("went") and v.get("to") == "/skribl-pad" for v in alone.values()) and len(alone) == 2,
+              json.dumps({k: nice(v, "wait", "quiet", "went", "to", "stopped") for k, v in alone.items()}))
+        # ...and on the editors' own pages (not inside a post) Make yours
+        # GOES to Your hand, as it always did: TEXT 11 reads that trip. Here,
+        # only that the layer and its module are not there to take it.
+        c, q = open_editor(b, "pad")
+        own = q.evaluate("() => ({ module: !!window.SkriblHandOver, layer: !!document.getElementById('handOver'),"
+                         " sheet: [...document.styleSheets].some(s => (s.href || '').includes('handover.css')) })")
+        c.close()
+        check("on the Pad's own page (not inside a post) there is no layer, no module and no sheet for it: Make yours goes"
+              " to Your hand as TEXT 11 reads",
+              own == {"module": False, "layer": False, "sheet": False}, json.dumps(own))
 
     b.close()
 

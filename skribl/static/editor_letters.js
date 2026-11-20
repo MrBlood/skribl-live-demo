@@ -1002,7 +1002,7 @@
   });
   laterBtnEl.addEventListener('click', function () {
     takeStroke();
-    window.location.assign(backTo(false));
+    goBack(false);
   });
 
   // ---- The pages: the start, Ready, and the tiles ----
@@ -1026,6 +1026,15 @@
     head.innerHTML = '<div class="lt-phead"><h2 class="lt-ptitle" id="ltPageTitle"></h2><p class="lt-psub" id="ltPageSub"></p></div>';
     head.querySelector('.lt-ptitle').textContent = title;
     head.querySelector('.lt-psub').textContent = sub;
+    // Over an editor (OVER, below): where the drawing is, under the page's
+    // own line, on every page of Your hand.
+    if (OVER) {
+      var wait = document.createElement('p');
+      wait.className = 'lt-psub lt-pwait';
+      wait.id = 'ltPageWait';
+      wait.textContent = WAITING[OVER];
+      head.querySelector('.lt-phead').appendChild(wait);
+    }
     pageEl.appendChild(head);
     document.body.appendChild(pageEl);
     document.body.classList.add('lt-paged');
@@ -1051,7 +1060,29 @@
     var url = (BACK === 'flip' && flip) ? flip : window.location.pathname;
     return url + ((text || BACK) ? '?text=1' : '');
   }
-  function leave() { window.location.assign(backTo(false)); }
+  // OVER AN EDITOR INSIDE A POST (lib/handover.js; the owner's "All yes",
+  // Nov 19, to "Your hand opens over your post, and your drawing waits for
+  // you"). There Your hand is a layer over the Pad or Flip, which has not
+  // left: every way out (Close, Done, Finish later, Write with it) ASKS THAT
+  // EDITOR TO CLOSE THE LAYER, and goes nowhere, because going anywhere would
+  // put the editor by itself in the layer and leave the post behind. Each
+  // page says where the drawing is, and Post your letters is not offered: it
+  // posts to Skribl, not to that post. The page says which it is over
+  // (SKRIBL_LETTERS_OVER, the route's over=): a post, or a face being drawn,
+  // where there is no post to name.
+  var WAITING = { post: 'Your drawing is waiting in your post.', face: 'Your drawing is waiting for you.' };
+  var OVER = (function () {
+    var o = window.SKRIBL_LETTERS_OVER;
+    return (o === 'post' || o === 'face') && window.parent && window.parent !== window ? o : null;
+  })();
+  function goBack(text) {
+    if (OVER) {
+      try { window.parent.postMessage({ type: 'skribl:hand:close' }, window.location.origin); return; }
+      catch (e) { /* no editor to ask: go, as it always did */ }
+    }
+    window.location.assign(backTo(text));
+  }
+  function leave() { goBack(false); }
 
   function showStart() {
     var p = openPage('start', 'Your hand', 'Text that writes the way you write', 'lt-mid');
@@ -1101,7 +1132,7 @@
     two.className = 'lt-two';
     two.appendChild(button('Add the rest · ' + (BOXES.length - drawnCount()), 'lt-second', addRest));
     // Write with it: back to where they came from, Text chosen (backTo).
-    two.appendChild(button('Write with it', 'lt-primary', function () { window.location.assign(backTo(true)); }));
+    two.appendChild(button('Write with it', 'lt-primary', function () { goBack(true); }));
     foot.appendChild(two);
     p.appendChild(foot);
   }
@@ -1172,7 +1203,8 @@
     quiet.appendChild(button('Save a copy', 'lt-link', saveCopy));
     quiet.appendChild(button('Open a copy', 'lt-link', openCopy));
     quiet.appendChild(button('Start over', 'lt-link', startOver));
-    quiet.appendChild(button('Post your letters', 'lt-link', postSet));
+    // Not over an editor inside a post: it posts to Skribl, not to that post.
+    if (!OVER) quiet.appendChild(button('Post your letters', 'lt-link', postSet));
     foot.appendChild(quiet);
     p.appendChild(foot);
     if (opts.scroll) body.scrollTop = opts.scroll;

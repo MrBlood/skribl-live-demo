@@ -1338,10 +1338,18 @@
     hide(null);
     write(p, at);
   }
+  // TO YOUR HAND (Make yours, Edit your hand). On the editor's own page the
+  // page goes there, and its draft keeps the drawing for the trip. INSIDE A
+  // POST nothing keeps it (compose keeps no draft), and the frame the host
+  // holds would come back to the editor by itself: so there Your hand opens
+  // OVER this editor, which stays as it is under it, and Text is chosen
+  // again once it has gone, as a return to this page chooses it
+  // (lib/handover.js, compose mode alone; the owner's "All yes", Nov 19).
   function toHand() {
     var s = sheetEl(), url = s && s.getAttribute('data-hand');
     if (!url) return;
     close();
+    if (window.SkriblHandOver && window.SkriblHandOver.open(url, again)) return;
     window.location.href = url;
   }
 
@@ -1363,6 +1371,11 @@
     var rest = q.toString();
     try { history.replaceState(history.state, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash); }
     catch (e) {}
+    again();
+  }
+  // ...and the same from Your hand's layer over this editor (toHand): Yours,
+  // once there is a hand, and Text chosen as the picker chooses it.
+  function again() {
     if (handCount() > 0) { readPrefs(); state.style = 'yours'; keepPrefs(); }
     setTimeout(function () {
       var b = document.querySelector('#shapeSeg [data-shape="text"]');
