@@ -2726,7 +2726,15 @@ with sync_playwright() as sp:
             return _rts_l(_HT, i=_wait_pad, w=_it.get("canvas_w"), h=_it.get("canvas_h"), li=li, wt=waits)
     _two = dict(_hline, drawn=20000, parts=[15000, 5000], people=2, by="Ana + Theo")
     _five = dict(_hline, drawn=185000, parts=[60000, 45000, 30000, 30000, 20000], people=5, by="Ana + 4 others")
-    _tag = dict(_hline, drawn=20000, parts=[15000, 5000], people=2, by="<b>Ana</b> + <i>Theo</i>")
+    # ITS WORDS ARE SHORT ON PURPOSE. The pill keeps the time alone where the
+    # names do not fit, measured on the real pill, so it follows the fonts
+    # (fitSays): "<b>Ana</b> + <i>Theo</i>" fitted this box's Inter and not
+    # DejaVu Sans, the face CI draws a post in, where the pill said "20 sec"
+    # and the row below went red on main (the run on the tree after #996, the
+    # first to run it there) with no element made and nothing wrong. Shown
+    # here with the pill drawn in DejaVu Sans: the old words, red, the run's
+    # own reading; these, 197 of the 308 it has. One tag is all the row needs.
+    _tag = dict(_hline, drawn=20000, parts=[15000, 5000], people=2, by="<b>A</b>")
     _long = dict(_hline, drawn=20000, parts=[15000, 5000], people=2,
                  by="Bartholomew the Elder + Maximiliana of the Very Long Name")
     _hc2 = b.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
@@ -2758,6 +2766,7 @@ with sync_playwright() as sp:
       const play = box.querySelector('.skribl-inline-play'), sp = play.querySelector('span'), d = line.querySelector('.rl-drawn'), sk = line.querySelector('.rl-skip');
       const pr = play.getBoundingClientRect(), br = box.getBoundingClientRect();
       return { words: play.textContent.trim(), kids: sp ? sp.children.length : null, name: box.getAttribute('aria-label'),
+               pill: Math.round(pr.width), room: box.clientWidth - 24, face: getComputedStyle(play).fontFamily.split(',')[0],
                inside: pr.left >= br.left && pr.right <= br.right, drawn: d ? d.textContent.replace(/\\s+/g, ' ').trim() : null,
                skip: sk ? !sk.hidden && sk.getClientRects().length > 0 : null }; }"""
     _hr = {k: _hp.evaluate(_HREAD, k) for k in ("twoWait", "twoLine", "fiveLine", "tagWait", "longWait", "bareLine")}
@@ -2768,9 +2777,10 @@ with sync_playwright() as sp:
           and _hr["longWait"]["words"] == "20 sec" and _hr["longWait"]["inside"] and _hr["twoWait"]["inside"],
           json.dumps({k: _hr[k] for k in ("twoWait", "longWait")}))
     _made = _hp.evaluate("() => window.__made")
-    check("who drew it is a host's words, written as text: markup in it is shown as it was typed and no element of it"
-          " is ever made, not for a moment",
-          _hr["tagWait"]["kids"] == 0 and _hr["tagWait"]["words"] == "<b>Ana</b> + <i>Theo</i> · 20 sec" and _made == [],
+    check("who drew it is a host's words, written as text: markup in it is shown as it was typed, on the button and in"
+          " its name, and no element of it is ever made, not for a moment",
+          _hr["tagWait"]["kids"] == 0 and _hr["tagWait"]["words"] == "<b>A</b> · 20 sec"
+          and _hr["tagWait"]["name"].endswith(", <b>A</b> · 20 sec") and _made == [],
           json.dumps({"read": _hr["tagWait"], "made": _made}))
     check("the line says each hand's own time (\"Drawn in 15 sec + 5 sec\"), and past three parts the whole and how many"
           " people (\"Drawn in 3 min by 5 people\"); it never says long pauses were skipped; a drawing with no parts says"

@@ -446,6 +446,25 @@ SHORT7 = []   # every word under 7:1 that is not on the brand purple, per surfac
 
 
 def measure(q, root, scale):
+    """Every word of a surface against what is painted behind it.
+
+    A WORD READ SHORT ON A GROUND THAT WAS STILL ON ITS WAY IS READ AGAIN
+    (three reads at most). A short word already says what the same point is
+    0.6s later, its words still hidden: the same colour, and it is painted
+    there; another, and something was passing under it when the photograph
+    was taken. Main's run on the tree after #996 read the Pad's "Photo" tab at
+    6.86 on rgb(51, 44, 91), a pill's lilac, where 0.6s later the point was
+    its own rgb(35, 30, 59): a row red for a moment that was not the surface
+    (the same row green on the other database in that run). A word short on a
+    ground that holds still is reported at the first read, as before."""
+    for _ in range(3):
+        words, low, moved = _measure(q, root, scale)
+        if not moved:
+            break
+    return words, low
+
+
+def _measure(q, root, scale):
     SHORT7.clear()
     q.evaluate(SETTLED, root)
     # A sheet still gliding (How it works scrolls smoothly) moves its words
@@ -453,7 +472,7 @@ def measure(q, root, scale):
     for _ in range(6):
         words = q.evaluate(WORDS, root)
         if words is None:
-            return None, []
+            return None, [], False
         style = q.add_style_tag(content=HIDE_TEXT)
         q.wait_for_timeout(60)
         im = Image.open(io.BytesIO(q.screenshot())).convert("RGB")
@@ -461,7 +480,7 @@ def measure(q, root, scale):
         if [w["box"] for w in q.evaluate(WORDS, root) or []] == [w["box"] for w in words]:
             break
         q.wait_for_timeout(400)
-    low, later = [], None
+    low, later, moved = [], None, False
     for w in words:
         b = w["box"]
         l, t, r, bt = (max(0, b["l"]) + 1) * scale, (max(0, b["t"]) + 1) * scale, (min(b["r"], im.width / scale) - 1) * scale, (min(b["b"], im.height / scale) - 1) * scale
@@ -499,7 +518,9 @@ def measure(q, root, scale):
             sx, sy = max(1, int((r - l) // 16)), max(1, int((bt - t) // 10))
             shape = '/'.join(''.join('#' if sum(im.getpixel((x, y))) < 720 else '.' for x in range(int(l), int(r), sx))
                              for y in range(int(t), int(bt), sy))
-            said += f'; 0.6s later rgb{tuple(later.getpixel(at))}; there: {q.evaluate(STACK, [at[0] / scale, at[1] / scale])}; under it {shape}'
+            then = later.getpixel(at)
+            moved = moved or sum(abs(x - y) for x, y in zip(then, under)) > 12
+            said += f'; 0.6s later rgb{tuple(then)}; there: {q.evaluate(STACK, [at[0] / scale, at[1] / scale])}; under it {shape}'
         if worst < need:
             low.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{need} ({said})')
         # TWO INKS (owner, after v324: "The two inks looks sharp"): every word
@@ -508,7 +529,7 @@ def measure(q, root, scale):
         # 19px bold); the small pills stay at AA (owner: the purple stays).
         if worst < sharp and not (w.get("fill") and sharp == 7):
             SHORT7.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{sharp} ({said})')
-    return words, low
+    return words, low, moved
 
 
 def read_cards(q, root, scale):
