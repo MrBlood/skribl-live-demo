@@ -28,18 +28,25 @@ each in a browser with a virtual passkey.
   5. ACTIVITY: "Theo drew back on your drawing", new, his words, Draw
      back's pen on his face, opening his draw-back; none from somebody she
      muted, none of her own; the nudge's words, under Replies.
-  6. HER POST'S STRIP: "3 draw-backs", newest first, each its drawing and
-     who, opening its page; behind a block, not on the strip.
+  6. HER POST'S STRIP: "3 draw-backs", a small quiet label, newest first,
+     each its drawing and who, opening its page; behind a block, not on the
+     strip; each tile the drawing alone, cut out of its share card, read off
+     the paint. "DRAW BACK" IN WORDS IS THE ANSWER BAR'S (the Calm Post
+     Page, Nov 20): on a phone standing on the bottom bar, on a desk under
+     the date; with nothing drawn back there is no strip and no heading.
   7. WHEN A REPLAY ENDS: "Watch again" and "Draw back" in the drawing's own
      box, 12px above its foot, 44px, the box's replay mark aside; Watch
-     again plays it and they go; Draw back opens the composer on hers.
+     again plays it and they go; Draw back opens the composer on hers. ON A
+     POST'S OWN PAGE Watch again rises alone and the answer bar's Draw back
+     lights up, until it plays again.
   8. WHAT A DRAW-BACK SAYS: each hand's own drawing time on its line, who
      and the whole on its play button.
   9. THE PEN'S LINE: Draw back's wave is the pen's line (--brand) and its
-     pen the ink of where it sits, on a card's row, a post's own row, the
-     draw-backs' title, "Draw back" in words and Activity's badge, read off
-     what is painted, 3:1 or more against its ground; on the pill that rises
-     when a replay ends (the action's fill) the wave stays white.
+     pen the ink of where it sits, on a card's row, a post's own row, "Draw
+     back" in words in the answer bar and Activity's badge, read off what is
+     painted, 3:1 or more against its ground; on the action's fill (the pill
+     that rises on a card when a replay ends, and the bar's Draw back lit)
+     the wave stays white.
  10. No page errors, no console errors and no CSP violations.
 
 SOCIALDRAWBACK_PART=<n>[,<m>] runs those sections only (calibration). Every
@@ -903,18 +910,21 @@ with sync_playwright() as p:
             ctx, pg = browser_as(b, theo)
             home(pg)
             own_card, kai_card = pg.evaluate(CARD, own), pg.evaluate(CARD, onkai)
+            # On his post's own page a first name is said in the comment box's
+            # title (More from said it too, until the Calm Post Page took More
+            # from off the page, Nov 20).
             pg.goto(BASE + f"/social/p/{k1}")
             ready(pg)
-            more = pg.evaluate("() => (document.querySelector('#moreTitle') || {}).textContent || null")
+            to = pg.evaluate("() => (document.querySelector('#commentBoxTitle') || {}).textContent || null")
             close_ctx(ctx, pg)
             check("a draw-back on its maker's own drawing says \"Drew back on their own drawing\", the link to it, and one"
                   " face (never their own twice)",
                   own_card and own_card["on"] == "Drew back on their own drawing" and not own_card["face"]
                   and (own_card["who"] or {}).get("href") == f"/social/p/{mine3}", json.dumps(own_card))
-            check("a name that starts with a title is said whole: \"Drew back on Dr. Kai Moss’s\" and \"More from Dr. Kai"
-                  " Moss\", never \"Dr.\"",
-                  kai_card and kai_card["on"] == "Drew back on Dr. Kai Moss’s" and more == "More from Dr. Kai Moss",
-                  json.dumps({"card": kai_card and kai_card["on"], "more": more}))
+            check("a name that starts with a title is said whole: \"Drew back on Dr. Kai Moss’s\" and, on his post's own"
+                  " page, \"Say something to Dr. Kai Moss\", never \"Dr.\"",
+                  kai_card and kai_card["on"] == "Drew back on Dr. Kai Moss’s" and to == "Say something to Dr. Kai Moss",
+                  json.dumps({"card": kai_card and kai_card["on"], "the box": to}))
             c = ana.client()
             c.get("/social/")
             dst, _ = c.post_json(f"/social/p/{cat}/delete", {})
@@ -1289,8 +1299,18 @@ with app.test_request_context("/social/"):
             c = theo.client()
             c.get("/social/")
             bst, _ = c.post_json("/social/@lea/block", {})
+            # ITS LABEL IS SMALL AND QUIET (the Calm Post Page; the owner's "All
+            # yes to everything", Nov 20): how many, in the row's second ink,
+            # 15px and semibold, a heading still to a screen reader; no pen in
+            # it and no button on its line (until then a bold 18px heading
+            # with the pen, "Draw back" in words at its end).
             STRIP = """() => { const s = document.querySelector('.db-strip'); if (!s) return null;
-              return { title: s.querySelector('.db-title').innerText.trim(), icon: !!s.querySelector('.db-title svg'),
+              const t = s.querySelector('.db-title'), cs = getComputedStyle(t), probe = document.createElement('i');
+              probe.style.color = 'var(--ink-2)'; document.body.appendChild(probe);
+              const ink2 = getComputedStyle(probe).color; probe.remove();
+              return { title: t.innerText.trim(), icon: !!t.querySelector('svg'), tag: t.tagName, type: [cs.fontSize, cs.fontWeight],
+                       quiet: cs.color === ink2, buttons: s.querySelectorAll('button').length,
+                       under: (() => { const a = document.querySelector('.post-page .ans'); return !!a && !!(a.compareDocumentPosition(s) & 4); })(),
                        tiles: [...s.querySelectorAll('.db-tile')].map(t => [new URL(t.href).pathname, t.querySelector('.db-by').textContent,
                                                                            !!t.querySelector('.more-plate img')]),
                        wide: document.documentElement.scrollWidth <= innerWidth,
@@ -1304,10 +1324,12 @@ with app.test_request_context("/social/"):
                 seen[who.handle] = pg.evaluate(STRIP)
                 close_ctx(ctx, pg)
             want = [[f"/social/p/{x}", n, True] for x, n in ((third, "Lea"), (second, "Uma"), (first, "Theo"))]
-            check("on her post, under the row: \"3 draw-backs\" with Draw back's pen, then each draw-back's drawing and who"
-                  " drew back, newest first, each opening its own page; nothing past the screen",
-                  seen["ana"] and seen["ana"]["title"] == "3 draw-backs" and seen["ana"]["icon"] and seen["ana"]["tiles"] == want
-                  and seen["ana"]["wide"], json.dumps(seen["ana"]))
+            check("on her post, after the answer bar: \"3 draw-backs\", a small quiet label (a heading still, 15px and"
+                  " semibold in the row's second ink, no pen in it and no button on its line), then each draw-back's drawing"
+                  " and who drew back, newest first, each opening its own page; nothing past the screen",
+                  seen["ana"] and seen["ana"]["title"] == "3 draw-backs" and seen["ana"]["tag"] == "H2" and not seen["ana"]["icon"]
+                  and seen["ana"]["type"] == ["15px", "600"] and seen["ana"]["quiet"] and seen["ana"]["buttons"] == 0
+                  and seen["ana"]["under"] and seen["ana"]["tiles"] == want and seen["ana"]["wide"], json.dumps(seen["ana"]))
             check("a strip long enough to scroll (three on a phone) keeps the page's gutter: its first drawing starts where"
                   " its title does, never on the screen's edge",
                   seen["ana"] and seen["ana"]["scrolls"] and abs(seen["ana"]["lefts"][0] - seen["ana"]["lefts"][1]) < 0.6
@@ -1315,25 +1337,109 @@ with app.test_request_context("/social/"):
             check("behind a block (Theo blocked Lea) Lea's is not on the strip Theo sees: \"2 draw-backs\"",
                   bst == 200 and seen["theo"] and seen["theo"]["title"] == "2 draw-backs" and seen["theo"]["tiles"] == want[1:],
                   json.dumps(seen["theo"]))
-            # "DRAW BACK", IN WORDS, AT THE END OF THEIR LINE (the walkthrough's
-            # mocks, choice 3, the owner's "all yes", Nov 19). Approved at the end
-            # of the row of buttons, it ran 10px past the drawing's edge once the
-            # row had counts and was cut off on a desk; here it ends where the
-            # line does, which on a phone is the drawing's edge. THE ROW IS NOT
-            # TOUCHED: its pen and count stay.
-            WORD = """() => { const s = document.querySelector('.post-page .db-strip'), b = s && s.querySelector('.db-word');
-              const art = document.querySelector('.post-page .post-art').getBoundingClientRect();
+            # A DRAW-BACK'S TILE IS THE DRAWING ALONE, CUT OUT OF ITS SHARE CARD, IN A
+            # BOX OF THE DRAWING'S OWN GROUND, read off the paint on a desk: none of
+            # the card's own ground, wordmark strip or plate line, the drawing's four
+            # corners there, its plate 3 card pixels in from the line; a tall one and
+            # a wide one. The plate is More from's (.more-pic, .more-plate), and its
+            # paint was read on More from's tiles in verify_socialposts until the
+            # Calm Post Page took More from off the page (Nov 20): this strip is
+            # where that plate is still drawn, so it is read here now.
+            cut = []
+            try:
+                import io as _io
+                from PIL import Image as _Im, ImageDraw as _Dr
+                C_GROUND, C_FOOT, C_LINE, C_MARK = (255, 0, 255), (0, 255, 255), (0, 160, 0), (0, 0, 255)
+
+                def plate_of(w, h):
+                    """lib/sharecard.js drawingRect(w, h): (x, y, w, h) in the 1200 x 630 card."""
+                    sc = min(1092 / w, 492 / h)
+                    dw, dh = int(w * sc + 0.5), int(h * sc + 0.5)
+                    return int((1200 - dw) / 2 + 0.5), int((546 - dh) / 2 + 0.5), dw, dh
+
+                def share_card(w, h):
+                    x, y, dw, dh = plate_of(w, h)
+                    im = _Im.new("RGB", (1200, 630), C_GROUND)
+                    d = _Dr.Draw(im)
+                    d.rectangle([0, 546, 1199, 629], fill=C_FOOT)
+                    d.rectangle([x, y, x + dw - 1, y + dh - 1], fill=(246, 242, 234), outline=C_LINE, width=3)
+                    for mx, my in ((x + 14, y + 14), (x + dw - 54, y + 14), (x + 14, y + dh - 54), (x + dw - 54, y + dh - 54)):
+                        d.rectangle([mx, my, mx + 39, my + 39], fill=C_MARK)
+                    buf = _io.BytesIO()
+                    im.save(buf, "PNG")
+                    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+                near = lambda c, t: abs(c[0] - t[0]) + abs(c[1] - t[1]) + abs(c[2] - t[2]) < 120  # noqa: E731
+                for words6, size in (("tall", (531, 944)), ("wide", (816, 612))):
+                    hers = post_payload(ana, f"Section 6, a {words6} one to draw back on", drawing(n=20, seed=71, size=size))
+                    his = dict(answer(n=10, seed=72, size=size), thumbnail=share_card(*size))
+                    back6 = (draw_back(theo, hers, his)[1] or {}).get("post")
+                    ctx, pg = browser_as(b, ana, screen="desk")
+                    pg.goto(BASE + f"/social/p/{hers}")
+                    ready(pg)
+                    one = {"size": words6, "back": bool(back6)}
+                    try:
+                        pg.wait_for_function("""() => { const i = document.querySelector('.db-tile .more-plate img');
+                          return !!i && i.complete && i.naturalWidth > 0; }""", timeout=15000)
+                        pg.evaluate("() => document.querySelector('.db-tile .more-plate img').decode().catch(() => null)")
+                        pg.evaluate("() => document.querySelector('.db-tile').scrollIntoView({ block: 'center' })")
+                        pg.wait_for_timeout(300)
+                        box = pg.evaluate("""() => { const t = document.querySelector('.db-tile'), pic = t.querySelector('.more-pic');
+                          const pl = t.querySelector('.more-plate'), i = pl.querySelector('img');
+                          const p = pl.getBoundingClientRect(), r = i.getBoundingClientRect(), k = r.width / 1200;   // CSS pixels to one card pixel
+                          return { at: [(p.left - r.left) / k, (p.top - r.top) / k, p.width / k, p.height / k],
+                                   ground: getComputedStyle(pic).backgroundColor, w: Math.round(t.getBoundingClientRect().width) }; }""")
+                        im = _Im.open(_io.BytesIO(pg.locator(".db-tile .more-pic").screenshot(timeout=5000))).convert("RGB")
+                        W, H = im.size
+                        card, marks = 0, [0, 0, 0, 0]
+                        for n_, c_ in enumerate(im.getdata()):
+                            if near(c_, C_GROUND) or near(c_, C_FOOT) or near(c_, C_LINE):
+                                card += 1
+                            elif near(c_, C_MARK):
+                                marks[(2 if n_ // W >= H / 2 else 0) + (1 if n_ % W >= W / 2 else 0)] += 1
+                        x, y, dw, dh = plate_of(*size)
+                        one.update(card=card, marks=marks, want=[x + 3, y + 3, dw - 6, dh - 6],
+                                   at=[round(v, 1) for v in box["at"]], ground=box["ground"], w=box["w"])
+                    except Exception as exc:  # noqa: BLE001 -- what stopped it is the row's red
+                        one["stopped"] = str(exc).splitlines()[0][:140]
+                    close_ctx(ctx, pg)
+                    cut.append(one)
+            except ImportError:
+                cut.append({"stopped": "no Pillow here"})
+            check("a draw-back's tile is the drawing whole and alone, cut out of its share card: none of the card's own"
+                  " ground, wordmark strip or plate line painted, the drawing's four corners painted, its plate 3 card"
+                  " pixels in from the line, in a box 132px wide of the drawing's own paper; a tall drawing and a wide one,"
+                  " on a desk",
+                  len(cut) == 2 and all(t.get("back") and t.get("card") == 0 and t.get("marks") and min(t["marks"]) >= 8
+                                        and t.get("at") and all(abs(a_ - w_) <= 1.0 for a_, w_ in zip(t["at"], t["want"]))
+                                        and t.get("ground") == "rgb(246, 242, 234)" and t.get("w") == 132 for t in cut),
+                  json.dumps(cut))
+            # "DRAW BACK", IN WORDS, IS THE ANSWER BAR'S (the Calm Post Page; the
+            # owner's "All yes to everything", Nov 20). It stood at the end of
+            # the draw-backs' line (the walkthrough's choice 3, Nov 19), which
+            # had to be there from the start, "No draw-backs yet", to hold it:
+            # a heading over nothing. Now the bar holds it on every post that
+            # can be drawn back on: on a phone standing on the bottom bar, the
+            # button ending at the drawing's edge; on a desk in the column
+            # under the date, ending its line. THE ROW IS NOT TOUCHED: its pen
+            # and count stay.
+            WORD = """() => { const page = document.querySelector('.post-page'), s = page.querySelector('.db-strip');
+              const bar = page.querySelector('.ans-bar'), b = bar && bar.querySelector('.db-word');
+              const art = page.querySelector('.post-art').getBoundingClientRect();
               const row = [...document.querySelectorAll('.post-page > .post-row > *')].map(e => e.classList.contains('db-pen') ? 'pen ' + e.textContent.trim()
                             : e.classList.contains('rp-btn') ? 'repost' : e.classList.contains('post-more') ? 'more' : e.classList.contains('lk-heart') || e.querySelector('.lk-heart') ? 'heart' : 'comments');
-              if (!b) return { strip: !!s, there: false, row, title: s ? s.querySelector('.db-title').innerText.trim() : null, tiles: s ? !!s.querySelector('.db-row') : false };
-              const r = b.getBoundingClientRect(), cs = getComputedStyle(b), t = s.querySelector('.db-title').getBoundingClientRect(), sr = s.getBoundingClientRect();
-              const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-              return { strip: true, there: true, says: b.textContent.trim(), icon: !!b.querySelector('svg'), h: Math.round(r.height * 10) / 10, font: cs.fontSize, weight: cs.fontWeight,
-                       painted: !!at && b.contains(at), lineEnd: Math.round((sr.right - r.right) * 10) / 10, artEdge: Math.round((art.right - r.right) * 10) / 10,
-                       sameLine: Math.abs((r.top + r.height / 2) - (t.top + t.height / 2)) < 1.5, clear: r.left >= t.right + 7.5,
-                       title: s.querySelector('.db-title').innerText.trim(), tiles: !!s.querySelector('.db-row'), row,
+              const base = { strip: !!s, bar: !!bar, row, title: s ? s.querySelector('.db-title').innerText.trim() : null, tiles: s ? !!s.querySelector('.db-row') : false,
+                             headings: [...page.querySelectorAll('h2')].filter(e => e.getClientRects().length).map(e => e.textContent.replace(/\\s+/g, ' ').trim()),
+                             inWords: [...page.querySelectorAll('[data-drawback]')].filter(e => !e.classList.contains('db-pen')).length };
+              if (!b) return Object.assign(base, { there: false });
+              const r = b.getBoundingClientRect(), cs = getComputedStyle(b), br = bar.getBoundingClientRect();
+              const nav = document.querySelector('nav.nav').getBoundingClientRect(), meta = page.querySelector('.post-meta').getBoundingClientRect();
+              const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2), fixed = getComputedStyle(bar).position === 'fixed';
+              return Object.assign(base, { there: true, says: b.textContent.trim(), icon: !!b.querySelector('svg'), h: Math.round(r.height * 10) / 10, font: cs.fontSize, weight: cs.fontWeight,
+                       painted: !!at && b.contains(at), fixed, onNav: Math.round((nav.top - br.bottom) * 10) / 10, underDate: Math.round((br.top - meta.bottom) * 10) / 10,
+                       lineEnd: Math.round((meta.right - r.right) * 10) / 10, artEdge: Math.round((art.right - r.right) * 10) / 10,
                        wide: document.documentElement.scrollWidth <= innerWidth,
-                       attrs: [b.getAttribute('data-drawback'), b.getAttribute('data-drawback-first'), b.hasAttribute('data-drawback-own')] }; }"""
+                       attrs: [b.getAttribute('data-drawback'), b.getAttribute('data-drawback-first'), b.hasAttribute('data-drawback-own')] }); }"""
             words = {}
             for who, screen in ((theo, "phone"), (theo, "desk"), (ana, "phone")):
                 ctx, pg = browser_as(b, who, screen=screen)
@@ -1341,9 +1447,7 @@ with app.test_request_context("/social/"):
                 ready(pg)
                 words[f"{who.handle} {screen}"] = pg.evaluate(WORD)
                 if who is theo and screen == "phone" and words[f"{who.handle} {screen}"].get("there"):
-                    pg.evaluate("() => document.querySelector('.db-word').scrollIntoView({ block: 'center' })")
-                    pg.wait_for_timeout(200)
-                    pg.click(".post-page .db-word")
+                    pg.tap(".post-page .ans-bar .db-word")
                     try:
                         pg.wait_for_function("() => window.SocialComposer && !!SocialComposer.drawingBack()", timeout=10000)
                         words["tapped"] = pg.evaluate("() => SocialComposer.drawingBack()")
@@ -1351,13 +1455,16 @@ with app.test_request_context("/social/"):
                         words["tapped"] = {"stopped": str(exc).splitlines()[0][:120]}
                 close_ctx(ctx, pg)
             wt, wd, wa = words["theo phone"], words["theo desk"], words["ana phone"]
-            check("at the end of the draw-backs' line, \"Draw back\" in words with its pen: the site's second button (44px,"
-                  " 15px, 600), painted, on the count's own line and clear of it, ending where the line ends (a phone and a"
-                  " desk), which on a phone is the drawing's edge; nothing past the screen",
+            check("in the answer bar, \"Draw back\" in words with its pen: the site's second button (44px, 15px, 600),"
+                  " painted, and the page's only one in words (the row's pen aside); on a phone the bar stands on the bottom"
+                  " bar and the button ends at the drawing's edge; on a desk the bar is in the column, 18px under the date,"
+                  " and the button ends its line; nothing past the screen",
                   all(w.get("there") and w["says"] == "Draw back" and w["icon"] and w["h"] >= 44 and w["font"] == "15px" and w["weight"] == "600"
-                      and w["painted"] and w["sameLine"] and w["clear"] and abs(w["lineEnd"]) <= 1 and w["wide"] for w in (wt, wd, wa))
-                  and abs(wt.get("artEdge", 99)) <= 1 and wt["title"] == "2 draw-backs" and wa["title"] == "3 draw-backs",
-                  json.dumps({k: v for k, v in words.items() if k != "tapped"})[:900])
+                      and w["painted"] and w["inWords"] == 1 and abs(w["lineEnd"]) <= 1 and w["wide"] for w in (wt, wd, wa))
+                  and all(w["fixed"] and abs(w["onNav"]) <= 0.6 and abs(w["artEdge"]) <= 1 for w in (wt, wa))
+                  and wd["fixed"] is False and abs(wd["underDate"] - 18) <= 0.6
+                  and wt["title"] == "2 draw-backs" and wa["title"] == "3 draw-backs",
+                  json.dumps({k: {x: y for x, y in v.items() if x not in ("row", "attrs", "headings")} for k, v in words.items() if k != "tapped"})[:1100])
             check("the row of buttons above it is not touched: comments, repost, heart, the pen with its count, and ⋯",
                   wt.get("row") == ["comments", "repost", "heart", "pen 2", "more"] and wa.get("row") == ["comments", "repost", "heart", "pen 3", "more"],
                   json.dumps({"theo": wt.get("row"), "ana": wa.get("row")}))
@@ -1365,9 +1472,12 @@ with app.test_request_context("/social/"):
                   " (your own drawing)",
                   (words.get("tapped") or {}).get("id") == cat and wt.get("attrs") == [cat, "Ana", False] and wa.get("attrs") == [cat, "Ana", True],
                   json.dumps({"tapped": words.get("tapped"), "theo": wt.get("attrs"), "ana": wa.get("attrs")}))
-            # THE LINE IS THERE FROM THE START, so the words always have a home;
-            # and where it cannot be done there are no words, and with nothing
-            # drawn back no line either: signed out, and a Flip of two pages.
+            # WITH NOTHING DRAWN BACK THERE IS NO LINE AND NO HEADING (the owner,
+            # Nov 20, of a post nobody had answered: "It seems busy and
+            # disorganized"; a heading is there to label something): until then
+            # "No draw-backs yet" stood from the start to hold the words. The
+            # bar holds them. Where it cannot be done the bar has no Draw back:
+            # signed out, and a Flip of two pages.
             fresh = post_payload(ana, "Section 6, nobody has drawn back on this", drawing(n=24, seed=61))
             pages2 = dict(drawing(n=12, seed=62))
             pages2["frames"] = [dict(pages2["frames"][0]), dict(pages2["frames"][0])]
@@ -1380,14 +1490,14 @@ with app.test_request_context("/social/"):
                 ready(pg)
                 zero[key] = pg.evaluate(WORD)
                 close_ctx(ctx, pg)
-            check("on a drawing nobody has drawn back on, the line is there from the start: \"No draw-backs yet\" and Draw"
-                  " back at its end, no row of drawings under it; signed out, or on a Flip of two pages (which can't be"
-                  " drawn back on yet), no words and no line",
-                  bool(fresh) and bool(flipped) and zero["fresh"].get("there") and zero["fresh"]["title"] == "No draw-backs yet"
-                  and not zero["fresh"]["tiles"] and abs(zero["fresh"].get("lineEnd", 99)) <= 1 and zero["fresh"].get("h", 0) >= 44
-                  and zero["signed out"] == {"strip": False, "there": False, "row": zero["signed out"]["row"], "title": None, "tiles": False}
-                  and "pen" not in " ".join(zero["signed out"]["row"])
-                  and zero["a Flip"].get("strip") is False and zero["a Flip"].get("there") is False,
+            check("on a drawing nobody has drawn back on there is no line and no heading at all (no strip, nothing saying"
+                  " \"No draw-backs yet\"), and Draw back is in the answer bar all the same, 44px; signed out, or on a Flip of"
+                  " two pages (which can't be drawn back on yet), the bar is there without it, and no strip",
+                  bool(fresh) and bool(flipped) and zero["fresh"].get("there") and zero["fresh"]["strip"] is False
+                  and zero["fresh"]["headings"] == [] and zero["fresh"].get("h", 0) >= 44 and zero["fresh"]["inWords"] == 1
+                  and all(zero[k]["bar"] and zero[k]["there"] is False and zero[k]["strip"] is False and zero[k]["inWords"] == 0
+                          and zero[k]["headings"] == [] for k in ("signed out", "a Flip"))
+                  and "pen" not in " ".join(zero["signed out"]["row"]) and "pen" not in " ".join(zero["a Flip"]["row"]),
                   json.dumps(zero)[:900])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(6, exc)
@@ -1437,6 +1547,64 @@ with app.test_request_context("/social/"):
             check("Watch again plays it again and they go; Draw back opens the composer drawing back on hers",
                   seen.get("again") == {"gone": True, "playing": True} and (seen.get("go") or {}).get("id") == short,
                   json.dumps({k: seen.get(k) for k in ("again", "go")}))
+            # ON A POST'S OWN PAGE THE INVITATION IS SAID ONCE (the Calm Post
+            # Page; the owner's "All yes to everything", Nov 20). The answer
+            # bar is there with Draw back in it, so Watch again rises alone and
+            # the bar's Draw back lights up: the action's fill, white on it,
+            # until it plays again. A card on Home keeps both pills (above).
+            LIT = """() => { const page = document.querySelector('.post-page'), e = page.querySelector('.db-end'), d = page.querySelector('.ans-bar .ans-draw');
+              const cs = getComputedStyle(d), probe = document.createElement('i');
+              probe.style.cssText = 'background: var(--fill); color: var(--on-fill)'; document.body.appendChild(probe);
+              const fill = getComputedStyle(probe).backgroundColor, onFill = getComputedStyle(probe).color; probe.remove();
+              const r = d.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              return { pills: e ? [...e.querySelectorAll('button')].map(b => b.textContent.trim()) : [], up: !!e && e.classList.contains('is-up'),
+                       lit: d.classList.contains('is-go'), filled: cs.backgroundColor === fill, white: cs.color === onFill,
+                       hit: !!at && d.contains(at), words: d.textContent.trim() }; }"""
+            own = {}
+            for scheme in ("light", "dark"):
+                got = own[scheme] = {}
+                # At rest, no replay ended (a still page: under Reduce Motion
+                # nothing plays by itself): nothing risen, nothing lit.
+                ctx, pg = browser_as(b, theo, scheme=scheme, reduced=True)
+                try:
+                    open_post(pg, short)
+                    got["before"] = pg.evaluate(LIT)
+                except Exception as exc:  # noqa: BLE001 -- what stopped it is the row's red
+                    got["stopped"] = str(exc).splitlines()[0][:160]
+                close_ctx(ctx, pg)
+                ctx, pg = browser_as(b, theo, scheme=scheme)
+                try:
+                    open_post(pg, short)
+                    pg.wait_for_function("() => !!document.querySelector('.post-page .db-end.is-up')", timeout=30000)
+                    pg.wait_for_timeout(450)                # the light is a fade (0.2s)
+                    got["ended"] = pg.evaluate(LIT)
+                    if scheme == "light":
+                        pg.tap(".post-page .db-end .db-again")
+                        pg.wait_for_timeout(250)            # as the card's row above: still playing
+                        got["again"] = pg.evaluate(LIT)
+                        got["again"]["playing"] = pg.evaluate("() => document.querySelector('.post-page [data-skribl-inline]').classList.contains('is-playing')")
+                        pg.wait_for_function("() => !!document.querySelector('.post-page .db-end.is-up')", timeout=30000)
+                        pg.wait_for_timeout(450)
+                        got["next"] = pg.evaluate(LIT)
+                        pg.tap(".post-page .ans-bar .ans-draw")
+                        pg.wait_for_function("() => window.SocialComposer && !!SocialComposer.drawingBack()", timeout=10000)
+                        got["go"] = pg.evaluate("() => SocialComposer.drawingBack()")
+                except Exception as exc:  # noqa: BLE001 -- what stopped it is the row's red
+                    got["stopped"] = str(exc).splitlines()[0][:160]
+                close_ctx(ctx, pg)
+            dim = {"pills": [], "up": False, "lit": False, "filled": False, "white": False, "hit": True, "words": "Draw back"}
+            lit = {"pills": ["Watch again"], "up": True, "lit": True, "filled": True, "white": True, "hit": True, "words": "Draw back"}
+            check("ON A POST'S OWN PAGE THE INVITATION IS SAID ONCE: with no replay ended (a still page) nothing has risen"
+                  " and the answer bar's Draw back is the second button it is; when the replay ends, \"Watch again\" rises"
+                  " alone on the drawing and the bar's Draw back lights up, the action's own fill with white on it, painted"
+                  " where it stands (light and dark)",
+                  all(own[s_].get("before") == dim and own[s_].get("ended") == lit for s_ in own),
+                  json.dumps({s_: {k: own[s_].get(k) for k in ("before", "ended", "stopped")} for s_ in own})[:900])
+            check("Watch again plays it again: its pill goes and the bar's Draw back is as it was; at the next end, lit"
+                  " again, a tap on it opens the composer drawing back on hers",
+                  own["light"].get("again") == dict(dim, playing=True) and own["light"].get("next") == lit
+                  and (own["light"].get("go") or {}).get("id") == short,
+                  json.dumps({k: own["light"].get(k) for k in ("again", "next", "go", "stopped")}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(7, exc)
 
@@ -1675,12 +1843,20 @@ with app.test_request_context("/social/"):
                 pg.wait_for_timeout(400)
                 got["the pill when a replay ends"] = read(pg, card + " .db-end .db-go svg")
                 close_ctx(ctx, pg)
-                # Her post's own page: its row, the draw-backs' title, the words.
-                ctx, pg = browser_as(b, theo, scheme=scheme, dpr=3)
+                # Her post's own page: its row, and the answer bar's words. Still
+                # (Reduce Motion: nothing plays by itself), so the bar's Draw back
+                # is read as it rests, not lit by a replay's end.
+                ctx, pg = browser_as(b, theo, scheme=scheme, reduced=True, dpr=3)
                 open_post(pg, cat)
                 got["a post's own row"] = read(pg, ".post-page > .post-row .db-pen svg")
-                got["the draw-backs' title"] = read(pg, ".db-title svg")
-                got["Draw back in words"] = read(pg, ".db-word svg")
+                got["Draw back in words"] = read(pg, ".post-page .ans-bar .db-word svg")
+                close_ctx(ctx, pg)
+                # ...and lit, when the replay on that page ends.
+                ctx, pg = browser_as(b, theo, scheme=scheme, dpr=3)
+                open_post(pg, cat)
+                pg.wait_for_function("() => !!document.querySelector('.post-page .ans-draw.is-go')", timeout=30000)
+                pg.wait_for_timeout(450)
+                got["the bar's Draw back, lit"] = read(pg, ".post-page .ans-bar .db-word svg")
                 close_ctx(ctx, pg)
                 # Her Activity: his draw-back's badge.
                 ctx, pg = browser_as(b, ana, scheme=scheme, dpr=3)
@@ -1689,8 +1865,8 @@ with app.test_request_context("/social/"):
                 pg.wait_for_timeout(400)
                 got["Activity's badge"] = read(pg, ".db-badge svg")
                 close_ctx(ctx, pg)
-            PAGE = ("a card's row", "a post's own row", "the draw-backs' title", "Draw back in words", "Activity's badge")
-            PILL = "the pill when a replay ends"
+            PAGE = ("a card's row", "a post's own row", "Draw back in words", "Activity's badge")
+            FILL = ("the pill when a replay ends", "the bar's Draw back, lit")
 
             def purple(v):
                 """The wave is the pen's line, computed and painted; the pen is
@@ -1704,12 +1880,12 @@ with app.test_request_context("/social/"):
                 return v and {k: v[k] for k in ("line", "pen", "brand", "wave", "penPaint", "ground", "ratio")}
             bad_a = {f"{s}: {k}": short(seen[s].get(k)) for s in seen for k in PAGE if not purple(seen[s].get(k))}
             check("Draw back's wave is the pen's line (--brand) and its pen the ink of where it sits: on a card's row, a"
-                  " post's own row, the draw-backs' title, \"Draw back\" in words and Activity's badge, computed and painted"
+                  " post's own row, \"Draw back\" in words in the answer bar and Activity's badge, computed and painted"
                   " (light and dark)", not bad_a and all(len(seen[s]) == 6 for s in seen),
                   json.dumps(bad_a or {k: short(v) for k, v in seen["light"].items() if k in PAGE})[:700])
             low = {f"{s}: {k}": (seen[s].get(k) or {}).get("ratio") for s in seen for k in PAGE
                    if not ((seen[s].get(k) or {}).get("ratio") or 0) >= 3.0}
-            check("the wave as painted is 3:1 or more against the ground painted behind it, in each of those five (light and"
+            check("the wave as painted is 3:1 or more against the ground painted behind it, in each of those four (light and"
                   " dark): a drawn line somebody is meant to see", not low,
                   json.dumps(low or {f"{s}: {k}": seen[s][k]["ratio"] for s in seen for k in PAGE}))
 
@@ -1718,10 +1894,11 @@ with app.test_request_context("/social/"):
                 computed and painted, and that ink is not the pen's purple."""
                 return bool(v and v["line"] == v["ink"] and v["pen"] == v["ink"] and v["ink"] != v["brand"]
                             and v["wave"] and far(v["wave"], rgb(v["ink"])) <= 6 and (v["ratio"] or 0) >= 3.0)
-            check("on the pill that rises when a replay ends, the action's fill, the wave stays the button's own ink with"
-                  " its pen (white), painted so and 3:1 or more: the pen's purple on that fill is a wave nobody sees"
-                  " (light and dark)", all(white(seen[s].get(PILL)) for s in seen),
-                  json.dumps({s: short(seen[s].get(PILL)) for s in seen}))
+            check("on the action's fill (the pill that rises on a card when a replay ends, and the answer bar's Draw back"
+                  " lit at a replay's end on a post's own page), the wave stays the button's own ink with its pen (white),"
+                  " painted so and 3:1 or more: the pen's purple on that fill is a wave nobody sees (light and dark)",
+                  all(white(seen[s].get(k)) for s in seen for k in FILL),
+                  json.dumps({f"{s}: {k}": short(seen[s].get(k)) for s in seen for k in FILL})[:900])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(9, exc)
 

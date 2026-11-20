@@ -796,8 +796,8 @@ def section(on, viewer, skribl_blueprint="skribl", focus=None):
             "closed": focus is not None and focus["c"].gone is not None,
             # Whom the box says something to ("Say something to Mira", or on
             # a comment's own page "Reply to Eli"), and the signed-out sheet's
-            # "you can reply to Mira": the first name, as More from and the
-            # heart's sheet say it.
+            # "you can reply to Mira": the first name, as the heart's sheet
+            # says it.
             "first": first_name((focus["who"] if focus is not None else on.owner).display_name)
             if focus is None or focus["who"] is not None else "",
             "new": new, "more": more,

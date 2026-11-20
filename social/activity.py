@@ -127,7 +127,7 @@ glow a moment and, a drawing answer, draw itself once.
 
 THROUGH SKRIBL'S SEAMS ONLY: describe_posts (whether a drawing's page is
 there for the viewer; each small picture's size), and the poster's address
-by url_for, as More from's tiles take theirs.
+by url_for, as a draw-back's tile takes its own.
 """
 import math
 from datetime import timedelta
@@ -598,7 +598,7 @@ def _key(kind, c):
 
 def _pic(sid, sk, skribl_blueprint, inner=50):
     """A drawing's small picture: its middle, square, cut from its poster (the
-    share card) as More from's tile and a face cut theirs (lib/sharecard.js
+    share card) as a draw-back's tile and a face cut theirs (lib/sharecard.js
     drawingRect's sums and rounding: the card 1200 x 630, its drawing's area
     1092 x 492 above an 84px foot, the plate's hairline 3px in), the poster
     placed behind a box `inner` px across. None when Skribl does not describe

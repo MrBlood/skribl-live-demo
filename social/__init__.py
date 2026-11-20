@@ -118,7 +118,8 @@ macros, Skribl's signature, the skribl_asset() global init_skribl adds, url_for
 of Skribl's pages (the Pad's with its documented compose flags, and the
 editors' with ?draft=<id>), and from the package only documented names:
 create_post and delete_post with their exceptions (piece 3, a face), and
-since, describe_posts, list_public_posts, recent_plays and list_drafts. Skribl never imports it. Anything the site needs
+since, describe_posts, recent_plays and list_drafts (and list_public_posts until Nov
+20, for More from). Skribl never imports it. Anything the site needs
 from Skribl, every host gets (docs/SOCIAL-SITE.md, section 1). verify_social
 section 8 reads both directions, and the Skribl templates and files the site
 names.
@@ -179,7 +180,7 @@ def muted_authors(viewer_id):
     public ids of everybody `viewer_id` muted, which a listing of
     everybody's leaves out (Skribl's own /gallery, as the site's first visit
     did while it held Skribl's section, until Nov 14) and a listing
-    of one person's own keeps (their page's Gallery, More from): what comes to you goes
+    of one person's own keeps (their page's Gallery): what comes to you goes
     quiet, and what you go to stays. Never for the visibility policy: a mute
     hides no page. Empty where the site is not running."""
     if not has_app_context() or "social" not in current_app.extensions:

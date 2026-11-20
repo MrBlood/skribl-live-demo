@@ -27,8 +27,9 @@ mock (Nov 13): C, quiet everywhere, and rule 3, mute and follow kept apart.
   4. THEIR PAGE: "You muted Theo · Unmute" under the buttons, yours alone
      (not for them, nobody else, not signed out, not in the source); their ⋯
      says Unmute; muting there opens the line, read on every frame (and under
-     Reduce Motion); its Unmute unmutes and closes it; their skribls, posts
-     and More from all still there.
+     Reduce Motion); its Unmute unmutes and closes it; their skribls and
+     posts all still there (a post's page shows no More from, of anybody,
+     since the Calm Post Page, Nov 20: asked here as gone).
   5. RULE 3: a mute never touches a follow: still following, the toast says
      "Theo is muted. You still follow them.", nothing changes on their side
      (their own counts, "1 follower", and their own list of who follows
@@ -1432,13 +1433,17 @@ with sync_playwright() as p:
             pg.wait_for_timeout(500)
             c = ida.client()
             pages = {p: c.get(p)[0] for p in (f"/social/p/{jp1}", f"/social/b/{js}", f"/s/{js}")}
-            more_from = jp2 in c.get(f"/social/p/{jp1}")[1]
+            # NO MORE FROM ON A POST'S PAGE, muted or not (the Calm Post Page, Nov
+            # 20): his other post is not offered there. Until then this row asked
+            # that More from kept him; what you go to still stays, on his page.
+            his_page = c.get(f"/social/p/{jp1}")[1]
+            more_from = jp2 in his_page or "More from" in his_page or 'class="more-from"' in his_page
             payload = c.get_json(f"/api/skribls/{js}")[0]
             check("loaded muted, their page says so and their ⋯ says Unmute @jay first; what you go to stays: Jay's"
-                  " drawing in his page's Gallery, his post's page with More from his other post, his drawing's page,"
-                  " its link page and its payload",
+                  " drawing in his page's Gallery, his post's page (which offers no More from, his other post not on"
+                  " it), his drawing's page, its link page and its payload",
                   line2 and line2["words"] == "You muted Jay · Unmute" and acts and acts[0]["name"] == "Unmute @jay"
-                  and listed and all(v == 200 for v in pages.values()) and more_from and payload == 200,
+                  and listed and all(v == 200 for v in pages.values()) and not more_from and payload == 200,
                   f"line {line2 and line2['words']}; row {acts and acts[0]['name']}; listed {listed}; pages {pages};"
                   f" more from {more_from}; payload {payload}")
             fr3 = record(pg, LINE_GET, None, 1100, lambda: press(pg, "[data-mute-unmute]"))
@@ -1616,15 +1621,17 @@ with sync_playwright() as p:
             st, mine = listing(nc, "&visibility=public&user_id=" + urllib.parse.quote(public_id("ozz")))
             pages = {p: nc.get(p)[0] for p in ("/social/@ozz", f"/social/p/{o_posts[0]}", f"/social/b/{o_draws[0]}",
                                                f"/s/{o_draws[0]}")}
-            # More from his first post: his three newest, his last post and both drawings (Skribl's listing,
-            # narrowed to him: the feed filter told so keeps him).
+            # His first post's page offers nothing else of his (no More from since
+            # the Calm Post Page, Nov 20: until then his three newest stood there,
+            # his last post and both drawings, kept through the mute).
             more_page = nc.get(f"/social/p/{o_posts[0]}")[1]
-            more_from = all(f"/social/{k}/{x}" in more_page for k, x in (("p", o_posts[2]), ("b", o_draws[0]), ("b", o_draws[1])))
+            more_from = ("More from" in more_page
+                         or any(f"/social/{k}/{x}" in more_page for k, x in (("p", o_posts[2]), ("b", o_draws[0]), ("b", o_draws[1]))))
             pay = nc.get_json(f"/api/skribls/{o_draws[0]}")[0]
             check("what you go to stays open, a mute hides no page: their page's listing (narrowed to them) holds their"
-                  " drawings; their page answers, and their post's page with More from them (their drawings in it), their"
-                  " drawing's page, its link page and its payload",
-                  st == 200 and set(o_draws) <= set(mine) and all(v == 200 for v in pages.values()) and more_from and pay == 200,
+                  " drawings; their page answers, and their post's page (with no More from: nothing else of theirs on"
+                  " it), their drawing's page, its link page and its payload",
+                  st == 200 and set(o_draws) <= set(mine) and all(v == 200 for v in pages.values()) and not more_from and pay == 200,
                   f"their listing {st} holds {len(set(o_draws) & set(mine))}/2; pages {pages}; more from {more_from}; payload {pay}")
             unmute(nat, "ozz")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop

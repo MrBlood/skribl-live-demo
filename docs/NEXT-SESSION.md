@@ -51,11 +51,13 @@ section 4 drives the whole way in a browser: the quickest look at it.
    first (her post's ⋯ is the likely home of the first; the second may want
    a place on the composer or the post's ⋯).
    MOCKED NOV 20 (https://claude.ai/artifact/NRZR69jirnAfhTQzroK3rr;
-   `DECISIONS.md`, "Her say, mocked"), AND WAITING ON THE OWNER'S ANSWER to
-   its seven choices. Nothing is built. The picks: the Gallery tab's eye on
-   each tile of her own strip, beside the name; Settings' pill in a card of
-   her post's ⋯, and one quiet line in the composer that opens it. Build
-   hiding first, then who can draw back, once the owner has said.
+   `DECISIONS.md`, "Her say, mocked"). THE OWNER ANSWERED THAT MORNING: "All
+   yes to everything. Make it smart and beautiful." So the seven picks
+   stand: the Gallery tab's eye on each tile of her own strip, beside the
+   name; Settings' pill in a card of her post's ⋯, and one quiet line in the
+   composer that opens it. NOT BUILT when this line was written (the calm
+   post page went first, because it reshapes the page her strip sits on):
+   hiding first, then who can draw back, each its own pull request.
 2. **The words** (choice 4, approved): the line under a draw-back says "Ana
    + Theo · drawn in 15 sec + 9 sec · watching at 1×", the card's play
    button "Ana + Theo · 24 sec", a jam "Ana + Theo + Mira", then "Ana + 4
@@ -239,15 +241,23 @@ eight"), and Her say is mocked (item 1 of "What is still to build", above).
 A POST WITH NOTHING UNDER IT YET, MOCKED (the owner's picture of Nov 20,
 "busy and disorganized"; `DECISIONS.md`, "A post with nothing under it
 yet"; https://claude.ai/artifact/1aQvBWEmTpBaMReRM8nEmD): three ways, the
-pick one quiet line and two buttons where two empty headings stand. WAITING
-ON THE OWNER'S ANSWER; nothing built. The owner's words are in
+pick one quiet line and two buttons where two empty headings stand. The
+owner liked the picks and asked a bigger question (next), and the calm post
+page took their place; none of the three was built. The owner's words are in
 `WORKING-AGREEMENTS.md` ("Never busy, never confusing").
 THEN THE OWNER ASKED FOR THE WHOLE LOOK TO BE READ BESIDE BLUESKY ("Are we
 looking good and feeling good?"), and the post's page is MOCKED CALMER
 (`DECISIONS.md`, the entry of that name;
 https://claude.ai/artifact/LGjra5dDzRVUC6a1eSb34t): one answer bar at the
-foot, quiet labels, no "More from". It would replace the three ways above.
-FIVE CHOICES WAITING; nothing built.
+foot, quiet labels, no "More from". It replaced the three ways above.
+THE OWNER: "All yes to everything. Make it smart and beautiful." (Nov 20,
+about 8:55 AM). BUILT THAT DAY (`DECISIONS.md`, "The calm post page, built";
+`docs/SOCIAL-SITE.md` section 23): one answer bar on every post's page and
+every comment's, small quiet labels and nothing over nothing, no More from,
+and the bar's Draw back lit when a replay ends. Still to come after it, in
+this order: Her say's two halves (item 1 of "What is still to build"), and
+the strip of Home that shows under the composer when an iPhone's keyboard
+is up.
 THE SESSION STOPPED ON THE OWNER'S USAGE LIMIT at about 10:25 PM, with
 those two runs unread, and nothing moved until the owner wrote at 5:56 AM.
 The owner's rule since: come back and finish without being asked

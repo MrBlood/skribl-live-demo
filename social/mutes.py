@@ -13,8 +13,7 @@ quiet, and what you go to stays.
 
 WHAT COMES TO YOU GOES QUIET (muted_ids, read once a request):
   * Home, Following and Everyone: their posts (posts.feed_page, in its
-    query; Home is posts only since the map's step 3; a feed of one
-    person's, More from, keeps them);
+    query; Home is posts only since the map's step 3);
   * The Gallery (Explore: gallery.py, in both its reads: their posts and
     the drawings they showed outside one), and Skribl's listings of
     everybody's: their drawings,
@@ -27,8 +26,8 @@ WHAT COMES TO YOU GOES QUIET (muted_ids, read once a request):
   * Activity: their comments, answers, likes and follows leave it, and never
     light the bell's dot (activity.py).
 WHAT YOU GO TO STAYS: their page (which says "You muted Theo · Unmute" to you
-alone), their posts and their drawings' pages, More from, their skribls on
-their page. The visibility policy is untouched: a mute never hides a page.
+alone), their posts and their drawings' pages, their skribls on their
+page. The visibility policy is untouched: a mute never hides a page.
 
 COUNTS AND "LIKED BY…" STAY TRUE, for everybody and for you: a mute changes
 what reaches you, never a number (a folded comment is counted, their like

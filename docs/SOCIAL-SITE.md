@@ -638,14 +638,16 @@ id.
 
 **A drawing shown outside a post has a page of its own**: one posted from
 the Pad on its own page (Make's Draw) and shown in the gallery
-(`/social/b/<id>`: its drawing plays by itself, More from its author's posts
-and drawings, its ⋯ and its Delete, its author's alone, and since phase 2
-its comments, section 10). From Nov 12 (the owner's "all yes" to A, of Home
+(`/social/b/<id>`: its drawing plays by itself, its ⋯ and its Delete, its
+author's alone, and since phase 2 its comments, section 10; More from its
+author's posts and drawings stood on it until the Calm Post Page, Nov 20,
+section 23). From Nov 12 (the owner's "all yes" to A, of Home
 saying "No posts yet" while Explore was full) such a drawing was on Home
 too, among the posts. Since the map's step 3 Home holds posts only (section
-16, decision 2): the drawing stays on its own page, its maker's page and
-More from, which reads it through Skribl's `list_public_posts`
-(docs/INTEGRATION.md, "A feed of your own people's drawings"). A post's
+16, decision 2): the drawing stays on its own page and its maker's page
+(and on More from until Nov 20, which read it through Skribl's
+`list_public_posts`: docs/INTEGRATION.md, "A feed of your own people's
+drawings"). A post's
 drawing's page is the post's. `harness/verify_socialposts.py` section 9
 holds it.
 
@@ -681,7 +683,8 @@ remove it", as it was the bar's Make by another name, which stays in the bar
 and the rail); Comments' place kept ("Comments open soon"; since
 phase 2 the comments themselves, section 10); on a desk, the drawing on the
 left and More from its author beside it, each tile the drawing alone, cut out
-of its share card as Skribl's face macro does.
+of its share card as Skribl's face macro does (More from went with the Calm
+Post Page, Nov 20, section 23; a draw-back's tile is that plate now).
 
 **The ⋯ sheet**, as the mock drew it: Copy link, Share…, and Report this
 post (and since piece 5, signed in, Block @them), or on your own Delete
@@ -720,7 +723,7 @@ law (in the US, reporting to NCMEC: the owner's lawyer sets that up).
 
 **Block, both ways and quietly.** From a profile's ⋯ or a post's ⋯, asked
 once. While it stands neither sees the other's posts or drawings: Home, a
-post's page, a drawing's page, More from. To the one blocked, the blocker's
+post's page, a drawing's page. To the one blocked, the blocker's
 profile is "Nobody here by that name"; the blocker finds theirs saying so,
 with Unblock, and nothing they made. Nobody is told. Settings lists the
 people you blocked, newest first, each with Unblock, and only the blocker
@@ -729,7 +732,7 @@ stays, naming nobody.
 
 **A block reaches Skribl's pages** through the two seams Skribl gives every
 host for a block list (docs/INTEGRATION.md): a feed filter (the first
-visit's gallery, a profile's Gallery tab's and More from's drawings) and a visibility
+visit's gallery's and a profile's Gallery tab's drawings) and a visibility
 policy (a drawing's link page, payload and card; the card falls back to its
 blank canvas). A host that mounts the site installs both, asking
 `social.hidden_authors(viewer_id)` (a block either way, and since the second
@@ -903,7 +906,9 @@ desk it glides open under the heading, the icon lit. Put away (the dimmed
 page, a drag down or Esc on a phone; a second click, Esc or a press elsewhere
 on a desk), it keeps what was typed for as long as the page is open. With no
 comments yet, "Say the first thing" stands where they will be and opens it
-too. The comments come newest first, each with its face, name, a short time
+too. (SINCE THE CALM POST PAGE, Nov 20, section 23: no heading, no icon and
+no "Say the first thing". The answer bar's one line, "Say something…",
+opens the box, and on a desk the box opens in that line's place.) The comments come newest first, each with its face, name, a short time
 ("40m", "2h"), its words or its drawing, Answer and ⋯; twenty a page, then
 Load more. **Answers sit one level under a comment, oldest first**:
 answering an answer puts the new one under the same comment. Answer opens
@@ -967,8 +972,9 @@ phone changes.
 **Who may comment:** somebody signed in, not taken down, with no block
 either way with the author of the post or the drawing; an answer also with
 none with the author of the comment it answers, and on what that comment is
-on. The route refuses anybody else kindly, and neither the box nor its icon
-is shown to them. Signed out, the comments are readable and the icon raises
+on. The route refuses anybody else kindly, and neither the box nor the line
+that opens it (its icon until Nov 20) is shown to them. Signed out, the
+comments are readable and the line raises
 "Say something?", whose Sign in comes back to the page with the box open
 (nothing is posted until Post). The
 words are a post's: tidied, 500 characters at most, nothing hidden or turned
@@ -1082,7 +1088,7 @@ on your post", or with a drawing, "Juno commented with a drawing"). Their
 face, who and what, when as comments say it ("5m", "2h"), their words under it
 in quotes (two lines at most), and the small picture: the drawing they
 answered with or drew, else the post's (or the drawing's), cut from its poster
-as More from's tiles are. Each row is one link to that comment on its page
+as a draw-back's tile is. Each row is one link to that comment on its page
 (`#c-<id>`, a post's or a drawing's).
 
 **Grouped since you last looked.** Several comments on one post since you
@@ -1581,8 +1587,8 @@ away only while what it holds can't be seen, and the fades remain.
 
 **What stays.** Their page, which says "You muted Theo · Unmute" under the
 buttons to you alone (to them and to everybody else their page is exactly as
-it was, in its source too); their posts and their drawings' pages, More from
-them, their Gallery on their page, a drawing's link page and its payload. The
+it was, in its source too); their posts and their drawings' pages, their
+Gallery on their page, a drawing's link page and its payload. The
 visibility policy is untouched: a mute never hides a page.
 
 **Counts and "Liked by…" stay true,** for everybody and for you: a folded
@@ -1793,7 +1799,8 @@ your own posts").
 
 **Step 3 is built**, its second part too (DECISIONS, "Home shows posts
 only"): Home's feed, Following and Everyone, signed in and out, holds posts
-alone (`posts.feed_page`; one person's, More from, keeps their drawings). A
+alone (`posts.feed_page`; one person's, More from, kept their drawings until
+More from went, Nov 20). A
 drawing shown in the gallery outside a post, the Pad's own or anything
 shared before posts, is on no Home and was not in the Gallery of everyone
 (it is since Nov 14: "The Gallery is every skribl", below); it keeps its own
@@ -1850,7 +1857,8 @@ yeses"). A TILE WEARS ITS DRAWING'S OWN GROUND: the box around a drawing whose
 shape is not the tile's is the colour the drawing is painted on, the Pad's
 dark for a drawing made on it, never cream bars; the paper where it is not
 known; Skribl's `describe_posts` says it (`ground`, a hex colour or nothing:
-docs/INTEGRATION.md), in the Gallery, a profile's Gallery tab and More from.
+docs/INTEGRATION.md), in the Gallery and a profile's Gallery tab (and on a
+draw-back's tile, since More from went, Nov 20).
 A TILE SAYS THE NAME AS WRITTEN ("Mr. Blood"), cut with … only when it does
 not fit. THE FIRST VISIT (Home signed out) keeps its welcome, and under
 "Fresh from everyone" the Gallery of everyone's six newest (posts only then;
@@ -1914,7 +1922,7 @@ a line drawing the blur is a coloured haze. The ▶ and, on your own Gallery
 tab, the eye stay on top of every tile (the copy comes first in the box and
 nothing has a z-index; the first mock lifted the drawing over the ▶ and the
 owner saw it). Every tile that frames a plate: the Gallery, a profile's
-Gallery tab, the first visit's six and More from. Hidden with the eye, the
+Gallery tab and the first visit's six (and More from, until Nov 20). Hidden with the eye, the
 picture at its sides fades with the drawing. Skribl says which drawings are
 on a picture (`describe_posts` `on_photo`), from a column written at post
 time beside the ground's (docs/INTEGRATION.md, "The ground a drawing is
@@ -2159,7 +2167,7 @@ stays plain words, and so does every one past the first ten people named in
 one post or comment. The words are escaped first, as any words are, and only
 the handles the post or the comment keeps as its mentions become links
 (`mentions.said`); where the words are already one link (Activity's peek, a
-quote's small card, More from's tiles) they stay plain. A card's words are
+quote's small card) they stay plain. A card's words are
 no link of their own any more (a link cannot hold the links to the people
 they name): a tap on them opens the post as the card's ground does
 (posts.js), a tap on a mention opens the person and never the post, and a
@@ -2924,7 +2932,9 @@ where it lives above; this is the index.
 - **3, "Draw back" in words:** on a post's own page the draw-backs' line
   ends in the words, the site's second button with the pen, there from the
   start ("No draw-backs yet") wherever the pen is offered; the row of
-  buttons above it is not touched.
+  buttons above it is not touched. (Since the Calm Post Page, Nov 20,
+  section 23: the words are the answer bar's, and with nothing drawn back
+  there is no line.)
 - **4, a drawn comment:** at rest no taller than its page's own drawing (156
   by 277 under a post's 370 by 278 on a phone, where it stood 294 by 523),
   its line waiting and its play button the card's glass pill at its foot; a
@@ -3043,3 +3053,79 @@ module for both editors (`lib/ask.js`).
 
 `verify_socialapp` 11 holds the page and its doors, `verify_ask` 6 the
 editors' side.
+
+## 23. Built: the calm post page (the owner's "All yes to everything", Nov 20)
+
+The owner, of a post nobody had answered: "It seems busy and disorganized.
+When there are comments and drawbacks it looks better and makes sense ... I
+don't want anything to ever look busy and confusing." Then, beside two
+pictures of Bluesky: "Bluesky looks simpler. Most because there aren't the
+more from images." And to the mock's five choices (the artifact "Calm Post
+Page"): "All yes to everything. Make it smart and beautiful." That page had
+three bold headings, two of them over nothing, seven things in violet, and
+the same two actions offered three times each in three shapes.
+
+**One answer bar** (`_comments.html` `answer_bar`; `social.css`, THE ANSWER
+BAR), on every post's page, every drawing's and every comment's: your face,
+a line that looks like a field and is a button, "Say something…" (a
+comment's own page: "Reply to Eli…"), and Draw back where the post can be
+drawn back on. It took the place of the round icon at a "Comments" heading's
+end, of "Say the first thing", and of "Draw back" at the end of the
+draw-backs' line. Nothing else on the page offers either in words; the row
+of icons above is as it was.
+
+- *A phone:* fixed at the foot of the screen, standing on the bottom bar,
+  on the bar's own glass, 60px tall. The page keeps 60px more at its foot
+  and the toast rises 60px higher there, so neither is ever under it. A tap
+  on the line raises the box's sheet, as the icon did.
+- *A desk:* in the column, 18px under the date, without the face. THE LINE
+  BECOMES THE BOX: the two share one room, so the box glides open over the
+  line while the line fades away under it; Esc or a press elsewhere folds
+  it away and the line is back. What is under them moves by the
+  difference, the box's room less the line's 44px.
+- *The line is the site's card,* its ring and its lift, as a comment's
+  bubble under it is. THE MOCK DREW IT WITH ITS RING ALONE, and in light
+  that was a white box on near-white set apart by its line and nothing
+  else (1.03:1 on a phone), which the owner ruled out on Nov 16 ("just a
+  border"); `verify_socialreposts` 13 found it. The lift is the one thing
+  built that the mock did not show.
+- *Signed out,* the line is there by itself and raises "Say something?".
+  A place (a deleted comment's own page) has no bar: it takes no reply.
+
+**Small quiet labels** where bold headings stood: "3 draw-backs", "7
+comments", and on a comment's own page "3 replies to Eli" (whose replies
+follow: the owner's yes to C, Nov 18, kept), in the row's second ink, 15px
+and semibold, each still a heading to a screen reader. AND NOTHING WHERE
+THERE IS NOTHING TO LABEL: no draw-backs, no strip at all; no comments, no
+label. The comments' label fades in with the first comment and goes with the
+last, leaving once that comment's room has closed.
+
+**No More from** on a post's page or a drawing's (`posts._post_page`; the
+read behind it, `feed_page`'s one-person branch, went with it). Their face
+and name open their page.
+
+**When a replay ends** on the page (`posts.js`), Watch again rises alone on
+the drawing and the bar's Draw back lights up in the action's own fill,
+white on it, until it plays again: the invitation at the moment it is
+wanted, said once. A card on Home keeps both pills, as before.
+
+**The row's talk cloud** on a post's own page is a way down to the
+comments. With none to go down to its own name is "Comment", and a tap on it
+opens the box (`comments.js`), so it is never a tap that does nothing.
+
+**Not changed:** Home, profiles, the comment sheet (it still opens ready to
+type), the drawing's own bar and its "Drawn in… watching at 1×" line, which
+are Skribl's player. The Pad and Flip: nothing of theirs.
+
+**Measured as built** (a touch phone 402 wide, and a desk; light and dark):
+the bar 402 by 60, its line 179 by 44 beside a Draw back of 139, 370 when it
+is alone; "Say something…" 16px, 7.56:1 light and 8.59:1 dark; the labels
+7.1:1 and 10.12:1; Draw back lit 5.33:1 in both. An empty post's page is
+874px, one screen, where it ran 1117.
+
+`verify_socialcomments` holds the bar, the box behind it and the labels
+(sections 1, 12, 29 to 37, 40, 46, 48), `verify_socialdrawback` the bar's
+Draw back, the strip and the replay's end (6, 7, 9), `verify_socialposts`
+that More from is gone (3, 9). NOT TESTED HERE: Safari on an iPhone, where
+the bar stands on the bottom bar above the home indicator and the keyboard
+rises under the sheet; the owner's phone is the test.

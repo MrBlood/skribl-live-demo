@@ -3,16 +3,19 @@
  * social/_comments.html), the same section on both: the page names its own
  * addresses (data-new, data-more, data-drop).
  *
- * THE BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an icon not
- * a card. It takes up too much room sitting there"; "Yes to all" to the
- * mock's choices). A round icon at the end of the "Comments" heading opens
- * the one box: on a phone it rises on Make's own sheet, "Say something to
- * Mira"; on a desk it glides open under the heading, the icon lit. Put away
- * (the dimmed page, a drag down or Esc on a phone; a second click, Esc or a
- * press elsewhere on a desk), it keeps what was typed. With no comments yet,
- * "Say the first thing" stands where they will be and opens it too. Signed
- * out, the icon raises "Say something?", whose Sign in comes back with the
- * box open (#say).
+ * THE BOX IS NOT A CARD SITTING THERE (the owner, Nov 13: "The comment needs
+ * to be an icon not a card. It takes up too much room sitting there"), AND
+ * ONE LINE OPENS IT (the Calm Post Page; the owner's "All yes to everything.
+ * Make it smart and beautiful", Nov 20): the answer bar's "Say something…"
+ * (_comments.html answer_bar), the one place to answer on the page. On a
+ * phone the box rises on Make's own sheet, "Say something to Mira"; on a
+ * desk it glides open over the line, in its place. Put away (the dimmed
+ * page, a drag down or Esc on a phone; Esc or a press elsewhere on a desk),
+ * it keeps what was typed. Signed out, the line raises "Say something?",
+ * whose Sign in comes back with the box open (#say). Until Nov 20 a round
+ * icon at the end of a "Comments" heading opened it, and "Say the first
+ * thing" stood where the comments would be: the same thing offered three
+ * times on a page with nothing on it yet.
  *
  * IN THE BOX the words grow as they are typed and say how many are left once
  * few are; Post sends them (/social/p/<id>/comments, or a drawing's
@@ -128,14 +131,36 @@
     return say('c_failed');
   }
 
-  var head = root.querySelector('.comments-head');
+  /* THE ANSWER BAR (_comments.html answer_bar): the one place to answer, in
+     the page and outside the comments' own section; `home` is the room it
+     shares with the box on a desk. */
+  var bar = doc.querySelector('[data-ans-bar]');
+  var home = bar ? bar.parentNode : null;
   var list = root.querySelector('[data-cm-list]');
+  var labelEl = root.querySelector('[data-cm-head]');
   var countEl = root.querySelector('[data-cm-count]');
+  var nounEl = root.querySelector('[data-cm-noun]');
   var pageSay = root.querySelector('[data-cm-page-say]');
+  /* HOW MANY, IN THE SMALL LABEL ("7 comments"), AND NO LABEL AT NONE (the
+     Calm Post Page): its number and its noun, one or many. It fades in as
+     the first one comes; as the last one goes it fades with it and leaves
+     once that one's room has closed, so nothing under it is moved twice. */
+  var labelOff = 0;
   function setCount(n) {
     if (!countEl || typeof n !== 'number') return;
     countEl.textContent = String(n);
-    countEl.hidden = !n;
+    if (nounEl) nounEl.textContent = nounEl.getAttribute(n === 1 ? 'data-one' : 'data-many') || nounEl.textContent;
+    if (!labelEl) return;
+    clearTimeout(labelOff);
+    if (n) {
+      labelEl.classList.remove('is-going');
+      if (labelEl.hidden) { labelEl.hidden = false; labelEl.classList.add('is-new'); }
+      return;
+    }
+    if (labelEl.hidden) return;
+    labelEl.classList.remove('is-new');
+    labelEl.classList.add('is-going');
+    labelOff = setTimeout(function () { labelEl.hidden = true; labelEl.classList.remove('is-going'); }, 420);
   }
   /* HOW MANY, after one came or went: the server's count of the post's or
      the drawing's (`n`); on a comment's own page its own replies, counted
@@ -304,15 +329,16 @@
   function onDesk() { return !!(desk && desk.matches); }
 
   /* WHERE IT CAN BE SEEN: something below what the screen shows (above a
-     phone's bar) is glided to, never jumped to; under Reduce Motion the page
-     is simply put there. */
+     phone's bar, and the answer bar standing on it) is glided to, never
+     jumped to; under Reduce Motion the page is simply put there. */
   function reveal(el) {
     var r = el.getBoundingClientRect(), floor = window.innerHeight;
-    var bar = doc.querySelector('body > .nav');
-    if (bar) {
-      var b = bar.getBoundingClientRect();
+    var nav = doc.querySelector('body > .nav');
+    if (nav) {
+      var b = nav.getBoundingClientRect();
       if (b.top > floor / 2) floor = b.top;           // a phone's bar along the bottom
     }
+    if (bar && !onDesk()) floor = Math.min(floor, bar.getBoundingClientRect().top);
     var over = r.bottom - (floor - 12);
     if (over > 0) window.scrollBy({ top: Math.min(over, r.top - 12), behavior: still() ? 'auto' : 'smooth' });
   }
@@ -332,33 +358,37 @@
     return off;
   }
 
-  /* ---- THE BOX, FOLDED AWAY BEHIND THE ICON ------------------------------------
-     The comment box is an icon (the owner, Nov 13: "The comment needs to be an
-     icon not a card. It takes up too much room sitting there"; "Yes to all").
-     One box, wherever it opens, keeping what was typed for as long as the page
-     is open:
-     - A PHONE: a tap on the icon (or on "Say the first thing") raises Make's
-       own sheet with the box on it, its field ready to type in, "Say something
-       to Mira"; Answer raises it as "Answer Theo", Theo's words in a line under
-       it. A tap on the dimmed page, a drag down or Esc puts it away
-       (social.js's SocialSheet). On a phone's keyboard it rides above it.
-     - A DESK: a click glides the box open under the heading (the fold), what
-       is under it sliding down while it fades in, the icon lit; a second
-       click, Esc or a press anywhere else folds it away. Answer glides it open
-       under that conversation instead ("Answer Theo…"), and the page glides
-       to it if it is below the screen. Open in one place and asked for in
-       another, it folds away there first, then opens.
+  /* ---- THE BOX, FOLDED AWAY BEHIND THE ANSWER BAR'S LINE -------------------------
+     The comment box is not a card sitting there (the owner, Nov 13: "It takes
+     up too much room sitting there"); the answer bar's line, "Say
+     something…", opens it (the Calm Post Page, Nov 20). One box, wherever it
+     opens, keeping what was typed for as long as the page is open:
+     - A PHONE: a tap on the line raises Make's own sheet with the box on it,
+       its field ready to type in, "Say something to Mira"; Answer raises it
+       as "Answer Theo", Theo's words in a line under it. A tap on the dimmed
+       page, a drag down or Esc puts it away (social.js's SocialSheet). On a
+       phone's keyboard it rides above it.
+     - A DESK: a click glides the box open in the line's own place (the fold,
+       in the room the two share: social.css .ans), what is under it sliding
+       down while it fades in and the line fades away under it: the line
+       becomes the box. Esc or a press anywhere else folds it away, and the
+       line is back. Answer glides it open under that conversation instead
+       ("Answer Theo…"), and the page glides to it if it is below the
+       screen. Open in one place and asked for in another, it folds away
+       there first, then opens.
      - POSTED: the box goes (the sheet glides down, or the fold folds away) as
        the new comment opens its room, fades in and glows a moment in the
        landing's tint (Activity's), which then fades. On a desk the two move in
        step, so what is under them moves only by how much taller or shorter the
        comment is than the box. */
-  var box = root.querySelector('[data-cm-box]');
-  var fold = root.querySelector('[data-cm-fold]');
+  var box = doc.querySelector('[data-cm-box]');
+  var fold = doc.querySelector('[data-cm-fold]');
   var foldIn = fold ? fold.querySelector('.cm-fold-in') : null;
-  var firstFold = root.querySelector('[data-cm-first-fold]');
-  var sayers = Array.prototype.slice.call((subjectEl || root).querySelectorAll('[data-cm-new]'));
-  var icon = root.querySelector('.cm-say');
+  /* What opens the box for something new: the answer bar's line (`icon`,
+     its name from when it was one), and on a comment's own page the Reply
+     in that comment's row. */
+  var sayers = Array.prototype.slice.call(doc.querySelectorAll('[data-cm-new]'));
+  var icon = bar ? bar.querySelector('.cm-say') : null;
   var words = box ? box.querySelector('[data-cm-words]') : null;
   var label = box ? box.querySelector('[data-cm-label]') : null;
   var left = box ? box.querySelector('[data-cm-left]') : null;
@@ -440,8 +470,8 @@
     if (want && box.parentNode !== want) want.appendChild(box);
   }
 
-  /* What the icon (and "Say the first thing") open, said to a screen reader
-     as such: a phone's dialog, or a desk's fold. */
+  /* What the bar's line (and a comment's own Reply) open, said to a screen
+     reader as such: a phone's dialog, or a desk's fold. */
   function named() {
     sayers.forEach(function (b) {
       if (onDesk()) { b.removeAttribute('aria-haspopup'); b.setAttribute('aria-controls', 'commentFold'); }
@@ -475,39 +505,19 @@
   }
 
   /* ---- a desk: the fold ----------------------------------------------------- */
-  var at = null;             // where the fold is open: `root` (under the heading) or a comment's li
+  var at = null;             // where the fold is open: `root` (at home, in the bar's place) or a comment's li
   var closing = false;       // folding away, from where it still is
   var foldOff = null;        // calls off the fold's glide under way
   var afterFold = null;      // what to do once it has folded away (open it elsewhere)
-  function placeOf() { return fold.parentNode === root ? root : fold.parentNode; }
+  /* The fold's home is the room it shares with the answer bar (.ans): open
+     there, the bar's line fades away under the box (social.css). */
+  function placeOf() { return fold.parentNode === home ? root : fold.parentNode; }
   function placeFold(top) {
     if (top) { if (fold.parentNode !== top) top.appendChild(fold); }
-    else if (head.nextElementSibling !== fold) root.insertBefore(fold, head.nextSibling);
+    else if (fold.parentNode !== home) home.appendChild(fold);
   }
 
-  /* "Say the first thing" stands where the comments will be while there are
-     none, unless the box is open under the heading in its place. It folds in
-     step with the box: `quick` as the box folds away quickly. */
-  var firstOff = null;
-  var firstIn = firstFold ? firstFold.querySelector('.cm-fold-in') : null;
-  function syncFirst(quick) {
-    if (!firstFold) return;
-    var want = !list.querySelector(':scope > .cm') && !(at === root && onDesk());
-    if (firstFold.classList.contains('is-open') === want) return;
-    if (firstOff) firstOff();
-    firstFold.classList.remove('is-still');
-    firstFold.classList.toggle('is-quick', !!quick);
-    if (want) { firstIn.hidden = false; void firstFold.offsetHeight; }   // laid out, then it opens
-    firstFold.classList.toggle('is-open', want);
-    firstOff = after(firstFold, 'grid-template-rows', 500, function () {
-      firstOff = null;
-      firstFold.classList.remove('is-quick');
-      if (firstFold.classList.contains('is-open')) firstFold.classList.add('is-still');
-      else firstIn.hidden = true;
-    });
-  }
-
-  /* The fold glides open under the heading (`top` none) or under the
+  /* The fold glides open in the bar's place (`top` none) or under the
      conversation `top`, its field ready to type in; once open, if it is below
      the screen, the page glides to it. */
   function unfold(top) {
@@ -527,7 +537,6 @@
     void fold.offsetHeight;          // the glide starts from where it is
     fold.classList.add('is-open');
     at = where;
-    syncFirst(false);
     words.focus({ preventScroll: true });
     grow();
     foldOff = after(fold, 'grid-template-rows', 500, function () {
@@ -540,7 +549,7 @@
 
   /* The fold folds away where it is: `quick` (0.24s) when it is put away, or
      'posted', in step with a comment arriving (0.32s, as the comment opens its
-     room). Folded, it goes back under the heading, unseen, and then `done`. */
+     room). Folded, it goes back home, unseen, and then `done`. */
   function shutFold(how, done) {
     if (!at) { if (done) done(); return; }
     if (foldOff) foldOff();
@@ -549,7 +558,6 @@
     fold.classList.remove('is-open');
     at = null;
     closing = true;
-    syncFirst(how === 'quick');
     foldOff = after(fold, 'grid-template-rows', 500, function () {
       foldOff = null;
       closing = false;
@@ -581,8 +589,9 @@
   }
 
   /* ---- the ways in ------------------------------------------------------------ */
-  /* The icon, or "Say the first thing": a new comment. On a desk a second
-     click on the icon puts it away. */
+  /* The bar's line, or a comment's own Reply: something new. On a desk,
+     asked again while the box is open at home (the Reply in a comment's own
+     row: the line itself is under the box then), it is put away. */
   function sayNew(btn) {
     if (!box || sending) return;
     if (!onDesk()) { rise(null, btn === icon ? [icon] : [btn, icon]); return; }
@@ -796,7 +805,6 @@
             glow(li);
           } else glowCount(top);
           if (at) shutFold('posted', tidy);
-          else syncFirst(false);
           counted(j.count, 1);
           var back = spot ? li.querySelector('[data-cm-answer]') : was && was.btn;
           if (back && doc.contains(back)) back.focus({ preventScroll: true });
@@ -807,12 +815,10 @@
              lands at the end, and the page glides to it. */
           arrive(li, list, null, 0, function () { reveal(li); });
         } else {
-          /* A new comment lands right under the icon that was pressed, so
-             nothing else needs to move. */
+          /* A new comment lands at the top of the list, newest first. */
           arrive(li, list, list.firstChild, 0);
         }
         if (at) shutFold('posted', tidy);
-        else syncFirst(false);
         counted(j.count, 1);
         glow(li);
         var next = subject && j.under === subject ? li.querySelector('[data-cm-answer]') : icon;
@@ -821,12 +827,27 @@
     });
   }
 
-  /* ---- signed out: the icon is there for everybody ---------------------------- */
+  /* ---- signed out: the bar's line is there for everybody ---------------------- */
   var outWrap = box ? null : doc.getElementById('commentOutSheet');
   var out = outWrap && window.SocialSheet ? window.SocialSheet(outWrap, {
     openers: sayers, doorCloses: false,
     first: function () { return outWrap.querySelector('.post-sheet-acts [data-make-close]'); }
   }) : null;
+
+  /* ---- THE ROW'S TALK CLOUD, ON A POST'S OWN PAGE ----------------------------
+     It is a way down to the comments (_post.html post_row). With none there
+     is nothing to go down to, and its own name then is "Comment": it opens
+     the box, as the bar's line does (signed out, "Say something?"), so a tap
+     on it is never a tap that does nothing. */
+  var cloud = !subjectEl && icon ? doc.querySelector('.post-page > .post-row a.post-count') : null;
+  if (cloud) {
+    cloud.addEventListener('click', function (e) {
+      if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (list.querySelector(':scope > .cm')) return;
+      e.preventDefault();
+      icon.click();
+    });
+  }
 
   /* ---- a link: copied, or the device's own share sheet ------------------- */
   function absolute(url) { return new URL(url, window.location.href).href; }
@@ -865,11 +886,12 @@
     : null;
   var current = null, opener = null;
 
-  /* THE CLICKS: the comments' own, and on a comment's own page the Reply and
-     ⋯ under that comment, which sit above the comments. */
+  /* THE CLICKS: the comments' own, the answer bar's line, and on a
+     comment's own page the Reply and ⋯ under that comment, which sit above
+     the comments. */
   doc.addEventListener('click', function (e) {
     if (!e.target || !e.target.closest) return;
-    if (!root.contains(e.target) && !(subjectEl && subjectEl.contains(e.target))) return;
+    if (!root.contains(e.target) && !(subjectEl && subjectEl.contains(e.target)) && !(bar && bar.contains(e.target))) return;
     var q = e.target.closest('[data-cm-show]');
     if (q) {
       e.preventDefault();
@@ -991,7 +1013,6 @@
       if (ol && ol.classList.contains('cm-chain') && !ol.querySelector(':scope > .cm') && ol.parentNode) {
         ol.parentNode.removeChild(ol);
       }
-      syncFirst(false);
     }
     li.addEventListener('transitionend', function (e) { if (e.target === li) off(); });
     setTimeout(off, 400);

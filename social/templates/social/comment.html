@@ -23,8 +23,10 @@
        YOU OPENED (the owner's yes to C, Nov 18): the highlight's lilac
        behind it from its face down to its time, and the violet ring round
        its face (social.css, THE COMMENT YOU OPENED).
-    3. "REPLIES TO ELI" and how many (every reply under it, at any depth),
-       the icon that opens the box ("Reply to Eli"), then its direct
+    3. THE ANSWER BAR, a post's own (_comments.html answer_bar; the Calm
+       Post Page, Nov 20), saying "Reply to Eli…"; then how many replies
+       and whose, a small quiet label ("3 replies to Eli": every reply
+       under it, at any depth), and nothing at none; then its direct
        replies, oldest first, each with the count by its talk cloud and its
        conversation followed down under it, ten deep (_comments.html,
        Bluesky's way); a tap on one opens its own page.
@@ -35,7 +37,7 @@
     change. #}
 {% extends 'social/base.html' %}
 {% from 'social/_post.html' import face, post_words, post_sheets, repost with context %}
-{% from 'social/_comments.html' import comments_section, comment_sheets, comment_art, comment_heart, the_way, share_data with context %}
+{% from 'social/_comments.html' import answer_bar, comments_section, comment_sheets, comment_art, comment_heart, the_way, share_data with context %}
 {% from 'social/_likes.html' import like_sheets with context %}
 {% import 'social/_icons.html' as ic %}
 {% set c = it.c %}{% set who = it.who %}
@@ -83,6 +85,7 @@
             aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>
   </footer>
   <p class="post-meta"><time datetime="{{ when_iso(c.created_at) }}" data-when="at">{{ when_day(c.created_at) }}</time></p>
+  {{ answer_bar(cm) }}
   {%- endif %}
   {{ comments_section(cm) }}
 </article>

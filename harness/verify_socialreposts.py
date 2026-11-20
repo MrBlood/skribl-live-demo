@@ -2318,7 +2318,11 @@ with sync_playwright() as p:
                 const l = Math.cbrt(0.4122214708*r + 0.5363325363*g + 0.0514459929*b), m = Math.cbrt(0.2119034982*r + 0.6806995451*g + 0.1073969566*b),
                       q = Math.cbrt(0.0883024619*r + 0.2817188376*g + 0.6299787005*b);
                 return Math.hypot(1.9779984951*l - 2.4285922050*m + 0.4505937099*q, 0.0259040371*l + 0.7827717662*m - 0.8086757660*q); };
-              const ROLES = [["a second button", ".btn:not(.btn-primary):not(.btn-danger):not(.cmp-post), .icon-btn.boxed, .cm-say, .chip"],
+              // (.cm-say was a second button here while it was the round lilac icon at a
+              // heading's end. Since the Calm Post Page, Nov 20, it is the answer bar's
+              // line and wears the site's card, as a comment's bubble does: no role of
+              // these. The bar's Draw back beside it is a .btn, and is read.)
+              const ROLES = [["a second button", ".btn:not(.btn-primary):not(.btn-danger):not(.cmp-post), .icon-btn.boxed, .chip"],
                              ["a switch's track", ".fo-seg, .theme-switch"], ["a well", ".post-card > .qt-card"],
                              ["a placeholder", ".face-blank:not(.nav .face-blank), .act-pic, .skribl-inline"],
                              ["a note", ".note, .prof-blocked, .legal-draft, .post-down, .prof-down, .rep-what"],
