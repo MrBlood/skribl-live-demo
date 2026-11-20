@@ -14,8 +14,7 @@ link to their page, in the small violet ink (--accent-ink), 600, never
 underlined (social.css, "MENTIONS"). Nothing else in the words moves. A
 handle that is nobody stays plain words, and so does every handle past the
 first MOST distinct people in one post or comment. Where the words are
-already one link (Activity's peek, a quote's small card, More from's tiles)
-they stay plain.
+already one link (Activity's peek, a quote's small card) they stay plain.
 
 WHAT IS KEPT (models.Mention, social_mentions): who was mentioned and the
 handle as typed, written in the same transaction as the post or the comment

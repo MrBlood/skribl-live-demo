@@ -9,15 +9,30 @@
     Reduce Motion, its line there from the start (you went there to watch).
     Its author, its words, the row every post has (_post.html post_row: the
     comments, a way down to them here, the heart, Share and the ⋯, the one ⋯
-    on the page), when and its plays; its
+    on the page), when and its plays; THE ANSWER BAR, the one place to
+    answer (_comments.html answer_bar); the draw-backs on it; its
     comments (phase 2: _comments.html, comments.py), on a desk beside the
-    drawing; on a desk, More from its author beside it. NO "MAKE YOUR OWN"
+    drawing. NO "MAKE YOUR OWN"
     HERE (the owner's "Yes, remove it", Nov 14): it was the bar's Make by
     another name, the same sheet; Make stays in the bar (a phone) and the
     rail (a desk), on this page as on every other. A
     drawing shown outside a post (/social/b/<id>) is this page too, its
     comments and all (the owner's yes, Nov 12: "whatever you open has the
     comment box"). Its ⋯ is the feed's sheet.
+
+    THE CALM POST PAGE (the owner, Nov 20, of a post nobody had answered:
+    "It seems busy and disorganized ... I don't want anything to ever look
+    busy and confusing"; then, of Bluesky's, "looks simpler. Most because
+    there aren't the more from images"; and to the mock's five choices, "All
+    yes to everything. Make it smart and beautiful"):
+    - ONE ANSWER BAR under the date, on every post's page: "Say something…"
+      and Draw back. Nothing else on the page offers either in words.
+    - NO "MORE FROM" HERE: on a page about one drawing it started a second
+      conversation. Their face and name open their page.
+    - SMALL QUIET LABELS where bold headings stood ("3 draw-backs", "7
+      comments"), and nothing at all where there is nothing to label.
+    - WHEN THE REPLAY ENDS, Watch again alone rises on the drawing and the
+      bar's Draw back lights up (posts.js).
 
     LIKES (phase 2; the likes mock, "I like d."): the heart and how many in
     the row under the drawing (_post.html, heart(); Nov 13, it sat at the
@@ -40,7 +55,7 @@
 {% from 'social/_post.html' import post_sheets, post_words, face, player, post_row, rp_data, drawn_on with context %}
 {% from 'social/_likes.html' import liked_by, like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
-{% from 'social/_comments.html' import comments_section, comment_sheets with context %}
+{% from 'social/_comments.html' import answer_bar, comments_section, comment_sheets with context %}
 {% from 'social/_mute.html' import mute_parts with context %}
 {% from 'social/_gallery.html' import plate_frame, plate_ground, plate_fill with context %}
 {% import 'social/_icons.html' as ic %}
@@ -89,27 +104,21 @@
   {% if card.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(card.quote) }}{% endif %}
   {{ post_row(card, landing=(lk is not none and not lk.line)) }}
   <p class="post-meta"><time datetime="{{ when_iso(p.created_at) }}" data-when="at">{{ when_day(p.created_at) }}</time>{% if card.plays %} · {{ card.plays }}{% endif %}</p>
-  {#- DRAW-BACKS ON IT (Draw back, step 2; the mock's strip): how many, then
-      their drawings, newest first, each with who drew back, opening its own
-      page (which plays hers, then theirs). A row that scrolls sideways when
-      they pass the page's width; a drawing's plate as More from's.
-      "DRAW BACK", IN WORDS, AT THE END OF THEIR LINE (the walkthrough's
-      mocks, choice 3, the owner's "all yes", Nov 19): approved at the end
-      of the row of buttons, where once the row has counts it runs past the
-      drawing's edge on a phone and is cut off on a desk. Here it ends at
-      the drawing's edge. The row above is not touched: its pen and count
-      stay, the same row as on every card. Offered where the pen is (it can
-      be drawn back on, and somebody is signed in), and then the line is
-      there from the start, "No draw-backs yet", so the words always have a
-      home. A tap is the pen's own (posts.js, [data-drawback]). #}
-  {%- set can_back = card.drawable and me %}
-  {% if backs or can_back %}
+  {{ answer_bar(cm, card) }}
+  {#- DRAW-BACKS ON IT (Draw back, step 2; the mock's strip): how many, a
+      small quiet label, then their drawings, newest first, each with who
+      drew back, opening its own page (which plays hers, then theirs). A row
+      that scrolls sideways when they pass the page's width; a drawing's
+      plate as a Gallery tile's. WITH NONE, NOTHING (the Calm Post Page, Nov
+      20): until then the line stood from the start, "No draw-backs yet",
+      with "Draw back" in words at its end (the walkthrough's choice 3, Nov
+      19), so the words always had a home. Their home is the answer bar
+      now, on every post that can be drawn back on, and a heading over
+      nothing is gone. The row above is not touched: its pen and count stay,
+      the same row as on every card. #}
+  {% if backs %}
   <section class="db-strip" aria-labelledby="dbTitle">
-    <div class="db-head">
-      <h2 class="db-title" id="dbTitle">{{ ic.drawback() }}<span>{% if backs %}{{ backs|length }} {{ 'draw-back' if backs|length == 1 else 'draw-backs' }}{% else %}No draw-backs yet{% endif %}</span></h2>
-      {% if can_back %}<button class="btn btn-small db-word" type="button" data-drawback="{{ p.public_id }}" data-drawback-first="{{ who.display_name|first_name }}"{% if card.mine %} data-drawback-own{% endif %}>{{ ic.drawback() }}<span>Draw back</span></button>{% endif %}
-    </div>
-    {% if backs %}
+    <h2 class="pp-label db-title" id="dbTitle">{{ backs|length }} {{ 'draw-back' if backs|length == 1 else 'draw-backs' }}</h2>
     <div class="db-row">
       {% for m in backs %}
       <a class="db-tile" href="{{ m.url }}">
@@ -118,25 +127,10 @@
       </a>
       {% endfor %}
     </div>
-    {% endif %}
   </section>
   {% endif %}
   {% if lk and lk.line %}{{ liked_by(lk) }}{% endif %}
   {% if cm %}{{ comments_section(cm) }}{% endif %}
-  {% if more %}
-  <section class="more-from" aria-labelledby="moreTitle">
-    <h2 class="more-title" id="moreTitle">More from {{ who.display_name|first_name }}</h2>
-    <div class="more-grid">
-      {% for m in more %}
-      <a class="more-tile" href="{{ m.url }}">
-        <span class="more-pic"{{ plate_ground(m.sk) }}>{% if m.sk %}{{ plate_fill(m.sk) }}<span class="more-plate" style="{{ plate_frame(m.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=m.post.skribl_id) }}" alt="" loading="lazy" decoding="async"></span>{% endif %}</span>
-        <b class="more-words">{{ m.post.words.split('\n')[0] if m.post.words else 'A drawing' }}</b>
-        {% if m.plays %}<span class="more-plays">{{ m.plays }}</span>{% endif %}
-      </a>
-      {% endfor %}
-    </div>
-  </section>
-  {% endif %}
 </article>
 <p class="say" data-page-say role="status" hidden></p>
 {{ post_words() }}

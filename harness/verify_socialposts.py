@@ -19,9 +19,9 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      that says public (the tick the composer asked for until Nov 19) is
      still kept public, and Skribl's listing shows it. No Make your
      own on the page (Nov 14): the bar's and the rail's Make opens the
-     composer there. On
-     a desk, More from shows each other drawing alone, cut out of its share
-     card.
+     composer there. NO MORE FROM
+     on it (the Calm Post Page, Nov 20): its author's other drawings are
+     not on the page or in its source.
   4. THE FEED: everyone's posts, newest first, each card still until
      tapped, its time said in the person's own; Load more brings the next
      page in place, by a cursor that names no internal id.
@@ -81,8 +81,8 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      kept link-only, a face or one by somebody not on the site;
      its tiles two across on a touch phone and three on a desk, each the
      drawing whole in 650 x 486, the box around it the drawing's own ground
-     (a tall one on the Pad's dark in its dark, read off the paint, there,
-     on its maker's Gallery tab and in More from), with "▶ 15 sec" (what the player's
+     (a tall one on the Pad's dark in its dark, read off the paint, there
+     and on its maker's Gallery tab), with "▶ 15 sec" (what the player's
      play button says at rest, without "drawn in"; a Flip its pages), the
      maker's face at 22px and whole name, the hearts and comments only when
      there are some; the drawing whole and alone, cut out of its share card;
@@ -111,7 +111,7 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      picture the Pad began on, a post's or one shown outside a post, shows that
      picture at its sides, blurred (read off the paint beside the plate: its
      colours, never its ground, no hard step), in the Gallery, on its maker's
-     Gallery tab, in More from and on the first visit; a plain drawing keeps
+     Gallery tab and on the first visit; a plain drawing keeps
      its strips in its own ground, with no copy behind it; every tile's ▶,
      and on your own Gallery tab its eye, is what is painted along its middle
      (elementFromPoint), phone and desk, light and dark; their words and the
@@ -936,7 +936,8 @@ with sync_playwright() as p:
         sk = skribl_row(row[1]) if row else None
         page = pg.evaluate("""() => ({ words: (document.querySelector('.post-words') || {}).textContent,
           meta: (document.querySelector('.post-meta') || {}).textContent,
-          comments: (document.getElementById('commentsTitle') || {}).innerText,
+          comments: !!document.getElementById('comments'), label: (l => !!l && !l.hidden)(document.getElementById('commentsTitle')),
+          line: (document.querySelector('.ans-bar .cm-say') || {}).textContent || null,
           box: !!document.querySelector('[data-cm-box]') })""")
         playing = pg.evaluate(STATE)
         check("Post sends the words and the drawing as one post: the post's own page, its row (the words as typed,"
@@ -947,11 +948,12 @@ with sync_playwright() as p:
               and sk[1] == "Day 12. The beard took longer than the skull." and not sk[2]
               and sk[3] == db("select public_id from social_people where handle = 'mira'")[0][0],
               f"url {url}; row {row}; skribl {sk}")
-        check("the post's own page plays its drawing by itself, its words, when and its comments (phase 2:"
-              " verify_socialcomments holds them)",
+        check("the post's own page plays its drawing by itself, its words, when, the answer bar (\"Say something…\") and"
+              " its comments' place, with no heading over it while there are none (phase 2: verify_socialcomments holds"
+              " them)",
               playing[:1] == ["playing"] and page["words"] == "Day 12. The beard took longer than the skull.\nWatch it at 2×."
               and " at " in (page["meta"] or "")
-              and (page["comments"] or "").strip() == "Comments" and page["box"],
+              and page["comments"] and not page["label"] and page["line"] == "Say something…" and page["box"],
               f"players {playing}; page {page}")
         rctx, rpg = browser_as(b, mira, reduced=True)
         rpg.goto(BASE + url)
@@ -998,51 +1000,36 @@ with sync_playwright() as p:
               all(makes.get(k) == {"inPage": 0, "words": 0, "bar": 1, "sheet": True} for k in ("phone", "desk")),
               json.dumps(makes))
 
-        # MORE FROM, ON A DESK: each tile the drawing alone, whole, cut out of
-        # its share card, read off the paint (the card's own colours: share_card).
-        tiles, tall, wide = [], (531, 944), (816, 612)
+        # NO MORE FROM ON A POST'S OWN PAGE (the Calm Post Page; the owner, Nov
+        # 20, beside Bluesky's: "looks simpler. Most because there aren't the
+        # more from images", then "All yes to everything"): on a page about one
+        # drawing it started a second conversation; their face and name open
+        # their page. Mira has two other drawings here, which More from showed
+        # until then (each cut out of its share card: the same plate now reads
+        # off the paint in the Gallery, section 13, and on a draw-back's tile,
+        # verify_socialdrawback 6). Asked as gone, in the page and its source.
+        tall, wide = (531, 944), (816, 612)
+        others = []
         for words, size in (("Card, tall", tall), ("Card, wide", wide)):
-            make_post(mira, words, seed=7, size=size, card=True)
-        dctx, dpg = browser_as(b, mira, "desk", "light")
-        dpg.goto(BASE + url)
-        try:
-            dpg.wait_for_function("""() => [...document.querySelectorAll('.more-plate img')].length >= 2 &&
-              [...document.querySelectorAll('.more-plate img')].every(i => i.complete && i.naturalWidth > 0)""", timeout=15000)
-            dpg.evaluate("() => Promise.all([...document.querySelectorAll('.more-plate img')].map(i => i.decode().catch(() => null)))")
-        except Exception as exc:
-            tiles.append({"stopped": str(exc).splitlines()[0][:100]})
-        dpg.wait_for_timeout(300)
-        for words, size in (("Card, tall", tall), ("Card, wide", wide)):
-            tile = dpg.locator(".more-tile", has_text=words)
-            box = dpg.evaluate("""(words) => { const t = [...document.querySelectorAll('.more-tile')].find(e => e.textContent.includes(words));
-              const pl = t && t.querySelector('.more-plate'), i = pl && pl.querySelector('img');
-              if (!i) return null; const p = pl.getBoundingClientRect(), r = i.getBoundingClientRect();
-              const k = r.width / 1200;   // CSS pixels to one card pixel
-              return { at: [(p.left - r.left) / k, (p.top - r.top) / k, p.width / k, p.height / k] }; }""", words)
-            png = tile.locator(".more-pic").screenshot(timeout=5000) if tile.count() and Image else None
-            card, marks = None, None
-            if png:
-                im = Image.open(io.BytesIO(png)).convert("RGB")
-                W, H = im.size
-                near = lambda c, t: abs(c[0] - t[0]) + abs(c[1] - t[1]) + abs(c[2] - t[2]) < 120
-                card, marks = 0, [0, 0, 0, 0]
-                for n, c in enumerate(im.getdata()):
-                    if near(c, CARD_GROUND) or near(c, CARD_FOOT) or near(c, CARD_LINE):
-                        card += 1
-                    elif near(c, CARD_MARK):
-                        marks[(2 if n // W >= H / 2 else 0) + (1 if n % W >= W / 2 else 0)] += 1
-            x, y, dw, dh = plate_of(*size)
-            want = [x + 3, y + 3, dw - 6, dh - 6]
-            tiles.append({"words": words, "card": card, "marks": marks, "want": want,
-                          "at": [round(v, 1) for v in box["at"]] if box else None})
-        close_ctx(dctx, dpg)
-        check("on a desk, More from shows each of the author's other drawings whole and alone, cut out of its share"
-              " card: none of the card's own ground, wordmark strip or plate line painted, the drawing's four"
-              " corners painted, its plate 3 card pixels in from the line, a tall drawing and a wide one",
-              len(tiles) == 2 and all(t.get("card") == 0 and t.get("marks") and min(t["marks"]) >= 20
-                                      and t.get("at") and all(abs(a - w) <= 1.0 for a, w in zip(t["at"], t["want"]))
-                                      for t in tiles),
-              f"{tiles}")
+            st_, j_ = make_post(mira, words, seed=7, size=size, card=True)
+            others.append(j_.get("post") if st_ == 200 and isinstance(j_, dict) else None)
+        gone3 = {}
+        for screen in ("phone", "desk"):
+            dctx, dpg = browser_as(b, mira, screen, "light")
+            dpg.goto(BASE + url)
+            dpg.wait_for_timeout(900)
+            gone3[screen] = dpg.evaluate("""(others) => { const page = document.querySelector('.post-page');
+              return { section: document.querySelectorAll('.more-from, .more-grid, .more-tile, #moreTitle').length,
+                       links: others.filter(id => !!page.querySelector('a[href="/social/p/' + id + '"]')).length,
+                       said: /More from/.test(document.body.innerText),
+                       last: page.lastElementChild ? page.lastElementChild.id || page.lastElementChild.className : null }; }""", others)
+            close_ctx(dctx, dpg)
+        source3 = mira.client().get(url)[1]
+        check("a post's own page has no More from: no section, no tile and no link to its author's two other drawings, the"
+              " page ending with its comments (a phone and a desk); nothing of it in the page's source either",
+              all(others) and all(v == {"section": 0, "links": 0, "said": False, "last": "comments"} for v in gone3.values())
+              and "More from" not in source3 and "more-from" not in source3 and not any(o in source3 for o in others),
+              json.dumps({"others": others, **gone3, "in the source": [w for w in ("More from", "more-from") if w in source3]}))
 
     # ------------------------------------------------------------------ 4
     if part(4, "the feed: everyone's, newest first, still until tapped; Load more in place"):
@@ -1299,7 +1286,7 @@ with sync_playwright() as p:
     # shows posts from then on"). Until then Home held every drawing the site's
     # people showed in the gallery, posts or not; these rows held that, and
     # now hold its opposite, and what was kept: the drawing's own page, its
-    # maker's page, More from, its ⋯ and its Delete.
+    # maker's page, its ⋯ and its Delete (and More from, until Nov 20).
     if part(9, "Home shows posts only: a drawing shown outside a post keeps its own page and its maker's, never Home"):
         from datetime import datetime, timezone
         mira = someone(b, "mira", "Mira Okafor")
@@ -1507,7 +1494,8 @@ with sync_playwright() as p:
               f" drawings among them {len({c['skribl'] for c in allc} & set(drawn))}")
 
         # A drawing's own page, its ⋯, and its Delete; and another of hers from
-        # the Pad, untitled, for More from (one person's: posts and drawings).
+        # the Pad, untitled, which More from listed beside it until Nov 20 and
+        # the page must not offer now.
         st_a, another = pad(mira.pg, "", "public", 5)
         jp = juno.pg
         jp.goto(BASE + f"/social/b/{shown}")
@@ -1518,7 +1506,8 @@ with sync_playwright() as p:
                              " return s.state === 'playing' || s.elapsedMs > 0; })")
         page = jp.evaluate("""() => ({ at: location.pathname, kind: document.querySelector('.post-page').getAttribute('data-kind'),
           words: (document.querySelector('.post-page .post-words') || {}).textContent || '',
-          more: [...document.querySelectorAll('.more-tile')].map(e => [e.getAttribute('href'), e.querySelector('.more-words').textContent]) })""")
+          more: document.querySelectorAll('.more-from, .more-tile').length + (/More from/.test(document.body.innerText) ? 1 : 0),
+          links: [...document.querySelectorAll('.post-page a[href^="/social/b/"], .post-page a[href^="/social/p/"]')].map(a => a.getAttribute('href')) })""")
         playing = jp.evaluate(STATE)
         OPEN = "(id) => document.getElementById(id).classList.contains('is-open')"
         jp.click("[data-post-menu] >> visible=true")
@@ -1547,15 +1536,15 @@ with sync_playwright() as p:
         mp.wait_for_timeout(600)
         after = mp.evaluate("() => ({ url: location.pathname + location.search, note: (document.querySelector('.note') || {}).textContent })")
         gone = skribl_row(shown) is None
-        check("a drawing's own page plays it by itself, its title for its words, with More from its author's"
-              " posts and drawings (one untitled, said as a drawing); its ⋯ says Report to anybody else and Delete"
-              " post to its author, asked once in the drawing's own words (it goes from her page too: Home never had"
-              " it), and then it is gone (Home says so); a post's drawing's page is the post's",
+        check("a drawing's own page plays it by itself, its title for its words, with no More from (her other"
+              " drawing and her post are not offered on it: the Calm Post Page, Nov 20); its ⋯ says Report to anybody"
+              " else and Delete post to its author, asked once in the drawing's own words (it goes from her page too:"
+              " Home never had it), and then it is gone (Home says so); a post's drawing's page is the post's",
               page["at"] == f"/social/b/{shown}" and page["kind"] == "s"
               and page["words"].strip() == "Section 9, shown from the Pad"
               and (playing[:1] == ["playing"] or played[:1] == [True])
-              and [f"/social/b/{another}", "A drawing"] in page["more"]
-              and [f"/social/p/{g_post}", "Section 9, a post shown in the gallery"] in page["more"]
+              and bool(another) and bool(g_post) and page["more"] == 0
+              and f"/social/b/{another}" not in page["links"] and f"/social/p/{g_post}" not in page["links"]
               and theirs == ["Bookmark", "Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
               and landed == f"/social/p/{g_post}"
               and mine == ["Bookmark", "Copy link", "Share…", "Delete post"] and ask.get("open") and "stopped" not in ask
@@ -2627,8 +2616,7 @@ with sync_playwright() as p:
         # a post; each box is read off the paint in the middle of the bars beside
         # its plate: in the Gallery, on his Gallery tab (a post's tile, and one
         # shown outside a post: the listing it comes from says no ground, so the
-        # site asks Skribl's description for it), and in More from on his other
-        # post's page (both kinds). His tall paper one keeps its paper (#f6f2ea),
+        # site asks Skribl's description for it). His tall paper one keeps its paper (#f6f2ea),
         # and Gwen's 4:3 on paper, which fills its box, is the box it was.
         NIGHT, NIGHT_RGB = "night" + secrets.token_hex(3), (13, 15, 20)
         PAPER_RGB = (246, 242, 234)
@@ -2670,14 +2658,10 @@ with sync_playwright() as p:
         cpg.goto(BASE + "/social/@galhugo/gallery")
         grounds["his Gallery tab, a post"] = bars_of(cpg, f'.gal-tile[data-post="{p_n}"]')
         grounds["his Gallery tab, outside a post"] = bars_of(cpg, f'.gal-tile[data-drawing="{d_n}"]')
-        cpg.goto(BASE + f"/social/p/{p_b}")
-        try:
-            cpg.wait_for_function("() => [...document.querySelectorAll('.more-plate img')].length >= 2", timeout=15000)
-        except Exception:  # noqa: BLE001 -- a tile missing is the row's red
-            pass
-        for key, sel in (("More from, a post", f'.more-tile[href="/social/p/{p_n}"]'),
-                         ("More from, outside a post", f'.more-tile[href="/social/b/{d_n}"]')):
-            grounds[key] = bars_of(cpg, sel)
+        # (More from on a post's page wore it too, both kinds, until the Calm
+        # Post Page took More from off the page, Nov 20: section 3 asks that it
+        # is gone. A draw-back's tile on a post's page is the plate that is
+        # left there: verify_socialdrawback 6 reads its ground.)
         close_ctx(ctx, cpg)
         check("THE BOX WEARS THE DRAWING'S OWN GROUND: in the Gallery a tall drawing made on the Pad's dark sits in its own"
               " dark, the bars beside it read off the paint (never the tile's cream); a paper drawing in the paper it had,"
@@ -2692,9 +2676,6 @@ with sync_playwright() as p:
               " description for its ground: the listing says none)",
               bool(d_n) and dark(grounds["his Gallery tab, a post"]) and dark(grounds["his Gallery tab, outside a post"]),
               json.dumps({k: grounds.get(k) for k in ("his Gallery tab, a post", "his Gallery tab, outside a post")}))
-        check("...and in More from on a post's page, both kinds: the box around the plate its own dark",
-              dark(grounds["More from, a post"]) and dark(grounds["More from, outside a post"]),
-              json.dumps({k: grounds.get(k) for k in ("More from, a post", "More from, outside a post")}))
 
         # A TAP ANYWHERE ON A TILE OPENS ITS POST: a touch on a phone and a click
         # on a desk, on the drawing, its ▶, the face, the name, the counts, a
@@ -3224,14 +3205,11 @@ print("PLAN " + json.dumps(out))
                     and dist(r["lm"], ground) <= 12 and dist(r["rm"], ground) <= 12)
         TILE = {"photo": f'.gal-tile[data-post="{p_photo}"]', "snap": f'.gal-tile[data-drawing="{d_snap}"]',
                 "plain": f'.gal-tile[data-post="{p_plain}"]'}
-        MORE = {"photo": f'.more-tile[href="/social/p/{p_photo}"]', "snap": f'.more-tile[href="/social/b/{d_snap}"]',
-                "plain": f'.more-tile[href="/social/p/{p_plain}"]'}
         GROUND15 = {"photo": DARK15, "snap": PAPER15, "plain": DARK15}
         read15 = {}
         for screen in ("phone", "desk"):
             for where, who, path, sels in (("the Gallery", noa, "/social/explore?q=" + urllib.parse.quote(T15), TILE),
                                            ("Sol's Gallery tab", noa, "/social/@fillsol/gallery", TILE),
-                                           ("More from", noa, f"/social/p/{p_four}", MORE),
                                            ("the first visit", None, "/social/", TILE)):
                 ctx, cpg = browser_as(b, who, screen, "light")
                 cpg.goto(BASE + path)
@@ -3239,14 +3217,16 @@ print("PLAN " + json.dumps(out))
                 for key, sel in sels.items():
                     read15[(where, screen, key)] = sides(cpg, sel)
                 close_ctx(ctx, cpg)
-        WHERE15 = ("the Gallery", "Sol's Gallery tab", "More from", "the first visit")
+        # (More from on a post's page was a fourth place until the Calm Post
+        # Page took it off the page, Nov 20: section 3 asks that it is gone.)
+        WHERE15 = ("the Gallery", "Sol's Gallery tab", "the first visit")
         short = lambda r: {k_: v for k_, v in r.items() if k_ in ("stopped", "fill", "bars", "lt", "lb", "soft", "sharp", "lm")}
         check("A DRAWING ON A PICTURE KEEPS ITS PICTURE AT ITS SIDES: beside its plate the box is painted in its"
               " picture's own colours (warm above, cool below), blurred (no hard step where the plate shows one),"
               " never its ground: a post's made on a photo and a drawing shown outside a post made on the picture the"
-              " Pad began on, in the Gallery, on its maker's Gallery tab, in More from and on the first visit, a touch"
+              " Pad began on, in the Gallery, on its maker's Gallery tab and on the first visit, a touch"
               " phone and a desk",
-              len(read15) == 24 and all(pictured(read15[(w, s, k_)], GROUND15[k_]) for w in WHERE15
+              len(read15) == 18 and all(pictured(read15[(w, s, k_)], GROUND15[k_]) for w in WHERE15
                                         for s in ("phone", "desk") for k_ in ("photo", "snap")),
               json.dumps({f"{w}, {s}, {k_}": short(read15.get((w, s, k_), {})) for w in WHERE15 for s in ("phone", "desk")
                           for k_ in ("photo", "snap") if not pictured(read15.get((w, s, k_), {"stopped": "?"}), GROUND15[k_])})[:900])
@@ -3259,7 +3239,7 @@ print("PLAN " + json.dumps(out))
         # EVERY TILE'S ▶ IS WHAT IS PAINTED ON TOP, and on your own Gallery tab
         # its eye: what is painted along the middle of each ▶ (every 2px of it
         # but its round ends), and of each eye's chip, is that ▶, that chip;
-        # never the drawing or its copy. More from's tiles have no ▶.
+        # never the drawing or its copy.
         ONTOP = """(root) => { const out = [];
           for (const t of document.querySelectorAll(root + ' .gal-tile')) {
             t.scrollIntoView({ block: 'center', behavior: 'instant' });
@@ -3292,7 +3272,7 @@ print("PLAN " + json.dumps(out))
         check("EVERY TILE'S ▶ IS PAINTED ON TOP, and on your own Gallery tab its eye: along the middle of each ▶ (and"
               " each eye's chip) what is painted is the ▶ (the chip), never the drawing or its picture behind it, on"
               " every tile: the Gallery, a profile's Gallery tab, its maker's own with the eye, the first visit; a touch"
-              " phone and a desk, light and dark (More from's tiles have no ▶)",
+              " phone and a desk, light and dark",
               len(top15) == 16 and not missed and all(len(v) >= 4 for v in top15.values())
               and all(n == 2 for n in photos_seen.values())
               and all(t.get("eye") == [] for k, v in top15.items() if k[0] == "her own Gallery tab" for t in v),

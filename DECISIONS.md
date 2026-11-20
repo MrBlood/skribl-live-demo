@@ -48948,3 +48948,139 @@ many frames, how soon). A set time is a guess about the machine.
 
 HOW IT RAN HERE: `verify_socialcomments` whole, alone, on the fix: 148 of
 148. FLIP AND THE PAD: nothing of theirs is touched; no page is.
+
+## After v330 -- The calm post page, built ("All yes to everything. Make it smart and beautiful.")
+
+Nov 20. The owner had sent a picture of a post nobody had answered ("It
+seems busy and disorganized. When there are comments and drawbacks it looks
+better and makes sense ... I don't want anything to ever look busy and
+confusing"), then two of Bluesky ("looks simpler. Most because there aren't
+the more from images"), and asked for the whole look to be read. The entry
+before last holds that read and its mock (the artifact "Calm Post Page").
+At about 8:55 AM the owner answered it, and Her say's mock with it:
+
+> I love your choices
+> What are the seven choices? Total choices I need to make?
+> All yes to everything. Make it smart and beautiful.
+
+So twelve picks stand, none left to make: Her say's seven (the entry "Her
+say, mocked") and this page's five. This entry is the five, built. Her say's
+two halves come next, each its own pull request, then the strip of Home
+under the composer when a phone's keyboard is up.
+
+THE FIVE, AS BUILT (`docs/SOCIAL-SITE.md` section 23 says the site as it is):
+
+1. ONE ANSWER BAR on every post's page: your face, a line that looks like a
+   field ("Say something…") and Draw back. A phone: fixed, standing on the
+   bottom bar, on its glass, 60px. A desk: in the column, 18px under the
+   date, no face. It took the place of the round icon at a "Comments"
+   heading's end (the owner's "icon not a card", Nov 13: still not a card
+   sitting there), of "Say the first thing", and of "Draw back" at the end
+   of the draw-backs' line (the walkthrough's choice 3, a day old).
+2. NO MORE FROM on a post's page or a drawing's. The read behind it went
+   too (`posts.feed_page`'s one-person branch, `_drawings_before`): the
+   site no longer calls Skribl's `list_public_posts`, which stays a seam
+   for other hosts.
+3. SMALL QUIET LABELS for headings ("3 draw-backs", "7 comments"), each
+   still a heading to a screen reader, and nothing at all over nothing: no
+   strip with nothing drawn back, no label with nothing said.
+4. WHEN A REPLAY ENDS on a post's page, Watch again rises alone on the
+   drawing and the bar's Draw back lights up. A card on Home keeps both
+   pills.
+5. Home, profiles and the comment sheet are not touched.
+
+WHAT NO MOCK SHOWED, DECIDED IN THE BUILDING, THE OWNER'S TO CHANGE:
+
+- A COMMENT'S OWN PAGE HAS THE SAME BAR AND LABEL. It is a post's page in
+  everything else, and left alone it would have kept the heading, the icon
+  and "Say the first thing" that the post's page lost. Its line says "Reply
+  to Eli…" and its label "3 replies to Eli", which keeps the owner's yes to
+  C (Nov 18: the heading says whose replies follow). With no reply yet
+  there is no label, and the line says whose it is. A place (a deleted
+  comment's page) has no bar: it takes no reply.
+- ON A DESK THE LINE BECOMES THE BOX. The mock showed the bar closed. Open
+  under the line, the box put two fields in a row, "Say something…" over
+  "Say something, or draw it…". So the two share one room: the box glides
+  open over the line while the line fades away under it, and Esc or a
+  press elsewhere brings the line back. What is under them moves by the
+  difference (92px with the box at 136). There is no second click to
+  close it any more: the line is under the box.
+- THE LINE HAS A CARD'S LIFT. The mock drew it with a ring alone, and in
+  light that is a white box on near-white (1.03:1 on a phone, 1.06:1 on a
+  desk), set apart by its line and nothing else: the thing the owner ruled
+  out on Nov 16 ("just a border"). `verify_socialreposts` 13 found it on
+  the first run. It wears the site's card now (`--card`, `--card-edge`,
+  `--card-drop`), as a comment's bubble under it does. In dark nothing
+  shows the difference.
+- THE ROW'S TALK CLOUD, WITH NO COMMENTS, OPENS THE BOX. It is a way down
+  to the comments; with none there was nothing to go down to, and since
+  the heading went a tap on it would have done nothing at all. Its own
+  name at none was already "Comment".
+- THE TOAST AND THE PAGE'S FOOT CLEAR THE BAR on a phone (60px more each:
+  `--ans-room`), so a toast never lies over the one place to answer.
+- THE LABEL COMES AND GOES KINDLY: it fades in with the first comment; with
+  the last it fades and leaves once that comment's room has closed.
+
+SHOWN RED, EACH BY BREAKING ONE THING (the sections named, alone; green as
+built before and after):
+
+- the label shown at none, and "Say the first thing" put back: the rows
+  that ask for nothing at none (comments 1, 20, 34, 36), and the bar's
+  "nothing of the old way" (29);
+- the cloud's tap doing nothing; the label hiding at once; the label
+  appearing with no fade: comments 34, one row each;
+- the bar left showing under the open box: "the line becomes the box" (29)
+  and the glide (31);
+- the box under the line, not over it: the desk's six rows (12, 31, 32,
+  33, 35), each off by the line's 44px;
+- the folded box stretched over the line (the first thing that went wrong
+  here: it took the line's clicks, unseen): 29 and 31, six rows;
+- a face on a desk's bar; the bar not fixed on a phone; its words at 14px;
+  30px under the date for 18: the bar's row (29), with 12, 36 and 48 where
+  they read the same thing;
+- the count back in a pill (38); the label without whose replies, the
+  line without it (40, 48); a bar on a place's page (46, 48);
+- the line's words too faint: the three word censuses (13, 29, 37);
+- the line without its lift: `verify_socialreposts` 13;
+- More from put back on the page: `verify_socialposts` 3 and 9,
+  `verify_socialmute` 4 and 6;
+- the bar standing over the heart: `verify_sociallikes` 9;
+- in `verify_socialdrawback`: a name with a title cut short (3); the
+  label as a bold heading, the bar not fixed, the old empty line put back,
+  Draw back taken out of the bar (6); the bar never lit (7, both rows; the
+  second passed while the first failed until it asked for "lit again"
+  itself); the lit pen's wave left purple (9); a tile's plate moved (6).
+
+ROWS THAT ASKED FOR WHAT IS GONE now ask that it is gone: More from (posts
+3 and 9, mute 4 and 6), "No draw-backs yet" (drawback 6), the heading and
+"Say the first thing" (comments 1, 34, 36). Two rows moved with what they
+read: the plate cut out of its share card, read off the paint on More
+from's tiles until now, is read on a draw-back's tile (drawback 6, new);
+"a name with a title is said whole" reads the comment box's title where
+it read More from's. One row asked for a scroll that a page of one screen
+no longer needs, and asks that the heart is in view and clear of the bar
+(likes 9).
+
+HOW THEY RAN HERE: the twenty suites that open a post, a comment or a page
+of the site, side by side, each whole, all green the first time, in 23
+minutes: `verify_socialcomments` 149, `verify_socialposts` 100,
+`verify_socialdrawback` 62, `verify_sociallikes` 112, `verify_socialmute`
+68, `verify_socialmentions` 51, `verify_socialreposts` 99, `verify_composer`
+43, `verify_socialprofile` 98, `verify_socialactivity` 48,
+`verify_socialbookmarks` 37, `verify_socialsafety` 38, `verify_social` 46,
+`verify_socialapp` 71, `verify_socialpush` 118, `verify_socialsearch` 32,
+`verify_socialfollow` 79, `verify_socialsettings` 45, `verify_socialauth`
+76, `verify_seam` 524. A whole run before it, made while the suites were
+still being brought up to date, is what listed the rows that asked for what
+is gone; it is not counted. The full battery was not run; main's run after
+the merge is it.
+
+FLIP AND THE PAD: not for either, and nothing of theirs is touched. The
+drawing's own bar and its "Drawn in… watching at 1×" line are Skribl's
+player, left alone.
+
+NOT TESTED HERE: Safari on an iPhone. The bar stands on the bottom bar
+above the home indicator (`env(safe-area-inset-bottom)`); how it sits there,
+and under the keyboard when the sheet is up, is the owner's phone to say.
+The tell for the new build: under a post's date, at the foot of the screen,
+a line saying "Say something…".

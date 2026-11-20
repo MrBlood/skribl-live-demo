@@ -1156,7 +1156,7 @@ with sync_playwright() as p:
             # A DESK'S FOLD, and an answer's.
             ctx, pg = browser_as(b, mira, screen="desk", scheme="light")
             go(pg, f"/social/p/{p5}", wait=500)
-            pg.click(".comments-head .cm-say")
+            pg.click(".ans-bar .cm-say")
             pg.wait_for_function("() => document.activeElement === document.getElementById('cmWords')", timeout=6000)
             pg.wait_for_timeout(500)
             d1 = typed(pg, "@ve", list_id="cmMentions", field="#cmWords")
@@ -1202,7 +1202,7 @@ with sync_playwright() as p:
             pg.wait_for_timeout(900)
             k1 = typed(pg, "@v")
             go(pg, f"/social/p/{p5}", wait=500)
-            press(pg, ".comments-head .cm-say")
+            press(pg, ".ans-bar .cm-say")
             pg.wait_for_function("() => document.activeElement === document.getElementById('cmWords')", timeout=6000)
             pg.evaluate("() => window.__keyboard(336)")
             pg.wait_for_timeout(900)

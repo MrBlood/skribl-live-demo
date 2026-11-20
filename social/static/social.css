@@ -274,7 +274,10 @@ body {
 /* The wordmark at the top of the page scrolls away with it: the bar below
    already holds the way home, and the drawings get the height. */
 .top { display: flex; align-items: center; height: 56px; padding: 0 16px; }
-.main { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+/* --ans-room: the answer bar's height where a phone's page has one standing
+   on the bar (a post's page: THE ANSWER BAR, below), so the page's last
+   line and the toast clear it as they clear the bar. */
+.main { padding-bottom: calc(88px + var(--ans-room, 0px) + env(safe-area-inset-bottom)); }
 .col { width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
 
 /* THE BAR along the bottom of a phone: Home, the Gallery, Make, and You
@@ -1857,7 +1860,7 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    STOPS AT THE BAND'S TOP EDGE (the owner, Nov 18: "The line should not go
    all the way to avatar, just to purple square edge above"): past the way's
    foot (6px) and the band's own 4px, never across the band. */
-.cm-page { grid-template-rows: repeat(7, auto) 1fr; }
+.cm-page { grid-template-rows: repeat(8, auto) 1fr; }
 .cm-page > * { grid-column: 1; }
 .cm-page .cm-way-item:last-child::before { bottom: calc(-6px - 4px); }
 .cm-page > .cm-way { grid-row: 1; }
@@ -1867,7 +1870,8 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .cm-page > .post-art { grid-row: 5; }
 .cm-page > .cm-row { grid-row: 6; }
 .cm-page > .post-meta { grid-row: 7; }
-.cm-page > .comments { grid-row: 8; }
+.cm-page > .ans { grid-row: 8; }           /* the answer bar's room, under the band */
+.cm-page > .comments { grid-row: 9; }
 .cm-page::before {
   content: ""; grid-column: 1 / -1; grid-row: 2 / 8; align-self: stretch;
   margin: 4px -14px -4px; border-radius: 20px; background: color-mix(in srgb, var(--tint) 70%, transparent);
@@ -1889,9 +1893,20 @@ a.post-face { text-decoration: none; }
 .post-caption { margin: 8px 0 0; color: var(--ink-2); font-size: 15px; }
 .post-meta { margin: 12px 0 0; color: var(--ink-2); font-size: 15px; }
 .comments { margin-top: 24px; }
-.comments-head { display: flex; align-items: center; margin: 0 0 10px; }
-.comments-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 20px; font-weight: 700; }
-.comments-title .ic { color: var(--accent-ink); }
+/* A QUIET LABEL WHERE A BOLD HEADING STOOD (the Calm Post Page; the owner's
+   "All yes to everything", Nov 20): what is here and how many, "3
+   draw-backs", "7 comments", in the row's second ink (7.1:1 on the page in
+   light, 10.1:1 in dark), 15px and semibold, and NOT THERE AT ALL when
+   there is nothing to label (the owner, of a post nobody had answered: "It
+   seems busy and disorganized"). Still a heading to a screen reader. It
+   fades in as the first comment comes and out as the last one goes
+   (comments.js). */
+.pp-label { margin: 22px 0 10px; color: var(--ink-2); font: 600 15px/1.3 var(--font); font-variant-numeric: tabular-nums; }
+.pp-label[hidden] { display: none; }
+.comments > .pp-label { margin-top: 0; }
+.pp-label.is-new { animation: pp-in 0.24s ease both; }
+.pp-label.is-going { opacity: 0; transition: opacity 0.2s ease; }
+@keyframes pp-in { from { opacity: 0; } }
 /* THE LINE THE PEN DRAWS, IN COLOUR (the owner's idea and "All yes", Nov 19;
    _icons.html, drawback()): Draw back's wave is the pen's line, --brand, as
    under the chosen tab, wherever its pen is drawn: the row under a post, the
@@ -1923,19 +1938,14 @@ a.post-face { text-decoration: none; }
 .db-ended .skribl-inline-play { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .db-end { transform: none; } }
 
-/* DRAW-BACKS ON IT (Draw back, step 2): a strip under the row, its title as
-   Comments' (its icon in the small violet ink), then the draw-backs' drawings
-   newest first, each a More from plate 132px wide with who drew back under
+/* DRAW-BACKS ON IT (Draw back, step 2): a strip under the answer bar, its
+   small quiet label ("3 draw-backs": .pp-label, above), then the draw-backs'
+   drawings newest first, each a plate 132px wide with who drew back under
    it, the row scrolling sideways past the page's width (it reaches the
-   page's edges on a phone, so the last one is not cut by the gutter). */
+   page's edges on a phone, so the last one is not cut by the gutter). With
+   none there is no strip (post.html). "Draw back" in words is the answer
+   bar's. */
 .db-strip { margin-top: 20px; }
-/* ITS LINE: how many, and at its end "Draw back" in words (the walkthrough's
-   mocks, choice 3, the owner's "all yes", Nov 19), the site's second button
-   as Edit drawing is (44px, 15px), ending at the page's edge, where the
-   drawing ends. The count gives way before the words do. */
-.db-head { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
-.db-title { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; font-size: 18px; font-weight: 700; }
-.db-title .ic { flex: none; color: var(--accent-ink); }
 .db-word { flex: none; margin-left: auto; }
 .db-row {
   display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity;
@@ -1950,10 +1960,6 @@ a.post-face { text-decoration: none; }
   text-decoration: none; scroll-snap-align: start; }
 .db-tile:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 14px; }
 .db-by { overflow: hidden; font-size: 15px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.more-from { margin-top: 24px; }
-.more-title { margin: 0 0 10px; font-size: 18px; font-weight: 700; }
-.more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.more-tile { display: flex; flex-direction: column; gap: 4px; min-width: 0; color: var(--ink); text-decoration: none; }
 /* The drawing whole, in its own shape, on the tile's ground: the plate as
    large as the tile allows less 8px each side; the poster behind it placed so
    only the drawing shows (none of the share card's
@@ -1974,8 +1980,6 @@ a.post-face { text-decoration: none; }
   position: absolute; left: var(--plate-x); top: var(--plate-y);
   display: block; width: var(--plate-w); max-width: none; height: auto;
 }
-.more-words { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
-.more-plays { color: var(--ink-2); font-size: 14px; }
 @media (min-width: 900px) {
   .post-page { grid-template-columns: minmax(0, 1fr) 340px; column-gap: 40px; align-items: start; }
   .post-page > .post-art { grid-column: 1; grid-row: 1 / span 8; margin-top: 0; }
@@ -1996,12 +2000,6 @@ a.post-face { text-decoration: none; }
    post's first ink, when, the count, Answer and ⋯ the second; "Sign in to
    answer" the small violet words Sign in wears at the top of a phone. Every
    target 44px; the words' field the composer's 17px. */
-/* THE COUNT IN A PILL (the comment thread; the owner's yes, Nov 17): the
-   site's lilac disc's colours, the small violet words on it. */
-.comments-title .cm-count {
-  margin-left: 4px; padding: 2px 9px; border-radius: 999px; background: var(--tint); color: var(--accent-ink);
-  font-size: 14px; font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums;
-}
 .cm-box { margin: 0 0 8px; padding: 14px; border-radius: 20px; }
 .cm-box .face-ring.composer-face { --skribl-face-size: 36px; width: 36px; height: 36px; }
 .cm-box .composer-acts { margin-top: 10px; flex-wrap: wrap; row-gap: 6px; }
@@ -2223,57 +2221,99 @@ a.post-face { text-decoration: none; }
 .cm-more { margin-top: 12px; }
 .cm.is-going { opacity: 0; transition: opacity 0.2s ease; }
 
-/* THE COMMENT BOX, AS AN ICON (the owner, Nov 13: "The comment needs to be an
-   icon not a card. It takes up too much room sitting there", then "Yes to
-   all" to the mock's choices, its option 2). THE ICON at the heading's end:
-   a round 44px button in the chips' lilac and the small violet ink (6.92:1
-   light, 8.62:1 dark, a mark's 3:1), reaching 7.5px above and below the
-   heading's 29px line into the room already round it, so the heading keeps
-   its height. While the box it opened is open it lights: white on the action
-   purple (5.33:1), as an action is; the light comes and goes as a fade.
-   Signed out it raises "Say something?" and stays as it is: no box is open. */
-.cm-say {
-  margin: -7.5px 0 -7.5px auto; background: var(--btn2-bg); color: var(--accent-ink);
-  transition: background-color 0.2s ease, color 0.2s ease;
+/* THE ANSWER BAR (the Calm Post Page; the owner's "All yes to everything.
+   Make it smart and beautiful", Nov 20): ONE PLACE TO ANSWER on a post's
+   page, and a comment's, the same place every time (_comments.html
+   answer_bar). Your face, a line that looks like a field and says "Say
+   something…", and Draw back where the post can be drawn back on. It took
+   the place of the round lilac icon at a "Comments" heading's end (the
+   owner's "icon not a card", Nov 13), of "Say the first thing", and of "Draw
+   back" at the end of the draw-backs' line.
+
+   NOTHING NEW IS DRAWN: the bar wears the bottom bar's own glass and
+   hairline; the line is THE SITE'S CARD, as a comment's bubble under it is
+   (--card, its ring --card-edge and its lift --card-drop), its words in
+   the second ink (7.56:1 light, 8.59:1 dark), 16px, so nothing changes
+   size when the real field takes over; Draw back is the second button it
+   already was (44px, 15px). ITS LIFT IS NOT DECORATION: the mock drew the
+   line with its ring alone, and white on the bar's near-white that is a
+   box set apart by its line and nothing else (1.03:1 on a phone, 1.06:1 on
+   a desk), which the owner ruled out on Nov 16 ("just a border";
+   verify_socialreposts 13 found it). A card's lift is how every other
+   white box on this ground is told from it.
+
+   A PHONE (and anything narrower than a desk): fixed at the foot of the
+   screen, standing on the bar (64px of tabs and its 1px edge), 60px tall,
+   under the bar's own hairline; the page keeps 60px more at its foot and
+   the toast rises 60px higher there (--ans-room), so neither is ever under
+   it. A tap on the line raises the box's sheet.
+
+   A DESK: no bottom bar, so it sits in the column under the date, without
+   your face (the column is 340 wide, and with it "Say something…" was
+   cut). THE LINE BECOMES THE BOX: the bar and the box's fold share one room
+   (.ans, one cell), so the box glides open over the line, in its place,
+   while the line fades away under it; folded away, the line is back. What
+   is under them slides by the difference and nothing jumps.
+
+   WHEN A REPLAY ENDS, Draw back lights up in the action's own fill, white
+   on it (5.33:1), as the pill on the drawing did (posts.js); the light
+   comes and goes as a fade. */
+.ans-bar { display: flex; align-items: center; gap: 10px; }
+.ans-face { flex: none; display: flex; }
+.ans-face .face-ring { --skribl-face-size: 32px; width: 32px; height: 32px; }
+.ans-face .face-blank.has-initial { font-size: 14px; }
+.ans-say {
+  flex: 1; min-width: 0; height: 44px; margin: 0; padding: 0 16px; border: 0; border-radius: 22px;
+  background: var(--card); box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop);
+  color: var(--ink-2); font: 400 16px/1.2 var(--font); text-align: left; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; -webkit-tap-highlight-color: transparent;
 }
-.cm-say[aria-expanded="true"]:is([aria-controls="commentFold"], [aria-controls="commentBoxSheet"]) {
-  background: var(--fill); color: var(--on-fill);
+.ans-draw { margin: 0 0 0 auto; transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
+.ans-draw.is-go { background: var(--fill); color: var(--on-fill); --line: transparent; box-shadow: var(--fill-drop); }
+.ans-draw.is-go .db-line { stroke: currentColor; }
+@media (max-width: 899.98px) {
+  body:has(.ans-bar) { --ans-room: 60px; }
+  .ans-bar {
+    position: fixed; z-index: 29; left: 0; right: 0; bottom: calc(65px + env(safe-area-inset-bottom));
+    padding: 8px max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left));
+    background: var(--nav-bg); box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--nav-line);
+    -webkit-backdrop-filter: saturate(1.4) blur(16px); backdrop-filter: saturate(1.4) blur(16px);
+  }
 }
-/* "SAY THE FIRST THING", at none, where the comments will be: the small
-   violet words, 44px, opening the box as the icon does. */
-.cm-first { margin: 0 0 8px; }
-.cm-first button {
-  display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none;
-  color: var(--accent-ink); font: inherit; font-size: 16px; font-weight: 600; cursor: pointer;
+@media (min-width: 900px) {
+  .ans { display: grid; grid-template-columns: minmax(0, 1fr); margin-top: 18px; }
+  /* Each at the cell's top and its own height: stretched, the folded box
+     lay unseen over the line, 44px tall, and took its clicks. */
+  .ans > * { grid-area: 1 / 1; align-self: start; }
+  .ans-bar { transition: opacity 0.2s ease; }
+  .ans-face { display: none; }
+  .ans:has(> .cm-fold.is-open) > .ans-bar { opacity: 0; visibility: hidden; transition: opacity 0.14s ease, visibility 0s linear 0.14s; }
 }
-/* THE FOLD (a desk): the box under the heading, or under the conversation it
-   answers, folded to nothing until asked for. Opening glides its room open
-   (0.32s) while the box fades in (a quarter in by 100ms), so what is under it
-   slides down rather than jumps; folding away is quicker and the same in
-   reverse. A closed fold is unseen, so nothing in it takes focus. Its edges
-   clip only while it moves; at rest its card's shadow fades in, so nothing
-   pops. "Say the first thing" folds the same way, in step with the box: one
-   room closes as the other opens, and posting the first comment takes its
-   place. comments.js says open or closed; the stylesheet moves them. */
-.cm-fold, .cm-first-fold {
+/* THE FOLD (a desk): the box in the answer bar's place, or under the
+   conversation it answers, folded to nothing until asked for. Opening glides
+   its room open (0.32s) while the box fades in (a quarter in by 100ms), so
+   what is under it slides down rather than jumps; folding away is quicker
+   and the same in reverse. A closed fold is unseen, so nothing in it takes
+   focus. Its edges clip only while it moves; at rest its card's shadow fades
+   in, so nothing pops. comments.js says open or closed; the stylesheet
+   moves it. */
+.cm-fold {
   display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 0fr; min-width: 0;
   transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.cm-fold > .cm-fold-in, .cm-first-fold > .cm-fold-in {
+.cm-fold > .cm-fold-in {
   min-height: 0; overflow: hidden; visibility: hidden; transition: visibility 0s linear 0.32s;
 }
-.cm-fold.is-open, .cm-first-fold.is-open { grid-template-rows: 1fr; }
-.cm-fold.is-open > .cm-fold-in, .cm-first-fold.is-open > .cm-fold-in { visibility: visible; transition: none; }
-.cm-fold.is-still > .cm-fold-in, .cm-first-fold.is-still > .cm-fold-in { overflow: visible; }
-.cm-fold.is-quick, .cm-first-fold.is-quick { transition-duration: 0.24s; transition-timing-function: cubic-bezier(0.4, 0, 1, 1); }
-.cm-fold.is-quick > .cm-fold-in, .cm-first-fold.is-quick > .cm-fold-in { transition-delay: 0.24s; }
+.cm-fold.is-open { grid-template-rows: 1fr; }
+.cm-fold.is-open > .cm-fold-in { visibility: visible; transition: none; }
+.cm-fold.is-still > .cm-fold-in { overflow: visible; }
+.cm-fold.is-quick { transition-duration: 0.24s; transition-timing-function: cubic-bezier(0.4, 0, 1, 1); }
+.cm-fold.is-quick > .cm-fold-in { transition-delay: 0.24s; }
 /* The box's edge is its ring (THE EDGES), kept in every state here; only
    its drop waits for the fold to rest. */
 .cm-fold .cm-box { opacity: 0; box-shadow: 0 0 0 var(--edge) var(--card-edge); transition: opacity 0.18s ease, box-shadow 0.18s ease; }
 .cm-fold.is-open .cm-box { opacity: 1; transition: opacity 0.22s ease 0.06s, box-shadow 0.2s ease; }
 .cm-fold.is-still .cm-box { box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop); }
-.cm-first-fold .cm-first { opacity: 0; transition: opacity 0.18s ease; }
-.cm-first-fold.is-open .cm-first { opacity: 1; transition: opacity 0.22s ease 0.06s; }
 /* Answering on a desk: the fold under the conversation, across the row. */
 .cm > .cm-fold { grid-column: 1 / -1; }
 .cm > .cm-fold .cm-box { margin: 6px 0 12px; }
@@ -2308,9 +2348,9 @@ a.post-face { text-decoration: none; }
    put away at once; a comment that arrives is put in place and fades in; the
    sheet fades where it sits (below). */
 @media (prefers-reduced-motion: reduce) {
-  .cm-fold, .cm-first-fold, .cm-fold > .cm-fold-in, .cm-first-fold > .cm-fold-in, .cm-sheet { transition: none; }
-  .cm-fold .cm-box, .cm-first-fold .cm-first { transition: none; }
-  .cm-fold.is-open .cm-box, .cm-first-fold.is-open .cm-first { transition: opacity 0.2s ease; }
+  .cm-fold, .cm-fold > .cm-fold-in, .cm-sheet { transition: none; }
+  .cm-fold .cm-box { transition: none; }
+  .cm-fold.is-open .cm-box { transition: opacity 0.2s ease; }
   .cm.is-growing { transition: opacity 0.2s ease; }
 }
 
@@ -2745,7 +2785,7 @@ button.fo-n {
    delete's says no eye (.is-plain). */
 .mu-toasts {
   position: fixed; z-index: 50; left: 0; right: 0;
-  bottom: calc(77px + env(safe-area-inset-bottom, 0px) + var(--mu-lift, 0px));
+  bottom: calc(77px + var(--ans-room, 0px) + env(safe-area-inset-bottom, 0px) + var(--mu-lift, 0px));
   display: flex; justify-content: center; pointer-events: none;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
 }

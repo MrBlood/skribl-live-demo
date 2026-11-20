@@ -77,8 +77,8 @@ class SocialBase(DeclarativeBase):
 
 
 def first_name(name):
-    """What the site calls a person in a sentence ("Ana’s comment", "More
-    from Ana", "Drew back on Ana’s"): the first word of their name, or the
+    """What the site calls a person in a sentence ("Ana’s comment", "Reply
+    to Ana", "Drew back on Ana’s"): the first word of their name, or the
     whole name when that word is a title ending in a period, "Mr. Bloob" or
     "Dr. Ana Ruiz" (the owner's "All yes", Nov 19, after "Drew back on
     Mr.’s" and "More from Mr."). A name of one word is itself."""
@@ -336,7 +336,7 @@ class Post(SocialBase):
     only its public id; the words are the site's. Deleting a post deletes
     both, in one transaction (Skribl's delete_post); so does deleting the
     account. The feed reads newest first, and a person's own newest first
-    ("More from"), each by an index of its own.
+    (their page's Posts), each by an index of its own.
 
     A QUOTE POST (the map, part two, item 3; the owner's "All yes" on the
     reposts mock, Nov 14) is a post that shows another one small inside it:

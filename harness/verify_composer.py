@@ -1254,11 +1254,10 @@ with sync_playwright() as p:
                        dee.api("POST", f"/social/b/{sid}/comments", {"words": "Late"})[0],
                        dee.api("POST", f"/social/b/{sid}/bookmark", {"bookmarked": True})[0]]
             check("the post's page holds the conversation (Dee's comment, counted 1 by its talk cloud, Eli's reply"
-                  " followed down under it: Bluesky's way; 2 comments); the drawing's old page sends Dee and nobody signed in to the post (a"
+                  " followed down under it: Bluesky's way; its small label says \"2 comments\"); the drawing's old page sends Dee and nobody signed in to the post (a"
                   " redirect), and its old like, comment and bookmark addresses take nothing new",
                   page["said"] == ["Love the shell.", "Same!"] and page["more"] == ["1"]
-                  and (page["count"] or "").strip().startswith("Comments")
-                  and "2" in (page["count"] or "")
+                  and " ".join((page["count"] or "").split()) == "2 comments"
                   and all(v and v[0] in (302, 303) and v[1] and v[1].endswith(url) for v in old.values()) and refused == [404, 404, 404],
                   f"page {page}; old page {old}; old addresses {refused}")
             tile = urllib.request.urlopen(BASE + "/social/explore", timeout=20).read().decode()

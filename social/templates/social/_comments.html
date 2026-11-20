@@ -3,17 +3,21 @@
     since the owner's yes the same day). comments.py says the rules; this is
     what they look like, the mock's own classes and words, the same on both.
 
-    comments_section(cm)  "Comments" and how many (on a comment's own page,
-                          "Replies"), and at the heading's end the icon that
-                          opens the box (a bubble with a plus, round, 44px,
-                          lilac), for somebody who may comment and for nobody
-                          signed in; the box folded away under the heading
-                          until asked for; "Say the first thing" where the
-                          comments will be, at none; the comments newest
-                          first (a comment's replies, on its page, oldest
-                          first), each with the count by its talk cloud and
-                          its conversation followed down under it (Bluesky's
-                          way, our look); Load more for the next page.
+    answer_bar(cm, card)  THE ONE PLACE TO ANSWER (the Calm Post Page, the
+                          owner's "All yes to everything", Nov 20): your face,
+                          "Say something…" (on a comment's own page "Reply to
+                          Eli…"), which opens the box, and on a post that can
+                          be drawn back on, Draw back. At the foot of a
+                          phone's screen, above the bar, on the bar's own
+                          glass; on a desk in the column under the date,
+                          where the box glides open in its place.
+    comments_section(cm)  how many, a small quiet label ("7 comments"; on a
+                          comment's own page "3 replies to Eli"), and nothing
+                          at all at none; the comments newest first (a
+                          comment's replies, on its page, oldest first), each
+                          with the count by its talk cloud and its
+                          conversation followed down under it (Bluesky's way,
+                          our look); Load more for the next page.
     comment(it, ...)      one comment or reply (the comment thread, step 1;
                           the owner's yes, Nov 17): its face, and beside it
                           its bubble (its name, when, in the person's own
@@ -38,9 +42,9 @@
                           BOX, WHEREVER IT OPENS: on a phone it rides Make's
                           own sheet from the bottom ("Say something to Mira",
                           or "Reply to Theo" with Theo's words under it); on a
-                          desk it glides open in place, under the heading or
-                          under the conversation it replies to ("Reply to
-                          Theo…"). Put away, it keeps what was typed. An @
+                          desk it glides open in place, over the answer bar's
+                          line or under the conversation it replies to ("Reply
+                          to Theo…"). Put away, it keeps what was typed. An @
                           typed in it shows the list of people under the line
                           (mentions: _mentions.html, mentions.js), replies too.
     comment_sheets(cm)    the box's sheet (a phone's), the signed-out sheet
@@ -51,9 +55,12 @@
                           sheet (the post's reasons), the Pad and Flip over
                           the page for a drawn reply, and comments.js's words.
 
-    THE COMMENT BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an
-    icon not a card. It takes up too much room sitting there", then "Yes to
-    all" to the mock's choices: its option 2, the icon at the heading's end).
+    THE COMMENT BOX IS NOT A CARD SITTING THERE (the owner, Nov 13: "The
+    comment needs to be an icon not a card. It takes up too much room sitting
+    there"): until Nov 20 a round icon at the heading's end opened it; since
+    the Calm Post Page the answer bar's one line does, and the heading, its
+    icon and "Say the first thing" are gone (the owner, of a post nobody had
+    answered: "It seems busy and disorganized").
 
     `cm` is comments.section()'s. Import these WITH CONTEXT: they read the
     page's me, skribl_bp, when_iso and when_day. comments.js holds the moving
@@ -244,31 +251,60 @@
 </div>
 {%- endmacro %}
 
-{#  THE HEADING'S ROW: "Comments" and how many, and at its end the icon that
-    opens the box (Say something), for somebody who may comment, and for
-    nobody signed in (it raises "Say something?"); nobody else is offered it.
-    The icon reaches into the room already round the heading, so the heading
-    keeps its height. THE BOX, folded away under it until asked for (a desk
-    glides it open there; a phone's sheet takes it); folded, it is not laid
-    out at all (hidden), so nothing reads its words as shown. "SAY THE FIRST THING",
-    at none, where the comments will be: the small violet words, 44px,
-    opening the box as the icon does. #}
+{#  THE ANSWER BAR (the Calm Post Page; the owner's "All yes to everything.
+    Make it smart and beautiful", Nov 20, to its five choices): ONE PLACE TO
+    ANSWER, the same on every post's page and every comment's, in the same
+    place every time. Your face (signed in), a line that looks like a field
+    and says "Say something…" (a comment's own page: "Reply to Eli…"), and
+    on a post that can be drawn back on, Draw back, the pen's own button
+    (posts.js, [data-drawback]). It took the place of the round icon at the
+    heading's end, "Say the first thing", and "Draw back" at the end of the
+    draw-backs' line: the same two actions were on the page three times
+    each, in three shapes.
+
+    THE LINE IS A BUTTON, NOT A FIELD: it opens the one box (comments.js),
+    for somebody who may comment, and for nobody signed in it raises "Say
+    something?"; nobody else is offered it. Its words are 16px, so nothing
+    changes size when the real field takes over.
+
+    A PHONE: fixed at the foot of the screen, above the bar and on its
+    glass; a tap raises the box's sheet. A DESK: in the column under the
+    date, and THE BOX, folded away in the same place until asked for, glides
+    open over it: the line becomes the box (social.css, .ans). Folded, the
+    box is not laid out at all (hidden), so nothing reads its words as
+    shown.
+
+    WHEN A REPLAY ENDS on the page, Draw back here lights up (posts.js), and
+    Watch again alone rises on the drawing: the invitation, said once. #}
+{% macro answer_bar(cm, card=none) -%}
+{%- set say = cm and (cm.can or not me) and not cm.closed -%}
+{%- set back = card and card.drawable and me -%}
+{%- if say or back %}
+<div class="ans" data-ans>
+  <div class="ans-bar" data-ans-bar>
+    {% if me %}<span class="ans-face" aria-hidden="true">{{ face(me, initial=true) }}</span>{% endif %}
+    {% if say %}<button class="ans-say cm-say" type="button" data-cm-new aria-expanded="false"
+            {%- if not cm.can %} aria-haspopup="dialog" aria-controls="commentOutSheet"{% endif %}>{{ ('Reply to ' ~ cm.first ~ '…' if cm.first else 'Reply…') if cm.subject else 'Say something…' }}</button>{% endif %}
+    {% if back %}<button class="btn btn-small db-word ans-draw" type="button" data-drawback="{{ card.post.public_id }}" data-drawback-first="{{ card.who.display_name|first_name }}"{% if card.mine %} data-drawback-own{% endif %}>{{ ic.drawback() }}<span>Draw back</span></button>{% endif %}
+  </div>
+  {% if cm and cm.can %}<div class="cm-fold" id="commentFold" data-cm-fold><div class="cm-fold-in" hidden>{{ comment_box() }}</div></div>{% endif %}
+</div>
+{%- endif %}
+{%- endmacro %}
+
+{#  THE COMMENTS: how many, in a small quiet label ("7 comments"; a comment's
+    own page says whose replies follow, "3 replies to Eli": the owner's yes
+    to C, Nov 18, kept), and NOTHING AT ALL AT NONE (the owner, Nov 20, of a
+    post nobody had answered: "It seems busy and disorganized"; a heading is
+    there to label something). The label is still the section's heading, so
+    a screen reader finds the comments by it; comments.js keeps its number
+    and its noun, and shows it as the first one comes. The way to say
+    something is the answer bar's (above). #}
 {% macro comments_section(cm) -%}
-{%- set say = (cm.can or not me) and not cm.closed -%}
+{%- set noun = (('reply to ' ~ cm.first, 'replies to ' ~ cm.first) if cm.first else ('reply', 'replies')) if cm.subject else ('comment', 'comments') -%}
 <section class="comments" id="comments" aria-labelledby="commentsTitle" data-comments data-new="{{ cm.new }}"
          data-more="{{ cm.more }}" data-drop="{{ cm.drop }}"{% if cm.post_mine %} data-post-mine{% endif %}{% if cm.subject %} data-subject="{{ cm.subject }}"{% endif %}>
-  <div class="comments-head">
-    {#- On a comment's own page the heading says whose replies follow ("Replies
-        to Eli": the owner's yes to C, Nov 18); a place, with nobody's name,
-        says Replies. #}
-    <h2 class="comments-title" id="commentsTitle">{{ ic.comment() }}<span>{{ ('Replies to ' ~ cm.first if cm.first else 'Replies') if cm.subject else 'Comments' }}</span><span class="cm-count" data-cm-count{% if not cm.count %} hidden{% endif %}>{{ cm.count }}</span></h2>
-    {% if say %}<button class="icon-btn cm-say" type="button" data-cm-new aria-expanded="false" aria-label="{{ 'Reply' if cm.subject else 'Say something' }}" title="{{ 'Reply' if cm.subject else 'Say something' }}"
-            {%- if not cm.can %} aria-haspopup="dialog" aria-controls="commentOutSheet"{% endif %}>{{ ic.comment_new() }}</button>{% endif %}
-  </div>
-  {% if cm.can %}<div class="cm-fold" id="commentFold" data-cm-fold><div class="cm-fold-in" hidden>{{ comment_box() }}</div></div>{% endif %}
-  {% if say %}<div class="cm-first-fold{% if not cm.cards %} is-open is-still{% endif %}" data-cm-first-fold><div class="cm-fold-in"{% if cm.cards %} hidden{% endif %}>
-    <p class="cm-first"><button type="button" data-cm-new data-cm-first{% if not cm.can %} aria-haspopup="dialog" aria-controls="commentOutSheet" aria-expanded="false"{% endif %}>Say the first thing</button></p>
-  </div></div>{% endif %}
+  <h2 class="pp-label comments-title" id="commentsTitle" data-cm-head{% if not cm.count %} hidden{% endif %}><span class="cm-count" data-cm-count>{{ cm.count }}</span> <span data-cm-noun data-one="{{ noun[0] }}" data-many="{{ noun[1] }}">{{ noun[0] if cm.count == 1 else noun[1] }}</span></h2>
   <ol class="cm-list" data-cm-list>{% for it in cm.cards %}{{ comment(it, cm.can, cm.post_mine) }}{% endfor %}</ol>
   <button class="btn btn-wide feed-more cm-more" type="button" data-cm-next="{{ cm.next or '' }}"{% if not cm.next %} hidden{% endif %}>Load more</button>
   <p class="say" data-cm-page-say role="status" hidden></p>
@@ -294,9 +330,10 @@
 </div>
 {% endif %}
 
-{#  SIGNED OUT: the icon is there for everybody; a tap raises this, small,
-    saying how, as the heart's "Like this drawing?" does. Sign in comes back
-    to the page with the box open (#say), and nothing is posted until Post. #}
+{#  SIGNED OUT: the answer bar's line is there for everybody; a tap raises
+    this, small, saying how, as the heart's "Like this drawing?" does. Sign in
+    comes back to the page with the box open (#say), and nothing is posted
+    until Post. #}
 {% if not me %}
 <div class="make post-sheet cm-out" id="commentOutSheet" hidden>
   <div class="make-scrim" data-make-close></div>

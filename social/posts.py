@@ -14,8 +14,8 @@
     /feed               the next page of the feed, for Load more, or the
                         first of Following or Everyone, for the pill (JSON).
     /p/<id>             a post's own page: its drawing plays by itself (sound
-                        off, never under Reduce Motion; posts.js), its
-                        comments (comments.py), More from its author.
+                        off, never under Reduce Motion; posts.js), the
+                        draw-backs on it and its comments (comments.py).
     /p/<id>/delete      your own post, gone: its words and its drawing (JSON).
     /b/<skribl_id>      a drawing shown outside a post, on a page of its own:
                         a post's page without words, its comments and all
@@ -102,9 +102,6 @@ POST_MAX_BODY = 24 * 1024 * 1024
 #: A page of the feed.
 PAGE = 20
 
-#: How many of a person's other posts a post's page shows (More from).
-MORE = 3
-
 #: A post's title on Skribl's side (what /s/<id> unfurls with): its first
 #: words, up to this many characters (Skribl's own cap is the same).
 TITLE_MAX = 80
@@ -170,8 +167,8 @@ def _cursor(entry):
     that names no internal id. A post's card is p<its address>, a repost's
     r<the original's address> at the repost's time (reposts.py: Home's
     Following and a person's Posts tab), a drawing shown outside a post
-    s<its skribl's address> (More from's; a Home page opened before Home kept
-    posts only can still hold one)."""
+    s<its skribl's address> (a Home page opened before Home kept posts only
+    can still hold one)."""
     at = as_utc(entry["at"])
     raw = f"{int(at.timestamp() * 1_000_000)}.{entry['key']}"
     return base64.urlsafe_b64encode(raw.encode()).rstrip(b"=").decode()
@@ -227,55 +224,26 @@ def _posts_before(at, limit, person=None, hidden=frozenset(), viewer=None, among
     return rows[:limit], len(rows) > limit
 
 
-def _drawings_before(at, limit, viewer, person, hidden=frozenset()):
-    """A page of the drawings one person showed in Skribl's gallery and not in
-    a post (More from), older than `at`, newest first, each with its author:
-    (entries, more). Through Skribl's list_public_posts, narrowed to them,
-    whose feed filter leaves out the people a block hides (the host installs
-    it: app.py); nobody in `hidden` is let through here either, whatever
-    the host installed. Home has none of these since the map's step 3."""
-    from skribl import list_public_posts
-    before = None
-    if at is not None:
-        when, key = at
-        before = (when, key[1:] if key.startswith("s") else "")
-    items, more = list_public_posts(before=before, limit=limit, author=person.public_id,
-                                    viewer_id=viewer.public_id if viewer is not None else None)
-    if not items:
-        return [], more
-    sess = site().session()
-    ids = [i["id"] for i in items]
-    in_posts = set(sess.execute(sa.select(Post.skribl_id).where(Post.skribl_id.in_(ids))).scalars())
-    authors = {p.public_id: p for p in sess.execute(
-        sa.select(Person).where(Person.public_id.in_({i["user_id"] for i in items}))).scalars()}
-    return [{"kind": "s", "at": as_utc(datetime.fromisoformat(i["created_at"])), "key": "s" + i["id"],
-             "sk": i, "who": authors[i["user_id"]]}
-            for i in items if i["id"] not in in_posts and i["user_id"] in authors
-            and authors[i["user_id"]].id not in hidden], more
+def feed_page(before=None, limit=PAGE, viewer=None, among=None):
+    """A page of Home's feed, newest first, after `before` (a cursor):
+    (entries, next cursor or None).
 
+    POSTS ONLY (the map's step 3; the owner's "Yes on everything", Nov 13:
+    every share is a post, and Home shows posts): everyone's, or with
+    `among` (follows: Home's Following) the people somebody follows and
+    theirs, their ids as a subquery (follows.home_items). A drawing shown in
+    the gallery outside a post (the Pad's own, or anything shared before
+    posts) is on its own page (/b/<id>) and its maker's page, never on Home.
+    A cursor from a Home page opened before may name one: it is read as its
+    time (_posts_before).
 
-def feed_page(before=None, limit=PAGE, viewer=None, person=None, among=None):
-    """A page of a feed, newest first, after `before` (a cursor): (entries,
-    next cursor or None).
+    ONE PERSON'S is not read here any more: a post's page showed "More from"
+    its author through this until Nov 20 (the Calm Post Page: the owner's
+    "Bluesky looks simpler. Most because there aren't the more from images");
+    their page's Posts tab is person_page's, below.
 
-    HOME'S (no `person`) IS POSTS ONLY (the map's step 3; the owner's "Yes
-    on everything", Nov 13: every share is a post, and Home shows posts):
-    everyone's, or with `among` (follows: Home's Following) the people
-    somebody follows and theirs, their ids as a subquery
-    (follows.home_items). A drawing shown in the gallery outside a post (the
-    Pad's own, or anything shared before posts) is on its own page
-    (/b/<id>), its maker's page and More from, never on Home. A cursor from
-    a Home page opened before may name one: it is read as its time
-    (_posts_before).
-
-    ONE PERSON'S (`person`: More from, on a post's or a drawing's page) is
-    their posts and the drawings they showed in the gallery outside a post,
-    newest first; a drawing that is a post's shows once, as the post.
-
-    MUTES (C, quiet everywhere): a feed of everybody's (Home, Following and
-    Everyone alike) leaves out the people the viewer muted, in its query, so
-    its pages stay whole; one person's (More from) is what the viewer went
-    to, and keeps them.
+    MUTES (C, quiet everywhere): Home, Following and Everyone alike leave
+    out the people the viewer muted, in the query, so its pages stay whole.
 
     REPOSTS (reposts.py; the owner's "All yes", Nov 14): Home's Following
     (`among`) holds the reposts of the people you follow and yours, merged
@@ -286,20 +254,14 @@ def feed_page(before=None, limit=PAGE, viewer=None, person=None, among=None):
     from .mutes import muted_ids
     from .safety import hidden_ids
     at = _uncursor(before) if before else None
-    hidden = hidden_ids(viewer)
-    if person is None:
-        hidden = hidden | muted_ids(viewer)
-    posts, more = _posts_before(at, limit, person, hidden, viewer, among)
+    hidden = hidden_ids(viewer) | muted_ids(viewer)
+    posts, more = _posts_before(at, limit, None, hidden, viewer, among)
     out = [_entry(p, who) for p, who in posts]
     if among is not None and viewer is not None:
         from .reposts import reposts_before
         shared, more_r = reposts_before(at, limit, viewer, hidden, among=among)
         out = sorted(out + shared, key=lambda e: (e["at"], e["key"]), reverse=True)
         more = len(out) > limit or more or more_r
-    if person is not None:
-        drawings, more_s = _drawings_before(at, limit, viewer, person, hidden)
-        out = sorted(out + drawings, key=lambda e: (e["at"], e["key"]), reverse=True)
-        more = len(out) > limit or more or more_s
     page = out[:limit]
     from .reposts import once
     return once(page), (_cursor(page[-1]) if more and page else None)
@@ -452,8 +414,8 @@ def cards(entries, viewer, words=True, aligned=False):
     and its Delete. A REPOST's card (reposts.py) is the original's, with who
     reposted it (`by`); a QUOTE's carries the original small (`quote`).
     `words`: whether the cards show their words, whose mentions are then
-    read (mentions.links, one read for the page); a tile (the Gallery's,
-    More from's) shows none, and reads none. A COMMENT'S CARD (kind "c": a
+    read (mentions.links, one read for the page); a tile (the Gallery's, a
+    draw-back's) shows none, and reads none. A COMMENT'S CARD (kind "c": a
     comment or a reply reposted, or kept in Bookmarks; the comment thread,
     step 3) is comments.world_cards's, in its place among them; one the
     viewer is not shown has no card, or with `aligned` (one for each entry:
@@ -529,8 +491,8 @@ def cards(entries, viewer, words=True, aligned=False):
             # A drawing shown outside a post: as Skribl describes it now (its
             # ground and whether it is on a picture too). The Gallery's read
             # names its id and visibility alone (gallery._read), so one Skribl
-            # no longer describes is no card there; the listing's own item
-            # (More from's) stays as read, its ground and picture not known.
+            # no longer describes is no card there; an item that came whole
+            # (a listing's own) stays as read, its ground and picture not known.
             sid = e["sk"]["id"]
             got = drawings.get(sid)
             sk = (dict(e["sk"], **got) if got is not None
@@ -1040,13 +1002,11 @@ def register(bp, skribl_blueprint="skribl"):
         return _post_page(cards([entry], me)[0], me)
 
     def _post_page(card, me):
-        """A post's page, or a drawing's: More from its author, posts and
-        drawings alike, newest first; and its comments (a post's, or since the
-        owner's yes on Nov 12, a drawing's: whatever is opened has them)."""
-        others, _ = feed_page(limit=MORE + 1, viewer=me, person=card["who"])
-        key = ("s" + card["post"].skribl_id) if card["kind"] == "s" else ("p" + card["post"].public_id)
-        # A tile is a drawing: a quote of words alone has none to show.
-        others = [e for e in others if e["key"] != key and (e["kind"] != "p" or e["post"].skribl_id)][:MORE]
+        """A post's page, or a drawing's: the draw-backs on it and its
+        comments (a post's, or since the owner's yes on Nov 12, a drawing's:
+        whatever is opened has them). NO "MORE FROM" its author (the Calm
+        Post Page, the owner's "All yes to everything", Nov 20): their face
+        and name open their page."""
         from . import comments
         on = (comments.On(card["who"], post=card["post"]) if card["kind"] == "p" else
               comments.On(card["who"], drawing=card["post"].skribl_id, sk=card["sk"]))
@@ -1070,8 +1030,7 @@ def register(bp, skribl_blueprint="skribl"):
             got = site().session().execute(q).all()
             backs = [c for c in cards([_entry(pp, who) for pp, who in got], me, words=False) if c and c["sk"]]
         # The page's token for everybody: Report is anybody's (piece 5).
-        return _page("post.html", here="post", card=card, more=cards(others, me, words=False) if others else [],
-                     backs=backs,
+        return _page("post.html", here="post", card=card, backs=backs,
                      share_url=public_origin() + card["url"], token=csrf_token(), cm=cm, lk=lk,
                      signin_here=url_for("social.signin", next=card["url"]))
 

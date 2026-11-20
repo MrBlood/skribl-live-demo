@@ -1923,16 +1923,24 @@ with sync_playwright() as p:
                 pass
             pg.wait_for_timeout(800)
             hl = pg.evaluate("""() => { const t = document.querySelector(':target'), h = document.querySelector('.post-page > .post-row .lk-heart');
-              const r = h ? h.getBoundingClientRect() : null;
+              const r = h ? h.getBoundingClientRect() : null, bar = document.querySelector('.post-page .ans-bar');
+              const at = r ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
               return { at: location.pathname + location.hash, heart: !!t && t === h, target: t ? (t.className || t.tagName) : null,
                        line: !!document.querySelector('[data-like-by]'), pressed: h ? h.getAttribute('aria-pressed') : null,
-                       y: Math.round(scrollY), top: r ? Math.round(r.top) : null, bottom: r ? Math.round(r.bottom) : null, vh: innerHeight }; }""")
+                       y: Math.round(scrollY), top: r ? Math.round(r.top) : null, bottom: r ? Math.round(r.bottom) : null, vh: innerHeight,
+                       painted: !!at && !!h && h.contains(at), bar: bar ? Math.round(bar.getBoundingClientRect().top) : null }; }""")
             close_ctx(ctx, pg)
+            # IN VIEW IS WHAT IS ASKED, NOT THAT THE PAGE SCROLLED: since the Calm
+            # Post Page (Nov 20) a post with nothing under it fits one screen, so
+            # there is nothing to scroll (the page was long enough to need it until
+            # then, and the row asked for a scroll). The heart painted where it
+            # stands, on the screen and above a phone's answer bar.
             check("with no line to land on (its maker the only one who liked it, the other like gone since Activity was"
-                  " read), a like row lands on the post's heart: the page's #liked, scrolled to and in view, the filled"
-                  " heart saying it",
+                  " read), a like row lands on the post's heart: the page's #liked, in view (painted where it stands, on"
+                  " the screen and above the answer bar at its foot), the filled heart saying it",
                   hl["at"] == f"/social/p/{p9c}#liked" and hl["heart"] and not hl["line"] and hl["pressed"] == "true"
-                  and hl["y"] > 0 and hl["top"] is not None and 0 <= hl["top"] and hl["bottom"] <= hl["vh"],
+                  and hl["painted"] and hl["top"] is not None and 0 <= hl["top"] and hl["bar"] is not None
+                  and hl["bottom"] <= hl["bar"] <= hl["vh"],
                   json.dumps(hl))
             ctx, pg = browser_as(b, nell, screen="desk")
             go(pg, "/social/activity")

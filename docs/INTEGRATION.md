@@ -384,7 +384,8 @@ Either way there are two buttons, beside the scrubber or on the drawing:
 
 **A feed of your own people's drawings** (after v330: the Skribl site's Home
 showed every drawing its people showed, made in its post box or not, until
-the site made Home posts only; it still reads one person's, for More from).
+the site made Home posts only; it read one person's for More from on a
+post's page until Nov 20, when that went, and reads none now).
 `skribl.list_public_posts(author=..., author_prefix=..., before=..., limit=...,
 viewer_id=...)` hands back `(items, more)`: the public skribls a gallery would
 list, newest first, as the listing's own items (the keys `describe_posts`

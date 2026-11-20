@@ -503,12 +503,17 @@
      Draw back's pen, "Watch again" and Draw back rise where the play button
      was, over the finished drawing: you have just watched it, so that is the
      moment to answer. They go as it plays again, by either. A glide up and a
-     fade (social.css .db-end); under Reduce Motion a fade where they sit. */
+     fade (social.css .db-end); under Reduce Motion a fade where they sit.
+     ON A POST'S OWN PAGE THE INVITATION IS SAID ONCE (the Calm Post Page;
+     the owner's "All yes to everything", Nov 20): the answer bar is there
+     with Draw back in it (`lit`), so Watch again rises alone and the bar's
+     Draw back lights up, the pill's own purple, until it plays again. */
   doc.addEventListener('skribl:ended', function (e) {
     var box = e.target, art = box && box.closest ? box.closest('.post-art') : null;
     var root = art && art.closest('[data-post], .post-page');
     var pen = root && root.querySelector('.post-row .db-pen');
     if (!art || !pen || box.querySelector('.db-end')) return;
+    var lit = root.querySelector('.ans-bar .ans-draw');
     var end = doc.createElement('div');
     end.className = 'db-end';
     var again = doc.createElement('button');
@@ -516,16 +521,29 @@
     again.className = 'db-again';
     again.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 2.5l9 5.5-9 5.5z" fill="currentColor"/></svg>';
     again.appendChild(doc.createTextNode(say('db_again') || 'Watch again'));
-    var go = doc.createElement('button');
-    go.type = 'button';
-    go.className = 'db-go';
-    go.setAttribute('data-drawback', pen.getAttribute('data-drawback'));
-    go.setAttribute('data-drawback-first', pen.getAttribute('data-drawback-first') || '');
-    if (pen.hasAttribute('data-drawback-own')) go.setAttribute('data-drawback-own', '');
-    go.innerHTML = (pen.querySelector('svg') || { outerHTML: '' }).outerHTML;
-    go.appendChild(doc.createTextNode(say('db_go') || 'Draw back'));
     end.appendChild(again);
-    end.appendChild(go);
+    if (lit) lit.classList.add('is-go');
+    else {
+      var go = doc.createElement('button');
+      go.type = 'button';
+      go.className = 'db-go';
+      go.setAttribute('data-drawback', pen.getAttribute('data-drawback'));
+      go.setAttribute('data-drawback-first', pen.getAttribute('data-drawback-first') || '');
+      if (pen.hasAttribute('data-drawback-own')) go.setAttribute('data-drawback-own', '');
+      go.innerHTML = (pen.querySelector('svg') || { outerHTML: '' }).outerHTML;
+      go.appendChild(doc.createTextNode(say('db_go') || 'Draw back'));
+      end.appendChild(go);
+      /* Its own click, so the box's tap (play or pause) never takes it first. */
+      go.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        away();
+        if (window.SocialComposer && window.SocialComposer.drawBack) {
+          window.SocialComposer.drawBack({ id: go.getAttribute('data-drawback'), first: go.getAttribute('data-drawback-first'),
+                                           own: go.hasAttribute('data-drawback-own'), from: pen });
+        }
+      });
+    }
     /* In the drawing's own box, at its foot; the box's own replay button
        steps aside while they are up (they say it in words). */
     box.appendChild(end);
@@ -541,6 +559,7 @@
       watch.disconnect();
       end.remove();
       box.classList.remove('db-ended');
+      if (lit) lit.classList.remove('is-go');
     }
     again.addEventListener('click', function (ev) {
       ev.preventDefault();
@@ -548,16 +567,6 @@
       away();
       var p = box._skriblInline;
       if (p && p.play) p.play();
-    });
-    /* Its own click, so the box's tap (play or pause) never takes it first. */
-    go.addEventListener('click', function (ev) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      away();
-      if (window.SocialComposer && window.SocialComposer.drawBack) {
-        window.SocialComposer.drawBack({ id: go.getAttribute('data-drawback'), first: go.getAttribute('data-drawback-first'),
-                                         own: go.hasAttribute('data-drawback-own'), from: pen });
-      }
     });
     var watch = new MutationObserver(function () { if (box.classList.contains('is-playing')) away(); });
     watch.observe(box, { attributes: true, attributeFilter: ['class'] });

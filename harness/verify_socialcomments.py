@@ -2,12 +2,13 @@
 phase 2, comments"), through the demo's own server, with Chromium's virtual
 authenticator for the site's people.
 
-  1. THE SECTION: a post's page says "Comments" and how many, and at the
-     heading's end the icon that opens the box (folded away until asked for:
-     a phone's sheet, "Say something to Juno": their face, "Say something, or
-     draw it…", Draw, Flip, Post); signed out, the comments are readable and
-     the icon raises "Say something?"; Post with nothing written or drawn
-     says so and sends nothing.
+  1. THE SECTION: a post nobody has commented on has no heading over
+     nothing; the answer bar's line, "Say something…", opens the box (folded
+     away until asked for: a phone's sheet, "Say something to Juno": their
+     face, "Say something, or draw it…", Draw, Flip, Post); signed out, the
+     comments are readable under their small label ("1 comment") and the
+     line raises "Say something?"; Post with nothing written or drawn says
+     so and sends nothing.
   2. COMMENTING, NEWEST FIRST: the box sends the words (tidied, as a post's);
      the new comment fades in at the top, the count with it; its time is
      short ("now", "40m"); its row names the post and the person.
@@ -42,9 +43,10 @@ authenticator for the site's people.
  10. LOAD MORE: twenty comments a page, the next in place, none twice.
  11. HOME'S CARD: how many comments beside the plays, "N comments", a way to
      them; at none the icon alone, "Comment" (the owner's yes, Nov 12).
- 12. ON A DESK: the comments beside the drawing, right under the time-and-
-     plays line (no Make your own between, since Nov 14); the icon at their
-     heading's end; the box opening right under it.
+ 12. ON A DESK: the answer bar beside the drawing, 18px under the time-and-
+     plays line, the comments 24px under it (no Make your own between,
+     since Nov 14; no strip where nothing is drawn back, since Nov 20); the
+     box opening in the bar's own place.
  13. THE NEW SCREENS: every word at 4.5:1 on what is painted behind it, every
      target 44px, every text field 16px: phone and desk, light and dark.
  14. A DRAWING ANSWER, IN THE BOX: Draw and Flip open Skribl's editor over
@@ -88,26 +90,38 @@ a post (made in the Pad, shown in the gallery: /social/b/<id>) has them too.
  28. THE NEW SCREENS on a drawing's page: words at 4.5:1, targets 44px, text
      fields 16px; phone and desk, light and dark.
 
-THE COMMENT BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an icon
-not a card. It takes up too much room sitting there", then "Yes to all"):
- 29. THE ICON at the heading's end (44px, round, its line 3:1 off the pixels,
-     lit while open), the heading keeping its height, the box folded away
-     (no room, unseen, nothing focusable); nobody who may not comment offered it.
+THE COMMENT BOX IS NOT A CARD SITTING THERE (the owner, Nov 13: "The comment
+needs to be an icon not a card. It takes up too much room sitting there"),
+AND ONE LINE OPENS IT: THE ANSWER BAR (the Calm Post Page; the owner's "All
+yes to everything. Make it smart and beautiful", Nov 20, of a page that
+"seems busy and disorganized" with nothing under it):
+ 29. THE ANSWER BAR: a line that looks like a field and is a button, "Say
+     something…", 44px, its words 16px and 4.5:1 off the pixels, Draw back
+     beside it, nothing of the old way on the page; a phone: fixed on the
+     bottom bar, 60px, your face; a desk: in the column, 18px under the
+     date, and THE LINE BECOMES THE BOX (the bar unseen and out of reach
+     under it, back on Esc); the box folded away (no room, unseen, nothing
+     focusable); nobody who may not comment offered it.
  30. A PHONE: the box rises on Make's sheet, ready (read on every frame, the
      page under it still and inert); the dimmed page, a drag down or Esc puts
      it away, keeping the words; on a keyboard (stood in) it rides above it;
      Draw opens the Pad over it, and the page stays inert behind it after.
- 31. A DESK: the box glides open under the heading (read on every frame),
-     the icon lit; a second click, Esc or a press elsewhere folds it away,
-     keeping the words; the Pad over the page is not "elsewhere".
+ 31. A DESK: the box glides open in the line's own place (read on every
+     frame: what is under it moves by the box's room less the line's 44px,
+     the line fading away under it); Esc or a press elsewhere folds it away,
+     keeping the words, the line back; the Pad over the page is not
+     "elsewhere".
  32. REPLY: a phone's sheet, "Reply to Theo" and Theo's words in a line; a
-     desk's fold under the conversation, folding first from the heading,
-     Reply again folding it; the page glides to it under a long thread.
+     desk's fold under the conversation, folding first from the bar's
+     place, Reply again folding it; the page glides to it under a long thread.
  33. POSTED: the box goes as the comment comes, glowing in the landing's tint
      that fades; on a desk in step; "Posting…" on Post, no line growing the
      box; the box emptied once it has gone.
  34. SIGNED OUT, "Say something?" and Sign in back with the box open (#say,
-     nothing posted, the address cleaned); "Say the first thing" at none.
+     nothing posted, the address cleaned); NOTHING AT NONE (no heading, no
+     "Say the first thing", no room taken) and the row's talk cloud opening
+     the box then; the label coming with the first comment and going with
+     the last.
  35. REDUCE MOTION: the sheet fades where it sits; a desk's box is put in
      place and fades; a posted comment too.
  36. A DRAWING'S OWN PAGE: the same.
@@ -118,8 +132,8 @@ THE COMMENT THREAD, step 1 (the owner's yes, Nov 17, to the Read More Replies
 mock; docs/SOCIAL-SITE.md section 18):
  38. THE LOOK: every comment in a bubble (the site's card, its lilac edge one
      screen pixel, its lift, 18px round, as wide as its words), no line
-     between comments, an initial in a face not drawn yet, the count in a
-     pill, the row under the bubble (Reply spelled out on a desk only, 44px):
+     between comments, an initial in a face not drawn yet, the count plain
+     in its small label, the row under the bubble (Reply spelled out on a desk only, 44px):
      read against their tokens, phone and desk, light and dark.
  39. THE LIST (the owner, Nov 17; Bluesky's way since Nov 18): a reply
      keeps the reply it answers; a list shows the direct replies, each with
@@ -127,7 +141,8 @@ mock; docs/SOCIAL-SITE.md section 18):
      and its conversation followed down (47), a comment's room, the line
      straight; a tap on one opens its own page; a block hides a reply and
      everything under it, counted the same way.
- 40. A COMMENT'S OWN PAGE: the way to it, it as big as a post, "Replies";
+ 40. A COMMENT'S OWN PAGE: the way to it, it as big as a post, its answer
+     bar ("Reply to Elio…") and its label ("2 replies to Elio");
      back where you were; signed out readable; hidden on the way is 404.
  41. REPLYING FROM A LIST: where that one's tree is closed, the count by
      its talk cloud takes the reply and glows; on a comment's own page the
@@ -624,8 +639,12 @@ SECTION = """() => { const one = li => ({ id: li.dataset.comment, name: (li.quer
     answer: !!li.querySelector(':scope > .cm-main [data-cm-answer]'),
     more: li.getAttribute('data-replies'),
     answers: [...li.querySelectorAll(':scope > .cm-chain > .cm')].map(one) });
-  return { count: (() => { const c = document.querySelector('[data-cm-count]'); return c && !c.hidden ? c.textContent : null; })(),
+  return { count: (() => { const c = document.querySelector('[data-cm-count]'), l = document.querySelector('[data-cm-head]');
+                           return c && l && !l.hidden ? c.textContent : null; })(),
     list: [...document.querySelectorAll('[data-cm-list] > .cm')].map(one) }; }"""
+# The small label over the comments, as shown: "7 comments", or None at none.
+LABEL = """() => { const l = document.querySelector('[data-cm-head]');
+  return l && !l.hidden && l.getClientRects().length ? l.innerText.replace(/\\s+/g, ' ').trim() : null; }"""
 OPEN = "(id) => document.getElementById(id).classList.contains('is-open')"
 ACTS = "(s) => [...document.querySelectorAll(s + ' .post-act')].filter(b => !b.hidden).map(b => b.textContent.trim())"
 REASONS = "(s) => [...document.querySelectorAll(s + ' input[name=reason]')].map(i => [i.value, i.closest('label').textContent.trim()])"
@@ -673,10 +692,12 @@ DELETE_AND_WATCH = """async ([id, act]) => {
            under: [...li.querySelectorAll(':scope > .cm-answers > .cm')].map(x => x.dataset.comment),
            more: li.getAttribute('data-replies') }; }"""
 
-# ---- THE COMMENT BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an
-# icon not a card"; "Yes to all"). The box is folded away behind the icon at the
-# heading's end: a phone opens it on Make's own sheet, a desk in place (the
-# fold). These open it as a person does, and read where it is.
+# ---- THE COMMENT BOX IS NOT A CARD SITTING THERE (the owner, Nov 13: "The comment
+# needs to be an icon not a card"), AND ONE LINE OPENS IT (the Calm Post Page; the
+# owner's "All yes to everything", Nov 20): the answer bar's "Say something…",
+# where a round icon at a heading's end did until then. A phone opens the box on
+# Make's own sheet, a desk in the line's own place (the fold). These open it as a
+# person does, and read where it is.
 BOX = """() => { const b = document.querySelector('[data-cm-box]'); if (!b) return null;
   const w = b.querySelector('[data-cm-words]'), fold = document.querySelector('[data-cm-fold]');
   const sheet = document.getElementById('commentBoxSheet'), inSheet = !!sheet && sheet.contains(b);
@@ -748,45 +769,47 @@ NEAR_LIMIT = """() => { const q = s => document.querySelector(s);
            holderRight: Math.round(holder.right), x: Math.round(post.left), dy: Math.round(post.top - chip.top),
            under: Math.round(lr.top - post.bottom), edge: Math.round(post.right - lr.right) }; }"""
 GONE = """() => { const s = document.getElementById('commentBoxSheet'), f = document.querySelector('[data-cm-fold]');
-  return (!s || s.hidden) && (!f || (!f.classList.contains('is-open') && f.parentElement.id === 'comments')); }"""
-# The icon, the heading it sits in, and the box folded under it.
-ICON = """() => { const b = document.querySelector('.cm-say'); if (!b) return null;
-  const h = document.querySelector('.comments-head'), t = document.getElementById('commentsTitle'), sec = document.getElementById('comments');
-  const r = b.getBoundingClientRect(), hr = h.getBoundingClientRect(), tr = t.getBoundingClientRect(), sr = sec.getBoundingClientRect();
+  return (!s || s.hidden) && (!f || (!f.classList.contains('is-open') && f.parentElement.classList.contains('ans'))); }"""
+# THE ANSWER BAR'S LINE (.cm-say, the name it had as an icon), the bar it is in
+# and the box folded away in the same room: what it says and is, where the bar
+# stands (a phone: fixed, on the bottom bar; a desk: in the column under the
+# date), whether a tap lands on it across its width, and that nothing else on
+# the page offers the box for something new.
+SAYLINE = """() => { const b = document.querySelector('.ans-bar .cm-say'); if (!b) return null;
+  const bar = b.closest('.ans-bar'), page = document.querySelector('.post-page'), meta = page.querySelector(':scope > .post-meta');
+  const r = b.getBoundingClientRect(), br = bar.getBoundingClientRect(), cs = getComputedStyle(b), bs = getComputedStyle(bar);
+  const nav = document.querySelector('nav.nav').getBoundingClientRect();
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-  const lands = [[cx, cy], [cx - 19, cy], [cx + 19, cy], [cx, cy - 19], [cx, cy + 19]].map(([x, y]) => {
+  const lands = [[cx, cy], [r.left + 14, cy], [r.right - 14, cy], [cx, r.top + 4], [cx, r.bottom - 4]].map(([x, y]) => {
     const e = document.elementFromPoint(x, y); return !!e && (e === b || b.contains(e)); });
-  const list = document.querySelector('[data-cm-list]').getBoundingClientRect();
   const fold = document.querySelector('[data-cm-fold]'), inner = fold && fold.querySelector('.cm-fold-in');
-  return { name: b.getAttribute('aria-label'), tip: b.getAttribute('title'), w: r.width, h: r.height,
-    round: getComputedStyle(b).borderTopLeftRadius, right: Math.round((sr.right - r.right) * 100) / 100,
-    centre: Math.round((cy - (tr.top + tr.height / 2)) * 100) / 100, head: Math.round(hr.height * 100) / 100,
-    line: Math.round(tr.height * 100) / 100, lands: lands.every(Boolean), gap: Math.round((list.top - hr.bottom) * 100) / 100,
+  const face = bar.querySelector('.ans-face .face-ring'), draw = bar.querySelector('.ans-draw');
+  const one = n => Math.round(n * 10) / 10;
+  return { name: b.textContent.trim(), tag: b.tagName, w: one(r.width), h: one(r.height), font: cs.fontSize, weight: cs.fontWeight,
+    lands: lands.every(Boolean), fixed: bs.position === 'fixed', bar: [one(br.width), one(br.height)], onNav: one(nav.top - br.bottom),
+    underDate: meta ? one(br.top - meta.getBoundingClientRect().bottom) : null,
+    face: face && face.getClientRects().length ? one(face.getBoundingClientRect().width) : null,
+    draw: draw ? one(draw.getBoundingClientRect().width) : null,
+    seen: bs.visibility === 'visible' && +bs.opacity === 1,
     expanded: b.getAttribute('aria-expanded'), popup: b.getAttribute('aria-haspopup'), controls: b.getAttribute('aria-controls'),
-    plus: b.querySelectorAll('svg path').length,
-    fold: fold ? { h: Math.round(fold.getBoundingClientRect().height * 100) / 100, seen: getComputedStyle(inner).visibility,
-                   laid: fold.querySelector('[data-cm-words]').getClientRects().length > 0 } : null }; }"""
+    // What stood here until Nov 20, and must not come back beside the bar: a
+    // heading's row with its round icon, "Say the first thing".
+    old: document.querySelectorAll('.comments-head, .comments .icon-btn.cm-say, [data-cm-first], .cm-first-fold').length,
+    openers: document.querySelectorAll('[data-cm-new]').length,
+    fold: fold ? { h: one(fold.getBoundingClientRect().height), seen: getComputedStyle(inner).visibility,
+                   laid: fold.querySelector('[data-cm-words]').getClientRects().length > 0,
+                   home: fold.parentElement === bar.parentElement } : null }; }"""
 # What the signed-out sheet says, and where its Sign in goes.
 OUT_SHEET = """() => { const w = document.getElementById('commentOutSheet'); if (!w) return null; const a = w.querySelector('a.btn');
-  const i = document.querySelector('.cm-say');
   return { open: w.classList.contains('is-open') && !w.hidden, title: w.querySelector('.make-title').textContent,
-    lit: i ? getComputedStyle(i).backgroundColor === getComputedStyle(document.querySelector('.composer-post, .btn-primary')).backgroundColor : null,
     lede: w.querySelector('.post-lede').textContent, acts: [...w.querySelectorAll('.post-sheet-acts .btn')].map(e => e.textContent.trim()),
     next: a ? new URL(a.href).searchParams.get('next') : null, path: a ? new URL(a.href).pathname : null,
     focus: document.activeElement ? document.activeElement.textContent.trim() : null,
     old: !!document.querySelector('.cm-signin') }; }"""
-# "Say the first thing", where the comments will be at none.
-FIRST_LINE = """() => { const b = document.querySelector('[data-cm-first]'); if (!b) return null;
-  const f = document.querySelector('[data-cm-first-fold]'), r = b.getBoundingClientRect(), h = document.querySelector('.comments-head').getBoundingClientRect();
-  const c = getComputedStyle(b);
-  return { words: b.textContent.trim(), open: f.classList.contains('is-open'), w: r.width, h: Math.round(r.height * 100) / 100,
-    room: Math.round(f.getBoundingClientRect().height * 100) / 100, gap: Math.round((r.top - h.bottom) * 100) / 100,
-    ink: c.color, size: parseFloat(c.fontSize), weight: c.fontWeight, seen: getComputedStyle(f.querySelector('.cm-fold-in')).visibility,
-    lands: (() => { const e = document.elementFromPoint(r.left + 10, r.top + r.height / 2); return !!e && (e === b || b.contains(e)); })() }; }"""
 
 
 def open_box(pg, by=".cm-say"):
-    """The box, opened as a person opens it (the icon, or `by`), once it is at rest."""
+    """The box, opened as a person opens it (the answer bar's line, or `by`), once it is at rest."""
     pg.click(by, timeout=8000)
     pg.wait_for_function(BOX_STILL, timeout=8000)
     pg.wait_for_timeout(100)
@@ -897,19 +920,21 @@ def contrast(a, b):
     return (max(x, y) + 0.05) / (min(x, y) + 0.05)
 
 
-def icon_mark(pg):
-    """The icon's line against its own ground, read off the painted pixels
-    (not the stylesheet: the comment mock found a reader that misread a colour
-    form): the most contrasting pixel inside the icon's drawing, and the
-    button's ground 5px in from its left edge at its middle."""
+def line_words(pg):
+    """The answer bar's line: its words against its own ground, read off the
+    painted pixels (not the stylesheet: the comment mock found a reader that
+    misread a colour form): the most contrasting pixel inside the words' own
+    box, and the line's ground 6px in from its left edge at its middle (the
+    words start 16px in)."""
     import io
     from PIL import Image
-    r = pg.evaluate("""() => { const b = document.querySelector('.cm-say'); const s = b.querySelector('svg').getBoundingClientRect(),
-      o = b.getBoundingClientRect(); return { sx: s.left, sy: s.top, sw: s.width, sh: s.height, ox: o.left, oy: o.top, oh: o.height,
-      dpr: devicePixelRatio }; }""")
+    r = pg.evaluate("""() => { const b = document.querySelector('.ans-bar .cm-say'), g = document.createRange();
+      g.selectNodeContents(b);
+      const s = g.getBoundingClientRect(), o = b.getBoundingClientRect(); return { sx: s.left, sy: s.top, sw: s.width, sh: s.height,
+      ox: o.left, oy: o.top, oh: o.height, dpr: devicePixelRatio }; }""")
     shot = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
     k = r["dpr"]
-    ground = shot.getpixel((int((r["ox"] + 5) * k), int((r["oy"] + r["oh"] / 2) * k)))
+    ground = shot.getpixel((int((r["ox"] + 6) * k), int((r["oy"] + r["oh"] / 2) * k)))
     best, ink = 0.0, None
     for x in range(int(r["sx"] * k), int((r["sx"] + r["sw"]) * k)):
         for y in range(int(r["sy"] * k), int((r["sy"] + r["sh"]) * k)):
@@ -985,7 +1010,8 @@ POSTED = """async ([ms]) => {
     if (!say.hidden && !say.classList.contains('sr')) out.line = true;
     const now = performance.now();
     if (t1 === null ? now - t0 < 8000 : now - t1 < ms) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); });
-  const head = q('.comments-head').getBoundingClientRect(), hs = out.heights;
+  // The comments' small label: the list starts 10px under it.
+  const head = q('#commentsTitle').getBoundingClientRect(), hs = out.heights;
   return { id: li ? li.id : null, room, waited: t1 === null ? null : Math.round(t1 - t0),
            old: out.old, new: out.new, ops: out.ops, sheet: out.sheet, glow: out.glow,
            tint: out.tint, fade: out.tints.filter(o => o > 0.03 && o < 0.97).length,
@@ -1280,8 +1306,11 @@ LOOK = """([cid, rid]) => { """ + TOKEN_JS + """
   const fb = blank ? getComputedStyle(blank) : null, cc = count ? getComputedStyle(count) : null;
   const faces = { letter: blank ? blank.textContent.trim() : null, want: name ? name.textContent.trim()[0] : null,
     ground: fb && fb.backgroundColor === tint, ink: fb && fb.color === ink, ratio: fb ? ratio(fb.color, fb.backgroundColor) : 0,
-    pill: !!cc && cc.backgroundColor === tint && cc.color === ink && parseFloat(cc.borderTopLeftRadius) * 2 >= count.getBoundingClientRect().height - 0.5 };
-  faces.ok = faces.letter === faces.want && faces.ground && faces.ink && faces.ratio >= 4.5 && faces.pill;
+    // The count is the small label's own number, plain: its second ink and no
+    // pill (a lilac pill beside a bold "Comments" until the Calm Post Page).
+    plain: !!cc && cc.backgroundColor === 'rgba(0, 0, 0, 0)' && cc.color === tok(sec, 'color', 'var(--ink-2)')
+           && cc.fontSize === '15px' && cc.fontWeight === '600' };
+  faces.ok = faces.letter === faces.want && faces.ground && faces.ink && faces.ratio >= 4.5 && faces.plain;
   const li = document.getElementById('c-' + cid), acts = li.querySelector(':scope > .cm-main > .cm-acts');
   const reply = acts && acts.querySelector('[data-cm-answer]'), dots = acts && acts.querySelector('[data-cm-menu]');
   const word = reply && reply.querySelector('.cm-word'), ink2 = tok(sec, 'color', 'var(--ink-2)');
@@ -1431,8 +1460,8 @@ PAGE_OF = """() => { const s = document.querySelector('[data-cm-subject]'), c = 
     way: [...document.querySelectorAll('.cm-way-item')].map(li => [li.querySelector('.cm-way-head b').textContent, li.querySelector('a').getAttribute('href')]),
     words: s ? (s.querySelector(':scope > .post-words') || {}).textContent || null : null,
     face: f ? Math.round(f.getBoundingClientRect().width) : null,
-    heading: (document.querySelector('.comments-title span') || {}).textContent || null,
-    count: c && !c.hidden ? c.textContent : null,
+    heading: (() => { const l = document.querySelector('[data-cm-head]'); return l && !l.hidden ? l.innerText.replace(/\\s+/g, ' ').trim() : null; })(),
+    count: (() => { const l = document.querySelector('[data-cm-head]'); return c && l && !l.hidden ? c.textContent : null; })(),
     row: s ? (s.querySelector(':scope > .cm-row .post-count span') || {}).textContent || null : null,
     list: [...document.querySelectorAll('[data-cm-list] > .cm')].map(li => [li.dataset.comment,
       [...li.querySelectorAll(':scope > .cm-answers > .cm')].map(x => x.dataset.comment)]) }; }"""
@@ -1494,14 +1523,15 @@ PLACE_LOOK = """(id) => { """ + TOKEN_JS + """
   out.ok = out.ring && out.words === 'This reply was deleted' && out.ink && out.ratio >= 4.5 && out.bare && out.more === '1';
   return out; }"""
 
-# A place's own page: its head, the header, "Replies" and what hangs under
-# it, and that nothing there takes a reply.
+# A place's own page: its head, the header, its small label ("1 reply": a
+# place has nobody's name to say) and what hangs under it, and that nothing
+# there takes a reply: no answer bar, no line, no box, no row.
 PLACE_PAGE = """() => ({ head: (document.querySelector('[data-cm-subject] > .cm-gone-head .cm-gone') || {}).textContent || null,
   ring: !!document.querySelector('[data-cm-subject] > .cm-gone-head .cm-gone-face'),
   title: (document.querySelector('.top-title') || {}).textContent || null,
-  heading: (document.querySelector('.comments-title span') || {}).textContent || null,
+  heading: (() => { const l = document.querySelector('[data-cm-head]'); return l && !l.hidden ? l.innerText.replace(/\\s+/g, ' ').trim() : null; })(),
   list: [...document.querySelectorAll('[data-cm-list] > .cm')].map(li => li.dataset.comment),
-  icon: !!document.querySelector('.cm-say'), box: !!document.querySelector('[data-cm-box]'),
+  bar: !!document.querySelector('.ans-bar, .ans'), line: !!document.querySelector('.cm-say, [data-cm-new]'), box: !!document.querySelector('[data-cm-box]'),
   row: !!document.querySelector('[data-cm-subject] > .cm-row') })"""
 
 # THE COMMENT YOU OPENED (section 48; the owner's "Yes to c", Nov 18), its own
@@ -1523,7 +1553,10 @@ FOCUS = """() => { """ + TOKEN_JS + """
   const desk = innerWidth >= 900, band = getComputedStyle(s, '::before'), fs = face ? getComputedStyle(face) : null;
   const flow = [...s.children].filter(e => e.getClientRects().length && !(desk && e.matches('.post-art')));
   const order = flow.every((e, i) => i === 0 || e.getBoundingClientRect().top >= flow[i - 1].getBoundingClientRect().bottom - 1);
-  const parts = flow.filter(e => !e.matches('.cm-way, .comments, .post-art'));
+  // The band's rows: the answer bar's room is under the band, not one of them.
+  const parts = flow.filter(e => !e.matches('.cm-way, .comments, .post-art, .ans'));
+  const ans = s.querySelector(':scope > .ans'), barEl = s.querySelector('.ans-bar'), metaEl = s.querySelector(':scope > .post-meta');
+  const fixed = !!barEl && getComputedStyle(barEl).position === 'fixed';
   const gaps = parts.slice(1).map((e, i) => Math.round(e.getBoundingClientRect().top - parts[i].getBoundingClientRect().bottom));
   const widths = flow.map(e => [e.tagName.toLowerCase() + '.' + (e.className || '').split(' ')[0], Math.round(e.getBoundingClientRect().width)]);
   const texts = [], named = e => e.tagName.toLowerCase() + (typeof e.className === 'string' && e.className ? '.' + e.className.split(' ')[0] : '');
@@ -1540,7 +1573,13 @@ FOCUS = """() => { """ + TOKEN_JS + """
     tint: tok(s, 'backgroundColor', 'color-mix(in srgb, var(--tint) 70%, transparent)'),
     ring: fs ? { style: fs.outlineStyle, width: fs.outlineWidth, offset: fs.outlineOffset, color: fs.outlineColor,
                  ink: tok(s, 'color', 'var(--accent-ink)') } : null,
-    texts, marks, order, gaps, widths, desk, heading: (document.querySelector('#commentsTitle > span:not(.cm-count)') || {}).textContent || null,
+    texts, marks, order, gaps, widths, desk,
+    // The answer bar: where a phone's stands on the screen (the paint under it
+    // is not the page's), how far under the time a desk's is, and what its line says.
+    bar: barEl ? { fixed, top: barEl.getBoundingClientRect().top,
+                   gap: ans && metaEl ? Math.round(ans.getBoundingClientRect().top - metaEl.getBoundingClientRect().bottom) : null,
+                   line: (barEl.querySelector('.cm-say') || {}).textContent || null } : null,
+    heading: (() => { const l = document.querySelector('[data-cm-head]'); return l && !l.hidden ? l.innerText.replace(/\\s+/g, ' ').trim() : null; })(),
     wide: document.scrollingElement.scrollWidth, vw: innerWidth }; }"""
 
 PROBE = r"""
@@ -1604,7 +1643,7 @@ with sync_playwright() as p:
     b = p.chromium.launch()
 
     # ------------------------------------------------------------------ 1
-    if part(1, "the section: Comments and how many, the box behind the icon, signed out readable"):
+    if part(1, "the section: how many in a small label and none at none, the box behind the bar's line, signed out readable"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
@@ -1615,9 +1654,9 @@ with sync_playwright() as p:
             open_post(pg, post)
             empty = pg.evaluate(SECTION)
             folded = pg.evaluate(BOX)
-            icon = pg.evaluate(ICON)
+            line = pg.evaluate(SAYLINE)
             soon = pg.evaluate("() => !!document.querySelector('.comments-soon')")
-            title = pg.evaluate("() => document.getElementById('commentsTitle').innerText.replace(/\\s+/g, ' ').trim()")
+            label = pg.evaluate(LABEL)
             box, err = steps(lambda: (open_box(pg), pg.evaluate(BOX))[1])
             nothing = blank = None
             def nothing_sent():         # a box that cannot be used is this row's red, never a stop
@@ -1635,35 +1674,39 @@ with sync_playwright() as p:
             if box:                     # no box is the first row's red, never a stop
                 got_, _ = steps(nothing_sent)
                 nothing, blank = got_ or (None, None)
-            check("a post's page says Comments, with no number at none, and at the heading's end the icon (\"Say something\"),"
-                  " the box folded away behind it; a tap opens it on a phone's sheet, \"Say something to Juno\": their face, the"
-                  " words' field (17px, focused), \"Say something, or draw it…\", Draw, Flip and Post; no \"Comments open soon\"",
-                  empty == {"count": None, "list": []} and title == "Comments" and not soon
-                  and icon is not None and icon["name"] == "Say something" and folded is not None and folded["open"] is None
+            check("a post nobody has commented on has no heading over nothing (no label, no number, nothing saying Comments),"
+                  " and the answer bar's line, \"Say something…\", the box folded away behind it and nothing else offering"
+                  " it; a tap opens it on a phone's sheet, \"Say something to Juno\": their face, the words' field (17px,"
+                  " focused), \"Say something, or draw it…\", Draw, Flip and Post; no \"Comments open soon\"",
+                  empty == {"count": None, "list": []} and label is None and not soon
+                  and line is not None and line["name"] == "Say something…" and line["old"] == 0 and line["openers"] == 1
+                  and folded is not None and folded["open"] is None
                   and box is not None and box["open"] == "sheet" and box["title"] == "Say something to Juno" and box["face"]
                   and box["focus"] and box["placeholder"] == "Say something, or draw it…" and box["chips"] == ["Draw", "Flip"]
                   and box["post"] == "Post" and box["font"] >= 16,
-                  f"section {empty}; title {title!r}; open soon {soon}; icon {icon and icon['name']}; folded"
-                  f" {folded and folded['open']}; opened {box}; stopped {err}")
+                  f"section {empty}; label {label!r}; open soon {soon}; line {line and [line['name'], line['old'], line['openers']]};"
+                  f" folded {folded and folded['open']}; opened {box}; stopped {err}")
             check("Post with nothing written or drawn (or only spaces) says so and sends nothing",
                   nothing == "Say something or draw something first, then Post." and blank == nothing and not sent,
                   f"said {nothing!r} / {blank!r}; sent {len(sent)}")
             said(theo, post, "Read by somebody signed out")
             nctx, npg = browser_as(b, None)
             open_post(npg, post)
-            out = {"section": npg.evaluate(SECTION), "box": npg.evaluate(BOX), "icon": npg.evaluate(ICON)}
+            out = {"section": npg.evaluate(SECTION), "box": npg.evaluate(BOX), "line": npg.evaluate(SAYLINE), "label": npg.evaluate(LABEL)}
             sheet, err2 = steps(lambda: (npg.click(".cm-say", timeout=8000),
                                          npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000),
                                          npg.wait_for_timeout(450), npg.evaluate(OUT_SHEET))[-1])
             close_ctx(nctx, npg)
-            check("signed out, the comments are readable, with no box and no Answer; the icon is there all the same, and a tap"
-                  " raises \"Say something?\", its Sign in back to the post with the box open; no \"Sign in to answer\"",
-                  out["box"] is None and out["section"]["count"] == "1"
+            check("signed out, the comments are readable under their small label (\"1 comment\"), with no box and no Answer;"
+                  " the answer bar's line is there all the same, and a tap raises \"Say something?\", its Sign in back to the"
+                  " post with the box open; no \"Sign in to answer\"",
+                  out["box"] is None and out["section"]["count"] == "1" and out["label"] == "1 comment"
                   and [(c["name"], c["words"], c["answer"]) for c in out["section"]["list"]]
                   == [("Theo Lind", "Read by somebody signed out", False)]
-                  and out["icon"] is not None and sheet and sheet["open"] and sheet["title"] == "Say something?"
-                  and sheet["next"] == f"/social/p/{post}#say" and not sheet["old"],
-                  f"{out['section']}; box {out['box']}; icon {out['icon'] and out['icon']['name']}; sheet {sheet}; stopped {err2}")
+                  and out["line"] is not None and out["line"]["name"] == "Say something…" and sheet and sheet["open"]
+                  and sheet["title"] == "Say something?" and sheet["next"] == f"/social/p/{post}#say" and not sheet["old"],
+                  f"{out['section']}; label {out['label']!r}; box {out['box']}; line {out['line'] and out['line']['name']};"
+                  f" sheet {sheet}; stopped {err2}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(1, exc)
 
@@ -2309,7 +2352,7 @@ with sync_playwright() as p:
             stopped(11, exc)
 
     # ------------------------------------------------------------------ 12
-    if part(12, "on a desk: the comments beside the drawing, under the time-and-plays line"):
+    if part(12, "on a desk: the answer bar under the time-and-plays line, the comments under it, beside the drawing"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
@@ -2317,24 +2360,25 @@ with sync_playwright() as p:
             cid = said(theo, post, "Section 12, beside the drawing")
             dctx, dpg = browser_as(b, juno, "desk", "light")
             open_post(dpg, post)
-            # WHAT IS RIGHT ABOVE THEM: the draw-backs' line where the post has one
-            # (from the start, wherever it can be drawn back on by somebody signed in:
-            # the walkthrough's mocks, choice 3, Nov 19), else the time-and-plays line.
+            # WHAT IS RIGHT ABOVE THEM: the answer bar, 18px under the time-and-plays
+            # line (the Calm Post Page, Nov 20), and where the post has draw-backs
+            # their strip between the two. Her own drawing with nothing drawn back
+            # has no strip (until Nov 20 its line stood from the start, "No
+            # draw-backs yet": a heading over nothing).
             WHERE = """() => { const r = s => document.querySelector(s).getBoundingClientRect();
-              const strip = document.querySelector('.post-page > .db-strip');
-              const art = r('.post-art'), meta = strip ? strip.getBoundingClientRect() : r('.post-page > .post-meta'), sec = r('#comments'), box = r('[data-cm-box]'), icon = r('.cm-say');
-              return { strip: !!strip, right: Math.round(sec.left - art.right), under: Math.round(sec.top - meta.bottom),
-                       left: Math.round(sec.left - meta.left), width: Math.round(sec.width), box: Math.round(box.width),
-                       boxTop: Math.round(box.top - r('.comments-head').bottom), icon: Math.round(sec.right - icon.right),
-                       onscreen: icon.bottom < innerHeight }; }"""
+              const art = r('.post-art'), meta = r('.post-page > .post-meta'), ans = r('.post-page > .ans'), sec = r('#comments');
+              const boxEl = document.querySelector('[data-cm-box]'), box = boxEl ? boxEl.getBoundingClientRect() : null, line = r('.cm-say');
+              return { strip: !!document.querySelector('.post-page > .db-strip'), right: Math.round(sec.left - art.right),
+                       bar: Math.round(ans.top - meta.bottom), under: Math.round(sec.top - ans.bottom),
+                       left: Math.round(sec.left - meta.left), width: Math.round(sec.width), box: box ? Math.round(box.width) : null,
+                       boxTop: box ? Math.round(box.top - ans.top) : null, line: Math.round(line.left - sec.left),
+                       onscreen: line.bottom < innerHeight }; }"""
             where = dpg.evaluate(WHERE)
             _, err = steps(lambda: open_box(dpg))
             opened = dpg.evaluate(WHERE)
             octx, opg = browser_as(b, None, "desk", "light")
             open_post(opg, post)
-            out12 = opg.evaluate("""() => { const r = s => document.querySelector(s).getBoundingClientRect();
-              return { strip: !!document.querySelector('.post-page > .db-strip'),
-                       under: Math.round(r('#comments').top - r('.post-page > .post-meta').bottom) }; }""")
+            out12 = opg.evaluate(WHERE)
             close_ctx(octx, opg)
             # TYPING TO THE LAST HUNDRED (the counter, "5 left"), in the box and in
             # an answer's: the box keeps to its column (main's run after #883 read it
@@ -2352,13 +2396,14 @@ with sync_playwright() as p:
             dpg.wait_for_timeout(200)
             answering = dpg.evaluate(NEAR_LIMIT)
             close_ctx(dctx, dpg)
-            check("on a desk the comments sit beside the drawing, right under the draw-backs' line (which her own drawing"
-                  " has from the start; signed out there is none, and they sit right under the time-and-plays line), in the"
-                  " same column, the icon at the end of their heading within reach; the box opens right under the heading,"
-                  " as wide as the column",
-                  where["strip"] and where["right"] >= 24 and 0 < where["under"] <= 40 and where["left"] == 0 and where["width"] >= 300
-                  and where["icon"] == 0 and where["onscreen"] and err is None and opened["box"] == opened["width"]
-                  and opened["boxTop"] == 10 and out12["strip"] is False and 0 < out12["under"] <= 40,
+            check("on a desk the answer bar sits beside the drawing, 18px under the time-and-plays line, its line starting"
+                  " where the column does and within reach, and the comments 24px under it in the same column (her own"
+                  " drawing with nothing drawn back has no strip between them; signed out the same); the box opens in the"
+                  " bar's own place, as wide as the column, the comments still 24px under it",
+                  where["strip"] is False and where["right"] >= 24 and where["bar"] == 18 and where["under"] == 24 and where["left"] == 0
+                  and where["width"] >= 300 and where["line"] == 0 and where["onscreen"] and err is None
+                  and opened["box"] == opened["width"] and opened["boxTop"] == 0 and opened["under"] == 24
+                  and {k: out12[k] for k in ("strip", "bar", "under", "left", "line")} == {"strip": False, "bar": 18, "under": 24, "left": 0, "line": 0},
                   f"{where}; opened {opened}; signed out {out12}; stopped {err}")
             check("the box keeps to its column whatever is in it (a wider font, larger words, something far too wide):"
                   " Post at its right edge, nothing past it, no gap under Post, and as wide saying \"Posting…\" (named"
@@ -2403,6 +2448,11 @@ with sync_playwright() as p:
                     cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'start' })")
                     cpg.wait_for_timeout(300)
                     seen[(screen, scheme, "comments")] = cpg.evaluate(READ, "#comments")
+                    # The answer bar: on a phone it stands at the foot wherever the
+                    # page is; on a desk it is in the column, under the date.
+                    cpg.evaluate("() => document.querySelector('.post-page > .post-meta').scrollIntoView({ block: 'center' })")
+                    cpg.wait_for_timeout(300)
+                    seen[(screen, scheme, "the bar")] = cpg.evaluate(READ, ".ans-bar")
                     cpg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", m13)
                     answer_box(cpg, t13)
                     seen[(screen, scheme, "answering")] = cpg.evaluate(READ, "#comments, #commentBoxSheet")
@@ -2429,6 +2479,9 @@ with sync_playwright() as p:
                     npg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'start' })")
                     npg.wait_for_timeout(300)
                     seen[(screen, scheme, "signed out")] = npg.evaluate(READ, "#comments")
+                    npg.evaluate("() => document.querySelector('.post-page > .post-meta').scrollIntoView({ block: 'center' })")
+                    npg.wait_for_timeout(300)
+                    seen[(screen, scheme, "the bar, signed out")] = npg.evaluate(READ, ".ans-bar")
                     npg.click(".cm-say")
                     npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000)
                     npg.wait_for_timeout(450)
@@ -2445,17 +2498,18 @@ with sync_playwright() as p:
             small = [(k, v["small"]) for k, v in seen.items() if v["small"]]
             fields = [(k, v["fields"]) for k, v in seen.items() if v["fields"]]
             lowest = min((v["lowest"], " ".join(k)) for k, v in seen.items())
-            musts = {"comments": ("Comments", "Mira Okafor", "My cat would never be this patient", "Reply", NOTE[:24]),
+            musts = {"comments": ("comments", "Mira Okafor", "My cat would never be this patient", "Reply", NOTE[:24]),
                      # Mira sees her own comment taken down, so four, said alone.
-                     "answering": ("Post",), "signed out": ("Comments", "Theo Lind"),
+                     "answering": ("Post",), "signed out": ("comments", "Theo Lind"),
+                     "the bar": ("Say something…", "Draw back"), "the bar, signed out": ("Say something…",),
                      "say something?": ("Say something?", "Sign in, and you can reply to", "Not now", "Sign in"),
                      "home's card": ("4",), "⋯": ("Copy link", "Report this comment"), "your reports": ("Theo Lind",)}
             # "Reply" is spelled out on a desk; a phone shows its icon alone (the comment thread, step 1).
             missing = [(" ".join(k), w) for k, v in seen.items() for w in musts.get(k[2], ())
                        if not (w == "Reply" and k[0] == "phone")
                        and not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
-            check("every word on the comments (a comment, a reply, the box replying, the count, Reply, a taken-down note,"
-                  " \"Say something?\" signed out), a comment's ⋯ and its report, Home's card's count and Your Reports' comment card reads at 4.5:1"
+            check("every word on the comments (their small label, a comment, a reply, the box replying, Reply, a taken-down note,"
+                  " \"Say something?\" signed out), the answer bar (\"Say something…\", Draw back), a comment's ⋯ and its report, Home's card's count and Your Reports' comment card reads at 4.5:1"
                   " or more on what is painted behind it, every control is 44px or more each way, every text field 16px:"
                   " phone and desk, light and dark",
                   not low and not small and not fields and not missing and all(v["read"] >= 1 for v in seen.values()),
@@ -2868,27 +2922,31 @@ with sync_playwright() as p:
             pg = theo.pg
             open_drawing(pg, sid)
             empty = pg.evaluate(SECTION)
-            title = pg.evaluate("() => { const t = document.getElementById('commentsTitle');"
-                                " return t ? t.innerText.replace(/\\s+/g, ' ').trim() : null; }")
+            label = pg.evaluate(LABEL)
+            line20 = pg.evaluate(SAYLINE)
             box, err = steps(lambda: (open_box(pg), pg.evaluate(BOX))[1])
             got = {}
             if box:                     # no box is the row's red, never a stop
                 got = steps(lambda: (pg.fill("[data-cm-words]", "  That wave!   Hello to you too.  ", timeout=8000),
                                      pg.evaluate(POST_AND_WATCH))[1])[0]
+            pg.wait_for_timeout(400)    # the label fades in as the first one comes
             after = pg.evaluate(SECTION)
+            label_after = pg.evaluate(LABEL)
             words = db("select words from social_comments where public_id = ?", (got.get("id") or "",))
-            check("a drawing shown outside a post (/social/b/<id>, made in the Pad) has a post's comments: \"Comments\","
-                  " no number at none, the box behind the icon (a face, \"Say something, or draw it…\", Draw, Flip, Post,"
-                  " \"Say something to Juno\"); the box sends the words, tidied, and the comment fades in at the top, said"
-                  " \"now\", the count with it; its row is on the drawing (its skribl's id, no post) and keeps whose the drawing is",
-                  bool(sid) and empty == {"count": None, "list": []} and title == "Comments" and box is not None
+            check("a drawing shown outside a post (/social/b/<id>, made in the Pad) has a post's comments: no heading over"
+                  " nothing at none, the box behind the answer bar's line (a face, \"Say something, or draw it…\", Draw, Flip,"
+                  " Post, \"Say something to Juno\"); the box sends the words, tidied, and the comment fades in at the top,"
+                  " said \"now\", its small label with it (\"1 comment\"); its row is on the drawing (its skribl's id, no"
+                  " post) and keeps whose the drawing is",
+                  bool(sid) and empty == {"count": None, "list": []} and label is None and label_after == "1 comment"
+                  and line20 is not None and line20["name"] == "Say something…" and line20["old"] == 0 and box is not None
                   and box["open"] == "sheet" and box["title"] == "Say something to Juno"
                   and box["face"] and box["placeholder"] == "Say something, or draw it…"
                   and box["chips"] == ["Draw", "Flip"] and box["post"] == "Post" and box["font"] >= 16
                   and bool(got.get("id")) and faded(got.get("ops", [])) >= 2 and got["ops"][-1] == 1
                   and words == [("That wave! Hello to you too.",)] and on_row(got["id"]) == (None, sid, "juno", None)
                   and after["count"] == "1" and [c["when"] for c in after["list"]] == ["now"],
-                  f"drawing {sid}; before {empty}; title {title!r}; box {box}; posted {got.get('id')} (faded"
+                  f"drawing {sid}; before {empty}; label {label!r} then {label_after!r}; box {box}; posted {got.get('id')} (faded"
                   f" {faded(got.get('ops', []))}); words {words}; row {on_row(got.get('id'))}; after {after}")
             nctx, npg = browser_as(b, None)
             open_drawing(npg, sid)
@@ -2897,8 +2955,8 @@ with sync_playwright() as p:
                                          npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000),
                                          npg.wait_for_timeout(450), npg.evaluate(OUT_SHEET))[-1])
             close_ctx(nctx, npg)
-            check("signed out, a drawing's comments are readable, with no box and no Answer: the icon raises \"Say"
-                  " something?\", its Sign in back to the drawing's page with the box open",
+            check("signed out, a drawing's comments are readable, with no box and no Answer: the answer bar's line raises"
+                  " \"Say something?\", its Sign in back to the drawing's page with the box open",
                   out["box"] is None and out["section"]["count"] == "1"
                   and [(c["name"], c["answer"]) for c in out["section"]["list"]] == [("Theo Lind", False)]
                   and sheet and sheet["path"] == "/social/signin" and sheet["next"] == f"/social/b/{sid}#say",
@@ -3203,11 +3261,12 @@ with sync_playwright() as p:
                   f" somebody else's try {not_hers}, kept {still}")
             lib = make_drawing(nia, "Section 24, deleted in the Library", seed=244)
             lib_c = said_on(oz, lib, "Section 24, on it")
-            # MORE FROM HER (one person's: her posts and drawings) lists it on her
-            # other drawing's page before, and never after: the site's own
-            # listing of her drawings, where Home's card for it was until the
-            # map's step 3 made Home posts only.
-            listed_before = f'href="/social/b/{lib}"' in oz.client().get(f"/social/b/{kept}")[1]
+            # HER PAGE'S GALLERY (the site's own listing of her drawings) lists it
+            # before, and never after. More from her, on her other drawing's page,
+            # was where this was asked until the Calm Post Page took More from off
+            # the page (Nov 20); `kept` is still what makes hers a list of two.
+            listed_before = (f'href="/social/b/{lib}"' in oz.client().get("/social/@nia/gallery")[1]
+                             and f'href="/social/b/{kept}"' in oz.client().get("/social/@nia/gallery")[1])
             nia.pg.goto(BASE + "/social/")
             st = nia.pg.evaluate(LIBRARY_DELETE, lib)
             asked = {"page, oz": status(oz.pg, f"/social/b/{lib}"), "page, nia": status(nia.pg, f"/social/b/{lib}")}
@@ -3217,13 +3276,14 @@ with sync_playwright() as p:
             asked["comment"] = c.post_json(f"/social/b/{lib}/comments", {"words": "hi"})[0]
             asked["answer"] = c.post_json(f"/social/b/{lib}/comments", {"words": "hi", "answer_to": lib_c})[0]
             asked["report"] = c.post_json("/social/report", {"kind": "comment", "target": lib_c, "reason": "spam"})[0]
-            asked["more from"] = f'href="/social/b/{lib}"' in oz.client().get(f"/social/b/{kept}")[1]
+            after_ = oz.client().get("/social/@nia/gallery")[1]
+            asked["her gallery"] = [f'href="/social/b/{lib}"' in after_, f'href="/social/b/{kept}"' in after_]
             check("a drawing deleted in the Library, outside the site: its page is a kind 404 for everybody, its maker too,"
-                  " and its comments go with it: none read (Load more), said, answered or reported; and More from her,"
-                  " on her other drawing's page, lists it before and not after",
+                  " and its comments go with it: none read (Load more), said, answered or reported; and her page's"
+                  " Gallery lists it before and not after, her other drawing staying",
                   bool(lib_c) and st == 204 and listed_before
                   and asked == {"page, oz": 404, "page, nia": 404, "more": 404, "comment": 404, "answer": 404,
-                                "report": 404, "more from": False},
+                                "report": 404, "her gallery": [False, True]},
                   f"Library delete {st}; listed before {listed_before}; {asked}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(24, exc)
@@ -3477,14 +3537,14 @@ with sync_playwright() as p:
             small = [(k, v["small"]) for k, v in seen.items() if v["small"]]
             fields = [(k, v["fields"]) for k, v in seen.items() if v["fields"]]
             lowest = min((v["lowest"], " ".join(k)) for k, v in seen.items())
-            musts = {"comments": ("Comments", "Theo Lind", "That wave is so good.", "Reply"), "answering": ("Post",),
-                     "signed out": ("Comments", "Theo Lind"), "say something?": ("Say something?", "Not now", "Sign in"),
+            musts = {"comments": ("comments", "Theo Lind", "That wave is so good.", "Reply"), "answering": ("Post",),
+                     "signed out": ("comments", "Theo Lind"), "say something?": ("Say something?", "Not now", "Sign in"),
                      "⋯": ("Copy link", "Report this comment"), "report": ("Report this comment",)}
             # "Reply" is spelled out on a desk; a phone shows its icon alone (the comment thread, step 1).
             missing = [(" ".join(k), w) for k, v in seen.items() for w in musts.get(k[2], ())
                        if not (w == "Reply" and k[0] == "phone")
                        and not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
-            check("every word in a drawing's comments (a comment, a reply, the box replying, the count, Reply, \"Say something?\"),"
+            check("every word in a drawing's comments (their small label, a comment, a reply, the box replying, Reply, \"Say something?\"),"
                   " a comment's ⋯ and its report reads at 4.5:1 or more on what is painted behind it, every control is"
                   " 44px or more each way, every text field 16px: phone and desk, light and dark",
                   not low and not small and not fields and not missing and all(v["read"] >= 1 for v in seen.values()),
@@ -3496,56 +3556,86 @@ with sync_playwright() as p:
     # ------------------------------------------------------------------ 29
     # THE COMMENT BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an
     # icon not a card. It takes up too much room sitting there", "Yes to all").
-    if part(29, "the icon at the heading's end, the box folded away behind it; who is offered it"):
+    if part(29, "the answer bar: its line, where it stands, the box folded away behind it; who is offered it"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
             post = make_post(juno, "Section 29, a snail", seed=291)
             said(theo, post, "Section 29, so there is a list")
+            # What is painted where the line stands, and whether the bar can be
+            # reached at all (a desk, the box open over it).
+            UNDER = """() => { const a = document.querySelector('.post-page > .ans').getBoundingClientRect(), b = document.querySelector('.ans-bar');
+              const e = document.elementFromPoint(a.left + 60, a.top + 22), cs = getComputedStyle(b);
+              return { box: !!e && !!e.closest('[data-cm-box]'), bar: !!e && b.contains(e), seen: cs.visibility, solid: +cs.opacity,
+                       tabs: [...b.querySelectorAll('button')].filter(x => getComputedStyle(x).visibility === 'visible').length }; }"""
             seen = {}
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
-                    cctx, cpg = browser_as(b, theo, screen=screen, scheme=scheme)
+                    cctx, cpg = browser_as(b, theo, screen=screen, scheme=scheme, reduced=True)
                     open_post(cpg, post)
-                    cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'center' })")
+                    cpg.evaluate("() => document.querySelector('.post-page > .post-meta').scrollIntoView({ block: 'center' })")
                     cpg.wait_for_timeout(300)
-                    got = {"icon": cpg.evaluate(ICON), "box": cpg.evaluate(BOX)}
+                    got = {"line": cpg.evaluate(SAYLINE), "box": cpg.evaluate(BOX)}
                     got["focusable"] = cpg.evaluate("""() => { const w = document.querySelector('[data-cm-words]'); w.focus();
                       const f = document.activeElement === w; w.blur(); return f; }""")
-                    got["mark"] = icon_mark(cpg)
-                    if screen == "desk":            # lit while its box is open: white on the action purple
+                    got["words"] = line_words(cpg)
+                    got["read"] = cpg.evaluate(READ, ".ans-bar")
+                    if screen == "desk":            # the line becomes the box: the bar unseen under it
                         _, err = steps(lambda: open_box(cpg))
-                        got["lit"] = icon_mark(cpg) if err is None else {"k": 0, "stopped": err}
-                        got["lit_ground"] = cpg.evaluate("() => getComputedStyle(document.querySelector('.cm-say')).backgroundColor")
+                        cpg.wait_for_timeout(250)
+                        got["open"] = dict(cpg.evaluate(UNDER), expanded=(cpg.evaluate(SAYLINE) or {}).get("expanded"), stopped=err)
+                        cpg.keyboard.press("Escape")
+                        cpg.wait_for_function(GONE, timeout=8000)
+                        cpg.wait_for_timeout(350)
+                        got["back"] = dict(cpg.evaluate(UNDER), focus=cpg.evaluate("() => document.activeElement.className"))
                     seen[(screen, scheme)] = got
                     close_ctx(cctx, cpg)
-            ok_place = all(v["icon"] and v["icon"]["name"] == "Say something" and v["icon"]["tip"] == "Say something"
-                           and v["icon"]["w"] == 44 and v["icon"]["h"] == 44 and v["icon"]["round"] == "999px"
-                           and abs(v["icon"]["right"]) <= 0.5 and abs(v["icon"]["centre"]) <= 0.5 and v["icon"]["lands"]
-                           and v["icon"]["head"] == v["icon"]["line"] == 29 and v["icon"]["gap"] == 10 and v["icon"]["plus"] == 3
-                           for v in seen.values())
-            check("the icon at the end of the Comments heading: a round 44px button, a bubble with a plus, named \"Say"
-                  " something\" (its tip too), every tap point on it landing on it; the heading keeps its 29px (the icon"
-                  " reaches into the room round it) and the comments start 10px under it: phone and desk, light and dark",
-                  ok_place, "; ".join(f"{' '.join(k)}: {v['icon']}" for k, v in seen.items())[:900])
-            ok_fold = all(v["box"] and v["box"]["open"] is None and v["icon"]["fold"]["h"] == 0
-                          and v["icon"]["fold"]["seen"] == "hidden" and not v["icon"]["fold"]["laid"] and not v["focusable"]
-                          and v["icon"]["expanded"] == "false" for v in seen.values())
-            check("the box is folded away until asked for: no room under the heading, unseen, not laid out at all (so no"
-                  " reader takes its words for shown words), and nothing in it takes focus",
-                  ok_fold, "; ".join(f"{' '.join(k)}: box {v['box'] and v['box']['open']}, fold {v['icon']['fold']},"
+
+            def placed(k, v):
+                ln = v["line"]
+                if not ln or not (ln["name"] == "Say something…" and ln["tag"] == "BUTTON" and ln["h"] == 44 and ln["font"] == "16px"
+                                  and ln["weight"] == "400" and ln["lands"] and ln["seen"] and ln["old"] == 0 and ln["openers"] == 1
+                                  and ln["draw"] and ln["draw"] >= 100):
+                    return False
+                if k[0] == "phone":
+                    return ln["fixed"] and abs(ln["onNav"]) <= 0.6 and ln["bar"] == [402, 60] and ln["face"] == 32
+                return ln["fixed"] is False and abs(ln["underDate"] - 18) <= 0.6 and ln["bar"][1] == 44 and ln["face"] is None
+            check("THE ANSWER BAR, the one place to answer: a line that looks like a field and is a button, \"Say something…\","
+                  " 44px tall, its words 16px, every tap point across it landing on it, Draw back beside it, and nothing of"
+                  " the old way on the page (no heading's row, no round icon, no \"Say the first thing\"). A phone: fixed,"
+                  " standing on the bottom bar, the screen's width and 60px tall, your face (32px) at its start. A desk: in"
+                  " the column, 18px under the date, no face. Light and dark",
+                  all(placed(k, v) for k, v in seen.items()),
+                  "; ".join(f"{' '.join(k)}: {v['line']}" for k, v in seen.items())[:1200])
+            ok_fold = all(v["box"] and v["box"]["open"] is None and v["line"]["fold"]["h"] == 0 and v["line"]["fold"]["home"]
+                          and v["line"]["fold"]["seen"] == "hidden" and not v["line"]["fold"]["laid"] and not v["focusable"]
+                          and v["line"]["expanded"] == "false" for v in seen.values())
+            check("the box is folded away until asked for, at home in the bar's own room: no room of its own, unseen, not"
+                  " laid out at all (so no reader takes its words for shown words), and nothing in it takes focus",
+                  ok_fold, "; ".join(f"{' '.join(k)}: box {v['box'] and v['box']['open']}, fold {v['line']['fold']},"
                                      f" focusable {v['focusable']}" for k, v in seen.items()))
-            ok_mark = all(v["mark"]["k"] >= 3 for v in seen.values()) and all(v["lit"]["k"] >= 3 and v["lit_ground"] in (
-                "rgb(109, 76, 240)",) for k, v in seen.items() if k[0] == "desk")
-            check("its line reads at 3:1 or more on its lilac, off the painted pixels, light and dark; lit while its box is"
-                  " open, white on the action purple",
-                  ok_mark, "; ".join(f"{' '.join(k)}: {v['mark']['k']}" + (f", lit {v['lit']['k']} on {v.get('lit_ground')}"
-                                                                          if k[0] == 'desk' else '') for k, v in seen.items()))
+            ok_words = all(v["words"]["k"] >= 4.5 and not v["read"]["low"] and not v["read"]["small"]
+                           and {"Say something…", "Draw back"} <= set(v["read"]["words"]) for v in seen.values())
+            check("its words read at 4.5:1 or more on the line, off the painted pixels, and every word in the bar on what"
+                  " is painted behind it; each control 44px or more each way: phone and desk, light and dark",
+                  ok_words, "; ".join(f"{' '.join(k)}: {v['words']['k']}, lowest {v['read']['lowest']}, low {v['read']['low']},"
+                                      f" small {v['read']['small']}" for k, v in seen.items()))
+            desk29 = [v for k, v in seen.items() if k[0] == "desk"]
+            check("ON A DESK THE LINE BECOMES THE BOX: open, what is painted where the line stood is the box, and the bar"
+                  " under it is unseen and out of reach (not painted, no button of it to tab to), the line saying it is open;"
+                  " Esc folds the box away and the bar is back, whole, the line in focus (light and dark)",
+                  len(desk29) == 2 and all(v.get("open") and v["open"]["stopped"] is None and v["open"]["box"] and not v["open"]["bar"]
+                                           and v["open"]["seen"] == "hidden" and v["open"]["solid"] == 0 and v["open"]["tabs"] == 0
+                                           and v["open"]["expanded"] == "true"
+                                           and v.get("back") and v["back"]["bar"] and not v["back"]["box"] and v["back"]["seen"] == "visible"
+                                           and v["back"]["solid"] == 1 and v["back"]["tabs"] == 2
+                                           and v["back"]["focus"].startswith("ans-say cm-say") for v in desk29),
+                  json.dumps([{x: v.get(x) for x in ("open", "back")} for v in desk29]))
             # Who is offered it: nobody who may not comment, as the box was not shown to them.
             zed = someone(b, "zed", "Zed Okoro")
             db_write("update social_people set taken_down_at = datetime('now') where handle_key = 'zed'")
             open_post(zed.pg, post)
-            zed_icon = zed.pg.evaluate("() => [!!document.querySelector('.cm-say'), !!document.querySelector('[data-cm-first]')]")
+            zed_icon = zed.pg.evaluate("() => [!!document.querySelector('.cm-say'), !!document.querySelector('[data-cm-new]')]")
             db_write("update social_people set taken_down_at = null where handle_key = 'zed'")
             db_write("update social_posts set taken_down_at = datetime('now') where public_id = ?", (post,))
             open_post(juno.pg, post)
@@ -3576,9 +3666,9 @@ with sync_playwright() as p:
             inert = ppg.evaluate("() => ['body > .top', 'body > .nav', '#main'].map(s => document.querySelector(s).hasAttribute('inert'))")
             g_up = glided(track(rise, 0))
             dim = fades_of(rise, 0)
-            check("a tap on the icon raises Make's own sheet from the bottom, the box on it: \"Say something to Juno\", their"
-                  " face, the field focused and ready (17px), Draw, Flip and Post; it glides up (read on every frame) while the"
-                  " page dims, the page under it holding still and inert; the icon lit",
+            check("a tap on the answer bar's line raises Make's own sheet from the bottom, the box on it: \"Say something to"
+                  " Juno\", their face, the field focused and ready (17px), Draw, Flip and Post; it glides up (read on every"
+                  " frame) while the page dims, the page under it holding still and inert; the line saying it is open",
                   up and up["open"] == "sheet" and up["title"] == "Say something to Juno" and up["quote"] is None
                   and up["focus"] and up["font"] == 17 and up["chips"] == ["Draw", "Flip"] and up["post"] == "Post"
                   and up["placeholder"] == "Say something, or draw it…" and up["icon"] == "true"
@@ -3614,9 +3704,9 @@ with sync_playwright() as p:
                 downs[how] = got_.pop("down")
                 kept[how] = dict(got_, stopped=err)
             check("a tap on the dimmed page, a drag down or Esc puts it away (gliding down, read on every frame), focus back on"
-                  " the icon and the page no longer inert; open it again and what was typed is there",
+                  " the bar's line and the page no longer inert; open it again and what was typed is there",
                   all(v["stopped"] is None and v["words"] == f"Typed, then {k}" and not v["gone"]["inert"]
-                      and v["gone"]["focus"].startswith("icon-btn cm-say") for k, v in kept.items())
+                      and v["gone"]["focus"].startswith("ans-say cm-say") for k, v in kept.items())
                   and all(g is None or g["ok"] for g in downs.values()),
                   f"{kept}; going down {downs}")
             # ON A PHONE'S KEYBOARD it rides above it (stood in: this box has no phone keyboard).
@@ -3726,7 +3816,7 @@ with sync_playwright() as p:
             stopped(30, exc)
 
     # ------------------------------------------------------------------ 31
-    if part(31, "a desk: the box glides open under the heading, the icon lit; it folds away kindly and keeps the words"):
+    if part(31, "a desk: the line becomes the box, gliding open in its place; it folds away kindly and keeps the words"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
@@ -3734,27 +3824,33 @@ with sync_playwright() as p:
             said(theo, post, "Section 31, the comment under the box")
             dctx, dpg = browser_as(b, theo, "desk")
             open_post(dpg, post)
+            # THE LINE BECOMES THE BOX (the Calm Post Page, Nov 20): the two share
+            # one room, so the box glides open over the line while the line fades
+            # away under it, and what is under them moves by the difference: the
+            # box's room less the line's 44px.
             opened = dpg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()",
-                                           ["[data-cm-list] > .cm .cm-name", "#commentsTitle", ".post-page > .post-art"],
-                                           ["[data-cm-box]"], 700])
+                                           ["[data-cm-list] > .cm .cm-name", ".post-page > .post-meta", ".post-page > .post-art"],
+                                           ["[data-cm-box]", ".ans-bar"], 700])
             there = dpg.evaluate(BOX)
             g_open = glided(track(opened, 0))
             ops = fades_of(opened, 0)
+            bar_ops = fades_of(opened, 1)
             room = dpg.evaluate("() => Math.round(document.querySelector('[data-cm-fold]').getBoundingClientRect().height * 100) / 100")
             want = box_room(dpg)
-            check("a click glides the box open under the heading: the comments under it slide down to make room (read on every"
-                  " frame, 136px, or a line more where a wider font puts Post on the next) while the box fades in, nothing"
-                  " above it moving; the field focused, the icon lit",
+            check("a click on the bar's line glides the box open in the line's own place: the comments under it slide down by"
+                  " the difference (read on every frame: the box's room, 136px, or a line more where a wider font puts Post"
+                  " on the next, less the line's 44) while the box fades in and the line fades away under it, never coming"
+                  " back; nothing above it moving; the field focused, the line saying it is open",
                   there and there["open"] == "home" and there["focus"] and there["icon"] == "true" and there["font"] == 17
-                  and g_open["ok"] and abs(g_open["way"] - room) <= 1 and room == want
+                  and g_open["ok"] and abs(g_open["way"] - (room - 44)) <= 1 and room == want
                   and len([o for o in ops if 0.02 < o < 0.98]) >= 3 and ops[-1] == 1
+                  and bar_ops and bar_ops[0] == 1 and bar_ops[-1] == 0 and all(y <= x for x, y in zip(bar_ops, bar_ops[1:]))
                   and still_(track(opened, 1)) and still_(track(opened, 2)),
-                  f"box {there}; the room {room} (the box's {want}); the comments {g_open}; the fade {ops[:5]}..; the heading"
-                  f" {glided(track(opened, 1))}")
+                  f"box {there}; the room {room} (the box's {want}); the comments {g_open}; the box's fade {ops[:5]}..; the"
+                  f" line's {bar_ops[:6]}..{bar_ops[-1:]}; the date {glided(track(opened, 1))}")
             folds = {}
-            for how in ("a second click", "Esc", "a press elsewhere"):
-                act = {"a second click": "document.querySelector('.cm-say').click()",
-                       "Esc": "document.querySelector('[data-cm-words]').focus();"
+            for how in ("Esc", "a press elsewhere"):
+                act = {"Esc": "document.querySelector('[data-cm-words]').focus();"
                               " document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))",
                        "a press elsewhere": "document.querySelector('.post-page > .post-meta').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))"}[how]
 
@@ -3763,24 +3859,28 @@ with sync_playwright() as p:
                     open_box(dpg)
                     dpg.fill("[data-cm-words]", f"Typed, then {how}")
                     room_ = box_room(dpg)
-                    fr = dpg.evaluate(FRAMES, [act, ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 600])
+                    fr = dpg.evaluate(FRAMES, [act, ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]", ".ans-bar"], 600])
                     dpg.wait_for_function(GONE, timeout=8000)
-                    after_ = dpg.evaluate("() => ({ icon: document.querySelector('.cm-say').getAttribute('aria-expanded'), focus: document.activeElement.className })")
+                    after_ = dpg.evaluate("""() => { const b = document.querySelector('.ans-bar'), cs = getComputedStyle(b);
+                      return { icon: document.querySelector('.cm-say').getAttribute('aria-expanded'), focus: document.activeElement.className,
+                               bar: cs.visibility === 'visible' && +cs.opacity === 1 }; }""")
                     open_box(dpg)
                     words_ = dpg.evaluate(BOX)["words"]
-                    dpg.click(".cm-say")
+                    dpg.keyboard.press("Escape")
                     dpg.wait_for_function(GONE, timeout=8000)
+                    bar_ = fades_of(fr, 1)
                     return {"g": glided(track(fr, 0)), "icon": after_["icon"], "focus": after_["focus"], "words": words_,
-                            "room": room_}
+                            "room": room_, "bar": after_["bar"], "line": bool(bar_) and all(y >= x for x, y in zip(bar_, bar_[1:]))}
 
                 got_, err = steps(fold_away)
-                folds[how] = dict(got_ or {"g": {"ok": False, "way": 0}, "icon": None, "focus": "", "words": None, "room": 136},
-                                  stopped=err)
-            check("a second click, Esc (focus back on the icon) or a press anywhere else folds it away, the comments sliding back"
-                  " up (read on every frame) and the icon going out; open it again and what was typed is there",
-                  all(v["stopped"] is None and v["g"]["ok"] and abs(v["g"]["way"] + v["room"]) <= 1 and v["icon"] == "false"
-                      and v["words"] == f"Typed, then {k}" for k, v in folds.items())
-                  and folds["Esc"]["focus"].startswith("icon-btn cm-say"),
+                folds[how] = dict(got_ or {"g": {"ok": False, "way": 0}, "icon": None, "focus": "", "words": None, "room": 136,
+                                           "bar": False, "line": False}, stopped=err)
+            check("Esc (focus back on the bar's line) or a press anywhere else folds it away, the comments sliding back up by"
+                  " the same difference (read on every frame) while the line fades back, never dimming again on the way, and"
+                  " is whole at the end, saying it is closed; open it again and what was typed is there",
+                  all(v["stopped"] is None and v["g"]["ok"] and abs(v["g"]["way"] + (v["room"] - 44)) <= 1 and v["icon"] == "false"
+                      and v["bar"] and v["line"] and v["words"] == f"Typed, then {k}" for k, v in folds.items())
+                  and folds["Esc"]["focus"].startswith("ans-say cm-say"),
                   f"{folds}")
             # Draw opens the Pad over the page with the box open; a press on the Pad's ground is not "elsewhere".
             def pad_kept():
@@ -3828,12 +3928,13 @@ with sync_playwright() as p:
             home_again = pg.evaluate(BOX)
             pg.keyboard.press("Escape")
             pg.wait_for_function(GONE, timeout=8000)
-            check("its words stay one line, cut short with an ellipsis when long; the icon opens it as \"Say something to Juno\""
+            check("its words stay one line, cut short with an ellipsis when long; the bar's line opens it as \"Say something to Juno\""
                   " again, its field back to \"Say something, or draw it…\" and no quote",
                   quote_line == {"lines": 1, "wrap": "nowrap", "cut": "ellipsis"} and home_again["title"] == "Say something to Juno"
                   and home_again["quote"] is None and home_again["placeholder"] == "Say something, or draw it…",
                   f"quote {quote_line}; again {home_again}")
-            # A desk: under the conversation, as today; open on the heading first, it folds there, then opens there.
+            # A desk: under the conversation, as today; open in the bar's place first, it folds there (the comments
+            # rising by the box's room less the line's 44px, the line coming back), then opens under the conversation.
             dctx, dpg = browser_as(b, mira, "desk")
             open_post(dpg, post)
             open_box(dpg)
@@ -3843,11 +3944,11 @@ with sync_playwright() as p:
             want = box_room(dpg)
             ops = fades_of(moved, 0)
             g_theo, g_other = glided(track(moved, 0)), glided(track(moved, 1))
-            check("on a desk, Reply opens it under that conversation (\"Reply to Theo…\"); open under the heading first, it folds"
-                  " away there and then glides open under the conversation, every move a glide (read on every frame), the box"
-                  " fading out and in",
+            check("on a desk, Reply opens it under that conversation (\"Reply to Theo…\"); open in the bar's place first, it"
+                  " folds away there and then glides open under the conversation, every move a glide (read on every frame),"
+                  " the box fading out and in",
                   under["open"] == "under" and under["under"] == theo_c and under["placeholder"] == "Reply to Theo…" and under["focus"]
-                  and g_theo["ok"] and abs(g_theo["way"] + want) <= 1 and (g_other["ok"] or still_(track(moved, 1)))
+                  and g_theo["ok"] and abs(g_theo["way"] + (want - 44)) <= 1 and (g_other["ok"] or still_(track(moved, 1)))
                   and min(ops) == 0 and ops[-1] == 1 and len([o for o in ops if 0.02 < o < 0.98]) >= 4,
                   f"{under}; Theo's {g_theo}; the next conversation {g_other}; the box {ops[:3]}..{min(ops)}..{ops[-1]}")
             again, err = steps(lambda: (dpg.click(f"#c-{theo_c} > .cm-main [data-cm-answer]"),
@@ -3907,13 +4008,16 @@ with sync_playwright() as p:
                         "the tint fading": w["fade"] >= 10 and not v["glow"],
                         "fading in": len([o for o in w["ops"] if 0.02 < o < 0.98]) >= 3 and w["ops"][-1] == 1,
                         "the box gone and emptied": v["box"]["open"] is None and v["box"]["words"] == "",
-                        "focus on the icon": w["focus"] == "icon-btn cm-say",
+                        "focus on the bar's line": w["focus"] == "ans-say cm-say",
                         "what was under it, a glide": g_old["ok"],
                         "the box not changing on its way": not w["step"],
                         "Post says Posting": w["label"] == "Posting…" and not w["line"]}
                 if screen == "desk":
-                    want["in step, where the box was"] = (g_new["ok"] and abs(g_new["way"] + w["room"]) <= 1.5
-                                                          and abs(w["new"][-1] - w["under_head"]) <= 1)
+                    # The box folds away in the bar's place, above the comments: the
+                    # list rises by the box's room less the line's 44px while the new
+                    # comment opens its own room at its top, and rests 10px under the label.
+                    want["in step, as the box folds away"] = (g_new["ok"] and abs(g_new["way"] + (w["room"] - 44)) <= 1.5
+                                                              and abs(w["new"][-1] - w["under_head"]) <= 1)
                 else:
                     want["the sheet gliding down"] = glided(w["sheet"])["ok"] and still_(w["new"])
                 ok = ok and all(want.values())
@@ -3922,10 +4026,11 @@ with sync_playwright() as p:
                             f" {w['ops'][:4]}..{w['ops'][-1:]}; the tint {w['tint']}, fading {w['fade']} frames; Post said"
                             f" {w['label']!r}, a line {w['line']}, a step {w['step']}; box {v['box']['open']} {v['box']['words']!r};"
                             f" focus {w['focus']}; it arrived {w['waited']}ms after the press")
-            check("posted, the box goes (a phone's sheet glides down; a desk's fold folds away in step as the comment opens its"
-                  " room where the box was) and the comment sits at the top, fading in and glowing in the landing's tint, which"
-                  " fades; what was under it moves only as a glide (read on every frame); Post says \"Posting…\" meanwhile and no"
-                  " line grows the box; the box is emptied once it has gone; focus on the icon",
+            check("posted, the box goes (a phone's sheet glides down; a desk's fold folds away in the bar's place, the line"
+                  " back, in step with the comment opening its room at the top of the list) and the comment sits at the top,"
+                  " fading in and glowing in the landing's tint, which fades; what was under it moves only as a glide (read on"
+                  " every frame); Post says \"Posting…\" meanwhile and no line grows the box; the box is emptied once it has"
+                  " gone; focus on the bar's line",
                   ok, " | ".join(why_))
             # An answer posted on a desk: under its comment, the fold folding away there in step.
             dctx, dpg = browser_as(b, mira, "desk")
@@ -3947,7 +4052,7 @@ with sync_playwright() as p:
             stopped(33, exc)
 
     # ------------------------------------------------------------------ 34
-    if part(34, "signed out the icon raises Say something?; signed in it comes back open; Say the first thing at none"):
+    if part(34, "signed out the bar's line raises Say something?; signed in it comes back open; nothing at none"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
@@ -3955,9 +4060,9 @@ with sync_playwright() as p:
             said(theo, post, "Section 34, readable signed out")
             nctx, npg = browser_as(b, None)
             open_post(npg, post)
-            icon = npg.evaluate(ICON)
+            line = npg.evaluate(SAYLINE)
 
-            def out_sheet():          # no icon, or no sheet, is this row's red, never a stop
+            def out_sheet():          # no line, or no sheet, is this row's red, never a stop
                 npg.click(".cm-say", timeout=8000)
                 npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000)
                 npg.wait_for_timeout(450)
@@ -3970,18 +4075,20 @@ with sync_playwright() as p:
             out, shut = got_ or ({"open": False, "title": None, "lede": None, "acts": [], "path": None, "next": None,
                                   "focus": None, "old": None}, {"open": True, "focus": ""})
             close_ctx(nctx, npg)
-            check("signed out, the icon is there all the same (\"Say something\", a dialog, and unlit while it is up: no box is"
-                  " open); a tap raises a small sheet like the heart's: \"Say something?\", \"Sign in, and you can reply to Juno in words or with a drawing.\", Not now and"
-                  " Sign in, which comes back to this post with the box open (#say); Not now puts it away; no \"Sign in to"
-                  " answer\" anywhere",
-                  icon and icon["name"] == "Say something" and icon["popup"] == "dialog" and icon["controls"] == "commentOutSheet"
+            check("signed out, the answer bar's line is there all the same (\"Say something…\", a dialog; no face and no Draw"
+                  " back beside it, so it runs the bar's width); a tap raises a small sheet like the heart's: \"Say something?\","
+                  " \"Sign in, and you can reply to Juno in words or with a drawing.\", Not now and Sign in, which comes back to"
+                  " this post with the box open (#say); Not now puts it away, focus back on the line; no \"Sign in to answer\""
+                  " anywhere",
+                  line and line["name"] == "Say something…" and line["popup"] == "dialog" and line["controls"] == "commentOutSheet"
+                  and line["face"] is None and line["draw"] is None and line["w"] == 370
                   and out["open"] and out["title"] == "Say something?"
                   and out["lede"] == "Sign in, and you can reply to Juno in words or with a drawing."
                   and out["acts"] == ["Not now", "Sign in"] and out["path"] == "/social/signin"
                   and out["next"] == f"/social/p/{post}#say" and out["focus"] == "Not now" and not out["old"]
-                  and out["lit"] is False and not shut["open"] and shut["focus"].startswith("icon-btn cm-say"),
-                  f"icon {icon and {k: icon[k] for k in ('name', 'popup', 'controls')}}; sheet {out}; after Not now {shut};"
-                  f" stopped {err34}")
+                  and not shut["open"] and shut["focus"].startswith("ans-say cm-say"),
+                  f"line {line and {k: line[k] for k in ('name', 'popup', 'controls', 'face', 'draw', 'w')}}; sheet {out};"
+                  f" after Not now {shut}; stopped {err34}")
             # Signed in from there: back on the post with the box open, nothing posted, the address without #say.
             before = db("select count(*) from social_comments")[0][0]
             back = {}
@@ -3997,62 +4104,98 @@ with sync_playwright() as p:
                   all(v["box"]["open"] == ("sheet" if k == "phone" else "home") and v["box"]["focus"] and v["url"] == f"/social/p/{post}"
                       for k, v in back.items()) and db("select count(*) from social_comments")[0][0] == before,
                   f"{back}; comments {before} -> {db('select count(*) from social_comments')[0][0]}")
-            # At none: "Say the first thing" where the comments will be.
+            # AT NONE THERE IS NOTHING WHERE THE COMMENTS WILL BE (the Calm Post
+            # Page; the owner, Nov 20, of a post nobody had answered: "It seems busy
+            # and disorganized ... I don't want anything to ever look busy and
+            # confusing"). Until then a bold "Comments" stood over "Say the first
+            # thing": a heading over nothing, and the box offered a third time. The
+            # one way in is the bar's line; and THE ROW'S TALK CLOUD, a way down to
+            # the comments, is never a tap that does nothing: with none to go down
+            # to (its own name is "Comment" then) it opens the box.
             quiet = make_post(juno, "Section 34, nobody has said anything yet", seed=342)
+            NONE = """() => { const sec = document.getElementById('comments'), page = document.querySelector('.post-page');
+              const cloud = page.querySelector(':scope > .post-row a.post-count');
+              return { first: document.querySelectorAll('[data-cm-first], .cm-first, .cm-first-fold').length,
+                       headings: [...page.querySelectorAll('h2')].filter(e => e.getClientRects().length).map(e => e.innerText.trim()),
+                       room: Math.round(sec.getBoundingClientRect().height * 10) / 10, cloud: cloud ? cloud.getAttribute('aria-label') : null }; }"""
             got = {}
-            for screen in ("phone", "desk"):
-                cctx, cpg = browser_as(b, theo, screen)
-                open_post(cpg, quiet)
-                cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'center' })")
-                cpg.wait_for_timeout(300)
-                line = cpg.evaluate(FIRST_LINE)
-                fr = cpg.evaluate(FRAMES, ["const f = document.querySelector('[data-cm-first]'); if (f) f.click();",
-                                           [".more-from"], [".cm-first"], 700])
-                _, err = steps(lambda: cpg.wait_for_function(BOX_STILL, timeout=8000))
-                opened = cpg.evaluate(BOX)
-                line_open = cpg.evaluate(FIRST_LINE)
-                got[screen] = {"line": line, "opened": opened, "line_open": line_open, "fr": fr, "stopped": err,
-                               "room": box_room(cpg)}
+            for key, who, screen, on in (("phone", theo, "phone", quiet), ("desk", theo, "desk", quiet), ("signed out", None, "phone", quiet),
+                                         ("with one", theo, "phone", post)):
+                cctx, cpg = browser_as(b, who, screen)
+                open_post(cpg, on)
+                none = cpg.evaluate(NONE)
+                (cpg.tap if screen == "phone" else cpg.click)(".post-page > .post-row a.post-count")
+                err = None
+                if key in ("phone", "desk"):
+                    _, err = steps(lambda: cpg.wait_for_function(BOX_STILL, timeout=8000))
+                else:
+                    cpg.wait_for_timeout(700)
+                got[key] = {"none": none, "opened": cpg.evaluate(BOX), "at": cpg.evaluate("() => location.pathname + location.hash"),
+                            "out": cpg.evaluate("() => { const w = document.getElementById('commentOutSheet'); return !!w && w.classList.contains('is-open'); }"),
+                            "stopped": err}
+                if key in ("phone", "desk"):
+                    cpg.keyboard.press("Escape")
+                    cpg.wait_for_function(GONE, timeout=8000)
+                    cpg.wait_for_timeout(350)
+                    got[key]["focus"] = cpg.evaluate("() => document.activeElement.className")
                 close_ctx(cctx, cpg)
-            d = got["desk"]
-            check("with nothing said yet, \"Say the first thing\" stands where the comments will be: the small violet words (16px,"
-                  " 600, Sign in's ink), 44px tall, 10px under the heading; a tap opens the box (a phone's sheet; a desk's fold,"
-                  " where the words fold away in step as the box opens in their place)",
-                  all(v["stopped"] is None and v["line"] and v["line"]["words"] == "Say the first thing" and v["line"]["h"] == 44 and v["line"]["open"]
-                      and v["line"]["gap"] == 10 and v["line"]["size"] == 16 and v["line"]["weight"] == "600" and v["line"]["lands"]
-                      and v["line"]["ink"] in ("rgb(76, 49, 196)",) for v in got.values())
-                  and got["phone"]["opened"]["open"] == "sheet" and got["phone"]["line_open"]["open"]
-                  and d["opened"]["open"] == "home" and not d["line_open"]["open"] and d["line_open"]["seen"] == "hidden"
-                  and glided(track(d["fr"], 0), d["room"] - 52)["ok"] and still_(track(got["phone"]["fr"], 0)),
-                  f"phone {got['phone']['line']} -> {got['phone']['opened']['open']}; desk {d['line']} -> {d['opened']['open']},"
-                  f" the line {d['line_open']}; under it on a desk {glided(track(d['fr'], 0))}")
+            bare = {"first": 0, "headings": [], "room": 0, "cloud": "Comment"}
+            check("with nothing said yet there is nothing where the comments will be: no \"Say the first thing\", no heading, no"
+                  " label, no room taken (a phone, a desk, signed out); and the row's talk cloud, named \"Comment\" then, is"
+                  " never a tap that does nothing: it opens the box as the bar's line does (a phone's sheet, \"Say something"
+                  " to Juno\"; a desk, in the line's place), the address as it was and Esc giving focus to the line; signed"
+                  " out it raises \"Say something?\"; with a comment there it is the way down to them it always was",
+                  all(got[k]["none"] == bare for k in ("phone", "desk", "signed out"))
+                  and all(got[k]["stopped"] is None and got[k]["at"] == f"/social/p/{quiet}" and got[k]["focus"].startswith("ans-say cm-say")
+                          for k in ("phone", "desk"))
+                  and got["phone"]["opened"]["open"] == "sheet" and got["phone"]["opened"]["title"] == "Say something to Juno"
+                  and got["phone"]["opened"]["focus"] and got["desk"]["opened"]["open"] == "home" and got["desk"]["opened"]["focus"]
+                  and got["signed out"]["out"] and got["signed out"]["opened"] is None and got["signed out"]["at"] == f"/social/p/{quiet}"
+                  and got["with one"]["none"]["cloud"] == "1 comment" and got["with one"]["at"] == f"/social/p/{post}#comments"
+                  and got["with one"]["opened"]["open"] is None and not got["with one"]["out"],
+                  json.dumps({k: {x: (y if x != "opened" else (y and [y["open"], y["title"], y["focus"]])) for x, y in v.items()}
+                              for k, v in got.items()})[:1300])
+            # THE LABEL COMES WITH THE FIRST COMMENT AND GOES WITH THE LAST, kindly:
+            # it fades in as the first one arrives; as the last one goes it fades
+            # with it and leaves only once that one's room has closed, so nothing
+            # is moved twice. Its own class and hidden-ness, each time they change.
+            HEAD = """() => { const l = document.querySelector('[data-cm-head]'), cs = getComputedStyle(l);
+              return { text: l.hidden ? null : l.innerText.replace(/\\s+/g, ' ').trim(), cls: l.className.replace('pp-label comments-title', '').trim(),
+                       anim: cs.animationName + ' ' + cs.animationDuration, solid: +cs.opacity }; }"""
+            WATCH_HEAD = """() => { const l = document.querySelector('[data-cm-head]'); window.__head = [];
+              new MutationObserver(() => window.__head.push([Math.round(performance.now()), l.className.replace('pp-label comments-title', '').trim(),
+                l.hidden, document.querySelectorAll('[data-cm-list] > .cm').length, getComputedStyle(l).transitionProperty + ' ' + getComputedStyle(l).transitionDuration]))
+                .observe(l, { attributes: true, attributeFilter: ['class', 'hidden'] }); }"""
             dctx, dpg = browser_as(b, theo, "desk")
             open_post(dpg, quiet)
 
             def first_and_last():      # a step that cannot go on is this row's red, never a stop
-                dpg.click(".cm-say")    # the icon, as "Say the first thing" may not be there to press
+                dpg.click(".cm-say")
                 dpg.wait_for_function(BOX_STILL, timeout=8000)
                 dpg.fill("[data-cm-words]", "Section 34, the first thing")
                 w = dpg.evaluate(POSTED, [900])
-                dpg.wait_for_timeout(400)
-                after_first = dpg.evaluate(FIRST_LINE)
+                came = dpg.evaluate(HEAD)
+                dpg.evaluate(WATCH_HEAD)
                 dpg.evaluate("(id) => document.querySelector('#' + id + ' > .cm-main [data-cm-menu]').click()", w["id"])
                 dpg.wait_for_function(OPEN, arg="commentSheet", timeout=10000)
                 dpg.wait_for_timeout(450)
-                back_fr = dpg.evaluate(FRAMES, ["document.querySelector('#commentSheet [data-cm-act=delete]').click()",
-                                                [".more-from"], [".cm-first"], 1400])
-                return w, after_first, back_fr, dpg.evaluate(FIRST_LINE)
+                dpg.click("#commentSheet [data-cm-act=delete]")
+                dpg.wait_for_function("() => document.querySelector('[data-cm-head]').hidden", timeout=8000)
+                dpg.wait_for_timeout(300)
+                return w, came, dpg.evaluate("() => window.__head"), dpg.evaluate(NONE)
 
             got_, err = steps(first_and_last)
-            w, after_first, back_fr, again_line = got_ if err is None else ({"id": None}, None, [], None)
+            w, came, went, at_none = got_ if err is None else ({"id": None}, None, [], None)
             close_ctx(dctx, dpg)
-            check("the first comment takes its place (the line gone, folded away); the last one deleted, it comes back, fading in"
-                  " as its room opens",
-                  err is None and w["id"] and after_first and not after_first["open"] and after_first["seen"] == "hidden"
-                  and again_line and again_line["open"] and fades_of(back_fr, 0)[-1:] == [1]
-                  and len([o for o in fades_of(back_fr, 0) if 0.02 < o < 0.98]) >= 2,
-                  f"posted {w['id']}; the line {after_first}; after the delete {again_line}; its fade"
-                  f" {fades_of(back_fr, 0)[-6:] if back_fr else None}; stopped {err}")
+            going = [h for h in went if h[1] == "is-going" and not h[2]]
+            left = [h for h in went if h[2]]
+            check("the first comment brings its small label, \"1 comment\", fading in (its own 0.24s animation) and whole at"
+                  " rest; the last one deleted, the label fades with it (0.2s) and leaves only once that comment's room has"
+                  " closed (0.3s and more later, the list empty by then), and the page is as it was at none",
+                  err is None and w["id"] and came == {"text": "1 comment", "cls": "is-new", "anim": "pp-in 0.24s", "solid": 1}
+                  and len(going) == 1 and going[0][4] == "opacity 0.2s" and len(left) == 1 and left[0][3] == 0
+                  and left[0][0] - going[0][0] >= 300 and at_none == dict(bare, cloud="Comment"),
+                  f"posted {w['id']}; the label came {came}; then {went}; at none {at_none}; stopped {err}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(34, exc)
 
@@ -4084,10 +4227,10 @@ with sync_playwright() as p:
             box_ops = fades_of(dn, 0)
             moves = [abs(y - x) for x, y in zip(track(dn, 0), track(dn, 0)[1:]) if abs(y - x) > 0.3]
             check("under Reduce Motion nothing glides: a phone's sheet fades in where it sits (0px moved), a desk's box is put in"
-                  " place (one step) and fades in; a posted comment is put in place and fades in, what was under it moving in"
-                  " one step",
+                  " the line's place (one step: its room less the line's 44px) and fades in; a posted comment is put in place"
+                  " and fades in, what was under it moving in one step",
                   still_(sheet_tops) and len([o for o in sheet_ops if 0.02 < o < 0.98]) >= 2 and sheet_ops[-1] == 1
-                  and len(moves) == 1 and abs(moves[0] - room35) <= 1 and len([o for o in box_ops if 0.02 < o < 0.98]) >= 2
+                  and len(moves) == 1 and abs(moves[0] - (room35 - 44)) <= 1 and len([o for o in box_ops if 0.02 < o < 0.98]) >= 2
                   and still_(pw["new"]) and len([o for o in pw["ops"] if 0.02 < o < 0.98]) >= 2
                   and still_(dw["new"]) and len([o for o in dw["ops"] if 0.02 < o < 0.98]) >= 2
                   and one_step(pw["old"]) and one_step(dw["old"]),
@@ -4098,18 +4241,20 @@ with sync_playwright() as p:
             stopped(35, exc)
 
     # ------------------------------------------------------------------ 36
-    if part(36, "a drawing's own page: the same icon, sheet, fold and posting; signed out back to the drawing"):
+    if part(36, "a drawing's own page: the same bar, sheet, fold and posting; signed out back to the drawing"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
             sid = make_drawing(juno, "Section 36, a wave", seed=361)
             open_drawing(theo.pg, sid)
-            first = theo.pg.evaluate(FIRST_LINE)
-            icon = theo.pg.evaluate(ICON)
+            first = theo.pg.evaluate("""() => ({ old: document.querySelectorAll('[data-cm-first], .cm-first, .comments-head').length,
+              headings: [...document.querySelectorAll('.post-page h2')].filter(e => e.getClientRects().length).length })""")
+            line36 = theo.pg.evaluate(SAYLINE)
             open_box(theo.pg)
             sheet = theo.pg.evaluate(BOX)
             theo.pg.fill("[data-cm-words]", "Section 36, on the drawing")
             pw = theo.pg.evaluate(POSTED, [900])
+            label36 = theo.pg.evaluate(LABEL)
             dctx, dpg = browser_as(b, theo, "desk")
             open_drawing(dpg, sid)
             opened = dpg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()", ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 700])
@@ -4121,20 +4266,22 @@ with sync_playwright() as p:
             npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000)
             out = npg.evaluate(OUT_SHEET)
             close_ctx(nctx, npg)
-            check("on a drawing's own page the same: \"Say the first thing\" at none, the icon, a phone's sheet (\"Say something to"
-                  " Juno\"), posting (it glows at the top), a desk's fold gliding open; signed out, Sign in comes back to the"
-                  " drawing with the box open",
-                  first and first["words"] == "Say the first thing" and icon and icon["w"] == 44 and sheet["open"] == "sheet"
-                  and sheet["title"] == "Say something to Juno" and pw["id"] and pw["glow"][0]
+            check("on a drawing's own page the same: nothing at none (no heading, no \"Say the first thing\"), the answer bar's"
+                  " line standing on the bottom bar (no Draw back: a drawing outside a post takes none), a phone's sheet (\"Say"
+                  " something to Juno\"), posting (it glows at the top, \"1 comment\" over it), a desk's box gliding open in"
+                  " the line's place; signed out, Sign in comes back to the drawing with the box open",
+                  first == {"old": 0, "headings": 0} and line36 and line36["name"] == "Say something…" and line36["h"] == 44
+                  and line36["fixed"] and abs(line36["onNav"]) <= 0.6 and line36["draw"] is None and sheet["open"] == "sheet"
+                  and sheet["title"] == "Say something to Juno" and pw["id"] and pw["glow"][0] and label36 == "1 comment"
                   and fold["open"] == "home" and glided(track(opened, 0))["ok"]
                   and out["next"] == f"/social/b/{sid}#say" and out["lede"] == "Sign in, and you can reply to Juno in words or with a drawing.",
-                  f"first {first}; icon {icon and icon['w']}; sheet {sheet}; posted {pw['id']}; fold {fold['open']}"
-                  f" {glided(track(opened, 0))}; signed out {out}")
+                  f"at none {first}; line {line36 and {k: line36[k] for k in ('name', 'h', 'fixed', 'onNav', 'draw')}}; sheet {sheet};"
+                  f" posted {pw['id']}, label {label36!r}; fold {fold['open']} {glided(track(opened, 0))}; signed out {out}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(36, exc)
 
     # ------------------------------------------------------------------ 37
-    if part(37, "the new screens' words and marks: the sheet, Say something?, Say the first thing; 4.5:1, 44px, 16px"):
+    if part(37, "the new screens' words and marks: the sheet, Say something?, the bar at none; 4.5:1, 44px, 16px"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
@@ -4151,11 +4298,14 @@ with sync_playwright() as p:
                     cpg.keyboard.press("Escape")
                     cpg.wait_for_function(GONE, timeout=8000)
                     open_box(cpg)
-                    seen[(screen, scheme, "the box")] = cpg.evaluate(READ, "#comments, #commentBoxSheet")
+                    # The box at home: a phone's sheet, or on a desk the bar's own room.
+                    seen[(screen, scheme, "the box")] = cpg.evaluate(READ, "#comments, #commentBoxSheet, .post-page > .ans")
                     open_post(cpg, quiet)
-                    cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'center' })")
+                    cpg.evaluate("() => document.querySelector('.post-page > .post-meta').scrollIntoView({ block: 'center' })")
                     cpg.wait_for_timeout(300)
-                    seen[(screen, scheme, "none yet")] = cpg.evaluate(READ, "#comments")
+                    # Nothing said yet: the answer bar is all there is to read (her
+                    # own drawing, so Draw back beside the line).
+                    seen[(screen, scheme, "none yet")] = cpg.evaluate(READ, ".ans-bar")
                     close_ctx(cctx, cpg)
                     nctx, npg = browser_as(b, None, screen=screen, scheme=scheme)
                     open_post(npg, post)
@@ -4169,14 +4319,14 @@ with sync_playwright() as p:
             fields = [(k, v["fields"]) for k, v in seen.items() if v["fields"]]
             lowest = min((v["lowest"], " ".join(k)) for k, v in seen.items())
             musts = {"answering": ("Post",), "the box": ("Draw", "Flip", "Post"),
-                     "none yet": ("Comments", "Say the first thing"),
+                     "none yet": ("Say something…", "Draw back"),
                      "say something?": ("Say something?", "Sign in, and you can reply to", "Not now", "Sign in")}
             phone_only = {"answering": ("Reply to Theo", "“That shell spiral is so good"), "the box": ("Say something",)}
             missing = [(" ".join(k), w) for k, v in seen.items()
                        for w in musts.get(k[2], ()) + (phone_only.get(k[2], ()) if k[0] == "phone" else ())
                        if not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
-            check("every word on the new screens (the sheet's title and the words it answers, the box on it and in place, \"Say"
-                  " the first thing\", \"Say something?\" and its words and buttons) reads at 4.5:1 or more on what is painted"
+            check("every word on the new screens (the sheet's title and the words it answers, the box on it and in place, the"
+                  " answer bar with nothing said yet, \"Say something?\" and its words and buttons) reads at 4.5:1 or more on what is painted"
                   " behind it, every control is 44px or more each way, every text field 16px: phone and desk, light and dark",
                   not low and not small and not fields and not missing and all(v["read"] >= 1 for v in seen.values()),
                   f"{sum(v['read'] for v in seen.values())} read, the lowest {lowest}; under 4.5: {low[:3]}; small: {small[:3]};"
@@ -4195,7 +4345,7 @@ with sync_playwright() as p:
     # replies in place (section 47).
 
     # ------------------------------------------------------------------ 38
-    if part(38, "the thread's look: bubbles, initials, the count's pill, no lines between; phone and desk, light and dark"):
+    if part(38, "the thread's look: bubbles, initials, the count plain in its label, no lines between; phone and desk, light and dark"):
         try:
             ana = someone(b, "aria", "Aria Reyes")
             eli = someone(b, "elio", "Elio Moss")
@@ -4219,8 +4369,8 @@ with sync_playwright() as p:
                   f"{ {k: v[:3] for k, v in bad.items()} }; read {[v['read'] for v in seen.values()]}")
             faces = {" ".join(k): v["faces"] for k, v in seen.items()}
             check("a face not drawn yet shows its initial: the name's first letter, in the small violet words' ink"
-                  " (--accent-ink) on the site's disc (--tint), at 4.5:1 or more; and the count beside \"Comments\" sits in a"
-                  " pill of the same lilac, the same ink",
+                  " (--accent-ink) on the site's disc (--tint), at 4.5:1 or more; and the count is the small label's own"
+                  " number, plain: the row's second ink, 15px and semibold, no pill",
                   all(f["ok"] for f in faces.values()), f"{faces}")
             rows = {" ".join(k): v["row"] for k, v in seen.items()}
             check("under each bubble, its row (the post's own): Reply and ⋯, each a 44px tap in the row's second ink; on a"
@@ -4409,14 +4559,14 @@ with sync_playwright() as p:
             check("each one's time opens its own page in turn, down the conversation (the post's, then Elio's"
                   " comment's, then Aria's reply's): Elio's reply's own page (/social/c/<id>) says Reply in its header; the"
                   " way to it above, small, each its own page's link: the post, Elio's comment, Aria's reply; then Elio's"
-                  " reply as big as a post (its 48px face and its words); \"Replies to Elio\" and how many (2), then its direct"
-                  " replies, Aria's alone (one level: Cora's is on Aria's own page)",
+                  " reply as big as a post (its 48px face and its words); its small label, \"2 replies to Elio\", then its"
+                  " direct replies, Aria's alone (one level: Cora's is on Aria's own page)",
                   walked == [f"/social/c/{c1}", f"/social/c/{r1}", f"/social/c/{r3}"]
                   and page["path"] == f"/social/c/{r3}" and page["title"] == "Reply"
                   and page["way"] == [["Bram Okafor", f"/social/p/{post}"], ["Elio Moss", f"/social/c/{c1}"],
                                       ["Aria Reyes", f"/social/c/{r1}"]]
                   and page["words"] == "Section 40, Sundays? I'll look out for you." and page["face"] == 48
-                  and page["heading"] == "Replies to Elio" and page["count"] == "2"
+                  and page["heading"] == "2 replies to Elio" and page["count"] == "2"
                   and page["list"] == [[r4, []]],
                   f"walked {walked}; {page}")
             with pg.expect_navigation():
@@ -4471,11 +4621,13 @@ with sync_playwright() as p:
             low = [(k, v["low"]) for k, v in seen.items() if v["low"]]
             small = [(k, v["small"]) for k, v in seen.items() if v["small"]]
             musts = ("Reply", "Bram Okafor", "Section 40, is this the ride along the river?", "Elio Moss", "@elio",
-                     "Section 40, Sundays? I'll look out for you.", "Replies", "Section 40, the red bell.")
+                     "Section 40, Sundays? I'll look out for you.", "replies to Elio", "Reply to Elio…",
+                     "Section 40, the red bell.")
             missing = [(" ".join(k), w) for k, v in seen.items() for w in musts
                        if not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
-            check("every word on a comment's own page (the way to it, it, its replies) reads at 4.5:1 or more on what is"
-                  " painted behind it, and every control is 44px or more each way: phone and desk, light and dark",
+            check("every word on a comment's own page (the way to it, it, the answer bar's line, the small label, its"
+                  " replies) reads at 4.5:1 or more on what is painted behind it, and every control is 44px or more each"
+                  " way: phone and desk, light and dark",
                   not low and not small and not missing and all(v["read"] >= 8 for v in seen.values()),
                   f"{sum(v['read'] for v in seen.values())} read, the lowest {min(v['lowest'] for v in seen.values())};"
                   f" under 4.5: {low[:3]}; small: {small[:3]}; not read: {missing[:4]}")
@@ -4814,10 +4966,11 @@ with sync_playwright() as p:
             dc.get(f"/social/p/{post}")
             refused = dc.post_json(f"/social/p/{post}/comments", {"words": "Section 46, to a place", "answer_to": r1})
             check("on the way to Cora's reply the place says \"This reply was deleted\"; its own page shows its ring and those"
-                  " words, \"Replies\" with Cora's, and takes no reply: no icon, no box, no row, and the route refuses one (404)",
+                  " words, \"1 reply\" over Cora's (nobody's name to say), and takes no reply: no answer bar, no line, no box,"
+                  " no row, and the route refuses one (404)",
                   way == ["Bram Okafor", "Elio Moss", "This reply was deleted"]
-                  and own == {"head": "This reply was deleted", "ring": True, "title": "Reply", "heading": "Replies",
-                              "list": [r3], "icon": False, "box": False, "row": False}
+                  and own == {"head": "This reply was deleted", "ring": True, "title": "Reply", "heading": "1 reply",
+                              "list": [r3], "bar": False, "line": False, "box": False, "row": False}
                   and refused[0] == 404,
                   f"the way {way}; its page {own}; a reply to it {refused}")
             dc.post_json("/social/@cora/block", {})
@@ -5017,7 +5170,7 @@ with sync_playwright() as p:
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(47, exc)
 
-    if part(48, "the comment you opened: the band behind it, the ring round its face, Replies to its maker"):
+    if part(48, "the comment you opened: the band behind it, the ring round its face, whose replies follow"):
         # The owner, Nov 18, of a reply's own page: "it doesn't really let me
         # know that's the reply I'm seeing the replies for ... I don't want to
         # make another bubble... but something right?"; then "Yes to c": the
@@ -5066,7 +5219,14 @@ with sync_playwright() as p:
                 h, m = got["head"], got["meta"] or got["head"]
                 mid = (h["t"] + h["b"]) / 2
                 ground = px(h["l"] - 7, mid)
-                out = {"heading": got["heading"], "gaps": got["gaps"]}
+                bar = got.get("bar")
+                out = {"heading": got["heading"], "gaps": got["gaps"], "line_says": bar and bar["line"], "bar": bar and bar["gap"]}
+                # A PHONE'S ANSWER BAR STANDS AT THE FOOT OF THE SCREEN, over whatever
+                # part of a long page is there: the band's foot has to be read clear
+                # of it, or the bar's own paint is taken for the band's (a drawn
+                # reply's page ended right under it, and the probe read the bar).
+                if bar and bar["fixed"] and m["b"] + 14 >= bar["top"]:
+                    return dict(out, why="the answer bar stands over the band's foot: the page was not scrolled clear of it")
                 if got["band"]:
                     # The band is see-through (the owner's pick): what it paints is it over the page beside it.
                     bc, under_it = rgba(got["band"]), px(h["l"] - 16, mid)
@@ -5112,7 +5272,8 @@ with sync_playwright() as p:
                 col = h["r"] - h["l"]
                 out["squeezed"] = [w for w in got["widths"] if w[1] < col - 1]
                 out["moved"] = got["order"] and got["wide"] <= got["vw"] and not out["squeezed"] \
-                    and (not got["desk"] or all(g <= 16 for g in got["gaps"]))
+                    and (not got["desk"] or all(g <= 16 for g in got["gaps"])) \
+                    and (not got["desk"] or bar is None or bar["gap"] == 18)
                 if got["desk"] and kind == "drawn":
                     a = got["art"]
                     out["moved"] = out["moved"] and a is not None and abs(a["l"] - got["page"]["l"]) <= 1 \
@@ -5126,7 +5287,11 @@ with sync_playwright() as p:
                     for kind, at in (("words", c1), ("drawn", d1), ("place", g1)):
                         pg.goto(BASE + f"/social/c/{at}")
                         ready(pg)
-                        pg.evaluate("() => window.scrollTo(0, 0)")
+                        # The comment you opened, 40px under the top of the screen where the
+                        # page is long enough to bring it there: its band whole in the
+                        # picture and clear of a phone's answer bar at the screen's foot.
+                        pg.evaluate("""() => { const h = document.querySelector('[data-cm-subject] > .post-head');
+                          window.scrollTo(0, 0); if (h) window.scrollTo(0, Math.max(0, h.getBoundingClientRect().top - 40)); }""")
                         pg.wait_for_timeout(400)
                         got = pg.evaluate(FOCUS)
                         shot = _Img.open(_io.BytesIO(pg.screenshot())).convert("RGB")
@@ -5136,8 +5301,10 @@ with sync_playwright() as p:
                     open_post(pg, post)
                     post_page[(screen, scheme)] = pg.evaluate("""() => { const a = document.querySelector('.post-page'),
                         f = a && a.querySelector(':scope > .post-head .face-ring');
+                      const l = document.querySelector('[data-cm-head]');
                       return { band: a ? getComputedStyle(a, '::before').content : null, ring: f ? getComputedStyle(f).outlineStyle : null,
-                               heading: (document.querySelector('#commentsTitle > span:not(.cm-count)') || {}).textContent || null }; }""")
+                               heading: l && !l.hidden ? l.innerText.replace(/\\s+/g, ' ').trim() : null,
+                               line: (document.querySelector('.ans-bar .cm-say') || {}).textContent || null }; }""")
                     close_ctx(ctx, pg)
             say = lambda key: {" ".join(k): {x: v.get(x) for x in key} for k, v in seen.items()}  # noqa: E731
             check("THE BAND: the highlight's lilac at 70% over the page (the owner's pick, the mock's softer one) behind the"
@@ -5156,18 +5323,24 @@ with sync_playwright() as p:
             check("every word on the band 4.5:1 or more (its name, handle, words, counts and time; a place's words), and"
                   " the row's marks 3:1",
                   all(v.get("words") for v in seen.values()), f"{say(('least', 'low'))}")
-            check("THE HEADING says whose replies follow: \"Replies to Elio\" on Elio's comment's page, \"Replies to Aria\" on"
-                  " Aria's drawn reply's; a place's says Replies; the post's own page still says Comments, with no band and no"
-                  " ring",
-                  all(v.get("heading") == {"words": "Replies to Elio", "drawn": "Replies to Aria", "place": "Replies"}[k[2]]
-                      for k, v in seen.items())
-                  and all(v == {"band": "none", "ring": "none", "heading": "Comments"} for v in post_page.values()),
-                  f"{say(('heading',))}; the post's {post_page}")
+            # WHOSE REPLIES FOLLOW (the owner's yes to C, Nov 18: "Replies to Eli"),
+            # kept through the Calm Post Page (Nov 20) in the small label, "3
+            # replies to Elio", and in the answer bar's line, "Reply to Elio…".
+            # With no reply yet there is no label (nothing to label), and the
+            # line alone says whose it is; a place has nobody's name and no bar.
+            want48 = {"words": ("3 replies to Elio", "Reply to Elio…"), "drawn": (None, "Reply to Aria…"), "place": ("1 reply", None)}
+            check("WHOSE REPLIES FOLLOW is said: \"3 replies to Elio\" over them on Elio's comment's page and \"Reply to"
+                  " Elio…\" in its answer bar; Aria's drawn reply has none yet, so no label at all, and its bar says \"Reply"
+                  " to Aria…\"; a place's says \"1 reply\" and has no bar; the post's own page says \"4 comments\" and"
+                  " \"Say something…\", with no band and no ring",
+                  all((v.get("heading"), v.get("line_says")) == want48[k[2]] for k, v in seen.items())
+                  and all(v == {"band": "none", "ring": "none", "heading": "4 comments", "line": "Say something…"} for v in post_page.values()),
+                  f"{say(('heading', 'line_says'))}; the post's {post_page}")
             check("NOTHING MOVED: the page's parts run top to bottom in its order, each as wide as its column, nothing wider"
                   " than the screen; on a"
-                  " desk the words' column packed as written (no gap over 16px) however tall a drawing, and the drawing in"
-                  " a column of its own from the top, beside every row",
-                  all(v.get("moved") for v in seen.values()), f"{say(('moved', 'gaps', 'squeezed'))}")
+                  " desk the words' column packed as written (no gap over 16px) however tall a drawing, the answer bar 18px"
+                  " under the time, and the drawing in a column of its own from the top, beside every row",
+                  all(v.get("moved") for v in seen.values()), f"{say(('moved', 'gaps', 'bar', 'squeezed'))}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(48, exc)
 
