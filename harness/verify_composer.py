@@ -1388,7 +1388,8 @@ with sync_playwright() as p:
             qsid = quinn.skribl("Quinn's drawing, outside a post", seed=92)
             OPEN = """() => { const w = document.getElementById('composeSheet'), q = w.querySelector('[data-compose-quote]');
               const c = q.querySelector('.qt-card'), words = w.querySelector('[data-compose-words]'), post = w.querySelector('[data-compose-post]');
-              return { open: w.classList.contains('is-open') && !w.hidden, focus: document.activeElement === words,
+              return { open: w.classList.contains('is-open') && !w.hidden,
+                focus: document.activeElement === words ? 'the words' : document.activeElement === w.querySelector('.make-sheet') ? 'the sheet' : 'elsewhere',
                 placeholder: words.getAttribute('placeholder'), shown: !q.hidden, tag: c ? c.tagName : null,
                 href: c ? c.getAttribute('href') : null, name: c ? (c.querySelector('.qt-name') || {}).textContent : null,
                 words: c ? (c.querySelector('.qt-words') || {}).textContent : null, pic: !!(c && c.querySelector('.qt-pic img')),
@@ -1430,9 +1431,11 @@ with sync_playwright() as p:
                 close_ctx(ctx, pg)
             o, d, w = got[("phone", "opened")], got[("phone", "pressed dim")], got[("phone", "with words")]
             check("the repost sheet's Quote opens the composer with the post small under the words (Quinn's name, words"
-                  " and drawing, no link there), the words' field focused, \"Add your words, or draw something…\", Post"
+                  " and drawing, no link there), calm on a touch phone (focus on the sheet itself, as Make opens it) and"
+                  " the words' field focused on a desk, \"Add your words, or draw something…\", Post"
                   " dim; a press on it says what is missing and sends nothing; words wake it (phone and desk)",
-                  all(got[(s, "opened")]["open"] and got[(s, "opened")]["focus"] and got[(s, "opened")]["shown"]
+                  all(got[(s, "opened")]["open"] and got[(s, "opened")]["focus"] == ("the sheet" if s == "phone" else "the words")
+                      and got[(s, "opened")]["shown"]
                       and got[(s, "opened")]["placeholder"] == "Add your words, or draw something…"
                       and got[(s, "opened")]["tag"] == "DIV" and got[(s, "opened")]["href"] is None
                       and got[(s, "opened")]["name"] == "Quinn Ash" and got[(s, "opened")]["words"] == "Quinn's to be quoted"

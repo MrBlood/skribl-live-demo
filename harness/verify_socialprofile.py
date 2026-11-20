@@ -4129,7 +4129,7 @@ print("PLAN " + json.dumps(out))
           return { at: location.pathname, sheet: window.SocialComposer.isOpen(),
                    sheetSeen: !wrap.hidden && getComputedStyle(sheet).visibility === 'visible',
                    editor: up ? up.id : null, src: fr ? fr.getAttribute('src') : null, front: !!fr && mid === fr,
-                   focus: at === fr ? 'the editor' : at === tile ? 'the tile' : at && at.hasAttribute('data-compose-words') ? 'the words'
+                   focus: at === fr ? 'the editor' : at === tile ? 'the tile' : at === sheet ? 'the sheet' : at && at.hasAttribute('data-compose-words') ? 'the words'
                      : at && at.hasAttribute('data-compose-edit') ? 'Edit drawing' : at ? at.tagName : null,
                    attached: window.SocialComposer.attached(), inert: document.getElementById('main').hasAttribute('inert'),
                    says: ((document.querySelector('[data-compose-say]') || {}).textContent || '').trim() }; }"""
@@ -4264,10 +4264,10 @@ print("PLAN " + json.dumps(out))
         make_after = seen20["flip"].get("make after") or {}
         check("put away without Add (its × on a phone; on a desk a tap beside its card): the sheet goes with it and you are"
               " on your drafts as you were, nothing attached, the page in reach again and focus back on the tile; and Make,"
-              " pressed after that, opens the sheet SEEN, on its words",
+              " pressed after that, opens the sheet SEEN, calm as Make opens it on a touch phone (focus on the sheet itself)",
               all({k: (v.get("after") or {}).get(k) for k in want_after} == want_after for v in seen20.values())
               and bool(make_after.get("sheet") and make_after.get("sheetSeen") and make_after.get("editor") is None
-                       and make_after.get("focus") == "the words"),
+                       and make_after.get("focus") == "the sheet"),
               json.dumps({"after": {k: v.get("after") for k, v in seen20.items()}, "Make after": make_after})[:1100])
         added, second = seen20["pad"].get("added") or {}, seen20["pad"].get("second") or {}
         check("Add brings it back attached: the sheet seen now, there under the editor as it goes, the drawing in it, Edit"

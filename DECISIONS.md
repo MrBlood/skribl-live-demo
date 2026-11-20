@@ -48774,3 +48774,76 @@ left: measure again the next time a shard runs long.
 NOT ASKED OF THE OWNER FIRST, and said to them: it bills nothing, it
 changes no trigger, and a main that reads "cancelled" one run in three is a
 gate that cries wolf.
+
+## After v330 -- The composer opens calm on a phone ("should start like 2nd screenshot")
+
+THE OWNER, Nov 20, about 8:15 AM, with two pictures of the Make sheet on
+their iPhone, a minute apart: "Ours opens like 1st shot and should start
+like 2nd screenshot. That part looks great." THE FIRST: the keyboard up as
+the sheet opens, the sheet at half the screen's height with Draw, Flip and
+Yours squeezed against the keys, and Home showing between its foot and the
+keyboard's own bar. THE SECOND, after the keyboard was put away: the sheet
+at its full height, "Say something…" at its top, the three at its foot.
+
+THE TARGET, said first: the Make sheet as it opens on a phone. A STATEMENT
+OF WHAT IT SHOULD DO, NOT A QUESTION, so built.
+
+WHY IT DID THAT. The words took focus as the sheet rose (`compose.js`,
+SocialSheet's `first`), from the composer mock made beside Bluesky's
+new-post screen, whose keyboard is up as it opens. A phone raises its
+keyboard for a field in focus and for nothing else.
+
+WHAT IT DOES NOW. On a device whose keyboard is on its screen (no hover, a
+coarse pointer: a phone, a tablet in the hand) the SHEET ITSELF takes focus
+as it opens, the dialog "Make a post", so a screen reader is in it and
+hears its name and nothing asks for a keyboard; a tap on "Say something…"
+brings it. With a keyboard of its own (a desk, a laptop, a tablet with one
+attached) the words take focus as they did, so you can type at once. No
+ring is drawn round a sheet that holds focus itself.
+HOWEVER IT IS OPENED: by Make, by the repost sheet's Quote, by "Post a
+drawing" on How it works, and by Make after a draft's tile has been put
+away. One composer, one way of opening.
+NOT CHANGED: the small comment sheet ("Say something to Ana") still opens
+ready to type; it was opened to say something. Said to the owner as theirs
+to change.
+
+WHAT CANNOT BE SEEN HERE, AND IS SAID: this box has no phone keyboard, so
+the check asks the cause, never the keyboard: on a touch phone, what holds
+focus as the sheet opens takes no typing. And the strip of Home between the
+sheet's foot and the keyboard in the first picture is still there once the
+words ARE tapped: the sheet rides above the keyboard by lifting the whole
+sheet (`--cmp-kb`), which leaves the page behind it uncovered under the
+iPhone's see-through bar. Put to the owner as the next small thing, to be
+tried on their phone.
+
+THE CHECKS. `verify_composer` 1, two new rows: a touch phone opens it calm
+(focus on the sheet, named "Make a post", nothing that takes typing holding
+it, no ring, the sheet's foot on the screen's own and 85% of its height or
+more, a tap on the words giving them focus, calm again when opened again),
+and a desk gives the words focus as it opens. Shown red: with the words
+taking focus as before, the phone's row ("on": "the words", "typing":
+true); with calm everywhere, the desk's row. The rows that asked for the
+words in focus on a phone ask for the sheet now: `verify_composer` (three,
+Quote's among them), `verify_socialactivity`, `verify_socialapp` 11,
+`verify_socialposts` 1, `verify_socialprofile` 20; and
+`verify_socialmentions` taps the words before it types, as a person would.
+A ring drawn round the sheet: the phone's row red too.
+
+HOW THEY RAN HERE: the fifteen suites that open the composer, side by side.
+Thirteen green the first time (`verify_social` 46, `verify_socialactivity`
+48, `verify_socialapp` 71, `verify_socialbookmarks` 37,
+`verify_socialcomments` 148, `verify_socialdrawback` 59,
+`verify_socialfollow` 79, `verify_sociallikes` 112, `verify_socialmentions`
+51, `verify_socialposts` 101, `verify_socialreposts` 99,
+`verify_socialsafety` 38, `verify_socialsettings` 45). TWO WENT RED ON ONE
+ROW EACH, AND IT WAS THE ROW, NOT LOAD: `verify_composer` 42 of 43 (Quote
+"opens the composer... the words' field focused" on a phone) and
+`verify_socialprofile` 97 of 98 (Make after a draft's tile "opens the sheet
+seen, on its words"). Each still asked for the old way through a door not
+looked at; each was brought up to date while the others ran, and the suite
+passed whole alone, 43 of 43 and 98 of 98. The runner calls that
+intermittent because the file changed between its two runs.
+
+FLIP AND THE PAD: not for either. NOT TESTED: Safari on an iPhone, which is
+the only place the keyboard is; the owner's phone is the test, and the tell
+is that the pencil opens the sheet with no keyboard.
