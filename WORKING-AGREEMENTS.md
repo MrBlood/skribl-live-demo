@@ -64,6 +64,16 @@ work through the list without check-in chatter, report at the end, and come back
 only for a real decision or a blocker. Keep a short status line when they ask
 "where are we", with what is merged, what is up, and what is next.
 
+**When the owner's usage runs out mid-work, come back and finish.** The owner,
+Nov 20: "if you ever stop because a session stalls due to me using all
+processing for a session wake up when it comes back and finish". (That night
+the session stopped at about 10:25 PM with the last pull request unmerged and
+main's two newest runs unread, and nothing moved until the owner wrote at
+5:56 AM.) So work in progress keeps a wake-up scheduled: an hourly check-in
+into the session, set when long work starts and removed once it is done and
+reported. One that fires while the usage is spent does nothing; the first
+after it resets picks the work up where it stopped, without being asked.
+
 ### Skribl Pad first — the roots, and keep them
 
 "I want to focus on Pad becoming a way of expression. Watching someone's drawing

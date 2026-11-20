@@ -48431,3 +48431,115 @@ THE OWNER TO OVERRULE (the page lists them):
    Settings), and the sheet's focus lands on How it works.
 
 NOT TESTED ANYWHERE IN THIS: Safari on an iPhone, SF or Segoe UI.
+
+## After v330 -- Main was red for a night: Your hand's layer said dialog and kept one promise of four
+
+WHAT MAIN SAID. The runs on the tree after #1004 and after #1005 (2377 and
+2379, Nov 19; read the morning of Nov 20) were each red on one row, in
+shard 3 of 6 on both databases:
+
+    verify_a11y: every aria-modal in a template is recipe-backed: handOver
+
+Everything else on both passed: the other shards, Firefox, WebKit, the MP4.
+How it works (#1005) has nothing red of its own; it sat on the red tree.
+
+WHY IT REACHED MAIN. #1004 added a dialog (Your hand's layer over the
+editor inside a post), and its pull request named the suites that draw and
+write with it, not the one that owns dialogs: `verify_a11y` was not run. A
+pull request's gate is the smoke job, so main's full run was the first to
+ask. START-HERE's row for dialogs says it now: a change that adds a dialog
+runs that suite.
+
+AND NOBODY READ THAT RUN FOR SEVEN HOURS. The session stopped on the
+owner's usage limit at about 10:25 PM, with #1006 open and the two runs
+unread, and nothing moved until the owner wrote at 5:56 AM: "if you ever
+stop because a session stalls due to me using all processing for a session
+wake up when it comes back and finish". `WORKING-AGREEMENTS.md` has the
+rule, and an hourly check-in into the session is kept while work is in
+progress.
+
+WHAT WAS WRONG, ONCE IT WAS DRIVEN. The red row said only "no recipe". A
+recipe and a keyboard said the rest. The layer's markup says dialog, and of
+a dialog's four promises it kept one (focus went in):
+- TAB WALKED OUT. Off Your hand's last button Tab left the frame: to the
+  browser at the editor's own address, and in a host's page onto the host's
+  own control (read in a page with a button each side of the editor's
+  frame: Shift+Tab off Your hand's first stop put focus on the host's
+  "Before").
+- ESCAPE DID NOTHING, on any of Your hand's pages.
+- AND WHILE YOUR HAND LOADED, THE EDITOR UNDER IT HEARD THE KEYS. `inert`
+  stops a click and a Tab; the editors hear their shortcuts on the page
+  itself. Ctrl+Z pressed in that second took a stroke off a drawing nobody
+  could see (two strokes, then one). Found building the fix, when focus
+  moved to the layer for the load: before it, the loading frame held focus
+  and swallowed every key, Escape with them.
+
+THE FIX (`lib/handover.js`, `editor_letters.js`, `handover.css`):
+- The layer holds focus while Your hand loads, and hands it into the page
+  the moment there is one.
+- Two stops nobody sees, one each side of the frame, are the only other
+  places Tab can reach in the editor's page while the rest is inert; each
+  hands focus back in at the other end. They hold nothing, so the order
+  inside is Your hand's own. A Tab pressed in the editor's page goes in the
+  same way.
+- Escape closes it. Pressed in Your hand's page it is the way out that page
+  already offers, and loses nothing: Finish later in a letter (what is
+  drawn is kept), Cancel when changing one (back to the letters, one step;
+  Escape again closes), Close or Done anywhere else. Pressed in the
+  editor's page (while it loads) it closes from there.
+- Every keydown in the editor's page stops at the layer while it is up.
+- Focus goes back where the trip began, as it already did: Text is chosen
+  again and its words hold focus.
+BY ITSELF, AT ITS OWN ADDRESS, YOUR HAND IS AS IT WAS: a page, and Escape no
+key of its.
+
+A CHOICE TAKEN WITHOUT A MOCK: Escape closing Your hand. Nothing on any
+screen changes, a phone has no Escape, and it is the promise every sheet of
+the editors' keeps and this census asks of each; a dialog that ignores it
+is the bug. Said to the owner with the report.
+
+THE DIRECTION WAS READ WRONG ONCE. The two stops first told "out of Your
+hand" from "into it" by the focus event's relatedTarget, which is the frame
+the first time round and not the second: the walk stuck on Your hand's last
+button on its second lap. A stop is only ever reached from inside now (a
+Tab pressed in the editor's page never gets to the browser's own walk), so
+it does not ask.
+
+THE CHECKS.
+- `verify_a11y` section 2 sweeps the two compose pages after the editors'
+  own and counts each for WHAT ONLY IT RENDERS (read from the two DOMs,
+  never listed), so the layer is in the population on both editors: ten
+  rows. A recipe step can wait (`until:`), because this dialog's inside is
+  a frame that arrives. WHAT IT CANNOT SEE is written there: a dialog both
+  pages render is driven on the editor's own page only.
+- THE CENSUS'S TAB ROWS CANNOT SEE THE TWO STOPS at the editor's own
+  address: with them taken out it stayed green, because a walk that leaves
+  for the browser comes straight back in a headless one. So `verify_text`
+  TEXT 23 reads the walk IN A HOST'S PAGE, where it is used, and says which
+  stop each press lands on. Its other new rows: Escape when changing one
+  letter and in a letter drawn in order, and the whole of it while Your
+  hand loads (its page held back): focus, Tab, Ctrl+Z, Escape. "By itself"
+  asks that Escape does nothing there.
+- EACH PART SHOWN RED IN A SCRATCH COPY, seventeen ways (the pull request
+  lists them with their rows): no recipe (the row main showed, and the
+  sweep's own beside it), no sweep, neither the stops nor the Tab key, no
+  Escape in the page, no hand-back, no focus; the stops out, a stop that
+  does nothing, no Tab key, the keys let through (the stroke lost), no
+  Escape in the editor's page, focus in the frame from the start, no focus
+  at load, no waiting for a page, Escape always closing, Escape not only
+  over an editor, no Escape at all.
+
+HOW THEY RAN HERE: side by side, each whole, all green the first time:
+`verify_a11y` 454 rows (444 and the layer's ten), `verify_text` 211 (207 and
+four), `verify_letters` 97, `verify_composer` 41. One row that measures went
+red once in a scratch run, beside two other browsers: TEXT 23's rise on Flip
+read five places where it reads eight alone. It was load: green alone, and
+green in the whole run. The full battery was not run; main's run after the
+merge is it.
+
+FLIP AND THE PAD: shared. One module and one page for both; the census
+drives the layer on each.
+
+NOT TESTED: a screen reader (VoiceOver, TalkBack, NVDA); Safari, on an
+iPhone or a Mac; Firefox's keyboard walk (CI's Firefox and WebKit lanes run
+their own smoke files, not these suites).

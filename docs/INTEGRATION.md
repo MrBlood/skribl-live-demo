@@ -984,6 +984,10 @@ editor by itself with the drawing gone. It is the one place Skribl frames one
 of its own pages, so a framing header of yours that covers Skribl's pages has
 to allow the same origin, as Skribl's own policy does (`frame-ancestors
 'self'`); a header that already lets you frame the editor lets it frame this.
+While it is up it is a dialog, and keeps the keyboard as one: Tab goes round
+Your hand and never reaches the controls your page has each side of the
+frame, Escape closes it, and no key pressed then reaches the editor under it.
+Nothing is asked of you for that either.
 
 **The handshake** underneath it, six messages, all `postMessage` — you need
 this only if you are not using the module:

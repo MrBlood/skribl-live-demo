@@ -1,4 +1,4 @@
-# Next session: the handoff (Nov 19, 2026, Mountain Time: written that morning, its status lines added to through the evening)
+# Next session: the handoff (Nov 19, 2026, Mountain Time: written that morning, its status lines added to through the evening and the morning after)
 
 A snapshot from the session that built Draw back, written as its last step.
 It is not maintained: where things stand is the newest entries at the bottom
@@ -219,11 +219,19 @@ four after "the evening's mocks") and `docs/SOCIAL-SITE.md` section 22:
 THE PICTURES OF ALL OF IT AS BUILT, on the page the owner was sent:
 https://claude.ai/artifact/8Am1CGcfGHTbfuuqfYiZ3x (`DECISIONS.md`, "The
 six as built").
-MAIN'S RUNS, AS READ AT 10:17 PM: green on the tree after #1003, which
-holds #1002 too (run 2375, done 9:30 PM; the run after #1002 alone was
-cancelled by the queue, not run). The run after #1004 (2377) was still
-going and the one after #1005 had not started. READ THEM before believing
-main is green on Your hand and How it works.
+MAIN'S RUNS: green on the tree after #1003, which holds #1002 too (run
+2375, done 9:30 PM; the run after #1002 alone was cancelled by the queue,
+not run). RED AFTER #1004 AND AFTER #1005 (runs 2377 and 2379), ON ONE ROW,
+BOTH DATABASES: verify_a11y's template census, "handOver". Your hand's
+layer said it was a dialog and had no recipe there; driven with a keyboard
+it let Tab out and did nothing on Escape. Mended the morning of Nov 20
+(`DECISIONS.md`, "Main was red for a night"). READ THE RUN ON THE TREE
+AFTER THAT FIX before believing main is green.
+THE SESSION STOPPED ON THE OWNER'S USAGE LIMIT at about 10:25 PM, with
+those two runs unread, and nothing moved until the owner wrote at 5:56 AM.
+The owner's rule since: come back and finish without being asked
+(`WORKING-AGREEMENTS.md`, "When the owner's usage runs out mid-work"; an
+hourly check-in is kept while work is in progress).
 DECIDED BEYOND THE MOCKS, TOLD TO THE OWNER, THEIRS TO CHANGE:
 - the pencil's wave stays white on the purple "Draw back" pill that rises
   when a replay ends (purple on that purple is 1.23:1);
