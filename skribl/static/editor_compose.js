@@ -69,6 +69,10 @@
  *   host   -> editor skribl:compose:underlay {payload, first} draw back: a
  *                                            drawing faint under the pen
  *                                            (lib/drawback.js)
+ *   host   -> editor skribl:compose:help     open How it works (lib/ask.js):
+ *                                            a host's own page explaining
+ *                                            the host, sending people on to
+ *                                            the editor's own help
  *
  * `guide` is a face's only (?face=1, after v330): a photo the host's page
  * picked, under the canvas as a guide to trace (editor_face.js). It is never
@@ -155,6 +159,14 @@
        the drawing comes back onto the original's shape. */
     if (d && d.type === 'skribl:compose:underlay') {
       if (d.payload && global.SkriblDrawBack) global.SkriblDrawBack.take({ payload: d.payload, first: d.first, own: !!d.own });
+      return;
+    }
+    /* HOW IT WORKS, ASKED FOR BY THE HOST (the Skribl site's own How it
+       works: its "The Pad" and "Flip" rows open the editor inside a post
+       with its help showing). The editor's own drawer, opened as its menu's
+       row opens it (lib/ask.js). */
+    if (d && d.type === 'skribl:compose:help') {
+      if (typeof global.SkriblAskOpen === 'function') global.SkriblAskOpen();
       return;
     }
     if (!d || d.type !== 'skribl:compose:load' || !d.payload) return;

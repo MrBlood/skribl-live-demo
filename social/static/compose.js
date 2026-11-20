@@ -513,19 +513,33 @@
       });
   }
 
-  /* ---- a draft's tile on the page: the draft, inside a post -------------------- */
-  /* draft({ id, kind, from }): a draft's id, the editor that made it ('pad'
-     or 'flip') and the tile. A post of your own, as Make's is: nothing
-     quoted, nothing drawn back on. With a drawing attached already the sheet
-     opens on it and says a post holds one. True when it took the tap. */
-  function draft(o) {
-    if (sending || !o || !o.id) return false;
+  /* ---- a door on the page that opens an editor inside a post ------------------- */
+  /* TWO DOORS, ONE WAY IN (editor, below): a draft's tile on your profile
+     (draft: the draft on its canvas), and How it works' "The Pad" and "Flip"
+     (the editor with its own How it works showing; how.js, the owner's "All
+     yes", Nov 19). Each opens this sheet with the editor over it, the sheet
+     not painted until Add brings something, so the editor is all that is
+     seen and its × is back on the page that opened it.
+
+     editor({ kind, id, help, from }): the editor ('pad' or 'flip'), a
+     draft's id or `help`, and what was pressed. A post of your own, as
+     Make's is: nothing quoted, nothing drawn back on. True when it took the
+     press.
+
+     WITH A DRAWING ATTACHED ALREADY (kept from before) the sheet opens on
+     it, seen: a draft would be a second drawing, so the sheet says a post
+     holds one; How it works is asked of the editor that holds the attached
+     drawing (as Edit drawing opens it, its help showing), and of the other
+     editor the sheet says a post holds one. */
+  function editor(o) {
+    if (sending || !o) return false;
     var over = overs[o.kind === 'flip' ? 'flip' : 'pad'];
     if (!over) return false;
     if (back) { if (att) unattach(); drawingBack(null); }
     if (quoted) setQuote(null);
     if (view !== 'write') show('write', true);
     tell(sayBox, '');
+    var own = !!att && !o.id && att.over === over;
     tiled = att ? null : over;
     /* Under the editor, the sheet is not painted until Add (the header):
        set before it opens, so its words cannot take focus either (nothing
@@ -535,10 +549,13 @@
     sheet.open(o.from || null);
     lift();
     grow();
-    if (att) { tell(sayBox, say('one_drawing')); return true; }
-    over.openDraft(o.id, o.from || null);
+    if (att && !own) { tell(sayBox, say('one_drawing')); return true; }
+    if (o.id) over.openDraft(o.id, o.from || null);
+    else if (o.help) over.help(o.from || null);
+    else over.open(o.from || null);
     return true;
   }
+  function draft(o) { return !!(o && o.id) && editor(o); }
   /* The tile is a link (the editor's own address with ?draft=<id>): a plain
      tap or click is taken here; a new tab, a new window or a download is the
      link's own. */
@@ -570,6 +587,7 @@
   window.SocialComposer = {
     open: function (from) { sheet.open(from || null); lift(); grow(); },
     draft: draft,
+    editor: editor,
     drawBack: drawBack,
     drawingBack: function () { return back ? { id: back.id, first: back.first, own: !!back.own, ready: !!back.payload } : null; },
     quote: function (o) {

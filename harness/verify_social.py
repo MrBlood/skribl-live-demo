@@ -473,8 +473,9 @@ with sync_playwright() as p:
               " before sign-in)",
               ph == ["Home", "Gallery", "Make", "Sign in"] and seen[("phone", "home")][2] is not None,
               f"the bar {ph}; the wordmark at the top {seen[('phone', 'home')][2]}")
-        check("on a desk the rail holds the wordmark, Home, Gallery, Make and Sign in, and nothing else",
-              dk == ["Blooby, home", "Home", "Gallery", "Make", "Sign in"] and seen[("desk", "home")][2] is None,
+        check("on a desk the rail holds the wordmark, Home, Gallery, Make, How it works (the owner's \"All yes\","
+              " Nov 19: a desk's rail alone, a phone's bar keeps its four) and Sign in, and nothing else",
+              dk == ["Blooby, home", "Home", "Gallery", "Make", "How it works", "Sign in"] and seen[("desk", "home")][2] is None,
               f"the rail {dk}; the phone's wordmark {seen[('desk', 'home')][2]}")
         # THE WORDMARK IS blooby. (the owner, Nov 12: the name, then "i
         # actually like the blooby blush period"): the word in the site's

@@ -18,6 +18,12 @@ Each row holds a promise, on the Pad and on Flip:
      the lit button goes on to the next step; Back to Ask comes back to the
      answer. Escape on an answer, or on the answers, goes back a step.
   5. NEW HERE? plays the one-minute tour full screen.
+  6. ASKED FOR FROM OUTSIDE (the owner's "All yes", Nov 19, to a door from
+     the Skribl site to How it works): the editor's own address with ?help=1
+     opens How it works once the page has loaded, on Ask's home, and the
+     flag leaves the address, so a reload does not open it again; a host's
+     composer asks the editor it holds by a message (skribl:compose:help)
+     and it opens the same way, once; without either it stays closed.
 
 Visible means painted: elementFromPoint. Touch is real touch.
 """
@@ -260,6 +266,40 @@ with sync_playwright() as p:
               and geo["top"] > 20 and geo["bottom"] < geo["vh"] - 20, str(geo))
         check(f"{name}: ...the field painted in it", q.evaluate(PAINTED, "#helpSearch"))
         check(f"{name}: no page errors on a desk", not errs, "; ".join(errs[:2]))
+        c.close()
+
+        # 6. Asked for from outside: by the address, and by a host's message.
+        c, q, errs = fresh(b, PHONE, route + "?help=1")
+        q.wait_for_timeout(600)
+        v = q.evaluate(VIEW)
+        at = q.evaluate("() => location.pathname + location.search")
+        painted = q.evaluate(PAINTED, "#helpSearch")
+        q.reload()
+        q.wait_for_timeout(1500)
+        again = q.evaluate(VIEW)
+        check(f"{name}: its own address with ?help=1 opens How it works once the page has loaded, on Ask's home, painted;"
+              " the flag has left the address, and a reload does not open it again",
+              v["open"] and v["home"] and not v["answer"] and painted and at == route and not again["open"],
+              f"opened {v['open']} home {v['home']} painted {painted}; address {at}; after a reload open {again['open']}")
+        check(f"{name}: no page errors, asked for by the address", not errs, "; ".join(errs[:2]))
+        c.close()
+        c, q, errs = fresh(b, PHONE, route + "?compose=1")
+        before = q.evaluate(VIEW)["open"]
+        # What a host's page sends the editor it holds (here the page asks itself:
+        # the editor hears its own origin, the frame it sits in or none).
+        q.evaluate("() => window.postMessage({ type: 'skribl:compose:help' }, location.origin)")
+        q.wait_for_timeout(900)
+        asked = q.evaluate(VIEW)
+        painted = q.evaluate(PAINTED, "#helpSearch")
+        add = q.evaluate("() => document.getElementById('postBtn').textContent.replace(/\\s+/g, ' ').trim()")
+        q.evaluate("() => window.postMessage({ type: 'skribl:compose:help' }, location.origin)")
+        q.wait_for_timeout(600)
+        twice = q.evaluate("() => document.querySelectorAll('#helpDrawer.open').length")
+        check(f"{name}: inside a post it stays closed until a host asks; skribl:compose:help opens it on Ask's home,"
+              " painted, the editor still a post's (Add its button); asked again while it is open, it is left as it is",
+              not before and asked["open"] and asked["home"] and painted and add.startswith("Add") and twice == 1,
+              f"before {before}; asked {asked['open']} home {asked['home']} painted {painted}; button {add!r}; open drawers {twice}")
+        check(f"{name}: no page errors, asked for by a host", not errs, "; ".join(errs[:2]))
         c.close()
     b.close()
 

@@ -57,6 +57,28 @@ Chromium's virtual authenticator for the site's people.
      ground over whatever scrolls under them, light and dark, so iOS 26 lays
      no glass blur there; never in a tab; under the sheets' scrims; out of
      the header's buttons' way.
+  11. HOW IT WORKS (the owner's "All yes", Nov 19: "first row on a phone,
+     above Settings on a desktop, and there for visitors too", opening
+     "Blooby's own short page, with Pad's and Flip's help at the bottom").
+     THE DOOR: the ☰'s first row, with its mark, as tall as the others,
+     opening /social/how, for a visitor too; on a desk a tab in the rail
+     above Settings (above Sign in before that), lit on its own page; a
+     phone's bar keeps its four. THE PAGE: its head and three parts, nothing
+     past the screen. THE EXAMPLES: three of Skribl's in-post player, each a
+     drawing from its file, their boxes the drawings' shape before the
+     drawings come (nothing moves); each play button says what the files
+     say (the cat's own time; the draw-back's two hands, read off both
+     files; the Flip's pages), the draw-back's file being that cat and then
+     an answer; the first draws itself as the page opens and the others
+     wait, none under Reduce Motion; a tap plays one and stops another; when
+     the files do not come, one line says so and Try again brings them.
+     PEOPLE OFTEN ASK: four rows, a tap going where it is done (the composer
+     here; Home's Everyone; your profile); a visitor reads the same four
+     with nothing to tap, and a line with Sign in. THE DRAWING TOOLS: signed
+     in, the Pad or Flip inside a post with its own How it works showing,
+     only the editor seen, its × back on the page, asked again without a
+     reload; a visitor, the editor's own page with it. EVERY WORD at 4.5:1,
+     every row 44px and more, phone and desk, light and dark.
   10. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALAPP_PART=<n>[,<m>] runs those sections only (calibration); a section
@@ -76,6 +98,7 @@ import sys
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -553,16 +576,18 @@ with sync_playwright() as pw:
             ip, io_, ipad, app, inst, andr = (got[k] for k in ("iPhone, signed in", "iPhone, signed out", "iPad (says Mac)",
                                                                 "Home Screen app (iOS)", "installed (display standalone)",
                                                                 "Android, no offer"))
-            check("an iPhone in a browser tab: Add to Home Screen in the ☰, the second row, right under Settings; no Reload",
-                  ip["add"] and ip["addPainted"] and not ip["reload"] and ip["rows"][:2] == ["Settings", "Add to Home Screen"],
-                  json.dumps(ip))
+            check("an iPhone in a browser tab: Add to Home Screen in the ☰, right under Settings (How it works is the sheet's"
+                  " first row since Nov 19, so it is the third); no Reload",
+                  ip["add"] and ip["addPainted"] and not ip["reload"]
+                  and ip["rows"][:3] == ["How it works", "Settings", "Add to Home Screen"], json.dumps(ip))
             check("signed out, the same row right under Sign in", io_["add"] and io_["addPainted"]
-                  and io_["rows"][:2] == ["Sign in", "Add to Home Screen"], json.dumps(io_))
+                  and io_["rows"][:3] == ["How it works", "Sign in", "Add to Home Screen"], json.dumps(io_))
             check("an iPad, which says it is a Mac with a touch screen: the same row", ipad["add"] and ipad["addPainted"],
                   json.dumps(ipad))
-            check("opened from the Home Screen (navigator.standalone): Reload in its place, the second row; no Add to Home Screen",
-                  app["reload"] and app["reloadPainted"] and not app["add"] and app["rows"][:2] == ["Settings", "Reload"],
-                  json.dumps(app))
+            check("opened from the Home Screen (navigator.standalone): Reload in its place, right under Settings; no Add to"
+                  " Home Screen",
+                  app["reload"] and app["reloadPainted"] and not app["add"]
+                  and app["rows"][:3] == ["How it works", "Settings", "Reload"], json.dumps(app))
             check("installed anywhere else (the standalone display mode): Reload, not Add to Home Screen",
                   inst["reload"] and not inst["add"], json.dumps(inst))
             check("Android before Chrome offers its install: neither row", not andr["add"] and not andr["reload"], json.dumps(andr))
@@ -710,7 +735,7 @@ with sync_playwright() as pw:
                 menu = pg.evaluate(READ, "#siteMenu .make-sheet")
                 hs = pg.evaluate("""() => { const r = e => Math.round(e.getBoundingClientRect().height * 10) / 10;
                   const rows = [...document.querySelectorAll('#siteMenu .post-acts > .post-act')].filter(e => e.getClientRects().length);
-                  return { add: r(document.getElementById('siteAddHome')), settings: r(rows[0]) }; }""")
+                  return { add: r(document.getElementById('siteAddHome')), settings: r(rows.find(e => e.textContent.trim() === 'Settings')) }; }""")
                 pg.click("#siteAddHome")
                 pg.wait_for_timeout(900)
                 steps = pg.evaluate(READ, "#homeSteps .make-sheet")
@@ -1209,6 +1234,343 @@ with sync_playwright() as pw:
                   json.dumps({"ground": ground, "dimmed": dim, "menu": hit}))
         except Exception as exc:  # noqa: BLE001
             stopped(9, exc)
+
+    # ------------------------------------------------------------------ 11
+    # HOW IT WORKS, the site's own page and its two doors (the owner's "All
+    # yes", Nov 19). The site had no door to any help: its menu's own note
+    # said "No Help row until there is a Help page." What the examples say is
+    # worked out HERE from the three files themselves, never copied from the
+    # page: the cat's own time, the answer's own time in the draw-back's
+    # file, the Flip's pages.
+    if part(11, "How it works: the ☰'s first row, a tab in the rail, and the site's own page with its examples and rows"):
+        try:
+            mira = member(b, "mira", "Mira Lopez")
+            cat_f = json.loads((ROOT / "skribl/static/help/demos/cat.json").read_text())
+            back_f = json.loads((ROOT / "social/static/how/drawback.json").read_text())
+            flip_f = json.loads((ROOT / "skribl/static/help/demos/flip-bounce.json").read_text())
+            cat_pts, back_pts = cat_f["frames"][0]["strokes"], back_f["frames"][0]["strokes"]
+            # The answer: what the file holds after the cat's points (a file
+            # that is only the cat has none, and says so in its row).
+            his = back_pts[len(cat_pts):] or [{"t": 0}]
+            hers_s, his_s = round(cat_pts[-1]["t"] / 1000), round((his[-1]["t"] - his[0]["t"]) / 1000)
+            same_cat = len(back_pts) >= len(cat_pts) and all(
+                abs(a["x"] - c["x"]) < 0.01 and abs(a["y"] - c["y"]) < 0.01 and a["color"] == c["color"] for a, c in zip(cat_pts, back_pts))
+            hers_end = back_pts[min(len(cat_pts), len(back_pts)) - 1]["t"]
+            check("the draw-back example is a draw-back: its file holds Skribl's cat point for point, squeezed to three"
+                  " seconds as the site joins one, then an answer that starts after it; and the Flip has pages",
+                  same_cat and len(back_pts) > len(cat_pts) + 50 and hers_end <= 3000
+                  and his[0].get("start") is True and his[0]["t"] > hers_end
+                  and back_f["canvasSize"]["cssWidth"] * 3 == back_f["canvasSize"]["cssHeight"] * 4 and len(flip_f["frames"]) > 1,
+                  f"the cat's {len(cat_pts)} points first: {same_cat}, of {len(back_pts)}; hers ends at {hers_end}ms, his from"
+                  f" {his[0]['t']} to {his[-1]['t']}; the Flip's pages {len(flip_f['frames'])}")
+
+            # ---- THE DOOR ---------------------------------------------------------
+            door = {}
+            for key, who in (("signed in", mira), ("a visitor", None)):
+                ctx, pg = browser_as(b, who)
+                go(pg, "/social/")
+                open_menu(pg)
+                door[key] = pg.evaluate("""() => { const rows = [...document.querySelectorAll('#siteMenu .post-acts > .post-act, #siteMenu .post-acts > form > .post-act')].filter(e => e.getClientRects().length);
+                  const r0 = rows[0], r = r0.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                  return { rows: rows.map(e => e.textContent.trim()), href: r0.getAttribute('href'), h: Math.round(r.height), hs: rows.map(e => Math.round(e.getBoundingClientRect().height)),
+                           mark: !!r0.querySelector('svg circle') && !!r0.querySelector('svg path'), hit: !!at && r0.contains(at),
+                           bar: [...document.querySelectorAll('nav.nav > .tab')].filter(e => e.getClientRects().length).map(e => e.querySelector('.tab-name').firstChild.textContent.trim()) }; }""")
+                with pg.expect_navigation(timeout=15000):
+                    pg.tap("#siteMenu .post-acts > .post-act")
+                pg.wait_for_function("() => document.readyState === 'complete'", timeout=15000)
+                door[key]["lands"] = pg.evaluate("() => [location.pathname, document.title, !!document.querySelector('[data-site-menu]')]")
+                close_ctx(ctx, pg)
+            check("the ☰'s first row is How it works, with its mark, as tall as the rows under it (56px), painted, to the"
+                  " site's own page; signed in above Settings, a visitor above Sign in; a phone's bar keeps its four places;"
+                  " the page it opens has no ☰ of its own",
+                  door["signed in"]["rows"][:2] == ["How it works", "Settings"] and door["a visitor"]["rows"][:2] == ["How it works", "Sign in"]
+                  and all(d["href"] == "/social/how" and d["h"] == 56 and set(d["hs"]) == {56} and d["mark"] and d["hit"]
+                          and d["lands"] == ["/social/how", "How it works · Blooby", False] for d in door.values())
+                  and door["signed in"]["bar"] == ["Home", "Gallery", "Make", "You"] and door["a visitor"]["bar"] == ["Home", "Gallery", "Make", "Sign in"],
+                  json.dumps(door))
+            RAIL = """() => { const tabs = [...document.querySelectorAll('nav.nav > .tab')].filter(e => e.getClientRects().length);
+              const name = e => e.querySelector('.tab-name').firstChild.textContent.trim();
+              const how = document.querySelector('nav.nav .tab-how'), r = how.getBoundingClientRect(), next = how.nextElementSibling.getBoundingClientRect();
+              const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              return { tabs: tabs.map(name), h: Math.round(r.height), href: how.getAttribute('href'), gap: Math.round(next.top - r.bottom), hit: !!at && how.contains(at),
+                       here: how.getAttribute('aria-current'), filled: !!how.querySelector('svg path[fill="currentColor"]'),
+                       line: [...how.querySelectorAll('.pen-line')].some(l => l.getBoundingClientRect().width > 10),
+                       foot: Math.round(innerHeight - document.querySelector('nav.nav > .tab:last-child').getBoundingClientRect().bottom) }; }"""
+            rail = {}
+            for key, who in (("signed in", mira), ("a visitor", None)):
+                ctx, pg = browser_as(b, who, screen="desk")
+                go(pg, "/social/")
+                rail[key] = pg.evaluate(RAIL)
+                # By its tab where the tab is there to press; a rail without
+                # one fails its own row above, and the page is gone to anyway.
+                if rail[key]["hit"]:
+                    with pg.expect_navigation(timeout=15000):
+                        pg.click("nav.nav .tab-how")
+                    pg.wait_for_function("() => document.readyState === 'complete'", timeout=15000)
+                else:
+                    go(pg, "/social/how")
+                rail[key + ", on its page"] = pg.evaluate(RAIL)
+                rail[key + ", on its page"]["at"] = pg.evaluate("() => location.pathname")
+                close_ctx(ctx, pg)
+            check("on a desk the rail has How it works above Settings (above Sign in for a visitor), a 52px row painted and"
+                  " to the page, 8px over the next as Settings is over You, the rail's foot where it was; not lit on Home",
+                  rail["signed in"]["tabs"][-3:-1] == ["How it works", "Settings"] and rail["a visitor"]["tabs"][-2:] == ["How it works", "Sign in"]
+                  and all(rail[k]["h"] == 52 and rail[k]["href"] == "/social/how" and rail[k]["gap"] == 8 and rail[k]["hit"]
+                          and rail[k]["here"] is None and not rail[k]["filled"] and not rail[k]["line"] and rail[k]["foot"] == 20
+                          for k in ("signed in", "a visitor")),
+                  json.dumps({k: rail[k] for k in ("signed in", "a visitor")}))
+            check("...and on its own page its place is lit, as Home's is on Home: marked the page, its mark filled, the pen's"
+                  " line under its name",
+                  all(rail[k]["at"] == "/social/how" and rail[k]["here"] == "page" and rail[k]["filled"] and rail[k]["line"]
+                      for k in ("signed in, on its page", "a visitor, on its page")),
+                  json.dumps({k: rail[k] for k in rail if "on its page" in k}))
+
+            # ---- THE PAGE AND ITS EXAMPLES ---------------------------------------
+            PAGE = """() => { const h = document.querySelector('.how'), pics = [...document.querySelectorAll('.how-pic')];
+              const players = window.SkriblInline ? SkriblInline.players() : [];
+              return { h1: (document.querySelector('h1') || {}).textContent, h1s: document.querySelectorAll('h1').length, sub: (document.querySelector('.page-sub') || {}).textContent,
+                       parts: [...h.querySelectorAll('h2')].map(e => e.textContent), over: document.documentElement.scrollWidth - innerWidth,
+                       ex: pics.map(p => { const b = p.querySelector('.skribl-inline'), r = p.getBoundingClientRect(), pl = b.querySelector('.skribl-inline-play'), d = b.querySelector('.skribl-inline-dur');
+                         const cv = b.querySelector('canvas'); let ink = 0;
+                         if (cv && cv.width) { try { const dd = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data, p0 = [dd[0], dd[1], dd[2]];
+                           for (let i = 0; i < dd.length; i += 16) if (Math.abs(dd[i] - p0[0]) + Math.abs(dd[i + 1] - p0[1]) + Math.abs(dd[i + 2] - p0[2]) > 60) ink++; } catch (e) { ink = -1; } }
+                         return { in: p.classList.contains('is-in'), player: b.classList.contains('skribl-inline'), w: Math.round(r.width * 10) / 10, ratio: Math.round(r.width / r.height * 1000) / 1000,
+                                  says: pl ? pl.textContent.trim() : null, playing: b.classList.contains('is-playing'), ink,
+                                  chip: !!d && d.getClientRects().length > 0, cap: [...p.parentElement.querySelectorAll('.how-cap b, .how-cap span')].map(e => e.textContent) }; }),
+                       players: players.length, strip: Math.round(document.querySelector('.how-strip').getBoundingClientRect().height * 10) / 10,
+                       say: !document.querySelector('[data-how-say]').hidden }; }"""
+            FILES = re.compile(r".*/(cat|drawback|flip-bounce)\.json.*")
+
+            # The three files held at the door until the page has been read
+            # without them (held, never slept on: a sleep here would hold the
+            # reading too).
+            held = []
+            ctx, pg = browser_as(b, mira)
+            ctx.route(FILES, lambda route: held.append(route))
+            pg.goto(BASE + "/social/how")
+            pg.wait_for_function("() => !!document.querySelector('.how-pic .skribl-inline') && document.readyState === 'complete'", timeout=15000)
+            pg.wait_for_timeout(600)
+            before = pg.evaluate(PAGE)
+            before["held"] = len(held)
+            for route in held:
+                route.continue_()
+            pg.wait_for_function("() => document.querySelectorAll('.how-pic.is-in').length === 3", timeout=20000)
+            pg.wait_for_timeout(1500)
+            after = pg.evaluate(PAGE)
+            # A tap on the second: it plays, and the first stops.
+            pg.tap("#howEx2")
+            pg.wait_for_timeout(900)
+            tapped = [e["playing"] for e in pg.evaluate(PAGE)["ex"]]
+            close_ctx(ctx, pg)
+            check("the page: one heading, \"How it works\", \"Blooby is where people talk in drawings.\", then Watch an example,"
+                  " People often ask and The drawing tools; nothing past the screen",
+                  after["h1"] == "How it works" and after["h1s"] == 1 and after["sub"] == "Blooby is where people talk in drawings."
+                  and after["parts"] == ["Watch an example", "People often ask", "The drawing tools"] and after["over"] <= 0,
+                  json.dumps({k: after[k] for k in ("h1", "h1s", "sub", "parts", "over")}))
+            caps = [["A drawing", "It draws itself, the way it was made"], ["A draw-back", "Theirs, then yours on top"], ["A Flip", "Pages that move"]]
+            check("the examples: three of Skribl's in-post player, 168px wide on a phone and their drawings' 4 to 3 BEFORE the"
+                  " drawings come, so nothing moves when they do (the strip as tall before as after); each then a drawing on"
+                  " its canvas, with what it is and one line under it; no second time label beside the play button",
+                  len(before["ex"]) == 3 and before["held"] == 3 and not any(e["in"] for e in before["ex"]) and before["strip"] == after["strip"]
+                  and all(e["player"] and e["w"] == 168 and abs(e["ratio"] - 4 / 3) < 0.01 for e in before["ex"] + after["ex"])
+                  and all(e["in"] and e["ink"] > 20 and not e["chip"] for e in after["ex"]) and after["players"] == 3
+                  and [e["cap"] for e in after["ex"]] == caps and not after["say"],
+                  json.dumps({"before": [(e["in"], e["w"], e["ratio"]) for e in before["ex"]], "strip": [before["strip"], after["strip"]],
+                              "after": [(e["in"], e["ink"], e["chip"], e["cap"]) for e in after["ex"]]})[:700])
+            want_says = [f"{hers_s} sec", f"{hers_s + his_s} sec", f"{len(flip_f['frames'])} pages"]
+            check(f"each play button says what its file says: the cat's own time ({want_says[0]}), the draw-back's two hands"
+                  f" together ({hers_s} and {his_s}: {want_says[1]}, not the joined drawing's nine), the Flip's pages ({want_says[2]})",
+                  [(e["says"] or "").replace("drawn in ", "") for e in after["ex"]] == want_says,
+                  json.dumps([e["says"] for e in after["ex"]]))
+            check("the first draws itself as the page opens and the others wait; a tap on the second plays it and the first"
+                  " stops: one at a time",
+                  [e["playing"] for e in after["ex"]] == [True, False, False] and tapped == [False, True, False],
+                  json.dumps({"as it opens": [e["playing"] for e in after["ex"]], "after a tap on the second": tapped}))
+            ctx, pg = browser_as(b, mira, reduced=True)
+            go(pg, "/social/how")
+            pg.wait_for_function("() => document.querySelectorAll('.how-pic.is-in').length === 3", timeout=20000)
+            pg.wait_for_timeout(1800)
+            still = pg.evaluate(PAGE)
+            close_ctx(ctx, pg)
+            check("under Reduce Motion none plays by itself: each rests on its finished drawing",
+                  [e["playing"] for e in still["ex"]] == [False, False, False] and all(e["ink"] > 20 for e in still["ex"]),
+                  json.dumps([(e["playing"], e["ink"]) for e in still["ex"]]))
+            # The files do not come: one line, and Try again.
+            ctx, pg = browser_as(b, mira)
+            ctx.route(FILES, lambda route: route.abort())
+            go(pg, "/social/how", wait=1500)
+            failed = pg.evaluate("""() => { const s = document.querySelector('[data-how-say]'), bt = s.querySelector('button'), r = bt.getBoundingClientRect();
+              return { shown: !s.hidden, words: s.querySelector('[role=status]').textContent.trim(), button: bt.textContent.trim(), h: Math.round(r.height),
+                       in: document.querySelectorAll('.how-pic.is-in').length }; }""")
+            ctx.unroute(FILES)
+            mended = {}
+            if failed["shown"]:
+                pg.tap("[data-how-again]")
+                try:
+                    pg.wait_for_function("() => document.querySelectorAll('.how-pic.is-in').length === 3", timeout=20000)
+                except Exception:  # noqa: BLE001 -- they never came: the row's red
+                    pass
+                pg.wait_for_timeout(400)
+                mended = pg.evaluate("() => ({ shown: !document.querySelector('[data-how-say]').hidden, in: document.querySelectorAll('.how-pic.is-in').length })")
+            close_ctx(ctx, pg)
+            check("when the examples' files do not come, one line says so (\"The examples didn’t load. Check your connection,"
+                  " then try again.\") with Try again, 44px; Try again brings them and the line goes",
+                  failed == {"shown": True, "words": "The examples didn’t load. Check your connection, then try again.",
+                             "button": "Try again", "h": 44, "in": 0} and mended == {"shown": False, "in": 3},
+                  json.dumps({"failed": failed, "mended": mended}))
+
+            # ---- PEOPLE OFTEN ASK -------------------------------------------------
+            ROWS11 = """() => [...document.querySelectorAll('.how-rows')].map(sec => [...sec.querySelectorAll('.how-row')].map(r => ({
+              tag: r.tagName, words: [...r.querySelectorAll('.how-words b, .how-words span')].map(e => e.textContent), href: r.getAttribute('href'),
+              go: !!r.querySelector('svg'), h: Math.round(r.getBoundingClientRect().height), make: r.hasAttribute('data-make') })))"""
+            ctx, pg = browser_as(b, mira)
+            go(pg, "/social/how")
+            rows_in = pg.evaluate(ROWS11)
+            # The first row, whatever it is: Post a drawing.
+            pg.evaluate("() => document.querySelector('.how-rows .how-row').scrollIntoView({ block: 'center' })")
+            pg.tap(".how-rows .how-row >> nth=0")
+            pg.wait_for_timeout(900)
+            made = pg.evaluate("() => ({ open: SocialComposer.isOpen(), at: location.pathname, focus: document.activeElement.hasAttribute('data-compose-words'),"
+                               " seen: getComputedStyle(document.querySelector('#composeSheet .make-sheet')).visibility })")
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, None)
+            go(pg, "/social/how")
+            rows_out = pg.evaluate(ROWS11)
+            note = pg.evaluate("() => { const n = document.querySelector('.how-out'), a = n && n.querySelector('a'); return n ? [n.querySelector('span').textContent.trim(),"
+                               " a.getAttribute('href'), a.textContent.trim(), Math.round(a.getBoundingClientRect().height)] : null; }")
+            close_ctx(ctx, pg)
+            ask = [["Post a drawing", "The pencil, then Draw"], ["Answer a drawing with a drawing", "Draw back: the pen under any drawing"],
+                   ["Comment with a drawing", "The speech bubble, then Draw"], ["Draw your face", "On your profile"]]
+            check("People often ask, signed in: four rows, the question over its answer, each 60px and more with a chevron,"
+                  " each going where it is done: Post a drawing opens the composer on this page, its words in focus; the"
+                  " two about answering go to Home's Everyone; Draw your face to your profile",
+                  [r["words"] for r in rows_in[0]] == ask and all(r["h"] >= 60 and r["go"] for r in rows_in[0])
+                  and [(r["tag"], r["href"], r["make"]) for r in rows_in[0]] == [("BUTTON", None, True), ("A", "/social/?tab=everyone", False),
+                                                                             ("A", "/social/?tab=everyone", False), ("A", "/social/@mira", False)]
+                  and made == {"open": True, "at": "/social/how", "focus": True, "seen": "visible"},
+                  json.dumps({"rows": rows_in[0], "Post a drawing": made})[:700])
+            check("a visitor reads the same four as plain lines, nothing to tap and no chevron, and one line under them says"
+                  " why, with Sign in beside it, a 44px button",
+                  [r["words"] for r in rows_out[0]] == ask and all(r["tag"] == "DIV" and not r["go"] and r["href"] is None for r in rows_out[0])
+                  and note == ["You’ll need an account for these, and Blooby is by invite for now.", "/social/signin", "Sign in", 44],
+                  json.dumps({"rows": [(r["tag"], r["go"]) for r in rows_out[0]], "note": note}))
+            tools = [["The Pad", "Pens, colour, music and replay speed"], ["Flip", "Pages that move"]]
+            check("The drawing tools: the Pad and Flip, each a link to the editor's own address asking for its help, the same"
+                  " for a visitor",
+                  all([r["words"] for r in rr[1]] == tools and [(r["tag"], r["href"], r["go"]) for r in rr[1]]
+                      == [("A", "/skribl-pad?help=1", True), ("A", "/flip?help=1", True)] and all(r["h"] >= 60 for r in rr[1])
+                      for rr in (rows_in, rows_out)), json.dumps({"signed in": rows_in[1], "a visitor": rows_out[1]})[:600])
+
+            # ---- THE DRAWING TOOLS, OPENED -----------------------------------------
+            def editor11(pg_, path, timeout=30):
+                end = time.time() + timeout
+                while time.time() < end:
+                    fr = next((f for f in pg_.frames if urllib.parse.urlsplit(f.url or "").path == path and "compose=1" in (f.url or "")), None)
+                    if fr:
+                        try:
+                            fr.wait_for_function("() => !!(window.__skriblBoot && (window.__skriblBoot.pad || window.__skriblBoot.flip))", timeout=1000)
+                            return fr
+                        except Exception:  # noqa: BLE001 -- not up yet
+                            pass
+                    pg_.wait_for_timeout(200)
+                return None
+            HOST11 = """(kind) => { const w = document.getElementById('composeSheet'), row = document.querySelector('[data-how-editor="' + kind + '"]');
+              const up = [document.getElementById('composePad'), document.getElementById('composeFlip')].find(o => !o.hidden) || null, fr = up && up.querySelector('iframe');
+              const mid = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+              return { at: location.pathname, sheet: SocialComposer.isOpen(), sheetSeen: !w.hidden && getComputedStyle(w.querySelector('.make-sheet')).visibility === 'visible',
+                       editor: up ? up.id : null, front: !!fr && mid === fr, attached: SocialComposer.attached(),
+                       focus: document.activeElement === fr ? 'the editor' : document.activeElement === row ? 'the row' : document.activeElement.tagName }; }"""
+            IN11 = """() => ({ at: location.pathname + location.search, help: !document.getElementById('helpDrawer').hidden && document.getElementById('helpDrawer').classList.contains('open'),
+              home: !document.getElementById('helpWatch').hidden, add: document.getElementById('postBtn').textContent.replace(/\\s+/g, ' ').trim(),
+              mark: (window.__mark = window.__mark || String(Math.random())) })"""
+            opened = {}
+            ctx, pg = browser_as(b, mira)
+            go(pg, "/social/how")
+            for kind, path, wrap_id in (("pad", "/skribl-pad", "composePad"), ("flip", "/flip", "composeFlip")):
+                got = opened[kind] = {"wrap": wrap_id}
+                try:
+                    row = f'[data-how-editor="{kind}"]'
+                    pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", row)
+                    pg.tap(row)
+                    fr = editor11(pg, path)
+                    fr.wait_for_function("() => !document.getElementById('helpDrawer').hidden && document.getElementById('helpDrawer').classList.contains('open')",
+                                         timeout=15000)
+                    pg.wait_for_timeout(900)
+                    got["up"], got["in"] = pg.evaluate(HOST11, kind), fr.evaluate(IN11)
+                    fr.evaluate("() => closeHelpDrawer()")
+                    pg.wait_for_timeout(600)
+                    fr.click("#composeCloseBtn")
+                    pg.wait_for_timeout(1300)
+                    got["after"] = pg.evaluate(HOST11, kind)
+                    # Asked again: the editor is there already, so it is asked at once.
+                    pg.tap(row)
+                    fr.wait_for_function("() => !document.getElementById('helpDrawer').hidden && document.getElementById('helpDrawer').classList.contains('open')",
+                                         timeout=15000)
+                    pg.wait_for_timeout(600)
+                    got["again"] = fr.evaluate(IN11)
+                    fr.evaluate("() => closeHelpDrawer()")
+                    pg.wait_for_timeout(600)
+                    fr.click("#composeCloseBtn")
+                    pg.wait_for_timeout(1300)
+                except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                    got["stopped"] = str(exc).splitlines()[0][:200]
+            close_ctx(ctx, pg)
+
+            def tool_ok(v, at):
+                u, i, a, g = v.get("up") or {}, v.get("in") or {}, v.get("after") or {}, v.get("again") or {}
+                return bool(u == {"at": "/social/how", "sheet": True, "sheetSeen": False, "editor": v["wrap"], "front": True, "attached": None,
+                                  "focus": "the editor"}
+                            and i.get("at") == at + "?compose=1" and i.get("help") and i.get("home") and i.get("add", "").startswith("Add")
+                            and a == {"at": "/social/how", "sheet": False, "sheetSeen": False, "editor": None, "front": False, "attached": None,
+                                      "focus": "the row"}
+                            and g.get("help") and g.get("home") and g.get("mark") == i.get("mark") and not v.get("stopped"))
+            check("signed in, The Pad and Flip open that editor INSIDE A POST with its own How it works showing, on its home:"
+                  " you stay on the page, only the editor is seen (the sheet under it not painted) and it holds focus, its"
+                  " button Add; its × is back on the page with nothing attached, focus on the row; asked again, the same"
+                  " editor (no reload) shows its help again",
+                  tool_ok(opened["pad"], "/skribl-pad") and tool_ok(opened["flip"], "/flip"), json.dumps(opened)[:1200])
+            walked = {}
+            for kind, path in (("pad", "/skribl-pad"), ("flip", "/flip")):
+                ctx, pg = browser_as(b, None)
+                go(pg, "/social/how")
+                try:
+                    pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", f'[data-how-editor="{kind}"]')
+                    with pg.expect_navigation(timeout=20000):
+                        pg.tap(f'[data-how-editor="{kind}"]')
+                    pg.wait_for_function("() => !!document.getElementById('helpDrawer') && !document.getElementById('helpDrawer').hidden"
+                                         " && document.getElementById('helpDrawer').classList.contains('open')", timeout=20000)
+                    walked[kind] = pg.evaluate("() => ({ at: location.pathname + location.search, home: !document.getElementById('helpWatch').hidden })")
+                except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                    walked[kind] = {"stopped": str(exc).splitlines()[0][:160]}
+                close_ctx(ctx, pg)
+            check("a visitor's rows go to the editor's own page with its How it works showing (their only Pad is that page,"
+                  " as Make's two doors are), the asking gone from the address",
+                  walked == {"pad": {"at": "/skribl-pad", "home": True}, "flip": {"at": "/flip", "home": True}}, json.dumps(walked))
+
+            # ---- EVERY WORD, EVERY ROW ---------------------------------------------
+            words = {}
+            for who, tag in ((mira, "signed in"), (None, "a visitor")):
+                for screen in ("phone", "desk"):
+                    for scheme in ("light", "dark"):
+                        ctx, pg = browser_as(b, who, screen=screen, scheme=scheme, reduced=True)
+                        go(pg, "/social/how")
+                        pg.wait_for_function("() => document.querySelectorAll('.how-pic.is-in').length === 3", timeout=20000)
+                        pg.wait_for_timeout(500)
+                        top = pg.evaluate(READ, ".how")
+                        pg.evaluate("() => window.scrollTo(0, document.documentElement.scrollHeight)")
+                        pg.wait_for_timeout(350)
+                        foot = pg.evaluate(READ, ".how")
+                        words[f"{tag}, {screen}, {scheme}"] = {"read": top["read"] + foot["read"], "low": top["low"] + foot["low"],
+                                                             "small": top["small"] + foot["small"], "lowest": min(top["lowest"], foot["lowest"])}
+                        close_ctx(ctx, pg)
+            print("      measured:", json.dumps({k: v["lowest"] for k, v in words.items()}))
+            check("every word of the page at 4.5:1 and more on its ground (the head, the parts' lines, what each example is,"
+                  " the rows' two lines, a visitor's note and its link), every link and button 44px and more: signed in and"
+                  " a visitor, a phone and a desk, light and dark",
+                  len(words) == 8 and all(v["read"] >= 20 and not v["low"] and not v["small"] for v in words.values()),
+                  json.dumps({k: (v["read"], v["lowest"], v["low"][:2], v["small"][:2]) for k, v in words.items()})[:900])
+        except Exception as exc:  # noqa: BLE001
+            stopped(11, exc)
 
     # ------------------------------------------------------------------ 10
     if part(10, "no page errors, no console errors and no CSP violations"):

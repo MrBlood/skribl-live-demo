@@ -985,7 +985,7 @@ of its own pages, so a framing header of yours that covers Skribl's pages has
 to allow the same origin, as Skribl's own policy does (`frame-ancestors
 'self'`); a header that already lets you frame the editor lets it frame this.
 
-**The handshake** underneath it, five messages, all `postMessage` — you need
+**The handshake** underneath it, six messages, all `postMessage` — you need
 this only if you are not using the module:
 
     editor -> host   skribl:compose:ready    up; send a payload if re-editing
@@ -993,9 +993,33 @@ this only if you are not using the module:
     editor -> host   skribl:compose:done     {payload, preview, hasAudio}
     editor -> host   skribl:compose:cancel   closed without attaching
     host   -> editor skribl:compose:guide    {file} a face's photo to trace
+    host   -> editor skribl:compose:help     open the editor's How it works
 
-The last is the face mode's alone ("A photo to trace", below); anywhere else
-the Pad ignores it.
+`guide` is the face mode's alone ("A photo to trace", below); anywhere else
+the Pad ignores it. `help` is the next paragraph's.
+
+**Sending people to the editor's own How it works.** A page of yours that
+explains your site can send people on to the Pad's and Flip's own help
+(their ⋯ menu's "How it works": a question in your own words, examples to
+watch, a little book), two ways. From a link, the editor's address with
+`?help=1`: it opens once the page has loaded, and the flag leaves the
+address, so a reload does not open it again.
+
+```python
+url_for("skribl.skribl_editor", help=1)   # or "skribl.skribl_flip"
+```
+
+From your composer, ask the editor you already hold, once it has said
+`ready`, so the person stays inside your site and Add still brings a
+drawing back:
+
+```js
+frame.contentWindow.postMessage({ type: 'skribl:compose:help' }, location.origin);
+```
+
+Asked while it is already open, it is left as it is. The Skribl site does
+both: its own How it works page opens the editor inside a post for somebody
+signed in, and links to the editor's address for a visitor.
 
 Target your own origin, never `'*'`, and check `e.origin` on the way in — a
 wildcard hands the author's drawing to whatever page is framing the editor. If

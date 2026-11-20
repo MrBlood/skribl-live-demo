@@ -1,4 +1,4 @@
-# Next session: the handoff (Nov 19, 2026, morning, Mountain Time)
+# Next session: the handoff (Nov 19, 2026, Mountain Time: written that morning, its status lines added to through the evening)
 
 A snapshot from the session that built Draw back, written as its last step.
 It is not maintained: where things stand is the newest entries at the bottom
@@ -204,12 +204,37 @@ what was red on the way, and why, is in the three entries of `DECISIONS.md`
 before the last. THE OWNER SAID "YES TO ALL" TO THE SEVEN (about 5:50 PM):
 1 to 4 below are decided as built; 5 to 7 were a go-ahead to mocks and a
 walk, now made, with the owner's own idea of that evening (the pencil's
-line in colour) beside them. WAITING ON THE OWNER, SIX CHOICES, EACH WITH A
-DEFAULT: https://claude.ai/artifact/28w1ZWVgWNRC9YF7Cywt8t (`DECISIONS.md`,
-the newest entry, has every finding and number). If it is "all yes": the
-pencil's line and the Drafts tile first (small), then Your hand inside a
-post, then How it works; each with a check shown red first, and each Pad
-change saying what it does to Flip.
+line in colour) beside them: https://claude.ai/artifact/28w1ZWVgWNRC9YF7Cywt8t
+"ALL YES" TO THOSE SIX (the owner, Nov 19, about 7:40 PM), ALL BUILT THAT
+EVENING, four pull requests, each with its entry in `DECISIONS.md` (the
+four after "the evening's mocks") and `docs/SOCIAL-SITE.md` section 22:
+- #1002, the pencil's line: Draw back's wave in the pen-line purple, white
+  on the action's fill.
+- #1003, a draft's tile on your profile opens inside a post (and a posted
+  draft stays in Drafts, as it did: nothing built).
+- #1004, Your hand opens over the post and the drawing waits (Skribl's
+  `lib/handover.js`, both editors, compose mode alone).
+- the one after, How it works: the ☰'s first row, a tab in a desk's rail,
+  and the site's own page `/social/how`.
+READ MAIN'S RUNS before believing main is green on them: the run after
+#1002 was cancelled by the queue (not run), and the later ones were still
+running when this was written.
+DECIDED BEYOND THE MOCKS, TOLD TO THE OWNER, THEIRS TO CHANGE:
+- the pencil's wave stays white on the purple "Draw back" pill that rises
+  when a replay ends (purple on that purple is 1.23:1);
+- a draft opened from its tile: the editor's × takes the sheet with it
+  (back on your drafts, not an empty post), and only the editor is seen
+  rising;
+- Your hand over a face's Pad says "Your drawing is waiting for you." (no
+  post to name), and it fades in place under Reduce Motion, past the
+  editors' own rule that stops every transition there;
+- How it works: its examples are files, not posts (Skribl's cat and Flip,
+  and a draw-back made for it, a ball of yarn on the cat); they play where
+  they sit, the first by itself once; a row goes where the thing is done;
+  a visitor's four are plain lines with Sign in beside one line; "The Pad"
+  and "Flip" open the editor INSIDE A POST with its help showing, where the
+  mock said only "into the Pad's and Flip's own How it works".
+NOT TESTED ANYWHERE THIS EVENING: Safari on an iPhone, SF, Segoe UI.
 MAIN AFTER #993 WAS RED ON ONE ROW (verify_socialcomments 33, "the tint
 fading", sqlite 4 of 6): the check's clock, not the site (`DECISIONS.md`,
 "Main's red after #993"); its watch now starts when the comment arrives.

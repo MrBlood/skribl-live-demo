@@ -238,4 +238,29 @@
     if (input.value) { input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); }
   }).observe(drawer, { attributes: true, attributeFilter: ['hidden'] });
 
+  /* ASKED FOR FROM OUTSIDE (the owner's "All yes", Nov 19, to a door from
+   * the Skribl site to How it works). A host's own page that explains the
+   * host sends people on to the editor's How it works, two ways:
+   *   - ?help=1 on the editor's own address (the site's rows for a visitor,
+   *     whose only Pad is this page): opened once the page has loaded, and
+   *     the flag leaves the address, so a reload does not open it again;
+   *   - skribl:compose:help, a host's composer asking the editor it holds
+   *     (editor_compose.js hears it and calls this).
+   * Each editor's own openHelpDrawer does the opening, as its menu's row
+   * does: nothing new opens, and one already open is left as it is. */
+  function askOpen() {
+    if (drawer.hidden && typeof window.openHelpDrawer === 'function') window.openHelpDrawer();
+  }
+  window.SkriblAskOpen = askOpen;
+  (function () {
+    var q;
+    try { q = new URLSearchParams(window.location.search); } catch (e) { return; }
+    if (q.get('help') !== '1') return;
+    q.delete('help');
+    var rest = q.toString();
+    try { history.replaceState(history.state, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash); }
+    catch (e) {}
+    if (document.readyState === 'complete') askOpen(); else window.addEventListener('load', askOpen);
+  }());
+
 }());

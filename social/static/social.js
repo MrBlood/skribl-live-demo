@@ -286,6 +286,8 @@
    *                            // Yours; composehost openDraft)
    *   over.underlay(o, back)   // draw back: a drawing faint under the pen
    *                            // ({payload, first}; composehost underlay)
+   *   over.help(back)          // the editor with its own How it works
+   *                            // showing (the site's How it works page)
    *
    * `wrap` is the overlay (.facepad: its scrim, its sheet, its frame, and the
    * editor's address in data-compose); `openers` are marked aria-expanded.
@@ -301,6 +303,24 @@
     var openers = o.openers || [];
     var behind = [doc.querySelector('body > .top'), doc.querySelector('body > .nav'), doc.getElementById('main')];
     var from = null, timer = 0, open = false, was = [];
+    /* HOW IT WORKS, ASKED FOR (help, below): the editor is asked for its own
+       help once it can hear. `heard`: the editor in the frame has said ready
+       since the frame last took an address, so it can be asked at once;
+       otherwise the asking waits for that ready. */
+    var heard = false, wantHelp = false;
+    function askHelp() {
+      wantHelp = false;
+      /* One message, to this page's own origin, as composehost's are. */
+      try { frame.contentWindow.postMessage({ type: 'skribl:compose:help' }, window.location.origin); }
+      catch (e) { /* the frame is gone: nothing to ask */ }
+    }
+    /* Whatever `go` does to the frame: a new address means a new editor,
+       which has not said ready yet. */
+    function moved(go) {
+      var at = frame.getAttribute('src');
+      go();
+      if (frame.getAttribute('src') !== at) heard = false;
+    }
 
     /* The page behind goes inert while it is up, and comes back as it was:
        opened from a sheet (a phone's comment box), the page stays inert
@@ -351,7 +371,12 @@
         clearTimeout(timer);
         timer = setTimeout(settle, SETTLE_MS);
       },
-      onReady: function () { wrap.classList.add('is-ready'); if (o.onReady) o.onReady(); },
+      onReady: function () {
+        heard = true;
+        wrap.classList.add('is-ready');
+        if (wantHelp) askHelp();
+        if (o.onReady) o.onReady();
+      },
       onDone: function (payload, preview, hasAudio) { if (o.onDone) o.onDone(payload, preview, hasAudio); },
       onCancel: function () { if (o.onAway) o.onAway(); }
     });
@@ -367,10 +392,26 @@
 
     return {
       pad: pad,
-      open: function (back) { from = back || null; pad.open(); },
-      guide: function (file, back) { from = back || null; pad.guide(file); },
-      openDraft: function (id, back) { from = back || null; wrap.classList.remove('is-ready'); pad.openDraft(id); },
-      underlay: function (o, back) { from = back || null; wrap.classList.remove('is-ready'); pad.underlay(o); },
+      open: function (back) { from = back || null; wantHelp = false; moved(function () { pad.open(); }); },
+      guide: function (file, back) { from = back || null; wantHelp = false; moved(function () { pad.guide(file); }); },
+      openDraft: function (id, back) {
+        from = back || null; wantHelp = false; heard = false;
+        wrap.classList.remove('is-ready');
+        pad.openDraft(id);
+      },
+      underlay: function (o, back) {
+        from = back || null; wantHelp = false; heard = false;
+        wrap.classList.remove('is-ready');
+        pad.underlay(o);
+      },
+      /* The editor, with its own How it works showing: asked at once when
+         the editor in the frame can hear already, else at its ready. */
+      help: function (back) {
+        from = back || null;
+        wantHelp = true;
+        moved(function () { pad.open(); });
+        if (heard) askHelp();
+      },
       isOpen: function () { return open; }
     };
   }

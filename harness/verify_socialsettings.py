@@ -50,10 +50,11 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
      named Menu, three strokes in our pen of one length (the owner's "B,
      equal lines", Nov 14), in the top's ink;
      a desk has none, nor any other page; it opens the site's own sheet, the
-     ⋯'s, titled with your name: Settings, Community rules, Privacy, Your
+     ⋯'s, titled with your name: How it works (first, since Nov 19), Settings,
+     Community rules, Privacy, Your
      reports (an admin's alone) and Sign out (a form with the page's token, on
-     the Gallery too), its rows one card, no Help; signed out, titled Blooby,
-     Sign in, Community rules and Privacy; each row opens what it says, the
+     the Gallery too), its rows one card; signed out, titled Blooby,
+     How it works, Sign in, Community rules and Privacy; each row opens what it says, the
      sheet going down as it does; Sign out signs out; no Cancel: Esc, a tap
      outside, its grip and a swipe down close it,
      focus back on the ☰; it rises and goes down read on every frame, and
@@ -1222,12 +1223,17 @@ with sync_playwright() as p:
                             settings: [...document.querySelectorAll('a[href$="/social/you"]')].filter(a => a.getClientRects().length).length,
                             places: [...document.querySelectorAll('nav.nav > a, nav.nav > button')].filter(e => e.getClientRects().length && !e.classList.contains('brand'))
                                      .map(e => (e.querySelector('.tab-name') || e).textContent.trim()) })""")
-                        outs.append((not seen["switch"] and seen["settings"] == 0 and seen["places"] == ["Home", "Gallery", "Make", "Sign in"]
+                        # How it works is a desk's rail's alone (the owner's "All yes",
+                        # Nov 19): a phone's bar keeps its four places.
+                        places = (["Home", "Gallery", "Make", "Sign in"] if screen == "phone"
+                                  else ["Home", "Gallery", "Make", "How it works", "Sign in"])
+                        outs.append((not seen["switch"] and seen["settings"] == 0 and seen["places"] == places
                                      and st["stamp"] == scheme and st["page"] == PAGE_RGB[scheme],
                                      f"{screen} {scheme} {path}: {seen}, {st['stamp']} {st['page']}"))
                     close_ctx(ctx, pg)
-            check("signed out the site shows nothing new: no Theme switch and no way to Settings anywhere, the bar and"
-                  " the rail as they were (Home, Gallery, Make, Sign in), and the device decides",
+            check("signed out the site shows nothing of Settings: no Theme switch and no way to Settings anywhere, the bar as"
+                  " it was (Home, Gallery, Make, Sign in) and a desk's rail with How it works above Sign in, and the device"
+                  " decides",
                   all(o for o, _ in outs), "; ".join(w for o, w in outs if not o) or f"{len(outs)} pages")
             ctx, pg = browser_as(b, None, "phone", "light", theme=None)
             go(pg, "/social/")
@@ -1430,24 +1436,26 @@ with sync_playwright() as p:
                 pg.wait_for_timeout(700)
                 sheets[path] = pg.evaluate(MSHEET)
                 close_ctx(ctx, pg)
-            want = [["Settings", "/social/you"], ["Community rules", "/social/rules"], ["Privacy", "/social/privacy"]]
+            want = [["How it works", "/social/how"], ["Settings", "/social/you"], ["Community rules", "/social/rules"],
+                    ["Privacy", "/social/privacy"]]
             bad = []
             for path, s1 in sheets.items():
                 if not (s1 and s1["open"] and s1["sheet"] and s1["role"] == "dialog" and s1["modal"] == "true" and s1["labelled"]
                         and s1["title"] == name_of[plain.handle] and same_colour(s1["paper"], PAPER["light"])
-                        and [[r["words"], r["href"]] for r in s1["rows"]][:3] == want and len(s1["rows"]) == 4
-                        and s1["rows"][3]["words"] == "Sign out" and s1["token"]
-                        and s1["rows"][3]["form"] == {"action": "/social/signout", "method": "post", "token": s1["token"]}
+                        and [[r["words"], r["href"]] for r in s1["rows"]][:4] == want and len(s1["rows"]) == 5
+                        and s1["rows"][4]["words"] == "Sign out" and s1["token"]
+                        and s1["rows"][4]["form"] == {"action": "/social/signout", "method": "post", "token": s1["token"]}
                         and len(s1["cards"]) == 1 and same_colour(s1["cards"][0], ROWBG["light"])
                         and all(r["h"] >= 56 and r["icon"] and r["bg"] == "rgba(0, 0, 0, 0)" for r in s1["rows"])
                         and all(abs(r["gap"]) <= 0.5 for r in s1["rows"][1:])
-                        and s1["focus"] == "Settings" and all(s1["inert"]) and s1["expanded"] == "true"):
+                        and s1["focus"] == "How it works" and all(s1["inert"]) and s1["expanded"] == "true"):
                     bad.append(f"{path}: {json.dumps(s1)}")
             check("signed in, it opens the site's own sheet, the ⋯'s (Make's sheet in its paper, a modal dialog named by"
-                  " its title, your name): Settings, Community rules, Privacy and Sign out (a form posting to the"
-                  " sign-out with the page's own token, the Gallery's too), each row 56px tall with its icon, no Help;"
+                  " its title, your name): How it works (its first row since the owner's \"All yes\", Nov 19, to the site's"
+                  " own page), Settings, Community rules, Privacy and Sign out (a form posting to the"
+                  " sign-out with the page's own token, the Gallery's too), each row 56px tall with its icon;"
                   " its rows ONE CARD (--row-bg; the owner's \"B, equal lines\", Nov 14: they were a card each), nothing"
-                  " of their own behind them and touching; focus on Settings, the page behind inert, the ☰ marked"
+                  " of their own behind them and touching; focus on its first row, the page behind inert, the ☰ marked"
                   " open; on Home and on the Gallery",
                   not bad and len(sheets) == 2, "; ".join(bad)[:1200])
 
@@ -1477,11 +1485,12 @@ with sync_playwright() as p:
                 pg.wait_for_timeout(700)
                 outs[path] = pg.evaluate(MSHEET)
                 close_ctx(ctx, pg)
-            check("signed out, the same ☰ opens the same sheet titled Blooby, with what a visitor can use: Sign in,"
-                  " Community rules and Privacy (no Settings, no Sign out); focus on Sign in",
+            check("signed out, the same ☰ opens the same sheet titled Blooby, with what a visitor can use: How it works,"
+                  " Sign in, Community rules and Privacy (no Settings, no Sign out); focus on its first row, How it works",
                   all(o and o["open"] and o["title"] == "Blooby" and [[r["words"], r["href"]] for r in o["rows"]]
-                      == [["Sign in", "/social/signin"], ["Community rules", "/social/rules"], ["Privacy", "/social/privacy"]]
-                      and o["focus"] == "Sign in" and all(r["h"] >= 56 and r["icon"] for r in o["rows"]) for o in outs.values())
+                      == [["How it works", "/social/how"], ["Sign in", "/social/signin"], ["Community rules", "/social/rules"],
+                          ["Privacy", "/social/privacy"]]
+                      and o["focus"] == "How it works" and all(r["h"] >= 56 and r["icon"] for r in o["rows"]) for o in outs.values())
                   and len(outs) == 2, json.dumps({k: v and [[r["words"], r["href"]] for r in v["rows"]] for k, v in outs.items()}))
 
             # (f) each row opens what it says; the sheet goes down as it goes

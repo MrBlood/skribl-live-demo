@@ -256,6 +256,19 @@
 {%- endmacro %}
 
 {# Settings, on your own profile: the account page (the profile mock's gear). #}
+{# HOW IT WORKS (the owner's "All yes", Nov 19, to the door from the site to
+   How it works): a play mark in a ring, "watch how it works". The ☰'s first
+   row and a tab in a desk's rail; on its own page the mark is filled, as
+   Home's is. #}
+{% macro how(filled=false) -%}
+{{ _svg('<circle cx="12" cy="12" r="8.6"/><path d="M10.1 8.5v7l5.9-3.5z"' ~ (' fill="currentColor"' if filled else '') ~ '/>') }}
+{%- endmacro %}
+
+{# A ROW THAT GOES SOMEWHERE (How it works' rows): a small chevron at its end. #}
+{% macro go() -%}
+{{ _svg('<path d="M9.5 6.5l5.5 5.5-5.5 5.5"/>') }}
+{%- endmacro %}
+
 {% macro gear() -%}
 {{ _svg('<path d="M10.3 3.5h3.4l.5 2.4 1.6.9 2.3-.8 1.7 2.9-1.8 1.6v1.9l1.8 1.6-1.7 2.9-2.3-.8-1.6.9-.5 2.4h-3.4l-.5-2.4-1.6-.9-2.3.8-1.7-2.9 1.8-1.6v-1.9L4.2 8.9l1.7-2.9 2.3.8 1.6-.9z"/><circle cx="12" cy="12" r="2.8"/>') }}
 {%- endmacro %}
