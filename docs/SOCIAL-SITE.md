@@ -2961,3 +2961,81 @@ where it lives above; this is the index.
   site it sat 38px above repost's two arrows in a ring, the same picture.
   Flip's "Loop this page" and the music drawer's loop keep the arrows:
   other verbs.
+
+## 22. Built: the evening's six (the owner's "All yes", Nov 19, about 7:40 PM)
+
+The page put to the owner that evening had four parts and six choices
+(`DECISIONS.md`, "Yes to all to the seven ... the evening's mocks"); "All
+yes" took the default of each. Built in four pull requests, each with its
+entry in `DECISIONS.md` and its checks shown red first.
+
+- **6, the pencil's line:** the little wave the pen draws in the Draw back
+  icon wears `--brand`, the pen's line under the chosen tab; the pen stays
+  in the ink of where it sits. One macro, so the row under a post, the
+  draw-backs' title, "Draw back" in words and Activity's badge change
+  together; on the pill that rises when a replay ends (the action's fill)
+  the wave stays white (`verify_socialdrawback` 9).
+- **4, a draft's tile on your profile:** a tap opens the draft inside a
+  post (the composer's sheet with the editor that made it over it, the
+  sheet not painted until Add), where it was a link out of the site to the
+  editor by itself. Put away without Add, the sheet goes with it and you
+  are on your drafts (`compose.js` `SocialComposer.draft`;
+  `verify_socialprofile` 20).
+- **5, a posted draft:** stays in Drafts, as it did. Nothing built.
+- **1, Your hand inside a post:** the Text drawer's "Make yours" and "Edit
+  your hand" open Your hand in a layer over the editor, which never leaves,
+  where the composer's frame used to go there and come back as the editor
+  by itself with the drawing gone. Skribl's own (`lib/handover.js`;
+  `verify_text` 23, `verify_composer` 10); nothing of the site's changed.
+- **2 and 3, How it works:** below.
+
+### How it works, the site's own page (`how.py`, `how.html`, `how.js`)
+
+The site had no door to any help: the ☰'s own note said "No Help row until
+there is a Help page." Now `/social/how`, for anybody, signed in or not.
+
+**Its doors.** The ☰'s first row on a phone (How it works, then Settings,
+or Sign in for a visitor), and on a desk a tab in the rail above Settings
+(above Sign in before that), lit on its own page as Home's is. A phone's
+bar keeps its four places, and the page has no ☰ of its own.
+
+**The page**, in the shape of the Pad's own How it works, so the two read as
+one family: "How it works", "Blooby is where people talk in drawings.",
+then three parts.
+
+- *Watch an example.* Three drawings, each in Skribl's in-post player (the
+  box a post has), 168px wide on a phone so the third shows there is more
+  to the side: a drawing, a draw-back, a Flip. THEY ARE FILES, NOT POSTS, so
+  they are there on a site with no posts yet: Skribl's cat and its bouncing
+  Flip (its help's demos, named with `skribl_asset`), and the site's own
+  draw-back (`static/how/drawback.json`): that cat, and a ball of yarn
+  drawn on it with a real pen through the composer's Pad, joined as the
+  site joins every draw-back. Each box keeps its drawing's shape before the
+  drawing comes, so nothing moves; each play button says what its file says
+  (the cat's 15 sec; the draw-back's two hands, 15 and 6, so 21; the
+  Flip's 10 pages). The first draws itself once as the page opens, never
+  under Reduce Motion; a tap plays one and stops another. If the files do
+  not come, one line says so, with Try again.
+- *People often ask.* Four rows, the question over its answer in the fewest
+  words ("Post a drawing / The pencil, then Draw"), and a tap goes where it
+  is done: the composer on this page; Home's Everyone, where the drawings
+  are; your profile. A visitor reads the same four with nothing to tap, and
+  one line says why ("You'll need an account for these, and Blooby is by
+  invite for now."), Sign in beside it.
+- *The drawing tools.* "The Pad" and "Flip", the editors' own How it works.
+  Signed in, each opens that editor INSIDE A POST with its help showing
+  (`SocialComposer.editor`, the same way in as a draft's tile: only the
+  editor is seen, its × is back on this page, and Add starts a post with
+  what was drawn), so nobody is sent out of the site to the editor by
+  itself. Each is still a link to the editor's own address with `?help=1`,
+  which is where a visitor goes: their only Pad is that page, as Make's two
+  doors are.
+
+**What it asked of Skribl** (docs/INTEGRATION.md, "Sending people to the
+editor's own How it works"): the editors open their own How it works when
+their address carries `?help=1` (the flag leaves the address), and when a
+host's composer asks the editor it holds (`skribl:compose:help`). One
+module for both editors (`lib/ask.js`).
+
+`verify_socialapp` 11 holds the page and its doors, `verify_ask` 6 the
+editors' side.

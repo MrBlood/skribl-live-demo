@@ -383,7 +383,7 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
                                show="everyone", sort="new", q="", more_url=None)
 
     if site is not None:
-        from . import (accounts, activity, bookmarks, comments, compose, follows, gallery, likes, mentions, mutes,
+        from . import (accounts, activity, bookmarks, comments, compose, follows, gallery, how, likes, mentions, mutes,
                        posts, profiles, push, reports, reposts, rules, safety)
         accounts.register(bp)
         gallery.register(bp)
@@ -402,6 +402,7 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         safety.register(bp)
         reports.register(bp, skribl_blueprint)
         rules.register(bp)
+        how.register(bp)
 
         @bp.before_request
         def _small_bodies():

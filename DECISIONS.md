@@ -48298,3 +48298,95 @@ a post; and Reduce Motion's fades, red before they were written.
 FLIP AND THE PAD: one module, one partial, one sheet, loaded by both in
 compose mode; the layer's markup is in `_skribl_text.html`, which both
 include. NOT TESTED: Safari on an iPhone, SF or Segoe UI.
+
+## After v330 -- How it works, from the site: the menu's first row, a tab in the rail, and the site's own page (choices 2 and 3)
+
+THE OWNER'S QUESTION (Nov 19, about 4:10 PM): "does anything from inside
+pad/flip need to come to a menu in blooby? somehow link to how it works?"
+The site had no door to any help: its menu's own note said "No Help row
+until there is a Help page." THE "All yes" (about 7:40 PM): "How it works
+in the menu: first row on a phone, above Settings on a desktop, and there
+for visitors too", opening "Blooby's own short page, with Pad's and Flip's
+help at the bottom".
+
+BUILT AS THE MOCK DREW IT (`how.py`, `how.html`, `how.js`, `/social/how`):
+the ☰'s first row with a play mark in a ring; a tab in a desk's rail above
+Settings (above Sign in for a visitor), lit on its own page; and the page,
+in the shape of the Pad's own How it works: "How it works", "Blooby is
+where people talk in drawings.", Watch an example (A drawing, A draw-back,
+A Flip), People often ask (Post a drawing; Answer a drawing with a drawing;
+Comment with a drawing; Draw your face), The drawing tools (The Pad; Flip).
+The words are the mock's.
+
+WHAT THE MOCK LEFT OPEN, DECIDED HERE AND TOLD TO THE OWNER:
+- THE EXAMPLES ARE FILES, NOT POSTS. The mock's three were the test site's
+  own posts. A real site may have none (and the live one's are other
+  people's), so the page ships its own: Skribl's cat and its bouncing Flip
+  (the Pad's help's demos), and a draw-back made for it the way a
+  draw-back is made: the cat posted through the composer, the pen tapped,
+  a ball of yarn drawn on it with a real pen in the real Pad
+  (`harness/tools/artdraw.py`: pressure, gesture then form then detail then
+  accent), the site joining the two. What is saved is that post's own
+  drawing (`static/how/drawback.json`, 68 KB), the mock's "Gave her
+  something to chase".
+- THEY PLAY WHERE THEY SIT, in Skribl's in-post player, the box a post has:
+  what is watched on this page is what a post is. The first draws itself
+  once as the page opens (never under Reduce Motion): the page says what
+  the site is by doing it. Each box keeps its drawing's shape before the
+  drawing comes, so nothing moves.
+- THE DRAW-BACK'S BUTTON SAYS BOTH HANDS' TIME, 21 sec (15 and 6), as a
+  draw-back's does on a card: its joined drawing plays hers squeezed, and
+  its own length is nine. The player's small length chip, which would say
+  that nine beside it, is not shown here.
+- A ROW GOES WHERE IT IS DONE. The mock's rows had chevrons and went
+  nowhere. Post a drawing opens the composer on the page; the two about
+  answering go to Home's Everyone, where the drawings are; Draw your face
+  goes to your profile. No answers were written: each row's second line
+  is the answer ("The pencil, then Draw").
+- A VISITOR CANNOT DO THE FOUR, so theirs are plain lines with nothing to
+  tap, and one line says why: "You'll need an account for these, and
+  Blooby is by invite for now.", Sign in beside it as a button (as a link
+  in the line it was 19px tall, which the page's own check caught).
+- THE DRAWING TOOLS DO NOT SEND ANYBODY OUT OF THE SITE. The mock said "two
+  rows into the Pad's and Flip's own How it works". Signed in, a link to
+  the editor by itself is the seam the walk found on a draft's tile (no
+  way back, "Post to Skribl"). So each row opens that editor INSIDE A
+  POST with its own How it works showing, by the door a draft's tile uses
+  (`SocialComposer.editor`: only the editor is seen, its × is back on the
+  page, Add starts a post with what was drawn). A visitor's only Pad is
+  the editor's own page, as Make's two doors are, so theirs is the link.
+
+WHAT IT ASKED OF SKRIBL, ONE MODULE FOR BOTH EDITORS (`lib/ask.js`): each
+editor opens its own How it works when its address carries `?help=1` (once
+the page has loaded; the flag leaves the address), and when a host's
+composer asks the editor it holds (`skribl:compose:help`, heard in
+`editor_compose.js`). Nothing new opens: each editor's own
+`openHelpDrawer`, as its menu's row calls it. The site's overlay asks at
+the editor's `ready`, or at once when the editor is loaded already
+(`social.js`, `help`); `composehost.js` is not touched.
+
+THE ☰'S ROWS, WHICH EARLIER CHECKS COUNTED: Add to Home Screen is still
+"right under Settings" and is the third row now (it was "the second"), and
+focus lands on How it works when the sheet opens (it was Settings).
+`verify_socialapp` 4 and 6, `verify_socialsettings`, `verify_social` 2 and
+`verify_socialactivity` say so. ONE OF THOSE WAS FOUND BY THE RUN, NOT BY
+READING: `verify_socialsettings` still listed a visitor's rail as "Home,
+Gallery, Make, Sign in" (one row red beside the other suites); its
+expectation was mended and it passed whole alone, which the runner prints
+as INTERMITTENT. It was the stale list, not load.
+
+THE CHECKS (`verify_socialapp`, a new section 11, sixteen rows;
+`verify_ask` 6, eight rows): what the examples' buttons say is worked out
+in the suite from the three files, never copied from the page (the cat's
+own time; the answer's own time inside the draw-back's file; the Flip's
+pages), and the draw-back's file is checked to be that cat point for point
+and then an answer. Shown red twenty ways in scratch copies, with their
+rows, in the pull request. TWO REDS OF THE FIRST RUN: the visitor's Sign
+in, 49 by 19 (a real miss, mended); and "the boxes' shape before the
+drawings come", where the check had slept inside the handler holding the
+files, which held its own reading too (the instrument: the files are held
+now and let go after the page is read).
+
+FLIP AND THE PAD: shared. `lib/ask.js` and `editor_compose.js` are loaded
+by both; each opens its own How it works. NOT TESTED: Safari on an iPhone,
+SF or Segoe UI.

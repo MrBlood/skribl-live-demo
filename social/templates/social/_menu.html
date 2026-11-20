@@ -10,14 +10,20 @@
     under it: its grip, a tap outside it, a swipe down and Esc close it, as
     they close the Pad's menu.
 
-    Signed in, its title is your name, then: Settings, Community rules,
-    Privacy, Your reports (an admin's alone, as Settings shows it: the page
-    is nobody else's) and Sign out (a form with the page's token, as
-    Settings' Sign out is). No Help row until there is a Help page.
+    Signed in, its title is your name, then: How it works, Settings,
+    Community rules, Privacy, Your reports (an admin's alone, as Settings
+    shows it: the page is nobody else's) and Sign out (a form with the
+    page's token, as Settings' Sign out is).
+
+    HOW IT WORKS IS ITS FIRST ROW (the owner's "All yes", Nov 19: "first row
+    on a phone, above Settings on a desktop, and there for visitors too").
+    It waited for a page to open (this note said "No Help row until there
+    is a Help page"); the page is the site's own (how.py, how.html).
 
     SIGNED OUT, the same ☰ in the same place, and in it what a visitor can
-    use: Sign in, Community rules and Privacy, so the rules and what is kept
-    can be read before anybody is invited. Its title is the site's name.
+    use: How it works, Sign in, Community rules and Privacy, so what the
+    site is, its rules and what is kept can be read before anybody is
+    invited. Its title is the site's name.
 
     A row picked goes there, and the sheet goes down as it does (social.js),
     so the page the back button brings back has it closed. The words are
@@ -29,6 +35,7 @@
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="siteMenuTitle">{{ me.display_name if me else 'Blooby' }}</h2>
     <div class="post-acts">
+      <a class="post-act" href="{{ url_for('social.how') }}">{{ ic.how() }}<span>How it works</span></a>
       {% if me %}
       <a class="post-act" href="{{ url_for('social.you') }}">{{ ic.gear() }}<span>Settings</span></a>
       {% else %}

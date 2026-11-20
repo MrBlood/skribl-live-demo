@@ -1,0 +1,91 @@
+{#  HOW IT WORKS, the site's own page (the owner's "All yes", Nov 19, to the
+    How it works mock: "Blooby's own short page, with Pad's and Flip's help
+    at the bottom"; how.py, how.js). The site had no door to any help: the
+    ☰'s first row on a phone and a tab in a desk's rail open this, for a
+    visitor too.
+
+    IN THE SHAPE OF THE PAD'S OWN HOW IT WORKS, so the two read as one
+    family: Watch an example, People often ask, then the tools. No search box
+    in a first version: there are six rows.
+
+    WATCH AN EXAMPLE: three drawings that draw themselves, each in Skribl's
+    own in-post player (the box a post has), so what is watched here is what
+    a post is. They are files, so they are here on a site with no posts yet
+    (how.py says which). A tap plays one where it sits, and its play button
+    says how long it took, as a card's does: the draw-back's, both hands'
+    time (15 sec and 6 sec: PARTS). The first plays itself once as the page
+    opens, never under Reduce Motion (how.js).
+
+    PEOPLE OFTEN ASK: each row is the question and, under it, the answer in
+    the fewest words ("The pencil, then Draw"), and a tap takes you to where
+    it is done: Post a drawing opens the composer here; the others go to
+    Home's Everyone, where the drawings are, or to your profile. A VISITOR
+    reads the same four as plain lines (nothing to tap that would not work),
+    and one line under them says why, with Sign in beside it, a button a
+    finger can find (as a link in the line it was 19px tall).
+
+    THE DRAWING TOOLS: the Pad's and Flip's own How it works. Signed in, each
+    row opens that editor INSIDE A POST with its help showing (compose.js,
+    SocialComposer.editor; the editor's × is back on this page, and Add
+    starts a post with what was drawn), so nobody is sent out of the site
+    to the editor by itself. Each is still a link to the editor's own
+    address with ?help=1, which is where a visitor goes: their only Pad is
+    that page, as Make's two doors are.
+
+    The words are here; how.js says nothing of its own. #}
+{% extends 'social/base.html' %}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
+{% import 'social/_icons.html' as ic %}
+
+{% block title %}How it works · Blooby{% endblock %}
+
+{% block scripts %}<script src="{{ social_asset('how.js') }}" defer></script>{% endblock %}
+
+{% macro example(n, src, title, line, parts=None) -%}
+<li class="how-ex">
+  <div class="how-pic" data-how-src="{{ src }}"{% if parts %} data-how-parts="{{ parts }}"{% endif %}>{{ skribl_inline_draft('howEx' ~ n, controls=false, progress=false) }}</div>
+  <p class="how-cap"><b>{{ title }}</b><span>{{ line }}</span></p>
+</li>
+{%- endmacro %}
+
+{% macro words(title, line) -%}
+<span class="how-words"><b>{{ title }}</b><span>{{ line }}</span></span>
+{%- endmacro %}
+
+{% block main %}
+<div class="how" data-how>
+  <div class="page-head"><h1 class="page-title">How it works</h1><p class="page-sub">Blooby is where people talk in drawings.</p></div>
+
+  <h2 class="how-k" id="howWatchK">Watch an example</h2>
+  <ul class="how-strip" aria-labelledby="howWatchK">
+    {{ example(1, skribl_asset('help/demos/cat.json'), 'A drawing', 'It draws itself, the way it was made') }}
+    {{ example(2, social_asset('how/drawback.json'), 'A draw-back', 'Theirs, then yours on top', parts=parts) }}
+    {{ example(3, skribl_asset('help/demos/flip-bounce.json'), 'A Flip', 'Pages that move') }}
+  </ul>
+  <p class="how-say" data-how-say hidden><span role="status">The examples didn’t load. Check your connection, then try again.</span>
+    <button class="btn btn-small" type="button" data-how-again>Try again</button></p>
+
+  <h2 class="how-k" id="howAskK">People often ask</h2>
+  <section class="panel how-rows" aria-labelledby="howAskK">
+    {% if me %}
+    <button class="how-row" type="button" data-make aria-haspopup="dialog" aria-controls="composeSheet" aria-expanded="false">{{ words('Post a drawing', 'The pencil, then Draw') }}{{ ic.go() }}</button>
+    <a class="how-row" href="{{ url_for('social.home', tab='everyone') }}">{{ words('Answer a drawing with a drawing', 'Draw back: the pen under any drawing') }}{{ ic.go() }}</a>
+    <a class="how-row" href="{{ url_for('social.home', tab='everyone') }}">{{ words('Comment with a drawing', 'The speech bubble, then Draw') }}{{ ic.go() }}</a>
+    <a class="how-row" href="{{ url_for('social.profile', handle=me.handle) }}">{{ words('Draw your face', 'On your profile') }}{{ ic.go() }}</a>
+    {% else %}
+    <div class="how-row">{{ words('Post a drawing', 'The pencil, then Draw') }}</div>
+    <div class="how-row">{{ words('Answer a drawing with a drawing', 'Draw back: the pen under any drawing') }}</div>
+    <div class="how-row">{{ words('Comment with a drawing', 'The speech bubble, then Draw') }}</div>
+    <div class="how-row">{{ words('Draw your face', 'On your profile') }}</div>
+    {% endif %}
+  </section>
+  {% if not me %}<p class="how-say how-out"><span>You’ll need an account for these, and Blooby is by invite for now.</span>
+    <a class="btn btn-small" href="{{ url_for('social.signin') }}">Sign in</a></p>{% endif %}
+
+  <h2 class="how-k" id="howToolsK">The drawing tools</h2>
+  <section class="panel how-rows" aria-labelledby="howToolsK">
+    <a class="how-row" href="{{ pad_url }}?help=1" data-how-editor="pad">{{ words('The Pad', 'Pens, colour, music and replay speed') }}{{ ic.go() }}</a>
+    <a class="how-row" href="{{ flip_url }}?help=1" data-how-editor="flip">{{ words('Flip', 'Pages that move') }}{{ ic.go() }}</a>
+  </section>
+</div>
+{% endblock %}

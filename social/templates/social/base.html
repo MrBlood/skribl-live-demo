@@ -193,6 +193,13 @@
   {% endif %}
   <button class="tab tab-make" type="button" data-make aria-haspopup="dialog" aria-controls="{{ 'composeSheet' if composing else 'makeSheet' }}" aria-expanded="false">
     <span class="tab-ic">{{ ic.pen() }}</span><span class="tab-name">Make</span></button>
+  {% if accounts %}
+  {# How it works, a desk's rail only (a phone's bar keeps its four places:
+     there it is the ☰'s first row), above Settings, or above Sign in before
+     that (the owner's "All yes", Nov 19). #}
+  <a class="tab tab-how" href="{{ url_for('social.how') }}"{% if here == 'how' %} aria-current="page"{% endif %}>
+    <span class="tab-ic">{{ ic.how(here == 'how') }}{% if here == 'how' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">How it works{% if here == 'how' %}{{ ic.underline() }}{% endif %}</span></a>
+  {% endif %}
   {% if accounts and me %}
   {# Settings, a desk's rail only (hidden in a phone's bar), above You. #}
   {% set at_settings = here in ('settings', 'invites') %}
