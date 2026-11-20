@@ -48671,3 +48671,69 @@ every target is 44px to a finger; no colour or token is new.
 
 FLIP AND THE PAD: not for either. NOT TESTED: Safari on an iPhone, SF or
 Segoe UI.
+
+## After v330 -- "Are we looking good and feeling good?": a read of the look beside Bluesky, and the post's page mocked calmer
+
+THE OWNER, Nov 20, about 7:50 AM, to the empty-page mock, with two pictures
+of Bluesky on their phone (a post with no replies, and its reply sheet): "I
+like your choices. Bluesky looks simpler. Most because there aren't the
+more from images. Then when you click reply it looks pretty simple too. I'm
+wondering what you think it should look like overall. Make an assessment
+like you are a ui/ux engineer for Apple/bluesky/X and you want this to be
+luxurious, simple, kind, intuitive, premium, powerful and playful. What
+would look best here and overall. Are we looking good and feeling good?"
+
+"I LIKE YOUR CHOICES" WAS NOT TAKEN AS A GO-AHEAD TO BUILD: the same
+message asked what the page should be overall, and the answer replaces the
+three choices it liked. NOTHING IS BUILT.
+
+THE READ, as given (the page: https://claude.ai/artifact/LGjra5dDzRVUC6a1eSb34t,
+"Calm Post Page"): Blooby looks like itself, which is the hard part; what
+it does not have yet is quiet.
+- KEEP: the drawing as the hero (warm paper on a deep ground, and it
+  moves); the hand (the wordmark, the pen-drawn icons, the wavy line);
+  Home and profiles, already calm; the comment sheet, as simple as
+  Bluesky's reply and leaving the drawing in view above it.
+- CALM DOWN, all on a post's own page: violet everywhere, so it stops
+  meaning "here"; headings over nothing, each with a button; the same
+  action in three places and three shapes; "More from", which the owner
+  named.
+- FROM BLUESKY, HOW IT BEHAVES AND NOT HOW IT LOOKS (the roots say the
+  same): one place to answer that never moves, no label over nothing,
+  colour only where you act.
+
+COUNTED IN THE PAGES, the same way before and after (a touch phone, dark):
+an empty post's screen wears violet in 7 places and has 3 bold headings,
+and the page runs 1117px; the owner's Bluesky screen has one coloured thing
+on it.
+
+THE PROPOSAL, MOCKED on the real pages, phone and desk, light and dark:
+1. ONE ANSWER BAR at the foot of every post's page, on the bottom bar's own
+   glass: your face, "Say something…", and Draw back beside it. It takes
+   the place of the round button, "Say the first thing", the Draw back by
+   the heading, and option A of the hour before. On a desk it sits in the
+   column under the date (without the face: with it the words were cut,
+   seen in the mock's own picture and mended).
+2. "MORE FROM" off the post's page (or one small link at its end).
+3. QUIET LABELS where the headings were ("3 draw-backs", "7 comments"), and
+   nothing at all when there are none.
+4. WHEN A REPLAY ENDS, Watch again on the drawing and the bar's Draw back
+   lit in the pill's own purple: the invitation at the same moment, said
+   once. (Or both pills on the drawing, as the Draw back mock had it.)
+5. Home, profiles and the comment sheet left as they are.
+With it an empty post fits one screen (874px), wears violet in 3 places
+(Make, Watch again, the lit Draw back) and has no heading; a full post's
+answers begin under small labels. Every new word reads 7.1:1 or more in
+light and 8.59:1 or more in dark, the lit button 5.33:1; every target is
+44px; no colour or token is new.
+
+SAID AS LATER, NOT MOCKED: a small picture of what is being answered in the
+comment sheet, as Bluesky shows the post; the date and plays beside the
+name, as on a card. SKRIBL'S PLAYER (its bar, "Drawn in… watching at 1×")
+LEFT ALONE: it is what the site is for, and it is the Pad's and Flip's too.
+
+FIVE CHOICES ARE WITH THE OWNER, each with a pick.
+
+FLIP AND THE PAD: not for either. NOT TESTED: Safari on an iPhone, SF or
+Segoe UI; and how a bar above the bottom bar behaves with the iPhone's
+keyboard up is to be checked on the owner's phone when it is built.

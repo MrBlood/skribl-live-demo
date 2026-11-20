@@ -242,6 +242,12 @@ yet"; https://claude.ai/artifact/1aQvBWEmTpBaMReRM8nEmD): three ways, the
 pick one quiet line and two buttons where two empty headings stand. WAITING
 ON THE OWNER'S ANSWER; nothing built. The owner's words are in
 `WORKING-AGREEMENTS.md` ("Never busy, never confusing").
+THEN THE OWNER ASKED FOR THE WHOLE LOOK TO BE READ BESIDE BLUESKY ("Are we
+looking good and feeling good?"), and the post's page is MOCKED CALMER
+(`DECISIONS.md`, the entry of that name;
+https://claude.ai/artifact/LGjra5dDzRVUC6a1eSb34t): one answer bar at the
+foot, quiet labels, no "More from". It would replace the three ways above.
+FIVE CHOICES WAITING; nothing built.
 THE SESSION STOPPED ON THE OWNER'S USAGE LIMIT at about 10:25 PM, with
 those two runs unread, and nothing moved until the owner wrote at 5:56 AM.
 The owner's rule since: come back and finish without being asked
