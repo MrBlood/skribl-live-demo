@@ -2314,6 +2314,23 @@ a.post-face { text-decoration: none; }
   .ans-bar { transition: opacity 0.2s ease; }
   .ans-face { display: none; }
   .ans:has(> .cm-fold.is-open) > .ans-bar { opacity: 0; visibility: hidden; transition: opacity 0.14s ease, visibility 0s linear 0.14s; }
+  /* AT HOME THE FOLD CLOSES TO THE LINE'S HEIGHT, NOT TO NOTHING (main's run
+     on the calm post page, Nov 20: red on a desk, on both databases). The
+     line and the fold share this cell, so the cell is the taller of the two:
+     a fold closing to nothing stopped moving the page once it was shorter
+     than the line's 44px, about a third of the way through its 0.32s, while
+     the comment arriving under it went on opening its room for the rest. A
+     box taller than the comment posted from it sent the list up some 35px
+     and brought it back: a hop, on any desk whose type makes the box tall.
+     Now the fold's room is the line's 44px and, over it, a share that opens
+     and closes: its height runs evenly from the box's to the line's for the
+     whole glide, so the two stay in step whatever their sizes, and opening
+     starts moving from its first frame. Closed, it lies where the line is,
+     unseen, and takes no press (the line under it does). */
+  .ans > .cm-fold { grid-template-rows: 44px 0fr; }
+  .ans > .cm-fold.is-open { grid-template-rows: 44px 1fr; }
+  .ans > .cm-fold > .cm-fold-in { grid-row: 1 / -1; }
+  .ans > .cm-fold:not(.is-open) { pointer-events: none; }
 }
 /* THE FOLD (a desk): the box in the answer bar's place, or under the
    conversation it answers, folded to nothing until asked for. Opening glides
