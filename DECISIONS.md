@@ -49166,3 +49166,69 @@ believing it, as the working agreements say. This is why.
 FLIP AND THE PAD: not for either. NOT TESTED HERE: Safari on an iPhone.
 The tell for the new build: on your own post that has draw-backs, a small
 eye beside each name in the row.
+
+## After v330 -- Main red after the calm post page: the list hopped under a posted comment on a desk
+
+Nov 20. MAIN'S RUN ON THE CALM POST PAGE (#1013) WAS RED ON ONE ROW, ON BOTH
+DATABASES (sqlite 6/7 and postgresql 6/7; every other shard green, Firefox,
+WebKit and the MP4 lane green): `verify_socialcomments` 33, "posted, the box
+goes... what was under it moves only as a glide", on a desk. THE ROW WAS
+RIGHT, AND IT WAS THE BUILD, NOT THE RUNNER. What it read: the comment that
+had been first went up and came back, 33px of "back" in thirteen frames, to
+rest 3px above where it began.
+
+WHY. On a desk the line and the folded box share one cell (the calm post
+page: "the line becomes the box"), so the cell is the taller of the two. The
+box folding away to NOTHING stopped moving the page once it was shorter than
+the line's 44px, about a third of the way through its 0.32s (it eases out,
+fast at first), while the comment arriving under it went on opening its own
+room for the whole 0.32s. So the list rose by the whole difference at once
+and was then pushed back down. Whenever the box's room less 44px was more
+than the comment's, that was a hop.
+
+WHY IT PASSED HERE, TWICE: this box's type makes the box 182px with the
+row's words, the runner's 232px. At 182 the comment's room is the larger of
+the two and the list only ever goes down. Same code, same flaw, a different
+font: "do not tune to this container's fonts" holds for checks too. On the
+owner's Windows desk the box may well be the runner's size.
+
+WHAT IT DOES NOW (`social.css`, `.ans > .cm-fold`). At home the fold's room
+is the line's own 44px and, over that, a share that opens and closes. Its
+height runs EVENLY from the box's to the line's for the whole glide, so the
+two motions stay in step whatever their sizes, and opening moves from its
+first frame (it waited until the box was taller than the line). Closed, it
+lies exactly where the line is, unseen, and takes no press: the line under
+it does. Nothing else moves: under a conversation the fold is as it was.
+
+THE CHECK THAT WOULD HAVE CAUGHT IT HERE, ADDED: a tall box and a short
+comment, made as anybody makes them (blank lines typed under the words,
+which are no part of the comment). The list ends 96px higher than it
+started and must glide there without ever going past where it rests. And
+the row's rule for "what was under it" is the new `in_step`: a move may be
+next to nothing (a comment the size of the box lands where the box was), so
+the glide's own rule is asked only of a move over 6px; whatever its size it
+never strays beyond where it started and where it ends. The old rule asked
+three moving frames of any move, which a 3px drift on a slow runner would
+have failed for nothing.
+
+SHOWN RED, section 29, 31 and 33 alone: the fix taken out (the tall box's
+row red HERE now: 22px past its rest, and thirteen frames back; and the
+folded box's own row, which now asks for the line's height); the folded box
+taking the line's presses (six rows: nothing opens); the box's page not
+spanning the fold's two rows (five rows: the box is 44px tall and cut).
+Green as built, before and after.
+
+THE ROW THAT ASKED THE FOLDED BOX FOR NO HEIGHT asks now what is true: a
+phone's has none; a desk's is the line's 44px in the line's own cell, and
+the cell is no taller for it.
+
+HOW THEY RAN HERE: the six suites that open the comment box, side by side,
+each whole, all green the first time, in 13 minutes: `verify_socialcomments`
+150 (149 and the new row), `verify_socialposts` 100, `verify_sociallikes`
+112, `verify_socialmute` 68, `verify_socialmentions` 51,
+`verify_socialreposts` 99. The full battery was not run; main's run after
+the merge is it, and its shard 6 on both databases is the one to read.
+
+FLIP AND THE PAD: not for either. NOT TESTED HERE: Safari and Segoe UI, as
+ever; the tell on a desk is that posting a comment from a tall box no
+longer makes the comments under it jump.

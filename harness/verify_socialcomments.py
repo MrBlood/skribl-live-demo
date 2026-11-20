@@ -798,7 +798,9 @@ SAYLINE = """() => { const b = document.querySelector('.ans-bar .cm-say'); if (!
     openers: document.querySelectorAll('[data-cm-new]').length,
     fold: fold ? { h: one(fold.getBoundingClientRect().height), seen: getComputedStyle(inner).visibility,
                    laid: fold.querySelector('[data-cm-words]').getClientRects().length > 0,
-                   home: fold.parentElement === bar.parentElement } : null }; }"""
+                   home: fold.parentElement === bar.parentElement,
+                   // the room the bar and the folded box take together (a desk: one cell)
+                   cell: one(bar.parentElement.getBoundingClientRect().height) } : null }; }"""
 # What the signed-out sheet says, and where its Sign in goes.
 OUT_SHEET = """() => { const w = document.getElementById('commentOutSheet'); if (!w) return null; const a = w.querySelector('a.btn');
   return { open: w.classList.contains('is-open') && !w.hidden, title: w.querySelector('.make-title').textContent,
@@ -896,6 +898,21 @@ def kind(frames, k=0):
 def still_(xs):
     xs = [x for x in xs if x is not None]
     return bool(xs) and max(xs) - min(xs) <= 0.5
+
+
+def in_step(xs):
+    """What is under a comment that arrives while the box folds away above it. It may hardly move at all (a comment
+    the size of the box lands where the box was), so the glide's own rule is asked only of a move big enough to be
+    one (over 6px). WHATEVER ITS SIZE IT NEVER GOES WHERE IT DOES NOT END UP: `out` is how far it strayed beyond
+    where it started and where it came to rest, and more than half a pixel of that is a hop (main's run on the calm
+    post page read 35px of it: up, and back)."""
+    g = glided(xs)
+    xs = [x for x in xs if x is not None]
+    if not xs:
+        return dict(g, ok=False, out=None)
+    lo, hi = min(xs[0], xs[-1]), max(xs[0], xs[-1])
+    out = round(max(0.0, lo - min(xs), max(xs) - hi), 2)
+    return dict(g, ok=out <= 0.5 and (abs(g["way"]) <= 6 or g["ok"]), out=out)
 
 
 def moved_by(xs):
@@ -3607,10 +3624,17 @@ with sync_playwright() as p:
                   " the column, 18px under the date, no face. Light and dark",
                   all(placed(k, v) for k, v in seen.items()),
                   "; ".join(f"{' '.join(k)}: {v['line']}" for k, v in seen.items())[:1200])
-            ok_fold = all(v["box"] and v["box"]["open"] is None and v["line"]["fold"]["h"] == 0 and v["line"]["fold"]["home"]
+            # A phone's fold has no height at all (its bar stands on the bottom bar). A desk's lies in the line's
+            # own cell at the line's own height, so that it closes evenly all the way (section 33, "in step
+            # whatever their sizes"): it adds no room there, and the line under it still takes every press
+            # (`lands`, the row above).
+            ok_fold = all(v["box"] and v["box"]["open"] is None and v["line"]["fold"]["home"]
+                          and (v["line"]["fold"]["h"] == 0 if k[0] == "phone"
+                               else v["line"]["fold"]["h"] == v["line"]["bar"][1] == v["line"]["fold"]["cell"] == 44)
                           and v["line"]["fold"]["seen"] == "hidden" and not v["line"]["fold"]["laid"] and not v["focusable"]
-                          and v["line"]["expanded"] == "false" for v in seen.values())
-            check("the box is folded away until asked for, at home in the bar's own room: no room of its own, unseen, not"
+                          and v["line"]["expanded"] == "false" for k, v in seen.items())
+            check("the box is folded away until asked for, at home in the bar's own room: no room of its own (a phone: no"
+                  " height; a desk: in the line's own cell at the line's own 44px, the cell no taller for it), unseen, not"
                   " laid out at all (so no reader takes its words for shown words), and nothing in it takes focus",
                   ok_fold, "; ".join(f"{' '.join(k)}: box {v['box'] and v['box']['open']}, fold {v['line']['fold']},"
                                      f" focusable {v['focusable']}" for k, v in seen.items()))
@@ -4001,7 +4025,7 @@ with sync_playwright() as p:
             ok, why_ = True, []
             for screen, v in got.items():
                 w = v["w"]
-                g_old, g_new = glided(w["old"]), glided(w["new"])
+                g_old, g_new = in_step(w["old"]), glided(w["new"])
                 want = {"posted, at the top": bool(w["id"]) and w["first"] == w["id"],
                         "counted": v["after"]["count"] in ("2", "3"),
                         "glowing in the tint": bool(w["glow"]) and w["glow"][0] and w["tint"] == TINT["light"],
@@ -4032,6 +4056,32 @@ with sync_playwright() as p:
                   " every frame); Post says \"Posting…\" meanwhile and no line grows the box; the box is emptied once it has"
                   " gone; focus on the bar's line",
                   ok, " | ".join(why_))
+            # IN STEP WHATEVER THEIR SIZES (main's run on the calm post page, Nov 20: red on both databases, on a
+            # runner whose type made the box 50px taller than this one's). A TALL BOX AND A SHORT COMMENT, as
+            # anybody makes them: blank lines typed under the words grow the box and are no part of the comment.
+            # The box's room less the line's 44px is then well over the comment's own, the list ends higher than
+            # it started, and it must get there without ever going past: the fold closes evenly to the line's
+            # height for the whole glide, as the comment opens its room.
+            cctx, cpg = browser_as(b, mira, "desk")
+            open_post(cpg, post)
+            cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'center' })")
+            cpg.wait_for_timeout(300)
+            open_box(cpg)
+            cpg.fill("[data-cm-words]", "Section 33, short." + "\n" * 6)
+            cpg.wait_for_timeout(250)
+            tall = cpg.evaluate(POSTED, [1800])
+            cpg.wait_for_timeout(1200)
+            tall_words = db("select words from social_comments where public_id = ?", ((tall["id"] or "")[2:],))
+            close_ctx(cctx, cpg)
+            t_old, t_new = in_step(tall["old"]), glided(tall["new"])
+            check("...and IN STEP WHATEVER THEIR SIZES, on a desk: a tall box (blank lines typed under the words, which"
+                  " are no part of the comment) and the short comment it posts; the list under it ends higher than it"
+                  " started and glides there, never going past where it comes to rest and never back (read on every"
+                  " frame), as the new comment rises by the box's room less the line's 44px",
+                  bool(tall["id"]) and tall_words == [("Section 33, short.",)] and tall["room"] >= 250
+                  and t_old["ok"] and t_old["way"] <= -20 and t_old["out"] == 0 and not t_old["back"]
+                  and t_new["ok"] and abs(t_new["way"] + (tall["room"] - 44)) <= 1.5,
+                  f"the box's room {tall['room']}; the old first {t_old}; the new {t_new}; kept {tall_words}")
             # An answer posted on a desk: under its comment, the fold folding away there in step.
             dctx, dpg = browser_as(b, mira, "desk")
             open_post(dpg, post)
