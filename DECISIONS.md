@@ -48543,3 +48543,76 @@ drives the layer on each.
 NOT TESTED: a screen reader (VoiceOver, TalkBack, NVDA); Safari, on an
 iPhone or a Mac; Firefox's keyboard walk (CI's Firefox and WebKit lanes run
 their own smoke files, not these suites).
+
+## After v330 -- The owner's "All yes" to the eight; and Her say, mocked
+
+THE OWNER, Nov 20, about 6:50 AM, to the morning's report and its status
+line: "All yes, go".
+
+"ALL YES": THE EIGHT CALLS NO MOCK SHOWED ARE DECIDED, AS BUILT. The seven
+of "The six as built" (the pencil's wave white on the purple pill that rises
+when a replay ends; a draft's × back on your drafts; "Your drawing is
+waiting for you." over a face's Pad; How it works bringing its own three
+drawings; its rows going where the thing is done, a visitor's plain lines
+with Sign in; "The Pad" and "Flip" opening inside a post with the editor's
+help showing; Add to Home Screen the menu's third row), and the eighth of
+"Main was red for a night": on a keyboard, Escape closes Your hand, as it
+closes every other sheet.
+
+"GO": HER SAY, MOCKED (choice 7 of "Draw back, mocked", approved Nov 19;
+where its two controls sit was never drawn). The page the owner was sent:
+https://claude.ai/artifact/NRZR69jirnAfhTQzroK3rr ("Her Say"). NOTHING IS
+BUILT. The target, said before drawing: where she hides a draw-back from
+her own post, and where a post's "Who can draw back" sits.
+
+BOTH CONTROLS ARE ONES THE SITE HAS, which is what the mock leans on:
+- HIDING is the eye of your own Gallery tab (the owner's "Yes, the eye in
+  view", Nov 14; `_gallery.html`, `.gal-eye`, eye.js), on each tile of her
+  own post's strip, hers alone: the eye crossed, "Hidden", the drawing at
+  55%, the site's toast with Undo ("Hidden. Sam isn’t told."). The heading
+  counts what everyone else sees, and one quiet line under it tells her
+  ("1 hidden from your post").
+- WHO CAN DRAW BACK is Settings' pill (`.theme-switch`), three choices, in a
+  card of its own in her post's ⋯ sheet, one line under it saying what the
+  choice means; and, the pick, one quiet line in the composer under the
+  drawing ("Anyone can draw back · Change") that opens the same pill.
+
+THE SEVEN CHOICES PUT TO THE OWNER, each with a pick so that "all yes" is an
+answer:
+1. Where she hides one: the eye on her own strip (pick); or a row in the
+   draw-back's own ⋯, "Hide from my post", as a comment's sheet has "Remove
+   from my post"; or both.
+2. Where the eye sits: beside the name (pick), where it never covers a
+   drawing; or on the picture, as the Gallery's. On these 132px tiles the
+   Gallery's place lands on what was drawn back (Mira's butterfly, in the
+   mock's own picture).
+3. What its maker sees on her post: gone from the row, as for everyone,
+   and not told (pick; the site hides nothing from one person alone
+   anywhere else); or still there for them alone.
+4. Where "Who can draw back" lives: the composer's quiet line and her
+   post's ⋯ (pick); or the ⋯ alone, which leaves a new post open to
+   everyone until she gets there.
+5. When someone can't: no pen, as on a Flip today (pick); or a grey pen
+   that says why.
+6. Her own post set to Nobody: she still can (pick); or nobody at all.
+7. The words, as shown.
+
+WHAT THE MOCK'S OWN MEASURE CAUGHT: the eye beside the name first kept the
+Gallery chip's ink, which is made for a chip on a picture's glass; on the
+page's own chip in dark it read 1.24:1. It wears the small violet ink there
+now (6.49:1 light, 6.87:1 dark), and the page says so. Every other new word
+reads 6.24:1 or more on what is painted behind it, light and dark; every
+target is 44px to a finger; the pill's three words fit a 402px phone uncut
+(101, 138 and 90px).
+
+HOW THE MOCK WAS MADE: on a scratch copy of the site with five made-up
+people, a touch phone at 402 and a desk, light and dark, "today" beside each
+option. The draw-back she hides was drawn for it with a real pen in the real
+Pad (Sam's glasses and a moustache on Ana's cat): playful and not wanted,
+never abuse, which is what Report is for.
+
+FLIP AND THE PAD: not for either. Both controls are Blooby's; a Flip, or a
+post of words alone, cannot be drawn back on yet and would not show the
+setting.
+
+NOT TESTED: Safari on an iPhone, SF or Segoe UI.

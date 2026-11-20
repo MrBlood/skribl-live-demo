@@ -50,6 +50,12 @@ section 4 drives the whole way in a browser: the quickest look at it.
    starting at Everyone. WHERE THE CONTROLS SIT was never mocked: mock that
    first (her post's ⋯ is the likely home of the first; the second may want
    a place on the composer or the post's ⋯).
+   MOCKED NOV 20 (https://claude.ai/artifact/NRZR69jirnAfhTQzroK3rr;
+   `DECISIONS.md`, "Her say, mocked"), AND WAITING ON THE OWNER'S ANSWER to
+   its seven choices. Nothing is built. The picks: the Gallery tab's eye on
+   each tile of her own strip, beside the name; Settings' pill in a card of
+   her post's ⋯, and one quiet line in the composer that opens it. Build
+   hiding first, then who can draw back, once the owner has said.
 2. **The words** (choice 4, approved): the line under a draw-back says "Ana
    + Theo · drawn in 15 sec + 9 sec · watching at 1×", the card's play
    button "Ana + Theo · 24 sec", a jam "Ana + Theo + Mira", then "Ana + 4
@@ -227,6 +233,9 @@ layer said it was a dialog and had no recipe there; driven with a keyboard
 it let Tab out and did nothing on Escape. Mended the morning of Nov 20
 (`DECISIONS.md`, "Main was red for a night"). READ THE RUN ON THE TREE
 AFTER THAT FIX before believing main is green.
+THE OWNER'S "ALL YES, GO" (Nov 20, about 6:50 AM): the eight calls no mock
+showed are decided as built (`DECISIONS.md`, "The owner's All yes to the
+eight"), and Her say is mocked (item 1 of "What is still to build", above).
 THE SESSION STOPPED ON THE OWNER'S USAGE LIMIT at about 10:25 PM, with
 those two runs unread, and nothing moved until the owner wrote at 5:56 AM.
 The owner's rule since: come back and finish without being asked
