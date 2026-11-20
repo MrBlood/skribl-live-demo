@@ -48901,3 +48901,50 @@ from anything a runner has shown (main's had 54 frames).
 HOW IT RAN HERE: `verify_socialprofile` whole, alone, on the fix: 98 of 98.
 Nothing else reads these frames. FLIP AND THE PAD: nothing of theirs is
 touched; no page is.
+
+## After v330 -- Main red again, one row on one database: a watch that ends when the thing has happened, not after a set time
+
+Nov 20, late morning. Main's run on #1010 (the fix above) was green where
+it had been red: `verify_socialprofile` on sqlite 7/7 and postgresql 7/7,
+every shard inside its hour again (42 to 52 minutes). ONE OTHER ROW WAS RED,
+on sqlite 6/7 alone, green beside it on postgresql 6/7, the same tree:
+`verify_socialcomments` 15, "a tap plays it and it grows to its room,
+gliding". A drawn comment on a phone: `'way': 0.0, 'frames': 0` in the watch,
+and when it was read 600 ms later it stood in its room, its line open
+(`'w': 294, 'room': 322, 'line': [False, 68]`). Nothing wrong was seen. It
+grew after the watch had stopped looking.
+
+WHY. A comment's drawing is not even fetched until it is tapped (the row
+above it says so). The row tapped it and watched for 900 ms: the tap, the
+fetch and the first stroke had to fit in that, and on a runner in a bad
+minute they did not. The second of its kind in one morning, and not the
+same fault: #1010's counted frames; this one counted on a clock.
+
+THE INSTRUMENT, NOT THE PAGE. `GROW15` watches until the drawing has played
+and come to rest: the line open (the play began) and the width then still
+for 400 ms, ten seconds at the longest. And as #1010 taught, the glide is
+read from its own clock: the box's transition of its width ran its 0.3 s
+(`transitionend`), the width went all the way to its room and never back,
+its top holding still on the screen. How many frames carried it is told and
+not asked. The Reduce Motion reading beside it waits the same way, and asks
+that the line opened, the width never moved and no transition ran.
+
+SHOWN RED AND GREEN, the section alone each time (nine rows, 35 seconds):
+- as it is: green, `'way': 137.91, 'want': 137.9, 'ran': 300`, the line open
+  22 ms after the tap, 737 ms watched;
+- the box with no transition: red, `'ran': 0`, the whole way in one frame;
+- the drawing not growing: red, `'way': 0.0`;
+- growing under Reduce Motion: red on the Reduce Motion row alone, 156 to
+  294 with a transition of 300;
+- THE BAD MINUTE ITSELF, the drawing's fetch held back 1.6 s and 3.5 s (its
+  own request, slowed in the browser): green both times, the line open at
+  1627 ms and 3533 ms and the glide read whole after it. The 900 ms watch
+  would have ended before either, reading what main's runner read.
+
+WHAT THE TWO HAVE IN COMMON, for the next check that reads something
+moving: ask of the page what the page decides (it glided, by its own clock;
+it never stepped back; where it ended), and of the machine nothing (how
+many frames, how soon). A set time is a guess about the machine.
+
+HOW IT RAN HERE: `verify_socialcomments` whole, alone, on the fix: 148 of
+148. FLIP AND THE PAD: nothing of theirs is touched; no page is.
