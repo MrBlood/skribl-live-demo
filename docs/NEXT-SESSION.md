@@ -214,11 +214,16 @@ four after "the evening's mocks") and `docs/SOCIAL-SITE.md` section 22:
   draft stays in Drafts, as it did: nothing built).
 - #1004, Your hand opens over the post and the drawing waits (Skribl's
   `lib/handover.js`, both editors, compose mode alone).
-- the one after, How it works: the ☰'s first row, a tab in a desk's rail,
-  and the site's own page `/social/how`.
-READ MAIN'S RUNS before believing main is green on them: the run after
-#1002 was cancelled by the queue (not run), and the later ones were still
-running when this was written.
+- #1005, How it works: the ☰'s first row, a tab in a desk's rail, and the
+  site's own page `/social/how`.
+THE PICTURES OF ALL OF IT AS BUILT, on the page the owner was sent:
+https://claude.ai/artifact/8Am1CGcfGHTbfuuqfYiZ3x (`DECISIONS.md`, "The
+six as built").
+MAIN'S RUNS, AS READ AT 10:17 PM: green on the tree after #1003, which
+holds #1002 too (run 2375, done 9:30 PM; the run after #1002 alone was
+cancelled by the queue, not run). The run after #1004 (2377) was still
+going and the one after #1005 had not started. READ THEM before believing
+main is green on Your hand and How it works.
 DECIDED BEYOND THE MOCKS, TOLD TO THE OWNER, THEIRS TO CHANGE:
 - the pencil's wave stays white on the purple "Draw back" pill that rises
   when a replay ends (purple on that purple is 1.23:1);

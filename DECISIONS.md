@@ -48390,3 +48390,44 @@ now and let go after the page is read).
 FLIP AND THE PAD: shared. `lib/ask.js` and `editor_compose.js` are loaded
 by both; each opens its own How it works. NOT TESTED: Safari on an iPhone,
 SF or Segoe UI.
+
+## After v330 -- The six as built: the pictures, main's runs, and what is the owner's to say
+
+ALL SIX OF THE EVENING'S CHOICES ARE BUILT AND MERGED (Nov 19, Mountain
+Time): #1002 the pencil's line (8:00 PM), #1003 a draft's tile inside a post
+(8:27 PM; a posted draft stays a draft, nothing built), #1004 Your hand over
+the post (9:27 PM), #1005 How it works (10:17 PM). Each its own entry above.
+
+THE PICTURES, on the page the owner was sent:
+https://claude.ai/artifact/8Am1CGcfGHTbfuuqfYiZ3x ("Evening Six Built").
+The site after the four merges, a touch phone at 402 in light and dark and
+a desk where it differs: the pen's line on a card, a post's page,
+Activity and the pill; a draft's tile, the Pad it opens and the post it
+becomes; Your hand over a post, with no hand yet and with one; the menu, a
+visitor's menu, the page signed in and out, the Pad's own help inside a
+post, the rail on a desk.
+
+MAIN'S RUNS, AS READ AT 10:17 PM. Green on the tree after #1003 (run 2375,
+every job, done 9:30 PM), which holds #1002 with it: the run after #1002
+alone (2373) was cancelled by the queue, not run. The run after #1004
+(2377) was going, the one after #1005 not started. NOT READ, SO NOT
+CLAIMED.
+
+SEVEN THINGS NO MOCK SHOWED, EACH BUILT THE SMALLEST HONEST WAY AND PUT TO
+THE OWNER TO OVERRULE (the page lists them):
+1. the pencil's wave stays white on the purple "Draw back" pill that rises
+   when a replay ends;
+2. a draft opened from its tile: the editor's × is back on your drafts, the
+   sheet going with it;
+3. Your hand over a face's Pad says "Your drawing is waiting for you.";
+4. How it works brings its own three drawings (files, not posts), and they
+   play on the page, the first by itself once;
+5. its rows go where the thing is done, and a visitor's are plain lines
+   with Sign in beside one line that says why;
+6. "The Pad" and "Flip" open the editor inside a post with its own help
+   showing, where the mock said "into the Pad's and Flip's own How it
+   works";
+7. Add to Home Screen is the ☰'s third row now (still right under
+   Settings), and the sheet's focus lands on How it works.
+
+NOT TESTED ANYWHERE IN THIS: Safari on an iPhone, SF or Segoe UI.
