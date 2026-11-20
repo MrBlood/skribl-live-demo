@@ -28,6 +28,15 @@
   opacity: 0; transition: opacity 0.2s ease;
 }
 .hand-over.is-ready .hand-over-frame { opacity: 1; }
+/* THE KEYBOARD (lib/handover.js). The layer holds focus itself while Your
+   hand loads: a ring round the whole screen says nothing, so it draws none.
+   The two stops that keep Tab inside are never seen and never hold focus
+   (each hands it into Your hand as it arrives). */
+.hand-over:focus { outline: 0; }
+.hand-over-edge {
+  position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden;
+  opacity: 0; pointer-events: none; outline: 0;
+}
 /* REDUCE MOTION: it stays where it sits and fades. The editors' own sheet
    stops every transition there (styles.css, "Reduced motion": its drawers
    are simply there and simply gone), which for this layer would swap the
