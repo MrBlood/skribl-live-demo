@@ -1,10 +1,10 @@
-"""Which suites one CI shard runs: `python3 harness/shard.py 2/6` prints them.
+"""Which suites one CI shard runs: `python3 harness/shard.py 2/7` prints them.
 
 Main's full battery ran as one job of 90-odd minutes, so a red main took an
 afternoon to show and a green one took the evening. The sqlite and postgres
-jobs now run as six shards each, side by side on standard runners (free on a
-public repository), and each shard runs `run_harness.sh` with the names this
-prints.
+jobs now run as seven shards each (six until Nov 20), side by side on standard
+runners (free on a public repository), and each shard runs `run_harness.sh`
+with the names this prints.
 
 BALANCED BY MEASURED TIME. A first split weighed each suite by the waiting
 written in its source; its four shards took 30, 15, 24 and 25 minutes, because
@@ -24,6 +24,12 @@ verify_socialcomments and verify_socialprofile 330. Re-weighed from main's
 last two runs (119 of 199 suites take half a minute or more), each shard's
 suites add up to 51 to 52 minutes at their slowest, and a job's own steps
 take one or two more.
+Nov 20, SEVEN SHARDS, AND THE TABLE LEFT AS IT WAS: four more days of suites
+had six shards' own suites at 48 to 56 minutes on the tree after #1006 (the
+table says 52.6 each), which no re-weighing could bring under about 53, and
+a runner that took 6 min 40 s to install Chromium was cut at the hour, one
+suite 20 seconds from done. By the table seven come to 45 each. The table is
+four days old and wants measuring again the next time a shard runs long.
 Suites go slowest first to the shard with the least so far, and the split is
 deterministic, so a re-run of a shard runs the same suites.
 

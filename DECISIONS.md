@@ -48543,3 +48543,234 @@ drives the layer on each.
 NOT TESTED: a screen reader (VoiceOver, TalkBack, NVDA); Safari, on an
 iPhone or a Mac; Firefox's keyboard walk (CI's Firefox and WebKit lanes run
 their own smoke files, not these suites).
+
+## After v330 -- The owner's "All yes" to the eight; and Her say, mocked
+
+THE OWNER, Nov 20, about 6:50 AM, to the morning's report and its status
+line: "All yes, go".
+
+"ALL YES": THE EIGHT CALLS NO MOCK SHOWED ARE DECIDED, AS BUILT. The seven
+of "The six as built" (the pencil's wave white on the purple pill that rises
+when a replay ends; a draft's × back on your drafts; "Your drawing is
+waiting for you." over a face's Pad; How it works bringing its own three
+drawings; its rows going where the thing is done, a visitor's plain lines
+with Sign in; "The Pad" and "Flip" opening inside a post with the editor's
+help showing; Add to Home Screen the menu's third row), and the eighth of
+"Main was red for a night": on a keyboard, Escape closes Your hand, as it
+closes every other sheet.
+
+"GO": HER SAY, MOCKED (choice 7 of "Draw back, mocked", approved Nov 19;
+where its two controls sit was never drawn). The page the owner was sent:
+https://claude.ai/artifact/NRZR69jirnAfhTQzroK3rr ("Her Say"). NOTHING IS
+BUILT. The target, said before drawing: where she hides a draw-back from
+her own post, and where a post's "Who can draw back" sits.
+
+BOTH CONTROLS ARE ONES THE SITE HAS, which is what the mock leans on:
+- HIDING is the eye of your own Gallery tab (the owner's "Yes, the eye in
+  view", Nov 14; `_gallery.html`, `.gal-eye`, eye.js), on each tile of her
+  own post's strip, hers alone: the eye crossed, "Hidden", the drawing at
+  55%, the site's toast with Undo ("Hidden. Sam isn’t told."). The heading
+  counts what everyone else sees, and one quiet line under it tells her
+  ("1 hidden from your post").
+- WHO CAN DRAW BACK is Settings' pill (`.theme-switch`), three choices, in a
+  card of its own in her post's ⋯ sheet, one line under it saying what the
+  choice means; and, the pick, one quiet line in the composer under the
+  drawing ("Anyone can draw back · Change") that opens the same pill.
+
+THE SEVEN CHOICES PUT TO THE OWNER, each with a pick so that "all yes" is an
+answer:
+1. Where she hides one: the eye on her own strip (pick); or a row in the
+   draw-back's own ⋯, "Hide from my post", as a comment's sheet has "Remove
+   from my post"; or both.
+2. Where the eye sits: beside the name (pick), where it never covers a
+   drawing; or on the picture, as the Gallery's. On these 132px tiles the
+   Gallery's place lands on what was drawn back (Mira's butterfly, in the
+   mock's own picture).
+3. What its maker sees on her post: gone from the row, as for everyone,
+   and not told (pick; the site hides nothing from one person alone
+   anywhere else); or still there for them alone.
+4. Where "Who can draw back" lives: the composer's quiet line and her
+   post's ⋯ (pick); or the ⋯ alone, which leaves a new post open to
+   everyone until she gets there.
+5. When someone can't: no pen, as on a Flip today (pick); or a grey pen
+   that says why.
+6. Her own post set to Nobody: she still can (pick); or nobody at all.
+7. The words, as shown.
+
+WHAT THE MOCK'S OWN MEASURE CAUGHT: the eye beside the name first kept the
+Gallery chip's ink, which is made for a chip on a picture's glass; on the
+page's own chip in dark it read 1.24:1. It wears the small violet ink there
+now (6.49:1 light, 6.87:1 dark), and the page says so. Every other new word
+reads 6.24:1 or more on what is painted behind it, light and dark; every
+target is 44px to a finger; the pill's three words fit a 402px phone uncut
+(101, 138 and 90px).
+
+HOW THE MOCK WAS MADE: on a scratch copy of the site with five made-up
+people, a touch phone at 402 and a desk, light and dark, "today" beside each
+option. The draw-back she hides was drawn for it with a real pen in the real
+Pad (Sam's glasses and a moustache on Ana's cat): playful and not wanted,
+never abuse, which is what Report is for.
+
+FLIP AND THE PAD: not for either. Both controls are Blooby's; a Flip, or a
+post of words alone, cannot be drawn back on yet and would not show the
+setting.
+
+NOT TESTED: Safari on an iPhone, SF or Segoe UI.
+
+## After v330 -- A post with nothing under it yet, mocked ("busy and disorganized")
+
+THE OWNER, Nov 20, about 7:15 AM, with a picture of a post's page on their
+iPhone in dark (a replay just ended, no draw-backs, no comments, "More from"
+under it): "This page has no drawbacks or comments. It seems busy and
+disorganized. When there are comments and drawbacks it looks better and
+makes sense. What are some ways we can make it feel better when no comments
+or drawbacks are present. I don't want anything to ever look busy and
+confusing". A QUESTION, SO A MOCK: nothing is built.
+
+THE TARGET, said first: the foot of a post's page when it has no draw-backs
+and no comments (the "No draw-backs yet" line and its button, the
+"Comments" heading and its round button, "Say the first thing").
+
+WHY IT READS BUSY, counted on the page (a touch phone, 402): between the
+time-and-plays line and "More from" there are two bold headings with
+nothing under them and three things to press, a pill, a round button and a
+link, each a different shape in a different place, in 213px. With the
+replay ended, "Draw back" is on the screen three times (the purple pill on
+the drawing, the pen in the row, the strip's button) and commenting three
+times (the row's bubble, the round button, the link). On a desk the heading
+"No draw-backs yet" breaks onto two lines beside its button.
+
+THE PAGE THE OWNER WAS SENT: https://claude.ai/artifact/1aQvBWEmTpBaMReRM8nEmD
+("Empty Post Page"). The owner's own screen first (the test copy's page with
+its replay let run to the end, as theirs was), then three ways:
+- A, ONE INVITATION (the pick): the two empty sections fold into one quiet
+  line, "Nobody’s answered yet.", and the two ways to answer side by side in
+  one shape, Say something and Draw back (the site's small button, which
+  "Draw back" wears today). No headings. 119px.
+- B, TWO QUIET LINES: "No draw-backs yet · Draw back" and "No comments yet ·
+  Say the first thing", small grey words and the small violet link. 124px.
+- C, NOTHING AT ALL: the row's bubble and pen are the ways in. It gives up
+  "Draw back" in words on a fresh post, the owner's own choice of Nov 19.
+AND WHEN ONLY ONE IS EMPTY, the same rule: the one with something in it as
+today, the empty one a single quiet line (pictured for comments and no
+draw-backs).
+
+THE RULE UNDER ALL THREE, put to the owner as such: a heading shows only
+when there is something under it; an empty section is an invitation, said
+once, quietly. It would hold for a drawing shown outside a post and for a
+comment's own page ("Replies"), which are the same template.
+
+SAID PLAINLY ON THE PAGE: with A, "Draw back" is still on the screen three
+times once a replay ends (C makes it two); commenting goes from three to
+two.
+
+THREE CHOICES ARE WITH THE OWNER, each with a pick: which way when both are
+empty; the quiet line when one is; the words. Every new word reads 9.89:1
+or more in dark and 7.1:1 or more in light on what is painted behind it;
+every target is 44px to a finger; no colour or token is new.
+
+FLIP AND THE PAD: not for either. NOT TESTED: Safari on an iPhone, SF or
+Segoe UI.
+
+## After v330 -- "Are we looking good and feeling good?": a read of the look beside Bluesky, and the post's page mocked calmer
+
+THE OWNER, Nov 20, about 7:50 AM, to the empty-page mock, with two pictures
+of Bluesky on their phone (a post with no replies, and its reply sheet): "I
+like your choices. Bluesky looks simpler. Most because there aren't the
+more from images. Then when you click reply it looks pretty simple too. I'm
+wondering what you think it should look like overall. Make an assessment
+like you are a ui/ux engineer for Apple/bluesky/X and you want this to be
+luxurious, simple, kind, intuitive, premium, powerful and playful. What
+would look best here and overall. Are we looking good and feeling good?"
+
+"I LIKE YOUR CHOICES" WAS NOT TAKEN AS A GO-AHEAD TO BUILD: the same
+message asked what the page should be overall, and the answer replaces the
+three choices it liked. NOTHING IS BUILT.
+
+THE READ, as given (the page: https://claude.ai/artifact/LGjra5dDzRVUC6a1eSb34t,
+"Calm Post Page"): Blooby looks like itself, which is the hard part; what
+it does not have yet is quiet.
+- KEEP: the drawing as the hero (warm paper on a deep ground, and it
+  moves); the hand (the wordmark, the pen-drawn icons, the wavy line);
+  Home and profiles, already calm; the comment sheet, as simple as
+  Bluesky's reply and leaving the drawing in view above it.
+- CALM DOWN, all on a post's own page: violet everywhere, so it stops
+  meaning "here"; headings over nothing, each with a button; the same
+  action in three places and three shapes; "More from", which the owner
+  named.
+- FROM BLUESKY, HOW IT BEHAVES AND NOT HOW IT LOOKS (the roots say the
+  same): one place to answer that never moves, no label over nothing,
+  colour only where you act.
+
+COUNTED IN THE PAGES, the same way before and after (a touch phone, dark):
+an empty post's screen wears violet in 7 places and has 3 bold headings,
+and the page runs 1117px; the owner's Bluesky screen has one coloured thing
+on it.
+
+THE PROPOSAL, MOCKED on the real pages, phone and desk, light and dark:
+1. ONE ANSWER BAR at the foot of every post's page, on the bottom bar's own
+   glass: your face, "Say something…", and Draw back beside it. It takes
+   the place of the round button, "Say the first thing", the Draw back by
+   the heading, and option A of the hour before. On a desk it sits in the
+   column under the date (without the face: with it the words were cut,
+   seen in the mock's own picture and mended).
+2. "MORE FROM" off the post's page (or one small link at its end).
+3. QUIET LABELS where the headings were ("3 draw-backs", "7 comments"), and
+   nothing at all when there are none.
+4. WHEN A REPLAY ENDS, Watch again on the drawing and the bar's Draw back
+   lit in the pill's own purple: the invitation at the same moment, said
+   once. (Or both pills on the drawing, as the Draw back mock had it.)
+5. Home, profiles and the comment sheet left as they are.
+With it an empty post fits one screen (874px), wears violet in 3 places
+(Make, Watch again, the lit Draw back) and has no heading; a full post's
+answers begin under small labels. Every new word reads 7.1:1 or more in
+light and 8.59:1 or more in dark, the lit button 5.33:1; every target is
+44px; no colour or token is new.
+
+SAID AS LATER, NOT MOCKED: a small picture of what is being answered in the
+comment sheet, as Bluesky shows the post; the date and plays beside the
+name, as on a card. SKRIBL'S PLAYER (its bar, "Drawn in… watching at 1×")
+LEFT ALONE: it is what the site is for, and it is the Pad's and Flip's too.
+
+FIVE CHOICES ARE WITH THE OWNER, each with a pick.
+
+FLIP AND THE PAD: not for either. NOT TESTED: Safari on an iPhone, SF or
+Segoe UI; and how a bar above the bottom bar behaves with the iPhone's
+keyboard up is to be checked on the owner's phone when it is built.
+
+## After v330 -- Main's run on the fix was cut at the hour, not red: seven shards
+
+THE RUN ON THE TREE AFTER #1006 (2382, Nov 20, 6:45 to 7:46 AM) READ
+"CANCELLED". Nothing in it failed. One job of its fifteen, sqlite 5/6, was
+stopped at its 60-minute limit with its last suite, verify_watchfull, about
+20 seconds from done: its runner had spent 6 min 40 s installing Chromium,
+where nine of the twelve took half a minute. Every other job was green:
+all six postgresql shards, sqlite 1, 2, 3, 4 and 6, the MP4, Firefox and
+WebKit.
+
+SO THE FIX OF "MAIN WAS RED FOR A NIGHT" IS READ GREEN WHERE IT WAS RED:
+verify_a11y's shard, 3 of 6, passed on both databases. WHAT WAS NOT READ:
+sqlite 5/6's summary. Twenty of its thirty-four suites are seen passed in
+the part of its log that could be fetched, thirteen earlier ones are out of
+the log reader's reach, and the last was cut; the same thirty-four passed
+on postgresql 5/6 in the same run. Not claimed green: cut.
+
+WHY IT WILL HAPPEN AGAIN AT SIX. Four days of suites since the Nov 16
+re-weighing: the shards' own suites took 48 to 56 minutes in that run (the
+table says 52.6 each), and a job's steps a minute or two more. No
+re-weighing brings the slowest under about 53, so any runner slow to
+install a browser runs out. The workflow's own note says what to do:
+"a run that needs more than that is worth splitting, not budgeting."
+
+SEVEN SHARDS (`.github/workflows/harness.yml`, both battery jobs;
+`harness/shard.py`): by the table, 45 minutes each. The 60-minute limit
+stays. Standard runners on a public repository cost nothing however many;
+seven shards of two databases with the MP4, Firefox and WebKit jobs is 17
+of the 20 jobs a free account runs at once. verify_docs already reads the
+matrix against the number shard.py is asked for and that the shards cover
+every suite once (201 of 201 at seven). THE TABLE IS FOUR DAYS OLD and was
+left: measure again the next time a shard runs long.
+
+NOT ASKED OF THE OWNER FIRST, and said to them: it bills nothing, it
+changes no trigger, and a main that reads "cancelled" one run in three is a
+gate that cries wolf.

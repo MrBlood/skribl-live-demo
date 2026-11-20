@@ -190,6 +190,16 @@ large built-in controls, clean type with varied weights. The Home Screen icon is
 Blooby in purple glass: dark accent at the outer edge, a soft light glow coming
 up from under him.
 
+**Never busy, never confusing.** The owner, Nov 20, of a post's page with no
+draw-backs and no comments: "It seems busy and disorganized. When there are
+comments and drawbacks it looks better and makes sense... I don't want
+anything to ever look busy and confusing." That screen had two bold headings
+with nothing under them, and the same two actions offered three times each
+in three shapes. Cal's reading of it, until the owner says otherwise: look at
+every screen EMPTY as well as full; a heading is there to label something,
+so one over nothing is clutter; an empty place is one quiet invitation; and
+the same action three times on one screen is noise, not help.
+
 **No dinge.** The owner, Nov 16, choosing inks for the lilac tint: "I want
 everything to pop, crisp and luxurious.. no dingy. Colorful but not
 cartoonish. Premium but kind and fun. Artistic, clean, and kind (like a
@@ -401,7 +411,7 @@ for nothing is a target.
 box running alone. Seal for an outside audit, for a release someone is handed,
 or when the owner asks; not at the end of a session, and not because changes
 have piled up. Between seals, every merge is covered by main's full run after
-it (twelve shards, both databases, the MP4, Firefox and WebKit lanes). A
+it (fourteen shards, both databases, the MP4, Firefox and WebKit lanes). A
 handoff says "not sealed since vNNN" and that is fine.
 
 Before a seal, `release_run.py --dry-run` (with the venv first on PATH) asks
