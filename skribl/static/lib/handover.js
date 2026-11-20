@@ -45,6 +45,33 @@
  * under Reduce Motion it fades where it sits. While it is up the editor
  * under it is out of reach (inert), and comes back as it was.
  *
+ * IT IS A DIALOG, AND KEEPS A DIALOG'S PROMISES (its markup says
+ * aria-modal; verify_a11y's census drives it as it drives every sheet). The
+ * day it merged it kept one of four: focus went in, and then Tab walked out
+ * of Your hand's last button to the browser (inside a host, to whatever the
+ * host has under its composer), Shift+Tab out of its first, and Escape did
+ * nothing at all. Now:
+ *   - FOCUS IS ON THE LAYER WHILE YOUR HAND LOADS, and goes into its page
+ *     the moment there is one. A frame still loading takes the keys and
+ *     answers none of them, Escape included.
+ *   - TAB STAYS IN. Two stops nobody sees, one each side of the frame
+ *     (edge()), are the only other places in this page Tab can reach while
+ *     the rest is inert. Each hands focus straight back: out of Your hand's
+ *     last stop comes round to its first, out of its first to its last. They
+ *     hold nothing, so the order inside is Your hand's own, untouched. A Tab
+ *     pressed in this page (not in Your hand's) goes in the same way.
+ *   - ESCAPE CLOSES IT. Pressed in Your hand's page it is that page's to
+ *     answer, and it asks to be closed (editor_letters.js, wayOut); pressed
+ *     here (while it loads, or after a click on the layer's own paper) it
+ *     closes from here.
+ *   - NO KEY REACHES THE EDITOR UNDER IT. inert stops a click and a Tab; it
+ *     does not stop a shortcut, which the editors hear on the page itself.
+ *     Ctrl+Z pressed while Your hand loaded would have taken a stroke off a
+ *     drawing nobody could see. Every keydown stops here while it is up.
+ *   - FOCUS GOES BACK with the caller's `back`: Text is chosen again and its
+ *     words take focus (lib/textwrite.js, again), so this hands it nowhere
+ *     itself.
+ *
  * COMPOSE ONLY: its template loads it there alone. On the editors' own pages
  * Make yours goes to Your hand as it always did, and the page's own draft
  * keeps the drawing for that trip.
@@ -59,7 +86,54 @@
   var SETTLE_MS = 450;
 
   var layer = null, frame = null, back = null, timer = 0, up = false;
-  var held = [];   // what this made inert, to put back
+  var ready = false;   // Your hand's page has loaded in the frame
+  var edges = null;    // the two stops that keep Tab in (edge)
+  var held = [];       // what this made inert, to put back
+
+  /* What Tab can stop on, as the editors' own dialogs count it
+     (lib/modalfocus.js). */
+  var STOPS = [
+    'a[href]:not([tabindex="-1"])', 'button:not([disabled]):not([tabindex="-1"])',
+    'input:not([disabled]):not([tabindex="-1"])', 'select:not([disabled]):not([tabindex="-1"])',
+    'textarea:not([disabled]):not([tabindex="-1"])', '[tabindex]:not([tabindex="-1"])'
+  ].join(',');
+
+  /* Into Your hand, at one end: its first stop, or its last. Each is TRIED,
+     not trusted: a control that is there but put away (hidden by a rule,
+     out of reach under one of its pages) takes no focus and says nothing,
+     so the next is asked until one has it. With no page yet, the layer keeps
+     focus; with a page and no stop, the frame does. */
+  function into(toLast) {
+    if (!up || !frame) return;
+    if (!ready) { layer.focus({ preventScroll: true }); return; }
+    var d = null, list = [], i, el;
+    try { d = frame.contentDocument; } catch (e) { d = null; }
+    if (d) list = d.querySelectorAll(STOPS);
+    for (i = 0; i < list.length; i++) {
+      el = list[toLast ? list.length - 1 - i : i];
+      if (!el.getClientRects().length) continue;
+      try { el.focus(); } catch (e2) { continue; }
+      if (d.activeElement === el) return;
+    }
+    frame.focus({ preventScroll: true });
+  }
+
+  /* One of the two stops round the frame. Focus that reaches it CAME OUT OF
+     YOUR HAND (Tab off its last stop reaches the one after the frame,
+     Shift+Tab off its first the one before) and goes back in at the other
+     end. Nothing else reaches one: a Tab pressed in this page never gets to
+     the browser (the keydown below), a finger cannot touch one, and a screen
+     reader is told they are not there. (Which way focus came was first read
+     from the event's relatedTarget, which is the frame the first time round
+     and not the second: the walk stuck on Your hand's last button.) */
+  function edge(after) {
+    var s = doc.createElement('span');
+    s.className = 'hand-over-edge';
+    s.setAttribute('tabindex', '0');
+    s.setAttribute('aria-hidden', 'true');
+    s.addEventListener('focus', function () { into(!after); });
+    return s;
+  }
 
   function find() {
     if (layer) return true;
@@ -68,6 +142,10 @@
     layer.addEventListener('transitionend', function (e) {
       if (e.target === layer && !up) settle();
     });
+    if (!layer.hasAttribute('tabindex')) layer.setAttribute('tabindex', '-1');
+    edges = [edge(false), edge(true)];
+    layer.insertBefore(edges[0], layer.firstChild);
+    layer.appendChild(edges[1]);
     return true;
   }
 
@@ -99,18 +177,27 @@
     frame = doc.createElement('iframe');
     frame.className = 'hand-over-frame';
     frame.setAttribute('title', layer.getAttribute('data-title') || 'Your hand');
-    frame.addEventListener('load', function () { if (up) layer.classList.add('is-ready'); });
+    ready = false;
+    frame.addEventListener('load', function () {
+      if (!up) return;
+      ready = true;
+      layer.classList.add('is-ready');
+      /* There is a page to take the keys now: focus goes in. */
+      try { frame.focus({ preventScroll: true }); } catch (e) { /* the layer keeps it */ }
+    });
     /* Over a post, or over a face being drawn (a host's ?face=1), where
        there is no post for Your hand to name. */
     frame.setAttribute('src', url + (url.indexOf('?') >= 0 ? '&' : '?') + 'over=' + (global.SKRIBL_FACE === true ? 'face' : '1'));
     layer.classList.remove('is-closing', 'is-ready');
-    layer.appendChild(frame);
+    layer.insertBefore(frame, edges[1]);
     layer.hidden = false;
     /* Read a size, so the glide starts from where the layer rests closed. */
     void layer.offsetHeight;
     layer.classList.add('is-open');
     hold(true);
-    try { frame.focus({ preventScroll: true }); } catch (e) { /* not focusable yet */ }
+    /* On the layer while Your hand loads (the header: a frame still loading
+       answers no key). */
+    layer.focus({ preventScroll: true });
     return true;
   }
 
@@ -141,6 +228,23 @@
     if (!up || !frame || e.origin !== global.location.origin || e.source !== frame.contentWindow) return;
     if (e.data && e.data.type === CLOSE) close();
   });
+
+  /* A KEY PRESSED IN THIS PAGE WHILE IT IS UP (the header). On the window as
+     the key arrives, before the editor's own shortcuts, which listen on the
+     page: none of them hears it. Escape closes. Tab goes into Your hand, at
+     its first stop or (with Shift) its last, and never to the browser's own
+     walk: from the layer, which holds focus while Your hand loads, Shift+Tab
+     has nothing before it in this page and went out to the browser. A key
+     let go is not stopped, so one held down when it opened is not left
+     held. */
+  global.addEventListener('keydown', function (e) {
+    if (!up) return;
+    e.stopImmediatePropagation();
+    if (e.key === 'Tab') { e.preventDefault(); into(e.shiftKey); return; }
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    close();
+  }, true);
 
   global.SkriblHandOver = {
     open: open,

@@ -1083,6 +1083,19 @@
     window.location.assign(backTo(text));
   }
   function leave() { goBack(false); }
+  // ESCAPE, OVER AN EDITOR. There Your hand is a dialog (the layer says so
+  // in the editor's page, lib/handover.js), and Escape is a dialog's way
+  // out: it closed nothing the day the layer merged. It is the way out this
+  // page already offers, never a new one, and it loses nothing: in a letter,
+  // Finish later (what is drawn is kept, as its button keeps it); changing
+  // one letter, Cancel (back to the letters, the letter as it was: one step,
+  // and Escape again closes); anywhere else, Close or Done. By itself, at
+  // its own address, Your hand is a page and Escape is no key of its.
+  function wayOut() {
+    if (view === 'draw' && mode === 'one') { backBtnEl.click(); return; }
+    if (view === 'draw') takeStroke();
+    leave();
+  }
 
   function showStart() {
     var p = openPage('start', 'Your hand', 'Text that writes the way you write', 'lt-mid');
@@ -1387,6 +1400,15 @@
   // the post sheet are left alone; a button's own Enter and Space still work.
   window.addEventListener('keydown', function (e) {
     var t = e.target;
+    // Escape, over an editor (wayOut): before the fields are left alone,
+    // because Escape types nothing in one; a dialog of this page's own
+    // keeps its Escape.
+    if (OVER && e.key === 'Escape' && !(t && t.closest && t.closest('#postOverlay, [role="dialog"]'))) {
+      e.preventDefault();
+      e.stopPropagation();
+      wayOut();
+      return;
+    }
     if (t && t.closest && (t.closest('input, textarea, select, [contenteditable]') ||
         t.closest('#postOverlay, [role="dialog"]'))) return;
     var k = (e.key || '').toLowerCase();

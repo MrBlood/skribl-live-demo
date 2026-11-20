@@ -297,6 +297,11 @@ with sync_playwright() as p:
     # It is primed below before the census is taken. Any future dialog built
     # the same way must be primed here too, and the template census that
     # follows is the backstop that says so.
+    # Your hand's recipe (its two rows are at the foot of MODALS).
+    _HAND = ("js:document.querySelector('#shapeSeg [data-shape=\"text\"]').click()"
+             "|click:#txStyles [data-style=\"yours\"]"
+             "|until:(f => !!f && !!f.contentWindow.SkriblLetters && f.contentWindow.SkriblLetters.view() === 'start')"
+             "(document.querySelector('#handOver iframe'))")
     MODALS = {
         # (route, id)          (how to open, expected focus-return target)
         ("/", "menuSheet"):    ("click:#menuBtn",                "menuBtn"),
@@ -427,6 +432,19 @@ with sync_playwright() as p:
         # hands focus to the ⋯ the row lives under, never to <body>.
         ("/", "homeScreenSteps"):     ("js:window.SkriblHomeScreen.open()", "menuBtn"),
         ("/flip", "homeScreenSteps"): ("js:window.SkriblHomeScreen.open()", "moreBtn"),
+        # YOUR HAND, OVER THE EDITOR INSIDE A POST (lib/handover.js; found
+        # the night it merged, by the template census below, on main). The
+        # one dialog only compose mode renders, and this section walked no
+        # compose page, so it had a role and no recipe; driven, it kept one
+        # promise of four (focus went in; Tab walked out of Your hand's last
+        # button, Shift+Tab out of its first, and Escape did nothing). Opened
+        # the way a person opens it: Text, then Make yours. THE WALK WAITS
+        # FOR YOUR HAND'S PAGE (it is a frame, and loads): Tab round a layer
+        # that is still loading says nothing about the page that arrives.
+        # What it does while it loads is verify_text's (TEXT 23). Closing
+        # chooses Text again, and its words take focus.
+        ("/skribl-pad?compose=1", "handOver"): (_HAND, "txField"),
+        ("/flip?compose=1", "handOver"):       (_HAND, "txField"),
     }
 
     def _draw_on_pad(pg):
@@ -466,6 +484,9 @@ with sync_playwright() as p:
                 pg.click(step[6:])
             elif step.startswith("js:"):
                 pg.evaluate(step[3:])
+            elif step.startswith("until:"):
+                # A dialog whose inside ARRIVES (a frame): wait for it, not a guess.
+                waits.until(pg, "() => " + step[6:], "the dialog's own page", ms=20000)
             waits.settle(pg, 450)   # the dialog's own timers and slide, not a guess
 
     # BOTH SURFACES. The census walked the Pad only, so a dialog that exists on
@@ -482,7 +503,19 @@ with sync_playwright() as p:
                          headers={"Content-Type": "application/json"})
     with _ur0.urlopen(_req0, timeout=15) as _r0:
         json.loads(_r0.read())
-    for _surface in ("/", "/flip", "/gallery", "/library"):
+    # ...AND THE EDITORS INSIDE A HOST'S POST (compose mode; after #1004).
+    # The same two pages with a flag, and the flag renders a dialog the plain
+    # page does not have: Your hand's layer. The sweep walked no compose page,
+    # so that dialog was in no population here, and only the template census
+    # at the foot of this section named it, a day late. Each compose page is
+    # swept AFTER the editor's own page and counted for WHAT ONLY IT RENDERS:
+    # read from the two DOMs, never listed, so the next dialog compose alone
+    # gains fails here without a recipe.
+    # WHAT THIS CANNOT SEE, said rather than found later: a dialog BOTH
+    # render is driven on the editor's own page only. Where compose changes
+    # how one of those opens or closes, this section does not know.
+    _COMPOSE = {"/skribl-pad?compose=1": "/", "/flip?compose=1": "/flip"}
+    for _surface in ("/", "/flip", "/gallery", "/library") + tuple(_COMPOSE):
         pg = browser.new_page(viewport={"width": 1280, "height": 900})
         browsing.goto(pg, BASE, _surface)
         # Prime the runtime-built dialog so the census can see it (see above).
@@ -501,8 +534,12 @@ with sync_playwright() as p:
         # (route, id), NOT id: a shared partial's dialog is one instance per
         # page it is included on, and each page's script may drive it
         # differently — which is exactly what SK-AUD-001/002 found.
-        found |= {(_surface, _id) for _id in pg.evaluate("""() => [...document.querySelectorAll('[aria-modal="true"]')]
-            .map(el => el.id || '(no id)')""")}
+        _ids = pg.evaluate("""() => [...document.querySelectorAll('[aria-modal="true"]')]
+            .map(el => el.id || '(no id)')""")
+        if _surface in _COMPOSE:
+            _own = {_i for (_s, _i) in found if _s == _COMPOSE[_surface]}
+            _ids = [_i for _i in _ids if _i not in _own]
+        found |= {(_surface, _id) for _id in _ids}
         pg.close()
 
     def _rid(rid):

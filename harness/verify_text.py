@@ -1840,6 +1840,188 @@ with sync_playwright() as p:
               (letter.get("view") == "tiles" and letter.get("wait") == WAITING
                and (seen["flip, a hand of 30"].get("after") or {}).get("note") == "Your hand, 31 of 92 letters"),
               json.dumps({"its page": nice(letter, "view", "wait"), "the drawer": (seen["flip, a hand of 30"].get("after") or {}).get("note")}))
+        # THE KEYBOARD (found on main the night the layer merged: its markup
+        # said dialog and verify_a11y's census had no recipe for it; driven,
+        # it kept one promise of four). The census walks it once Your hand
+        # has loaded, on its first page: focus in, Tab and Shift+Tab staying,
+        # Escape closing, focus handed back. Here, what that walk cannot
+        # say: WHICH stop the walk comes round to, Escape on each of Your
+        # hand's other pages, and all of it WHILE YOUR HAND LOADS.
+        KEYS = """() => { const a = document.activeElement, l = document.getElementById('handOver'), fr = l.querySelector('iframe');
+          let inner = null;
+          try { const d = fr && fr.contentDocument, ia = d && d.activeElement;
+                inner = ia && ia !== d.body ? (ia.getAttribute('aria-label') || ia.textContent || '').trim() : null; } catch (e) { inner = 'not readable'; }
+          return [a === fr ? 'Your hand' : a === l ? 'the layer' : a === document.body ? 'the page' : (a.id || a.className || a.tagName), inner]; }"""
+        STORE = "() => { try { return Object.keys(JSON.parse(localStorage.getItem(%s)).g); } catch (e) { return null; } }" % json.dumps(HAND)
+        # IN A HOST'S PAGE, AS IT REALLY IS: the editor is a frame in
+        # somebody's composer, and the host has controls of its own each side
+        # of that frame. Tab off Your hand's last stop has somewhere to go
+        # there, and went. (At its own address, which is how the census
+        # opens the editor, there is nowhere: the walk goes to the browser,
+        # and in a headless one comes straight back, so the two stops that
+        # keep Tab in could be taken out and that walk stay green. It was,
+        # and it did.) A hand of 30: its letters' page has 97 stops.
+        HOSTED = BASE + "/a-host-for-text-23"
+        c = b.new_context(**DESK)
+        c.add_init_script("try { if (!sessionStorage.getItem('tx-seeded')) { sessionStorage.setItem('tx-seeded', '1');"
+                          + "localStorage.setItem(%s, %s); } } catch (e) {}" % (json.dumps(HAND), json.dumps(json.dumps(hand_seed(QUICK)))))
+        q = c.new_page()
+        hosted = {}
+        try:
+            q.route(HOSTED, lambda r: r.fulfill(status=200, content_type="text/html; charset=utf-8", body=(
+                '<!doctype html><html lang="en"><meta charset="utf-8"><title>A host</title><body>'
+                '<button id="hostBefore" type="button">Before</button>'
+                '<iframe id="hostEditor" title="The editor" src="%s?compose=1" style="width:1100px;height:720px;border:0"></iframe>'
+                '<button id="hostAfter" type="button">After</button></body></html>' % ROUTE["pad"])))
+            q.goto(HOSTED, wait_until="load")
+            ed = next(f for f in q.frames if f != q.main_frame and "compose=1" in (f.url or ""))
+            ed.wait_for_function("() => !!window.SkriblText && !!window.SkriblHandOver", timeout=15000)
+            q.wait_for_timeout(600)
+            ed.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
+            ed.wait_for_function("() => SkriblText.isOpen()", timeout=15000)
+            q.wait_for_timeout(300)
+            ed.click("#txEdit")
+            fr = hand_frame(q)
+            q.wait_for_timeout(900)
+            hosted["view"] = fr.evaluate("() => SkriblLetters.view()") if fr else None
+            HOST_HAS = "() => document.activeElement.id || document.activeElement.tagName"
+            walk = [ed.evaluate(KEYS) + [q.evaluate(HOST_HAS)]]
+            for press in ("Tab", "Shift+Tab", "Tab", "Tab"):
+                q.keyboard.press(press)
+                walk.append(ed.evaluate(KEYS) + [q.evaluate(HOST_HAS)])
+            hosted["round"] = walk
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            hosted["stopped"] = str(exc).splitlines()[0][:200]
+        c.close()
+        first, last = "Done", "Start over"
+        check("in a host's page, a button of the host's each side of the editor's frame: Tab goes round Your hand and stays"
+              f" in. With its frame holding focus, Tab lands on its first stop ({first}); Shift+Tab from there on its LAST"
+              f" ({last}), one press; Tab from that on its first again, then its second. The host's page never takes focus,"
+              " and no stop is one that is not Your hand's",
+              bool(hosted.get("view") == "tiles" and hosted.get("round") == [
+                  ["Your hand", None, "hostEditor"], ["Your hand", first, "hostEditor"], ["Your hand", last, "hostEditor"],
+                  ["Your hand", first, "hostEditor"], ["Your hand", "Change a", "hostEditor"]] and not hosted.get("stopped")),
+              json.dumps(hosted))
+        keys = {}
+        # At the editor's own address, a hand of 30: one letter, then out.
+        c, q = open_editor(b, "pad", dev=DESK, hand=hand_seed(QUICK), query="compose=1")
+        try:
+            draw_line(q, 0.25, 0.3, 0.7, 0.42)
+            drawn = q.evaluate(POINTS["pad"], 0)
+            choose_text(q)
+            waited(q, "() => SkriblText.isOpen()")
+            q.wait_for_timeout(300)
+            q.click("#txEdit")
+            fr = hand_frame(q)
+            q.wait_for_timeout(900)
+            fr.click('.lt-tile[data-id="a"]')
+            fr.wait_for_function("() => SkriblLetters.view() === 'draw'", timeout=10000)
+            q.wait_for_timeout(300)
+            q.keyboard.press("Escape")
+            q.wait_for_timeout(700)
+            still_up = q.evaluate("() => SkriblHandOver.isOpen()")
+            keys["one"] = {"view": fr.evaluate("() => SkriblLetters.view()") if still_up else None, "up": still_up,
+                           "letters": len(q.evaluate(STORE) or [])}
+            q.keyboard.press("Escape")
+            waited(q, "() => !SkriblHandOver.isOpen() && SkriblText.isOpen()", 6000)
+            q.wait_for_timeout(700)
+            keys["closed"] = dict(q.evaluate(EDITOR), same=q.evaluate(POINTS["pad"], 0) == drawn and len(drawn) > 10)
+            keys["errors"] = q._tx_errors[:3]
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            keys["stopped"] = str(exc).splitlines()[0][:200]
+        c.close()
+        closed = keys.get("closed") or {}
+        check("Escape, changing one letter, is Cancel: back to the letters, the layer still up and the hand as it was (30);"
+              " Escape again closes it: the layer and its frame gone, Text chosen with its words holding focus, the drawing"
+              " under it point for point; no errors",
+              bool(keys.get("one") == {"view": "tiles", "up": True, "letters": 30} and closed.get("up") is False
+                   and not closed.get("shown") and closed.get("frames") == 0 and closed.get("held") == 0 and closed.get("text")
+                   and closed.get("focus") == "txField" and closed.get("same") and not keys.get("errors") and not keys.get("stopped")),
+              json.dumps({"one": keys.get("one"), "closed": nice(closed, "up", "shown", "frames", "held", "text", "focus", "same"),
+                          "errors": keys.get("errors"), "stopped": keys.get("stopped")}))
+        # No hand yet, on Flip: a letter being drawn in order.
+        c, q = open_editor(b, "flip", dev=DESK, query="compose=1")
+        inorder = {}
+        try:
+            choose_text(q)
+            waited(q, "() => SkriblText.isOpen()")
+            q.wait_for_timeout(300)
+            q.click('#txStyles [data-style="yours"]')
+            fr = hand_frame(q)
+            q.wait_for_timeout(700)
+            fr.click("text=Start with a")
+            fr.wait_for_function("() => SkriblLetters.view() === 'draw' && !!SkriblLetters.box()", timeout=10000)
+            q.wait_for_timeout(300)
+            bx = fr.evaluate("""() => { const b = SkriblLetters.box(), r = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize();
+              return [r.left + (b.x + b.w * 0.5) * r.width / lg.width, r.top + (b.y + b.h * 0.3) * r.height / lg.height, b.h * r.height / lg.height]; }""")
+            q.mouse.move(bx[0], bx[1])
+            q.mouse.down()
+            for i in range(1, 12):
+                q.mouse.move(bx[0] + i, bx[1] + bx[2] * 0.04 * i)
+                q.wait_for_timeout(8)
+            q.mouse.up()
+            q.wait_for_timeout(250)
+            inorder["before"] = [fr.evaluate("() => SkriblLetters.view()"), q.evaluate("() => SkriblHandOver.isOpen()")]
+            q.keyboard.press("Escape")
+            waited(q, "() => !SkriblHandOver.isOpen() && SkriblText.isOpen()", 6000)
+            q.wait_for_timeout(700)
+            after = q.evaluate(EDITOR)
+            inorder.update(up=after["up"], frames=after["frames"], focus=after["focus"], kept=q.evaluate(STORE), errors=q._tx_errors[:3])
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            inorder["stopped"] = str(exc).splitlines()[0][:200]
+        c.close()
+        check("Escape in a letter being drawn in order is Finish later: the layer goes, what was drawn is kept (the hand"
+              " holds a), and Text's words hold focus; no errors",
+              bool(inorder.get("before") == ["draw", True] and inorder.get("up") is False and inorder.get("frames") == 0
+                   and inorder.get("kept") == ["a"] and inorder.get("focus") == "txField" and not inorder.get("errors")
+                   and not inorder.get("stopped")), json.dumps(inorder))
+        # WHILE IT LOADS: Your hand's own page held back, so the layer is up
+        # with nothing in it yet. A frame that is loading takes the keys and
+        # answers none, so focus is on the layer until there is a page.
+        c, q = open_editor(b, "pad", dev=DESK, query="compose=1")
+        loading, kept_back = {}, []
+        try:
+            q.route("**/skribl-pad?letters=1*", lambda r: kept_back.append(r))
+            draw_line(q, 0.25, 0.3, 0.7, 0.42)
+            draw_line(q, 0.3, 0.5, 0.75, 0.36)
+            n0 = q.evaluate(COUNT["pad"])
+            choose_text(q)
+            waited(q, "() => SkriblText.isOpen()")
+            q.wait_for_timeout(300)
+            q.click('#txStyles [data-style="yours"]')
+            q.wait_for_timeout(700)
+            loading["held back"] = len(kept_back)
+            walk = [q.evaluate(KEYS)[0]]
+            for press in ("Tab", "Shift+Tab", "Shift+Tab", "Tab"):
+                q.keyboard.press(press)
+                walk.append(q.evaluate(KEYS)[0])
+            loading["walk"] = walk
+            q.keyboard.press("Control+z")
+            q.wait_for_timeout(250)
+            loading["drawing"] = [n0, q.evaluate(COUNT["pad"])]
+            loading["still up"] = q.evaluate("() => SkriblHandOver.isOpen()")
+            q.keyboard.press("Escape")
+            waited(q, "() => !SkriblHandOver.isOpen() && SkriblText.isOpen()", 6000)
+            q.wait_for_timeout(700)
+            after = q.evaluate(EDITOR)
+            loading.update(up=after["up"], shown=after["shown"], frames=after["frames"], held=after["held"], focus=after["focus"],
+                           errors=q._tx_errors[:3])
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            loading["stopped"] = str(exc).splitlines()[0][:200]
+        for r in kept_back:
+            try:
+                r.abort()
+            except Exception:  # noqa: BLE001 -- its frame has gone with the layer
+                pass
+        c.close()
+        check("while Your hand loads the layer holds focus: Tab and Shift+Tab stay on it (never the page under it, never"
+              " the browser), a shortcut reaches nothing under it (Ctrl+Z leaves the drawing stroke for stroke), and"
+              " Escape closes it, nothing left out of reach, Text's words holding focus; no errors",
+              bool(loading.get("held back") == 1 and loading.get("walk") == ["the layer"] * 5
+                   and loading.get("drawing") and loading["drawing"][0] == loading["drawing"][1] and loading["drawing"][0][0] > 10
+                   and loading.get("still up") is True and loading.get("up") is False and not loading.get("shown")
+                   and loading.get("frames") == 0 and loading.get("held") == 0 and loading.get("focus") == "txField"
+                   and not loading.get("errors") and not loading.get("stopped")), json.dumps(loading))
         # OVER A FACE BEING DRAWN (a host's ?face=1, compose too): no post to
         # name, so the line does not name one.
         c, q = open_editor(b, "pad", query="compose=1&face=1")
@@ -1880,6 +2062,12 @@ with sync_playwright() as p:
                 browsing.goto(q, BASE, "/skribl-pad?" + query)
                 q.wait_for_function("() => !!window.SkriblLetters && SkriblLetters.view() === 'tiles'", timeout=15000)
                 alone[key] = q.evaluate(HANDPAGE)
+                # Escape is the layer's way out; by itself Your hand is a page.
+                q.keyboard.press("Escape")
+                q.wait_for_timeout(600)
+                alone[key]["escape"] = q.evaluate("() => [location.pathname + location.search, window.SkriblLetters ? SkriblLetters.view() : null]")
+                if alone[key]["escape"][1] != "tiles":
+                    raise RuntimeError("Escape left Your hand's page")
                 q.click(".lt-ptop .lt-pdone")
                 alone[key]["went"] = waited(q, "() => !window.SkriblLetters && !!window.SkriblText && typeof shapeKind !== 'undefined' && shapeKind === 'text'")
                 alone[key]["to"] = q.evaluate("() => location.pathname + location.search")
@@ -1887,10 +2075,13 @@ with sync_playwright() as p:
                 alone[key] = dict(alone.get(key) or {}, stopped=str(exc).splitlines()[0][:160])
             c.close()
         check("Your hand by itself is as it always was, at its own address and with the flag but no editor over it: no"
-              " line about a post, Post your letters offered, and Done goes back to the Pad with Text chosen",
+              " line about a post, Post your letters offered, Escape no key of its (it stays on its letters, where it"
+              " was), and Done goes back to the Pad with Text chosen",
               all(v.get("wait") is None and v.get("quiet") == ["Save a copy", "Open a copy", "Start over", "Post your letters"]
-                  and v.get("went") and v.get("to") == "/skribl-pad" for v in alone.values()) and len(alone) == 2,
-              json.dumps({k: nice(v, "wait", "quiet", "went", "to", "stopped") for k, v in alone.items()}))
+                  and v.get("escape") == ["/skribl-pad?" + query, "tiles"]
+                  and v.get("went") and v.get("to") == "/skribl-pad"
+                  for v, query in zip(alone.values(), ("letters=1&back=pad", "letters=1&back=pad&over=1"))) and len(alone) == 2,
+              json.dumps({k: nice(v, "wait", "quiet", "escape", "went", "to", "stopped") for k, v in alone.items()}))
         # ...and on the editors' own pages (not inside a post) Make yours
         # GOES to Your hand, as it always did: TEXT 11 reads that trip. Here,
         # only that the layer and its module are not there to take it.
