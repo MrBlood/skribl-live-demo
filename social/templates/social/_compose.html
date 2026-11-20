@@ -54,6 +54,15 @@
     data-skribl-api, written here for the composer's box, which is a draft's
     and carries none).
 
+    HER SAY, WHO CAN DRAW BACK (the owner's "All yes to everything", Nov 20,
+    to the Her say mock; _who.html): under a drawing that can be drawn back
+    on, one quiet line, "Anyone can draw back · Change". Change opens
+    Settings' pill where the line stood (Everyone, People I follow, Nobody,
+    and one line saying what the choice means), growing into its room; the
+    line is not seen again for that drawing. Post sends what is chosen
+    ({drawback_by}); a new drawing starts at Everyone. Not under a Flip, nor
+    with words alone: nothing there can be drawn back on yet.
+
     ON A PHONE IT OPENS CALM (the owner, Nov 20: "should start like 2nd
     screenshot", the sheet at its full height and no keyboard): the sheet
     itself takes focus there (its tabindex below; compose.js, "A PHONE OPENS
@@ -64,6 +73,7 @@
 {% from 'social/_post.html' import face with context %}
 {% from 'social/_follow.html' import compose_pill with context %}
 {% from 'social/_mentions.html' import mention_list %}
+{% from 'social/_who.html' import who_switch %}
 <div class="make cmp" id="composeSheet" hidden data-post-new="{{ url_for('social.post_new') }}" data-drawback-url="{{ url_for('social.post_drawback', public_id='__ID__') }}"
      data-yours="{{ url_for('social.compose_yours') }}" data-skribl-api="{{ url_for(skribl_bp ~ '.create_skribl') }}">
   <div class="make-scrim" data-make-close></div>
@@ -89,6 +99,10 @@
             <button class="btn btn-small" type="button" data-compose-edit>{{ ic.pen() }}<span>Edit drawing</span></button>
             <button class="btn btn-small btn-quiet-danger" type="button" data-compose-remove>{{ ic.close() }}<span>Remove</span></button>
           </div>
+        </div>
+        <div class="cmp-who-wrap" data-compose-who hidden>
+          <button class="cmp-who" type="button" data-compose-who-line aria-expanded="false" aria-controls="composeWho">{{ ic.drawback() }}<span><span data-compose-who-words data-says-everyone="Anyone can draw back" data-says-follow="People you follow can draw back" data-says-nobody="Nobody else can draw back">Anyone can draw back</span> · <b>Change</b></span></button>
+          <div class="cmp-who-open" id="composeWho" data-compose-who-card hidden>{{ who_switch('composeWhoTitle') }}</div>
         </div>
         <div class="cmp-quote" data-compose-quote hidden></div>
         <p class="say cmp-say" data-compose-say role="status" hidden></p>
@@ -160,6 +174,7 @@
   <span data-word="cmp_drawback_empty">Draw back first, then Post.</span>
   <span data-word="cmp_drawback_gone">That drawing isn’t here to draw back on anymore.</span>
   <span data-word="cmp_drawback_unsupported">That drawing can’t be drawn back on yet.</span>
+  <span data-word="cmp_drawback_closed">That drawing isn’t open for draw-backs right now.</span>
   <span data-word="cmp_drawback_photo">A picture can’t go under a draw-back yet. Edit drawing, take the picture out, then Post.</span>
   <span data-word="cmp_drawback_music">Music can’t go with a draw-back yet. Edit drawing, take the music out, then Post.</span>
   <span data-word="cmp_drawback_recolors">Recolour can’t be used in a draw-back yet. Edit drawing, undo it, then Post.</span>

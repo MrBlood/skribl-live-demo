@@ -332,6 +332,53 @@ def drawbacks(posts, viewer):
     return out
 
 
+#: HER SAY, WHO CAN DRAW BACK ON A POST: what its maker may choose, in the
+#: pill's order. "everyone" is kept as nothing (Post.drawback_by).
+WHO = ("everyone", "follow", "nobody")
+
+
+def drawback_by(post):
+    """Who can draw back on `post`, as its maker chose: "everyone" (where
+    every post starts, and every post from before the choice), "follow" or
+    "nobody"."""
+    by = getattr(post, "drawback_by", None)
+    return by if by in WHO else "everyone"
+
+
+def open_to(posts, viewer):
+    """HER SAY, WHO CAN DRAW BACK (the owner's "All yes to everything", Nov
+    20, to the Her say mock): the ids of those of `posts` (the site's rows)
+    whose maker lets `viewer` draw back on them. THE ONE RULE that the row's
+    pen, the answer bar's Draw back, the composer's way in (post_drawback)
+    and the post itself (_drawing_back) all read:
+
+    - its maker always can, whatever it is set to (on "nobody" too: the
+      mock's choice 6);
+    - "everyone", where every post starts, is anybody signed in;
+    - "follow" is whoever its maker follows NOW (unfollowed, the pen goes;
+      what they drew back before stays), read once for the page;
+    - "nobody" is nobody else.
+
+    Whether its drawing CAN be drawn back on is another question
+    (drawback.drawable), and so is whether the viewer may see the post at
+    all (reposts.quotable): this is only her say."""
+    out, ask = set(), {}
+    for p in posts:
+        pid = getattr(p, "id", None)
+        if pid is None:
+            continue
+        by = drawback_by(p)
+        if by == "everyone" or (viewer is not None and p.person_id == viewer.id):
+            out.add(pid)
+        elif by == "follow" and viewer is not None:
+            ask.setdefault(p.person_id, []).append(pid)
+    if ask:
+        from .follows import followers_among
+        for maker in followers_among(viewer, list(ask)):
+            out.update(ask[maker])
+    return out
+
+
 def hands_said(posts, drawings, viewer):
     """WHAT A DRAW-BACK SAYS OF ITS HANDS (drawback.py; the walkthrough's
     mocks, choice 6, the owner's "all yes", Nov 19), for a page of posts:
@@ -472,6 +519,8 @@ def cards(entries, viewer, words=True, aligned=False):
     # DRAW BACK (drawback.py): how many draw-backs each post has, and on a
     # draw-back whose drawing it answers; one read each for the page.
     backs = drawbacks([e["post"] for e in entries if e["kind"] == "p"], viewer)
+    # ...and whose maker lets this viewer draw back (Her say: open_to).
+    may = open_to([e["post"] for e in entries if e["kind"] == "p"], viewer)
     # ...and what each draw-back says of its hands (hands_said): its line's
     # "drawn in" is their own times, never the joined drawing's, in which
     # hers plays squeezed.
@@ -509,6 +558,15 @@ def cards(entries, viewer, words=True, aligned=False):
                 or getattr(who, "taken_down_at", None) is not None)
         key = ("p", p.id) if e["kind"] == "p" else ("s", p.skribl_id)
         by = e.get("by")
+        mine = viewer is not None and viewer.id == who.id
+        # WHETHER ITS DRAWING CAN BE DRAWN BACK ON AT ALL (a drawing of one
+        # page, no recolours: drawback.drawable). A photo or music is no bar
+        # since the owner's yes, Nov 19: a draw-back keeps the author's.
+        # Recolours are the post's `undrawable`, read when it was made; a
+        # post from before that keeps its pen, answered when opened ("photo"
+        # and "music" recorded before the yes bar nothing now).
+        can_back = (e["kind"] == "p" and not down and sk is not None and sk.get("kind") == "pad"
+                    and getattr(p, "undrawable", None) not in ("pages", "recolors"))
         made[id(e)] = {"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
                        "plays": plays_text(sk["views"]) if sk else None,
                        "comments": said.get(key, 0),
@@ -539,19 +597,21 @@ def cards(entries, viewer, words=True, aligned=False):
                        # their handle now}, which said() makes links of.
                        "mentions": named.get(("p", p.id), {}) if e["kind"] == "p" else {},
                        "profile": profile_url(who.handle),
-                       "mine": viewer is not None and viewer.id == who.id,
+                       "mine": mine,
                        "muted": who.id in muted,
                        # DRAW BACK: the pen in the row where it can be done
-                       # (a drawing of one page, no recolours: drawback.drawable), how many there are, and on
-                       # a draw-back the post it answers and whose that is.
-                       # (A photo or music is no bar since the owner's yes,
-                       # Nov 19: a draw-back keeps the author's. Recolours
-                       # are the post's `undrawable`, read when it was made;
-                       # a post from before that keeps its pen, answered when
-                       # opened. "photo" and "music" recorded before the yes
-                       # bar nothing now.)
-                       "drawable": (e["kind"] == "p" and not down and sk is not None and sk.get("kind") == "pad"
-                                    and getattr(p, "undrawable", None) not in ("pages", "recolors")),
+                       # (`can_back`, above) AND ITS MAKER LETS THIS VIEWER
+                       # (Her say, Nov 20: open_to; no pen at all for
+                       # somebody who can't, as on a Flip), how many there
+                       # are, and on a draw-back the post it answers and
+                       # whose that is.
+                       "drawable": can_back and p.id in may,
+                       # HER SAY: on your own post that can be drawn back on,
+                       # who you let ("everyone", "follow", "nobody"): the
+                       # pill in its ⋯ and the quiet line on its page read
+                       # it. None on anybody else's, and where nothing can be
+                       # drawn back on (a Flip, words alone).
+                       "who_draws": drawback_by(p) if can_back and mine else None,
                        "drawbacks": backs["n"].get(p.id, 0) if e["kind"] == "p" else 0,
                        "drawn_on": backs["on"].get(p.id) if e["kind"] == "p" else None}
     out = []
@@ -662,8 +722,9 @@ def register(bp, skribl_blueprint="skribl"):
     def post_drawback(public_id):
         """DRAW BACK, for the composer: the drawing to lay under the pen
         ({payload, first}), open to the person signed in as a like asks
-        (reposts.quotable) and one that can be drawn back on
-        (drawback.drawable); "drawback_gone" or "drawback_unsupported"
+        (reposts.quotable), one its maker lets them draw back on (Her say:
+        open_to) and one that can be drawn back on (drawback.drawable);
+        "drawback_gone", "drawback_closed" or "drawback_unsupported"
         otherwise. Only what Skribl would serve this viewer (read_payload)."""
         from skribl import read_payload
         from .drawback import drawable
@@ -676,6 +737,10 @@ def register(bp, skribl_blueprint="skribl"):
                     if on is not None and on.post is not None and on.post.skribl_id else None)
         if original is None:
             return _json_error("drawback_gone", 404)
+        # HER SAY: closed to them since the page they pressed was made (the
+        # pen is not on a page made now). Said kindly, and not why.
+        if on.post.id not in open_to([on.post], me):
+            return _json_error("drawback_closed", 403)
         why = drawable(original)
         if why:
             return _json_error("drawback_unsupported", 400, why=why)
@@ -712,6 +777,14 @@ def register(bp, skribl_blueprint="skribl"):
         quoting, refusal = _quoting(me, body)
         if refusal is not None:
             return refusal
+        # HER SAY, WHO CAN DRAW BACK ON IT (the composer's quiet line and its
+        # pill): {"drawback_by": "follow" or "nobody"}; nothing, or
+        # "everyone", leaves it open. Anything else is refused, never read
+        # as open: she asked for something.
+        by = body.get("drawback_by")
+        if by is not None and by not in WHO:
+            return _json_error("bad", 400)
+        by = None if by == "everyone" else by
         if body.get("draw_back") is not None:
             # DRAW BACK (drawback.py): the answer's strokes, joined here to
             # the original's, never beside a quote or an older drawing.
@@ -727,7 +800,7 @@ def register(bp, skribl_blueprint="skribl"):
             # never beside a new one: a post holds one drawing.
             if body.get("payload") is not None:
                 return _json_error("one_drawing", 400)
-            return _post_older(me, words, body.get("skribl"), quoting)
+            return _post_older(me, words, body.get("skribl"), quoting, by)
         payload = body.get("payload")
         if payload is None and (quoting is not None or words):
             # WORDS ALONE: a quote of words alone (the original brings its
@@ -775,7 +848,7 @@ def register(bp, skribl_blueprint="skribl"):
         except SkriblUnavailable:
             return _json_error("busy", 503)
         row = Post(public_id=new_public_id(8), person_id=me.id, words=words or "",
-                   skribl_id=made.public_id, undrawable=undrawable, **(quoting or {}))
+                   skribl_id=made.public_id, undrawable=undrawable, drawback_by=by, **(quoting or {}))
         sess = site().session()
         sess.add(row)
         sess.flush()
@@ -786,8 +859,11 @@ def register(bp, skribl_blueprint="skribl"):
     def _drawing_back(me, oid, payload):
         """A draw-back's drawing and columns ({"payload", "columns"}), or a
         refusal: the post `oid` names, open to `me` as a like asks
-        (reposts.quotable), its drawing one they may see and one that can
-        be drawn back on, and `payload` the strokes drawn on its shape."""
+        (reposts.quotable) and one its maker lets them draw back on (Her
+        say: open_to, asked again here, so a draw-back begun while it was
+        open and posted after it closed is not posted), its drawing one
+        they may see and one that can be drawn back on, and `payload` the
+        strokes drawn on its shape."""
         import json
         from skribl import read_payload
         from .drawback import _points, drawable, hands, join, same_shape
@@ -797,6 +873,8 @@ def register(bp, skribl_blueprint="skribl"):
         on = quotable(me, "p", oid)
         if on is None or on.post is None or not on.post.skribl_id:
             return None, _json_error("drawback_gone", 404)
+        if on.post.id not in open_to([on.post], me):
+            return None, _json_error("drawback_closed", 403)
         # Her photo and song as data, to post again with the two (the
         # author's background and music: the owner's yes, Nov 19).
         original = read_payload(on.post.skribl_id, viewer_id=me.public_id, inline_media=True)
@@ -880,7 +958,7 @@ def register(bp, skribl_blueprint="skribl"):
                 "quoted_drawing_id": on.drawing if on.post is None else None,
                 "quoted_owner_id": on.owner.id}, None
 
-    def _post_older(me, words, skribl_id, quoting=None):
+    def _post_older(me, words, skribl_id, quoting=None, by=None):
         """ONE DRAWING, ONE CONVERSATION: one of `me`'s older drawings as a
         post (the header's rule). The drawing is theirs, shared (public or
         link-only), never a post's, a face or a comment's; taken down
@@ -924,7 +1002,7 @@ def register(bp, skribl_blueprint="skribl"):
                    # Hidden from the Gallery by its maker (link-only): the
                    # post's drawing stays out of it, as the eye said.
                    gallery_hidden_at=None if sk.get("visibility") == "public" else utcnow(),
-                   undrawable=drawable(kept) if kept is not None else None, **(quoting or {}))
+                   undrawable=drawable(kept) if kept is not None else None, drawback_by=by, **(quoting or {}))
         sess.add(row)
         sess.flush()
         move_drawing_comments(sid, row.id)
@@ -1078,6 +1156,35 @@ def register(bp, skribl_blueprint="skribl"):
         if not isinstance(want, bool):
             return None, None, _json_error("bad", 400)
         return me, want, None
+
+    @bp.post("/p/<public_id>/drawback-by")
+    @_rests(json_answer=True)
+    def post_drawback_by(public_id):
+        """HER SAY, WHO CAN DRAW BACK ON HER POST (the owner's "All yes to
+        everything", Nov 20, to the Her say mock): the pill in her own
+        post's ⋯, {"by": "everyone", "follow" or "nobody"}. Hers alone to
+        set (anybody else's, or none, is as gone as one never made), on a
+        post with a drawing. Nothing else changes: the draw-backs it has
+        stay where they are, and nobody is told. The eye's guards (the
+        token and Origin, signed in, its limit: a person's own switches)."""
+        if not origin_ok() or not token_ok():
+            return _json_error("stale", 403)
+        me = current_person()
+        if me is None:
+            return _json_error("signed_out", 401)
+        if over("gallery", "person|" + me.public_id):
+            return _json_error("limited", 429)
+        body = request.get_json(silent=True)
+        want = body.get("by") if isinstance(body, dict) else None
+        if not isinstance(want, str) or want not in WHO:
+            return _json_error("bad", 400)
+        sess = site().session()
+        row = sess.execute(sa.select(Post).where(Post.public_id == public_id)).scalar_one_or_none()
+        if row is None or row.person_id != me.id or not row.skribl_id or row.taken_down_at is not None:
+            return _json_error("gone", 404)
+        row.drawback_by = None if want == "everyone" else want
+        sess.flush()
+        return jsonify({"ok": True, "by": want})
 
     @bp.post("/p/<public_id>/shown")
     @_rests(json_answer=True)

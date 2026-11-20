@@ -234,7 +234,7 @@
 {%- set p = c.post %}{% set who = c.who -%}
 <article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id or '' }}" data-kind="{{ c.kind }}"
          data-handle="{{ who.handle }}" data-first="{{ who.display_name|first_name }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
-         {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %}{{ rp_data(c) }} aria-labelledby="pn-{{ p.public_id }}">
+         {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %}{% if c.who_draws %} data-who="{{ c.who_draws }}"{% endif %}{{ rp_data(c) }} aria-labelledby="pn-{{ p.public_id }}">
   {% if c.by %}{{ reposted_by(c) }}{% endif %}
   <header class="post-head">
     <a class="post-face{% if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %} has-back{% endif %}" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who, initial=true) }}
@@ -284,6 +284,14 @@
       <button class="post-act" type="button" data-act="share">{{ ic.share() }}<span>Share…</span></button>
       {% if me %}{{ mute_row('', false, 'post') }}{% endif %}
     </div>
+    {#- HER SAY, WHO CAN DRAW BACK (the owner's "All yes to everything", Nov
+        20; _who.html): on her own post that can be drawn back on, a card of
+        its own with Settings' pill and one line saying what the choice
+        means. posts.js shows it for such a post (the card's data-who),
+        presses what it is set to, and sends a tap at once
+        (/p/<id>/drawback-by): nothing to confirm, as in Settings. #}
+    {% if me %}{% from 'social/_who.html' import who_switch %}
+    <div class="post-acts who-acts" data-who-card data-who-url="{{ url_for('social.post_drawback_by', public_id='__ID__') }}" hidden>{{ who_switch('postWhoTitle', true) }}</div>{% endif %}
     <div class="post-acts">
       <button class="post-act is-danger" type="button" data-act="report" data-theirs>{{ ic.flag() }}<span data-kind-word="report">Report this post</span></button>
       {% if me %}<button class="post-act is-danger" type="button" data-act="block" data-theirs>{{ ic.block() }}<span data-block-who>Block</span></button>{% endif %}

@@ -58,8 +58,12 @@ section 4 drives the whole way in a browser: the quickest look at it.
    composer that opens it. The calm post page went first, because it
    reshapes the page her strip sits on. HIDING IS BUILT (`DECISIONS.md`,
    "Her say: hiding a draw-back from your own post, built";
-   `docs/SOCIAL-SITE.md` section 24). WHO CAN DRAW BACK is next, its own
-   pull request.
+   `docs/SOCIAL-SITE.md` section 24). WHO CAN DRAW BACK IS BUILT TOO
+   (`DECISIONS.md`, "Her say: who can draw back, built";
+   `docs/SOCIAL-SITE.md` section 25): the one rule is `posts.open_to`, the
+   words are in `social/templates/social/_who.html`. BOTH HALVES OF HER SAY
+   ARE DONE; the calls no mock showed are listed in those two entries as
+   the owner's to change.
 2. **The words** (choice 4, approved): the line under a draw-back says "Ana
    + Theo · drawn in 15 sec + 9 sec · watching at 1×", the card's play
    button "Ana + Theo · 24 sec", a jam "Ana + Theo + Mira", then "Ana + 4
@@ -256,8 +260,8 @@ THE OWNER: "All yes to everything. Make it smart and beautiful." (Nov 20,
 about 8:55 AM). BUILT THAT DAY (`DECISIONS.md`, "The calm post page, built";
 `docs/SOCIAL-SITE.md` section 23): one answer bar on every post's page and
 every comment's, small quiet labels and nothing over nothing, no More from,
-and the bar's Draw back lit when a replay ends. Still to come after it, in
-this order: Her say's two halves (item 1 of "What is still to build"), and
+and the bar's Draw back lit when a replay ends. Her say's two halves
+followed the same day (item 1 of "What is still to build"). STILL TO COME:
 the strip of Home that shows under the composer when an iPhone's keyboard
 is up.
 THE SESSION STOPPED ON THE OWNER'S USAGE LIMIT at about 10:25 PM, with

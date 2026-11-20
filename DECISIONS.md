@@ -49232,3 +49232,167 @@ the merge is it, and its shard 6 on both databases is the one to read.
 FLIP AND THE PAD: not for either. NOT TESTED HERE: Safari and Segoe UI, as
 ever; the tell on a desk is that posting a comment from a tall box no
 longer makes the comments under it jump.
+
+## After v330 -- Her say: who can draw back, built
+
+Nov 20. The other half of Her say (the same mock, the artifact "Her Say",
+and the same answer: "All yes to everything. Make it smart and beautiful.").
+Its last three picks, and the words:
+
+4. WHERE "WHO CAN DRAW BACK" LIVES: the composer's quiet line AND her own
+   post's ⋯ (not the ⋯ alone, which would leave a new post open to everyone
+   until she got there).
+5. WHEN SOMEBODY CAN'T: no pen, as on a Flip today (not a grey pen that says
+   why).
+6. HER OWN POST SET TO NOBODY: she still can.
+7. THE WORDS, as shown.
+
+AS BUILT (`docs/SOCIAL-SITE.md` section 25). One column
+(`social_posts.drawback_by`, migration `c8d3f5a1e694`: nothing for
+Everyone, `follow`, `nobody`; no data work) and ONE RULE, `posts.open_to`,
+which the row's pen, the answer bar, the replay's end, the composer's way
+in and the post itself all read. The three choices are Settings' own pill
+(`.theme-switch`), placed outside Settings by one helper
+(`social.js` `SocialSwitch`: Settings' two keep their own copies of the
+same few lines; folding them into this one is a tidy-up for another day,
+since it would touch Settings for nothing the owner asked). The words are
+in one template (`_who.html`) and the scripts read them off the page.
+
+WHAT THE MOCK DID NOT SAY, DECIDED IN THE BUILDING, THE OWNER'S TO CHANGE:
+
+- HER PAGE'S QUIET LINE SHOWS WHERE NOBODY HAS DRAWN BACK YET TOO, alone
+  under the date. The mock drew it on a strip of three. But on Nobody
+  nobody else can make the first, so a line that waited for a strip would
+  never be seen exactly where she most needs it ("why has nobody drawn
+  back?"). At Everyone there is no line, and it takes no room: the calm
+  page stays as calm as it was.
+- THE COMPOSER'S PILL STAYS OPEN ONCE OPENED, and the sheet put away and
+  opened again shows the line again, saying the choice ("Nobody else can
+  draw back · Change"). The mock showed the line at Everyone only.
+- A DRAWING REMOVED TAKES ITS CHOICE WITH IT: the next one starts at
+  Everyone, so a choice made for one drawing never rides unseen onto
+  another.
+- IN THE COMPOSER, NOBODY SAYS "Nobody else can draw back on this." and
+  stops there: "The ones it has stay." is for a post that has some.
+- THE LINE IS UNDER ANYTHING THAT CAN BE DRAWN BACK ON: a drawing from the
+  Pad, an older drawing from Yours, and a draw-back as you make one (it is
+  a post too, and a jam is drawing back on a draw-back).
+- "PEOPLE I FOLLOW" IS READ WHEN IT MATTERS, NOT WHEN SHE CHOSE: unfollowed,
+  their pen goes; followed since, they have one. What anybody drew back
+  while they could stays. Following HER lets nobody in.
+- SOMEBODY WHO CAN'T LOSES THE ROW'S COUNT WITH THE PEN (the pen carries
+  it), and nothing rises for them when a replay ends, Watch again included:
+  both exactly as on a Flip. They still see the draw-backs and their label
+  on her post's page.
+- A PAGE GONE STALE (opened before she closed it) is told "That drawing
+  isn’t open for draw-backs right now.": kindly, and not who or why. No Pad
+  opens over it.
+- A TAP IN THE ⋯ IS THE CHANGE, with nothing to confirm, as in Settings; the
+  sheet stays up so she reads what the choice means. If the site can't be
+  told, the pill goes back and the sheet says "That didn’t go through. Try
+  again?".
+- THE WORDS THE MOCK DID NOT SHOW, made in its voice: the composer's line
+  at the other two ("People you follow can draw back", "Nobody else can
+  draw back"), and her page's at Nobody ("Nobody else can draw back.").
+- UNDER 360px WIDE the pill's words are 14px, so "People I follow" is never
+  cut. Not seen on an iPhone 17 (402).
+
+TWO THINGS THE BUILDING CAUGHT, each before anybody else could:
+
+- THE FIRST PICTURE of the composer showed a request nobody asked for. The
+  words rode on attributes named for what they say, and one of those names
+  is the one the site's follow buttons are found by: a tap on "Change" told
+  the site to follow an address made of the sentence. The words' attributes
+  have names of their own now, and the row that watches the opening asks
+  that the tap sends nothing at all.
+- THE CHECK FOR "WHERE THE LINE STOOD" WAS RED ON A DESK, AND IT WAS RIGHT.
+  A click gives the line focus; the line was hidden before the pill was
+  shown; and a browser that finds its focused thing gone, in a sheet now a
+  line shorter, pulls a scrolled sheet back. The pill opened 42px under
+  where the line had been, from its first frame. A phone at rest never
+  showed it; a phone with a long post would have. The pill is shown and
+  takes focus first now, and then the line goes.
+
+SHOWN RED, EACH BY BREAKING ONE THING (forty-one breakages against section
+12 alone, twenty-one rows; green as built before and after):
+
+- THE RULE. The composer's way in left unguarded: "the one rule", "whom she
+  follows now", "Post sends" and "a page gone stale". The post itself left
+  unguarded: "the one rule", and "no pen" (the label counts one too many).
+  "People I follow" read backwards (whom the VIEWER follows): five rows.
+  Her own post closed to her: "the one rule", "no pen", "she still can".
+- THE ROUTE open to anybody; open on a post of words alone; keeping the
+  word for Everyone where nothing is kept: its guards, each.
+- A NEW POST dropping the choice; an older drawing's dropping it; any word
+  taken for a choice: "a new post says who".
+- THE PEN given to everybody: "no pen" and "she still can". What it is set
+  to given to everybody's page: "she still can" (hers alone to read).
+- HER ⋯: the card on every post of hers ("only there"); the tint never
+  sliding, and "The ones it has stay." left off ("a tap is the change");
+  the pill not put back when the site can't be told, the sheet not saying
+  why, the tint sliding under Reduce Motion (that row, each); her page's
+  line not following the pill (both); the choices squeezed to thirds, cut
+  (six rows, the composer's among them).
+- HER PAGE'S LINE shown at Everyone; not shown alone ("alone under the
+  date", each); Change 30px tall (both of the line's rows).
+- THE COMPOSER'S LINE there from the start, and 36px tall ("one quiet
+  line"); under a Flip, and whenever anything had been attached ("not
+  under a Flip", "a choice is the drawing's"); a choice surviving Remove,
+  and the pill not folded back into its line ("a choice is the drawing's");
+  Post not sending it ("Post sends").
+- THE OPENING with no animation; with the line hidden before the pill was
+  shown, AS IT WAS FIRST BUILT (red on a desk alone: "where the line
+  stood"); with no focus on the choice pressed; with the words back on the
+  follow buttons' attribute ("sends nothing"): "Change opens the pill",
+  each. Growing under Reduce Motion: "not under a Flip", its second half.
+- A CLOSED DRAWING with no words of its own: "a page gone stale" (it said
+  the page had gone stale, which is the token's word).
+- THE COMPOSER'S RULE ignoring recolours on a page: "the two rules agree".
+  AND ONE BREAKAGE CHANGED NOTHING: an empty list read as "some". The
+  helper had two lines doing one job (a list's keys are its places), so
+  taking one out broke nothing. It is one line now, and without it the row
+  is red.
+- THE WORDS: the composer's line at 45%; the pill's line in a hairline's
+  colour: "every new word", each.
+- FROM A CARD (added after the whole run, when the pill had only been read
+  on a post's own page): her card left without what it is set to: "from a
+  card too", alone. Its first red was the section stopping (it pressed a
+  pill that was not there); it says what is missing now, and the section
+  goes on.
+
+A ROW THAT ASKED FOR WHAT HAS CHANGED: `verify_socialposts` 16 said your
+own post's ⋯ is two cards ("Copy link, Share… | Delete post"). It is three
+on a post that can be drawn back on, and the row says so now. That was the
+whole run's one red, twice (beside others and alone): the row, not load.
+
+HOW THEY RAN HERE. The twenty suites that open a post, a comment or a page
+of the site, side by side, each whole, on the tree before the hop's fix
+(#1016) landed: nineteen green the first time (`verify_socialdrawback` 91,
+`verify_composer` 43, `verify_socialcomments` 149, `verify_socialprofile`
+98, `verify_socialfollow` 79, `verify_socialsettings` 45,
+`verify_socialpush` 118, `verify_socialreposts` 99, `verify_sociallikes`
+112, `verify_socialmute` 68, `verify_socialmentions` 51,
+`verify_socialactivity` 48, `verify_socialbookmarks` 37,
+`verify_socialsafety` 38, `verify_socialsearch` 32, `verify_social` 46,
+`verify_socialapp` 71, `verify_socialauth` 76, `verify_seam` 524), and
+`verify_socialposts` 99 of 100, beside others and alone: the row above.
+THEN, with that row brought up to date, the card's row added and this
+branch moved onto main with #1016 in it, the six suites the two changes
+share, side by side, all green: `verify_socialdrawback` 92 (71 and section
+12's 21), `verify_socialposts` 100, `verify_socialcomments` 150,
+`verify_composer` 43, `verify_socialprofile` 98, `verify_socialauth` 76 (the
+chain, with the new column). The other fourteen were not run again on the
+moved tree: #1016 touches the comment box's fold and its own suite, which
+is among the six. The full battery was not run; main's run after the merge
+is it.
+
+FLIP AND THE PAD: not for either, and nothing of theirs is touched. Both
+controls are Blooby's; a Flip, or a post of words alone, cannot be drawn
+back on yet, so neither place shows the setting there.
+
+NOT TESTED HERE: Safari on an iPhone, SF or Segoe UI. The pill's three
+words fit a 402px phone with room to spare in this box's type (101, 138 and
+90px of 332); whether "People I follow" keeps its room in SF is the owner's
+phone to say, and under 360px the words go to 14px. The tell for the new
+build: attach a drawing in Make, and under Edit drawing and Remove there is
+a quiet line, "Anyone can draw back · Change".

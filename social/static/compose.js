@@ -75,6 +75,16 @@
  * MENTIONS (the owner's "All yes", Nov 15): an @ typed in the words shows the
  * list of people under the line, mentions.js's, as in a comment's box.
  *
+ * HER SAY, WHO CAN DRAW BACK (the owner's "All yes to everything", Nov 20, to
+ * the Her say mock; _who.html has the words). Under a drawing that can be
+ * drawn back on (drawableHere, the site's own rule read here), one quiet
+ * line: "Anyone can draw back · Change". Change opens Settings' pill where
+ * the line stood, growing into its room (a fade where it stands under Reduce
+ * Motion); a tap on a choice is the choice, and Post sends it with the post
+ * ({drawback_by}). Put away and opened again, the sheet shows the line
+ * again, saying what was chosen. A drawing removed takes its choice with
+ * it: the next one starts at Everyone.
+ *
  * The words are the page's ([data-compose-said]): this file says nothing of
  * its own.
  */
@@ -121,6 +131,12 @@
   var sending = false;
   var view = 'write';
   var tiled = null;     // the editor a draft's tile ON THE PAGE opened with this sheet (draft, below)
+  var who = 'everyone'; // HER SAY: who can draw back on what is attached ('everyone', 'follow', 'nobody')
+  var whoWrap = q('[data-compose-who]'), whoLine = q('[data-compose-who-line]'), whoCard = q('[data-compose-who-card]');
+  var whoWords = q('[data-compose-who-words]');
+  var whoSw = whoCard ? whoCard.querySelector('[data-who-switch]') : null;
+  var whoSay = whoCard ? whoCard.querySelector('[data-who-say]') : null;
+  var SW = window.SocialSwitch;
 
   /* A PHONE OPENS IT CALM (the owner, Nov 20, with two pictures of it on
      their iPhone: "Ours opens like 1st shot and should start like 2nd
@@ -148,6 +164,8 @@
       if (view !== 'write') show('write', true);
       tell(pickSay, '');
       lift();
+      /* Who can draw back: the line again, saying what was chosen. */
+      whoFold();
     }
   });
 
@@ -196,7 +214,7 @@
     editBtn.focus({ preventScroll: true });
   }
   function attachSkribl(id, payload) {
-    att = { kind: 'skribl', id: id };
+    att = { kind: 'skribl', id: id, shows: payload };
     shown(true);
     /* AN OLDER DRAWING IS POSTED AS IT IS, so its conversation can come with
        it: nothing to edit here. */
@@ -208,13 +226,101 @@
     draftWrap.hidden = !on;
     tell(sayBox, '');
     ready();
+    whoFit();
   }
   function unattach() {
     if (att && att.over) att.over.pad.clear();
     if (player && player.pause) player.pause();
     att = null;
     player = null;
+    /* Its choice of who can draw back goes with it: the next starts open. */
+    who = 'everyone';
+    whoFold();
     shown(false);
+  }
+
+  /* ---- who can draw back on it (the header; _who.html) ---------------------- */
+  /* WHETHER A DRAWING CAN BE DRAWN BACK ON, as the site will say when it is
+     posted (drawback.py drawable(), read here so the line shows only where
+     it is true; verify_socialdrawback holds the two side by side): one page,
+     played as a replay, no loop, nothing kept under it, no beat, no
+     recolours. has() is the site's own "is there one": an empty list or an
+     empty set of them is none (a list's keys are its places, so one line
+     reads both). */
+  function has(v) {
+    if (v && typeof v === 'object') return Object.keys(v).length > 0;
+    return !!v;
+  }
+  function drawableHere(p) {
+    if (!p || typeof p !== 'object' || !Array.isArray(p.frames) || p.frames.length !== 1) return false;
+    var f = p.frames[0];
+    if (!f || typeof f !== 'object' || Array.isArray(f)) return false;
+    if (p.playbackMode != null && p.playbackMode !== 'replay') return false;
+    if (p.loop != null || p.under != null || p.beat != null) return false;
+    return !has(f.recolors) && !has(p.recolors);
+  }
+  /* The line is there while what is attached can be drawn back on. */
+  function whoFit() {
+    if (!whoWrap) return;
+    var on = !!att && !!SW && drawableHere(att.kind === 'skribl' ? att.shows : att.payload);
+    whoWrap.hidden = !on;
+    if (whoWords) whoWords.textContent = whoWords.getAttribute('data-says-' + who) || '';
+  }
+  /* The pill folded back into its line (unseen: the sheet has gone, or the
+     drawing has). */
+  function whoFold() {
+    if (!whoWrap) return;
+    whoCard.hidden = true;
+    whoLine.hidden = false;
+    whoLine.setAttribute('aria-expanded', 'false');
+    if (whoWords) whoWords.textContent = whoWords.getAttribute('data-says-' + who) || '';
+  }
+  /* CHANGE: the pill, where the line stood. It grows from the line's height
+     into its own room and fades in as it goes, what is under it moving down
+     with it; under Reduce Motion it fades in where it stands. Focus goes to
+     the choice that is pressed, so a keyboard carries on from there (and a
+     phone's keyboard, up for the words, goes down and gives it room).
+     THE ORDER IS THE POINT: the pill is shown and takes focus BEFORE the line
+     goes. A line hidden while it held focus (a click gives it focus), or a
+     sheet a line shorter for a moment, makes the browser pull a scrolled
+     sheet back, and the pill then stood 42px under where the line had been
+     (seen on a desk, whose sheet scrolls sooner: verify_socialdrawback 12). */
+  function whoOpen() {
+    if (!whoWrap || !whoCard.hidden || sending) return;
+    var from = whoLine.getBoundingClientRect().height;
+    whoCard.hidden = false;
+    SW.press(whoSw, who, true);
+    SW.says(whoSay, who);
+    var to = whoCard.getBoundingClientRect().height;
+    var on = whoSw.querySelector('button[aria-pressed="true"]');
+    if (on) on.focus({ preventScroll: true });
+    whoLine.hidden = true;
+    whoLine.setAttribute('aria-expanded', 'true');
+    function seen() {
+      whoCard.style.overflow = '';
+      /* All of it in view, if the sheet's own scroll had cut it off. */
+      var box = whoCard.closest('.cmp-scroll');
+      if (!box) return;
+      var c = whoCard.getBoundingClientRect(), b = box.getBoundingClientRect();
+      if (c.bottom > b.bottom) box.scrollBy({ top: c.bottom - b.bottom + 8, behavior: still() ? 'auto' : 'smooth' });
+    }
+    if (!whoCard.animate) { seen(); return; }
+    whoCard.style.overflow = 'hidden';
+    var grow = whoCard.animate(still() ? [{ opacity: 0 }, { opacity: 1 }]
+                                       : [{ height: from + 'px', opacity: 0 }, { height: to + 'px', opacity: 1 }],
+                               { duration: still() ? 200 : 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+    grow.onfinish = grow.oncancel = seen;
+  }
+  if (whoWrap && SW) {
+    SW.watch(whoSw);
+    whoLine.addEventListener('click', whoOpen);
+    whoSw.addEventListener('click', function (e) {
+      var c = e.target.closest('button[data-choice]');
+      if (!c || sending) return;
+      who = c.getAttribute('data-choice');
+      SW.press(whoSw, who, false);
+      SW.says(whoSay, who);
+    });
   }
 
   editBtn.addEventListener('click', function () {
@@ -293,6 +399,9 @@
     else if (att) body.payload = att.payload;
     if (quoted) body[quoted.kind === 's' ? 'quote_drawing' : quoted.kind === 'c' ? 'quote_comment' : 'quote'] = quoted.id;
     if (back) body.draw_back = back.id;
+    /* Who can draw back on it, where the line is showing and it is not
+       Everyone (nothing sent is Everyone). */
+    if (whoWrap && !whoWrap.hidden && who !== 'everyone') body.drawback_by = who;
     post(wrap.getAttribute('data-post-new'), body).then(function (j) {
       if (j.ok && j.go) { window.location.assign(j.go); return; }
       sending = false;
@@ -616,6 +725,11 @@
     },
     isOpen: sheet.isOpen,
     attached: function () { return att ? { kind: att.kind, id: att.id || null } : null; },
+    /* Who can draw back on what is attached (null: nothing that can be),
+       and the rule that says whether one can (verify_socialdrawback reads
+       it beside the site's own). */
+    who: function () { return whoWrap && !whoWrap.hidden ? who : null; },
+    drawable: drawableHere,
     quoted: function () { return quoted ? { kind: quoted.kind, id: quoted.id } : null; }
   };
 })();

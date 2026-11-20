@@ -1,0 +1,54 @@
+{#  HER SAY, WHO CAN DRAW BACK (the owner's "All yes to everything", Nov 20,
+    to the Her say mock; DECISIONS.md, "Her say, mocked", choices 4 to 7, and
+    "Her say: who can draw back, built").
+
+    A post's maker says who can draw back on it: Everyone (where every post
+    starts), People I follow, or Nobody. THE THREE ARE SETTINGS' OWN PILL
+    (.theme-switch; social.js's SocialSwitch places it and glides it), with
+    one line under it saying what the choice means. It is in two places:
+
+    - IN THE COMPOSER, under the drawing: one quiet line, "Anyone can draw
+      back · Change", which opens the pill where it stands (_compose.html,
+      compose.js). Only while what is attached can be drawn back on.
+    - IN HER OWN POST'S ⋯, a card of its own under the first (_post.html
+      post_sheets, posts.js), and on her post's page one quiet line with
+      Change while it is not Everyone (who_note, below).
+
+    Somebody who can't has no pen at all, as on a Flip, and nothing says why
+    (posts.open_to is the one rule; the mock's choice 5). She still can on
+    her own (choice 6). Not for a Flip or a post of words alone: nothing
+    there can be drawn back on yet, so neither place shows it.
+
+    THE WORDS are here and nowhere else: the scripts read them off the
+    elements (data-says-everyone, data-says-follow, data-says-nobody; a name
+    of their own, since the site's follow buttons are found by an attribute
+    a shorter name would have matched). #}
+{% import 'social/_icons.html' as ic %}
+
+{#  The pill and its line. `title`: the id its heading takes (a page can
+    hold two: the composer's and the ⋯'s). `kept`: on a post that is there
+    already, Nobody says the draw-backs it has stay. #}
+{% macro who_switch(title, kept=false) -%}
+<div class="who-block">
+  <p class="who-head" id="{{ title }}">{{ ic.drawback() }}<span>Who can draw back</span></p>
+  <div class="theme-switch who-switch" role="group" aria-labelledby="{{ title }}" data-who-switch>
+    <span class="theme-pill" aria-hidden="true"></span>
+    <button type="button" data-choice="everyone" aria-pressed="true">Everyone</button>
+    <button type="button" data-choice="follow" aria-pressed="false">People I follow</button>
+    <button type="button" data-choice="nobody" aria-pressed="false">Nobody</button>
+  </div>
+  <p class="who-say" data-who-say role="status" data-says-everyone="Anyone on Blooby can draw back on this."
+     data-says-follow="Only people you follow can draw back on this."
+     data-says-nobody="Nobody else can draw back on this.{% if kept %} The ones it has stay.{% endif %}">Anyone on Blooby can draw back on this.</p>
+</div>
+{%- endmacro %}
+
+{#  ON HER OWN POST'S PAGE: one quiet line while it is not Everyone, hers
+    alone, with Change, which opens her post's ⋯ where the pill is (posts.js).
+    Under the draw-backs' label where there are some; alone under the date
+    where there are none yet, which on Nobody is where it would stay. At
+    Everyone it is in the page, unseen, for the pill to show. #}
+{% macro who_note(card) -%}
+{%- set says = {'follow': 'Only people you follow can draw back.', 'nobody': 'Nobody else can draw back.'} -%}
+<p class="db-note db-who" data-db-who{% if card.who_draws == 'everyone' %} hidden{% endif %}><span data-db-who-words data-says-follow="{{ says.follow }}" data-says-nobody="{{ says.nobody }}">{{ says.get(card.who_draws, '') }}</span> <button class="db-change" type="button" data-who-change aria-haspopup="dialog" aria-controls="postSheet">Change</button></p>
+{%- endmacro %}

@@ -3179,3 +3179,72 @@ no address to hide one, in the page or its source.
 
 `verify_socialdrawback` 11 holds it. The Pad and Flip: nothing of theirs.
 NOT TESTED HERE: Safari on an iPhone.
+
+## 25. Built: Her say, who can draw back (Nov 20)
+
+The other half of Her say, the same mock and the same answer ("All yes to
+everything"): its choices 4 to 7. A post's maker says who can draw back on
+it, post by post: **Everyone** (where every post starts), **People I
+follow**, or **Nobody**.
+
+**The one rule** (`posts.open_to`), read by everything below. Her own post
+is always hers to draw back on, on Nobody too. Everyone is anybody signed
+in. People I follow is whoever SHE follows now: unfollowed, their pen goes
+(what they drew back before stays); following her lets nobody in. Nobody is
+nobody else. Whether a drawing CAN be drawn back on is another question
+(`drawback.drawable`), and so is whether somebody may see the post at all.
+
+**Somebody who can't has no pen at all**, as on a Flip: none in the row (on
+her post's page and on every card), no Draw back in the answer bar (its
+line runs to the bar's end), nothing rising when a replay ends. Nothing
+says why, and nothing about it is in their page or its source. The
+draw-backs her post already has stay where they are, for everybody, with
+their label.
+
+**Both doors hold it.** The composer's way in (`/p/<id>/drawback`) and the
+post itself (`posts._drawing_back`) each ask the rule again, so a page
+opened before she closed it, or a draw-back begun before and posted after,
+is refused: 403 `drawback_closed`, which the composer says as "That drawing
+isn’t open for draw-backs right now."
+
+**In her own post's ⋯:** a card of its own under the first, "Who can draw
+back" with Draw back's pen, then SETTINGS' OWN PILL (`.theme-switch`; the
+three choices each 44px tall and as wide as its words) and one line saying
+what the choice means: "Anyone on Blooby can draw back on this.", "Only
+people you follow can draw back on this.", "Nobody else can draw back on
+this. The ones it has stay." A tap is the change, as in Settings: the tint
+slides, the line changes, the site is told
+(`/social/p/<id>/drawback-by`, `{"by": ...}`). If the site can't be told,
+the pill goes back and the sheet says "That didn’t go through. Try again?".
+Only there: not in the ⋯ of somebody else's post, of a Flip, or of words
+alone. The same card is in the ⋯ of her post wherever it is a card (her own
+page, Home), and every card of that post takes the choice.
+
+**On her own post's page, one quiet line** while it is not Everyone: "Only
+people you follow can draw back. Change" (or "Nobody else can draw back.
+Change"), under the draw-backs' label; Change opens her ⋯ where the pill
+is, and focus comes back to it. Where nobody has drawn back yet the line
+stands alone under the date: on Nobody that is where it would stay, since
+nobody else can make the first. At Everyone there is no line and it takes
+no room.
+
+**In the composer, under the drawing:** one quiet line, "Anyone can draw
+back · Change", the whole line a button. Change opens the same pill where
+the line stood, growing into its room (0.26s; a fade where it stands under
+Reduce Motion), focus on the choice pressed. Post sends what is chosen
+(`drawback_by`); left at Everyone nothing is sent. Put away and opened
+again, the sheet shows the line again, saying the choice ("Nobody else can
+draw back · Change"). A drawing removed takes its choice with it. The line
+is there only while what is attached can be drawn back on, by the site's
+own rule read in the page (`compose.js` `drawableHere`, held beside
+`drawback.drawable` by the suite): a drawing from the Pad, an older drawing
+from Yours, a draw-back (which is a post too); never a Flip, never words
+alone.
+
+**How it is kept:** `social_posts.drawback_by` (migration `c8d3f5a1e694`),
+nothing for Everyone, `follow` or `nobody`; no data work, every post there
+stays open. The pill outside Settings is placed by `social.js`'s
+`SocialSwitch`; the words live in `_who.html` and nowhere else.
+
+`verify_socialdrawback` 12 holds it (21 rows). The Pad and Flip: nothing of
+theirs. NOT TESTED HERE: Safari on an iPhone.

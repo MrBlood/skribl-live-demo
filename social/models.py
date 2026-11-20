@@ -416,6 +416,14 @@ class Post(SocialBase):
     #: page, Home, its own page, still saying whose it draws back on), and
     #: nobody is told. Nothing is deleted. None: on her post.
     drawn_on_hidden_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+    #: HER SAY, WHO CAN DRAW BACK ON IT (the owner's "All yes to everything",
+    #: Nov 20, to the Her say mock): its maker's own choice, post by post,
+    #: made in the composer or in her post's ⋯. None: everyone signed in
+    #: (where every post starts, and every post from before the column);
+    #: "follow": only the people its maker follows now; "nobody": nobody
+    #: else. Its maker always can, and the draw-backs it has stay
+    #: (posts.open_to is the one rule).
+    drawback_by = sa.Column(sa.String(8), nullable=True)
     #: WHOSE HANDS, AND HOW LONG EACH DREW (the walkthrough's mocks, choice 6,
     #: the owner's "all yes", Nov 19). A draw-back's drawing is the
     #: original's strokes, squeezed to three seconds, and then its own, so

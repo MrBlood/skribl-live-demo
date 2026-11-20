@@ -185,8 +185,25 @@
     : null;
   var opener = null;
 
+  /* HER SAY, WHO CAN DRAW BACK (the owner's "All yes to everything", Nov 20;
+     _who.html): the card with Settings' pill, in the ⋯ of your own post that
+     can be drawn back on (its card says what it is set to: data-who). */
+  var whoCard = menuWrap ? menuWrap.querySelector('[data-who-card]') : null;
+  var whoSw = whoCard ? whoCard.querySelector('[data-who-switch]') : null;
+  var whoSay = whoCard ? whoCard.querySelector('[data-who-say]') : null;
+  var SW = window.SocialSwitch;
+  if (whoSw && SW) SW.watch(whoSw);
+  function whoOf(p) { return p && p.mine && p.kind === 'p' ? p.el.getAttribute('data-who') : null; }
+  function whoShow(by, first) {
+    if (!whoSw || !SW) return;
+    SW.press(whoSw, by, first);
+    SW.says(whoSay, by);
+  }
+
   doc.addEventListener('click', function (e) {
-    var m = e.target.closest('[data-post-menu]');
+    /* The ⋯, or on your own post's page the quiet line's Change (who can
+       draw back): the same sheet, and focus back on what was pressed. */
+    var m = e.target.closest('[data-post-menu], [data-who-change]');
     if (m && menu) {
       e.preventDefault();
       current = postOf(m);
@@ -213,13 +230,65 @@
         mu.querySelector('[data-mute-say]').textContent = say(current.muted ? 'mu_say_un' : 'mu_say');
       }
       tell(menuWrap.querySelector('[data-post-say]'), '');
+      var by = whoOf(current);
+      if (whoCard) whoCard.hidden = !by || !SW;
       menu.open(m);
+      /* Placed once the sheet is laid out (it is, from here on: it rises by
+         a transform, which moves no box inside it). */
+      if (by) whoShow(by, true);
       return;
     }
   });
 
+  /* A TAP ON THE PILL IS THE CHANGE, as in Settings: nothing to confirm. The
+     tint slides and the line under it says what the choice means at once;
+     the site is told (/p/<id>/drawback-by), and if that fails the pill goes
+     back to where it was and the sheet says why (a bookmark's own words for
+     a failure, which say nothing of bookmarks). Every card of that post on
+     the page takes the choice, and its page's quiet line follows
+     (social:who, below). One request at a time: what is asked meanwhile is
+     where it ends up. */
+  var whoBusy = false, whoNext = null;
+  function whoSet(p, want) {
+    var was = whoOf(p);
+    if (!was || want === was) return;
+    if (whoBusy) { whoNext = want; whoShow(want, false); return; }
+    whoBusy = true;
+    whoShow(want, false);
+    tell(menuWrap.querySelector('[data-post-say]'), '');
+    post(whoCard.getAttribute('data-who-url').replace('__ID__', encodeURIComponent(p.id)), { by: want }, { 'X-Social-CSRF': token })
+      .then(function (j) {
+        whoBusy = false;
+        var next = whoNext;
+        whoNext = null;
+        if (!j.ok) {
+          if (current === p) { whoShow(was, false); tell(menuWrap.querySelector('[data-post-say]'), markWhy(j)); }
+          return;
+        }
+        Array.prototype.forEach.call(doc.querySelectorAll('.post-card[data-post], .post-page[data-post]'), function (el) {
+          if (el.getAttribute('data-post') !== p.id || !el.hasAttribute('data-who')) return;
+          el.setAttribute('data-who', want);
+          el.dispatchEvent(new CustomEvent('social:who', { bubbles: true, detail: { by: want } }));
+        });
+        if (next && next !== want) whoSet(p, next);
+      });
+  }
+  /* ON HER OWN POST'S PAGE, the quiet line follows the pill: what it is set
+     to while that is not Everyone, and nothing at Everyone. */
+  doc.addEventListener('social:who', function (e) {
+    var page = e.target && e.target.closest ? e.target.closest('.post-page') : null;
+    var note = page ? page.querySelector('[data-db-who]') : null;
+    if (!note) return;
+    var by = e.detail && e.detail.by, w = note.querySelector('[data-db-who-words]');
+    var text = w ? w.getAttribute('data-says-' + by) : '';
+    if (w && text) w.textContent = text;
+    note.hidden = !text;
+  });
+
   if (menuWrap) {
     menuWrap.addEventListener('click', function (e) {
+      var c = e.target.closest('[data-who-card] [data-choice]');
+      if (c && current) { whoSet(current, c.getAttribute('data-choice')); return; }
       var a = e.target.closest('[data-act]');
       if (!a || !current) return;
       var act = a.getAttribute('data-act'), box = menuWrap.querySelector('[data-post-say]');

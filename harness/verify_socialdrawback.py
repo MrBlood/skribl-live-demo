@@ -56,6 +56,19 @@ each in a browser with a virtual passkey.
      line how many are hidden; its maker's page, Home, its own page and
      his Activity as they were; Undo and the eye bring it back; its guards;
      its words and the eye at 4.5:1.
+ 12. HER SAY, WHO CAN DRAW BACK (the same yes): a post's maker says who can
+     draw back on it, Everyone, People I follow or Nobody. The one rule at
+     both doors (the composer's way in, the post itself); whom she follows
+     now; the route's guards; a new post says it. No pen for somebody who
+     can't, on the row, the answer bar or at a replay's end, and nothing
+     says why; she still can on her own. Her post's ⋯ has Settings' pill in
+     a card of its own (from a card of hers too, on her page and Home): a
+     tap is the change, the tint slides, a failure puts it back. Her page's quiet line with Change, alone where nobody has
+     drawn back. The composer's quiet line under a drawing that can be
+     drawn back on, opening the pill where it stood, growing into its room;
+     Post sends it; not under a Flip. A page gone stale is told kindly. The
+     composer's reading of "can be drawn back on" and the site's agree.
+     Every new word at 4.5:1.
 
 SOCIALDRAWBACK_PART=<n>[,<m>] runs those sections only (calibration). Every
 row was shown red by breaking one part and green as built: DECISIONS.md,
@@ -2186,6 +2199,769 @@ with app.test_request_context("/social/"):
                   all(v >= 4.5 for d in paint.values() for v in d.values()), json.dumps(paint))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(11, exc)
+
+    # ----------------------------------------------------------------- 12
+    # HER SAY, WHO CAN DRAW BACK (the owner's "All yes to everything", Nov 20,
+    # to the Her say mock, choices 4 to 7): a post's maker says who can draw
+    # back on it, Everyone (where every post starts), People I follow or
+    # Nobody: in the composer, one quiet line under the drawing that opens
+    # Settings' pill, and in her own post's ⋯, a card of its own. Somebody who
+    # can't has no pen at all, as on a Flip; she still can on her own.
+    if part(12, "her say: who can draw back (Everyone, People I follow, Nobody); no pen for somebody who can't"):
+        try:
+            nia = someone(b, "nia", "Nia Park")        # whose posts these are
+            tom = someone(b, "tom", "Tom Reed")        # she follows him
+            ula = someone(b, "ula", "Ula West")        # she does not
+            nc_, tc_, uc_, oc_ = nia.client(), tom.client(), ula.client(), Client()
+            for c_ in (nc_, tc_, uc_, oc_):
+                c_.get("/social/")
+            followed = nc_.post_json("/social/@tom/follow", {"following": True})[0]
+            cat = post_payload(nia, "Section 12, the cat", CAT)
+            oc_.get(f"/social/p/{cat}")       # a post's page has the token for somebody signed out (Home's first visit has none)
+
+            def kept_by(pid):
+                got = db("select drawback_by from social_posts where public_id = ?", (pid or "",))
+                return got[0][0] if got else "no row"
+
+            def set_by(want, c=None, post=None, **kw):
+                return (c or nc_).post_json(f"/social/p/{post or cat}/drawback-by", {"by": want}, **kw)
+
+            def told(st, j):
+                return f"{st} {j.get('error') if isinstance(j, dict) else ''}".strip()
+
+            def start(c, post=None):
+                """The composer's way in (the row's pen): the drawing handed over, or the refusal."""
+                st, j = c.get_json(f"/social/p/{post or cat}/drawback")
+                return "open" if st == 200 and isinstance(j, dict) and j.get("payload") else told(st, j)
+
+            def send(who, seed, post=None):
+                """A draw-back posted: made, or the refusal."""
+                st, j = draw_back(who, post or cat, answer(n=8, seed=seed))
+                return "posted" if st == 200 and isinstance(j, dict) and j.get("post") else told(st, j)
+
+            # THE ONE RULE, AT BOTH DOORS.
+            doors, seed_ = {}, 120
+            for want in ("everyone", "follow", "nobody"):
+                st_ = set_by(want)[0]
+                doors[want] = {"set": st_, "kept": kept_by(cat),
+                               "start": {"hers": start(nc_), "followed": start(tc_), "not followed": start(uc_), "signed out": start(oc_)}}
+                sent = {}
+                for name, who in (("followed", tom), ("not followed", ula), ("hers", nia)):
+                    seed_ += 1
+                    sent[name] = send(who, seed_)
+                    time.sleep(0.02)
+                doors[want]["post"] = sent
+            n_backs = db("select count(*) from social_posts where drawn_on_id = (select id from social_posts where public_id = ?)", (cat,))[0][0]
+            closed = "403 drawback_closed"
+            want_doors = {
+                "everyone": {"set": 200, "kept": None,
+                             "start": {"hers": "open", "followed": "open", "not followed": "open", "signed out": "401 signed_out"},
+                             "post": {"followed": "posted", "not followed": "posted", "hers": "posted"}},
+                "follow": {"set": 200, "kept": "follow",
+                           "start": {"hers": "open", "followed": "open", "not followed": closed, "signed out": "401 signed_out"},
+                           "post": {"followed": "posted", "not followed": closed, "hers": "posted"}},
+                "nobody": {"set": 200, "kept": "nobody",
+                           "start": {"hers": "open", "followed": closed, "not followed": closed, "signed out": "401 signed_out"},
+                           "post": {"followed": closed, "not followed": closed, "hers": "posted"}}}
+            check("THE ONE RULE, AT BOTH DOORS (the composer's way in, and the post itself): at Everyone anybody signed in"
+                  " draws back; at People I follow only somebody she follows, and she; at Nobody only she, on her own;"
+                  " somebody who can't is told \"drawback_closed\" (403) and nothing is posted; the six draw-backs made"
+                  " while they could are still there",
+                  bool(cat) and followed == 200 and doors == want_doors and n_backs == 6,
+                  json.dumps({"followed": followed, "doors": doors, "draw-backs on it": n_backs}))
+
+            # "PEOPLE I FOLLOW" IS WHOM SHE FOLLOWS NOW; who follows HER is not let in by that.
+            set_by("follow")
+            nc_.post_json("/social/@tom/follow", {"following": False})
+            nc_.post_json("/social/@ula/follow", {"following": True})
+            turned = {"unfollowed": start(tc_), "followed since": start(uc_)}
+            nc_.post_json("/social/@tom/follow", {"following": True})
+            nc_.post_json("/social/@ula/follow", {"following": False})
+            tc_.post_json("/social/@nia/follow", {"following": True})
+            uc_.post_json("/social/@nia/follow", {"following": True})
+            back_ = {"followed again": start(tc_), "unfollowed again, and following her": start(uc_)}
+            check("\"PEOPLE I FOLLOW\" IS WHOM SHE FOLLOWS NOW: unfollowed, he is closed out at once, and somebody she has"
+                  " followed since is let in; and following HER lets nobody in",
+                  turned == {"unfollowed": closed, "followed since": "open"}
+                  and back_ == {"followed again": "open", "unfollowed again, and following her": closed},
+                  json.dumps({"turned": turned, "back": back_}))
+
+            # THE ROUTE HER ⋯ USES: its guards.
+            words_only = (nc_.post_json("/social/posts", {"words": "Section 12, words alone"})[1] or {}).get("post")
+            set_by("everyone")
+            asked = {"no token": set_by("nobody", token=False)[0], "signed out": set_by("nobody", c=oc_)[0],
+                     "somebody else": set_by("nobody", c=tc_)[0], "no such post": set_by("nobody", post="nosuchpost12")[0],
+                     "words alone": set_by("nobody", post=words_only)[0], "a word it does not know": set_by("friends")[0],
+                     "nothing": nc_.post_json(f"/social/p/{cat}/drawback-by", {})[0], "a list": set_by(["nobody"])[0],
+                     "true": set_by(True)[0]}
+            untouched = kept_by(cat)
+            db_write("update social_posts set taken_down_at = datetime('now') where public_id = ?", (cat,))
+            asked["taken down"] = set_by("nobody")[0]
+            db_write("update social_posts set taken_down_at = null where public_id = ?", (cat,))
+            good = [list(set_by("follow")), kept_by(cat), list(set_by("nobody")), kept_by(cat), list(set_by("everyone")), kept_by(cat)]
+            check("its guards: the page's token (403), signed in (401), hers alone and a post with a drawing (somebody"
+                  " else's, none, words alone, one taken down: 404), one of the three words (400); none of them changing"
+                  " anything; and hers is kept as she said, Everyone as nothing",
+                  bool(words_only) and asked == {"no token": 403, "signed out": 401, "somebody else": 404, "no such post": 404,
+                                                 "words alone": 404, "a word it does not know": 400, "nothing": 400, "a list": 400,
+                                                 "true": 400, "taken down": 404}
+                  and untouched is None
+                  and good == [[200, {"ok": True, "by": "follow"}], "follow", [200, {"ok": True, "by": "nobody"}], "nobody",
+                               [200, {"ok": True, "by": "everyone"}], None],
+                  f"{asked}; untouched {untouched!r}; hers {good}")
+
+            # A NEW POST SAYS IT, as the composer sends it.
+            def posted(body):
+                st, j = nc_.post_json("/social/posts", body)
+                pid = j.get("post") if st == 200 and isinstance(j, dict) else None
+                return [st if pid is None else "posted", kept_by(pid) if pid else told(st, j)]
+            n_before = db("select count(*) from social_posts")[0][0]
+            refused = posted({"words": "Section 12, friends", "payload": drawing(n=10, seed=131), "drawback_by": "friends"})
+            n_after = db("select count(*) from social_posts")[0][0]
+            older = make_drawing(nia, "Section 12, an older drawing", seed=135)
+            news = {"nothing said": posted({"words": "Section 12, open", "payload": drawing(n=10, seed=132)}),
+                    "everyone": posted({"words": "Section 12, everyone", "payload": drawing(n=10, seed=133), "drawback_by": "everyone"}),
+                    "follow": posted({"words": "Section 12, follow", "payload": drawing(n=10, seed=134), "drawback_by": "follow"}),
+                    "nobody, an older drawing": posted({"words": "", "skribl": older, "drawback_by": "nobody"}),
+                    "words alone": posted({"words": "Section 12, words and a choice", "drawback_by": "nobody"})}
+            set_by("everyone")
+            st_j, j_j = draw_back(nia, cat, answer(n=8, seed=136), drawback_by="nobody")
+            jam_kept = kept_by(j_j.get("post")) if st_j == 200 and isinstance(j_j, dict) else told(st_j, j_j)
+            check("A NEW POST SAYS WHO: what the composer sends with it is kept (People I follow, Nobody; on an older"
+                  " drawing posted, and on a draw-back, which is a post too); nothing sent, or Everyone, is kept as"
+                  " nothing; words alone keep none; a word it does not know is refused (400) and nothing is posted",
+                  refused == [400, "400 bad"] and n_after == n_before and bool(older)
+                  and news == {"nothing said": ["posted", None], "everyone": ["posted", None], "follow": ["posted", "follow"],
+                               "nobody, an older drawing": ["posted", "nobody"], "words alone": ["posted", None]}
+                  and jam_kept == "nobody",
+                  json.dumps({"refused": refused, "posts": [n_before, n_after], "new": news, "a draw-back": jam_kept}))
+
+            # ---- the pages ---------------------------------------------------------------
+            PAGE12 = """() => { const page = document.querySelector('.post-page'), row = page.querySelector(':scope > .post-row');
+              const bar = document.querySelector('.ans-bar'), say = bar && bar.querySelector('.ans-say'), draw = bar && bar.querySelector('.ans-draw');
+              const seen = e => !!e && !e.hidden && e.getClientRects().length > 0;
+              const label = page.querySelector('.db-strip .db-title'), note = page.querySelector('[data-db-who]');
+              return { pen: !!row.querySelector('.db-pen'), draw: seen(draw),
+                       sayEnds: say ? Math.round(innerWidth - say.getBoundingClientRect().right) : null,
+                       label: seen(label) ? label.innerText.replace(/\\s+/g, ' ').trim() : null, who: page.getAttribute('data-who'),
+                       note: note ? (seen(note) ? note.innerText.replace(/\\s+/g, ' ').trim() : '') : null }; }"""
+            # The replay's end, as the player says it (posts.js listens on the drawing's own box).
+            END12 = """() => { const box = document.querySelector('.post-page .post-art [data-skribl-inline]');
+              box.dispatchEvent(new CustomEvent('skribl:ended', { bubbles: true }));
+              return new Promise(done => setTimeout(() => { const end = box.querySelector('.db-end');
+                done({ end: !!end, again: !!(end && end.querySelector('.db-again')), go: !!(end && end.querySelector('.db-go')),
+                       lit: !!document.querySelector('.ans-bar .ans-draw.is-go') }); }, 450)); }"""
+
+            def sees(who, post=None, end=False):
+                ctx_, pg_ = browser_as(b, who, reduced=True)
+                open_post(pg_, post or cat)
+                got = pg_.evaluate(PAGE12)
+                if end:
+                    got["end"] = pg_.evaluate(END12)
+                close_ctx(ctx_, pg_)
+                return got
+
+            def card_of(who, post=None):
+                ctx_, pg_ = browser_as(b, who)
+                home(pg_)
+                got = pg_.evaluate(CARD, post or cat)
+                close_ctx(ctx_, pg_)
+                return got and {"kids": got["kids"], "pen": bool(got["pen"])}
+            set_by("follow")
+            at_follow = {"hers": sees(nia), "followed": sees(tom, end=True), "not followed": sees(ula, end=True)}
+            cards_follow = {"hers": card_of(nia), "followed": card_of(tom), "not followed": card_of(ula)}
+            src = {"followed": tc_.get(f"/social/p/{cat}")[1], "not followed": uc_.get(f"/social/p/{cat}")[1],
+                   "signed out": oc_.get(f"/social/p/{cat}")[1], "hers": nc_.get(f"/social/p/{cat}")[1]}
+            marks = {k: [w for w in ('data-who="', "data-db-who", f'data-drawback="{cat}"') if w in v] for k, v in src.items()}
+            set_by("nobody")
+            at_nobody = {"hers": sees(nia), "followed": sees(tom), "not followed": sees(ula)}
+            cards_nobody = {"hers": card_of(nia), "followed": card_of(tom)}
+            set_by("everyone")
+            at_everyone = {"hers": sees(nia), "not followed": sees(ula)}
+            row_with, row_without = ["comment", "repost", "heart", "pen", "more"], ["comment", "repost", "heart", "more"]
+            check("NO PEN FOR SOMEBODY WHO CAN'T, AND NOTHING SAYS WHY (as on a Flip): at People I follow, somebody she"
+                  " does not follow has no pen in the row, on her post's page or on Home's card, no Draw back in the"
+                  " answer bar (the line runs to the bar's end), and nothing rises when the replay ends; somebody she"
+                  " follows has all of it (Watch again, and the bar's Draw back lit); at Nobody he has none either; back"
+                  " at Everyone it is there again. The label still counts what was drawn back before",
+                  at_follow["not followed"]["pen"] is False and at_follow["not followed"]["draw"] is False
+                  and at_follow["not followed"]["sayEnds"] == 16 and at_follow["not followed"]["end"] == {"end": False, "again": False, "go": False, "lit": False}
+                  and at_follow["followed"]["pen"] and at_follow["followed"]["draw"]
+                  and at_follow["followed"]["end"] == {"end": True, "again": True, "go": False, "lit": True}
+                  and cards_follow == {"hers": {"kids": row_with, "pen": True}, "followed": {"kids": row_with, "pen": True},
+                                       "not followed": {"kids": row_without, "pen": False}}
+                  and not at_nobody["followed"]["pen"] and not at_nobody["followed"]["draw"] and not at_nobody["not followed"]["pen"]
+                  and cards_nobody == {"hers": {"kids": row_with, "pen": True}, "followed": {"kids": row_without, "pen": False}}
+                  and at_everyone["not followed"]["pen"] and at_everyone["not followed"]["draw"]
+                  and all(v["label"] == "7 draw-backs" for d in (at_follow, at_nobody, at_everyone) for v in d.values()),
+                  json.dumps({"follow": at_follow, "cards": cards_follow, "nobody": at_nobody, "cards at nobody": cards_nobody,
+                              "everyone": at_everyone})[:1500])
+            check("SHE STILL CAN ON HER OWN, whatever it is set to (the pen, and Draw back in her bar), and what it is set"
+                  " to is hers alone to read: her page carries it and her quiet line; nobody else's page or its source"
+                  " does (theirs has the pen's own address where they can, and nothing where they can't)",
+                  all(d["hers"]["pen"] and d["hers"]["draw"] for d in (at_follow, at_nobody, at_everyone))
+                  and [at_follow["hers"]["who"], at_nobody["hers"]["who"], at_everyone["hers"]["who"]] == ["follow", "nobody", "everyone"]
+                  and all(v["who"] is None and v["note"] is None for d in (at_follow, at_nobody, at_everyone)
+                          for k, v in d.items() if k != "hers")
+                  and marks == {"followed": [f'data-drawback="{cat}"'], "not followed": [], "signed out": [],
+                                "hers": ['data-who="', "data-db-who", f'data-drawback="{cat}"']},
+                  json.dumps({"hers": [[d["hers"]["pen"], d["hers"]["draw"], d["hers"]["who"]] for d in (at_follow, at_nobody, at_everyone)],
+                              "in the source": marks}))
+
+            # ---- her own post's ⋯: the pill ----------------------------------------------
+            WHO12 = """() => { const w = document.getElementById('postSheet'), c = w.querySelector('[data-who-card]');
+              const seen = e => !!e && !e.hidden && e.getClientRects().length > 0, one = n => Math.round(n * 10) / 10;
+              const cards = [...w.querySelectorAll('.post-acts')].filter(seen), open = w.classList.contains('is-open');
+              if (!seen(c)) return { card: false, open, cards: cards.length };
+              const sw = c.querySelector('[data-who-switch]'), pill = sw.querySelector('.theme-pill'), on = sw.querySelector('button[aria-pressed="true"]');
+              const head = c.querySelector('.who-head'), say = c.querySelector('[data-who-say]');
+              const pr = pill.getBoundingClientRect(), or = on.getBoundingClientRect(), cr = c.getBoundingClientRect(), sr = sw.getBoundingClientRect();
+              return { card: true, open, nth: cards.indexOf(c), cards: cards.length,
+                head: head.textContent.trim(), headType: getComputedStyle(head).fontSize + ' ' + getComputedStyle(head).fontWeight, pen: !!head.querySelector('svg'),
+                group: sw.getAttribute('role'), named: ((document.getElementById(sw.getAttribute('aria-labelledby')) || {}).textContent || '').trim(),
+                choices: [...sw.querySelectorAll('button[data-choice]')].map(b => { const q = b.getBoundingClientRect(), at = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
+                  return { is: b.getAttribute('data-choice'), says: b.textContent.trim(), pressed: b.getAttribute('aria-pressed'), w: one(q.width), h: one(q.height),
+                           whole: b.scrollWidth <= b.clientWidth, hit: !!at && b.contains(at), type: getComputedStyle(b).fontSize + ' ' + getComputedStyle(b).fontWeight }; }),
+                on: on.getAttribute('data-choice'), pillOn: Math.abs(pr.left - or.left) <= 0.6 && Math.abs(pr.width - or.width) <= 0.6 && Math.abs(pr.top - or.top) <= 0.6,
+                pillSeen: +getComputedStyle(pill).opacity, say: say.textContent.trim(), sayType: getComputedStyle(say).fontSize,
+                inside: sr.left >= cr.left + 15.5 && sr.right <= cr.right - 15.5, fits: (q => q.top >= 0 && q.bottom <= innerHeight + 0.5)(w.querySelector('.make-sheet').getBoundingClientRect()),
+                failed: (() => { const s = w.querySelector('[data-post-say]'); return seen(s) ? s.textContent.trim() : ''; })() }; }"""
+            SAYS = {"everyone": "Anyone on Blooby can draw back on this.", "follow": "Only people you follow can draw back on this.",
+                    "nobody": "Nobody else can draw back on this. The ones it has stay."}
+            NOTES = {"follow": "Only people you follow can draw back. Change", "nobody": "Nobody else can draw back. Change"}
+
+            def press_of(screen):
+                return (lambda pg_, s: pg_.tap(s)) if screen == "phone" else (lambda pg_, s: pg_.click(s))
+
+            def menu_of(who, post, screen="phone"):
+                ctx_, pg_ = browser_as(b, who, screen=screen)
+                open_post(pg_, post)
+                pg_.evaluate("() => document.querySelector('.post-page > .post-row').scrollIntoView({ block: 'center' })")
+                pg_.wait_for_timeout(250)
+                press_of(screen)(pg_, ".post-page > .post-row [data-post-menu]")
+                pg_.wait_for_timeout(700)
+                got = pg_.evaluate(WHO12)
+                close_ctx(ctx_, pg_)
+                return got
+            flip = drawing(n=20, seed=137)
+            flip["playbackMode"] = "flip"
+            flip["frames"] = [flip["frames"][0], dict(flip["frames"][0])]
+            flip["fps"] = 8
+            fl = post_payload(nia, "Section 12, a flip", flip)
+            set_by("everyone")
+            hers_menu = {sc: menu_of(nia, cat, sc) for sc in ("phone", "desk")}
+            others_menu = {"somebody else, on her post": menu_of(tom, cat), "her Flip": menu_of(nia, fl), "her words alone": menu_of(nia, words_only)}
+
+            def pilled(v, on="everyone"):
+                return bool(v and v["card"] and v["open"] and v["nth"] == 1 and v["cards"] == 3 and v["head"] == "Who can draw back"
+                            and v["headType"] == "17px 600" and v["pen"] and v["group"] == "group" and v["named"] == "Who can draw back"
+                            and [c["is"] for c in v["choices"]] == ["everyone", "follow", "nobody"]
+                            and [c["says"] for c in v["choices"]] == ["Everyone", "People I follow", "Nobody"]
+                            and all(c["w"] >= 44 and c["h"] == 44 and c["whole"] and c["hit"] and c["type"] == "15px 600"
+                                    and c["pressed"] == ("true" if c["is"] == on else "false") for c in v["choices"])
+                            and v["on"] == on and v["pillOn"] and v["pillSeen"] == 1 and v["say"] == SAYS[on] and v["sayType"] == "14px"
+                            and v["inside"] and v["fits"] and v["failed"] == "")
+            check("HER OWN POST'S ⋯ HAS THE PILL, in a card of its own under the first: \"Who can draw back\" with Draw"
+                  " back's pen (a row's 17px, 600), Settings' switch named by it, its three choices (Everyone, People I"
+                  " follow, Nobody) each 44px tall and as wide as its words, none cut, 16px inside the card; what it is"
+                  " set to pressed, the tint under it, and one line saying what that means; the sheet inside the screen (a"
+                  " touch phone and a desk)",
+                  bool(fl) and all(pilled(v) for v in hers_menu.values()), json.dumps(hers_menu)[:1500])
+            check("...and only there: no such card in the ⋯ of somebody else's post, of her own Flip, or of her own post of"
+                  " words alone (nothing there can be drawn back on), where the sheet has its two cards",
+                  all(v and v["open"] and v["card"] is False and v["cards"] == 2 for v in others_menu.values()), json.dumps(others_menu))
+
+            # FROM A CARD TOO: the same sheet wherever her post is a card (same markup is not same behaviour).
+            carded = post_payload(nia, "Section 12, a card of hers", drawing(n=10, seed=141))
+
+            def card_menu(who, path, choose=None):
+                ctx_, pg_ = browser_as(b, who)
+                pg_.goto(BASE + path)
+                ready(pg_)
+                pg_.wait_for_timeout(400)
+                sel = f'.post-card[data-post="{carded}"]'
+                if not pg_.locator(sel).count():
+                    close_ctx(ctx_, pg_)
+                    return {"menu": None, "card": "not on the page"}
+                pg_.evaluate("(s) => document.querySelector(s + ' .post-row').scrollIntoView({ block: 'center' })", sel)
+                pg_.wait_for_timeout(250)
+                pg_.tap(sel + " [data-post-menu]")
+                pg_.wait_for_timeout(700)
+                got = {"menu": pg_.evaluate(WHO12)}
+                if choose and got["menu"]["card"]:       # no card, nothing to press: the row says so, and the section goes on
+                    pg_.tap(f"#postSheet [data-who-switch] [data-choice={choose}]")
+                    pg_.wait_for_timeout(800)
+                    got["after"] = pg_.evaluate(WHO12)
+                got["card"] = pg_.evaluate("(s) => document.querySelector(s).getAttribute('data-who')", sel)
+                got["pen"] = pg_.evaluate("(s) => !!document.querySelector(s + ' .db-pen')", sel)
+                close_ctx(ctx_, pg_)
+                return got
+            on_hers = card_menu(nia, "/social/@nia", choose="nobody")
+            kept_card = kept_by(carded)
+            on_home = card_menu(nia, "/social/?tab=everyone")
+            his_home = card_menu(tom, "/social/?tab=everyone")
+            check("FROM A CARD TOO, wherever her post is one: on her own page its ⋯ has the same card with the pill; set"
+                  " to Nobody from there, the site has it and the card says so; on Home her card of it opens at Nobody,"
+                  " her pen still there; and somebody else's card of that post has no such card in its ⋯, and no pen",
+                  bool(carded) and pilled(on_hers["menu"]) and pilled(on_hers.get("after"), "nobody") and on_hers["card"] == "nobody"
+                  and kept_card == "nobody" and pilled(on_home["menu"], "nobody") and on_home["card"] == "nobody" and on_home["pen"]
+                  and his_home["menu"] and his_home["menu"]["card"] is False and his_home["menu"]["cards"] == 2
+                  and his_home["card"] is None and his_home["pen"] is False,
+                  json.dumps({"her page": [on_hers["menu"] and on_hers["menu"].get("on"), (on_hers.get("after") or {}).get("on"), on_hers["card"]],
+                              "kept": kept_card, "Home, hers": [on_home["menu"] and on_home["menu"].get("on"), on_home["card"], on_home["pen"]],
+                              "Home, his": [his_home["menu"], his_home["card"], his_home["pen"]]})[:900])
+
+            # A TAP IS THE CHANGE.
+            PILL12 = """() => { window.__pill = []; const p = document.querySelector('#postSheet [data-who-switch] .theme-pill');
+              p.addEventListener('transitionend', e => window.__pill.push([e.propertyName, Math.round(e.elapsedTime * 100) / 100])); }"""
+            NOTE12 = """() => { const n = document.querySelector('[data-db-who]'); if (!n) return null;
+              const seen = e => !!e && !e.hidden && e.getClientRects().length > 0, one = v => Math.round(v * 10) / 10;
+              const alone = n.closest('.db-alone');
+              if (!seen(n)) return { seen: false, alone: !!alone, room: alone ? one(alone.getBoundingClientRect().height) : null };
+              n.scrollIntoView({ block: 'center' });
+              const ch = n.querySelector('[data-who-change]'), r = n.getBoundingClientRect(), c = ch.getBoundingClientRect();
+              const at = document.elementFromPoint(c.left + c.width / 2, c.top + c.height / 2);
+              const page = document.querySelector('.post-page'), label = page.querySelector('.db-strip .db-title'), tiles = page.querySelector('.db-strip .db-row');
+              const meta = page.querySelector(':scope > .post-meta'), cs = getComputedStyle(n), cc = getComputedStyle(ch);
+              return { seen: true, alone: !!alone, text: n.innerText.replace(/\\s+/g, ' ').trim(), h: one(r.height), type: cs.fontSize + ' ' + cs.fontWeight,
+                       change: { w: one(c.width), h: one(c.height), hit: !!at && ch.contains(at), type: cc.fontSize + ' ' + cc.fontWeight,
+                                 popup: ch.getAttribute('aria-haspopup'), controls: ch.getAttribute('aria-controls'), tag: ch.tagName },
+                       underLabel: seen(label) ? one(r.top - label.getBoundingClientRect().bottom) : null,
+                       overTiles: tiles ? one(tiles.getBoundingClientRect().top - r.bottom) : null,
+                       underDate: meta ? one(r.top - meta.getBoundingClientRect().bottom) : null,
+                       strip: !!page.querySelector('.db-strip'), wide: document.documentElement.scrollWidth <= innerWidth }; }"""
+            ctx, pg = browser_as(b, nia)
+            open_post(pg, cat)
+            pg.evaluate("() => document.querySelector('.post-page > .post-row').scrollIntoView({ block: 'center' })")
+            pg.wait_for_timeout(250)
+            pg.tap(".post-page > .post-row [data-post-menu]")
+            pg.wait_for_timeout(700)
+            pg.evaluate(PILL12)
+            with pg.expect_response(lambda r: r.url.endswith("/drawback-by") and r.request.method == "POST", timeout=8000) as hit:
+                pg.tap("#postSheet [data-who-switch] [data-choice=follow]")
+                pg.wait_for_timeout(60)
+                at_once = pg.evaluate(WHO12)
+            sent_ = hit.value.request.post_data
+            pg.wait_for_timeout(700)
+            rested, glide, kept1 = pg.evaluate(WHO12), pg.evaluate("() => window.__pill"), kept_by(cat)
+            note1 = pg.evaluate("() => { const n = document.querySelector('[data-db-who]'); return n && !n.hidden ? n.innerText.replace(/\\s+/g, ' ').trim() : null; }")
+            pg.tap("#postSheet [data-who-switch] [data-choice=nobody]")
+            pg.wait_for_timeout(800)
+            nob, kept2 = pg.evaluate(WHO12), kept_by(cat)
+            note2 = pg.evaluate("() => { const n = document.querySelector('[data-db-who]'); return n && !n.hidden ? n.innerText.replace(/\\s+/g, ' ').trim() : null; }")
+            close_ctx(ctx, pg)
+            reopened = menu_of(nia, cat)
+            check("A TAP IS THE CHANGE, as in Settings: at once the choice is pressed and the line under it says what it"
+                  " means; the tint SLIDES to it (its own 0.26s, read from the pill's own transition) and rests under it;"
+                  " the sheet stays; the site is told ({by}) and has it; her page's quiet line says it (\"Only people you"
+                  " follow can draw back. Change\"); Nobody the same, saying the ones it has stay; and opened again"
+                  " tomorrow, the ⋯ shows what it was set to",
+                  at_once["on"] == "follow" and at_once["say"] == SAYS["follow"] and at_once["open"]
+                  and ["transform", 0.26] in glide and pilled(rested, "follow") and json.loads(sent_ or "{}") == {"by": "follow"}
+                  and kept1 == "follow" and note1 == NOTES["follow"]
+                  and pilled(nob, "nobody") and kept2 == "nobody" and note2 == NOTES["nobody"] and pilled(reopened, "nobody"),
+                  json.dumps({"at once": [at_once["on"], at_once["say"], at_once["open"]], "glide": glide, "rested": [rested["on"], rested["pillOn"]],
+                              "sent": sent_, "kept": [kept1, kept2], "her line": [note1, note2],
+                              "nobody": [nob["on"], nob["say"]], "reopened": [reopened["on"], reopened["pillOn"], reopened["say"]]}))
+
+            # UNDER REDUCE MOTION the tint is put there; and A FAILURE PUTS IT BACK AND SAYS SO.
+            ctx, pg = browser_as(b, nia, reduced=True)
+            open_post(pg, cat)
+            pg.evaluate("() => document.querySelector('.post-page > .post-row').scrollIntoView({ block: 'center' })")
+            pg.wait_for_timeout(250)
+            pg.tap(".post-page > .post-row [data-post-menu]")
+            pg.wait_for_timeout(700)
+            pg.evaluate(PILL12)
+            pg.tap("#postSheet [data-who-switch] [data-choice=follow]")
+            pg.wait_for_timeout(700)
+            still_, still_glide, kept3 = pg.evaluate(WHO12), pg.evaluate("() => window.__pill"), kept_by(cat)
+            pg.route("**/drawback-by", lambda r: r.fulfill(status=500, content_type="application/json", body="{}"))
+            pg.tap("#postSheet [data-who-switch] [data-choice=everyone]")
+            pg.wait_for_timeout(900)
+            failed, kept4 = pg.evaluate(WHO12), kept_by(cat)
+            fail_page = pg.evaluate("""() => ({ who: document.querySelector('.post-page').getAttribute('data-who'),
+              note: (() => { const n = document.querySelector('[data-db-who]'); return n && !n.hidden ? n.innerText.replace(/\\s+/g, ' ').trim() : null; })() })""")
+            pg.unroute("**/drawback-by")
+            close_ctx(ctx, pg)
+            check("under Reduce Motion the tint is put under the choice, never slid; and WHEN THE SITE CAN'T BE TOLD the"
+                  " pill goes back to where it was, the sheet says \"That didn’t go through. Try again?\", and nothing is"
+                  " changed: her page, her line, what the site has",
+                  pilled(still_, "follow") and not any(p_[0] == "transform" for p_ in still_glide) and kept3 == "follow"
+                  and failed["on"] == "follow" and failed["pillOn"] and failed["say"] == SAYS["follow"]
+                  and failed["failed"] == "That didn’t go through. Try again?" and failed["open"] and kept4 == "follow"
+                  and fail_page == {"who": "follow", "note": NOTES["follow"]},
+                  json.dumps({"reduced": [still_["on"], still_["pillOn"], still_glide], "failed": [failed["on"], failed["pillOn"], failed["say"], failed["failed"]],
+                              "kept": [kept3, kept4], "her page": fail_page}))
+
+            # THE QUIET LINE ON HER OWN PAGE.
+            lone = post_payload(nia, "Section 12, nobody has drawn back", drawing(n=12, seed=138))
+            set_by("nobody", post=lone)
+            line = {}
+            for screen in ("phone", "desk"):
+                ctx, pg = browser_as(b, nia, screen=screen)
+                open_post(pg, cat)
+                with_backs = pg.evaluate(NOTE12)
+                press_of(screen)(pg, "[data-who-change]")
+                pg.wait_for_timeout(700)
+                opened = pg.evaluate(WHO12)
+                pg.keyboard.press("Escape")
+                pg.wait_for_timeout(700)
+                back_on = pg.evaluate("() => { const a = document.activeElement; return !!a && a.hasAttribute('data-who-change') && !document.getElementById('postSheet').classList.contains('is-open'); }")
+                open_post(pg, lone)
+                alone = pg.evaluate(NOTE12)
+                close_ctx(ctx, pg)
+                line[screen] = {"with draw-backs": with_backs, "Change opened": [opened["card"], opened["on"], opened["open"]], "focus back": back_on, "alone": alone}
+            set_by("everyone", post=lone)
+            set_by("everyone")
+            ctx, pg = browser_as(b, nia)
+            open_post(pg, lone)
+            lone_open = pg.evaluate(NOTE12)
+            open_post(pg, cat)
+            cat_open = pg.evaluate(NOTE12)
+            close_ctx(ctx, pg)
+
+            def lined(v, says):
+                return bool(v and v["seen"] and v["text"] == says and v["h"] <= 22 and v["type"] == "14px 400" and v["wide"]
+                            and v["change"]["w"] >= 44 and v["change"]["h"] == 44 and v["change"]["hit"] and v["change"]["type"] == "14px 600"
+                            and v["change"]["tag"] == "BUTTON" and v["change"]["popup"] == "dialog" and v["change"]["controls"] == "postSheet")
+            check("ON HER OWN POST'S PAGE, ONE QUIET LINE while it is not Everyone: \"Only people you follow can draw"
+                  " back.\" and Change (14px; Change a button 44px to a finger, the line still one line tall), under the"
+                  " draw-backs' label and over their row; Change opens her ⋯ with the pill, and focus comes back to it; a"
+                  " touch phone and a desk",
+                  all(lined(v["with draw-backs"], NOTES["follow"]) and v["with draw-backs"]["alone"] is False
+                      and v["with draw-backs"]["underLabel"] is not None and 0 <= v["with draw-backs"]["underLabel"] <= 12
+                      and v["with draw-backs"]["overTiles"] is not None and 0 <= v["with draw-backs"]["overTiles"] <= 16
+                      and v["Change opened"] == [True, "follow", True] and v["focus back"] for v in line.values()),
+                  json.dumps({k: [v["with draw-backs"], v["Change opened"], v["focus back"]] for k, v in line.items()})[:1400])
+            check("...and where nobody has drawn back yet it stands alone under the date, with no label over nothing and no"
+                  " strip (\"Nobody else can draw back. Change\": on Nobody that is where it would stay); at Everyone there"
+                  " is no line at all and it takes no room",
+                  all(lined(v["alone"], NOTES["nobody"]) and v["alone"]["alone"] and v["alone"]["strip"] is False
+                      and v["alone"]["underDate"] is not None and v["alone"]["underDate"] >= 20 for v in line.values())
+                  and lone_open == {"seen": False, "alone": True, "room": 0} and cat_open and cat_open["seen"] is False,
+                  json.dumps({"alone": {k: v["alone"] for k, v in line.items()}, "at everyone": [lone_open, cat_open]})[:1400])
+
+            # ---- the composer ------------------------------------------------------------
+            CMP12 = """() => { const w = document.querySelector('[data-compose-who]'); if (!w) return null;
+              const seen = e => !!e && !e.hidden && e.getClientRects().length > 0, one = v => Math.round(v * 10) / 10;
+              const line = w.querySelector('[data-compose-who-line]'), card = w.querySelector('[data-compose-who-card]');
+              const out = { there: seen(w), who: window.SocialComposer.who(), line: null, card: null };
+              const scEl = document.querySelector('#composeSheet .cmp-scroll');
+              if (seen(line)) line.scrollIntoView({ block: 'nearest' });
+              const sc = scEl.getBoundingClientRect();
+              if (seen(line)) { const r = line.getBoundingClientRect(), acts = document.querySelector('#composeSheet .composer-draft-acts').getBoundingClientRect();
+                const cs = getComputedStyle(line), bold = line.querySelector('b'), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                out.line = { says: line.innerText.replace(/\\s+/g, ' ').trim(), x: one(r.left - sc.left), spare: one(scEl.clientWidth - r.width), h: one(r.height),
+                             type: cs.fontSize + ' ' + cs.fontWeight, change: bold ? [bold.textContent, getComputedStyle(bold).fontWeight] : null,
+                             pen: !!line.querySelector('svg'), under: one(r.top - acts.bottom), expanded: line.getAttribute('aria-expanded'),
+                             controls: line.getAttribute('aria-controls'), hit: !!at && line.contains(at), tag: line.tagName }; }
+              if (seen(card)) { const r = card.getBoundingClientRect(), sw = card.querySelector('[data-who-switch]'), pill = sw.querySelector('.theme-pill').getBoundingClientRect();
+                const on = sw.querySelector('button[aria-pressed="true"]'), o = on.getBoundingClientRect(), a = document.activeElement;
+                out.card = { x: one(r.left - sc.left), spare: one(scEl.clientWidth - r.width), h: one(r.height), head: card.querySelector('.who-head').textContent.trim(),
+                             choices: [...sw.querySelectorAll('button[data-choice]')].map(b => { const q = b.getBoundingClientRect();
+                               return [b.textContent.trim(), b.getAttribute('aria-pressed'), one(q.width) >= 44 && one(q.height) === 44 && b.scrollWidth <= b.clientWidth]; }),
+                             on: on.getAttribute('data-choice'), pillOn: Math.abs(pill.left - o.left) <= 0.6 && Math.abs(pill.width - o.width) <= 0.6,
+                             say: card.querySelector('[data-who-say]').textContent.trim(), focus: a ? a.textContent.trim() : null, id: card.id,
+                             inView: r.bottom <= sc.bottom + 0.5 }; }
+              return out; }"""
+            # The opening, read on every frame until it has rested; the animation tells its own length and what it moves.
+            GROW12 = """() => { const w = document.querySelector('[data-compose-who]'), line = w.querySelector('[data-compose-who-line]'), card = w.querySelector('[data-compose-who-card]');
+              const fr = line.getBoundingClientRect(), from = [Math.round(fr.top * 10) / 10, Math.round(fr.height * 10) / 10];
+              window.__grow = new Promise(done => { const frames = [], t0 = performance.now(); let anim = null, shown = 0;
+                function tick() { const now = performance.now() - t0, r = card.getBoundingClientRect();
+                  if (!card.hidden && !shown) shown = now;
+                  if (!anim && !card.hidden) { const a = card.getAnimations()[0];
+                    if (a) anim = { ms: a.effect.getComputedTiming().duration, keys: a.effect.getKeyframes().map(k => [k.height || null, k.opacity]),
+                                    moves: [...new Set(a.effect.getKeyframes().flatMap(k => Object.keys(k)))].filter(k => !['offset', 'easing', 'composite', 'computedOffset'].includes(k)).sort() }; }
+                  if (!card.hidden) frames.push([Math.round(now), Math.round(r.height * 10) / 10, Math.round(r.top * 10) / 10, Math.round(+getComputedStyle(card).opacity * 100) / 100]);
+                  if ((shown && now - shown > 900) || now > 6000) {
+                    done({ from, frames, anim, shown: Math.round(shown), lineGone: line.hidden, rest: Math.round(card.getBoundingClientRect().height * 10) / 10 }); }
+                  else requestAnimationFrame(tick); }
+                requestAnimationFrame(tick); }); }"""
+            FLIPDEMO = json.loads((ROOT / "skribl/static/help/demos/flip-bounce.json").read_text())
+
+            def add_from(pg_, press, kind="pad"):
+                """A drawing handed back by its editor, through the composer's own tool: the cat from the Pad, a Flip from Flip."""
+                box = "#composeFlip" if kind == "flip" else "#composePad"
+                press(pg_, f"#composeSheet [data-compose-open={kind}]")
+                fe_ = pg_.wait_for_selector(box + " .facepad-frame", state="attached", timeout=15000)
+                pg_.wait_for_function("(s) => { const o = document.querySelector(s); return !o.hidden && o.classList.contains('is-ready'); }", arg=box, timeout=30000)
+                fr_ = fe_.content_frame()
+                fr_.wait_for_function("() => typeof window.SkriblComposeLoad === 'function'" if kind == "flip"
+                                      else "() => typeof loadSkribl === 'function' && !!(window.__skriblBoot && window.__skriblBoot.pad)", timeout=30000)
+                pg_.wait_for_timeout(700)
+                fr_.evaluate("(d) => window.SkriblComposeLoad(d)" if kind == "flip" else "(d) => loadSkribl(d)", FLIPDEMO if kind == "flip" else CAT)
+                pg_.wait_for_timeout(1500)
+                if fr_.evaluate("() => typeof recording !== 'undefined' && !!recording"):
+                    fr_.click("#recordBtn")
+                    pg_.wait_for_timeout(400)
+                fr_.click("#postBtn")
+                pg_.wait_for_timeout(700)
+                fr_.click("#postSubmitBtn")
+                pg_.wait_for_function("() => !!window.SocialComposer.attached()", timeout=25000)
+                pg_.wait_for_timeout(700)
+
+            def lined_up(v, says="Anyone can draw back · Change", who="everyone"):
+                ln = v and v["line"]
+                return bool(v and v["there"] and v["who"] == who and v["card"] is None and ln and ln["says"] == says and ln["x"] == 4
+                            and ln["spare"] == 8 and ln["h"] == 44 and ln["type"] == "15px 400" and ln["change"] == ["Change", "600"]
+                            and ln["pen"] and 0 <= ln["under"] <= 8 and ln["expanded"] == "false" and ln["controls"] == "composeWho"
+                            and ln["hit"] and ln["tag"] == "BUTTON")
+
+            def opened_up(v, on="everyone", says="Anyone on Blooby can draw back on this."):
+                cd = v and v["card"]
+                return bool(v and v["there"] and v["who"] == on and v["line"] is None and cd and cd["x"] == 4 and cd["spare"] == 8
+                            and cd["head"] == "Who can draw back" and cd["id"] == "composeWho"
+                            and cd["choices"] == [["Everyone", "true" if on == "everyone" else "false", True],
+                                                  ["People I follow", "true" if on == "follow" else "false", True],
+                                                  ["Nobody", "true" if on == "nobody" else "false", True]]
+                            and cd["on"] == on and cd["pillOn"] and cd["say"] == says and cd["inView"])
+            cmp = {}
+            for screen in ("phone", "desk"):
+                press = press_of(screen)
+                ctx, pg = browser_as(b, nia, screen=screen)
+                home(pg)
+                press(pg, "nav.nav .tab-make")
+                pg.wait_for_timeout(700)
+                empty = pg.evaluate(CMP12)
+                pg.fill("#composeSheet [data-compose-words]", "Section 12, from the composer")
+                pg.wait_for_timeout(200)
+                wordy = pg.evaluate(CMP12)
+                add_from(pg, press)
+                pg.evaluate("() => { const a = document.activeElement; if (a && a.blur) a.blur(); }")
+                attached = pg.evaluate(CMP12)
+                asked_ = []
+                hear = lambda r: asked_.append(f"{r.method} {r.url.replace(BASE, '')}")  # noqa: E731
+                pg.on("request", hear)
+                pg.evaluate(GROW12)
+                press(pg, "#composeSheet [data-compose-who-line]")
+                grown = pg.evaluate("() => window.__grow")
+                pg.remove_listener("request", hear)
+                grown["sent"] = [a for a in asked_ if a.startswith("POST")]
+                open_ = pg.evaluate(CMP12)
+                cmp[screen] = {"empty": empty, "words": wordy, "attached": attached, "grown": grown, "open": open_}
+                if screen == "phone":
+                    # A CHOICE, PUT AWAY AND BACK, REMOVED: what the line says each time.
+                    pg.tap("#composeSheet [data-who-switch] [data-choice=nobody]")
+                    pg.wait_for_timeout(500)
+                    chosen = pg.evaluate(CMP12)
+                    pg.tap("#composeSheet [data-compose-cancel]")
+                    pg.wait_for_timeout(900)
+                    pg.tap("nav.nav .tab-make")
+                    pg.wait_for_timeout(800)
+                    again = pg.evaluate(CMP12)
+                    pg.tap("#composeSheet [data-compose-remove]")
+                    pg.wait_for_timeout(400)
+                    removed = pg.evaluate(CMP12)
+                    add_from(pg, press)
+                    fresh = pg.evaluate(CMP12)
+                    # ...AND POST SENDS IT.
+                    pg.tap("#composeSheet [data-compose-who-line]")
+                    pg.wait_for_timeout(600)
+                    pg.tap("#composeSheet [data-who-switch] [data-choice=follow]")
+                    pg.wait_for_timeout(400)
+                    with pg.expect_request(lambda r: r.url.endswith("/social/posts") and r.method == "POST", timeout=15000) as rq:
+                        with pg.expect_navigation(timeout=30000):
+                            pg.tap("#composeSheet [data-compose-post]")
+                    body_ = json.loads(rq.value.post_data or "{}")
+                    made_ = pg.url.rstrip("/").rsplit("/", 1)[-1]
+                    cmp[screen].update({"chosen": chosen, "again": again, "removed": removed, "fresh": fresh,
+                                        "sent": body_.get("drawback_by", "not sent"), "kept": kept_by(made_),
+                                        "then": {"followed": start(tc_, made_), "not followed": start(uc_, made_)}})
+                else:
+                    # A DESK, UNDER REDUCE MOTION, AND LEFT AT EVERYONE: nothing is sent.
+                    with pg.expect_request(lambda r: r.url.endswith("/social/posts") and r.method == "POST", timeout=15000) as rq:
+                        with pg.expect_navigation(timeout=30000):
+                            pg.click("#composeSheet [data-compose-post]")
+                    body_ = json.loads(rq.value.post_data or "{}")
+                    made_ = pg.url.rstrip("/").rsplit("/", 1)[-1]
+                    cmp[screen].update({"sent": body_.get("drawback_by", "not sent"), "kept": kept_by(made_)})
+                close_ctx(ctx, pg)
+            check("IN THE COMPOSER, UNDER A DRAWING THAT CAN BE DRAWN BACK ON, ONE QUIET LINE: \"Anyone can draw back ·"
+                  " Change\" (15px, Draw back's pen at its start, Change in the small violet words' weight), the whole line"
+                  " a button 44px tall across the sheet, right under Edit drawing and Remove; none with nothing attached,"
+                  " none with words alone (a touch phone and a desk)",
+                  all(v["empty"] and v["empty"]["there"] is False and v["empty"]["who"] is None
+                      and v["words"]["there"] is False and v["words"]["who"] is None and lined_up(v["attached"]) for v in cmp.values()),
+                  json.dumps({k: [v["empty"], v["words"], v["attached"]] for k, v in cmp.items()})[:1400])
+
+            def grew(g):
+                """What is wrong with the opening `g` (nothing, when it grew as it should). Asked of the page: its
+                animation's own length, what it moves, where it starts and ends. How many frames this machine drew of
+                it is told, never asked; what they showed must never step back."""
+                hs = [f[1] for f in g["frames"]]
+                during = [f for f in g["frames"] if f[0] <= g["shown"] + 240]
+                keys = (g["anim"] or {}).get("keys") or []
+                asked = {"an animation of its own": bool(g["anim"]),
+                         "0.26s": bool(g["anim"]) and g["anim"]["ms"] == 260,
+                         "height and opacity": bool(g["anim"]) and g["anim"]["moves"] == ["height", "opacity"],
+                         "from the line's height, unseen": len(keys) == 2 and keys[0] == [f"{g['from'][1]:g}px", "0"],
+                         "to its own, seen": len(keys) == 2 and keys[1][1] == "1" and abs(float(keys[1][0][:-2]) - g["rest"]) <= 0.6 and g["rest"] >= 130,
+                         "the line gone": g["lineGone"],
+                         "it ends at rest": bool(hs) and hs[-1] == g["rest"] and g["frames"][-1][3] == 1,
+                         "never a step back": all(b_ >= a_ - 0.2 for a_, b_ in zip(hs, hs[1:])),
+                         "where the line stood": bool(during) and all(abs(f[2] - g["from"][0]) <= 0.6 for f in during),
+                         "nothing sent": g["sent"] == []}
+                return [k for k, ok in asked.items() if not ok]
+            wrong = {k: {"the opening": grew(v["grown"]), "the pill": [] if opened_up(v["open"]) else ["not as it should be"],
+                         "focus": [] if (v["open"]["card"] or {}).get("focus") == "Everyone" else [(v["open"]["card"] or {}).get("focus")]}
+                     for k, v in cmp.items()}
+            check("CHANGE OPENS THE PILL WHERE THE LINE STOOD, GROWING INTO ITS ROOM: the card starts at the line's own"
+                  " top and height and grows to its own, never stepping back, fading in as it goes (its own animation:"
+                  " height and opacity, 0.26s), the line gone; then Settings' pill under \"Everyone\", pressed and in"
+                  " focus, \"Anyone on Blooby can draw back on this.\" under it, all of it in view; and the tap sends"
+                  " NOTHING to the site (the choice goes with Post)",
+                  all(not any(w.values()) for w in wrong.values()),
+                  json.dumps({"wrong": wrong,
+                              "seen": {k: {"from": v["grown"]["from"], "anim": v["grown"]["anim"], "rest": v["grown"]["rest"],
+                                           "tops": sorted(set(f[2] for f in v["grown"]["frames"]))[:6],
+                                           "heights": sorted(set(f[1] for f in v["grown"]["frames"]))[:8], "frames": len(v["grown"]["frames"]),
+                                           "sent": v["grown"]["sent"], "open": v["open"]["card"]} for k, v in cmp.items()}})[:1700])
+            ph = cmp["phone"]
+            check("A CHOICE IS THE DRAWING'S, UNTIL IT IS POSTED OR REMOVED: Nobody pressed says \"Nobody else can draw"
+                  " back on this.\" (nothing of draw-backs it has: it has none); put away and opened again the sheet"
+                  " shows the line again, saying it (\"Nobody else can draw back · Change\"); the drawing removed, the"
+                  " line goes; and the next drawing starts at Everyone",
+                  opened_up(ph.get("chosen"), "nobody", "Nobody else can draw back on this.")
+                  and lined_up(ph.get("again"), "Nobody else can draw back · Change", "nobody")
+                  and ph.get("removed") and ph["removed"]["there"] is False and ph["removed"]["who"] is None and lined_up(ph.get("fresh")),
+                  json.dumps({k: ph.get(k) for k in ("chosen", "again", "removed", "fresh")})[:1400])
+            check("POST SENDS WHAT WAS CHOSEN, and the new post keeps it: People I follow sent with the post and kept,"
+                  " somebody she follows let in and somebody she does not closed out; left at Everyone, nothing is sent"
+                  " and nothing kept",
+                  ph.get("sent") == "follow" and ph.get("kept") == "follow" and ph.get("then") == {"followed": "open", "not followed": closed}
+                  and cmp["desk"].get("sent") == "not sent" and cmp["desk"].get("kept") is None,
+                  json.dumps({"phone": [ph.get("sent"), ph.get("kept"), ph.get("then")], "desk": [cmp["desk"].get("sent"), cmp["desk"].get("kept")]}))
+
+            # NOT UNDER A FLIP; UNDER REDUCE MOTION IT FADES WHERE IT STANDS.
+            ctx, pg = browser_as(b, nia)
+            home(pg)
+            pg.tap("nav.nav .tab-make")
+            pg.wait_for_timeout(700)
+            add_from(pg, press_of("phone"), kind="flip")
+            flipped = pg.evaluate(CMP12)
+            flipped["attached"] = pg.evaluate("() => (window.SocialComposer.attached() || {}).kind || null")
+            pg.tap("#composeSheet [data-compose-remove]")
+            pg.wait_for_timeout(400)
+            pg.emulate_media(reduced_motion="reduce")
+            add_from(pg, press_of("phone"))
+            pg.evaluate("() => { const a = document.activeElement; if (a && a.blur) a.blur(); }")
+            pg.evaluate(GROW12)
+            pg.tap("#composeSheet [data-compose-who-line]")
+            faded = pg.evaluate("() => window.__grow")
+            faded_open = pg.evaluate(CMP12)
+            close_ctx(ctx, pg)
+            fh = [f[1] for f in faded["frames"]]
+            check("NOT UNDER A FLIP (nothing there can be drawn back on yet): a Flip attached, no line and nothing to"
+                  " send; and UNDER REDUCE MOTION the pill fades in where it stands, at its full height from its first"
+                  " frame (its animation moves opacity alone)",
+                  flipped["attached"] == "payload" and flipped["there"] is False and flipped["who"] is None
+                  and faded["anim"] and faded["anim"]["moves"] == ["opacity"] and fh and len(set(fh)) == 1 and fh[0] == faded["rest"]
+                  and opened_up(faded_open),
+                  json.dumps({"a Flip": flipped, "reduced": {"anim": faded["anim"], "heights": sorted(set(fh)), "rest": faded["rest"]}})[:900])
+
+            # A PAGE GONE STALE IS TOLD KINDLY.
+            set_by("everyone")
+            ctx, pg = browser_as(b, tom)
+            open_post(pg, cat)
+            pen = ".post-page > .post-row .db-pen"
+            pg.locator(pen).scroll_into_view_if_needed()
+            had_pen = pg.locator(pen).count()
+            set_by("nobody")
+            pg.tap(pen)
+            pg.wait_for_timeout(1500)
+            stale = pg.evaluate("""() => { const s = document.querySelector('#composeSheet [data-compose-say]');
+              return { open: window.SocialComposer.isOpen(), says: s && !s.hidden ? s.textContent.trim() : null,
+                       pad: !document.getElementById('composePad').hidden, post: document.querySelector('[data-compose-post]').getAttribute('aria-disabled') }; }""")
+            close_ctx(ctx, pg)
+            set_by("everyone")
+            check("A PAGE OPENED BEFORE SHE CLOSED IT still shows him the pen: pressed, the composer says \"That drawing"
+                  " isn’t open for draw-backs right now.\", kindly and not why, and no Pad opens over it",
+                  had_pen == 1 and stale == {"open": True, "says": "That drawing isn’t open for draw-backs right now.", "pad": False, "post": "true"},
+                  json.dumps(stale))
+
+            # THE TWO RULES AGREE: the composer's reading of "can be drawn back on" and the site's.
+            import importlib.util as _ilu12
+            _spec = _ilu12.spec_from_file_location("drawback_rules12", str(ROOT / "social" / "drawback.py"))
+            _rules = _ilu12.module_from_spec(_spec)
+            _spec.loader.exec_module(_rules)
+            one_ = drawing(n=6, seed=139)
+            f0 = one_["frames"][0]
+            cases = {"one page": one_, "the cat": CAT, "a replay, said so": dict(one_, playbackMode="replay"),
+                     "two pages": dict(one_, frames=[f0, dict(f0)]), "no pages": dict(one_, frames=[]), "pages not a list": dict(one_, frames={"0": f0}),
+                     "a page that is no page": dict(one_, frames=["x"]), "a flip of one page": dict(one_, playbackMode="flip"),
+                     "a loop": dict(one_, loop={"from": 0}), "kept under": dict(one_, under=0), "a beat": dict(one_, beat=[]),
+                     "recolours on its page": dict(one_, frames=[dict(f0, recolors=[{"from": "#000", "to": "#fff"}])]),
+                     "recolours on it": dict(one_, recolors={"a": 1}), "no recolours, an empty list": dict(one_, frames=[dict(f0, recolors=[])]),
+                     "no recolours, an empty set": dict(one_, recolors={}), "a photo and music": on_photo_with_music(seed=140),
+                     "the Flip demo": FLIPDEMO}
+            ctx, pg = browser_as(b, nia)
+            home(pg)
+            theirs_ = pg.evaluate("(cs) => Object.fromEntries(Object.entries(cs).map(([k, v]) => [k, window.SocialComposer.drawable(v)]))", cases)
+            close_ctx(ctx, pg)
+            ours_ = {k: _rules.drawable(v) is None for k, v in cases.items()}
+            check("THE COMPOSER SHOWS THE LINE EXACTLY WHERE THE SITE WILL LET IT BE DRAWN BACK ON: its own reading and the"
+                  " site's (drawback.drawable) agree on seventeen drawings, the yes and the no: one page, a replay, a"
+                  " picture and music, empty recolours (yes); two pages, none, a flip, a loop, one kept under, a beat,"
+                  " recolours (no)",
+                  theirs_ == ours_ and sum(ours_.values()) == 6 and len(ours_) == 17,
+                  json.dumps({"the site": ours_, "differ": {k: [ours_[k], theirs_.get(k)] for k in ours_ if ours_[k] != theirs_.get(k)}}))
+
+            # THE WORDS AS PAINTED, light and dark.
+            import io as _io12
+            from PIL import Image as _Im12
+
+            def lum12(c):
+                v = [x / 255 for x in c[:3]]
+                v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+                return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+            def best12(pg_, sel):
+                """The most contrasting pixel in `sel` against the colour most of it is."""
+                im = _Im12.open(_io12.BytesIO(pg_.locator(sel).first.screenshot(animations="disabled"))).convert("RGB")
+                ground = max(im.getcolors(im.size[0] * im.size[1]))[1]
+                top = 0.0
+                for _n, c in im.getcolors(im.size[0] * im.size[1]):
+                    hi, lo = max(lum12(c), lum12(ground)), min(lum12(c), lum12(ground))
+                    top = max(top, (hi + 0.05) / (lo + 0.05))
+                return round(top, 2)
+            set_by("follow")
+            paint = {}
+            for scheme in ("light", "dark"):
+                ctx, pg = browser_as(b, nia, scheme=scheme, reduced=True, dpr=2)
+                open_post(pg, cat)
+                pg.evaluate("() => document.querySelector('[data-db-who]').scrollIntoView({ block: 'center' })")
+                pg.wait_for_timeout(300)
+                got = {"her line": best12(pg, "[data-db-who-words]"), "her line's Change": best12(pg, "[data-db-who] .db-change")}
+                pg.tap(".post-page > .post-row [data-post-menu]")
+                pg.wait_for_timeout(800)
+                got.update({"the pill's name": best12(pg, "#postSheet .who-head span"),
+                            "the choice pressed": best12(pg, "#postSheet [data-who-switch] button[aria-pressed=true]"),
+                            "a choice not pressed": best12(pg, "#postSheet [data-who-switch] button[aria-pressed=false]"),
+                            "the line under it": best12(pg, "#postSheet [data-who-say]")})
+                pg.keyboard.press("Escape")
+                pg.wait_for_timeout(600)
+                home(pg)
+                pg.tap("nav.nav .tab-make")
+                pg.wait_for_timeout(700)
+                add_from(pg, press_of("phone"))
+                pg.evaluate("() => { const a = document.activeElement; if (a && a.blur) a.blur(); }")
+                pg.wait_for_timeout(300)
+                got.update({"the composer's line": best12(pg, "[data-compose-who-words]"), "its Change": best12(pg, "[data-compose-who-line] b")})
+                pg.tap("#composeSheet [data-compose-who-line]")
+                pg.wait_for_timeout(700)
+                got.update({"the composer's pill, pressed": best12(pg, "#composeSheet [data-who-switch] button[aria-pressed=true]"),
+                            "the composer's pill, not": best12(pg, "#composeSheet [data-who-switch] button[aria-pressed=false]"),
+                            "its line": best12(pg, "#composeSheet [data-who-say]"), "its name": best12(pg, "#composeSheet .who-head span")})
+                paint[scheme] = got
+                close_ctx(ctx, pg)
+            set_by("everyone")
+            check("every new word reads at 4.5:1 or more on what is painted behind it, off the painted pixels, light and"
+                  " dark: her page's line and its Change, the pill's name, its choices pressed and not, the line under"
+                  " it, and the composer's line, its Change and its pill",
+                  all(len(d) == 12 and all(v >= 4.5 for v in d.values()) for d in paint.values()), json.dumps(paint))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(12, exc)
 
     # ----------------------------------------------------------------- 10
     if part(10, "no page errors, no console errors and no CSP violations"):
