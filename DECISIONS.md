@@ -48009,3 +48009,102 @@ WHERE MAIN STOOD AS THIS WAS WRITTEN. The run on the tree after #999 was
 under way with (A) still in it, so it is red on verify_inline for this
 reason whatever else it says. The run after this entry's own pull request
 is the one to read.
+
+## After v330 -- "Yes to all" to the seven; main green on the final tree; and the evening's mocks (your hand inside a post, a door to How it works, the walk of Save and Drafts, the pencil's line)
+
+THE OWNER (Nov 19, about 5:50 PM): "Yes to all", to the seven lines put to
+them. SO, DECIDED: (1) a drawn comment's play button is the card's own
+pill at its foot, saying the time; (2) the initial of a face not drawn yet
+stays on cards, a post's page and in Activity (their Nov 13 "never an
+initial" is changed by this), and lists of people stay plain; (3) two
+faces sharing a row of Activity stay plain; (4) Export's GIF row keeps the
+infinity sign. AND A GO-AHEAD, each to a mock or a walk first, nothing
+built: (5) the Text drawer's door out of a post; (6) How it works in the
+site's menu; (7) a walk of Save and Drafts between the editors and the
+profile.
+
+MAIN IS GREEN ON THE FINAL TREE. Run 2369 (tree 4510eb9, after #1000):
+every job, both databases, Firefox, WebKit and the MP4 lane, done at 6:51
+PM; the workflow's own issue #997 ("main is red at 5df7f0b") closed itself
+then. The run before it (2367, the tree after #999) was red on shard 1 of
+both databases only, verify_inline's row whose sample did not fit CI's
+face ("words": "20 sec", read in sqlite's own log): the red expected, and
+the last of it.
+
+THE OWNER, WHILE THE MOCKS WERE BEING MADE (about 7 PM, with a picture of
+a card's row in dark): "After you finish, I think a nice touch that
+accentuates our purpose is coloring the line under the pencil signature
+purple, or maybe the accent blue to the accent purple?" Read as: the short
+wavy line the pen draws under itself in the Draw back icon. A question, so
+a mock; it is the page's fourth part.
+
+THE PAGE, NOT BUILT, WAITING ON THE OWNER:
+https://claude.ai/artifact/28w1ZWVgWNRC9YF7Cywt8t ("Pad Inside Blooby").
+The real site on a touch phone at 402 with each option laid over it, light
+and dark, a desk where it differs, measured; six choices, each with a
+default, so "all yes" is a whole answer.
+
+1. THE TEXT DRAWER INSIDE A POST. WALKED FIRST, AND IT IS A TRAP ON BOTH
+   EDITORS: "+ Make yours" (and "Edit your hand": the same `toHand()` in
+   `lib/textwrite.js`) takes the composer's frame to Your hand
+   (`/skribl-pad?letters=1&back=pad`), and Close or Done comes back to the
+   editor BY ITSELF (`/skribl-pad`, `/flip`): 126 strokes, then 0; the
+   button "Post to Skribl" where it was "Add to post"; no × back to the
+   post. THE PICK CHANGED: A, offered that afternoon (not shown inside a
+   post, one line saying where a hand is made), would leave no way to make
+   a hand from the site at all: signed in, the only door to an editor by
+   itself is the Drafts tile the walk below would close (signed out, Make
+   still has its two). B, THE DEFAULT NOW: Your
+   hand opens over the post, one line under its title ("Your drawing is
+   waiting in your post.", 14px in the small violet ink, 7.36:1 light and
+   9.47:1 dark, one line, 48px clear of Close), Close and Done come back
+   to the drawing as it was with Text chosen, Yours ready and Add still
+   the button, and "Post your letters" is not shown there (it posts to
+   Skribl). C: ask first, with the sheet the switch to Flip raises; Leave
+   still drops the drawing. HOW B WOULD BE BUILT is not decided: the
+   letters page over the editor (nothing unloads, the hand re-read from
+   its store on the way back) or the frame's own trip with the drawing
+   kept for it; the owner sees the same either way. One module, both
+   editors; on their own pages nothing changes.
+
+2 AND 3. HOW IT WORKS, FROM THE SITE. Today the site has no door to it:
+   the menu's own note says "No Help row until there is a Help page."
+   DEFAULTS: a "How it works" row FIRST in the ☰ sheet (56px as the
+   others, 17px/600, 17.95:1 light and 14.05:1 dark; the sheet 296 to
+   352), in a visitor's sheet too, and on a desk in the rail above
+   Settings; and it opens THE SITE'S OWN PAGE in the Pad's help's shape:
+   "Watch an example" (a drawing, a draw-back, a Flip, each drawing
+   itself), "People often ask" (post a drawing; answer a drawing with a
+   drawing; comment with a drawing; draw your face), then "The drawing
+   tools", two rows into the Pad's and Flip's own How it works. No search
+   box in a first version. The other answers shown: the row after
+   Privacy; and straight into the Pad's own help (tools only).
+
+THE WALK (7). SAVE AND DRAFTS WORK INSIDE A POST: ⋯, Save, a name box with
+the time filled in, "Saved to your drafts", to the account, Pad and Flip;
+Your drafts inside a post lists it, "Open in Pad" loads it there with Add
+still the button, and it posted; the composer's "Yours" ("Use one you
+made": Drafts, Drawings) opens a draft in the editor inside the post. THE
+SEAM: A DRAFT'S TILE ON THE PROFILE'S DRAFTS TAB LEAVES THE SITE. It is a
+plain link to `/skribl-pad?draft=...` (`/flip?draft=...`): the editor by
+itself, no bar of the site's, no link back on the page (none found, phone
+or desk), its button "Post to Skribl" with a title and "Show in the public
+gallery", which makes a drawing outside any post. DEFAULT (4): the tile
+opens the draft inside a post, as the same tile already does in "Use one
+you made". AND (5): a draft stays in Drafts after it is posted; default,
+leave it so.
+
+THE PENCIL'S LINE (6). The Draw back icon is two paths, a pen and a
+little wave (`_icons.html`, `drawback()`), all in the ink of where it
+sits. DEFAULT A: the wave in `--brand`, which social.css already names
+"the wordmark, and the pen's line" (the line under the chosen tab): against
+its ground 4.35:1 on a card, 4.08:1 on a post's page, 3.42:1 on the Draw
+back button; dark 4.63, 5.46, 3.79. B, the owner's second thought, the
+signature's own two colours as a sweep (#5b8cff to #7c5cff): hard to see
+at 11px of line, and in light its blue end is 2.97:1 on a post's page and
+2.49:1 on the button, under the 3:1 a drawn line wants; dark 5.03, 5.93,
+4.12. One macro, so the row, the draw-backs' title, the button and
+Activity's badge change together.
+
+NOT WALKED: Safari on an iPhone, Segoe UI or SF. The hand in the pictures
+is the suite's own (`hand_seed`, the Skribl style's letters).

@@ -199,6 +199,17 @@ repository"): 1 and 2 (the menu inside a post, no gallery tick: #992); 3,
 draw-back says: each hand's drawing time kept on the post, a migration, and
 numbers the site hands Skribl's player: #994). Read DECISIONS and main's
 runs for what has merged and how it ran.
+MAIN IS GREEN ON THE FINAL TREE (run 2369, Nov 19, 6:51 PM, after #1000);
+what was red on the way, and why, is in the three entries of `DECISIONS.md`
+before the last. THE OWNER SAID "YES TO ALL" TO THE SEVEN (about 5:50 PM):
+1 to 4 below are decided as built; 5 to 7 were a go-ahead to mocks and a
+walk, now made, with the owner's own idea of that evening (the pencil's
+line in colour) beside them. WAITING ON THE OWNER, SIX CHOICES, EACH WITH A
+DEFAULT: https://claude.ai/artifact/28w1ZWVgWNRC9YF7Cywt8t (`DECISIONS.md`,
+the newest entry, has every finding and number). If it is "all yes": the
+pencil's line and the Drafts tile first (small), then Your hand inside a
+post, then How it works; each with a check shown red first, and each Pad
+change saying what it does to Flip.
 MAIN AFTER #993 WAS RED ON ONE ROW (verify_socialcomments 33, "the tint
 fading", sqlite 4 of 6): the check's clock, not the site (`DECISIONS.md`,
 "Main's red after #993"); its watch now starts when the comment arrives.
