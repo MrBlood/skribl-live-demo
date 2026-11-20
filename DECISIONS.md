@@ -47961,3 +47961,51 @@ help under them. A mock first. THE ORDER OFFERED: the Text drawer's door
 out of a post (the fifth of the five calls), then that mock, then a walk
 of Save and Drafts between the editors and the profile. Put to the owner
 as a sixth and a seventh line under the five, so "all yes" answers all.
+
+## After v330 -- Main's red on the tree after #996: a row of mine that did not fit CI's face, and a contrast read taken while a colour passed
+
+RUN 2363 (tree 489ff25, the first full run to hold #994 and #995, whose
+own runs the queue had cancelled) HAD THREE JOBS RED, AND NONE WAS THE
+SITE: sqlite 1 of 6 and PostgreSQL 1 of 6 on the same row of
+verify_inline (226/227 each, the lines identical), and sqlite 2 of 6 on
+one row of verify_contrast (676/677). verify_socialcomments, red in the run
+before it, was green on both databases here with its clock still as it
+was: intermittent, as its entry says.
+
+(A) MY ROW, AND IT COULD NOT PASS IN CI. verify_inline, "who drew it is a
+host's words, written as text" (#994): "words": "20 sec", "kids": 0,
+"made": [], the name carrying the words as typed. Nothing made, nothing
+wrong with the player. The pill keeps the time alone where the names do
+not fit, measured on the real pill; the row's sample, "<b>Ana</b> +
+<i>Theo</i>", had been sized to fit this box's Inter, and DejaVu Sans, the
+face CI draws a post in (this suite says so twice), is wider. SHOWN HERE
+with the pill drawn in DejaVu Sans: red, the run's own reading. THE SAMPLE
+IS NOW ONE SHORT TAG ("<b>A</b>": 197 of the 308 it has in DejaVu Sans);
+the row reads the button's name as well; and every reading in that section
+says the pill's width, its room and its face. CALIBRATED: the old words in
+DejaVu Sans, red; the new in DejaVu Sans, green (227/227); the new with the
+player made to put the words in as markup, red ("kids": 1, six B made).
+WHAT TO KEEP: a row whose pass needs words to fit is read in CI's face
+before it is believed. #994's notes said the sample was shortened once to
+fit; it was shortened to fit here.
+
+(B) A CONTRAST READ TAKEN WHILE A COLOUR PASSED. verify_contrast, "Pad,
+dark, phone: Music, Exact times: every word off the brand purple reads 7:1":
+"Photo" 6.86 on rgb(51, 44, 91), and by the suite's own second look the
+same point was rgb(35, 30, 59) 0.6s later. Green on PostgreSQL's shard in
+the same run; nothing of the Pad's tabs was touched today. THE READING NOW
+READS A SURFACE AGAIN, three reads at most, when a short word's ground is
+another colour 0.6s later; a word short on a ground that holds still is
+reported at the first read, as before. CALIBRATED on that surface alone
+(CONTRAST_ONLY), a lilac put under "Photo": there at the photograph and
+gone after it, the reading as it was is red with the run's own words (6.86,
+both colours) and the reading as it is green; left there, the reading as it
+is red ("0.6s later rgb(51, 44, 91)"). THE STAGING WAS WRONG TWICE BEFORE IT
+WAS RIGHT, and both readings passed: a timer let the lilac go before the
+photograph, then the suite's own loop took a second photograph after it had
+gone. It is let go now off the photograph that is read.
+
+WHERE MAIN STOOD AS THIS WAS WRITTEN. The run on the tree after #999 was
+under way with (A) still in it, so it is red on verify_inline for this
+reason whatever else it says. The run after this entry's own pull request
+is the one to read.

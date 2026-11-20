@@ -202,8 +202,15 @@ runs for what has merged and how it ran.
 MAIN AFTER #993 WAS RED ON ONE ROW (verify_socialcomments 33, "the tint
 fading", sqlite 4 of 6): the check's clock, not the site (`DECISIONS.md`,
 "Main's red after #993"); its watch now starts when the comment arrives.
-READ THE RUN ON THE TREE AFTER THAT FIX before believing main is green:
-the runs after #994 and #995 were cancelled by the queue, not run.
+THE RUN AFTER #996 WAS RED ON TWO MORE, NEITHER THE SITE (`DECISIONS.md`,
+"Main's red on the tree after #996"): a row of #994's in verify_inline
+whose sample fitted this box's Inter and not CI's DejaVu Sans (shard 1 of
+both databases; mended, and read in DejaVu Sans here), and a contrast read
+of the Pad's "Photo" tab taken while a colour passed under it (sqlite 2;
+the reading reads again when a short word's ground was on its way).
+READ THE RUN ON THE TREE AFTER THOSE FIXES before believing main is green:
+the runs after #994, #995 and #998 were cancelled by the queue, not run,
+and the one after #999 still holds the verify_inline row.
 THE PICTURES OF ALL TEN AS BUILT, on the page the owner was sent:
 https://claude.ai/artifact/4BFRLCBk6cB8BMg8VZQt68 (`DECISIONS.md`, "The ten
 as built", has what was read on the built pages and main's runs).
