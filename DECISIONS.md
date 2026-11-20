@@ -48847,3 +48847,57 @@ intermittent because the file changed between its two runs.
 FLIP AND THE PAD: not for either. NOT TESTED: Safari on an iPhone, which is
 the only place the keyboard is; the owner's phone is the test, and the tell
 is that the pencil opens the sheet with no keyboard.
+
+## After v330 -- Main red on one row, on one database: a glide is read from its own clock, not from a count of frames
+
+Nov 20, the morning. Main's first run on seven shards (the tree of #1008)
+did what the seven were for: every shard finished inside its hour, 41 to 52
+minutes of the 60. ONE ROW WAS RED, on sqlite 7/7 alone and green beside it
+on postgresql 7/7, the same tree: `verify_socialprofile` 20, "ONLY THE
+EDITOR IS SEEN, read on every frame", in one of its eight readings. A
+draft's tile opened on a desk: `"frames": 54, "sheet painted": [],
+"changing": 3, "went back": 0`, at rest at the end. Nothing wrong was seen.
+The row asked for four frames on which the editor's card had changed, and
+that runner showed the page's script three.
+
+WHY THREE. The card rises 28px and fades in over 0.28 s. The editor's own
+page loads in the same thread while it does, so on a busy machine the
+frames a page's script is handed thin out exactly then, while the browser
+goes on moving the card (a transform and an opacity are moved off that
+thread). The row had been written knowing a desk is the thin case ("four is
+a glide still at twenty frames a second"), and was one frame out on a
+runner in a bad minute. A count of frames measures the machine as much as
+the page: WORKING-AGREEMENTS, "a gate that cries wolf gets ignored".
+
+THE INSTRUMENT, NOT THE PAGE. `judge20` reads the glide from the
+transition's own clock: the browser says each transition the editor's
+sheet finished and for how long it ran (`transitionend`, its elapsed time),
+and the row asks for the one that should run, at 150 ms or more: `transform`
+where it glides (a phone 340 up and 240 away; a desk 280 and 240, its
+opacity 200 and 240 beside it), `opacity` where Reduce Motion fades it
+where it sits (200 and 240). A jump has no transition to report, however
+many frames there are. The frames still say what they can say truly at any
+pace: nothing of the sheet or its scrim painted on any of them, never a
+step back, and where it ended. How many there were, and on how many it had
+changed, is told and no longer asked; what is asked is that the watch ran
+its 1.4 s (a frame is what gets painted, so however few there are, each
+was read).
+
+SHOWN RED AND GREEN, the section alone each time (four rows, 42 seconds):
+- as it is: green, the eight readings 340/240, 340/240, 280/240, 200/240;
+- a desk's card with no transition: red on "pad, a desk" alone, nothing
+  reported;
+- a phone's sheet with none: red on the Pad and Flip on a phone alone;
+- Reduce Motion's fade with none: red on "pad, Reduce Motion" alone;
+- the watch cut short at 0.6 s: red on all eight;
+- THE BAD MINUTE ITSELF, a desk's page at a sixth of this machine's speed
+  (the browser's own processor throttle): `"frames": 23, "changing": 3`,
+  the very reading main's runner gave, and the row is green on it where
+  four frames asked would be red.
+At a twelfth of the speed the card has not come to rest inside the watch's
+1.4 s and the row is red for that, which is true of such a machine and far
+from anything a runner has shown (main's had 54 frames).
+
+HOW IT RAN HERE: `verify_socialprofile` whole, alone, on the fix: 98 of 98.
+Nothing else reads these frames. FLIP AND THE PAD: nothing of theirs is
+touched; no page is.
