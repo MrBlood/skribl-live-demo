@@ -148,7 +148,9 @@ def draft_tiles(me, skribl_blueprint="skribl"):
     (list_drafts, its seam), newest saved first, each with its picture, its
     title, "Pad · saved 2 hours ago" (or Flip), and the editor that made it,
     at its address with ?draft=<id>, where it opens as the editors' own Your
-    drafts opens one."""
+    drafts opens one. That address is the tile's link, for a new tab; a tap
+    on the tile opens the draft inside a post instead (compose.js, draft:
+    the owner's "All yes", Nov 19), where "Keep drawing" is still true."""
     from skribl import list_drafts
     out = []
     for d in list_drafts(me.public_id):

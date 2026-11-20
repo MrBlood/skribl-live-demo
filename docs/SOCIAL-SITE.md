@@ -1830,7 +1830,13 @@ so nothing is lost; Likes and Drafts are yours alone, nothing of either on
 anybody else's page or in its source. Drafts are the ones Skribl keeps on
 your account, listed through its new seam `list_drafts()` and opened in the
 Pad or Flip with `?draft=<id>` (docs/INTEGRATION.md, "A person's drafts on
-your own page"). Next was step 6, which the owner changed (section 17).
+your own page"). SINCE NOV 19 A TAP ON A DRAFT'S TILE OPENS IT INSIDE A POST
+(the owner's "All yes" to the walk of Save and Drafts: that link left the
+site for the editor by itself, with no way back): the composer's sheet with
+the editor over it, as "Use one you made" opens one, the sheet unseen until
+Add; the link is still the tile's own, for a new tab (`compose.js`,
+`SocialComposer.draft`; `verify_socialprofile` 20). Next was step 6, which
+the owner changed (section 17).
 
     /social/@<handle>            Posts, which opens first
     /social/@<handle>/gallery    the Gallery

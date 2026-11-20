@@ -96,8 +96,9 @@ events with pressure, a hand's timing).
       one link; Likes, yours alone, the posts you liked, newest liked first,
       Load more (posts only, nobody a block hides, nothing taken down, a mute
       changing nothing); Drafts, yours alone, your account's drafts as tiles,
-      newest saved first, each opening the Pad or Flip with that draft; the
-      reads on their indexes; every tab's kind words when it holds nothing.
+      newest saved first, each a link to the Pad or Flip with that draft
+      (what a tap on one does is section 20); the reads on their indexes;
+      every tab's kind words when it holds nothing.
   17. THE TABS' WORDS: every word on the strip and in every tab at 4.5:1 on
       what is painted behind it, every control 44px, phone and desk, light
       and dark.
@@ -119,6 +120,16 @@ events with pressure, a hand's timing).
       on every frame, and under Reduce Motion; its ink at 4.5:1 off the
       pixels; its guards; every tap counting when pressed fast. Nothing of it
       on anybody else's page or in its source.
+  20. A DRAFT'S TILE OPENS INSIDE A POST (the owner's "All yes", Nov 19, to
+      the walk of Save and Drafts): a tap keeps you on your page, the
+      composer's sheet and the editor that made the draft over it, nothing
+      of the sheet painted on any frame until Add (only the editor is seen
+      rising: a phone, a desk, Reduce Motion) and the words never taking
+      focus; the draft on its canvas, Add its button and its × there; put away without
+      Add (its ×; on a desk a tap beside its card) the sheet goes with it,
+      nothing attached, focus back on the tile; Add brings it attached,
+      the sheet under it; with a drawing attached already the sheet opens on
+      it and says a post holds one; a Flip draft in Flip the same.
 
 The layers (the site imports only Skribl's documented names, and its
 templates only documented partials, the face player's now among them) stay
@@ -3329,7 +3340,8 @@ with sync_playwright() as p_:
             ctx, pg = browser_as(b, pia, "phone", "light")
             try:
                 pg.goto(BASE + "/social/@tabpia/drafts")
-                pg.tap(f'.gal-tile[data-draft="{did}"]')
+                # The tile's own address, as a new tab opens it (a tap is section 20's).
+                pg.goto(BASE + pg.get_attribute(f'.gal-tile[data-draft="{did}"]', "href"))
                 pg.wait_for_url(lambda u, p=path: urllib.parse.urlsplit(u).path == p, timeout=20000)
                 pg.wait_for_function("(id) => !!window.SkriblSavedDrafts && window.SkriblSavedDrafts.current() === id",
                                      arg=did, timeout=20000)
@@ -3338,7 +3350,8 @@ with sync_playwright() as p_:
             except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
                 opened[key] = {"stopped": str(exc).splitlines()[0][:160]}
             close_ctx(ctx, pg)
-        check("a tap on a draft opens it to keep drawing, as the editors' own Your drafts does: the Pad at its address,"
+        check("a draft's own address (the tile's link, as a new tab opens it) opens it to keep drawing, as the editors'"
+              " own Your drafts does: the Pad at its address,"
               " ?draft= gone once read, the draft open (the Pad's own draft, named as it is, its drawing on the canvas);"
               " a Flip draft in Flip the same way, its three pages there",
               opened.get("pad", {}).get("current") == T["snail"] and opened["pad"].get("at") == "/skribl-pad"
@@ -4075,6 +4088,198 @@ print("PLAN " + json.dumps(out))
               " hide it, the page and the site agreeing",
               fast19.get(2) == {"hidden": False, "flag": False} and fast19.get(3) == {"hidden": True, "flag": True},
               json.dumps(fast19))
+
+    # ------------------------------------------------------------------ 20
+    # A DRAFT'S TILE OPENS INSIDE A POST (the owner's "All yes", Nov 19, to
+    # the evening's walk of Save and Drafts; choice 4). The tile was a plain
+    # link to the editor by itself: out of the site, no bar, no way back, its
+    # button "Post to Skribl". A tap now opens the draft inside a post, as
+    # the picker's own tile does: the composer's sheet with the editor over
+    # it (compose.js, draft). THE SHEET IS THERE TO HOLD WHAT ADD BRINGS, SO
+    # UNTIL THEN IT IS NOT PAINTED, AND THAT IS READ ON EVERY FRAME (the
+    # owner: "No transitions should be jumpy"): the editor is all that is
+    # seen rising. As first built the two rose together; on a desk both
+    # cards faded in at once and the sheet showed through the editor's.
+    if part(20, "a draft's tile opens inside a post: only the editor seen as it rises, × back on your drafts, Add attached"):
+        T = tab_people(b)
+        pia = T["pia"]
+        tg20 = T["tag"]
+
+        def frame20(pg_, path, timeout=30):
+            """The editor at `path` in compose mode, over the page, once it is up."""
+            end = time.time() + timeout
+            while time.time() < end:
+                fr = next((f for f in pg_.frames if urllib.parse.urlsplit(f.url or "").path == path
+                           and "compose=1" in (f.url or "")), None)
+                if fr:
+                    try:
+                        fr.wait_for_function("() => !!(window.__skriblBoot && (window.__skriblBoot.pad || window.__skriblBoot.flip))",
+                                             timeout=1000)
+                        return fr
+                    except Exception:  # noqa: BLE001 -- not up yet
+                        pass
+                pg_.wait_for_timeout(200)
+            return None
+
+        HOST20 = """(id) => { const tile = document.querySelector('.gal-tile[data-draft="' + id + '"]');
+          const wrap = document.getElementById('composeSheet'), sheet = wrap.querySelector('.make-sheet');
+          const up = [document.getElementById('composePad'), document.getElementById('composeFlip')].find(o => !o.hidden) || null;
+          const fr = up && up.querySelector('iframe'), at = document.activeElement;
+          const mid = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+          return { at: location.pathname, sheet: window.SocialComposer.isOpen(),
+                   sheetSeen: !wrap.hidden && getComputedStyle(sheet).visibility === 'visible',
+                   editor: up ? up.id : null, src: fr ? fr.getAttribute('src') : null, front: !!fr && mid === fr,
+                   focus: at === fr ? 'the editor' : at === tile ? 'the tile' : at && at.hasAttribute('data-compose-words') ? 'the words'
+                     : at && at.hasAttribute('data-compose-edit') ? 'Edit drawing' : at ? at.tagName : null,
+                   attached: window.SocialComposer.attached(), inert: document.getElementById('main').hasAttribute('inert'),
+                   says: ((document.querySelector('[data-compose-say]') || {}).textContent || '').trim() }; }"""
+        # Every frame from the tap (or the ×) on: whether the sheet or its
+        # scrim is painted, and where the editor's own sheet stands and how
+        # solid it is. [ms, sheet painted, the editor's top, its opacity]
+        WATCH20 = """() => { window.__rise = []; const t0 = performance.now(), wrap = document.getElementById('composeSheet');
+          const sheet = wrap.querySelector('.make-sheet'), scrim = wrap.querySelector('.make-scrim');
+          if (window.__words === undefined) { window.__words = 0;
+            wrap.querySelector('[data-compose-words]').addEventListener('focus', () => { window.__words += 1; }); }
+          (function step() {
+            const up = [document.getElementById('composePad'), document.getElementById('composeFlip')].find(o => !o.hidden) || null;
+            const ed = up && up.querySelector('.facepad-sheet');
+            const painted = !wrap.hidden && (getComputedStyle(sheet).visibility !== 'hidden' || +getComputedStyle(scrim).opacity > 0.001);
+            window.__rise.push([Math.round(performance.now() - t0), painted,
+                                ed ? Math.round(ed.getBoundingClientRect().top * 10) / 10 : null,
+                                ed ? Math.round(+getComputedStyle(ed).opacity * 100) / 100 : null]);
+            if (performance.now() - t0 < 1400) requestAnimationFrame(step); })(); }"""
+
+        def judge20(frames, rising, glides=True):
+            """Nothing of the sheet painted on any frame; the editor moving
+            one way over many frames (where it glides: not under Reduce
+            Motion, which fades it where it sits) and ending where it should
+            (up: at rest and solid; away: gone)."""
+            seen = [f for f in frames if f[1]]
+            shown = [f for f in frames if f[2] is not None]
+            tops = [f[2] for f in shown]
+            # A frame on which it stands somewhere new or is more (or less)
+            # solid than the frame before: a glide and a fade both have many,
+            # a jump has one. Four is a glide still at twenty frames a second
+            # (a desk's card moves 28px and fades in 0.2s: under load it had
+            # five places of its own, which is why places alone are not asked).
+            changing = [k for k in range(1, len(shown)) if abs(shown[k][2] - shown[k - 1][2]) > 0.5 or shown[k][3] != shown[k - 1][3]]
+            moving = [k for k in range(1, len(tops)) if abs(tops[k] - tops[k - 1]) > 0.5]
+            back = [k for k in range(1, len(tops)) if (tops[k] - tops[k - 1]) * (1 if rising else -1) > 0.5]
+            end_ok = (bool(tops) and frames[-1][3] == 1 and len(set(tops[-5:])) == 1) if rising else frames[-1][2] is None
+            return {"ok": len(frames) > 20 and not seen and len(changing) >= 4 and (bool(moving) or not glides) and not back
+                    and end_ok,
+                    "frames": len(frames), "sheet painted": seen[:3], "changing": len(changing), "moving": len(moving),
+                    "went back": len(back), "ends": frames[-1]}
+
+        seen20 = {}
+        for key, did, path, read, name, screen, reduced in (
+                ("pad", T["snail"], "/skribl-pad", "strokes.length", f"A snail for Kai {tg20}", "phone", False),
+                ("flip", T["bike"], "/flip", "serializeFlip({ recipes: true }).frames.length", f"The bike, half done {tg20}",
+                 "phone", False),
+                ("pad, a desk", T["snail"], "/skribl-pad", "strokes.length", f"A snail for Kai {tg20}", "desk", False),
+                ("pad, Reduce Motion", T["snail"], "/skribl-pad", "strokes.length", f"A snail for Kai {tg20}", "phone", True)):
+            got = seen20[key] = {"name": name, "id": did}
+            ctx, pg = browser_as(b, pia, screen, "dark" if screen == "desk" else "light", reduced=reduced)
+            press = pg.tap if screen == "phone" else pg.click
+            try:
+                pg.goto(BASE + "/social/@tabpia/drafts")
+                pg.wait_for_function("() => !!window.SocialComposer && document.readyState === 'complete'", timeout=15000)
+                tile = f'.gal-tile[data-draft="{did}"]'
+                pg.evaluate(WATCH20)
+                press(tile)
+                fr = frame20(pg, path)
+                fr.wait_for_function("(id) => !!window.SkriblSavedDrafts && window.SkriblSavedDrafts.current() === id", arg=did,
+                                     timeout=20000)
+                pg.wait_for_timeout(1500)
+                got["rise"] = judge20(pg.evaluate("() => window.__rise"), True, glides=not reduced)
+                got["up"] = pg.evaluate(HOST20, did)
+                got["up"]["words took focus"] = pg.evaluate("() => window.__words")
+                got["in"] = fr.evaluate("() => ({ current: SkriblSavedDrafts.current(), name: window.SkriblName ? SkriblName.get() : null,"
+                                        " drawn: " + read + ", add: document.getElementById('postBtn').textContent.trim(),"
+                                        " close: document.getElementById('composeCloseBtn').getClientRects().length > 0 })")
+                # Put away, nothing added: its ×; on a desk, a tap beside its card.
+                pg.evaluate(WATCH20)
+                if screen == "desk":
+                    pg.mouse.click(8, 8)
+                else:
+                    fr.click("#composeCloseBtn")
+                pg.wait_for_timeout(1500)
+                got["away"] = judge20(pg.evaluate("() => window.__rise"), False, glides=not reduced)
+                got["after"] = pg.evaluate(HOST20, did)
+                if key == "flip":
+                    # Make, after a draft's editor was put away: the sheet is seen.
+                    pg.tap("nav.nav .tab-make")
+                    pg.wait_for_timeout(900)
+                    got["make after"] = pg.evaluate(HOST20, did)
+                    pg.tap("#composeSheet [data-compose-cancel]")
+                    pg.wait_for_timeout(700)
+                if key == "pad":
+                    # Again, and Add: the draft comes back attached, the sheet under it.
+                    press(tile)
+                    fr = frame20(pg, path)
+                    fr.wait_for_function("() => typeof strokes !== 'undefined' && strokes.length > 0", timeout=20000)
+                    pg.wait_for_timeout(600)
+                    fr.click("#postBtn")
+                    pg.wait_for_timeout(700)
+                    fr.click("#postSubmitBtn")
+                    pg.wait_for_function("() => !!window.SocialComposer.attached()", timeout=25000)
+                    pg.wait_for_timeout(900)
+                    got["added"] = pg.evaluate(HOST20, did)
+                    got["post lit"] = pg.evaluate("() => document.querySelector('[data-compose-post]').getAttribute('aria-disabled')")
+                    # The sheet put away with the drawing still in it, then the
+                    # other draft's tile: a post holds one.
+                    pg.tap("#composeSheet [data-compose-cancel]")
+                    pg.wait_for_timeout(900)
+                    pg.tap(f'.gal-tile[data-draft="{T["bike"]}"]')
+                    pg.wait_for_timeout(1200)
+                    got["second"] = pg.evaluate(HOST20, T["bike"])
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                got["stopped"] = str(exc).splitlines()[0][:200]
+            close_ctx(ctx, pg)
+
+        def up_ok(v, wrap_id, drawn):
+            u, i = v.get("up") or {}, v.get("in") or {}
+            return bool(u.get("at") == "/social/@tabpia/drafts" and u.get("sheet") and u.get("editor") == wrap_id
+                        and "compose=1" in (u.get("src") or "") and (u.get("src") or "").endswith("draft=" + v["id"])
+                        and u.get("front") and u.get("focus") == "the editor" and u.get("words took focus") == 0
+                        and u.get("attached") is None
+                        and i.get("current") == v["id"] and i.get("name") == v["name"] and drawn(i.get("drawn") or 0)
+                        and i.get("add", "").startswith("Add") and i.get("close"))
+        check("a tap on a draft keeps you on your page and opens it INSIDE A POST: the composer's sheet and the editor that"
+              " made it over it (compose mode, ?draft=<id>), the editor painted at the screen's middle and holding focus"
+              " (the words never took it, counted, so no keyboard comes up under it), the draft on its canvas named as it"
+              " is, its button Add and its × there; a Flip draft in Flip the same, its three pages; a click on a desk the"
+              " same",
+              up_ok(seen20["pad"], "composePad", lambda n: n > 0) and up_ok(seen20["flip"], "composeFlip", lambda n: n == 3)
+              and up_ok(seen20["pad, a desk"], "composePad", lambda n: n > 0),
+              json.dumps({k: {x: v.get(x) for x in ("up", "in", "stopped")} for k, v in seen20.items()})[:900])
+        check("ONLY THE EDITOR IS SEEN, read on every frame: from the tap until it rests nothing of the sheet is painted, nor"
+              " its scrim, and the editor moves one way over many frames (a phone: up from the foot; a desk: its card"
+              " rising a little as it fades in; under Reduce Motion a fade where it sits); put away without Add the same,"
+              " until it is gone (the Pad and Flip on a phone, a desk, Reduce Motion)",
+              all((v.get("rise") or {}).get("ok") and (v.get("away") or {}).get("ok") for v in seen20.values()),
+              json.dumps({k: {x: v.get(x) for x in ("rise", "away")} for k, v in seen20.items()})[:1100])
+        want_after = {"at": "/social/@tabpia/drafts", "sheet": False, "sheetSeen": False, "editor": None, "focus": "the tile",
+                      "attached": None, "inert": False}
+        make_after = seen20["flip"].get("make after") or {}
+        check("put away without Add (its × on a phone; on a desk a tap beside its card): the sheet goes with it and you are"
+              " on your drafts as you were, nothing attached, the page in reach again and focus back on the tile; and Make,"
+              " pressed after that, opens the sheet SEEN, on its words",
+              all({k: (v.get("after") or {}).get(k) for k in want_after} == want_after for v in seen20.values())
+              and bool(make_after.get("sheet") and make_after.get("sheetSeen") and make_after.get("editor") is None
+                       and make_after.get("focus") == "the words"),
+              json.dumps({"after": {k: v.get("after") for k, v in seen20.items()}, "Make after": make_after})[:1100])
+        added, second = seen20["pad"].get("added") or {}, seen20["pad"].get("second") or {}
+        check("Add brings it back attached: the sheet seen now, there under the editor as it goes, the drawing in it, Edit"
+              " drawing in focus and Post lit; and with that drawing attached, a tap on another draft opens the sheet on it"
+              " (seen) and says a post holds one, no editor over it",
+              bool(added.get("sheet") and added.get("sheetSeen") and added.get("editor") is None
+                   and added.get("attached") == {"kind": "payload", "id": None}
+                   and added.get("focus") == "Edit drawing" and seen20["pad"].get("post lit") == "false"
+                   and second.get("sheet") and second.get("sheetSeen") and second.get("editor") is None
+                   and second.get("attached") == {"kind": "payload", "id": None}
+                   and second.get("says") == "A post holds one drawing. Remove this one to use another."),
+              json.dumps({"added": added, "post lit": seen20["pad"].get("post lit"), "second": second}))
 
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):

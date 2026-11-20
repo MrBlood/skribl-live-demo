@@ -279,7 +279,7 @@
    * focus back to where the person was. The editor brings its own ×; a tap
    * beside a desk's card puts it away, the drawing kept in it.
    *
-   *   var over = SocialPadOverlay(wrap, { openers, onDone, onReady });
+   *   var over = SocialPadOverlay(wrap, { openers, onDone, onReady, onAway });
    *   over.open(back)          // back: what takes focus when it goes
    *   over.guide(file, back)   // a face's photo to trace (composehost guide)
    *   over.openDraft(id, back) // a saved draft on its canvas (the composer's
@@ -288,7 +288,11 @@
    *                            // ({payload, first}; composehost underlay)
    *
    * `wrap` is the overlay (.facepad: its scrim, its sheet, its frame, and the
-   * editor's address in data-compose); `openers` are marked aria-expanded. */
+   * editor's address in data-compose); `openers` are marked aria-expanded.
+   * `onAway` is called when it is put away WITHOUT a drawing handed back: the
+   * editor's own × (composehost's cancel) or a tap beside a desk's card. The
+   * composer closes its sheet with it when a draft's tile on the page opened
+   * the two together (compose.js). */
   function padOver(wrap, o) {
     o = o || {};
     if (!wrap || !window.SkriblComposeHost) return null;
@@ -348,12 +352,17 @@
         timer = setTimeout(settle, SETTLE_MS);
       },
       onReady: function () { wrap.classList.add('is-ready'); if (o.onReady) o.onReady(); },
-      onDone: function (payload, preview, hasAudio) { if (o.onDone) o.onDone(payload, preview, hasAudio); }
+      onDone: function (payload, preview, hasAudio) { if (o.onDone) o.onDone(payload, preview, hasAudio); },
+      onCancel: function () { if (o.onAway) o.onAway(); }
     });
 
     if (scrim) {
       scrim.addEventListener('transitionend', function (e) { if (e.target === scrim && !open) settle(); });
-      scrim.addEventListener('click', function () { pad.close(); });
+      scrim.addEventListener('click', function () {
+        var up = open;
+        pad.close();
+        if (up && o.onAway) o.onAway();
+      });
     }
 
     return {
