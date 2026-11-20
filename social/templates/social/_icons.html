@@ -217,9 +217,14 @@
 
 {# DRAW BACK (the owner's "All yes", Nov 19, to the Draw back mock): a pen
    drawing a little line, the one new verb, after the heart in the row under
-   a post. Its ink centred in its box (3.5 to 20.5 across, 3.6 to 20.6 down). #}
+   a post. Its ink centred in its box (3.5 to 20.5 across, 3.6 to 20.6 down).
+   THE LINE IT DRAWS IS IN COLOUR (the owner's own idea, and "All yes",
+   Nov 19: "a nice touch that accentuates our purpose is coloring the line
+   under the pencil signature purple"): the wave is the pen's line, --brand,
+   as under the chosen tab; the pen stays in the ink of where it sits
+   (social.css, .db-line, which also says where the wave stays white). #}
 {% macro drawback() -%}
-{{ _svg('<path d="M15.9 3.6l3.6 3.6-8.4 8.4-4.6.9.9-4.6z"/><path d="M3.5 19.6c1.9-1.4 3.8-1.4 5.7 0s3.8 1.4 5.7 0"/>') }}
+{{ _svg('<path d="M15.9 3.6l3.6 3.6-8.4 8.4-4.6.9.9-4.6z"/><path class="db-line" d="M3.5 19.6c1.9-1.4 3.8-1.4 5.7 0s3.8 1.4 5.7 0"/>') }}
 {%- endmacro %}
 
 {# QUOTE (the walkthrough's mocks, choice 8, the owner's "all yes", Nov 19):

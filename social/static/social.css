@@ -1874,6 +1874,17 @@ a.post-face { text-decoration: none; }
 .comments-head { display: flex; align-items: center; margin: 0 0 10px; }
 .comments-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 20px; font-weight: 700; }
 .comments-title .ic { color: var(--accent-ink); }
+/* THE LINE THE PEN DRAWS, IN COLOUR (the owner's idea and "All yes", Nov 19;
+   _icons.html, drawback()): Draw back's wave is the pen's line, --brand, as
+   under the chosen tab, wherever its pen is drawn: the row under a post, the
+   draw-backs' title, "Draw back" in words, Activity's badge. Against its
+   ground 4.35:1 on a card, 4.08:1 on a post's page, 3.42:1 on the second
+   button; dark 4.63, 5.46, 3.79 (a drawn line wants 3:1). ON THE ACTION'S
+   FILL IT STAYS WHITE: the pill that rises when a replay ends is the fill
+   itself, and the pen's purple on it is 1.23:1 (dark 1.55), a wave nobody
+   sees. */
+.ic .db-line { stroke: var(--brand); }
+.db-end .db-go .db-line { stroke: currentColor; }
 /* WHEN A REPLAY ENDS (Draw back; posts.js): "Watch again" and Draw back at
    the drawing's foot, in its own box, the box's replay button aside, 44px each, rising 8px as
    they fade in (a fade alone under Reduce Motion). Watch again in the play

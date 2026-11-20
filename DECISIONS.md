@@ -48108,3 +48108,48 @@ Activity's badge change together.
 
 NOT WALKED: Safari on an iPhone, Segoe UI or SF. The hand in the pictures
 is the suite's own (`hand_seed`, the Skribl style's letters).
+
+## After v330 -- "All yes" to the six; the pencil's line in colour (choice 6)
+
+THE OWNER (Nov 19, about 7:40 PM): "All yes", to the six choices put with
+the evening's page (the entry above): (1) Your hand opens over the post and
+the drawing waits; (2) "How it works" first in the site's menu, above
+Settings on a desk, in a visitor's menu too; (3) it opens the site's own
+page, the Pad's and Flip's help at its foot; (4) a draft's tile on the
+profile opens inside a post; (5) a draft stays in Drafts after it is
+posted, as now; (6) the pencil's line, the pen-line purple. Built in that
+order of size: 6 and 4, then 1, then 2 and 3, each its own entry here.
+
+THE PENCIL'S LINE (6), BUILT. The owner's own idea: "a nice touch that
+accentuates our purpose is coloring the line under the pencil signature
+purple". Draw back's icon is a pen and the little wave it draws
+(`_icons.html`, `drawback()`); the wave has a class now (`db-line`) and
+social.css gives it `--brand`, the token that file already calls "the
+wordmark, and the pen's line" (the line under the chosen tab). The pen
+stays in the ink of where it sits. One macro, so it is the row under a
+post, a post's own row, the draw-backs' title, "Draw back" in words and
+Activity's badge at once.
+
+ONE PLACE THE MOCK DID NOT SHOW, AND IT STAYS WHITE THERE: the "Draw back"
+pill that rises when a replay ends is the action's fill, white on it, and
+it borrows the row's icon (`posts.js`). The pen's purple on that fill is
+1.23:1 (dark 1.55): a wave nobody sees. So on the fill the wave keeps the
+button's own ink (`.db-end .db-go .db-line`), 5.33:1. Told to the owner
+with the build.
+
+THE CHECK, AND ITS REDS (`verify_socialdrawback`, a new section 9; the
+errors' row is 10 now). Each of the six places, light and dark, read twice:
+what the page computes (the wave's stroke is `--brand`, the pen's is the
+ink) and what is painted (the colour most of the wave's own band is, on a
+screen of three pixels to one, so a 1.3px line has whole pixels of
+itself), then the wave as painted against the ground painted behind it,
+3:1 or more. As built: 4.35 on a card, 4.08 on a post's page and on
+Activity's badge, 3.42 on the second button; dark 4.63, 5.46, 3.79; the
+numbers the mock gave. Shown red four ways, each on its own row: the class
+off the macro and the rule off the sheet (row one: the wave painted in the
+row's grey), the fill's exception off (row three: no wave found on the
+pill at all), and `--brand` made a pale lilac (row two: 2.12 on a card,
+1.67 on the button; row one stays green, it follows the token).
+
+NOT FOR FLIP OR THE PAD: the site's own icon; the editors have no Draw
+back pen. NOT TESTED: Safari on an iPhone.
