@@ -4136,10 +4136,18 @@ print("PLAN " + json.dumps(out))
         # Every frame from the tap (or the ×) on: whether the sheet or its
         # scrim is painted, and where the editor's own sheet stands and how
         # solid it is. [ms, sheet painted, the editor's top, its opacity]
-        WATCH20 = """() => { window.__rise = []; const t0 = performance.now(), wrap = document.getElementById('composeSheet');
+        # AND THE GLIDE'S OWN CLOCK (window.__glide): every transition the
+        # editor's sheet finishes, [what moved, for how many ms], as the
+        # browser reports it (transitionend's elapsedTime). The frames say
+        # what was painted; the clock says it glided, whatever the frames a
+        # busy machine got round to showing this page's script.
+        WATCH20 = """() => { window.__rise = []; window.__glide = [];
+          const t0 = performance.now(), wrap = document.getElementById('composeSheet');
           const sheet = wrap.querySelector('.make-sheet'), scrim = wrap.querySelector('.make-scrim');
           if (window.__words === undefined) { window.__words = 0;
-            wrap.querySelector('[data-compose-words]').addEventListener('focus', () => { window.__words += 1; }); }
+            wrap.querySelector('[data-compose-words]').addEventListener('focus', () => { window.__words += 1; });
+            document.addEventListener('transitionend', (e) => { if (e.target.classList && e.target.classList.contains('facepad-sheet'))
+              window.__glide.push([e.propertyName, Math.round(e.elapsedTime * 1000)]); }, true); }
           (function step() {
             const up = [document.getElementById('composePad'), document.getElementById('composeFlip')].find(o => !o.hidden) || null;
             const ed = up && up.querySelector('.facepad-sheet');
@@ -4149,27 +4157,47 @@ print("PLAN " + json.dumps(out))
                                 ed ? Math.round(+getComputedStyle(ed).opacity * 100) / 100 : null]);
             if (performance.now() - t0 < 1400) requestAnimationFrame(step); })(); }"""
 
-        def judge20(frames, rising, glides=True):
-            """Nothing of the sheet painted on any frame; the editor moving
-            one way over many frames (where it glides: not under Reduce
-            Motion, which fades it where it sits) and ending where it should
-            (up: at rest and solid; away: gone)."""
+        def judge20(got, rising, glides=True):
+            """Nothing of the sheet painted on any frame; the editor gliding
+            one way (where it glides: not under Reduce Motion, which fades
+            it where it sits) and ending where it should (up: at rest and
+            solid; away: gone).
+
+            THE GLIDE IS READ FROM ITS OWN CLOCK, NOT FROM HOW MANY FRAMES
+            THIS PAGE'S SCRIPT WAS SHOWN (main's run after #1008, sqlite 7/7
+            alone: "pad, a desk" rose with 3 frames on which it had changed,
+            54 frames in 1.4 s, where 4 were asked; green beside it on
+            postgresql, the same tree). The editor's own page loads in the
+            same thread while its card rises, so on a busy machine the
+            frames this script is handed thin out, while the browser moves
+            the card all the same. What cannot thin out is the transition
+            itself: it ran its time, on what should move (transform where
+            it glides, opacity where it only fades). A jump has no
+            transition to report, however many frames there are. The frames
+            still say what they can say truly at any pace: nothing of the
+            sheet painted, never a step back, and where it ended."""
+            frames, clock = got["frames"], got["glide"]
             seen = [f for f in frames if f[1]]
             shown = [f for f in frames if f[2] is not None]
             tops = [f[2] for f in shown]
-            # A frame on which it stands somewhere new or is more (or less)
-            # solid than the frame before: a glide and a fade both have many,
-            # a jump has one. Four is a glide still at twenty frames a second
-            # (a desk's card moves 28px and fades in 0.2s: under load it had
-            # five places of its own, which is why places alone are not asked).
+            # Told, not asked: on how many frames it stood somewhere new or
+            # was more (or less) solid than the frame before.
             changing = [k for k in range(1, len(shown)) if abs(shown[k][2] - shown[k - 1][2]) > 0.5 or shown[k][3] != shown[k - 1][3]]
             moving = [k for k in range(1, len(tops)) if abs(tops[k] - tops[k - 1]) > 0.5]
             back = [k for k in range(1, len(tops)) if (tops[k] - tops[k - 1]) * (1 if rising else -1) > 0.5]
             end_ok = (bool(tops) and frames[-1][3] == 1 and len(set(tops[-5:])) == 1) if rising else frames[-1][2] is None
-            return {"ok": len(frames) > 20 and not seen and len(changing) >= 4 and (bool(moving) or not glides) and not back
-                    and end_ok,
-                    "frames": len(frames), "sheet painted": seen[:3], "changing": len(changing), "moving": len(moving),
-                    "went back": len(back), "ends": frames[-1]}
+            ran = {}
+            for what, ms in clock:
+                ran[what] = max(ran.get(what, 0), ms)
+            glided = ran.get("transform" if glides else "opacity", 0) >= 150
+            # THE WATCH RAN ITS 1.4 s. How many frames it was shown is told,
+            # not asked: a frame is what gets painted, so however few a busy
+            # machine shows, each was read (at a twelfth of this machine's
+            # speed a desk showed 15, where 20 were asked until now).
+            watched = len(frames) > 4 and frames[-1][0] >= 1300
+            return {"ok": watched and not seen and glided and not back and end_ok,
+                    "frames": len(frames), "sheet painted": seen[:3], "ran": ran, "changing": len(changing),
+                    "moving": len(moving), "went back": len(back), "ends": frames[-1]}
 
         seen20 = {}
         for key, did, path, read, name, screen, reduced in (
@@ -4191,7 +4219,7 @@ print("PLAN " + json.dumps(out))
                 fr.wait_for_function("(id) => !!window.SkriblSavedDrafts && window.SkriblSavedDrafts.current() === id", arg=did,
                                      timeout=20000)
                 pg.wait_for_timeout(1500)
-                got["rise"] = judge20(pg.evaluate("() => window.__rise"), True, glides=not reduced)
+                got["rise"] = judge20(pg.evaluate("() => ({ frames: window.__rise, glide: window.__glide })"), True, glides=not reduced)
                 got["up"] = pg.evaluate(HOST20, did)
                 got["up"]["words took focus"] = pg.evaluate("() => window.__words")
                 got["in"] = fr.evaluate("() => ({ current: SkriblSavedDrafts.current(), name: window.SkriblName ? SkriblName.get() : null,"
@@ -4204,7 +4232,7 @@ print("PLAN " + json.dumps(out))
                 else:
                     fr.click("#composeCloseBtn")
                 pg.wait_for_timeout(1500)
-                got["away"] = judge20(pg.evaluate("() => window.__rise"), False, glides=not reduced)
+                got["away"] = judge20(pg.evaluate("() => ({ frames: window.__rise, glide: window.__glide })"), False, glides=not reduced)
                 got["after"] = pg.evaluate(HOST20, did)
                 if key == "flip":
                     # Make, after a draft's editor was put away: the sheet is seen.
@@ -4254,11 +4282,11 @@ print("PLAN " + json.dumps(out))
               and up_ok(seen20["pad, a desk"], "composePad", lambda n: n > 0),
               json.dumps({k: {x: v.get(x) for x in ("up", "in", "stopped")} for k, v in seen20.items()})[:900])
         check("ONLY THE EDITOR IS SEEN, read on every frame: from the tap until it rests nothing of the sheet is painted, nor"
-              " its scrim, and the editor moves one way over many frames (a phone: up from the foot; a desk: its card"
-              " rising a little as it fades in; under Reduce Motion a fade where it sits); put away without Add the same,"
-              " until it is gone (the Pad and Flip on a phone, a desk, Reduce Motion)",
+              " its scrim, and the editor glides one way, never a step back, its own transition running its time (a phone:"
+              " up from the foot; a desk: its card rising a little as it fades in; under Reduce Motion a fade where it"
+              " sits); put away without Add the same, until it is gone (the Pad and Flip on a phone, a desk, Reduce Motion)",
               all((v.get("rise") or {}).get("ok") and (v.get("away") or {}).get("ok") for v in seen20.values()),
-              json.dumps({k: {x: v.get(x) for x in ("rise", "away")} for k, v in seen20.items()})[:1100])
+              json.dumps({k: {x: v.get(x) for x in ("rise", "away")} for k, v in seen20.items()})[:2000])
         want_after = {"at": "/social/@tabpia/drafts", "sheet": False, "sheetSeen": False, "editor": None, "focus": "the tile",
                       "attached": None, "inert": False}
         make_after = seen20["flip"].get("make after") or {}
