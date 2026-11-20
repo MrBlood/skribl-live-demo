@@ -1146,7 +1146,21 @@ REST15 = """(id) => { const r1 = x => Math.round(x * 10) / 10;
            playPainted: !!at && boxEl.contains(at) && ps.visibility === 'visible' && ps.display !== 'none' && +ps.opacity > 0.5 && pr.width > 20,
            playInside: pr.left >= box.left - 0.5 && pr.right <= box.right + 0.5 && pr.bottom <= box.bottom + 0.5, playFoot: r1(box.bottom - pr.bottom) }; }"""
 # A tap on it, and on every frame after: its drawing's width, its bubble's, its top on the screen.
-GROW15 = """async ([id, ms]) => { const li = document.getElementById('c-' + id), art = li.querySelector(':scope > .cm-main .cm-art'), box = art.querySelector('.skribl-inline');
+# THE WATCH ENDS WHEN THE DRAWING HAS PLAYED AND COME TO REST, NOT AFTER A SET
+# TIME (main's run after #1010, sqlite 6/7 alone: the width had not moved in
+# the 900 ms watched, "way 0.0, frames 0", and stood in its room when it was
+# read 600 ms later; green beside it on postgresql). A comment's drawing is
+# not even fetched until it is tapped, so on a busy machine the tap, the
+# fetch and the first stroke can outlast any set time, and the glide begins
+# after the watch has stopped looking. It runs until the line has opened
+# (the play began) and the width has then held still for 400 ms, `most` at
+# the longest. AND THE GLIDE'S OWN CLOCK: each transition of its width that
+# the box (.cm-art) finishes, in ms as the browser reports it (transitionend),
+# so the glide is read from that and not from how many frames this page's
+# script was shown (verify_socialprofile 20 learned it the same morning).
+GROW15 = """async ([id, most]) => { const li = document.getElementById('c-' + id), art = li.querySelector(':scope > .cm-main .cm-art'), box = art.querySelector('.skribl-inline');
+  const line = art.querySelector('.skribl-inline-line'), clock = [];
+  art.addEventListener('transitionend', (e) => { if (e.target === art) clock.push([e.propertyName, Math.round(e.elapsedTime * 1000)]); });
   const read = () => { const r = box.getBoundingClientRect(), b = li.querySelector(':scope > .cm-main > .cm-bubble').getBoundingClientRect();
                        return [Math.round(r.width * 100) / 100, Math.round(b.width * 100) / 100, Math.round(r.top * 100) / 100]; };
   const frames = [read()];
@@ -1154,9 +1168,30 @@ GROW15 = """async ([id, ms]) => { const li = document.getElementById('c-' + id),
   const at = document.elementFromPoint(o.clientX, o.clientY) || box;
   at.dispatchEvent(new PointerEvent('pointerdown', o)); at.dispatchEvent(new PointerEvent('pointerup', o)); at.dispatchEvent(new MouseEvent('click', o));
   frames.push(read());
-  const t0 = performance.now();
-  await new Promise(res => { const step = () => { frames.push(read()); if (performance.now() - t0 < ms) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); });
-  return frames; }"""
+  const t0 = performance.now(); let opened = null, still = null, last = frames[1][0];
+  await new Promise(res => { const step = () => { const f = read(), now = performance.now(); frames.push(f);
+    if (opened === null && line && !line.classList.contains('is-waiting')) opened = now;
+    if (Math.abs(f[0] - last) > 0.05) { last = f[0]; still = null; } else if (still === null) still = now;
+    if (now - t0 > most || (opened !== null && still !== null && now - Math.max(opened, still) >= 400)) res(); else requestAnimationFrame(step); };
+    requestAnimationFrame(step); });
+  return { frames, clock, opened: opened === null ? null : Math.round(opened - t0), ms: Math.round(performance.now() - t0) }; }"""
+
+
+def grew15(got, want):
+    """A drawn comment growing to its room as it plays, from what GROW15 saw:
+    its width went `want` px, never back; the box's own transition of its
+    width ran its 0.3 s (a jump has none to report, however many frames there
+    are: those are told, not asked); its top held still on the screen."""
+    ws = [f[0] for f in got["frames"]]
+    steps = [y - x for x, y in zip(ws, ws[1:])]
+    ran = max([ms for what, ms in got["clock"] if what == "width"] or [0])
+    way = ws[-1] - ws[0]
+    back = [round(x, 2) for x in steps if x < -0.5]
+    return {"ok": abs(way - want) <= 1.5 and way > 20 and ran >= 250 and not back and still_([f[2] for f in got["frames"]]),
+            "way": round(way, 2), "want": round(want, 2), "ran": ran, "frames": len([x for x in steps if abs(x) > 0.3]),
+            "back": back, "opened": got["opened"], "watched": got["ms"]}
+
+
 STATES = """() => (window.SkriblInline ? SkriblInline.players() : []).map(p => { const s = p.state();
   return [s.id, { state: s.state, loaded: s.loaded, ms: Math.round(s.elapsedMs || 0) }]; })"""
 
@@ -2575,8 +2610,8 @@ with sync_playwright() as p:
             # stood 294 by 523 with its line under it, under a post's drawing of
             # 370 by 278. Read at rest, then on every frame as a tap plays it.
             rest15 = pg.evaluate(REST15, got["id"])
-            grow15 = pg.evaluate(GROW15, [got["id"], 900])
-            pg.wait_for_timeout(600)
+            grow15 = pg.evaluate(GROW15, [got["id"], 10000])
+            pg.wait_for_timeout(300)
             tapped = dict(pg.evaluate(STATES)).get(sid) or {}
             after15 = pg.evaluate(REST15, got["id"])
             own = states.get(post_sid) or {}
@@ -2594,13 +2629,14 @@ with sync_playwright() as p:
                   and rest15["w"] + 27 <= rest15["bubble"] <= rest15["room"] + 0.5 and rest15["line"] == [True, 0]
                   and rest15["says"].endswith("sec") and rest15["playPainted"] and rest15["playInside"] and rest15["playFoot"] >= 11,
                   json.dumps(rest15))
-            g15 = glided([f[0] for f in grow15], want=rest15["room"] - 28 - rest15["w"])
-            check("a tap plays it and it grows to its room, gliding: its width read on every frame, three frames or more"
-                  " carrying the move and none most of it, nothing going back; its top holds still on the screen; then its"
-                  " line is open under it and it is as wide as the bubble's room, as before",
-                  g15["ok"] and still_([f[2] for f in grow15]) and abs(after15["w"] - (after15["room"] - 28)) <= 1
+            g15 = grew15(grow15, rest15["room"] - 28 - rest15["w"])
+            check("a tap plays it and it grows to its room, gliding: its width read on every frame from the tap until it"
+                  " has played and come to rest, all the way and never back, its own transition running its 0.3 s; its top"
+                  " holds still on the screen; then its line is open under it and it is as wide as the bubble's room, as"
+                  " before",
+                  g15["ok"] and abs(after15["w"] - (after15["room"] - 28)) <= 1
                   and after15["line"] and after15["line"][0] is False and after15["line"][1] > 20,
-                  f"{g15}; top {min(f[2] for f in grow15)} to {max(f[2] for f in grow15)}; after {after15}")
+                  f"{g15}; top {min(f[2] for f in grow15['frames'])} to {max(f[2] for f in grow15['frames'])}; after {after15}")
             # ONE DRAWN WIDE is in its room from the start, as before; and under
             # Reduce Motion nothing grows: it plays where it sits.
             wc = mira.client()
@@ -2614,8 +2650,8 @@ with sync_playwright() as p:
             open_post(rpg, post)
             rpg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", got["id"])
             r_rest = rpg.evaluate(REST15, got["id"])
-            r_grow = rpg.evaluate(GROW15, [got["id"], 700])
-            rpg.wait_for_timeout(500)
+            r_grow = rpg.evaluate(GROW15, [got["id"], 10000])
+            rpg.wait_for_timeout(300)
             r_after = rpg.evaluate(REST15, got["id"])
             r_state = dict(rpg.evaluate(STATES)).get(sid) or {}
             close_ctx(rctx, rpg)
@@ -2623,9 +2659,12 @@ with sync_playwright() as p:
                   " drawing); under Reduce Motion a tall one plays where it sits: its width the same on every frame, its line"
                   " there once it plays",
                   bool(wide_id) and abs(wide15["w"] - (wide15["room"] - 28)) <= 1 and wide15["h"] <= wide15["postH"] + 0.5
-                  and still_([f[0] for f in r_grow]) and abs(r_after["w"] - r_rest["w"]) <= 0.5 and r_after["line"][0] is False
+                  and r_grow["opened"] is not None and still_([f[0] for f in r_grow["frames"]]) and r_grow["clock"] == []
+                  and abs(r_after["w"] - r_rest["w"]) <= 0.5 and r_after["line"][0] is False
                   and r_state.get("loaded"),
-                  f"wide {wide15}; reduced: rest {r_rest['w']}, frames {min(f[0] for f in r_grow)} to {max(f[0] for f in r_grow)}, after {r_after}")
+                  f"wide {wide15}; reduced: rest {r_rest['w']}, frames {min(f[0] for f in r_grow['frames'])} to"
+                  f" {max(f[0] for f in r_grow['frames'])} (the line open at {r_grow['opened']} ms, no transition: {r_grow['clock']}),"
+                  f" after {r_after}")
             dctx, dpg = browser_as(b, mira, screen="desk")
             open_post(dpg, post)
             desk15 = dpg.evaluate(REST15, got["id"])
