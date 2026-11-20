@@ -152,7 +152,7 @@ jobs:
           echo "every PR-gate suite ran"
 
   sqlite:
-    name: harness (sqlite ${{ matrix.shard }}/6)
+    name: harness (sqlite ${{ matrix.shard }}/7)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     # SIX SHARDS SIDE BY SIDE, which is what the note this replaced said to do
@@ -161,14 +161,20 @@ jobs:
     # main took the afternoon to show and the first green came at 6:39 PM.
     # harness/shard.py picks each shard's suites by their measured seconds, and
     # the six together run every suite once, about 17 minutes each then; by
-    # Nov 16 the battery had tripled, and re-weighed, each takes 52 to 54. Standard
-    # runners on a public repository cost nothing however many there are; six
-    # shards of two databases plus the mp4 job is 13 of the 20 jobs a free
-    # account runs at once. 60 minutes a shard keeps the old habit of room to grow.
+    # Nov 16 the battery had tripled, and re-weighed, each takes 52 to 54.
+    # SEVEN SINCE NOV 20. At six, four more days of suites had each shard at 49
+    # to 59 of its 60 minutes, and on the tree after #1006 the one whose runner
+    # spent 6 min 40 s installing Chromium was cut at the limit, its last suite
+    # 20 seconds from done (sqlite 5/6; nothing had failed, and the run read
+    # "cancelled"). Splitting, not budgeting: seven take about 45 by the table.
+    # Standard runners on a public repository cost nothing however many there
+    # are; seven shards of two databases plus the mp4, Firefox and WebKit jobs
+    # is 17 of the 20 jobs a free account runs at once. 60 minutes a shard
+    # keeps the old habit of room to grow.
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        shard: [1, 2, 3, 4, 5, 6, 7]
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
@@ -199,7 +205,7 @@ jobs:
         # without it the browser launches and dies on a missing shared object.
         run: python -m playwright install --with-deps chromium
       - name: Run the harness
-        run: ./harness/run_harness.sh $(python3 harness/shard.py ${{ matrix.shard }}/6)
+        run: ./harness/run_harness.sh $(python3 harness/shard.py ${{ matrix.shard }}/7)
       # THE JOB THAT RUNS ALL 100 SUITES WAS THE ONE WITH NO SKIP GUARD, while
       # the two jobs that run a single suite each had one. run_harness.sh exits
       # 0 on a skip -- correctly, because two lanes MAY skip here: verify_mp4
@@ -234,7 +240,7 @@ jobs:
           path: harness/LAST-RUN.txt
 
   postgres:
-    name: harness (postgresql ${{ matrix.shard }}/6)
+    name: harness (postgresql ${{ matrix.shard }}/7)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     # SIX SHARDS SIDE BY SIDE, which is what the note this replaced said to do
@@ -243,14 +249,20 @@ jobs:
     # main took the afternoon to show and the first green came at 6:39 PM.
     # harness/shard.py picks each shard's suites by their measured seconds, and
     # the six together run every suite once, about 17 minutes each then; by
-    # Nov 16 the battery had tripled, and re-weighed, each takes 52 to 54. Standard
-    # runners on a public repository cost nothing however many there are; six
-    # shards of two databases plus the mp4 job is 13 of the 20 jobs a free
-    # account runs at once. 60 minutes a shard keeps the old habit of room to grow.
+    # Nov 16 the battery had tripled, and re-weighed, each takes 52 to 54.
+    # SEVEN SINCE NOV 20. At six, four more days of suites had each shard at 49
+    # to 59 of its 60 minutes, and on the tree after #1006 the one whose runner
+    # spent 6 min 40 s installing Chromium was cut at the limit, its last suite
+    # 20 seconds from done (sqlite 5/6; nothing had failed, and the run read
+    # "cancelled"). Splitting, not budgeting: seven take about 45 by the table.
+    # Standard runners on a public repository cost nothing however many there
+    # are; seven shards of two databases plus the mp4, Firefox and WebKit jobs
+    # is 17 of the 20 jobs a free account runs at once. 60 minutes a shard
+    # keeps the old habit of room to grow.
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        shard: [1, 2, 3, 4, 5, 6, 7]
     timeout-minutes: 60
 
     services:
@@ -347,7 +359,7 @@ jobs:
         # run_harness.sh honours an externally supplied DATABASE_URL and resets
         # by dropping and recreating Skribl's tables, so this is a genuine
         # PostgreSQL run with per-run isolation intact.
-        run: ./harness/run_harness.sh $(python3 harness/shard.py ${{ matrix.shard }}/6)
+        run: ./harness/run_harness.sh $(python3 harness/shard.py ${{ matrix.shard }}/7)
       - name: Verify the migration chain on PostgreSQL
         if: matrix.shard == 1
         # A SEPARATE, EMPTY database. run_harness.sh resets the supplied one with

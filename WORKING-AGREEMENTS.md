@@ -411,7 +411,7 @@ for nothing is a target.
 box running alone. Seal for an outside audit, for a release someone is handed,
 or when the owner asks; not at the end of a session, and not because changes
 have piled up. Between seals, every merge is covered by main's full run after
-it (twelve shards, both databases, the MP4, Firefox and WebKit lanes). A
+it (fourteen shards, both databases, the MP4, Firefox and WebKit lanes). A
 handoff says "not sealed since vNNN" and that is fine.
 
 Before a seal, `release_run.py --dry-run` (with the venv first on PATH) asks

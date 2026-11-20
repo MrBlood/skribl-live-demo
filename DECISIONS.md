@@ -48737,3 +48737,40 @@ FIVE CHOICES ARE WITH THE OWNER, each with a pick.
 FLIP AND THE PAD: not for either. NOT TESTED: Safari on an iPhone, SF or
 Segoe UI; and how a bar above the bottom bar behaves with the iPhone's
 keyboard up is to be checked on the owner's phone when it is built.
+
+## After v330 -- Main's run on the fix was cut at the hour, not red: seven shards
+
+THE RUN ON THE TREE AFTER #1006 (2382, Nov 20, 6:45 to 7:46 AM) READ
+"CANCELLED". Nothing in it failed. One job of its fifteen, sqlite 5/6, was
+stopped at its 60-minute limit with its last suite, verify_watchfull, about
+20 seconds from done: its runner had spent 6 min 40 s installing Chromium,
+where nine of the twelve took half a minute. Every other job was green:
+all six postgresql shards, sqlite 1, 2, 3, 4 and 6, the MP4, Firefox and
+WebKit.
+
+SO THE FIX OF "MAIN WAS RED FOR A NIGHT" IS READ GREEN WHERE IT WAS RED:
+verify_a11y's shard, 3 of 6, passed on both databases. WHAT WAS NOT READ:
+sqlite 5/6's summary. Twenty of its thirty-four suites are seen passed in
+the part of its log that could be fetched, thirteen earlier ones are out of
+the log reader's reach, and the last was cut; the same thirty-four passed
+on postgresql 5/6 in the same run. Not claimed green: cut.
+
+WHY IT WILL HAPPEN AGAIN AT SIX. Four days of suites since the Nov 16
+re-weighing: the shards' own suites took 48 to 56 minutes in that run (the
+table says 52.6 each), and a job's steps a minute or two more. No
+re-weighing brings the slowest under about 53, so any runner slow to
+install a browser runs out. The workflow's own note says what to do:
+"a run that needs more than that is worth splitting, not budgeting."
+
+SEVEN SHARDS (`.github/workflows/harness.yml`, both battery jobs;
+`harness/shard.py`): by the table, 45 minutes each. The 60-minute limit
+stays. Standard runners on a public repository cost nothing however many;
+seven shards of two databases with the MP4, Firefox and WebKit jobs is 17
+of the 20 jobs a free account runs at once. verify_docs already reads the
+matrix against the number shard.py is asked for and that the shards cover
+every suite once (201 of 201 at seven). THE TABLE IS FOUR DAYS OLD and was
+left: measure again the next time a shard runs long.
+
+NOT ASKED OF THE OWNER FIRST, and said to them: it bills nothing, it
+changes no trigger, and a main that reads "cancelled" one run in three is a
+gate that cries wolf.
