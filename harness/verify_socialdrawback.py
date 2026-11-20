@@ -33,7 +33,14 @@ each in a browser with a virtual passkey.
   7. WHEN A REPLAY ENDS: "Watch again" and "Draw back" in the drawing's own
      box, 12px above its foot, 44px, the box's replay mark aside; Watch
      again plays it and they go; Draw back opens the composer on hers.
-  9. No page errors, no console errors and no CSP violations.
+  8. WHAT A DRAW-BACK SAYS: each hand's own drawing time on its line, who
+     and the whole on its play button.
+  9. THE PEN'S LINE: Draw back's wave is the pen's line (--brand) and its
+     pen the ink of where it sits, on a card's row, a post's own row, the
+     draw-backs' title, "Draw back" in words and Activity's badge, read off
+     what is painted, 3:1 or more against its ground; on the pill that rises
+     when a replay ends (the action's fill) the wave stays white.
+ 10. No page errors, no console errors and no CSP violations.
 
 SOCIALDRAWBACK_PART=<n>[,<m>] runs those sections only (calibration). Every
 row was shown red by breaking one part and green as built: DECISIONS.md,
@@ -288,10 +295,13 @@ class Person:
             return []
 
 
-def browser_as(b, who, screen="phone", scheme="light", reduced=False):
+def browser_as(b, who, screen="phone", scheme="light", reduced=False, dpr=None):
     kw = {"reduced_motion": "reduce"} if reduced else {}
+    shape = dict(PHONE if screen == "phone" else DESK)
+    if dpr:
+        shape["device_scale_factor"] = dpr      # a line's own colour needs whole pixels of it (section 9)
     ctx = b.new_context(color_scheme=scheme, extra_http_headers={"X-Forwarded-For": who.xff if who else address()},
-                        **(PHONE if screen == "phone" else DESK), **kw)
+                        **shape, **kw)
     ctx.add_init_script(WATCH)
     if who:
         ctx.add_cookies([{k: v for k, v in c.items() if k in ("name", "value", "domain", "path", "httpOnly",
@@ -1584,14 +1594,146 @@ with app.test_request_context("/social/"):
             stopped(8, exc)
 
     # ------------------------------------------------------------------ 9
-    if part(9, "no page errors, no console errors and no CSP violations"):
+    # THE LINE THE PEN DRAWS, IN COLOUR (the owner's own idea, and "All yes",
+    # Nov 19: "a nice touch that accentuates our purpose is coloring the line
+    # under the pencil signature purple"). Draw back's icon is a pen and the
+    # little wave it draws: the wave wears --brand, the pen's line under the
+    # chosen tab, and the pen stays in the ink of where it sits. ONE MACRO,
+    # SIX PLACES, AND ONE OF THEM IS THE ACTION'S FILL: the pill that rises
+    # when a replay ends is the fill itself, where the pen's purple would be a
+    # wave nobody sees, so there it stays the button's own white. Read twice
+    # each: what the page computes, and what is painted (the colour most of
+    # the wave's own band is, on a screen of three pixels to one, where a
+    # 1.3px line has whole pixels of itself).
+    if part(9, "the pen's line: the pen's purple wherever Draw back's pen is drawn, white on the action's fill"):
+        try:
+            import io
+            from PIL import Image
+
+            def lum(c):
+                v = [x / 255 for x in c[:3]]
+                v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+                return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+            def ratio(a, c):
+                hi, lo = max(lum(a), lum(c)), min(lum(a), lum(c))
+                return round((hi + 0.05) / (lo + 0.05), 2)
+
+            def far(a, c):
+                return max(abs(x - y) for x, y in zip(a[:3], c[:3]))
+
+            def rgb(css):
+                return [round(float(x)) for x in re.findall(r"[\d.]+", css or "")[:3]]
+
+            PEN = """(sel) => { const svg = document.querySelector(sel); if (!svg) return null;
+              const p = svg.querySelectorAll('path'), probe = document.createElement('i');
+              probe.style.color = 'var(--brand)'; document.body.appendChild(probe);
+              const brand = getComputedStyle(probe).color; probe.remove();
+              return { paths: p.length, pen: getComputedStyle(p[0]).stroke, line: getComputedStyle(p[p.length - 1]).stroke,
+                       ink: getComputedStyle(svg).color, brand, h: svg.getBoundingClientRect().height }; }"""
+
+            def read(pg, sel):
+                """What the page computes for the icon at `sel`, and what is
+                painted: its ground (the colour most of its box is), the
+                wave's colour (the colour most of the wave's own band is,
+                the ground apart) and the pen's (the same, above the wave)."""
+                got = pg.evaluate(PEN, sel)
+                if not got:
+                    return None
+                pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", sel)
+                pg.wait_for_timeout(350)
+                im = Image.open(io.BytesIO(pg.locator(sel).first.screenshot(animations="disabled"))).convert("RGB")
+                w, h = im.size
+                ground = max(im.getcolors(w * h))[1]
+
+                def most(top, bottom):
+                    band = [(n, c) for n, c in im.crop((0, round(h * top), w, round(h * bottom))).getcolors(w * h)
+                            if far(c, ground) > 24]
+                    return list(max(band)[1]) if band else None
+                # The wave runs from 18.9 to 20.3 of the icon's 24, a line 2
+                # wide: 17.9 to 21.3. The pen ends at 17.5 with its line.
+                wave, pen = most(18.4 / 24, 20.9 / 24), most(4 / 24, 15 / 24)
+                got.update(ground=list(ground), wave=wave, penPaint=pen,
+                           ratio=ratio(wave, ground) if wave else None)
+                return got
+
+            ana = someone(b, "ana", "Ana Ruiz")
+            theo = someone(b, "theo", "Theo Lin")
+            cat = post_payload(ana, "Section 9, the cat", drawing(n=20, seed=41))
+            back = (draw_back(theo, cat, answer(n=10, seed=42))[1] or {}).get("post")
+            card = f'.post-card[data-post="{cat}"]'
+            seen = {}
+            for scheme in ("light", "dark"):
+                got = seen[scheme] = {}
+                # A card's row, and the pill when its replay ends.
+                ctx, pg = browser_as(b, theo, scheme=scheme, dpr=3)
+                home(pg)
+                pg.locator(card).scroll_into_view_if_needed()
+                got["a card's row"] = read(pg, card + " .post-row .db-pen svg")
+                pg.click(card + " .skribl-inline-play")
+                pg.wait_for_function("(s) => !!document.querySelector(s + ' .db-end.is-up')", arg=card, timeout=20000)
+                pg.wait_for_timeout(400)
+                got["the pill when a replay ends"] = read(pg, card + " .db-end .db-go svg")
+                close_ctx(ctx, pg)
+                # Her post's own page: its row, the draw-backs' title, the words.
+                ctx, pg = browser_as(b, theo, scheme=scheme, dpr=3)
+                open_post(pg, cat)
+                got["a post's own row"] = read(pg, ".post-page > .post-row .db-pen svg")
+                got["the draw-backs' title"] = read(pg, ".db-title svg")
+                got["Draw back in words"] = read(pg, ".db-word svg")
+                close_ctx(ctx, pg)
+                # Her Activity: his draw-back's badge.
+                ctx, pg = browser_as(b, ana, scheme=scheme, dpr=3)
+                pg.goto(BASE + "/social/activity")
+                ready(pg)
+                pg.wait_for_timeout(400)
+                got["Activity's badge"] = read(pg, ".db-badge svg")
+                close_ctx(ctx, pg)
+            PAGE = ("a card's row", "a post's own row", "the draw-backs' title", "Draw back in words", "Activity's badge")
+            PILL = "the pill when a replay ends"
+
+            def purple(v):
+                """The wave is the pen's line, computed and painted; the pen is
+                the ink of where it sits, computed and painted, and not the
+                wave's colour (so the two can be told apart at all)."""
+                return bool(v and v["paths"] == 2 and v["line"] == v["brand"] and v["pen"] == v["ink"] and v["pen"] != v["brand"]
+                            and v["wave"] and far(v["wave"], rgb(v["brand"])) <= 6
+                            and v["penPaint"] and far(v["penPaint"], rgb(v["ink"])) <= 6)
+
+            def short(v):
+                return v and {k: v[k] for k in ("line", "pen", "brand", "wave", "penPaint", "ground", "ratio")}
+            bad_a = {f"{s}: {k}": short(seen[s].get(k)) for s in seen for k in PAGE if not purple(seen[s].get(k))}
+            check("Draw back's wave is the pen's line (--brand) and its pen the ink of where it sits: on a card's row, a"
+                  " post's own row, the draw-backs' title, \"Draw back\" in words and Activity's badge, computed and painted"
+                  " (light and dark)", not bad_a and all(len(seen[s]) == 6 for s in seen),
+                  json.dumps(bad_a or {k: short(v) for k, v in seen["light"].items() if k in PAGE})[:700])
+            low = {f"{s}: {k}": (seen[s].get(k) or {}).get("ratio") for s in seen for k in PAGE
+                   if not ((seen[s].get(k) or {}).get("ratio") or 0) >= 3.0}
+            check("the wave as painted is 3:1 or more against the ground painted behind it, in each of those five (light and"
+                  " dark): a drawn line somebody is meant to see", not low,
+                  json.dumps(low or {f"{s}: {k}": seen[s][k]["ratio"] for s in seen for k in PAGE}))
+
+            def white(v):
+                """On the fill the wave is the button's own ink with its pen,
+                computed and painted, and that ink is not the pen's purple."""
+                return bool(v and v["line"] == v["ink"] and v["pen"] == v["ink"] and v["ink"] != v["brand"]
+                            and v["wave"] and far(v["wave"], rgb(v["ink"])) <= 6 and (v["ratio"] or 0) >= 3.0)
+            check("on the pill that rises when a replay ends, the action's fill, the wave stays the button's own ink with"
+                  " its pen (white), painted so and 3:1 or more: the pen's purple on that fill is a wave nobody sees"
+                  " (light and dark)", all(white(seen[s].get(PILL)) for s in seen),
+                  json.dumps({s: short(seen[s].get(PILL)) for s in seen}))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(9, exc)
+
+    # ----------------------------------------------------------------- 10
+    if part(10, "no page errors, no console errors and no CSP violations"):
         try:
             for who in list(_people.values()):
                 ERRS.extend(f"csp: {v}" for v in who.csp())
             check("no page errors, no console errors and no CSP violations, in every browser the suite opened",
                   not ERRS, f"{len(ERRS)}: {ERRS[:4]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
-            stopped(9, exc)
+            stopped(10, exc)
     b.close()
 
 bad = [(n, d) for ok, n, d in results if not ok]
