@@ -572,6 +572,33 @@
     watch.observe(box, { attributes: true, attributeFilter: ['class'] });
   });
 
+  /* HER SAY, ON HER OWN STRIP (the owner's "All yes to everything", Nov 20):
+     as an eye hides a draw-back from her post or brings it back (eye.js says
+     so on its cell), the page's own counts follow at once: the label is what
+     everyone else sees ("2 draw-backs"; none at none), the quiet line under
+     it how many are hidden, hers alone ("1 hidden from your post"), and the
+     row's pen one fewer or one more, with its name. */
+  doc.addEventListener('social:eye', function (e) {
+    var cell = e.target, strip = cell && cell.closest ? cell.closest('[data-db-strip]') : null;
+    if (!strip) return;
+    var hidden = strip.querySelectorAll('.db-cell.is-hidden').length;
+    var shown = strip.querySelectorAll('.db-cell').length - hidden;
+    var label = strip.querySelector('.db-title'), n = strip.querySelector('[data-db-n]'), noun = strip.querySelector('[data-db-noun]');
+    if (n) n.textContent = String(shown);
+    if (noun) noun.textContent = noun.getAttribute(shown === 1 ? 'data-one' : 'data-many');
+    if (label) label.hidden = !shown;
+    var note = strip.querySelector('[data-db-note]'), h = strip.querySelector('[data-db-hidden]');
+    if (h) h.textContent = String(hidden);
+    if (note) note.hidden = !hidden;
+    var page = strip.closest('.post-page'), pen = page ? page.querySelector(':scope > .post-row .db-pen') : null;
+    if (!pen) return;
+    var c = pen.querySelector('span'), now = Math.max(0, (c ? +c.textContent || 0 : 0) + (e.detail && e.detail.hidden ? -1 : 1));
+    if (!c && now) { c = doc.createElement('span'); pen.appendChild(c); }
+    if (c) { if (now) c.textContent = String(now); else pen.removeChild(c); }
+    pen.setAttribute('aria-label', (say('db_go') || 'Draw back')
+      + (now ? ', ' + now + ' ' + (now === 1 ? say('db_one') || 'draw-back' : say('db_many') || 'draw-backs') : ''));
+  });
+
   /* DRAW BACK (the owner's "All yes", Nov 19): the row's pen opens the
      composer, and the Pad over it with the drawing faint under the pen
      (compose.js drawBack). */

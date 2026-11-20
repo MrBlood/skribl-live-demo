@@ -55,9 +55,11 @@ section 4 drives the whole way in a browser: the quickest look at it.
    yes to everything. Make it smart and beautiful." So the seven picks
    stand: the Gallery tab's eye on each tile of her own strip, beside the
    name; Settings' pill in a card of her post's ⋯, and one quiet line in the
-   composer that opens it. NOT BUILT when this line was written (the calm
-   post page went first, because it reshapes the page her strip sits on):
-   hiding first, then who can draw back, each its own pull request.
+   composer that opens it. The calm post page went first, because it
+   reshapes the page her strip sits on. HIDING IS BUILT (`DECISIONS.md`,
+   "Her say: hiding a draw-back from your own post, built";
+   `docs/SOCIAL-SITE.md` section 24). WHO CAN DRAW BACK is next, its own
+   pull request.
 2. **The words** (choice 4, approved): the line under a draw-back says "Ana
    + Theo · drawn in 15 sec + 9 sec · watching at 1×", the card's play
    button "Ana + Theo · 24 sec", a jam "Ana + Theo + Mira", then "Ana + 4

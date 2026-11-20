@@ -49084,3 +49084,85 @@ above the home indicator (`env(safe-area-inset-bottom)`); how it sits there,
 and under the keyboard when the sheet is up, is the owner's phone to say.
 The tell for the new build: under a post's date, at the foot of the screen,
 a line saying "Say something…".
+
+## After v330 -- Her say: hiding a draw-back from your own post, built
+
+Nov 20. The first half of Her say (approved Nov 19, "she may hide a
+draw-back from her post"; mocked that morning, the artifact "Her Say"; the
+owner's "All yes to everything" above). Four of its seven picks:
+
+1. WHERE SHE HIDES ONE: A, the eye on her own strip (not a row in the
+   draw-back's ⋯, and not both).
+2. WHERE THE EYE SITS: beside the name, clear of the drawing (on the picture
+   it lay on Mira's butterfly, and "Hidden" on Sam's cat).
+3. WHAT ITS MAKER SEES ON HER POST: gone from the row, as for everyone, and
+   not told.
+4. THE WORDS: "Hidden. Sam isn’t told." with Undo; "1 hidden from your post".
+
+AS BUILT (`docs/SOCIAL-SITE.md` section 24). The eye is her Gallery tab's
+own (`_gallery.html`, `eye.js`), taught its second place: the word it asks
+in (`shown`), what its toast says (it names who), and a `social:eye` event
+on its cell, so the page keeps its own counts (`posts.js`). The flag is the
+site's own, on the draw-back (`social_posts.drawn_on_hidden_at`, migration
+`a4c9e1b7d352`); `drawbacks()` leaves a hidden one out of every count, and
+the strip's read leaves it out for everybody but her.
+
+WHAT THE MOCK DID NOT SAY, DECIDED IN THE BUILDING, THE OWNER'S TO CHANGE:
+
+- WHEN SHE BRINGS ONE BACK THE TOAST SAYS "Back on your post.", as her
+  Gallery tab says "Back in the Gallery". No Undo on it: the eye is right
+  there.
+- WITH EVERY ONE HIDDEN she has no label ("0 draw-backs" labels nothing):
+  the one line, "3 hidden from your post", and the faded tiles. Everybody
+  else has no strip at all.
+- THE PEN'S COUNT FOLLOWS FOR HER TOO, on her post's row and on Home's card:
+  the mock said "the count becomes what everyone else sees", and a pen
+  saying 3 over a label saying 2 would be two numbers for one thing.
+- A HIDDEN ONE KEEPS ITS PLACE IN HER STRIP (newest first, as before), faded,
+  so undoing by eye is where she left it.
+- ITS OWN MAKER CAN'T BRING IT BACK, and can't tell from any answer that it
+  is hidden: the route answers them 404, as it answers anybody.
+- ONE WHOSE ORIGINAL IS GONE has no post to be on: 404, nothing changed.
+
+SHOWN RED, EACH BY BREAKING ONE THING (section 11 alone; green as built):
+
+- hidden ones counted all the same: "for everyone else" (the pen says 3);
+- hidden ones left in everybody's strip: "for everyone else", and "with
+  every one hidden";
+- the eyes given to anybody signed in: "nobody else's" (in Theo's page and
+  its source) and "for everyone else";
+- anybody allowed to hide one: the guards (Theo and Sam answered 200);
+- the eye left on the picture: "her own strip has the eyes" (its chip not
+  under the drawing);
+- the page's counts not following: "one tap" and "Undo";
+- the eye in the glass's own ink on the lilac chip, the mock's first try:
+  the contrast row, 1.46:1 in dark;
+- the drawing not fading: three rows;
+- the toast not naming who: "one tap".
+
+HOW THEY RAN HERE, AND WHAT THE WHOLE RUN FOUND THAT THE PART HAD NOT: the
+twelve suites that read a post's page, the eye, the counts or the chain,
+side by side, each whole. Eleven green the first time: `verify_socialposts`
+100, `verify_socialprofile` 98, `verify_socialcomments` 149,
+`verify_socialactivity` 48, `verify_socialauth` 76, `verify_socialreposts`
+99, `verify_sociallikes` 112, `verify_socialmute` 68, `verify_social` 46,
+`verify_socialapp` 71, `verify_seam` 524. `verify_socialdrawback` WAS RED,
+65 of 66, AND IT WAS THE NEW SECTION'S OWN FAULT, NOT LOAD: section 11
+stopped at its fourth row. It reads Home's card with the suite's reader
+`CARD`, and section 8, which runs before it in a whole run, had given that
+name to a reader of its own, with no pen in it. Alone, as it had been run
+while it was written, section 11 got the first reader and passed nine of
+nine. Section 8's reader has its own name now (`HANDS_CARD`), so `CARD` is
+one thing for every section. The runner then ran the suite alone, whole,
+with that in: 71 of 71; it calls that "intermittent" (red beside others,
+green alone), which here is the fix landing between the two, and is said
+so. Run again beside two others to be sure: `verify_socialdrawback` 71,
+`verify_socialposts` 100, `verify_socialprofile` 98, all green. The full
+battery was not run; main's run after the merge is it.
+
+A section checked alone is checked alone: run the suite whole before
+believing it, as the working agreements say. This is why.
+
+FLIP AND THE PAD: not for either. NOT TESTED HERE: Safari on an iPhone.
+The tell for the new build: on your own post that has draw-backs, a small
+eye beside each name in the row.
