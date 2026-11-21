@@ -51335,8 +51335,10 @@ overrule.
 
 FIVE FIXES (four bugs and a tidying; the owner was told none is built, and
 that by the working agreements a bug fix needs no OK):
-  A. Skribl's own Gallery's search hint is left to the browser's grey: 3.45
-     to 1 in dark.
+  A. Six hints in text boxes under the line, none on the site: four left
+     to the browser's grey (Skribl's Gallery search and Report note, its
+     Library search, the recovery box: 3.45 to 4.15) and two set to the
+     editors' dim ink (the Post sheet's title and caption: 2.47 and 3.05).
   B. The in-post player's four controls can be reached by Tab while their
      line is hidden: 24 of the 26 keyboard stops that show nothing.
   C. In forced colours the site's chosen pill is not marked (the editors'
@@ -51392,6 +51394,13 @@ changed:
     a tint cannot show"). Changed before the page was republished. READ
     THE RECORD BEFORE RECOMMENDING: the second time this has had to be
     written (the walkthrough of Nov 19 was the first).
+  - ONE FAINT HINT WAS SIX. The words were read on ten scenes of the
+    editors, forty screens, which did not open the Post sheet, Report or
+    the recovery box; and the page said "every other box clears 6.7",
+    which those scenes could not know. Found on building fix A, by
+    reading every text box's hint on every page and then each low one
+    open, off its own pixels. No suite reads a hint. The page's count and
+    fix A were corrected.
   - "ON YOUR IPHONE" was said of a thin line read in Chromium at an
     iPhone's density. It says Chrome now, and that Safari is not here.
   - Font thinning was "one line in each of three stylesheets"; it is six

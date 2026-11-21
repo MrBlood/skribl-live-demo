@@ -438,8 +438,8 @@ in the mock page.
      artifact "Colour Crisp Audit"
      (https://claude.ai/artifact/Jqzoat7mwLv78eXVAkg8yc); the whole of it
      is `docs/COLOR-AUDIT.md`, and `DECISIONS.md` has its entry ("The
-     colour crisp audit"). FIVE FIXES (A to E: a search hint too faint in
-     dark, four keyboard stops that show nothing, the chosen pill in forced
+     colour crisp audit"). FIVE FIXES (A to E: six hints in text boxes too
+     faint, four keyboard stops that show nothing, the chosen pill in forced
      colours, a token nothing reads, focus under a phone's bar) are bugs
      and need no OK; read
      DECISIONS for whether they have been built. ELEVEN CHOICES wait for

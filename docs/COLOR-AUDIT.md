@@ -30,7 +30,8 @@ and light and dark keep the same order of depth. What is left is small.
 | | |
 |---|---|
 | Words read against what is painted behind them | 2,552, on 150 screens |
-| Under the line | 1 (a search hint, in dark) |
+| Under the line, on those screens | 1 (a search hint, in dark) |
+| Hints in text boxes under the line, every box opened | 6, in five places; none on the site |
 | Keyboard stops that show a clear 2px ring | 374 of 400 |
 | Colour tokens tabled, both themes | 148 (the site 53, the editors 95) |
 | A thin line | 1 sharp pixel at 1x, 2x and 3x (in Chromium); two soft ones in between |
@@ -131,6 +132,16 @@ grey line under a drawing ("Drawn in … watching at"), `#6a6c71` on `#f6f8fa`,
 Skribl's own pages: 504 words on 40 screens, ONE UNDER THE LINE (fix A).
 Two desk scenes of the editors' menu were not reached and are not counted:
 a desk has no ☰, its rail is the menu.
+
+THOSE FORTY SCREENS WERE TEN SCENES, AND NOT EVERY SHEET, and the report
+first said "every other box clears 6.7", which those scenes could not
+know. Building fix A, every text box's hint (its placeholder) was read on
+every page of Skribl's and of the site, then each low one opened as a
+person opens it and read off the paint: the hint's own pixels are the ones
+that change when it is made see-through. FIVE MORE ARE UNDER THE LINE, all
+on Skribl's own pages and the Pad's sheets; the site's three hints read
+6.7 to 9.7. No suite reads a hint: `verify_contrast` makes them
+see-through to photograph a sheet and reads the words that are left.
 
 **Marks and focus (4A).** A field's edge: Edit profile 3.26 in light, 3.77
 in dark; the site's Gallery search 3.10 and 4.13. Two boxes have no edge on
@@ -256,10 +267,10 @@ every built-in control follows; the theme is stamped by a script in the
 head before anything is drawn, so no flash of the wrong one; a phone's
 address bar takes the theme's colour on the site and in the editors;
 scrollbars, the typing cursor and selected text follow the theme. There is
-no dropdown, date or time picker anywhere. TWO SMALL GAPS: one placeholder
-left to the browser's grey (fix A); and the Pad, Flip and Skribl's own
-pages do not carry the one-line `color-scheme` hint in the head that the
-site does (to add with the fixes).
+no dropdown, date or time picker anywhere. TWO SMALL GAPS: four hints
+left to the browser's grey and two set too dim (fix A); and the Pad, Flip
+and Skribl's own pages do not carry the one-line `color-scheme` hint in
+the head that the site does (to add with the fixes).
 
 **Forced colours and "more contrast" (4C).** Forced colours holds up well:
 cards keep an outline, a drawing keeps its own colours, icons follow the
@@ -291,15 +302,33 @@ A, B, C and E are bugs; D is tidying nobody would see. By the working
 agreements a bug fix needs no OK, but the owner was told none is built and
 to say if they would rather see any first.
 
-**A. One search hint is too faint in dark.** On Skribl's own Gallery page
-the words in the search box before anything is typed (`#galleryQ`,
-"Search titles, captions") are left to the browser's grey: the section
-resets itself and hands `::placeholder` back to the browser
-(`skribl/static/gallerysection.css`). In Chromium that grey is `#757575`:
-3.45 to 1 on the dark box `#231e3b`, 4.61 on the light one. Every other
-search box and words box sets its own colour and clears 6.7. Safari's grey
-is not Chromium's, so what the owner's iPhone shows is not known; setting
-our own colour mends it everywhere.
+**A. Six hints in text boxes are too faint.** The words in a box before
+anything is typed. FIRST REPORTED AS ONE (the Gallery's search); the other
+five were found on building it, and the report corrected.
+
+| The hint | Where | Light | Dark | Why |
+|---|---|---|---|---|
+| "Untitled Skribl" | the Post sheet's title, Pad and Flip | 3.05 | 2.47 | set to the dim ink |
+| "Say something about it…" | the Post sheet's caption | 3.05 | 2.47 | set to the dim ink |
+| "https://…/s/abc123" | the recovery box: Pad, Flip, Library | 3.96, 4.15 | 3.78, 3.74 | the browser's grey |
+| "What should we know?" | Skribl's Gallery, Report | 4.15 | 3.74 | the browser's grey |
+| "Search titles, captions" | Skribl's Gallery, search | 4.61 | 3.45 | the browser's grey |
+| "title…" | Skribl's Library, search | 4.61 | 3.45 | the browser's grey |
+
+Each but the last was read off the paint with its box open; the Library's
+search shows only to somebody with skribls of their own and is as
+computed. FOUR ARE LEFT TO THE BROWSER, which in Chromium is `#757575`;
+Safari's grey is another, so what the owner's iPhone shows is not known,
+and setting our own ink mends it everywhere. TWO ARE THE EDITORS' DIM INK
+(`--text-dim`, `.post-input::placeholder`), from before the second ink was
+made the rule for every word (`DECISIONS.md`, "Two inks, sharp": 7 to 1);
+Export's name, called "the same field as .post-input, deliberately" in the
+stylesheet, already wears the second ink at 10 and 8.6. THE MEND: each
+hint takes its page's second ink at full strength, as every hint on the
+site does. (The Pad's and Flip's name field wears the dim ink too, 2.97
+and 3.02, but it lies under the canvas and is never on show.) A HINT
+COMPUTED WHILE ITS SHEET IS SHUT IS NOT ALWAYS THE HINT PAINTED: read it
+open, off its own pixels.
 
 **B. Four stops a keyboard can land on and see nothing.** A drawing that
 has not been played keeps its line of controls hidden, the calm card
@@ -474,10 +503,12 @@ Each is Cal's reading and the owner's to overrule; the report says each.
   same in both themes because the drawing under it does not change with
   the theme).
 
-## The report was corrected once
+## The report was corrected twice
 
 Sent at 3:40 PM; republished the same afternoon after the specification
-was read again clause by clause against it. What changed: choice 11 was
+was read again clause by clause against it, and once more when building
+fix A showed it was six hints and not one (the count at the top and fix A
+say so now). What changed: choice 11 was
 added (a chosen state had not been measured) and fix E (a phone's layout
 had not been walked with a keyboard); choice 1 and the numbers at
 the top said a thin line is one pixel "on your iPhone", which was Chromium
