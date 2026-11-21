@@ -103,7 +103,7 @@
   {% if card.drawn_on %}<p class="post-on-page">{{ drawn_on(card) }}</p>{% endif %}
   {% if card.down and card.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
   {% if p.words %}<p class="post-words is-big">{{ said(p.words, card.mentions) }}</p>{% endif %}
-  {% if p.skribl_id %}<div class="post-art"{{ plate_ground(card.sk) }}>{{ player(card, waits=false) }}
+  {% if p.skribl_id %}<div class="post-art">{{ player(card, waits=false) }}
     {% if card.sk and card.sk.caption %}<p class="post-caption">{{ card.sk.caption }}</p>{% endif %}
   </div>{% endif %}
   {% if card.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(card.quote) }}{% endif %}

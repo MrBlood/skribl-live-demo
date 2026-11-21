@@ -1450,14 +1450,8 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    A post's drawing is Skribl's in-post player, its five tokens the
    first visit's (same role, same values); everything else is the site's own
    cards, rows and words. ---- */
-/* A DRAWING'S BOX IS ITS OWN PAPER TO ITS EDGE (the owner, Nov 21, of a band of lilac round a post's drawing:
-   "Look at the canvas border. Is that we are doing?"). The player draws a drawing a pixel or two inside its box,
-   and the box's ground showed there: the waiting colour, six or seven of a phone's pixels of lilac between the
-   picture and its one line, a bright frame round a drawing on dark paper. The box's ground is the drawing's own
-   (--plate-ground, which the page sets from what Skribl says of it, as a Gallery tile's is), so the picture runs
-   to its line; the waiting colour only where a drawing's ground is not known. */
 .post-art, .composer-draft, .cm-art, .how-pic {
-  --border: transparent; --radius: 14px; --bg-elev: var(--plate-ground, var(--draw-wait));
+  --border: transparent; --radius: 14px; --bg-elev: var(--draw-wait);
   --accent: #7c5cff; --accent-2: #7c5cff; --text-dim: var(--ink-2);
 }
 /* ONE SCREEN PIXEL (THE EDGES, part four): the player's border is kept, its

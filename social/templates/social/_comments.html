@@ -127,7 +127,7 @@
           choice 4, the owner's "all yes", Nov 19): --ar is its shape, which
           social.css (.cm-art) needs to size its box; its line waits for the
           first play, as a card's does, and then it grows to its room. #}
-      {% if c.skribl_id %}<div class="cm-art"{% if it.sk and ((it.sk.canvas_w and it.sk.canvas_h) or it.sk.ground) %} style="{% if it.sk.canvas_w and it.sk.canvas_h %}--ar: {{ '%.5f'|format(it.sk.canvas_w|float / it.sk.canvas_h|float) }};{% endif %}{% if it.sk.ground %} --plate-ground: {{ it.sk.ground }}{% endif %}"{% endif %}>{{ comment_art(it, waits=true) }}</div>{% endif %}
+      {% if c.skribl_id %}<div class="cm-art"{% if it.sk and it.sk.canvas_w and it.sk.canvas_h %} style="--ar: {{ '%.5f'|format(it.sk.canvas_w|float / it.sk.canvas_h|float) }}"{% endif %}>{{ comment_art(it, waits=true) }}</div>{% endif %}
     </div>
     <div class="cm-acts">
       {#- THE COUNT BY THE TALK CLOUD (the owner's yes, Nov 18): how many
