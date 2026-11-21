@@ -322,9 +322,16 @@ for suite in "$@"; do
   # verify_musictimeline measured 570s on CI (harness/shard.py) against the
   # 600s every suite has, and a busy runner cut it off mid-run, its last rows
   # green (main after #865): 900s for it alone. A hang still ends here.
+  # verify_socialposts has a section for each build of the site's posts and
+  # of the screens round them, twenty-three by now: 548s on CI's sqlite
+  # lane and cut off at 600 on the postgresql one, in section 22 with every
+  # row it had read green (main after #1029, Nov 21; harness/shard.py still
+  # weighs it 500). 900s for it alone. A hang still ends here. ITS NEXT
+  # SECTION BELONGS IN A SUITE OF ITS OWN: a budget is raised once.
   budget=600
   [ "$suite" = "verify_contrast.py" ] && budget=1800
   [ "$suite" = "verify_musictimeline.py" ] && budget=900
+  [ "$suite" = "verify_socialposts.py" ] && budget=900
   t0="$(date +%s%N)"
   setsid timeout -k 15 "$budget" python3 "$suite" >"$log" 2>&1 &
   suite_pid=$!

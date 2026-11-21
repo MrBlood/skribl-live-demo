@@ -50569,6 +50569,18 @@ Green as built: section 21, ten of ten; `verify_socialauth` whole, 76 of 76.
 ALSO TRIED BY HAND, in process: a site mounted with no accounts (the frame
 alone) answers the same card, and the same bare 404 to a script.
 
+HOW THEY RAN HERE: the site's whole family, each suite whole, three side by
+side, in 25 minutes, ALL TWENTY-TWO GREEN THE FIRST TIME: `verify_socialcomments`
+150, `verify_socialpush` 118, `verify_socialposts` 117 (the two new rows with
+it), `verify_sociallikes` 112, `verify_socialreposts` 99, `verify_socialprofile`
+98, `verify_socialdrawback` 92, `verify_compose` 92, `verify_socialfollow` 79,
+`verify_socialauth` 76, `verify_socialapp` 71, `verify_socialmute` 68,
+`verify_socialmentions` 51, `verify_socialactivity` 48, `verify_social` 46,
+`verify_socialsettings` 45, `verify_composer` 43, `verify_socialsafety` 38,
+`verify_socialbookmarks` 37, `verify_csp` 34, `verify_socialsearch` 32,
+`verify_boot` 23. The full battery was not run; main's run after the merge
+is it.
+
 AGAINST THE FOUR. Kind: a wrong turn is nobody's fault, and it says so.
 Simple: one way out, in the place a person already knows. Powerful and
 playful are not in it.
@@ -50580,3 +50592,43 @@ NOT TESTED HERE: Safari on an iPhone, and the Home Screen app, where a
 wrong address is most a dead end (no address bar to mend it in). THE TELL:
 blooby's address with /nope after it shows Blooby and "That page isn’t
 here", with the bar under it.
+
+## After v330 -- Main red after the editors' crisp build: verify_socialposts ran out of its ten minutes
+
+Main's run after #1029 (crisp on the Pad and Flip) was red at about 6:32 AM
+on Nov 21: ONE JOB of seventeen, postgresql 4/7, `verify_socialposts`:
+"ERROR — exit 124, NO assertion summary". The harness cut it off at the 600
+seconds every suite has, in section 22 of 23, every row it had read green.
+The same suite on sqlite's 4/7, in that same run: 115 of 115, in 547.9
+seconds. Nothing in #1029 is this suite's; it is the editors' stylesheet
+and three other suites.
+
+WHAT IT WAS: THE SUITE HAS GROWN PAST ITS BUDGET, and the slower lane found
+the line first. It has a section for each build of the site's posts and of
+the screens round them, twenty-three by now; `harness/shard.py` still
+weighs it at the 500 seconds it took on Nov 16. The three sections of Nov
+20 (the way back, the rows' bands, crisp) took it from inside the budget to
+the edge of it: 548 on the faster lane is nine tenths of 600.
+
+THE MEND, in `harness/run_harness.sh`: 900 seconds for it alone, as
+`verify_contrast` (1800) and `verify_musictimeline` (900) have theirs, the
+measured seconds beside it. A hang still ends there. AND SAID BESIDE IT: its
+next section belongs in a suite of its own. A budget is raised once; the
+second time is a suite that should have been two.
+
+WHY IT IS IN THIS PULL REQUEST: the wrong address's page (the entry above)
+adds two rows to that same suite's section 21, some twenty page loads. On
+its own it would have made a suite at the edge a suite over it, on both
+lanes.
+
+NOT SPLIT NOW, and why: its sections share the people and the posts its
+first ones make, so cutting it in two is a rewrite of how each later
+section gets its people, not a move of lines; not a change to make while
+main is red. `harness/shard.py`'s table is left as it is: a re-weighing is
+done from a whole run's seconds, and shard 4 ran 45 to 48 minutes of its
+60 with this suite at its fullest.
+
+NOT SHOWN RED AND GREEN: a budget is not a check, and nothing here can make
+this box's seconds a runner's. What stands for it is CI's own count above,
+and main's run after the merge on the postgresql lane is its proof. Here,
+beside two other suites, the whole suite took 11.0 minutes, 117 of 117.
