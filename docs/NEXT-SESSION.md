@@ -401,12 +401,13 @@ in the mock page.
   4. THE PAD AND FLIP: built, exactly what the mock laid over them
      (`DECISIONS.md`, "Crisp on the Pad and Flip"; `verify_contrast`'s
      "CRISP, THE EDITORS" holds it, `verify_galib` 3 the two pages'
-     copies). STILL OWED, in this order: (a) a MOCK FOR THE OWNER of the
-     editors' other soft shadows, which the crisp mock never pictured and
-     which are theirs to say (that entry lists them by kind and count;
-     `CRISP_LEFT` in the check is the list, and it only shrinks); (b) the
-     band under rows in Skribl's own Gallery and the Library, and their
-     cards' and rows' lift to the one line.
+     copies). THE REST IS MOCKED AND WAITS FOR THE OWNER: the artifact
+     "Last Soft Shadows", nine calls with a pick on each (`DECISIONS.md`,
+     "The last soft shadows, mocked"). Nothing of it is built. THE BAND
+     UNDER ROWS IN SKRIBL'S OWN GALLERY AND THE LIBRARY IS NOT TO BE BUILT
+     ON THE EARLIER YES: those pages are whole cards, not a grid of tiles
+     (that entry's correction); it is asked again as call 9, pick "no
+     band". Read the owner's answer before anything there.
   NOT DECIDED: bands for lists of one thing a line (Activity, people);
   initials in "Liked by"; a tablet's Make card riding its keyboard.
 - **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No
