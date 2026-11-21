@@ -15,6 +15,12 @@
 {% block title %}Join · Blooby{% endblock %}
 {% block scripts %}<script src="{{ social_asset('passkey.js') }}" defer></script>{% endblock %}
 
+{% block top %}
+  {#- THE WAY BACK (part two): a door screen keeps the mark in the middle and has the arrow at the top's start. #}
+  <a class="icon-btn top-back top-back-door" href="{{ url_for('social.signin') }}" aria-label="Back">{{ ic.back() }}</a>
+  <a class="brand" href="{{ url_for('social.home') }}" aria-label="Blooby, home">{% include 'social/_blooby_mark.html' %}</a>
+{% endblock %}
+
 {% block main %}
 <div class="si si-solo">
   <section class="si-card is-checking" aria-labelledby="joinTitle" data-link="{{ url_for('social.join_check') }}">

@@ -3288,8 +3288,21 @@ comment's own page). They are one rule now, in `social.js`:
   it is on.
 
 A phone's Home Screen app has no browser Back, so this arrow is the only
-one there. It says "Back". Part two, the arrow on the screens that have
-none (profiles, Settings and its pages, How it works, the rules, sign-in),
-is a change to how those screens look and is the owner's to say.
+one there. It says "Back".
 
-`verify_socialposts` 21 holds it, with `verify_socialcomments` 40.
+**Part two (the owner's "All yes" to the mock's A, the same evening): every
+screen the bar does not lead to has the arrow**, at its top's start, with
+the screen's name beside it, as a post's top: Settings, Edit profile,
+Delete account, How it works, the three rules pages, an admin's Invites and
+Reports, and somebody's profile (before their @name). The page's big
+heading leaves a phone where the top says it (`.page-head.in-top`; a screen
+reader's still, and a desk's). A door screen (Sign in, Join, Add a passkey)
+keeps the mark in the middle and has the arrow at the top's start. Home,
+the Gallery and your own profile have none: they are where the bar leads.
+A desk shows no arrow anywhere.
+
+Opened with nothing behind you, each goes to the screen it belongs to:
+Settings and Edit profile to your profile, Delete account to Settings, the
+rest to Home (Join and Add a passkey to Sign in).
+
+`verify_socialposts` 21 holds both parts, with `verify_socialcomments` 40.

@@ -49772,3 +49772,106 @@ band's ends, the last row of an odd count still a whole band. Then
 last tile and the page between two rows. NOT TESTED HERE: an iPhone's
 screen, whose blacks are deeper than these pictures: a 4% lift may read
 stronger or fainter there, and that is the owner's eye to say.
+
+## After v330 -- "All yes" to the evening's three mocks; the way back, part two, built
+
+Nov 20, about 7:25 PM. The three mocks of the evening stood waiting, each
+with its picks and each told to be answerable in two words. The owner:
+
+> All yes
+
+So, decided, none left to make: THE CRISP QUOTIENT, B (three heights; the
+purple buttons an enamel edge and no glow; a sheet's top a line of light;
+the play pill its glass and a close shadow; the Pad and Flip next, the same
+rule, their buttons' text shadow with it). THE WAY BACK, PART TWO, A (the
+arrow and the screen's name on every inner screen; somebody's profile; the
+door screens; a kind page for a wrong address; none on Home, the Gallery or
+your own profile). EACH ROW DISTINCT, A (a band under every row, as faint
+as shown, on every grid of tiles at once; Skribl's own Gallery and the
+Library next). NOT ASKED AND NOT ASSUMED: whether lists of one thing a line
+(Activity, people) are meant too, and the two small things on the
+afternoon's as-built page (initials in "Liked by", a tablet's Make card).
+THE ORDER, as told: the way back, distinct rows, crisp on the site, then
+the Pad and Flip. Each its own pull request.
+
+THIS ENTRY IS THE FIRST: THE WAY BACK, PART TWO, BUILT.
+
+- EVERY SCREEN THE BAR DOES NOT LEAD TO has the arrow at its top's start,
+  where a post's is, and its own name beside it: Settings, Edit profile,
+  Delete account, How it works, Community rules, Privacy, Terms, and the two
+  an admin has (Invites, Reports). Each is its own top, as a post's and
+  Activity's are (`{% block top %}`), with the arrow that part one taught to
+  go where you were.
+- THE BIG HEADING LEAVES A PHONE where the top now says it
+  (`.page-head.in-top`): it stays for a screen reader, and a desk, which has
+  no top bar, shows it, as Activity's has. Settings' "@name" line goes with
+  it on a phone (it is your own name, and the mock showed the cards moving
+  up).
+- SOMEBODY'S PROFILE has the arrow before their @name. Your own has none:
+  it is where the bar leads.
+- A DOOR SCREEN (Sign in, Join, Add a passkey) keeps the mark in the middle
+  and has the arrow at the top's start.
+- A DESK SHOWS NO ARROW ANYWHERE, as before: it has no top bar, its rail is
+  always in reach, and the browser has Back. A door's top does show on a
+  desk, so its arrow is hidden there.
+- WHERE EACH GOES when there is nothing behind you: Settings and Edit
+  profile to your profile, Delete account and the admin's two to Settings,
+  How it works, the rules and somebody's profile to Home, Sign in to Home,
+  Join and Add a passkey to Sign in.
+
+WHAT THE MOCK DID NOT SAY, OR SAID WRONG, DECIDED IN THE BUILDING, THE
+OWNER'S TO CHANGE:
+
+- DELETE ACCOUNT KEEPS ITS HEADING. Its top says "Delete account"; its
+  heading is the question the page asks ("Delete your account?"), not its
+  name, and that question should be the largest thing there.
+- A PROFILE KEEPS ITS HEADING TOO: it is the person's name, where the top
+  is their @name.
+- EDIT PROFILE BELONGS TO YOUR PROFILE, NOT TO SETTINGS. The mock's caption
+  said "opened from Settings". It is opened from your profile's own button;
+  the check found it (the path it tried from Settings had no such link).
+  Its arrow goes where you were either way.
+- THE WRONG ADDRESS'S KIND PAGE IS NOT IN THIS PULL REQUEST. A missing post
+  has its page because its own view answers; any other wrong address is
+  answered by the app, outside the site's views, where the site's person
+  and its page's frame are not loaded. Doing that well is its own small
+  change, and it is next.
+
+THE CHECK. `verify_socialposts` 21, three more rows (seven now): every inner
+screen's arrow at a post's own place, 44px, painted, named, with its name
+and its address, and the three roots with none, and which headings leave a
+phone and which stay; where each goes, from where you were and cold; a door
+screen's arrow and mark, a signed-out How it works, and a desk with no
+arrow and every heading. SHOWN RED: Settings' top taken out; the heading
+left showing; an arrow on your own profile; Edit profile sent to Settings;
+the door's arrow left on a desk; the door's mark taken out.
+
+ONE ROW ELSEWHERE WAS ASKING A CLOCK, found by the whole run and not this
+change's doing: `verify_sociallikes` 9, "a like row lands on the post ...
+then the tint fades". Its watch ran four and a half seconds from the page's
+first frame; the page's own script starts the glow once it has loaded,
+holds it, then fades it, and beside two other suites the watch ended before
+the fade began (fifty-three frames, none fading). It watches now until the
+glow has gone (the page's own class says so; fifteen seconds at the
+longest), for the Reduce Motion row too. Shown: with the glow made to start
+three seconds late, the old watch red and the new one green; a tint that
+never fades, red.
+
+HOW THEY RAN HERE: the twenty suites that open a page of the site, each
+whole, side by side, in 27 minutes. Nineteen green the first time:
+`verify_socialposts` 107, `verify_socialcomments` 150, `verify_socialprofile`
+98, `verify_socialsettings` 45, `verify_socialauth` 76, `verify_socialapp`
+71, `verify_social` 46, `verify_socialsafety` 38, `verify_socialsearch` 32,
+`verify_socialactivity` 48, `verify_socialbookmarks` 37,
+`verify_socialfollow` 79, `verify_socialmute` 68, `verify_socialmentions`
+51, `verify_socialreposts` 99, `verify_socialpush` 118, `verify_composer`
+43, `verify_socialdrawback` 92, `verify_seam` 524. `verify_sociallikes` 111
+of 112 beside the others (the row above) and 112 of 112 alone: load, not a
+defect. With its watch mended, beside two others: `verify_sociallikes` 112,
+`verify_socialprofile` 98, `verify_socialposts` 107, all green. The full
+battery was not run; main's run after the merge is it.
+
+FLIP AND THE PAD: not for either. Opened inside a post they have their own
+way back, and by themselves they are Skribl's pages. NOT TESTED HERE: the
+Home Screen app on an iPhone. THE TELL: open Settings from your profile; at
+the top left, an arrow and "Settings".

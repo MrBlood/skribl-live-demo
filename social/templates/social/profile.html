@@ -81,6 +81,9 @@
 {% if mine %}<script src="{{ social_asset('eye.js') }}" defer></script>{% endif %}{% endblock %}
 
 {% block top %}
+  {#- THE WAY BACK (part two): somebody else's profile has the arrow before their @name; your own is where
+      the bar leads, so it has none. #}
+  {% if not mine %}<a class="icon-btn top-back" href="{{ url_for('social.home') }}" aria-label="Back">{{ ic.back() }}</a>{% endif %}
   <span class="top-title">@{{ who.handle }}</span>
   {% if mine %}<a class="top-gear" href="{{ url_for('social.you') }}">{{ ic.gear() }}<span>Settings</span></a>{% endif %}
 {% endblock %}

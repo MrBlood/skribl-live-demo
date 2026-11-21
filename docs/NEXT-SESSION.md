@@ -385,23 +385,22 @@ in the mock page.
   ending the request's read before `create_post` would likely mend it,
   but it touches every post, so it wants its own look.
 
-- **EACH ROW DISTINCT IS MOCKED AND WAITS FOR A YES** (`DECISIONS.md`, "Each
-  row distinct, mocked"; the artifact "Distinct Rows"; the owner's words are
-  in `WORKING-AGREEMENTS.md`). A faint band under each row of the Gallery's
-  tiles, so a row has a top and a bottom even when a dark drawing has no
-  edge on the dark page. The pick is A. Nothing is built.
-- **THE WAY BACK, PART TWO, IS MOCKED AND WAITS FOR A YES** (`DECISIONS.md`,
-  "The way back, part one"; the artifact "The Way Back"; the owner's words
-  are in `WORKING-AGREEMENTS.md`, "Never stranded"). Part one is built: the
-  three arrows the site has go where you were. Part two is the arrow on the
-  screens that have none: profiles, Settings and its pages, How it works,
-  the rules, sign-in, and a wrong address's bare "Not Found".
-- **THE CRISP QUOTIENT IS MOCKED AND WAITS FOR A YES** (`DECISIONS.md`, "The
-  crisp quotient, mocked"; the artifact "Crisp Quotient"; the owner's words
-  are in `WORKING-AGREEMENTS.md`, "Crisp, not blurry"). They asked for
-  fewer, crisper shadows. Counted: Home has seventeen soft shadows on
-  screen, the Pad one. The pick is B, three heights. Nothing is built; the
-  site first on a yes, then the Pad and Flip together.
+- **THE OWNER SAID "ALL YES" TO THE EVENING'S THREE MOCKS** (Nov 20, about
+  7:25 PM; `DECISIONS.md`, "All yes to the evening's three mocks"). Built
+  in this order, each its own pull request; read the newest entries to see
+  how far it got:
+  1. THE WAY BACK, PART TWO (A): built, the entry above. STILL OWED from
+     it: a kind page for a wrong address ("That page isn't here"), which
+     the app answers outside the site's views.
+  2. EACH ROW DISTINCT (A): a faint band under every row of every grid of
+     tiles (`DECISIONS.md`, "Each row distinct, mocked", says how it
+     builds).
+  3. THE CRISP QUOTIENT (B) on the site (`DECISIONS.md`, "The crisp
+     quotient, mocked", says the numbers).
+  4. THE PAD AND FLIP: the same crisp rule, both together, and the band
+     under rows in Skribl's own Gallery and the Library.
+  NOT DECIDED: bands for lists of one thing a line (Activity, people);
+  initials in "Liked by"; a tablet's Make card riding its keyboard.
 - **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No
   strip of Home under a sheet on a phone's keyboard"). The tell: in Make,
   the words tapped, the sheet's own lilac paper down to the keys and

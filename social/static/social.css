@@ -1802,6 +1802,23 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 /* A POST'S OWN PAGE: one column on a phone, the mock's; on a desk the
    drawing on the left and everything else beside it. */
 .top-back { margin-left: -10px; }
+/* THE WAY BACK, PART TWO (the owner's "All yes", Nov 20, to its mock, A: "there's no back button on so many
+   screens. You end up stranded a lot"). Every screen the bar does not lead to has the arrow at its top's start
+   and its own name beside it, as a post's top always had (Settings, Edit profile, Delete account, How it works,
+   the rules, somebody's profile). So under 900px the page's big heading says nothing the top has not: it stays
+   for a screen reader, and a desk, which has no top bar, shows it (as Activity's has). .is-bare: a head with
+   nothing left to show on a phone (Settings' @name is your own; the rules' has its heading alone) takes no room
+   there. A DOOR SCREEN (sign in, join, add a passkey) keeps the mark in the middle and has the arrow at the
+   top's start; a desk's door shows none, as a desk shows no arrow anywhere: the browser has Back. */
+@media (max-width: 899.98px) {
+  .page-head.in-top .page-title, .page-head.is-bare .page-sub {
+    position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .page-head.is-bare { margin: 0; }
+  body.focus .top { position: relative; }
+  .top-back-door { position: absolute; left: 6px; top: 50%; margin: 0; transform: translateY(-50%); }
+}
+@media (min-width: 900px) { .top-back-door { display: none; } }
 .post-page { display: grid; grid-template-columns: minmax(0, 1fr); padding-top: 4px; }
 /* A COMMENT'S OWN PAGE (comment.html; the comment thread, step 1): the way
    to it above the comment, small and joined by the thread's line, each a
