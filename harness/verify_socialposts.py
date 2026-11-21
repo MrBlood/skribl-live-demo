@@ -4197,6 +4197,152 @@ print("PLAN " + json.dumps(out))
         except Exception as exc:  # noqa: BLE001
             check("section 21 ran to its end", False, str(exc).splitlines()[0][:200])
 
+    # ------------------------------------------------------------------ 22
+    if part(22, "each row distinct: one flat band under every row of a grid of tiles (the owner's \"All yes\", Nov 20)"):
+        # The owner's picture of the Gallery in dark: a name floats between two pictures, and a drawing on dark
+        # paper has no edge on the dark page. UNDER EVERY ROW ONE FLAT BAND (--row-band; the mock's A): drawn by
+        # the row's own tiles, out to the row's ends and 8px past the grid, the ground showing between two rows,
+        # a last row that is not full still a whole band. READ OFF THE PAINT (a picture of the screen), since a
+        # band is a part of its tile and has no box of its own to ask.
+        try:
+            import io as _io
+            from PIL import Image as _Image
+            sol = someone(b, "solv", "Sol Vega")
+            made22 = [make_post(sol, f"Section 22, tile {i}", gallery=True, seed=220 + i) for i in range(5)]
+            ids22 = [j.get("post") for st, j in made22 if st == 200 and isinstance(j, dict)]
+            # somebody else, with three drawings shared outside a post: what Make's "Use one you made" lists under
+            # Drawings (and somebody to look at Sol's profile, whose grid is then tiles alone, with no eyes)
+            tess = someone(b, "tessq", "Tess Quill")
+            alone22 = [tess.pg.evaluate(PAD, [f"Section 22, on its own {i}", "public", 226 + i])[0] for i in range(3)]
+            # UNTIL THE CRISP BUILD takes the tiles' soft shadow off the page (the pull request after this one), a
+            # band's paint beside a tile is up to eleven levels darker than its token (2px from a tile on a sheet's
+            # paper, the deepest of it); under a row, where no shadow reaches, it is the token's own. That build
+            # brings this down to two.
+            SHADE22 = 11
+            GRID22 = """([sel, scroll]) => { const g = [...document.querySelectorAll(sel)].find(e => e.getClientRects().length); if (!g) return null;
+              if (scroll) window.scrollTo(0, g.getBoundingClientRect().top + scrollY - 90);
+              const gr = g.getBoundingClientRect(), rows = {}, cs = getComputedStyle(g);
+              [...g.children].forEach(t => { const r = t.getBoundingClientRect(); const k = Math.round(r.top); (rows[k] = rows[k] || []).push([r.left, r.top, r.right, r.bottom]); });
+              return { grid: [gr.left, gr.right], vh: innerHeight, gap: parseFloat(cs.columnGap), bleed: parseFloat(cs.getPropertyValue('--row-bleed')),
+                       cols: cs.gridTemplateColumns.split(' ').length, token: getComputedStyle(g.children[0], '::before').backgroundColor,
+                       cells: [...new Set([...g.children].map(c => c.className.split(' ')[0]))],
+                       rows: Object.keys(rows).map(Number).sort((a, b) => a - b).map(k => rows[k]) }; }"""
+
+            def lum22(c):
+                v = [(x / 255 / 12.92) if x / 255 <= 0.03928 else ((x / 255 + 0.055) / 1.055) ** 2.4 for x in c[:3]]
+                return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+            def bands(page_, sel, scroll=True):
+                """Every row of the grid that is on the screen: what is painted at its ends, between its tiles,
+                over and under it (the band), and at its corner, beside it and under it (the ground)."""
+                # a tall screen of the same width, so every row is on it at once (the layout is the width's)
+                page_.set_viewport_size({"width": page_.viewport_size["width"], "height": 1500})
+                page_.wait_for_timeout(300)
+                page_.evaluate(GRID22, [sel, scroll])
+                page_.wait_for_timeout(300)
+                g = page_.evaluate(GRID22, [sel, False])
+                im = _Image.open(_io.BytesIO(page_.screenshot())).convert("RGB")
+
+                def px(x, y):
+                    return im.getpixel((min(max(int(round(x)), 0), im.size[0] - 1), min(max(int(round(y)), 0), im.size[1] - 1)))
+                left, right, bleed, out = g["grid"][0], g["grid"][1], g["bleed"], []
+                for r in g["rows"]:
+                    top, bot = min(t[1] for t in r), max(t[3] for t in r)
+                    if top < 75 or bot > g["vh"] - 100:
+                        continue
+                    mid, tx = (top + bot) / 2, (r[0][0] + r[0][2]) / 2
+                    # ... and at the middle of its top edge, where two half bands with their ends the wrong way round
+                    # would leave a notch; the last is under the row, where no tile's shadow reaches
+                    band = [px(left - bleed / 2, mid), px(r[0][2] + g["gap"] / 2, mid), px(right + bleed / 2 - 1, mid), px(tx, top - 4),
+                            px(r[0][2] + g["gap"] / 2, top - 6), px(tx, bot + 5)]
+                    ground = [px(left - bleed + 1, top - 6), px(left - bleed - 3, mid), px((left + right) / 2, bot + 9.5)]
+                    out.append({"tiles": len(r), "band": band, "ground": ground})
+                rgb = tuple(int(float(x)) for x in re.findall(r"[\d.]+", g["token"])[:3])
+                return {"cols": g["cols"], "token": rgb, "cells": g["cells"], "rows": out}
+
+            def whole(v, want_token, want_tiles):
+                """Each row one band of the token's colour, end to end; the ground at its corner, beside it and
+                under it, and a step from the band of about one part in twelve (1.04 to 1.13 to 1)."""
+                if not v or v["token"] != want_token or [r["tiles"] for r in v["rows"]] != want_tiles:
+                    return False
+                for r in v["rows"]:
+                    g0 = r["ground"][1]
+                    step = (max(lum22(want_token), lum22(g0)) + 0.05) / (min(lum22(want_token), lum22(g0)) + 0.05)
+                    if any(max(abs(c[i] - want_token[i]) for i in range(3)) > SHADE22 for c in r["band"]):
+                        return False
+                    # ... and each is the BAND, not the ground: a step from the ground beside this row, the way the
+                    # token steps (an allowance wider than the band's own step would pass the page itself)
+                    darker = lum22(want_token) < lum22(g0)
+                    for c in r["band"]:
+                        hi, lo = (lum22(g0), lum22(c)) if darker else (lum22(c), lum22(g0))
+                        if (hi + 0.05) / (lo + 0.05) < 1.03:
+                            return False
+                    if max(abs(r["band"][-1][i] - want_token[i]) for i in range(3)) > 2:
+                        return False
+                    if any(max(abs(c[i] - g0[i]) for i in range(3)) > 3 for c in r["ground"]) or not 1.04 <= step <= 1.13:
+                        return False
+                return True
+
+            seen22 = {}
+            for scheme, tok in (("light", (238, 239, 248)), ("dark", (25, 27, 33))):
+                ctx, pg = browser_as(b, sol, "phone", scheme)
+                pg.goto(BASE + "/social/@solv/gallery")
+                pg.wait_for_load_state("load")
+                pg.wait_for_timeout(900)
+                seen22[scheme] = bands(pg, "[data-prof-list].gal-grid")
+                close_ctx(ctx, pg)
+                ctx, pg = browser_as(b, tess, "phone", scheme)
+                pg.goto(BASE + "/social/@solv/gallery")
+                pg.wait_for_load_state("load")
+                pg.wait_for_timeout(900)
+                seen22[scheme + ", somebody else's"] = bands(pg, "[data-prof-list].gal-grid")
+                if scheme == "light":
+                    # Make's "Use one you made": the same grid on a sheet's paper, its band the paper's own step.
+                    pg.goto(BASE + "/social/")
+                    pg.wait_for_load_state("load")
+                    pg.click("nav.nav .tab-make")
+                    pg.wait_for_timeout(700)
+                    pg.click("#composeSheet [data-compose-yours]")
+                    pg.wait_for_timeout(600)
+                    pg.click('#composeSheet [data-pick="drawings"]')
+                    pg.wait_for_selector("#composeSheet .cmp-grid .gal-tile", timeout=15000)
+                    pg.wait_for_timeout(900)
+                    seen22["picker"] = bands(pg, "#composeSheet .cmp-grid", scroll=False)
+                close_ctx(ctx, pg)
+            check("on a phone every row of a profile's Gallery has one flat band, end to end and 8px past the grid, with no"
+                  " notch in its middle, the colour its token says (the page's own, one part in twelve from it: light and"
+                  " dark), the page showing at its rounded corner, beside it and between two rows; five tiles are two rows"
+                  " of two and a last row of one, and that one is a whole band too; your own profile's grid (each tile in"
+                  " a cell with its eye) and somebody else's view of it (tiles alone) the same",
+                  len(ids22) == 5 and all(whole(seen22.get(k + who), tok, [2, 2, 1]) for k, tok in (("light", (238, 239, 248)), ("dark", (25, 27, 33)))
+                                          for who in ("", ", somebody else's"))
+                  and seen22["light"]["cols"] == 2 and seen22["light"]["cells"] == ["gal-cell"]
+                  and seen22["light, somebody else's"]["cells"] == ["gal-tile"],
+                  json.dumps({k: [v["cells"], v["token"], [r["tiles"] for r in v["rows"]], v["rows"][-1:]] for k, v in seen22.items() if k != "picker"})[:1100])
+            check("Make's \"Use one you made\" is the same grid on a sheet's paper: its band the paper's own step, whole, its"
+                  " corner rounded inside the list (not cut square by it)",
+                  bool(seen22.get("picker")) and whole(seen22["picker"], (235, 231, 252), [2, 1]),
+                  f"shared alone {alone22}; " + json.dumps(seen22.get("picker"))[:700])
+            dctx, dpg = browser_as(b, sol, "desk")
+            dpg.goto(BASE + "/social/@solv/gallery")
+            dpg.wait_for_load_state("load")
+            dpg.wait_for_timeout(900)
+            d5 = bands(dpg, "[data-prof-list].gal-grid")
+            c22 = sol.client()
+            c22.get("/social/")
+            gone22 = c22.post_json(f"/social/p/{ids22[0]}/delete", {})[0] if ids22 else None
+            dpg.goto(BASE + "/social/@solv/gallery")
+            dpg.wait_for_load_state("load")
+            dpg.wait_for_timeout(900)
+            d4 = bands(dpg, "[data-prof-list].gal-grid")
+            close_ctx(dctx, dpg)
+            check("on a desk the grid is three across and the rule the same: five tiles are a row of three and a row of"
+                  " two, four are three and one, and every one of those rows is a whole band",
+                  gone22 == 200 and whole(d5, (238, 239, 248), [3, 2]) and whole(d4, (238, 239, 248), [3, 1]) and d5["cols"] == 3,
+                  json.dumps({"five": d5, "four": d4})[:900])
+        except Exception as exc:  # noqa: BLE001
+            check("section 22 ran to its end", False, str(exc).splitlines()[0][:200])
+
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):
             ERRS.extend(f"csp: {v}" for v in who.csp())
