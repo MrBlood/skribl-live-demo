@@ -226,6 +226,15 @@ never to Home because Home is easy; a tab is a way out, not a way back; and
 a new screen is walked on a phone, come to from two different places, before
 it ships (`DECISIONS.md`, "The way back").
 
+**Each row distinct.** The owner, Nov 20, of the Gallery in dark on their
+phone: "anything like this with rows should maybe have slightly diff color
+under each town [row]. Almost imperceptible but enough so you can tell where
+top and bottom are.. each row distinct". Cal's reading of it, until the
+owner says otherwise: rows are told apart by a flat step of colour, never by
+a line or a shadow; and a grid is looked at with a dark drawing on the dark
+page, where a picture's own edge goes missing (`DECISIONS.md`, "Each row
+distinct, mocked").
+
 **It lives in skribls.net too.** Pad, the Library and the Gallery will sit inside
 the owner's site. Pad acts like an app on the phone: it opens full screen, has a
 Home Screen icon, and returns to the site after posting. Anything built has to

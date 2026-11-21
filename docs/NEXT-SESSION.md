@@ -385,6 +385,11 @@ in the mock page.
   ending the request's read before `create_post` would likely mend it,
   but it touches every post, so it wants its own look.
 
+- **EACH ROW DISTINCT IS MOCKED AND WAITS FOR A YES** (`DECISIONS.md`, "Each
+  row distinct, mocked"; the artifact "Distinct Rows"; the owner's words are
+  in `WORKING-AGREEMENTS.md`). A faint band under each row of the Gallery's
+  tiles, so a row has a top and a bottom even when a dark drawing has no
+  edge on the dark page. The pick is A. Nothing is built.
 - **THE WAY BACK, PART TWO, IS MOCKED AND WAITS FOR A YES** (`DECISIONS.md`,
   "The way back, part one"; the artifact "The Way Back"; the owner's words
   are in `WORKING-AGREEMENTS.md`, "Never stranded"). Part one is built: the
