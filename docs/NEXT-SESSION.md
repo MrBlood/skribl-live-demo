@@ -410,6 +410,13 @@ in the mock page.
      band". Read the owner's answer before anything there.
   NOT DECIDED: bands for lists of one thing a line (Activity, people);
   initials in "Liked by"; a tablet's Make card riding its keyboard.
+- **TWO QUESTIONS OFF THE OWNER'S PHONE (Nov 21) WAIT FOR THEIR ANSWER**
+  (`DECISIONS.md`, "Two questions off the owner's phone"). The drawing's
+  edge: the artifact "The Drawing's Edge", A (the pick), B, or leave it; A
+  and its check are a commit on the branch with no pull request, to be put
+  up on "A" and mended or taken out otherwise. The talk cloud: the artifact
+  "The Talk Cloud", A, B (the pick: the cloud answers) or C; nothing built.
+  And the nine calls of "Last Soft Shadows". Read what they said first.
 - **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No
   strip of Home under a sheet on a phone's keyboard"). The tell: in Make,
   the words tapped, the sheet's own lilac paper down to the keys and

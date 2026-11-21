@@ -50632,3 +50632,93 @@ NOT SHOWN RED AND GREEN: a budget is not a check, and nothing here can make
 this box's seconds a runner's. What stands for it is CI's own count above,
 and main's run after the merge on the postgresql lane is its proof. Here,
 beside two other suites, the whole suite took 11.0 minutes, 117 of 117.
+
+## After v330 -- Two questions off the owner's phone, Nov 21: the drawing's edge, and the talk cloud. Both mocked, neither merged
+
+Nov 21, morning. Two questions, each with pictures off their iPhone, each
+answered with a measure and a mock. A QUESTION IS NOT AN OK: nothing here
+is merged, and each waits for a plain answer.
+
+### 1. "Look at the canvas border. Is that we are doing?"
+
+Home in light and in dark, a drawing on dark paper in a white card, a frame
+of lilac round it, uneven. THE TARGET: the line round a drawing inside a
+post's card, at its corners and along its top and bottom.
+
+IT WAS NOT WHAT WE WERE DOING. A drawing in a card is meant to wear its one
+line and nothing else ("The edges, part four", Nov 16; crisp, Nov 20).
+MEASURED at a phone's three pixels to one, outside in: one screen pixel of
+line; then 6 to 7 screen pixels of the WAITING colour (`--draw-wait`: lilac
+#ece6ff, in dark the deep violet #2e2650) at the top and the sides and 4 to
+5 at the bottom; then the picture. Skribl's player keeps a 1px border, which
+the site made transparent on Nov 16 "so nothing moves", and draws the
+picture a little inside its box; the box's ground, the waiting colour,
+showed in both. It has been there since Nov 16. The soft shadow drew the eye
+from it, and the crisp build took the shadow away. THE ROW THAT HELD "its
+edge is one screen pixel" read the ring's own width off its style: a band
+beside a line is not a width of anything, and a rect is not a paint.
+
+THE MOCK (the artifact "The Drawing's Edge"), now beside two:
+
+- A (the pick): the box's ground is the drawing's own (`--plate-ground`,
+  from what Skribl says of it, as a Gallery tile's is), so the picture runs
+  to its line. Measured: line, then the drawing's own colour, light and
+  dark, a drawing on paper and one on dark paper.
+- B: an even band, one pixel of the lilac all round, then the picture.
+
+WHERE A REACHES: a post's card, its own page, a drawn comment's bubble, the
+comment's own page, and its card where it was reposted. NOT YET: the draft
+in the composer and How it works' pictures, whose ground the page does not
+know; said to the owner, and looked at after their answer.
+
+A IS ON THE BRANCH AND NOT PUT UP (kept there so the work survives; no pull
+request): the stylesheet's token, five wrappers in four templates, and
+`verify_socialreposts` 20, three rows READ OFF THE PAINT at three pixels to
+one: just inside a drawing's box, on its left, top and bottom, every pixel
+is the drawing's own ground (Home's card; and the four other places); and a
+drawing whose ground is not said keeps the waiting colour. SHOWN RED, eight
+breaks, each on a copy with its own server: the token (rows 1, 2); Home's
+card (1); the post's page, the bubble, the comment's page, the comment's
+card (2, each naming its own place); B's even band (1, 2); another colour
+where no ground is said (3). Green as built. IF THE ANSWER IS B OR "LEAVE
+IT", that commit is mended or taken out before anything is put up.
+
+### 2. Bluesky's reply screen beside Blooby's comments: "Is that what we're going for? Should it go to reply page?"
+
+THE TARGET: what a tap on the talk cloud under a post does.
+
+WHAT IT DOES TODAY, read from the code and walked on a touch phone: under a
+post on its own page it slides the page down to the comments (721px here)
+and opens nothing; on Home's card it opens the post at its comments; under
+a COMMENT it opens the reply sheet ("Reply to Theo", his words under it,
+the words, Draw and Flip, Post). That is the Calm Post Page as built on Nov
+20: "the answer bar's 'Say something…', the one place to answer on the
+page", and the row's cloud "a way down to the comments". SO THE SAME CLOUD
+MEANS TWO THINGS, "answer this" under a comment and "go and look" under a
+post, and a person does not get that without being told.
+
+THE VIEW GIVEN: the instinct is right, and it is not a new page. Blooby has
+the reply screen already (the sheet); the cloud under a post does not open
+it. THE MOCK (the artifact "The Talk Cloud"):
+
+- A: leave it.
+- B (the pick): the cloud answers, on a post as on a comment. It raises
+  "Say something to Ana", her words under it as a reply shows a comment's;
+  on Home's card it opens the post with the sheet up (the page opens its
+  box when asked to already: #say), so the words land in the conversation
+  in front of the person. The row then reads as two ways to answer side by
+  side: the cloud to say something, the pencil to draw back. The number
+  beside the cloud stays; reading the comments is a tap on the post.
+- C: a reply page of its own, as Bluesky's. Said against: it does what the
+  sheet does and takes the drawing being answered out of sight; Bluesky is
+  a reference for how a social site behaves, never for a screen to copy.
+
+SAID PLAINLY ON THE PAGE: from Home an iPhone will likely not raise its
+keyboard when a page opens by itself, so there the sheet would be up and
+the keyboard a tap away; not seen on an iPhone here.
+
+AGAINST THE FOUR (B): simple, the cloud means one thing wherever it is;
+kind, the sheet keeps what was typed; playful, Draw and Flip are in it;
+powerful, one tap from a drawing to answering it.
+
+NOT BUILT. FLIP AND THE PAD: neither is theirs.
