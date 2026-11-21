@@ -49637,3 +49637,73 @@ pill; `verify_contrast` runs, and the count is kept as a check that reads
 the soft shadows on a screen and holds the number. NOT TESTED HERE: Safari
 on an iPhone, SF and Segoe UI. A one-pixel line is the owner's screen to
 judge, and is tuned by the half pixel if they say so.
+
+## After v330 -- The way back, part one: every arrow goes where you were
+
+Nov 20, evening. The owner, a few minutes after the crisp quotient's mock:
+
+> And there's no back button on so many screens. You end up stranded a lot
+
+THE TARGET, said first: the way back out of a screen, on every screen of the
+site, on a phone above all. The Home Screen app has no browser Back, so the
+page's own arrow is the only one there is.
+
+THE WALK (a temporary part, never committed: every screen opened on a touch
+phone, and what on it takes you out or back):
+
+- AN ARROW, ON THREE: a post's page and Activity ("Back to Home", a plain
+  link to Home whatever you had come from), and a comment's own page (back
+  where you were, since Nov 18).
+- NO ARROW, THE BOTTOM BAR ALONE: somebody's profile, your own, Settings,
+  Edit profile, Delete account, How it works, Community rules, Privacy,
+  Terms. A tab is a way out, never a way back: the post or the page you came
+  from is lost.
+- NO ARROW AND NO BAR: Sign in, Join, Recover (the wordmark leads Home); and
+  a wrong address, which is a bare "Not Found" with nothing on it at all.
+- Home, the Gallery and your own profile are where the bar leads: nothing to
+  go back to.
+
+So two things were wrong, and they are two pull requests. THIS ONE IS THE
+BUG, the three arrows there are. A post opened from the Gallery, from a
+profile or from Activity sent you to Home, and to the top of it. The Gallery
+was built so that "the way back from a post opens on it" (its own entry),
+which in the app nothing could do.
+
+WHAT CHANGED. ONE RULE, IN ONE PLACE (`social.js`): a screen's arrow
+(`a.top-back`) is the browser's own Back while the page you came from is
+this site's, so it brings you to the Gallery, the profile, Activity, or Home
+at the place you had scrolled to. Opened from anywhere else (a link somebody
+sent, a new tab, the app's first page) it is its own address, the screen
+this one belongs to: Home for a post and for Activity, what it is on for a
+comment. A comment's own page had the rule to itself (`comments.js`); that
+copy is gone. The arrow says "Back" where it said "Back to Home". A click
+with a key held is the browser's, as any link's.
+
+NOTHING LOOKS DIFFERENT, which is why it merges on green: no arrow is added,
+moved or redrawn.
+
+PART TWO IS A LOOK, AND WAITS FOR A YES: the arrow on the screens that have
+none. Mocked for the owner the same evening (the artifact "The Way Back").
+
+THE CHECK. `verify_socialposts` 21, four rows: a post's arrow from the
+Gallery, a profile and Home; Activity's from the Gallery's bell; the arrow's
+own address when a post is opened cold, in a new tab from this site (the
+page you came from is ours, and there is nothing behind you), and from
+another site (a page behind you, and not ours: the arrow never leads out);
+and its name and its 44px. SHOWN RED: the rule taken out (the first two
+rows, and `verify_socialcomments` 40's "back goes where you were", which
+the one rule serves now); no look at what is behind you (a new tab's arrow
+did nothing); no look at where you came from (the arrow led back out to the
+other site, and a post opened cold went to whatever was behind it); "Back
+to Home" put back.
+
+HOW THEY RAN HERE: the three suites that press an arrow or read these
+pages, each whole, side by side, all green the first time: `verify_socialposts`
+104 (the four new rows with it), `verify_socialcomments` 150,
+`verify_socialactivity` 48. The full battery was not run; main's run after
+the merge is it.
+
+FLIP AND THE PAD: not for either. NOT TESTED HERE: the Home Screen app on
+an iPhone, where this matters most. The arrow calls the browser's own Back,
+and that is the phone's to do. THE TELL: open a post from the Gallery and
+tap the arrow. You are in the Gallery again, not on Home.

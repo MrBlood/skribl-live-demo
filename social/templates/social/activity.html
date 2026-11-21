@@ -72,7 +72,9 @@
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>{% endblock %}
 
 {% block top %}
-  <a class="icon-btn top-back" href="{{ url_for('social.home') }}" aria-label="Back to Home">{{ ic.back() }}</a>
+  {#- BACK GOES WHERE YOU WERE (social.js): the page you came from on this site; opened from anywhere
+      else, Home, which is this link's own address. #}
+  <a class="icon-btn top-back" href="{{ url_for('social.home') }}" aria-label="Back">{{ ic.back() }}</a>
   <span class="top-title">Activity</span>
 {% endblock %}
 

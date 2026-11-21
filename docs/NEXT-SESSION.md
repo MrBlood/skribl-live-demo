@@ -385,6 +385,12 @@ in the mock page.
   ending the request's read before `create_post` would likely mend it,
   but it touches every post, so it wants its own look.
 
+- **THE WAY BACK, PART TWO, IS MOCKED AND WAITS FOR A YES** (`DECISIONS.md`,
+  "The way back, part one"; the artifact "The Way Back"; the owner's words
+  are in `WORKING-AGREEMENTS.md`, "Never stranded"). Part one is built: the
+  three arrows the site has go where you were. Part two is the arrow on the
+  screens that have none: profiles, Settings and its pages, How it works,
+  the rules, sign-in, and a wrong address's bare "Not Found".
 - **THE CRISP QUOTIENT IS MOCKED AND WAITS FOR A YES** (`DECISIONS.md`, "The
   crisp quotient, mocked"; the artifact "Crisp Quotient"; the owner's words
   are in `WORKING-AGREEMENTS.md`, "Crisp, not blurry"). They asked for

@@ -53,6 +53,26 @@
 
   function shown(el) { return !!el && el.getClientRects().length > 0; }
 
+  /* BACK GOES WHERE YOU WERE (the owner, Nov 20: "there's no back button on
+     so many screens. You end up stranded a lot"). A screen's arrow
+     (a.top-back) is the browser's own Back while the page you came from is
+     this site's: the Gallery, a profile, Activity, Home at the place you had
+     scrolled to. Come from anywhere else (a link somebody sent, a new tab,
+     the app's first page) it is its own address, the screen this one belongs
+     to. A comment's own page did this by itself (comments.js, since Nov 18);
+     a post's and Activity's went to Home whatever you had come from, which
+     on a phone's Home Screen app, with no browser Back, lost your place.
+     One rule now, here, for every arrow. A click with a key held is the
+     browser's (a new tab), as any link's. */
+  doc.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a.top-back') : null;
+    if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var from = doc.referrer || '';
+    if (from.indexOf(window.location.origin + '/') !== 0 || window.history.length < 2) return;
+    e.preventDefault();
+    window.history.back();
+  });
+
   /* ONE SHEET OVER ANOTHER (the owner's "A", Nov 15: "Unfollow Theo?" over
      your follows sheet): the sheets open, in the order they rose. Esc and Tab
      are the top one's alone, and the page behind stays out of reach until

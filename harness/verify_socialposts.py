@@ -3994,6 +3994,108 @@ print("PLAN " + json.dumps(out))
         except Exception as exc:  # noqa: BLE001
             check("section 20 ran to its end", False, str(exc).splitlines()[0][:200])
 
+    # ------------------------------------------------------------------ 21
+    if part(21, "the way back: a screen's arrow goes where you were (the owner, Nov 20: \"You end up stranded a lot\")"):
+        # A post's arrow and Activity's were links to Home, whatever you had
+        # come from; a comment's own page alone went back where you were. A
+        # phone's Home Screen app has no browser Back, so from the Gallery or a
+        # profile a post's arrow lost your place. ONE RULE NOW (social.js): the
+        # page you came from on this site, as the browser's own Back; opened
+        # from anywhere else, the arrow's own address (Home).
+        try:
+            wren = someone(b, "wrenb", "Wren Baptiste")
+            st21, j21 = make_post(wren, "Section 21, the way back", gallery=True, seed=211)
+            p21 = j21.get("post") if st21 == 200 and isinstance(j21, dict) else None
+            ctx, pg = browser_as(b, wren)
+
+            def at(page_):
+                return page_.evaluate("() => location.protocol === 'data:' ? 'the other site' : location.pathname")
+
+            def arrow(page_):
+                """Press the screen's arrow as a person does; say where it leaves you (the same page, if nowhere)."""
+                was = page_.evaluate("() => location.href")
+                page_.click("a.top-back", timeout=8000)
+                try:
+                    page_.wait_for_function("(u) => location.href !== u", arg=was, timeout=5000)
+                    page_.wait_for_load_state("load")
+                    page_.wait_for_timeout(300)
+                except Exception:  # noqa: BLE001 -- it went nowhere: that is the answer
+                    pass
+                return at(page_)
+
+            def into_post(page_, start):
+                """From `start`, open the post by the first of its links that shows, as a person does."""
+                page_.goto(BASE + start)
+                page_.wait_for_load_state("load")
+                page_.wait_for_timeout(500)
+                link = page_.locator(f'a[href^="/social/p/{p21}"]').locator("visible=true").first
+                link.scroll_into_view_if_needed(timeout=8000)
+                with page_.expect_navigation(timeout=15000):
+                    link.click()
+                page_.wait_for_load_state("load")
+                page_.wait_for_timeout(300)
+                return at(page_)
+
+            came, back = {}, {}
+            for name, start in (("the Gallery", "/social/explore"), ("her profile", "/social/@wrenb"), ("Home", "/social/")):
+                came[name] = into_post(pg, start)
+                back[name] = arrow(pg)
+            check("a post's arrow goes where you were: opened from the Gallery it brings you back to the Gallery, from a"
+                  " profile to the profile, from Home to Home (it went to Home whatever you had come from)",
+                  bool(p21) and all(v == f"/social/p/{p21}" for v in came.values())
+                  and back == {"the Gallery": "/social/explore", "her profile": "/social/@wrenb", "Home": "/social/"},
+                  f"opened {came}; the arrow then {back}")
+            # Activity's arrow: opened by the bell from the Gallery, back on the Gallery.
+            pg.goto(BASE + "/social/explore")
+            pg.wait_for_load_state("load")
+            pg.wait_for_timeout(400)
+            with pg.expect_navigation(timeout=15000):
+                pg.locator('body > .top a[href$="/social/activity"]').first.click()
+            pg.wait_for_load_state("load")
+            act_at = at(pg)
+            act_back = arrow(pg)
+            check("Activity's arrow the same: opened by the bell on the Gallery, it brings you back to the Gallery",
+                  act_at == "/social/activity" and act_back == "/social/explore", f"at {act_at}; the arrow then {act_back}")
+            # OPENED FROM ANYWHERE ELSE, THE ARROW'S OWN ADDRESS: cold; a new tab opened from this site (the page
+            # you came from is this site's, but there is nothing behind you to go back to); and from another site
+            # (a page behind you, and it is not ours: the arrow never leads out of the site).
+            pg.goto(BASE + f"/social/p/{p21}")
+            pg.wait_for_load_state("load")
+            names = pg.evaluate("() => ({ says: document.querySelector('a.top-back').getAttribute('aria-label'),"
+                                " box: (r => [Math.round(r.width), Math.round(r.height)])(document.querySelector('a.top-back').getBoundingClientRect()) })")
+            cold = arrow(pg)
+            pg.goto(BASE + "/social/")
+            pg.wait_for_load_state("load")
+            with ctx.expect_page(timeout=15000) as pop:
+                pg.evaluate("(u) => { window.open(u); }", f"/social/p/{p21}")
+            tab = pop.value
+            tab.wait_for_load_state("load")
+            tab.wait_for_timeout(300)
+            tab_from = tab.evaluate("() => [document.referrer.replace(location.origin, ''), history.length]")
+            new_tab = arrow(tab)
+            tab.close()
+            pg.goto("data:text/html," + urllib.parse.quote(f'<a id="x" href="{BASE}/social/p/{p21}">a link somebody sent</a>'))
+            with pg.expect_navigation(timeout=15000):
+                pg.click("#x")
+            pg.wait_for_load_state("load")
+            sent_from = pg.evaluate("() => [document.referrer, history.length]")
+            sent = arrow(pg)
+            pg.goto(BASE + "/social/activity")
+            pg.wait_for_load_state("load")
+            names["activity"] = pg.evaluate("() => document.querySelector('a.top-back').getAttribute('aria-label')")
+            close_ctx(ctx, pg)
+            check("opened from anywhere else it is the arrow's own address, Home: a post opened cold; one opened in a new"
+                  " tab from this site, with nothing behind it to go back to; and one come to from another site, which"
+                  " the arrow never leads back out to",
+                  cold == "/social/" and new_tab == "/social/" and tab_from == ["/social/", 1] and sent == "/social/"
+                  and sent_from[0] == "" and sent_from[1] >= 2,
+                  f"cold {cold}; a new tab (came from {tab_from}) {new_tab}; from another site (came from {sent_from}) {sent}")
+            check("the arrow says \"Back\" on a post and on Activity (it said \"Back to Home\"), and is 44px to press",
+                  names.get("says") == "Back" and names.get("activity") == "Back" and min(names.get("box") or [0]) >= 44,
+                  json.dumps(names))
+        except Exception as exc:  # noqa: BLE001
+            check("section 21 ran to its end", False, str(exc).splitlines()[0][:200])
+
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):
             ERRS.extend(f"csp: {v}" for v in who.csp())

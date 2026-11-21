@@ -3272,3 +3272,24 @@ once.
 `verify_composer` 3 and `verify_socialcomments` 30 hold it on a stood-in
 keyboard, by what is painted where the keyboard would be. NOT SEEN HERE:
 this box has no phone keyboard; the owner's iPhone is the test.
+
+## 27. Built: a screen's arrow goes where you were (Nov 20)
+
+The owner: "there's no back button on so many screens. You end up stranded
+a lot". Part one is the arrows the site has (a post's page, Activity, a
+comment's own page). They are one rule now, in `social.js`:
+
+- **The page you came from, when it is this site's**: the arrow
+  (`a.top-back`) is the browser's own Back, so a post opened from the
+  Gallery brings you back to the Gallery, from a profile to the profile,
+  and Home opens where you had scrolled to.
+- **Its own address otherwise** (a link somebody sent, a new tab, the app's
+  first page): Home for a post and for Activity; for a comment's page, what
+  it is on.
+
+A phone's Home Screen app has no browser Back, so this arrow is the only
+one there. It says "Back". Part two, the arrow on the screens that have
+none (profiles, Settings and its pages, How it works, the rules, sign-in),
+is a change to how those screens look and is the owner's to say.
+
+`verify_socialposts` 21 holds it, with `verify_socialcomments` 40.
