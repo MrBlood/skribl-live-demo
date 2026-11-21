@@ -4093,6 +4093,107 @@ print("PLAN " + json.dumps(out))
             check("the arrow says \"Back\" on a post and on Activity (it said \"Back to Home\"), and is 44px to press",
                   names.get("says") == "Back" and names.get("activity") == "Back" and min(names.get("box") or [0]) >= 44,
                   json.dumps(names))
+            # PART TWO (the owner's "All yes", Nov 20, to the mock's A): THE ARROW ON THE SCREENS THAT HAD NONE. Every
+            # screen the bar does not lead to has it at its top's start with the screen's name beside it, as a
+            # post's top; the page's big heading then leaves a phone (a screen reader's still, and a desk's).
+            TOP21 = """() => { const top = document.querySelector('body > .top'), a = top && top.querySelector('a.top-back'), t = top && top.querySelector('.top-title');
+              const shows = e => { if (!e || !e.getClientRects().length) return false; const r = e.getBoundingClientRect();
+                if (r.width < 3 || r.height < 3) return false; const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!at && (e === at || e.contains(at)); };
+              const h = document.querySelector('h1'), r = a && a.getBoundingClientRect();
+              return { arrow: shows(a) ? [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] : null, to: a ? a.getAttribute('href') : null,
+                       says: a ? a.getAttribute('aria-label') : null, title: shows(t) ? t.textContent.trim() : null,
+                       h1: h ? h.textContent.trim() : null, h1shows: shows(h), mark: shows(top && top.querySelector('.brand')) }; }"""
+            kit = someone(b, "kitm", "Kit Moreau")
+            ctx, pg = browser_as(b, wren)
+
+            def top_of(page_, path):
+                page_.goto(BASE + path)
+                page_.wait_for_load_state("load")
+                page_.wait_for_timeout(300)
+                return page_.evaluate(TOP21)
+
+            inner = {"Settings": "/social/you", "Edit profile": "/social/you/edit", "Delete account": "/social/you/delete", "How it works": "/social/how",
+                     "Community rules": "/social/rules", "Privacy": "/social/privacy", "Terms": "/social/terms", "@kitm": "/social/@kitm"}
+            tops = {name: top_of(pg, path) for name, path in inner.items()}
+            roots = {name: top_of(pg, path) for name, path in (("Home", "/social/"), ("the Gallery", "/social/explore"), ("your own profile", "/social/@wrenb"))}
+            post_top = top_of(pg, f"/social/p/{p21}")
+            homes = {"Settings": "/social/@wrenb", "Edit profile": "/social/@wrenb", "Delete account": "/social/you", "How it works": "/social/",
+                     "Community rules": "/social/", "Privacy": "/social/", "Terms": "/social/", "@kitm": "/social/"}
+            # the heading the top has taken the place of is not shown on a phone; Delete account's is the question the
+            # page asks, and a profile's is the person's name, so those two stay
+            stays = {"Delete account": "Delete your account?", "@kitm": "Kit Moreau"}
+            check("every screen the bar does not lead to has the arrow at its top's start, where a post's is, 44px, painted,"
+                  " saying \"Back\", its own name beside it and its own address behind it (Settings, Edit profile, Delete"
+                  " account, How it works, the three rules pages, somebody's profile); Home, the Gallery and your own"
+                  " profile have none; the page's big heading leaves a phone where the top says it, and stays where it"
+                  " says more (Delete account's question, a person's name)",
+                  bool(post_top.get("arrow")) and all(v["arrow"] == post_top["arrow"] and min(v["arrow"][2:]) >= 44 and v["says"] == "Back"
+                                                      and v["title"] == name and v["to"] == homes[name] and not v["mark"]
+                                                      and (v["h1shows"] and v["h1"] == stays[name] if name in stays
+                                                           else (not v["h1shows"] and bool(v["h1"])))
+                                                      for name, v in tops.items())
+                  and all(v["arrow"] is None for v in roots.values()),
+                  f"a post's {post_top.get('arrow')}; {json.dumps({k: [v['arrow'], v['title'], v['to'], v['h1'], v['h1shows']] for k, v in tops.items()})};"
+                  f" roots {json.dumps({k: v['arrow'] for k, v in roots.items()})}")
+            # WHERE THEY GO: where you were; opened cold, the screen each belongs to.
+            went = {}
+            pg.goto(BASE + "/social/@wrenb")
+            pg.wait_for_load_state("load")
+            with pg.expect_navigation(timeout=15000):
+                pg.locator('a[href$="/social/you/edit"]').locator("visible=true").first.click()
+            pg.wait_for_load_state("load")
+            went["Edit profile, from your profile"] = arrow(pg)
+            with pg.expect_navigation(timeout=15000):
+                pg.locator('body > .top a[href$="/social/you"]').first.click()
+            pg.wait_for_load_state("load")
+            with pg.expect_navigation(timeout=15000):
+                pg.locator('a[href$="/social/you/delete"]').locator("visible=true").first.click()
+            pg.wait_for_load_state("load")
+            went["Delete account, from Settings"] = arrow(pg)
+            went["Settings, from your profile"] = arrow(pg)
+            pg.goto(BASE + f"/social/p/{p21}")
+            pg.wait_for_load_state("load")
+            pg.evaluate("(u) => { location.href = u; }", "/social/@kitm")
+            pg.wait_for_function("() => location.pathname === '/social/@kitm'", timeout=15000)
+            pg.wait_for_load_state("load")
+            went["a profile, from a post"] = arrow(pg)
+            for name, path in (("Edit profile, cold", "/social/you/edit"), ("Delete account, cold", "/social/you/delete"), ("Settings, cold", "/social/you"),
+                               ("a profile, cold", "/social/@kitm"), ("How it works, cold", "/social/how")):
+                tab = ctx.new_page()
+                tab.goto(BASE + path)
+                tab.wait_for_load_state("load")
+                went[name] = arrow(tab)
+                tab.close()
+            close_ctx(ctx, pg)
+            check("and each goes where you were: Edit profile opened from your profile back to your profile, Delete account"
+                  " opened from Settings back to Settings, Settings opened by your profile's gear back to your profile, a"
+                  " profile opened from a post back to the post; opened cold, to the screen it belongs to (Edit profile"
+                  " and Settings to your profile, Delete account to Settings, a profile and How it works to Home)",
+                  went == {"Edit profile, from your profile": "/social/@wrenb", "Delete account, from Settings": "/social/you",
+                           "Settings, from your profile": "/social/@wrenb", "a profile, from a post": f"/social/p/{p21}",
+                           "Edit profile, cold": "/social/@wrenb", "Delete account, cold": "/social/you",
+                           "Settings, cold": "/social/@wrenb", "a profile, cold": "/social/", "How it works, cold": "/social/"},
+                  json.dumps(went))
+            # A DOOR SCREEN keeps the mark in the middle and has the arrow at the top's start; A DESK shows no arrow
+            # anywhere (it has no top bar, and the browser has Back) and shows the headings.
+            nctx, npg = browser_as(b, None)
+            door = top_of(npg, "/social/signin")
+            out_how = top_of(npg, "/social/how")
+            close_ctx(nctx, npg)
+            dctx, dpg = browser_as(b, wren, "desk")
+            desk = {name: top_of(dpg, path) for name, path in (("Settings", "/social/you"), ("How it works", "/social/how"), ("@kitm", "/social/@kitm"))}
+            close_ctx(dctx, dpg)
+            nd, ndp = browser_as(b, None, "desk")
+            desk["Sign in"] = top_of(ndp, "/social/signin")
+            close_ctx(nd, ndp)
+            check("a door screen (Sign in) has the arrow at the same place with the mark still in the middle, and How it"
+                  " works keeps its arrow and its name before you sign in; on a desk no arrow shows anywhere and the"
+                  " headings do (Settings, How it works, a profile, Sign in)",
+                  door["arrow"] == post_top["arrow"] and door["mark"] and door["to"] == "/social/" and door["h1shows"]
+                  and out_how["arrow"] == post_top["arrow"] and out_how["title"] == "How it works"
+                  and all(v["arrow"] is None and v["h1shows"] for v in desk.values()),
+                  f"Sign in {[door['arrow'], door['mark'], door['to']]}; signed out, How it works {[out_how['arrow'], out_how['title']]};"
+                  f" a desk {json.dumps({k: [v['arrow'], v['h1shows']] for k, v in desk.items()})}")
         except Exception as exc:  # noqa: BLE001
             check("section 21 ran to its end", False, str(exc).splitlines()[0][:200])
 

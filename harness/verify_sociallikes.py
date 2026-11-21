@@ -725,15 +725,23 @@ BSAMPLE = r"""(ms) => { window.__bf = []; const t0 = performance.now();
 
 # From the page's first frame, landing at "Liked by…" (#liked): there, in
 # view, glowing (is-landed), its tint's opacity and colour, and where it is.
-LANDING = r"""window.__lf = [];
-(function () { const t0 = performance.now(); const step = () => {
+# WATCHED UNTIL THE GLOW HAS GONE, not for a set time (window.__lfDone says
+# so): the page's own script starts the glow once it has loaded, holds it,
+# then fades it, and beside two other suites a watch of four and a half
+# seconds from the first frame ended before the fade began (Nov 20: red
+# beside others, green alone). Fifteen seconds at the longest, which a page
+# with nothing to land on (Activity itself) simply runs out.
+LANDING = r"""window.__lf = []; window.__lfDone = false;
+(function () { const t0 = performance.now(); let seen = false, after = 0; const step = () => {
   const a = document.getElementById('liked');
   const f = { t: Math.round(performance.now() - t0), there: !!a, landed: false };
   if (a) { const r = a.getBoundingClientRect(); f.top = Math.round(r.top * 10) / 10; f.bottom = r.bottom;
     if (a.classList.contains('is-landed')) { const cs = getComputedStyle(a, '::before');
       Object.assign(f, { landed: true, op: +cs.opacity, bg: cs.backgroundColor }); } }
   window.__lf.push(f);
-  if (performance.now() - t0 < 4500) requestAnimationFrame(step); };
+  if (f.landed) seen = true; else if (seen) after++;
+  if ((seen && after > 3) || performance.now() - t0 > 15000) { window.__lfDone = true; return; }
+  requestAnimationFrame(step); };
   requestAnimationFrame(step); })();"""
 
 # How many like requests are out at once, and what each said.
@@ -1878,7 +1886,7 @@ with sync_playwright() as p:
                 ready(pg)
             except Exception:  # noqa: BLE001
                 pass
-            pg.wait_for_timeout(4200)
+            pg.wait_for_function("() => window.__lfDone === true", timeout=20000)
             lf = pg.evaluate("() => window.__lf")
             vh = pg.evaluate("() => innerHeight")
             close_ctx(ctx, pg)
@@ -1895,7 +1903,8 @@ with sync_playwright() as p:
                   f"{href}; landed {len(landed)} frames, tint {landed and landed[0]['bg']}, fading {faded(ops)},"
                   f" last {ops and ops[-1]}; at {tops and tops[-1]} of {vh}, moved {spread([{'t': t} for t in tops], 't')}")
             ctx, pg = browser_as(b, nell, reduced=True, init=LANDING)
-            go(pg, f"/social/p/{p9a}#liked", wait=4200)
+            go(pg, f"/social/p/{p9a}#liked", wait=300)
+            pg.wait_for_function("() => window.__lfDone === true", timeout=20000)
             lf = pg.evaluate("() => window.__lf")
             close_ctx(ctx, pg)
             landed = [f for f in lf if f.get("landed")]

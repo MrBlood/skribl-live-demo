@@ -9,11 +9,20 @@
     say is in docs/LAWYER-NOTE.md. #}
 {% extends 'social/base.html' %}
 
+{% import 'social/_icons.html' as ic %}
 {% block title %}{{ heading }} (draft) · Blooby{% endblock %}
+
+{% block top %}
+  {#- THE WAY BACK (the owner's "All yes", Nov 20, to its mock, A): the arrow and the screen's name, as a post's
+      top; it goes where you were (social.js), and opened from anywhere else, to this address. #}
+  <a class="icon-btn top-back" href="{{ url_for('social.home') }}" aria-label="Back">{{ ic.back() }}</a>
+  <span class="top-title">{{ heading }}</span>
+  {% if accounts and not me and not hide_nav %}<a class="top-signin" href="{{ url_for('social.signin') }}">Sign in</a>{% endif %}
+{% endblock %}
 
 {% block main %}
 <div class="legal">
-  <div class="page-head"><h1 class="page-title">{{ heading }}</h1></div>
+  <div class="page-head in-top is-bare"><h1 class="page-title">{{ heading }}</h1></div>
   <nav class="legal-nav" aria-label="The rules">
     {%- for route, label in pages %}<a href="{{ url_for('social.' ~ route) }}"{% if route == page %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor -%}
   </nav>
