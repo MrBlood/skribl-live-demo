@@ -398,10 +398,15 @@ in the mock page.
      built"; `verify_socialposts` 23 holds it). It lists five calls no
      mock showed, and says where it meets Nov 16's "just a border": read
      what the owner says of both before anything else there.
-  4. THE PAD AND FLIP: the same crisp rule, both together (their drawers'
-     cards, Post and Record, Flip's page strip, the text shadow on the
-     purple buttons, the player's speed chips and line), and the band
-     under rows in Skribl's own Gallery and the Library.
+  4. THE PAD AND FLIP: built, exactly what the mock laid over them
+     (`DECISIONS.md`, "Crisp on the Pad and Flip"; `verify_contrast`'s
+     "CRISP, THE EDITORS" holds it, `verify_galib` 3 the two pages'
+     copies). STILL OWED, in this order: (a) a MOCK FOR THE OWNER of the
+     editors' other soft shadows, which the crisp mock never pictured and
+     which are theirs to say (that entry lists them by kind and count;
+     `CRISP_LEFT` in the check is the list, and it only shrinks); (b) the
+     band under rows in Skribl's own Gallery and the Library, and their
+     cards' and rows' lift to the one line.
   NOT DECIDED: bands for lists of one thing a line (Activity, people);
   initials in "Liked by"; a tablet's Make card riding its keyboard.
 - **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No

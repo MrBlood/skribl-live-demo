@@ -529,14 +529,24 @@ try:
 
         _why = {}
 
-        def _ring(shadow):
-            """The widest unblurred shadow in a computed box-shadow, in CSS px:
-            a ring's spread, or a side's offset (the column's)."""
+        def _ring(shadow, top=False):
+            """The widest unblurred shadow in a computed box-shadow that lies
+            ALONG THE SIDE BEING READ, in CSS px: a ring's spread, or that
+            side's own offset (the column's side is drawn 1px across). A line
+            moved along the other axis with no spread is not this side's: what
+            floats wears one line of shade under its edge since the crisp
+            build (--chip-lift, Nov 20: 1px down, or a line of light inside
+            its top), and read on a left side that is no line there at all.
+            The speed chips' card read "a line 1.0px wide" for it."""
             best = None
             for one in re.split(r",(?![^()]*\))", shadow or ""):
                 v = [float(x_) for x_ in re.findall(r"(-?[\d.]+)px", re.sub(r"[a-z]+\([^)]*\)", "", one))]
                 if len(v) >= 2 and (len(v) < 3 or v[2] == 0):
-                    w_ = max(abs(x_) for x_ in v[:2] + v[3:4])
+                    spread = abs(v[3]) if len(v) > 3 else 0
+                    along = abs(v[1] if top else v[0])
+                    if not spread and not along:
+                        continue
+                    w_ = max(along, spread)
                     best = w_ if best is None else max(best, w_)
             return best
 
@@ -576,7 +586,7 @@ try:
             # stands apart from its neighbours (the x, its line at 1px, read
             # 1), so the line's own width is read too, the widest unblurred
             # shadow, in screen pixels.
-            w = _ring(pg.evaluate("(s) => getComputedStyle(document.querySelector(s)).boxShadow", sel))
+            w = _ring(pg.evaluate("(s) => getComputedStyle(document.querySelector(s)).boxShadow", sel), top)
             if w is None or abs(w * k - 1) > 0.05:
                 n = f"{n} and a line {w}px wide"
             if n != 1:

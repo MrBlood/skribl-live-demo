@@ -191,10 +191,16 @@
      Flip's page strip, and each drawer, picker and sheet -- so the screen
      reads as one family of panels around the drawing. The fill and blur are
      the header's own values; the drop is softer than the header's old 0.42,
-     which read as a slab once three panels wore it. */
+     which read as a slab once three panels wore it.
+     CRISP (the owner's "All yes", Nov 20, to the crisp mock's B, "the Pad and
+     Flip next, the same rule, both together"): a panel's rim is its edge, and
+     under it ONE CLOSE LINE, 1px/2px, where it wore 6px/20px. The site's
+     numbers, value for value (social.css). */
   --glass-fill: rgba(var(--surface-well-2-rgb), 0.78);
-  --glass-drop: rgba(0, 0, 0, 0.30);
-  --glass: 0 0 0 1px var(--header-rim), 0 6px 20px var(--glass-drop);
+  --glass-drop: rgba(0, 0, 0, 0.5);
+  --glass: 0 0 0 1px var(--header-rim), 0 1px 2px var(--glass-drop);
+  /* THE FILL'S ENAMEL (crisp), either theme: Post, and Record while recording. */
+  --fill-drop: inset 0 1px 0 rgba(255, 255, 255, 0.32), inset 0 -1px 0 rgba(36, 16, 120, 0.34), 0 1px 2px rgba(60, 40, 140, 0.36);
   /* THE MENU'S PAPER (owner, after v323: "Is this the best color look?"; B2
      of the colour mock). The menu and the sheets it opens are solid, not
      glass: a sheet with a breath of Skribl purple, white cards that stand off
@@ -205,7 +211,9 @@
   --menu-card:       #231e3b;
   --menu-card-line:  rgba(167, 146, 255, 0.12);
   --menu-card-rule:  rgba(167, 146, 255, 0.12);
-  --menu-card-drop:  0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+  /* CRISP: a card on a sheet has its edge and one line (in dark, a line of
+     light inside its top); it wore 6px/18px of black at 35% as well. */
+  --menu-card-drop:  0 1px 0 rgba(255, 255, 255, 0.07) inset;
   /* A SELECTED OPTION IS A TINT, AN ACTION IS SOLID. The same purple used to
      mean both, so a drawer carried five or six purple slabs and nothing said
      which one did something. Segments (Pen / Background, Off / Low / High,
@@ -236,7 +244,9 @@
      here, white with a lilac edge in light; it was the line's grey at 82%. */
   --chip-glass: rgba(46, 38, 88, 0.94);
   --chip-line: rgba(167, 146, 255, 0.32);
-  --chip-lift: 0 8px 24px rgba(0, 0, 0, 0.35);
+  /* CRISP: what floats has the one true shadow, short and close (22px of blur
+     drawn 12px in under its foot; it wore 8px/24px), the site's --float-drop. */
+  --chip-lift: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 22px -12px rgba(0, 0, 0, 0.8);
   /* A control when off (No dinge): at full strength, only its words quiet. */
   --off-ink: #756e9c;
   /* No dinge's solid lilacs: a tip's well (the site's --quote-well), a
@@ -486,8 +496,9 @@ body {
      The ban itself: the canvas carries a 1px ring (--canvas-ring), and when the
      header and toolbar each carried one too, at almost the same radius, three
      concentric outlined rectangles fought and the eye could not tell which was
-     the subject. rgba over the near-black page plus the 26px-blur shadow below
-     does the raising; the rim only sharpens the cut.
+     the subject. rgba over the near-black page does the raising, with one
+     close line under the rim (1px/2px since the crisp build, Nov 20; a soft
+     shadow fell below it before); the rim sharpens the cut.
 
      A box-shadow RING, not a border, and that is load-bearing: a border eats
      2px of interior width, and the 390px header fit is measured to the pixel --
@@ -660,30 +671,13 @@ body {
 }
 @media (hover: hover) { .btn.play:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; }}
 
-/* Crisper labels on the solid-purple (accent-filled) buttons — plus the ACTIVE
-   segmented-control buttons (pen/eraser, Fill/Fit/Stretch) whose white label
-   rides on the purple sliding pill. A tight dark text-shadow separates the white
-   text from the purple. Inactive/dark-fill buttons are left out (the shadow is
-   invisible there); the softer .post-watch chip is excluded so its light text
-   stays clean; tabs use a purple underline (text on dark), so they're out too. */
-.btn.post,
-.name-done,
-.post-submit:not(.post-watch),
-.player-cta,
-.btn.record.active,
-/* A dark text-shadow lifts LIGHT text off a busy background. .pending-btn was
-   dark text on solid yellow, where the same shadow smeared the glyph edges and
-   read as blurry — most visibly on "Re-add". It is white on purple now (v317)
-   and stays out of the list; the others are white-on-colour and benefit. (The
-   restore banner's Restore button left the list with the banner: v294 retired
-   the banner, and its markup outlived it on the player page until the
-   centring census found a control nothing could ever show.) */
-.reposition-btn.active {
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
-}
-/* .tool-btn.active and .photo-fit-btn.active left this list with the bar
-   redesign: a selected tool or fit option is now tinted ink on a soft tint,
-   not white on purple, and the dark shadow smeared it (see --seg-on-fill). */
+/* THE WHITE WORDS ON A PURPLE BUTTON CARRY NO SHADOW (crisp; the owner's "All
+   yes", Nov 20: "their buttons' text shadow with it"). Post, Done, Post's
+   submit, the player's button, Record while recording and Reposition while on
+   wore 1px/3px of black at 45%, put there to part white from purple; white on
+   that purple is 5.33:1 by itself, and the shadow blurred the letters' edges
+   (as it had on the yellow "Re-add", which left the list at v317, and on a
+   selected tool, which left it with the bar redesign). */
 
 .rec-indicator[hidden] { display: none; }
 
@@ -2209,7 +2203,7 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
    =================================================================== */
 @media (min-width: 641px) {
   .btn { padding: 7px 14px; }                          /* ~32px tall vs 37 */
-  .btn svg { width: 14px; height: 14px; }
+  .btn svg { width: 14px; height: 14px; }   /* CRISP: the same enamel at a desk's size (it wore 2px/6px) */
 
   /* Merged Play pill: its divider lighter. The shell is the lilac with no
      edge since No dinge, the last four (it was a hairline round a grey wash). */
@@ -2442,12 +2436,12 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   --brand-ink:               #4a33c2;
   /* Light flips the rim: a near-white edge, light catching the card. */
   --header-rim:              rgba(255, 255, 255, 0.9);
-  --glass-drop:              rgba(20, 24, 40, 0.10);
+  --glass-drop:              rgba(20, 24, 40, 0.14);
   --menu-paper:              #f3f0ff;
   --menu-card:               #ffffff;
   --menu-card-line:          rgba(124, 92, 255, 0.34);
   --menu-card-rule:          rgba(80, 60, 170, 0.10);
-  --menu-card-drop:          0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
+  --menu-card-drop:          0 1px 0 rgba(60, 40, 140, 0.13);
   /* AA on what is actually painted behind it: #5b3be6 was 4.37:1 on the tint
      over the drawers' track, under the unselected label's 4.99. One step
      deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground
@@ -2463,7 +2457,7 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   --chip-line: rgba(124, 92, 255, 0.3);
   --press-fill: rgba(124, 92, 255, 0.22);
   --press-ring: #7c5cff;
-  --chip-lift: 0 10px 30px rgba(60, 40, 140, 0.16), 0 2px 6px rgba(60, 40, 140, 0.08);
+  --chip-lift: 0 1px 0 rgba(60, 40, 140, 0.14), 0 12px 22px -12px rgba(30, 20, 80, 0.45);
   --off-ink: #a59dcc;
   --tip-well: #f0ecff;
   --count-fill: #ece6ff;
