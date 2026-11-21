@@ -430,12 +430,27 @@ in the mock page.
      readings in them are the owner's to overrule: focus back to the
      cloud, the cloud's number kept true, the site's row lines clearer in
      dark with the rest.
-  4. STILL WAITING, nothing built: the nine calls of "Last Soft Shadows",
-     whose picks no longer stand (what floats over the drawing keeps a
-     short close shadow; the cards of Skribl's own Gallery and Library
-     still wear dark's old 12% edge and a soft drop). THE COLOUR AUDIT the
-     owner asked for the same morning takes them up; read its entry before
-     asking them anything again.
+  4. "LAST SOFT SHADOWS" IS WITHDRAWN: its nine calls are choices 2 and 3
+     of the colour audit (next), with picks redone. Build nothing from
+     that page.
+  5. THE COLOUR CRISP AUDIT the owner asked for in the same message: DONE,
+     AND WAITING FOR THE OWNER. Nothing of it is built. The report is the
+     artifact "Colour Crisp Audit"
+     (https://claude.ai/artifact/Jqzoat7mwLv78eXVAkg8yc); the whole of it
+     is `docs/COLOR-AUDIT.md`, and `DECISIONS.md` has its entry ("The
+     colour crisp audit"). FIVE FIXES (A to E: a search hint too faint in
+     dark, four keyboard stops that show nothing, the chosen pill in forced
+     colours, a token nothing reads, focus under a phone's bar) are bugs
+     and need no OK; read
+     DECISIONS for whether they have been built. ELEVEN CHOICES wait for
+     the owner's answer, Cal's pick on each; 2, 3, 4 and 11 get a mock
+     before anything is built. The token table is `docs/COLOR-TOKENS.md`,
+     made by `harness/tools/coloraudit.py`.
+  6. MAIN WAS RED AFTER THE SITE'S HALF (#1036), one row of
+     `verify_socialposts` 13: a name that fitted this box's font and not
+     CI's (`DECISIONS.md`, "a name that fits in one font and not in
+     another"). Mended in the pull request after it. READ MAIN'S RUN ON
+     THAT FIX before believing main is green.
 - **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No
   strip of Home under a sheet on a phone's keyboard"). The tell: in Make,
   the words tapped, the sheet's own lilac paper down to the keys and
