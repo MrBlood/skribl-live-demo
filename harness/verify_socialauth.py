@@ -964,22 +964,47 @@ with sync_playwright() as p_:
               "No one has the handle @nobody_here" in unknown and not owner.pg.locator("[data-made-link]").count(),
               unknown)
 
+        #: What a browser says when a person goes somewhere: the site answers
+        #: that with its kind page for a wrong address (since Nov 21), and a
+        #: script's ask (the two rows above it) with the bare 404 as before.
+        BROWSER = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}
+
         def same_as_missing(req, token):
             """Invites asked for, beside a page that is not there: status,
-            words and headers (all but the date and the length)."""
+            words and headers (all but the date and the length). A BROWSER'S
+            ASK TOO, and Your reports with it: there both are the site's kind
+            page, each drawn with a nonce of its own (in its one inline
+            script and in its policy's header), so each answer's own nonce
+            is read off its header and taken out of both before they are
+            laid side by side. Nothing else is taken out."""
             out = []
             for method, hidden, missing in (("GET", "/social/invites", "/social/no-such-page"),
                                             ("POST", "/social/invites", "/social/no-such-page"),
-                                            ("POST", "/social/invites/recover", "/social/no-such/page")):
+                                            ("POST", "/social/invites/recover", "/social/no-such/page"),
+                                            ("GET, as a browser", "/social/invites", "/social/no-such-page"),
+                                            ("GET, as a browser", "/social/reports", "/social/no-such/page")):
                 if method == "GET":
                     a, m = req.get(BASE + hidden, max_redirects=0), req.get(BASE + missing, max_redirects=0)
+                elif method == "GET, as a browser":
+                    a = req.get(BASE + hidden, headers=BROWSER, max_redirects=0)
+                    m = req.get(BASE + missing, headers=BROWSER, max_redirects=0)
                 else:
                     form = {"csrf": token, "handle": "sam_young"}
                     a = req.post(BASE + hidden, form=form, headers={"Origin": BASE}, max_redirects=0)
                     m = req.post(BASE + missing, form=form, headers={"Origin": BASE}, max_redirects=0)
-                ha = {k: v for k, v in a.headers.items() if k not in ("date", "set-cookie", "content-length")}
-                hm = {k: v for k, v in m.headers.items() if k not in ("date", "set-cookie", "content-length")}
-                out.append((method, hidden, a.status, m.status, a.text() == m.text(), ha == hm,
+                sides = []
+                for r in (a, m):
+                    heads = {k: v for k, v in r.headers.items() if k not in ("date", "set-cookie", "content-length")}
+                    words = r.text()
+                    nonce = re.search(r"'nonce-([^']+)'", heads.get("content-security-policy", ""))
+                    if nonce:
+                        words = words.replace(nonce.group(1), "(its nonce)")
+                        heads = {k: v.replace(nonce.group(1), "(its nonce)") for k, v in heads.items()}
+                    sides.append((words, heads))
+                (wa, ha), (wm, hm) = sides
+                # the page is asked for by name where a browser asks, and is not there where a script does
+                drawn = ("si-card" in wa and "That page isn’t here" in wa) == (method == "GET, as a browser")
+                out.append((method, hidden, a.status, m.status, wa == wm and drawn, ha == hm,
                             sorted(k for k in set(ha) | set(hm) if ha.get(k) != hm.get(k))))
             return out
 
@@ -993,7 +1018,8 @@ with sync_playwright() as p_:
         stranger.close()
         ok = all(a == 404 and m == 404 and body and heads for _, _, a, m, body, heads, _ in as_member + as_stranger)
         check("to a member and to somebody signed out, Invites (the page and both of its forms) is a 404 the same as"
-              " a page that is not there: the same status, the same words, the same headers",
+              " a page that is not there: the same status, the same words, the same headers; and gone to in a browser,"
+              " Invites and Your reports are the wrong address's own kind page, word for word and header for header",
               ok and bool(member_token), f"member {as_member}; signed out {as_stranger}")
         made_by = db("select count(*) from social_invites where created_by_id = (select id from social_people where handle_key = ?)",
                      (member.handle.lower(),))[0][0]

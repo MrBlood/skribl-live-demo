@@ -417,6 +417,8 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             a whole drawing, a Flip's music included, up to POST_MAX_BODY;
             so is a drawing answer (phase 2, comments), on a post or on a
             drawing."""
+            if request.endpoint == "social.lost":
+                return None          # a wrong address reads nothing: its 404 is its answer, as before
             if request.method == "POST":
                 cap = {"social.face_save": profiles.FACE_MAX_BODY,
                        "social.post_new": posts.POST_MAX_BODY,
@@ -484,6 +486,56 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             ctx["when_iso"] = lambda t: as_utc(t).isoformat() if t else ""
             ctx["when_day"] = lambda t: f"{as_utc(t):%b} {as_utc(t).day}, {as_utc(t).year}" if t else ""
         return ctx
+
+    # A WRONG ADDRESS (the owner, Nov 20: "there's no back button on so many
+    # screens. You end up stranded a lot"; their "All yes" to the way back's
+    # mock: "a kind page for a wrong address"). An address under the site that
+    # nothing else answers was the app's bare "Not Found": no bar, no way
+    # home, nothing on it at all.
+    #
+    # A ROUTE OF THE SITE'S OWN, NOT A HANDLER ON THE APP: whatever nothing
+    # else under the site's prefix answers lands here, so it is the site's
+    # request (its person, its page's frame, its headers), and a host that
+    # mounts the site keeps its own 404s and its own handler. It reads nothing
+    # and does nothing, whatever was sent and however.
+    #
+    # WHAT ROUTING GIVES UP FOR IT, and it is said: an address the site has
+    # under another verb (a form's address gone to by hand, a page posted to)
+    # used to answer 405 and answers 404 now, as a page that is not there.
+    @bp.route("/<path:rest>", endpoint="lost", provide_automatic_options=False,
+              methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+    def _lost(rest):
+        g.social_lost = True
+        abort(404)
+
+    def _asks_for_a_page():
+        """A browser going somewhere says text/html by name. A script's
+        fetch says */* or JSON: what it reads stays the bare 404 it read."""
+        return (request.method in ("GET", "HEAD")
+                and any(m.lower() in ("text/html", "application/xhtml+xml") for m, _q in request.accept_mimetypes))
+
+    @bp.errorhandler(404)
+    def _not_here(err):
+        """Every 404 a view of the site's raises, the wrong address's among
+        them. To a browser going there: the kind page, the same for an
+        address that was never one and for a page the asker may not know is
+        there (accounts._admin, reports._admin), with the site's headers on
+        both, so neither can be told from the other. To anything else: the
+        bare answer as it was, and a wrong address's without the site's
+        headers, which is how the app's own 404 left before this route."""
+        if _asks_for_a_page():
+            try:
+                resp = current_app.response_class(render_template("social/lost.html", here="lost"),
+                                                  status=404, mimetype="text/html")
+            except Exception:        # noqa: BLE001 -- a page that cannot be drawn is still a 404, never a 500
+                current_app.logger.debug("the wrong address's page could not be drawn", exc_info=True)
+            else:
+                resp.headers["Cache-Control"] = "no-store"
+                g.social_hidden = False
+                return resp
+        if g.get("social_lost"):
+            g.social_hidden = True
+        return err
 
     @bp.after_request
     def _headers(resp):

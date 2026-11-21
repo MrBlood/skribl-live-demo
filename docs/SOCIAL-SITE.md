@@ -3367,3 +3367,40 @@ rules be soft. A new surface gets an edge first; if it floats, it wears
 What sets a white card apart from the near-white page is its edge and that
 one line (the "just a border" census, `verify_socialreposts` 13, counts the
 line as the lift a soft shadow used to be).
+
+## 30. Built: a wrong address is a kind page (Nov 21)
+
+Owed from section 27's second part (the owner's "All yes" to the way
+back's mock: "a kind page for a wrong address"). An address under the site
+that nothing answers was the app's bare "Not Found": no bar, no way home,
+nothing on it at all. It is the card a missing post has now (`lost.html`):
+Blooby, "That page isn’t here", one line, **Back to Blooby**, and the bar.
+
+- **A route of the site's own** (`/<path:rest>` under the site's prefix,
+  every verb; `social.lost`, in `social/__init__.py`), not a handler on
+  the app: whatever nothing else under the site's prefix answers lands
+  there, so it is the site's request, with its person, its page's frame
+  and its headers. A HOST THAT MOUNTS THE SITE SHOULD KNOW IT: every
+  address under the prefix it gives the site is the site's to answer, and
+  nothing outside that prefix is touched (the host keeps its own 404s and
+  its own handler). The route reads nothing and does nothing.
+- **A person going there gets the page; anything else gets what it got.**
+  A browser's navigation says `text/html` by name, and gets the card
+  (404). A script's fetch (`*/*`, JSON) and every other verb get the bare
+  404, without the site's headers: word for word and header for header
+  what an address outside the site gets.
+- **A page the asker may not know is there is still not told from one that
+  is not.** Invites and Your reports answer 404 to anyone but an admin.
+  They are the same card now, with the same headers, as an address that
+  was never one; and to a script the same bare answer (`_not_here`, the
+  blueprint's one handler for a 404). `verify_socialauth` 6 lays the two
+  side by side, a script's ask and a browser's.
+- **What routing gives up for it:** an address the site has under another
+  verb (a form's address gone to by hand, a page posted to) answered 405
+  and answers 404 now, as a page that is not there. Gone to by a person,
+  that is this card where it was a bare "Method Not Allowed".
+- A view's own kind page (a post not there, nobody by that name) is as it
+  was: those views answer for themselves.
+
+`verify_socialposts` 21 holds the page (two rows: gone to, signed out and
+signed in, a phone and a desk; and what a script reads).

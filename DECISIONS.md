@@ -50481,3 +50481,102 @@ KNOWN HERE (no WebKit, no GPU): the owner is asked whether they have ever
 seen it, and it is chased only if they have, or once a real device says.
 
 NOT TESTED HERE: Safari on an iPhone, SF and Segoe UI.
+
+## After v330 -- A wrong address is a kind page, and a hidden page is still not told from it
+
+Nov 21, morning. Owed from the way back's second part (the owner, Nov 20:
+"there's no back button on so many screens. You end up stranded a lot";
+their "All yes" to its mock, which said "a kind page for a wrong address").
+An address under the site that nothing answers was the app's bare "Not
+Found": no bar, no way home, nothing on it at all.
+
+AS BUILT (`docs/SOCIAL-SITE.md` section 30). The card a missing post has
+(`lost.html`): Blooby, "That page isn’t here", "This address doesn’t lead
+anywhere on Blooby. There’s plenty more to look at.", Back to Blooby, and
+the bar. Nothing is anybody's fault.
+
+A ROUTE OF THE SITE'S OWN, NOT A HANDLER ON THE APP. The first plan was an
+app-wide 404 handler that looked at the address. Two things were against
+it. Flask keeps ONE handler for a code at the app: a host that mounts the
+site and has its own 404 page would lose it, or the site would lose its
+own, by the order they were registered ("A host borrows Skribl; Skribl
+never needs a host"). And a request nothing matched is nobody's: the
+site's person, its page's frame and its headers are not loaded for it. So
+the site has one more route, `social.lost`, for whatever nothing else under
+its prefix answers. It reads nothing and does nothing; it says 404, and the
+blueprint's one handler for a 404 (`_not_here`) decides what that is.
+
+A PERSON GOING THERE GETS THE PAGE; ANYTHING ELSE GETS WHAT IT GOT. A
+browser's navigation says text/html by name, and gets the card. A script's
+fetch (it says */* or JSON) and every other verb get the bare 404, without
+the site's headers: word for word and header for header what an address
+outside the site still gets, which is what a wrong address under the site
+was.
+
+THE THING THIS COULD HAVE BROKEN, AND THE READING FOUND IT BEFORE A RUN
+DID. Invites and Your reports answer 404 to anyone but an admin, "the same
+words and the same headers, so the page cannot be told from one that is not
+there" (`accounts._admin`, `reports._admin`). A kind page for a missing
+address alone would have told them apart at once: a missing page a card,
+a hidden one bare. SO THEY ARE ONE ANSWER, MADE IN ONE PLACE: gone to in a
+browser, a hidden page is the wrong address's own card, with the site's
+headers on both; asked for by a script, both are the bare 404 with none.
+`verify_socialauth` 6 laid Invites beside a missing page already; it lays
+them side by side for a browser's ask too now, and Your reports with them,
+which nothing had compared. Each card is drawn with a nonce of its own (in
+its one inline script and in its policy's header), so each answer's nonce
+is read off its own header and taken out of both before they are compared;
+nothing else is.
+
+WHAT ROUTING GIVES UP FOR IT, AND IT IS SAID. An address the site has under
+another verb (a form's address gone to by hand, a page posted to) answered
+405 and answers 404 now: a route that takes every verb matches where the
+right route's verb did not. Gone to by a person that is the kind card where
+it was a bare "Method Not Allowed". No check asked for a 405 on the site
+(read: none). Kept as they were: the site's root without its slash still
+goes to it; two slashes still become one; a body past 64 KiB sent to a
+wrong address is still a 404 and not "too large" (the route is let past the
+site's limit, since it reads nothing); a host's own 404s are untouched.
+
+THE CHECK. `verify_socialposts` 21, two more rows (ten now):
+
+1. GONE TO, the way a person goes: an address that was never one, one a
+   level deeper, a real page's with a slash too many, and a form's own
+   address, signed out and signed in, a phone and a desk. Each answers 404
+   with the card, its title, the bar there and no tab lit, Blooby painted,
+   Back to Blooby painted and 44px, nothing wider than the screen; and the
+   button lands on Home.
+2. WHAT IS NOT A PERSON GOING THERE reads what it read before: a fetch, a
+   fetch for JSON, a POST, a DELETE, a POST of 100 KiB and a stylesheet
+   that is not there each get the bare 404; a fetch's is the app's own 404
+   word for word and header for header; the root without its slash still
+   redirects, and a real page still answers.
+
+SHOWN RED, eleven breaks, each on a copy with a server of its own (the
+rows it turns; "auth" is `verify_socialauth` 6's row):
+
+- the route taken out: 1; auth (a hidden page a card, a missing one bare);
+- the handler taken out: 1, 2; auth;
+- the page given to any GET, a script's too: 2; auth;
+- a hidden page left bare to a browser: auth alone (words and headers);
+- a hidden page's card without the site's headers: auth alone (its policy);
+- a wrong address's bare answer with the site's headers: 2; auth;
+- the route for GET alone: 2 (a POST becomes 405); auth;
+- the site's limit on a wrong address's body: 2 (413);
+- other words on the card: 1; the bar hidden: 1; no way home: 1.
+
+Green as built: section 21, ten of ten; `verify_socialauth` whole, 76 of 76.
+ALSO TRIED BY HAND, in process: a site mounted with no accounts (the frame
+alone) answers the same card, and the same bare 404 to a script.
+
+AGAINST THE FOUR. Kind: a wrong turn is nobody's fault, and it says so.
+Simple: one way out, in the place a person already knows. Powerful and
+playful are not in it.
+
+FLIP AND THE PAD: not theirs. Skribl's own pages answer for themselves, as
+before; this is the site's blueprint alone.
+
+NOT TESTED HERE: Safari on an iPhone, and the Home Screen app, where a
+wrong address is most a dead end (no address bar to mend it in). THE TELL:
+blooby's address with /nope after it shows Blooby and "That page isn’t
+here", with the bar under it.

@@ -389,9 +389,9 @@ in the mock page.
   7:25 PM; `DECISIONS.md`, "All yes to the evening's three mocks"). Built
   in this order, each its own pull request; read the newest entries to see
   how far it got:
-  1. THE WAY BACK, PART TWO (A): built, the entry above. STILL OWED from
-     it: a kind page for a wrong address ("That page isn't here"), which
-     the app answers outside the site's views.
+  1. THE WAY BACK, PART TWO (A): built, the entry above; and the kind
+     page for a wrong address that was owed from it (`DECISIONS.md`, "A
+     wrong address is a kind page"; `docs/SOCIAL-SITE.md` section 30).
   2. EACH ROW DISTINCT (A): built (`DECISIONS.md`, "Each row distinct,
      built").
   3. THE CRISP QUOTIENT (B) on the site: built (`DECISIONS.md`, "Crisp,
