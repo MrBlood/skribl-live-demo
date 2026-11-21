@@ -106,6 +106,21 @@ opens an issue on red. `firstopen.py` times a first open of each editor at a
 slow phone's speed (files, bytes, first paint, ready to draw, the phone's busy
 time; FUTURE.md 6af). The rest are below.
 
+`coloraudit.py` makes `docs/COLOR-TOKENS.md`: every colour token of the site
+and of the editors as a browser resolves it, light and dark, as HEX or sRGB
+and as OKLCH, with which properties read it; each see-through token laid over
+the grounds it can land on; one colour under several names; the site's copies
+of the editors' colours, exact or drifted; and what each stylesheet says
+(colours written into rules, mixes, gradients, shadows and the soft ones, the
+blocks for forced colours and more contrast). The owner's colour audit of
+Nov 21 asked for the table (`docs/COLOR-AUDIT.md`). It needs a running copy
+and a browser, and refuses a copy that is not serving this tree's
+stylesheets. The table says which commits of the sheets it read; made again
+on the same sheets it is the same file, so `git diff` after a re-make says
+whether it is still true. Contrast in it is WCAG's sum on sRGB; OKLCH and
+Delta E OK are for comparing colours and never say whether words can be
+read.
+
 ## refgraph.js
 
 An AST reference graph over `skribl/static/app.js`, built with acorn. Covers

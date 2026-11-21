@@ -51307,3 +51307,129 @@ NOT THE FIRST. `verify_inline` (twice) and the mentions suite have each had
 a row that fitted this box's face and not CI's. The working agreements now say
 it where the calibration rules are: a row about words fitting is read in
 DejaVu Sans before it merges, or says the rule instead of the sample.
+
+## After v330 -- The colour crisp audit: measured, five fixes and eleven choices, nothing built
+
+The owner, Nov 21, 11:16 AM, in the message that said "Yes to all" to that
+day's eight: "Once you finish up, I would like to do a color cris[p] audit.
+Here is an audit I want you to do after you've tidied up", and a
+specification in sixteen parts with a required table. DONE THAT AFTERNOON
+on main as merged (#1035 and #1036), served from a scratch copy with five
+made-up people; put to the owner at 3:40 PM as the artifact "Colour Crisp
+Audit" (https://claude.ai/artifact/Jqzoat7mwLv78eXVAkg8yc) and republished
+once. NOTHING OF IT IS BUILT. The whole of it is `docs/COLOR-AUDIT.md`; the
+table it required is `docs/COLOR-TOKENS.md`, made by
+`harness/tools/coloraudit.py`.
+
+THE ANSWER GIVEN: in good shape, and the day's builds made it crisper.
+2,552 words read against what is painted behind them on 150 screens, one
+under the line; 374 of 400 keyboard stops show the same 2px ring; light and
+dark keep one order of depth; 148 colour tokens tabled, all sRGB; a thin
+line is one sharp pixel at 1x, 2x and 3x and two soft ones in between.
+
+AN AUDIT MEASURES. The specification is written as rules for a colour
+system and speaks once of "this refactor"; the owner called it an audit,
+and a design change waits for a plain yes. So nothing was changed, and what
+it would change is a fix or a choice. Cal's reading, the owner's to
+overrule.
+
+FIVE FIXES (four bugs and a tidying; the owner was told none is built, and
+that by the working agreements a bug fix needs no OK):
+  A. Six hints in text boxes under the line, none on the site: four left
+     to the browser's grey (Skribl's Gallery search and Report note, its
+     Library search, the recovery box: 3.45 to 4.15) and two set to the
+     editors' dim ink (the Post sheet's title and caption: 2.47 and 3.05).
+  B. The in-post player's four controls can be reached by Tab while their
+     line is hidden: 24 of the 26 keyboard stops that show nothing.
+  C. In forced colours the site's chosen pill is not marked (the editors'
+     is: a Highlight edge, the owner's "a ring only where a tint cannot
+     show").
+  D. `--line-mid-2` is read by nothing, and rides in `player.css`.
+  E. At a phone's width (under 900px) a control that Tab scrolls into view
+     lands wholly under the bottom bar: five stops in a row on a post's
+     page, three in Settings (WCAG 2.2's 2.4.11).
+
+ELEVEN CHOICES, Cal's pick on each ("all yes" is a complete answer; 2, 3, 4
+and 11 get a mock before anything is built):
+  1. Thin lines one sharp pixel at in-between densities too (yes).
+  2. The soft shadows still painted in the Pad and Flip, by rule (yes).
+  3. Skribl's own Gallery and Library cards: the edge and one line of every
+     other card (yes).
+  4. A press shows on the site as on the Pad (yes).
+  5. The site answers "more contrast" (yes).
+  6. Three copied colours that drifted: set to the editors', and a check
+     that holds copies together (yes).
+  7. Light's switched-off ink one step deeper, to 3 to 1 (yes).
+  8. No font thinning on Macs (yes; not tested, no Mac here).
+  9. The glow at the top of the site's page (leave it).
+  10. The same-colour token names point at one (yes); a check that fails on
+      a new colour written into a rule (the owner's call).
+  11. Telling which one is chosen: the chosen word a step bolder, no ring;
+      an edge only where a tint cannot show (yes, the quiet way).
+
+"LAST SOFT SHADOWS" IS WITHDRAWN. Its nine calls are choices 2 and 3 here,
+the picks redone after the owner's "shadows are good if they add crisp
+ness, not if they are too big". Nothing is to be built from that page.
+
+ASKED BY THE SPECIFICATION AND NOT RECOMMENDED, each said on the page: the
+tokens rebuilt into three formal layers, or moved to the Design Tokens file
+format (every rule in ten thousand lines for no change on screen); OKLCH in
+the stylesheets (the mixes move an edge by a Delta E OK of 0.017 at most);
+a wide-gamut purple.
+
+WHAT THE FIRST VERSION GOT WRONG, found by reading the specification again
+clause by clause after it was sent; corrected on the page, which says what
+changed:
+  - A PHONE'S LAYOUT HAD NOT BEEN WALKED WITH A KEYBOARD: the focus walk
+    was a desk's, where nothing is covered. Walked: fix E.
+  - A CHOSEN STATE HAD NOT BEEN MEASURED (its "Selected state", and
+    "chroma alone as a substitute for luminance contrast"). Measured: the
+    lilac tile behind a chosen thing is 1.2 to 1.4 to 1 from what is
+    beside it, on the pill everywhere, the rules' tabs, and the chosen tool
+    in the Pad and Flip; where the squiggle is, 4.1 to 5.5. Choice 11.
+  - AND THE PICK FIRST DRAFTED FOR IT WAS THE OWNER'S OWN RING, PUT BACK:
+    "a crisp edge round the chosen tile". The record has the owner choosing
+    the tint from four mocks ("one pill, everywhere") and asking why
+    anything besides a search box wears a bright ring ("A ring only where
+    a tint cannot show"). Changed before the page was republished. READ
+    THE RECORD BEFORE RECOMMENDING: the second time this has had to be
+    written (the walkthrough of Nov 19 was the first).
+  - ONE FAINT HINT WAS SIX. The words were read on ten scenes of the
+    editors, forty screens, which did not open the Post sheet, Report or
+    the recovery box; and the page said "every other box clears 6.7",
+    which those scenes could not know. Found on building fix A, by
+    reading every text box's hint on every page and then each low one
+    open, off its own pixels. No suite reads a hint. The page's count and
+    fix A were corrected.
+  - "ON YOUR IPHONE" was said of a thin line read in Chromium at an
+    iPhone's density. It says Chrome now, and that Safari is not here.
+  - Font thinning was "one line in each of three stylesheets"; it is six
+    lines in four.
+
+THE TOOL, SHOWN TO MOVE. On a copy with six known changes and a server of
+its own, beside one as built: a drifted copy put in step (its row gone from
+the drifted list); a token moved on the site and one in the editors (each
+its own row, and light alone where light alone moved); a colour and a soft
+shadow written into a rule, and a forced-colours block added (each count up
+by exactly that). The count of exact copies one up and one down on doctored
+readings (16, 14, and 15 with both, which is what the copy read). Made
+twice, the same bytes. AND IT REFUSES A COPY THAT IS NOT THIS TREE'S: with
+either stylesheet changed after the server started, it stops, names the
+sheet and writes nothing. A FINDING IN MAKING THAT: the guard first
+compared the bytes served with the file, which holds for the site's sheet
+and not for Skribl's, served with their comments stripped; it reads the
+app's own content stamp now, and bytes only failing that.
+
+NOT TESTED HERE: Safari on an iPhone; Segoe UI or SF; a Mac; a real Windows
+high-contrast theme; a wide-gamut screen; a browser's auto-filled box. And
+WCAG's own pages could not be opened from this box, so what WCAG asks is
+said from knowing it (the page says so where it leans on that).
+
+ALSO FOUND, NOT THE AUDIT'S: on a draw-back's card the words of the time
+("6h · 2 plays") lie partly under the tap area of the name in the line
+below ("Drew back on Ana's"), so a tap on the time can open her page and
+not the post. A bug of its own, to be mended on its own.
+
+FLIP AND THE PAD, and the four pillars: in `docs/COLOR-AUDIT.md`, choice by
+choice. THE RUNS: no product file is changed by this entry's pull request;
+`verify_docs` 144 of 144; the full battery was not run.

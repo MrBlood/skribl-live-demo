@@ -44,6 +44,10 @@ not. Never make the owner feel slow for asking.
 - Batch the owner's choices into one short list with defaults, so "all yes" is a
   complete answer. Before bedtime, ask for everything at once.
 - Design changes need the owner's OK; bug fixes merge on green.
+- **Read the record before recommending a change to something on screen.**
+  Most of what is there is there by the owner's decision (`DECISIONS.md`,
+  by its name). Nov 19: half a list of removals taken back. Nov 21: a pick
+  that would have put back a ring the owner had taken off.
 - **A question is not an OK.** "…right?" or "What do you think?" asks for a
   view; a design change waits for a plain yes. (B, the empty canvas's stroke,
   was built on "…right?" and taken down: "I wanted to okay it before you
@@ -402,6 +406,14 @@ and consistency on all our changes, and future changes."
 - **A MOCK QUOTES ITS CONTRAST** beside "now", on the ground it proposes, and
   says what it does to every other surface of the same kind, not only the one
   the owner pointed at.
+- **THE OWNER'S RULES FOR MEASURING COLOUR** (their specification for the
+  audit of Nov 21, in its words): "Never infer WCAG compliance from OKLCH L
+  values alone"; contrast is said as a pair, ink on ground, as painted;
+  "Do not use Delta E as an accessibility metric"; "Never evaluate a
+  translucent token in isolation." That audit, and what waits from it, is
+  `docs/COLOR-AUDIT.md`. Every token in both themes is
+  `docs/COLOR-TOKENS.md`: make it again (`harness/tools/coloraudit.py`)
+  rather than trust an old one.
 - **SAME ROLE, SAME TOKEN.** A sheet the menu opens wears `--menu-paper`; a
   card `--menu-card` with `--menu-card-line`; a choice the one pill; an action
   `--accent-fill`; small violet words `--accent-ink`; secondary words the
