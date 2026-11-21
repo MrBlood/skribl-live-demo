@@ -326,9 +326,11 @@ Export's name, called "the same field as .post-input, deliberately" in the
 stylesheet, already wears the second ink at 10 and 8.6. THE MEND: each
 hint takes its page's second ink at full strength, as every hint on the
 site does. (The Pad's and Flip's name field wears the dim ink too, 2.97
-and 3.02, but it lies under the canvas and is never on show.) A HINT
-COMPUTED WHILE ITS SHEET IS SHUT IS NOT ALWAYS THE HINT PAINTED: read it
-open, off its own pixels.
+and 3.02; it is under the canvas at rest and on show only while the name's
+panel is open.) A CRUDE READING OF THE PAINT FOOLED ITSELF ONCE HERE: "the
+strongest pixel in the box" took the caption's resize grip for its hint
+and called it fine. The hint's own pixels are the ones that change when
+the hint is made see-through; read those.
 
 **B. Four stops a keyboard can land on and see nothing.** A drawing that
 has not been played keeps its line of controls hidden, the calm card
