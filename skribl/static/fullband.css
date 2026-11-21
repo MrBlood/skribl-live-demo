@@ -37,7 +37,7 @@
   --btn2-bg: #332a58;
   --btn2-hover: #3b3166;
   --chip-glass: rgba(46, 38, 88, 0.94);
-  --chip-lift: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --chip-lift: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 22px -12px rgba(0, 0, 0, 0.8);
   --chip-line: rgba(167, 146, 255, 0.32);
   --control-edge-strong: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-control));
   --deep-edge: color-mix(in srgb, rgb(var(--wash-rgb)) var(--hls), var(--surface-deep));
@@ -68,7 +68,7 @@
   --btn2-bg: #e7e0ff;
   --btn2-hover: #ddd4ff;
   --chip-glass: rgba(255, 255, 255, 0.96);
-  --chip-lift: 0 10px 30px rgba(60, 40, 140, 0.16), 0 2px 6px rgba(60, 40, 140, 0.08);
+  --chip-lift: 0 1px 0 rgba(60, 40, 140, 0.14), 0 12px 22px -12px rgba(30, 20, 80, 0.45);
   --chip-line: rgba(124, 92, 255, 0.3);
   --hl: 9%;
   --hls: 15%;

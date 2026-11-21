@@ -918,7 +918,51 @@ def surfaces(name, ids, q, canvas, btn):
                 ("Moving the artwork", moving, "#movebar")) if name == "Flip" else ()))
 
 
+# CRISP, THE EDITORS (the owner's "All yes", Nov 20, to the crisp mock's B: "the
+# Pad and Flip next, the same rule, both together, their buttons' text shadow
+# with it"). What a surface PAINTS that is soft (a box or text shadow with more
+# than 2.5px of blur, on anything on the screen), and its three tokens as the
+# page resolves them: a card's lift, the glass's rim and line, what floats, the
+# fill's enamel. Read on every surface this suite opens.
+CRISP = r"""() => {
+  const layers = v => { if (!v || v === 'none') return []; const parts = []; let depth = 0, cur = '';
+    for (const ch of v) { if (ch === '(') depth++; if (ch === ')') depth--; if (ch === ',' && !depth) { parts.push(cur); cur = ''; } else cur += ch; }
+    if (cur.trim()) parts.push(cur);
+    return parts.map(p => { const col = (p.match(/(?:rgba?|color)\([^)]*\)/) || [''])[0];
+      const nums = (col.match(/-?[\d.]+(?:e-?\d+)?/g) || []).map(Number);
+      const a = /^rgba\(/.test(col) ? nums[3] : /^color\(/.test(col) ? (col.includes('/') ? nums[nums.length - 1] : 1) : 1;
+      const px = (p.replace(col, '').match(/-?[\d.]+px/g) || []).map(parseFloat);
+      return [/inset/.test(p) ? 'in' : 'out', px[0] || 0, px[1] || 0, px[2] || 0, px[3] || 0, a]; }).filter(l => l[5] > 0).map(l => l.slice(0, 5)); };
+  const name = e => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className.trim() ? '.' + e.className.trim().split(/\s+/).slice(0, 2).join('.') : '');
+  const soft = [];
+  document.querySelectorAll('body *').forEach(e => { const r = e.getBoundingClientRect(); if (!r.width || !r.height || e.closest('[hidden]')) return;
+    if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) return;
+    const cs = getComputedStyle(e); if (cs.visibility === 'hidden') return;
+    let op = 1; for (let n = e; n && n.nodeType === 1; n = n.parentElement) op *= +getComputedStyle(n).opacity; if (op < 0.02) return;
+    const vals = [['box', cs.boxShadow]];
+    // a text shadow is inherited: counted where it is set, on what has words of its own
+    if ([...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) vals.push(['text', cs.textShadow]);
+    for (const pe of ['::before', '::after']) { const ps = getComputedStyle(e, pe); if (ps.content !== 'none') vals.push(['box', ps.boxShadow]); }
+    vals.forEach(([kind, v]) => { const ls = layers(v).filter(l => l[3] > 2.5); if (ls.length) soft.push({ el: name(e), kind, layers: ls.map(l => l.slice(0, 5)) }); }); });
+  const probe = document.createElement('div'); probe.style.position = 'absolute'; document.body.appendChild(probe);
+  const tok = t => { probe.style.boxShadow = 'var(' + t + ')'; const v = layers(getComputedStyle(probe).boxShadow); probe.style.boxShadow = ''; return v; };
+  const tokens = { card: tok('--menu-card-drop'), glass: tok('--glass'), floats: tok('--chip-lift'), fill: tok('--fill-drop') };
+  // a rule by its own selector, as the sheet declares it, resolved here: for a state this suite does not reach
+  // (Record while recording)
+  const decl = needle => { let got = null;
+    const walk = rules => { for (const r of rules) { if (r.cssRules && r.cssRules.length && !r.selectorText) { walk(r.cssRules); continue; }
+      if (r.selectorText && r.selectorText.split(',').some(x => x.trim() === needle) && r.style.getPropertyValue('box-shadow')) got = r.style.getPropertyValue('box-shadow'); } };
+    for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch (e) { /* another origin's */ } }
+    if (!got) return null; probe.style.boxShadow = got; const v = layers(getComputedStyle(probe).boxShadow); probe.style.boxShadow = ''; return v; };
+  const record = decl('.btn.record.active');
+  probe.remove();
+  const of = sel => { const e = [...document.querySelectorAll(sel)].find(x => x.getClientRects().length && !x.closest('[hidden]')); if (!e) return null;
+    const cs = getComputedStyle(e); return { box: layers(cs.boxShadow), text: cs.textShadow, off: !!e.disabled || e.getAttribute('aria-disabled') === 'true' }; };
+  return { soft, tokens, record, post: of('#postBtn'), submit: of('.post-submit:not(.post-watch)'), sheet: of('.menu-sheet'), strip: of('.strip-wrap'),
+           card: of('.menu-list, .menu-tile') }; }"""
+
 census = {}
+crisp = {}     # (editor, scheme, device, surface): what it paints that is soft, and the three tokens
 onecard = {}   # (editor, scheme, device, surface): its lists of choices (ONE CARD)
 typeset = {}   # (editor, scheme, device): every drawer's words, cuts and knobs
 justb = {}     # (editor, scheme, device, surface): JUST A BORDER's roles, each fill against its ground
@@ -967,6 +1011,10 @@ with sync_playwright() as p:
                         justb[(name, scheme, dev, label)] = q.evaluate(JUST_ROLES)
                     except Exception as e:  # noqa: BLE001 -- an unread surface reads as a low row, never a stop
                         justb[(name, scheme, dev, label)] = {"(unread)": [{"apart": 0, "shadow": repr(e)[:120], "border": ""}]}
+                    try:
+                        crisp[(name, scheme, dev, label)] = q.evaluate(CRISP)
+                    except Exception as e:  # noqa: BLE001 -- an unread surface is the row's red, never a stop
+                        crisp[(name, scheme, dev, label)] = {"unread": repr(e)[:120]}
                     if label in ("New", "Your drafts", "Post"):
                         # BIG WORDS ON THE PURPLE (owner, after v324, B): the big
                         # purple buttons carry large words, 19px bold.
@@ -1452,6 +1500,76 @@ check(f"no dinge (the owner's \"All yes\", Nov 16): every tip, second button and
       f" solid, and reads as lilac (chroma 0.038 and up, a tip's well 0.02; 0.07 and 0.045 in dark), on Pad and Flip,"
       f" light and dark, phone and desk ({len(_djb)} read)",
       bool(_djb) and not _dingy, f"dingy {_dingy[:6]}; the paper's own card, not asked for lilac: {_dcard}")
+
+# CRISP, THE EDITORS: the rows. THREE HEIGHTS, as the site wears them
+# (social.css; verify_socialposts 23), value for value: a card on a sheet has
+# its edge and ONE LINE under it (in dark a line of light inside its top); a
+# glass panel its rim and one close line, 1px/2px; what floats (a toast, a
+# chip, a hint) the one true shadow, short and close; the fill is enamel, and
+# the white words on it carry no shadow. AND NOTHING THESE SURFACES PAINT IS
+# SOFT but what floats, and what is still to be decided: the mock pictured two
+# states, and the count of the rest (Nov 20: sheets with a fall of their own,
+# floating cards, knobs and lights) is the owner's to say. `CRISP_LEFT` is that
+# list, by the thing's own class, and it only shrinks: a thing on it that no
+# surface paints soft any more must come off it.
+print("\nCRISP, THE EDITORS")
+CRISP_LEFT = ("tab-dot", "canvas-wrap", "addtake-pill", "mt-tl-grip", "layer-toggle-knob", "mt-rv-dot",
+              "help-drawer-inner", "bk", "sdrafts-sheet", "tx-drag", "lc-card", "lc-banner", "da-pill", "draft-acts",
+              "post-jump", "skribl-inline-nib", "video")
+FLOAT = ["out", 0, 12, 22, -12]
+
+
+def _left(el):
+    parts = el.replace("#", ".").split(".")
+    return next((c for c in CRISP_LEFT if c in parts), None)
+
+
+_cread = {k: v for k, v in crisp.items() if "unread" not in v}
+_csoft = [(k, x) for k, v in _cread.items() for x in v["soft"]]
+_cnew = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {x['el']} {x['kind']} {x['layers']}" for k, x in _csoft
+                if not _left(x["el"]) and x["layers"] != [FLOAT]})
+_cseen = {_left(x["el"]) for _, x in _csoft if _left(x["el"])}
+_cgone = sorted(set(CRISP_LEFT) - _cseen)
+check(f"crisp, the editors (the owner's \"All yes\", Nov 20): on every surface of the Pad and Flip, light and dark, phone "
+      f"and desk, nothing painted casts a soft shadow (over 2.5px of blur) but what floats, its one close shadow, and "
+      f"the things still to be decided, a list that only shrinks ({len(_cread)} surfaces read, {len(_csoft)} soft things, "
+      f"{len(_cseen)} kinds left)",
+      bool(_cread) and len(_cread) == len(crisp) and not _cnew and (bool(ONLY) or not _cgone),
+      f"new {_cnew[:6]}; on the list and soft nowhere now {_cgone}; unread {[k for k, v in crisp.items() if 'unread' in v][:3]}")
+
+
+def _heights(tone, t):
+    line = ["out", 0, 1, 0, 0] if tone == "light" else ["in", 0, 1, 0, 0]
+    return (t["card"] == [line]
+            and len(t["glass"]) == 2 and t["glass"][0][:4] == ["out", 0, 0, 0] and t["glass"][0][4] > 0 and t["glass"][1] == ["out", 0, 1, 2, 0]
+            and t["floats"] == [line, FLOAT]
+            and t["fill"] == [["in", 0, 1, 0, 0], ["in", 0, -1, 0, 0], ["out", 0, 1, 2, 0]])
+
+
+_ctok = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {json.dumps(v['tokens'])}" for k, v in _cread.items() if not _heights(k[1], v["tokens"])})
+_cworn = [(k, what, got, want) for k, v in _cread.items()
+          for what, got, want in (("a menu's sheet", v["sheet"] if k[3] in ("the menu", "New", "Settings") else None, v["tokens"]["glass"]),
+                                  ("Flip's page strip", v["strip"], v["tokens"]["glass"]),
+                                  ("a menu's card", v["card"] if k[3] in ("the menu", "New", "Settings") else None, None)) if got]
+_cwear = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {what} {json.dumps(got['box'])}" for k, what, got, want in _cworn
+                 if (want is not None and got["box"] != want) or (want is None and got["box"][1:] != _cread[k]["tokens"]["card"])})
+_cwhat = {what for _, what, _, _ in _cworn}
+check(f"...three heights, as the site's: a card's lift is its one line (in dark a line of light inside its top), the "
+      f"glass its rim and one close line (1px/2px), what floats the one shadow (22px drawn 12px in), the fill enamel; "
+      f"a menu's sheet and Flip's page strip wear the glass, and a menu's card its edge and the line "
+      f"({len(_cread)} surfaces read, {len(_cworn)} things)",
+      bool(_cread) and not _ctok and not _cwear and (bool(ONLY) or len(_cwhat) == 3),
+      f"tokens {_ctok[:3]}; worn {_cwear[:4]}; seen {sorted(_cwhat)}; e.g. {json.dumps([[w, g['box']] for _, w, g, _ in _cworn[:3]])[:400]}")
+_cpost = [(k, v["post"]) for k, v in _cread.items() if v.get("post")] + [(k, v["submit"]) for k, v in _cread.items() if v.get("submit")]
+_clit = [(k, g) for k, g in _cpost if not g["off"] and g["box"]]
+_cshadowed = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {g['text']}" for k, g in _cpost if g["text"] != "none"})
+_cglow = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {json.dumps(g['box'])}" for k, g in _clit if any(l[3] > 2.5 for l in g["box"])})
+_crec = sorted({f"{k[0]} {k[1]} {k[2]}: {json.dumps(v['record'])}" for k, v in _cread.items() if v["record"] != v["tokens"]["fill"]})
+check(f"...and Post: its white words carry no shadow, lit or not, and lit it is enamel with no glow, wherever it shows "
+      f"({len(_cpost)} read, {len(_clit)} of them lit); Record while recording is declared the same enamel (a state "
+      f"this suite does not reach, so read off its rule)",
+      bool(_cpost) and (bool(ONLY) or bool(_clit)) and not _cshadowed and not _cglow and not _crec,
+      f"a text shadow {_cshadowed[:4]}; a glow {_cglow[:4]}; Record {_crec[:2]}")
 
 print("\nEach surface's own colours, for reading side by side")
 for (name, scheme, label), cz in sorted(census.items(), key=lambda kv: (kv[0][1], kv[0][2], kv[0][0])):

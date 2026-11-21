@@ -34,8 +34,8 @@
   --glass-solid: rgb(23, 26, 34);              /* the same, solid: a phone's header */
   --glass-sheet-fill: var(--glass-fill);
   --header-rim: rgba(0, 0, 0, 0.55);
-  --glass-drop: rgba(0, 0, 0, 0.30);
-  --glass: 0 0 0 var(--edge) var(--header-rim), 0 6px 20px var(--glass-drop);
+  --glass-drop: rgba(0, 0, 0, 0.5);            /* CRISP (Nov 20): one close line under the rim, 1px/2px, as the editors' */
+  --glass: 0 0 0 var(--edge) var(--header-rim), 0 1px 2px var(--glass-drop);
   --glass-scrim: rgba(0, 0, 0, 0.4);           /* styles.css .menu-overlay::before */
   --on-glass-2: var(--text-2);
   /* The editors' focus ring: 2px, 2px out, in this colour. */
@@ -46,7 +46,7 @@
   --glass-solid: rgb(234, 238, 244);
   --glass-sheet-fill: rgba(246, 248, 251, 0.9);
   --header-rim: rgba(255, 255, 255, 0.9);
-  --glass-drop: rgba(20, 24, 40, 0.10);
+  --glass-drop: rgba(20, 24, 40, 0.14);
   --on-glass-2: #3b4251;   /* the one second ink (styles.css --text-secondary) */
 }
 .pm-sheet, .sheet-card, .cardMenu { --text-2: var(--on-glass-2); --text-3: var(--on-glass-2); }
@@ -75,7 +75,7 @@
   --menu-card: #231e3b;
   --menu-card-line: rgba(167, 146, 255, 0.12);
   --menu-card-rule: rgba(167, 146, 255, 0.12);
-  --menu-card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+  --menu-card-drop: 0 1px 0 rgba(255, 255, 255, 0.07) inset;
   --menu-card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--menu-card));
   --text-2: #9aa2b1; --text-3: #9aa2b1;
 }
@@ -84,7 +84,7 @@
   --menu-card: #ffffff;
   --menu-card-line: rgba(124, 92, 255, 0.34);
   --menu-card-rule: rgba(80, 60, 170, 0.10);
-  --menu-card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
+  --menu-card-drop: 0 1px 0 rgba(60, 40, 140, 0.13);
   --menu-card-edge: color-mix(in srgb, rgb(124 92 255) 34%, var(--menu-card));
   --text-2: #545c6a; --text-3: #545c6a;
   --seg-on-ink: #4c31c4;
