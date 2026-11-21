@@ -50632,3 +50632,339 @@ NOT SHOWN RED AND GREEN: a budget is not a check, and nothing here can make
 this box's seconds a runner's. What stands for it is CI's own count above,
 and main's run after the merge on the postgresql lane is its proof. Here,
 beside two other suites, the whole suite took 11.0 minutes, 117 of 117.
+
+## After v330 -- Two questions off the owner's phone, Nov 21: the drawing's edge, and the talk cloud. Both mocked, neither merged
+
+Nov 21, morning. Two questions, each with pictures off their iPhone, each
+answered with a measure and a mock. A QUESTION IS NOT AN OK: nothing here
+is merged, and each waits for a plain answer.
+
+### 1. "Look at the canvas border. Is that we are doing?"
+
+Home in light and in dark, a drawing on dark paper in a white card, a frame
+of lilac round it, uneven. THE TARGET: the line round a drawing inside a
+post's card, at its corners and along its top and bottom.
+
+IT WAS NOT WHAT WE WERE DOING. A drawing in a card is meant to wear its one
+line and nothing else ("The edges, part four", Nov 16; crisp, Nov 20).
+MEASURED at a phone's three pixels to one, outside in: one screen pixel of
+line; then 6 to 7 screen pixels of the WAITING colour (`--draw-wait`: lilac
+#ece6ff, in dark the deep violet #2e2650) at the top and the sides and 4 to
+5 at the bottom; then the picture. Skribl's player keeps a 1px border, which
+the site made transparent on Nov 16 "so nothing moves", and draws the
+picture a little inside its box; the box's ground, the waiting colour,
+showed in both. It has been there since Nov 16. The soft shadow drew the eye
+from it, and the crisp build took the shadow away. THE ROW THAT HELD "its
+edge is one screen pixel" read the ring's own width off its style: a band
+beside a line is not a width of anything, and a rect is not a paint.
+
+THE MOCK (the artifact "The Drawing's Edge"), now beside two:
+
+- A (the pick): the box's ground is the drawing's own (`--plate-ground`,
+  from what Skribl says of it, as a Gallery tile's is), so the picture runs
+  to its line. Measured: line, then the drawing's own colour, light and
+  dark, a drawing on paper and one on dark paper.
+- B: an even band, one pixel of the lilac all round, then the picture.
+
+WHERE A REACHES: a post's card, its own page, a drawn comment's bubble, the
+comment's own page, and its card where it was reposted. NOT YET: the draft
+in the composer and How it works' pictures, whose ground the page does not
+know; said to the owner, and looked at after their answer.
+
+A IS BUILT AND KEPT, NOT MERGED: it is a commit in the history of the pull
+request that carries this entry, and the commit after these notes takes it
+back out, so that what the owner asked for next could go up alone. On "A"
+it comes back whole (that commit again). (IT DID, the same morning: "The
+drawing's edge is A", below.) It is the stylesheet's token, five
+wrappers in four templates, and
+`verify_socialreposts` 20, three rows READ OFF THE PAINT at three pixels to
+one: just inside a drawing's box, on its left, top and bottom, every pixel
+is the drawing's own ground (Home's card; and the four other places); and a
+drawing whose ground is not said keeps the waiting colour. SHOWN RED, eight
+breaks, each on a copy with its own server: the token (rows 1, 2); Home's
+card (1); the post's page, the bubble, the comment's page, the comment's
+card (2, each naming its own place); B's even band (1, 2); another colour
+where no ground is said (3). Green as built. IF THE ANSWER IS B OR "LEAVE
+IT", it is mended first, or left where it is.
+
+### 2. Bluesky's reply screen beside Blooby's comments: "Is that what we're going for? Should it go to reply page?"
+
+THE TARGET: what a tap on the talk cloud under a post does.
+
+WHAT IT DOES TODAY, read from the code and walked on a touch phone: under a
+post on its own page it slides the page down to the comments (721px here)
+and opens nothing; on Home's card it opens the post at its comments; under
+a COMMENT it opens the reply sheet ("Reply to Theo", his words under it,
+the words, Draw and Flip, Post). That is the Calm Post Page as built on Nov
+20: "the answer bar's 'Say something…', the one place to answer on the
+page", and the row's cloud "a way down to the comments". SO THE SAME CLOUD
+MEANS TWO THINGS, "answer this" under a comment and "go and look" under a
+post, and a person does not get that without being told.
+
+THE VIEW GIVEN: the instinct is right, and it is not a new page. Blooby has
+the reply screen already (the sheet); the cloud under a post does not open
+it. THE MOCK (the artifact "The Talk Cloud"):
+
+- A: leave it.
+- B (the pick): the cloud answers, on a post as on a comment. It raises
+  "Say something to Ana", her words under it as a reply shows a comment's;
+  on Home's card it opens the post with the sheet up (the page opens its
+  box when asked to already: #say), so the words land in the conversation
+  in front of the person. The row then reads as two ways to answer side by
+  side: the cloud to say something, the pencil to draw back. The number
+  beside the cloud stays; reading the comments is a tap on the post.
+- C: a reply page of its own, as Bluesky's. Said against: it does what the
+  sheet does and takes the drawing being answered out of sight; Bluesky is
+  a reference for how a social site behaves, never for a screen to copy.
+
+SAID PLAINLY ON THE PAGE: from Home an iPhone will likely not raise its
+keyboard when a page opens by itself, so there the sheet would be up and
+the keyboard a tap away; not seen on an iPhone here.
+
+AGAINST THE FOUR (B): simple, the cloud means one thing wherever it is;
+kind, the sheet keeps what was typed; playful, Draw and Flip are in it;
+powerful, one tap from a drawing to answering it.
+
+NOT BUILT. FLIP AND THE PAD: neither is theirs.
+
+## After v330 -- The person's tap stops at their name: the top right of a card opens the post
+
+Nov 21, morning. The owner, with the cloud's question still open:
+
+> Also on posts the the name or icon should take you to profile but
+> anything on top right should open post. Right now profile tap extends
+> past name. It should stop at name so tap up there to right of name opens
+> post
+
+AN INSTRUCTION, not a question, so it is built. THE TARGET, said first: at
+the top of a post's card, the face and the name go to the person; the empty
+space to the right of the name opens the post.
+
+WHAT IT WAS. "Easy to open" (Nov 12) made the name's link a block as wide
+as the card's whole top so that the person's link was "the 44px the whole
+line's link was": MEASURED, 280px wide on a phone and 886 on a desk, for a
+name 73px wide. A tap anywhere to the right of a name, on either line, went
+to the person. Only the time's own link lay over it.
+
+AS BUILT (`docs/SOCIAL-SITE.md` section 31). The name's link is as wide as
+the longer of the person's two lines, the name or the @handle, 44px at the
+least, and still 44px tall. The @handle is words, as it was, and lets a tap
+through to that link. What is left of the top is the card's own ground,
+which opens the post. NOTHING MOVES: every box of a card's top is where it
+was, to the hundredth of a pixel, phone and desk, MEASURED on main's tree
+beside this one on twelve cards, and again with the people renamed into the
+awkward cases (two letters over the narrowest @handle; two letters over a
+long one; one word that is also the @handle; a name too long for its line,
+which still ends in its three dots).
+
+BUILT TWICE, AND THE FIRST WAS WRONG. The instruction did not say what the
+@handle does. Stopped at the name, the link no longer lay under an @handle
+longer than the name (the owner's own is), whose last letters would have
+opened the post. First answer, pushed and not merged: the @handle a link of
+its own. Two censuses of targets caught it as narrower than a finger
+("@bix", 36px), and widening it was a minute's work. Looking at why it had
+to be widened showed the real fault: a link has to be 44px TALL too, the
+room above the @handle is the room right of the name (the post's, by this
+very instruction), so it reached DOWN, and MEASURED it lay over the top 9px
+of the 20px of the words' first line. A tap on the upper half of a post's
+first words, under the @handle, opened the person's page. No row had
+pressed there. Second answer, this one: no second link. The card says the
+@handle a second time, unseen, beside the name (a grid's first column, as
+wide as what it holds; `::before` with `data-at`, no height, not shown, not
+read out), which makes the one link as wide as the longer line.
+
+WHAT THAT DECIDES, AND IT IS CAL'S READING until the owner says otherwise:
+where an @handle runs on past a short name, the room right of the name and
+OVER the @handle is the person's too, since it is their block. Everywhere
+the name is the longer line, which is most cards, the link is the name's
+width exactly. The other way to read "stop at name" would open the post
+from the end of a long @handle. Said to the owner.
+
+THE CHECKS, in the suites that pressed these already:
+
+- `verify_socialposts` 11, pressed for real (a touch on a phone, a mouse on
+  a desk): a tap 10px past the name's last letter, and one at the far end
+  of the top, lands on the card's ground and opens the post; the @handle's
+  last letter opens the person's page. TWO NEW PEOPLE FOR IT. "Al", two
+  letters over a twenty-letter @handle: his link as wide as the @handle to
+  half a pixel, both lines starting where it does, what widens it unseen
+  and without height; the @handle's last letter and the room over it open
+  his page, and a tap 12px past the link opens the post. "Il", two letters
+  over the narrowest @handle there can be: her link 44px and no more.
+  Juno's @handle ends under her name, so on her card none of this could be
+  seen.
+- `verify_socialposts` 10: the row that asked that the name's link be its
+  own at its middle and four corners asks that still, but for its bottom
+  right, where the time's link may lie over it now that it is no wider
+  than the name.
+- `verify_socialreposts` 16: a comment's card, the same rule read off it,
+  and what widens the link read itself (Lena's name is her longer line, so
+  her link's width could not say whether the card hands the @handle over).
+
+SHOWN RED, eleven breaks, each on a copy with a server of its own: the
+link as wide as the top again (11's three rows; 16's); no least width
+(Il's row: 25px); nothing to widen it (Al's row: 44px, and the @handle's
+end opens the post); it set in a smaller size (Al's row; 16's); it shown
+(Al's; 16's); the @handle deaf to a tap falling through (four rows); the
+@handle not handed over on a post's card (Al's row), nor on a comment's
+(16's). Green as built: 10, 11, the census of targets (8) and the tap map
+(12), 24 of 24; 16, 12 of 12.
+
+AGAINST THE FOUR. Simple: a name is a person, a card is a post, and each
+tap goes where the thing under the finger says. Kind: a finger that misses
+the name by a little gets the post, the thing it was most likely after.
+Powerful and playful are not in it.
+
+FLIP AND THE PAD: not theirs.
+
+NOT TESTED HERE: Safari on an iPhone, where a finger is not a point. THE
+TELL: on Home, tap the empty space to the right of somebody's name: the
+post opens, where their profile did.
+
+## After v330 -- The drawing's edge is A: the owner's yes, and the row that took a drawing's own paper for dinge
+
+Nov 21, about 10 AM. The owner, of the mock "The Drawing's Edge":
+
+> The drawings edge is A.
+
+A PLAIN YES, so it is built: the commit kept from the morning comes back
+whole (two entries up says what it is: the box round a drawing takes the
+drawing's own ground, `--plate-ground`, in a post's card, its page, a drawn
+comment's bubble, the comment's page and its card; `verify_socialreposts`
+20 reads the paint). It goes up in the same pull request as the name's tap:
+one screen, a post's card.
+
+WHAT THE WHOLE SUITE FOUND THAT SECTION 20 ALONE HAD NOT. That morning A was
+shown red and green on its own section and never ran under the rest of its
+suite. Run whole, `verify_socialreposts` 13's NO DINGE row went red: it
+reads every drawing's box as "a placeholder" and asks that it be lilac
+(chroma 0.03 and up), and under A a drawing on paper has a box of cream
+(0.011). THE ROW WAS RIGHT ABOUT WHAT IT SAW AND WRONG ABOUT WHAT IT IS: a
+box whose ground the page knows is the drawing's own paper now, not a
+placeholder. So the row leaves out a drawing's box that has a ground said
+(by the token on it, the mechanism, never by its colour), and reads the
+waiting colour as itself, so the lilac is held whether or not the tour
+passes a box without one. SHOWN BOTH WAYS, each on a copy with its own
+server: the waiting colour made grey, red (naming it, the empty faces and
+Activity's slot, which wear it too); the row as it read before, red on the
+cream; as built, green. A CHECK THAT RAN ONLY ITS OWN SECTION IS NOT A RUN
+OF ITS SUITE: the rule was already written ("run the whole suite once at
+the end"), and A went into a commit without it because it was waiting for
+an answer. It should have run then.
+
+THE RUN, on the tree that goes up (the name's tap and A together):
+thirteen suites whole, three side by side. Green the first time:
+`verify_socialposts` 120 of 120, `verify_socialcomments` 150,
+`verify_sociallikes` 112, `verify_socialprofile` 98, `verify_socialfollow`
+79, `verify_socialmute` 68 (the census that caught the first answer to the
+name's tap), `verify_socialmentions` 51, `verify_socialactivity` 48,
+`verify_social` 46, `verify_socialbookmarks` 37, `verify_socialsearch` 32.
+TWO WERE RED BESIDE THE OTHERS AND GREEN ALONE, AND THEY ARE NOT THE SAME
+KIND OF RED. `verify_socialreposts`, 102 of 103: the NO DINGE row above, a
+real finding; mended, then 103 of 103 alone, on the mended check.
+`verify_socialdrawback`, 88 of 89: section 11 stopped at a tap that waited
+its thirty seconds (Undo, on a toast that stays seven), with six or seven
+browsers running in this box, the suites' three and the pictures for the
+two mocks; 92 of 92 alone, the same tree. LOAD, by Cal's reading: nothing
+in this change is near that toast. `verify_docs` 144. The full battery was
+not run.
+
+STILL OWED AFTER IT: the draft in the composer and How it works' pictures,
+whose ground the page does not know.
+
+## After v330 -- The little V, and whether the crisp build overdid it: mocked, four choices
+
+Nov 21, about 10 AM, in the same message, with a screenshot of the as-built
+page ("Friday Night Built", Flip's tool tray, "Before") and a red ring drawn
+round the tray's pointer:
+
+> Screenshot one shows an issue on both light and dark. The little V at the
+> bottom disappears with now shadow or border. What other choices? Without
+> the shadow it looks less crisp because background is smoky (on dark
+> theme). Tell me choices I need to make
+> I feel like you may have overdone it with the shadows and now it looks
+> less crisp in areas? What do you think. Like I said, shadows are good if
+> they add crisp ness, not if they are too big and without them buttons can
+> look washed out
+
+A QUESTION AND A REQUEST FOR CHOICES, so it is measured and mocked and
+nothing is built. THE TARGET, said first: the pointer under the tool tray,
+and the edge of what opens over the drawing.
+
+WHAT IT IS. The tray, the shape picker and Flip's stamps shelf each hang a
+7px triangle from their bottom edge, in the paper's colour, with no line
+of its own (`.tool-tray::after`, `.shape-pop::after`, `.stamp-pop::after`).
+It was only ever seen against the soft fall behind it. The crisp build gave
+these three the token of a card lying on a sheet (`--menu-card-drop`: a
+line, no blur), though they float over the drawing. MEASURED off the paint,
+a phone at three pixels to one, the pointer against the page beside it:
+light 1.23 to 1 before, 1.04 now; dark 1.10 before, 1.06 now. The tray's
+bottom edge against the page: light 1.57 before, 1.60 now; dark 1.28
+before, 1.26 now.
+
+CAL'S ANSWER TO "WHAT DO YOU THINK": yes, in one family. What floats over
+the drawing was given a flat card's edge. And the wider cause, in dark:
+the rule is that an edge does the separating, and dark's edges are the
+lilac at 12% where light's are the accent at 34%. They were set that faint
+while shadows did the work; the shadows went and the edges stayed faint.
+Buttons came out crisper (Post: a glow and a shadow on its words, to
+enamel), and are left.
+
+THE MOCK (the artifact "The Little V"): before, now, and three steps each
+on top of the last, on the tray, the stamps shelf and the shape picker,
+light and dark; then every edge in dark, now beside clearer, on the Pad's
+menu, its Photo and Music drawer, and Blooby's Home; then Post, before and
+now.
+
+1. The rim goes round the pointer (a square turned to a point with the
+   tray's edge on its two lower sides, as the link page's menu and a
+   button's card already draw theirs). The pointer: light 1.53, dark 1.28.
+2. ...and what opens over the drawing wears the float's shadow
+   (`--chip-lift`, the one a toast has). The tray's bottom edge in light:
+   2.28.
+3. ...and in dark the edge about twice as clear (mocked at 26%). The
+   tray's bottom edge in dark: 1.69; the pointer 1.77.
+
+THE CHOICES PUT TO THE OWNER, Cal's pick first: the pointer gets the rim
+(yes); the short close shadow under the three pops (yes); clearer edges in
+dark (yes, everywhere: the editors' sheets, cards and drawers, and
+Blooby's cards; or "pop-ups only"); buttons (leave). SAID ON THE PAGE TOO:
+the picks on "Last Soft Shadows" were all "take the last soft shadows
+off"; for what floats over the drawing they would change to a short close
+shadow, and that page's picks are redone after this answer.
+
+FLIP AND THE PAD: shared, one stylesheet; the stamps shelf is Flip's.
+AGAINST THE FOUR: simple (the pointer says which button a tray came from,
+and can be seen) and kind (nothing to squint at in dark).
+
+NOT TESTED HERE: Safari on an iPhone. The dark edge is mocked at one
+strength.
+
+## After v330 -- The Gallery's rows as tiles: mocked
+
+Nov 21, about 10 AM, the same message, with a picture of the Gallery in
+light on their phone:
+
+> I like the colors that make rows. Maybe they should be individual tiles,
+> not rows. Mock that up
+
+THE TARGET: the band of colour behind each row of drawings ("Each row
+distinct", built Nov 20), as one tile behind each drawing and its name.
+
+THE MOCK (the artifact "Gallery Tiles"): the Gallery on a phone and a desk
+and a profile with three drawings, light and dark, now beside two.
+
+- A (the pick), roomy: 6px of the tile round a picture, 8px of page between
+  tiles, across and down. MEASURED on a phone of 402: a picture 175 wide
+  where it is 179; on a desk the pictures do not change.
+- B, snug: 4px and 6px; a picture 178 wide, the rows where they are.
+
+The colour is the band's own (`--row-band`), 1.08 to 1 against the page in
+light and 1.09 in dark, as asked for on Nov 20 ("almost imperceptible but
+enough"). A LAST ROW THAT IS NOT FULL is a tile, where today it is a band
+right across. WHEREVER THE GRID IS: the Gallery, a profile's Gallery and
+Drafts, the front door's six, Make's "Use one you made". Not pictured: the
+eye on one's own profile, which is in the same cell and so on the tile.
+
+NOTHING IS BUILT: it waits for "A", "B" or "leave the rows". FLIP AND THE
+PAD: not theirs.

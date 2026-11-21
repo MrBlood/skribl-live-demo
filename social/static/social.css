@@ -1450,8 +1450,14 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    A post's drawing is Skribl's in-post player, its five tokens the
    first visit's (same role, same values); everything else is the site's own
    cards, rows and words. ---- */
+/* A DRAWING'S BOX IS ITS OWN PAPER TO ITS EDGE (the owner, Nov 21, of a band of lilac round a post's drawing:
+   "Look at the canvas border. Is that we are doing?"). The player draws a drawing a pixel or two inside its box,
+   and the box's ground showed there: the waiting colour, six or seven of a phone's pixels of lilac between the
+   picture and its one line, a bright frame round a drawing on dark paper. The box's ground is the drawing's own
+   (--plate-ground, which the page sets from what Skribl says of it, as a Gallery tile's is), so the picture runs
+   to its line; the waiting colour only where a drawing's ground is not known. */
 .post-art, .composer-draft, .cm-art, .how-pic {
-  --border: transparent; --radius: 14px; --bg-elev: var(--draw-wait);
+  --border: transparent; --radius: 14px; --bg-elev: var(--plate-ground, var(--draw-wait));
   --accent: #7c5cff; --accent-2: #7c5cff; --text-dim: var(--ink-2);
 }
 /* ONE SCREEN PIXEL (THE EDGES, part four): the player's border is kept, its
@@ -1643,8 +1649,15 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    no two ways overlap where a tap could mean either:
    - the name's link reaches down under the @handle's line (padding, given
      back by a negative margin, from the two lines' own heights), so the
-     person's link is the 44px the whole line's link was, and the @handle
-     lets a tap through to it;
+     person's link is 44px tall; IT IS AS WIDE AS THE NAME AND THE @HANDLE,
+     WHICHEVER RUNS ON FURTHER, AND NO WIDER (the owner, Nov 21: "Right now
+     profile tap extends past name. It should stop at name so tap up there
+     to right of name opens post"; it was the whole line's width, to the ⋯),
+     44px at the least for a name of two letters. The @handle is words, not
+     a second link, and lets a tap through to it: a link of its own was
+     tried that day and had no honest 44px to be tall in (above it is the
+     room right of the name, below it the post's words: reaching down, it
+     took the top half of the words' first line for the person's page);
    - the time's link lies over it, 44px wide at least and tall by reaching
      down into the room under the line (toward the words, which go where it
      goes), and its ring hugs the time; on a card with no words the drawing
@@ -1658,8 +1671,18 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    so on a desk, and nothing changes on a phone. */
 /* 45px, not 44: the two lines and the padding are laid out in 64ths of a
    pixel, and a box worked out to 44 exactly came out at 43.99. */
+/* AS WIDE AS THE WIDER OF ITS TWO LINES: on a card the name and what is under it are a grid, its first column
+   as wide as what it holds and no wider. It holds the name's link and, in the same cell, the @handle said a
+   second time by ::before (no height, not shown, not read out), so the link stretches to whichever of the two
+   runs on further; the lines themselves span both columns and lie where they lay. */
+.post-card .post-who { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); place-content: center start; }
+.post-card .post-who > * { grid-column: 1 / -1; }
+.post-card .post-who::before {
+  content: attr(data-at); grid-area: 1 / 1; height: 0; overflow: hidden; visibility: hidden;
+  font-size: 15px; white-space: nowrap;
+}
 .post-card .post-name {
-  display: block; text-decoration: none;
+  display: block; grid-area: 1 / 1; min-width: 44px; text-decoration: none;
   padding: calc((45px - 17px * 1.3 - 15px * 1.3) / 2) 0 calc((45px - 17px * 1.3 + 15px * 1.3) / 2);
   margin: calc((17px * 1.3 + 15px * 1.3 - 45px) / 2) 0 calc((17px * 1.3 - 15px * 1.3 - 45px) / 2);
 }

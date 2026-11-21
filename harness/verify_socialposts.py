@@ -1638,9 +1638,16 @@ with sync_playwright() as p:
             if key == bare and w["words"] is not None:
                 bad_open.append(f"{tag}: words where there are none {w['words']}")
             person = f"/social/@{'juno'}"
-            for name in ("name", "face"):
-                if not (big(w[name]) and w[name]["href"] == person):
-                    bad_person.append(f"{tag} {name}: {w[name]}")
+            if not (big(w["face"]) and w["face"]["href"] == person):
+                bad_person.append(f"{tag} face: {w['face']}")
+            # THE NAME'S LINK IS AS WIDE AS THE NAME AND THE @HANDLE, WHICHEVER RUNS ON FURTHER (the owner, Nov
+            # 21; it was the whole top's width): 44px each way still, its own at its middle, at both top corners
+            # and at its bottom left, under the @handle (words, which let a tap through to it); at its bottom right
+            # its own or, where the second line runs on under the name's end, the time's, to the post.
+            x = w["name"]
+            if not (x and x["w"] >= 44 and x["h"] >= 44 and x["href"] == person and x["at"][:4] == ["self"] * 4
+                    and x["at"][4] in ("self", want_page[key])):
+                bad_person.append(f"{tag} name: {x}")
             if w["handle"] != person:
                 bad_person.append(f"{tag} @handle lands on {w['handle']}")
             n = w["count"]
@@ -1660,8 +1667,8 @@ with sync_playwright() as p:
               " there (Home shows posts only)",
               made and len(seen) == 12 and not bad_open and not drawn_cards,
               f"made {made}; {len(seen)} read; {bad_open[:4]}; the drawing's card on Home {drawn_cards}")
-        check("the face, the name and the @handle still open the person's page: the name's link 44px, painted under the"
-              " @handle too, so a tap on the @handle lands on it",
+        check("the face, the name and the @handle still open the person's page: the name's link 44px each way, its own"
+              " along the name's line and painted under the @handle too, so a tap on the @handle lands on it",
               made and not bad_person, f"{bad_person[:4]}")
         check("the 💬 shows even at none: its icon alone, named \"Comment\", a way to the comments (#comments) a tap lands"
               " on, 44px; with one, its number, \"1 comment\"",
@@ -1685,6 +1692,16 @@ with sync_playwright() as p:
         st, j = make_post(juno, "", seed=402)
         bare = j.get("post") if isinstance(j, dict) else None
         bare_sid = (post_row(bare) or (None, None))[1] if bare else None
+        # TWO NAMES OF TWO LETTERS (Juno's @handle ends under her name, so her link is her name's width). Al's
+        # @handle runs on far past his name: his link is as wide as the @handle. Il's is the narrowest @handle
+        # there can be (a letter and two more, accounts.HANDLE_RE): both of her lines are narrower than a finger,
+        # and her link is 44px.
+        al = someone(b, "al_has_a_long_handle", "Al")
+        st, j = make_post(al, "Section 11, a name of two letters", seed=403)
+        short = j.get("post") if isinstance(j, dict) else None
+        il = someone(b, "ill", "Il")
+        st, j = make_post(il, "Section 11, the narrowest @handle", seed=404)
+        narrow = j.get("post") if isinstance(j, dict) else None
         SPOT = """([key, what]) => {
           const c = document.querySelector('.post-card[data-post="' + key + '"]'); if (!c) return null;
           c.scrollIntoView({ block: 'center' });
@@ -1702,6 +1719,16 @@ with sync_playwright() as p:
             xy = [t.left + t.width / 2, a.top + 4]; }
           else if (what === 'name') xy = mid(text(c.querySelector('.post-head'), c.querySelector('.post-name').textContent));
           else if (what === 'handle') xy = mid(text(c.querySelector('.post-head'), '@' + c.dataset.handle));
+          // WHERE THE PERSON'S TAP STOPS (the owner, Nov 21): 10px past the name's last letter, on its line; the
+          // top's far end, 12px in from its right edge, on the name's line; and the @handle's own last letter.
+          else if (what === 'right of the name') { const n = text(c.querySelector('.post-head'), c.querySelector('.post-name').textContent);
+            xy = [n.right + 10, n.top + n.height / 2]; }
+          else if (what === 'top right') { const n = text(c.querySelector('.post-head'), c.querySelector('.post-name').textContent);
+            xy = [R('.post-head').right - 12, n.top + n.height / 2]; }
+          else if (what === 'end of the handle') { const h = text(c.querySelector('.post-head'), '@' + c.dataset.handle);
+            xy = [h.right - 3, h.top + h.height / 2]; }
+          else if (what === 'past the name') { const n = text(c.querySelector('.post-head'), c.querySelector('.post-name').textContent);
+            xy = [R('.post-name').right + 12, n.top + n.height / 2]; }
           else xy = mid(R({ face: '.post-face', more: '.post-more', repost: '.post-row .rp-btn', count: '.post-count' }[what]));
           const e = document.elementFromPoint(xy[0], xy[1]);
           return { xy, on: e ? (e.closest('.post-art') ? 'drawing' : e.closest('a, button') ? e.closest('a, button').className : 'card') : null }; }"""
@@ -1754,10 +1781,30 @@ with sync_playwright() as p:
                 cpg.wait_for_timeout(900)
                 second = (on2, cpg.evaluate(PLAYER, bare_sid), cpg.evaluate("() => location.pathname"))
                 r["drawing"] = (first, second)
-                for what in ("face", "name", "handle"):
+                for what in ("face", "name", "handle", "end of the handle", "right of the name", "top right"):
                     home()
                     on = press(card, what)
                     r[what] = (on, landed())
+                # THE LINK AGAINST ITS TWO LINES' OWN LETTERS: its width, the name's and the @handle's, and where
+                # each starts from the link's left (all three together: nothing moved to make the link).
+                LINES = """(key) => { const c = document.querySelector('.post-card[data-post="' + key + '"]'); if (!c) return null;
+                  const a = c.querySelector('.post-name'), r = a.getBoundingClientRect(), g = document.createRange();
+                  g.selectNodeContents(a); const t = g.getBoundingClientRect();
+                  const n = document.createTreeWalker(c.querySelector('.post-sub'), NodeFilter.SHOW_TEXT).nextNode();
+                  const at = '@' + c.dataset.handle, i = n ? n.textContent.indexOf(at) : -1; if (i < 0) return null;
+                  g.setStart(n, i); g.setEnd(n, i + at.length); const h = g.getBoundingClientRect(), r2 = v => Math.round(v * 100) / 100;
+                  // ...and what gives the link the @handle's width: the @handle said again beside the name, unseen.
+                  const gb = getComputedStyle(c.querySelector('.post-who'), '::before');
+                  return { link: r2(r.width), name: r2(t.width), handle: r2(h.width), starts: [r2(t.left - r.left), r2(h.left - r.left)],
+                           ghost: [gb.content, gb.visibility, gb.height] }; }"""
+                for tag, key, taps in (("Al", short, ("end of the handle", "right of the name", "past the name")),
+                                       ("Il", narrow, ("end of the handle", "past the name"))):
+                    home()
+                    r[tag + "'s lines"] = cpg.evaluate(LINES, key or "")
+                    for what in taps:
+                        home()
+                        on = press(key, what)
+                        r[tag + ", " + what] = (on, landed())
                 home()
                 press(card, "more")
                 try:
@@ -1808,9 +1855,46 @@ with sync_playwright() as p:
               " time on a card with no words: the drawing never opens the post; phone and desk",
               bool(bare_sid) and all(r.get("drawing") == want_drawing for r in res.values()),
               f"{ {s: r.get('drawing') for s, r in res.items()} }")
-        check("a tap on the face, the name or the @handle opens the person's page, never the post: phone and desk",
-              all(r.get(k, (None, None))[1] == people for r in res.values() for k in ("face", "name", "handle")),
-              f"{ {s: {k: r.get(k) for k in ('face', 'name', 'handle')} for s, r in res.items()} }")
+        check("a tap on the face, the name or the @handle (its last letter too) opens the person's page, never the post:"
+              " phone and desk",
+              all(r.get(k, (None, None))[1] == people for r in res.values() for k in ("face", "name", "handle", "end of the handle")),
+              f"{ {s: {k: r.get(k) for k in ('face', 'name', 'handle', 'end of the handle')} for s, r in res.items()} }")
+        # THE PERSON'S TAP STOPS AT THEIR NAME (the owner, Nov 21: "on posts the name or icon should take you to
+        # profile but anything on top right should open post. Right now profile tap extends past name. It should
+        # stop at name so tap up there to right of name opens post"). The name's link was as wide as the whole top,
+        # to the ⋯ (280px on a phone, 886 on a desk, for a name 73px wide).
+        check("...and the person's tap stops at their name: a tap 10px past the name's last letter, and one at the far"
+              " end of the card's top, lands on the card's own ground and opens the post: phone and desk",
+              all(r.get(k) == ("card", page) for r in res.values() for k in ("right of the name", "top right")),
+              f"{ {s: {k: r.get(k) for k in ('right of the name', 'top right')} for s, r in res.items()} }")
+        # THE @HANDLE IS THE PERSON'S TOO, TO ITS LAST LETTER, AND A FINGER TALL: so where it runs on past the
+        # name the link is as wide as the @handle, and the room right of a short name, over the @handle, goes
+        # with it. (A link of the @handle's own was tried first, Nov 21: 44px tall, it reached down over the top
+        # half of the words' first line, and a tap there opened the person's page.)
+        als = {s_: {k: r.get(k) for k in ("Al's lines", "Al, end of the handle", "Al, right of the name", "Al, past the name")}
+               for s_, r in res.items()}
+        check("...and where the @handle runs on past a name of two letters, the link is as wide as the @handle and no"
+              " wider (both lines start where the link does; what widens it is not shown and has no height): the"
+              " @handle's last letter and the room over it, right of the name, open the person's page, and a tap 12px"
+              " past the link opens the post: phone and desk",
+              bool(short) and all((v["Al's lines"] or {}).get("handle", 0) > 100 and 0 < v["Al's lines"]["name"] < 30
+                                  and abs(v["Al's lines"]["link"] - v["Al's lines"]["handle"]) <= 0.5
+                                  and v["Al's lines"]["ghost"] == [f'"@{al.handle}"', "hidden", "0px"]
+                                  and all(abs(x) <= 0.5 for x in v["Al's lines"]["starts"])
+                                  and v["Al, past the name"] == ("card", f"/social/p/{short}")
+                                  and all((v[k] or (None, None))[1] == "/social/@" + al.handle
+                                          for k in ("Al, end of the handle", "Al, right of the name"))
+                                  for v in als.values()), f"{als}")
+        ils = {s_: {k: r.get(k) for k in ("Il's lines", "Il, end of the handle", "Il, past the name")} for s_, r in res.items()}
+        check("...and where the name and the @handle are both narrower than a finger (two letters over the narrowest"
+              " @handle there can be), the link is 44px and no more: the @handle opens the person's page, and a tap"
+              " 12px past the link opens the post: phone and desk",
+              bool(narrow) and all((v["Il's lines"] or {}).get("link") == 44 and 0 < v["Il's lines"]["name"] < 30
+                                   and 0 < v["Il's lines"]["handle"] < 40
+                                   and all(abs(x) <= 0.5 for x in v["Il's lines"]["starts"])
+                                   and v["Il, past the name"] == ("card", f"/social/p/{narrow}")
+                                   and (v["Il, end of the handle"] or (None, None))[1] == "/social/@" + il.handle
+                                   for v in ils.values()), f"{ils}")
         check("⋯ and the repost do their own job and the page stays: ⋯ opens its sheet, the repost its own (Share is in"
               " the ⋯ since the reposts mock): phone and desk",
               all(r.get("more") == (True, "/social/") and r.get("repost") == (True, "/social/") for r in res.values()),

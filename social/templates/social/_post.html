@@ -102,6 +102,19 @@
     as you went there to watch. Its line ends in the full-screen button
     (`full`, the owner's "yes to A", Nov 16), and its full screen's corner says
     the post's words over its maker's name and @handle (`full_meta`). #}
+{#  A DRAWING'S BOX IS ITS OWN PAPER TO ITS EDGE (the owner, Nov 21, of a
+    lilac band round a post's drawing: "Look at the canvas border. Is that
+    we are doing?"). The player draws a drawing a pixel or two inside its box,
+    and what showed there was the box's waiting colour: a band of lilac
+    between the picture and its one line, bright round a drawing on dark
+    paper. The box takes the drawing's own ground instead (Skribl says it:
+    sk.ground), as a Gallery tile's does (_gallery.html plate_ground), so the
+    picture runs to its line. Not known (a drawing withheld, or not
+    described yet): the waiting colour, as before. #}
+{% macro own_ground(sk) -%}
+{%- if sk and sk.ground %} style="--plate-ground: {{ sk.ground }}"{% endif -%}
+{%- endmacro %}
+
 {% macro player(c, waits=true) -%}
 {%- set p = c.post %}{% set sk = c.sk -%}
 {%- set marks = c.likes.marks if not c.down else none -%}
@@ -203,14 +216,14 @@
   {{ the_way(c.way) }}
   <header class="post-head">
     <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who, initial=true) }}</a>
-    <div class="post-who">
+    <div class="post-who" data-at="@{{ who.handle }}">
       <a class="post-name" id="pn-{{ cm.public_id }}" href="{{ c.profile }}">{{ who.display_name }}</a>
       <span class="post-sub">@{{ who.handle }} · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(cm.created_at) }}" data-when="ago">{{ when_day(cm.created_at) }}</time></a></span>
     </div>
   </header>
   {% if c.down and c.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
   {% if cm.words %}<p class="post-words">{{ said(cm.words, it.mentions) }}</p>{% endif %}
-  {% if cm.skribl_id %}<div class="post-art">{{ comment_art(it, waits=true) }}</div>{% endif %}
+  {% if cm.skribl_id %}<div class="post-art"{{ own_ground(it.sk) }}>{{ comment_art(it, waits=true) }}</div>{% endif %}
   <footer class="post-row">
     <a class="post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d repl%s' % (c.replies, 'y' if c.replies == 1 else 'ies')) if c.replies else 'Replies' }}">{{ ic.comment() }}{% if c.replies %}<span>{{ c.replies }}</span>{% endif %}</a>
     {% if c.markable %}{{ repost(c) }}{% endif %}{% if not c.down %}{{ comment_heart(it) }}{% endif %}
@@ -239,10 +252,16 @@
   <header class="post-head">
     <a class="post-face{% if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %} has-back{% endif %}" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who, initial=true) }}
       {%- if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %}<span class="db-face">{{ face(c.drawn_on.who, initial=true) }}</span>{% endif %}</a>
-    {#- Their page, the size of a finger: the name's link lies under the name and
-        the @handle both, as the whole line's did; when it was is a link of its
-        own, to the post's page, over it (social.css, "EASY TO OPEN"). #}
-    <div class="post-who">
+    {#- Their page, the size of a finger, AND NO WIDER THAN THEIR NAME AND
+        @HANDLE (the owner, Nov 21: "It should stop at name so tap up there
+        to right of name opens post"): the name's link lies under the name
+        and the @handle both and is as wide as the longer of the two, which
+        is what data-at is for (social.css says the @handle a second time,
+        unseen, beside the name, to give the link its width); when it was is
+        a link of its own, to the post's page, over it; and what is left of
+        the top, to the right, is the card's ground, which opens the post
+        (social.css, "EASY TO OPEN"). #}
+    <div class="post-who" data-at="@{{ who.handle }}">
       <a class="post-name" id="pn-{{ p.public_id }}" href="{{ c.profile }}">{{ who.display_name }}</a>
       <span class="post-sub">@{{ who.handle }} · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(p.created_at) }}" data-when="ago">{{ when_day(p.created_at) }}</time>{% if c.plays %}<span class="post-plays-n"> · {{ c.plays }}</span>{% endif %}</a></span>
       {%- if c.drawn_on %}{{ drawn_on(c) }}{% endif %}
@@ -254,7 +273,7 @@
       somebody opens that person's page, and pressed and pulled they select (posts.js opens nothing then). #}
   {% if p.words %}<p class="post-words">{{ said(p.words, c.mentions) }}</p>{% endif %}
   {#- A quote of words alone has no drawing of its own. #}
-  {% if p.skribl_id %}<div class="post-art">{{ player(c) }}</div>{% endif %}
+  {% if p.skribl_id %}<div class="post-art"{{ own_ground(c.sk) }}>{{ player(c) }}</div>{% endif %}
   {% if c.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(c.quote) }}{% endif %}
   {{ post_row(c) }}
 </article>
