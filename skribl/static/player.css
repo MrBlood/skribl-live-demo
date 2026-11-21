@@ -496,8 +496,9 @@ body {
      The ban itself: the canvas carries a 1px ring (--canvas-ring), and when the
      header and toolbar each carried one too, at almost the same radius, three
      concentric outlined rectangles fought and the eye could not tell which was
-     the subject. rgba over the near-black page plus the 26px-blur shadow below
-     does the raising; the rim only sharpens the cut.
+     the subject. rgba over the near-black page does the raising, with one
+     close line under the rim (1px/2px since the crisp build, Nov 20; a soft
+     shadow fell below it before); the rim sharpens the cut.
 
      A box-shadow RING, not a border, and that is load-bearing: a border eats
      2px of interior width, and the 390px header fit is measured to the pixel --

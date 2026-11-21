@@ -431,7 +431,21 @@ with sync_playwright() as p:
       const L = rgba(shown ? bc : (ring ? ring[1] : 'none') || 'none'), G = rgba(c.backgroundColor);
       return L && G ? [0, 1, 2].map(k => Math.round(L[k] * L[3] + G[k] * (1 - L[3]))) : null; };
       """
-    MENU = """() => { """ + SEEN + """const s = document.getElementById('pageMenu'), b = document.getElementById('pageMenuBtn');
+    # A BOX'S LIFT, its ring aside: every other layer of its shadow as [inset, x, y, blur, spread, alpha]. The
+    # two pages restate the editors' tokens (pagemenu.css: "if they move there, they move here"), and nothing
+    # held the lift to that: with the crisp build's card or glass put back on these pages alone, this suite and
+    # verify_gallery stayed green (Nov 20).
+    DROP = """const drop = (v) => { if (!v || v === 'none') return []; const parts = []; let depth = 0, cur = '';
+      for (const ch of v) { if (ch === '(') depth++; if (ch === ')') depth--; if (ch === ',' && !depth) { parts.push(cur); cur = ''; } else cur += ch; }
+      if (cur.trim()) parts.push(cur);
+      return parts.map(p => { const col = (p.match(/(?:rgba?|color)\\([^)]*\\)/) || [''])[0];
+        const n = (col.match(/-?[\\d.]+(?:e-?\\d+)?/g) || []).map(Number);
+        const a = /^rgba\\(/.test(col) ? n[3] : /^color\\(/.test(col) ? (col.includes('/') ? n[n.length - 1] : 1) : 1;
+        const px = (p.replace(col, '').match(/-?[\\d.]+px/g) || []).map(parseFloat);
+        return [/inset/.test(p) ? 1 : 0, px[0] || 0, px[1] || 0, px[2] || 0, px[3] || 0, Math.round(a * 100) / 100]; })
+        .filter(l => l[5] > 0 && !(l[1] === 0 && l[2] === 0 && l[3] === 0 && l[4] > 0)); };
+      """
+    MENU = """() => { """ + SEEN + DROP + """const s = document.getElementById('pageMenu'), b = document.getElementById('pageMenuBtn');
       const sr = s.getBoundingClientRect(), br = b.getBoundingClientRect(), cs = getComputedStyle(s);
       const scrim = getComputedStyle(document.getElementById('pageMenuOverlay'), '::before');
       const l = s.querySelector('.pm-list'), lc = l ? getComputedStyle(l) : null, t = s.querySelector('.pm-seg');
@@ -439,11 +453,13 @@ with sync_playwright() as p:
                bottom: innerHeight - sr.bottom, vw: innerWidth, bf: cs.backdropFilter, bg: cs.backgroundColor,
                r: cs.borderTopLeftRadius, pad: cs.paddingTop,
                card: lc && lc.backgroundColor, line: seen(lc), cardR: lc && lc.borderTopLeftRadius,
+               lift: lc ? drop(lc.boxShadow) : null, glass: drop(cs.boxShadow),
                places: l ? l.querySelectorAll('a[data-dest]').length : 0, track: t && getComputedStyle(t).backgroundColor,
                weight: getComputedStyle(s.querySelector('.pm-item')).fontWeight,
                scrim: scrim.backgroundColor, scrimBf: scrim.backdropFilter }; }"""
-    PAD = """() => { """ + SEEN + """const m = document.getElementById('menuSheet'), l = m.querySelector('.menu-list'), t = m.querySelector('.menu-editor-seg');
+    PAD = """() => { """ + SEEN + DROP + """const m = document.getElementById('menuSheet'), l = m.querySelector('.menu-list'), t = m.querySelector('.menu-editor-seg');
       return { bg: getComputedStyle(m).backgroundColor, card: getComputedStyle(l).backgroundColor,
+               lift: drop(getComputedStyle(l).boxShadow), glass: drop(getComputedStyle(m).boxShadow),
                line: seen(getComputedStyle(l)), track: getComputedStyle(t).backgroundColor }; }"""
     for theme in ("dark", "light"):
         pg = open_page(ctx, "/skribl-pad", theme)
@@ -460,6 +476,11 @@ with sync_playwright() as p:
                   and bool(m["line"]) and bool(pad["line"]) and all(abs(a - b_) <= 1 for a, b_ in zip(m["line"], pad["line"]))
                   and m["track"] == pad["card"] and m["weight"] == "600"
                   and "blur(2px)" in m["scrimBf"] and abs(_rgba(m["scrim"])[1] - 0.4) < 0.01, f"{m} pad={pad}")
+            check(f"{path} {theme}: ...and its lift is the editors' too, value for value: the card's under its edge, and "
+                  "the sheet's under its rim, as the Pad's menu wears them (crisp: one line, nothing soft)",
+                  bool(pad["lift"]) and m["lift"] == pad["lift"] and bool(pad["glass"]) and m["glass"] == pad["glass"]
+                  and all(l[3] <= 2.5 for l in m["lift"] + m["glass"]),
+                  f"card {m['lift']} pad {pad['lift']}; sheet {m['glass']} pad {pad['glass']}")
             if theme == "dark":
                 check(f"{path}: on a desktop it is the editors' popover under the ••• -- 336 wide, a 22 corner, "
                       "12px of room, cards at 16, right edges flush, 8px below",

@@ -50227,3 +50227,165 @@ OTHER SUITES DRAG ON THIS TIMELINE in their own words (`verify_musictimeline`,
 `verify_musictall`, `verify_musicsnap`, `verify_musiclane`, `verify_music`
 and others). None was red, and they are not touched: a mend goes where a
 row has shown it is needed, and this entry says where the next one would.
+
+## After v330 -- Crisp on the Pad and Flip: the mock's three tokens, Post and Record enamel, no shadow on the white words
+
+The fourth of what the owner's "All yes" (Nov 20) covered, in the crisp
+mock's own words: "the Pad and Flip next, the same rule, both together,
+their buttons' text shadow with it".
+
+WHAT IS BUILT IS WHAT THE MOCK LAID OVER THE TWO EDITORS, AND NO MORE (it
+pictured Flip with its tools open and the Pad with its media drawer). The
+numbers are the site's, value for value ("Crisp, built", above):
+
+- A CARD ON A SHEET (the menu's tiles and lists, a drawer's cards): its edge
+  and ONE LINE OF SHADE under it (`--menu-card-drop`: 1px, no blur, the
+  violet at 13%; it was 1px/2px at 8% and 6px/18px at 9%). In dark a line of
+  light inside its top (white at 7%; it was white at 4% and 6px/18px of
+  black at 35%).
+- THE GLASS (a drawer, a sheet the menu opens, Flip's page strip): its rim
+  and ONE CLOSE LINE under it, 1px/2px (`--glass`: at 14% in light and 50%
+  in dark; it was 6px/20px at 10% and 30%).
+- WHAT FLOATS (a toast, Flip's chip, a hint, a link's page's speed chips):
+  the one true shadow, short and close (`--chip-lift`: 22px of blur drawn
+  12px in; it was 10px/30px and 2px/6px in light, 8px/24px in dark), over a
+  line of shade in light and of light in dark.
+- POST, AND RECORD WHILE RECORDING: enamel, no glow (`--fill-drop`, new in
+  the editors' sheet with the site's own numbers; Post wore 3px/12px of the
+  accent's glow, and 2px/6px of black at 35% on a desk).
+- THE WHITE WORDS ON A PURPLE BUTTON carry no shadow. Post, Done, Post's
+  submit, the player's button, Record while recording and Reposition while
+  on wore 1px/3px of black at 45%, put there to part white from purple;
+  white on that purple is 5.33:1 by itself.
+
+FLIP AND THE PAD: SHARED. One stylesheet, both editors; nothing here is the
+Pad's alone or Flip's alone. MOVED WITH THEM: the Gallery's and the
+Library's restated copies of the glass and the card (`pagemenu.css`, "if
+they move there, they move here"), and the three emitted sheets
+(`player.css`, `fullband.css`, `gallerysection.css`), emitted again.
+
+THE COUNT, main's tree beside this one, the same walk and the same reader
+(every surface of the two editors that `verify_contrast` opens, 85 on a
+phone and 86 on a desk; a box or text shadow with more than 2.5px of blur,
+on anything on the screen; a text shadow counted on each word and icon that
+wore it):
+
+- A phone, light and dark alike: 1,051 soft things and 237 after (608 box
+  shadows and 237; 443 text shadows and none). A desk in light: 920 and 245
+  (588 and 245; 332 and none).
+- On one surface: the middle one had 12 and has 2 (a desk 10.5 and 2); the
+  most on one, 24 and 10 (a desk 26 and 10); surfaces with nothing soft at
+  all, none and 15.
+- The Pad at rest: Post's words and icon, and the canvas's inner shade; now
+  the inner shade alone. Flip at rest: Post's words and icon and the page
+  strip's fall; now nothing (a hint, when one is up, floats). Flip's draw
+  drawer 12 and none; the menu 12 and none (on the Pad the canvas's inner
+  shade shows behind it); Post's sheet 14 and 2.
+
+WHAT IS LEFT IS THE OWNER'S TO SAY, AND NONE OF IT IS TOUCHED. The mock
+pictured two states. Skribl's own sheets (the editors', Flip's, the
+player's, the Library's and the Gallery's) declared a soft shadow in 110
+rules, each resolved on the page; 83 now, six of them what floats. What the
+walk still paints, a phone in light, 237: what floats, its one shadow (18: a
+toast, Flip's chip, a hint); and 219 the rule has not been shown on:
+
+- the Pad's canvas, its inner shade (38 surfaces; 70px inside, at 6%, in
+  dark 40%);
+- the green dot on a tab that holds something (59; a 3px halo);
+- the "add a take" pill (28; 6px/20px);
+- the music timeline's grips (28; 1px/3px) and a switch's knob (25;
+  2px/6px);
+- sheets with a fall of their own (16): How it works and Ask (40px, falling
+  upward), Your drafts (24px/60px), the little book;
+- floating cards (10): a button's card and a Show me step (18px/40px), Name
+  every button's banner, Draw along's pill, a draft row's menu;
+- the replay's pen nib (6; its glow, which the mock left alone), Text's
+  drag handle (4), the jump to a post (2), the blend's dot (2), a video in
+  an answer (1).
+
+And states this walk does not reach: Leave's sheet, Flip's export card, the
+recovery key's sheet, the two lenses, a desk's tooltip, the player's menu
+and its button, the buttons that ride on a drawing in full screen, a
+slider's thumb, the timeline's lit beat and its playhead; and the Library's
+and Skribl's Gallery's own cards and rows. NEXT: a mock of these for the
+owner, "now" beside the rule, grouped, with picks; nothing of it is built
+without their yes.
+
+THE CHECK. `verify_contrast`, "CRISP, THE EDITORS", three rows, read on
+every surface the suite opens, the Pad and Flip, light and dark, a phone and
+a desk:
+
+1. NOTHING PAINTED CASTS A SOFT SHADOW but what floats (its one close
+   shadow, by its numbers) and the things still to be decided, by name
+   (`CRISP_LEFT`). THAT LIST ONLY SHRINKS: a new soft thing is red, and so
+   is a name on it that no surface paints soft any more.
+2. THE THREE HEIGHTS, as the page resolves the tokens: a card's one line (in
+   dark a line of light inside), the glass's rim and 1px/2px, what floats,
+   the fill's enamel; and WORN: a menu's sheet and Flip's page strip wear
+   the glass, a menu's card its edge and the line.
+3. POST: no text shadow, lit or not, on every surface that shows it; lit it
+   is the enamel, with no glow; and Record while recording, a state this
+   suite does not reach, is read off its own rule and is the same enamel.
+
+NO ROW YET ASKS THAT THE EDITORS' SHEETS DECLARE NO OTHER SOFT SHADOW (the
+site has one, `verify_socialposts` 23's fourth). Today it could only be a
+list of 77 exceptions: a TODO in a test's clothes. It comes with the
+owner's answer.
+
+SHOWN RED, each by a break of its own, each on a server of its own (the
+rows it turns): the card's old token in light (1, 2) and in dark (1, 2);
+what floats, old, in light (1, 2) and in dark (1, 2); the editors' glass
+(1, 2); Post's glow (1, 3), and a desk's (1, 3); Record's glow (3); the
+words' shadow (1, 3); the fill's token made soft (1, 2, 3). Green as built.
+ONE BREAK TURNED NOTHING, AND IT IS SAID: the glass's value at the root,
+outside the editors' own scope. A probe says why: nothing a link's page
+lays out wears it (that page has no header band). It moved with the rest so
+that the number is one; nothing pins it.
+
+A DESK'S TOOLTIP IS ALLOWED FOR, NOT ASKED FOR (`CRISP_HOVER`). It comes up
+380 ms after a control with a title lands under the pointer, and a sheet
+that opens can put one there: whether one is up when a surface is read is
+the pointer and the runner's speed, not the surface. The count above found
+one up on one desk surface; the suite's own walk did not, and a row that
+turns on that is the kind main goes red on at night. SHOWN: with a tooltip
+put up before each read (the module's own timer, by a hover), the row as
+first written is red on four surfaces (its 8px/24px, new), and as it is now
+green. Its shadow is on the list for the owner with the rest.
+
+TWO OTHER CHECKS, both found wanting by this change:
+
+- `verify_galib` 3, a new row for each page and theme: THE GALLERY'S AND
+  THE LIBRARY'S MENU WEARS THE PAD'S LIFT, VALUE FOR VALUE (the card's
+  under its edge, the sheet's under its rim, nothing soft). Nothing held
+  the restated copies to the editors': with the old card or the old glass
+  put back on those two pages alone, this suite and `verify_gallery` stayed
+  green. SHOWN RED: the card in light (both pages), the glass (all four).
+- `verify_linkpage`: its measure of a chip's ring took the new line under
+  it (`0 1px 0`) for a second ring and read the ring fat. A ring is read
+  ALONG THE SIDE IT IS ASKED ON now: a layer with no spread that only steps
+  down is not on a left side at all. SHOWN RED: the chips' ring made a
+  whole pixel. This is the one row the full battery found.
+
+HOW THEY RAN. THE FULL BATTERY RAN, on GitHub: a manual run of the harness
+on the branch (free: a public repository on standard runners, both checked
+first), on this change over main as it stood before #1028 (which is one
+suite's gestures and its entry). Of the seventeen jobs a manual run starts
+(fourteen shards across the two databases, the MP4, Firefox and WebKit
+lanes): FIFTEEN GREEN, TWO RED, shard 7 of 7 on each database, one row, the
+ring measure above; `verify_contrast` with the three rows green on both.
+Then here, on the tree as it is, three side by side, all green the first
+time: `verify_linkpage` 61 of 61, `verify_galib` 186 of 186, `verify_seam`
+524 of 524, `verify_sharedrules` 106 of 106, `verify_player_isolation` 85
+of 85, `verify_jsstrip` 35 of 35, `verify_gallery` 234 of 234,
+`verify_library` 248 of 248; and `verify_contrast` whole, alone, after the
+tooltip was allowed for: 680 of 680 (334 surfaces read). The full battery
+was not run again on the last tree; main's run after the merge is it.
+
+AGAINST THE FOUR. Simple: in a drawer a card is a card by its edge, and
+only what floats casts anything. Kind: the words on Post are sharp, with
+nothing smeared under them. Powerful: nothing changes what a tool does.
+Playful is not in it; this is the frame, and the drawing is the hero.
+
+NOT TESTED HERE: Safari on an iPhone, SF and Segoe UI. THE TELL: with
+something drawn, Post has no glow under it and its word is sharp; and open
+the menu: its cards have no haze round them.

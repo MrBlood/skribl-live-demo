@@ -1516,12 +1516,18 @@ print("\nCRISP, THE EDITORS")
 CRISP_LEFT = ("tab-dot", "canvas-wrap", "addtake-pill", "mt-tl-grip", "layer-toggle-knob", "mt-rv-dot",
               "help-drawer-inner", "bk", "sdrafts-sheet", "tx-drag", "lc-card", "lc-banner", "da-pill", "draft-acts",
               "post-jump", "skribl-inline-nib", "video")
+# A DESK'S TOOLTIP IS A HOVER'S, ON A TIMER (lib/tooltip.js: 380 ms after a
+# control with a title comes under the pointer, and a sheet that opens can put
+# one there). Whether one is up when a surface is read is where the pointer
+# came to rest and how fast the runner is, not the surface: so it is neither
+# new nor asked for. Its own shadow (8px/24px) is with the rest for the owner.
+CRISP_HOVER = ("skribl-tip",)
 FLOAT = ["out", 0, 12, 22, -12]
 
 
 def _left(el):
     parts = el.replace("#", ".").split(".")
-    return next((c for c in CRISP_LEFT if c in parts), None)
+    return next((c for c in CRISP_LEFT + CRISP_HOVER if c in parts), None)
 
 
 _cread = {k: v for k, v in crisp.items() if "unread" not in v}
@@ -1533,7 +1539,7 @@ _cgone = sorted(set(CRISP_LEFT) - _cseen)
 check(f"crisp, the editors (the owner's \"All yes\", Nov 20): on every surface of the Pad and Flip, light and dark, phone "
       f"and desk, nothing painted casts a soft shadow (over 2.5px of blur) but what floats, its one close shadow, and "
       f"the things still to be decided, a list that only shrinks ({len(_cread)} surfaces read, {len(_csoft)} soft things, "
-      f"{len(_cseen)} kinds left)",
+      f"{len(_cseen & set(CRISP_LEFT))} kinds left)",
       bool(_cread) and len(_cread) == len(crisp) and not _cnew and (bool(ONLY) or not _cgone),
       f"new {_cnew[:6]}; on the list and soft nowhere now {_cgone}; unread {[k for k, v in crisp.items() if 'unread' in v][:3]}")
 
