@@ -3415,23 +3415,36 @@ Since "Easy to open" (Nov 12) the name's link on a card was a block as wide
 as the card's whole top, 44px tall: 280px on a phone and 886 on a desk for
 a name 73px wide. Everything to the right of a name went to the person.
 
-- **The name's link is as wide as the name** (`.post-card .post-name`:
-  `align-self: flex-start`), 44px at the least for a name of two letters,
-  and still 44px tall, reaching down under the second line.
-- **The @handle is a link of its own** to the person's page (`.post-at`),
-  as wide as the @handle, its tap reaching down as the time's does. It was
-  plain text that let a tap through to the name's link under it, which
-  only worked while that link was as wide as the top. A second way to the
-  same page, so it is out of the tab order and not read out, as the face's
-  link is.
+- **The name's link is as wide as the longer of the person's two lines**,
+  the name or the @handle, and no wider; 44px at the least for two short
+  ones, and still 44px tall, reaching down under the second line.
+- **The @handle is words, not a second link**, and lets a tap through to
+  the name's link under it, as it always did. So that the link is wide
+  enough to be under all of it, the card says the @handle a second time,
+  unseen: on a card the name and what is under it are a grid
+  (`.post-card .post-who`), its first column as wide as what it holds, and
+  beside the name in that cell `::before` holds `data-at` in the @handle's
+  size with no height, not shown and not read out.
 - **What is left of the top is the card's own ground**, which opens the
-  post (`posts.js`): right of the name, the far end of the top, and right
-  of the time on the second line.
-- Nothing moves: the top, its second line and the time are where they were.
+  post (`posts.js`): right of the two lines, the far end of the top, and
+  right of the time on the second line.
+- Nothing moves: every box of a card's top is where it was, to the
+  hundredth of a pixel, phone and desk, for a short name, a long @handle
+  and a name too long for its line (which still ends in its three dots).
+
+**Tried first and taken back the same day: a link of the @handle's own.**
+A link has to be a finger tall. Above the @handle is the room right of the
+name, which the owner asked to open the post; below it are the post's
+words. Reaching down, the @handle's link took the top half of the words'
+first line (9px of their 20) for the person's page. Where the @handle runs
+on past a short name, the room right of the name and over the @handle goes
+to the person instead: it is the person's own block.
 
 A post's card and a comment's card both (`_post.html`). A post's own page
-and a comment's own page are not cards, and are as they were.
+and a comment's own page are not cards, and are as they were: there the
+whole top is the person's link still.
 
 `verify_socialposts` 10 and 11 hold a post's card (the taps, pressed for
-real, a phone and a desk; a name of two letters over a long @handle);
-`verify_socialreposts` 16 a comment's card.
+real, a phone and a desk; a name of two letters over a long @handle, and
+one over the narrowest @handle there can be); `verify_socialreposts` 16 a
+comment's card.

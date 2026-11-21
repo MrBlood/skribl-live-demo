@@ -50746,44 +50746,68 @@ name 73px wide. A tap anywhere to the right of a name, on either line, went
 to the person. Only the time's own link lay over it.
 
 AS BUILT (`docs/SOCIAL-SITE.md` section 31). The name's link is as wide as
-the name, 44px at the least, and still 44px tall. The @handle is a link of
-its own to the same page, as wide as the @handle. What is left of the top
-is the card's own ground, which opens the post. NOTHING MOVES: the top, its
-second line and the time are where they were, to the hundredth of a pixel,
-phone and desk.
+the longer of the person's two lines, the name or the @handle, 44px at the
+least, and still 44px tall. The @handle is words, as it was, and lets a tap
+through to that link. What is left of the top is the card's own ground,
+which opens the post. NOTHING MOVES: every box of a card's top is where it
+was, to the hundredth of a pixel, phone and desk, MEASURED on main's tree
+beside this one on twelve cards, and again with the people renamed into the
+awkward cases (two letters over the narrowest @handle; two letters over a
+long one; one word that is also the @handle; a name too long for its line,
+which still ends in its three dots).
 
-THE @HANDLE HAD TO BECOME A LINK, and that is the part the instruction did
-not say. It was plain text that let a tap fall through to the name's link
-under it, which worked only while that link was as wide as the top. With
-the link stopped at the name, an @handle longer than the name (the owner's
-own is) would have opened the POST from its last letters.
-The Nov 12 rule stands: "the face, the name and the @handle are still the
-person's".
+BUILT TWICE, AND THE FIRST WAS WRONG. The instruction did not say what the
+@handle does. Stopped at the name, the link no longer lay under an @handle
+longer than the name (the owner's own is), whose last letters would have
+opened the post. First answer, pushed and not merged: the @handle a link of
+its own. Two censuses of targets caught it as narrower than a finger
+("@bix", 36px), and widening it was a minute's work. Looking at why it had
+to be widened showed the real fault: a link has to be 44px TALL too, the
+room above the @handle is the room right of the name (the post's, by this
+very instruction), so it reached DOWN, and MEASURED it lay over the top 9px
+of the 20px of the words' first line. A tap on the upper half of a post's
+first words, under the @handle, opened the person's page. No row had
+pressed there. Second answer, this one: no second link. The card says the
+@handle a second time, unseen, beside the name (a grid's first column, as
+wide as what it holds; `::before` with `data-at`, no height, not shown, not
+read out), which makes the one link as wide as the longer line.
+
+WHAT THAT DECIDES, AND IT IS CAL'S READING until the owner says otherwise:
+where an @handle runs on past a short name, the room right of the name and
+OVER the @handle is the person's too, since it is their block. Everywhere
+the name is the longer line, which is most cards, the link is the name's
+width exactly. The other way to read "stop at name" would open the post
+from the end of a long @handle. Said to the owner.
 
 THE CHECKS, in the suites that pressed these already:
 
 - `verify_socialposts` 11, pressed for real (a touch on a phone, a mouse on
   a desk): a tap 10px past the name's last letter, and one at the far end
   of the top, lands on the card's ground and opens the post; the @handle's
-  last letter opens the person's page. A NEW PERSON FOR IT, "Al", a name of
-  two letters over a twenty-letter @handle: the link 44px wide over a name
-  of 17, a tap 12px past it opening the post, the @handle to its last
-  letter opening the person's page. Juno's @handle ends under her name, so
-  on her card a missing @handle link could not be seen.
+  last letter opens the person's page. TWO NEW PEOPLE FOR IT. "Al", two
+  letters over a twenty-letter @handle: his link as wide as the @handle to
+  half a pixel, both lines starting where it does, what widens it unseen
+  and without height; the @handle's last letter and the room over it open
+  his page, and a tap 12px past the link opens the post. "Il", two letters
+  over the narrowest @handle there can be: her link 44px and no more.
+  Juno's @handle ends under her name, so on her card none of this could be
+  seen.
 - `verify_socialposts` 10: the row that asked that the name's link be its
-  own at all five of its corners and middle asks it along the name's line
-  (middle and both top corners), and at its foot its own or what is
-  painted there: the @handle's link, and where the second line runs under
-  the name's end, the time's.
-- `verify_socialreposts` 16: a comment's card, the same rule read off it
-  (its link against the name's own letters, its @handle's link, a tap 12px
-  past the name).
+  own at its middle and four corners asks that still, but for its bottom
+  right, where the time's link may lie over it now that it is no wider
+  than the name.
+- `verify_socialreposts` 16: a comment's card, the same rule read off it,
+  and what widens the link read itself (Lena's name is her longer line, so
+  her link's width could not say whether the card hands the @handle over).
 
-SHOWN RED, each on a copy with a server of its own: the link as wide as the
-top again (11's two rows; 16's); no least width (Al's row: 17px); no
-@handle link on a post's card (Al's row: its last letter opens the post);
-none on a comment's card (16's); the @handle's link deaf to a tap (Al's
-row). Green as built.
+SHOWN RED, eleven breaks, each on a copy with a server of its own: the
+link as wide as the top again (11's three rows; 16's); no least width
+(Il's row: 25px); nothing to widen it (Al's row: 44px, and the @handle's
+end opens the post); it set in a smaller size (Al's row; 16's); it shown
+(Al's; 16's); the @handle deaf to a tap falling through (four rows); the
+@handle not handed over on a post's card (Al's row), nor on a comment's
+(16's). Green as built: 10, 11, the census of targets (8) and the tap map
+(12), 24 of 24; 16, 12 of 12.
 
 AGAINST THE FOUR. Simple: a name is a person, a card is a post, and each
 tap goes where the thing under the finger says. Kind: a finger that misses

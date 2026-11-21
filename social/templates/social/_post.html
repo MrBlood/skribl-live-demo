@@ -203,9 +203,9 @@
   {{ the_way(c.way) }}
   <header class="post-head">
     <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who, initial=true) }}</a>
-    <div class="post-who">
+    <div class="post-who" data-at="@{{ who.handle }}">
       <a class="post-name" id="pn-{{ cm.public_id }}" href="{{ c.profile }}">{{ who.display_name }}</a>
-      <span class="post-sub"><a class="post-at" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">@{{ who.handle }}</a> · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(cm.created_at) }}" data-when="ago">{{ when_day(cm.created_at) }}</time></a></span>
+      <span class="post-sub">@{{ who.handle }} · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(cm.created_at) }}" data-when="ago">{{ when_day(cm.created_at) }}</time></a></span>
     </div>
   </header>
   {% if c.down and c.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
@@ -239,17 +239,18 @@
   <header class="post-head">
     <a class="post-face{% if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %} has-back{% endif %}" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who, initial=true) }}
       {%- if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %}<span class="db-face">{{ face(c.drawn_on.who, initial=true) }}</span>{% endif %}</a>
-    {#- Their page, the size of a finger, AND NO WIDER THAN THEIR NAME (the
-        owner, Nov 21: "It should stop at name so tap up there to right of
-        name opens post"): the name's link is as wide as the name, and reaches
-        down under the @handle's line; the @handle is a link of its own to
-        the same page (a second way there, so not a second thing read out);
-        when it was is a link to the post's page; and what is left of the
-        top, to the right, is the card's ground, which opens the post
+    {#- Their page, the size of a finger, AND NO WIDER THAN THEIR NAME AND
+        @HANDLE (the owner, Nov 21: "It should stop at name so tap up there
+        to right of name opens post"): the name's link lies under the name
+        and the @handle both and is as wide as the longer of the two, which
+        is what data-at is for (social.css says the @handle a second time,
+        unseen, beside the name, to give the link its width); when it was is
+        a link of its own, to the post's page, over it; and what is left of
+        the top, to the right, is the card's ground, which opens the post
         (social.css, "EASY TO OPEN"). #}
-    <div class="post-who">
+    <div class="post-who" data-at="@{{ who.handle }}">
       <a class="post-name" id="pn-{{ p.public_id }}" href="{{ c.profile }}">{{ who.display_name }}</a>
-      <span class="post-sub"><a class="post-at" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">@{{ who.handle }}</a> · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(p.created_at) }}" data-when="ago">{{ when_day(p.created_at) }}</time>{% if c.plays %}<span class="post-plays-n"> · {{ c.plays }}</span>{% endif %}</a></span>
+      <span class="post-sub">@{{ who.handle }} · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(p.created_at) }}" data-when="ago">{{ when_day(p.created_at) }}</time>{% if c.plays %}<span class="post-plays-n"> · {{ c.plays }}</span>{% endif %}</a></span>
       {%- if c.drawn_on %}{{ drawn_on(c) }}{% endif %}
     </div>
   </header>
