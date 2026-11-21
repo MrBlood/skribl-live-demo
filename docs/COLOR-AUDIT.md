@@ -362,7 +362,7 @@ narrow split with its keyboard, Switch Control or Full Keyboard Access on
 an iPhone, any browser window under 900px. The mend is one rule on the
 page's own scroller (`scroll-padding-bottom`, the bars' height); it also
 moves where a script's own scroll-into-view lands, so the suites that
-read a comment's landing place are the ones to run. ADDED AT 4:30 PM with
+read a comment's landing place are the ones to run. ADDED AT 4:25 PM with
 choice 11.
 
 ## Eleven choices, each with Cal's pick
@@ -471,7 +471,7 @@ away, each with a check shown red first.
     pick drafted was "a crisp edge round the chosen tile", which is the
     bright ring the owner had taken off; it was changed on reading the
     record, before the page was republished. Read the record before
-    recommending. ADDED AT 4:30 PM, fifty minutes after the report was
+    recommending. ADDED AT 4:25 PM, forty-five minutes after the report was
     first sent, from reading the specification again clause by clause.
 
 PAD AND FLIP: 2, 7 and 10 are theirs and shared (one stylesheet). 1 is the
