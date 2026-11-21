@@ -377,6 +377,13 @@ blank page as full, imports that parsed but did not import.)
   an example of a machine-read literal in prose the machine reads.
 - **A POPULATION THAT SPANS ROUTES CARRIES THE ROUTE IN ITS IDENTITY**: key a
   cross-page census by `(route, id)`; same markup is not same behaviour.
+- **A ROW ABOUT WORDS FITTING IS READ IN CI'S FACE BEFORE IT MERGES.** CI's
+  Linux has no Inter: it draws the site in DejaVu Sans, wider than any face
+  here, and 600 as bold. A row that says "this sample fits" is a fact about
+  a font; say the rule (its own width against the room it has) and pin the
+  room. To read a page as CI does, a copy with the stylesheet's font set to
+  "DejaVu Sans". (Main red after #1036: a name whole in Inter by 8px, cut
+  in DejaVu Sans by 3; it had fitted there by one.)
 - **An assertion that can only pass while the work is OUTSTANDING is a TODO in
   a test's clothes.** Invert it to guard the achievement.
 - **NEVER `git checkout` OR `git stash` A FILE THAT HOLDS UNCOMMITTED WORK.**

@@ -2588,13 +2588,19 @@ with sync_playwright() as p:
             const pic = a.querySelector('.gal-pic').getBoundingClientRect(), dur = a.querySelector('.gal-dur'), d = dur.getBoundingClientRect();
             const ring = a.querySelector('.gal-by .face-ring'), f = ring.getBoundingClientRect(), nm = a.querySelector('.gal-by b'), ns = getComputedStyle(nm);
             const n = a.querySelector('.gal-n'), tri = dur.querySelector('svg').getBoundingClientRect(), r = a.getBoundingClientRect();
+            // The name's own width (a range round its words) and the room its row has left for it: the row less the
+            // face, the counts and the gaps between. A NAME FITS OR NOT BY THESE TWO, in whatever face draws it.
+            const by = a.querySelector('.gal-by'), rg = document.createRange(); rg.selectNodeContents(nm);
+            const rest = [...by.children].filter(c => c !== nm), gap = parseFloat(getComputedStyle(by).columnGap) || 0;
+            const room = by.getBoundingClientRect().width - rest.reduce((w, c) => w + c.getBoundingClientRect().width, 0) - gap * rest.length;
             out.tiles[id] = { ratio: Math.round(pic.width / pic.height * 10000) / 10000, durL: Math.round((d.left - pic.left) * 10) / 10,
               durB: Math.round((pic.bottom - d.bottom) * 10) / 10, durH: Math.round(d.height * 10) / 10, tri: Math.round(tri.width * 10) / 10,
               words: (dur.querySelector('span') || { textContent: '' }).textContent.trim(),
               face: [Math.round(f.width * 10) / 10, Math.round(f.height * 10) / 10, getComputedStyle(ring).borderRadius,
                      !!ring.querySelector('img'), !!ring.querySelector('.face-blank'), ring.textContent.trim()],
-              name: nm.textContent, weight: ns.fontWeight, ellipsis: ns.textOverflow + ' ' + ns.whiteSpace,
+              name: nm.textContent, weight: ns.fontWeight, ellipsis: ns.textOverflow + ' ' + ns.whiteSpace + ' ' + ns.overflowX,
               cut: nm.scrollWidth > nm.clientWidth + 0.5, inside: nm.getBoundingClientRect().right <= r.right + 0.5,
+              natural: Math.round(rg.getBoundingClientRect().width * 10) / 10, room: Math.round(room * 10) / 10,
               counts: n ? [...n.children].map(s => [s.className, s.textContent.trim(), Math.round(s.querySelector('svg').getBoundingClientRect().width)]) : null,
               link: a.tagName.toLowerCase() + ' ' + a.getAttribute('href'), label: a.getAttribute('aria-label') }; });
           return out; }"""
@@ -2633,20 +2639,38 @@ with sync_playwright() as p:
                       for s in geo for t in geo[s]["tiles"].values()),
               f"tiles {[geo.get('phone', {}).get('tiles', {}).get(k, {}).get('words') for k in WANT_WORDS]};"
               f" the player {player_says}; place {[(t['durL'], t['durB'], t['durH'], t['tri']) for t in geo.get('phone', {}).get('tiles', {}).values()]}")
+        # CUT ONLY WHEN IT DOESN'T FIT, AND THEN ALWAYS, read as that rule: the name's own width against the room
+        # its row has left, on every tile, a phone and a desk. (Main red after #1036, both databases, on
+        # "Gwen Lark is whole beside two counts on a phone": true in this box's Inter, 72px in a room of 80, and not
+        # in CI's DejaVu Sans, 83px. The tiles had taken 4px of the row, and the sample had fitted CI's face by one.
+        # A sample that fits is a fact about a font; the rule holds in any.) A pixel either side of the edge is
+        # either's: the browser's own two widths are whole numbers. THE OWNER'S "whole, never its first word" is
+        # pinned where it is true in every face: beside no counts on a phone, and on a desk's wider tile. AND WHAT
+        # THE OLD SAMPLE HELD WITHOUT SAYING IT, said: beside a heart's count and a comment's, a phone's tile
+        # keeps the name ROOM13 or more (80 as built, 84 before the tiles; ten letters or so in the faces the site
+        # is drawn in). Digits are near one width in every face, so this floor is the layout's and not a font's.
+        ROOM13 = 78
+
+        def name_cut_by_rule(t):
+            return (t["cut"] or t["natural"] <= t["room"] + 1) and (not t["cut"] or t["natural"] >= t["room"] - 1)
         check("under it the maker's face at 22px (their drawn face, or the empty circle, never an initial) and name"
               " as they wrote it, whole (\"Gwen Lark\", never its first word: the owner's \"Your picks\", Nov 14; 600,"
-              " cut with an ellipsis only when it doesn't fit, never past the tile; a screen reader hears it whole too),"
+              " cut with an ellipsis only when it doesn't fit and then always, its own width against the room its"
+              " row has left, in whatever face draws it; beside two counts a phone's tile keeps it 78px or more;"
+              " never past the tile; a screen reader hears it whole too),"
               " and the hearts and comments each only when there are some, their icons 14px",
               all(t["face"][:3] == [22, 22, "50%"] and not t["face"][5] for s in geo for t in geo[s]["tiles"].values())
               and all(geo[s]["tiles"][p_a]["face"][3] and geo[s]["tiles"][p_b]["face"][4] for s in geo)
               and all(geo[s]["tiles"][k]["name"] == n_ for s in geo for k, n_ in
                       ((p_a, "Gwen Lark"), (p_b, "Hugo Bell"), (p_c, "Wilhelminaconstance Moss")))
               and all((geo[s]["tiles"][p_a]["label"] or "").startswith("Gwen Lark: ") for s in geo)
-              and not geo["phone"]["tiles"][p_a]["cut"]
-              and all(t["weight"] == "600" and t["ellipsis"] == "ellipsis nowrap" and t["inside"]
+              and all(name_cut_by_rule(t) for s in geo for t in geo[s]["tiles"].values())
+              and not geo["phone"]["tiles"][p_flip]["cut"] and not geo["desk"]["tiles"][p_a]["cut"]
+              and geo["phone"]["tiles"][p_a]["room"] >= ROOM13
+              and all(t["weight"] == "600" and t["ellipsis"] == "ellipsis nowrap hidden" and t["inside"]
                       for s in geo for t in geo[s]["tiles"].values()) and geo["phone"]["tiles"][p_c]["cut"]
               and all(geo[s]["tiles"][k]["counts"] == v for s in geo for k, v in WANT_N.items()),
-              f"{ {k: (t['face'], t['name'], t['cut'], t['counts']) for k, t in geo.get('phone', {}).get('tiles', {}).items()} }")
+              f"{ {s: {k: (t['face'], t['name'], 'cut' if t['cut'] else 'whole', t['natural'], t['room'], t['counts']) for k, t in geo.get(s, {}).get('tiles', {}).items()} for s in geo} }")
 
         # THE DRAWING ON ITS PAPER: whole and alone, cut out of its share card
         # (the card's colours: share_card), a 4:3 filling the box, a tall one

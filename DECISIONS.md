@@ -51237,3 +51237,73 @@ NOT TESTED HERE: Safari on an iPhone. THE TELLS: in the Gallery each
 drawing sits on its own soft tile with the page between; on a post, tap
 the talk cloud and the box rises with the post's words quoted; in dark,
 each card has a clear lilac line.
+
+## After v330 -- Main red after the site's half of "Yes to all": a name that fits in one font and not in another
+
+Main's run after #1036 was red at 3:50 PM on Nov 21: TWO JOBS of
+seventeen, sqlite 4/7 and postgresql 4/7, `verify_socialposts`, 120 of 121,
+one row of section 13 (the Gallery's tiles): "under it the maker's face at
+22px ... and name as they wrote it, whole". Everything else green, the
+Firefox and WebKit lanes with it.
+
+WHAT IT WAS: THE ROW'S SAMPLE, NOT THE TILE. The row held that "Gwen Lark"
+is whole on a phone's tile beside a heart's count and a comment's. Read
+here, both ways:
+  - in this box's Inter the name is 72.1px in a room of 80.1: whole;
+  - in CI's DejaVu Sans (its Linux has no Inter, and draws 600 as bold)
+    83.3px in a room of 80.4: cut with an ellipsis, which is what a tile
+    does with a name that does not fit.
+The tiles (#1036) took 4px of the row, a picture 175 wide where it was
+179. Before them the room was 84 and the sample fitted CI's face BY ONE
+PIXEL; nothing said so. The suite ran whole here twice before the merge
+and this row was green both times. It could not have been red: this box
+does not draw the page as CI does unless it is asked to.
+
+WHAT THE TILES COST A NAME, since the mock did not say it: 4px. Beside two
+one-digit counts a phone's tile leaves a name 80px, ten or eleven letters
+in the faces the site is drawn in ("Mira Okafor" is 79.5 in Inter and fits
+by under a pixel); beside one count 113px; beside none 146px. A longer
+name is cut with an ellipsis as it always was, four pixels sooner. THE
+OWNER'S TO OVERRULE if a name should have that room back.
+
+THE MEND IS THE ROW'S. It reads the rule and not a sample:
+  - CUT ONLY WHEN IT DOESN'T FIT, AND THEN ALWAYS: the name's own width (a
+    range round its words) against the room its row has left (the row less
+    the face, the counts and the gaps), on every tile, a phone and a desk,
+    in whatever face draws it. A pixel either side of the edge is either's:
+    the browser's own two widths are whole numbers.
+  - The owner's "whole, never its first word" (Nov 14) is pinned where it
+    is true in every face: beside no counts on a phone, and on a desk's
+    wider tile.
+  - WHAT THE OLD SAMPLE HELD WITHOUT SAYING IT is said: beside two counts a
+    phone's tile keeps the name 78px or more (`ROOM13`; 80 as built). Digits
+    are near one width in every face, so the floor is the layout's.
+  - AN ELLIPSIS THAT CAN BE PAINTED: the row read `text-overflow` and
+    `nowrap`; it reads `overflow: hidden` with them, without which the
+    words say ellipsis and none is drawn.
+
+CALIBRATED, section 13 alone, each on a copy with a server of its own:
+  - as built, in this box's face: green;
+  - as built with every face DejaVu Sans, as CI draws: green ("Gwen Lark"
+    cut at 83.3 in 80.4, by the rule);
+  - THE ROW AS MAIN HAD IT, in DejaVu Sans: red, the run's own reading;
+  - a name cut though it fits (a width forced on it): red, in both faces;
+  - a name that does not fit and is not cut (it runs past the tile): red;
+  - the words say ellipsis and nothing clips: red;
+  - the counts given a width they do not need (the name's room 19): red by
+    the floor; the tile's room round the picture doubled (74): red by the
+    floor.
+
+THE RUN: `verify_socialposts` whole on the mended tree, 121 of 121 (10.5
+minutes here). `verify_docs` 144 of 144. Nothing but the row, this record
+and the working agreements is changed; the full battery was not run.
+Main's run after the merge, on shard 4 of both databases, is its proof.
+
+FLIP AND THE PAD: not theirs. NOT TESTED HERE: SF or Segoe UI, which this
+box does not have; what a name measures on the owner's iPhone is not
+known, and Inter is near both.
+
+NOT THE FIRST. `verify_inline` (twice) and the mentions suite have each had
+a row that fitted this box's face and not CI's. The working agreements now say
+it where the calibration rules are: a row about words fitting is read in
+DejaVu Sans before it merges, or says the rule instead of the sample.
