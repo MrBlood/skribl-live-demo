@@ -49950,3 +49950,82 @@ drift. NOT TESTED HERE: an iPhone's screen, whose blacks are deeper than
 these pictures; a 4% lift may read stronger or fainter there. THE TELL: the
 Gallery in dark; each row of two sits on a faint band, with the page
 between rows.
+
+## After v330 -- The mark in the middle of a door screen; main red after the bands: a reply box read on its way
+
+Two mends in one pull request, both from the same evening (Nov 20).
+
+THE MARK. The owner, of the as-built picture of a door screen's top ("This
+link doesn't work anymore", the arrow at its start): "FYI blooby. Does not
+look centered, does it?" It did not. MEASURED OFF THE PAINT (the columns of
+a picture of the screen that carry the word's ink, two pixels to one): on a
+phone the ink ran from 164 to 222.5 of the screen's 402, its middle 7.75px
+LEFT of the screen's, over an icon and a heading that are on it. The same
+on Sign in, Join and a link to add a passkey, light and dark. NOT THE
+ARROW'S DOING: the arrow is out of the row, and the pictures from before
+it show the same 7.75px.
+
+WHY: the mark's link is 76px wide at the least (`.brand`) and the mark is
+61px, standing at the link's start. On Home's bar that is right: the link
+starts the bar. A door's bar puts the LINK in its middle, so the word stood
+half the spare room to the left.
+
+THE MEND, one rule: under 900px a door's link holds its mark in its own
+middle (`body.focus .top .brand`). The ink's middle is a quarter of a pixel
+from the screen's now. A DESK's door has the mark at the page's start, the
+rail's place, and nothing there is centred: untouched (its box starts where
+the bar's room does, before and after). Nowhere else is the mark centred.
+
+THE ROW HAD SAID MORE THAN IT ASKED. `verify_socialposts` 21's door row
+says "the mark still in the middle" and asked only that the mark was
+painted. A new row asks it of the paint: on a phone the ink's middle within
+a pixel of the screen's on the three door screens, light and dark, over a
+heading that is; on a desk the mark's box where the bar's room starts.
+SHOWN RED: the rule taken out (7.75px left, all six); the rule at every
+width (a desk's mark 1.91px from its start); the mark at the link's end
+(7.25px right).
+
+MAIN'S RUN AFTER #1023 WAS RED, at about 9:41 PM (the row bands; it carried
+the way back's part two as well, whose own run the next merge cancelled).
+ONE ROW, on one job of fourteen (sqlite 6/7; the same suite green on
+PostgreSQL's): `verify_socialcomments` 13, the words' contrast. 345 words
+read, NONE UNDER 4.5:1, and "not read: Post" on a desk's reply box in
+light. Neither of the evening's merges touches that box.
+
+WHAT IT WAS: THE INSTRUMENT'S, A CLOCK ASKED AGAIN. A desk's reply box
+opens under its conversation, and where that is below what the screen
+shows, the page glides down to it once the box is open (`comments.js`,
+`reveal()`). The suite's two helpers (`answer_box`, `open_box`) waited for
+the box to be open and still, then 100 ms, and section 13 read the screen.
+READ ON EVERY FRAME HERE: the box open and still at 550 ms, Post first on
+the screen at 599, the read at 655, the glide over at 732. Here the read
+came 56 ms after Post did; on a slower machine it came before.
+
+THE MEND: the helpers wait for what the page decides (`BOX_REST`): the box
+wholly on the screen (or a page that can go no further, or a box the screen
+cannot hold), and then still for a quarter second and eight frames. Five
+seconds at the longest, and never a stop: a box that never comes into view
+is the red of the row that reads it, said by that row.
+
+SHOWN: with the glide begun 300 ms late (a slow machine, stood in for in
+`comments.js`), the old helper reads "not read: Post" on both desks, red,
+as main did, and the new one reads every word, green. With NO GLIDE AT ALL
+the new one is red too (Post never comes onto the screen): the wait hides
+nothing.
+
+HOW THEY RAN HERE, each whole and green the first time:
+`verify_socialcomments` 150 (alone, with the patient helpers);
+`verify_socialposts` 111 (the new row with it), `verify_socialauth` 76 (the
+door screens) and `verify_social` 46 (the mark), side by side. The full
+battery was not run; main's run after the merge is it.
+
+FLIP AND THE PAD: not for either, and nothing of theirs is touched (the
+mark they wear at blooby.app stands at their bar's start).
+
+AGAINST THE FOUR. Simple and kind: a door is the first screen somebody
+sees, and its name sits where the eye expects it. Powerful and playful are
+not in it; this is a mend.
+
+NOT TESTED HERE: an iPhone's Safari or the Home Screen app. The mark is a
+drawing, not type, so no font moves it. THE TELL: on Sign in, the word
+"blooby." sits right over the icon and the heading, its middle on theirs.

@@ -716,6 +716,29 @@ BOX_STILL = """() => { const s = document.getElementById('commentBoxSheet'), f =
   const m = s && s.querySelector('.make-sheet'), cs = m && getComputedStyle(m);
   return !!((s && !s.hidden && s.classList.contains('is-open') && cs.transform === 'none' && +cs.opacity === 1)
             || (f && f.classList.contains('is-still'))); }"""
+# AND WHERE THE PAGE TAKES IT: a desk's fold that opens below what the screen
+# shows is glided to once it is open (comments.js reveal()), so "open and still"
+# is not yet "there". This waits for what the page decides, whatever the time:
+# the box wholly on the screen (or a page that can go no further, or a box the
+# screen cannot hold), and then standing still for a quarter second and eight
+# frames. Five seconds at the longest, and it never raises: a box that never
+# comes into view is the red of the row that reads it, said by that row.
+# MAIN'S RUN AFTER #1023 (Nov 20): section 13 read a desk's answering box 100 ms
+# after `is-still`, while the page was still on its way, and Post, the last
+# thing in the box, was not on the screen yet: 345 words read, none under
+# 4.5:1, "not read: Post". Green on the other database's shard, and here.
+BOX_REST = """async () => { const b = document.querySelector('[data-cm-box]'); if (!b) return null;
+  const sheet = document.getElementById('commentBoxSheet'), inSheet = !!sheet && sheet.contains(b);
+  const top = () => Math.round(b.getBoundingClientRect().top * 100) / 100;
+  const there = () => { const r = b.getBoundingClientRect(), d = document.documentElement;
+    return inSheet || r.bottom <= innerHeight || r.height >= innerHeight - 24 || scrollY + innerHeight >= d.scrollHeight - 1; };
+  const t0 = performance.now(); let last = top(), since = t0, frames = 0, came = null;
+  await new Promise(res => { const step = () => { const now = performance.now(), t = top();
+    if (t !== last) { last = t; since = now; frames = 0; } else frames++;
+    if (came === null && there()) came = Math.round(now - t0);
+    if ((came !== null && now - since >= 250 && frames >= 8) || now - t0 > 5000) res(); else requestAnimationFrame(step); };
+    requestAnimationFrame(step); });
+  return { there: came, ms: Math.round(performance.now() - t0), y: Math.round(scrollY) }; }"""
 # Post's place in the box: its left edge, and how far below the first chip it
 # sits (the same line, or the next), so a counter that moved it shows.
 POST_AT = """() => { const p = document.querySelector('[data-cm-post]').getBoundingClientRect();
@@ -811,10 +834,11 @@ OUT_SHEET = """() => { const w = document.getElementById('commentOutSheet'); if 
 
 
 def open_box(pg, by=".cm-say"):
-    """The box, opened as a person opens it (the answer bar's line, or `by`), once it is at rest."""
+    """The box, opened as a person opens it (the answer bar's line, or `by`), once it is at rest
+    and where the page takes it (BOX_REST)."""
     pg.click(by, timeout=8000)
     pg.wait_for_function(BOX_STILL, timeout=8000)
-    pg.wait_for_timeout(100)
+    pg.evaluate(BOX_REST)
 
 
 def box_room(pg):
@@ -829,12 +853,12 @@ def box_room(pg):
 
 
 def answer_box(pg, cid):
-    """Reply on comment `cid`: the box open for it, at rest."""
+    """Reply on comment `cid`: the box open for it, at rest and where the page takes it (BOX_REST)."""
     pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", cid)
     pg.wait_for_timeout(150)
     pg.click(f"#c-{cid} > .cm-main [data-cm-answer]", timeout=8000)
     pg.wait_for_function(BOX_STILL, timeout=8000)
-    pg.wait_for_timeout(100)
+    pg.evaluate(BOX_REST)
 
 
 # KIND, NEVER JUMPY, READ ON EVERY FRAME: run `act` (a function's body), then

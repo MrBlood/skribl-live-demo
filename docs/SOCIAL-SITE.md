@@ -3301,6 +3301,13 @@ keeps the mark in the middle and has the arrow at the top's start. Home,
 the Gallery and your own profile have none: they are where the bar leads.
 A desk shows no arrow anywhere.
 
+**The mark's ink is in the middle, not only its link** (the owner, the same
+evening: "blooby. Does not look centered, does it?"). The link is 76px wide
+for a 61px mark, which stood at the link's start, 7.75px left of the
+screen's middle; under 900px a door's link holds the mark in its own middle
+now (`body.focus .top .brand`). A desk's door has the mark at the page's
+start, as the rail does.
+
 Opened with nothing behind you, each goes to the screen it belongs to:
 Settings and Edit profile to your profile, Delete account to Settings, the
 rest to Home (Join and Add a passkey to Sign in).
