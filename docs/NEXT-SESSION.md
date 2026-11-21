@@ -410,15 +410,24 @@ in the mock page.
      band". Read the owner's answer before anything there.
   NOT DECIDED: bands for lists of one thing a line (Activity, people);
   initials in "Liked by"; a tablet's Make card riding its keyboard.
-- **TWO QUESTIONS OFF THE OWNER'S PHONE (Nov 21) WAIT FOR THEIR ANSWER**
-  (`DECISIONS.md`, "Two questions off the owner's phone"). The drawing's
-  edge: the artifact "The Drawing's Edge", A (the pick), B, or leave it; A
-  and its check are BUILT AND NOT MERGED: a commit in the history of the
-  pull request that carried these notes, taken back out by the commit after
-  it. On "A", bring that commit back (`git log --all --grep "its own paper
-  to its edge"` finds it, or the pull request's own list of commits). The talk cloud: the artifact
-  "The Talk Cloud", A, B (the pick: the cloud answers) or C; nothing built.
-  And the nine calls of "Last Soft Shadows". Read what they said first.
+- **NOV 21, FROM THE OWNER'S PHONE** (`DECISIONS.md`, the entries from "Two
+  questions off the owner's phone" down):
+  1. THE DRAWING'S EDGE: "A", built ("The drawing's edge is A"). Still owed:
+     the draft in the composer and How it works' pictures, whose ground the
+     page does not know.
+  2. THE PERSON'S TAP STOPS AT THEIR NAME: built ("The person's tap stops
+     at their name"; `docs/SOCIAL-SITE.md` section 31). CAL'S READING, said
+     to the owner and theirs to overrule: where an @handle runs on past a
+     short name, the room right of the name and over the @handle is the
+     person's.
+  3. WAITING FOR THEIR ANSWER, nothing built: the talk cloud (the artifact
+     "The Talk Cloud": A, B the pick, or C); the tool tray's pointer and
+     the edges in dark (the artifact "The Little V", four choices); the
+     Gallery's rows as tiles (the artifact "Gallery Tiles": A the pick, B,
+     or leave the rows); and the nine calls of "Last Soft Shadows", WHOSE
+     PICKS ARE TO BE REDONE after the answer to "The Little V" (for what
+     floats over the drawing: a short close shadow, not none). Read what
+     they said first.
 - **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No
   strip of Home under a sheet on a phone's keyboard"). The tell: in Make,
   the words tapped, the sheet's own lilac paper down to the keys and

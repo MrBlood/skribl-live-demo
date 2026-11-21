@@ -2339,6 +2339,13 @@ with sync_playwright() as p:
             # wear one chosen colour, solid (a see-through wash took the grey of what
             # it sat on), and colourful enough to read as lilac (OKLCH chroma), read
             # off the computed fill wherever the tour goes.
+            # A DRAWING'S BOX WHOSE GROUND THE PAGE KNOWS IS NO PLACEHOLDER since the
+            # drawing's edge (A, the owner, Nov 21): it wears the drawing's own paper,
+            # cream or the Pad's dark, which this row took for dinge the first time the
+            # whole suite ran over A (chroma 0.011). Section 20 holds that paint. A box
+            # whose ground is not known still wears the waiting colour, and that colour
+            # is read here as itself, so the lilac is held whether or not the tour
+            # passes such a box.
             DINGE = r"""(where) => {
               const rgba = s => { const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
                 return m.length >= 3 ? [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1] : null; };
@@ -2357,12 +2364,16 @@ with sync_playwright() as p:
                              ["a note", ".note, .prof-blocked, .legal-draft, .post-down, .prof-down, .rep-what"],
                              ["a disc", ".key-ic, .home-steps-list i, .face-lead-me, .make-ic.is-pen"]];
               const out = [];
+              const own = e => e.matches('.skribl-inline') && !!getComputedStyle(e).getPropertyValue('--plate-ground').trim();
               for (const [role, sel] of ROLES)
-                for (const e of [...document.querySelectorAll(sel)].filter(e => e.getClientRects().length && getComputedStyle(e).visibility === 'visible' && !e.closest('[hidden]')).slice(0, 4)) {
+                for (const e of [...document.querySelectorAll(sel)].filter(e => e.getClientRects().length && getComputedStyle(e).visibility === 'visible' && !e.closest('[hidden]') && !own(e)).slice(0, 4)) {
                   const c = rgba(getComputedStyle(e).backgroundColor);
                   out.push({ where, role, el: e.className.toString().split(/\s+/).slice(0, 2).join('.'), alpha: c ? +c[3].toFixed(3) : 0,
                              chroma: c ? +chroma(c).toFixed(3) : 0 });
                 }
+              const probe = document.createElement('i'); probe.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px;background:var(--draw-wait)';
+              document.body.appendChild(probe); const w = rgba(getComputedStyle(probe).backgroundColor); probe.remove();
+              out.push({ where, role: 'a placeholder', el: 'the waiting colour', alpha: w ? +w[3].toFixed(3) : 0, chroma: w ? +chroma(w).toFixed(3) : 0 });
               return out; }"""
             # Just under the chosen colours (0.042, 0.080; 0.026, 0.051; 0.034, 0.074) and over every
             # wash they replaced (0.031 to 0.034 light, 0.030 to 0.065 dark; 0.015, 0.031; 0.006, 0.013).

@@ -50674,7 +50674,8 @@ know; said to the owner, and looked at after their answer.
 A IS BUILT AND KEPT, NOT MERGED: it is a commit in the history of the pull
 request that carries this entry, and the commit after these notes takes it
 back out, so that what the owner asked for next could go up alone. On "A"
-it comes back whole (that commit again). It is the stylesheet's token, five
+it comes back whole (that commit again). (IT DID, the same morning: "The
+drawing's edge is A", below.) It is the stylesheet's token, five
 wrappers in four templates, and
 `verify_socialreposts` 20, three rows READ OFF THE PAINT at three pixels to
 one: just inside a drawing's box, on its left, top and bottom, every pixel
@@ -50819,3 +50820,151 @@ FLIP AND THE PAD: not theirs.
 NOT TESTED HERE: Safari on an iPhone, where a finger is not a point. THE
 TELL: on Home, tap the empty space to the right of somebody's name: the
 post opens, where their profile did.
+
+## After v330 -- The drawing's edge is A: the owner's yes, and the row that took a drawing's own paper for dinge
+
+Nov 21, about 10 AM. The owner, of the mock "The Drawing's Edge":
+
+> The drawings edge is A.
+
+A PLAIN YES, so it is built: the commit kept from the morning comes back
+whole (two entries up says what it is: the box round a drawing takes the
+drawing's own ground, `--plate-ground`, in a post's card, its page, a drawn
+comment's bubble, the comment's page and its card; `verify_socialreposts`
+20 reads the paint). It goes up in the same pull request as the name's tap:
+one screen, a post's card.
+
+WHAT THE WHOLE SUITE FOUND THAT SECTION 20 ALONE HAD NOT. That morning A was
+shown red and green on its own section and never ran under the rest of its
+suite. Run whole, `verify_socialreposts` 13's NO DINGE row went red: it
+reads every drawing's box as "a placeholder" and asks that it be lilac
+(chroma 0.03 and up), and under A a drawing on paper has a box of cream
+(0.011). THE ROW WAS RIGHT ABOUT WHAT IT SAW AND WRONG ABOUT WHAT IT IS: a
+box whose ground the page knows is the drawing's own paper now, not a
+placeholder. So the row leaves out a drawing's box that has a ground said
+(by the token on it, the mechanism, never by its colour), and reads the
+waiting colour as itself, so the lilac is held whether or not the tour
+passes a box without one. SHOWN BOTH WAYS, each on a copy with its own
+server: the waiting colour made grey, red (naming it, the empty faces and
+Activity's slot, which wear it too); the row as it read before, red on the
+cream; as built, green. A CHECK THAT RAN ONLY ITS OWN SECTION IS NOT A RUN
+OF ITS SUITE: the rule was already written ("run the whole suite once at
+the end"), and A went into a commit without it because it was waiting for
+an answer. It should have run then.
+
+THE RUN, on the tree that goes up (the name's tap and A together):
+thirteen suites whole, three side by side. Green the first time:
+`verify_socialposts` 120 of 120, `verify_socialcomments` 150,
+`verify_sociallikes` 112, `verify_socialprofile` 98, `verify_socialfollow`
+79, `verify_socialmute` 68 (the census that caught the first answer to the
+name's tap), `verify_socialmentions` 51, `verify_socialactivity` 48,
+`verify_social` 46, `verify_socialbookmarks` 37, `verify_socialsearch` 32.
+TWO WERE RED BESIDE THE OTHERS AND GREEN ALONE, AND THEY ARE NOT THE SAME
+KIND OF RED. `verify_socialreposts`, 102 of 103: the NO DINGE row above, a
+real finding; mended, then 103 of 103 alone, on the mended check.
+`verify_socialdrawback`, 88 of 89: section 11 stopped at a tap that waited
+its thirty seconds (Undo, on a toast that stays seven), with six or seven
+browsers running in this box, the suites' three and the pictures for the
+two mocks; 92 of 92 alone, the same tree. LOAD, by Cal's reading: nothing
+in this change is near that toast. `verify_docs` 144. The full battery was
+not run.
+
+STILL OWED AFTER IT: the draft in the composer and How it works' pictures,
+whose ground the page does not know.
+
+## After v330 -- The little V, and whether the crisp build overdid it: mocked, four choices
+
+Nov 21, about 10 AM, in the same message, with a screenshot of the as-built
+page ("Friday Night Built", Flip's tool tray, "Before") and a red ring drawn
+round the tray's pointer:
+
+> Screenshot one shows an issue on both light and dark. The little V at the
+> bottom disappears with now shadow or border. What other choices? Without
+> the shadow it looks less crisp because background is smoky (on dark
+> theme). Tell me choices I need to make
+> I feel like you may have overdone it with the shadows and now it looks
+> less crisp in areas? What do you think. Like I said, shadows are good if
+> they add crisp ness, not if they are too big and without them buttons can
+> look washed out
+
+A QUESTION AND A REQUEST FOR CHOICES, so it is measured and mocked and
+nothing is built. THE TARGET, said first: the pointer under the tool tray,
+and the edge of what opens over the drawing.
+
+WHAT IT IS. The tray, the shape picker and Flip's stamps shelf each hang a
+7px triangle from their bottom edge, in the paper's colour, with no line
+of its own (`.tool-tray::after`, `.shape-pop::after`, `.stamp-pop::after`).
+It was only ever seen against the soft fall behind it. The crisp build gave
+these three the token of a card lying on a sheet (`--menu-card-drop`: a
+line, no blur), though they float over the drawing. MEASURED off the paint,
+a phone at three pixels to one, the pointer against the page beside it:
+light 1.23 to 1 before, 1.04 now; dark 1.10 before, 1.06 now. The tray's
+bottom edge against the page: light 1.57 before, 1.60 now; dark 1.28
+before, 1.26 now.
+
+CAL'S ANSWER TO "WHAT DO YOU THINK": yes, in one family. What floats over
+the drawing was given a flat card's edge. And the wider cause, in dark:
+the rule is that an edge does the separating, and dark's edges are the
+lilac at 12% where light's are the accent at 34%. They were set that faint
+while shadows did the work; the shadows went and the edges stayed faint.
+Buttons came out crisper (Post: a glow and a shadow on its words, to
+enamel), and are left.
+
+THE MOCK (the artifact "The Little V"): before, now, and three steps each
+on top of the last, on the tray, the stamps shelf and the shape picker,
+light and dark; then every edge in dark, now beside clearer, on the Pad's
+menu, its Photo and Music drawer, and Blooby's Home; then Post, before and
+now.
+
+1. The rim goes round the pointer (a square turned to a point with the
+   tray's edge on its two lower sides, as the link page's menu and a
+   button's card already draw theirs). The pointer: light 1.53, dark 1.28.
+2. ...and what opens over the drawing wears the float's shadow
+   (`--chip-lift`, the one a toast has). The tray's bottom edge in light:
+   2.28.
+3. ...and in dark the edge about twice as clear (mocked at 26%). The
+   tray's bottom edge in dark: 1.69; the pointer 1.77.
+
+THE CHOICES PUT TO THE OWNER, Cal's pick first: the pointer gets the rim
+(yes); the short close shadow under the three pops (yes); clearer edges in
+dark (yes, everywhere: the editors' sheets, cards and drawers, and
+Blooby's cards; or "pop-ups only"); buttons (leave). SAID ON THE PAGE TOO:
+the picks on "Last Soft Shadows" were all "take the last soft shadows
+off"; for what floats over the drawing they would change to a short close
+shadow, and that page's picks are redone after this answer.
+
+FLIP AND THE PAD: shared, one stylesheet; the stamps shelf is Flip's.
+AGAINST THE FOUR: simple (the pointer says which button a tray came from,
+and can be seen) and kind (nothing to squint at in dark).
+
+NOT TESTED HERE: Safari on an iPhone. The dark edge is mocked at one
+strength.
+
+## After v330 -- The Gallery's rows as tiles: mocked
+
+Nov 21, about 10 AM, the same message, with a picture of the Gallery in
+light on their phone:
+
+> I like the colors that make rows. Maybe they should be individual tiles,
+> not rows. Mock that up
+
+THE TARGET: the band of colour behind each row of drawings ("Each row
+distinct", built Nov 20), as one tile behind each drawing and its name.
+
+THE MOCK (the artifact "Gallery Tiles"): the Gallery on a phone and a desk
+and a profile with three drawings, light and dark, now beside two.
+
+- A (the pick), roomy: 6px of the tile round a picture, 8px of page between
+  tiles, across and down. MEASURED on a phone of 402: a picture 175 wide
+  where it is 179; on a desk the pictures do not change.
+- B, snug: 4px and 6px; a picture 178 wide, the rows where they are.
+
+The colour is the band's own (`--row-band`), 1.08 to 1 against the page in
+light and 1.09 in dark, as asked for on Nov 20 ("almost imperceptible but
+enough"). A LAST ROW THAT IS NOT FULL is a tile, where today it is a band
+right across. WHEREVER THE GRID IS: the Gallery, a profile's Gallery and
+Drafts, the front door's six, Make's "Use one you made". Not pictured: the
+eye on one's own profile, which is in the same cell and so on the tile.
+
+NOTHING IS BUILT: it waits for "A", "B" or "leave the rows". FLIP AND THE
+PAD: not theirs.
