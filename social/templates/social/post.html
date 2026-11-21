@@ -107,7 +107,7 @@
     {% if card.sk and card.sk.caption %}<p class="post-caption">{{ card.sk.caption }}</p>{% endif %}
   </div>{% endif %}
   {% if card.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(card.quote) }}{% endif %}
-  {{ post_row(card, landing=(lk is not none and not lk.line)) }}
+  {{ post_row(card, landing=(lk is not none and not lk.line), say=(('box' if cm.can else 'out') if (cm and (cm.can or not me) and not cm.closed) else '')) }}
   <p class="post-meta"><time datetime="{{ when_iso(p.created_at) }}" data-when="at">{{ when_day(p.created_at) }}</time>{% if card.plays %} · {{ card.plays }}{% endif %}</p>
   {{ answer_bar(cm, card) }}
   {#- DRAW-BACKS ON IT (Draw back, step 2; the mock's strip): how many, a

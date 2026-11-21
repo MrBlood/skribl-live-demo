@@ -421,14 +421,21 @@ in the mock page.
      to the owner and theirs to overrule: where an @handle runs on past a
      short name, the room right of the name and over the @handle is the
      person's.
-  3. WAITING FOR THEIR ANSWER, nothing built: the talk cloud (the artifact
-     "The Talk Cloud": A, B the pick, or C); the tool tray's pointer and
-     the edges in dark (the artifact "The Little V", four choices); the
-     Gallery's rows as tiles (the artifact "Gallery Tiles": A the pick, B,
-     or leave the rows); and the nine calls of "Last Soft Shadows", WHOSE
-     PICKS ARE TO BE REDONE after the answer to "The Little V" (for what
-     floats over the drawing: a short close shadow, not none). Read what
-     they said first.
+  3. "I LOVE YOUR PICKS. YES TO ALL." (11:16 AM), to eight: built, all of
+     it (`DECISIONS.md`, the two entries headed "Yes to all"). In Skribl's
+     editors: a pop's pointer wears its rim, the three pops over the
+     drawing float, dark's edge is 26%. On the site: a tile for each
+     drawing, the talk cloud answers, a page's name link stops at the
+     name, dark's edge (`docs/SOCIAL-SITE.md` sections 33 to 36). Cal's
+     readings in them are the owner's to overrule: focus back to the
+     cloud, the cloud's number kept true, the site's row lines clearer in
+     dark with the rest.
+  4. STILL WAITING, nothing built: the nine calls of "Last Soft Shadows",
+     whose picks no longer stand (what floats over the drawing keeps a
+     short close shadow; the cards of Skribl's own Gallery and Library
+     still wear dark's old 12% edge and a soft drop). THE COLOUR AUDIT the
+     owner asked for the same morning takes them up; read its entry before
+     asking them anything again.
 - **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No
   strip of Home under a sheet on a phone's keyboard"). The tell: in Make,
   the words tapped, the sheet's own lilac paper down to the keys and

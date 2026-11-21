@@ -1011,6 +1011,9 @@ CCARD = r"""(cid) => { const c = document.querySelector('.post-card[data-kind="c
            row: [...c.querySelector('.post-row').children].map(e => e.classList.contains('rp-btn') ? 'repost' : e.classList.contains('lk-heart') ? 'heart'
                   : e.classList.contains('post-count') ? 'replies' : e.classList.contains('post-more') ? 'more' : e.classList.contains('post-open') ? 'open' : e.className),
            replies: (c.querySelector('.post-count span') || {}).textContent || null,
+           // THE CLOUD ANSWERS on a comment's card too (the owner's yes to the talk cloud's B, Nov 21): its link asks
+           // the comment's page for its reply box (#say), where it went to the replies.
+           cloud: (c.querySelector('.post-row a.post-count') || { getAttribute: () => null }).getAttribute('href'),
            waits: !!c.querySelector('.post-art .skribl-inline-line.is-waiting') }; }"""
 
 # The site's toast (mutes.js): up, its words, Undo.
@@ -2611,7 +2614,7 @@ with sync_playwright() as p:
                   " its replies (1), repost, heart and ⋯ (no Open ›: its time is the link to its own page)",
                   cc and cc["order"] == ["by", "way", "head", "words", "row"] and cc["by"] == "Otto Brand reposted"
                   and cc["way"] == [f"/social/p/{p16}"] and cc["name"] == "Lena Park" and cc["words"] == "Section 16, Lena's comment"
-                  and cc["row"] == ["replies", "repost", "heart", "more"] and cc["replies"] == "1"
+                  and cc["row"] == ["replies", "repost", "heart", "more"] and cc["replies"] == "1" and cc["cloud"] == f"/social/c/{c16}#say"
                   and cc["open"] is None and cc["when"] == f"/social/c/{c16}" and cc["url"] == f"/social/c/{c16}", json.dumps(cc))
             whos = {k_: (v[0] or {}).get("who") for k_, v in seen.items()}
             check("a comment's card stops the person's tap at their name too (the owner, Nov 21): its name's link as wide"

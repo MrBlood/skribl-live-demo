@@ -3316,6 +3316,9 @@ rest to Home (Join and Add a passkey to Sign in).
 
 ## 28. Built: each row of a grid of tiles on one faint band (Nov 20)
 
+(Since Nov 21 the colour is a tile under each drawing, not a band under each
+row: section 33. What follows is the band as it was built.)
+
 The owner, of the Gallery in dark: "anything like this with rows should
 maybe have slightly diff color under each [row]. Almost imperceptible but
 enough so you can tell where top and bottom are.. each row distinct". A name
@@ -3485,3 +3488,119 @@ tells. `verify_composer` 4, `verify_socialcomments` 14 and
 waiting colour before a drawing is there, the player's own ground with it,
 none again once a draft is removed. `verify_socialreposts` 13's "no dinge"
 does not take a drawing's own paper for a placeholder.
+
+## 33. Built: a tile for each drawing (Nov 21)
+
+The owner, of the Gallery in light on their phone: "I like the colors that
+make rows. Maybe they should be individual tiles, not rows." Then, of the
+mock "Gallery Tiles" (now, A roomy, B snug): yes to A.
+
+**The same colour, one tile under each drawing and its name**
+(`.gal-grid > *::before`): `--row-band` as section 28 chose it (the page's
+own colour stepped about one part in twelve, solid; `--row-band-sheet` on a
+sheet's paper), `--tile-out` of it round the picture (6px), 8px under the
+name, its corners the picture's own 14px plus that. Between two tiles 8px
+of the page, across and down: the grid's gap is the tile's each side and
+the page's 8 (`2 x --tile-out + 8` across, `--tile-out + 16` down). No
+line, no blur. A last row that is not full is its tiles and nothing more;
+it was a band right across.
+
+MEASURED on a phone, 402 wide: a picture 175px (it was 179), a tile 187,
+8px of page between two; the grid's gaps 20px across and 22px down (they
+were 12 and 18). On a desk the pictures keep their 312px and their 20px
+across; the rows sit 22px apart where they sat 26, so the page between two
+tiles is 8px down as it is across. In Make's "Use one you made" the list
+leaves 4px beside the grid, so there `--tile-out` is 4px and no tile is
+cut square by the list's edge.
+
+It is wherever the one grid is: the Gallery, a profile's Gallery and Drafts
+tabs (your own, where each tile sits in a cell with its eye: the tile is
+the cell's), the front door, and Make's list.
+
+`verify_socialposts` 22 holds it, read off the paint: every cell's tile in
+its token's colour, the page at each tile's rounded corner, between two
+tiles, under one, beside the grid and where a short row has no cell. EACH
+POINT IS READ TWICE, as painted and with the tiles' ground taken away,
+since the page is not one flat colour (a glow lies over its top) and "the
+page" has to be what is painted at that very point.
+
+## 34. Built: the row's talk cloud answers (Nov 21)
+
+The owner, of Bluesky's reply screen beside Blooby's comments: "When I
+click the reply talky cloud on Bluesky I get this... Is that what we're
+going for? Should it go to reply page?" Then yes to the mock's B ("The
+Talk Cloud").
+
+Under a comment the cloud meant "answer this"; under a post it meant "go
+and look at the comments", and opened the box only when there were none to
+go down to. It means one thing now.
+
+- **On a post's own page** the cloud in the post's row is a button that
+  opens what the answer bar's line opens (`_post.html` `post_row`, `say`;
+  `comments.js`, THE ROW'S TALK CLOUD), with comments there or none: on a
+  phone the sheet, "Say something to Ana", THE POST'S OWN WORDS under that
+  in quotes as a reply shows a comment's (a post that is a drawing alone
+  has none to show), and the page under it where it was; on a desk the box
+  in the line's place. Signed out it raises "Say something?". Put away,
+  focus goes back to the cloud that was pressed, on a phone and a desk.
+  It is named for what it does: "Say something", or "3 comments · Say
+  something".
+- **On a card** (Home, a profile, a search, a bookmark; a comment's card
+  too) the cloud is a link to the post with its box open, for somebody
+  signed in (`#say`, which the page drops once it has opened the box);
+  signed out it goes to the comments, to read (`#comments`).
+- **Where nothing can be said** (comments closed, or not this person's to
+  make) the page's cloud is still a link down to the comments.
+- **The number beside it is kept** as comments come and go on the page
+  (`comments.js` `rowSays`): it held the number the page came with until
+  now, whatever was said or deleted since.
+
+`verify_socialcomments` 34 (the cloud on a phone, a desk and signed out,
+with a comment there and none; the card's link; the number), 30 and 32
+(the sheet's quote), 11 (the cards' addresses); `verify_socialposts` 10
+and 11; `verify_socialreposts` 16 (a comment's card).
+
+## 35. Built: on a page of its own, the person's tap stops at their name too (Nov 21)
+
+Section 31 stopped the tap at the name on a post's card. On a post's own
+page and a comment's the whole block is one link, the name over the
+@handle, and it ran on to the page's far side: MEASURED 310px on a phone
+and 280 on a desk for a name 73px wide, so a finger that came down in the
+empty room beside a name left the post for a profile. The owner's yes to
+the last of the eight, Nov 21.
+
+`.post-page > .post-head .post-who` takes its own width now (`flex: 0 1
+auto`), 44px at the least: as wide as the longer of the name and the
+@handle, and still a finger tall. What is left of the head does nothing.
+
+`verify_socialcomments` 49 presses it for real, a phone and a desk, on four
+pages (a name the longer, an @handle the longer, both short, a comment's
+page): 12px past the link and at the page's far side stays on the page; on
+the name opens the person's page.
+
+## 36. Built: in dark the edge does the separating (Nov 21)
+
+The owner, after the crisp build: "I feel like you may have overdone it
+with the shadows and now it looks less crisp in areas"; then yes to step 3
+of "The Little V": in dark, every edge about twice as clear, everywhere.
+
+Dark's edge was 12% of the lilac over its card, set that faint while soft
+shadows did the work; crisp took the shadows away and left dark flat.
+`--card-edge` is 26% of the lilac over the card and `--card-line` 0.26 of
+it now, in both copies of the dark ramp (light's is 34% of the accent and
+has not moved). READ OFF THE PAINT, a post's card on Home at a phone's
+three pixels to one: its edge stands 1.61 to 1 from the card (it was 1.23)
+and 1.90 from the page (1.45); light's 1.56 and 1.47.
+
+Everything that wears the tokens moves with them: a card, a comment's
+bubble, the comment box, a panel, a tile's line, a quote's picture, a
+thread's line, a toast, the list under an @. AND THE LINE BETWEEN TWO ROWS
+OF ONE LIST (`.fp-row`, `.mn-row`): on the site that line wears
+`--card-line`, as it does in light, so it is clearer in dark too. Skribl's
+editors took the same step the same day (`styles.css` `--menu-card-line`,
+`--menu-card-edge`, `--menu-paper-edge`); there the line between two rows
+has a token of its own (`--menu-card-rule`) and stayed as it was.
+
+`verify_socialposts` 17 holds the floor (1.4 to 1 from the card and from
+the page, both themes); `verify_socialsettings` 8 holds the ramp's two
+copies together, word for word.
