@@ -1,0 +1,12 @@
+{#  A WRONG ADDRESS (404): anything under the site that nothing else answers.
+    The owner, Nov 20: "there's no back button on so many screens. You end up
+    stranded a lot"; a wrong address was a bare "Not Found" with nothing on
+    it at all. The kind card a missing post has, with the bar and a way home,
+    and nothing is anybody's fault. Said the same for an address that was
+    never one and for a page the asker may not know is there (Invites, Your
+    reports, to anyone but an admin): one page, so neither can be told from
+    the other. #}
+{% extends 'social/base.html' %}
+{% from 'social/_kind.html' import card with context %}
+{% block title %}Not here · Blooby{% endblock %}
+{% block main %}{{ card("That page isn’t here", "This address doesn’t lead anywhere on Blooby. There’s plenty more to look at.") }}{% endblock %}

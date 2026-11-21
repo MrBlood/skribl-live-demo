@@ -4264,6 +4264,86 @@ print("PLAN " + json.dumps(out))
                   all(v.get("ink") and abs(v["off"]) <= 1 and v["head"] is not None and abs(v["head"]) <= 1 for v in marks.values())
                   and bool(desk_mark.get("ink")) and abs(desk_mark["box"]) <= 0.5,
                   f"{json.dumps(marks)}; a desk {json.dumps(desk_mark)}")
+
+            # A WRONG ADDRESS (owed from this section's own build, Nov 20: "a kind page for a wrong address"; it
+            # was the app's bare "Not Found", with no bar and no way home). GONE TO, the way a person goes there:
+            # signed out and signed in, a phone and a desk. An address that was never one, one a level deeper, a
+            # real page's with a slash too many, and a form's own address (the site has it under POST alone).
+            LOST21 = """() => { const c = document.querySelector('.si-card');
+              if (!c) return { card: false, says: document.body.innerText.trim().slice(0, 60) };
+              const h = c.querySelector('h1'), a = c.querySelector('a.btn-primary'), i = c.querySelector('img.si-icon');
+              const on = e => { if (!e) return false; const r = e.getBoundingClientRect();
+                const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && (t === e || e.contains(t)); };
+              const nav = document.querySelector('nav.nav'), words = c.querySelector('.si-lede');
+              return { card: true, title: h ? h.textContent.trim() : null, words: words ? words.textContent.trim() : '',
+                       home: a ? a.getAttribute('href') : null, homePainted: on(a), tall: a ? Math.round(a.getBoundingClientRect().height) : 0,
+                       icon: on(i), nav: !!nav && nav.getClientRects().length > 0, lit: nav ? nav.querySelectorAll('[aria-current]').length : 0,
+                       wide: document.documentElement.scrollWidth - innerWidth }; }"""
+            lost = {}
+            for who21, tag21 in ((None, "signed out"), (wren, "signed in")):
+                for screen21 in ("phone", "desk"):
+                    lctx, lpg = browser_as(b, who21, screen21)
+                    for name21, path21 in (("never one", "/social/no-such-page"), ("a level deeper", "/social/no/such/page"),
+                                           ("a slash too many", "/social/explore/"),
+                                           ("a form's own address", f"/social/@{wren.handle}/follow")):
+                        resp21 = lpg.goto(BASE + path21)
+                        lpg.wait_for_load_state("load")
+                        got21 = lpg.evaluate(LOST21)
+                        got21["status"] = resp21.status if resp21 else None
+                        lost[f"{name21}, {tag21}, {screen21}"] = got21
+                    # ...and its one button is a way out: it lands on Home.
+                    home21 = None
+                    if lpg.locator(".si-card a.btn-primary").count():
+                        lpg.click(".si-card a.btn-primary")
+                        lpg.wait_for_load_state("load")
+                        home21 = lpg.evaluate("() => location.pathname")
+                    lost[f"its way home, {tag21}, {screen21}"] = {"at": home21}
+                    close_ctx(lctx, lpg)
+            bad_lost = {k: v for k, v in lost.items() if not (
+                v.get("at") == "/social/" if k.startswith("its way home") else
+                (v.get("status") == 404 and v.get("card") and v["title"] == "That page isn’t here" and "Blooby" in v["words"]
+                 and v["home"] == "/social/" and v["homePainted"] and v["tall"] >= 44 and v["icon"] and v["nav"]
+                 and v["lit"] == 0 and v["wide"] <= 0))}
+            check("a wrong address is a kind page with a way out, where it was a bare \"Not Found\": an address that was"
+                  " never one, one a level deeper, a real page's with a slash too many and a form's own address, gone to"
+                  " signed out and signed in, on a phone and a desk, each answer 404 with Blooby's card (\"That page"
+                  " isn’t here\"), the bar there and no tab lit, and Back to Blooby painted, 44px and landing on Home",
+                  not bad_lost and len(lost) == 20, f"wrong: {json.dumps(bad_lost)[:900]}; read {len(lost)}")
+            # WHAT IS NOT A PERSON GOING THERE READS WHAT IT READ BEFORE: a script's fetch (it says */* or JSON, never
+            # text/html by name) and every other verb get the bare 404, without the page and without its headers.
+            # And the route that catches a wrong address takes nothing from a right one: the site's root without its
+            # slash still goes to it, and a real page still answers.
+            rq21 = wren.ctx.request
+            asks21 = {"a fetch": rq21.get(BASE + "/social/no-such-page", max_redirects=0),
+                      "a fetch for JSON": rq21.get(BASE + "/social/no-such-page", headers={"Accept": "application/json"}, max_redirects=0),
+                      "a POST": rq21.post(BASE + "/social/no-such-page", form={"a": "b"}, headers={"Origin": BASE}, max_redirects=0),
+                      "a DELETE": rq21.delete(BASE + "/social/no-such-page", headers={"Origin": BASE}, max_redirects=0),
+                      # more than the site reads from a form (64 KiB): a wrong address reads nothing, so it is
+                      # still the 404 it was, never "too large"
+                      "a POST of 100 KiB": rq21.post(BASE + "/social/no-such-page", data="x" * 102400, max_redirects=0,
+                                                     headers={"Origin": BASE, "Content-Type": "text/plain"}),
+                      "a sheet that is not there": rq21.get(BASE + "/social/static/no-such.css", headers={"Accept": "text/css,*/*;q=0.1"}, max_redirects=0)}
+            # "BEFORE" IS THE APP'S OWN 404, which is what a wrong address under the site was: the same words and the
+            # same headers as an address outside the site still gets (all but the date and the length).
+            app21 = rq21.get(BASE + "/zz-no-such-surface", max_redirects=0)
+
+            def heads21(r):
+                return {k: v for k, v in r.headers.items() if k not in ("date", "set-cookie", "content-length")}
+            bare21 = {k: {"status": r.status, "card": "si-card" in r.text(), "nonce": "nonce-" in r.headers.get("content-security-policy", ""),
+                          "as the app's": k != "a fetch" or (r.text() == app21.text() and heads21(r) == heads21(app21)),
+                          "differs": sorted(h for h in set(heads21(r)) | set(heads21(app21)) if heads21(r).get(h) != heads21(app21).get(h)) if k == "a fetch" else []}
+                      for k, r in asks21.items()}
+            root21 = rq21.get(BASE + "/social", max_redirects=0)
+            real21 = rq21.get(BASE + "/social/explore", headers={"Accept": "text/html"}, max_redirects=0)
+            check("...and what is not a person going there reads what it read before: a script's fetch, a fetch for JSON, a"
+                  " POST, a DELETE, a POST of 100 KiB and a stylesheet that is not there each get the bare 404, with no"
+                  " card and none of the page's headers (a fetch's, word for word and header for header what an address"
+                  " outside the site gets); the site's root without its slash still goes to it, and a real page still"
+                  " answers",
+                  all(v["status"] == 404 and not v["card"] and not v["nonce"] and v["as the app's"] for v in bare21.values())
+                  and app21.status == 404 and root21.status in (301, 308) and root21.headers.get("location", "").endswith("/social/")
+                  and real21.status == 200 and "si-card" not in real21.text(),
+                  f"{json.dumps(bare21)}; the root {root21.status} {root21.headers.get('location')}; a real page {real21.status}")
         except Exception as exc:  # noqa: BLE001
             check("section 21 ran to its end", False, str(exc).splitlines()[0][:200])
 
