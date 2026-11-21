@@ -385,6 +385,12 @@ in the mock page.
   ending the request's read before `create_post` would likely mend it,
   but it touches every post, so it wants its own look.
 
+- **THE CRISP QUOTIENT IS MOCKED AND WAITS FOR A YES** (`DECISIONS.md`, "The
+  crisp quotient, mocked"; the artifact "Crisp Quotient"; the owner's words
+  are in `WORKING-AGREEMENTS.md`, "Crisp, not blurry"). They asked for
+  fewer, crisper shadows. Counted: Home has seventeen soft shadows on
+  screen, the Pad one. The pick is B, three heights. Nothing is built; the
+  site first on a yes, then the Pad and Flip together.
 - **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No
   strip of Home under a sheet on a phone's keyboard"). The tell: in Make,
   the words tapped, the sheet's own lilac paper down to the keys and
