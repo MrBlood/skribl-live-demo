@@ -329,10 +329,13 @@ class Person:
             return []
 
 
-def browser_as(b, who, screen="phone", scheme="light", reduced=False, init=None):
+def browser_as(b, who, screen="phone", scheme="light", reduced=False, init=None, scale=None):
     kw = {"reduced_motion": "reduce"} if reduced else {}
+    opts = dict(PHONE if screen == "phone" else DESK)
+    if scale:
+        opts["device_scale_factor"] = scale        # a phone's own three pixels to one, where a row reads the paint
     ctx = b.new_context(color_scheme=scheme, extra_http_headers={"X-Forwarded-For": who.xff if who else address()},
-                        **(PHONE if screen == "phone" else DESK), **kw)
+                        **opts, **kw)
     ctx.add_init_script(WATCH)
     for s in ([init] if isinstance(init, str) else (init or [])):
         ctx.add_init_script(s)
@@ -3017,6 +3020,118 @@ with sync_playwright() as p:
             stopped(20, exc)
 
     # ------------------------------------------------------------------ 12
+    # ------------------------------------------------------------------ 20
+    if part(20, "a drawing's box is its own paper to its edge: nothing of another colour between its picture and its line"):
+        try:
+            # The owner, Nov 21, two pictures of Home off their phone, a drawing on dark paper in a white card: "Look
+            # at the canvas border. Is that we are doing?" It was not. A drawing in a card wears its one line and
+            # nothing else (crisp, Nov 20), and between that line and the picture a phone painted six or seven of its
+            # pixels of the WAITING colour (--draw-wait: lilac, in dark a deep violet): Skribl's player keeps a 1px
+            # border, which the site makes transparent, and draws the picture a little inside its box, and the box's
+            # ground showed in both. The box's ground is the drawing's own now (--plate-ground, from what Skribl says
+            # of it, as a Gallery tile's is). READ OFF THE PAINT, at a phone's three pixels to one: the row that held
+            # "its edge is one screen pixel" read the ring's own width off its style, and a band beside it is not a
+            # width of anything.
+            def with_ground(payload, colour):
+                """The drawing on another ground (or none said), with a share card of that ground to show."""
+                import base64
+                f0 = {k: v for k, v in payload["frames"][0].items() if k != "background"}
+                if colour:
+                    f0["background"] = {"color": colour}
+                rgb = tuple(int((colour or "#f6f2ea")[i:i + 2], 16) for i in (1, 3, 5))
+                buf = io.BytesIO()
+                Image.new("RGB", (1200, 630), rgb).save(buf, "PNG")
+                return dict(payload, frames=[f0], thumbnail="data:image/png;base64," + base64.b64encode(buf.getvalue()).decode())
+
+            PAPER20, DARK20 = "#f6f2ea", "#0e1017"
+            eve = someone(b, "edge_eve", "Eve Edge")
+            p20 = {"on paper": make_post(eve, "Section 20, on paper", payload=with_ground(drawing(seed=200), PAPER20)),
+                   "on dark paper": make_post(eve, "Section 20, on dark paper", payload=with_ground(drawing(seed=201), DARK20)),
+                   "no ground said": make_post(eve, "Section 20, no ground said", payload=with_ground(drawing(seed=202), None))}
+            c20 = say_on(eve, p20["on paper"], "A drawn answer, on dark paper", payload=with_ground(drawing(seed=203), DARK20))
+            fay = someone(b, "edge_fay", "Fay Edge")           # somebody else reposts it: its card is on her profile
+            rp20 = on_c(fay, c20, "repost", {"reposted": True})[0] if c20 else None
+            EDGE20 = """(sel) => { const e = document.querySelector(sel); if (!e) return null;
+              e.scrollIntoView({ block: 'center' });
+              const w = e.closest('.post-art, .cm-art'), r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+              const img = e.querySelector('img.skribl-inline-poster');
+              return { rect: [r.left, r.top, r.width, r.height], said: w ? w.style.getPropertyValue('--plate-ground').trim() : '',
+                       wait: cs.getPropertyValue('--draw-wait').trim(), shown: !!img && img.complete && img.naturalWidth > 0,
+                       vw: innerWidth }; }"""
+
+            def edge20(pg, sel):
+                """The four device pixels just inside a drawing's box on its left, its top and its bottom, at the
+                middle of each side (the first one skipped: a box seldom starts on a whole screen pixel)."""
+                try:
+                    pg.wait_for_function("(s) => { const i = document.querySelector(s + ' img.skribl-inline-poster'); return !!i && i.complete && i.naturalWidth > 0; }",
+                                         arg=sel, timeout=8000)
+                except Exception:      # noqa: BLE001 -- a picture that never came is the row's red, never a stop
+                    pass
+                g = pg.evaluate(EDGE20, sel)
+                if not g:
+                    return {"why": f"no {sel}"}
+                pg.wait_for_timeout(450)
+                g = pg.evaluate(EDGE20, sel)
+                im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+                k = im.size[0] / g["vw"]
+                x, y, w, h = g["rect"]
+
+                def at(px, py):
+                    return im.getpixel((min(max(px, 0), im.size[0] - 1), min(max(py, 0), im.size[1] - 1)))
+                ex, ey, eb = round(x * k), round(y * k), round((y + h) * k)
+                mx, my = round((x + w / 2) * k), round((y + h / 2) * k)
+                g["px"] = {"left": [at(ex + i, my) for i in range(1, 5)], "top": [at(mx, ey + i) for i in range(1, 5)],
+                           "bottom": [at(mx, eb - 1 - i) for i in range(1, 5)]}
+                return g
+
+            def is20(px, hexc, n=4, tol=4):
+                want = tuple(int(hexc[i:i + 2], 16) for i in (1, 3, 5))
+                return all(max(abs(a - b_) for a, b_ in zip(c, want)) <= tol for c in px[:n])
+
+            def own20(g, colour):
+                """Its ground is said, and every pixel read is that colour, on each of the three sides."""
+                return (not g.get("why") and g["shown"] and g["said"] == colour
+                        and all(is20(side, colour) for side in g["px"].values()))
+            where20 = {"Home's card": ("/social/", 'article.post-card[data-post="{p}"] .post-art .skribl-inline'),
+                       "the post's own page": ("/social/p/{p}", ".post-page .post-art .skribl-inline"),
+                       "a drawn comment's bubble": ("/social/p/" + str(p20["on paper"]), ".cm-art .skribl-inline"),
+                       "the comment's own page": ("/social/c/" + str(c20), ".post-art .skribl-inline"),
+                       "the comment's card, reposted": ("/social/@" + fay.handle, 'article.cm-card[data-post="' + str(c20) + '"] .post-art .skribl-inline')}
+            read20, none20 = {}, {}
+            for scheme20 in ("light", "dark"):
+                ectx, epg = browser_as(b, eve, "phone", scheme20, scale=3)
+                for kind20, colour20 in (("on paper", PAPER20), ("on dark paper", DARK20)):
+                    for place20 in ("Home's card", "the post's own page"):
+                        path20, sel20 = where20[place20]
+                        go(epg, path20.replace("{p}", str(p20[kind20])), wait=500)
+                        read20[f"{place20}, {kind20}, {scheme20}"] = (edge20(epg, sel20.replace("{p}", str(p20[kind20]))), colour20)
+                for place20 in ("a drawn comment's bubble", "the comment's own page", "the comment's card, reposted"):
+                    path20, sel20 = where20[place20]
+                    go(epg, path20, wait=500)
+                    read20[f"{place20}, {scheme20}"] = (edge20(epg, sel20), DARK20)
+                go(epg, "/social/", wait=500)
+                none20[scheme20] = edge20(epg, where20["Home's card"][1].replace("{p}", str(p20["no ground said"])))
+                close_ctx(ectx, epg)
+            bad20 = {k_: {"said": g.get("said"), "why": g.get("why"), "shown": g.get("shown"), "px": g.get("px")}
+                     for k_, (g, colour) in read20.items() if not own20(g, colour)}
+            home20 = {k_: v for k_, v in bad20.items() if k_.startswith("Home's card")}
+            check("on Home, at a phone's three pixels to one, a post's drawing is its own paper to its edge: just inside"
+                  " its box, on its left, its top and its bottom, every pixel is the drawing's own ground, which the page"
+                  " says (a drawing on paper and one on dark paper, light and dark), where a band of the waiting colour was",
+                  bool(c20) and all(p20.values()) and len(read20) == 14 and not home20, f"wrong: {json.dumps(home20)[:700]}; posts {p20}")
+            rest20 = {k_: v for k_, v in bad20.items() if not k_.startswith("Home's card")}
+            check("...and the same wherever a drawing's box is: a post's own page, a drawn comment's bubble, the comment's"
+                  " own page, and the comment's card where it was reposted",
+                  rp20 == 200 and len(read20) == 14 and not rest20,
+                  f"wrong: {json.dumps(rest20)[:700]}; the comment {c20}, its repost {rp20}")
+            check("...and a drawing whose ground Skribl does not say keeps the waiting colour there, as before (its page"
+                  " says none)",
+                  all(not g.get("why") and g["said"] == "" and g["wait"] and all(is20(side, g["wait"], n=2) for side in g["px"].values())
+                      for g in none20.values()) and len(none20) == 2,
+                  json.dumps({k_: {"said": g.get("said"), "wait": g.get("wait"), "why": g.get("why"), "px": g.get("px")} for k_, g in none20.items()})[:600])
+        except Exception as exc:  # noqa: BLE001
+            stopped(20, exc)
+
     if part(12, "no page errors, no console errors and no CSP violations"):
         try:
             for who in list(_people.values()):
