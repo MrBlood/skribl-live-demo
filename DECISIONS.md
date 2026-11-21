@@ -49707,3 +49707,68 @@ FLIP AND THE PAD: not for either. NOT TESTED HERE: the Home Screen app on
 an iPhone, where this matters most. The arrow calls the browser's own Back,
 and that is the phone's to do. THE TELL: open a post from the Gallery and
 tap the arrow. You are in the Gallery again, not on Home.
+
+## After v330 -- Each row distinct, mocked: a faint band under each row of the Gallery's tiles
+
+Nov 20, evening. The owner, with a picture of the Gallery in dark on their
+iPhone (their own drawings on dark paper in its second row):
+
+> Also anything like this with rows should maybe have slightly diff color
+> under each town. Almost imperceptible but enough so you can tell where top
+> and bottom are.. each row distinct
+
+("town" is the phone's word for "row".)
+
+THE TARGET, said first: the grid of tiles in the Gallery, and every grid
+like it, and how you tell where one row ends and the next begins.
+
+NOTHING IS BUILT. This entry is the measure and the mock (the artifact
+"Distinct Rows"); the look waits for a plain yes.
+
+WHY IT IS HARD TO READ, MEASURED on the real page (a phone): a name sits
+8px under its own picture and 18px above the next row's, so it belongs by
+nearness alone, and nearness needs the picture's edge. A drawing on dark
+paper is 1.01:1 against the dark page: no edge, so that row has no top and
+no bottom, and its names read as between two pictures.
+
+THE THREE, each laid over the real Gallery for its pictures (dark and light,
+a phone's two across and a desk's three; two drawings on dark paper posted
+through the composer to stand for the owner's):
+
+- A, A BAND UNDER EVERY ROW (the pick): the same flat tint behind each row
+  of tiles, its pictures and its names, the page showing between rows. The
+  page lifted by 4% of white in dark (1.09:1 against the page) and by 4.5%
+  of the violet in light (1.08:1). On it a dark drawing's paper is 1.10:1,
+  so it has its edge again. Six shapes on a screen of twelve tiles.
+- B, UNDER EVERY OTHER ROW: half the shapes; a row with no band is told by
+  its neighbours alone, so a single row, or the last, has nothing.
+- C, A CARD UNDER EVERY TILE: each tile one thing; twice the shapes, and a
+  rounded picture in a rounded card is a box in a box.
+
+No blur and no line in any of them: a step of colour, which is what the
+crisp quotient's mock asks of everything at rest.
+
+CONTRAST ON THE BAND, measured: a name 15.2:1 in dark and 15.7:1 in light;
+the hearts and comment counts 9.3:1 and 6.6:1.
+
+WHERE IT WOULD REACH, said in the mock: the one grid (`.gal-grid`) is the
+Gallery's, a profile's Gallery and Drafts tabs', the composer's "Use one you
+made", and the front door's fresh drawings. NOT FOR THE PAD OR FLIP. Skribl's
+own Gallery and the Library have the same kind of grid and would follow
+next with the same band, so the two do not drift. Lists of one thing a line
+(Activity, people) have a line between rows already; asked whether the
+owner means those too.
+
+THE OWNER'S CHOICES, with the picks, so that "all yes" is an answer: which
+one (A); how faint (as shown; "fainter" or "stronger" gets both shown);
+every grid of tiles on the site at once (yes); Skribl's own Gallery and the
+Library next (yes).
+
+IF IT IS A YES, HOW IT BUILDS: in the stylesheet alone, a part of each tile
+drawn behind it and stretched to its row's share (the grid's columns are
+known: two, and three from 900px), the first and last of a row rounding the
+band's ends, the last row of an odd count still a whole band. Then
+`verify_contrast`, and a row that reads the band behind a row's first and
+last tile and the page between two rows. NOT TESTED HERE: an iPhone's
+screen, whose blacks are deeper than these pictures: a 4% lift may read
+stronger or fainter there, and that is the owner's eye to say.
