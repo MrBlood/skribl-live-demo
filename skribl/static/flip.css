@@ -447,8 +447,9 @@
   /* Paired with the rule above: an explicit display defeats [hidden], which
      this codebase has been bitten by three times. */
   .stamp-pop[hidden] { display: none; }
-  .stamp-pop::after { content: ''; position: absolute; top: 100%; left: 64px;
-    border: 7px solid transparent; border-top-color: var(--menu-paper); }
+  /* Its pointer is the tray's and the shape picker's (styles.css, THE POINTER
+     UNDER A POP); here, where its point stands: over the Stamps button. */
+  .stamp-pop { --pop-point: 71px; }
   /* auto-fill, not auto-fit: with one stamp on the shelf auto-fit stretches it
      to the full width and a single stamp looks like a different control than
      six do.

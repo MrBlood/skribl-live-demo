@@ -279,15 +279,19 @@ CENSUS = r"""(root) => {
       caps.push((el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/)[0] : el.tagName.toLowerCase())
                 + ' "' + el.textContent.trim().slice(0, 20) + '"');
   }
-  // The little arrow a pop points with (a triangle: its ::after's top border
-  // coloured, its sides clear), when it has one.
+  // The little arrow a pop points with, when it has one: a square of the pop's
+  // paper turned to a point, the paper's edge along its two lower sides (the
+  // owner's "little V", Nov 21: it was a triangle, its ::after's top border
+  // coloured, with no line of its own). Its fill, and its edge's two inks.
   const a = getComputedStyle(R, '::after');
-  const arrow = a.content !== 'none' && a.display !== 'none' && parseFloat(a.borderTopWidth) > 0
-    && a.borderLeftColor === 'rgba(0, 0, 0, 0)' ? a.borderTopColor : null;
+  const turned = a.content !== 'none' && a.display !== 'none' && a.transform !== 'none' && parseFloat(a.width) > 0
+    && parseFloat(a.borderBottomWidth) > 0 && parseFloat(a.borderRightWidth) > 0 && parseFloat(a.borderTopWidth) === 0;
+  const arrow = turned ? a.backgroundColor : null;
+  const arrowEdge = turned ? [a.borderBottomColor, a.borderRightColor] : null;
   // The line laid over the paper, as the page resolves it: a drawer's ring.
   const pr = document.createElement('i'); R.appendChild(pr); pr.style.color = 'var(--menu-paper-edge)';
   const paperEdge = getComputedStyle(pr).color; pr.remove();
-  return { sheet: s(R), arrow, cards, labels, caps, paperEdge };
+  return { sheet: s(R), arrow, arrowEdge, cards, labels, caps, paperEdge };
 }"""
 
 # A LIST OF CHOICES IS ONE CARD (the owner's "B, equal lines", Nov 14: "Do we
@@ -1423,12 +1427,18 @@ for scheme in ("light", "dark"):
     # AND THE ARROW UNDER A POP IS ITS PAPER. It points at the button the pop
     # opened from and is of a piece with it: the shape picker's kept the well's
     # grey when the picker took the paper, on both editors.
-    arrows = {(n, l): (census[(n, sc, l)]["arrow"], census[(n, sc, l)]["sheet"]["bg"]) for (n, sc, l) in census
-              if sc == scheme and l in DRAWERS and census[(n, sc, l)] and census[(n, sc, l)].get("arrow")}
+    # AND IT WEARS THE PAPER'S EDGE (the owner, Nov 21, of the tray's: "The
+    # little V at the bottom disappears with no shadow or border"): the line
+    # round the pop runs on round its point, the same ink. The tray's own is
+    # verify_tray's, read off the paint where the owner saw it.
+    arrows = {(n, l): (census[(n, sc, l)]["arrow"], census[(n, sc, l)]["sheet"]["bg"], census[(n, sc, l)].get("arrowEdge"),
+                       census[(n, sc, l)].get("paperEdge"))
+              for (n, sc, l) in census if sc == scheme and l in DRAWERS and census[(n, sc, l)] and census[(n, sc, l)].get("arrow")}
     if not ONLY or {"The shape picker", *SHELF} & set(ONLY):
-        check(f"{scheme}: and the arrow under a pop is its paper ({len(arrows)} read)",
-              len(arrows) >= (1 if ONLY else 4) and all(w == g for w, g in arrows.values()),
-              "; ".join(f"{n} {l}: arrow {w} on {g}" for (n, l), (w, g) in sorted(arrows.items()) if w != g))
+        check(f"{scheme}: and the arrow under a pop is its paper, with the paper's edge along its two lower sides ({len(arrows)} read)",
+              len(arrows) >= (1 if ONLY else 4) and all(w == g and e == [pe, pe] and pe not in (None, "none") for w, g, e, pe in arrows.values()),
+              "; ".join(f"{n} {l}: arrow {w} on {g}, its edge {e} for {pe}" for (n, l), (w, g, e, pe) in sorted(arrows.items())
+                        if w != g or e != [pe, pe]))
     off, seen = [], 0
     for (n, sc, l), cz in census.items():
         if sc != scheme or l not in PAPER + DRAWERS or not cz:
