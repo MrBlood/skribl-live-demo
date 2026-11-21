@@ -50183,3 +50183,47 @@ NOT TESTED HERE: Safari on an iPhone, whose screen is finer than these
 pictures; a one-pixel line is the owner's screen to judge, and is tuned by
 the half pixel if they say so. THE TELL: Home, in light: no haze between
 two cards, and no purple glow under Make's button.
+
+## After v330 -- Main red after the crisp build: verify_musicbeat's finger went down on a view still on its way
+
+Main's run after #1026 (crisp on the site) was red at about 12:37 AM on Nov
+21: ONE JOB of fourteen (sqlite 4/7; the same suite green on PostgreSQL's
+4/7), `verify_musicbeat`, 64 of 66. Nothing in #1026 is the editors' music
+drawer: it is the site's stylesheet, the player's pill and four suites.
+`verify_socialposts`, with the crisp rows, was 115 of 115 in that same job.
+
+THE TWO ROWS, and what their numbers say:
+
+- "Flip: an end let go counts whole beats from the start wherever it is: a
+  start off the beat is never moved": the loop set to 1.23 to 5.0 came back
+  2 to 5.77. BOTH ENDS MOVED BY THE SAME 0.77s: that is the song slid under
+  the drawing, not an end dragged. The finger went down on the song.
+- "Pad: the song slid under the drawing settles the loop's start on a beat,
+  its length kept": let go 0.51s along where 0.37 was aimed; the settle
+  itself right (the start on its beat, the length kept).
+
+WHAT IT WAS: THE INSTRUMENT'S, AND THE FAMILY #773'S RED CAME FROM. The
+timeline eases its view to where the loop is, frame by frame
+(`lib/musictimeline.js`), and a loop set from the suite starts that. The
+suite's gestures waited a set 300 ms and then read where the handle was, or
+how many pixels a second is. On a busy runner the view was still on its way,
+so the finger went down where the handle HAD been. The mend after #773
+taught the drag to aim, read and correct once it is holding the end; it
+could not help a finger that never took hold of the end at all.
+
+THE MEND, in the suite: before a finger goes down, the view the timeline
+publishes, its stage and both handles have stood still for a quarter second
+and eight frames (`TL_REST`; five seconds at the longest, and a view that
+never rests is then the red of the row that reads it). Both gestures, the
+end's drag and the song's slide. Nothing in the app changed.
+
+SHOWN, with the condition forced in a scratch copy (the view's easing made
+ten times slower, 70 ms to 700): the old gestures, three rows red (an end
+let go at 8.00 beats where 10.6 was aimed; a slide that never moved the
+song); the new ones, every row green. As built, the whole suite, alone: 66
+of 66. The full battery was not run; main's run after the merge is it.
+
+OTHER SUITES DRAG ON THIS TIMELINE in their own words (`verify_musictimeline`,
+`verify_musictall`, `verify_musicsnap`, `verify_musiclane`, `verify_music`
+and others). None was red, and they are not touched: a mend goes where a
+row has shown it is needed, and this entry says where the next one would.

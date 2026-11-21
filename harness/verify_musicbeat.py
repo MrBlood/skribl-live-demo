@@ -446,9 +446,27 @@ with sync_playwright() as pw:
           " return { x: s.left, w: s.width, hx: h.left + h.width / 2, hy: h.top + h.height / 2, v0: v[0], span: v[1], d: audioDuration }; }")
     REC = """() => { const out = window.__rec = [], t0 = performance.now();
       (function f() { out.push([performance.now() - t0, trimStart, trimEnd]); if (performance.now() - t0 < 700) requestAnimationFrame(f); })(); }"""
+    # THE VIEW AT REST BEFORE A FINGER GOES DOWN (main red after #1026, Nov 20, one shard of fourteen). The
+    # timeline eases its view to where the loop is (lib/musictimeline.js, frame by frame), and a loop set from
+    # here starts that. The gestures below waited a set 300 ms and read where the handle was; on a busy runner
+    # the view was still on its way, so the finger went down where the handle HAD been: on the song itself.
+    # That is a slide, not an end: the loop 1.23 to 5.0 came back 2 to 5.77, both ends moved together; and the
+    # slide's own row let go 0.51s along where 0.37 was aimed. So: until the view the timeline publishes, its
+    # stage and both handles have stood still for a quarter second and eight frames (five seconds at the
+    # longest; a view that never rests is then the red of the row that reads it).
+    TL_REST = """async () => { const root = document.getElementById('musicTimeline'), stage = document.getElementById('musicTlStage');
+      const read = () => { const s = stage.getBoundingClientRect();
+        return [root.dataset.view, s.left.toFixed(2), s.top.toFixed(2), s.width.toFixed(2)].concat(['tlStart', 'tlEnd'].map(id => {
+          const h = document.getElementById(id).getBoundingClientRect(); return (h.left + h.width / 2).toFixed(2); })).join(' '); };
+      const t0 = performance.now(); let last = read(), since = t0, frames = 0;
+      await new Promise(res => { const step = () => { const now = performance.now(), r = read();
+        if (r !== last) { last = r; since = now; frames = 0; } else frames++;
+        if ((now - since >= 250 && frames >= 8) || now - t0 > 5000) res(); else requestAnimationFrame(step); };
+        requestAnimationFrame(step); });
+      return Math.round(performance.now() - t0); }"""
 
     def tl_drag(pg, handle, t, rec=False):
-        pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
+        pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.evaluate(TL_REST)
         at = pg.evaluate(TL, handle)
         x_of = lambda a: a["x"] + (t - a["v0"]) / a["span"] * a["w"]   # noqa: E731
         # Clear of the edge's zone, or as clear as it gets: where the view
@@ -554,7 +572,7 @@ with sync_playwright() as pw:
     for _n, _p in eds("bars"):
         c, pg, errs = editor(b, _n, _p, door=None)
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0.1}, "s": 0.5, "e": 4.75, "xf": 250})
-        pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
+        pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.evaluate(TL_REST)
         r = pg.evaluate(TL, "tlEnd")
         # The song under the drawing, grabbed between the ends and moved left:
         # the song goes with the finger, so the loop starts 0.37s later.
