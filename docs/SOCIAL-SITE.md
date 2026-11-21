@@ -3334,3 +3334,36 @@ tabs (your own, where each tile sits in a cell with its eye), the front
 door, and Make's "Use one you made".
 
 `verify_socialposts` 22 holds it, read off the paint.
+
+## 29. Built: crisp, three heights, and nothing soft at rest (Nov 20)
+
+The owner: "I want to minimize shadows to create depth and keep it crisp
+and luxurious. Shadows seem blurry and kind of muddy the page." Their "All
+yes" to the crisp mock's B. Depth on the site is three heights now, and a
+soft shadow (more than 2.5px of blur) is only for what floats:
+
+- **On the page** (a post's card, a comment's bubble, a tile, a panel, the
+  answer line, the comment box): the edge and one line of shade under it,
+  1px with no blur (`--card-drop`). In dark, a line of light inside the top
+  edge.
+- **In a card** (the drawing in a post's card, a bubble or the comment
+  box): the edge alone. A drawing on the page itself (a post's own page,
+  How it works, the front door, a sheet's paper) keeps the page's line
+  (`--draw-lift`).
+- **Floating** (a toast, the list under an @): the one shadow, short and
+  close (`--float-drop`). A sheet casts nothing and has a line of light
+  along its top (`--sheet-top`). The play pill on a drawing has a hairline
+  and 1px/2px (Skribl's `inlineplayer.css`, so wherever that player is).
+- **The fill** (Make, Post, Follow, Draw back lit): enamel, no glow
+  (`--fill-drop`).
+
+**Before adding a shadow, count.** `verify_socialposts` 23 reads Home, a
+post's page, the Gallery, a profile's grid and Settings, phone and desk,
+light and dark, and holds the soft shadows at rest at none; it also
+resolves every shadow `social.css` declares and lets only the two floating
+rules be soft. A new surface gets an edge first; if it floats, it wears
+`--float-drop`.
+
+What sets a white card apart from the near-white page is its edge and that
+one line (the "just a border" census, `verify_socialreposts` 13, counts the
+line as the lift a soft shadow used to be).

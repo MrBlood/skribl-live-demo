@@ -59,7 +59,8 @@ authenticator for the site's people.
      every target 44px; inside a post's card the quote a well (D2).
  13. JUST A BORDER: on the site's pages, phone and desk, light and dark, no
      box with something in it is set apart from what it sits on by its line
-     alone (the owner's question, Nov 16).
+     alone (the owner's question, Nov 16). A lift counts, and since the
+     crisp build (Nov 20) a lift is one line of shade under the edge.
  14. A COMMENT'S ROW (the comment thread, step 3; "A Comment Shared", the
      owner's yes, Nov 17): Reply · Repost · heart · ⋯ in a list and on its
      own page; the post's repost sheet; lit and counted at once and after a
@@ -2234,7 +2235,12 @@ with sync_playwright() as p:
             # picture) and a line round it (a ring, or a border on two sides or
             # more): its fill against the ground that shows round it (past any
             # wrapper its own size) must differ by 1.08:1 or more. Not counted: a box
-            # with a soft lift (its shadow sets it apart), one on a drawing or a
+            # with a lift (a shadow that sets it apart; SINCE THE CRISP BUILD, Nov 20,
+            # the site's lift is one line of shade under the edge, 1px with no blur:
+            # the owner's "All yes" to the crisp mock's B, which said of the edge
+            # alone, C, that it is "one step from" this rule. So a lift here is a
+            # soft shadow or a line a pixel or more DOWN; a ring alone is still
+            # none), one on a drawing or a
             # picture (its ground is what the picture paints), a picture's own box
             # (the picture four fifths of it or more; and a drawing's plate,
             # .gal-pic, whose ground is the drawing's own paper by plate_ground,
@@ -2262,7 +2268,7 @@ with sync_playwright() as p:
                 const r = e.getBoundingClientRect(); if (r.width < 40 || r.height < 28) continue;
                 const cs = getComputedStyle(e); if (cs.visibility === 'hidden' || +cs.opacity === 0) continue;
                 const sh = shadows(cs.boxShadow);
-                if (sh.some(s => s.c && s.c[3] > 0.04 && s.blur > 0)) continue;
+                if (sh.some(s => s.c && s.c[3] > 0.04 && (s.blur > 0 || s.y >= 1))) continue;
                 const bw = ['Top', 'Right', 'Bottom', 'Left'].map(s => parseFloat(cs['border' + s + 'Width']) || 0);
                 const bc = ['Top', 'Right', 'Bottom', 'Left'].map(s => rgba(cs['border' + s + 'Color']));
                 const dashed = /dashed|dotted/.test(cs.borderTopStyle);

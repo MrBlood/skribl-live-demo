@@ -3561,11 +3561,14 @@ print("PLAN " + json.dumps(out))
             check("section 16 ran to its end", False, str(exc).splitlines()[0][:200])
 
     # ------------------------------------------------------------------ 17
-    if part(17, "the edges: every outline one screen pixel; a Gallery tile's lift on the light page; a field's edge 3:1"):
+    if part(17, "the edges: every outline one screen pixel; a Gallery tile's line on the light page; a field's edge 3:1"):
         # THE EDGES (the owner, Nov 15, "The edges", B): every outline the
         # site draws is one screen pixel, the rows' thin line given to every
         # edge, and the Gallery's tiles sit on the light page with the cards'
-        # own soft shadow. Read off the paint at the owner's phone's 3x, light
+        # own lift. THAT LIFT IS ONE LINE OF SHADE NOW (the crisp build, the
+        # owner's "All yes" to its B, Nov 20; section 23): 1px under the edge
+        # and nothing soft below it, where it was a soft shadow. Read off the
+        # paint at the owner's phone's 3x, light
         # and dark: at the middle of a box's left side (the bar: of its top),
         # the screen pixels that stand 1.15:1 apart from both the page beside
         # and what is inside. Every one of them was three; a field's edge
@@ -3586,6 +3589,23 @@ print("PLAN " + json.dumps(out))
                 return [im.getpixel(p_) for p_ in pts if _cr(im.getpixel(p_), page) >= 1.15 and _cr(im.getpixel(p_), inside) >= 1.15]
 
             BOX = "(s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }"
+
+            # WHAT A BOX'S SHADOW PAINTS UNDER IT, PAST ITS RING: the screen rows from its foot down (13px of
+            # them) where the picture is darker than the same picture with the shadow cut to its ring. One line
+            # of shade is a run of two or three rows at 3x (1px, the ring over its first); a soft shadow is
+            # dozens; none is none. (A box's foot seldom lands on a whole screen pixel, so a set row cannot be
+            # asked: the first writing of this read the ring twice and never the line.)
+            def _shade(page_, im_, sel_, r_, across, ring):
+                xm, yb = round((r_[0] + r_[2] * across) * 3), round((r_[1] + r_[3]) * 3)
+                cut = page_.add_style_tag(content=sel_ + " { box-shadow: 0 0 0 var(--edge) " + ring + " !important; }")
+                page_.wait_for_timeout(120)
+                im2_ = Image.open(io.BytesIO(page_.screenshot())).convert("RGB")
+                cut.evaluate("s => s.remove()")
+                page_.wait_for_timeout(60)
+                return [k for k in range(-4, 40) if _lum(im_.getpixel((xm, yb + k))) * 1000 < _lum(im2_.getpixel((xm, yb + k))) * 1000 - 2]
+
+            def _one_line(rows):
+                return bool(rows) and 2 <= len(rows) <= 3 and rows == list(range(rows[0], rows[0] + len(rows)))
             ed = member(b, "edgy", "Eddie Edge")
             st17, _ = make_post(ed, "Edges, one screen pixel.", card=True)
             edges, lift = {}, None
@@ -3605,8 +3625,7 @@ print("PLAN " + json.dumps(out))
                         got = _band(im, [(i, y) for i in range(x - 6, x + 8)], page, inside)
                         edges[f"{scheme} {sel}"] = {"n": len(got), "px": got[:3], "inside": inside}
                         if sel == ".gal-pic" and scheme == "light":
-                            xm, yb = round((r[0] + r[2] / 2) * 3), round((r[1] + r[3]) * 3)
-                            lift = [round(_lum(im.getpixel((xm, yb + 9))) * 1000, 1), round(_lum(im.getpixel((xm, yb + 75))) * 1000, 1)]
+                            lift = _shade(pg, im, sel, r, 0.5, "var(--card-line)")
                     if path == "/social/explore":
                         r = pg.evaluate(BOX, "nav.nav")
                         x6, y = 6, round(r[1] * 3)
@@ -3618,9 +3637,10 @@ print("PLAN " + json.dumps(out))
                   " New | Hot, a tile, and the bar's line along its top",
                   st17 == 200 and len(edges) == 10 and all(v and v["n"] == 1 for v in edges.values()),
                   json.dumps({k: (v and v["n"]) for k, v in edges.items()}) + " " + json.dumps(edges)[:500])
-            check("...a Gallery tile sits on the light page with the cards' own lift: the page just under it darker than"
-                  " further down",
-                  bool(lift) and lift[0] < lift[1] - 2, json.dumps(lift))
+            check("...a Gallery tile sits on the light page with the cards' own lift, which is one line of shade (crisp):"
+                  " under its edge the shadow paints two or three screen rows together (1px), and nothing below them for"
+                  " 13px",
+                  _one_line(lift), json.dumps(lift))
             fld = edges.get("light .gal-find input") or {}
             check("...and the search box's edge reads 3:1 or more against its own white",
                   bool(fld.get("px")) and _cr(fld["px"][0], fld["inside"]) >= 3.0,
@@ -3631,7 +3651,10 @@ print("PLAN " + json.dumps(out))
             # on the light page"): the player's own line made transparent
             # (--border, the seam the site sets), and a line of one screen
             # pixel outside the box, in the drawing's line over its own ground,
-            # made solid; on the light page the cards' own lift. Read as part
+            # made solid; on the light page the cards' own lift. SINCE THE
+            # CRISP BUILD (Nov 20) that lift is the page's one line of shade,
+            # and only where the drawing sits on the page itself: IN A CARD it
+            # wears its edge and nothing else. Read as part
             # four reads the link page: the drawing hidden for the photograph,
             # and the screen pixels that stand apart from both their neighbours
             # (a line one pixel wide does; a wider line, or a shadow's soft
@@ -3675,34 +3698,29 @@ print("PLAN " + json.dumps(out))
                         mech = pg.evaluate("""(s) => { const c = getComputedStyle(document.querySelector(s));
                             const a = (c.borderLeftColor.match(/[\\d.]+/g) || []).map(Number);
                             const line = (parseFloat(c.borderLeftWidth) || 0) > 0 && (a.length < 4 ? a.length > 0 : a[3] > 0);
-                            let w = null;
+                            let w = null;       // its ring: unblurred and not moved (a line of shade under it is moved down, and is not the ring)
                             for (const one of c.boxShadow.split(/,(?![^()]*\\))/)) {
                               const v = (one.replace(/[a-z]+\\([^)]*\\)/g, '').match(/-?[\\d.]+(?=px)/g) || []).map(Number);
-                              if (v.length >= 2 && (v.length < 3 || v[2] === 0)) w = Math.max(w || 0, Math.abs(v[0]), Math.abs(v[1]), Math.abs(v[3] || 0));
+                              if (v.length >= 2 && !v[0] && !v[1] && (v.length < 3 || v[2] === 0)) w = Math.max(w || 0, Math.abs(v[3] || 0));
                             }
                             return { border: line ? c.borderLeftColor : null, w: w }; }""", sel)
                         if mech["border"] or mech["w"] is None or abs(mech["w"] * 3 - 1) > 0.05:
                             got = f"{got} and {mech}"
                         art[f"{scheme} {sel}"] = got
-                        if path == "/social/":
-                            # The lift: just under the box, against the same with its
-                            # shadow cut to its line.
-                            xm, yb = round((r[0] + r[2] * 0.3) * 3), round((r[1] + r[3]) * 3) + 6
-                            was = _lum(im.getpixel((xm, yb)))
-                            cut = pg.add_style_tag(content=sel + " { box-shadow: 0 0 0 var(--edge) var(--draw-edge) !important; }")
-                            pg.wait_for_timeout(120)
-                            im2 = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
-                            cut.evaluate("s => s.remove()")
-                            lifts[scheme] = [round(was * 1000, 1), round(_lum(im2.getpixel((xm, yb))) * 1000, 1)]
+                        if ".cm-art" not in sel:
+                            # The lift: what its shadow paints under it, past its ring.
+                            lifts[f"{scheme} {'in a card' if path == '/social/' else 'on the page'}"] = _shade(pg, im, sel, r, 0.3, "var(--draw-edge)")
                         hide.evaluate("s => s.remove()")
                 close_ctx(ctx, pg)
             check("a drawing on the site wears a line of one screen pixel at 3x, light and dark: a post's on Home's card"
                   " and on its own page, and a comment's",
                   stc17 == 200 and stcm == 200 and len(art) == 6 and all(v == 1 for v in art.values()), json.dumps(art))
-            check("...and on the light page it sits with the cards' lift: just under it darker than with its shadow cut to"
-                  " its line; in dark, none",
-                  bool(lifts.get("light")) and lifts["light"][0] < lifts["light"][1] - 2
-                  and bool(lifts.get("dark")) and abs(lifts["dark"][0] - lifts["dark"][1]) <= 1, json.dumps(lifts))
+            check("...and its lift is the crisp one: ON THE PAGE in light (a post's own page) one line of shade under its"
+                  " edge (two or three screen rows together, nothing below them); IN A CARD (Home's) its edge alone, the"
+                  " shadow painting nothing; in dark, nothing either way",
+                  len(lifts) == 4 and _one_line(lifts.get("light on the page")) and lifts.get("light in a card") == []
+                  and lifts.get("dark in a card") == [] and lifts.get("dark on the page") == [],
+                  json.dumps(lifts))
         except Exception as exc:  # noqa: BLE001
             check("section 17 ran to its end", False, str(exc).splitlines()[0][:200])
 
@@ -4266,11 +4284,10 @@ print("PLAN " + json.dumps(out))
             # Drawings (and somebody to look at Sol's profile, whose grid is then tiles alone, with no eyes)
             tess = someone(b, "tessq", "Tess Quill")
             alone22 = [tess.pg.evaluate(PAD, [f"Section 22, on its own {i}", "public", 226 + i])[0] for i in range(3)]
-            # UNTIL THE CRISP BUILD takes the tiles' soft shadow off the page (the pull request after this one), a
-            # band's paint beside a tile is up to eleven levels darker than its token (2px from a tile on a sheet's
-            # paper, the deepest of it); under a row, where no shadow reaches, it is the token's own. That build
-            # brings this down to two.
-            SHADE22 = 11
+            # A BAND'S PAINT IS ITS TOKEN'S OWN, within two levels (the picture's rounding). Until the crisp build
+            # (section 23) this allowed eleven: a tile's soft shadow lay on the band beside it, deepest 2px from a
+            # tile on a sheet's paper. Nothing soft lies there now.
+            SHADE22 = 2
             GRID22 = """([sel, scroll]) => { const g = [...document.querySelectorAll(sel)].find(e => e.getClientRects().length); if (!g) return null;
               if (scroll) window.scrollTo(0, g.getBoundingClientRect().top + scrollY - 90);
               const gr = g.getBoundingClientRect(), rows = {}, cs = getComputedStyle(g);
@@ -4394,6 +4411,164 @@ print("PLAN " + json.dumps(out))
                   json.dumps({"five": d5, "four": d4})[:900])
         except Exception as exc:  # noqa: BLE001
             check("section 22 ran to its end", False, str(exc).splitlines()[0][:200])
+
+    # ------------------------------------------------------------------ 23
+    if part(23, "crisp: three heights, and nothing soft at rest (the owner's \"All yes\" to the crisp mock's B, Nov 20)"):
+        # The owner: "I want to minimize shadows to create depth and keep it crisp and luxurious. Shadows seem blurry
+        # and kind of muddy the page." B, THREE HEIGHTS: in a card, an edge and nothing else; on the page, the edge
+        # and one line of shade under it (1px, no blur); floating, the one true shadow, short and close, and a
+        # sheet a line of light along its top. The fill an enamel edge, no glow. "SOFT" here is what the count
+        # called soft: a shadow with more than 2.5px of blur. The replay's pen nib keeps its glow (left alone,
+        # and said so in the mock).
+        try:
+            cris = someone(b, "crisv", "Cris Vale")
+            odo = someone(b, "odoq", "Odo Quist")
+            made23 = [make_post(cris, f"Section 23, post {i}", gallery=True, seed=230 + i) for i in range(3)]
+            ids23 = [j.get("post") for st, j in made23 if st == 200 and isinstance(j, dict)]
+            oc23 = odo.client()
+            oc23.get("/social/")
+            said23 = [oc23.post_json(f"/social/p/{ids23[0]}/comments", {"words": "Section 23, a comment"})[0],
+                      oc23.post_json(f"/social/p/{ids23[0]}/comments", {"words": "Section 23, drawn", "payload": drawing(seed=239)})[0]]
+            # A shadow's layers as the browser resolved them: [{ inset, x, y, blur, spread, a }] (a: its colour's alpha).
+            LAYERS23 = """const layers23 = v => { if (!v || v === 'none') return []; const parts = []; let depth = 0, cur = '';
+                for (const ch of v) { if (ch === '(') depth++; if (ch === ')') depth--; if (ch === ',' && !depth) { parts.push(cur); cur = ''; } else cur += ch; }
+                if (cur.trim()) parts.push(cur);
+                return parts.map(p => { const col = (p.match(/(?:rgba?|color)\\([^)]*\\)/) || [''])[0];
+                  const nums = (col.match(/-?[\\d.]+(?:e-?\\d+)?/g) || []).map(Number);
+                  const a = /^rgba\\(/.test(col) ? nums[3] : /^color\\(/.test(col) ? (col.includes('/') ? nums[nums.length - 1] : 1) : 1;
+                  const px = (p.replace(col, '').match(/-?[\\d.]+px/g) || []).map(parseFloat);
+                  return { inset: /inset/.test(p), x: px[0] || 0, y: px[1] || 0, blur: px[2] || 0, spread: px[3] || 0, a: a }; }); };"""
+            # EVERYTHING PAINTED ON THE SCREEN THAT CASTS SOMETHING SOFT (a box, a text or a drop shadow, an element
+            # or its ::before / ::after), and how many of the things that used to are there to be read.
+            SOFT23 = """() => { """ + LAYERS23 + """
+              const out = [], name = e => e.tagName.toLowerCase() + (typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\\s+/).slice(0, 2).join('.') : '');
+              document.querySelectorAll('body *').forEach(e => { const r = e.getBoundingClientRect(); if (!r.width || !r.height) return;
+                if (e.closest('[hidden], .skribl-inline-nib')) return;
+                const cs = getComputedStyle(e); if (cs.visibility === 'hidden' || +cs.opacity === 0) return;
+                if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) return;
+                const vals = [cs.boxShadow, cs.textShadow];
+                for (const pe of ['::before', '::after']) { const ps = getComputedStyle(e, pe); if (ps.content !== 'none') vals.push(ps.boxShadow); }
+                vals.forEach(v => layers23(v).filter(l => l.blur > 2.5 && l.a > 0).forEach(l => out.push(name(e) + ' ' + l.blur + 'px')));
+                if (cs.filter && cs.filter.includes('drop-shadow')) out.push(name(e) + ' ' + cs.filter); });
+              const n = s => [...document.querySelectorAll(s)].filter(e => { const r = e.getBoundingClientRect(); return r.width && r.bottom > 0 && r.top < innerHeight; }).length;
+              return { soft: out, cards: n('.post-card'), plates: n('.skribl-inline'), pills: n('.skribl-inline-play'), tiles: n('.gal-pic'), durs: n('.gal-dur'),
+                       eyes: n('.gal-eye-chip'), bubbles: n('.cm-bubble'), panels: n('.panel'), fill: n('.nav .tab-make') }; }"""
+            # ONE THING'S SHADOW, as painted: its layers, the ring's aside (0 0 0 and a spread).
+            OF23 = """(sel) => { """ + LAYERS23 + """
+              const e = [...document.querySelectorAll(sel)].find(x => x.getClientRects().length); if (!e) return null;
+              return layers23(getComputedStyle(e).boxShadow).filter(l => l.a > 0).map(l => [l.inset ? 'in' : 'out', l.x, l.y, l.blur, l.spread]); }"""
+            # EVERY SHADOW THE SITE'S OWN SHEET DECLARES, whatever state it is for: each rule's box-shadow and
+            # text-shadow resolved on a probe in this page's theme, and the ones with a soft layer named.
+            SHEET23 = """() => { """ + LAYERS23 + """
+              const probe = document.createElement('div'); probe.style.position = 'absolute'; document.body.appendChild(probe);
+              const sheet = [...document.styleSheets].find(s => (s.href || '').includes('/social.css')); if (!sheet) return null;
+              const root = getComputedStyle(document.documentElement), soft = [], lost = [], seen = { rules: 0, shadows: 0 };
+              const read = (prop, v) => { probe.style.setProperty(prop, v);
+                const got = getComputedStyle(probe)[prop === 'box-shadow' ? 'boxShadow' : 'textShadow']; probe.style.removeProperty(prop); return got; };
+              // A rule's own token (--line on a button, say) is not the probe's: stood in for, a colour first and then a
+              // length, so a soft layer cannot hide behind it.
+              const resolve = (prop, v) => { let got = read(prop, v); if (got !== 'none' || !v.includes('var(')) return got;
+                for (const stand of ['rgb(1, 2, 3)', '1px']) {
+                  got = read(prop, v.replace(/var\\((--[\\w-]+)\\)/g, (m, n) => root.getPropertyValue(n).trim() ? m : stand)); if (got !== 'none') return got; }
+                return null; };
+              const walk = rules => { for (const r of rules) { if (r.cssRules && r.cssRules.length && !r.selectorText) { walk(r.cssRules); continue; }
+                if (!r.style) continue; seen.rules++; const who = (r.selectorText || r.keyText || '?').slice(0, 60);
+                for (const prop of ['box-shadow', 'text-shadow']) { const v = r.style.getPropertyValue(prop); if (!v || v === 'none') continue; seen.shadows++;
+                  const got = resolve(prop, v); if (got === null) { lost.push([who, v.slice(0, 60)]); continue; }
+                  const s = layers23(got).filter(l => l.blur > 2.5 && l.a > 0);
+                  if (s.length) soft.push([who, s.map(l => [l.y, l.blur, l.spread])]); }
+                const f = r.style.getPropertyValue('filter'); if (f && f.includes('drop-shadow')) soft.push([who, f]); } };
+              walk(sheet.cssRules); probe.remove();
+              return { soft, lost, rules: seen.rules, shadows: seen.shadows }; }"""
+            seen23, heights, floats, sheet23 = {}, {}, {}, {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    cctx, cpg = browser_as(b, cris, screen, scheme)
+                    for name, path in (("Home", "/social/?show=everyone"), ("a post", f"/social/p/{ids23[0]}"), ("the Gallery", "/social/explore"),
+                                       ("your profile", "/social/@crisv/gallery"), ("Settings", "/social/you")):
+                        cpg.goto(BASE + path)
+                        cpg.wait_for_load_state("load")
+                        cpg.wait_for_timeout(900)
+                        if name == "a post":         # its comments on the screen, where the bubbles are
+                            cpg.evaluate("() => { const c = document.getElementById('comments'); c && c.scrollIntoView({ block: 'center' }); }")
+                            cpg.wait_for_timeout(500)
+                        seen23[f"{name}, {screen} {scheme}"] = cpg.evaluate(SOFT23)
+                        if screen == "phone" and name == "Home":
+                            heights[scheme] = {"a card": cpg.evaluate(OF23, ".post-card"), "in a card": cpg.evaluate(OF23, ".post-card .skribl-inline"),
+                                               "the fill": cpg.evaluate(OF23, ".nav .tab-make .tab-ic"), "the pill": cpg.evaluate(OF23, ".skribl-inline-play")}
+                            sheet23[scheme] = cpg.evaluate(SHEET23)
+                        if screen == "phone" and name == "a post":
+                            heights[scheme].update({"a bubble": cpg.evaluate(OF23, ".cm-bubble"), "in a bubble": cpg.evaluate(OF23, ".cm-bubble .skribl-inline"),
+                                                    "on the page": cpg.evaluate(OF23, ".post-page > .post-art .skribl-inline")})
+                        if screen == "phone" and name == "the Gallery":
+                            heights[scheme]["a tile"] = cpg.evaluate(OF23, ".gal-pic")
+                    if screen == "phone":
+                        cpg.goto(BASE + "/social/?show=everyone")
+                        cpg.wait_for_load_state("load")
+                        cpg.wait_for_timeout(600)
+                        cpg.evaluate("() => window.SocialToast && window.SocialToast.rise('Section 23', { plain: true })")
+                        cpg.wait_for_timeout(700)
+                        floats[scheme] = {"a toast": cpg.evaluate(OF23, ".mu-toast")}
+                        cpg.goto(BASE + "/social/?show=everyone")
+                        cpg.wait_for_load_state("load")
+                        cpg.wait_for_timeout(600)
+                        cpg.locator("nav.nav .tab-make").tap()
+                        cpg.wait_for_function("() => document.getElementById('composeSheet').classList.contains('is-open')", timeout=8000)
+                        cpg.wait_for_timeout(600)
+                        floats[scheme]["a sheet"] = cpg.evaluate(OF23, "#composeSheet .make-sheet")
+                    close_ctx(cctx, cpg)
+            floors = {"Home": {"cards": 1, "plates": 1, "pills": 1}, "a post": {"bubbles": 2, "plates": 1}, "the Gallery": {"tiles": 3, "durs": 3},
+                      "your profile": {"tiles": 3, "eyes": 3}, "Settings": {"panels": 2}}
+            thin = [k for k, v in seen23.items() if v["fill"] < 1 or any(v[what] < n for what, n in floors[k.split(",")[0]].items())]
+            softs = {k: v["soft"][:4] for k, v in seen23.items() if v["soft"]}
+            check("AT REST NOTHING ON THE SCREEN CASTS A SOFT SHADOW (over 2.5px of blur; the replay's pen nib aside): Home, a"
+                  " post's page at its comments, the Gallery, your own profile's grid and Settings, on a phone and a desk,"
+                  " light and dark, each with the things that used to cast one on it (cards, drawings and their play pills,"
+                  " bubbles, tiles with their time and eye chips, panels, Make's button)",
+                  all(st == 200 for st in said23) and len(seen23) == 20 and not softs and not thin,
+                  f"comments {said23}; soft {json.dumps(softs)[:600]}; too little on {thin}; e.g. Home {json.dumps(seen23.get('Home, phone light'))[:260]}")
+
+            def line(l, tone):         # the page's one line under an edge: 1px down, no blur (light), or a line of light inside the top (dark)
+                return l == (["out", 0, 1, 0, 0] if tone == "light" else ["in", 0, 1, 0, 0])
+
+            def ring(l):
+                return l[0] == "out" and l[1:4] == [0, 0, 0] and l[4] > 0
+
+            def three(tone):
+                h = heights.get(tone) or {}
+                on_page = [h.get(k) or [] for k in ("a card", "a bubble", "a tile")]
+                in_card = [h.get(k) or [] for k in ("in a card", "in a bubble")]
+                plate = h.get("on the page") or []
+                fill = h.get("the fill") or []
+                return (all(len(v) == 2 and ring(v[0]) and line(v[1], tone) for v in on_page)
+                        and all(len(v) == 1 and ring(v[0]) for v in in_card)
+                        and (len(plate) == 2 and ring(plate[0]) and line(plate[1], "light") if tone == "light" else len(plate) == 1 and ring(plate[0]))
+                        and len(fill) == 3 and fill[0] == ["in", 0, 1, 0, 0] and fill[1] == ["in", 0, -1, 0, 0] and fill[2] == ["out", 0, 1, 2, 0])
+            check("THREE HEIGHTS, read off what is painted: ON THE PAGE (a card, a comment's bubble, a tile) the edge and one"
+                  " line under it, 1px with no blur (in dark a line of light inside the top); IN A CARD (the drawing in a"
+                  " post's card, in a bubble) the edge alone; the drawing on a post's own page as a card on the page (the"
+                  " edge alone in dark); THE FILL enamel: light on its top edge, shade on its foot, 1px/2px under it, no glow",
+                  three("light") and three("dark"), json.dumps(heights)[:900])
+
+            def floating(tone):
+                f, h = floats.get(tone) or {}, heights.get(tone) or {}
+                toast, sheet, pill = f.get("a toast") or [], f.get("a sheet") or [], h.get("the pill") or []
+                return (len(toast) == 3 and ring(toast[0]) and line(toast[1], tone) and toast[2] == ["out", 0, 12, 22, -12]
+                        and sheet == [["in", 0, 1, 0, 0]]
+                        and bool(pill) and max(l[3] for l in pill) <= 2 and any(l[:4] == ["out", 0, 0, 0] and l[4] == 0.5 for l in pill))
+            check("WHAT FLOATS: a toast has the one true shadow, short and close (22px of blur pulled in 12px under its"
+                  " foot), over its edge and the page's line; a sheet casts nothing and has a line of light along its top;"
+                  " the play pill on a drawing has a hairline and 1px/2px (nothing over 2px); light and dark",
+                  floating("light") and floating("dark"), json.dumps({"floats": floats, "pill": {k: (v or {}).get("the pill") for k, v in heights.items()}})[:700])
+            want_soft = {".mu-toast", ".mn-list"}
+            check("AND THE SITE'S SHEET DECLARES NO OTHER SOFT SHADOW, whatever the state: every box-shadow and text-shadow"
+                  " in social.css resolved in light and in dark, and the only rules with a soft layer are the two things"
+                  " that float (the toast and the list under an @), each the same one shadow",
+                  all(v and v["rules"] > 800 and v["shadows"] > 60 and not v["lost"] and {s[0] for s in v["soft"]} == want_soft
+                      and all(s[1] == [[12, 22, -12]] for s in v["soft"]) for v in (sheet23.get("light"), sheet23.get("dark"))),
+                  json.dumps(sheet23)[:600])
+        except Exception as exc:  # noqa: BLE001
+            check("section 23 ran to its end", False, str(exc).splitlines()[0][:200])
 
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):
