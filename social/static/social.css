@@ -864,6 +864,13 @@ html.is-app .app-edge {
  * 16px a phone magnifies the page) and every target is 44px or more. */
 body.focus .main { padding-bottom: 40px; }
 body.focus .top { justify-content: center; }
+/* THE MARK IN THE MIDDLE, ITS INK TOO: the link is 76px wide (.brand's least
+   width) for a mark 61px wide, and the mark stood at the link's start: the
+   link in the middle of the screen and the word 7.75px left of it, over a
+   heading and an icon that are on it (the owner, Nov 20: "blooby. Does not
+   look centered, does it?"). A desk's door has the mark at the page's start,
+   as the rail does: nothing to centre there. */
+@media (max-width: 899.98px) { body.focus .top .brand { justify-content: center; } }
 .si { display: flex; justify-content: center; gap: 56px; padding: 4px 0 24px; }
 .si-art { display: none; }
 .si-card { display: flex; flex-direction: column; width: 100%; max-width: 400px; }

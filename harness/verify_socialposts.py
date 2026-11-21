@@ -4194,6 +4194,58 @@ print("PLAN " + json.dumps(out))
                   and all(v["arrow"] is None and v["h1shows"] for v in desk.values()),
                   f"Sign in {[door['arrow'], door['mark'], door['to']]}; signed out, How it works {[out_how['arrow'], out_how['title']]};"
                   f" a desk {json.dumps({k: [v['arrow'], v['h1shows']] for k, v in desk.items()})}")
+            # THE MARK'S INK IN THE MIDDLE (the owner, Nov 20, of a door screen's top: "blooby. Does not look
+            # centered, does it?"). The row above says "in the middle" and asked only that the mark was painted:
+            # its LINK was in the middle, and the word stood 7.75px left of it (the link is 76px wide for a 61px
+            # mark, and the mark stood at the link's start). READ OFF THE PAINT, at two pixels to one: the columns
+            # of a picture of the screen that carry the mark's ink, against the screen's middle and the middle of
+            # the heading under it. A DESK's door has the mark at the page's start (the rail's place), where there
+            # is nothing to centre: its box starts where the bar's room does.
+            MARK21 = """() => { const top = document.querySelector('body > .top'), m = top && top.querySelector('.brand .brand-mark');
+              if (!m || !m.getClientRects().length) return null;
+              // the heading the screen shows now (Join and a passkey's link carry more than one, for what the link turns out to be)
+              const h = [...document.querySelectorAll('main h1, main h2')].find(e => e.getClientRects().length);
+              const r = m.getBoundingClientRect(), hr = h ? h.getBoundingClientRect() : null;
+              const tr = top.getBoundingClientRect(), cs = getComputedStyle(top);
+              return { box: [r.left, r.top, r.right, r.bottom], w: innerWidth, head: hr ? (hr.left + hr.right) / 2 : null,
+                       says: h ? h.textContent.trim().slice(0, 30) : null, start: tr.left + parseFloat(cs.paddingLeft) }; }"""
+
+            def mark_of(page_, path):
+                page_.goto(BASE + path)
+                page_.wait_for_load_state("load")
+                page_.wait_for_timeout(400)
+                g = page_.evaluate(MARK21)
+                if not g or Image is None:
+                    return {"ink": None, "why": "no mark on the page" if not g else "Pillow is not installed"}
+                im = Image.open(io.BytesIO(page_.screenshot())).convert("RGB")
+                k = im.size[0] / g["w"]                          # the picture's pixels to one of the page's
+                x0, y0 = max(int((g["box"][0] - 8) * k), 0), max(int((g["box"][1] - 2) * k), 0)
+                x1, y1 = min(int((g["box"][2] + 9) * k), im.size[0]), min(int((g["box"][3] + 8) * k), im.size[1])
+                ground = im.getpixel((x0, y0))
+                cols = [x for x in range(x0, x1)
+                        if any(sum(abs(a - c) for a, c in zip(im.getpixel((x, y)), ground)) > 60 for y in range(y0, y1))]
+                if not cols:
+                    return {"ink": None, "why": "no ink where the mark's box is"}
+                mid = (cols[0] + cols[-1] + 1) / 2 / k
+                return {"ink": [round(cols[0] / k, 1), round((cols[-1] + 1) / k, 1)], "off": round(mid - g["w"] / 2, 2),
+                        "head": None if g["head"] is None else round(g["head"] - g["w"] / 2, 2), "says": g["says"],
+                        "box": round(g["box"][0] - g["start"], 2)}
+
+            marks = {}
+            for scheme in ("light", "dark"):
+                mctx, mpg = browser_as(b, None, "phone", scheme, scale=2)
+                for name, path in (("Sign in", "/social/signin"), ("Join", "/social/join"), ("a link to add a passkey", "/social/recover")):
+                    marks[f"{name}, {scheme}"] = mark_of(mpg, path)
+                close_ctx(mctx, mpg)
+            mctx, mpg = browser_as(b, None, "desk", "light", scale=2)
+            desk_mark = mark_of(mpg, "/social/signin")
+            close_ctx(mctx, mpg)
+            check("on a phone the mark's INK is in the middle of the screen on every door screen (Sign in, Join, a link to"
+                  " add a passkey; light and dark), within a pixel, over a heading that is; on a desk it starts where the"
+                  " bar's room does, as before",
+                  all(v.get("ink") and abs(v["off"]) <= 1 and v["head"] is not None and abs(v["head"]) <= 1 for v in marks.values())
+                  and bool(desk_mark.get("ink")) and abs(desk_mark["box"]) <= 0.5,
+                  f"{json.dumps(marks)}; a desk {json.dumps(desk_mark)}")
         except Exception as exc:  # noqa: BLE001
             check("section 21 ran to its end", False, str(exc).splitlines()[0][:200])
 
