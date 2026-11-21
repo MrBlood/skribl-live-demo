@@ -392,9 +392,10 @@ in the mock page.
   1. THE WAY BACK, PART TWO (A): built, the entry above. STILL OWED from
      it: a kind page for a wrong address ("That page isn't here"), which
      the app answers outside the site's views.
-  2. EACH ROW DISTINCT (A): a faint band under every row of every grid of
-     tiles (`DECISIONS.md`, "Each row distinct, mocked", says how it
-     builds).
+  2. EACH ROW DISTINCT (A): built (`DECISIONS.md`, "Each row distinct,
+     built"). Its check allows the tiles' soft shadow on the band
+     (`SHADE22` in `verify_socialposts` 22) until item 3 takes that shadow
+     away: bring it down to two there.
   3. THE CRISP QUOTIENT (B) on the site (`DECISIONS.md`, "The crisp
      quotient, mocked", says the numbers).
   4. THE PAD AND FLIP: the same crisp rule, both together, and the band

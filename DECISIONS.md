@@ -49875,3 +49875,78 @@ FLIP AND THE PAD: not for either. Opened inside a post they have their own
 way back, and by themselves they are Skribl's pages. NOT TESTED HERE: the
 Home Screen app on an iPhone. THE TELL: open Settings from your profile; at
 the top left, an arrow and "Settings".
+
+## After v330 -- Each row distinct, built: one flat band under every row of a grid of tiles
+
+Nov 20, evening. The second of the three the owner's "All yes" covered (the
+entry above), the mock's A (the artifact "Distinct Rows"): the same faint
+band under every row, as faint as shown, on every grid of tiles at once.
+
+AS BUILT (`docs/SOCIAL-SITE.md` section 28). UNDER EVERY ROW, ONE FLAT BAND:
+no line, no blur. Its colour is a token, solid (No dinge): `--row-band`, the
+page's own colour stepped by about one part in twelve (#eeeff8 in light,
+1.08:1; #191b21 in dark, 1.09:1), and on a sheet's paper the paper's own
+step (`--row-band-sheet`: #ebe7fc, #1f1c32). It runs 8px out past the grid
+at each end, 7px over the pictures and 8px under the names, its ends rounded
+(20px); the page shows between two rows. It is drawn in the stylesheet
+alone, by the row's own cells, each behind itself and out to its share of
+the row (the columns are known: two, and three from 900px), the first and
+the last of a row rounding its ends. A LAST ROW THAT IS NOT FULL IS STILL A
+WHOLE BAND: its last cell carries it across.
+
+WHERE: wherever the one grid is (`.gal-grid`). The Gallery; a profile's
+Gallery and Drafts tabs; the front door's fresh drawings; and Make's "Use
+one you made", where the ground is the sheet's paper and the list leaves
+4px to run out into.
+
+WHAT THE BUILDING FOUND, each before anybody else could:
+
+- YOUR OWN PROFILE'S GRID HOLDS CELLS, NOT TILES (a tile and its eye in
+  one box). The first writing put the band on the tile, and there every
+  tile is the first thing in its box: each took a row's left end, so the
+  right half of a row never reached the row's end and rounded its corners
+  in the middle. The check's first run read it. The band is the grid's own
+  children's now, whatever they are.
+- MAKE'S LIST CUT THE FIRST ROW'S BAND SQUARE, 3px short at the top: the
+  list scrolls, and a scroller cuts what runs out past its own padding. Its
+  top padding is the band's room now (8px for 4, its margin 8px for 12:
+  the tiles sit where they sat).
+- THE CHECK ITSELF WAS TOO KIND. Four of the eight breakages stayed green
+  on its first writing: it allowed a band's paint eleven levels of shade
+  (the tiles' soft shadow, below), and the band is only nine levels from
+  the page, so the page itself passed for a band. Each band pixel must now
+  also be a step from the ground beside its row, the way the token steps.
+- THE TILES' SOFT SHADOW LIES ON THE BAND, beside each tile, until the
+  crisp build takes it off the page (the next pull request). The mock's
+  pictures showed exactly that, and those are what the owner said yes to.
+  Under a row, where no shadow reaches, the band is its token's own colour.
+
+LEFT AS THEY WERE: lists of one thing a line (Activity, people), which have
+a line between rows; asked of the owner, not answered.
+
+THE CHECK. `verify_socialposts` 22, three rows, READ OFF THE PAINT (a
+picture of the screen: a band is a part of its cell and has no box of its
+own to ask): on a phone, a profile's five tiles are two rows of two and one
+of one, each a whole band, end to end, with no notch in its middle, its
+corner, its sides and the gap under it the page's, in light and dark, on
+your own profile (cells) and somebody else's view of it (tiles); Make's
+list the same on its paper; a desk's five are three and two, and its four
+three and one. SHOWN RED: the last-row rule taken out (a phone's, and each
+of a desk's two); the band put back on the tile; another colour; bands
+touching; the list's old padding; the page's band on a sheet's paper.
+
+HOW THEY RAN HERE: the ten suites that draw this grid or read the words
+on it, each whole, side by side, all green the first time, in 16 minutes:
+`verify_socialposts` 110 (the three new rows with it),
+`verify_socialcomments` 150, `verify_socialprofile` 98,
+`verify_socialreposts` 99, `verify_socialauth` 76, `verify_socialapp` 71,
+`verify_social` 46, `verify_composer` 43, `verify_socialbookmarks` 37,
+`verify_socialsearch` 32. The full battery was not run; main's run after
+the merge is it.
+
+FLIP AND THE PAD: not for either. Skribl's own Gallery and the Library have
+the same kind of grid and follow with the editors' round, so the two do not
+drift. NOT TESTED HERE: an iPhone's screen, whose blacks are deeper than
+these pictures; a 4% lift may read stronger or fainter there. THE TELL: the
+Gallery in dark; each row of two sits on a faint band, with the page
+between rows.

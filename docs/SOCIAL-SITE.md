@@ -3306,3 +3306,24 @@ Settings and Edit profile to your profile, Delete account to Settings, the
 rest to Home (Join and Add a passkey to Sign in).
 
 `verify_socialposts` 21 holds both parts, with `verify_socialcomments` 40.
+
+## 28. Built: each row of a grid of tiles on one faint band (Nov 20)
+
+The owner, of the Gallery in dark: "anything like this with rows should
+maybe have slightly diff color under each [row]. Almost imperceptible but
+enough so you can tell where top and bottom are.. each row distinct". A name
+sits 8px under its own picture and 18px over the next row's, and a drawing
+on dark paper has no edge on the dark page.
+
+**Under every row, one flat band** (`.gal-grid > *::before`): the token
+`--row-band` (the page's own colour stepped about one part in twelve, solid;
+`--row-band-sheet` on a sheet's paper), 8px out past the grid, 7px over the
+pictures, 8px under the names, the page showing between two rows. No line,
+no blur. The row's own cells draw it, each to its share of the row; a last
+row that is not full is still a whole band.
+
+It is wherever the grid is: the Gallery, a profile's Gallery and Drafts
+tabs (your own, where each tile sits in a cell with its eye), the front
+door, and Make's "Use one you made".
+
+`verify_socialposts` 22 holds it, read off the paint.
