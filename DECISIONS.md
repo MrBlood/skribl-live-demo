@@ -50389,3 +50389,95 @@ Playful is not in it; this is the frame, and the drawing is the hero.
 NOT TESTED HERE: Safari on an iPhone, SF and Segoe UI. THE TELL: with
 something drawn, Post has no glow under it and its word is sharp; and open
 the menu: its cards have no haze round them.
+
+## After v330 -- The last soft shadows, mocked: nine calls for the owner, and a band that does not fit
+
+Nov 21, about 6 AM. The build before this (the entry above) left alone
+every soft shadow in the Pad and Flip that the crisp mock had not pictured,
+and said a mock of them was next. This is it: the artifact "Last Soft
+Shadows". NOTHING IN IT IS BUILT; each call waits for a plain yes.
+
+THE TARGET, said first: the shadows still left in the Pad and Flip (sheets,
+floating cards, knobs, the Pad's paper), and the cards of Skribl's own
+Gallery and the Library. Not the colours, the type or the layout.
+
+HOW IT WAS PICTURED: every state `verify_contrast`'s own walk reaches that
+still paints something soft, as it is, and again with a stylesheet laid
+over the same page (a temporary part, never committed), a touch phone and
+a desk, light and dark. Skribl's Gallery and the Library from five public
+drawings posted to a scratch copy.
+
+THE NINE, with the pick on each, so that "all yes" is an answer:
+
+1. SHEETS OVER A DIMMED PAGE (Your drafts 24px/60px; How it works and the
+   little book 40px, falling upward on a phone and 24px/60px on a desk):
+   no fall, a line of light along the top, as the site's sheets. PICK: yes.
+   The same kind, not pictured: Leave's sheet, Flip's export card, the
+   recovery key's sheet, the Home Screen steps.
+2. CARDS AND PILLS THAT FLOAT OVER THE CANVAS (a button's card and a Show
+   me step 18px/40px, Name every button's banner 12px/30px, Draw along's
+   pill 10px/28px, a draft row's menu 12px/40px, "Drag to move" 2px/10px):
+   the one floating shadow (`--chip-lift`) over a thin edge. PICK: yes.
+   MEASURED: a floating card's lilac edge is 1.43:1 against what it floats
+   over (1.45:1 in dark); "Drag to move" is as light as the paper (1.0:1),
+   set apart today by its shadow alone, and gains the edge. Not pictured:
+   the "Keep drawing" pill, a desk's tooltip, the two lenses, the swoosh's
+   readout, the replay's speed bubble, Flip's page menu.
+3. BLOOBY'S TILE ON "POSTED!" (6px/16px): a close 1px/2px, the call made
+   for the app's icon in the site's Home Screen steps. PICK: yes, and said
+   to be the one least argued for. The player's purple button takes Post's
+   enamel with it.
+4. KNOBS AND GRIPS (a switch's knob 2px/6px, a slider's thumb 1px/3px, the
+   timeline's grips 1px/3px, the blend's dot 1px/4px): 1px/2px. PICK: yes.
+5. LIGHTS (the green dot's 3px halo, the lit beat, the playhead, the pen
+   nib): a glow there is light, not depth. PICK: leave them.
+6. THE PAD'S PAPER: its inner shade (70px inside, at 6%, in dark 40%) off.
+   MEASURED: the paper is 246,242,234 in its middle and 238,234,226 in its
+   corners (1.07:1); in dark 13,15,20 and 9,11,15. It is on 38 of the 85
+   surfaces, the largest soft thing left. FLIP'S PAPER HAS NEVER HAD IT, so
+   this is also a place the two differ for no reason. PICK: take it off.
+7. THE DEMO VIDEO IN AN ANSWER (8px/22px): a thing in a card, its edge
+   alone. PICK: yes.
+8. BUTTONS THAT RIDE ON A DRAWING IN FULL SCREEN (3px/12px): the play
+   pill's hairline and 1px/2px. PICK: yes. Not pictured; said to be the
+   pill's look. The halo behind the time and the words over a drawing
+   stays: it is what lets them read on any drawing.
+9. SKRIBL'S OWN GALLERY AND THE LIBRARY: their cards' own copy of the old
+   lift (`--card-drop` in the two templates, 6px/18px) to the one line.
+   PICK: yes. AND NO BAND THERE, below.
+
+A CORRECTION, SAID TO THE OWNER ON THE PAGE AND IN CHAT. The rows mock
+("Each row distinct, mocked") said Skribl's own Gallery and the Library
+"have the same kind of grid" as the site's Gallery and would follow with
+the same band, and the owner's "All yes" took that as one of its choices.
+THEY DO NOT. Read on the page: every drawing in Skribl's Gallery is a
+whole card with a ground and an edge of its own (374px wide on a phone,
+one to a line; two across on a desk), and the Library is a player's card
+and rows that are cards. Each row there is distinct already, and a band
+behind a card is a box in a box, which that same mock argued against (its
+C). SO THE BAND THERE IS NOT BUILT, and is asked again as part of call 9
+with the pick "no band". A yes given on a wrong description is not a yes.
+
+FLIP AND THE PAD: shared, all of it, one stylesheet; call 6 is the Pad's
+alone and makes its paper Flip's.
+
+AGAINST THE FOUR. Simple: one answer to "why does this have a shadow?": it
+floats. Kind: clean paper to draw on. Playful: the lights stay, and Blooby
+still jumps. Powerful: nothing a tool does changes.
+
+IF IT IS A YES, HOW IT BUILDS: in the two stylesheets and the two
+templates; `CRISP_LEFT` shrinks to the lights, and `verify_contrast` gains
+the row it could not have until now, every shadow the editors' sheets
+declare, resolved, soft only for what floats and what is a light.
+
+SEEN ON THE WAY, NOT TOUCHED: in this box's Chromium, How it works on a
+phone paints a small black wedge outside each of its top corners (pure
+black where the dimmed page should show; about 437 device pixels at two to
+one). It is there on main's tree from before the crisp build, with or
+without the sheet's shadow, at every screen density, at rest. With the
+section that holds its examples hidden it is gone. Not seen on a desk, on
+the little book or on Your drafts. WHETHER A REAL PHONE SHOWS IT IS NOT
+KNOWN HERE (no WebKit, no GPU): the owner is asked whether they have ever
+seen it, and it is chased only if they have, or once a real device says.
+
+NOT TESTED HERE: Safari on an iPhone, SF and Segoe UI.
