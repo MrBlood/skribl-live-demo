@@ -614,14 +614,17 @@ def skribl_there(*sids):
     return [bool(db("select 1 from skribl_posts where public_id = ?", (s or "",))) for s in sids]
 
 
-# The row under a drawing on its own page, as the page shows it: its comments'
-# link (the count, by posts.cards: what Home's card for it said until the
-# map's step 3, when Home became posts only), or None.
+# The row under a drawing on its own page, as the page shows it: its talk
+# cloud (the count, by posts.cards: what Home's card for it said until the
+# map's step 3, when Home became posts only), or None. SINCE THE CLOUD ANSWERS
+# (Nov 21) it is a button there for whoever may say something, with no address
+# of its own; a link down to the comments only where nothing can be said.
 ROW_COUNT = """(sid) => { const c = document.querySelector('.post-page[data-skribl="' + sid + '"]');
   if (!c) return null; const n = c.querySelector(':scope > .post-row .post-count'); if (!n) return { none: true };
   const r = n.getBoundingClientRect();
-  return { label: n.getAttribute('aria-label'), text: n.textContent.trim(), icon: !!n.querySelector('svg'),
-           href: new URL(n.href).pathname + new URL(n.href).hash, w: r.width, h: r.height }; }"""
+  return { label: n.getAttribute('aria-label'), text: n.textContent.trim(), icon: !!n.querySelector('svg'), is: n.tagName.toLowerCase(),
+           says: n.hasAttribute('data-cm-new'), href: n.tagName === 'A' ? new URL(n.href).pathname + new URL(n.href).hash : null,
+           w: r.width, h: r.height }; }"""
 
 
 def row_count(pg, sid):
@@ -818,6 +821,7 @@ SAYLINE = """() => { const b = document.querySelector('.ans-bar .cm-say'); if (!
     // What stood here until Nov 20, and must not come back beside the bar: a
     // heading's row with its round icon, "Say the first thing".
     old: document.querySelectorAll('.comments-head, .comments .icon-btn.cm-say, [data-cm-first], .cm-first-fold').length,
+    // what opens the box for something new: the bar's line, and since Nov 21 the row's talk cloud
     openers: document.querySelectorAll('[data-cm-new]').length,
     fold: fold ? { h: one(fold.getBoundingClientRect().height), seen: getComputedStyle(inner).visibility,
                    laid: fold.querySelector('[data-cm-words]').getClientRects().length > 0,
@@ -1731,11 +1735,12 @@ with sync_playwright() as p:
                 got_, _ = steps(nothing_sent)
                 nothing, blank = got_ or (None, None)
             check("a post nobody has commented on has no heading over nothing (no label, no number, nothing saying Comments),"
-                  " and the answer bar's line, \"Say something…\", the box folded away behind it and nothing else offering"
-                  " it; a tap opens it on a phone's sheet, \"Say something to Juno\": their face, the words' field (17px,"
+                  " and the answer bar's line, \"Say something…\", the box folded away behind it; the line and the row's"
+                  " talk cloud offer it and nothing else does; a tap opens it on a phone's sheet, \"Say something to Juno\":"
+                  " their face, the words' field (17px,"
                   " focused), \"Say something, or draw it…\", Draw, Flip and Post; no \"Comments open soon\"",
                   empty == {"count": None, "list": []} and label is None and not soon
-                  and line is not None and line["name"] == "Say something…" and line["old"] == 0 and line["openers"] == 1
+                  and line is not None and line["name"] == "Say something…" and line["old"] == 0 and line["openers"] == 2
                   and folded is not None and folded["open"] is None
                   and box is not None and box["open"] == "sheet" and box["title"] == "Say something to Juno" and box["face"]
                   and box["focus"] and box["placeholder"] == "Say something, or draw it…" and box["chips"] == ["Draw", "Flip"]
@@ -2393,15 +2398,15 @@ with sync_playwright() as p:
             # the icon alone, named Comment, the same way in, where the number goes.
             # (Since the reposts mock, Nov 14, the repost comes next, where the heart was.)
             check("Home's card says how many comments first in the row under the drawing (the comment icon and the"
-                  " number, \"3 comments\"), 14px before the repost and on its middle, a way to them on the post's page,"
-                  " 44px; a post with none shows the icon alone, no number, named \"Comment\", the same way in at the"
-                  " same place",
+                  " number, \"3 comments\"), 14px before the repost and on its middle, a way to the post with its answer box"
+                  " open (#say: the cloud answers, the owner's yes, Nov 21; it went to the comments), 44px; a post with"
+                  " none shows the icon alone, no number, named \"Comment\", the same way in at the same place",
                   got is not None and got.get("label") == "3 comments" and got.get("text") == "3" and got.get("icon")
                   and got.get("first") and got.get("next")
-                  and got.get("href") == f"/social/p/{post}#comments" and got.get("beside") == 14
+                  and got.get("href") == f"/social/p/{post}#say" and got.get("beside") == 14
                   and got.get("middle") and got.get("w", 0) >= 44 and got.get("h", 0) >= 44
                   and none.get("label") == "Comment" and none.get("text") == "" and none.get("icon")
-                  and none.get("href") == f"/social/p/{bare}#comments" and none.get("beside") == got.get("beside")
+                  and none.get("href") == f"/social/p/{bare}#say" and none.get("beside") == got.get("beside")
                   and none.get("middle") and none.get("w", 0) >= 44 and none.get("h", 0) >= 44,
                   f"{got}; with none {none}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
@@ -3224,11 +3229,11 @@ with sync_playwright() as p:
             dee_by_cyd = seen_by(dee)
             cc.post_json("/social/@dee/unblock", {})
             all4 = sorted(["Section 23, Ben's", "Section 23, Cyd's", "Section 23, Ben under Cyd", "Section 23, Cyd under Ben"])
-            bens = {"count": "1", "card": "1 comment", "shown": ["Section 23, Ben's"]}
+            bens = {"count": "1", "card": "1 comment · Say something", "shown": ["Section 23, Ben's"]}
             check("on a drawing, a block either way hides the other's comments and every answer under them: neither shown"
                   " nor counted, on the drawing's page, its section and the row under it (its card on Home until the"
                   " map's step 3)",
-                  before == {"count": "4", "card": "4 comments", "shown": all4} and dee_blocked == bens
+                  before == {"count": "4", "card": "4 comments · Say something", "shown": all4} and dee_blocked == bens
                   and dee_by_cyd == bens,
                   f"before {before}; dee blocked cyd {dee_blocked}; cyd blocked dee {dee_by_cyd}")
 
@@ -3478,13 +3483,14 @@ with sync_playwright() as p:
             home = row_count(mira.pg, sid) or {}
             none = row_count(mira.pg, bare) or {}
             check("the row under a drawing on its own page counts its comments as its section does (the one taken down"
-                  " not counted): the icon and the number, \"2 comments\", a way to them (#comments), 44px; a drawing"
-                  " with none, the icon alone, named \"Comment\" (Home's card said so until the map's step 3: Home is"
-                  " posts only)",
-                  home.get("label") == "2 comments" and home.get("text") == "2" and home.get("icon")
-                  and home.get("href") == f"/social/b/{sid}#comments" and home.get("w", 0) >= 44 and home.get("h", 0) >= 44
-                  and none.get("label") == "Comment" and none.get("text") == "" and none.get("icon")
-                  and none.get("href") == f"/social/b/{bare}#comments" and none.get("w", 0) >= 44
+                  " not counted): the icon and the number, named \"2 comments · Say something\", a button that opens the"
+                  " box (the talk cloud answers, as under a post), 44px; a drawing with none, the icon alone, named \"Say"
+                  " something\"",
+                  home.get("label") == "2 comments · Say something" and home.get("text") == "2" and home.get("icon")
+                  and home.get("is") == "button" and home.get("says") and home.get("href") is None
+                  and home.get("w", 0) >= 44 and home.get("h", 0) >= 44
+                  and none.get("label") == "Say something" and none.get("text") == "" and none.get("icon")
+                  and none.get("is") == "button" and none.get("says") and none.get("w", 0) >= 44
                   and none.get("h", 0) >= 44,
                   f"{home}; with none {none}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
@@ -3663,15 +3669,16 @@ with sync_playwright() as p:
             def placed(k, v):
                 ln = v["line"]
                 if not ln or not (ln["name"] == "Say something…" and ln["tag"] == "BUTTON" and ln["h"] == 44 and ln["font"] == "16px"
-                                  and ln["weight"] == "400" and ln["lands"] and ln["seen"] and ln["old"] == 0 and ln["openers"] == 1
+                                  and ln["weight"] == "400" and ln["lands"] and ln["seen"] and ln["old"] == 0 and ln["openers"] == 2
                                   and ln["draw"] and ln["draw"] >= 100):
                     return False
                 if k[0] == "phone":
                     return ln["fixed"] and abs(ln["onNav"]) <= 0.6 and ln["bar"] == [402, 60] and ln["face"] == 32
                 return ln["fixed"] is False and abs(ln["underDate"] - 18) <= 0.6 and ln["bar"][1] == 44 and ln["face"] is None
-            check("THE ANSWER BAR, the one place to answer: a line that looks like a field and is a button, \"Say something…\","
-                  " 44px tall, its words 16px, every tap point across it landing on it, Draw back beside it, and nothing of"
-                  " the old way on the page (no heading's row, no round icon, no \"Say the first thing\"). A phone: fixed,"
+            check("THE ANSWER BAR, the one place an answer is made: a line that looks like a field and is a button, \"Say"
+                  " something…\", 44px tall, its words 16px, every tap point across it landing on it, Draw back beside it,"
+                  " and nothing of the old way on the page (no heading's row, no round icon, no \"Say the first thing\"; the"
+                  " row's talk cloud the one other thing that opens the same box). A phone: fixed,"
                   " standing on the bottom bar, the screen's width and 60px tall, your face (32px) at its start. A desk: in"
                   " the column, 18px under the date, no face. Light and dark",
                   all(placed(k, v) for k, v in seen.items()),
@@ -3742,10 +3749,13 @@ with sync_playwright() as p:
             inert = ppg.evaluate("() => ['body > .top', 'body > .nav', '#main'].map(s => document.querySelector(s).hasAttribute('inert'))")
             g_up = glided(track(rise, 0))
             dim = fades_of(rise, 0)
+            # (Under its title, the post's own words: something new answers the post, as a reply answers a
+            # comment. The talk cloud, B: the owner's yes, Nov 21. Until then a new comment's sheet had no such line.)
             check("a tap on the answer bar's line raises Make's own sheet from the bottom, the box on it: \"Say something to"
-                  " Juno\", their face, the field focused and ready (17px), Draw, Flip and Post; it glides up (read on every"
-                  " frame) while the page dims, the page under it holding still and inert; the line saying it is open",
-                  up and up["open"] == "sheet" and up["title"] == "Say something to Juno" and up["quote"] is None
+                  " Juno\", the post's own words under that in quotes, their face, the field focused and ready (17px), Draw,"
+                  " Flip and Post; it glides up (read on every frame) while the page dims, the page under it holding still"
+                  " and inert; the line saying it is open",
+                  up and up["open"] == "sheet" and up["title"] == "Say something to Juno" and up["quote"] == "“Section 30, a snail”"
                   and up["focus"] and up["font"] == 17 and up["chips"] == ["Draw", "Flip"] and up["post"] == "Post"
                   and up["placeholder"] == "Say something, or draw it…" and up["icon"] == "true"
                   and g_up["ok"] and 150 <= abs(g_up["way"]) and len([o for o in dim if 0.02 < o < 0.98]) >= 3
@@ -4025,9 +4035,9 @@ with sync_playwright() as p:
             pg.keyboard.press("Escape")
             pg.wait_for_function(GONE, timeout=8000)
             check("its words stay one line, cut short with an ellipsis when long; the bar's line opens it as \"Say something to Juno\""
-                  " again, its field back to \"Say something, or draw it…\" and no quote",
+                  " again, its field back to \"Say something, or draw it…\", and what it answers the post's own words again",
                   quote_line == {"lines": 1, "wrap": "nowrap", "cut": "ellipsis"} and home_again["title"] == "Say something to Juno"
-                  and home_again["quote"] is None and home_again["placeholder"] == "Say something, or draw it…",
+                  and home_again["quote"] == "“Section 32, a snail”" and home_again["placeholder"] == "Say something, or draw it…",
                   f"quote {quote_line}; again {home_again}")
             # A desk: under the conversation, as today; open in the bar's place first, it folds there (the comments
             # rising by the box's room less the line's 44px, the line coming back), then opens under the conversation.
@@ -4231,52 +4241,100 @@ with sync_playwright() as p:
             # and disorganized ... I don't want anything to ever look busy and
             # confusing"). Until then a bold "Comments" stood over "Say the first
             # thing": a heading over nothing, and the box offered a third time. The
-            # one way in is the bar's line; and THE ROW'S TALK CLOUD, a way down to
-            # the comments, is never a tap that does nothing: with none to go down
-            # to (its own name is "Comment" then) it opens the box.
+            # one way in is the bar's line; and THE ROW'S TALK CLOUD ANSWERS (the
+            # owner's yes to the mock's B, Nov 21, of Bluesky's reply screen beside
+            # this page: "Is that what we're going for?"). Under a comment the cloud
+            # meant "answer this" and under a post "go and look at the comments" (it
+            # opened the box only when there were none to go down to); it means one
+            # thing now. It is a button that opens what the bar's line opens, with
+            # comments there or none: a phone's sheet says whom, the post's own words
+            # under that, and the page under it has not moved; a desk's box opens in
+            # the line's place; signed out, "Say something?".
             quiet = make_post(juno, "Section 34, nobody has said anything yet", seed=342)
+            CLOUD34 = ".post-page > .post-row .post-count[data-cm-new]"
             NONE = """() => { const sec = document.getElementById('comments'), page = document.querySelector('.post-page');
-              const cloud = page.querySelector(':scope > .post-row a.post-count');
+              const cloud = page.querySelector(':scope > .post-row .post-count[data-cm-new]'), link = page.querySelector(':scope > .post-row a.post-count');
               return { first: document.querySelectorAll('[data-cm-first], .cm-first, .cm-first-fold').length,
                        headings: [...page.querySelectorAll('h2')].filter(e => e.getClientRects().length).map(e => e.innerText.trim()),
-                       room: Math.round(sec.getBoundingClientRect().height * 10) / 10, cloud: cloud ? cloud.getAttribute('aria-label') : null }; }"""
+                       room: Math.round(sec.getBoundingClientRect().height * 10) / 10, cloud: cloud ? cloud.getAttribute('aria-label') : null,
+                       n: cloud && cloud.querySelector('span') ? cloud.querySelector('span').textContent : null,
+                       is: cloud ? cloud.tagName.toLowerCase() : null, opens: cloud ? cloud.getAttribute('aria-controls') : null, link: !!link }; }"""
             got = {}
             for key, who, screen, on in (("phone", theo, "phone", quiet), ("desk", theo, "desk", quiet), ("signed out", None, "phone", quiet),
                                          ("with one", theo, "phone", post)):
                 cctx, cpg = browser_as(b, who, screen)
                 open_post(cpg, on)
                 none = cpg.evaluate(NONE)
-                (cpg.tap if screen == "phone" else cpg.click)(".post-page > .post-row a.post-count")
                 err = None
-                if key in ("phone", "desk"):
-                    _, err = steps(lambda: cpg.wait_for_function(BOX_STILL, timeout=8000))
-                else:
-                    cpg.wait_for_timeout(700)
+                try:
+                    cpg.locator(CLOUD34).scroll_into_view_if_needed(timeout=8000)
+                    cpg.wait_for_timeout(250)
+                    y0 = cpg.evaluate("() => Math.round(scrollY)")
+                    (cpg.tap if screen == "phone" else cpg.click)(CLOUD34, timeout=8000)
+                    if who is not None:
+                        cpg.wait_for_function(BOX_STILL, timeout=8000)
+                    else:
+                        cpg.wait_for_timeout(700)
+                except Exception as exc:  # noqa: BLE001 -- no cloud to press, or no box, is this row's red, never a stop
+                    err, y0 = str(exc).splitlines()[0][:140], None
                 got[key] = {"none": none, "opened": cpg.evaluate(BOX), "at": cpg.evaluate("() => location.pathname + location.hash"),
                             "out": cpg.evaluate("() => { const w = document.getElementById('commentOutSheet'); return !!w && w.classList.contains('is-open'); }"),
-                            "stopped": err}
-                if key in ("phone", "desk"):
+                            "moved": None if y0 is None else cpg.evaluate("() => Math.round(scrollY)") - y0, "stopped": err}
+                if who is not None and err is None:
                     cpg.keyboard.press("Escape")
                     cpg.wait_for_function(GONE, timeout=8000)
                     cpg.wait_for_timeout(350)
                     got[key]["focus"] = cpg.evaluate("() => document.activeElement.className")
                 close_ctx(cctx, cpg)
-            bare = {"first": 0, "headings": [], "room": 0, "cloud": "Comment"}
+            bare = {"first": 0, "headings": [], "room": 0, "cloud": "Say something", "n": None, "is": "button", "link": False}
             check("with nothing said yet there is nothing where the comments will be: no \"Say the first thing\", no heading, no"
-                  " label, no room taken (a phone, a desk, signed out); and the row's talk cloud, named \"Comment\" then, is"
-                  " never a tap that does nothing: it opens the box as the bar's line does (a phone's sheet, \"Say something"
-                  " to Juno\"; a desk, in the line's place), the address as it was and Esc giving focus to the line; signed"
-                  " out it raises \"Say something?\"; with a comment there it is the way down to them it always was",
-                  all(got[k]["none"] == bare for k in ("phone", "desk", "signed out"))
-                  and all(got[k]["stopped"] is None and got[k]["at"] == f"/social/p/{quiet}" and got[k]["focus"].startswith("ans-say cm-say")
+                  " label, no room taken (a phone, a desk, signed out); and the row's talk cloud answers: a button named \"Say"
+                  " something\" (with a comment there, \"1 comment · Say something\") that opens the box as the bar's line"
+                  " does, comments or none: a phone's sheet, \"Say something to Juno\", the post's own words under that, the"
+                  " page under it where it was; a desk's box in the line's place; the address as it was, and Esc giving focus"
+                  " back to the cloud that was pressed; signed out it is named as opening \"Say something?\" and raises it",
+                  all({x: got[k]["none"][x] for x in bare} == bare for k in ("phone", "desk", "signed out"))
+                  and got["phone"]["none"]["opens"] == "commentBoxSheet" and got["signed out"]["none"]["opens"] == "commentOutSheet"
+                  and all(got[k]["stopped"] is None and got[k]["at"] == f"/social/p/{quiet}" and got[k]["focus"].startswith("post-count")
                           for k in ("phone", "desk"))
                   and got["phone"]["opened"]["open"] == "sheet" and got["phone"]["opened"]["title"] == "Say something to Juno"
+                  and got["phone"]["opened"]["quote"] == "“Section 34, nobody has said anything yet”" and got["phone"]["moved"] == 0
                   and got["phone"]["opened"]["focus"] and got["desk"]["opened"]["open"] == "home" and got["desk"]["opened"]["focus"]
                   and got["signed out"]["out"] and got["signed out"]["opened"] is None and got["signed out"]["at"] == f"/social/p/{quiet}"
-                  and got["with one"]["none"]["cloud"] == "1 comment" and got["with one"]["at"] == f"/social/p/{post}#comments"
-                  and got["with one"]["opened"]["open"] is None and not got["with one"]["out"],
-                  json.dumps({k: {x: (y if x != "opened" else (y and [y["open"], y["title"], y["focus"]])) for x, y in v.items()}
-                              for k, v in got.items()})[:1300])
+                  and got["with one"]["none"]["cloud"] == "1 comment · Say something" and got["with one"]["none"]["n"] == "1"
+                  and got["with one"]["at"] == f"/social/p/{post}"
+                  and got["with one"]["stopped"] is None and got["with one"]["opened"]["open"] == "sheet"
+                  and got["with one"]["opened"]["quote"] == "“Section 34, a snail”" and got["with one"]["moved"] == 0
+                  and not got["with one"]["out"],
+                  json.dumps({k: {x: (y if x != "opened" else (y and [y["open"], y["title"], y["quote"], y["focus"]])) for x, y in v.items()}
+                              for k, v in got.items()})[:1500])
+            # FROM A CARD the cloud goes to the post with its box open: Home's card, somebody signed in (the
+            # address asks for it, #say, and loses that once it has); signed out it goes to the comments, to read.
+            card34 = {}
+            for key, who in (("signed in", theo), ("signed out", None)):
+                cctx, cpg = browser_as(b, who, "phone")
+                try:
+                    cpg.goto(BASE + f"/social/@{juno.handle}")
+                    cpg.wait_for_selector(f'.post-card[data-post="{post}"] .post-row a.post-count', timeout=10000)
+                    cpg.wait_for_timeout(500)
+                    href = cpg.evaluate("(id) => document.querySelector('.post-card[data-post=\"' + id + '\"] .post-row a.post-count').getAttribute('href')", post)
+                    cpg.tap(f'.post-card[data-post="{post}"] .post-row a.post-count')
+                    cpg.wait_for_function("() => /^\\/social\\/p\\//.test(location.pathname) && !!document.querySelector('[data-comments]')", timeout=15000)
+                    if who is not None:
+                        cpg.wait_for_function(BOX_STILL, timeout=8000)
+                    else:
+                        cpg.wait_for_timeout(900)
+                    card34[key] = {"href": href, "at": cpg.evaluate("() => location.pathname + location.hash"), "box": (cpg.evaluate(BOX) or {}).get("open"),
+                                   "out": cpg.evaluate("() => { const w = document.getElementById('commentOutSheet'); return !!w && w.classList.contains('is-open'); }")}
+                except Exception as exc:  # noqa: BLE001 -- a card that cannot be tapped is this row's red, never a stop
+                    card34[key] = {"stopped": str(exc).splitlines()[0][:140]}
+                close_ctx(cctx, cpg)
+            check("from a card the cloud goes to the post with its box open: signed in, its address ends #say, a tap lands on"
+                  " the post with a phone's sheet up and the address without its #say; signed out it ends #comments and lands"
+                  " at the comments, nothing raised",
+                  card34.get("signed in") == {"href": f"/social/p/{post}#say", "at": f"/social/p/{post}", "box": "sheet", "out": False}
+                  and card34.get("signed out") == {"href": f"/social/p/{post}#comments", "at": f"/social/p/{post}#comments", "box": None, "out": False},
+                  json.dumps(card34))
             # THE LABEL COMES WITH THE FIRST COMMENT AND GOES WITH THE LAST, kindly:
             # it fades in as the first one arrives; as the last one goes it fades
             # with it and leaves only once that one's room has closed, so nothing
@@ -4296,7 +4354,7 @@ with sync_playwright() as p:
                 dpg.wait_for_function(BOX_STILL, timeout=8000)
                 dpg.fill("[data-cm-words]", "Section 34, the first thing")
                 w = dpg.evaluate(POSTED, [900])
-                came = dpg.evaluate(HEAD)
+                came = dict(dpg.evaluate(HEAD), row=dpg.evaluate(NONE))
                 dpg.evaluate(WATCH_HEAD)
                 dpg.evaluate("(id) => document.querySelector('#' + id + ' > .cm-main [data-cm-menu]').click()", w["id"])
                 dpg.wait_for_function(OPEN, arg="commentSheet", timeout=10000)
@@ -4311,13 +4369,18 @@ with sync_playwright() as p:
             close_ctx(dctx, dpg)
             going = [h for h in went if h[1] == "is-going" and not h[2]]
             left = [h for h in went if h[2]]
+            row1 = (came or {}).pop("row", None) or {}
             check("the first comment brings its small label, \"1 comment\", fading in (its own 0.24s animation) and whole at"
-                  " rest; the last one deleted, the label fades with it (0.2s) and leaves only once that comment's room has"
-                  " closed (0.3s and more later, the list empty by then), and the page is as it was at none",
+                  " rest, and the row's talk cloud says it too (a 1 beside it, named \"1 comment · Say something\"); the last"
+                  " one deleted, the label fades with it (0.2s) and leaves only once that comment's room has"
+                  " closed (0.3s and more later, the list empty by then), and the page is as it was at none, the cloud's"
+                  " number gone with it",
                   err is None and w["id"] and came == {"text": "1 comment", "cls": "is-new", "anim": "pp-in 0.24s", "solid": 1}
+                  and row1.get("cloud") == "1 comment · Say something" and row1.get("n") == "1"
                   and len(going) == 1 and going[0][4] == "opacity 0.2s" and len(left) == 1 and left[0][3] == 0
-                  and left[0][0] - going[0][0] >= 300 and at_none == dict(bare, cloud="Comment"),
-                  f"posted {w['id']}; the label came {came}; then {went}; at none {at_none}; stopped {err}")
+                  and left[0][0] - going[0][0] >= 300 and at_none is not None and {x: at_none[x] for x in bare} == bare,
+                  f"posted {w['id']}; the label came {came}, the row's cloud {[row1.get('cloud'), row1.get('n')]}; then {went};"
+                  f" at none {at_none}; stopped {err}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(34, exc)
 
@@ -5428,23 +5491,24 @@ with sync_playwright() as p:
                                heading: l && !l.hidden ? l.innerText.replace(/\\s+/g, ' ').trim() : null,
                                line: (document.querySelector('.ans-bar .cm-say') || {}).textContent || null }; }""")
                     close_ctx(ctx, pg)
-            say = lambda key: {" ".join(k): {x: v.get(x) for x in key} for k, v in seen.items()}  # noqa: E731
+            # (not `say`: that is the suite's own helper, and a section after this one comments with it)
+            seen48 = lambda key: {" ".join(k): {x: v.get(x) for x in key} for k, v in seen.items()}  # noqa: E731
             check("THE BAND: the highlight's lilac at 70% over the page (the owner's pick, the mock's softer one) behind the"
                   " comment you opened, from over its face to under its"
                   " time and past its column each side; the page above, below and beside it, and on a desk between its"
                   " drawing and the band: a comment, a drawn reply and a place; phone and desk, light and dark",
                   went[0] == 200 and d1 and all(v.get("band") for v in seen.values()),
-                  f"delete {went[0]}; drawn {bool(d1)}; {say(('band', 'inside', 'outside', 'why'))}")
+                  f"delete {went[0]}; drawn {bool(d1)}; {seen48(('band', 'inside', 'outside', 'why'))}")
             check("THE LINE from the way stops at the band's top edge, never crossing it to the face (the owner, Nov 18:"
                   " \"The line should not go all the way to avatar, just to purple square edge above\"): the band's own"
                   " lilac 3px under the edge where the line runs, the line's ink 3px over it (off the page beside it)",
-                  all(v.get("line") for v in seen.values()), f"{say(('line', 'line_px'))}")
+                  all(v.get("line") for v in seen.values()), f"{seen48(('line', 'line_px'))}")
             check("THE RING: 2px of the small violet words' ink (--accent-ink), 3px out round its face, 3:1 or more on the"
                   " band as painted; a place keeps only its own empty ring",
-                  all(v.get("ring") for v in seen.values()), f"{say(('ring', 'ring_px', 'outline'))}")
+                  all(v.get("ring") for v in seen.values()), f"{seen48(('ring', 'ring_px', 'outline'))}")
             check("every word on the band 4.5:1 or more (its name, handle, words, counts and time; a place's words), and"
                   " the row's marks 3:1",
-                  all(v.get("words") for v in seen.values()), f"{say(('least', 'low'))}")
+                  all(v.get("words") for v in seen.values()), f"{seen48(('least', 'low'))}")
             # WHOSE REPLIES FOLLOW (the owner's yes to C, Nov 18: "Replies to Eli"),
             # kept through the Calm Post Page (Nov 20) in the small label, "3
             # replies to Elio", and in the answer bar's line, "Reply to Elio…".
@@ -5457,16 +5521,79 @@ with sync_playwright() as p:
                   " \"Say something…\", with no band and no ring",
                   all((v.get("heading"), v.get("line_says")) == want48[k[2]] for k, v in seen.items())
                   and all(v == {"band": "none", "ring": "none", "heading": "4 comments", "line": "Say something…"} for v in post_page.values()),
-                  f"{say(('heading', 'line_says'))}; the post's {post_page}")
+                  f"{seen48(('heading', 'line_says'))}; the post's {post_page}")
             check("NOTHING MOVED: the page's parts run top to bottom in its order, each as wide as its column, nothing wider"
                   " than the screen; on a"
                   " desk the words' column packed as written (no gap over 16px) however tall a drawing, the answer bar 18px"
                   " under the time, and the drawing in a column of its own from the top, beside every row",
-                  all(v.get("moved") for v in seen.values()), f"{say(('moved', 'gaps', 'bar', 'squeezed'))}")
+                  all(v.get("moved") for v in seen.values()), f"{seen48(('moved', 'gaps', 'bar', 'squeezed'))}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(48, exc)
 
     # ------------------------------------------------------------------ 19
+    # ------------------------------------------------------------------ 49
+    # THE PERSON'S TAP STOPS AT THEIR NAME ON A PAGE OF THEIR OWN TOO (the owner, Nov 21, of a post's card: "Right
+    # now profile tap extends past name. It should stop at name"; then yes to the last of that day's list, the
+    # same on a post's own page). There the whole block is the link, the name over the @handle, and it ran on to
+    # the page's far side: MEASURED 310px on a phone and 280 on a desk for a name 73px wide, so a finger that came
+    # down in the empty room beside a name left the post for a profile. A post's page and a comment's own page.
+    if part(49, "a page's own head: the person's link is as wide as their name and @handle, and the room beside it does nothing"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            al = someone(b, "al_has_a_long_handle", "Al")
+            il = someone(b, "ill", "Il")
+            theo = someone(b, "theo", "Theo Lind")
+            pages49 = {"a post, the name the longer": (f"/social/p/{make_post(juno, 'Section 49, a snail', seed=491)}", "juno"),
+                       "a post, the @handle the longer": (f"/social/p/{make_post(al, 'Section 49, two letters', seed=492)}", al.handle),
+                       "a post, both short": (f"/social/p/{make_post(il, 'Section 49, the narrowest', seed=493)}", il.handle)}
+            p49 = make_post(theo, "Section 49, something to answer", seed=494)
+            pages49["a comment"] = (f"/social/c/{said(juno, p49, 'Section 49, a comment with a page of its own')}", "juno")
+            HEAD49 = """() => { const a = document.querySelector('.post-page > .post-head a.post-who'); if (!a) return null;
+              const r = a.getBoundingClientRect(), head = a.closest('.post-head').getBoundingClientRect(), g = document.createRange();
+              g.selectNodeContents(a.querySelector('.post-name')); const n = g.getBoundingClientRect();
+              g.selectNodeContents(a.querySelector('.post-sub')); const h = g.getBoundingClientRect();
+              const r2 = v => Math.round(v * 100) / 100;
+              return { link: r2(r.width), tall: r2(r.height), name: r2(n.width), at: r2(h.width), room: r2(head.right - r.right),
+                       goes: a.getAttribute('href'), on: [n.left + n.width / 2, n.top + n.height / 2], beside: [r.right + 12, n.top + n.height / 2],
+                       far: [head.right - 12, n.top + n.height / 2] }; }"""
+            seen49 = {}
+            for screen in ("phone", "desk"):
+                ctx, pg = browser_as(b, theo, screen)
+                press = pg.touchscreen.tap if screen == "phone" else pg.mouse.click
+                for what, (path, handle) in pages49.items():
+                    v = {"handle": handle}
+                    try:
+                        pg.goto(BASE + path)
+                        pg.wait_for_function("() => document.readyState === 'complete' && !!document.querySelector('.post-page > .post-head a.post-who')", timeout=15000)
+                        pg.wait_for_timeout(400)
+                        v.update(pg.evaluate(HEAD49))
+                        for spot in ("beside", "far"):          # the room beside the name, near it and at the page's far side
+                            press(*v[spot])
+                            pg.wait_for_timeout(700)
+                            v[spot + " lands"] = pg.evaluate("() => location.pathname")
+                        press(*v["on"])                          # the name itself
+                        pg.wait_for_function("() => /^\\/social\\/@/.test(location.pathname)", timeout=8000)
+                        v["on lands"] = pg.evaluate("() => location.pathname")
+                    except Exception as exc:  # noqa: BLE001 -- a head that cannot be read or pressed is this row's red
+                        v["stopped"] = str(exc).splitlines()[0][:140]
+                    seen49[f"{screen}: {what}"] = dict(v, path=path)
+                close_ctx(ctx, pg)
+            check("on a post's own page and a comment's, a phone and a desk, the person's link is as wide as the longer of"
+                  " their name and @handle (44px at the least) and 44px tall or more, with the head's room left beside it;"
+                  " a press 12px past it, and one at the page's far side, stays on the page, and a press on the name opens"
+                  " the person's page",
+                  len(seen49) == 8 and all("stopped" not in v and abs(v["link"] - max(v["name"], v["at"], 44)) <= 0.5 and v["tall"] >= 44
+                                           and v["room"] > 40 and v["goes"] == "/social/@" + v["handle"]
+                                           and v["beside lands"] == v["path"] and v["far lands"] == v["path"]
+                                           and v["on lands"] == "/social/@" + v["handle"] for v in seen49.values())
+                  and seen49["phone: a post, the @handle the longer"]["at"] > seen49["phone: a post, the @handle the longer"]["name"] + 40
+                  and seen49["phone: a post, the name the longer"]["name"] > seen49["phone: a post, the name the longer"]["at"]
+                  and seen49["phone: a post, both short"]["link"] == 44,
+                  json.dumps({k: {x: v.get(x) for x in ("link", "name", "at", "room", "beside lands", "far lands", "on lands", "stopped")}
+                              for k, v in seen49.items()})[:1500])
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(49, exc)
+
     if part(19, "no page errors, no console errors and no CSP violations"):
         try:
             for who in list(_people.values()):

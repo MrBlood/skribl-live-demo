@@ -245,7 +245,11 @@ top and bottom are.. each row distinct". Cal's reading of it, until the
 owner says otherwise: rows are told apart by a flat step of colour, never by
 a line or a shadow; and a grid is looked at with a dark drawing on the dark
 page, where a picture's own edge goes missing (`DECISIONS.md`, "Each row
-distinct, mocked").
+distinct, mocked"). The next day, of the same Gallery in light: "I like the
+colors that make rows. Maybe they should be individual tiles, not rows."
+So the step of colour is a tile under each drawing and its name, with the
+page showing between two tiles (`DECISIONS.md`, "The Gallery's rows as
+tiles").
 
 **It lives in skribls.net too.** Pad, the Library and the Gallery will sit inside
 the owner's site. Pad acts like an app on the phone: it opens full screen, has a

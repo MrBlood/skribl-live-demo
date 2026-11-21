@@ -162,11 +162,28 @@
     labelEl.classList.add('is-going');
     labelOff = setTimeout(function () { labelEl.hidden = true; labelEl.classList.remove('is-going'); }, 420);
   }
+  /* ON A POST'S OWN PAGE THE ROW'S TALK CLOUD SAYS HOW MANY TOO, as the page
+     was made (_post.html post_row): its number, none at none, and in its
+     name ("2 comments · Say something"; where nothing can be said, "2
+     comments"). Until the cloud answered (Nov 21) it kept the number the
+     page came with, whatever was said or deleted since. */
+  var pageCloud = doc.querySelector('.post-page > .post-row .post-count[data-none]');
+  function rowSays(n) {
+    if (!pageCloud || typeof n !== 'number') return;
+    var c = pageCloud.querySelector('span');
+    if (!c && n) { c = doc.createElement('span'); pageCloud.appendChild(c); }
+    if (c) { if (n) c.textContent = String(n); else pageCloud.removeChild(c); }
+    var none = pageCloud.getAttribute('data-none');
+    var noun = (nounEl && nounEl.getAttribute(n === 1 ? 'data-one' : 'data-many')) || '';
+    pageCloud.setAttribute('aria-label', !n || !noun ? none
+      : n + ' ' + noun + (pageCloud.hasAttribute('data-cm-new') ? ' · ' + none : ''));
+  }
   /* HOW MANY, after one came or went: the server's count of the post's or
-     the drawing's (`n`); on a comment's own page its own replies, counted
-     here by `by`, and the count in its row with them. */
+     the drawing's (`n`), and the row's talk cloud with it; on a comment's
+     own page its own replies, counted here by `by`, and the count in its
+     row with them. */
   function counted(n, by) {
-    if (!subjectEl) { setCount(n); return; }
+    if (!subjectEl) { setCount(n); rowSays(n); return; }
     var now = Math.max(0, (+(countEl && countEl.textContent) || 0) + by);
     setCount(now);
     var row = subjectEl.querySelector(':scope > .cm-row .post-count');
@@ -408,6 +425,8 @@
   var sheetTitle = sheetWrap ? sheetWrap.querySelector('[data-cm-sheet-title]') : null;
   var homeTitle = sheetTitle ? sheetTitle.textContent : '';
   var quote = sheetWrap ? sheetWrap.querySelector('[data-cm-quote]') : null;
+  /* The post's own words, on its own page: what a new comment answers (aim). */
+  var postWords = doc.querySelector('.post-page > .post-words');
   var sheetOpeners = [];
   var sheetAfter = null;     // what waits for the sheet to have gone (emptying a posted box)
   var sheet = sheetWrap && window.SocialSheet ? window.SocialSheet(sheetWrap, {
@@ -456,7 +475,10 @@
     label.textContent = li ? say('c_answer_label', { name: name }) : say('c_say');
     if (sheetTitle) sheetTitle.textContent = li ? say('c_answer_label', { name: name }) : homeTitle;
     if (quote) {
-      var w = !li ? null : li === subjectEl ? li.querySelector(':scope > .post-words')
+      /* SOMETHING NEW ON A POST'S PAGE ANSWERS THE POST (the talk cloud, B: the
+         owner's yes, Nov 21): its own words under the sheet's title, as a reply
+         shows a comment's. A post that is a drawing alone has none to show. */
+      var w = !li ? postWords : li === subjectEl ? li.querySelector(':scope > .post-words')
         : li.querySelector(':scope > .cm-main .cm-words');
       var text = w ? w.textContent.replace(/\s+/g, ' ').trim() : '';
       quote.textContent = text ? say('c_quote', { words: text }) : '';
@@ -506,6 +528,7 @@
 
   /* ---- a desk: the fold ----------------------------------------------------- */
   var at = null;             // where the fold is open: `root` (at home, in the bar's place) or a comment's li
+  var homeBtn = null;        // what opened it at home, when that was not the bar's line (the row's talk cloud)
   var closing = false;       // folding away, from where it still is
   var foldOff = null;        // calls off the fold's glide under way
   var afterFold = null;      // what to do once it has folded away (open it elsewhere)
@@ -581,9 +604,13 @@
     pressed(was && was.btn, false);
     pressed(icon, false);
     var inside = !stay && box.contains(doc.activeElement);
+    var from = homeBtn;
+    homeBtn = null;
     shutFold('quick');
     if (inside) {
-      var back = was && was.btn && was.btn.isConnected ? was.btn : icon;
+      /* FOCUS GOES BACK TO WHAT WAS PRESSED: a comment's Reply, the row's talk
+         cloud on a post's page, or the bar's line. */
+      var back = was && was.btn && was.btn.isConnected ? was.btn : from && from.isConnected ? from : icon;
       if (back) back.focus({ preventScroll: true });
     }
   }
@@ -598,6 +625,7 @@
     if (at === root) { putAway(); return; }
     if (answering) pressed(answering.btn, false);
     answering = subjectEl ? { id: subject, btn: btn } : null;
+    homeBtn = !subjectEl && btn !== icon ? btn : null;
     aim(null);
     tell(sayBox, '');
     pressed(icon, true);
@@ -793,6 +821,7 @@
         var was = answering;
         answering = null;
         afterFold = null;
+        homeBtn = null;
         pressed(was && was.btn, false);
         pressed(icon, false);
         /* The box goes as the comment comes: the sheet glides down, or the
@@ -837,19 +866,19 @@
   }) : null;
 
   /* ---- THE ROW'S TALK CLOUD, ON A POST'S OWN PAGE ----------------------------
-     It is a way down to the comments (_post.html post_row). With none there
-     is nothing to go down to, and its own name then is "Comment": it opens
-     the box, as the bar's line does (signed out, "Say something?"), so a tap
-     on it is never a tap that does nothing. */
-  var cloud = !subjectEl && icon ? doc.querySelector('.post-page > .post-row a.post-count') : null;
-  if (cloud) {
-    cloud.addEventListener('click', function (e) {
-      if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      if (list.querySelector(':scope > .cm')) return;
-      e.preventDefault();
-      icon.click();
-    });
-  }
+     IT ANSWERS (the owner's yes to the mock's B, Nov 21: "When I click the
+     reply talky cloud on Bluesky I get this... Is that what we're going
+     for?"). It is one of the things that open the box for something new
+     (_post.html post_row: a button, data-cm-new), as the bar's line is and
+     as a comment's own Reply is on its page: a phone's sheet, the post's
+     words under its title; a desk's fold; signed out, "Say something?".
+     Until then it was a way down to the comments, and opened the box only
+     when there were none to go down to: the same cloud meant "answer this"
+     under a comment and "go and look" under a post. It sits in the post's
+     row, above the comments, so THE CLICKS below are told it is theirs.
+     (Where nothing can be said the row has a link down to the comments
+     instead, and that is not this.) */
+  var cloud = !subjectEl ? doc.querySelector('.post-page > .post-row .post-count[data-cm-new]') : null;
 
   /* ---- a link: copied, or the device's own share sheet ------------------- */
   function absolute(url) { return new URL(url, window.location.href).href; }
@@ -878,12 +907,13 @@
     : null;
   var current = null, opener = null;
 
-  /* THE CLICKS: the comments' own, the answer bar's line, and on a
-     comment's own page the Reply and ⋯ under that comment, which sit above
-     the comments. */
+  /* THE CLICKS: the comments' own, the answer bar's line, on a post's own
+     page the talk cloud in its row, and on a comment's own page the Reply
+     and ⋯ under that comment, which sit above the comments. */
   doc.addEventListener('click', function (e) {
     if (!e.target || !e.target.closest) return;
-    if (!root.contains(e.target) && !(subjectEl && subjectEl.contains(e.target)) && !(bar && bar.contains(e.target))) return;
+    if (!root.contains(e.target) && !(subjectEl && subjectEl.contains(e.target)) && !(bar && bar.contains(e.target))
+        && !(cloud && cloud.contains(e.target))) return;
     var q = e.target.closest('[data-cm-show]');
     if (q) {
       e.preventDefault();

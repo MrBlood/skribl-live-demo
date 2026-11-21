@@ -1652,7 +1652,7 @@ with sync_playwright() as p:
                 bad_person.append(f"{tag} @handle lands on {w['handle']}")
             n = w["count"]
             want_label, want_text = ("1 comment", "1") if key == worded else ("Comment", "")
-            if not (big(n) and n["href"] == want_page[key] + "#comments" and n["icon"] and n["label"] == want_label
+            if not (big(n) and n["href"] == want_page[key] + "#say" and n["icon"] and n["label"] == want_label
                     and n["text"] == want_text):
                 bad_count.append(f"{tag}: {n}")
             if not (w["sameLine"] and w["headH"] == 44 and (w["wordsGap"] is None or abs(w["wordsGap"] - 12) <= 0.5)
@@ -1670,8 +1670,8 @@ with sync_playwright() as p:
         check("the face, the name and the @handle still open the person's page: the name's link 44px each way, its own"
               " along the name's line and painted under the @handle too, so a tap on the @handle lands on it",
               made and not bad_person, f"{bad_person[:4]}")
-        check("the 💬 shows even at none: its icon alone, named \"Comment\", a way to the comments (#comments) a tap lands"
-              " on, 44px; with one, its number, \"1 comment\"",
+        check("the 💬 shows even at none: its icon alone, named \"Comment\", a way to the post with its answer box open (#say:"
+              " the cloud answers, the owner's yes, Nov 21) a tap lands on, 44px; with one, its number, \"1 comment\"",
               made and not bad_count, f"{bad_count[:4]}")
         check("and nothing moved: the header the face's 44px, the time on the @handle's line just after it, the words"
               " 12px under the header, and the drawing 12px under the words (or the header, with none)",
@@ -1842,12 +1842,13 @@ with sync_playwright() as p:
             close_ctx(ctx, cpg)
         page, people = f"/social/p/{card}", "/social/@juno"
         ok_open = all(r.get("ground") == ("card", page) and r.get("words", (None, None))[1] == page
-                      and r.get("count", (None, None))[1] == page + "#comments" for r in res.values())
+                      and r.get("count", (None, None))[1] in (page, page + "#say") for r in res.values())
         # NO OPEN › (the owner's "completely remove open", Nov 19): the card's
         # own ground is the door, so the row's open space past the ⋯ is ground.
         check("a tap anywhere on a card's own ground (here in the row's open space past the ⋯, where Open › was"
               " until Nov 19 and no finger is snapped to a button) opens its page, as a tap on its words does;"
-              " the 💬 opens it at its comments: a touch on a phone, a click on a desk",
+              " the 💬 opens it too, asking for its answer box (#say, which the page drops once it has opened it:"
+              " verify_socialcomments 34 holds the box): a touch on a phone, a click on a desk",
               bool(card) and ok_open,
               f"{ {s: {k: r.get(k) for k in ('ground', 'words', 'count', 'stopped')} for s, r in res.items()} }")
         want_drawing = (("drawing", "playing", "/social/"), ("drawing", "paused", "/social/"))
@@ -2608,9 +2609,10 @@ with sync_playwright() as p:
         WANT_N = {p_a: [["gal-likes", "2", 14], ["gal-comments", "1", 14]], p_flip: None, p_b: None,
                   p_c: [["gal-comments", "1", 14]]}
         cols = {s: (geo[s].get("columns"), geo[s].get("colGap"), geo[s].get("rowGap")) for s in geo}
-        check("the tiles are two across on a touch phone (12px apart, rows 18px apart) and three on a desk (20px and"
-              " 26px), each one link to its post, the drawing's box 650 x 486",
-              cols.get("phone") == (2, 12, 18) and cols.get("desk") == (3, 20, 26)
+        check("the tiles are two across on a touch phone and three on a desk, 20px apart and rows 22px apart on both"
+              " (a tile's own room round each picture and 8px of the page between two: section 22; they were 12 and"
+              " 18, and 20 and 26 on a desk, under the bands), each one link to its post, the drawing's box 650 x 486",
+              cols.get("phone") == (2, 20, 22) and cols.get("desk") == (3, 20, 22)
               and all(abs(t["ratio"] - 650 / 486) <= 0.003 and t["link"].startswith("a /social/p/")
                       for s in geo for t in geo[s]["tiles"].values()) and all(len(geo[s]["tiles"]) == 4 for s in geo),
               f"{cols}; ratios {[t['ratio'] for t in geo.get('phone', {}).get('tiles', {}).values()]}")
@@ -3666,8 +3668,9 @@ print("PLAN " + json.dumps(out))
                 a_, b_ = sorted((_lum(p_), _lum(q_)), reverse=True)
                 return (a_ + 0.05) / (b_ + 0.05)
 
-            # A line pixel stands 1.15:1 or more apart from both sides: every line here does (the faintest, a dark
-            # card's hairline, 1.22:1 on its card), and a tile's lift does not (its gradient beside the ring reads
+            # A line pixel stands 1.15:1 or more apart from both sides: every line here does (the faintest was a dark
+            # card's hairline, 1.22:1 on its card, until dark's edge was made clear on Nov 21: 1.61 since), and a
+            # tile's lift does not (its gradient beside the ring reads
             # 1.06:1 against the page: the first version, at 1.05, counted it as a second pixel of line).
             def _band(im, pts, page, inside):
                 return [im.getpixel(p_) for p_ in pts if _cr(im.getpixel(p_), page) >= 1.15 and _cr(im.getpixel(p_), inside) >= 1.15]
@@ -3707,7 +3710,7 @@ print("PLAN " + json.dumps(out))
                         x, y = round(r[0] * 3), round((r[1] + r[3] / 2) * 3)
                         page, inside = im.getpixel((x - 9, y)), im.getpixel((x + 12, y))
                         got = _band(im, [(i, y) for i in range(x - 6, x + 8)], page, inside)
-                        edges[f"{scheme} {sel}"] = {"n": len(got), "px": got[:3], "inside": inside}
+                        edges[f"{scheme} {sel}"] = {"n": len(got), "px": got[:3], "inside": inside, "page": page}
                         if sel == ".gal-pic" and scheme == "light":
                             lift = _shade(pg, im, sel, r, 0.5, "var(--card-line)")
                     if path == "/social/explore":
@@ -3725,6 +3728,24 @@ print("PLAN " + json.dumps(out))
                   " under its edge the shadow paints two or three screen rows together (1px), and nothing below them for"
                   " 13px",
                   _one_line(lift), json.dumps(lift))
+            # AN EDGE DOES THE SEPARATING, IN DARK TOO (the owner, Nov 21, after the crisp build: "I feel like you
+            # may have overdone it with the shadows and now it looks less crisp in areas"; yes to step 3 of "The
+            # Little V", "everywhere"). Dark's edge was 12% of the lilac over its card, set that faint while soft
+            # shadows did the work: 1.23:1 from the card. It is 26% now, 1.61:1, where light's 34% of the accent
+            # stands 1.56:1 from its white. The same pixels the row above counted: a post's card on Home (its ring is
+            # --card-edge) against the card inside it and the page beside it, and a Gallery tile's line (--card-line,
+            # a see-through lilac over whatever it lies on) against the ground beside it; inside a tile is somebody's
+            # drawing, which is not asked.
+            apart = {}
+            for sc in ("light", "dark"):
+                v = edges.get(f"{sc} .post-card")
+                apart[f"{sc}, a card"] = (round(_cr(v["px"][0], v["inside"]), 2), round(_cr(v["px"][0], v["page"]), 2)) if v and v.get("px") else None
+                v = edges.get(f"{sc} .gal-pic")
+                apart[f"{sc}, a tile"] = (round(_cr(v["px"][0], v["page"]), 2),) if v and v.get("px") else None
+            check("...and the edge does the separating in both themes: read off the paint, a post's card's edge stands 1.4 to"
+                  " 1 or more apart from the card inside it and from the page beside it, and a Gallery tile's line as far"
+                  " from the ground beside it, light and dark (dark's stood 1.23 from its card until Nov 21)",
+                  all(v is not None and min(v) >= 1.4 for v in apart.values()), json.dumps(apart))
             fld = edges.get("light .gal-find input") or {}
             check("...and the search box's edge reads 3:1 or more against its own white",
                   bool(fld.get("px")) and _cr(fld["px"][0], fld["inside"]) >= 3.0,
@@ -4432,12 +4453,14 @@ print("PLAN " + json.dumps(out))
             check("section 21 ran to its end", False, str(exc).splitlines()[0][:200])
 
     # ------------------------------------------------------------------ 22
-    if part(22, "each row distinct: one flat band under every row of a grid of tiles (the owner's \"All yes\", Nov 20)"):
-        # The owner's picture of the Gallery in dark: a name floats between two pictures, and a drawing on dark
-        # paper has no edge on the dark page. UNDER EVERY ROW ONE FLAT BAND (--row-band; the mock's A): drawn by
-        # the row's own tiles, out to the row's ends and 8px past the grid, the ground showing between two rows,
-        # a last row that is not full still a whole band. READ OFF THE PAINT (a picture of the screen), since a
-        # band is a part of its tile and has no box of its own to ask.
+    if part(22, "a tile for each drawing: every cell of a grid of tiles on its own flat tile (the owner's yes, Nov 21)"):
+        # The owner's picture of the Gallery in dark (Nov 20): a name floats between two pictures, and a drawing on
+        # dark paper has no edge on the dark page. So under every ROW one flat band (--row-band; "each row
+        # distinct"). Then, Nov 21, of the same Gallery in light: "I like the colors that make rows. Maybe they
+        # should be individual tiles, not rows", and yes to the mock's A: THE SAME COLOUR, ONE TILE UNDER EACH
+        # DRAWING AND ITS NAME, the page showing between two tiles, across and down; a last row that is not full
+        # is its tiles and nothing more. READ OFF THE PAINT (a picture of the screen), since a tile's ground is a
+        # part of its cell and has no box of its own to ask.
         try:
             import io as _io
             from PIL import Image as _Image
@@ -4448,15 +4471,16 @@ print("PLAN " + json.dumps(out))
             # Drawings (and somebody to look at Sol's profile, whose grid is then tiles alone, with no eyes)
             tess = someone(b, "tessq", "Tess Quill")
             alone22 = [tess.pg.evaluate(PAD, [f"Section 22, on its own {i}", "public", 226 + i])[0] for i in range(3)]
-            # A BAND'S PAINT IS ITS TOKEN'S OWN, within two levels (the picture's rounding). Until the crisp build
-            # (section 23) this allowed eleven: a tile's soft shadow lay on the band beside it, deepest 2px from a
-            # tile on a sheet's paper. Nothing soft lies there now.
+            # A TILE'S PAINT IS ITS TOKEN'S OWN, within two levels (the picture's rounding). Until the crisp build
+            # (section 23) this allowed eleven: a picture's soft shadow lay on the colour beside it, deepest 2px
+            # from a picture on a sheet's paper. Nothing soft lies there now.
             SHADE22 = 2
             GRID22 = """([sel, scroll]) => { const g = [...document.querySelectorAll(sel)].find(e => e.getClientRects().length); if (!g) return null;
               if (scroll) window.scrollTo(0, g.getBoundingClientRect().top + scrollY - 90);
               const gr = g.getBoundingClientRect(), rows = {}, cs = getComputedStyle(g);
               [...g.children].forEach(t => { const r = t.getBoundingClientRect(); const k = Math.round(r.top); (rows[k] = rows[k] || []).push([r.left, r.top, r.right, r.bottom]); });
-              return { grid: [gr.left, gr.right], vh: innerHeight, gap: parseFloat(cs.columnGap), bleed: parseFloat(cs.getPropertyValue('--row-bleed')),
+              return { grid: [gr.left, gr.right], vh: innerHeight, gap: parseFloat(cs.columnGap), rowGap: parseFloat(cs.rowGap),
+                       out: parseFloat(cs.getPropertyValue('--tile-out')),
                        cols: cs.gridTemplateColumns.split(' ').length, token: getComputedStyle(g.children[0], '::before').backgroundColor,
                        cells: [...new Set([...g.children].map(c => c.className.split(' ')[0]))],
                        rows: Object.keys(rows).map(Number).sort((a, b) => a - b).map(k => rows[k]) }; }"""
@@ -4465,9 +4489,14 @@ print("PLAN " + json.dumps(out))
                 v = [(x / 255 / 12.92) if x / 255 <= 0.03928 else ((x / 255 + 0.055) / 1.055) ** 2.4 for x in c[:3]]
                 return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
 
-            def bands(page_, sel, scroll=True):
-                """Every row of the grid that is on the screen: what is painted at its ends, between its tiles,
-                over and under it (the band), and at its corner, beside it and under it (the ground)."""
+            def tiles(page_, sel, scroll=True):
+                """Every row of the grid that is on the screen, cell by cell: what is painted in the room a tile
+                takes round its picture and under its name (the tile), and at its rounded corner, between it and
+                the next, under it, beside the grid and where a row that is not full has no cell (the ground).
+                EACH POINT IS READ TWICE, as the page paints it and with the tiles' own ground taken away: the
+                page is not one flat colour (a glow lies over its top, 10% of the accent fading down: on this
+                tall screen it reaches the first row and tints the page there half-way to a tile's colour), so
+                "the ground" is what the page paints at that very point, not a colour read somewhere else."""
                 # a tall screen of the same width, so every row is on it at once (the layout is the width's)
                 page_.set_viewport_size({"width": page_.viewport_size["width"], "height": 1500})
                 page_.wait_for_timeout(300)
@@ -4475,44 +4504,54 @@ print("PLAN " + json.dumps(out))
                 page_.wait_for_timeout(300)
                 g = page_.evaluate(GRID22, [sel, False])
                 im = _Image.open(_io.BytesIO(page_.screenshot())).convert("RGB")
+                bare = page_.add_style_tag(content=".gal-grid > *::before { display: none !important; }")
+                page_.wait_for_timeout(150)
+                im0 = _Image.open(_io.BytesIO(page_.screenshot())).convert("RGB")
+                bare.evaluate("s => s.remove()")
 
                 def px(x, y):
-                    return im.getpixel((min(max(int(round(x)), 0), im.size[0] - 1), min(max(int(round(y)), 0), im.size[1] - 1)))
-                left, right, bleed, out = g["grid"][0], g["grid"][1], g["bleed"], []
+                    at = (min(max(int(round(x)), 0), im.size[0] - 1), min(max(int(round(y)), 0), im.size[1] - 1))
+                    return [im.getpixel(at), im0.getpixel(at)]
+                o, rows = g["out"], []
                 for r in g["rows"]:
                     top, bot = min(t[1] for t in r), max(t[3] for t in r)
                     if top < 75 or bot > g["vh"] - 100:
                         continue
-                    mid, tx = (top + bot) / 2, (r[0][0] + r[0][2]) / 2
-                    # ... and at the middle of its top edge, where two half bands with their ends the wrong way round
-                    # would leave a notch; the last is under the row, where no tile's shadow reaches
-                    band = [px(left - bleed / 2, mid), px(r[0][2] + g["gap"] / 2, mid), px(right + bleed / 2 - 1, mid), px(tx, top - 4),
-                            px(r[0][2] + g["gap"] / 2, top - 6), px(tx, bot + 5)]
-                    ground = [px(left - bleed + 1, top - 6), px(left - bleed - 3, mid), px((left + right) / 2, bot + 9.5)]
-                    out.append({"tiles": len(r), "band": band, "ground": ground})
+                    mid, tile, ground = (top + bot) / 2, [], []
+                    for i, (l, t, rt, bt) in enumerate(r):
+                        cx = (l + rt) / 2
+                        # the tile: beside its picture each way, over it, and under its name
+                        tile += [px(l - o / 2, mid), px(rt + o / 2 - 1, mid), px(cx, t - o / 2), px(cx, bt + 5)]
+                        # the ground: at the tile's rounded corner, and under it, in the middle of the page's 8px
+                        ground += [px(l - o + 1, t - o + 1), px(cx, bt + 8 + 4)]
+                        if i + 1 < len(r):                       # between it and the next: the page, where a band ran
+                            ground.append(px(rt + o + (r[i + 1][0] - o - rt - o) / 2, mid))
+                    ground.append(px(r[0][0] - o - 3, mid))       # beside the grid
+                    if len(r) < g["cols"]:                        # a row that is not full: no tile where no cell is
+                        w = r[-1][2] - r[-1][0]
+                        ground.append(px(r[-1][2] + g["gap"] + w / 2, mid))
+                    rows.append({"tiles": len(r), "tile": tile, "ground": ground})
                 rgb = tuple(int(float(x)) for x in re.findall(r"[\d.]+", g["token"])[:3])
-                return {"cols": g["cols"], "token": rgb, "cells": g["cells"], "rows": out}
+                # every cell as wide as every other: a lone one in a last row is a tile like the rest, not stretched
+                wide = sorted({round(c[2] - c[0], 1) for r in g["rows"] for c in r})
+                return {"cols": g["cols"], "token": rgb, "cells": g["cells"], "out": o, "gaps": [g["gap"], g["rowGap"]], "wide": wide, "rows": rows}
 
-            def whole(v, want_token, want_tiles):
-                """Each row one band of the token's colour, end to end; the ground at its corner, beside it and
-                under it, and a step from the band of about one part in twelve (1.04 to 1.13 to 1)."""
+            def tiled(v, want_token, want_tiles, want_out):
+                """Each cell on a tile of the token's colour, a step from what the page paints at that point
+                (about one part in twelve where the page is flat, 1.08 to 1; less under the glow at its top:
+                1.03 to 1.13); and nothing of a tile anywhere the ground should be (the two readings alike).
+                The room between two pictures is the tile's each side and 8px of the page: 2 x out + 8 across,
+                out + 16 down."""
                 if not v or v["token"] != want_token or [r["tiles"] for r in v["rows"]] != want_tiles:
                     return False
+                if v["out"] != want_out or v["gaps"] != [2 * want_out + 8, want_out + 16] or len(v["wide"]) != 1:
+                    return False
                 for r in v["rows"]:
-                    g0 = r["ground"][1]
-                    step = (max(lum22(want_token), lum22(g0)) + 0.05) / (min(lum22(want_token), lum22(g0)) + 0.05)
-                    if any(max(abs(c[i] - want_token[i]) for i in range(3)) > SHADE22 for c in r["band"]):
-                        return False
-                    # ... and each is the BAND, not the ground: a step from the ground beside this row, the way the
-                    # token steps (an allowance wider than the band's own step would pass the page itself)
-                    darker = lum22(want_token) < lum22(g0)
-                    for c in r["band"]:
-                        hi, lo = (lum22(g0), lum22(c)) if darker else (lum22(c), lum22(g0))
-                        if (hi + 0.05) / (lo + 0.05) < 1.03:
+                    for c, page_c in r["tile"]:
+                        step = (max(lum22(c), lum22(page_c)) + 0.05) / (min(lum22(c), lum22(page_c)) + 0.05)
+                        if max(abs(c[i] - want_token[i]) for i in range(3)) > SHADE22 or not 1.03 <= step <= 1.13:
                             return False
-                    if max(abs(r["band"][-1][i] - want_token[i]) for i in range(3)) > 2:
-                        return False
-                    if any(max(abs(c[i] - g0[i]) for i in range(3)) > 3 for c in r["ground"]) or not 1.04 <= step <= 1.13:
+                    if any(max(abs(c[i] - page_c[i]) for i in range(3)) > 1 for c, page_c in r["ground"]):
                         return False
                 return True
 
@@ -4522,15 +4561,15 @@ print("PLAN " + json.dumps(out))
                 pg.goto(BASE + "/social/@solv/gallery")
                 pg.wait_for_load_state("load")
                 pg.wait_for_timeout(900)
-                seen22[scheme] = bands(pg, "[data-prof-list].gal-grid")
+                seen22[scheme] = tiles(pg, "[data-prof-list].gal-grid")
                 close_ctx(ctx, pg)
                 ctx, pg = browser_as(b, tess, "phone", scheme)
                 pg.goto(BASE + "/social/@solv/gallery")
                 pg.wait_for_load_state("load")
                 pg.wait_for_timeout(900)
-                seen22[scheme + ", somebody else's"] = bands(pg, "[data-prof-list].gal-grid")
+                seen22[scheme + ", somebody else's"] = tiles(pg, "[data-prof-list].gal-grid")
                 if scheme == "light":
-                    # Make's "Use one you made": the same grid on a sheet's paper, its band the paper's own step.
+                    # Make's "Use one you made": the same grid on a sheet's paper, its tile the paper's own step.
                     pg.goto(BASE + "/social/")
                     pg.wait_for_load_state("load")
                     pg.click("nav.nav .tab-make")
@@ -4540,38 +4579,40 @@ print("PLAN " + json.dumps(out))
                     pg.click('#composeSheet [data-pick="drawings"]')
                     pg.wait_for_selector("#composeSheet .cmp-grid .gal-tile", timeout=15000)
                     pg.wait_for_timeout(900)
-                    seen22["picker"] = bands(pg, "#composeSheet .cmp-grid", scroll=False)
+                    seen22["picker"] = tiles(pg, "#composeSheet .cmp-grid", scroll=False)
                 close_ctx(ctx, pg)
-            check("on a phone every row of a profile's Gallery has one flat band, end to end and 8px past the grid, with no"
-                  " notch in its middle, the colour its token says (the page's own, one part in twelve from it: light and"
-                  " dark), the page showing at its rounded corner, beside it and between two rows; five tiles are two rows"
-                  " of two and a last row of one, and that one is a whole band too; your own profile's grid (each tile in"
-                  " a cell with its eye) and somebody else's view of it (tiles alone) the same",
-                  len(ids22) == 5 and all(whole(seen22.get(k + who), tok, [2, 2, 1]) for k, tok in (("light", (238, 239, 248)), ("dark", (25, 27, 33)))
+            check("on a phone every drawing of a profile's Gallery is on a tile of its own: 6px of the tile round its"
+                  " picture and 8px under its name, the colour its token says (the page's own, one part in twelve from"
+                  " it: light and dark), and the page at the tile's rounded corner, between two tiles across and down"
+                  " (8px), and beside the grid; five drawings are two rows of two and a last row of one, and where that"
+                  " row has no second drawing there is the page (it was a band right across) and the lone tile is as wide as"
+                  " the others; your own profile's grid"
+                  " (each tile in a cell with its eye) and somebody else's view of it (tiles alone) the same",
+                  len(ids22) == 5 and all(tiled(seen22.get(k + who), tok, [2, 2, 1], 6) for k, tok in (("light", (238, 239, 248)), ("dark", (25, 27, 33)))
                                           for who in ("", ", somebody else's"))
                   and seen22["light"]["cols"] == 2 and seen22["light"]["cells"] == ["gal-cell"]
                   and seen22["light, somebody else's"]["cells"] == ["gal-tile"],
-                  json.dumps({k: [v["cells"], v["token"], [r["tiles"] for r in v["rows"]], v["rows"][-1:]] for k, v in seen22.items() if k != "picker"})[:1100])
-            check("Make's \"Use one you made\" is the same grid on a sheet's paper: its band the paper's own step, whole, its"
-                  " corner rounded inside the list (not cut square by it)",
-                  bool(seen22.get("picker")) and whole(seen22["picker"], (235, 231, 252), [2, 1]),
+                  json.dumps({k: [v["cells"], v["token"], v["out"], v["gaps"], v["wide"], [r["tiles"] for r in v["rows"]], v["rows"][-1:]] for k, v in seen22.items() if k != "picker"})[:1100])
+            check("Make's \"Use one you made\" is the same grid on a sheet's paper: a tile each, the paper's own step, 4px"
+                  " round a picture (the room the list leaves, so no tile is cut square by it), the paper between two",
+                  bool(seen22.get("picker")) and tiled(seen22["picker"], (235, 231, 252), [2, 1], 4),
                   f"shared alone {alone22}; " + json.dumps(seen22.get("picker"))[:700])
             dctx, dpg = browser_as(b, sol, "desk")
             dpg.goto(BASE + "/social/@solv/gallery")
             dpg.wait_for_load_state("load")
             dpg.wait_for_timeout(900)
-            d5 = bands(dpg, "[data-prof-list].gal-grid")
+            d5 = tiles(dpg, "[data-prof-list].gal-grid")
             c22 = sol.client()
             c22.get("/social/")
             gone22 = c22.post_json(f"/social/p/{ids22[0]}/delete", {})[0] if ids22 else None
             dpg.goto(BASE + "/social/@solv/gallery")
             dpg.wait_for_load_state("load")
             dpg.wait_for_timeout(900)
-            d4 = bands(dpg, "[data-prof-list].gal-grid")
+            d4 = tiles(dpg, "[data-prof-list].gal-grid")
             close_ctx(dctx, dpg)
-            check("on a desk the grid is three across and the rule the same: five tiles are a row of three and a row of"
-                  " two, four are three and one, and every one of those rows is a whole band",
-                  gone22 == 200 and whole(d5, (238, 239, 248), [3, 2]) and whole(d4, (238, 239, 248), [3, 1]) and d5["cols"] == 3,
+            check("on a desk the grid is three across and the rule the same: five drawings are a row of three and a row"
+                  " of two, four are three and one, each on its own tile, and the page where a row has no drawing",
+                  gone22 == 200 and tiled(d5, (238, 239, 248), [3, 2], 6) and tiled(d4, (238, 239, 248), [3, 1], 6) and d5["cols"] == 3,
                   json.dumps({"five": d5, "four": d4})[:900])
         except Exception as exc:  # noqa: BLE001
             check("section 22 ran to its end", False, str(exc).splitlines()[0][:200])

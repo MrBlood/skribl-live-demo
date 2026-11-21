@@ -167,10 +167,28 @@
     the repost and how many, the heart and how many, the ⋯ (Share… and Copy
     link are in it). Each 44px to a finger. No "Open ›" at the end (the
     owner's "completely remove open", Nov 19): a card opens from a tap on its
-    own ground, and its time is the link. `landing`: heart()'s, on a post's own page. #}
-{% macro post_row(c, landing=false) -%}
+    own ground, and its time is the link. `landing`: heart()'s, on a post's own page.
+
+    THE CLOUD ANSWERS (the owner, Nov 21, of Bluesky's reply screen beside
+    this one: "Is that what we're going for?"; yes to the mock's B). It
+    meant two things: under a comment "answer this", under a post "go and
+    look at the comments". It means one now. On a post's own page (`say`:
+    what the page's line "Say something…" opens, passed by post.html: 'box',
+    or 'out' for the sheet that asks somebody signed out; nothing where
+    there is no such line) it is a button that opens what that line opens,
+    the post's own words under its title (comments.js); on a card it goes to the post
+    with the box open (#say), when somebody is signed in to say something.
+    Signed out, a card's still goes to the comments, to read; and on a page
+    where nothing can be said it is the way down to them, as it was. The
+    number beside it stays; reading the comments is a tap on the post. #}
+{% macro post_row(c, landing=false, say=none) -%}
 <footer class="post-row">
-  <a class="post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d comment%s' % (c.comments, '' if c.comments == 1 else 's')) if c.comments else 'Comment' }}">{{ ic.comment() }}{% if c.comments %}<span>{{ c.comments }}</span>{% endif %}</a>
+  {%- set n = ('%d comment%s' % (c.comments, '' if c.comments == 1 else 's')) if c.comments else '' %}
+  {% if say -%}
+  <button class="post-count" type="button" data-cm-new data-none="Say something"{% if say == 'out' %} aria-haspopup="dialog" aria-controls="commentOutSheet"{% endif %} aria-label="{{ (n ~ ' · Say something') if n else 'Say something' }}">{{ ic.comment() }}{% if c.comments %}<span>{{ c.comments }}</span>{% endif %}</button>
+  {%- else -%}
+  <a class="post-count" href="{{ c.url }}{{ '#say' if (me and say is none) else '#comments' }}"{% if say is not none %} data-none="Comment"{% endif %} aria-label="{{ n or 'Comment' }}">{{ ic.comment() }}{% if c.comments %}<span>{{ c.comments }}</span>{% endif %}</a>
+  {%- endif %}
   {% if c.markable %}{{ repost(c) }}{% endif %}{% if not c.down %}{{ heart(c, landing) }}{% endif %}
   {% if c.drawable and me %}{{ drawback_pen(c) }}{% endif %}
   <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
@@ -225,7 +243,7 @@
   {% if cm.words %}<p class="post-words">{{ said(cm.words, it.mentions) }}</p>{% endif %}
   {% if cm.skribl_id %}<div class="post-art"{{ own_ground(it.sk) }}>{{ comment_art(it, waits=true) }}</div>{% endif %}
   <footer class="post-row">
-    <a class="post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d repl%s' % (c.replies, 'y' if c.replies == 1 else 'ies')) if c.replies else 'Replies' }}">{{ ic.comment() }}{% if c.replies %}<span>{{ c.replies }}</span>{% endif %}</a>
+    <a class="post-count" href="{{ c.url }}{{ '#say' if me else '#comments' }}" aria-label="{{ ('%d repl%s' % (c.replies, 'y' if c.replies == 1 else 'ies')) if c.replies else 'Replies' }}">{{ ic.comment() }}{% if c.replies %}<span>{{ c.replies }}</span>{% endif %}</a>
     {% if c.markable %}{{ repost(c) }}{% endif %}{% if not c.down %}{{ comment_heart(it) }}{% endif %}
     <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
             aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>

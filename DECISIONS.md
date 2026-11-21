@@ -51125,3 +51125,115 @@ NOT TESTED HERE: Safari on an iPhone. THE TELL: in Flip, open All tools:
 the little V under the tray has a fine lilac line round it and a short
 shadow sits under the tray's foot; in dark, the cards in the menu each have
 a clear lilac line.
+
+## After v330 -- "Yes to all", the site's half: a tile for each drawing, the talk cloud answers, a page's name link, and dark's edge
+
+Nov 21. The rest of the owner's "I love your picks. Yes to all." (11:16
+AM; the entry above has the eight and the editors' three): 5, 6 and 8, and
+3 on the site.
+
+**5. A TILE FOR EACH DRAWING (A, the roomy one).** The owner, of the
+Gallery in light: "I like the colors that make rows. Maybe they should be
+individual tiles, not rows." `--row-band` is under each drawing and its
+name now, not under each row: `--tile-out` of it round the picture (6px),
+8px under the name, 8px of the page between two tiles across and down
+(`social.css`, A TILE FOR EACH DRAWING; `docs/SOCIAL-SITE.md` section 33).
+AS BUILT IS THE MOCK'S A: on a phone a picture is 175px (179), a tile 187,
+8px of page between; on a desk the pictures keep their 312px. Make's "Use
+one you made" takes 4px, the room its list leaves (at 6 the list's edge cut
+each tile square). The colour did not move: 1.08 to 1 from the page in
+light, 1.09 in dark.
+
+**6. THE TALK CLOUD ANSWERS (B).** On a post's own page the cloud in its
+row opens the comment box, comments or none: a phone's sheet with the
+post's own words under "Say something to Ana", a desk's box in the line's
+place, signed out "Say something?". From a card it goes to the post with
+its box open (`#say`) for somebody signed in, to the comments signed out
+(`docs/SOCIAL-SITE.md` section 34). THREE THINGS THE MOCK DID NOT SHOW,
+each Cal's reading and the owner's to overrule:
+  - FOCUS GOES BACK TO THE CLOUD on a desk too. The box opens in the bar's
+    line's place there, and Esc used to hand focus to that line whatever
+    had been pressed. Somebody on a keyboard is put back where they were.
+  - THE NUMBER BY THE CLOUD FOLLOWS THE PAGE. It kept the number the page
+    came with, whatever was said or deleted after. With the cloud the thing
+    pressed, "I said something and it still says none" would read as lost.
+    It counts as the small label over the comments does.
+  - WHERE NOTHING CAN BE SAID (comments closed; not this person's to make)
+    the page's cloud stays a link down to the comments.
+
+**8. A PAGE'S NAME LINK STOPS AT THE NAME.** On a post's page and a
+comment's the person's link was the whole width of the head (310px on a
+phone, 280 on a desk, for a name 73px wide). It is as wide as the longer
+of the name and the @handle, 44px at the least (`docs/SOCIAL-SITE.md`
+section 35). The room beside it does nothing; on a card it opens the post.
+
+**3, ON THE SITE: IN DARK THE EDGE DOES THE SEPARATING.** `--card-edge`
+26% of the lilac over its card, `--card-line` 0.26 (each was 12), in both
+copies of the dark ramp. Off the paint, a post's card on Home: 1.61 to 1
+from the card (1.23) and 1.90 from the page (1.45); a Gallery tile's line
+1.60 from the ground beside it (1.21). Light, which did not move: 1.56,
+1.47 and 1.53. ONE THING TO KNOW: on the site the line between two rows of
+one list (`.fp-row`, `.mn-row`) wears `--card-line` too, as it always has
+in light, so it is clearer in dark with the rest; in the editors that line
+has its own token and stayed (`docs/SOCIAL-SITE.md` section 36).
+
+THE CHECKS, AND EACH SHOWN RED. Twenty-four breaks, each on a copy with a
+server of its own, each red in a row of its own part; green as built.
+  - TILES (`verify_socialposts` 22, read off the paint, each point with the
+    tiles and without, since the page's top glow tints the ground): a band
+    again; no tile; the snug spacing; a fixed gap; no tile under the name;
+    square corners; a lone tile stretched to the row (red on a desk only at
+    first: the row now holds every cell to one width, and it is red on a
+    phone too); Make's list at 6px, and on the page's colour.
+  - THE CLOUD (`verify_socialcomments` 34, 30, 32, 11; `verify_socialposts`
+    10; `verify_socialreposts` 16): the page's cloud a link again; deaf to
+    its own press; no quote of the post; focus to the bar's line; the
+    number left stale; no name for the signed-out sheet; the old name; a
+    post's card to the comments; a comment's card to the comments (the
+    reposts suite's row, not the comments suite's); a signed-out card to
+    the box (the comments suite's, not the posts suite's).
+  - THE NAME (`verify_socialcomments` 49, pressed for real on four pages, a
+    phone and a desk): the rule gone; its 44px least gone.
+  - THE EDGE (`verify_socialposts` 17): the card's edge back at 12 (the
+    card's reading red, 1.23); the tile's line back at 0.12 (NOT CAUGHT at
+    first: the row read only a card's ring; it reads a tile's line as well
+    now, and is red at 1.21); one copy of the dark ramp alone
+    (`verify_socialsettings` 8).
+A FINDING ALONG THE WAY, in the new check's own code: section 49 wrote the
+@handle's width over the person's handle and stopped itself; found by its
+first run, which is what a first run is for.
+
+THE RUNS. Seventeen suites whole, three side by side. FOURTEEN GREEN THE
+FIRST TIME: likes 112, reposts 103, profile 98, follow 79, app 72, mute 68,
+mentions 51, activity 48, social 46, settings 45, composer 44, safety 38,
+bookmarks 37, search 32. THREE RED, AND WHAT EACH WAS:
+  - `verify_socialcomments` 144 of 149 and `verify_socialposts` 120 of 121:
+    SIX ROWS OF THE CHECKS' OWN, none a defect of the build. Two older rows
+    counted what opens the comment box and found two things, the bar's
+    line and now the cloud; two older sections read the cloud's address on
+    a drawing's own page, where it is a button now and has none; one row
+    held the grid's old gaps; and the new section 49 was stopped by a
+    name: section 48 had called its own reader `say`, which is the suite's
+    helper for making a comment, so nothing after it could comment (nothing
+    had needed to until now). Each mended and read again: comments 153 of
+    153, posts 121 of 121, whole. A PART-RUN IS NOT A RUN OF ITS SUITE: all
+    six were in sections the part-runs never opened.
+  - `verify_socialdrawback` 88 of 89 beside others, twice, and 92 of 92
+    alone: LOAD, the row it was the day before (section 11 taps Undo on a
+    seven-second toast after four more browsers have been opened). Its
+    check is to be mended on its own.
+(The fourteen ran on the tree before those six rows were mended; the
+mending touched the two suites and nothing they share.) The full battery
+was not run.
+
+FLIP AND THE PAD: not theirs, but for the edge, which the editors took the
+same day in their own tokens (the entry above). AGAINST THE FOUR: simple
+(a cloud means "say something" wherever it is; a name's tap is the name);
+kind (a lone drawing is not stretched into a band; focus comes back to
+where you were; a count that is true); playful (a wall of little cards);
+powerful is not in it.
+
+NOT TESTED HERE: Safari on an iPhone. THE TELLS: in the Gallery each
+drawing sits on its own soft tile with the page between; on a post, tap
+the talk cloud and the box rises with the post's words quoted; in dark,
+each card has a clear lilac line.
