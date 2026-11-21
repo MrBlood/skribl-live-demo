@@ -51010,6 +51010,14 @@ row); the comment box's draft not told, and not untold; an example not
 told, its own box left on the waiting colour, told another colour. Green
 as built: the three sections, 6 of 6, 4 of 4 and 17 of 17.
 
+THE RUN, eight suites whole, three side by side, nothing else running in
+the box, all green the first time: `verify_socialcomments` 151 of 151,
+`verify_socialposts` 120, `verify_socialreposts` 103, `verify_socialprofile`
+98, `verify_socialdrawback` 92 (the suite that stopped at a tap under load
+that morning: the same tree's worth of it, quiet, whole), `verify_socialapp`
+72, `verify_social` 46, `verify_composer` 44. `verify_docs` 144. The full
+battery was not run.
+
 FLIP AND THE PAD: not theirs; the player is asked only what it already
 says. AGAINST THE FOUR: simple (a draft looks like the post it will be).
 
