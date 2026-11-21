@@ -1012,12 +1012,15 @@ with sync_playwright() as p:
             # THE EDGES (Nov 15, B): the card's edge is a ring one screen pixel wide in --card-edge (its line as it
             # looked over the card, made solid), the border kept, transparent, so nothing moves.
             ring = re.match(r"(.+?) 0px 0px 0px ([0-9.]+)px", look.get("shadow") or "")
+            # ITS DROP IS THE ONE SHADOW OF WHAT FLOATS (the crisp build, Nov 20; --float-drop: 22px of blur drawn
+            # 12px in under its foot, where it wore 10px/28px), as a toast's is: verify_socialposts 23 holds that
+            # the site's sheet has no other soft shadow.
             check("the mock's card and rows: --card, its edge one screen pixel of --card-edge (the border kept,"
-                  " transparent), 16px round, a drop; each row 52px, the face 36px, the name 17px 600 in the first ink,"
-                  " the @handle 15px in the second, painted where it is",
+                  " transparent), 16px round, the one close drop of what floats; each row 52px, the face 36px, the name"
+                  " 17px 600 in the first ink, the @handle 15px in the second, painted where it is",
                   bool(row_ok) and look["bg"] == look["card"] and look["border"] in ("rgba(0, 0, 0, 0)", "transparent")
                   and look["borderW"] == "1px" and bool(ring) and ring.group(1) == look["edge"] and float(ring.group(2)) <= 1
-                  and look["radius"] == "16px" and "0px 10px 28px" in look["shadow"],
+                  and look["radius"] == "16px" and look["shadow"].rstrip().endswith("0px 12px 22px -12px"),
                   json.dumps({k: look.get(k) for k in ("bg", "card", "border", "edge", "borderW", "radius", "shadow")})
                   + " " + json.dumps(rows[:1]))
             check("to a screen reader: a listbox of options, named; the field says it is open (aria-expanded), which it"

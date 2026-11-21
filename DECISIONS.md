@@ -50087,7 +50087,10 @@ pictured and the owner said yes to: its lilac edge (1.47:1 on the page) and
 the one line under it; the mock said of C, the edge alone, that it is "one
 step from" what Nov 16 ruled out. So the census counts a lift as it is
 now: a soft shadow, or a line a pixel or more down. A ring alone is still
-none (shown: with the line taken away, C, the census is red). IF A CARD
+none. SHOWN: with the line taken away (C, the edge alone) the census is
+red, 28 boxes on its 36 pages (a post's card and a bubble 1.06:1, the
+answer line 1.03:1); and the census as it was, on the crisp sheet, is red
+with the same 28, which is why its lift had to be said again. IF A CARD
 READS AS "JUST A BORDER" ON THE OWNER'S PHONE, the line is the thing to
 strengthen, and they are asked to say.
 
@@ -50102,6 +50105,22 @@ WHAT ELSE MOVED WITH IT:
   `EMBED_RATCHET`, with its reason beside it). The pill is Skribl's player's,
   so it is crisp wherever that player is: the site, Skribl's own Gallery and
   Library, a link's page.
+- FOUR OLDER ROWS ASKED FOR THE SHADOW THIS TOOK AWAY, and the whole run
+  found them. "The edges" (Nov 15; `verify_socialposts` 17) asked that the
+  page under a tile, and under a drawing, be darker than further down: the
+  soft fall. They ask the crisp lift now: under a tile's edge, and under a
+  drawing on a post's own page, the shadow paints two or three screen rows
+  together (1px at 3x) and nothing below them for 13px; in a card it paints
+  nothing; in dark nothing either way. READ BY COMPARING the picture with
+  the same picture, its shadow cut to its ring, row by row: a box's foot
+  seldom lands on a whole screen pixel, and the first rewriting, which
+  asked a set row, read the ring twice and never the line. The third, the
+  drawing's "line of one screen pixel", measured the widest unblurred
+  shadow and so took the line of shade for the ring: it measures the ring
+  (unblurred and not moved). SHOWN RED: the old token (39 rows of fall),
+  the in-a-card rule out, a tile without its line, the page's drawing
+  without its line. And `verify_socialmentions` 4 asked the @ list's drop
+  by its old numbers: it asks the floating one (red with the old).
 
 THE CHECK. `verify_socialposts` 23, four rows:
 
@@ -50128,11 +50147,27 @@ the floating shadow made wide in dark (3, 4); the sheet's line of light
 taken out in dark (3). Green as built.
 
 HOW THEY RAN HERE: the thirty-six suites that open a page of the site or
-read the player's pill, each whole, three side by side. The first to
-report, green: `verify_socialreposts` 99 (the census with it),
-`verify_socialcomments` 150, `verify_inline` 227 (the budget to the byte).
-THE REST WERE STILL RUNNING when this was first written; their counts are
-added here before the merge.
+read the player's pill, each whole, three side by side, in 55 minutes.
+THIRTY-FOUR GREEN THE FIRST TIME: `verify_contrast` 677,
+`verify_seam` 524, `verify_library` 248, `verify_gallery` 234,
+`verify_inline` 227 (the budget to the byte), `verify_replayspeed` 192,
+`verify_galib` 182, `verify_socialcomments` 150, `verify_socialpush` 118,
+`verify_sociallikes` 112, `verify_sharedrules` 106, `verify_socialreposts`
+99 (the census with it), `verify_socialprofile` 98, `verify_socialdrawback`
+92, `verify_compose` 92, `verify_player_isolation` 85,
+`verify_socialfollow` 79, `verify_socialauth` 76, `verify_socialapp` 71,
+`verify_socialmute` 68, `verify_icons` 61, `verify_example` 59,
+`verify_socialactivity` 48, `verify_social` 46, `verify_socialsettings`
+45, `verify_composer` 43, `verify_socialsafety` 38,
+`verify_socialbookmarks` 37, `verify_jsstrip` 35, `verify_socialsearch`
+32, `verify_sharecard` 32, `verify_recolorplay` 23, `verify_viewedges` 19,
+`verify_surfaces` 13. TWO RED THE FIRST TIME, AND NOT FROM LOAD:
+`verify_socialposts` 112 of 115 and `verify_socialmentions` 50 of 51, the
+four rows above that asked for the old shadows. Rewritten while the run
+went on, each shown red and green on its own, and then each suite whole,
+alone: 115 of 115 and 51 of 51 (the runner calls that intermittent; here
+it is the rows changing between the two passes). The full battery was not
+run; main's run after the merge is it.
 
 FLIP AND THE PAD: next, both together, with the same numbers (their
 drawers' cards, Post and Record, Flip's page strip, the white words' text

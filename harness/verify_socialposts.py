@@ -3561,11 +3561,14 @@ print("PLAN " + json.dumps(out))
             check("section 16 ran to its end", False, str(exc).splitlines()[0][:200])
 
     # ------------------------------------------------------------------ 17
-    if part(17, "the edges: every outline one screen pixel; a Gallery tile's lift on the light page; a field's edge 3:1"):
+    if part(17, "the edges: every outline one screen pixel; a Gallery tile's line on the light page; a field's edge 3:1"):
         # THE EDGES (the owner, Nov 15, "The edges", B): every outline the
         # site draws is one screen pixel, the rows' thin line given to every
         # edge, and the Gallery's tiles sit on the light page with the cards'
-        # own soft shadow. Read off the paint at the owner's phone's 3x, light
+        # own lift. THAT LIFT IS ONE LINE OF SHADE NOW (the crisp build, the
+        # owner's "All yes" to its B, Nov 20; section 23): 1px under the edge
+        # and nothing soft below it, where it was a soft shadow. Read off the
+        # paint at the owner's phone's 3x, light
         # and dark: at the middle of a box's left side (the bar: of its top),
         # the screen pixels that stand 1.15:1 apart from both the page beside
         # and what is inside. Every one of them was three; a field's edge
@@ -3586,6 +3589,23 @@ print("PLAN " + json.dumps(out))
                 return [im.getpixel(p_) for p_ in pts if _cr(im.getpixel(p_), page) >= 1.15 and _cr(im.getpixel(p_), inside) >= 1.15]
 
             BOX = "(s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }"
+
+            # WHAT A BOX'S SHADOW PAINTS UNDER IT, PAST ITS RING: the screen rows from its foot down (13px of
+            # them) where the picture is darker than the same picture with the shadow cut to its ring. One line
+            # of shade is a run of two or three rows at 3x (1px, the ring over its first); a soft shadow is
+            # dozens; none is none. (A box's foot seldom lands on a whole screen pixel, so a set row cannot be
+            # asked: the first writing of this read the ring twice and never the line.)
+            def _shade(page_, im_, sel_, r_, across, ring):
+                xm, yb = round((r_[0] + r_[2] * across) * 3), round((r_[1] + r_[3]) * 3)
+                cut = page_.add_style_tag(content=sel_ + " { box-shadow: 0 0 0 var(--edge) " + ring + " !important; }")
+                page_.wait_for_timeout(120)
+                im2_ = Image.open(io.BytesIO(page_.screenshot())).convert("RGB")
+                cut.evaluate("s => s.remove()")
+                page_.wait_for_timeout(60)
+                return [k for k in range(-4, 40) if _lum(im_.getpixel((xm, yb + k))) * 1000 < _lum(im2_.getpixel((xm, yb + k))) * 1000 - 2]
+
+            def _one_line(rows):
+                return bool(rows) and 2 <= len(rows) <= 3 and rows == list(range(rows[0], rows[0] + len(rows)))
             ed = member(b, "edgy", "Eddie Edge")
             st17, _ = make_post(ed, "Edges, one screen pixel.", card=True)
             edges, lift = {}, None
@@ -3605,8 +3625,7 @@ print("PLAN " + json.dumps(out))
                         got = _band(im, [(i, y) for i in range(x - 6, x + 8)], page, inside)
                         edges[f"{scheme} {sel}"] = {"n": len(got), "px": got[:3], "inside": inside}
                         if sel == ".gal-pic" and scheme == "light":
-                            xm, yb = round((r[0] + r[2] / 2) * 3), round((r[1] + r[3]) * 3)
-                            lift = [round(_lum(im.getpixel((xm, yb + 9))) * 1000, 1), round(_lum(im.getpixel((xm, yb + 75))) * 1000, 1)]
+                            lift = _shade(pg, im, sel, r, 0.5, "var(--card-line)")
                     if path == "/social/explore":
                         r = pg.evaluate(BOX, "nav.nav")
                         x6, y = 6, round(r[1] * 3)
@@ -3618,9 +3637,10 @@ print("PLAN " + json.dumps(out))
                   " New | Hot, a tile, and the bar's line along its top",
                   st17 == 200 and len(edges) == 10 and all(v and v["n"] == 1 for v in edges.values()),
                   json.dumps({k: (v and v["n"]) for k, v in edges.items()}) + " " + json.dumps(edges)[:500])
-            check("...a Gallery tile sits on the light page with the cards' own lift: the page just under it darker than"
-                  " further down",
-                  bool(lift) and lift[0] < lift[1] - 2, json.dumps(lift))
+            check("...a Gallery tile sits on the light page with the cards' own lift, which is one line of shade (crisp):"
+                  " under its edge the shadow paints two or three screen rows together (1px), and nothing below them for"
+                  " 13px",
+                  _one_line(lift), json.dumps(lift))
             fld = edges.get("light .gal-find input") or {}
             check("...and the search box's edge reads 3:1 or more against its own white",
                   bool(fld.get("px")) and _cr(fld["px"][0], fld["inside"]) >= 3.0,
@@ -3631,7 +3651,10 @@ print("PLAN " + json.dumps(out))
             # on the light page"): the player's own line made transparent
             # (--border, the seam the site sets), and a line of one screen
             # pixel outside the box, in the drawing's line over its own ground,
-            # made solid; on the light page the cards' own lift. Read as part
+            # made solid; on the light page the cards' own lift. SINCE THE
+            # CRISP BUILD (Nov 20) that lift is the page's one line of shade,
+            # and only where the drawing sits on the page itself: IN A CARD it
+            # wears its edge and nothing else. Read as part
             # four reads the link page: the drawing hidden for the photograph,
             # and the screen pixels that stand apart from both their neighbours
             # (a line one pixel wide does; a wider line, or a shadow's soft
@@ -3675,34 +3698,29 @@ print("PLAN " + json.dumps(out))
                         mech = pg.evaluate("""(s) => { const c = getComputedStyle(document.querySelector(s));
                             const a = (c.borderLeftColor.match(/[\\d.]+/g) || []).map(Number);
                             const line = (parseFloat(c.borderLeftWidth) || 0) > 0 && (a.length < 4 ? a.length > 0 : a[3] > 0);
-                            let w = null;
+                            let w = null;       // its ring: unblurred and not moved (a line of shade under it is moved down, and is not the ring)
                             for (const one of c.boxShadow.split(/,(?![^()]*\\))/)) {
                               const v = (one.replace(/[a-z]+\\([^)]*\\)/g, '').match(/-?[\\d.]+(?=px)/g) || []).map(Number);
-                              if (v.length >= 2 && (v.length < 3 || v[2] === 0)) w = Math.max(w || 0, Math.abs(v[0]), Math.abs(v[1]), Math.abs(v[3] || 0));
+                              if (v.length >= 2 && !v[0] && !v[1] && (v.length < 3 || v[2] === 0)) w = Math.max(w || 0, Math.abs(v[3] || 0));
                             }
                             return { border: line ? c.borderLeftColor : null, w: w }; }""", sel)
                         if mech["border"] or mech["w"] is None or abs(mech["w"] * 3 - 1) > 0.05:
                             got = f"{got} and {mech}"
                         art[f"{scheme} {sel}"] = got
-                        if path == "/social/":
-                            # The lift: just under the box, against the same with its
-                            # shadow cut to its line.
-                            xm, yb = round((r[0] + r[2] * 0.3) * 3), round((r[1] + r[3]) * 3) + 6
-                            was = _lum(im.getpixel((xm, yb)))
-                            cut = pg.add_style_tag(content=sel + " { box-shadow: 0 0 0 var(--edge) var(--draw-edge) !important; }")
-                            pg.wait_for_timeout(120)
-                            im2 = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
-                            cut.evaluate("s => s.remove()")
-                            lifts[scheme] = [round(was * 1000, 1), round(_lum(im2.getpixel((xm, yb))) * 1000, 1)]
+                        if ".cm-art" not in sel:
+                            # The lift: what its shadow paints under it, past its ring.
+                            lifts[f"{scheme} {'in a card' if path == '/social/' else 'on the page'}"] = _shade(pg, im, sel, r, 0.3, "var(--draw-edge)")
                         hide.evaluate("s => s.remove()")
                 close_ctx(ctx, pg)
             check("a drawing on the site wears a line of one screen pixel at 3x, light and dark: a post's on Home's card"
                   " and on its own page, and a comment's",
                   stc17 == 200 and stcm == 200 and len(art) == 6 and all(v == 1 for v in art.values()), json.dumps(art))
-            check("...and on the light page it sits with the cards' lift: just under it darker than with its shadow cut to"
-                  " its line; in dark, none",
-                  bool(lifts.get("light")) and lifts["light"][0] < lifts["light"][1] - 2
-                  and bool(lifts.get("dark")) and abs(lifts["dark"][0] - lifts["dark"][1]) <= 1, json.dumps(lifts))
+            check("...and its lift is the crisp one: ON THE PAGE in light (a post's own page) one line of shade under its"
+                  " edge (two or three screen rows together, nothing below them); IN A CARD (Home's) its edge alone, the"
+                  " shadow painting nothing; in dark, nothing either way",
+                  len(lifts) == 4 and _one_line(lifts.get("light on the page")) and lifts.get("light in a card") == []
+                  and lifts.get("dark in a card") == [] and lifts.get("dark on the page") == [],
+                  json.dumps(lifts))
         except Exception as exc:  # noqa: BLE001
             check("section 17 ran to its end", False, str(exc).splitlines()[0][:200])
 
