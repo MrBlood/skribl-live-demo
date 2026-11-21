@@ -49539,3 +49539,101 @@ mock showed, build by build, as theirs to overrule, the afternoon's hop,
 and two things noticed and left alone, each asked with a pick: initials in
 the empty circles of "Liked by", and whether a tablet's card should ride
 its keyboard. Neither is built; each waits for a yes.
+
+## After v330 -- The crisp quotient, mocked: every soft shadow counted, three treatments beside now
+
+Nov 20, evening. The owner, after the day's four builds:
+
+> I want you to look at the crisp quotient. That is does every read crisp
+> with right contrast to lift focal points off the page. I want to minimize
+> shadows to create depth and keep it crisp and luxurious. Shadows seem
+> blurry and kind of muddy the page. They work and are necessary but too
+> much.. it looks cheap. I want this to look magic how it works. So
+> beautiful and natural and crisp and lux.
+
+THE TARGET, said first: the shadows and edges that lift things off the page
+in Blooby (cards, bubbles, sheets, pills, the two bars), and the same job in
+the Pad and Flip. Not the colours, the type or the layout.
+
+NOTHING IS BUILT. This entry is the count and the mock (the artifact "Crisp
+Quotient"); the look waits for a plain yes.
+
+THE COUNT (a temporary part, never committed: every element painted with a
+box shadow, a drop shadow, a text shadow or a backdrop blur, read off the
+real pages state by state; "soft" is a shadow with more than 2.5px of blur,
+the replay's pen nib left out):
+
+- On a phone in light, across fourteen screens and sheets of the site: 188
+  soft shadows, and 131 of them the very same one, the cards' lift
+  (`--card-drop`: 1px/2px at 8% and 6px/18px at 9%). It is under post
+  cards, comment bubbles, the drawing's plate (`--draw-lift` is the same
+  token), the tiles, panels and the answer line. In dark 155 and 98; on a
+  desk in light, across twelve, 143 and 103.
+- On screen at once: Home 17, a post's page 15, the Gallery 21. The Pad at
+  rest 1, Flip 2; with a drawer open 2 and 3.
+- THREE DEEP: a card's shadow, the drawing's inside it, the play pill's on
+  that (3px/12px at 14%, over glass).
+- The other soft things: the purple fill's glow (`--fill-drop`, 6px/16px of
+  the fill at 30%: Make, Post, Follow, Draw back lit); a sheet's (40px of
+  black at 25%, over a page the scrim has dimmed already); a toast's (the
+  card's lift and 16px/36px of black at 16%); the duration chip's (1px/4px
+  at 12%).
+- WHAT "MUDDY" MEASURES AS: between two cards on Home there are 16px of
+  page, and shadow tints all 16 (the middle of the gap is 92% as bright as
+  the page). The fog there is 1.08:1 against the page; a white card against
+  the page is 1.06:1; the card's lilac ring is 1.47:1. The ring is the
+  edge, and the fog is a bigger step than the card.
+
+THE THREE TREATMENTS, each laid over the real pages for its pictures (tokens
+and a few rules; a phone and a desk, light and dark, with close-ups at nine
+device pixels to one):
+
+- A, TIGHTER: everything that has a lift keeps one, shorter and closer (the
+  card's 3px/8px pulled in 3px; the glow 8px). Home 16 soft shadows, the
+  widest 8px; 7.7 of the gap's 16px tinted.
+- B, THREE HEIGHTS (the pick). IN A CARD, an edge and nothing else (the
+  drawing's plate in a post's card or a comment). ON THE PAGE, the edge and
+  one line of shade under it (1px, no blur, the violet at 13%: cards,
+  bubbles, tiles, panels, the answer line; the drawing too where it sits on
+  the page itself). FLOATING, the one true shadow, short and close (a
+  toast: 12px/22px pulled in 12px; the play pill a hairline and 1px/2px),
+  and a sheet a line of light along its top and no shadow. THE FILL an
+  enamel edge and no glow: light on its top edge, shade on its foot,
+  1px/2px under it. Home 0 soft shadows at rest, the widest blur 2px; 1.3
+  of the gap's 16px tinted (the ring and the line).
+- C, EDGES ONLY: nothing at rest casts anything; what floats as in B. Home
+  0; 0.7px. Said against it: a card on the page is then its ring alone, one
+  step from what the owner ruled out on Nov 16 ("just a border").
+
+In dark a shadow hardly showed: what changes to the eye there is the glow
+round Make and the top of a sheet.
+
+WHAT IT WOULD DO TO THE PAD AND FLIP, said in the mock: they are close to
+this already. Their drawers' cards wear the same lift, number for number
+(`--menu-card-drop`), so the same rule fits: the drawers' cards, Post and
+Record (3px/12px), Flip's page strip (`--glass`), the post sheet. One more
+soft thing lives there: the white words and icons on the purple buttons
+carry a text shadow (1px/3px of black at 45%), put there to part white from
+purple; white on that purple is 5.33:1. SHARED: one set of numbers for both
+editors, together, after the site. Counted on a phone in light, the Pad at
+rest and with one drawer, Flip at rest and with four; the editors' other
+states were not counted, and that is said.
+
+LEFT ALONE: the page's own colour (`--page`, shared with the editors'
+ground, with a dozen inks chosen against it), every ink, the two bars'
+glass, the nib's glow.
+
+THE OWNER'S CHOICES, with the picks, so that "all yes" is an answer: the
+treatment (B); the purple buttons (the enamel edge, no glow); a sheet's top
+(the line of light, no shadow); the play pill on a drawing keeps its glass
+and takes a close shadow, wherever Skribl's player is (yes); the Pad and
+Flip next, the same rule, both together, their buttons' text shadow with
+it (yes).
+
+IF IT IS A YES, HOW IT BUILDS. On the site it is three tokens
+(`--card-drop`, `--draw-lift`, `--fill-drop`) and four rules (the sheet,
+the toast, the duration chip, the plate inside a card), and Skribl's play
+pill; `verify_contrast` runs, and the count is kept as a check that reads
+the soft shadows on a screen and holds the number. NOT TESTED HERE: Safari
+on an iPhone, SF and Segoe UI. A one-pixel line is the owner's screen to
+judge, and is tuned by the half pixel if they say so.

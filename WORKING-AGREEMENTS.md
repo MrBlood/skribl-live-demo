@@ -207,6 +207,17 @@ sophisticated hippy)." A colour that greys or muddies (a see-through tint
 landing on a grey, a washed-out ink, grey words where a clear one reads) is
 the thing to fix; between a grey and a clear colour, offer the clear colour.
 
+**Crisp, not blurry.** The owner, Nov 20, of the site's shadows: "I want to
+minimize shadows to create depth and keep it crisp and luxurious. Shadows
+seem blurry and kind of muddy the page. They work and are necessary but too
+much.. it looks cheap. I want this to look magic how it works. So beautiful
+and natural and crisp and lux." Cal's reading of it, until the owner says
+otherwise: an edge does the separating, and a shadow only says "this
+floats"; nothing casts a shadow onto the card it sits in; no glow under a
+button; and a new surface asks first whether an edge will do. Count the
+soft shadows on a screen before adding one (`DECISIONS.md`, "The crisp
+quotient, mocked": Home had seventeen, the Pad one).
+
 **It lives in skribls.net too.** Pad, the Library and the Gallery will sit inside
 the owner's site. Pad acts like an app on the phone: it opens full screen, has a
 Home Screen icon, and returns to the site after posting. Anything built has to
