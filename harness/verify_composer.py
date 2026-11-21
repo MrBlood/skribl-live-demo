@@ -604,6 +604,13 @@ CENSUS = """(root) => {
   });
   return out; }"""
 
+# THE DRAFT'S BOX AND ITS GROUND (A of the drawing's edge, the owner, Nov 21; social.js SocialGround): what the
+# box's wrapper holds as --plate-ground, what its player says it paints on, what the box wears, the waiting colour.
+GROUND = """() => { const w = document.querySelector('[data-compose-draft]'), box = w.querySelector('.skribl-inline'), pl = box && box._skriblInline;
+  const probe = document.createElement('i'); probe.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px;background:var(--draw-wait)';
+  document.body.appendChild(probe); const wait = getComputedStyle(probe).backgroundColor; probe.remove();
+  return { token: w.style.getPropertyValue('--plate-ground'), says: pl && pl.ground ? pl.ground() : null,
+           box: box ? getComputedStyle(box).backgroundColor : null, wait }; }"""
 STATE = """() => { const p = window.SkriblInline ? SkriblInline.players() : [];
   const box = document.getElementById('composeDraft'); const me = p.find(x => x.el === box);
   return me ? me.state().state : null; }"""
@@ -980,6 +987,7 @@ with sync_playwright() as p:
             got = pg.evaluate(SHEET)
             state, played = pg.evaluate(STATE), pg.evaluate(PLAYED)
             parts_ = pg.evaluate(PARTS)
+            g_in = pg.evaluate(GROUND)
             check("Draw opens Skribl's Pad over the sheet in compose mode, asking for no gallery tick (compose=1, no"
                   " gallery=1; the walkthrough's mocks, choice 2), its sheet saying Add to post with no gallery checkbox and"
                   " Viewers start at still asked; Add hands the drawing back into the sheet's own in-post player, PLAYING, Post"
@@ -1007,6 +1015,18 @@ with sync_playwright() as p:
             removed = pg.evaluate("""() => ({ att: SocialComposer.attached(), shown: !document.querySelector('[data-compose-draft]').hidden,
               post: document.querySelector('[data-compose-post]').getAttribute('aria-disabled'),
               frame: document.querySelector('#composePad iframe').getAttribute('src') })""")
+            # THE DRAFT'S BOX IS THE DRAWING'S OWN PAPER TO ITS EDGE (A of "The Drawing's Edge", the owner, Nov 21).
+            # A draft is handed to the player as it is, so the page was never told its ground and the box kept
+            # the waiting lilac round the picture; the wrapper takes it from the player now.
+            g_out = pg.evaluate(GROUND)
+            rgb = lambda h: "rgb(%d, %d, %d)" % tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))  # noqa: E731
+            check("the draft's box is the drawing's own paper to its edge: with a drawing attached, its wrapper holds the"
+                  " ground the player says it paints (the one colour a page may use) and the box wears it, not the waiting"
+                  " colour; removed, the wrapper holds none and the box waits again",
+                  bool(re.fullmatch(r"#[0-9a-f]{6}", g_in.get("token") or "")) and g_in["token"] == g_in.get("says")
+                  and g_in.get("box") == rgb(g_in["token"]) and g_in["box"] != g_in.get("wait")
+                  and g_out.get("token") == "" and g_out.get("box") == g_out.get("wait"),
+                  f"attached {g_in}; removed {g_out}")
             check("with a drawing attached a tool says a post holds one and opens nothing; Edit drawing reopens the Pad with the"
                   " drawing put back in it (a load message); Remove takes it away, Post dim again, and the frame is let go",
                   one == {"said": "A post holds one drawing. Remove this one to use another.", "flip": False}

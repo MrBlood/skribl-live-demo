@@ -412,9 +412,10 @@ in the mock page.
   initials in "Liked by"; a tablet's Make card riding its keyboard.
 - **NOV 21, FROM THE OWNER'S PHONE** (`DECISIONS.md`, the entries from "Two
   questions off the owner's phone" down):
-  1. THE DRAWING'S EDGE: "A", built ("The drawing's edge is A"). Still owed:
-     the draft in the composer and How it works' pictures, whose ground the
-     page does not know.
+  1. THE DRAWING'S EDGE: "A", built ("The drawing's edge is A"), and the
+     places the page was never told too: a draft in Make and in the comment
+     box, How it works' examples ("The drawing's edge, the places the page
+     was never told"; `docs/SOCIAL-SITE.md` section 32).
   2. THE PERSON'S TAP STOPS AT THEIR NAME: built ("The person's tap stops
      at their name"; `docs/SOCIAL-SITE.md` section 31). CAL'S READING, said
      to the owner and theirs to overrule: where an @handle runs on past a

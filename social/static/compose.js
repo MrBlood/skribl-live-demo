@@ -210,6 +210,7 @@
        joins the two when it posts: drawback.py; joined() is its preview). */
     var shows = back && back.payload ? joined(back.payload, payload) : payload;
     player = window.SkriblInline ? window.SkriblInline.attach(draftBox, shows) : null;
+    if (window.SocialGround) window.SocialGround(draftWrap, player);
     playIt();
     editBtn.focus({ preventScroll: true });
   }
@@ -220,6 +221,7 @@
        it: nothing to edit here. */
     editBtn.hidden = true;
     player = window.SkriblInline ? window.SkriblInline.attach(draftBox, payload) : null;
+    if (window.SocialGround) window.SocialGround(draftWrap, player);
     playIt();
   }
   function shown(on) {
@@ -233,6 +235,7 @@
     if (player && player.pause) player.pause();
     att = null;
     player = null;
+    if (window.SocialGround) window.SocialGround(draftWrap, null);
     /* Its choice of who can draw back goes with it: the next starts open. */
     who = 'everyone';
     whoFold();

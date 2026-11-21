@@ -3176,7 +3176,7 @@ button.fo-n {
 }
 .how-strip::-webkit-scrollbar { display: none; }
 .how-ex { flex: none; width: 168px; margin: 0; scroll-snap-align: start; }
-.how-pic { aspect-ratio: 4 / 3; border-radius: 14px; background: var(--draw-wait); }
+.how-pic { aspect-ratio: 4 / 3; border-radius: 14px; background: var(--plate-ground, var(--draw-wait)); }
 .how-pic .skribl-inline { width: 100%; margin: 0; }
 /* Its play button says the time (the draw-back's, both hands'): the player's
    own length chip would say the joined drawing's 9 seconds beside it. */
