@@ -50029,3 +50029,122 @@ not in it; this is a mend.
 NOT TESTED HERE: an iPhone's Safari or the Home Screen app. The mark is a
 drawing, not type, so no font moves it. THE TELL: on Sign in, the word
 "blooby." sits right over the icon and the heading, its middle on theirs.
+
+## After v330 -- Crisp, built: three heights on Blooby, and nothing soft at rest
+
+The third of the three the owner's "All yes" (Nov 20) covered: the crisp
+mock's B ("The crisp quotient, mocked", above). The owner: "I want to
+minimize shadows to create depth and keep it crisp and luxurious. Shadows
+seem blurry and kind of muddy the page."
+
+THREE HEIGHTS, as the mock drew them, on the site:
+
+- ON THE PAGE (a post's card, a comment's bubble, a tile, a panel, the
+  answer line, the comment box): the edge and ONE LINE OF SHADE under it,
+  1px, no blur (`--card-drop`: the violet at 13%; it was 1px/2px at 8% and
+  6px/18px at 9%). In dark a line of light inside the top edge (white at
+  7%), and no shadow (it was 18px of black at 35%).
+- IN A CARD (the drawing in a post's card, in a comment's bubble, in the
+  comment box): THE EDGE AND NOTHING ELSE. On a post's own page, on How it
+  works, at the front door and on a sheet's paper the drawing sits on the
+  page itself and keeps the page's one line.
+- FLOATING: the one true shadow, short and close (`--float-drop`: 22px of
+  blur drawn 12px in, so about 10px shows under the foot) on a toast and on
+  the list under an @. A SHEET casts nothing: a line of light along its top
+  (`--sheet-top`; it wore 40px of black at 25% over a page the scrim had
+  dimmed already). The play pill on a drawing keeps its glass and has a
+  hairline and 1px/2px (it wore 3px/12px).
+- THE FILL (Make, Post, Follow, Draw back lit): enamel, no glow
+  (`--fill-drop`: light along its top edge, shade along its foot, 1px/2px
+  under it; it was 6px/16px of the fill at 30%).
+
+THE COUNT, soft shadows on the screen at once (over 2.5px of blur; the
+replay's pen nib aside, which the mock left alone), a phone in light,
+before and after: Home 7 and 0; a post's page 5 and 0; the Gallery 15 and
+0; your own profile's grid 11 and 0; Settings 6 and 0; How it works 8 and
+0. The same nothing in dark and on a desk.
+
+CALLS NO MOCK SHOWED, each made by the rule and each the owner's to
+overrule (said on the as-built page):
+
+- THE EYE CHIP on your own tiles: no shadow, as the time chip beside it
+  (both wore 1px/4px).
+- "PLAY AGAIN" on a drawing's end card: the play pill's hairline and
+  1px/2px (it wore 2px/10px).
+- THE LIST UNDER AN @: it floats, so the toast's one shadow (it wore
+  10px/28px).
+- THE PAD'S FRAME OVER THE PAGE ON A DESK: a sheet over the scrim, so
+  nothing (it wore 24px/64px of black at 35%). A desk's Make card is the
+  same sheet: the line of light, no shadow.
+- THE APP'S ICON in the Home Screen steps: 1px/2px (it was 1px/3px).
+
+"JUST A BORDER" AND THIS RULE MEET, and it is said plainly. On Nov 16 the
+owner asked about a box with "just a border" in the colour of what it sits
+on, and the census that came of it (`verify_socialreposts` 13) let a white
+card on the near-white page through because of its lift, the soft shadow.
+B takes that shadow away. What sets a card apart now is what the mock's B
+pictured and the owner said yes to: its lilac edge (1.47:1 on the page) and
+the one line under it; the mock said of C, the edge alone, that it is "one
+step from" what Nov 16 ruled out. So the census counts a lift as it is
+now: a soft shadow, or a line a pixel or more down. A ring alone is still
+none (shown: with the line taken away, C, the census is red). IF A CARD
+READS AS "JUST A BORDER" ON THE OWNER'S PHONE, the line is the thing to
+strengthen, and they are asked to say.
+
+WHAT ELSE MOVED WITH IT:
+
+- THE BANDS UNDER A ROW OF TILES are their token's own colour beside a tile
+  now: the check's allowance for the tiles' shadow came down from eleven
+  levels to two (`verify_socialposts` 22, `SHADE22`), as its entry said it
+  would.
+- THE IN-POST PLAYER'S BUDGET rose for one named cost, +59 B, all
+  `inlineplayer.css`: the pill's two shadows (`verify_inline`,
+  `EMBED_RATCHET`, with its reason beside it). The pill is Skribl's player's,
+  so it is crisp wherever that player is: the site, Skribl's own Gallery and
+  Library, a link's page.
+
+THE CHECK. `verify_socialposts` 23, four rows:
+
+1. AT REST NOTHING ON THE SCREEN CASTS A SOFT SHADOW: Home, a post's page
+   at its comments, the Gallery, your own profile's grid and Settings, a
+   phone and a desk, light and dark, each read with the things that used to
+   cast one on it counted (so an empty page cannot pass).
+2. THREE HEIGHTS, off what is painted: a card, a bubble and a tile wear the
+   edge and the line; the drawing in a card and in a bubble the edge alone;
+   on a post's own page the line (none in dark); the fill its enamel.
+3. WHAT FLOATS: a toast's one shadow over its edge and line; a sheet's line
+   of light and nothing else; the pill's hairline and 1px/2px.
+4. THE SITE'S SHEET DECLARES NO OTHER SOFT SHADOW, WHATEVER THE STATE:
+   every box-shadow and text-shadow in `social.css` resolved in light and
+   in dark; the only rules with a soft layer are the two that float.
+
+SHOWN RED, each by a break of its own (the rows it turns): the cards' token
+put back in light (1, 2, 4, and all three rows of 22) and in dark (1, 2,
+4); the fill's glow (1, 2, 4); the rule for a drawing in a card taken out,
+and for a bubble alone (2); the sheet's shadow (3, 4); the toast's (3, 4);
+the pill's (1, 3); the time chip's and the eye chip's (1, 4); the list
+under an @, the Pad's frame and the app's icon (4); "Play again" (1, 4);
+the floating shadow made wide in dark (3, 4); the sheet's line of light
+taken out in dark (3). Green as built.
+
+HOW THEY RAN HERE: the thirty-six suites that open a page of the site or
+read the player's pill, each whole, three side by side. The first to
+report, green: `verify_socialreposts` 99 (the census with it),
+`verify_socialcomments` 150, `verify_inline` 227 (the budget to the byte).
+THE REST WERE STILL RUNNING when this was first written; their counts are
+added here before the merge.
+
+FLIP AND THE PAD: next, both together, with the same numbers (their
+drawers' cards, Post and Record, Flip's page strip, the white words' text
+shadow on the purple buttons), and the band under rows in Skribl's own
+Gallery and the Library. SHARED ALREADY: the play pill.
+
+AGAINST THE FOUR. Simple: an edge says "a thing", a shadow says "this
+floats", and nothing says both. Kind: nothing hazy to squint through
+between two cards. Playful and powerful are not in it; this is the ground
+the drawings stand on, and it steps back.
+
+NOT TESTED HERE: Safari on an iPhone, whose screen is finer than these
+pictures; a one-pixel line is the owner's screen to judge, and is tuned by
+the half pixel if they say so. THE TELL: Home, in light: no haze between
+two cards, and no purple glow under Make's button.

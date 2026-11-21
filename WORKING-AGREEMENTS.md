@@ -216,7 +216,8 @@ otherwise: an edge does the separating, and a shadow only says "this
 floats"; nothing casts a shadow onto the card it sits in; no glow under a
 button; and a new surface asks first whether an edge will do. Count the
 soft shadows on a screen before adding one (`DECISIONS.md`, "The crisp
-quotient, mocked": Home had seventeen, the Pad one).
+quotient, mocked": Home had seventeen, the Pad one; on the site the count
+at rest is none now, and `verify_socialposts` 23 holds it there).
 
 **Never stranded.** The owner, Nov 20: "there's no back button on so many
 screens. You end up stranded a lot". On a phone the Home Screen app has no

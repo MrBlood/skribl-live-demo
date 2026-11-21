@@ -32,7 +32,9 @@
   --blooby-paper: #f6f2ea;          /* the paper a bloob is drawn on (the Pad's) */
   --fill: #6d4cf0;                  /* --accent-fill: an action, white on it */
   --on-fill: #ffffff;
-  --fill-drop: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 6px 16px rgba(109, 76, 240, 0.30);
+  /* CRISP (the owner's "All yes" to B, Nov 20): no glow under a button. The fill is enamel: light along its top
+     edge, shade along its foot, and one close line under it (1px/2px), in either theme. */
+  --fill-drop: inset 0 1px 0 rgba(255, 255, 255, 0.32), inset 0 -1px 0 rgba(36, 16, 120, 0.34), 0 1px 2px rgba(60, 40, 140, 0.36);
   --focus: #6d4cf0;
   /* The second button, and every switch's track: Skribl's lilac (the owner's
      "all yes" to "Just a Border", Nov 16; white before, which on a white panel
@@ -76,7 +78,14 @@
      colour, 1.08:1 against it, solid (No dinge); on a sheet's paper, the same step of the paper's. */
   --row-band: #eeeff8;
   --row-band-sheet: #ebe7fc;
-  --card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
+  /* CRISP, THREE HEIGHTS (B): what sits ON THE PAGE has its edge and ONE LINE OF SHADE under it, 1px, no blur
+     (it was 1px/2px at 8% and 6px/18px at 9%, which tinted all 16px between two cards: "blurry", "muddy").
+     What sits IN A CARD has its edge alone (--draw-lift, below); what FLOATS has the one close shadow. */
+  --card-drop: 0 1px 0 rgba(60, 40, 140, 0.13);
+  /* WHAT FLOATS (a toast, the list under an @): the page's line and ONE true shadow, short and close, pulled in
+     under its foot (22px of blur drawn 12px in: about 10px shows). A SHEET's top is a line of light instead. */
+  --float-drop: 0 1px 0 rgba(60, 40, 140, 0.14), 0 12px 22px -12px rgba(30, 20, 80, 0.45);
+  --sheet-top: rgba(255, 255, 255, 0.85);
   --rule: rgba(80, 60, 170, 0.12);  /* --menu-card-rule */
   --row-line: rgba(20, 10, 60, 0.16);  /* the thin line between two rows of a card (Apple's way) */
   --field: #ffffff;
@@ -166,7 +175,9 @@
   --card: #231e3b;
   --card-line: rgba(167, 146, 255, 0.12);
   --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
-  --card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+  --card-drop: 0 1px 0 rgba(255, 255, 255, 0.07) inset;
+  --float-drop: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 22px -12px rgba(0, 0, 0, 0.8);
+  --sheet-top: rgba(255, 255, 255, 0.10);
   --rule: rgba(167, 146, 255, 0.14);
   --row-line: rgba(255, 255, 255, 0.16);
   --field: #17142a;
@@ -213,7 +224,9 @@
     --card: #231e3b;
     --card-line: rgba(167, 146, 255, 0.12);
     --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
-    --card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+    --card-drop: 0 1px 0 rgba(255, 255, 255, 0.07) inset;
+    --float-drop: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 22px -12px rgba(0, 0, 0, 0.8);
+    --sheet-top: rgba(255, 255, 255, 0.10);
     --rule: rgba(167, 146, 255, 0.14);
     --row-line: rgba(255, 255, 255, 0.16);
     --field: #17142a;
@@ -490,7 +503,7 @@ html.is-app .app-edge {
    words, as a chosen pill wears them. The note in the second ink, then the
    site's one action, Got it. */
 .home-steps-app { display: flex; gap: 14px; align-items: center; margin: 0 4px 14px; }
-.home-steps-app img { width: 60px; height: 60px; border-radius: 14px; flex: none; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }
+.home-steps-app img { width: 60px; height: 60px; border-radius: 14px; flex: none; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18); }
 .home-steps-app b { display: block; color: var(--ink); font-size: 17px; font-weight: 600; line-height: 1.3; }
 .home-steps-app span { display: block; color: var(--ink-2); font-size: 15px; line-height: 1.35; }
 .home-steps-list { margin: 0 0 14px; padding: 2px 0; list-style: none; overflow: hidden; border-radius: 16px; background: var(--row-bg); }
@@ -711,7 +724,7 @@ html.is-app .app-edge {
 .gal-dur {
   position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px;
   height: 24px; padding: 0 9px 0 7px; border-radius: 12px; background: var(--says-glass);
-  color: var(--says-ink); font: 600 12px/1 var(--font); box-shadow: 0 1px 4px rgba(10, 6, 30, 0.12);
+  color: var(--says-ink); font: 600 12px/1 var(--font);   /* CRISP: its glass is its edge (it wore 1px/4px at 12%) */
 }
 .gal-dur .ic-tri { width: 9px; height: 9px; }
 .gal-by { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 14px; line-height: 1.3; }
@@ -778,7 +791,7 @@ html.is-app .app-edge {
 }
 .gal-eye-chip {
   display: inline-flex; align-items: center; height: 30px; padding: 0 7px; border-radius: 15px;
-  background: var(--says-glass); box-shadow: 0 1px 4px rgba(10, 6, 30, 0.12);
+  background: var(--says-glass);   /* CRISP: no shadow, as the duration chip beside it */
   font: 600 12px/1 var(--font); white-space: nowrap;
 }
 .gal-eye-ics { position: relative; flex: none; width: 16px; height: 16px; }
@@ -814,7 +827,9 @@ html.is-app .app-edge {
   position: relative; width: 100%; max-width: 440px;
   padding: 0 16px calc(16px + env(safe-area-inset-bottom));
   background: var(--sheet-paper); color: var(--ink);
-  border-radius: 22px 22px 0 0; box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.25);
+  /* CRISP (B): a sheet casts nothing. The scrim has dimmed the page under it already (it wore 40px of black at
+     25% over that); a line of light along its top edge says where it begins. */
+  border-radius: 22px 22px 0 0; box-shadow: inset 0 1px 0 var(--sheet-top);
   transform: translateY(100%); transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .make.is-open .make-scrim { opacity: 1; }
@@ -1286,7 +1301,7 @@ body.facepad-open { overflow: hidden; }
   .facepad { align-items: center; }
   .facepad-sheet {
     width: min(1120px, calc(100vw - 64px)); height: min(840px, calc(100vh - 48px));
-    border-radius: 22px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+    border-radius: 22px;   /* CRISP: a sheet casts nothing over the scrim (it wore 24px/64px of black at 35%) */
     opacity: 0; transform: translateY(28px);
     transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
   }
@@ -1444,6 +1459,14 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    the drawing's line over its own ground, and the lift on the light page. */
 :is(.post-art, .composer-draft, .cm-art, .hello-art, .how-pic) .skribl-inline {
   box-shadow: 0 0 0 var(--edge) var(--draw-edge), var(--draw-lift); }
+/* CRISP (B): IN A CARD, THE EDGE AND NOTHING ELSE. A drawing inside a post's
+   card, a comment's bubble or the comment box wears its ring alone (a quote's
+   picture has had its ring alone since it was made):
+   the card under it has the page's line already, and a second one inside it
+   is the stack the owner called muddy. On the page itself (a post's own page,
+   How it works, the front door) and on a sheet's paper it keeps the one line,
+   as a card does. Dark has no line either way. */
+:is(.post-card, .cm-bubble, .composer) .skribl-inline { --draw-lift: 0 0 0 transparent; }
 
 /* THE COMMENT BOX'S CARD (it was Home's box too, until Home's went: the
    owner's "All yes", Nov 14, Make being the way to post): your face beside
@@ -2016,7 +2039,7 @@ a.post-face { text-decoration: none; }
   display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 0; border-radius: 999px;
   font: 650 15px/1.2 var(--font); cursor: pointer; white-space: nowrap;   /* the box's own face is the player's */
 }
-.db-end .db-again { background: var(--card); color: var(--accent-ink); box-shadow: 0 2px 10px rgba(20, 10, 60, .18); }
+.db-end .db-again { background: var(--card); color: var(--accent-ink); box-shadow: 0 0 0 0.5px rgba(20, 23, 29, 0.14), 0 1px 2px rgba(10, 6, 30, 0.16); }
 .db-end .db-go { background: var(--fill); color: var(--on-fill); box-shadow: var(--fill-drop); }
 .db-end .ic { width: 18px; height: 18px; }
 .db-end button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -2904,7 +2927,7 @@ button.fo-n {
 .mn-list {
   position: absolute; z-index: 30; left: 52px; right: 0; margin: 0; padding: 4px 0; list-style: none;
   border: 1px solid transparent; border-radius: 16px; background: var(--card);
-  box-shadow: 0 0 0 var(--edge) var(--card-edge), 0 10px 28px rgba(20, 16, 50, 0.14); overflow: hidden; opacity: 0; transition: opacity 0.16s ease;
+  box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--float-drop); overflow: hidden; opacity: 0; transition: opacity 0.16s ease;
 }
 .mn-list[hidden] { display: none; }
 .mn-list.is-open { opacity: 1; }
@@ -2963,7 +2986,7 @@ button.fo-n {
 .mu-toast {
   display: flex; align-items: center; gap: 10px; width: 100%; max-width: 460px; min-height: 56px; padding: 6px 6px 6px 14px;
   border-radius: 18px; background: var(--card); border: 1px solid transparent; color: var(--ink);
-  box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop), 0 16px 36px rgba(0, 0, 0, 0.16); font-size: 15px; line-height: 1.35;
+  box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--float-drop); font-size: 15px; line-height: 1.35;   /* CRISP: it floats */
   opacity: 0; transform: translateY(10px); pointer-events: none;
 }
 .mu-toast[hidden] { display: none; }

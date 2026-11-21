@@ -1913,7 +1913,16 @@ with sync_playwright() as sp:
     #   carries the words). WHICH CALLER PAYS: every page that shows a post,
     #   for words any host that joins drawings can use. 82,512 B measured,
     #   against 82,119 before it.
-    EMBED_RATCHET = 82_512
+    # RAISED (the owner's "All yes", Nov 20, to the crisp mock's B, its choice
+    #   "the play pill on a drawing keeps its glass and takes a close shadow,
+    #   wherever Skribl's player is"), for one named cost: +59 B, all
+    #   inlineplayer.css -- the pill's shadow is a hairline (0 0 0 .5px) and
+    #   1px/2px where it was 3px/12px, in each of its two tones. WHICH CALLER
+    #   PAYS: every page that shows a post, for a pill with no soft shadow on
+    #   any host's page. Spent first: nothing was there to spend; the two
+    #   values are the whole of it. 82,571 B measured, against 82,512 before
+    #   it.
+    EMBED_RATCHET = 82_571
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

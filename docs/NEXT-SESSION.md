@@ -393,12 +393,14 @@ in the mock page.
      it: a kind page for a wrong address ("That page isn't here"), which
      the app answers outside the site's views.
   2. EACH ROW DISTINCT (A): built (`DECISIONS.md`, "Each row distinct,
-     built"). Its check allows the tiles' soft shadow on the band
-     (`SHADE22` in `verify_socialposts` 22) until item 3 takes that shadow
-     away: bring it down to two there.
-  3. THE CRISP QUOTIENT (B) on the site (`DECISIONS.md`, "The crisp
-     quotient, mocked", says the numbers).
-  4. THE PAD AND FLIP: the same crisp rule, both together, and the band
+     built").
+  3. THE CRISP QUOTIENT (B) on the site: built (`DECISIONS.md`, "Crisp,
+     built"; `verify_socialposts` 23 holds it). It lists five calls no
+     mock showed, and says where it meets Nov 16's "just a border": read
+     what the owner says of both before anything else there.
+  4. THE PAD AND FLIP: the same crisp rule, both together (their drawers'
+     cards, Post and Record, Flip's page strip, the text shadow on the
+     purple buttons, the player's speed chips and line), and the band
      under rows in Skribl's own Gallery and the Library.
   NOT DECIDED: bands for lists of one thing a line (Activity, people);
   initials in "Liked by"; a tablet's Make card riding its keyboard.
