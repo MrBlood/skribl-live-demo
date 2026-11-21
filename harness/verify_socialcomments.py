@@ -840,7 +840,7 @@ def answer_box(pg, cid):
 # KIND, NEVER JUMPY, READ ON EVERY FRAME: run `act` (a function's body), then
 # read where `sels` are on the screen (each one's top, null while it is not
 # painted) and the opacity of `fades`, on every animation frame for `ms`.
-FRAMES = """async ([act, sels, fades, ms]) => {
+FRAMES = """async ([act, sels, fades, ms, rest]) => {
   const q = s => document.querySelector(s);
   const top = s => { const e = q(s); return e && e.getClientRects().length ? Math.round(e.getBoundingClientRect().top * 100) / 100 : null; };
   const op = s => { const e = q(s); return e && e.getClientRects().length ? Math.round(+getComputedStyle(e).opacity * 100) / 100 : null; };
@@ -849,8 +849,16 @@ FRAMES = """async ([act, sels, fades, ms]) => {
   (new Function(act))();
   frames.push(read());
   const t0 = performance.now();
-  await new Promise(res => { const step = () => { frames.push(read());
-    if (performance.now() - t0 < ms) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); });
+  // `rest`: WATCH UNTIL IT HAS COME TO REST, not for a set time: past `ms`, go on until the first thing watched has
+  // stood still for `rest` ms (four seconds more at the longest). SEEN ONCE, Nov 20: a desk's list still 6px from
+  // home when a 600 ms watch ended, beside four other suites on a busy machine, and green alone. It could not be
+  // made to happen again (a page stalled, and a processor slowed tenfold, both read the whole way). What is shown
+  // is that the set time no longer decides: a 150 ms watch reads 28 of the 92px the old way and all 92 this way.
+  let last = null, since = t0;
+  await new Promise(res => { const step = () => { const f = read(), now = performance.now(); frames.push(f);
+    if (f.tops[0] !== last) { last = f.tops[0]; since = now; }
+    if (now - t0 < ms || (rest && now - since < rest && now - t0 < ms + 4000)) requestAnimationFrame(step); else res(); };
+    requestAnimationFrame(step); });
   return frames; }"""
 
 
@@ -3685,7 +3693,7 @@ with sync_playwright() as p:
             ppg.wait_for_timeout(300)
             rise = ppg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()",
                                          ["#commentBoxSheet .make-sheet", "[data-cm-list] > .cm .cm-name", "#commentsTitle"],
-                                         ["#commentBoxSheet .make-scrim"], 700])
+                                         ["#commentBoxSheet .make-scrim"], 700, 250])
             up = ppg.evaluate(BOX)
             inert = ppg.evaluate("() => ['body > .top', 'body > .nav', '#main'].map(s => document.querySelector(s).hasAttribute('inert'))")
             g_up = glided(track(rise, 0))
@@ -3713,7 +3721,7 @@ with sync_playwright() as p:
                         ppg.evaluate(SWIPE, [[12, 40, 90, 160, 220], 60])
                         down = None
                     else:
-                        down = glided(track(ppg.evaluate(FRAMES, [act, ["#commentBoxSheet .make-sheet"], [], 600]), 0))
+                        down = glided(track(ppg.evaluate(FRAMES, [act, ["#commentBoxSheet .make-sheet"], [], 600, 250]), 0))
                     ppg.wait_for_function(GONE, timeout=8000)
                     ppg.wait_for_timeout(200)
                     gone = ppg.evaluate("() => ({ inert: !!document.querySelector('#main[inert]'), focus: document.activeElement.className })")
@@ -3733,26 +3741,40 @@ with sync_playwright() as p:
                       and v["gone"]["focus"].startswith("ans-say cm-say") for k, v in kept.items())
                   and all(g is None or g["ok"] for g in downs.values()),
                   f"{kept}; going down {downs}")
-            # ON A PHONE'S KEYBOARD it rides above it (stood in: this box has no phone keyboard).
+            # ON A PHONE'S KEYBOARD its box rides above it and ITS PAPER RUNS DOWN BEHIND IT, as the composer's does
+            # (the owner's picture of the Make sheet, Nov 20: no strip of the page under a sheet; stood in: this box
+            # has no phone keyboard). Where the paper ends, where the box ends, and what is painted where the
+            # keyboard is, at three heights of its band: the sheet's own paper, never the page (a rect is not a paint).
+            ON_KB30 = """() => { const w = document.querySelector('#commentBoxSheet'), s = w.querySelector('.make-sheet'), r = s.getBoundingClientRect(),
+              scrim = w.querySelector('.make-scrim'), kb = Math.round(innerHeight - visualViewport.height);
+              const box = s.querySelector('.cm-box').getBoundingClientRect(), f = document.querySelector('[data-cm-words]').getBoundingClientRect();
+              const band = kb > 20 ? [0.08, 0.5, 0.94].map(p => { const at = document.elementFromPoint(innerWidth / 2, Math.round(innerHeight - kb + kb * p));
+                return at && s.contains(at) ? 'paper' : at === scrim ? 'the dimmed page' : at ? 'the page' : 'nothing'; }) : [];
+              return { paper: Math.round(r.bottom), box: Math.round(box.bottom), field: Math.round(f.bottom), top: Math.round(f.top), floor: innerHeight - kb, band }; }"""
             open_post(ppg, post)
             open_box(ppg)
+            before_kb = ppg.evaluate(ON_KB30)
             ppg.evaluate("() => window.__keyboard(336)")
             ppg.wait_for_timeout(500)
-            on_kb = ppg.evaluate("""() => { const s = document.querySelector('#commentBoxSheet .make-sheet').getBoundingClientRect(),
-              w = document.querySelector('[data-cm-words]').getBoundingClientRect();
-              return { bottom: Math.round(s.bottom), field: Math.round(w.bottom), floor: innerHeight - 336 }; }""")
+            on_kb = ppg.evaluate(ON_KB30)
             ppg.evaluate("() => window.__keyboard(0)")
             ppg.wait_for_timeout(500)
-            off_kb = ppg.evaluate("() => Math.round(document.querySelector('#commentBoxSheet .make-sheet').getBoundingClientRect().bottom)")
+            off_kb = ppg.evaluate(ON_KB30)
             ppg.evaluate("() => window.__keyboard(300, 2)")
             ppg.wait_for_timeout(500)
-            zoomed = ppg.evaluate("() => Math.round(document.querySelector('#commentBoxSheet .make-sheet').getBoundingClientRect().bottom)")
+            zoomed = ppg.evaluate(ON_KB30)
             ppg.evaluate("() => window.__keyboard(0)")
             close_ctx(pctx, ppg)
-            check("on a phone's keyboard the sheet rides above it, its field in view, and goes back down with it; a pinch's zoom"
-                  " is no keyboard (a stand-in visual viewport: this box has no phone keyboard)",
-                  abs(on_kb["bottom"] - on_kb["floor"]) <= 1 and on_kb["field"] < on_kb["floor"] and off_kb == 874 and zoomed == 874,
-                  f"on a 336px keyboard {on_kb}; after {off_kb}; zoomed {zoomed}")
+            check("ON A PHONE'S KEYBOARD THE SHEET'S PAPER RUNS DOWN BEHIND IT, as the composer's: the paper still ends at the"
+                  " screen's foot, and what is painted where the keyboard is, top, middle and bottom, is the sheet's own"
+                  " paper, never the page; its box rides 14px above the keyboard as it sat above the screen's foot, its"
+                  " field in view; it goes back down with the keyboard; a pinch's zoom is no keyboard (a stand-in visual"
+                  " viewport: this box has no phone keyboard)",
+                  before_kb["paper"] == 874 and before_kb["box"] == 860
+                  and on_kb["paper"] == 874 and on_kb["band"] == ["paper", "paper", "paper"]
+                  and abs(on_kb["box"] - (on_kb["floor"] - 14)) <= 1 and on_kb["field"] < on_kb["floor"]
+                  and off_kb["paper"] == 874 and off_kb["box"] == 860 and zoomed["box"] == 860,
+                  f"before {before_kb}; on a 336px keyboard {on_kb}; after {off_kb}; zoomed {zoomed}")
             # A keyboard that passes through a size and says nothing once it rests (the owner's iPhone, Nov 14).
             qctx, qpg = browser_as(b, theo)
             qpg.add_init_script(KEYBOARD)
@@ -3760,21 +3782,20 @@ with sync_playwright() as p:
             open_box(qpg)
             qpg.evaluate("() => window.__keyboard(780)")
             qpg.wait_for_timeout(450)
-            passing = qpg.evaluate("""() => { const w = document.querySelector('#commentBoxSheet'), r = w.querySelector('.make-sheet').getBoundingClientRect(),
-              scrim = w.querySelector('.make-scrim');
-              return [0.4, 0.7, 0.98].map(f => { const y = Math.round(innerHeight * f); return y > r.bottom + 2 ? document.elementFromPoint(innerWidth / 2, y) === scrim : true; }); }""")
+            passing = qpg.evaluate(ON_KB30)
             qpg.evaluate("() => window.__keyboardQuiet(336)")
             qpg.wait_for_timeout(2400)
-            rests = qpg.evaluate("""() => { const s = document.querySelector('#commentBoxSheet .make-sheet').getBoundingClientRect(),
-              w = document.querySelector('[data-cm-words]').getBoundingClientRect();
-              return { bottom: Math.round(s.bottom), field: Math.round(w.bottom), floor: innerHeight - 336 }; }""")
+            rests = qpg.evaluate(ON_KB30)
             qpg.evaluate("() => window.__keyboard(0)")
             close_ctx(qctx, qpg)
-            check("a keyboard that passes through a size and says nothing once it rests: the page under the sheet is dimmed to"
-                  " the screen's foot meanwhile, and then, with no word from the keyboard, the sheet rides above where it"
-                  " rests (the owner's iPhone, Nov 14; stood in)",
-                  all(passing) and abs(rests["bottom"] - rests["floor"]) <= 1 and rests["field"] < rests["floor"],
-                  f"passing through 780px, dimmed below at 40/70/98%: {passing}; at rest on 336px: {rests}")
+            check("a keyboard that passes through a size and says nothing once it rests: meanwhile the sheet's own paper is"
+                  " painted all the way down where the keyboard says it is, to the screen's foot (never the page); and"
+                  " then, with no word from the keyboard, its box rides above where the keyboard rests (the owner's iPhone,"
+                  " Nov 14; stood in)",
+                  passing["paper"] == 874 and passing["band"] == ["paper", "paper", "paper"]
+                  and rests["paper"] == 874 and abs(rests["box"] - (rests["floor"] - 14)) <= 1 and rests["field"] < rests["floor"]
+                  and rests["band"] == ["paper", "paper", "paper"],
+                  f"passing through 780px: {passing}; at rest on 336px: {rests}")
             # Chrome on an iPhone: the page itself shrinks for the keyboard after the visual viewport did, saying
             # nothing; the keyboard is not to be taken off twice (read after the second reading's timers).
             qctx, qpg = browser_as(b, theo)
@@ -3800,8 +3821,8 @@ with sync_playwright() as p:
             open_post(qpg, post)
             open_box(qpg)
             qpg.wait_for_timeout(2600)
-            qpg.evaluate("""() => { const s = document.querySelector('#commentBoxSheet .make-sheet'), t0 = performance.now(); window.__feet = [];
-              (function f() { window.__feet.push([Math.round(performance.now() - t0), Math.round(s.getBoundingClientRect().bottom), innerHeight]);
+            qpg.evaluate("""() => { const s = document.querySelector('#commentBoxSheet .make-sheet'), bx = s.querySelector('.cm-box'), t0 = performance.now(); window.__feet = [];
+              (function f() { window.__feet.push([Math.round(performance.now() - t0), Math.round(s.getBoundingClientRect().bottom), innerHeight, Math.round(bx.getBoundingClientRect().bottom)]);
                 if (performance.now() - t0 < 1200) requestAnimationFrame(f); })(); }""")
             qpg.evaluate("() => window.__keyboard(336)")
             qpg.wait_for_timeout(60)
@@ -3810,11 +3831,12 @@ with sync_playwright() as p:
             feet = qpg.evaluate("() => window.__feet")
             close_ctx(qctx, qpg)
             line = 874 - 336
-            above = [f for f in feet if f[1] < line - 2]
-            check("no hop on the way: Chrome shrinking the page a moment after the visual viewport, the sheet's foot, read on"
-                  " every frame, never rises above the keyboard and rests on it (stood in)",
-                  len(feet) >= 30 and not above and feet and abs(feet[-1][1] - line) <= 1,
-                  f"{len(feet)} frames; above the keyboard's line ({line}): {above[:6]}; last {feet[-1:] if feet else None}")
+            above = [f for f in feet if f[1] < line - 2 or f[3] < line - 14 - 2]
+            check("no hop on the way: Chrome shrinking the page a moment after the visual viewport, the sheet's paper and"
+                  " its box, read on every frame, never rise above where they rest on the keyboard (the box 14px over its"
+                  " line), and rest there (stood in)",
+                  len(feet) >= 30 and not above and feet and abs(feet[-1][1] - line) <= 1 and abs(feet[-1][3] - (line - 14)) <= 1,
+                  f"{len(feet)} frames; above the keyboard's line ({line}) or the box above {line - 14}: {above[:6]}; last {feet[-1:] if feet else None}")
             # Draw over the sheet: the Pad rises above it and goes; the page behind stays inert under the sheet.
             dctx, dpg = browser_as(b, theo)
             open_post(dpg, post)
@@ -3823,9 +3845,15 @@ with sync_playwright() as p:
                 open_box(dpg)
                 dpg.click("[data-cm-open=pad]", timeout=8000)
                 fr = editor_frame(dpg, "skribl-pad")
+                # ASKED OF THE PAGE, NOT OF A CLOCK: the Pad hears its × once the page over it says it is ready (a ×
+                # pressed before that did nothing, and the row read the Pad still up 800 ms later: red twice in a
+                # dozen runs, on this machine, Nov 20); and it has gone when the page says it is hidden. Neither
+                # happening is this row's red, said as what stopped it.
+                dpg.wait_for_function("() => document.getElementById('commentPad').classList.contains('is-ready')", timeout=30000)
                 if fr:
                     fr.click("#composeCloseBtn", timeout=8000)
-                dpg.wait_for_timeout(800)
+                dpg.wait_for_function("() => document.getElementById('commentPad').hidden", timeout=8000)
+                dpg.wait_for_timeout(200)
                 return dpg.evaluate("""() => ({ sheet: document.getElementById('commentBoxSheet').classList.contains('is-open'),
                   inert: ['body > .top', 'body > .nav', '#main'].map(s => document.querySelector(s).hasAttribute('inert')),
                   pad: document.getElementById('commentPad').hidden, focus: document.activeElement.textContent.trim() })""")
@@ -3854,7 +3882,7 @@ with sync_playwright() as p:
             # box's room less the line's 44px.
             opened = dpg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()",
                                            ["[data-cm-list] > .cm .cm-name", ".post-page > .post-meta", ".post-page > .post-art"],
-                                           ["[data-cm-box]", ".ans-bar"], 700])
+                                           ["[data-cm-box]", ".ans-bar"], 700, 250])
             there = dpg.evaluate(BOX)
             g_open = glided(track(opened, 0))
             ops = fades_of(opened, 0)
@@ -3883,7 +3911,7 @@ with sync_playwright() as p:
                     open_box(dpg)
                     dpg.fill("[data-cm-words]", f"Typed, then {how}")
                     room_ = box_room(dpg)
-                    fr = dpg.evaluate(FRAMES, [act, ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]", ".ans-bar"], 600])
+                    fr = dpg.evaluate(FRAMES, [act, ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]", ".ans-bar"], 600, 250])
                     dpg.wait_for_function(GONE, timeout=8000)
                     after_ = dpg.evaluate("""() => { const b = document.querySelector('.ans-bar'), cs = getComputedStyle(b);
                       return { icon: document.querySelector('.cm-say').getAttribute('aria-expanded'), focus: document.activeElement.className,
@@ -4307,7 +4335,7 @@ with sync_playwright() as p:
             label36 = theo.pg.evaluate(LABEL)
             dctx, dpg = browser_as(b, theo, "desk")
             open_drawing(dpg, sid)
-            opened = dpg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()", ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 700])
+            opened = dpg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()", ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 700, 250])
             fold = dpg.evaluate(BOX)
             close_ctx(dctx, dpg)
             nctx, npg = browser_as(b, None)

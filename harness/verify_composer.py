@@ -23,7 +23,9 @@ Skribl's real Pad.
      missing and sends nothing); your face beside "Say something…" at 18px;
      Draw, Flip and Yours along the bottom and the characters left at their
      end, 500, counting down as words are typed. On a phone's keyboard
-     (stood in) the sheet rides above it, and a pinch's zoom is no keyboard.
+     (stood in) its tools ride above it and ITS PAPER RUNS DOWN BEHIND IT
+     to the screen's foot (the owner's picture, Nov 20: no strip of Home
+     under the sheet), and a pinch's zoom is no keyboard.
   4. DRAW AND FLIP: Draw opens Skribl's Pad over the sheet in compose mode,
      asking for no gallery tick; Add hands the drawing back, PLAYING in the
      sheet's in-post player, Post lit and focus on Edit drawing; Edit drawing
@@ -436,15 +438,22 @@ GLIDE = """([sel, ms]) => new Promise(res => { const w = document.getElementById
     if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); })"""
 
 # Turning to Yours (or Back), on every frame for `ms`: the sheet's box, and
-# each view's opacity as painted (0 while it is hidden).
-SWAP = """([sel, ms]) => new Promise(res => { const s = document.querySelector('#composeSheet .make-sheet'), out = [];
+# each view's opacity as painted (0 while it is hidden). `rest`: WATCH UNTIL
+# THE TURN IS OVER, not for a set time: past `ms`, go on while either view
+# still has an animation of its own (the page's own word that it has not
+# come to rest; four seconds more at the longest). One fade ends and the
+# next begins in the page's own time, and beside two other suites the view
+# coming in was read at 0.92 when a 700 ms watch ended (Nov 20: red beside
+# others, green alone).
+SWAP = """([sel, ms, rest]) => new Promise(res => { const s = document.querySelector('#composeSheet .make-sheet'), out = [];
   const v = k => s.querySelector('[data-compose-view="' + k + '"]');
   const op = e => e.hidden || !e.getClientRects().length ? 0 : +getComputedStyle(e).opacity;
+  const turning = () => v('write').getAnimations().length + v('pick').getAnimations().length > 0;
   const t0 = performance.now(); document.querySelector(sel).click();
-  (function f() { const r = s.getBoundingClientRect();
+  (function f() { const r = s.getBoundingClientRect(), now = performance.now();
     out.push({ top: Math.round(r.top * 10) / 10, h: Math.round(r.height * 10) / 10, write: Math.round(op(v('write')) * 100) / 100,
                pick: Math.round(op(v('pick')) * 100) / 100 });
-    if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); })"""
+    if (now - t0 < ms || (rest && turning() && now - t0 < ms + 4000)) requestAnimationFrame(f); else res(out); })(); })"""
 
 
 def glide(frames, rest, start):
@@ -487,27 +496,39 @@ KEYBOARD = """(() => { const t = new EventTarget(); let h = null, off = 0, scale
   window.__keyboard = (px, zoom) => { scale = zoom || 1; h = innerHeight - px; off = 0; t.dispatchEvent(new Event('resize')); };
   window.__keyboardQuiet = (px) => { h = innerHeight - px; }; })();"""
 
+# THE SHEET ON A KEYBOARD (the owner's picture, Nov 20: Home showed between
+# the sheet's foot and the keyboard's own bar; "All yes to everything"). The
+# sheet is not lifted: its paper runs down behind the keyboard and what is in
+# it rides above. Read: where the paper ends (the screen's foot), where its
+# tools and its field end (above the keyboard's line), and WHAT IS PAINTED
+# where the keyboard is, at three heights of its band: the sheet's own paper,
+# never the page, dimmed or not (a rect is not a paint).
+ON_KEYBOARD = """(sel) => { const w = document.querySelector(sel), s = w.querySelector('.make-sheet'), r = s.getBoundingClientRect(),
+  scrim = w.querySelector('.make-scrim'), kb = Math.round(innerHeight - visualViewport.height);
+  const foot = q => { const e = w.querySelector(q); return e && e.getClientRects().length ? Math.round(e.getBoundingClientRect().bottom) : null; };
+  const band = kb > 20 ? [0.08, 0.5, 0.94].map(f => { const at = document.elementFromPoint(innerWidth / 2, Math.round(innerHeight - kb + kb * f));
+    return at && s.contains(at) ? 'paper' : at === scrim ? 'the dimmed page' : at ? 'the page' : 'nothing'; }) : [];
+  return { top: Math.round(r.top), paper: Math.round(r.bottom), tools: foot('.cmp-tools'), field: foot('[data-compose-words]'),
+           floor: innerHeight - kb, foot: innerHeight, band }; }"""
+
 # WHILE A KEYBOARD PASSES THROUGH A SIZE (the owner's iPhone, Nov 14: a size
 # the keyboard only passed through left the sheet a sliver, its rows drawn
-# over the page and the page under it undimmed, until a touch): what is
-# painted, read while the sheet is that sliver. Below the sheet, at three
-# heights across the screen, the dimmed page (the scrim), never the page
-# itself; and none of the sheet's parts painted outside its paper (each
-# part's middle, where it lies outside the sheet's box, is not the sheet's).
-PASSING = """(sel) => { const w = document.querySelector(sel), s = w.querySelector('.make-sheet'), r = s.getBoundingClientRect(),
-  scrim = w.querySelector('.make-scrim');
-  const below = [0.4, 0.7, 0.98].map(f => { const y = Math.round(innerHeight * f); return y > r.bottom + 2 ? document.elementFromPoint(innerWidth / 2, y) : scrim; });
+# over the page and the page under it undimmed, until a touch): the sheet is
+# no sliver now. Read while the keyboard says that size: none of the sheet's
+# parts painted outside its paper (each part's middle, where it lies outside
+# the sheet's box, is not the sheet's), with ON_KEYBOARD beside it.
+PASSING = """(sel) => { const w = document.querySelector(sel), s = w.querySelector('.make-sheet'), r = s.getBoundingClientRect();
   const out = [...s.querySelectorAll('button, textarea, .cmp-left')].filter(e => e.getClientRects().length).map(e => {
     const q = e.getBoundingClientRect(), x = q.left + q.width / 2, y = q.top + q.height / 2;
     if (y >= r.top && y <= r.bottom && x >= r.left && x <= r.right) return null;
     if (y < 0 || y > innerHeight) return null;
     const at = document.elementFromPoint(x, y); return at && s.contains(at) ? (e.textContent.trim() || e.tagName).slice(0, 20) : null; }).filter(Boolean);
-  return { sheet: [Math.round(r.top), Math.round(r.bottom)], dimmed: below.map(e => e === scrim), outside: out }; }"""
+  return { sheet: [Math.round(r.top), Math.round(r.bottom)], outside: out }; }"""
 
-# ITS FOOT ON EVERY FRAME (no hop): the sheet's bottom and the page's height,
-# read on every frame for 1.2s from now, into window.__feet.
-FOOT_WATCH = """(sel) => { const s = document.querySelector(sel + ' .make-sheet'), t0 = performance.now(); window.__feet = [];
-  (function f() { window.__feet.push([Math.round(performance.now() - t0), Math.round(s.getBoundingClientRect().bottom), innerHeight]);
+# ITS FEET ON EVERY FRAME (no hop): the paper's bottom, the page's height and
+# the tools' bottom, read on every frame for 1.2s from now, into window.__feet.
+FOOT_WATCH = """(sel) => { const s = document.querySelector(sel + ' .make-sheet'), tl = document.querySelector(sel + ' .cmp-tools'), t0 = performance.now(); window.__feet = [];
+  (function f() { window.__feet.push([Math.round(performance.now() - t0), Math.round(s.getBoundingClientRect().bottom), innerHeight, Math.round(tl.getBoundingClientRect().bottom)]);
     if (performance.now() - t0 < 1200) requestAnimationFrame(f); })(); }"""
 
 # THE SHEET'S PARTS, where they are and whether they are what is painted
@@ -761,8 +782,8 @@ with sync_playwright() as p:
                   f"{json.dumps(down)}; hidden {shut['hidden']}; inert {shut['inert']}")
             # Yours and back: the sheet keeps its box on every frame.
             open_composer(pg)
-            there = pg.evaluate(SWAP, ["#composeSheet [data-compose-yours]", 700])
-            back = pg.evaluate(SWAP, ["#composeSheet [data-compose-back]", 700])
+            there = pg.evaluate(SWAP, ["#composeSheet [data-compose-yours]", 700, True])
+            back = pg.evaluate(SWAP, ["#composeSheet [data-compose-back]", 700, True])
             a, z = swap_ok(there, "pick"), swap_ok(back, "write")
             focus = pg.evaluate("() => document.activeElement.textContent.trim()")
             close_ctx(ctx, pg)
@@ -791,7 +812,7 @@ with sync_playwright() as p:
             seen_down = sorted({f[0] for f in gone if not f[2] and f[1] > 0.02})
             fades = (len({round(f[1], 2) for f in frames}), len({round(f[1], 2) for f in gone if not f[2]}))
             open_composer(pg)
-            r_there = swap_ok(pg.evaluate(SWAP, ["#composeSheet [data-compose-yours]", 700]), "pick")
+            r_there = swap_ok(pg.evaluate(SWAP, ["#composeSheet [data-compose-yours]", 700, True]), "pick")
             close_ctx(ctx, pg)
             check("under Reduce Motion it does not move: it fades in where it rests and fades out there, every frame; Yours"
                   " is the same fades, the sheet still",
@@ -857,24 +878,28 @@ with sync_playwright() as p:
             kctx, kpg = browser_as(b, mira, init=KEYBOARD)
             go(kpg, "/social/explore")
             open_composer(kpg)
+            before_kb = kpg.evaluate(ON_KEYBOARD, "#composeSheet")
             kpg.evaluate("() => window.__keyboard(336)")
             kpg.wait_for_timeout(500)
-            on_kb = kpg.evaluate("""() => { const s = document.querySelector('#composeSheet .make-sheet').getBoundingClientRect(),
-              t = document.querySelector('#composeSheet .cmp-tools').getBoundingClientRect(), w = document.querySelector('[data-compose-words]').getBoundingClientRect();
-              return { bottom: Math.round(s.bottom), tools: Math.round(t.bottom), field: Math.round(w.bottom), floor: innerHeight - 336, top: Math.round(s.top) }; }""")
+            on_kb = kpg.evaluate(ON_KEYBOARD, "#composeSheet")
             kpg.evaluate("() => window.__keyboard(0)")
             kpg.wait_for_timeout(500)
-            off_kb = kpg.evaluate("() => Math.round(document.querySelector('#composeSheet .make-sheet').getBoundingClientRect().bottom)")
+            off_kb = kpg.evaluate(ON_KEYBOARD, "#composeSheet")
             kpg.evaluate("() => window.__keyboard(300, 2)")
             kpg.wait_for_timeout(500)
-            zoomed = kpg.evaluate("() => Math.round(document.querySelector('#composeSheet .make-sheet').getBoundingClientRect().bottom)")
+            zoomed = kpg.evaluate("() => Math.round(document.querySelector('#composeSheet .cmp-tools').getBoundingClientRect().bottom)")
             close_ctx(kctx, kpg)
-            check("on a phone's keyboard the sheet's foot rides above it, the tools and the field in view, its top where it"
-                  " was, and goes back down with it; a pinch's zoom is no keyboard (a stand-in visual viewport: this box has"
-                  " no phone keyboard)",
-                  abs(on_kb["bottom"] - on_kb["floor"]) <= 1 and on_kb["tools"] <= on_kb["floor"] and on_kb["field"] < on_kb["floor"]
-                  and abs(on_kb["top"] - 44) <= 1 and off_kb == 874 and zoomed == 874,
-                  f"on a 336px keyboard {on_kb}; after {off_kb}; zoomed {zoomed}")
+            check("ON A PHONE'S KEYBOARD THE SHEET'S PAPER RUNS DOWN BEHIND IT (the owner's picture, Nov 20: Home showed"
+                  " between the sheet's foot and the keyboard's own bar): the paper still ends at the screen's foot, and"
+                  " what is painted where the keyboard is, top, middle and bottom, is the sheet's own paper, never the"
+                  " page; its tools ride 16px above the keyboard as they sat above the screen's foot, the field in view,"
+                  " its top where it was; it all goes back down with the keyboard; a pinch's zoom is no keyboard (a"
+                  " stand-in visual viewport: this box has no phone keyboard)",
+                  before_kb["paper"] == 874 and before_kb["tools"] == 858
+                  and on_kb["paper"] == 874 and on_kb["band"] == ["paper", "paper", "paper"]
+                  and abs(on_kb["tools"] - (on_kb["floor"] - 16)) <= 1 and on_kb["field"] < on_kb["floor"]
+                  and abs(on_kb["top"] - 44) <= 1 and off_kb["paper"] == 874 and off_kb["tools"] == 858 and zoomed == 858,
+                  f"before {before_kb}; on a 336px keyboard {on_kb}; after {off_kb}; zoomed, the tools at {zoomed}")
             # A keyboard that passes through a size and says nothing once it rests (the owner's iPhone, Nov 14).
             kctx, kpg = browser_as(b, mira, init=KEYBOARD)
             go(kpg, "/social/explore")
@@ -882,18 +907,19 @@ with sync_playwright() as p:
             kpg.evaluate("() => window.__keyboard(780)")
             kpg.wait_for_timeout(450)
             passing = kpg.evaluate(PASSING, "#composeSheet")
+            passing.update({k: v for k, v in kpg.evaluate(ON_KEYBOARD, "#composeSheet").items() if k in ("paper", "band", "top")})
             kpg.evaluate("() => window.__keyboardQuiet(336)")
             kpg.wait_for_timeout(2400)
-            rests = kpg.evaluate("""() => { const s = document.querySelector('#composeSheet .make-sheet').getBoundingClientRect(),
-              t = document.querySelector('#composeSheet .cmp-tools').getBoundingClientRect();
-              return { bottom: Math.round(s.bottom), top: Math.round(s.top), tools: Math.round(t.bottom), floor: innerHeight - 336 }; }""")
+            rests = kpg.evaluate(ON_KEYBOARD, "#composeSheet")
             close_ctx(kctx, kpg)
-            check("a keyboard that passes through a size and says nothing once it rests: while the sheet is a sliver, the page"
-                  " under it is dimmed to the screen's foot and nothing of the sheet is painted outside its paper; then, with"
-                  " no word from the keyboard, the sheet rides above where it rests, its top where it was (the owner's iPhone,"
-                  " Nov 14; stood in)",
-                  all(passing["dimmed"]) and not passing["outside"]
-                  and abs(rests["bottom"] - rests["floor"]) <= 1 and rests["tools"] <= rests["floor"] and abs(rests["top"] - 44) <= 1,
+            check("a keyboard that passes through a size and says nothing once it rests: meanwhile the sheet is no sliver"
+                  " (its paper at the screen's foot, its top where it was, the sheet's own paper painted all the way down"
+                  " where the keyboard says it is) and nothing of it is painted outside its paper; then, with no word from"
+                  " the keyboard, its tools ride above where the keyboard rests (the owner's iPhone, Nov 14; stood in)",
+                  passing["paper"] == 874 and abs(passing["top"] - 44) <= 1 and passing["band"] == ["paper", "paper", "paper"]
+                  and not passing["outside"]
+                  and rests["paper"] == 874 and abs(rests["tools"] - (rests["floor"] - 16)) <= 1 and abs(rests["top"] - 44) <= 1
+                  and rests["band"] == ["paper", "paper", "paper"],
                   f"passing through 780px: {passing}; at rest on 336px: {rests}")
             # CHROME ON AN IPHONE (the owner's screenshots, Nov 14: the bar sat on the keyboard): the page itself
             # shrinks for the keyboard, after the visual viewport did and without a word from it. The keyboard
@@ -930,11 +956,12 @@ with sync_playwright() as p:
             feet = kpg.evaluate("() => window.__feet")
             close_ctx(kctx, kpg)
             line = 874 - 336
-            above = [f for f in feet if f[1] < line - 2]
-            check("no hop on the way: Chrome shrinking the page a moment after the visual viewport, the sheet's foot, read on"
-                  " every frame, never rises above the keyboard and rests on it (stood in)",
-                  len(feet) >= 30 and not above and feet and abs(feet[-1][1] - line) <= 1,
-                  f"{len(feet)} frames; above the keyboard's line ({line}): {above[:6]}; last {feet[-1:] if feet else None}")
+            above = [f for f in feet if f[1] < line - 2 or f[3] < line - 16 - 2]
+            check("no hop on the way: Chrome shrinking the page a moment after the visual viewport, the sheet's paper and"
+                  " its tools, read on every frame, never rise above where they rest on the keyboard (the tools 16px over"
+                  " its line), and rest there (stood in)",
+                  len(feet) >= 30 and not above and feet and abs(feet[-1][1] - line) <= 1 and abs(feet[-1][3] - (line - 16)) <= 1,
+                  f"{len(feet)} frames; above the keyboard's line ({line}) or the tools above {line - 16}: {above[:6]}; last {feet[-1:] if feet else None}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(3, exc)
 
