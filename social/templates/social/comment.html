@@ -49,7 +49,7 @@
 <script src="{{ social_asset('likes.js') }}" defer></script>{% endblock %}
 
 {% block top %}
-  <a class="icon-btn top-back" href="{{ on_page }}" data-cm-back aria-label="Back">{{ ic.back() }}</a>
+  <a class="icon-btn top-back" href="{{ on_page }}" aria-label="Back">{{ ic.back() }}</a>
   <span class="top-title">{{ 'Reply' if c.parent_id else 'Comment' }}</span>
 {% endblock %}
 

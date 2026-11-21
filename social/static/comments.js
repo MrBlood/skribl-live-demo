@@ -858,18 +858,8 @@
     } else byHand();
   }
 
-  /* ---- BACK GOES WHERE YOU WERE (a comment's own page): the page you came
-     from on this site, as the browser's own back; come from anywhere else,
-     the link's own address, what it is on. */
-  var back = doc.querySelector('[data-cm-back]');
-  if (back) {
-    back.addEventListener('click', function (e) {
-      var from = doc.referrer || '';
-      if (from.indexOf(window.location.origin + '/') !== 0 || window.history.length < 2) return;
-      e.preventDefault();
-      window.history.back();
-    });
-  }
+  /* BACK GOES WHERE YOU WERE on a comment's own page too: every screen's
+     arrow is one rule now (social.js); it was this page's alone. */
 
   /* ---- a comment's ⋯ ------------------------------------------------------ */
   var menuWrap = doc.getElementById('commentSheet');

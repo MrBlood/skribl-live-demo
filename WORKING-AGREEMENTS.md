@@ -218,6 +218,14 @@ button; and a new surface asks first whether an edge will do. Count the
 soft shadows on a screen before adding one (`DECISIONS.md`, "The crisp
 quotient, mocked": Home had seventeen, the Pad one).
 
+**Never stranded.** The owner, Nov 20: "there's no back button on so many
+screens. You end up stranded a lot". On a phone the Home Screen app has no
+browser Back, so a screen's own arrow is the only way back there is. Cal's
+reading of it, until the owner says otherwise: an arrow goes where you were,
+never to Home because Home is easy; a tab is a way out, not a way back; and
+a new screen is walked on a phone, come to from two different places, before
+it ships (`DECISIONS.md`, "The way back").
+
 **It lives in skribls.net too.** Pad, the Library and the Gallery will sit inside
 the owner's site. Pad acts like an app on the phone: it opens full screen, has a
 Home Screen icon, and returns to the site after posting. Anything built has to
