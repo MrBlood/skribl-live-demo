@@ -55,6 +55,7 @@
         var info = lineOf(payload, pic);
         if (info) box.setAttribute('data-skribl-line', JSON.stringify(info));
         pic._how = window.SkriblInline.attach(box, payload);
+        if (window.SocialGround) window.SocialGround(pic, pic._how);
         pic._asking = null;
         pic.classList.add('is-in');
         return pic._how;

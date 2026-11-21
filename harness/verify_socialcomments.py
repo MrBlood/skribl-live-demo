@@ -1196,8 +1196,15 @@ def add_from_pad(pg, fr):
     return sheet
 
 
+# ...AND ITS BOX'S GROUND (A of the drawing's edge, the owner, Nov 21; social.js SocialGround): what the box's
+# wrapper holds as --plate-ground, what its player says it paints on, what the box wears, and the waiting colour.
 DRAFT = """() => { const d = document.querySelector('[data-cm-draft]'); const box = d && d.querySelector('.skribl-inline');
-  return { shown: !!d && !d.hidden, attached: !!(box && box._skriblInline),
+  const probe = document.createElement('i'); probe.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px;background:var(--draw-wait)';
+  document.body.appendChild(probe); const wait = getComputedStyle(probe).backgroundColor; probe.remove();
+  const pl = box && box._skriblInline;
+  return { shown: !!d && !d.hidden, attached: !!pl,
+           ground: { token: d ? d.style.getPropertyValue('--plate-ground') : null, says: pl && pl.ground ? pl.ground() : null,
+                     box: box ? getComputedStyle(box).backgroundColor : null, wait },
            chips: [...document.querySelectorAll('[data-cm-open]')].map(c => c.hidden),
            overlay: document.getElementById('commentPad').hidden,
            focus: document.activeElement ? document.activeElement.textContent.trim() : null }; }"""
@@ -2620,6 +2627,19 @@ with sync_playwright() as p:
                   and kept.get("attached") and not removed.get("shown") and removed.get("chips") == [False, False]
                   and got.get("frame") == "about:blank",
                   f"reopened {reopened}; kept {kept}; removed {removed}; frame {got.get('frame')}; stopped {err}")
+
+            # THE DRAFT'S BOX IS THE DRAWING'S OWN PAPER TO ITS EDGE (A of "The Drawing's Edge", the owner, Nov 21).
+            # A draft is handed to the player as it is, so the page was never told its ground and the box kept
+            # the waiting lilac round the picture; the wrapper takes it from the player now.
+            g_in, g_out = (drafted.get("ground") or {}), (removed.get("ground") or {})
+            rgb = lambda h: "rgb(%d, %d, %d)" % tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))  # noqa: E731
+            check("the draft's box is the drawing's own paper to its edge: with a drawing waiting, its wrapper holds the"
+                  " ground the player says it paints (the one colour a page may use) and the box wears it, not the waiting"
+                  " colour; removed, the wrapper holds none and the box waits again",
+                  bool(re.fullmatch(r"#[0-9a-f]{6}", g_in.get("token") or "")) and g_in["token"] == g_in.get("says")
+                  and g_in.get("box") == rgb(g_in["token"]) and g_in["box"] != g_in.get("wait")
+                  and g_out.get("token") == "" and g_out.get("box") == g_out.get("wait"),
+                  f"waiting {g_in}; removed {g_out}")
 
             def flip():
                 pg.click("[data-cm-open=flip]", timeout=8000)

@@ -532,6 +532,24 @@
   }
   window.SocialSwitch = { place: swPlace, press: swPress, says: swSays, watch: swWatch };
 
+  /* ---- a drawing's own ground, where the page was not told it --------------
+   * A DRAWING'S BOX IS ITS OWN PAPER TO ITS EDGE (A of "The Drawing's Edge", the
+   * owner, Nov 21): a post's card and its page are told the drawing's ground
+   * by the site (--plate-ground, _post.html). A draft in Make or in the
+   * comment box, and How it works' examples, are drawings handed to the
+   * player as they are: the page was never told, and their box kept the
+   * waiting lilac round the picture. The player knows the ground it paints
+   * (ground(), inlineplayer.js), so the box's wrapper takes it from there:
+   * the one spelling a page may use (#rgb or #rrggbb, validation._ground's
+   * rule: a drawing's own words never reach the page's CSS as anything but a
+   * colour), and nothing when there is none to say or no drawing any more. */
+  window.SocialGround = function (wrap, player) {
+    if (!wrap) return;
+    var g = player && typeof player.ground === 'function' ? player.ground() : null;
+    if (typeof g === 'string' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(g)) wrap.style.setProperty('--plate-ground', g.toLowerCase());
+    else wrap.style.removeProperty('--plate-ground');
+  };
+
   /* TIMES, IN THE PERSON'S OWN (window.SocialWhen): every <time data-when>
    * under `root` said as the site says a time: "now", "35m", "2h", "3d", then
    * the day ("Nov 3"); data-when="at", the day and the hour ("Nov 10 at 8:20

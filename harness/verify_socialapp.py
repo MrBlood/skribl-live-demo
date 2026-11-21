@@ -1328,7 +1328,9 @@ with sync_playwright() as pw:
             # ---- THE PAGE AND ITS EXAMPLES ---------------------------------------
             PAGE = """() => { const h = document.querySelector('.how'), pics = [...document.querySelectorAll('.how-pic')];
               const players = window.SkriblInline ? SkriblInline.players() : [];
-              return { h1: (document.querySelector('h1') || {}).textContent, h1s: document.querySelectorAll('h1').length, sub: (document.querySelector('.page-sub') || {}).textContent,
+              const probe = document.createElement('i'); probe.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px;background:var(--draw-wait)';
+              document.body.appendChild(probe); const wait = getComputedStyle(probe).backgroundColor; probe.remove();
+              return { h1: (document.querySelector('h1') || {}).textContent, h1s: document.querySelectorAll('h1').length, sub: (document.querySelector('.page-sub') || {}).textContent, wait,
                        parts: [...h.querySelectorAll('h2')].map(e => e.textContent), over: document.documentElement.scrollWidth - innerWidth,
                        ex: pics.map(p => { const b = p.querySelector('.skribl-inline'), r = p.getBoundingClientRect(), pl = b.querySelector('.skribl-inline-play'), d = b.querySelector('.skribl-inline-dur');
                          const cv = b.querySelector('canvas'); let ink = 0;
@@ -1336,6 +1338,9 @@ with sync_playwright() as pw:
                            for (let i = 0; i < dd.length; i += 16) if (Math.abs(dd[i] - p0[0]) + Math.abs(dd[i + 1] - p0[1]) + Math.abs(dd[i + 2] - p0[2]) > 60) ink++; } catch (e) { ink = -1; } }
                          return { in: p.classList.contains('is-in'), player: b.classList.contains('skribl-inline'), w: Math.round(r.width * 10) / 10, ratio: Math.round(r.width / r.height * 1000) / 1000,
                                   says: pl ? pl.textContent.trim() : null, playing: b.classList.contains('is-playing'), ink,
+                                  // its box's ground: what the box holds as --plate-ground, what it wears, what its player's box wears, what the player says it paints on
+                                  ground: [p.style.getPropertyValue('--plate-ground'), getComputedStyle(p).backgroundColor, getComputedStyle(b).backgroundColor,
+                                           b._skriblInline && b._skriblInline.ground ? b._skriblInline.ground() : null],
                                   chip: !!d && d.getClientRects().length > 0, cap: [...p.parentElement.querySelectorAll('.how-cap b, .how-cap span')].map(e => e.textContent) }; }),
                        players: players.length, strip: Math.round(document.querySelector('.how-strip').getBoundingClientRect().height * 10) / 10,
                        say: !document.querySelector('[data-how-say]').hidden }; }"""
@@ -1377,6 +1382,17 @@ with sync_playwright() as pw:
                   and [e["cap"] for e in after["ex"]] == caps and not after["say"],
                   json.dumps({"before": [(e["in"], e["w"], e["ratio"]) for e in before["ex"]], "strip": [before["strip"], after["strip"]],
                               "after": [(e["in"], e["ink"], e["chip"], e["cap"]) for e in after["ex"]]})[:700])
+            # EACH EXAMPLE'S BOX IS ITS DRAWING'S OWN PAPER TO ITS EDGE (A of "The Drawing's Edge", the owner, Nov 21).
+            # An example is a file handed to the player as it is, so the page was never told its ground and the box
+            # kept the waiting lilac round the picture; the box takes it from the player now (social.js SocialGround).
+            rgb = lambda h: "rgb(%d, %d, %d)" % tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))  # noqa: E731
+            check("each example's box is its drawing's own paper to its edge: while its file is held, the box and its"
+                  " player's wear the waiting colour and hold no ground; once the drawing has come, the box holds the ground"
+                  " its player says it paints (the one colour a page may use) and both wear it, not the waiting colour",
+                  len(before["ex"]) == 3 and all(e["ground"][0] == "" and e["ground"][1] == e["ground"][2] == before["wait"] for e in before["ex"])
+                  and all(re.fullmatch(r"#[0-9a-f]{6}", e["ground"][0] or "") and e["ground"][0] == e["ground"][3]
+                          and e["ground"][1] == e["ground"][2] == rgb(e["ground"][0]) and e["ground"][1] != after["wait"] for e in after["ex"]),
+                  json.dumps({"held": [e["ground"] for e in before["ex"]], "come": [e["ground"] for e in after["ex"]], "waiting": after["wait"]}))
             want_says = [f"{hers_s} sec", f"{hers_s + his_s} sec", f"{len(flip_f['frames'])} pages"]
             check(f"each play button says what its file says: the cat's own time ({want_says[0]}), the draw-back's two hands"
                   f" together ({hers_s} and {his_s}: {want_says[1]}, not the joined drawing's nine), the Flip's pages ({want_says[2]})",

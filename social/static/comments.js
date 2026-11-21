@@ -653,7 +653,8 @@
   function attach(payload, over) {
     draft = { payload: payload, over: over };
     draftWrap.hidden = false;
-    if (draftBox && window.SkriblInline) window.SkriblInline.attach(draftBox, payload);
+    var drawn = draftBox && window.SkriblInline ? window.SkriblInline.attach(draftBox, payload) : null;
+    if (window.SocialGround) window.SocialGround(draftWrap, drawn);
     chips.forEach(function (c) { c.hidden = true; });
     tell(sayBox, '');
     var edit = box.querySelector('[data-cm-edit]');
@@ -663,6 +664,7 @@
     if (draft && draft.over) draft.over.pad.clear();
     draft = null;
     if (draftWrap) draftWrap.hidden = true;
+    if (window.SocialGround) window.SocialGround(draftWrap, null);
     chips.forEach(function (c) { c.hidden = false; });
     if (focus && chips[0]) chips[0].focus({ preventScroll: true });
   }

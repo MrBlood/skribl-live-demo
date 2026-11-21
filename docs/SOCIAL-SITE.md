@@ -3448,3 +3448,40 @@ whole top is the person's link still.
 real, a phone and a desk; a name of two letters over a long @handle, and
 one over the narrowest @handle there can be); `verify_socialreposts` 16 a
 comment's card.
+
+## 32. Built: a drawing's box is its own paper to its edge (Nov 21)
+
+The owner, of a band of lilac between a post's drawing and its hairline:
+"Look at the canvas border. Is that we are doing?" Then, of the mock "The
+Drawing's Edge": "The drawings edge is A."
+
+Skribl's in-post player draws a drawing a pixel or two inside its box, so
+the box's own ground shows round the picture. That ground was the waiting
+colour (`--draw-wait`): six or seven of a phone's pixels of lilac inside
+the line, loud round a drawing on dark paper. It is the drawing's own now,
+`--plate-ground` on the box's wrapper (`social.css`: `--bg-elev:
+var(--plate-ground, var(--draw-wait))`), so the picture runs to its one
+line. The waiting colour is left for a box whose drawing has not come, or
+whose ground nobody can say.
+
+Who tells a box its ground:
+
+- **The site, where it made the page**: a post's card, a post's own page,
+  a drawn comment's bubble, a comment's own page and its card (`_post.html`
+  `own_ground`, `_gallery.html` `plate_ground`), from what Skribl says of
+  the drawing (`describe_posts`: `ground`, "#rrggbb" or nothing).
+- **The player, where the page was never told**: a draft in Make, a draft
+  in the comment box, and How it works' three examples are drawings handed
+  to the player as they are. `social.js` `SocialGround(wrap, player)`
+  reads the ground the player paints (`ground()`, `inlineplayer.js`) and
+  sets it on the wrapper, only as #rgb or #rrggbb (the rule of
+  `validation._ground`: a drawing's own words never reach the page's CSS
+  as anything but a colour), and takes it off again when a draft is
+  removed.
+
+`verify_socialreposts` 20 reads the paint in the five places the site
+tells. `verify_composer` 4, `verify_socialcomments` 14 and
+`verify_socialapp` 11 hold the three the player tells: no ground and the
+waiting colour before a drawing is there, the player's own ground with it,
+none again once a draft is removed. `verify_socialreposts` 13's "no dinge"
+does not take a drawing's own paper for a placeholder.

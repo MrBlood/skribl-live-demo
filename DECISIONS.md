@@ -50968,3 +50968,51 @@ eye on one's own profile, which is in the same cell and so on the tile.
 
 NOTHING IS BUILT: it waits for "A", "B" or "leave the rows". FLIP AND THE
 PAD: not theirs.
+
+## After v330 -- The drawing's edge, the places the page was never told: a draft and How it works' examples
+
+Nov 21, late morning. OWED FROM A ("The drawing's edge is A", above; said
+on the mock as "not yet": "the draft in the composer and How it works'
+pictures, whose ground the page does not know"). LOOKED AT AFTER THE YES,
+as promised there: both still wore the waiting lilac round the picture,
+and so did a third the mock had not named, the draft of a drawn answer in
+the comment box, which is the composer's box by another door.
+
+WHY THE PAGE DID NOT KNOW. A post's card is told its drawing's ground by
+the site, from what Skribl says of a drawing it has stored. A draft is not
+stored yet, and an example is a file: each is handed to the in-post player
+as it is. THE PLAYER KNOWS: it paints that ground, and already says it to
+a host (`ground()`, "which a full screen wears to its edges").
+
+AS BUILT (`docs/SOCIAL-SITE.md` section 32). One small thing of the
+site's, `social.js` `SocialGround(wrap, player)`: the box's wrapper takes
+`--plate-ground` from the player it has just been given, and loses it when
+the draft is removed. ONLY A COLOUR GETS THROUGH, #rgb or #rrggbb, the
+rule the site's own templates are held to (`validation._ground`): a draft
+is somebody's own file, and its words must never reach the page's CSS as
+anything else. Called where a draft is attached (`compose.js`, twice;
+`comments.js`) and where an example's file arrives (`how.js`). How it
+works' own box behind each player takes the same ground.
+
+THE CHECKS, one row in each suite that already stood at that place, each
+read three ways (before a drawing is there; with it; for a draft, after
+Remove): `verify_composer` 4, `verify_socialcomments` 14,
+`verify_socialapp` 11. They read the box's computed ground beside the
+player's own answer and the waiting colour. THE PAINT ITSELF is read where
+the site tells the ground (`verify_socialreposts` 20); here the layer that
+shows in the band is the box's one background, so its colour is the
+measure.
+
+SHOWN RED, eight breaks, each on a copy with a server of its own, each in
+the row of its own place: Make's draft not told (its row), told and not
+untold on Remove (its row), told another colour than the player's (its
+row); the comment box's draft not told, and not untold; an example not
+told, its own box left on the waiting colour, told another colour. Green
+as built: the three sections, 6 of 6, 4 of 4 and 17 of 17.
+
+FLIP AND THE PAD: not theirs; the player is asked only what it already
+says. AGAINST THE FOUR: simple (a draft looks like the post it will be).
+
+NOT TESTED HERE: Safari on an iPhone. THE TELL: in Make, with a drawing
+added, the picture runs to its line with no lilac frame inside it; the
+same in How it works' three examples.
