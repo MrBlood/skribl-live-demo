@@ -51096,6 +51096,26 @@ its fill another colour (the tray's row; the contrast suite's); the page
 menus' copy left at 0.12 (`verify_galib`, both pages in dark). Green as
 built.
 
+A FINDING FROM THE WHOLE RUN, AND ITS FIX. Run whole beside the others,
+`verify_player_isolation` and `verify_jsstrip` each went red in one row:
+the link player's stylesheet served 45,597 bytes against budgets of 45,552
+and 45,571. Light's new token for the pointer's line of shade sat in the
+theme's token block, which the link player carries whole, and the player
+has no pop to spend it on. It is said on the three pops now
+(`:root[data-theme="light"] :is(.tool-tray, .shape-pop, .stamp-pop)`),
+where only the editors' stylesheet has it, and `player.css` differs from
+main's by the one edge value. A TOKEN THAT ONLY THE EDITORS READ DOES NOT
+BELONG IN THE THEME'S BLOCK. The tray's edge row reads the shade as well
+(in light the float's own colour and no blur; in dark none): three more
+breaks (no shade, a shade in dark too, a blurred one), each red in that
+row of its own theme.
+
+THE RUN: thirteen suites whole on the final tree, three side by side, all
+green the first time (the site's own runs shared the box for part of it):
+contrast 680, seam 524, library 248, gallery 234, galib 186, tray 153,
+sharedrules 106, player_isolation 85, stamps 76, linkpage 61, jsstrip 35,
+flipedges 22, motion 22. The full battery was not run.
+
 FLIP AND THE PAD: shared, one stylesheet. The tray is Flip's in practice
 (the Pad's tools fit its bar), the shape picker both editors', the stamps
 shelf Flip's. AGAINST THE FOUR: simple (the pointer says which button a
