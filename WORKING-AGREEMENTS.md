@@ -219,7 +219,16 @@ soft shadows on a screen before adding one (`DECISIONS.md`, "The crisp
 quotient, mocked": Home had seventeen, the Pad one; on the site the count
 at rest is none now, and `verify_socialposts` 23 holds it there; in the Pad
 and Flip `verify_contrast` holds what the mock covered and names what is
-still the owner's to say).
+still the owner's to say). AND NOT TOO FAR (the owner, Nov 21, once crisp
+had reached the Pad and Flip: "I feel like you may have overdone it with
+the shadows and now it looks less crisp in areas... shadows are good if
+they add crisp ness, not if they are too big and without them buttons can
+look washed out"). Cal's reading of it, until the owner says otherwise:
+what rises over the drawing (the tool tray, the shape picker, the stamps
+shelf, a toast) keeps one short, close shadow; a big or a soft one is
+still the thing to cut; and where a shadow is taken away, the edge left
+behind has to be clear enough to do the work alone, in dark as in light
+(`DECISIONS.md`, "The little V").
 
 **Never stranded.** The owner, Nov 20: "there's no back button on so many
 screens. You end up stranded a lot". On a phone the Home Screen app has no

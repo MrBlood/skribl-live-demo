@@ -901,6 +901,116 @@ with sync_playwright() as p:
               str({t: f and {k: f[k] for k in ("labelFits", "outFits", "spans", "out")} for t, f in fit.items()}))
     rc.close()
 
+    # ------------------------------------------------------------------
+    # THE TRAY'S POINTER IS PART OF ITS OUTLINE, AND THE TRAY FLOATS (the owner,
+    # Nov 21, a ring drawn round it on a picture of Flip: "The little V at the
+    # bottom disappears with no shadow or border... without the shadow it looks
+    # less crisp because background is smoky (on dark theme)"; yes to all three
+    # steps of the mock "The Little V"). The pointer was a triangle of the
+    # tray's paper with no line of its own, seen only against the soft fall
+    # the crisp build took away; and the tray, which rises over the drawing,
+    # had been given the one line of a card that lies on a sheet. So, on Flip
+    # at a phone's three pixels to one, where the owner saw it, light and dark:
+    #   the pointer   a square of the tray's paper turned to a point, the
+    #                 paper's own edge along its two lower sides, one screen
+    #                 pixel, its middle on the tray's foot over the chevron;
+    #   the tray      the paper's ring and the float's shadow (--chip-lift);
+    #   AND THE PAINT (a rect is not a paint, nor is a rule): across the
+    #                 pointer, 3px under the tray's foot, something stands
+    #                 apart from what is beside it; and down through the
+    #                 tray's foot something stands apart from the bar below.
+    # The floors sit between what it was and what it is, MEASURED: the pointer
+    # 1.04 to 1 in light and 1.06 in dark (now 1.48 and 1.66); the foot 1.60
+    # and 1.26 (now 2.28 with the float's shadow, and 1.69 with dark's edge
+    # at 0.26 where it was 0.12).
+    print("\nTRAY — its pointer is part of its outline, and the tray floats (the owner's \"little V\")")
+    import io as _io
+    import re as _re
+    from PIL import Image as _Image
+    POINT = r"""() => { const t = document.getElementById('toolTray'), chev = document.getElementById('toolMoreBtn');
+      const r = t.getBoundingClientRect(), a = getComputedStyle(t, '::after'), cs = getComputedStyle(t), c = chev.getBoundingClientRect();
+      const probe = document.createElement('i');
+      probe.style.cssText = 'position:absolute;box-shadow:var(--paper-ring), var(--chip-lift);color:var(--menu-paper-edge);background:var(--menu-paper)';
+      t.parentElement.appendChild(probe); const ps = getComputedStyle(probe);
+      const want = { shadow: ps.boxShadow, edge: ps.color, paper: ps.backgroundColor }; probe.remove();
+      const w = parseFloat(a.width), h = parseFloat(a.height), m = a.transform && a.transform !== 'none' ? new DOMMatrix(a.transform) : null;
+      const k = m ? Math.hypot(m.a, m.b) : 1;
+      return { foot: r.bottom, left: r.left, width: r.width, chev: c.left + c.width / 2,
+               x: r.left + parseFloat(cs.borderLeftWidth) + parseFloat(a.left) + w / 2, y: r.top + parseFloat(cs.borderTopWidth) + parseFloat(a.top) + h / 2,
+               size: w * k, turned: m ? Math.round(Math.atan2(m.b, m.a) * 180 / Math.PI) : 0,
+               fill: a.backgroundColor, paper: cs.backgroundColor,
+               edge: [a.borderBottomColor, a.borderRightColor],
+               edgePx: [parseFloat(a.borderBottomWidth) * k * devicePixelRatio, parseFloat(a.borderRightWidth) * k * devicePixelRatio],
+               bare: [parseFloat(a.borderTopWidth), parseFloat(a.borderLeftWidth)], shadow: cs.boxShadow, shade: a.boxShadow, want }; }"""
+
+    def _lum(c):
+        v = [x / 255 for x in c[:3]]
+        v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+        return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+    def _apart(a, b):
+        x, y = _lum(a), _lum(b)
+        return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+
+    FLOOR = {"light": (1.35, 1.9), "dark": (1.4, 1.5)}     # the pointer; the tray's foot
+    for scheme in ("light", "dark"):
+        vc = browser.new_context(viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True,
+                                 device_scale_factor=3, color_scheme=scheme, reduced_motion="reduce")
+        vc.add_init_script("try { localStorage.setItem('skribl.learncard.note.v1', '1'); } catch (e) {}")
+        vp = vc.new_page()
+        g, seen = None, {}
+        try:
+            browsing.goto(vp, BASE, "/flip")
+            vp.wait_for_timeout(700)
+            vp.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            vp.tap("#toolMoreBtn")
+            vp.wait_for_timeout(600)
+            g = vp.evaluate(POINT)
+            top = g["foot"] - 12
+            im = _Image.open(_io.BytesIO(vp.screenshot(clip={"x": 0, "y": top, "width": 402, "height": 36}, animations="disabled"))).convert("RGB")
+            D = 3
+            at = lambda x, y: im.getpixel((min(im.width - 1, max(0, round(x * D))), min(im.height - 1, max(0, round((y - top) * D)))))  # noqa: E731
+            beside = at(g["x"] - 20, g["foot"] + 2)
+            seen["pointer"] = max(_apart(im.getpixel((px, round((g["foot"] + 3 - top) * D))), beside)
+                                  for px in range(round((g["x"] - 10) * D), round((g["x"] + 10) * D) + 1))
+            far = g["left"] + (40 if g["x"] > g["left"] + g["width"] / 2 else g["width"] - 40)
+            bar = at(far, g["foot"] + 20)
+            seen["foot"] = max(_apart(im.getpixel((round(far * D), py)), bar)
+                               for py in range(round((g["foot"] - 3 - top) * D), round((g["foot"] + 10 - top) * D)))
+        except Exception as exc:  # noqa: BLE001 -- a tray that cannot be opened is these rows' red, never a stop
+            seen["stopped"] = str(exc).splitlines()[0][:160]
+        vc.close()
+        g = g or {}
+        check(f"Flip, {scheme}: the tray's pointer is a square of its paper turned to a point (10px, 45 degrees), its middle"
+              " on the tray's foot and over the chevron",
+              bool(g) and g["fill"] == g["paper"] == g["want"]["paper"] and abs(g["size"] - 10) <= 0.5 and g["turned"] == 45
+              and abs(g["x"] - g["chev"]) <= 1.5 and abs(g["y"] - g["foot"]) <= 1,
+              f"{ {k: g.get(k) for k in ('fill', 'paper', 'size', 'turned', 'x', 'chev', 'y', 'foot')} }; {seen.get('stopped', '')}")
+        # IN LIGHT THE FLOAT'S LINE OF SHADE RUNS ON UNDER THE POINTER: the tray's foot has it (--chip-lift's first
+        # layer), so the pointer has it too, the same colour, no blur; in dark the float has no such line, and the
+        # pointer none. It is said on the three pops, not among the theme's tokens (the link player carries those).
+        shade = (g or {}).get("shade") or "none"
+        ink = _re.match(r"rgba?\([^)]*\)", shade)
+        check(f"Flip, {scheme}: ...and it wears the paper's own edge along its two lower sides, one screen pixel, none along"
+              " the two that lie inside the tray; "
+              + ("the float's own line of shade runs on under it, in the float's colour and with no blur"
+                 if scheme == "light" else "and no line of shade under it, as dark's float has none"),
+              bool(g) and g["edge"] == [g["want"]["edge"]] * 2 and all(0.9 <= w <= 1.1 for w in g["edgePx"]) and g["bare"] == [0, 0]
+              and ((ink is not None and ink.group(0) in g["want"]["shadow"] and shade.endswith(" 0px 0px")) if scheme == "light"
+                   else shade == "none"),
+              f"edge {g.get('edge')} for {(g.get('want') or {}).get('edge')}; screen pixels {g.get('edgePx')}; inside {g.get('bare')};"
+              f" shade {shade}")
+        check(f"Flip, {scheme}: ...and the tray, which rises over the drawing, wears the paper's ring and the float's shadow"
+              " (--chip-lift), not a card's one line",
+              bool(g) and g["shadow"] == g["want"]["shadow"] and g["shadow"] != "none",
+              f"{g.get('shadow')} for {(g.get('want') or {}).get('shadow')}")
+        lo_p, lo_f = FLOOR[scheme]
+        check(f"Flip, {scheme}: ...as painted on a phone at three pixels to one: across the pointer something stands"
+              f" {lo_p} to 1 or more apart from what is beside it, and through the tray's foot {lo_f} to 1 or more apart"
+              " from the bar below",
+              seen.get("pointer", 0) >= lo_p and seen.get("foot", 0) >= lo_f,
+              f"the pointer {seen.get('pointer', 0):.2f}, the foot {seen.get('foot', 0):.2f}; {seen.get('stopped', '')}")
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

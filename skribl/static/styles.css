@@ -186,7 +186,11 @@
      step lighter. Light values in the light ramp. */
   --menu-paper:      #17142a;
   --menu-card:       #231e3b;
-  --menu-card-line:  rgba(167, 146, 255, 0.12);
+  /* THE EDGE IN DARK IS CLEAR ENOUGH TO DO THE SEPARATING (the owner, Nov 21, after the crisp build: "now it
+     looks less crisp in areas"; yes to step 3 of "The Little V"). It was 0.12, set that faint while soft
+     shadows did the work; crisp took the shadows away and left dark flat. 0.26, where light's is 0.34 of the
+     accent. The rule between two rows of one card is not an edge, and stays as quiet as it was. */
+  --menu-card-line:  rgba(167, 146, 255, 0.26);
   --menu-card-rule:  rgba(167, 146, 255, 0.12);
   /* CRISP: a card on a sheet has its edge and one line (in dark, a line of
      light inside its top); it wore 6px/18px of black at 35% as well. */
@@ -1081,8 +1085,8 @@ body .canvas-wrap:not(.light-bg) {
    Set on the editors' pages, so the player's stylesheet (which keeps every
    root token) never carries them. */
 body:not(.player-mode) {
-  --menu-card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--menu-card));
-  --menu-paper-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--menu-paper));
+  --menu-card-edge: color-mix(in srgb, rgb(167 146 255) 26%, var(--menu-card));
+  --menu-paper-edge: color-mix(in srgb, rgb(167 146 255) 26%, var(--menu-paper));
   --card-ring: 0 0 0 var(--edge) var(--menu-card-edge);
   --paper-ring: 0 0 0 var(--edge) var(--menu-paper-edge);
   --glass: 0 0 0 var(--edge) var(--header-rim), 0 1px 2px var(--glass-drop);
@@ -8349,20 +8353,15 @@ html.skribl-sheet { overscroll-behavior-y: none; }
 .shape-preview svg { width: 64px; height: 64px; overflow: visible; }
 .shape-preview polyline { fill: none; stroke: var(--ui-hi); stroke-width: 2.5;
   stroke-linejoin: round; stroke-linecap: round; }
-/* The little arrow, so it reads as belonging to the button below it. */
-.shape-pop::after {
-  content: '';
-  position: absolute;
-  top: 100%; left: 50%;
-  transform: translateX(-50%);
-  border: 7px solid transparent;
-  border-top-color: var(--surface-pop);
-}
+/* The little arrow, so it reads as belonging to the button below it: drawn
+   with the tray's and the stamps shelf's, by one rule (THE POINTER UNDER A
+   POP, with the dock's drawers at the end of this file); here, where its
+   point stands. */
+.shape-pop { --pop-point: 50%; }
 @media (max-width: 640px) {
   /* Stay inside the viewport on a phone: the Shape button is near the left, so
      a centred popover would hang off the edge. */
-  .shape-pop { left: 8px; transform: none; }
-  .shape-pop::after { left: 64px; }
+  .shape-pop { left: 8px; transform: none; --pop-point: 64px; }
 }
 
 /* ---------- Text: the drawer (lib/textwrite.js, _skribl_text.html) ----------
@@ -9077,7 +9076,6 @@ body.lc-open .skribl-tip { display: none !important; }   /* the card grows out o
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.shape-pop::after { border-top-color: rgb(var(--surface-well-2-rgb)); }
 
 /* A SELECTED OPTION IS A TINT (see --seg-on-fill in :root) -- AND ONE PILL
    CARRIES IT, identical everywhere (owner: "a on the pill"). Every pick-one
@@ -9435,16 +9433,9 @@ body.replaying .media-card { pointer-events: none; }
 
 /* The arrow points at the pill, not at the row's centre: the tool group sits at
    the left end, so a centred arrow would point at the colour ring. Placed by
-   syncToolShelf() through --tray-arrow, which measures the chevron. */
-.tool-tray::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: var(--tray-arrow, 48px);
-  transform: translateX(-50%);
-  border: 7px solid transparent;
-  border-top-color: var(--surface-pop);
-}
+   syncToolShelf() through --tray-arrow, which measures the chevron; drawn by
+   THE POINTER UNDER A POP, at the end of this file. */
+.tool-tray { --pop-point: var(--tray-arrow, 48px); }
 
 .tool-tray-btn {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -10050,13 +10041,44 @@ body.drawback :is(#eraserToolBtn, #recolorBtn, #mediaOpenBtn, #customBgBtn, .bg-
 }
 :is(.tab-panel:not(.media-card > .tab-panel), .media-card, .shape-pop, .tool-tray, .tune-shell.open, .stamp-pop) {
   border: 1px solid transparent;
+}
+/* A drawer lies on the page under the tools: the paper's edge and a card's one line. (The three that rise over
+   the drawing are named apart, below: inside this list they would take its weight, a :is() being as heavy as
+   its heaviest name, and no rule of their own after it could say otherwise.) */
+:is(.tab-panel:not(.media-card > .tab-panel), .media-card, .tune-shell.open) {
   box-shadow: var(--paper-ring), var(--menu-card-drop);
 }
 .tune-shell.open { border-top: 0; }
-/* The little arrow under a pop is its paper. The shape picker's kept the
-   well's grey when the picker took the paper (verify_contrast: the arrow
-   under a pop). The stamp shelf's is flip.css's, which loads after this. */
-:is(.tool-tray, .shape-pop)::after { border-top-color: var(--menu-paper); }
+/* WHAT OPENS OVER THE DRAWING FLOATS (the owner, Nov 21, of the tray after the
+   crisp build: "The little V at the bottom disappears with no shadow or
+   border... without the shadow it looks less crisp"; yes to steps 1 and 2 of
+   "The Little V"). The tray of tools, the shape picker and Flip's stamps shelf
+   rise over the canvas, where a drawer lies on the page under the tools: so
+   these three wear the float's shadow, the one a toast has, short and close
+   (--chip-lift), with the paper's edge. Crisp had given them a card's one
+   line, and against a page as bright as their paper nothing held their foot. */
+:is(.shape-pop, .tool-tray, .stamp-pop) { box-shadow: var(--paper-ring), var(--chip-lift); }
+/* THE POINTER UNDER A POP IS PART OF ITS OUTLINE. It was a triangle of the
+   paper with no line of its own, seen only against the soft fall behind it,
+   and gone with the fall. It is a square turned to a point now, the pop's
+   paper, the pop's own edge along its two lower sides, its middle on the
+   pop's foot at --pop-point (the tray's follows the chevron, the picker's
+   its own middle or 64px on a phone, the shelf's is flip.css's): as the link
+   page's menu and a button's card draw theirs, 1/--hair as large and scaled
+   back, so its line is the screen's own pixel. In light the float's line of
+   shade runs on under it (--pop-point-shade: said on the three pops, not
+   among the theme's tokens, which the link player carries whole and has no
+   pop to spend it on; verify_player_isolation's budget caught it there). */
+:root[data-theme="light"] :is(.tool-tray, .shape-pop, .stamp-pop) {
+  --pop-point-shade: calc(1px / var(--hair, 1)) calc(1px / var(--hair, 1)) 0 rgba(60, 40, 140, 0.14);
+}
+:is(.tool-tray, .shape-pop, .stamp-pop)::after {
+  content: ''; position: absolute; top: calc(100% + 1px - 5px / var(--hair, 1)); left: calc(var(--pop-point, 50%) - 5px / var(--hair, 1));
+  width: calc(10px / var(--hair, 1)); height: calc(10px / var(--hair, 1));
+  transform: rotate(45deg) scale(var(--hair, 1)); background: var(--menu-paper);
+  border: solid var(--menu-paper-edge); border-width: 0 1px 1px 0;
+  box-shadow: var(--pop-point-shade, none);
+}
 :where(.tab-panel, .media-card, .shape-pop, .tool-tray, .tune-shell) :is(.seg, .smooth-seg, .photo-fit-group, .media-tabs, .gif-seg,
     .brush-slider-line, .reposition-btn, .panel-btn, .clear-drawer-btn, .loop-btn:where(.subtle), .edge-controls,
     .slider-nudge-btn, .eyedropper-btn) {

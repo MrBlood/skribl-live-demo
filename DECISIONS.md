@@ -51024,3 +51024,104 @@ says. AGAINST THE FOUR: simple (a draft looks like the post it will be).
 NOT TESTED HERE: Safari on an iPhone. THE TELL: in Make, with a drawing
 added, the picture runs to its line with no lilac frame inside it; the
 same in How it works' three examples.
+
+## After v330 -- "Yes to all": the owner's answer to that day's eight, and the little V built
+
+Nov 21, 11:16 AM. The owner, of the list of eight put to them at 11:15
+(four from "The Little V", "Gallery Tiles", "The Talk Cloud", and two of
+Cal's own readings):
+
+> I love your picks. Yes to all. Once you finish up, I would like to do a
+> color cris audit.
+
+A PLAIN YES TO EACH, WITH CAL'S PICK: (1) the tray's pointer gets the
+tray's rim; (2) one short, close shadow under the three pops that open over
+the drawing; (3) in dark, every edge about twice as clear, everywhere; (4)
+buttons stay as built; (5) the Gallery's rows as tiles, A; (6) the talk
+cloud, B; (7) where an @handle runs on past a short name the person's tap
+runs to its end (kept); (8) on a post's own page the name's tap stops at
+the name too. THE AUDIT they ask for comes after these are built, and has
+its own entry.
+
+THIS ENTRY IS 1, 2 AND 3 IN SKRIBL'S EDITORS (the site's part of 3, and 5,
+6 and 8, are the next). Built: what the mock laid over them, measured
+beside it.
+
+1. THE POINTER UNDER A POP IS PART OF ITS OUTLINE. One rule for the three
+   (`styles.css`, THE POINTER UNDER A POP; it was three triangles, two here
+   and one in `flip.css`): a square of the pop's paper turned to a point,
+   the paper's edge along its two lower sides, drawn 1/--hair as large and
+   scaled back as the link page's menu and a button's card draw theirs, its
+   middle on the pop's foot at `--pop-point` (the tray's follows the
+   chevron, the picker's its own middle or 64px on a phone, the shelf's
+   71px). In light the float's line of shade runs on under it.
+2. WHAT OPENS OVER THE DRAWING FLOATS: the tray, the shape picker and the
+   stamps shelf wear `var(--paper-ring), var(--chip-lift)`. A drawer, which
+   lies on the page under the tools, keeps a card's line.
+   A THING LEARNED: the rule that gave all six their line listed them in
+   one `:is()`, and a `:is()` is as heavy as its heaviest name
+   (`.tab-panel:not(.media-card > .tab-panel)`), so no later rule of a
+   pop's own could say otherwise. The list is split; the drawers keep its
+   weight.
+3. IN DARK THE EDGE IS CLEAR ENOUGH TO DO THE SEPARATING:
+   `--menu-card-line` 0.26 (it was 0.12) and `--menu-card-edge`,
+   `--menu-paper-edge` 26% (12%). `--menu-card-rule`, the line between two
+   rows of one card, is not an edge and stays. `pagemenu.css`'s copies for
+   the Gallery's and the Library's menu move with them (`verify_galib`
+   holds the two to the Pad's, painted). CAL'S READING, the owner's to
+   overrule: the CARDS of Skribl's own Gallery and Library keep their edge
+   for now. They were in no picture of the mock, their look is call 9 of
+   "Last Soft Shadows", and that page's picks are redone next with this
+   edge on them.
+
+MEASURED on Flip at a phone's three pixels to one, the mock's own measure,
+as built beside what the owner said yes to: the tray's foot against the bar
+below it, light 2.28 to 1 (the mock 2.28; it was 1.60) and dark 1.69
+(1.69; 1.26); the pointer against what is beside it, light 1.48 (1.48;
+1.04) and dark 1.66 (1.77, the rim there a little heavier than the tray's
+own; 1.06).
+
+THE CHECKS. `verify_tray`, four rows a theme, on Flip where the owner saw
+it: the pointer's shape, fill and place over the chevron; its edge, one
+screen pixel on two sides and none on the two inside the tray; the tray's
+shadow, the ring and the float's; and the paint, the two measures above
+with floors between what it was and what it is. `verify_contrast`'s "the
+arrow under a pop is its paper" reads the new shape and asks its edge too
+(the shape picker on both editors, the stamps shelf). SHOWN RED, nine runs,
+each on a copy with a server of its own: no rim on the pointer (the tray's
+edge row and its paint in dark; the contrast suite's row); no float on the
+pops (the shadow row, both themes, and light's paint, 1.60); dark's edge
+back at 0.12 (dark's paint, 1.29 and 1.27); the pointer off the chevron;
+its fill another colour (the tray's row; the contrast suite's); the page
+menus' copy left at 0.12 (`verify_galib`, both pages in dark). Green as
+built.
+
+A FINDING FROM THE WHOLE RUN, AND ITS FIX. Run whole beside the others,
+`verify_player_isolation` and `verify_jsstrip` each went red in one row:
+the link player's stylesheet served 45,597 bytes against budgets of 45,552
+and 45,571. Light's new token for the pointer's line of shade sat in the
+theme's token block, which the link player carries whole, and the player
+has no pop to spend it on. It is said on the three pops now
+(`:root[data-theme="light"] :is(.tool-tray, .shape-pop, .stamp-pop)`),
+where only the editors' stylesheet has it, and `player.css` differs from
+main's by the one edge value. A TOKEN THAT ONLY THE EDITORS READ DOES NOT
+BELONG IN THE THEME'S BLOCK. The tray's edge row reads the shade as well
+(in light the float's own colour and no blur; in dark none): three more
+breaks (no shade, a shade in dark too, a blurred one), each red in that
+row of its own theme.
+
+THE RUN: thirteen suites whole on the final tree, three side by side, all
+green the first time (the site's own runs shared the box for part of it):
+contrast 680, seam 524, library 248, gallery 234, galib 186, tray 153,
+sharedrules 106, player_isolation 85, stamps 76, linkpage 61, jsstrip 35,
+flipedges 22, motion 22. The full battery was not run.
+
+FLIP AND THE PAD: shared, one stylesheet. The tray is Flip's in practice
+(the Pad's tools fit its bar), the shape picker both editors', the stamps
+shelf Flip's. AGAINST THE FOUR: simple (the pointer says which button a
+tray came from, and can be seen); kind (nothing to squint at in dark).
+
+NOT TESTED HERE: Safari on an iPhone. THE TELL: in Flip, open All tools:
+the little V under the tray has a fine lilac line round it and a short
+shadow sits under the tray's foot; in dark, the cards in the menu each have
+a clear lilac line.

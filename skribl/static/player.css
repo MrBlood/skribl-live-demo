@@ -209,7 +209,11 @@
      step lighter. Light values in the light ramp. */
   --menu-paper:      #17142a;
   --menu-card:       #231e3b;
-  --menu-card-line:  rgba(167, 146, 255, 0.12);
+  /* THE EDGE IN DARK IS CLEAR ENOUGH TO DO THE SEPARATING (the owner, Nov 21, after the crisp build: "now it
+     looks less crisp in areas"; yes to step 3 of "The Little V"). It was 0.12, set that faint while soft
+     shadows did the work; crisp took the shadows away and left dark flat. 0.26, where light's is 0.34 of the
+     accent. The rule between two rows of one card is not an edge, and stays as quiet as it was. */
+  --menu-card-line:  rgba(167, 146, 255, 0.26);
   --menu-card-rule:  rgba(167, 146, 255, 0.12);
   /* CRISP: a card on a sheet has its edge and one line (in dark, a line of
      light inside its top); it wore 6px/18px of black at 35% as well. */
