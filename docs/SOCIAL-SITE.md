@@ -3248,3 +3248,27 @@ stays open. The pill outside Settings is placed by `social.js`'s
 
 `verify_socialdrawback` 12 holds it (21 rows). The Pad and Flip: nothing of
 theirs. NOT TESTED HERE: Safari on an iPhone.
+
+## 26. Built: no strip of the page under a sheet on a phone's keyboard (Nov 20)
+
+The owner's picture of the Make sheet on their iPhone showed Home between
+the sheet's foot and the keyboard's own bar. The sheet rode above the
+keyboard by being lifted whole, so its box ended where the keyboard began,
+and what the keyboard's see-through bar uncovered was the page behind.
+
+**Now the paper runs down behind the keyboard.** On a phone the sheet is
+not lifted: a spacer the keyboard's height stands at its foot
+(`.cmp-sheet::after`, from `--cmp-kb`, which `social.js`'s `SocialKeyboard`
+keeps as before). What is in the sheet sits exactly where it sat, its tools
+16px above the keyboard, and the sheet's own paper goes on to the screen's
+foot. The small comment sheet does the same (`--cm-kb`). A desk's card
+(900px and wider, a tablet with a keyboard on its screen among them) never
+rode a keyboard and does not now: the spacer is a phone's alone.
+
+Nothing else changes: the keyboard is read the same way, read again until
+it rests, and a page that itself changed size takes the new reading at
+once.
+
+`verify_composer` 3 and `verify_socialcomments` 30 hold it on a stood-in
+keyboard, by what is painted where the keyboard would be. NOT SEEN HERE:
+this box has no phone keyboard; the owner's iPhone is the test.

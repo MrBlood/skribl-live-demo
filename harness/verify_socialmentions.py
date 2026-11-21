@@ -1193,8 +1193,10 @@ with sync_playwright() as p:
                   and d4["field"]["value"] == "@victran " and d4["field"]["focused"] and not d4["open"],
                   json.dumps([d3 and handles(d3["rows"]), in_answer, d4 and d4["field"]["value"]]))
             # ON A PHONE'S KEYBOARD, STOOD IN: the composer's list above it; a
-            # comment's sheet sits on the keyboard, so its list opens over the
-            # line, above the keyboard too.
+            # comment's box sits right over the keyboard, so its list opens over
+            # the line, above the keyboard too. (The sheet's own paper runs on
+            # down behind the keyboard since Nov 20, so that no strip of the
+            # page shows under it: it is the BOX that ends above the keyboard.)
             ctx, pg = browser_as(b, mira, screen="phone", scheme="dark", init=KEYBOARD)
             go(pg, "/social/", wait=400)
             open_composer(pg)
@@ -1214,10 +1216,12 @@ with sync_playwright() as p:
             check("on a phone over its keyboard (stood in, 336px): the composer's list ends above the keyboard",
                   bool(k1) and k1["open"] and k1["box"][3] <= k1["vh"] - 336 + 0.5 and k1["box"][1] >= 0,
                   json.dumps(k1 and {"box": k1["box"], "vh": k1["vh"]}))
-            check("...and a comment's sheet, riding on the keyboard, has no room under its line: its list opens over"
-                  " the line (8px above it), above the keyboard and on the screen",
+            check("...and a comment's box, right over the keyboard, has no room under its line: its list opens over"
+                  " the line (8px above it), above the keyboard and on the screen; the line itself ends above the"
+                  " keyboard, and the sheet's paper runs on behind it to the screen's foot",
                   bool(k2) and k2["open"] and k2["box"][3] <= k2["vh"] - 336 + 0.5 and k2["box"][1] >= 0
-                  and abs(k2["box"][3] - (fk["box"][1] + fk["padTop"] - 8)) <= 1.5 and sheet[1] <= k2["vh"] - 336 + 1,
+                  and abs(k2["box"][3] - (fk["box"][1] + fk["padTop"] - 8)) <= 1.5
+                  and fk["box"][3] <= k2["vh"] - 336 + 0.5 and abs(sheet[1] - k2["vh"]) <= 1,
                   json.dumps(k2 and {"box": k2["box"], "vh": k2["vh"], "field": fk.get("box"), "sheet": sheet}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(5, exc)

@@ -261,9 +261,19 @@ about 8:55 AM). BUILT THAT DAY (`DECISIONS.md`, "The calm post page, built";
 `docs/SOCIAL-SITE.md` section 23): one answer bar on every post's page and
 every comment's, small quiet labels and nothing over nothing, no More from,
 and the bar's Draw back lit when a replay ends. Her say's two halves
-followed the same day (item 1 of "What is still to build"). STILL TO COME:
-the strip of Home that shows under the composer when an iPhone's keyboard
-is up.
+followed the same day (item 1 of "What is still to build"), and so did the
+strip of Home that showed under the composer when an iPhone's keyboard was
+up: the sheet's paper runs down behind the keyboard now (`DECISIONS.md`,
+"No strip of Home under a sheet on a phone's keyboard";
+`docs/SOCIAL-SITE.md` section 26). THAT ONE CANNOT BE SEEN HERE: the
+owner's iPhone is the test, and what they say of it is the next thing to
+read.
+MAIN WAS RED TWICE THAT AFTERNOON ON ONE ROW, AND THE ROW WAS RIGHT: on a
+desk the list hopped under a posted comment when the box was taller than
+the comment (`DECISIONS.md`, "Main red after the calm post page"). It
+passed here because of this box's type. Mended the same afternoon (#1016),
+main green after it, and green again after who can draw back (#1017, at
+about 5:47 PM).
 THE SESSION STOPPED ON THE OWNER'S USAGE LIMIT at about 10:25 PM, with
 those two runs unread, and nothing moved until the owner wrote at 5:56 AM.
 The owner's rule since: come back and finish without being asked
@@ -375,6 +385,18 @@ in the mock page.
   ending the request's read before `create_post` would likely mend it,
   but it touches every post, so it wants its own look.
 
+- **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No
+  strip of Home under a sheet on a phone's keyboard"). The tell: in Make,
+  the words tapped, the sheet's own lilac paper down to the keys and
+  nothing of Home. Read what they say of it before anything else there.
+- **ASKED OF THE OWNER ON NOV 20'S AS-BUILT PAGE** (the artifact "Friday
+  Four Built"), each waiting for a yes, neither built: initials in the
+  empty circles of "Liked by" (somebody with no drawn face is a blank lilac
+  circle there, and an initial beside a comment); and whether a tablet's
+  Make card should ride its keyboard as a phone's sheet does (its tools sit
+  under the keys: measured on 1024 by 768 with a keyboard stood in, not
+  seen on an iPad). The same page lists, build by build, every call no mock
+  showed, as theirs to overrule.
 - Main's full runs after #986, #987 and the PR after them were still going
   when this was written. Look at the newest runs on main first.
 - Not sealed since v330. That is fine: seal only when there is a reason.

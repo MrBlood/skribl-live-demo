@@ -1436,8 +1436,9 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
  * Make's own sheet (.make and .make-sheet: its paper, its 22px corners, its
  * glide and its scrim, social.js's SocialSheet), made tall. On a phone it
  * rises almost to the top, 5vh short of it (or clear of the status bar where
- * a phone gives the page the whole screen), and its foot rides above the
- * keyboard (--cmp-kb, compose.js, as a comment's sheet does). On a desk it is
+ * a phone gives the page the whole screen), and its tools ride above the
+ * keyboard while its paper runs on down behind it (--cmp-kb, compose.js, as
+ * a comment's sheet does: "ON A PHONE'S KEYBOARD", below). On a desk it is
  * a 600px card in the middle of the screen, one height whatever it holds, so
  * a drawing attached or "Use one you made" moves nothing; what does not fit
  * scrolls inside it. In the mock's own sizes: the 64px row of Cancel and
@@ -1448,21 +1449,42 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
  * action (--fill), the tools the chips Home's box wears, the words the
  * page's two inks. Post is dim (0.45) until a drawing is attached, an
  * inactive control, as the mock drew it. */
-.make.cmp { bottom: var(--cmp-kb, 0px); transition: bottom 0.25s ease; }
+/* ON A PHONE'S KEYBOARD THE SHEET STAYS WHERE IT IS, AND ITS PAPER RUNS DOWN
+   BEHIND THE KEYBOARD (the owner's picture of the Make sheet on their iPhone,
+   Nov 20: Home showing between the sheet's foot and the keyboard's own bar;
+   then "All yes to everything"). Until then the WHOLE sheet was lifted by
+   the keyboard's height, so whatever the keyboard left uncovered at its top
+   (an iPhone's see-through bar) showed the page behind the sheet. Now a
+   spacer the keyboard's height stands at the sheet's foot (--cmp-kb,
+   social.js's SocialKeyboard; --cm-kb on a comment's sheet): what is in the
+   sheet sits exactly where it sat, above the keyboard, and the paper under
+   it goes on to the screen's foot, so what shows through is the sheet's own
+   paper, never Home. The spacer glides with the keyboard as the lift did
+   (0.25s). NOT SEEN HERE: this box has no phone keyboard; the suites stand
+   one in, and the owner's phone is the test.
+   A DESK'S CARD (900px and wider, a tablet with a keyboard on its screen
+   among them) never rode a keyboard (a rule for that width put its foot
+   back at the screen's) and does not now: the spacer is a phone's alone,
+   and the keyboard's reading is not used there. Whether a tablet's card
+   should ride is the owner's to say. */
+@media (max-width: 899.98px) {
+  .cmp-sheet::after { content: ""; flex: none; height: var(--cmp-kb, 0px); transition: height 0.25s ease; }
+}
 /* On a phone the sheet itself takes focus as it opens (compose.js, "A PHONE
    OPENS IT CALM"): a ring round the whole sheet says nothing, so none. */
 .cmp-sheet:focus { outline: 0; }
 /* WHATEVER A KEYBOARD SAYS ON THE WAY (the owner's iPhone, Nov 14: a size a
    keyboard passed through left the sheet a sliver, its rows drawn over Home
-   and the page under it undimmed, until a touch): the scrim reaches the
-   screen's foot under a lifted sheet (the keyboard covers it at rest), and
-   nothing of the sheet is drawn outside its paper. social.js's
-   SocialKeyboard reads the keyboard again until it rests. */
-.make.cmp > .make-scrim, .cm-sheet > .make-scrim { bottom: -100vh; }
-/* The page itself changed size with the keyboard (Chrome on an iPhone): the
-   sheet's box moved with the page, so it takes the keyboard's new reading at
-   once, never hopping above the keyboard (SocialKeyboard's .kb-now). */
-.make.cmp.kb-now, .cm-sheet.kb-now { transition: none; }
+   and the page under it undimmed, until a touch): the sheet is no sliver
+   now. Neither it nor its scrim is lifted, so both are at the screen's foot
+   whatever the keyboard says, and nothing of the sheet is drawn outside its
+   paper (.cmp-sheet's overflow). social.js's SocialKeyboard reads the
+   keyboard again until it rests.
+   The page itself changed size with the keyboard (Chrome on an iPhone): the
+   sheet's box moved with the page, so the spacer takes the keyboard's new
+   reading at once, and what is in the sheet never hops above the keyboard
+   (SocialKeyboard's .kb-now). */
+.make.cmp.kb-now .cmp-sheet::after, .cm-sheet.kb-now .make-sheet::after { transition: none; }
 .cmp-sheet {
   display: flex; flex-direction: column; max-width: 640px; overflow: hidden;
   height: calc(100% - max(5vh, env(safe-area-inset-top) + 8px));
@@ -1525,7 +1547,6 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .cmp-pick .cmp-say { margin: 12px 4px 0; }
 button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
 @media (min-width: 900px) {
-  .make.cmp { bottom: 0; }
   .cmp-sheet { width: 600px; max-width: calc(100vw - 48px); height: min(660px, calc(100vh - 64px)); }
 }
 
@@ -2404,11 +2425,13 @@ a.post-face { text-decoration: none; }
 /* THE SHEET (a phone): Make's own, rising from the bottom with the box on it,
    the field ready to type in; answering, the words it answers in a line under
    its title. The box sits on the sheet's paper as Make's doors do, without
-   the page's shadow. ON A PHONE'S KEYBOARD it rides above it: comments.js
-   reads the keyboard off the visual viewport (--cm-kb) and the sheet glides
-   up by that much. (Not seen here: this box has no phone keyboard.) */
-.cm-sheet { bottom: var(--cm-kb, 0px); transition: bottom 0.25s ease; }
+   the page's shadow. ON A PHONE'S KEYBOARD its box rides above it and its
+   paper runs down behind it, as the composer's does (the same spacer;
+   social.css, "ON A PHONE'S KEYBOARD"): comments.js reads the keyboard off
+   the visual viewport (--cm-kb). (Not seen here: this box has no phone
+   keyboard.) */
 .cm-sheet .make-sheet { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+.cm-sheet .make-sheet::after { content: ""; display: block; height: var(--cm-kb, 0px); transition: height 0.25s ease; }
 .cm-sheet .make-title { margin-bottom: 6px; }
 .cm-quote {
   margin: -2px 4px 10px; overflow: hidden; color: var(--ink-2); font-size: 15px; line-height: 1.4;
@@ -2432,7 +2455,7 @@ a.post-face { text-decoration: none; }
    put away at once; a comment that arrives is put in place and fades in; the
    sheet fades where it sits (below). */
 @media (prefers-reduced-motion: reduce) {
-  .cm-fold, .cm-fold > .cm-fold-in, .cm-sheet { transition: none; }
+  .cm-fold, .cm-fold > .cm-fold-in, .cm-sheet .make-sheet::after { transition: none; }
   .cm-fold .cm-box { transition: none; }
   .cm-fold.is-open .cm-box { transition: opacity 0.2s ease; }
   .cm.is-growing { transition: opacity 0.2s ease; }

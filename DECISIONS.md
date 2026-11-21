@@ -49396,3 +49396,146 @@ words fit a 402px phone with room to spare in this box's type (101, 138 and
 phone to say, and under 360px the words go to 14px. The tell for the new
 build: attach a drawing in Make, and under Edit drawing and Remove there is
 a quiet line, "Anyone can draw back · Change".
+
+## After v330 -- No strip of Home under a sheet on a phone's keyboard: the paper runs down behind it
+
+Nov 20. The last of the four the owner's "All yes to everything" covered,
+and the one this box cannot see. THE OWNER'S PICTURE (Nov 20, about 8:15
+AM, the Make sheet on their iPhone with the keyboard up): Home showing
+between the sheet's foot and the keyboard's own bar. Told to them then as
+the next small thing ("The composer opens calm on a phone", above).
+
+THE TARGET, said first: what shows under the Make sheet, between its foot
+and the keys, while a phone's keyboard is up.
+
+WHY IT SHOWED. The sheet rode above the keyboard by being LIFTED WHOLE: its
+box ended where the keyboard began (`.make.cmp { bottom: var(--cmp-kb) }`).
+Whatever the keyboard leaves uncovered at its own top edge (an iPhone's
+see-through bar) then shows what is behind the sheet's box, and that is the
+page.
+
+WHAT IT DOES NOW. The sheet stays where it is, down to the screen's foot,
+and a spacer the keyboard's height stands at its foot
+(`.cmp-sheet::after`, `--cmp-kb`). What is in the sheet sits exactly where
+it sat, its tools 16px above the keyboard; the sheet's own paper goes on
+behind the keyboard. What shows through is the sheet, never Home. The
+spacer glides with the keyboard as the lift did (0.25s), and takes a new
+reading at once when the page itself changed size (Chrome on an iPhone), so
+nothing hops.
+
+THE SMALL COMMENT SHEET ("Say something to Ana") THE SAME WAY, in the same
+pull request: it was lifted by the same rule (`--cm-kb`), so it had the same
+strip. One way for both, or the two would drift. Said to the owner as theirs
+to undo if a phone shows otherwise.
+
+A DESK'S CARD (900px and wider, a tablet with a keyboard on its screen
+among them) NEVER RODE A KEYBOARD, AND DOES NOT NOW. The first writing of
+this change said "a tablet's card is still lifted whole" and kept a rule to
+lift it. Reading the change through before the pull request showed the rule
+could never apply: further down, a rule for that width had always put the
+card's foot back at the screen's. Measured, as it was before today and as
+it is now: a 1024 by 768 tablet with a 336px keyboard stood in has its card
+from 54 to 714 and its tools at 698, under the keyboard. So nothing there
+changed, the claim was wrong, and three rules that did nothing went with
+it (the lift at that width, the rule that undid it, and a scrim stretched
+to reach under a lift no sheet has any more). WHETHER A TABLET'S CARD
+SHOULD RIDE ITS KEYBOARD is a question for the owner, not a thing to slip
+in: said on the as-built page.
+
+WHAT CANNOT BE SEEN HERE, AND IS SAID. This box has no phone keyboard and
+no iPhone. The suites stand a keyboard in (the visual viewport made
+shorter, as iPhone's Safari reports one) and ask what is PAINTED where the
+keyboard would be, at three heights of its band: the sheet's own paper,
+never the page, dimmed or not. That proves the paper is there. Whether an
+iPhone's bar shows it as one clean sheet is the owner's phone to say. THE
+TELL: tap "Say something…" in Make; under the three tools, down to the
+keys, the same lilac paper and nothing of Home.
+
+THE CHECKS. `verify_composer` 3 and `verify_socialcomments` 30, four rows
+each, brought to the new way: the paper at the screen's foot; the sheet's
+own paper painted top, middle and bottom of the keyboard's band; the tools
+(the box, on a comment's sheet) above the keyboard where they sat above the
+foot; a keyboard that passes through a size; Chrome's shrinking page; no
+hop on the way, the tools read on every frame. SHOWN RED, on each suite:
+the old lift put back (the paper ends at the keyboard and the band is the
+dimmed page), no spacer (the tools under the keyboard), a spacer 30px short,
+and the spacer gliding to a reading it should take at once (the tools hop
+above the keyboard and come back).
+
+ONE MORE ROW HAD THE OLD WAY IN IT. `verify_socialmentions` 5 asked that a
+comment's sheet end where the keyboard begins. It asks now what the fix
+governs: the box's line ends above the keyboard, and the sheet's paper ends
+at the screen's foot. Shown red with the old lift put back, and with no
+spacer.
+
+THREE ROWS WERE ASKING A CLOCK, found by running the suites beside each
+other. None is this change's doing; each is the instrument's, mended the way
+the last two days' were (ask of the page what the page decides, and of the
+machine nothing):
+
+- `verify_socialcomments` 31, "a press elsewhere folds it away": the list
+  was read 86 of its 92px home when a 600 ms watch ended, once, beside four
+  other suites while this box was also making pictures; alone it was green.
+  The watch (`FRAMES`) goes on now until what it watches has stood still for
+  a quarter second, whatever the time. IT COULD NOT BE MADE TO HAPPEN AGAIN,
+  and that is said: a page stalled for 420 ms, and a processor slowed
+  tenfold, both read the whole way, the old watch and the new. What is shown
+  is that the set time no longer decides (a 150 ms watch reads 28 of the
+  92px the old way, red, and all 92 the patient way, green), and that the
+  patient watch still catches a real fault (a fold 6px short of its place:
+  red).
+- `verify_socialcomments` 30, "Draw on the sheet opens the Pad over it": red
+  twice in about a dozen runs here. The row pressed the Pad's × and looked
+  800 ms later, and a × pressed before the page over it was ready did
+  nothing. It waits now for the page's own word that the Pad is ready and,
+  after the ×, that it has gone. Shown red still: focus not given back to
+  Draw, and a Pad that never goes (the row says what stopped it).
+- `verify_composer` 2, "Yours and Back": beside two other suites the view
+  coming in was read at 0.92 when a 700 ms watch ended; alone, green. One
+  fade ends and the next begins in the page's own time, so the watch
+  (`SWAP`) goes on now while either view still has an animation of its own.
+  Shown: a 150 ms watch reads nothing of the fade in the old way (red) and
+  the whole turn the patient way (green); a view that ends at 0.9 is red,
+  and a turn that never lands is red.
+
+HOW THEY RAN HERE. The five suites that open the composer, a comment's sheet
+or a post's page, each whole, side by side:
+
+- FIRST, before the rows above were mended: `verify_composer` 43,
+  `verify_socialdrawback` 92 and `verify_socialposts` 100, green.
+  `verify_socialmentions` 50 of 51 (the row that still asked the old way),
+  then 51 of 51 alone once it was brought up to date: the runner calls that
+  intermittent, and here it is the fix landing between the two.
+  `verify_socialcomments` 149 of 150 beside the others (section 31's watch)
+  and 150 of 150 alone: load, not a defect.
+- SECOND, with those mended: `verify_socialcomments` 150,
+  `verify_socialposts` 100, `verify_socialdrawback` 92 and
+  `verify_socialmentions` 51, green. `verify_composer` 42 of 43 beside the
+  others ("Yours and Back") and 43 of 43 alone: load, not a defect.
+- THIRD, with that row mended: `verify_composer` 43,
+  `verify_socialcomments` 150 and `verify_socialposts` 100, side by side,
+  green.
+- FOURTH, ON THE TREE AS IT MERGES (after the three rules that did nothing
+  were taken out, and every breakage above shown red again against it): the
+  five once more, side by side, all green the first time, in 11 minutes:
+  `verify_socialcomments` 150, `verify_socialposts` 100,
+  `verify_socialdrawback` 92, `verify_socialmentions` 51, `verify_composer`
+  43.
+
+The full battery was not run; main's run after the merge is it.
+
+FLIP AND THE PAD: not for either, and nothing of theirs is touched. The Pad
+that opens over a comment's sheet or the composer covers the whole screen as
+it did.
+
+AGAINST THE FOUR. Simple and kind: what is under your words while you type
+is your own sheet, not a slice of somewhere else. Powerful and playful are
+not in it; this is a mend.
+
+TOLD TO THE OWNER THAT EVENING on one page (the artifact "Friday Four
+Built"): pictures of the four as built, the before and after of this one
+with the keyboard's room outlined (stood in, and said so), every call no
+mock showed, build by build, as theirs to overrule, the afternoon's hop,
+and two things noticed and left alone, each asked with a pick: initials in
+the empty circles of "Liked by", and whether a tablet's card should ride
+its keyboard. Neither is built; each waits for a yes.
