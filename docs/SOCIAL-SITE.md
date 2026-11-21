@@ -3404,3 +3404,34 @@ Blooby, "That page isn’t here", one line, **Back to Blooby**, and the bar.
 
 `verify_socialposts` 21 holds the page (two rows: gone to, signed out and
 signed in, a phone and a desk; and what a script reads).
+
+## 31. Built: the person's tap stops at their name (Nov 21)
+
+The owner: "on posts the name or icon should take you to profile but
+anything on top right should open post. Right now profile tap extends past
+name. It should stop at name so tap up there to right of name opens post."
+
+Since "Easy to open" (Nov 12) the name's link on a card was a block as wide
+as the card's whole top, 44px tall: 280px on a phone and 886 on a desk for
+a name 73px wide. Everything to the right of a name went to the person.
+
+- **The name's link is as wide as the name** (`.post-card .post-name`:
+  `align-self: flex-start`), 44px at the least for a name of two letters,
+  and still 44px tall, reaching down under the second line.
+- **The @handle is a link of its own** to the person's page (`.post-at`),
+  as wide as the @handle, its tap reaching down as the time's does. It was
+  plain text that let a tap through to the name's link under it, which
+  only worked while that link was as wide as the top. A second way to the
+  same page, so it is out of the tab order and not read out, as the face's
+  link is.
+- **What is left of the top is the card's own ground**, which opens the
+  post (`posts.js`): right of the name, the far end of the top, and right
+  of the time on the second line.
+- Nothing moves: the top, its second line and the time are where they were.
+
+A post's card and a comment's card both (`_post.html`). A post's own page
+and a comment's own page are not cards, and are as they were.
+
+`verify_socialposts` 10 and 11 hold a post's card (the taps, pressed for
+real, a phone and a desk; a name of two letters over a long @handle);
+`verify_socialreposts` 16 a comment's card.

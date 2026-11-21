@@ -50671,8 +50671,11 @@ comment's own page, and its card where it was reposted. NOT YET: the draft
 in the composer and How it works' pictures, whose ground the page does not
 know; said to the owner, and looked at after their answer.
 
-A IS ON THE BRANCH AND NOT PUT UP (kept there so the work survives; no pull
-request): the stylesheet's token, five wrappers in four templates, and
+A IS BUILT AND KEPT, NOT MERGED: it is a commit in the history of the pull
+request that carries this entry, and the commit after these notes takes it
+back out, so that what the owner asked for next could go up alone. On "A"
+it comes back whole (that commit again). It is the stylesheet's token, five
+wrappers in four templates, and
 `verify_socialreposts` 20, three rows READ OFF THE PAINT at three pixels to
 one: just inside a drawing's box, on its left, top and bottom, every pixel
 is the drawing's own ground (Home's card; and the four other places); and a
@@ -50681,7 +50684,7 @@ breaks, each on a copy with its own server: the token (rows 1, 2); Home's
 card (1); the post's page, the bubble, the comment's page, the comment's
 card (2, each naming its own place); B's even band (1, 2); another colour
 where no ground is said (3). Green as built. IF THE ANSWER IS B OR "LEAVE
-IT", that commit is mended or taken out before anything is put up.
+IT", it is mended first, or left where it is.
 
 ### 2. Bluesky's reply screen beside Blooby's comments: "Is that what we're going for? Should it go to reply page?"
 
@@ -50722,3 +50725,73 @@ kind, the sheet keeps what was typed; playful, Draw and Flip are in it;
 powerful, one tap from a drawing to answering it.
 
 NOT BUILT. FLIP AND THE PAD: neither is theirs.
+
+## After v330 -- The person's tap stops at their name: the top right of a card opens the post
+
+Nov 21, morning. The owner, with the cloud's question still open:
+
+> Also on posts the the name or icon should take you to profile but
+> anything on top right should open post. Right now profile tap extends
+> past name. It should stop at name so tap up there to right of name opens
+> post
+
+AN INSTRUCTION, not a question, so it is built. THE TARGET, said first: at
+the top of a post's card, the face and the name go to the person; the empty
+space to the right of the name opens the post.
+
+WHAT IT WAS. "Easy to open" (Nov 12) made the name's link a block as wide
+as the card's whole top so that the person's link was "the 44px the whole
+line's link was": MEASURED, 280px wide on a phone and 886 on a desk, for a
+name 73px wide. A tap anywhere to the right of a name, on either line, went
+to the person. Only the time's own link lay over it.
+
+AS BUILT (`docs/SOCIAL-SITE.md` section 31). The name's link is as wide as
+the name, 44px at the least, and still 44px tall. The @handle is a link of
+its own to the same page, as wide as the @handle. What is left of the top
+is the card's own ground, which opens the post. NOTHING MOVES: the top, its
+second line and the time are where they were, to the hundredth of a pixel,
+phone and desk.
+
+THE @HANDLE HAD TO BECOME A LINK, and that is the part the instruction did
+not say. It was plain text that let a tap fall through to the name's link
+under it, which worked only while that link was as wide as the top. With
+the link stopped at the name, an @handle longer than the name (the owner's
+own is) would have opened the POST from its last letters.
+The Nov 12 rule stands: "the face, the name and the @handle are still the
+person's".
+
+THE CHECKS, in the suites that pressed these already:
+
+- `verify_socialposts` 11, pressed for real (a touch on a phone, a mouse on
+  a desk): a tap 10px past the name's last letter, and one at the far end
+  of the top, lands on the card's ground and opens the post; the @handle's
+  last letter opens the person's page. A NEW PERSON FOR IT, "Al", a name of
+  two letters over a twenty-letter @handle: the link 44px wide over a name
+  of 17, a tap 12px past it opening the post, the @handle to its last
+  letter opening the person's page. Juno's @handle ends under her name, so
+  on her card a missing @handle link could not be seen.
+- `verify_socialposts` 10: the row that asked that the name's link be its
+  own at all five of its corners and middle asks it along the name's line
+  (middle and both top corners), and at its foot its own or what is
+  painted there: the @handle's link, and where the second line runs under
+  the name's end, the time's.
+- `verify_socialreposts` 16: a comment's card, the same rule read off it
+  (its link against the name's own letters, its @handle's link, a tap 12px
+  past the name).
+
+SHOWN RED, each on a copy with a server of its own: the link as wide as the
+top again (11's two rows; 16's); no least width (Al's row: 17px); no
+@handle link on a post's card (Al's row: its last letter opens the post);
+none on a comment's card (16's); the @handle's link deaf to a tap (Al's
+row). Green as built.
+
+AGAINST THE FOUR. Simple: a name is a person, a card is a post, and each
+tap goes where the thing under the finger says. Kind: a finger that misses
+the name by a little gets the post, the thing it was most likely after.
+Powerful and playful are not in it.
+
+FLIP AND THE PAD: not theirs.
+
+NOT TESTED HERE: Safari on an iPhone, where a finger is not a point. THE
+TELL: on Home, tap the empty space to the right of somebody's name: the
+post opens, where their profile did.

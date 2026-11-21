@@ -413,8 +413,10 @@ in the mock page.
 - **TWO QUESTIONS OFF THE OWNER'S PHONE (Nov 21) WAIT FOR THEIR ANSWER**
   (`DECISIONS.md`, "Two questions off the owner's phone"). The drawing's
   edge: the artifact "The Drawing's Edge", A (the pick), B, or leave it; A
-  and its check are a commit on the branch with no pull request, to be put
-  up on "A" and mended or taken out otherwise. The talk cloud: the artifact
+  and its check are BUILT AND NOT MERGED: a commit in the history of the
+  pull request that carried these notes, taken back out by the commit after
+  it. On "A", bring that commit back (`git log --all --grep "its own paper
+  to its edge"` finds it, or the pull request's own list of commits). The talk cloud: the artifact
   "The Talk Cloud", A, B (the pick: the cloud answers) or C; nothing built.
   And the nine calls of "Last Soft Shadows". Read what they said first.
 - **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No

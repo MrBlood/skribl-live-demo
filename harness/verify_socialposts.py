@@ -1638,9 +1638,16 @@ with sync_playwright() as p:
             if key == bare and w["words"] is not None:
                 bad_open.append(f"{tag}: words where there are none {w['words']}")
             person = f"/social/@{'juno'}"
-            for name in ("name", "face"):
-                if not (big(w[name]) and w[name]["href"] == person):
-                    bad_person.append(f"{tag} {name}: {w[name]}")
+            if not (big(w["face"]) and w["face"]["href"] == person):
+                bad_person.append(f"{tag} face: {w['face']}")
+            # THE NAME'S LINK IS AS WIDE AS THE NAME (the owner, Nov 21; it was the whole top's width): 44px each
+            # way still, its own on the name's line (its middle and both top corners), and at its foot either its
+            # own or what is painted there: the @handle's link, to the same person, and where the second line runs
+            # under the name's end, the time's, to the post.
+            x = w["name"]
+            if not (x and x["w"] >= 44 and x["h"] >= 44 and x["href"] == person and x["at"][:3] == ["self"] * 3
+                    and x["at"][3] in ("self", person) and x["at"][4] in ("self", person, want_page[key])):
+                bad_person.append(f"{tag} name: {x}")
             if w["handle"] != person:
                 bad_person.append(f"{tag} @handle lands on {w['handle']}")
             n = w["count"]
@@ -1660,8 +1667,8 @@ with sync_playwright() as p:
               " there (Home shows posts only)",
               made and len(seen) == 12 and not bad_open and not drawn_cards,
               f"made {made}; {len(seen)} read; {bad_open[:4]}; the drawing's card on Home {drawn_cards}")
-        check("the face, the name and the @handle still open the person's page: the name's link 44px, painted under the"
-              " @handle too, so a tap on the @handle lands on it",
+        check("the face, the name and the @handle still open the person's page: the name's link 44px each way and its"
+              " own along the name's line, the @handle a link to the same person (its middle lands on one)",
               made and not bad_person, f"{bad_person[:4]}")
         check("the 💬 shows even at none: its icon alone, named \"Comment\", a way to the comments (#comments) a tap lands"
               " on, 44px; with one, its number, \"1 comment\"",
@@ -1685,6 +1692,11 @@ with sync_playwright() as p:
         st, j = make_post(juno, "", seed=402)
         bare = j.get("post") if isinstance(j, dict) else None
         bare_sid = (post_row(bare) or (None, None))[1] if bare else None
+        # A NAME OF TWO LETTERS OVER A LONG @HANDLE: where a link as wide as the name would be too small for a
+        # finger, and where the @handle runs on far past the name's end (Juno's ends under her name).
+        al = someone(b, "al_has_a_long_handle", "Al")
+        st, j = make_post(al, "Section 11, a name of two letters", seed=403)
+        short = j.get("post") if isinstance(j, dict) else None
         SPOT = """([key, what]) => {
           const c = document.querySelector('.post-card[data-post="' + key + '"]'); if (!c) return null;
           c.scrollIntoView({ block: 'center' });
@@ -1702,6 +1714,16 @@ with sync_playwright() as p:
             xy = [t.left + t.width / 2, a.top + 4]; }
           else if (what === 'name') xy = mid(text(c.querySelector('.post-head'), c.querySelector('.post-name').textContent));
           else if (what === 'handle') xy = mid(text(c.querySelector('.post-head'), '@' + c.dataset.handle));
+          // WHERE THE PERSON'S TAP STOPS (the owner, Nov 21): 10px past the name's last letter, on its line; the
+          // top's far end, 12px in from its right edge, on the name's line; and the @handle's own last letter.
+          else if (what === 'right of the name') { const n = text(c.querySelector('.post-head'), c.querySelector('.post-name').textContent);
+            xy = [n.right + 10, n.top + n.height / 2]; }
+          else if (what === 'top right') { const n = text(c.querySelector('.post-head'), c.querySelector('.post-name').textContent);
+            xy = [R('.post-head').right - 12, n.top + n.height / 2]; }
+          else if (what === 'end of the handle') { const h = text(c.querySelector('.post-head'), '@' + c.dataset.handle);
+            xy = [h.right - 3, h.top + h.height / 2]; }
+          else if (what === 'past the name') { const n = text(c.querySelector('.post-head'), c.querySelector('.post-name').textContent);
+            xy = [R('.post-name').right + 12, n.top + n.height / 2]; }
           else xy = mid(R({ face: '.post-face', more: '.post-more', repost: '.post-row .rp-btn', count: '.post-count' }[what]));
           const e = document.elementFromPoint(xy[0], xy[1]);
           return { xy, on: e ? (e.closest('.post-art') ? 'drawing' : e.closest('a, button') ? e.closest('a, button').className : 'card') : null }; }"""
@@ -1754,10 +1776,20 @@ with sync_playwright() as p:
                 cpg.wait_for_timeout(900)
                 second = (on2, cpg.evaluate(PLAYER, bare_sid), cpg.evaluate("() => location.pathname"))
                 r["drawing"] = (first, second)
-                for what in ("face", "name", "handle"):
+                for what in ("face", "name", "handle", "end of the handle", "right of the name", "top right"):
                     home()
                     on = press(card, what)
                     r[what] = (on, landed())
+                home()
+                r["Al's name"] = cpg.evaluate("""(key) => { const c = document.querySelector('.post-card[data-post="' + key + '"]');
+                  if (!c) return null; const a = c.querySelector('.post-name'), r = a.getBoundingClientRect(), g = document.createRange();
+                  g.selectNodeContents(a); const t = g.getBoundingClientRect(), h = c.querySelector('.post-at');
+                  return { link: Math.round(r.width * 100) / 100, name: Math.round(t.width * 100) / 100,
+                           handle: h ? Math.round(h.getBoundingClientRect().width * 100) / 100 : null }; }""", short or "")
+                for what in ("end of the handle", "past the name"):
+                    home()
+                    on = press(short, what)
+                    r["Al, " + what] = (on, landed())
                 home()
                 press(card, "more")
                 try:
@@ -1808,9 +1840,27 @@ with sync_playwright() as p:
               " time on a card with no words: the drawing never opens the post; phone and desk",
               bool(bare_sid) and all(r.get("drawing") == want_drawing for r in res.values()),
               f"{ {s: r.get('drawing') for s, r in res.items()} }")
-        check("a tap on the face, the name or the @handle opens the person's page, never the post: phone and desk",
-              all(r.get(k, (None, None))[1] == people for r in res.values() for k in ("face", "name", "handle")),
-              f"{ {s: {k: r.get(k) for k in ('face', 'name', 'handle')} for s, r in res.items()} }")
+        check("a tap on the face, the name or the @handle (its last letter too) opens the person's page, never the post:"
+              " phone and desk",
+              all(r.get(k, (None, None))[1] == people for r in res.values() for k in ("face", "name", "handle", "end of the handle")),
+              f"{ {s: {k: r.get(k) for k in ('face', 'name', 'handle', 'end of the handle')} for s, r in res.items()} }")
+        # THE PERSON'S TAP STOPS AT THEIR NAME (the owner, Nov 21: "on posts the name or icon should take you to
+        # profile but anything on top right should open post. Right now profile tap extends past name. It should
+        # stop at name so tap up there to right of name opens post"). The name's link was as wide as the whole top,
+        # to the ⋯ (280px on a phone, 886 on a desk, for a name 73px wide).
+        check("...and the person's tap stops at their name: a tap 10px past the name's last letter, and one at the far"
+              " end of the card's top, lands on the card's own ground and opens the post: phone and desk",
+              all(r.get(k) == ("card", page) for r in res.values() for k in ("right of the name", "top right")),
+              f"{ {s: {k: r.get(k) for k in ('right of the name', 'top right')} for s, r in res.items()} }")
+        als = {s_: {k: r.get(k) for k in ("Al's name", "Al, end of the handle", "Al, past the name")} for s_, r in res.items()}
+        check("...and a name of two letters keeps a finger's width and no more (its link 44px wide over a name half"
+              " that), a tap 12px past the link opens the post, and its @handle, which runs on far past the name, opens"
+              " the person's page to its last letter: phone and desk",
+              bool(short) and all((v["Al's name"] or {}).get("link") == 44 and 0 < v["Al's name"]["name"] < 30
+                                  and (v["Al's name"]["handle"] or 0) > 100
+                                  and v["Al, past the name"] == ("card", f"/social/p/{short}")
+                                  and (v["Al, end of the handle"] or (None, None))[1] == "/social/@" + al.handle
+                                  for v in als.values()), f"{als}")
         check("⋯ and the repost do their own job and the page stays: ⋯ opens its sheet, the repost its own (Share is in"
               " the ⋯ since the reposts mock): phone and desk",
               all(r.get("more") == (True, "/social/") and r.get("repost") == (True, "/social/") for r in res.values()),

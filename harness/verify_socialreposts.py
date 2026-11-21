@@ -983,6 +983,17 @@ CCARD = r"""(cid) => { const c = document.querySelector('.post-card[data-kind="c
                      : e.matches('.post-words') ? 'words' : e.matches('.post-art') ? 'art' : e.matches('.post-row') ? 'row' : e.tagName.toLowerCase()),
            by: by ? by.textContent.replace(/\s+/g, ' ').trim() : null, way: items.map(i => i.querySelector('.cm-way-link').getAttribute('href')),
            name: (c.querySelector('.post-name') || {}).textContent || null, words: words ? words.textContent : null,
+           // WHERE THE PERSON'S TAP STOPS on a comment's card too (the owner, Nov 21; verify_socialposts 11 taps a
+           // post's): its name's link against the name's own letters, its @handle's link, and what a tap 12px past
+           // the name and one on the @handle's last letter land on. Read last: it brings the card to the middle.
+           who: (() => { const a = c.querySelector('.post-name'), h = c.querySelector('.post-head .post-at'); if (!a) return null;
+             c.scrollIntoView({ block: 'center' });
+             const g = document.createRange(); g.selectNodeContents(a); const t = g.getBoundingClientRect(), r = a.getBoundingClientRect();
+             const hr = h ? h.getBoundingClientRect() : null, e = hr ? document.elementFromPoint(hr.right - 3, hr.top + hr.height / 2) : null;
+             const pe = document.elementFromPoint(r.right + 12, t.top + t.height / 2), pa = pe ? pe.closest('a, button') : null;
+             return { link: Math.round(r.width * 100) / 100, text: Math.round(t.width * 100) / 100, profile: a.getAttribute('href'),
+                      at: h ? h.getAttribute('href') : null, end: e && e.closest('a') ? e.closest('a').getAttribute('href') : null,
+                      past: pa ? (pa.getAttribute('href') || pa.className) : (pe && pe.closest('.post-card') ? 'card' : null) }; })(),
            open: open ? open.getAttribute('href') : null, url: c.getAttribute('data-url'), line,
            when: (c.querySelector('.post-head .post-when') || { getAttribute: () => null }).getAttribute('href'),
            row: [...c.querySelector('.post-row').children].map(e => e.classList.contains('rp-btn') ? 'repost' : e.classList.contains('lk-heart') ? 'heart'
@@ -2579,6 +2590,13 @@ with sync_playwright() as p:
                   and cc["way"] == [f"/social/p/{p16}"] and cc["name"] == "Lena Park" and cc["words"] == "Section 16, Lena's comment"
                   and cc["row"] == ["replies", "repost", "heart", "more"] and cc["replies"] == "1"
                   and cc["open"] is None and cc["when"] == f"/social/c/{c16}" and cc["url"] == f"/social/c/{c16}", json.dumps(cc))
+            whos = {k_: (v[0] or {}).get("who") for k_, v in seen.items()}
+            check("a comment's card stops the person's tap at their name too (the owner, Nov 21): its name's link no wider"
+                  " than the name (44px at the least), its @handle a link of its own to the person, to its last letter,"
+                  " and a tap 12px past the name on the card's own ground: phone and desk, light and dark",
+                  len(whos) == 4 and all(w and w["profile"] == "/social/@lena" and w["at"] == w["profile"] and w["end"] == w["profile"]
+                                         and w["past"] == "card" and abs(w["link"] - max(44, w["text"])) <= 1 for w in whos.values()),
+                  json.dumps(whos)[:700])
             check("a drawn reply's card: the way two steps (Kip's post, then Lena's comment), then Milo, his words and his"
                   " drawing as a post's card has one, its line waiting for the first play",
                   rc and rc["order"] == ["by", "way", "head", "words", "art", "row"] and rc["by"] == "Pax Reed reposted"
