@@ -2462,8 +2462,6 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   --press-fill: rgba(124, 92, 255, 0.22);
   --press-ring: #7c5cff;
   --chip-lift: 0 1px 0 rgba(60, 40, 140, 0.14), 0 12px 22px -12px rgba(30, 20, 80, 0.45);
-  /* The float's line of shade, along the two lower sides of a pop's pointer (drawn 1/--hair as large). */
-  --pop-point-shade: calc(1px / var(--hair, 1)) calc(1px / var(--hair, 1)) 0 rgba(60, 40, 140, 0.14);
   --off-ink: #a59dcc;
   --tip-well: #f0ecff;
   --count-fill: #ece6ff;

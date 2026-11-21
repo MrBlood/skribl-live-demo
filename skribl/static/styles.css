@@ -9589,8 +9589,6 @@ body.replaying .media-card { pointer-events: none; }
   --press-fill: rgba(124, 92, 255, 0.22);
   --press-ring: #7c5cff;
   --chip-lift: 0 1px 0 rgba(60, 40, 140, 0.14), 0 12px 22px -12px rgba(30, 20, 80, 0.45);
-  /* The float's line of shade, along the two lower sides of a pop's pointer (drawn 1/--hair as large). */
-  --pop-point-shade: calc(1px / var(--hair, 1)) calc(1px / var(--hair, 1)) 0 rgba(60, 40, 140, 0.14);
   --off-ink: #a59dcc;
   --tip-well: #f0ecff;
   --count-fill: #ece6ff;
@@ -10068,7 +10066,12 @@ body.drawback :is(#eraserToolBtn, #recolorBtn, #mediaOpenBtn, #customBgBtn, .bg-
    its own middle or 64px on a phone, the shelf's is flip.css's): as the link
    page's menu and a button's card draw theirs, 1/--hair as large and scaled
    back, so its line is the screen's own pixel. In light the float's line of
-   shade runs on under it (--pop-point-shade). */
+   shade runs on under it (--pop-point-shade: said on the three pops, not
+   among the theme's tokens, which the link player carries whole and has no
+   pop to spend it on; verify_player_isolation's budget caught it there). */
+:root[data-theme="light"] :is(.tool-tray, .shape-pop, .stamp-pop) {
+  --pop-point-shade: calc(1px / var(--hair, 1)) calc(1px / var(--hair, 1)) 0 rgba(60, 40, 140, 0.14);
+}
 :is(.tool-tray, .shape-pop, .stamp-pop)::after {
   content: ''; position: absolute; top: calc(100% + 1px - 5px / var(--hair, 1)); left: calc(var(--pop-point, 50%) - 5px / var(--hair, 1));
   width: calc(10px / var(--hair, 1)); height: calc(10px / var(--hair, 1));

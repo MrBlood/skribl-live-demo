@@ -925,6 +925,7 @@ with sync_playwright() as p:
     # at 0.26 where it was 0.12).
     print("\nTRAY — its pointer is part of its outline, and the tray floats (the owner's \"little V\")")
     import io as _io
+    import re as _re
     from PIL import Image as _Image
     POINT = r"""() => { const t = document.getElementById('toolTray'), chev = document.getElementById('toolMoreBtn');
       const r = t.getBoundingClientRect(), a = getComputedStyle(t, '::after'), cs = getComputedStyle(t), c = chev.getBoundingClientRect();
@@ -940,7 +941,7 @@ with sync_playwright() as p:
                fill: a.backgroundColor, paper: cs.backgroundColor,
                edge: [a.borderBottomColor, a.borderRightColor],
                edgePx: [parseFloat(a.borderBottomWidth) * k * devicePixelRatio, parseFloat(a.borderRightWidth) * k * devicePixelRatio],
-               bare: [parseFloat(a.borderTopWidth), parseFloat(a.borderLeftWidth)], shadow: cs.boxShadow, want }; }"""
+               bare: [parseFloat(a.borderTopWidth), parseFloat(a.borderLeftWidth)], shadow: cs.boxShadow, shade: a.boxShadow, want }; }"""
 
     def _lum(c):
         v = [x / 255 for x in c[:3]]
@@ -985,10 +986,20 @@ with sync_playwright() as p:
               bool(g) and g["fill"] == g["paper"] == g["want"]["paper"] and abs(g["size"] - 10) <= 0.5 and g["turned"] == 45
               and abs(g["x"] - g["chev"]) <= 1.5 and abs(g["y"] - g["foot"]) <= 1,
               f"{ {k: g.get(k) for k in ('fill', 'paper', 'size', 'turned', 'x', 'chev', 'y', 'foot')} }; {seen.get('stopped', '')}")
+        # IN LIGHT THE FLOAT'S LINE OF SHADE RUNS ON UNDER THE POINTER: the tray's foot has it (--chip-lift's first
+        # layer), so the pointer has it too, the same colour, no blur; in dark the float has no such line, and the
+        # pointer none. It is said on the three pops, not among the theme's tokens (the link player carries those).
+        shade = (g or {}).get("shade") or "none"
+        ink = _re.match(r"rgba?\([^)]*\)", shade)
         check(f"Flip, {scheme}: ...and it wears the paper's own edge along its two lower sides, one screen pixel, none along"
-              " the two that lie inside the tray",
-              bool(g) and g["edge"] == [g["want"]["edge"]] * 2 and all(0.9 <= w <= 1.1 for w in g["edgePx"]) and g["bare"] == [0, 0],
-              f"edge {g.get('edge')} for {(g.get('want') or {}).get('edge')}; screen pixels {g.get('edgePx')}; inside {g.get('bare')}")
+              " the two that lie inside the tray; "
+              + ("the float's own line of shade runs on under it, in the float's colour and with no blur"
+                 if scheme == "light" else "and no line of shade under it, as dark's float has none"),
+              bool(g) and g["edge"] == [g["want"]["edge"]] * 2 and all(0.9 <= w <= 1.1 for w in g["edgePx"]) and g["bare"] == [0, 0]
+              and ((ink is not None and ink.group(0) in g["want"]["shadow"] and shade.endswith(" 0px 0px")) if scheme == "light"
+                   else shade == "none"),
+              f"edge {g.get('edge')} for {(g.get('want') or {}).get('edge')}; screen pixels {g.get('edgePx')}; inside {g.get('bare')};"
+              f" shade {shade}")
         check(f"Flip, {scheme}: ...and the tray, which rises over the drawing, wears the paper's ring and the float's shadow"
               " (--chip-lift), not a card's one line",
               bool(g) and g["shadow"] == g["want"]["shadow"] and g["shadow"] != "none",
