@@ -102,6 +102,19 @@
     as you went there to watch. Its line ends in the full-screen button
     (`full`, the owner's "yes to A", Nov 16), and its full screen's corner says
     the post's words over its maker's name and @handle (`full_meta`). #}
+{#  A DRAWING'S BOX IS ITS OWN PAPER TO ITS EDGE (the owner, Nov 21, of a
+    lilac band round a post's drawing: "Look at the canvas border. Is that
+    we are doing?"). The player draws a drawing a pixel or two inside its box,
+    and what showed there was the box's waiting colour: a band of lilac
+    between the picture and its one line, bright round a drawing on dark
+    paper. The box takes the drawing's own ground instead (Skribl says it:
+    sk.ground), as a Gallery tile's does (_gallery.html plate_ground), so the
+    picture runs to its line. Not known (a drawing withheld, or not
+    described yet): the waiting colour, as before. #}
+{% macro own_ground(sk) -%}
+{%- if sk and sk.ground %} style="--plate-ground: {{ sk.ground }}"{% endif -%}
+{%- endmacro %}
+
 {% macro player(c, waits=true) -%}
 {%- set p = c.post %}{% set sk = c.sk -%}
 {%- set marks = c.likes.marks if not c.down else none -%}
@@ -210,7 +223,7 @@
   </header>
   {% if c.down and c.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
   {% if cm.words %}<p class="post-words">{{ said(cm.words, it.mentions) }}</p>{% endif %}
-  {% if cm.skribl_id %}<div class="post-art">{{ comment_art(it, waits=true) }}</div>{% endif %}
+  {% if cm.skribl_id %}<div class="post-art"{{ own_ground(it.sk) }}>{{ comment_art(it, waits=true) }}</div>{% endif %}
   <footer class="post-row">
     <a class="post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d repl%s' % (c.replies, 'y' if c.replies == 1 else 'ies')) if c.replies else 'Replies' }}">{{ ic.comment() }}{% if c.replies %}<span>{{ c.replies }}</span>{% endif %}</a>
     {% if c.markable %}{{ repost(c) }}{% endif %}{% if not c.down %}{{ comment_heart(it) }}{% endif %}
@@ -260,7 +273,7 @@
       somebody opens that person's page, and pressed and pulled they select (posts.js opens nothing then). #}
   {% if p.words %}<p class="post-words">{{ said(p.words, c.mentions) }}</p>{% endif %}
   {#- A quote of words alone has no drawing of its own. #}
-  {% if p.skribl_id %}<div class="post-art">{{ player(c) }}</div>{% endif %}
+  {% if p.skribl_id %}<div class="post-art"{{ own_ground(c.sk) }}>{{ player(c) }}</div>{% endif %}
   {% if c.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(c.quote) }}{% endif %}
   {{ post_row(c) }}
 </article>

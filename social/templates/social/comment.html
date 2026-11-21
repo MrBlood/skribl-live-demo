@@ -36,7 +36,7 @@
     else, to what it is on. Comments are the site's: the Pad and Flip don't
     change. #}
 {% extends 'social/base.html' %}
-{% from 'social/_post.html' import face, post_words, post_sheets, repost with context %}
+{% from 'social/_post.html' import face, post_words, post_sheets, repost, own_ground with context %}
 {% from 'social/_comments.html' import answer_bar, comments_section, comment_sheets, comment_art, comment_heart, the_way, share_data with context %}
 {% from 'social/_likes.html' import like_sheets with context %}
 {% import 'social/_icons.html' as ic %}
@@ -72,7 +72,7 @@
   </header>
   {% if c.taken_down_at and me and me.id == c.person_id %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
   {% if c.words %}<p class="post-words is-big">{{ said(c.words, it.mentions) }}</p>{% endif %}
-  {% if c.skribl_id %}<div class="post-art">{{ comment_art(it) }}</div>{% endif %}
+  {% if c.skribl_id %}<div class="post-art"{{ own_ground(it.sk) }}>{{ comment_art(it) }}</div>{% endif %}
   <footer class="post-row cm-row">
     {%- if cm.can or not me %}
     <button class="post-count" type="button" data-cm-new aria-label="{{ 'Reply' if not cm.count else ('%d repl%s · Reply' % (cm.count, 'y' if cm.count == 1 else 'ies')) }}">{{ ic.comment() }}{% if cm.count %}<span>{{ cm.count }}</span>{% endif %}</button>
