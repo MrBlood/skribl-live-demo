@@ -480,7 +480,7 @@ READ = """() => {
   // Skribl's own parts keep their own (its player's box and its line under it: verify_inline's),
   // as verify_socialposts reads them; Home holds drawings since the site's people's show there.
   const SKRIBLS = '.skribl-inline, .skribl-inline-line, #skriblGallery';
-  const out = { read: 0, low: [], small: [], fields: [], lowest: 99 };
+  const out = { read: 0, low: [], small: [], fields: [], lowest: 99, where: location.pathname };
   const roots = [...document.querySelectorAll('main, header.top, nav.nav')];
   roots.forEach(root => root.querySelectorAll('*').forEach(e => {
     if (!e.getClientRects().length || e.closest('[hidden], .words, .sr, ' + SKRIBLS)) return;
@@ -1942,9 +1942,13 @@ with sync_playwright() as p_:
                 v.pg.wait_for_timeout(400)
                 looks[(screen, scheme, "home, signed out")] = v.pg.evaluate(READ)
                 # A form sent without its token: the kind page that says so.
-                v.pg.evaluate("() => { const f = document.createElement('form'); f.method = 'post';"
-                              " f.action = '/social/signout/everywhere'; document.body.appendChild(f); f.submit(); }")
-                v.pg.wait_for_load_state()
+                # Sent by script, so nothing waits for where it lands unless
+                # asked: the read waits for that page (main red after #1060,
+                # PostgreSQL's lane: the kind page came after the read had
+                # begun, and "Execution context was destroyed").
+                with v.pg.expect_navigation(wait_until="load", timeout=30000):
+                    v.pg.evaluate("() => { const f = document.createElement('form'); f.method = 'post';"
+                                  " f.action = '/social/signout/everywhere'; document.body.appendChild(f); f.submit(); }")
                 v.pg.wait_for_timeout(200)
                 looks[(screen, scheme, "stale")] = v.pg.evaluate(READ)
                 v.close()
@@ -1984,6 +1988,10 @@ with sync_playwright() as p_:
         counted = sum(1 for k in looks if k[2] in ("join", "invites", "delete", "you"))
         check("every text field is 16px or more, so a phone never magnifies the page on a tap",
               not fields and counted >= 12, "; ".join(fields[:6]))
+        staled = {f"{k[0]} {k[1]}": v.get("where") for k, v in looks.items() if k[2] == "stale"}
+        check("...and the form sent without its token is read where it lands, on the kind page at its own address,"
+              " never the page it was sent from (phone and desk, light and dark)",
+              len(staled) == 4 and all(w == "/social/signout/everywhere" for w in staled.values()), json.dumps(staled))
 
     # ------------------------------------------------------------------ 16
     # ------------------------------------------------------------------ 17
