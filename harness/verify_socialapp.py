@@ -95,6 +95,14 @@ Chromium's virtual authenticator for the site's people.
      the app changes page: as Post is pressed, as a form really goes, as the
      page goes; a search that stays on its page keeps its keyboard. Whether
      an iPhone then measures again is the owner's phone's to say.
+  13. A HELD FINGER SELECTS NO CONTROL (the owner's iPhone, Nov 22: a finger
+     held by Make brought up the text-selection handles; a phone's bar keeps
+     its names in a pixel). Home on a phone and a desk with a post of words,
+     and Make's composer open: the top bar, the bar, a post's row of actions,
+     every button, switch and tab, and every word in one, take no selection
+     (as a phone applies it: a word's own, or its nearest ancestor's that is
+     not auto); a post's words and every field still select; and the rule
+     takes the press-and-hold callout too, read from the stylesheet.
   10. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALAPP_PART=<n>[,<m>] runs those sections only (calibration); a section
@@ -1880,6 +1888,78 @@ with sync_playwright() as pw:
             close_ctx(ctx, pg)
         except Exception as exc:  # noqa: BLE001
             stopped(12, exc)
+
+    # ------------------------------------------------------------------ 13
+    if part(13, "a held finger selects no control: the bars, a post's actions, every button; words and fields still select"):
+        try:
+            # THE OWNER'S IPHONE, NOV 22: a finger held by Make brought up the
+            # text-selection handles (a phone's bar keeps its names in a
+            # pixel, and the held finger found one). THE MECHANISM, NOT THE
+            # WORD: the selection a word ends up with, its own user-select or,
+            # where that is auto, the nearest ancestor's that is not (as a
+            # phone applies it). Home on a phone and a desk, with a post of
+            # words on it, then Make's composer open: the top bar, the bar, a
+            # post's row of actions and every button, switch and tab, and
+            # every word in one, none; a post's words still select, and every
+            # field. Chromium does not compute -webkit-touch-callout, so the
+            # rule is read from the stylesheet for it (verify_a11y 11f holds
+            # the editors, the player and Skribl's own pages).
+            HELD = """() => {
+              const CONTROLS = '.top, .nav, .post-row, button, [role="button"], [role="switch"], [role="tab"]';
+              const own = (e) => { const s = getComputedStyle(e); return s.userSelect || s.webkitUserSelect || 'auto'; };
+              const eff = (e) => { for (let a = e; a && a.nodeType === 1; a = a.parentElement) { const v = own(a); if (v !== 'auto') return v; } return 'text'; };
+              const name = (e) => e.id ? '#' + e.id : e.tagName.toLowerCase() + (e.classList.length ? '.' + [...e.classList].slice(0, 2).join('.') : '');
+              const shown = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+              const out = { controls: 0, words: 0, names: 0, read: 0, fields: 0, odd: [] };
+              for (const e of document.querySelectorAll(CONTROLS)) { if (!shown(e)) continue; out.controls++;
+                if (eff(e) !== 'none') out.odd.push('control ' + name(e)); }
+              const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+              for (let n = tw.nextNode(); n; n = tw.nextNode()) { const p = n.parentElement;
+                if (!n.textContent.trim() || !p || !p.closest(CONTROLS) || p.closest('input, textarea, [contenteditable="true"]') || !shown(p)) continue;
+                out.words++; if (p.closest('.nav .tab-name')) out.names++;
+                if (eff(p) !== 'none') out.odd.push('word ' + name(p) + ' "' + n.textContent.trim().slice(0, 16) + '"'); }
+              for (const e of document.querySelectorAll('.post-words')) { if (!shown(e)) continue; out.read++;
+                if (eff(e) === 'none') out.odd.push('a post\\'s words ' + name(e)); }
+              for (const e of document.querySelectorAll('input[type="text"], input[type="search"], input:not([type]), textarea')) { if (!shown(e)) continue;
+                out.fields++; if (eff(e) === 'none') out.odd.push('field ' + name(e)); }
+              return out; }"""
+            mira = member(b, "mira", "Mira Lopez")
+            ctx, pg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE, SPLASHED))
+            go(pg, "/social/")
+            said = pg.evaluate("""async () => { const t = document.querySelector('meta[name="social-csrf"]').content;
+              const r = await fetch('/social/posts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Social-CSRF': t },
+                body: JSON.stringify({ words: 'Words to hold and copy' }) }); return r.status; }""")
+            go(pg, "/social/", wait=900)
+            home = pg.evaluate(HELD)
+            pg.click("nav.nav .tab-make")
+            pg.wait_for_timeout(900)
+            making = pg.evaluate(HELD)
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, mira, screen="desk")
+            go(pg, "/social/", wait=900)
+            desk = pg.evaluate(HELD)
+            close_ctx(ctx, pg)
+            got = {"phone": home, "phone, Make open": making, "desk": desk}
+            check("a held finger selects no control: on Home on a phone and a desk, and with Make's composer open, the top bar,"
+                  " the bar (its names a phone keeps in a pixel among them), a post's row of actions and every button, switch"
+                  " and tab, and every word in one, take no selection (the owner's iPhone: held by Make, the handles came up)",
+                  said in (200, 201) and all(g["controls"] >= 6 and g["words"] >= 3 for g in got.values()) and home["names"] >= 3
+                  and not any(o for g in got.values() for o in g["odd"] if not o.startswith(("a post", "field"))),
+                  json.dumps({k: {kk: v for kk, v in g.items()} for k, g in got.items()})[:1500] + f"; posted {said}")
+            check("...and a post's words still select, and every field does (Make's words among them)",
+                  home["read"] >= 1 and desk["read"] >= 1 and making["fields"] >= 1
+                  and not any(o for g in got.values() for o in g["odd"] if o.startswith(("a post", "field"))),
+                  json.dumps({k: {"read": g["read"], "fields": g["fields"], "odd": [o for o in g["odd"] if o.startswith(("a post", "field"))]}
+                              for k, g in got.items()}))
+            # ...and the press-and-hold callout, from the stylesheet.
+            css = re.sub(r"/\*.*?\*/", "", (ROOT / "social" / "static" / "social.css").read_text(encoding="utf-8"), flags=re.S)
+            rules = [m.group(2) for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", css)
+                     if re.search(r"(^|[\s,])\.nav(\s*,|\s*$)", m.group(1).strip()) and re.search(r"(?<!-)user-select:\s*none", m.group(2))]
+            check("...and the rule that takes the bar's selection takes the press-and-hold callout too (read from the stylesheet:"
+                  " Chromium does not compute it)",
+                  bool(rules) and all(re.search(r"-webkit-touch-callout:\s*none", r) for r in rules), json.dumps(rules)[:400])
+        except Exception as exc:  # noqa: BLE001
+            stopped(13, exc)
 
     # ------------------------------------------------------------------ 10
     if part(10, "no page errors, no console errors and no CSP violations"):

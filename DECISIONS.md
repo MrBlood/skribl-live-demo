@@ -52134,3 +52134,84 @@ FOUND ON THE WAY, ITS OWN NEXT: in this box's Inter, Flip's desk page bar
 (a 694px column) holds eight labelled buttons 4px wider than itself since
 the buttons took the page's font, so Delete's own gap is gone
 (`verify_pages` 101 of 103 here, green before #1047, green in CI's face).
+
+## After v330 -- A held finger selects no control
+
+The owner's iPhone, Nov 22, a picture of Home with the text-selection
+handles round Make: "I held the screen down there by draw button and I get
+the select tool. It happened on the text page too, so it probably happens
+everywhere." A phone's bar keeps its names (Home, Gallery, Make, You) in a
+pixel, clipped, for a screen reader; a held finger found one and selected
+it. In the Pad's Text drawer the drawer's own words (Style, Size 35px) were
+words like any other.
+
+THE FIX (a bug fix, merged on green): the app's own controls and bars take
+no selection and no press-and-hold callout. On the site (social.css): the
+top bar, the bar, a post's row of actions, and every button, switch and
+tab. On Skribl's (styles.css, and so the player; the Gallery's and the
+Library's own pages, and the Gallery section a host mounts): the editors'
+header, dock, page bar and drawers, and every button, switch, tab and
+label. The words people read still select (a post's words keep their own
+rule, "THE WORDS SELECT AS WORDS"; a comment; a bio; How it works), and
+every field does: a field inside a drawer or a label says so itself, since
+an iPhone has been known to stop typing in a field under a parent that
+takes the selection. What a learn card names was already held this way
+([data-lc-hold]); this is the rest. The player's sheet grew 197 bytes,
+both its ledgers say so (46,210 measured).
+
+THE CHECKS read the selection a word ends up with, as a phone applies it
+(its own, or where that is auto the nearest ancestor's that is not), and
+read the callout from the stylesheet, since Chromium does not compute it:
+- `verify_socialapp` 13: Home on a phone and a desk with a post of words,
+  and Make's composer open: the top bar, the bar (its pixel-small names
+  among the words), a post's actions, every button, switch and tab, and
+  every word in one, none; a post's words and every field still select;
+  the rule takes the callout too. Four breaks, each on a copy, each red
+  only in its rows: the tree before (the controls and the callout); the
+  bar left out of the rule (the same two: the bar's names selectable, the
+  owner's case); the callout left out (that row alone); the rule laid on
+  the whole page (the fields row: Make's words could not be selected).
+- `verify_a11y` 11f: the five Skribl pages (the Pad and Flip at rest and in
+  each place they open, Text's drawer on both among them; the player; the
+  Library; the Gallery): every button, switch, tab and label, every bar and
+  drawer, and every word in one, none; every text field, not none; and
+  each sheet's rule takes the callout too.
+
+NOT SEEN ON AN IPHONE: Chromium's own long press selects nothing here, so
+the owner's scenario cannot be run; the checks read what WebKit obeys.
+
+PAD AND FLIP: shared, one rule for both.
+
+## After v330 -- Blooby and Search, mocked: Blooby in the middle, a magnifier in the bar, recent searches
+
+The owner, Nov 22 (about 5:30 to 5:50 AM): "Should there be a search 🔍 on
+bottom?", then two Bluesky screenshots (its magnifier tab opens Explore
+with Recent searches; its butterfly sits centred at the top), and "And
+center blooby. At the top like on Bluesky or maybe blooby (the
+character?) at same size? Or bigger? Maybe mock it?"
+
+FROM THE RECORD: Nov 13, the Gallery kept Blooby's Explore picture in the
+bar ("Explore becomes the Gallery of everyone"); Nov 15, the one search is
+the Gallery's own box, finding people and drawings (A, over a page of its
+own behind a magnifier beside the bell); a phone's bar keeps its four
+places. The search was there all along; nothing on a phone said so.
+
+THE MOCK (https://claude.ai/artifact/WU8UqoUZ1ovwnYLHWWxDD1), on the real
+site, light and dark, a touch phone and a desk, measured, nothing built:
+1. THE TOP OF HOME: A the wordmark centred (60.8 x 36.3, as now); B Blooby
+   as his Home Screen icon, centred at the wordmark's height (36px), the
+   way the record says he appears on a page; C the same at 44px. Each sits
+   on the bar's middle (201 of 402 across, 28 of 56 down); ☰ and the bell
+   stay. The icon's lilac edge reads 1.75 to 1 on the light top and 8.65
+   on the dark; on light his own dark violet body is what reads.
+2. THE BAR: a magnifier in the Gallery's place, drawn with the bar's pen
+   (24 units, 2.1; 2.9 lit), 32.4px as Home is, in the bar's own ink (7.36
+   to 1 light, 10.49 dark; lit 17.47 and 19.43). It opens the same
+   Gallery; a desk's rail keeps the word Gallery. Blooby leaves the bar
+   for the top (1).
+3. THE BOX, TAPPED: Recent searches under it, the people opened from a
+   search and the words searched, newest first, an x each and Clear all,
+   kept on the phone only; a letter typed runs the search as today.
+
+Cal's picks: 1 B, 2 the magnifier, 3 recent searches. Waits for the
+owner's answer; "all yes" takes the picks.

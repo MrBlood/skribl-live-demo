@@ -1427,6 +1427,89 @@ with sync_playwright() as p:
               f" page's own face, or a monospace one on purpose", _seen >= _least and not _odd,
               f"{_seen} controls read (at least {_least})" + (": " + "; ".join(sorted(set(_odd))[:6]) if _odd else ""))
 
+    # --------------------------------------------------------- section 11f
+    print("\nA11Y 11f — a held finger selects no control; a field still selects")
+    # THE OWNER'S IPHONE, NOV 22: a finger held in the Pad's Text drawer (and
+    # one held by Make on the site, verify_socialapp 26) brought up the
+    # text-selection handles. A control is not words to copy. THE MECHANISM,
+    # NOT THE WORD: what decides is the selection a word ends up with, its
+    # own user-select or, where that is auto, the nearest ancestor's that is
+    # not (as a phone applies it). Read on the five pages, at rest and in each
+    # place they open, Text's drawer on both editors: every button, switch,
+    # tab and label, every bar and drawer of the editors, and every word
+    # painted inside one, none; every text field, not none. Chromium does not
+    # compute -webkit-touch-callout (the press-and-hold menu an iPhone shows),
+    # so the rule that takes the selection is read from the stylesheet for it.
+    HELD = """() => {
+      const CONTROLS = 'button, [role="button"], [role="switch"], [role="tab"], label, .header, .toolbar, .flip-tools, .pagebar, .tab-panel';
+      const own = (e) => { const s = getComputedStyle(e); return s.userSelect || s.webkitUserSelect || 'auto'; };
+      const eff = (e) => { for (let a = e; a && a.nodeType === 1; a = a.parentElement) { const v = own(a); if (v !== 'auto') return v; } return 'text'; };
+      const name = (e) => e.id ? '#' + e.id : e.tagName.toLowerCase() + (e.classList.length ? '.' + [...e.classList].slice(0, 2).join('.') : '');
+      const shown = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+      const out = { controls: 0, words: 0, fields: 0, odd: [] };
+      for (const e of document.querySelectorAll(CONTROLS)) { if (!shown(e)) continue; out.controls++;
+        if (eff(e) !== 'none') out.odd.push('control ' + name(e)); }
+      const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n = tw.nextNode(); n; n = tw.nextNode()) { const p = n.parentElement;
+        if (!n.textContent.trim() || !p || !p.closest(CONTROLS) || p.closest('input, textarea, [contenteditable="true"]') || !shown(p)) continue;
+        out.words++; if (eff(p) !== 'none') out.odd.push('word ' + name(p) + ' "' + n.textContent.trim().slice(0, 16) + '"'); }
+      for (const e of document.querySelectorAll('input[type="text"], input[type="search"], input:not([type]), textarea')) { if (!shown(e)) continue;
+        out.fields++; if (eff(e) === 'none') out.odd.push('field ' + name(e)); }
+      return out; }"""
+    _held = {}
+    for _path, _name, _opens, _least in (("/", "Pad", ("draw", "text", "#tuneBtn", "#menuBtn"), 40),
+                                         ("/flip", "Flip", ("move", "text", "#toolMoreBtn", "#moreBtn"), 40),
+                                         ("/s/" + _pid, "the player", (), 3),
+                                         ("/library", "the library", (), 3),
+                                         ("/gallery", "the gallery", (), 2)):
+        _n, _odd, _fields = [0, 0], [], 0
+        for _open in (None,) + _opens:
+            _pg = browser.new_page(viewport={"width": 390, "height": 844})
+            try:
+                _pg.goto(BASE + _path, wait_until="load")
+                _pg.wait_for_timeout(700)
+                if _open == "draw":
+                    browsing.pad_drawer(_pg, "draw")
+                elif _open == "move":
+                    _pg.evaluate("() => setTool('artmove')")
+                elif _open == "text":
+                    _pg.evaluate("() => { window.SkriblHints && SkriblHints.hide(); document.querySelector('#shapeSeg [data-shape=\"text\"]').click(); }")
+                elif _open:
+                    _pg.click(_open)
+                _pg.wait_for_timeout(600)
+                _got = _pg.evaluate(HELD)
+                _n[0] += _got["controls"]; _n[1] += _got["words"]; _fields += _got["fields"]
+                _odd += [f"{_open or 'at rest'}: {x}" for x in _got["odd"]]
+            finally:
+                _pg.close()
+        _held[_name] = _fields
+        check(f"{_name}: a held finger selects no control: every button, switch, tab and label it shows, every bar and"
+              f" drawer, and every word in one, takes no selection (at rest, and in each place it opens); every text"
+              f" field still selects", _n[0] >= _least and not _odd,
+              f"{_n[0]} controls and {_n[1]} words in them read (at least {_least} controls), {_fields} fields"
+              + (": " + "; ".join(sorted(set(_odd))[:8]) if _odd else ""))
+    check("...and the text fields read are there to be read: Text's field on both editors among them",
+          _held.get("Pad", 0) >= 1 and _held.get("Flip", 0) >= 1, json.dumps(_held))
+
+    # ...and the press-and-hold callout, which Chromium does not compute: the
+    # rule that takes a control's selection takes the callout too, in each
+    # sheet that has one (the editors' and the player's, the Gallery's and
+    # the Library's own pages, and the Gallery section a host mounts).
+    def _held_rules(text):
+        """Every rule whose selector list names `button` and whose body takes
+        the selection: (selector, body)."""
+        text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+        return [(m.group(1).strip(), m.group(2)) for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", text)
+                if re.search(r"(^|[\s,])(#\w+\s+)?button(\s*,|\s*$)", m.group(1).strip()) and re.search(r"(?<!-)user-select:\s*none", m.group(2))]
+    _callout = {}
+    for _file in ("skribl/static/styles.css", "skribl/static/player.css", "skribl/static/gallerysection.css",
+                  "skribl/templates/skribl/skribl_gallery.html", "skribl/templates/skribl/skribl_library.html"):
+        _rules = _held_rules((ROOT / _file).read_text(encoding="utf-8"))
+        _callout[_file] = [bool(re.search(r"-webkit-touch-callout:\s*none", body)) for _, body in _rules]
+    check("...and the rule that takes a control's selection takes the press-and-hold callout too, in every sheet that"
+          " has one (read from the stylesheets: Chromium does not compute it)",
+          all(v and all(v) for v in _callout.values()), json.dumps(_callout))
+
     # --------------------------------------------------------- section 11c
     print("\nA11Y 11c — the hint in a text box can be read: 4.5 to 1 on its field, light and dark")
     # THE WORDS IN A BOX BEFORE ANYTHING IS TYPED ARE WORDS, AND NOTHING READ
