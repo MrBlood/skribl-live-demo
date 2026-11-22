@@ -1035,6 +1035,23 @@ with sync_playwright() as p:
               " option's word is in its markup (New | Hot, Skribls | Drafts, All | In the gallery | Link only, the"
               " menu's Theme)",
               all(nojs.values()) and all(t == w for v in nojs.values() for t, w in v), str(nojs))
+        # ...and the room never costs a word its centring by its capitals (lib/labels.js puts a lone word in
+        # its own span, trimmed to cap height: the owner's "doesn't look centered vertically"). A column is a
+        # tile with its mark above its word, which labels.js leaves; a pill's option is a column only for the
+        # unseen room under its word, and keeps its span. Read on every page with a pill: no option that keeps
+        # its room (data-bold) holds its word bare.
+        bare = {}
+        c = ctx_for("dark", "desk"); q = c.new_page()
+        for path in ("/skribl-pad", "/flip", "/gallery", "/library"):
+            browsing.goto(q, BASE, path); settle(q)
+            bare[path] = q.evaluate("""() => [...document.querySelectorAll('button[data-bold]')].filter(b =>
+              [...b.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())).map(b => b.textContent.trim())""")
+            bare[path + " (read)"] = q.evaluate("() => document.querySelectorAll('button[data-bold]').length")
+        c.close()
+        check("WORDS: no pill option that keeps its room holds its word bare: each word is in lib/labels.js's span,"
+              " centred by its capitals (the Pad, Flip, the Gallery, the Library)",
+              all(bare[p + " (read)"] for p in ("/skribl-pad", "/flip", "/gallery", "/library"))
+              and not any(v for k, v in bare.items() if not k.endswith("(read)")), str(bare))
         for w in (320, 360, 402):
             c = browser.new_context(viewport={"width": w, "height": 800}, device_scale_factor=1, color_scheme="dark",
                                     has_touch=True, is_mobile=True)
