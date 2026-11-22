@@ -52668,3 +52668,58 @@ Text open and the keyboard up, the field and Write it sit just above the
 ^ v ✓ strip, and the drawer's paper runs on behind the strip to the keys.
 
 PAD AND FLIP: shared, one drawer for both.
+
+## After v330 -- Main red after the bold word: the Who can draw back pill keeps its room, and a sign-in read waits for its page
+
+Main's full run on #1060 (the chosen word a step bolder) was red in two
+places.
+
+(1) `verify_socialdrawback` 89/93 on both databases (89/93 here too,
+beside others and alone): four rows of section 12 read every choice of
+the Who can draw back pill at 15px 600. The pill is Settings' own switch
+(.theme-switch), so its chosen word went to 700 with Settings' thirds, and
+the rows held the one weight. Behind them was a real slip. Settings'
+thirds are their own (flex 1 1 0), but this pill's choices are as wide as
+their words ask (flex 1 1 auto), so the chosen one grew and the others
+gave way: 0.9px in this box's face going from Everyone to People I follow,
+the very thing 11 A said must not happen. #1060's own run read every pill
+of words on the pages, but this one is reached through a post's ⋯ and the
+composer, and its suite was not among the about thirty run. Next time a
+pill's class changes, the suites that name the class are the list, not
+the pages that show it.
+
+THE FIX (a bug fix): each choice carries its word (data-bold, _who.html)
+and lays it out again at 700 under the label, unseen and no height
+(social.css `.theme-switch > button[data-bold]::after`), the room every
+other pill of words keeps. Settings' thirds and the push switches carry
+none and are unchanged. Her post's ⋯ and the composer share the macro.
+
+THE CHECKS, `verify_socialdrawback` 12: the pill's rows read the chosen
+word at 700 and the rest at 600; a room row for her post's ⋯ (a touch
+phone and a desk) and one for the composer's pill (each choice carries its
+word, and with every word forced to 700 no box grows); and a tap moves no
+box, Everyone to People I follow, to a tenth of a pixel. Section 12 24/24.
+Three breaks, each on a copy, each red only in its rows: the words taken
+out of the macro, and the room's rule taken out of the stylesheet, each
+the three new rows (Everyone 102 to 101.1px wide, People I follow 0.9px
+left and 0.9px wider); the chosen word not bolder, the four weight rows
+(20/24).
+
+(2) `verify_socialauth` stopped on PostgreSQL 4/7 in section 15
+("Execution context was destroyed, most likely because of a navigation";
+SQLite 4/7 green). The form sent without its token is sent by script, so
+nothing waited for where it landed: wait_for_load_state() answered for the
+page it was sent from, and on a slow runner the kind page arrived while
+the read ran. On a fast one the read could have measured the page before
+it and passed. The read now waits for the navigation it starts
+(expect_navigation, to its load), and each read says where it was taken:
+a new row holds that the form's read is on the kind page at
+/social/signout/everywhere, on a phone and a desk, light and dark.
+Calibrated with a slow server (every request of that browser 900ms late,
+from the form on): the read as it was crashed with main's own words; the
+mended read 4/4, on the kind page all four times. And with the read
+taken on the page before the form, the new row alone went red (3/4): the
+other three rows passed on the wrong page, which is how a fast runner
+could have passed it all along.
+
+PAD AND FLIP: not theirs; the site's pill and a site suite.
