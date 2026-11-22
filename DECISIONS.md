@@ -52090,3 +52090,47 @@ meets it today; a host that asks for the gallery choice would.
 
 WHAT IT DOES TO FLIP: shared. One module (lib/textwrite.js); New is each
 editor's own, the same three calls.
+
+## After v330 -- Main red after the button font: a key's ring read across its band, and CI's face for the editors
+
+Main's full run after #1047 (the button font) was red in one row of
+`verify_contrast`, on both databases' shard 2: on a desk in dark, Your
+drafts with three saved, the ring on "Save as a file" (Flip's #miSave) read
+at its foot (103, 77, 207) against the ring's (124, 92, 255). The same
+pixel was met once before ("WHY THE BORDER STAYS", above), when the layout
+was nudged until the row sat on whole pixels in this box's face.
+
+WHAT CI DRAWS THE EDITORS IN. Not DejaVu Sans, as was assumed: that is the
+site's (its font list ends in system-ui). The editors' list ends in plain
+sans-serif, which Chromium takes as its own default, Arial, and Linux gives
+Arial's twin, Liberation Sans (CI installs it with Chromium's deps). Here
+the same list draws Inter (this box maps system-ui and the editors' names
+to it). Read in CI's face (a fontconfig that leaves Inter out; the editors
+then draw Liberation Sans, as CDP's platform fonts say), the row went red
+here too, on the Pad's "Save as a file" as well as Flip's: the row sits from
+597.84px, so the ring's 2px band sits a quarter pixel high, and the one
+pixel read a pixel inside its foot is three quarters ring. The pixel above
+it is wholly ring. Nobody sees a quarter pixel; the check read one pixel
+of a two-pixel band.
+
+THE MEND: each side is read one and two pixels in, and the nearer the
+ring's colour stands. A ring the card cuts, one drawn outside the row, or a
+veil leaves neither. Not an inset shadow instead of the outline to make it
+crisp: a shadow is gone in Windows' high contrast, where an outline stays.
+Calibrated in CI's face on the two Your drafts scenes, each on a copy with
+a server of its own: as it was, red (both editors); mended, green; mended
+with the ring's rule taken out (drawn outside the row), red, the band
+reading the row's own ground (35, 30, 59); mended with a veil over the
+card, red (63, 49, 126). Those two are the breaks the row was first shown
+red by.
+
+THE TWO OTHER REDS of that run, on PostgreSQL's shard 5 alone, were timing:
+`verify_flipbeat` (a late song unlock's rounds, one 77ms late against 60)
+and `verify_socialfollow` (Reduce Motion's fade). Neither suite touches
+what #1047 changed, and both were green on SQLite's shard 5 of the same
+run. Watched in main's next run.
+
+FOUND ON THE WAY, ITS OWN NEXT: in this box's Inter, Flip's desk page bar
+(a 694px column) holds eight labelled buttons 4px wider than itself since
+the buttons took the page's font, so Delete's own gap is gone
+(`verify_pages` 101 of 103 here, green before #1047, green in CI's face).

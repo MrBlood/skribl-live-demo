@@ -577,7 +577,20 @@ def read_cards(q, root, scale):
             im2 = Image.open(io.BytesIO(q.screenshot())).convert("RGB")
             tips.evaluate("s => s.remove()")
             my, mx = (fr["t"] + fr["b"]) / 2, (fr["l"] + fr["r"]) / 2
-            fr["sides"] = [at(im2, fr["l"] + 1, my), at(im2, fr["r"] - 1, my), at(im2, mx, fr["t"] + 1), at(im2, mx, fr["b"] - 1)]
+            # THE RING IS TWO PIXELS WIDE, so each side is read at the pixel
+            # one in and the pixel two in, and the nearer the ring's colour
+            # stands: one of the two is wholly ring wherever a fraction of a
+            # pixel puts the band (CI's face, Nov 22: Liberation Sans laid
+            # "Save as a file" from 597.84px, the band sat a quarter pixel
+            # high, and the one pixel read at its foot was three quarters
+            # ring). A ring the card's edge cuts, or one drawn outside the row,
+            # or a veil, leaves neither.
+            ring = tuple(round(float(v)) for v in fr["ring"][fr["ring"].index("(") + 1:fr["ring"].index(")")].replace(",", " ").split()[:3])
+
+            def band(x, y, dx, dy):
+                one, two = at(im2, x, y), at(im2, x + dx, y + dy)
+                return min((one, two), key=lambda px: max(abs(a - b) for a, b in zip(px[:3], ring)))
+            fr["sides"] = [band(fr["l"] + 1, my, 1, 0), band(fr["r"] - 1, my, -1, 0), band(mx, fr["t"] + 1, 0, 1), band(mx, fr["b"] - 1, 0, -1)]
         rings.append(fr)
     got["rings"] = rings
     return got
@@ -1304,7 +1317,7 @@ if not ONLY or set(ONECARD) & set(ONLY):
     check("and what is painted says the same: the card's own white 4px inside its edge at every row's middle, off the"
           " screen", len(onecard) == want and not bad_paint, "; ".join(bad_paint)[:1200])
     check(f"a key's ring on a row in one card is drawn inside the row, so the card's edge never cuts it: its four sides"
-          f" painted in the ring's colour a pixel inside the row ({rings_read} read)",
+          f" painted in the ring's colour inside the row, in its two-pixel band ({rings_read} read)",
           rings_read >= (1 if ONLY else len(onecard)) and not bad_ring, "; ".join(bad_ring)[:1200])
 
 

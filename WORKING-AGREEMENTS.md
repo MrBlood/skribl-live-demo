@@ -387,7 +387,11 @@ blank page as full, imports that parsed but did not import.)
   a font; say the rule (its own width against the room it has) and pin the
   room. To read a page as CI does, a copy with the stylesheet's font set to
   "DejaVu Sans". (Main red after #1036: a name whole in Inter by 8px, cut
-  in DejaVu Sans by 3; it had fitted there by one.)
+  in DejaVu Sans by 3; it had fitted there by one.) THE EDITORS ARE NOT:
+  their font list ends in plain sans-serif, which Chromium takes as Arial,
+  so CI draws Pad and Flip in Liberation Sans. A fontconfig that leaves
+  Inter out reads both as CI does, no copy needed (FONTCONFIG_FILE; check
+  with CDP's platform fonts). (Main red after #1047.)
 - **An assertion that can only pass while the work is OUTSTANDING is a TODO in
   a test's clothes.** Invert it to guard the achievement.
 - **NEVER `git checkout` OR `git stash` A FILE THAT HOLDS UNCOMMITTED WORK.**
