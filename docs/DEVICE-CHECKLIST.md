@@ -174,4 +174,8 @@ Open Blooby from its Home Screen icon for these.
 - [ ] If the bar ever rides the page (an iPhone's own fault after its
       keyboard: `DECISIONS.md`, "The moving bottom bar"): take one picture
       scrolled down and one scrolled back up, and say what was done just
-      before. Swiping the app away and opening it again puts it right.
+      before. Then, before closing the app, open a drawing to edit (or
+      Make → Draw), `•••` → **Report a problem** → Copy details, and paste
+      it with the pictures: its Viewport line says what the phone takes
+      its screen for. Swiping the app away and opening it again puts the
+      bar right.

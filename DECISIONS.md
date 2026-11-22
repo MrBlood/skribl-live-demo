@@ -51598,3 +51598,40 @@ dark, a touch phone and a desk) and waits for a yes of its own to the look
 it shows. NOTHING OF THE ELEVEN IS BUILT BY THIS ENTRY. The audit's five
 fixes (A to E), which are bugs and needed no answer, were in hand when the
 bar came first; where they stand is said in the entries after this one.
+
+## After v330 -- Report a problem says what the phone takes its screen for
+
+The moving bottom bar (its own entry, two above) is a fault that leaves
+no trace on the page: a phone that goes on taking the foot of its screen
+for covered looks, to the page, like a phone with its keyboard up. There
+is no console on an iPhone, the fault cannot be made in this box, and the
+mend that went out is one person's report of what works. So if the bar
+rides again, the next step needs that phone's own numbers, and there was
+no way for the owner to hand them over.
+
+THE PAD'S AND FLIP'S "Report a problem" (the menu's; `lib/report.js`, one
+module for both) already copies what a tester is always asked: the
+version, the browser, the screen. ONE LINE MORE, under Screen:
+
+    Viewport: 476 of 812 seen, offset 120, scrolled 0, Home Screen app
+
+How much of the window the visual viewport says is seen and how far down
+it starts, how far the page is scrolled, and whether this is the Home
+Screen app or a browser tab; a zoom, when there is one. The numbers are
+the OUTERMOST window's, and the line says "in a frame" when the editor is
+one: inside a post the editor is in a frame, and the fault is the whole
+window's. Healthy, it reads "812 of 812 seen, offset 0". Nothing on the
+screen changes; nothing is sent anywhere, as before; and the line is
+numbers, not anything drawn or written.
+
+`verify_report` holds it: in each editor the line against the page's own
+numbers; a phone left stuck, stood in for, in the Home Screen app; and the
+editor in a frame 600px tall over a page scrolled 240px, saying the outer
+window's numbers and its scroll. SIX BREAKS, each on a copy with a server
+of its own, each red in a row of its own: the frame's own numbers; the
+frame's own height beside the outer window's; no word of the app; no
+offset; no scroll; no "in a frame".
+
+`docs/DEVICE-CHECKLIST.md`, "Blooby on the Home Screen", asks for the
+line with the two pictures. FLIP AND THE PAD: shared, one module, the same
+line in both. NOT SEEN ON AN IPHONE.
