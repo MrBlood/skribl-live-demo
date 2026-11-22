@@ -51996,5 +51996,16 @@ every point now, as it did at the centre. On that scene alone: as it
 was, the four rows red; mended, green; mended with that line made faint
 where it shows, red again (1.66 to 1).
 
+AND "THREE SAVED" HELD FOUR. The contrast walk's Your drafts with three
+drafts saved its three on top of the draft an earlier sheet had left (a
+row's menu leaves "A row to read"), so the card had four rows. Four
+fitted a desk's sheet by a few pixels; 7px taller, the fourth row's
+middle went under the sheet's fold in this box's face, and ONE CARD
+read the page behind it (in CI's face, the whole harness on the branch,
+it stayed green). A list too long for its sheet scrolls, as it should;
+the scene clears the walk's drafts first and shows its three. On the two
+scenes in their order: without the clear, both ONE CARD rows red; with
+it, green; with it and a row painting a ground of its own, red again.
+
 FLIP AND THE PAD: shared, one sheet. Nothing changes on an iPhone. NOT
 SEEN ON WINDOWS: this box has no Segoe UI.
