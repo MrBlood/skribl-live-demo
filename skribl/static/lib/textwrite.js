@@ -1247,6 +1247,13 @@
       watching = v;
     }
   }
+  // AN IPHONE FLOATS ITS OWN BAR (^ v and the tick) over the foot of what it
+  // says can be seen, which no visual viewport reports (the owner's iPhone,
+  // Nov 22, iOS 26): the typing drawer keeps that bar's room at its own foot
+  // there (styles.css .tx-drawer.typing.over-bar). An iPad's wider than a
+  // phone, so its drawer never types on the keyboard at all.
+  var APPLE = /iP(hone|od|ad)/.test(navigator.userAgent || '')
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   function fitKeyboard() {
     var s = els && els.sheet;
     if (!s) return;
@@ -1265,6 +1272,7 @@
     }
     var was = s.classList.contains('typing');
     s.classList.toggle('typing', typing);
+    s.classList.toggle('over-bar', typing && APPLE);
     s.style.bottom = typing ? lift + 'px' : '';
     s.style.maxHeight = typing ? Math.max(160, Math.round(v.bottom - v.top - 12)) + 'px' : '';
     if (want && isOpen()) { anchor = clampAnchor(want); position(); }

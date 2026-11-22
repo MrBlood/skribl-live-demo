@@ -2151,9 +2151,9 @@ with sync_playwright() as p:
         def r1(v):
             return [round(x) for x in v] if v else v
 
-        def in_a_post(ed):
-            """The editor inside the stand-in host's frame, once Text can be chosen."""
-            c = b.new_context(color_scheme="light", **INFRAME)
+        def in_a_post(ed, ua=None):
+            """The editor inside the stand-in host's frame, once Text can be chosen (as an iPhone, given its name)."""
+            c = b.new_context(color_scheme="light", **INFRAME, **({"user_agent": ua} if ua else {}))
             c.add_init_script(OUTER_KB)
             c.add_init_script("if (window !== window.top && !sessionStorage.getItem('tx-seeded')) { sessionStorage.setItem('tx-seeded', '1');"
                               " localStorage.setItem(%s, %s); }" % (json.dumps(PREFS), json.dumps(json.dumps({"style": "print", "size": "M", "speed": 4}))))
@@ -2235,7 +2235,54 @@ with sync_playwright() as p:
             except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the rows' red
                 g["stopped"] = str(exc).splitlines()[0][:200]
 
+        # AN IPHONE'S OWN BAR (the owner's iPhone, Nov 22, iOS 26: "When I push text I get this"). The phone
+        # floats its strip (^ v and the tick) over the foot of what it says can be seen, and no visual viewport
+        # reports it: the drawer rested on the keyboard with its field and Write it under the strip, and a tap
+        # had the phone slide the page up to show them, the page then showing between the drawer and the keys.
+        # On an iPhone the typing drawer keeps the strip's room at its own foot. The phone told as an iPhone
+        # (its name), the same keyboard told to the outermost window: the drawer still on the keys, the field
+        # and Write it the strip's 60px (the owner's screen) above them.
+        IOS_UA = ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko)"
+                  " Version/26.0 Mobile/15E148 Safari/604.1")
+        BAR = 60
+        GO = "() => { const r = document.getElementById('txGo').getBoundingClientRect(); return [r.top, r.bottom]; }"
+        bar = {}
+        for ed in ("pad", "flip"):
+            try:
+                c, q, fr, errs = in_a_post(ed, IOS_UA)
+                fr.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
+                fr.wait_for_function("() => SkriblText.isOpen()", timeout=5000)
+                settle(fr)
+                q.evaluate("() => window.__keyboard(%d)" % KB)
+                q.wait_for_timeout(500)
+                bar[ed] = {"up": fr.evaluate(SEEN, CANVAS[ed]), "go": fr.evaluate(GO),
+                           "band": fr.evaluate("() => document.getElementById('txSheet').classList.contains('over-bar')")}
+                q.evaluate("() => window.__keyboard(0)")
+                q.wait_for_timeout(700)
+                bar[ed]["after"] = fr.evaluate("() => document.getElementById('txSheet').classList.contains('over-bar')")
+                bar[ed]["errors"] = errs[:3]
+                c.close()
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the rows' red
+                bar[ed] = {"stopped": str(exc).splitlines()[0][:200]}
+
         line = FH - KB
+        for ed in ("pad", "flip"):
+            g, i = got[ed], bar.get(ed) or {}
+            iu, ig = i.get("up") or {}, i.get("go") or [0, 1e9]
+            check(f"{ed} on an iPhone, inside a post, with the keyboard up: its own bar (^ v and the tick) floats over the"
+                  f" foot of what it says can be seen (iOS 26; the owner's iPhone, Nov 22), so the drawer, still resting on"
+                  f" the keys, keeps the bar's room at its own foot: the field and Write it at least the bar's {BAR}px above"
+                  f" the keys, the bar over the drawer's own paper, nothing for the phone to slide up to show",
+                  not i.get("stopped") and iu.get("typing") is True and i.get("band") is True and iu.get("focus") == "txField"
+                  and abs(iu["sheet"][1] - line) <= 1 and iu["field"][1] <= line - BAR and ig[1] <= line - BAR
+                  and i.get("after") is False and not i.get("errors"),
+                  i.get("stopped") or f"drawer {r1(iu.get('sheet'))} for the keys at {line}, field {r1(iu.get('field'))},"
+                  f" Write it {r1(ig)}, the bar's room {i.get('band')} (after the keys: {i.get('after')}); errors {i.get('errors')}")
+            up = g.get("up") or {}
+            check(f"{ed}: ...and away from an iPhone there is no bar to make room for: the field within the bar's height of"
+                  f" the keys, as the drawer has always rested",
+                  not g.get("stopped") and up.get("typing") is True and line - BAR < up["field"][1] <= line,
+                  g.get("stopped") or f"field {r1(up.get('field'))} for the keys at {line}")
         for ed in ("pad", "flip"):
             g = got[ed]
             up, free, down = g.get("up") or {}, g.get("free") or {}, g.get("down") or {}

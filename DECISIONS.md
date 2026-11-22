@@ -52623,3 +52623,48 @@ labels.js put in its span (New | Hot among them) since labels.js. Read
 directly, the chosen New on its tint is 6.24:1 in light: over AA, under
 the page's own 7:1. The owner's to say whether that pill's ink is held to
 AA with the editors' (as Make one's white words are) or darkened.
+
+## After v330 -- Text's drawer clears the iPhone's own bar over the keyboard
+
+The owner's iPhone, Nov 22 (iOS 26), two pictures of Text: "When I push
+text I get this. Then when I click the checkmark it looks right, but when I
+click in the box to type text, I get this". In the first the drawer rested
+on the keyboard with its field and Write it under the phone's own strip
+over the keys (^ v and the tick). In the second, after a tap in the field,
+the phone had slid the page up to show it, and the page showed in a gap
+between the drawer and the keys.
+
+WHY: an iPhone floats that strip over the foot of what it says can be
+seen, and no visual viewport reports it (on the owner's screen it reaches
+about 60px up from the keyboard's top). The drawer rested where the phone
+said the keys began, so the strip covered its foot, and a tap in a covered
+field had the phone scroll to show it.
+
+THE FIX (a bug fix, merged on green): on an iPhone the typing drawer keeps
+the strip's room at its own foot (styles.css `.tx-drawer.typing.over-bar`,
+68px under its last row: the strip's 60 and 8 clear, about what the phone
+itself slid by). lib/textwrite.js (fitKeyboard) sets it while the drawer
+types on the keyboard, on an iPhone alone (told by its name; an iPad that
+calls itself a Mac counts too, though an iPad's drawer never types on the
+keys). The drawer still rests on the keys: the strip floats over the
+drawer's own paper, the field and Write it sit above it, and there is
+nothing for the phone to slide up to show. Away from an iPhone nothing
+changes.
+
+THE CHECK, `verify_text` 24 (the editor inside a post, told it is an
+iPhone, the keyboard told to the outermost window as before), on the Pad
+and Flip: the drawer still on the keys, its field and Write it at least
+the strip's 60px above them, the room kept only while typing; and away
+from an iPhone the field rests within the strip's height of the keys, as
+it always has. Two breaks, each on a copy, each red only in its rows: the
+room never kept (the tree before: the field 13px above the keys, under the
+strip, the owner's case); the room kept on every device (away from an
+iPhone the field 81px up for nothing).
+
+NOT SEEN ON AN IPHONE: there is no iOS or WebKit here, so the strip's
+height is read from the owner's picture and the phone's own slide cannot
+be run; the check holds the drawer's layout. The tell on the phone: with
+Text open and the keyboard up, the field and Write it sit just above the
+^ v ✓ strip, and the drawer's paper runs on behind the strip to the keys.
+
+PAD AND FLIP: shared, one drawer for both.
