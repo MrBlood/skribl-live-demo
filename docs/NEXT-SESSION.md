@@ -1,529 +1,290 @@
-# Next session: the handoff (Nov 19, 2026, Mountain Time: written that morning, its status lines added to through the evening and the morning after)
+# Next session: the handoff (Nov 22, 2026, Mountain Time: written at about 3:15 PM, for Tuesday evening, Nov 24)
 
-A snapshot from the session that built Draw back, written as its last step.
-It is not maintained: where things stand is the newest entries at the bottom
-of `DECISIONS.md`, and how to work is `WORKING-AGREEMENTS.md`. Read this
-after `START-HERE.md`; once you have, replace it with your own handoff or
-delete it, so it never goes stale here.
+A snapshot from the session of Nov 20 to 22, written as its last step at
+the owner's request: "I will start a new session on Tuesday evening, so
+make a comprehensive handoff for the new session". It is not maintained:
+where things stand is the newest entries at the bottom of `DECISIONS.md`,
+and how to work is `WORKING-AGREEMENTS.md`. Read this after
+`START-HERE.md`; once you have, replace it with your own handoff or delete
+it, so it never goes stale here.
 
-## The thread
+The owner stopped for the week with a little usage left, and said: "Let's
+not start anything new and just let everything finish". Nothing was left
+half-built: every change is merged, and the branch held nothing else.
 
-"Blooby is where people talk in drawings" (`WORKING-AGREEMENTS.md`, the
-roots). Draw back is its one new verb: answering a drawing by drawing with
-it, theirs faint under your pen, the answer playing theirs and then yours.
-The owner said "All yes and completely remove open" to the mock
-(https://claude.ai/artifact/Sa9HeL7MyFyRiUmRtoRc2W); `DECISIONS.md`, "Draw
-back, mocked", holds the eight choices.
+## Before anything: read main's newest full runs
 
-## What happened on Nov 19 (all merged)
+Two of main's full runs were still going when this was written:
 
-- #984 Open › off every card: a tap on the card, or its time, opens it.
-- #986 Draw back, step 1: the pen after the heart; the composer and the Pad
-  over it, on the original's shape and paper, the original faint under the
-  pen in its own colours (Theirs: faint, full, hidden); the server joins
-  the two (theirs first, squeezed to about three seconds, then yours); the
-  card's "Drew back on Ana’s" and her face small at the foot of his.
-- #987 Draw back, step 2: Activity's "Theo drew back on your drawing", the
-  dot and the nudge (Replies); her post's strip of draw-backs; "Watch again"
-  and Draw back rising when a replay ends (Skribl's player says
-  `skribl:ended`).
-- #988: no pen where it can't be done yet, read when the post is made
-  (`undrawable`); the picture a draw-back rests on is both drawings (the
-  owner had seen empty boxes); its own page says it is one.
-- The PR after it: the owner's "All yes" to four questions (the background
-  is the original artist's; the eraser off while drawing back; your own
-  drawing said so; a name that starts with a title said whole), and the
-  author's background and music (below).
+- the one on #1065 (Text on a phone), started at 2:43 PM. The old
+  session's last check read it at 3:55 PM and told the owner; that result
+  is in the old conversation, not here;
+- the one on the pull request that brought this handoff (documents only).
 
-`docs/SOCIAL-SITE.md` section 20 says what is built. The code: the join in
-`social/drawback.py`; the route, the posting and the counts in
-`social/posts.py`; the underlay in Skribl's `skribl/static/lib/drawback.js`,
-handed over by `skribl/static/lib/composehost.js`; Activity's rows in
-`social/activity.py`. `harness/verify_socialdrawback.py` holds it, and its
-section 4 drives the whole way in a browser: the quickest look at it.
+Read main's newest full runs, every job, before believing main is green.
+A red is work in progress: read the failing row, mend the defect (or the
+check that cries wolf, with a calibrated check), open a PR, merge on green.
 
-## What is still to build, in the decided order
+Not sealed since v330. That is fine: seal only when there is a reason
+(`WORKING-AGREEMENTS.md`, "Sealing a release").
 
-1. **Her say** (choice 7, approved): she may hide a draw-back from her post
-   (it stays on its maker's page; nothing deleted, nobody told), and each
-   post has "Who can draw back: Everyone · People I follow · Nobody",
-   starting at Everyone. WHERE THE CONTROLS SIT was never mocked: mock that
-   first (her post's ⋯ is the likely home of the first; the second may want
-   a place on the composer or the post's ⋯).
-   MOCKED NOV 20 (https://claude.ai/artifact/NRZR69jirnAfhTQzroK3rr;
-   `DECISIONS.md`, "Her say, mocked"). THE OWNER ANSWERED THAT MORNING: "All
-   yes to everything. Make it smart and beautiful." So the seven picks
-   stand: the Gallery tab's eye on each tile of her own strip, beside the
-   name; Settings' pill in a card of her post's ⋯, and one quiet line in the
-   composer that opens it. The calm post page went first, because it
-   reshapes the page her strip sits on. HIDING IS BUILT (`DECISIONS.md`,
-   "Her say: hiding a draw-back from your own post, built";
-   `docs/SOCIAL-SITE.md` section 24). WHO CAN DRAW BACK IS BUILT TOO
-   (`DECISIONS.md`, "Her say: who can draw back, built";
-   `docs/SOCIAL-SITE.md` section 25): the one rule is `posts.open_to`, the
-   words are in `social/templates/social/_who.html`. BOTH HALVES OF HER SAY
-   ARE DONE; the calls no mock showed are listed in those two entries as
-   the owner's to change.
-2. **The words** (choice 4, approved): the line under a draw-back says "Ana
-   + Theo · drawn in 15 sec + 9 sec · watching at 1×", the card's play
-   button "Ana + Theo · 24 sec", a jam "Ana + Theo + Mira", then "Ana + 4
-   others". The line is Skribl's (`skribl/static/lib/replayline.js`), which
-   knows no names: the site would hand it the hands (names and each one's
-   drawing time, kept when the draw-back is made: the joined drawing
-   squeezes the original, so its own time cannot be read back from it). The
-   in-post player has a byte budget (`harness/verify_inline.py`), and the
-   words at 402px with long names were never measured: mock the layout.
-3. **Flip, page for page**: its own mock. The page that stays underneath
-   (`FUTURE.md` 6i) is its twin.
-4. **Recolours**: refused with why for now (`social/drawback.py`
-   drawable): they index the strokes by number and time, which the join
-   would have to carry over.
+## First: Text on the owner's iPhone, two bugs not yet mended
 
-Then the owner's list from Nov 18 resumes: messages as drawn letters, then
-watching first everywhere (the old handoff's items 2 and 3; `docs/SOCIAL-SITE.md`
-section 17 for messages).
+The owner's iPhone 17 (iOS 26), the Home Screen app, Nov 22 from 2:50 PM,
+after #1065 had merged. Six pictures, then a test on the Pad on its own.
 
-## Decided since, and built
+WHAT WORKS NOW (#1064, #1065; the owner: "The text drawer looks great
+when we start and when I click in box"):
 
-The owner's "All yes" (7:09 AM) to the four questions: the background is
-the original artist's; the eraser off while drawing back; "Drew back on
-their own drawing"; a name that starts with a title said whole.
-`DECISIONS.md`, "the owner's All yes to the four questions".
+- Text opens with its whole drawer and no keyboard.
+- A tap on the box brings the keyboard. The drawer then sits on the keys:
+  the box, Write it, and Style's four chips.
+- The keyboard's tick brings the whole drawer back.
+- Inside the site, the page behind the Pad no longer moves (the timeline
+  no longer creeps under it).
 
-Then their own idea, and their yes: "why not just only let a drawback be on
-author's background and music?" A draw-back keeps her photo and her song;
-the answer adds none. `DECISIONS.md`, "your own drawing, and the author's
-background and music".
+### Bug 1: inside the site only, each letter moves the Pad
 
-## The walkthrough (Nov 19, 8:40 AM): done, and waiting on the owner's answer
+"1st letter jumps and second letter jumps again. Third letter jumps to
+this. 4th is still there." The Pad was in the site's frame over Make
+(`social/static/social.js`, padOver), the keyboard up and the box
+focused:
 
-The owner: "can you do a run on the social site and draw, draw-back,
-comments, etc and do a logic test? ... I feel like we are getting convoluted
-and it's simplicity is slipping away. I would be confused using this app I
-think." Done on a fresh copy of the site (five people, ten posts, comments,
-draw-backs, all through the real screens), as a new member on a touch phone
-(402 wide), then a desk and dark. Nothing was changed. The report, with
-pictures: https://claude.ai/artifact/C3mVr5QGaZ969wHwvLp9Ek
+- The first letter moved the Pad: its header went up inside the frame,
+  and the drawer slid down under the iPhone's own strip (^ v and the
+  tick, which floats over the top of the keys).
+- The second letter moved it again.
+- After the third, the drawer showed Size, Thickness and Speed. The
+  typing view had dropped, though the keyboard was still up and the box
+  still focused. The drawer's foot sat at the strip's top, the tools above
+  it.
+- The fourth letter moved nothing.
 
-The verdict given: the look holds up; what is slipping is the number of
-ways to do one thing. What was found, biggest first:
+Then, on the Pad on its own page (not from Make): "The drawer works". No
+jumps there. So bug 1 belongs to the frame.
 
-1. Three ways to answer a drawing with a drawing: Draw back, Draw (and
-   Flip) in the comment box, and Quote "with your own words, or a drawing".
-   Activity then says "drew back on your drawing" or "drew something on your
-   post".
-2. Every comment is a small post: four buttons under each (reply, repost,
-   like, more), its own page, repost, quote, bookmark, share; seven comments
-   put 40 things to press in the thread. A drawn comment made on a phone
-   shows 294 by 601 with its own scrubber and speed; the post's drawing is
-   370 by 278.
-3. Four buttons to post a drawing from the composer: Done, Add, Add to post
-   (the Pad's own sheet), Post. That sheet's "Show in the Skribls gallery /
-   Off, it shows in your post only" is not true on the site: with it off for
-   every drawing, all nine were on the Gallery tab, signed out (the site's
-   Gallery shows a post's drawing unless its maker hides it with the eye;
-   the tick is Skribl's own visibility, and Skribl's own gallery was empty).
-4. Draw-backs repeat the original: Home's first four cards and the Gallery's
-   first four tiles were the same cat; a card does not show what was added
-   until it plays; its play button says "drawn in 4 sec" (the squeezed
-   replay) on a cat that took 15.
-5. Pictures without words: a phone's four tabs have no names while empty
-   pages say "Tap Make"; the loop button and the repost button are nearly
-   the same picture, one above the other; a pen means Make, Draw back, Edit
-   drawing and Quote.
-6. The Pad inside a post is the whole standalone Pad: its menu has New,
-   Save, Export, Library, a switch to Flip and "Public gallery".
-7. Small: blank faces on cards and Activity, an initial in comments; the
-   Gallery has Following and Everyone as well as New and Hot, and its search
-   words are cut off at 402; Activity's empty words leave out draw-backs.
+Where to look:
 
-THREE BUGS, found and not fixed (the owner was told nothing would change):
-- A draw-back's own page: the original artist's face (`.db-face`) is as big
-  as the poster's and lies over it (48 by 48 both; on the card 22 at the
-  foot of 44).
-- The draw-backs strip: its first tile at 0 from the screen's edge with
-  three tiles, the page's gutter 16.
-- The "eraser is off" toast lands on the "Drawing back on Ana’s" pill.
+- `skribl/static/lib/textwrite.js`, fitKeyboard. The typing view needs a
+  phone, the box in focus, and `kb` over 80. `kb` is the outermost
+  window's `innerHeight` less its visual viewport's height (the function
+  just above fitKeyboard reads the outermost window). After the third
+  letter that test went false with the keyboard up. So either the outer
+  `innerHeight` came down to the visual viewport's height (iOS resizing
+  its layout viewport), or the box let go of its focus for a moment.
+- `social/static/social.css` `body.facepad-open` and padOver's hold() and
+  letGo() (#1065): while the editor is up, the page behind is fixed where
+  it stood. Before #1065 the page behind scrolled on every letter; now the
+  frame's own document does instead. Each keystroke seems to scroll
+  whatever can still scroll. That is most likely iOS revealing the caret
+  of a box in a `position: fixed` drawer, inside a frame, inside a fixed
+  overlay: a long-standing WebKit habit. Not reproduced here, because
+  there is no WebKit in this box.
+- The Pad on its own does not jump. Compare what differs: the frame, the
+  fixed overlay, the frame's height, the fixed page behind.
 
-THE FIRST LIST OF CHOICES WAS WRONG IN HALF, and was taken back the same
-hour. The owner: "do all your suggestions make sense? double check and make
-sure we're not changing anything that needs to be there." Checked against
-the code and this record, about half would have undone a choice of the
-owner's or removed something needed. Check the record BEFORE recommending a
-removal: most of what is on the site is there by a decision.
+Ideas to weigh, none tried, none to believe until the owner's phone says:
 
-WHAT HOLDS UP (removes nothing, undoes nothing; the report's page now says
-this):
-- the three bugs;
-- TWO DETAILS OF THE OWNER'S "ALL YES" TO DRAW BACK THAT ARE NOT BUILT
-  (`DECISIONS.md`, "Draw back, mocked", choices 2 and 3): on a post's own
-  page Draw back carries its words at the row's end (the page shows the pen
-  alone), and the composer's button says "Post draw-back" (it says "Post");
-  and choice 4's "Ana + Theo" words, in place of "drawn in 4 sec";
-- words: empty pages say "Tap Make" where a phone's bar has no names (the
-  owner took them off, Nov 15); Activity's "drew something on your post"
-  beside "drew back on your drawing" (a drawn reply already says "replied
-  with a drawing"); Activity's empty words leave out draw-backs; the
-  Gallery's search words are cut off at 402;
-- a drawn comment no taller than the post's own drawing (the owner's B,
-  Nov 17, is "as wide as the bubble": a phone's tall drawing was not in
-  that mock), and more room between conversations than inside one;
-- a mock each: another picture for loop (Skribl's player, so Pad, Flip and
-  the link page with it, and the in-post player's byte budget), a quote mark
-  for Quote, an initial in a blank face on cards and in Activity (a
-  Gallery tile's 22px face is "never an initial", by an earlier decision).
+- hold the frame's own document still while typing, as the page behind is
+  held;
+- read the keyboard so that neither a pan nor a resized layout viewport
+  can drop the typing view while the box is in focus;
+- keep the box out of a fixed layer while typing.
 
-THE OWNER'S ANSWER (Nov 19, about 9 AM): "I'd say yes to your suggestions,
-but the comment row stays (maybe even add bookmark)", and "I do want to fix
-the bugs and logic flaws also."
-- THE COMMENT'S ROW STAYS, as chosen on Nov 17. A bookmark in it was a
-  maybe: the answer given was to leave it under the dots (a phone's post row
-  is full, and a comment would have a button a post does not), with a mock
-  on offer. Not asked for since.
-- BUILT, in the PR after #989 (`DECISIONS.md`, "The walkthrough of the
-  site"): the three bugs; "Post draw-back"; "Tap the pencil", "commented
-  with a drawing", draw-backs in Activity's words.
-- AND MAIN'S RED AFTER #989, a real defect: the Pad said "ready" before all
-  its own scripts had run, so on a slow line the drawing to lay under the
-  pen was dropped and the Pad opened blank. Fixed in the same PR
-  (`editor_compose.js`: ready at DOMContentLoaded), with a check that holds
-  the scripts back. A timeout in section 4 of `verify_socialdrawback` seen
-  under load before that fix was this, not the load.
-- STILL TO MOCK, each agreed as an idea: "Draw back" in words on a post's
-  own page (choice 2; it does not fit the row once the row has counts: the
-  mock's post had none); a drawn comment no taller than its post's drawing,
-  and more room between conversations; the "Ana + Theo" words; another
-  picture for loop, a quote mark for Quote, an initial in a blank face; room
-  for the Gallery's search words at 402 (the words are the owner's).
+If a guess needs numbers, ask the owner for the Viewport line that the
+Pad's Report a problem copies (`docs/DEVICE-CHECKLIST.md`), taken inside
+Make before and after a letter.
 
-THE BIGGER QUESTION, the owner's, ANSWERED (Nov 19, late morning): "yes to
-A, go ahead with the mocks." It was a separate repository where Pad and
-Flip are "totally a part of" the site (blooby.app), this one keeping them
-independent for skribls.net; the answer given had three ways, and A is one
-repository, the editors still able to stand alone, giving up their own
-doors inside the site and using its places and words. (B was a second
-repository with its own copy of the editors, about 61,000 lines and most of
-the suites to keep in step for good; C was deciding now for the site alone
-and taking the standalone side out.)
+### Bug 2: everywhere, the words cannot be dragged with a finger
 
-"ALL YES" (the owner, Nov 19, about noon) to the ten choices below, ALL TEN
-BUILT, in three pieces (`DECISIONS.md`, the entries after "One
-repository"): 1 and 2 (the menu inside a post, no gallery tick: #992); 3,
-4, 5 and 7 to 10 (a post's page and the small ones: #993); 6 (what a
-draw-back says: each hand's drawing time kept on the post, a migration, and
-numbers the site hands Skribl's player: #994). Read DECISIONS and main's
-runs for what has merged and how it ran.
-MAIN IS GREEN ON THE FINAL TREE (run 2369, Nov 19, 6:51 PM, after #1000);
-what was red on the way, and why, is in the three entries of `DECISIONS.md`
-before the last. THE OWNER SAID "YES TO ALL" TO THE SEVEN (about 5:50 PM):
-1 to 4 below are decided as built; 5 to 7 were a go-ahead to mocks and a
-walk, now made, with the owner's own idea of that evening (the pencil's
-line in colour) beside them: https://claude.ai/artifact/28w1ZWVgWNRC9YF7Cywt8t
-"ALL YES" TO THOSE SIX (the owner, Nov 19, about 7:40 PM), ALL BUILT THAT
-EVENING, four pull requests, each with its entry in `DECISIONS.md` (the
-four after "the evening's mocks") and `docs/SOCIAL-SITE.md` section 22:
-- #1002, the pencil's line: Draw back's wave in the pen-line purple, white
-  on the action's fill.
-- #1003, a draft's tile on your profile opens inside a post (and a posted
-  draft stays in Drafts, as it did: nothing built).
-- #1004, Your hand opens over the post and the drawing waits (Skribl's
-  `lib/handover.js`, both editors, compose mode alone).
-- #1005, How it works: the ☰'s first row, a tab in a desk's rail, and the
-  site's own page `/social/how`.
-THE PICTURES OF ALL OF IT AS BUILT, on the page the owner was sent:
-https://claude.ai/artifact/8Am1CGcfGHTbfuuqfYiZ3x (`DECISIONS.md`, "The
-six as built").
-MAIN'S RUNS: green on the tree after #1003, which holds #1002 too (run
-2375, done 9:30 PM; the run after #1002 alone was cancelled by the queue,
-not run). RED AFTER #1004 AND AFTER #1005 (runs 2377 and 2379), ON ONE ROW,
-BOTH DATABASES: verify_a11y's template census, "handOver". Your hand's
-layer said it was a dialog and had no recipe there; driven with a keyboard
-it let Tab out and did nothing on Escape. Mended the morning of Nov 20
-(`DECISIONS.md`, "Main was red for a night"). READ THE RUN ON THE TREE
-AFTER THAT FIX before believing main is green.
-THE OWNER'S "ALL YES, GO" (Nov 20, about 6:50 AM): the eight calls no mock
-showed are decided as built (`DECISIONS.md`, "The owner's All yes to the
-eight"), and Her say is mocked (item 1 of "What is still to build", above).
-A POST WITH NOTHING UNDER IT YET, MOCKED (the owner's picture of Nov 20,
-"busy and disorganized"; `DECISIONS.md`, "A post with nothing under it
-yet"; https://claude.ai/artifact/1aQvBWEmTpBaMReRM8nEmD): three ways, the
-pick one quiet line and two buttons where two empty headings stand. The
-owner liked the picks and asked a bigger question (next), and the calm post
-page took their place; none of the three was built. The owner's words are in
-`WORKING-AGREEMENTS.md` ("Never busy, never confusing").
-THEN THE OWNER ASKED FOR THE WHOLE LOOK TO BE READ BESIDE BLUESKY ("Are we
-looking good and feeling good?"), and the post's page is MOCKED CALMER
-(`DECISIONS.md`, the entry of that name;
-https://claude.ai/artifact/LGjra5dDzRVUC6a1eSb34t): one answer bar at the
-foot, quiet labels, no "More from". It replaced the three ways above.
-THE OWNER: "All yes to everything. Make it smart and beautiful." (Nov 20,
-about 8:55 AM). BUILT THAT DAY (`DECISIONS.md`, "The calm post page, built";
-`docs/SOCIAL-SITE.md` section 23): one answer bar on every post's page and
-every comment's, small quiet labels and nothing over nothing, no More from,
-and the bar's Draw back lit when a replay ends. Her say's two halves
-followed the same day (item 1 of "What is still to build"), and so did the
-strip of Home that showed under the composer when an iPhone's keyboard was
-up: the sheet's paper runs down behind the keyboard now (`DECISIONS.md`,
-"No strip of Home under a sheet on a phone's keyboard";
-`docs/SOCIAL-SITE.md` section 26). THAT ONE CANNOT BE SEEN HERE: the
-owner's iPhone is the test, and what they say of it is the next thing to
-read.
-MAIN WAS RED TWICE THAT AFTERNOON ON ONE ROW, AND THE ROW WAS RIGHT: on a
-desk the list hopped under a posted comment when the box was taller than
-the comment (`DECISIONS.md`, "Main red after the calm post page"). It
-passed here because of this box's type. Mended the same afternoon (#1016),
-main green after it, and green again after who can draw back (#1017, at
-about 5:47 PM).
-THE SESSION STOPPED ON THE OWNER'S USAGE LIMIT at about 10:25 PM, with
-those two runs unread, and nothing moved until the owner wrote at 5:56 AM.
-The owner's rule since: come back and finish without being asked
-(`WORKING-AGREEMENTS.md`, "When the owner's usage runs out mid-work"; an
-hourly check-in is kept while work is in progress).
-DECIDED BEYOND THE MOCKS, TOLD TO THE OWNER, THEIRS TO CHANGE:
-- the pencil's wave stays white on the purple "Draw back" pill that rises
-  when a replay ends (purple on that purple is 1.23:1);
-- a draft opened from its tile: the editor's × takes the sheet with it
-  (back on your drafts, not an empty post), and only the editor is seen
-  rising;
-- Your hand over a face's Pad says "Your drawing is waiting for you." (no
-  post to name), and it fades in place under Reduce Motion, past the
-  editors' own rule that stops every transition there;
-- How it works: its examples are files, not posts (Skribl's cat and Flip,
-  and a draw-back made for it, a ball of yarn on the cat); they play where
-  they sit, the first by itself once; a row goes where the thing is done;
-  a visitor's four are plain lines with Sign in beside one line; "The Pad"
-  and "Flip" open the editor INSIDE A POST with its help showing, where the
-  mock said only "into the Pad's and Flip's own How it works".
-NOT TESTED ANYWHERE THIS EVENING: Safari on an iPhone, SF, Segoe UI.
-MAIN AFTER #993 WAS RED ON ONE ROW (verify_socialcomments 33, "the tint
-fading", sqlite 4 of 6): the check's clock, not the site (`DECISIONS.md`,
-"Main's red after #993"); its watch now starts when the comment arrives.
-THE RUN AFTER #996 WAS RED ON TWO MORE, NEITHER THE SITE (`DECISIONS.md`,
-"Main's red on the tree after #996"): a row of #994's in verify_inline
-whose sample fitted this box's Inter and not CI's DejaVu Sans (shard 1 of
-both databases; mended, and read in DejaVu Sans here), and a contrast read
-of the Pad's "Photo" tab taken while a colour passed under it (sqlite 2;
-the reading reads again when a short word's ground was on its way).
-READ THE RUN ON THE TREE AFTER THOSE FIXES before believing main is green:
-the runs after #994, #995 and #998 were cancelled by the queue, not run,
-and the one after #999 still holds the verify_inline row.
-THE PICTURES OF ALL TEN AS BUILT, on the page the owner was sent:
-https://claude.ai/artifact/4BFRLCBk6cB8BMg8VZQt68 (`DECISIONS.md`, "The ten
-as built", has what was read on the built pages and main's runs).
-PUT TO THE OWNER, THEIRS TO ANSWER (each built the way named first):
-- a drawn comment's play button is the card's own pill at its foot, saying
-  the time; the mock drew a small round mark in the corner;
-- the initial on cards changes their Nov 13 "never an initial"; lists of
-  people (followers, who liked it, search) still show the blank circle;
-- two faces sharing a row of Activity stay plain (a letter there was cut:
-  the one behind by the face in front, a wide one in front by the heart);
-  letters for a pair would need the faces or the badge to sit differently,
-  and so a mock;
-- Export's GIF row wears the infinity sign with the players' loop;
-- the Text drawer's way out of a post ("Yours" with no hand yet, and "Edit
-  your hand", leave the composer's frame and the drawing is gone): not
-  fixed; the answer offered is that inside a post "Edit your hand" is not
-  shown and "Yours" with no hand says where to make one;
-- THE OWNER'S OWN QUESTION (about 4:10 PM): what comes next to make the
-  site smooth with the editors, whether anything in their menu belongs in
-  the site's, "somehow link to how it works?". Answered, not decided
-  (`DECISIONS.md`, the newest entry): the site has no door to How it works
-  today; offered, a row in the site's menu (a mock first), and a walk of
-  Save and Drafts between the editors and the profile, which was not
-  walked.
+"can't drag letters, still jumps right every touch. Not draggable", and
+from the Pad on its own: "can't drag on skribl pad standalone". Before
+#1065 it was the same: "Each time I touch it it jumps to right or up and
+over to the right."
 
-THE SIX MOCKS, as they were put up:
-https://claude.ai/artifact/MxPYZyHAtdR4hEg9YiXAuR, ten choices with a
-default each (`DECISIONS.md`, "One repository (the owner's yes to A), and
-the walkthrough's six mocks", lists them and what was measured). Build only
-what the owner answers, the editors' menu first:
-- A DEFECT WAITS ON CHOICE 1. From a host's composer the menu's Library and
-  Public gallery are plain links: the frame leaves the Pad, compose keeps
-  no draft, the drawing is gone and nothing asks. A takes the two doors out
-  inside a post; B keeps them behind the question the switch to the other
-  editor already asks. Either mends it; show it red first (a drawing, the
-  door, the canvas after).
-- THE OWNER ASKED "why take out library? you're taking out the ability to
-  load .skribls into the pad?" A `.skribl` file is opened and saved in Your
-  drafts, never in the Library, and that stays (tried inside the composer:
-  saved, opened again, every stroke back). Say so first if it comes up
-  again, and never mock that door away.
-- THE ADD SHEET STAYS (minus the gallery tick) and THE ROW UNDER A POST IS
-  NOT TOUCHED: both were the other way in the page's draft and were changed
-  by reading the record first.
-- The first step needs no switch: the menu already knows it is inside a
-  post, and the tick is asked for by the site's own composer.
+- THE CHECK WAS BLIND TO IT. `harness/verify_text.py` part 16's drag row
+  drags with a MOUSE, and checks only that the words moved right and up.
+  A jump to the right passes it. Make it drive a finger (touch events on
+  a touch page) and check that the words follow the finger by the drag's
+  own amount. Show it red on today's tree before mending anything.
+- A LEAD, NOT A FINDING. With the drawer up, a press on the drawing moves
+  the words to the press. That is the TEXT branch of the drawing's press
+  in `skribl/static/editor_draw.js`, which calls `SkriblText.place`; Flip
+  has the same call in `skribl/static/flip.js`, and `place()` itself is in
+  `skribl/static/lib/textwrite.js`. Suppose an iPhone's finger on the
+  words reaches the drawing's press instead of the words' own box (whose
+  pointerdown starts the drag). Then every touch moves the words' anchor
+  to the finger, which is right of where they were when the finger is on
+  their middle, and they never drag. That would match the owner's words
+  exactly.
+- One cure that holds whatever the cause: a press on the drawing that
+  lands inside the words' own box starts their drag instead of placing
+  them anew.
+- Keep what #1065 did for a drag while typing: the drawer no longer steps
+  aside, so the keyboard stays.
 
-TAKEN BACK, and why: Quote without a drawing (the only way to answer a Flip
-or a post of words with a drawing in a post of your own); Flip out of the
-comment box (Pad and Flip do not drift); no Add sheet (the owner's pick,
-and "Viewers start at" is the author's speed, a root; Tune's Watching speed
-is the preview's); names under a phone's tabs (the owner's own choice,
-Nov 15); a draw-back's card with the original faint (washed-out ink on
-every card: "no dinge"); one Gallery tile a drawing (the test site's ten
-posts held four draw-backs; wait for the live site); a three-item Pad menu
-in the composer (New, Your drafts and the Pad and Flip switch are there on
-purpose; only Library and Public gallery lead out, read in the template and
-not tried on screen); the Gallery without Following and Everyone (the map);
-leaving "Who can draw back" for later (the artist's say over her own art:
-build both parts of choice 7).
+The Pad and Flip share the drawer and its script: whatever mends it mends
+both, and says so.
 
-The walkthrough's copy of the site, and the mocks' (five made-up people,
-eleven posts), were scratch and are gone with the session; the pictures are
-in the mock page.
+## What happened Nov 21 and 22 (all merged)
 
-## Open threads
+Nov 21, evening:
 
-- **On SQLite with media kept in a store, a post with a photo or music
-  answers "busy"** (503). Found while testing the author's background and
-  music: the site's post route reads through the request's session before
-  Skribl stores the post (the taken-down check, a quote's reads), and the
-  store's claim commits on a connection of its own (`skribl/creation.py`,
-  H3), which waits on SQLite's lock and gives up. The same post made
-  through `create_post` with nothing read first is stored. Not the live
-  site (it posts music), and PostgreSQL has no such lock. Not fixed:
-  ending the request's read before `create_post` would likely mend it,
-  but it touches every post, so it wants its own look.
+- #1040 The moving bottom bar: a phone that still thinks its keyboard is
+  up is asked to measure again.
+- #1041 Report a problem says what the phone takes its screen for (a
+  Viewport line).
+- #1042 The colour audit's five fixes.
+- #1043 The colour audit's yes: 1, 5, 6, 7, 8 and 10a.
 
-- **THE OWNER SAID "ALL YES" TO THE EVENING'S THREE MOCKS** (Nov 20, about
-  7:25 PM; `DECISIONS.md`, "All yes to the evening's three mocks"). Built
-  in this order, each its own pull request; read the newest entries to see
-  how far it got:
-  1. THE WAY BACK, PART TWO (A): built, the entry above; and the kind
-     page for a wrong address that was owed from it (`DECISIONS.md`, "A
-     wrong address is a kind page"; `docs/SOCIAL-SITE.md` section 30).
-  2. EACH ROW DISTINCT (A): built (`DECISIONS.md`, "Each row distinct,
-     built").
-  3. THE CRISP QUOTIENT (B) on the site: built (`DECISIONS.md`, "Crisp,
-     built"; `verify_socialposts` 23 holds it). It lists five calls no
-     mock showed, and says where it meets Nov 16's "just a border": read
-     what the owner says of both before anything else there.
-  4. THE PAD AND FLIP: built, exactly what the mock laid over them
-     (`DECISIONS.md`, "Crisp on the Pad and Flip"; `verify_contrast`'s
-     "CRISP, THE EDITORS" holds it, `verify_galib` 3 the two pages'
-     copies). THE REST IS MOCKED AND WAITS FOR THE OWNER: the artifact
-     "Last Soft Shadows", nine calls with a pick on each (`DECISIONS.md`,
-     "The last soft shadows, mocked"). Nothing of it is built. THE BAND
-     UNDER ROWS IN SKRIBL'S OWN GALLERY AND THE LIBRARY IS NOT TO BE BUILT
-     ON THE EARLIER YES: those pages are whole cards, not a grid of tiles
-     (that entry's correction); it is asked again as call 9, pick "no
-     band". Read the owner's answer before anything there.
-  NOT DECIDED: bands for lists of one thing a line (Activity, people);
-  initials in "Liked by"; a tablet's Make card riding its keyboard.
-- **NOV 21, FROM THE OWNER'S PHONE** (`DECISIONS.md`, the entries from "Two
-  questions off the owner's phone" down):
-  1. THE DRAWING'S EDGE: "A", built ("The drawing's edge is A"), and the
-     places the page was never told too: a draft in Make and in the comment
-     box, How it works' examples ("The drawing's edge, the places the page
-     was never told"; `docs/SOCIAL-SITE.md` section 32).
-  2. THE PERSON'S TAP STOPS AT THEIR NAME: built ("The person's tap stops
-     at their name"; `docs/SOCIAL-SITE.md` section 31). CAL'S READING, said
-     to the owner and theirs to overrule: where an @handle runs on past a
-     short name, the room right of the name and over the @handle is the
-     person's.
-  3. "I LOVE YOUR PICKS. YES TO ALL." (11:16 AM), to eight: built, all of
-     it (`DECISIONS.md`, the two entries headed "Yes to all"). In Skribl's
-     editors: a pop's pointer wears its rim, the three pops over the
-     drawing float, dark's edge is 26%. On the site: a tile for each
-     drawing, the talk cloud answers, a page's name link stops at the
-     name, dark's edge (`docs/SOCIAL-SITE.md` sections 33 to 36). Cal's
-     readings in them are the owner's to overrule: focus back to the
-     cloud, the cloud's number kept true, the site's row lines clearer in
-     dark with the rest.
-  4. "LAST SOFT SHADOWS" IS WITHDRAWN: its nine calls are choices 2 and 3
-     of the colour audit (next), with picks redone. Build nothing from
-     that page.
-  5. THE COLOUR CRISP AUDIT the owner asked for in the same message: DONE,
-     AND WAITING FOR THE OWNER. Nothing of it is built. The report is the
-     artifact "Colour Crisp Audit"
-     (https://claude.ai/artifact/Jqzoat7mwLv78eXVAkg8yc); the whole of it
-     is `docs/COLOR-AUDIT.md`, and `DECISIONS.md` has its entry ("The
-     colour crisp audit"). FIVE FIXES (A to E: six hints in text boxes too
-     faint, four keyboard stops that show nothing, the chosen pill in forced
-     colours, a token nothing reads, focus under a phone's bar) are bugs
-     and needed no OK: BUILT that evening (`DECISIONS.md`, "The colour
-     audit's five fixes, built"). ELEVEN CHOICES: answered "All yes" the
-     same afternoon (item 8); 2, 3, 4 and 11 get a mock before anything is
-     built. The token table is `docs/COLOR-TOKENS.md`, made by
-     `harness/tools/coloraudit.py` (its `--check` says whether it is still
-     true).
-  6. MAIN WAS RED AFTER THE SITE'S HALF (#1036), one row of
-     `verify_socialposts` 13: a name that fitted this box's font and not
-     CI's (`DECISIONS.md`, "a name that fits in one font and not in
-     another"). Mended in the pull request after it. READ MAIN'S RUN ON
-     THAT FIX before believing main is green.
-     (Read at 7:55 PM: green on every job, #1038's run and #1039's.)
-  7. THE MOVING BOTTOM BAR (the owner, 3:56 PM and 4:31 PM, from the Home
-     Screen app: "When I scroll the bottom menu scrolls too?", "That's a
-     big bug"). An iPhone's own fault after its keyboard has been up
-     (`DECISIONS.md`, "The moving bottom bar"); the owner was told to
-     swipe the app away and open it again. BUILT: every page of the site
-     asks a phone left like that to measure again, and the keyboard is put
-     away before the app changes page (`docs/SOCIAL-SITE.md` section 37).
-     NOT SEEN ON AN IPHONE. ASK THE OWNER whether the bar has ridden the
-     page since. If it has, the sure cure in that entry (the page
-     scrolling inside the app's frame) is the next thing to put to them:
-     a design change, a mock, the full battery. Skribl's own Gallery and
-     Library have no guard yet. IF IT RIDES AGAIN, ASK FOR THE NUMBERS
-     FIRST: the Pad's and Flip's Report a problem now copies a Viewport
-     line (what the phone takes its screen for; `DECISIONS.md`, "Report a
-     problem says what the phone takes its screen for"), and
-     `docs/DEVICE-CHECKLIST.md`, "Blooby on the Home Screen", says how.
-  8. "ALL YES." (4:51 PM, with the first picture of the bar), to the
-     colour audit's eleven choices (`DECISIONS.md`, ""All yes" to the
-     colour audit's eleven"). BUILT that night: 1, 5, 6, 7, 8 and the
-     first half of 10 (`DECISIONS.md`, "The colour audit's yes, built").
-     STILL OWED: the mocks for 2, 3, 4 and 11 (each waits for a yes of its
-     own to the look it shows), and 10's second half to ask again (Cal's
-     pick: yes, a check that holds today's counts of colours written into
-     rules). The "more contrast" values are Cal's, by measurement: the
-     owner's to adjust.
-- **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No
-  strip of Home under a sheet on a phone's keyboard"). The tell: in Make,
-  the words tapped, the sheet's own lilac paper down to the keys and
-  nothing of Home. Read what they say of it before anything else there.
-- **ASKED OF THE OWNER ON NOV 20'S AS-BUILT PAGE** (the artifact "Friday
-  Four Built"), each waiting for a yes, neither built: initials in the
-  empty circles of "Liked by" (somebody with no drawn face is a blank lilac
-  circle there, and an initial beside a comment); and whether a tablet's
-  Make card should ride its keyboard as a phone's sheet does (its tools sit
-  under the keys: measured on 1024 by 768 with a keyboard stood in, not
-  seen on an iPad). The same page lists, build by build, every call no mock
-  showed, as theirs to overrule.
-- Main's full runs after #986, #987 and the PR after them were still going
-  when this was written. Look at the newest runs on main first.
-- Not sealed since v330. That is fine: seal only when there is a reason.
-- Not tried on the owner's iPhone: no WebKit here. The owner asked "what
-  should I see?" at 6:30 AM; the tells were the row ending at ⋯ (no Open ›)
-  and the pen after the heart, signed in.
+Nov 22:
 
-## Things learned that will save you time
+- #1044 A draw-back's card: the time's words take their own taps.
+- #1046 Main red after the yes-choices: `verify_a11ypages` follows a
+  colour's name to its colour.
+- #1047 A button takes the page's font (the editors' buttons were in
+  Arial on Windows).
+- #1049 Text inside a post: the drawer sits on the iPhone's keyboard, and
+  New takes the words in the box.
+- #1050 Main red after the button font. CI draws the editors in
+  Liberation Sans.
+- #1051 A held finger selects no control.
+- #1052 and #1053 "Blooby and Search": the wordmark in the middle on a
+  phone, five places, and Search of its own.
+- #1054 See all has its way back.
+- #1056 No new colour written straight into a rule (the audit's 10b).
+- #1057, #1058, #1059 and #1060 "Four Looks":
+  - Skribl's own Gallery and Library cards have the edge alone (3, A);
+  - a press that shows, on Blooby (4, A);
+  - the Pad's and Flip's last soft shadows (2, after);
+  - the chosen word a step bolder, its room kept (11, A).
+- #1061 Text's drawer kept room for the iPhone's strip. Replaced by #1064.
+- #1063 Main red after #1060 mended: the Who can draw back pill keeps its
+  room, and a sign-in read waits for its page.
+- #1064 Text: Style stays under the words while they are typed, and the
+  empty room goes.
+- #1065 Text on a phone:
+  - it opens whole, and a tap on the box brings the keyboard;
+  - inside the site, the page behind holds still;
+  - a drag keeps the keyboard.
+
+Each has its `DECISIONS.md` entry, with what was checked and what was
+shown red.
+
+## Waiting on the owner
+
+- Their iPhone, still to say: has the bottom bar ridden the page since
+  #1040? Does a held finger still select anything (#1051)? Does a press
+  show, on Blooby (#1058)?
+- Flip's desk page bar lost its group gaps after #1047 in this box's font
+  (`harness/verify_pages.py` is red here and green in CI's font). See
+  `DECISIONS.md`, "FOUND ON THE WAY, ITS OWN NEXT". Mock it if they want
+  one.
+- The Gallery's chosen "New" reads 6.24:1 in light: over AA, under the
+  page's own 7:1. The 7:1 check in `harness/verify_galib.py` cannot read
+  words in the span that `skribl/static/lib/labels.js` adds. See
+  `DECISIONS.md`, "AND A BLIND SPOT, NOT MENDED HERE".
+  - The owner's to say: hold that pill to AA, or darken it.
+  - Mending the check's blind spot is a bug fix, and needs no yes.
+- Not decided, carried from Nov 20:
+  - initials in the empty circles of "Liked by";
+  - whether a tablet's Make card rides its keyboard;
+  - bands for lists of one thing a line (Activity, people).
+
+## Still to build, in the decided order (from the Nov 19 handoff)
+
+1. Flip, page for page: Draw back's Flip twin. Its own mock first. The
+   page that stays underneath (`FUTURE.md` 6i) is its twin.
+2. Recolours on a draw-back: refused, with why, for now
+   (`social/drawback.py`, drawable). They index the strokes by number and
+   time, which the join would have to carry over.
+3. Then the owner's list from Nov 18: messages as drawn letters
+   (`docs/SOCIAL-SITE.md` section 17), then watching first everywhere.
+
+Behind all of it are the roots in `WORKING-AGREEMENTS.md`: "Skribl Pad
+first", and Blooby as the place where people talk in drawings.
+
+## Open thread carried
+
+On SQLite with media kept in a store, a post with a photo or music answers
+"busy" (503). The site's post route reads through the request's session
+before Skribl stores the post. The store's claim then commits on a
+connection of its own (`skribl/creation.py`), which waits on SQLite's lock
+and gives up. This doesn't affect the live site (it posts music) or
+PostgreSQL. Not fixed: ending the request's read before `create_post`
+would likely mend it, but it touches every post, so it wants its own look.
+
+## How this session worked, and what saves time
+
+How to run things:
+
+- Suites ran side by side with `harness/run_parallel.py -j 3 <suites>`,
+  on a clean worktree of the commit (commit first). This box has four
+  cores. More than three side by side made frame-paced checks
+  intermittent, so a red beside others is re-run alone before believing
+  it.
+- A check was calibrated on a copy of the tree with one break applied,
+  served by a server of its own, running only the part that matters.
+  `TEXT_PART` and `SOCIALPROFILE_PART` run one part alone; each suite's
+  header says how.
+- `harness/bootstrap.sh` makes the pinned Python (`/tmp/skribl-venv` by
+  default). Put it first on PATH: with the box's own python3,
+  `verify_docs` goes red on two rows (the interpreter and the lock).
+- The scratch scripts this session used (runs on worktrees, calibration
+  copies) were in its scratchpad and are gone with the container. Make
+  them again if useful.
+
+Lessons from Nov 22:
+
+- A drag check drives a finger and checks the follow, not just the
+  direction (bug 2's blind spot).
+- The iPhone's own strip (^ v and the tick) is about 60px tall and floats
+  over the top of the keys. The visual viewport sometimes counts it and
+  sometimes does not, and no web API says which (`DECISIONS.md`, "Text's
+  drawer clears the iPhone's own bar"). Style under the box while typing
+  (#1064) made the strip's place matter less.
+- A tap on Text's box is taken by the page (its default stopped), so that
+  the phone does not slide the page up to show the box (#1065).
+- Inside the site, the editor overlay holds the page behind:
+  `body.facepad-open` in `social/static/social.css`, held by
+  `harness/verify_socialprofile.py` part 21.
+- For "it doesn't show on my phone", give a one-glance tell for the new
+  build and ask for a reload first.
+
+Habits:
+
+- After a squash merge, check that main's tree is the tree that was
+  tested. Then restart the branch from main (`git checkout -B <branch>
+  origin/main`) and push with `--force-with-lease=<branch>:<old sha>`.
+  That worked through Nov 22. `merge_pull_request` needs the head's full
+  sha.
+- While long work is in progress, keep an hourly check-in on the session
+  (the owner's rule, `WORKING-AGREEMENTS.md`). Remove it once the work is
+  merged, main's run is read, and the owner is told. At the end of this
+  session it was turned into one last check at 3:55 PM, which reads main's
+  run and then deletes itself.
+
+Still true from the Nov 19 handoff:
 
 - The site warms its static files when it starts, so a change to
-  `social/static/social.css` or `social/static/posts.js` is not served by a
-  server already running. Restart it before believing what you see.
-- Every Pad drawing carries a picture of its blank paper (`baseSnapshot`),
-  so Skribl's `on_photo` is true for nearly every Pad drawing. It does not
-  mean a photo; a photo is `frames[0].photo.data`.
+  `social/static/social.css` or `social/static/posts.js` is not served by
+  a server already running. Restart it before believing what you see.
+- Every Pad drawing carries a picture of its blank paper
+  (`baseSnapshot`), so Skribl's `on_photo` is true for nearly every Pad
+  drawing. It does not mean a photo; a photo is `frames[0].photo.data`.
 - `harness/verify_seam.py` reads `skribl/describing.py` and
-  `skribl/__init__.py` closely: it pins some import lines word for word and
-  resolves names at the module's top, so an import inside a function is
-  red there.
-- `harness/verify_socialposts.py` 7 floors how many words it reads on each
-  screen: taking a word off a page (Open ›) lowers a floor.
+  `skribl/__init__.py` closely. It pins some import lines word for word
+  and resolves names at the module's top, so an import inside a function
+  is red there.
 - The in-post player's byte budget rises only for a named cost the owner
   said yes to, written beside it in its own format.
-- A block is held twice for anything of Skribl's (the site's own check, and
-  Skribl's `visible_to` through the site's hook): to see a block's row go
-  red, take both away.
-- After a branch's PR merges, merge main into the branch and push; a force
-  push was refused here.
-- A post made through the site's own requests carries no picture (the
-  Pad makes it), so it rests as a blank box: for a site that looks real,
-  open the composer's Pad and call `loadSkribl(payload)` in its frame
-  (Flip's is `window.SkriblComposeLoad`), then Add and Post, as the
-  walkthrough did with the drawings under `skribl/static/help/demos/`.
+- A block is held twice for anything of Skribl's (the site's own check,
+  and Skribl's `visible_to` through the site's hook). To see a block's row
+  go red, take both away.
+- A post made through the site's own requests carries no picture (the Pad
+  makes it). For a site that looks real, open the composer's Pad and call
+  `loadSkribl(payload)` in its frame (Flip's is
+  `window.SkriblComposeLoad`), then Add and Post.
 - Mocks are made by driving the real site with Playwright and laying the
-  option over it; the suites' fixtures (`harness/verify_socialcomments.py`'s
-  head) make a site with people in a minute. Scratch files do not survive a
-  new container.
+  option over it. The suites' fixtures (the head of
+  `harness/verify_socialcomments.py`) make a site with people in a minute.
