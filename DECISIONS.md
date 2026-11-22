@@ -52373,3 +52373,31 @@ search's own address. Calibrated, section 21 alone: as built 12 of 12; no
 arrow (main as it was), its row red and the walk unable to go on; the
 arrow to Home, its row and the walk red; the big heading left on a phone,
 its row red.
+
+## After v330 -- Four Looks, the owner's "All yes"; the colour check built (10's second half)
+
+The owner, Nov 22, 8:31 AM, having asked "What are those looks?" (put in
+plain words, each with its pick): "All yes". So 11 A (the chosen word
+bold, its width held), 3 A (Skribl's own Gallery and Library cards: the
+edge alone), 4 A (a press that shows on Blooby: the Pad's dip), 2 after
+(the Pad's and Flip's last soft shadows, one rule each), and the colour
+check. Each is its own pull request, its check shown red first; this
+one is the check.
+
+THE COLOUR CHECK, `verify_surfaces`, "no new colour written straight into
+a rule": every sheet's count of colours written into its rules, read the
+audit's own way (harness/tools/coloraudit.py inventory(): a colour in a
+declaration that is not a custom property, comments set aside), held
+where it stood that morning: the editors' styles.css 238 and the site's
+social.css 13, as the audit counted them, and each other sheet its own
+(fullbar.css 63, gallerysection.css 94, inlineplayer.css 56, flip.css
+33, fullband.css 26, posted.css 10, letters.css 5, postfull.css 2, four
+at 1); a new sheet starts at none; player.css is left out (cssgraph
+makes it from styles.css). Never chased down: a sheet below its ceiling
+says so in the run, and its ceiling may come down with it. A token may
+still be defined with a colour: that is where a colour belongs. It runs
+in a pull request's own check (the smoke job runs verify_surfaces), the
+stricter check the owner said yes to. Calibrated: a colour typed into a
+rule of social.css, red (14, its ceiling 13); the same colour in a
+comment and as a token used through var(), green; a new sheet holding
+one colour, red.
