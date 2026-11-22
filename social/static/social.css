@@ -87,8 +87,21 @@
      under its foot (22px of blur drawn 12px in: about 10px shows). A SHEET's top is a line of light instead. */
   --float-drop: 0 1px 0 rgba(60, 40, 140, 0.14), 0 12px 22px -12px rgba(30, 20, 80, 0.45);
   --sheet-top: rgba(255, 255, 255, 0.85);
-  --rule: rgba(80, 60, 170, 0.12);  /* --menu-card-rule */
+  --rule: rgba(80, 60, 170, 0.10);  /* --menu-card-rule */
   --row-line: rgba(20, 10, 60, 0.16);  /* the thin line between two rows of a card (Apple's way) */
+  /* FOR "MORE CONTRAST" (the colour audit of Nov 21, choice 5; the owner's
+     "All yes"): the grey words a step stronger and every edge firmer, mapped
+     over the names above only for somebody whose device asks for more
+     contrast (at the end of the ramps, below). Here so the mapping holds no
+     colour and each theme carries its own. Off the paint: the grey words 9.68
+     to 1 on the page (7.10 at rest), 10.31 on a card; a card's edge 3.4 from
+     the card and 3.2 from the page (1.56 and 1.47 at rest). */
+  --ink-2-hc: #374151;
+  --card-edge-hc: color-mix(in srgb, rgb(124 92 255) 85%, var(--card));
+  --card-line-hc: rgba(124, 92, 255, 0.85);
+  --rule-hc: rgba(80, 60, 170, 0.30);
+  --row-line-hc: rgba(20, 10, 60, 0.36);
+  --nav-line-hc: rgba(20, 23, 29, 0.24);
   --field: #ffffff;
   --field-line: rgba(124, 92, 255, 0.82);  /* 3:1 against the card, as a field's edge must be: 3.26:1 on white,
                                               3.06 on the page (at 0.75 it read 2.90 and 2.68: "The edges") */
@@ -128,7 +141,7 @@
      value for value. Same role, same values; the site names its own. */
   --pill-on-fill: rgba(124, 92, 255, 0.22);
   --pill-on-ink: #3f27a8;
-  --pill-off-ink: #3f4756;
+  --pill-off-ink: #3b4251;
   /* A GALLERY TILE'S "▶ 15 sec" (the map's step 3, the Gallery mock's B),
      on the drawing, which wears no theme, so the same in both: the in-post
      player's own words at rest (inlineplayer.css .is-says, #3a24a8), on its
@@ -182,8 +195,17 @@
   --card-drop: 0 1px 0 rgba(255, 255, 255, 0.07) inset;
   --float-drop: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 22px -12px rgba(0, 0, 0, 0.8);
   --sheet-top: rgba(255, 255, 255, 0.10);
-  --rule: rgba(167, 146, 255, 0.14);
+  --rule: rgba(167, 146, 255, 0.12);
   --row-line: rgba(255, 255, 255, 0.16);
+  /* For "more contrast" (the light ramp says why): the grey words 13.48 to 1
+     on the page (10.12 at rest), 11.44 on a card; a card's edge 3.16 from the
+     card and 3.73 from the page (1.61 and 1.90 at rest). */
+  --ink-2-hc: #d6dbe3;
+  --card-edge-hc: color-mix(in srgb, rgb(167 146 255) 60%, var(--card));
+  --card-line-hc: rgba(167, 146, 255, 0.6);
+  --rule-hc: rgba(167, 146, 255, 0.36);
+  --row-line-hc: rgba(255, 255, 255, 0.36);
+  --nav-line-hc: rgba(255, 255, 255, 0.24);
   --field: #17142a;
   --field-line: rgba(167, 146, 255, 0.7);
   --danger-ink: #ffb3c6;
@@ -194,7 +216,7 @@
      4.99:1 and 4.39:1 on a card. --heart-paper stays: the paper is cream. */
   --heart-2: #ff4d78;
   --heart-3: #ff2d5f;
-  --pill-on-ink: #d4c9ff;
+  --pill-on-ink: #dad1ff;
   --pill-off-ink: #b7bfcc;
 }
 /* ...and the same ramp where nothing is stamped and the device is dark. */
@@ -231,8 +253,17 @@
     --card-drop: 0 1px 0 rgba(255, 255, 255, 0.07) inset;
     --float-drop: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 22px -12px rgba(0, 0, 0, 0.8);
     --sheet-top: rgba(255, 255, 255, 0.10);
-    --rule: rgba(167, 146, 255, 0.14);
+    --rule: rgba(167, 146, 255, 0.12);
     --row-line: rgba(255, 255, 255, 0.16);
+    /* For "more contrast" (the light ramp says why): the grey words 13.48 to 1
+       on the page (10.12 at rest), 11.44 on a card; a card's edge 3.16 from the
+       card and 3.73 from the page (1.61 and 1.90 at rest). */
+    --ink-2-hc: #d6dbe3;
+    --card-edge-hc: color-mix(in srgb, rgb(167 146 255) 60%, var(--card));
+    --card-line-hc: rgba(167, 146, 255, 0.6);
+    --rule-hc: rgba(167, 146, 255, 0.36);
+    --row-line-hc: rgba(255, 255, 255, 0.36);
+    --nav-line-hc: rgba(255, 255, 255, 0.24);
     --field: #17142a;
     --field-line: rgba(167, 146, 255, 0.7);
     --danger-ink: #ffb3c6;
@@ -243,8 +274,27 @@
        4.99:1 and 4.39:1 on a card. --heart-paper stays: the paper is cream. */
     --heart-2: #ff4d78;
     --heart-3: #ff2d5f;
-    --pill-on-ink: #d4c9ff;
+    --pill-on-ink: #dad1ff;
     --pill-off-ink: #b7bfcc;
+  }
+}
+/* "MORE CONTRAST", ANSWERED (the colour audit of Nov 21, choice 5; the
+   owner's "All yes"). With the setting on, not one pixel of the site
+   changed; the editors had answered it since v290. For somebody who asks:
+   the grey words a step stronger, and every edge firmer (a card's and a
+   tile's, the thin rule and the line between two rows, the bar's top line),
+   each theme's own -hc value above. Nobody without the setting sees any of
+   it. After both dark copies, and as specific as each, so it wins in light,
+   in dark chosen and in dark by the device alike. verify_socialsettings 15. */
+@media (prefers-contrast: more) {
+  :root, :root[data-theme], :root:not([data-theme]) {
+    --ink-2: var(--ink-2-hc);
+    --nav-ink: var(--ink-2-hc);
+    --card-edge: var(--card-edge-hc);
+    --card-line: var(--card-line-hc);
+    --rule: var(--rule-hc);
+    --row-line: var(--row-line-hc);
+    --nav-line: var(--nav-line-hc);
   }
 }
 
@@ -264,7 +314,6 @@ body {
   background: radial-gradient(115% 62% at 50% -6%, rgba(124,92,255,0.10) 0%, transparent 55%) no-repeat top / 100% 100vh, var(--page);
   color: var(--ink);
   font: 16px/1.45 var(--font);
-  -webkit-font-smoothing: antialiased;
 }
 @media (min-width: 720px) {
   body { background-image: radial-gradient(828px 62% at 50% -6%, rgba(124,92,255,0.10) 0%, transparent 55%); }
@@ -1834,7 +1883,16 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    pixel), from where the row's words start (--line-start) to 16px before
    the card's edge, in --row-line. Report's reasons the same way. */
 :root { --hair: 1; --edge: calc(1px * var(--hair)); }
+/* A step for each density between 1x, 2x and 3x too (the colour audit of
+   Nov 21, choice 1): styles.css, THE CANVAS'S EDGE, says why. */
+@media (min-resolution: 1.25dppx) { :root { --hair: 0.8; } }
+@media (min-resolution: 1.5dppx) { :root { --hair: 0.6667; } }
+@media (min-resolution: 1.75dppx) { :root { --hair: 0.5715; } }
 @media (min-resolution: 2dppx) { :root { --hair: 0.5; } }
+@media (min-resolution: 2.25dppx) { :root { --hair: 0.4445; } }
+@media (min-resolution: 2.5dppx) { :root { --hair: 0.4; } }
+@media (min-resolution: 2.625dppx) { :root { --hair: 0.381; } }
+@media (min-resolution: 2.75dppx) { :root { --hair: 0.3637; } }
 @media (min-resolution: 3dppx) { :root { --hair: 0.3334; } }
 /* THE EDGES (the owner, Nov 15, "The edges", B): every outline the site
    draws is one screen pixel, the rows' thin line given to every edge. A

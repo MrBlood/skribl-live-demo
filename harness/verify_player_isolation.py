@@ -1416,7 +1416,17 @@ with sync_playwright() as sp:
     #   the dark glass violet; full screen's x joining the bar's glass rules,
     #   one more selector in each, which the lilac's shorter values paid for.
     #   verify_jsstrip's line moves with it. 45,546 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_552, 119_844, 40_000
+    # RAISED (the owner's "All yes" to the colour audit's choices, Nov 21),
+    #   for two named costs: +426 B -- a step of --hair for each density
+    #   between 1x, 2x and 3x (choice 1: a 1px-scaled line one sharp screen
+    #   pixel on a Windows screen at 125, 150 or 175% and on 2.625 and 2.75x
+    #   phones, where it was two soft ones), copied with the body's rule; and
+    #   +97 B net -- the second ink's four other names and the violet's four
+    #   roles pointing at the one (choice 10: var() where a colour was written
+    #   out), with the letters' thinning gone (choice 8: -35 B). Nothing to
+    #   spend first: the player keeps the token blocks whole by design.
+    #   verify_jsstrip's line moves with it. 45,955 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_961, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

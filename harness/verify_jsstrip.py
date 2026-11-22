@@ -643,7 +643,13 @@ with sync_playwright() as sp:
     # four (Nov 18): the Play pill the lilac, its grey wash and edges gone,
     # the dark glass violet, full screen's x joining its rules. 45,546
     # measured, and 25 B again.
-    _css_target = 45_571
+    #
+    # AND 523 B MORE, IN WRITING, at the owner's "All yes" to the colour
+    # audit's choices (Nov 21): a step of --hair for each density between
+    # 1x, 2x and 3x (426 B), and the second ink's and the violet's names
+    # pointing at the one where their colour was written out, with the
+    # letters' thinning gone (97 B net). 45,955 measured, and 25 B again.
+    _css_target = 45_980
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")

@@ -82,9 +82,15 @@
      where the text-contrast requirement does not apply. Everything a user reads
      uses --text-muted; verify_a11y.py holds that line and fails a token that is
      defined, used by no rule and unable to pass. */
-  --text-soft: #b7bfcc;           /* TWO INKS (owner, after v324): every secondary word is the one */
-  --text-soft-2: #b7bfcc;         /* second ink, 7:1 or more on the page, the paper and the cards */
-  --text-soft-3: #b7bfcc;
+  /* ONE GREY, FIVE NAMES (the colour audit of Nov 21, choice 10; the owner's
+     "All yes"): the second ink was written out under each of its names, in
+     both ramps, and nothing but care kept the five the same. Four of them
+     point at --text-secondary now, here and in the light ramp. No colour
+     moves: a name still means what it meant, in every theme and scope (the
+     light sheets' glass and "more contrast" each set their own, as before). */
+  --text-soft: var(--text-secondary);     /* TWO INKS (owner, after v324): every secondary word is the one */
+  --text-soft-2: var(--text-secondary);   /* second ink, 7:1 or more on the page, the paper and the cards */
+  --text-soft-3: var(--text-secondary);
   --text-tool-3: #a8b0bf;
   --text-tool-2: #a9b1c1;
   --text-tool: #a8b2c1;           /* .tool-btn at rest */
@@ -156,7 +162,7 @@
   /* Text */
   --text-primary: #f6f7f9;
   --text-secondary: #b7bfcc;      /* 10.9 on the page, 9.7 on the paper, 8.6 on a card */
-  --text-muted: #b7bfcc;
+  --text-muted: var(--text-secondary);
   --text-dim: #575f6e;
   /* The increased-contrast counterparts. Mapped over the four above under
      prefers-contrast: more, at the end of this sheet; defined HERE so the media
@@ -303,10 +309,13 @@
      the accent's hue at low saturation, so the UI is calm but not grey.
      Two-stop gradients (scrub/export fills, scrollbars) were flattened to
      solid fills during the demotion and stay solid at every setting. */
-  --ui-hi: #7c5cff;
-  --ui-active: #7c5cff;
-  --ui-line: #7c5cff;
-  --focus-ring: #7c5cff;
+  /* POINTED AT THE ACCENT, AND SAID SO (the colour audit of Nov 21, choice 10):
+     the four were the accent's value written out four times. The dial is one
+     edit still: give a role its own value here and it leaves the accent. */
+  --ui-hi: var(--accent);
+  --ui-active: var(--accent);
+  --ui-line: var(--accent);
+  --focus-ring: var(--accent);
 
   /* Ink that sits ON the canvas rather than on the chrome — the empty-state
      hint. It is deliberately absent from the light ramp: the canvas is the
@@ -460,7 +469,6 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   display: flex;
   justify-content: center;
-  -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
 }
 
@@ -834,9 +842,23 @@ body.player-mode .canvas-area { display: contents; }
    set on every page, the editors' and a drawing's link page (the edges,
    part four), which they reach in player.css. A border cannot draw it
    (Chromium rounds a border under 1px up to 1px, three screen pixels at
-   3x); an inset ring can, and the canvas's edge was one already. */
+   3x); an inset ring can, and the canvas's edge was one already.
+   AND BETWEEN THE THREE (the colour audit of Nov 21, choice 1; the owner's
+   "All yes"): a Windows screen at 125, 150 or 175% and many Android
+   phones (2.625, 2.75) drew a 1px-scaled line as two soft pixels, a
+   step of --hair for each puts it back on one. Each step is 1 over its
+   density, at four places (a hair over: 0.3334 at 3x was always one sharp
+   pixel); a density between two steps takes the lower, a line a few
+   hundredths of a pixel wider. Nothing changes at 1x, 2x or 3x. */
 body { --hair: 1; --edge: calc(1px * var(--hair)); }
+@media (min-resolution: 1.25dppx) { body { --hair: 0.8; }}
+@media (min-resolution: 1.5dppx) { body { --hair: 0.6667; }}
+@media (min-resolution: 1.75dppx) { body { --hair: 0.5715; }}
 @media (min-resolution: 2dppx) { body { --hair: 0.5; }}
+@media (min-resolution: 2.25dppx) { body { --hair: 0.4445; }}
+@media (min-resolution: 2.5dppx) { body { --hair: 0.4; }}
+@media (min-resolution: 2.625dppx) { body { --hair: 0.381; }}
+@media (min-resolution: 2.75dppx) { body { --hair: 0.3637; }}
 @media (min-resolution: 3dppx) { body { --hair: 0.3334; }}
 body .canvas-wrap:not(.light-bg) {
   --canvas-ring: inset 0 0 0 calc(1px * var(--hair)) rgba(var(--wash-rgb), 0.18);
@@ -2407,15 +2429,15 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
 
   /* Text — the brightest becomes the darkest ink */
   --text-dim:                #8c94a3;
-  --text-muted:              #3b4251;   /* TWO INKS: the one second ink, 9.0:1 on the lilac paper, 7.47 on the second
+  --text-muted:              var(--text-secondary);   /* TWO INKS: the one second ink (#3b4251), 9.0:1 on the lilac paper, 7.47 on the second
                                            button's tint over Flip's frame (Just a Border: was #3f4756, 6.93 there) */
   --text-muted-hc:           #3d4452;   /* prefers-contrast: more — 8.3:1 on the darkest light surface */
   --text-dim-hc:             #4f5765;
   --hairline-hc:             rgba(0,0,0,0.28);
   --hairline-strong-hc:      rgba(0,0,0,0.42);
-  --text-soft:               #3b4251;
-  --text-soft-2:             #3b4251;
-  --text-soft-3:             #3b4251;
+  --text-soft:               var(--text-secondary);
+  --text-soft-2:             var(--text-secondary);
+  --text-soft-3:             var(--text-secondary);
   --text-secondary:          #3b4251;
   --text-tool-3:             #4b535f;
   --text-tool-2:             #4b535f;
@@ -2460,7 +2482,7 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   --press-fill: rgba(124, 92, 255, 0.22);
   --press-ring: #7c5cff;
   --chip-lift: 0 1px 0 rgba(60, 40, 140, 0.14), 0 12px 22px -12px rgba(30, 20, 80, 0.45);
-  --off-ink: #a59dcc;
+  --off-ink: #928ab8;
   --tip-well: #f0ecff;
   --count-fill: #ece6ff;
   --draw-wait: #ece6ff;

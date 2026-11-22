@@ -203,6 +203,59 @@ check("the stylesheet declares tokens, and every one is read by something (a var
       len(_declared) > 100 and not _unread,
       ", ".join(_unread[:8]) or f"{len(_declared)} names, {len(_sheets)} sheets read")
 
+# ONE COLOUR, ONE NAME TO SET IT BY (the colour audit of Nov 21, choice 10;
+# the owner's "All yes"). Five names were the one second ink, each written
+# out in both ramps (--text-secondary, --text-muted, --text-soft, -2, -3), and
+# five the accent's violet (--accent, --ui-hi, --ui-active, --ui-line,
+# --focus-ring); nothing but care kept each five the same. Four of each point
+# at the one now, so a change to the ink or the violet is one edit and can
+# drift nowhere. No colour moved (docs/COLOR-TOKENS.md made again: only the
+# rows the choices meant to move moved). Read on the ramps themselves: the
+# dark one (the sheet's first :root) and the light one (:root[data-theme=
+# "light"]); a scope that sets its own (the light sheets' glass, "more
+# contrast") is free to, as before.
+_ALIAS = {"--text-secondary": ("--text-muted", "--text-soft", "--text-soft-2", "--text-soft-3"),
+          "--accent": ("--ui-hi", "--ui-active", "--ui-line", "--focus-ring")}
+_ramps = {"dark": re.search(r"^:root\s*\{(.*?)\n\}", _bare, re.S | re.M),
+          "light": re.search(r'^:root\[data-theme="light"\]\s*\{(.*?)\n\}', _bare, re.S | re.M)}
+_off_alias = []
+for _rn, _rm in _ramps.items():
+    _decls = dict(re.findall(r"(--[\w-]+)\s*:\s*([^;]+);", _rm.group(1))) if _rm else {}
+    for _one, _names in _ALIAS.items():
+        for _nm in _names:
+            _v = " ".join(_decls.get(_nm, "").split())
+            # the dark ramp must say it; the light one says it where it says the name at all
+            if (_rn == "dark" or _nm in _decls) and _v != f"var({_one})":
+                _off_alias.append(f"{_rn} {_nm}: {_v or 'not declared'}")
+check("one colour, one name to set it by: in both ramps the second ink's four other names point at --text-secondary and"
+      " the violet's four roles at --accent, none of them written out again",
+      all(_ramps.values()) and not _off_alias, "; ".join(_off_alias[:8]) or "all eight are the one's, in both ramps")
+
+# NO SHEET THINS ITS LETTERS (the colour audit of Nov 21, choice 8; the owner's
+# "All yes"). Six lines asked the browser to draw every letter with grey
+# smoothing alone: the editors' body and the amber pill, the site's body, and
+# the sheets Skribl's Gallery, Library and feed carry in their own pages. That
+# property does nothing on an iPhone or on Windows; on a Mac it draws letters
+# thinner than the system would, and thin light words on a dark ground are
+# where it hurts. Gone, and held gone here: the property's name as a
+# DECLARATION (comments taken out first, so a sentence about it is not it) in
+# any stylesheet, derived ones too, and in any template's own style.
+_SMOOTH = re.compile(r"(?:^|[;{\s])-(?:webkit|moz)-(?:osx-)?font-smoothing\s*:", re.M)
+_thin = []
+for _d, _pat in ((ROOT / "skribl" / "static", "*.css"), (ROOT / "social" / "static", "*.css"),
+                 (ROOT / "skribl" / "templates" / "skribl", "*.html"), (ROOT / "social" / "templates" / "social", "*.html")):
+    for _p in sorted(_d.glob(_pat)):
+        _t = _p.read_text(encoding="utf-8", errors="replace")
+        _t = re.sub(r"/\*.*?\*/", " ", _t, flags=re.S)
+        if _p.suffix == ".html":
+            _t = re.sub(r"\{#.*?#\}", " ", _t, flags=re.S)
+        _n = len(_SMOOTH.findall(_t))
+        if _n:
+            _thin.append(f"{_p.parent.name}/{_p.name} ({_n})")
+check("no stylesheet and no page's own style asks for its letters to be thinned (the smoothing property, as a "
+      "declaration, in Skribl's sheets and the site's, the derived ones, and every template)",
+      not _thin, "; ".join(_thin) or "none in any sheet or template")
+
 print("\nTHEME — both surfaces carry the same switch, wired to the same key")
 MENU = (TPL / "_skribl_menu.html").read_text(encoding="utf-8")   # the ⋯ menu both editors include (after v323)
 for name in ("skribl_editor.html", "skribl_flip.html"):

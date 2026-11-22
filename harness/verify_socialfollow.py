@@ -989,8 +989,11 @@ FILL, WHITE = "rgb(109, 76, 240)", "rgb(255, 255, 255)"
 # wash took the grey of what it sat on).
 BTN2 = {"light": "rgb(231, 224, 255)", "dark": "rgb(51, 42, 88)"}
 CARD = {"light": "rgb(255, 255, 255)", "dark": "rgb(35, 30, 59)"}
-PILL_ON = {"light": "rgb(63, 39, 168)", "dark": "rgb(212, 201, 255)"}
-PILL_OFF = {"light": "rgb(63, 71, 86)", "dark": "rgb(183, 191, 204)"}
+# The pill's two inks are the editors' since the colour audit's choice 6
+# (the site's copies had drifted a step: #d4c9ff chosen in dark, #3f4756 the
+# others in light; verify_socialsettings 14 holds the copies together).
+PILL_ON = {"light": "rgb(63, 39, 168)", "dark": "rgb(218, 209, 255)"}
+PILL_OFF = {"light": "rgb(59, 66, 81)", "dark": "rgb(183, 191, 204)"}
 TINT = "rgba(124, 92, 255, 0.22)"
 
 

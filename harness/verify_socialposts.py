@@ -3850,6 +3850,48 @@ print("PLAN " + json.dumps(out))
                   len(lifts) == 4 and _one_line(lifts.get("light on the page")) and lifts.get("light in a card") == []
                   and lifts.get("dark in a card") == [] and lifts.get("dark on the page") == [],
                   json.dumps(lifts))
+            # AND BETWEEN THE THREE (the colour audit of Nov 21, choice 1; the owner's "All yes"). --hair was 1, a
+            # half and a third: one sharp screen pixel at 1x, 2x and 3x, and two soft ones between (a Windows screen
+            # at 125, 150 or 175%; many Android phones at 2.625 and 2.75). A step for each now. READ TWO WAYS. What
+            # each page's own sheet says (--hair, as the browser resolves it, times the screen's density: one
+            # screen pixel, at every density from 1x to 3x, on the site, the Pad, Skribl's Gallery and its Library:
+            # social.css, styles.css, and pagemenu.css with the Gallery section's sheet made from styles.css). And
+            # what is painted: a post's card on Home on a touch phone at the five in-between densities the audit
+            # read, its left edge counted as the row above counts it at 3x (16px in from the screen's edge, a whole
+            # screen pixel at every one of them, so a line that is one is one).
+            DENS = (1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.625, 2.75, 3)
+            HAIR = "() => { const e = document.querySelector('#skriblGallery') || document.body; const v = getComputedStyle(e).getPropertyValue('--hair').trim(); return v ? parseFloat(v) : null; }"
+            per = {}
+            for dpr in DENS:
+                ctx, pg = browser_as(b, ed, screen="phone", scheme="light", scale=dpr)
+                for path in ("/social/", "/skribl-pad", "/gallery", "/library"):
+                    pg.goto(BASE + path)
+                    pg.wait_for_timeout(350)
+                    h = pg.evaluate(HAIR)
+                    per[f"{dpr} {path}"] = None if h is None else round(h * dpr, 4)
+                close_ctx(ctx, pg)
+            off_px = {k: v for k, v in per.items() if v is None or abs(v - 1) > 0.0005}
+            check("one screen pixel at every density, as each page's sheet says it: --hair times the screen's density is one"
+                  " at 1x, 1.25, 1.5, 1.75, 2x, 2.25, 2.5, 2.625, 2.75 and 3x, on the site, the Pad, the Gallery and the Library",
+                  len(per) == len(DENS) * 4 and not off_px, json.dumps(off_px or {"all": len(per)}))
+            between = {}
+            for dpr in (1.25, 1.5, 1.75, 2.625, 2.75):
+                for scheme in ("light", "dark"):
+                    ctx, pg = browser_as(b, ed, screen="phone", scheme=scheme, scale=dpr)
+                    pg.goto(BASE + "/social/")
+                    pg.wait_for_timeout(900)
+                    im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+                    r = pg.evaluate(BOX, ".post-card")
+                    x, y = round(r[0] * dpr), round((r[1] + min(r[3], 300) / 2) * dpr)
+                    k = lambda n: round(n * dpr)
+                    page, inside = im.getpixel((x - k(3), y)), im.getpixel((x + k(4), y))
+                    got = _band(im, [(i, y) for i in range(x - k(2), x + k(3))], page, inside)
+                    between[f"{dpr} {scheme}"] = {"n": len(got), "at": round(r[0] * dpr, 3), "px": got[:3]}
+                    close_ctx(ctx, pg)
+            check("...and painted so: a post's card's edge is one screen pixel at 1.25, 1.5, 1.75, 2.625 and 2.75, light and"
+                  " dark, on a whole screen pixel (where it was two soft ones)",
+                  len(between) == 10 and all(v["n"] == 1 and abs(v["at"] - round(v["at"])) < 0.01 for v in between.values()),
+                  json.dumps(between)[:900])
         except Exception as exc:  # noqa: BLE001
             check("section 17 ran to its end", False, str(exc).splitlines()[0][:200])
 
