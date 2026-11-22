@@ -1461,13 +1461,16 @@
      which leaves the pill full-size on every phone in common use.
      The one pill then set every label at 600 (it was 500 until chosen), and
      360px was over by three: the scope's options give 2px a side back here,
-     8px in all, so the margin is not one face's rounding. */
-  @media (max-width: 400px) { .movebar { gap: 6px; } .mb-scope button { padding: 0 7px; } }
+     8px in all, so the margin is not one face's rounding. The chosen word
+     then took the face's bold with the room for it kept (Four Looks' 11 A,
+     Nov 22), and with the longest page label 360px was over by one: they
+     give one more pixel a side back (6px here, 4px at 359 and under). */
+  @media (max-width: 400px) { .movebar { gap: 6px; } .mb-scope button { padding: 0 6px; } }
   /* 320px is the 1st-gen SE and narrower than anything sold now — a true
      fallback, like the FLIPMODE wordmark's step-down, not a target. */
   @media (max-width: 359px) {
     .movebar { gap: 5px; padding: 7px 8px; }
-    .mb-scope button { min-width: 24px; padding: 0 5px; font-size: 11px; }   /* 11px at this fallback only: at 12 the bar scrolls 4px with the longest page label (verify_move) */
+    .mb-scope button { min-width: 24px; padding: 0 4px; font-size: 11px; }   /* 11px at this fallback only: at 12 the bar scrolls 4px with the longest page label (verify_move) */
     .mb-offset { min-width: 46px; padding: 0 4px; }
     .movebar #mbReset, .movebar .mb-done { padding: 0 8px; }
   }
