@@ -348,6 +348,16 @@ body {
 /* The wordmark at the top of the page scrolls away with it: the bar below
    already holds the way home, and the drawings get the height. */
 .top { display: flex; align-items: center; height: 56px; padding: 0 16px; }
+/* THE WORDMARK IN THE MIDDLE ON A PHONE (the owner's pick A of "Blooby and
+   Search", Nov 22: "I like A"), as Bluesky's butterfly sits: its own ink on
+   the screen's middle, as a door screen's is ("THE MARK IN THE MIDDLE, ITS
+   INK TOO", below), on Home, the Gallery and every page whose top it is in.
+   Out of the bar's row, so the ☰ and the bell, or Sign in, stay where they
+   were. A desk has no top: its rail keeps the mark at its start. */
+@media (max-width: 899.98px) {
+  .top { position: relative; }
+  .top > .brand { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); justify-content: center; }
+}
 /* --ans-room: the answer bar's height where a phone's page has one standing
    on the bar (a post's page: THE ANSWER BAR, below), so the page's last
    line and the toast clear it as they clear the bar. */

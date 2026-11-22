@@ -52215,3 +52215,52 @@ site, light and dark, a touch phone and a desk, measured, nothing built:
 
 Cal's picks: 1 B, 2 the magnifier, 3 recent searches. Waits for the
 owner's answer; "all yes" takes the picks.
+
+## After v330 -- The wordmark in the middle on a phone (the owner's pick A)
+
+The owner, Nov 22 (about 6:10 AM), of "Blooby and Search": "I like A." The
+wordmark "blooby." sits in the middle of a phone's top, as Bluesky's
+butterfly does, on Home, the Gallery and every page whose top it is in;
+the ☰ and the bell, or Sign in, stay where they were. Out of the bar's row
+(absolute, centred), so nothing beside it moves; its own ink centred, as a
+door screen's is ("THE MARK IN THE MIDDLE, ITS INK TOO"). A desk has no top:
+its rail keeps the mark at its start. The same answer asked for the bar to
+keep Blooby's Gallery beside a magnifier ("Search is different than
+gallery which is fine the way it is"): five places, mocked next.
+
+THE CHECK, `verify_socialposts` 21, read off the paint at two pixels to one
+as the door screens' row reads: on Home and the Gallery, signed in and out,
+light and dark, the mark's ink within a pixel of the screen's middle, the ☰
+at the top's start and the bell or Sign in at its end, the mark touching
+neither. As built 11 of 11. Calibrated, each on a copy: the rule taken out,
+the new row alone red (the ink 118.75px left of the middle); the link
+centred but not its mark, the new row alone red (-7.75px, the owner's Nov
+20 case); the bar squeezed to the middle instead, red, with the arrows of
+the other screens' rows.
+
+NOT SEEN ON AN IPHONE: Chrome here at a phone's size with touch.
+
+## After v330 -- Five places and Search of its own, mocked (Blooby and Search, round two)
+
+The owner's same answer (Nov 22, about 6:10 AM): "I like the search icon
+but does blooby icon (real gallery) not fit on phone? Search is different
+than gallery which is fine the way it is." It fits: five places in a
+phone's bar, 77.2px each (96.5 today; a finger needs 44).
+
+THE MOCK, round two at the same link
+(https://claude.ai/artifact/WU8UqoUZ1ovwnYLHWWxDD1), the wordmark centred
+as built in every picture, nothing else built:
+1. FIVE PLACES, two orders: Home, Gallery, Search, Make, You (the two
+   places for looking side by side; the magnifier under the wordmark, 201
+   of 402); or Home, Gallery, Make, Search, You (Make, the one coloured
+   button, under the wordmark). The magnifier is the bar's own pen and ink.
+2. SEARCH, ITS OWN PAGE: titled Search, the box on top; tapped, the recent
+   searches (people opened, words searched, newest first, an x each, Clear
+   all, kept on the phone); typed, the people the box finds, then the
+   drawings, as the Gallery's search finds them; with nothing searched
+   yet, one quiet line. The Gallery stays as it is, its own box included.
+3. A DESK: Search on the rail under the Gallery; Make stays the big button.
+
+Cal's picks: Make in the middle; Search with recent searches; the rail.
+Waits for the owner's answer. "The bar keeps its four" (Nov 17) gives way
+to five if the owner says yes.
