@@ -1660,12 +1660,13 @@ with sync_playwright() as p:
                   f"{before and before['pressed']} then {after and after['pressed']}")
             check("the pill is the first thing under the header (Home has no box since the owner's \"All yes\", Nov 14), over the posts: the one switch, as the"
                   " Gallery's and the theme's (the owner's \"all yes\", Nov 16: 44px, the second button's tint and line, 12px round, the tint rgba(124, 92, 255, 0.22) under the chosen one, 13px words"
-                  " at 600, the chosen one's ink and the other's), each option 44px to a finger",
+                  " at 600 and the chosen word at 700 (Four Looks' 11 A, Nov 22), the chosen one's ink and the other's), each option 44px to a finger",
                   after and where["box"] == 0 and 0 <= where["top"] - where["header"] <= 24 and where["bottom"] < where["first"]
                   and after["h"] == 44 and after["bg"] == BTN2["light"] and after["line"] == after["token"] != "rgba(0, 0, 0, 0)"
                   and after["radius"] == "12px" and after["tint"] == TINT and after["tintOp"] == 1 and after["under"]
                   and [x["words"] for x in after["buttons"]] == ["Following", "Everyone"]
-                  and all(x["size"] == "13px" and x["weight"] == "600" and x["reach"] and x["w"] >= 44 for x in after["buttons"])
+                  and all(x["size"] == "13px" and x["weight"] == ("700" if x["words"] == after["pressed"] else "600")
+                          and x["reach"] and x["w"] >= 44 for x in after["buttons"])
                   and after["buttons"][0]["color"] == PILL_ON["light"] and after["buttons"][1]["color"] == PILL_OFF["light"],
                   json.dumps({"where": where, "pill": after}))
             pg.locator("[data-home-pill] button[data-show=everyone]").tap()
