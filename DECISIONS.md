@@ -52336,7 +52336,10 @@ wordmark 2px after the ☰; #1052 put the wordmark in the middle of the top,
 and its run of affected suites did not include verify_socialsettings (a
 miss: it reads the top too). The row now asks for the ☰ first in the top
 and the wordmark clear of it, on Home, the Gallery and Search;
-verify_socialposts 21 holds the wordmark's middle.
+verify_socialposts 21 holds the wordmark's middle. Calibrated, section 10
+alone: as built 11 of 11; the wordmark laid over the ☰, its row red;
+Search without its ☰, its row red, and the desk's row (it asks for the
+button there, unpainted).
 
 NOT SEEN ON AN IPHONE: Chrome here at a phone's size with touch. A phone's
 keyboard does not rise when Search opens: the box waits to be tapped, as
