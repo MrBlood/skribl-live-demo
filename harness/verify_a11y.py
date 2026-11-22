@@ -1378,6 +1378,55 @@ with sync_playwright() as p:
               or f"{len(_fields)} controls, smallest "
                  f"{min(f['fs'] for f in _fields)}px")
 
+    # --------------------------------------------------------- section 11e
+    print("\nA11Y 11e — every button, field and choice is in its page's own face")
+    # A BROWSER GIVES A CONTROL A FONT OF ITS OWN unless the page hands it
+    # down, and the body's font is not handed down to one by itself. Found
+    # making the chosen-word mock (Nov 21): the Pad's Post, the name's Done,
+    # the menu's rows, Pen | Background and Flip's Reset, Done and "0, 0"
+    # were drawn in the browser's own button font, which is Arial in Chrome
+    # and Edge on Windows (and here), while every word round them was in the
+    # page's. An iPhone's own button font is the system's, so it never showed
+    # there. THE MECHANISM, NOT THE WORD: read the family each control
+    # computes against its page's body, on the five pages with the places
+    # controls live opened; a family that says monospace is a choice (a hex
+    # or a code), anything else is the browser's own.
+    CONTROL_FACES = """() => { const body = getComputedStyle(document.body).fontFamily; const out = [];
+      for (const e of document.querySelectorAll('button, input, select, textarea')) {
+        const r = e.getBoundingClientRect(); if (!r.width || !r.height) continue;
+        const cs = getComputedStyle(e); if (cs.visibility === 'hidden') continue;
+        if (cs.fontFamily === body || /monospace/.test(cs.fontFamily)) { out.push(null); continue; }
+        out.push((e.id ? '#' + e.id : e.tagName.toLowerCase() + '.' + [...e.classList].slice(0, 2).join('.')) + ' in ' + cs.fontFamily.split(',')[0]); }
+      return out; }"""
+    _faces = {}
+    for _path, _name, _opens, _least in (("/", "Pad", ("draw", "#tuneBtn", "#menuBtn"), 30),
+                                         ("/flip", "Flip", ("move", "#toolMoreBtn", "#moreBtn"), 30),
+                                         ("/s/" + _pid, "the player", (), 3),
+                                         ("/library", "the library", (), 3),
+                                         ("/gallery", "the gallery", (), 2)):
+        _seen, _odd = 0, []
+        for _open in (None,) + _opens:
+            _pg = browser.new_page(viewport={"width": 390, "height": 844})
+            try:
+                _pg.goto(BASE + _path, wait_until="load")
+                _pg.wait_for_timeout(700)
+                if _open == "draw":
+                    browsing.pad_drawer(_pg, "draw")
+                elif _open == "move":
+                    _pg.evaluate("() => setTool('artmove')")
+                elif _open:
+                    _pg.click(_open)
+                _pg.wait_for_timeout(600)
+                _got = _pg.evaluate(CONTROL_FACES)
+                _seen += len(_got)
+                _odd += [f"{_open or 'at rest'}: {x}" for x in _got if x]
+            finally:
+                _pg.close()
+        _faces[_name] = (_seen, _odd)
+        check(f"{_name}: every button, field and choice it shows (at rest, and in each place it opens) is in the"
+              f" page's own face, or a monospace one on purpose", _seen >= _least and not _odd,
+              f"{_seen} controls read (at least {_least})" + (": " + "; ".join(sorted(set(_odd))[:6]) if _odd else ""))
+
     # --------------------------------------------------------- section 11c
     print("\nA11Y 11c — the hint in a text box can be read: 4.5 to 1 on its field, light and dark")
     # THE WORDS IN A BOX BEFORE ANYTHING IS TYPED ARE WORDS, AND NOTHING READ

@@ -649,7 +649,10 @@ with sync_playwright() as sp:
     # 1x, 2x and 3x (426 B), and the second ink's and the violet's names
     # pointing at the one where their colour was written out, with the
     # letters' thinning gone (97 B net). 45,955 measured, and 25 B again.
-    _css_target = 45_980
+    #
+    # AND 58 B MORE for a bug of its own (Nov 21): a button, a field and a
+    # choice take the page's font, one rule. 46,013 measured, and 25 B again.
+    _css_target = 46_038
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")

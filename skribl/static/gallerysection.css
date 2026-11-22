@@ -381,6 +381,7 @@ html[data-input="pointer"] #skriblGallery :focus-visible { outline: none !import
   :root:not([data-theme]) #skriblGallery { color-scheme: light; --base: #f6f8fa; --panel: #ffffff; --control: #f1f3f7; --control-hi: #e7eaf0; --hairline: rgba(0,0,0,0.12); --text: #14171d; --text-2: #4b5563; --text-3: var(--text-2); --hairline-strong: rgba(0,0,0,0.18); --accent-ink: #4c31c4; --danger: #c1104a; }
 }
 #skriblGallery, #skriblGallery * { box-sizing: border-box; }
+#skriblGallery button, #skriblGallery input, #skriblGallery select, #skriblGallery textarea { font-family: inherit; }
 #skriblGallery a { color: var(--accent); }
 #skriblGallery a:focus-visible, #skriblGallery button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 #skriblGallery .wrap { max-width: 1100px; margin: 0 auto; padding: 12px clamp(14px, 3vw, 28px) 60px; }

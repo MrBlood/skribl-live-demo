@@ -153,6 +153,9 @@
       font-family: var(--font-ui);
       line-height: 1.5;
     }
+    /* A button takes the page's font (styles.css, "A BUTTON TAKES THE
+       PAGE'S FONT"; verify_a11y 11e). */
+    button, input, select, textarea { font-family: inherit; }
     /* 12 above the header card, as the Pad's; 6 on a phone (pagemenu.css). */
     .wrap { max-width: 1240px; margin: 0 auto; padding: 12px clamp(14px, 3vw, 30px) 60px; }
     @media (max-width: 640px) { .wrap { padding-top: 6px; } }

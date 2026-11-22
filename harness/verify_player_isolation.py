@@ -1426,7 +1426,13 @@ with sync_playwright() as sp:
     #   out), with the letters' thinning gone (choice 8: -35 B). Nothing to
     #   spend first: the player keeps the token blocks whole by design.
     #   verify_jsstrip's line moves with it. 45,955 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 45_961, 119_844, 40_000
+    # RAISED (a bug of its own, found making the chosen-word mock, Nov 21):
+    #   +58 B -- a button, a field and a choice take the page's font (the
+    #   body's family does not reach them by itself, and the player's Play,
+    #   Loop and More were in the browser's own button font). One rule, the
+    #   selector listed live. Nothing to spend first. verify_jsstrip's line
+    #   moves with it. 46,013 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 46_019, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

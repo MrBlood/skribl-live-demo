@@ -104,6 +104,9 @@
       font-family: var(--font-ui);
       line-height: 1.5;
     }
+    /* A button takes the page's font (styles.css, "A BUTTON TAKES THE
+       PAGE'S FONT"; verify_a11y 11e). */
+    button, input, select, textarea { font-family: inherit; }
     a { color: var(--accent); }
     a:focus-visible, button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
     /* 12 above the header card, as the Pad's; 6 on a phone (pagemenu.css). */
