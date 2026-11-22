@@ -51860,4 +51860,15 @@ and 36 on a phone). Three breaks, each red: the old rule (36 of the
 time's 144 taps went to her), the time's words raised only in part, and
 the whole time link raised (her own words then went to the time).
 
+AND SECTION 11'S UNDO, mended in the same suite (task of Nov 20): the
+site's toast goes 7 seconds after it rises, whatever happens, and section
+11 tapped its Undo only after four other browsers had looked (what Theo,
+nobody and Sam see, and Sam's Activity). Under load they took longer and
+the tap waited out its 30 seconds: red beside others on Nov 20, twice on
+Nov 21 and on this change's own first run, green alone each time. Undo is
+tapped while the toast is up now, as a person reaching for it does, and
+the eye hides the draw-back again before the others look; every assertion
+is as it was. With 8 seconds stood in before the old tap, red (the same
+timeout); the same 8 seconds where the slow work now is, green.
+
 FLIP AND THE PAD: not theirs; this is the site's card.
