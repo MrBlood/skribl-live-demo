@@ -160,3 +160,18 @@ the address to see it again; every reload of that address replays it.
 - [ ] How it works → Trading card (a Pad example) and A card that waves (a
       Flip one) → the skribl title's dot sits straight over the i, as in the
       header.
+
+## Blooby on the Home Screen
+
+Open Blooby from its Home Screen icon for these.
+
+- [ ] On Home, tap Make, tap the words, type a line, press Post → the
+      keyboard goes down as Post is pressed; on the post's page the bottom
+      bar is at the screen's foot. Go Home and scroll down and back up →
+      the bar never leaves the foot of the screen.
+- [ ] On a post, tap the talk cloud, type a comment and post it, go back to
+      Home and scroll → the same.
+- [ ] If the bar ever rides the page (an iPhone's own fault after its
+      keyboard: `DECISIONS.md`, "The moving bottom bar"): take one picture
+      scrolled down and one scrolled back up, and say what was done just
+      before. Swiping the app away and opening it again puts it right.

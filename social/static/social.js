@@ -588,6 +588,103 @@
     if (e.persisted && T) T.apply(T.get());
   });
 
+  /* THE BAR STAYS AT THE SCREEN'S FOOT (the owner, Nov 21, from the Home
+     Screen app, with two pictures of Home: "When I scroll the bottom menu
+     scrolls too?", then "That's a big bug and messes up other stuff like
+     full screen play"). In both pictures the bar sat where the first
+     screenful ends, to the pixel, and rode the page; the strip at the app's
+     top edge had gone with it. That morning both were in place, and nothing
+     merged between touches either.
+
+     IT IS AN IPHONE'S OWN FAULT (WebKit 297779 and 300523; Apple's forum
+     thread 800125; iOS 26, and reported back in iOS 27's betas): after its
+     keyboard has been up, the phone can go on taking the foot of the screen
+     for covered. The visual viewport then stays shorter than the window, or
+     offset in it, with no keyboard there, and everything pinned to the
+     screen (the bar, a post's answer bar, a sheet, a post's full screen) is
+     laid out that far from its edge and rides the page, until the app is
+     closed and opened again. No rule of the stylesheet can undo it.
+
+     SO THE PAGE WATCHES FOR IT AND ASKS THE PHONE TO MEASURE AGAIN: one
+     pixel of scroll and back, which one person reports puts it right in a
+     Home Screen app on an iPhone. NOT SEEN HERE: this box has no iPhone
+     engine, so what is checked is that the page does this, and only then;
+     the owner's phone says whether the phone listens.
+       - only where a finger works the screen (a desk's scrollbar makes the
+         same numbers honestly), and only on a page that scrolls (on one that
+         does not, nothing can ride);
+       - never while words are being typed (the keyboard is really there
+         then), nor with the page pinched larger;
+       - never with a finger down, and only once the page has been at rest a
+         moment (a scroll from here would stop a glide);
+       - three times at the most for one stuck spell, so a phone this does
+         not cure is left alone. A new spell: a keyboard going, the page
+         shown again, and the phone stuck DIFFERENTLY (short or offset by
+         another amount, as it is from one place in the page to the next:
+         the report that this works asks once for each such shift).
+     On a healthy page nothing happens at all.
+
+     AND THE KEYBOARD IS PUT AWAY BEFORE THE APP CHANGES PAGE: a form that
+     really goes (Edit profile's Save), the page going away, and the
+     composer's Post (compose.js, through SocialViewport.drop). Changing
+     page with it still up is one way a phone is reported left like this. */
+  var STUCK_REST_MS = 150, STUCK_TRIES = 3, STUCK_BACK_MS = 50;
+  function typing(el) {
+    if (!el || el === doc.body || el === doc.documentElement) return false;
+    var tag = el.tagName;
+    if (tag === 'TEXTAREA' || tag === 'IFRAME' || el.isContentEditable) return true;
+    return tag === 'INPUT' && !/^(?:button|checkbox|color|file|hidden|image|radio|range|reset|submit)$/i.test(el.type || '');
+  }
+  function viewportStuck() {
+    var vv = window.visualViewport;
+    if (!vv || Math.abs((vv.scale || 1) - 1) > 0.01) return false;
+    return vv.offsetTop > 0.5 || window.innerHeight - vv.height > 1;
+  }
+  function dropKeyboard() {
+    var a = doc.activeElement;
+    if (a && a.tagName !== 'IFRAME' && typing(a) && a.blur) a.blur();
+  }
+  (function watchViewport() {
+    var rest = 0, back = 0, tries = 0, fingers = 0, how = '';
+    function settle() {
+      rest = 0;
+      var byFinger = false;
+      try { byFinger = window.matchMedia('(pointer: coarse)').matches; } catch (e) { /* a desk, then */ }
+      if (!byFinger) return;
+      if (!viewportStuck()) { tries = 0; how = ''; return; }
+      var vv = window.visualViewport;
+      var now = Math.round(vv.offsetTop) + '/' + Math.round(window.innerHeight - vv.height);
+      if (now !== how) { how = now; tries = 0; }
+      if (tries >= STUCK_TRIES || fingers || typing(doc.activeElement)) return;
+      var page = doc.scrollingElement || doc.documentElement;
+      if (page.scrollHeight - window.innerHeight < 2) return;
+      tries++;
+      var step = window.scrollY > 0 ? -1 : 1;
+      window.scrollBy(0, step);
+      clearTimeout(back);
+      back = setTimeout(function () { window.scrollBy(0, -step); }, STUCK_BACK_MS);
+    }
+    function wait() { clearTimeout(rest); rest = setTimeout(settle, STUCK_REST_MS); }
+    function anew() { tries = 0; wait(); }
+    function touched(e) { fingers = e.touches ? e.touches.length : 0; wait(); }
+    var vv = window.visualViewport, quiet = { passive: true, capture: true };
+    if (vv) {
+      vv.addEventListener('resize', wait);
+      vv.addEventListener('scroll', wait);
+    }
+    window.addEventListener('scroll', wait, { passive: true });
+    window.addEventListener('pageshow', anew);
+    doc.addEventListener('visibilitychange', anew);
+    doc.addEventListener('focusout', anew, true);
+    doc.addEventListener('touchstart', touched, quiet);
+    doc.addEventListener('touchend', touched, quiet);
+    doc.addEventListener('touchcancel', touched, quiet);
+    wait();
+  })();
+  doc.addEventListener('submit', function (e) { if (!e.defaultPrevented) dropKeyboard(); });
+  window.addEventListener('pagehide', dropKeyboard);
+  window.SocialViewport = { stuck: viewportStuck, drop: dropKeyboard };
+
   /* ACTIVITY'S DOT GOES AS YOU LOOK (notifications): a tap on the bell (a
      phone's top) or the rail's Activity lets the dot fade while Activity
      opens (social.css, .is-seen), so a page the back button brings back

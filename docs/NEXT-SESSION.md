@@ -451,6 +451,23 @@ in the mock page.
      CI's (`DECISIONS.md`, "a name that fits in one font and not in
      another"). Mended in the pull request after it. READ MAIN'S RUN ON
      THAT FIX before believing main is green.
+     (Read at 7:55 PM: green on every job, #1038's run and #1039's.)
+  7. THE MOVING BOTTOM BAR (the owner, 3:56 PM and 4:31 PM, from the Home
+     Screen app: "When I scroll the bottom menu scrolls too?", "That's a
+     big bug"). An iPhone's own fault after its keyboard has been up
+     (`DECISIONS.md`, "The moving bottom bar"); the owner was told to
+     swipe the app away and open it again. BUILT: every page of the site
+     asks a phone left like that to measure again, and the keyboard is put
+     away before the app changes page (`docs/SOCIAL-SITE.md` section 37).
+     NOT SEEN ON AN IPHONE. ASK THE OWNER whether the bar has ridden the
+     page since. If it has, the sure cure in that entry (the page
+     scrolling inside the app's frame) is the next thing to put to them:
+     a design change, a mock, the full battery. Skribl's own Gallery and
+     Library have no guard yet.
+  8. "ALL YES." (4:51 PM, with the first picture of the bar), to the
+     colour audit's eleven choices (`DECISIONS.md`, ""All yes" to the
+     colour audit's eleven"): what each is, which are built and which wait
+     for their mock, is there.
 - **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No
   strip of Home under a sheet on a phone's keyboard"). The tell: in Make,
   the words tapped, the sheet's own lilac paper down to the keys and
