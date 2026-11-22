@@ -1748,10 +1748,20 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 }
 .post-card .post-sub { pointer-events: none; }
 .post-when {
-  position: relative; z-index: 1; display: inline-block; min-width: 44px;
+  position: relative; display: inline-block; min-width: 44px;
   padding-bottom: calc(44px - 15px * 1.3); margin-bottom: calc(15px * 1.3 - 44px);
   color: inherit; text-decoration: none; pointer-events: auto;
 }
+/* ITS WORDS TAKE THEIR OWN TAPS (found in the colour audit of Nov 21; a bug
+   of its own). On a draw-back's card "Drew back on Ana's" lies right under
+   the time, and her link reaches 13px up into the time's line to be 44px
+   to a finger: so a tap on the lower half of "6h · 2 plays" opened her page,
+   not the post (12 and 14 taps of 39 on two cards). The time's own words
+   sit above any link's reach now (they and only they: the time's box itself
+   keeps its place in the order, no z-index of its own, so her link still
+   takes the room over her own words that the time reaches down into).
+   Under the ⋯ still. */
+.post-when > * { position: relative; z-index: 2; }
 .post-when:focus-visible { outline: none; }
 .post-when:focus-visible > time { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 .post-card .post-more { position: relative; z-index: 2; }

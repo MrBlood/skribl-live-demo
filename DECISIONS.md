@@ -51832,3 +51832,43 @@ FLIP AND THE PAD: 1, 7, 8 and 10 are theirs and shared (one stylesheet);
 who ask their device for more contrast, or read on a screen between the
 steps; simple, nothing new to learn anywhere; powerful and playful, not
 touched.
+
+## After v330 -- A draw-back's card: the time's words take their own taps
+
+Found in passing during the colour audit (Nov 21); a bug of its own, so it
+merges on green. On a draw-back's card (Home, a profile, the Gallery's
+lists) "Drew back on Ana's" lies right under the time ("6h · 2 plays"),
+and each of the two links reaches into the other's line to be 44px to a
+finger. Where they overlap, the one painted later took the tap: her link,
+over the lower half of the time's own words. So a tap on "6h · 2 plays"
+could open her page instead of the post (12 and 14 taps of 39, read on
+two cards).
+
+THE FIX (social.css): the time's own words sit above any link's reach
+(`.post-when > *`, raised), and the time's box no longer raises itself,
+so her link still takes the room over her own words that the time's box
+reaches down into. Both links stay 44px to a finger; the ⋯ stays above
+both.
+
+THE CHECK, `verify_socialdrawback` 13: a grid of taps over each link's own
+words, where they are painted (a range round the words, not the link's
+box), on a card whose time is long enough to reach over her link (its
+plays set), on a touch phone and a desk. Every tap on the time's words is
+the time's and every tap on her words is hers; her link is still 44px or
+more, and its middle is hers. As built, every tap where it belongs (144
+and 36 on a phone). Three breaks, each red: the old rule (36 of the
+time's 144 taps went to her), the time's words raised only in part, and
+the whole time link raised (her own words then went to the time).
+
+AND SECTION 11'S UNDO, mended in the same suite (task of Nov 20): the
+site's toast goes 7 seconds after it rises, whatever happens, and section
+11 tapped its Undo only after four other browsers had looked (what Theo,
+nobody and Sam see, and Sam's Activity). Under load they took longer and
+the tap waited out its 30 seconds: red beside others on Nov 20, twice on
+Nov 21 and on this change's own first run, green alone each time. Undo is
+tapped while the toast is up now, as a person reaching for it does, and
+the eye hides the draw-back again before the others look; every assertion
+is as it was. With 8 seconds stood in before the old tap, red (the same
+timeout); the same 8 seconds where the slow work now is, green.
+
+FLIP AND THE PAD: not theirs; this is the site's card.
