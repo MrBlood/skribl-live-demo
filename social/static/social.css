@@ -2275,6 +2275,19 @@ a.post-face { text-decoration: none; }
 .who-head .ic { flex: none; width: 22px; height: 22px; color: var(--ink-2); }
 .who-switch { width: 100%; }
 .who-switch > button { flex: 1 1 auto; padding: 0 6px; white-space: nowrap; }
+/* ITS CHOSEN WORD A STEP BOLDER, ITS ROOM KEPT (Four Looks' 11 A). Settings'
+   thirds are their own, so their chosen word at 700 moves nothing; these
+   choices are as wide as their words ask, so the chosen one grew and the
+   others gave way (main red after #1060). Each carries its word
+   (data-bold, _who.html) and lays it out again at 700 under the label,
+   unseen and no height at all: its box is as wide as its bold word, chosen
+   or not, so the choice moves and no box moves with it. The same room as
+   every other pill of words (Home's, the Gallery's, the editors'). */
+.theme-switch > button[data-bold]::after {
+  content: attr(data-bold); content: attr(data-bold) / "";
+  display: block; height: 0; overflow: hidden; visibility: hidden;
+  font-weight: 700; pointer-events: none;
+}
 .who-say { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.35; }
 @media (max-width: 359.98px) { .who-switch > button { padding: 0 3px; font-size: 14px; } }
 /* IN THE COMPOSER, under the drawing: the quiet line (15px, second ink, the

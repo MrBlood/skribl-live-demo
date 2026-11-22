@@ -33,9 +33,13 @@
   <p class="who-head" id="{{ title }}">{{ ic.drawback() }}<span>Who can draw back</span></p>
   <div class="theme-switch who-switch" role="group" aria-labelledby="{{ title }}" data-who-switch>
     <span class="theme-pill" aria-hidden="true"></span>
-    <button type="button" data-choice="everyone" aria-pressed="true">Everyone</button>
-    <button type="button" data-choice="follow" aria-pressed="false">People I follow</button>
-    <button type="button" data-choice="nobody" aria-pressed="false">Nobody</button>
+    {#- Each choice carries its word (data-bold): its chosen word is 700, and
+        social.css lays the word out again at 700 under it, unseen, so a
+        choice as wide as its words ask keeps its bold word's room and no box
+        moves when it is chosen (Four Looks' 11 A). #}
+    <button type="button" data-choice="everyone" aria-pressed="true" data-bold="Everyone">Everyone</button>
+    <button type="button" data-choice="follow" aria-pressed="false" data-bold="People I follow">People I follow</button>
+    <button type="button" data-choice="nobody" aria-pressed="false" data-bold="Nobody">Nobody</button>
   </div>
   <p class="who-say" data-who-say role="status" data-says-everyone="Anyone on Blooby can draw back on this."
      data-says-follow="Only people you follow can draw back on this."

@@ -62,8 +62,9 @@ each in a browser with a virtual passkey.
      now; the route's guards; a new post says it. No pen for somebody who
      can't, on the row, the answer bar or at a replay's end, and nothing
      says why; she still can on her own. Her post's ⋯ has Settings' pill in
-     a card of its own (from a card of hers too, on her page and Home): a
-     tap is the change, the tint slides, a failure puts it back. Her page's quiet line with Change, alone where nobody has
+     a card of its own (from a card of hers too, on her page and Home), its
+     chosen word at 700 with its room kept (so is the composer's): a tap is
+     the change, the tint slides, no box moves, a failure puts it back. Her page's quiet line with Change, alone where nobody has
      drawn back. The composer's quiet line under a drawing that can be
      drawn back on, opening the pill where it stood, growing into its room;
      Post sends it; not under a Flip. A page gone stale is told kindly. The
@@ -2429,12 +2430,18 @@ with app.test_request_context("/social/"):
               const sw = c.querySelector('[data-who-switch]'), pill = sw.querySelector('.theme-pill'), on = sw.querySelector('button[aria-pressed="true"]');
               const head = c.querySelector('.who-head'), say = c.querySelector('[data-who-say]');
               const pr = pill.getBoundingClientRect(), or = on.getBoundingClientRect(), cr = c.getBoundingClientRect(), sr = sw.getBoundingClientRect();
+              // its room (Four Looks' 11 A): every word forced to 700 for one read, put back before a frame
+              const bs = [...sw.querySelectorAll('button[data-choice]')], w0 = bs.map(b => b.getBoundingClientRect().width);
+              bs.forEach(b => b.style.setProperty('font-weight', '700', 'important'));
+              const w7 = bs.map(b => b.getBoundingClientRect().width);
+              bs.forEach(b => b.style.removeProperty('font-weight'));
               return { card: true, open, nth: cards.indexOf(c), cards: cards.length,
                 head: head.textContent.trim(), headType: getComputedStyle(head).fontSize + ' ' + getComputedStyle(head).fontWeight, pen: !!head.querySelector('svg'),
                 group: sw.getAttribute('role'), named: ((document.getElementById(sw.getAttribute('aria-labelledby')) || {}).textContent || '').trim(),
-                choices: [...sw.querySelectorAll('button[data-choice]')].map(b => { const q = b.getBoundingClientRect(), at = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
+                choices: bs.map((b, i) => { const q = b.getBoundingClientRect(), at = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
                   return { is: b.getAttribute('data-choice'), says: b.textContent.trim(), pressed: b.getAttribute('aria-pressed'), w: one(q.width), h: one(q.height),
-                           whole: b.scrollWidth <= b.clientWidth, hit: !!at && b.contains(at), type: getComputedStyle(b).fontSize + ' ' + getComputedStyle(b).fontWeight }; }),
+                           whole: b.scrollWidth <= b.clientWidth, hit: !!at && b.contains(at), type: getComputedStyle(b).fontSize + ' ' + getComputedStyle(b).fontWeight,
+                           x: one(q.left), bold: b.getAttribute('data-bold'), grow: Math.round((w7[i] - w0[i]) * 100) / 100 }; }),
                 on: on.getAttribute('data-choice'), pillOn: Math.abs(pr.left - or.left) <= 0.6 && Math.abs(pr.width - or.width) <= 0.6 && Math.abs(pr.top - or.top) <= 0.6,
                 pillSeen: +getComputedStyle(pill).opacity, say: say.textContent.trim(), sayType: getComputedStyle(say).fontSize,
                 inside: sr.left >= cr.left + 15.5 && sr.right <= cr.right - 15.5, fits: (q => q.top >= 0 && q.bottom <= innerHeight + 0.5)(w.querySelector('.make-sheet').getBoundingClientRect()),
@@ -2470,16 +2477,24 @@ with app.test_request_context("/social/"):
                             and v["headType"] == "17px 600" and v["pen"] and v["group"] == "group" and v["named"] == "Who can draw back"
                             and [c["is"] for c in v["choices"]] == ["everyone", "follow", "nobody"]
                             and [c["says"] for c in v["choices"]] == ["Everyone", "People I follow", "Nobody"]
-                            and all(c["w"] >= 44 and c["h"] == 44 and c["whole"] and c["hit"] and c["type"] == "15px 600"
+                            and all(c["w"] >= 44 and c["h"] == 44 and c["whole"] and c["hit"]
+                                    and c["type"] == ("15px 700" if c["is"] == on else "15px 600")
                                     and c["pressed"] == ("true" if c["is"] == on else "false") for c in v["choices"])
                             and v["on"] == on and v["pillOn"] and v["pillSeen"] == 1 and v["say"] == SAYS[on] and v["sayType"] == "14px"
                             and v["inside"] and v["fits"] and v["failed"] == "")
             check("HER OWN POST'S ⋯ HAS THE PILL, in a card of its own under the first: \"Who can draw back\" with Draw"
                   " back's pen (a row's 17px, 600), Settings' switch named by it, its three choices (Everyone, People I"
                   " follow, Nobody) each 44px tall and as wide as its words, none cut, 16px inside the card; what it is"
-                  " set to pressed, the tint under it, and one line saying what that means; the sheet inside the screen (a"
-                  " touch phone and a desk)",
+                  " set to pressed, its word at 700 (the rest 600), the tint under it, and one line saying what that means;"
+                  " the sheet inside the screen (a touch phone and a desk)",
                   bool(fl) and all(pilled(v) for v in hers_menu.values()), json.dumps(hers_menu)[:1500])
+            check("...and the chosen word a step bolder keeps its room (Four Looks' 11 A; main red after #1060, where the"
+                  " chosen one grew and the others gave way): each choice carries its word, and with every word forced to"
+                  " 700 no box grows (a touch phone and a desk)",
+                  all(v and v["card"] and all(c["bold"] == c["says"] and abs(c["grow"]) <= 0.05 for c in v["choices"])
+                      for v in hers_menu.values()),
+                  json.dumps({sc: v and v["card"] and [(c["says"], c["bold"], c["grow"]) for c in v["choices"]]
+                              for sc, v in hers_menu.items()}))
             check("...and only there: no such card in the ⋯ of somebody else's post, of her own Flip, or of her own post of"
                   " words alone (nothing there can be drawn back on), where the sheet has its two cards",
                   all(v and v["open"] and v["card"] is False and v["cards"] == 2 for v in others_menu.values()), json.dumps(others_menu))
@@ -2549,6 +2564,7 @@ with app.test_request_context("/social/"):
             pg.wait_for_timeout(250)
             pg.tap(".post-page > .post-row [data-post-menu]")
             pg.wait_for_timeout(700)
+            before_tap = pg.evaluate(WHO12)
             pg.evaluate(PILL12)
             with pg.expect_response(lambda r: r.url.endswith("/drawback-by") and r.request.method == "POST", timeout=8000) as hit:
                 pg.tap("#postSheet [data-who-switch] [data-choice=follow]")
@@ -2576,6 +2592,12 @@ with app.test_request_context("/social/"):
                   json.dumps({"at once": [at_once["on"], at_once["say"], at_once["open"]], "glide": glide, "rested": [rested["on"], rested["pillOn"]],
                               "sent": sent_, "kept": [kept1, kept2], "her line": [note1, note2],
                               "nobody": [nob["on"], nob["say"]], "reopened": [reopened["on"], reopened["pillOn"], reopened["say"]]}))
+            boxes = lambda v: v and v["card"] and [(c["x"], c["w"]) for c in v["choices"]]  # noqa: E731
+            check("...and the tap moves the choice, never a box: from Everyone to People I follow, each of the three where"
+                  " it was and as wide as it was, to a tenth of a pixel (its bold word's room kept)",
+                  bool(boxes(before_tap)) and boxes(before_tap) == boxes(rested),
+                  json.dumps({"before": before_tap and [(c["says"], c["x"], c["w"]) for c in before_tap["choices"]],
+                              "after": rested and [(c["says"], c["x"], c["w"]) for c in rested["choices"]]}))
 
             # UNDER REDUCE MOTION the tint is put there; and A FAILURE PUTS IT BACK AND SAYS SO.
             ctx, pg = browser_as(b, nia, reduced=True)
@@ -2675,7 +2697,12 @@ with app.test_request_context("/social/"):
                                return [b.textContent.trim(), b.getAttribute('aria-pressed'), one(q.width) >= 44 && one(q.height) === 44 && b.scrollWidth <= b.clientWidth]; }),
                              on: on.getAttribute('data-choice'), pillOn: Math.abs(pill.left - o.left) <= 0.6 && Math.abs(pill.width - o.width) <= 0.6,
                              say: card.querySelector('[data-who-say]').textContent.trim(), focus: a ? a.textContent.trim() : null, id: card.id,
-                             inView: r.bottom <= sc.bottom + 0.5 }; }
+                             inView: r.bottom <= sc.bottom + 0.5,
+                             room: (() => { const bs = [...sw.querySelectorAll('button[data-choice]')], w0 = bs.map(b => b.getBoundingClientRect().width);
+                               bs.forEach(b => b.style.setProperty('font-weight', '700', 'important'));
+                               const w7 = bs.map(b => b.getBoundingClientRect().width);
+                               bs.forEach(b => b.style.removeProperty('font-weight'));
+                               return bs.map((b, i) => [b.textContent.trim(), b.getAttribute('data-bold'), Math.round((w7[i] - w0[i]) * 100) / 100]); })() }; }
               return out; }"""
             # The opening, read on every frame until it has rested; the animation tells its own length and what it moves.
             GROW12 = """() => { const w = document.querySelector('[data-compose-who]'), line = w.querySelector('[data-compose-who-line]'), card = w.querySelector('[data-compose-who-card]');
@@ -2830,6 +2857,12 @@ with app.test_request_context("/social/"):
                                            "tops": sorted(set(f[2] for f in v["grown"]["frames"]))[:6],
                                            "heights": sorted(set(f[1] for f in v["grown"]["frames"]))[:8], "frames": len(v["grown"]["frames"]),
                                            "sent": v["grown"]["sent"], "open": v["open"]["card"]} for k, v in cmp.items()}})[:1700])
+            check("...and the composer's pill keeps its bold word's room as her post's ⋯ does (the same markup on another"
+                  " sheet): each choice carries its word, and with every word forced to 700 no box grows (a touch phone and"
+                  " a desk)",
+                  all((v["open"]["card"] or {}).get("room") and all(r_[1] == r_[0] and abs(r_[2]) <= 0.05 for r_ in v["open"]["card"]["room"])
+                      for v in cmp.values()),
+                  json.dumps({k: (v["open"]["card"] or {}).get("room") for k, v in cmp.items()}))
             ph = cmp["phone"]
             check("A CHOICE IS THE DRAWING'S, UNTIL IT IS POSTED OR REMOVED: Nobody pressed says \"Nobody else can draw"
                   " back on this.\" (nothing of draw-backs it has: it has none); put away and opened again the sheet"
