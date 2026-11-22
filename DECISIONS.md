@@ -52592,3 +52592,34 @@ the no-script row. On the site: the macro writing no word, the weight
 and room rows; the room taken out, the room row; the room left
 readable, the name row ("Following Following"); the chosen word not
 bolder, the weight row.
+
+FOUND IN ITS OWN RUN, mended before merge (the about thirty suites that
+touch a pill, on a clean checkout). (1) lib/labels.js puts a lone word in
+a span trimmed to cap height (the owner's "doesn't look centered
+vertically") and leaves a column alone, a tile with its mark above its
+word. The room made a pill's option a column, so where the word is in
+the markup (the Gallery's New | Hot, the Library's tabs and filter, the
+page menu's Theme) labels.js skipped it and the word lost its centring
+by its capitals; the Pad's and Flip's kept theirs, labels.js running
+before the pill code there. A column that only holds the room
+(data-bold) keeps its span, and verify_onepill's WORDS holds it: no
+option that keeps its room holds its word bare, on the Pad, Flip, the
+Gallery and the Library (red with the exception taken out). (2) Flip's
+move bar, with the longest page label and an offset shown, was over by
+1px at 360 in this box's face (main: 0): the scope's options give one
+more pixel a side back (6px at 400 and under, 4px at 359 and under);
+verify_move green, red at 360 with the old padding. (3) The room said
+user-select: none, and verify_a11y holds every rule that takes a
+control's selection to take the press-and-hold callout too: the room
+takes neither now (generated words are never selected). (4) Two rows
+elsewhere held the old one weight and hold the new one:
+verify_socialfollow's Home pill (13px at 600, the chosen word 700) and
+verify_socialsettings' theme switch (15px at 600, the chosen one 700),
+each red with the site's bold taken out.
+
+AND A BLIND SPOT, NOT MENDED HERE: verify_galib's "every word on the page
+reads 7:1" reads only a box's own text, so it has not read a word that
+labels.js put in its span (New | Hot among them) since labels.js. Read
+directly, the chosen New on its tint is 6.24:1 in light: over AA, under
+the page's own 7:1. The owner's to say whether that pill's ink is held to
+AA with the editors' (as Make one's white words are) or darkened.
