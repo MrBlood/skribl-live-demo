@@ -646,6 +646,27 @@
       // Enter is Write it.
       if (touchFirst()) els.field.blur(); else go();
     });
+    // A TAP ON THE BOX BRINGS THE KEYBOARD, the way choosing Text did: the
+    // page's own focus, which never slid the page in the owner's pictures. The
+    // phone's own tap on a box low on the screen slides the whole page up to
+    // show it (the owner's 10:06 picture). Only to start typing, and only a
+    // tap: once the words are in focus a tap places the caret as the phone
+    // does, and a drag that starts on the box is the page's.
+    var tapFrom = null;
+    els.field.addEventListener('touchstart', function (e) {
+      var t = e.touches && e.touches[0];
+      tapFrom = (t && e.touches.length === 1 && document.activeElement !== els.field) ? { x: t.clientX, y: t.clientY } : null;
+    }, { passive: true });
+    els.field.addEventListener('touchend', function (e) {
+      var t = e.changedTouches && e.changedTouches[0], from = tapFrom;
+      tapFrom = null;
+      if (!from || !t || document.activeElement === els.field) return;
+      if (Math.abs(t.clientX - from.x) > 10 || Math.abs(t.clientY - from.y) > 10) return;
+      e.preventDefault();
+      try { els.field.focus({ preventScroll: true }); } catch (err) { els.field.focus(); }
+      var n = els.field.value.length;
+      try { els.field.setSelectionRange(n, n); } catch (err) {}
+    });
     els.field.addEventListener('focus', function () { fitKeyboard(); setTimeout(fitKeyboard, 120); });
     els.field.addEventListener('blur', function () { fitKeyboard(); setTimeout(fitKeyboard, 120); });
     if (window.visualViewport) {
@@ -1356,7 +1377,13 @@
     requestAnimationFrame(function () { if (want) { anchor = clampAnchor(want); position(); } });
     lastPen = '';
     if (!follow) follow = requestAnimationFrame(followLoop);
-    try { els.field.focus({ preventScroll: true }); } catch (e) { els.field.focus(); }
+    // ON A PHONE TEXT OPENS WHOLE, WITH NO KEYBOARD (the owner, Nov 22: "how
+    // would I even know it was there?", and yes to the three steps): the box,
+    // Style, Size, Thickness and Speed are seen first, a tap on the box brings
+    // the keyboard (below, the box's touchend), and the keyboard's tick puts it
+    // away with the words kept. As Make opens since Nov 20. With a keyboard of
+    // its own (a desk, a laptop) the words take the focus at once, as they did.
+    if (!touchFirst()) { try { els.field.focus({ preventScroll: true }); } catch (e) { els.field.focus(); } }
   }
   // What closing leaves, whoever closed it: no words waiting, no keyboard.
   function tidy() {

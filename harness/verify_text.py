@@ -13,10 +13,14 @@ Thickness and Speed as tiles. Each row holds a promise:
      the license travels with the fonts; all three are served.
   2. THE PICKER: Text is Shape's fifth kind on both editors; picking it
      chooses Shape and Text, puts the picker away, and brings Text's drawer
-     straight up under the tools, one of the editor's own drawers, the words
-     in the middle of the drawing that shows above them.
-  3. NOTHING UNTIL WRITE IT: the drawer opens with the field ready, draws
-     nothing and arms no take; its grabber and Escape leave nothing behind,
+     straight up under the tools, whole and asking for no keyboard on a
+     phone, one of the editor's own drawers, the words in the middle of the
+     drawing that shows above them.
+  3. NOTHING UNTIL WRITE IT: the drawer opens with the box there and, on a
+     phone, no keyboard until the box is tapped (the page takes that tap
+     itself, so the phone never slides the page to show the box; a second
+     tap is the phone's; a desk types at once), draws nothing and arms no
+     take; its grabber and Escape leave nothing behind,
      the page going home; with Text chosen, a press opens it again where the
      press was. On both editors, another drawer opening closes it and the
      words with it, Text still chosen, and a press brings it back; another
@@ -269,6 +273,16 @@ def choose_text(q):
     q.wait_for_timeout(100)
 
 
+def tap_box(q):
+    """A tap on the words' box, as a finger or a mouse gives it. On a phone Text opens whole with no keyboard and
+    the box is tapped to type (the owner's yes, Nov 22: the three steps); on a desk it is in focus already."""
+    if getattr(q, "_tx_touch", False):
+        q.tap("#txField")
+    else:
+        q.click("#txField")
+    q.wait_for_timeout(300)
+
+
 def at(q, fx, fy):
     """A point on the canvas, as fractions of its box, on screen."""
     r = q.evaluate("(s) => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }",
@@ -513,8 +527,10 @@ with sync_playwright() as p:
                        words: x > Math.max(c.left, 0) && x < Math.min(c.right, innerWidth) && y > Math.max(c.top, top) && y < d.top,
                        at: [Math.round(x), Math.round(y)], between: [Math.round(Math.max(c.top, top)), Math.round(d.top)] }; }""",
                             [CANVAS[editor], DOCK[editor], STUCK])
-            check(f"{editor}: ...and Text's drawer comes straight up under the tools, the words in the drawing that shows above them",
-                  up["open"] and up.get("focus") == "txField" and up.get("seen") and 0 <= up.get("under", -1) <= 24 and up.get("words"), str(up))
+            check(f"{editor}: ...and Text's drawer comes straight up under the tools, whole and asking for no keyboard on a phone"
+                  f" (the words not in focus until the box is tapped: the owner's yes, Nov 22), the words in the drawing that"
+                  f" shows above them",
+                  up["open"] and up.get("focus") != "txField" and up.get("seen") and 0 <= up.get("under", -1) <= 24 and up.get("words"), str(up))
             mine = q.evaluate(DRAWER[editor])
             check(f"{editor}: ...one of the editor's own drawers, the one open", mine == "text", f"the open drawer: {mine!r}")
             check(f"{editor}: no errors", not q._tx_errors, str(q._tx_errors[:2]))
@@ -528,8 +544,26 @@ with sync_playwright() as p:
         q.wait_for_timeout(300)
         s = q.evaluate(SHEET)
         after = q.evaluate("() => [strokes.length, strokeGroups.length, recording, hasContent]")
-        check("choosing Text opens the drawer, the words' field ready",
-              s["open"] and not s["hidden"] and s["focus"] == "txField", json.dumps(s)[:160])
+        check("choosing Text opens the drawer, the words' box there and, on a phone, no keyboard asked for (the box not in"
+              " focus until it is tapped: the owner's yes, Nov 22, to Text opening whole)",
+              s["open"] and not s["hidden"] and s["focus"] != "txField", json.dumps(s)[:160])
+        # THE TAP ON THE BOX IS THE PAGE'S: its default stopped (the phone's own focus, which slides the page up to
+        # show a box low on the screen, never starts) and the words taken into focus by the page itself; once in
+        # focus a tap is the phone's again (it places the caret). Read from the tap's own event, after the box's.
+        TAPPED = """() => { window.__tapped = []; document.addEventListener('touchend', e => {
+          if (e.target && e.target.id === 'txField') window.__tapped.push(e.defaultPrevented); }); }"""
+        q.evaluate(TAPPED)
+        tap_box(q)
+        s2 = q.evaluate(SHEET)
+        tap_box(q)
+        s3, tapped = q.evaluate(SHEET), q.evaluate("() => window.__tapped")
+        check("...a tap on the box brings the keyboard: the page takes the tap itself (the phone's own focus, which slid"
+              " the page up to show the box, the owner's 10:06 picture, never starts) and puts the words in focus; a"
+              " second tap, the words in focus, is the phone's own (it places the caret)",
+              s2["focus"] == "txField" and s3["focus"] == "txField" and tapped == [True, False], json.dumps({"tapped": tapped,
+              "focus": [s2["focus"], s3["focus"]]}))
+        q.evaluate("() => document.activeElement && document.activeElement.blur()")
+        q.wait_for_timeout(200)
         check("...and draws nothing and arms no take", after[:2] == n0 and after[2] is False and after[3] is False, str(after))
         settle(q)
         y0 = q.evaluate("() => scrollY")
@@ -594,6 +628,17 @@ with sync_playwright() as p:
                   not s["open"] and s["place"] is None and q.evaluate(COUNT[editor]) == n1, f"open {s['open']}, strokes {n1} -> {q.evaluate(COUNT[editor])}")
             check(f"{editor}: the ways out: no errors", not q._tx_errors, str(q._tx_errors[:2]))
             c.close()
+        # WITH A KEYBOARD OF ITS OWN (a desk): choosing Text puts the words in focus at once, to type straight away.
+        desk = {}
+        for editor in ("pad", "flip"):
+            c, q = open_editor(b, editor, dev=DESK)
+            choose_text(q)
+            waited(q, "() => SkriblText.isOpen()")
+            q.wait_for_timeout(300)
+            desk[editor] = q.evaluate("() => document.activeElement && document.activeElement.id")
+            c.close()
+        check("on a desk, with a keyboard of its own, choosing Text puts the words in focus at once (Pad and Flip): only a"
+              " phone opens it with no keyboard", desk == {"pad": "txField", "flip": "txField"}, json.dumps(desk))
 
     # ------------------------------------------------------------------ 4
     if part("TEXT 4 — placed before ink"):
@@ -1157,6 +1202,7 @@ with sync_playwright() as p:
         # yet): the whole drawer, the words being typed or not.
         c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 4})
         choose_text(q)
+        tap_box(q)
         type_words(q, "Hello")
         q.wait_for_timeout(300)
         t0 = q.evaluate(TYPING, [DOCK["pad"], STUCK])
@@ -2232,6 +2278,8 @@ with sync_playwright() as p:
                 fr.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
                 fr.wait_for_function("() => SkriblText.isOpen()", timeout=5000)
                 settle(fr)
+                fr.tap("#txField")   # Text opens whole on a phone; the box is tapped to type
+                q.wait_for_timeout(300)
                 q.keyboard.type("Hello")
                 q.wait_for_timeout(300)
                 g["free"] = fr.evaluate(SEEN, CANVAS[ed])
@@ -2302,6 +2350,8 @@ with sync_playwright() as p:
                 fr.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
                 fr.wait_for_function("() => SkriblText.isOpen()", timeout=5000)
                 settle(fr)
+                fr.tap("#txField")
+                q.wait_for_timeout(300)
                 q.evaluate("() => window.__keyboard(%d)" % KB)
                 q.wait_for_timeout(500)
                 bar[ed] = {"up": fr.evaluate(SEEN, CANVAS[ed]), "go": fr.evaluate(GO), "sty": fr.evaluate(STY)}
