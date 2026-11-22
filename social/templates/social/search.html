@@ -31,12 +31,23 @@
 {% from 'social/_people.html' import people_box, people_rows with context %}
 
 {% block title %}{% if who %}People{% else %}Search{% endif %} · Blooby{% endblock %}
+{% block top %}
+{%- if who %}
+  {#- SEE ALL HAS ITS WAY BACK (the way back, part two: the owner's "All yes", Nov 20, "there's no back
+      button on so many screens. You end up stranded a lot"). Every screen the bar does not lead to has
+      the arrow at its top's start and its own name beside it, and See all is one: the arrow goes to the
+      search it came from (social.js: where you were, on this site), or from anywhere else to that
+      search's own address. #}
+  <a class="icon-btn top-back" href="{{ url_for('social.search', q=q) }}" aria-label="Back">{{ ic.back() }}</a>
+  <span class="top-title">People</span>
+{%- else %}{{ super() }}{% endif %}
+{% endblock %}
 {% block scripts %}<script src="{{ social_asset('follows.js') }}" defer></script>
 <script src="{{ social_asset('explore.js') }}" defer></script>
 <script src="{{ social_asset('search.js') }}" defer></script>{% endblock %}
 
 {% block main %}
-<div class="page-head">
+<div class="page-head{% if who %} in-top{% endif %}">
   <h1 class="page-title">{% if who %}People{% else %}Search{% endif %}</h1>
 </div>
 <p class="sr" data-follow-said role="status"></p>

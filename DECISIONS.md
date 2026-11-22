@@ -52345,3 +52345,28 @@ NOT SEEN ON AN IPHONE: Chrome here at a phone's size with touch. A phone's
 keyboard does not rise when Search opens: the box waits to be tapped, as
 the composer's words have since Nov 20 ("The composer opens calm on a
 phone").
+
+## After v330 -- See all has its way back (the people alone, the Gallery's and Search's)
+
+A BUG BY THE OWNER'S OWN RULE, found building Search (Nov 22). The way back,
+part two (the owner's "All yes", Nov 20: "there's no back button on so many
+screens. You end up stranded a lot"): every screen the bar does not lead to
+has the arrow at its top's start and its own name beside it. See all, the
+people alone (`?who=people`), is one, and it kept the Gallery's top, the ☰
+and the bell: on a phone's Home Screen app, with no browser Back, the way
+from it was a tab, which starts the search over. Search's See all, built
+the same morning as the Gallery's, had the same.
+
+NOW, on both: the arrow and "People" beside it, as Activity's and a
+post's tops are; the arrow goes to the search it came from (social.js,
+where you were on this site), its words still in the box, and opened from
+anywhere else to that search's own address; the big heading leaves a phone
+(the top says it) and stays on a desk, which has no top. Nothing else on
+the page changes.
+
+THE CHECK, `verify_socialposts` 21: See all, the Gallery's and Search's,
+joins the screens with the arrow (where a post's is, 44px, "Back",
+"People", the search's address behind it), Search joins the places with
+none, a desk shows See all's heading and no arrow, and a new row walks See
+all's arrow: from its search, back to it with its words; cold, to the
+search's own address.
