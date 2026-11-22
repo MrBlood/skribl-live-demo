@@ -45,8 +45,9 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
      painted behind it (the pill's chosen word on its tint), every target 44px
      to a finger, no field under 16px; phone (touch) and desk, light and dark.
  10. THE ☰ ON A PHONE (the quick-patterns mock; the owner's "Yes on
-     everything", Nov 13, the map's step 5): at the top left of Home and the
-     Gallery on a touch phone, first in the top, painted, 44px every way,
+     everything", Nov 13, the map's step 5): at the top left of Home, the
+     Gallery and Search on a touch phone, first in the top (the wordmark
+     clear of it, in the middle since Nov 22), painted, 44px every way,
      named Menu, three strokes in our pen of one length (the owner's "B,
      equal lines", Nov 14), in the top's ink;
      a desk has none, nor any other page; it opens the site's own sheet, the
@@ -1403,29 +1404,31 @@ with sync_playwright() as p:
             PAPER = {"light": "rgb(243, 240, 255)", "dark": "rgb(23, 20, 42)"}       # --sheet-paper
             ROWBG = {"light": "rgb(255, 255, 255)", "dark": "rgb(35, 30, 59)"}       # --row-bg
 
-            # (a) where it is, light and dark, signed in and out, Home and the Gallery
+            # (a) where it is, light and dark, signed in and out, Home, the Gallery and Search (whose top is the
+            # Gallery's since Nov 22). The wordmark is in the middle of the top since Nov 22 (the owner's pick A of
+            # "Blooby and Search"; verify_socialposts 21 reads it there): here it need only be clear of the ☰.
             seen = {}
             for scheme in ("light", "dark"):
                 for who in (plain, None):
                     ctx, pg = browser_as(b, who, "phone", scheme, theme=None)
-                    for path in ("/social/", "/social/explore"):
+                    for path in ("/social/", "/social/explore", "/social/search"):
                         go(pg, path)
                         seen[(scheme, who.handle if who else "nobody", path)] = pg.evaluate(MENU)
                     close_ctx(ctx, pg)
             bad = []
             for k, m in seen.items():
                 if not (m and m["painted"] and m["reach"] and m["w"] == 44 and m["h"] == 44 and m["x"] == 6 and m["first"]
-                        and m["gap"] == 2 and abs(m["mid"]) <= 0.5 and m["label"] == "Menu" and m["popup"] == "dialog"
+                        and m["gap"] >= 2 and abs(m["mid"]) <= 0.5 and m["label"] == "Menu" and m["popup"] == "dialog"
                         and m["controls"] == "siteMenu" and m["expanded"] == "false" and m["pen"] and len(m["lengths"]) == 3
                         and max(m["lengths"]) - min(m["lengths"]) <= 0.5 and same_colour(m["color"], m["ink"])
                         and (m["bell"] is None or same_colour(m["color"], m["bell"])) and m["k"] >= 3):
                     bad.append(f"{k}: {json.dumps(m)}")
-            check("on a touch phone Home and the Gallery have the ☰ at the top left, first in the top, the wordmark 2px"
-                  " after it: painted where it stands, 44px to a finger every way, its box reaching 10px past the top's"
+            check("on a touch phone Home, the Gallery and Search have the ☰ at the top left, first in the top, the wordmark"
+                  " clear of it (in the top's middle since Nov 22): painted where it stands, 44px to a finger every way, its box reaching 10px past the top's"
                   " edge as the mock placed it, its middle on the top's; named Menu, opening a dialog; drawn in our pen,"
                   " three strokes of one length, within half a unit (the owner's equal lines, Nov 14: the last was"
                   " shorter); in the top's ink (the bell's), 3:1 or more as a mark; signed in"
-                  " and signed out, light and dark", not bad and len(seen) == 8, "; ".join(bad)[:1200] or f"{len(seen)} read")
+                  " and signed out, light and dark", not bad and len(seen) == 12, "; ".join(bad)[:1200] or f"{len(seen)} read")
             print("    the ☰'s strokes and ink:", json.dumps({f"{k[0]} {k[1]} {k[2]}": [m and m["lengths"], m and m["k"]]
                                                           for k, m in list(seen.items())[:2]}))
 
@@ -1433,18 +1436,18 @@ with sync_playwright() as p:
             none = {}
             for screen in ("phone", "desk"):
                 ctx, pg = browser_as(b, plain, screen, "light", theme=None)
-                paths = (("/social/", "/social/explore") if screen == "desk" else
+                paths = (("/social/", "/social/explore", "/social/search") if screen == "desk" else
                          (f"/social/@{plain.handle}", "/social/activity", "/social/you", "/social/rules"))
                 for path in paths:
                     go(pg, path)
                     none[(screen, path)] = pg.evaluate("() => { const b = document.querySelector('[data-site-menu]');"
                                                        " return b ? b.getClientRects().length : 'none'; }")
                 close_ctx(ctx, pg)
-            check("a desk has none (on Home and the Gallery nothing of it is painted: the top is a phone's, and the rail"
-                  " already has Settings), and on a phone it is Home's and the Gallery's alone: not on your profile,"
-                  " Activity, Settings or the rules",
+            check("a desk has none (on Home, the Gallery and Search nothing of it is painted: the top is a phone's, and"
+                  " the rail already has Settings), and on a phone it is Home's, the Gallery's and Search's alone: not on"
+                  " your profile, Activity, Settings or the rules",
                   all(v == 0 for (s_, _), v in none.items() if s_ == "desk")
-                  and all(v == "none" for (s_, _), v in none.items() if s_ == "phone") and len(none) == 6,
+                  and all(v == "none" for (s_, _), v in none.items() if s_ == "phone") and len(none) == 7,
                   json.dumps({f"{k[0]} {k[1]}": v for k, v in none.items()}))
 
             # (c) its sheet, signed in, on Home and the Gallery

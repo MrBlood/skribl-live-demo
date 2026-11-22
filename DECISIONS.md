@@ -52331,6 +52331,13 @@ the box 16px, light and dark). The four-place rows of verify_social,
 verify_socialactivity, verify_socialapp and verify_socialsettings now read
 five, and verify_socialsettings 6 walks Search's page too.
 
+MAIN RED AFTER #1052, mended here. `verify_socialsettings` 10 asked for the
+wordmark 2px after the ☰; #1052 put the wordmark in the middle of the top,
+and its run of affected suites did not include verify_socialsettings (a
+miss: it reads the top too). The row now asks for the ☰ first in the top
+and the wordmark clear of it, on Home, the Gallery and Search;
+verify_socialposts 21 holds the wordmark's middle.
+
 NOT SEEN ON AN IPHONE: Chrome here at a phone's size with touch. A phone's
 keyboard does not rise when Search opens: the box waits to be tapped, as
 the composer's words have since Nov 20 ("The composer opens calm on a
