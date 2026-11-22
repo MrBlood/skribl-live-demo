@@ -4301,23 +4301,30 @@ print("PLAN " + json.dumps(out))
                 page_.wait_for_timeout(300)
                 return page_.evaluate(TOP21)
 
+            # SEE ALL, the people alone, the Gallery's and Search's (Nov 22, owed from part two: it kept the ☰ and the
+            # bell, and a phone's Home Screen app had no way back from it): "People" beside the arrow.
             inner = {"Settings": "/social/you", "Edit profile": "/social/you/edit", "Delete account": "/social/you/delete", "How it works": "/social/how",
-                     "Community rules": "/social/rules", "Privacy": "/social/privacy", "Terms": "/social/terms", "@kitm": "/social/@kitm"}
+                     "Community rules": "/social/rules", "Privacy": "/social/privacy", "Terms": "/social/terms", "@kitm": "/social/@kitm",
+                     "the Gallery's See all": "/social/explore?q=kit&who=people", "Search's See all": "/social/search?q=kit&who=people"}
+            titles = {"the Gallery's See all": "People", "Search's See all": "People"}
             tops = {name: top_of(pg, path) for name, path in inner.items()}
-            roots = {name: top_of(pg, path) for name, path in (("Home", "/social/"), ("the Gallery", "/social/explore"), ("your own profile", "/social/@wrenb"))}
+            roots = {name: top_of(pg, path) for name, path in (("Home", "/social/"), ("the Gallery", "/social/explore"), ("Search", "/social/search"),
+                                                                  ("your own profile", "/social/@wrenb"))}
             post_top = top_of(pg, f"/social/p/{p21}")
             homes = {"Settings": "/social/@wrenb", "Edit profile": "/social/@wrenb", "Delete account": "/social/you", "How it works": "/social/",
-                     "Community rules": "/social/", "Privacy": "/social/", "Terms": "/social/", "@kitm": "/social/"}
+                     "Community rules": "/social/", "Privacy": "/social/", "Terms": "/social/", "@kitm": "/social/",
+                     "the Gallery's See all": "/social/explore?q=kit", "Search's See all": "/social/search?q=kit"}
             # the heading the top has taken the place of is not shown on a phone; Delete account's is the question the
             # page asks, and a profile's is the person's name, so those two stay
             stays = {"Delete account": "Delete your account?", "@kitm": "Kit Moreau"}
             check("every screen the bar does not lead to has the arrow at its top's start, where a post's is, 44px, painted,"
                   " saying \"Back\", its own name beside it and its own address behind it (Settings, Edit profile, Delete"
-                  " account, How it works, the three rules pages, somebody's profile); Home, the Gallery and your own"
-                  " profile have none; the page's big heading leaves a phone where the top says it, and stays where it"
-                  " says more (Delete account's question, a person's name)",
+                  " account, How it works, the three rules pages, somebody's profile, and the people alone, the Gallery's"
+                  " and Search's See all, \"People\", back to the search); Home, the Gallery, Search and your own profile"
+                  " have none; the page's big heading leaves a phone where the top says it, and stays where it says more"
+                  " (Delete account's question, a person's name)",
                   bool(post_top.get("arrow")) and all(v["arrow"] == post_top["arrow"] and min(v["arrow"][2:]) >= 44 and v["says"] == "Back"
-                                                      and v["title"] == name and v["to"] == homes[name] and not v["mark"]
+                                                      and v["title"] == titles.get(name, name) and v["to"] == homes[name] and not v["mark"]
                                                       and (v["h1shows"] and v["h1"] == stays[name] if name in stays
                                                            else (not v["h1shows"] and bool(v["h1"])))
                                                       for name, v in tops.items())
@@ -4353,6 +4360,24 @@ print("PLAN " + json.dumps(out))
                 tab.wait_for_load_state("load")
                 went[name] = arrow(tab)
                 tab.close()
+            # See all's arrow: back to the search it came from, its words there; opened cold, that search's address.
+            went_all = {}
+            for name, start, path in (("the Gallery's See all, from its search", "/social/explore?q=kit", "/social/explore?q=kit&who=people"),
+                                      ("Search's See all, from its search", "/social/search?q=kit", "/social/search?q=kit&who=people")):
+                pg.goto(BASE + start)
+                pg.wait_for_load_state("load")
+                pg.evaluate("(u) => { location.href = u; }", path)
+                pg.wait_for_function("(u) => location.pathname + location.search === u", arg=path, timeout=15000)
+                pg.wait_for_load_state("load")
+                arrow(pg)
+                went_all[name] = pg.evaluate("() => [location.pathname + location.search, (document.querySelector('[data-gal-q]') || {}).value]")
+            for name, path in (("the Gallery's See all, cold", "/social/explore?q=kit&who=people"), ("Search's See all, cold", "/social/search?q=kit&who=people")):
+                tab = ctx.new_page()
+                tab.goto(BASE + path)
+                tab.wait_for_load_state("load")
+                arrow(tab)
+                went_all[name] = tab.evaluate("() => [location.pathname + location.search, (document.querySelector('[data-gal-q]') || {}).value]")
+                tab.close()
             close_ctx(ctx, pg)
             check("and each goes where you were: Edit profile opened from your profile back to your profile, Delete account"
                   " opened from Settings back to Settings, Settings opened by your profile's gear back to your profile, a"
@@ -4363,6 +4388,13 @@ print("PLAN " + json.dumps(out))
                            "Edit profile, cold": "/social/@wrenb", "Delete account, cold": "/social/you",
                            "Settings, cold": "/social/@wrenb", "a profile, cold": "/social/", "How it works, cold": "/social/"},
                   json.dumps(went))
+            check("...and See all, the Gallery's and Search's, goes back to the search it came from, its words still in the"
+                  " box; opened cold, to that search's own address",
+                  went_all == {"the Gallery's See all, from its search": ["/social/explore?q=kit", "kit"],
+                               "Search's See all, from its search": ["/social/search?q=kit", "kit"],
+                               "the Gallery's See all, cold": ["/social/explore?q=kit", "kit"],
+                               "Search's See all, cold": ["/social/search?q=kit", "kit"]},
+                  json.dumps(went_all))
             # A DOOR SCREEN keeps the mark in the middle and has the arrow at the top's start; A DESK shows no arrow
             # anywhere (it has no top bar, and the browser has Back) and shows the headings.
             nctx, npg = browser_as(b, None)
@@ -4370,14 +4402,15 @@ print("PLAN " + json.dumps(out))
             out_how = top_of(npg, "/social/how")
             close_ctx(nctx, npg)
             dctx, dpg = browser_as(b, wren, "desk")
-            desk = {name: top_of(dpg, path) for name, path in (("Settings", "/social/you"), ("How it works", "/social/how"), ("@kitm", "/social/@kitm"))}
+            desk = {name: top_of(dpg, path) for name, path in (("Settings", "/social/you"), ("How it works", "/social/how"), ("@kitm", "/social/@kitm"),
+                                                                 ("See all", "/social/search?q=kit&who=people"))}
             close_ctx(dctx, dpg)
             nd, ndp = browser_as(b, None, "desk")
             desk["Sign in"] = top_of(ndp, "/social/signin")
             close_ctx(nd, ndp)
             check("a door screen (Sign in) has the arrow at the same place with the mark still in the middle, and How it"
                   " works keeps its arrow and its name before you sign in; on a desk no arrow shows anywhere and the"
-                  " headings do (Settings, How it works, a profile, Sign in)",
+                  " headings do (Settings, How it works, a profile, See all, Sign in)",
                   door["arrow"] == post_top["arrow"] and door["mark"] and door["to"] == "/social/" and door["h1shows"]
                   and out_how["arrow"] == post_top["arrow"] and out_how["title"] == "How it works"
                   and all(v["arrow"] is None and v["h1shows"] for v in desk.values()),
