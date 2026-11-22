@@ -258,11 +258,11 @@ sys.path.insert(0, str(ROOT / "harness" / "tools"))
 import coloraudit  # noqa: E402
 
 COLOUR_CEILING = {
-    "skribl/static/styles.css": 238, "social/static/social.css": 13,
-    "skribl/static/face.css": 1, "skribl/static/flip.css": 33, "skribl/static/fullband.css": 26,
-    "skribl/static/fullbar.css": 63, "skribl/static/gallerysection.css": 94, "skribl/static/inlineplayer.css": 56,
+    "skribl/static/styles.css": 216, "social/static/social.css": 13,
+    "skribl/static/face.css": 1, "skribl/static/flip.css": 31, "skribl/static/fullband.css": 26,
+    "skribl/static/fullbar.css": 63, "skribl/static/gallerysection.css": 93, "skribl/static/inlineplayer.css": 56,
     "skribl/static/letters.css": 5, "skribl/static/pagemenu.css": 1, "skribl/static/posted.css": 10,
-    "skribl/static/postfull.css": 2, "skribl/static/segslider.css": 1, "skribl/static/tooltip.css": 1,
+    "skribl/static/postfull.css": 2, "skribl/static/segslider.css": 1,
 }
 over, under = [], []
 for sheet in sorted([*(ROOT / "skribl" / "static").glob("*.css"), *(ROOT / "social" / "static").glob("*.css")]):
@@ -274,8 +274,9 @@ for sheet in sorted([*(ROOT / "skribl" / "static").glob("*.css"), *(ROOT / "soci
         over.append(f"{rel}: {n}, its ceiling {most}")
     elif n < most:
         under.append(f"{rel}: {n} (its ceiling {most} may come down)")
-check("no sheet writes more colours straight into its rules than it did on Nov 22 (the editors' styles.css 238, the"
-      " site's social.css 13, each other sheet its own; a new sheet none): a new colour is a named token",
+check("no sheet writes more colours straight into its rules than its ceiling, set on Nov 22 and only lowered since (the"
+      " editors' styles.css 216, the site's social.css 13, each other sheet its own; a new sheet none): a new colour is a"
+      " named token",
       not over, "; ".join(over) + " -- name it as a token (a custom property) and use the token")
 for line in under:
     print(f"    fewer than its ceiling: {line}")

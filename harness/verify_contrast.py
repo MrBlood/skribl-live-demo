@@ -994,10 +994,21 @@ CRISP = r"""() => {
     for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch (e) { /* another origin's */ } }
     if (!got) return null; probe.style.boxShadow = got; const v = layers(getComputedStyle(probe).boxShadow); probe.style.boxShadow = ''; return v; };
   const record = decl('.btn.record.active');
+  // FOUR LOOKS' 2 (the owner's "All yes", Nov 22): what each of the last soft shadows wears now, where it shows,
+  // and, for those this suite never opens (Leave, Text over a keyboard, Add to Home Screen, the pen's size; Flip's export
+  // card and a page's actions), off its rule
+  const wear = {};
+  ['.sdrafts-sheet', '.help-drawer-inner', '.bk', '.da-pill', '.lc-card', '.lc-banner', '.draft-acts', '.tx-drag', '.addtake-pill',
+   '.post-jump', '.skribl-tip', '.lc-phone video', '.tab-dot'].forEach(sel => {
+    const e = [...document.querySelectorAll(sel)].find(x => x.getClientRects().length && !x.closest('[hidden]'));
+    if (e) wear[sel] = layers(getComputedStyle(e).boxShadow); });
+  const ruled = {};
+  ['.leave-sheet', '.tx-drawer.typing', '.hs-steps', '.hs-banner', '.swoosh-readout', '.flip-export-card', '.pageops-menu']
+    .forEach(n => { ruled[n] = decl(n); });
   probe.remove();
   const of = sel => { const e = [...document.querySelectorAll(sel)].find(x => x.getClientRects().length && !x.closest('[hidden]')); if (!e) return null;
     const cs = getComputedStyle(e); return { box: layers(cs.boxShadow), text: cs.textShadow, off: !!e.disabled || e.getAttribute('aria-disabled') === 'true' }; };
-  return { soft, tokens, record, post: of('#postBtn'), submit: of('.post-submit:not(.post-watch)'), sheet: of('.menu-sheet'), strip: of('.strip-wrap'),
+  return { soft, tokens, record, wear, ruled, post: of('#postBtn'), submit: of('.post-submit:not(.post-watch)'), sheet: of('.menu-sheet'), strip: of('.strip-wrap'),
            card: of('.menu-list, .menu-tile') }; }"""
 
 census = {}
@@ -1552,27 +1563,23 @@ check(f"no dinge (the owner's \"All yes\", Nov 16): every tip, second button and
 # glass panel its rim and one close line, 1px/2px; what floats (a toast, a
 # chip, a hint) the one true shadow, short and close; the fill is enamel, and
 # the white words on it carry no shadow. AND NOTHING THESE SURFACES PAINT IS
-# SOFT but what floats, and what is still to be decided: the mock pictured two
-# states, and the count of the rest (Nov 20: sheets with a fall of their own,
-# floating cards, knobs and lights) is the owner's to say. `CRISP_LEFT` is that
-# list, by the thing's own class, and it only shrinks: a thing on it that no
-# surface paints soft any more must come off it.
+# SOFT but what floats, and what the owner kept. The rest (Nov 20: sheets with
+# a fall of their own, floating cards, knobs and lights) was the owner's to
+# say, and the owner said it (Four Looks' 2, "All yes", Nov 22): a sheet wears
+# the menu sheet's rim, what floats the tray's one shadow, a light a rim; a
+# knob you drag keeps its tiny shadow, the canvas its inner shade, a replay's
+# pen its light. `CRISP_KEPT` is what keeps its own, by the thing's own class,
+# and it only shrinks: a thing on it that no surface paints soft any more must
+# come off it. (A desk's tooltip, a hover's on a timer, floats like the rest
+# now, so it needs no place of its own.)
 print("\nCRISP, THE EDITORS")
-CRISP_LEFT = ("tab-dot", "canvas-wrap", "addtake-pill", "mt-tl-grip", "layer-toggle-knob", "mt-rv-dot",
-              "help-drawer-inner", "bk", "sdrafts-sheet", "tx-drag", "lc-card", "lc-banner", "da-pill", "draft-acts",
-              "post-jump", "skribl-inline-nib", "video")
-# A DESK'S TOOLTIP IS A HOVER'S, ON A TIMER (lib/tooltip.js: 380 ms after a
-# control with a title comes under the pointer, and a sheet that opens can put
-# one there). Whether one is up when a surface is read is where the pointer
-# came to rest and how fast the runner is, not the surface: so it is neither
-# new nor asked for. Its own shadow (8px/24px) is with the rest for the owner.
-CRISP_HOVER = ("skribl-tip",)
+CRISP_KEPT = ("canvas-wrap", "mt-tl-grip", "layer-toggle-knob", "mt-rv-dot", "skribl-inline-nib")
 FLOAT = ["out", 0, 12, 22, -12]
 
 
 def _left(el):
     parts = el.replace("#", ".").split(".")
-    return next((c for c in CRISP_LEFT + CRISP_HOVER if c in parts), None)
+    return next((c for c in CRISP_KEPT if c in parts), None)
 
 
 _cread = {k: v for k, v in crisp.items() if "unread" not in v}
@@ -1580,11 +1587,11 @@ _csoft = [(k, x) for k, v in _cread.items() for x in v["soft"]]
 _cnew = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {x['el']} {x['kind']} {x['layers']}" for k, x in _csoft
                 if not _left(x["el"]) and x["layers"] != [FLOAT]})
 _cseen = {_left(x["el"]) for _, x in _csoft if _left(x["el"])}
-_cgone = sorted(set(CRISP_LEFT) - _cseen)
-check(f"crisp, the editors (the owner's \"All yes\", Nov 20): on every surface of the Pad and Flip, light and dark, phone "
-      f"and desk, nothing painted casts a soft shadow (over 2.5px of blur) but what floats, its one close shadow, and "
-      f"the things still to be decided, a list that only shrinks ({len(_cread)} surfaces read, {len(_csoft)} soft things, "
-      f"{len(_cseen & set(CRISP_LEFT))} kinds left)",
+_cgone = sorted(set(CRISP_KEPT) - _cseen)
+check(f"crisp, the editors (the owner's \"All yes\", Nov 20 and Nov 22): on every surface of the Pad and Flip, light and "
+      f"dark, phone and desk, nothing painted casts a soft shadow (over 2.5px of blur) but what floats, its one close "
+      f"shadow, and what the owner kept (a knob's tiny shadow, the canvas's inner shade, a replay pen's light), a list "
+      f"that only shrinks ({len(_cread)} surfaces read, {len(_csoft)} soft things, {len(_cseen & set(CRISP_KEPT))} kinds kept)",
       bool(_cread) and len(_cread) == len(crisp) and not _cnew and (bool(ONLY) or not _cgone),
       f"new {_cnew[:6]}; on the list and soft nowhere now {_cgone}; unread {[k for k, v in crisp.items() if 'unread' in v][:3]}")
 
@@ -1611,6 +1618,58 @@ check(f"...three heights, as the site's: a card's lift is its one line (in dark 
       f"({len(_cread)} surfaces read, {len(_cworn)} things)",
       bool(_cread) and not _ctok and not _cwear and (bool(ONLY) or len(_cwhat) == 3),
       f"tokens {_ctok[:3]}; worn {_cwear[:4]}; seen {sorted(_cwhat)}; e.g. {json.dumps([[w, g['box']] for _, w, g, _ in _cworn[:3]])[:400]}")
+# FOUR LOOKS' 2, THE EDITORS' LAST SOFT SHADOWS (the owner's "All yes", Nov
+# 22, to the mock's "after": "one rule each"). A SHEET (one that rises from the
+# foot, or opens in the middle) wears the menu sheet's own rim and one close
+# line, the glass's, no fall; WHAT FLOATS OVER THE DRAWING its own edge where
+# it has one and the tray's one short shadow (--chip-lift), the pops' way; a
+# video inside a card its edge alone; the media dot's light a rim of its own
+# colour, never a glow. Read as painted where this suite opens it, by the
+# tokens the same page resolves; the five it never opens off their own rules.
+_GLASS4 = (".sdrafts-sheet", ".help-drawer-inner", ".bk")
+_RINGED4 = (".da-pill", ".lc-card", ".lc-banner", ".draft-acts")
+_BARE4 = (".tx-drag", ".addtake-pill", ".post-jump", ".skribl-tip")
+_RULED4 = {".leave-sheet": "glass", ".tx-drawer.typing": "glass", ".hs-steps": "glass", ".flip-export-card": "glass",
+           ".hs-banner": "bare", ".swoosh-readout": "ringed", ".pageops-menu": "bare"}
+_FLIPS4 = (".flip-export-card", ".pageops-menu")   # flip.css's own: on the Pad there is no such rule
+
+
+def _ring4(l):
+    return l[:4] == ["out", 0, 0, 0] and l[4] > 0
+
+
+def _worn4(how, got, t):
+    if got is None:
+        return False
+    if how == "glass":
+        return got == t["glass"]
+    if how == "ringed":
+        return len(got) == len(t["floats"]) + 1 and _ring4(got[0]) and got[1:] == t["floats"]
+    if how == "bare":
+        return got == t["floats"]
+    if how == "edge":
+        return len(got) == 1 and _ring4(got[0])
+    return any(l == ["out", 0, 0, 0, 0.75] for l in got) and not any(l[3] > 0 for l in got)   # the dot
+
+
+_HOW4 = {**{x: "glass" for x in _GLASS4}, **{x: "ringed" for x in _RINGED4}, **{x: "bare" for x in _BARE4},
+         ".lc-phone video": "edge", ".tab-dot": "dot"}
+_w4 = [(k, sel, got) for k, v in _cread.items() for sel, got in v.get("wear", {}).items()]
+_w4bad = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {sel} {json.dumps(got)}" for k, sel, got in _w4
+                 if not _worn4(_HOW4[sel], got, _cread[k]["tokens"])})
+_w4seen = {sel for _, sel, _ in _w4}
+_r4bad = sorted({f"{k[0]} {k[1]} {k[2]}: {n} {json.dumps(v['ruled'].get(n))}" for k, v in _cread.items()
+                 for n, how in _RULED4.items() if (k[0] == "Flip" or n not in _FLIPS4)
+                 and not _worn4(how, v.get("ruled", {}).get(n), v["tokens"])})
+_w4need = set(_HOW4) - {".skribl-tip"}   # a desk's tooltip is up or not by where the pointer rests: worn right when read
+check(f"...the last soft shadows went (Four Looks' 2, the owner's \"All yes\", Nov 22): a sheet wears the glass's rim and "
+      f"one close line (Your drafts, Ask, the little book; off their rules, Leave, Text over the keyboard, Add to Home "
+      f"Screen's steps, Flip's export card), what floats over the drawing its edge and the tray's one short shadow (Draw "
+      f"along, a button's card, Name every button, a draft's menu, Text's label, Post's pill, the posted picture, a "
+      f"desk's tooltip; off their rules, the Home Screen card, the pen's size, Flip's page actions), a video in a card "
+      f"its edge alone, the media dot's light a rim of its own colour ({len(_w4)} worn things read on {len(_cread)} surfaces, {len(_RULED4)} rules)",
+      bool(_w4) and not _w4bad and not _r4bad and (bool(ONLY) or _w4need <= _w4seen),
+      f"worn {_w4bad[:4]}; ruled {_r4bad[:3]}; never seen {sorted(_w4need - _w4seen)}")
 _cpost = [(k, v["post"]) for k, v in _cread.items() if v.get("post")] + [(k, v["submit"]) for k, v in _cread.items() if v.get("submit")]
 _clit = [(k, g) for k, g in _cpost if not g["off"] and g["box"]]
 _cshadowed = sorted({f"{k[0]} {k[1]} {k[2]}, {k[3]}: {g['text']}" for k, g in _cpost if g["text"] != "none"})
