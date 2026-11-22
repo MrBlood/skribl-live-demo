@@ -178,7 +178,19 @@ WORDS = r"""(root) => {
         // painted, not merely laid out: what is on top at the box's centre is this or inside it
         const at = document.elementFromPoint((box.l + box.r) / 2, (box.t + box.b) / 2);
         if (!at || !(el === at || el.contains(at) || at.contains(el))) continue;
-        out.push({ name, text: t.textContent.trim().slice(0, 28), box, fill: onFill(el),
+        // ...AND AT EVERY POINT THE WORD IS READ AT, the same question. The
+        // grid below reads nine points across the box; a word half under a
+        // menu was read where the menu lay over it (Your drafts with a row's
+        // menu open: the "Save as a file" line's last third, under the menu,
+        // read on the menu's divider at 5.87 when a font change moved both
+        // by a few pixels; on the menu's plain paper before, it passed by
+        // luck). Nobody reads the part of a word that something lies over.
+        // The points are the grid's own (_measure), in the page's pixels.
+        const L = Math.max(0, box.l) + 1, T = Math.max(0, box.t) + 1, Rr = Math.min(box.r, innerWidth) - 1, B = Math.min(box.b, innerHeight) - 1;
+        const vis = [0, 1, 2].map(i => [0, 1, 2].map(j => {
+          const h = document.elementFromPoint(L + (Rr - L) * (i + .5) / 3, T + (B - T) * (j + .5) / 3);
+          return !!h && (el === h || el.contains(h) || h.contains(el)); }));
+        out.push({ name, text: t.textContent.trim().slice(0, 28), box, vis, fill: onFill(el),
                    ink: [c[0], c[1], c[2], c[3] * op], px: parseFloat(cs.fontSize), w: parseInt(cs.fontWeight, 10) });
       } }
   }
@@ -493,6 +505,8 @@ def _measure(q, root, scale):
         worst, under, at = None, None, None
         for i in range(3):
             for j in range(3):
+                if w.get("vis") and not w["vis"][i][j]:
+                    continue   # something else is painted over the word there (WORDS)
                 pt = (int(l + (r - l) * (i + .5) / 3), int(t + (bt - t) * (j + .5) / 3))
                 ground = im.getpixel(pt)
                 a = w["ink"][3]
