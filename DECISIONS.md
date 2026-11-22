@@ -52181,3 +52181,37 @@ NOT SEEN ON AN IPHONE: Chromium's own long press selects nothing here, so
 the owner's scenario cannot be run; the checks read what WebKit obeys.
 
 PAD AND FLIP: shared, one rule for both.
+
+## After v330 -- Blooby and Search, mocked: Blooby in the middle, a magnifier in the bar, recent searches
+
+The owner, Nov 22 (about 5:30 to 5:50 AM): "Should there be a search 🔍 on
+bottom?", then two Bluesky screenshots (its magnifier tab opens Explore
+with Recent searches; its butterfly sits centred at the top), and "And
+center blooby. At the top like on Bluesky or maybe blooby (the
+character?) at same size? Or bigger? Maybe mock it?"
+
+FROM THE RECORD: Nov 13, the Gallery kept Blooby's Explore picture in the
+bar ("Explore becomes the Gallery of everyone"); Nov 15, the one search is
+the Gallery's own box, finding people and drawings (A, over a page of its
+own behind a magnifier beside the bell); a phone's bar keeps its four
+places. The search was there all along; nothing on a phone said so.
+
+THE MOCK (https://claude.ai/artifact/WU8UqoUZ1ovwnYLHWWxDD1), on the real
+site, light and dark, a touch phone and a desk, measured, nothing built:
+1. THE TOP OF HOME: A the wordmark centred (60.8 x 36.3, as now); B Blooby
+   as his Home Screen icon, centred at the wordmark's height (36px), the
+   way the record says he appears on a page; C the same at 44px. Each sits
+   on the bar's middle (201 of 402 across, 28 of 56 down); ☰ and the bell
+   stay. The icon's lilac edge reads 1.75 to 1 on the light top and 8.65
+   on the dark; on light his own dark violet body is what reads.
+2. THE BAR: a magnifier in the Gallery's place, drawn with the bar's pen
+   (24 units, 2.1; 2.9 lit), 32.4px as Home is, in the bar's own ink (7.36
+   to 1 light, 10.49 dark; lit 17.47 and 19.43). It opens the same
+   Gallery; a desk's rail keeps the word Gallery. Blooby leaves the bar
+   for the top (1).
+3. THE BOX, TAPPED: Recent searches under it, the people opened from a
+   search and the words searched, newest first, an x each and Clear all,
+   kept on the phone only; a letter typed runs the search as today.
+
+Cal's picks: 1 B, 2 the magnifier, 3 recent searches. Waits for the
+owner's answer; "all yes" takes the picks.
