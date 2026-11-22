@@ -595,8 +595,8 @@ with sync_playwright() as p:
               words_ok, json.dumps({"phone": {f"{k[1]} {k[2]}": {n: v["word"] for n, v in d.items()} for k, d in alone.items() if k[0] == "phone"},
                                     "said": {f"{k[0]} {k[1]}": v for k, v in said.items()}})[:700])
         def one_size(d):
-            lines = [d[n] for n in ("Home", "Gallery", "Search", "Sign in")]
-            return all(v and 24.5 <= max(v) <= 26.8 for v in lines) and bool(d["Make"]) and 31 <= d["Make"][0] <= 33
+            lines = [d.get(n) for n in ("Home", "Gallery", "Search", "Sign in")]
+            return all(v and 24.5 <= max(v) <= 26.8 for v in lines) and bool(d.get("Make")) and 31 <= d["Make"][0] <= 33
         check("...and every icon looks one size, read off its paint: the line drawings (Home, the Gallery's Blooby, Search's"
               " magnifier, Sign in) at 92%, reaching 24.5 to 26.8px, and Make's purple round, 31 to 33 across (a circle drawn a seventh"
               " bigger), light and dark, Home and the Gallery",

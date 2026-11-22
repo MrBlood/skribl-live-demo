@@ -52264,3 +52264,74 @@ as built in every picture, nothing else built:
 Cal's picks: Make in the middle; Search with recent searches; the rail.
 Waits for the owner's answer. "The bar keeps its four" (Nov 17) gives way
 to five if the owner says yes.
+
+## After v330 -- Five places and Search of its own (the owner's yes to round two)
+
+The owner, Nov 22 (6:58 AM), to round two of "Blooby and Search": "Yes to
+all": Cal's three picks. "The bar keeps its four" (Nov 17) gives way to
+five.
+
+1. THE BAR, FIVE PLACES, MAKE IN THE MIDDLE: Home, Gallery, Make, Search,
+   You (Sign in before you sign in), 77.2px each on a 402px phone, Make's
+   purple round at 201, the screen's middle. A DESK'S RAIL has Search right
+   under the Gallery, the rail's 4px between them, Make the big button below
+   Activity. Two links in `base.html`, one shown at each width (the rail's
+   after the Gallery, the bar's after Make), so a keyboard takes the places
+   in the order seen; CSS `order` would have moved the picture and left the
+   focus behind.
+2. THE MAGNIFIER, in the bar's pen (24 units, 2.1). Drawn 4.7% larger than
+   the mock's: the mock's lens reached 24.5px on the bar where Home and Sign
+   in reach 25.5, and a round line looks smaller than a square one as wide;
+   now 25.5 (verify_social 2, every icon one size, now names it). LIT on
+   Search's own page its line is 2.9 and the lens the mock's own size, so it
+   lands at the same outside size (25.5 by 26): the place you are on does
+   not grow its icon, as Home's house fills in its own outline.
+3. SEARCH, ITS OWN PAGE (`/social/search`, `search.html`, gallery.py
+   search_page): its top is the Gallery's (the ☰, the wordmark, the bell);
+   the Gallery's box; typed, what the Gallery's box finds, People first with
+   See all to Search's own people alone, then everyone's drawings, newest
+   first (no pills: they are the Gallery's); explore.js moves it all, as it
+   moves the Gallery, and an emptied box there asks for nothing
+   (`data-blank`). Nothing searched yet: one quiet line, "Find people and
+   drawings." (the site's own `.feed-none`).
+4. RECENT SEARCHES (`search.js`), before a search: the words searched with
+   the keyboard's Search (or that found something then opened: a drawing,
+   See all) and the people opened from what was found, newest first, ten at
+   most, the same words or person again going back to the top. A person's
+   row as the People rows are (64px, face, name, @handle, a link to their
+   page; a face drawn again since, its old picture gone, the empty circle,
+   never a broken picture); words in a name's size but not its weight (17px 400: what you
+   typed, not somebody); an × each, 44px, named for what it takes away, a
+   screen reader told what went; Clear all at Recent's end in See all's
+   small violet words (16px 600; the mock drew 15px: same role, same
+   token). A recent search tapped searches again in place. Kept on the
+   phone alone (localStorage, a list for each person signed in here and one
+   for nobody), never sent; storage refused is the quiet line. The list and
+   what is found trade places only while the part that fades cannot be
+   seen: explore.js says what it shows (`gal:swap`) while it is out, and
+   search.js puts its list in or takes it out then. Both wait hidden until
+   search.js has read the phone, so neither shows and turns into the other.
+5. THE GALLERY STAYS AS IT IS ("Search is different than gallery which is
+   fine the way it is"): no recent searches there, its emptied box bringing
+   every drawing back.
+
+Flip and the Pad do not change: this is the site's bar and a page of the
+site.
+
+THE CHECKS, `verify_socialsearch` 12 (the places: the order seen, phone and
+desk, signed in and out; one width each and Make in the middle; Search lit
+on its own page alone, its line heavier; Search under the Gallery on a
+desk; a keyboard's order the order seen) and 13 (the page: the quiet line
+and its top; typed, the same people and drawings as the Gallery's box; what
+is kept and in what order; a recent search again in place; the emptied box;
+an ×, Clear all and what a screen reader hears; ten at most; each person's
+own list and the Gallery unchanged; storage refused; changed only unseen,
+read on every frame, phone and desk; every word 4.5:1, every target 44px,
+the box 16px, light and dark). The four-place rows of verify_social,
+verify_socialactivity, verify_socialapp and verify_socialsettings now read
+five, and verify_socialsettings 6 walks Search's page too.
+
+NOT SEEN ON AN IPHONE: Chrome here at a phone's size with touch. A phone's
+keyboard does not rise when Search opens: the box waits to be tapped, as
+the composer's words have since Nov 20 ("The composer opens calm on a
+phone").

@@ -133,6 +133,14 @@
     }
     a.setAttribute('href', r.u);
     var ring = li.querySelector('.face-ring');
+    function circle() {
+      var blank = doc.createElement('span');
+      blank.className = 'face-blank';
+      blank.setAttribute('aria-hidden', 'true');
+      ring.textContent = '';
+      ring.classList.add('is-blank');
+      ring.appendChild(blank);
+    }
     if (r.f) {
       var f = doc.createElement('span');
       f.className = 'skribl-face';
@@ -146,15 +154,14 @@
       img.className = 'skribl-face-still';
       img.alt = '';
       img.decoding = 'async';
+      /* A face drawn again since, its old picture gone: the empty circle,
+         never a broken picture. */
+      img.addEventListener('error', circle);
       img.src = r.f;
       f.appendChild(img);
       ring.appendChild(f);
     } else {
-      var blank = doc.createElement('span');
-      blank.className = 'face-blank';
-      blank.setAttribute('aria-hidden', 'true');
-      ring.classList.add('is-blank');
-      ring.appendChild(blank);
+      circle();
     }
     li.querySelector('.fp-words b').textContent = r.n;
     li.querySelector('.fp-words span').textContent = '@' + r.h;
