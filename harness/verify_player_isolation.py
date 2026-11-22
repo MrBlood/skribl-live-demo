@@ -1432,7 +1432,14 @@ with sync_playwright() as sp:
     #   Loop and More were in the browser's own button font). One rule, the
     #   selector listed live. Nothing to spend first. verify_jsstrip's line
     #   moves with it. 46,013 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 46_019, 119_844, 40_000
+    # RAISED (a bug of its own, the owner's iPhone, Nov 22): +197 B -- a held
+    #   finger selects no control (a finger held by Make on the site, and in
+    #   the Pad's Text drawer, brought up the text-selection handles): every
+    #   button, switch, tab and label takes no selection and no press-and-hold
+    #   callout, the player's Play pill on a post among them. One rule, its
+    #   selectors listed live already. Nothing to spend first. verify_jsstrip's
+    #   line moves with it. 46,210 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 46_216, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

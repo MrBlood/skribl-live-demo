@@ -468,6 +468,18 @@ body {
    and weight stay its own rule's, and a family a rule names (a monospace)
    still wins. verify_a11y 11e. */
 button, input, select, textarea { font-family: inherit; }
+/* A HELD FINGER SELECTS NO CONTROL (the owner's iPhone, Nov 22: a finger held
+   in the Pad's Text drawer brought up the text-selection handles, as one held
+   by Make did on the site). The editors' bars and drawers, and every button,
+   switch, tab and label, take no selection and no press-and-hold callout; a
+   field still selects, and so do the words people read (How it works, a
+   caption). What a learn card names was already held so ([data-lc-hold],
+   below); this is the rest. verify_a11y 11f. */
+.header, .toolbar, .flip-tools, .pagebar, .tab-panel,
+button, [role="button"], [role="switch"], [role="tab"], label {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+:is(.tab-panel, label) :is(input, textarea, [contenteditable="true"]) {
+  -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 
 .app {
   background:

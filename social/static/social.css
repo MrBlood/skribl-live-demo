@@ -409,6 +409,15 @@ body {
    variable, so a desk's rail, which names its own size below, keeps it. */
 .nav .tab .ic-blooby.is-lit { --bar-blooby: var(--bar-blooby-lit); }
 .nav .tab-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* A HELD FINGER SELECTS NO CONTROL (the owner's iPhone, Nov 22: a finger held
+   by Make brought up the text-selection handles; a phone's bar keeps its
+   names in a pixel, above, and the held finger found one). The top bar, the
+   bar, a post's row of actions, and every button, switch and tab take no
+   selection and no press-and-hold callout. The words people read still
+   select (a post's words, a comment, a bio), and so does every field.
+   verify_socialapp 13. */
+.top, .nav, .post-row, button, [role="button"], [role="switch"], [role="tab"] {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .nav .tab[aria-current="page"] { color: var(--nav-on); }
 .nav .tab[aria-current="page"] .tab-name { font-weight: 700; }
 .nav .ic-cut { fill: var(--page); stroke: var(--page); }

@@ -52134,3 +52134,50 @@ FOUND ON THE WAY, ITS OWN NEXT: in this box's Inter, Flip's desk page bar
 (a 694px column) holds eight labelled buttons 4px wider than itself since
 the buttons took the page's font, so Delete's own gap is gone
 (`verify_pages` 101 of 103 here, green before #1047, green in CI's face).
+
+## After v330 -- A held finger selects no control
+
+The owner's iPhone, Nov 22, a picture of Home with the text-selection
+handles round Make: "I held the screen down there by draw button and I get
+the select tool. It happened on the text page too, so it probably happens
+everywhere." A phone's bar keeps its names (Home, Gallery, Make, You) in a
+pixel, clipped, for a screen reader; a held finger found one and selected
+it. In the Pad's Text drawer the drawer's own words (Style, Size 35px) were
+words like any other.
+
+THE FIX (a bug fix, merged on green): the app's own controls and bars take
+no selection and no press-and-hold callout. On the site (social.css): the
+top bar, the bar, a post's row of actions, and every button, switch and
+tab. On Skribl's (styles.css, and so the player; the Gallery's and the
+Library's own pages, and the Gallery section a host mounts): the editors'
+header, dock, page bar and drawers, and every button, switch, tab and
+label. The words people read still select (a post's words keep their own
+rule, "THE WORDS SELECT AS WORDS"; a comment; a bio; How it works), and
+every field does: a field inside a drawer or a label says so itself, since
+an iPhone has been known to stop typing in a field under a parent that
+takes the selection. What a learn card names was already held this way
+([data-lc-hold]); this is the rest. The player's sheet grew 197 bytes,
+both its ledgers say so (46,210 measured).
+
+THE CHECKS read the selection a word ends up with, as a phone applies it
+(its own, or where that is auto the nearest ancestor's that is not), and
+read the callout from the stylesheet, since Chromium does not compute it:
+- `verify_socialapp` 13: Home on a phone and a desk with a post of words,
+  and Make's composer open: the top bar, the bar (its pixel-small names
+  among the words), a post's actions, every button, switch and tab, and
+  every word in one, none; a post's words and every field still select;
+  the rule takes the callout too. Four breaks, each on a copy, each red
+  only in its rows: the tree before (the controls and the callout); the
+  bar left out of the rule (the same two: the bar's names selectable, the
+  owner's case); the callout left out (that row alone); the rule laid on
+  the whole page (the fields row: Make's words could not be selected).
+- `verify_a11y` 11f: the five Skribl pages (the Pad and Flip at rest and in
+  each place they open, Text's drawer on both among them; the player; the
+  Library; the Gallery): every button, switch, tab and label, every bar and
+  drawer, and every word in one, none; every text field, not none; and
+  each sheet's rule takes the callout too.
+
+NOT SEEN ON AN IPHONE: Chromium's own long press selects nothing here, so
+the owner's scenario cannot be run; the checks read what WebKit obeys.
+
+PAD AND FLIP: shared, one rule for both.
