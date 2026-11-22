@@ -450,6 +450,10 @@
   font-size: 16px;
   font-family: inherit;
 }
+/* ITS HINT IS OURS, NOT THE BROWSER'S: left to the browser it was Chromium's
+   grey, 3.7 to 4.2 to 1 on this well in either theme, and Safari's is another
+   grey again (the colour audit of Nov 21, fix A). The label's ink. */
+.reckey-input::placeholder { color: var(--text-muted); opacity: 1; }
 .reckey-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .reckey-done[disabled] { opacity: 0.45; cursor: not-allowed; }
 

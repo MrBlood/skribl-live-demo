@@ -61,6 +61,14 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
      under Reduce Motion fades where it rests; every word at 4.5:1, every row
      44px, light and dark.
  11. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
+ 12. WHERE A TINT CANNOT SHOW, AN EDGE (the colour audit of Nov 21, fix C).
+     Forced colours replace every background, and a chosen option was said
+     with a tint alone: Settings' switch, the Gallery's two pills and the
+     rules' tab each mark the chosen one there with the system's Highlight,
+     read from what the browser says and off the paint; a focused one keeps
+     its ring outside; and outside the mode none of it is seen.
+ 13. ON A PHONE'S LAYOUT NOTHING THE KEYBOARD REACHES IS UNDER THE BAR (fix
+     E): Settings walked with Tab to its foot, each stop read at nine points.
 
 SOCIALSETTINGS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
@@ -1634,6 +1642,137 @@ with sync_playwright() as p:
                   f"read {[(k, v['read']) for k, v in looks.items()]}; low {low[:4]}; small {small[:4]}")
         except Exception as exc:  # noqa: BLE001
             stopped(10, exc)
+
+    # ------------------------------------------------------------------ 12
+    if part(12, "where a tint cannot show, an edge: forced colours mark the chosen option of each pill and the rules' tab"):
+        try:
+            nico = someone(b, "nico", "Nico Reyes")
+            # A group's chosen option beside one that is not. What the browser says of each (its outline and
+            # its underline), and what is PAINTED: with the words made see-through, the pixels of the chosen
+            # one's box in a colour the other's box does not hold at all. A background would be one (and is,
+            # outside the mode: the tint); in the mode there is no background to be one, so it is the edge.
+            STATE12 = """([sel, i]) => { const g = document.querySelectorAll(sel)[i]; if (!g) return null;
+              const kids = [...g.querySelectorAll(':scope > button, :scope > a')];
+              const isOn = (e) => e.getAttribute('aria-pressed') === 'true' || e.hasAttribute('aria-current');
+              const on = kids.find(isOn), off = kids.find(e => !isOn(e)); if (!on || !off) return null;
+              on.setAttribute('data-on12', ''); off.setAttribute('data-off12', '');
+              const say = (e) => { const c = getComputedStyle(e); return { style: c.outlineStyle, width: parseFloat(c.outlineWidth), offset: parseFloat(c.outlineOffset), line: c.textDecorationLine }; };
+              const R = (e) => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, width: r.width, height: r.height }; };
+              return { on: say(on), off: say(off), onBox: R(on), offBox: R(off), onName: on.textContent.trim(), offName: off.textContent.trim() }; }"""
+            HIDE12 = ("*, *::before, *::after { color: transparent !important; -webkit-text-fill-color: transparent !important; }"
+                      " svg { visibility: hidden !important; }")
+            GROUPS12 = (("Settings' switch", "/social/you", "[data-theme-switch]", 0),
+                        ("the Gallery's first pill", "/social/explore", ".fo-seg", 0),
+                        ("the Gallery's second pill", "/social/explore", ".fo-seg", 1),
+                        ("the rules' tabs", "/social/rules", ".legal-nav", 0))
+
+            def only_in(pg, a, b_):
+                """How many pixels of box `a` are a colour box `b_` does not hold."""
+                def colours(box):
+                    im = Image.open(io.BytesIO(pg.screenshot(clip=box, animations="disabled"))).convert("RGB")
+                    return list(im.getdata())
+                pa, pb = colours(a), set(colours(b_))
+                return sum(1 for c in pa if c not in pb)
+
+            got = {}
+            for mode in ("forced", "plain"):
+                for scheme in ("light", "dark"):
+                    ctx, pg = browser_as(b, nico, "desk", scheme, theme=scheme)
+                    if mode == "forced":
+                        pg.emulate_media(forced_colors="active")
+                    for name, path, sel, i in GROUPS12:
+                        go(pg, path)
+                        st = pg.evaluate(STATE12, [sel, i])
+                        row = got.setdefault(name, {})
+                        if not st:
+                            row[f"{mode} {scheme}"] = None
+                            continue
+                        hide = pg.add_style_tag(content=HIDE12)
+                        pg.wait_for_timeout(120)
+                        st["paint"] = only_in(pg, st["onBox"], st["offBox"])
+                        hide.evaluate("e => e.remove()")
+                        if mode == "forced":
+                            # The chosen one, reached with the keyboard: its ring is outside it, not painted over.
+                            pg.evaluate("() => { if (document.activeElement) document.activeElement.blur(); }")
+                            for _ in range(60):
+                                pg.keyboard.press("Tab")
+                                if pg.evaluate("() => !!document.activeElement && document.activeElement.hasAttribute('data-on12')"):
+                                    break
+                            st["focus"] = pg.evaluate("""() => { const e = document.activeElement; if (!e || !e.hasAttribute('data-on12')) return null;
+                              const c = getComputedStyle(e); return { visible: e.matches(':focus-visible'), style: c.outlineStyle, width: parseFloat(c.outlineWidth), offset: parseFloat(c.outlineOffset) }; }""")
+                        row[f"{mode} {scheme}"] = st
+                    close_ctx(ctx, pg)
+
+            def marked(st):      # the chosen one says an edge the other does not, and it is painted
+                return bool(st) and st["on"]["style"] == "solid" and st["on"]["width"] >= 3 and st["on"] != st["off"] and st["paint"] >= 40
+
+            def ringed(st):      # focused, its ring is outside it
+                f = st and st.get("focus")
+                return bool(f) and f["visible"] and f["style"] == "solid" and f["width"] >= 2 and f["offset"] >= 1
+
+            def unseen(st):      # outside the mode: no outline on either
+                return bool(st) and st["on"]["style"] == "none" and st["off"]["style"] == "none"
+            for name, _, _, _ in GROUPS12:
+                row = got.get(name, {})
+                check(f"{name}: in forced colours the chosen one wears an edge the others do not (said by the browser, and"
+                      " painted: 40 pixels or more of its box in a colour no other's box holds), light and dark",
+                      all(marked(row.get(f"forced {t}")) for t in ("light", "dark")),
+                      json.dumps({k: (v and [v["onName"], v["on"], v["offName"], v["off"], v["paint"]]) for k, v in row.items() if k.startswith("forced")})[:700])
+                check(f"{name}: ...the chosen one, reached with the keyboard, keeps its ring outside it; and outside the mode"
+                      " neither wears an outline",
+                      all(ringed(row.get(f"forced {t}")) and unseen(row.get(f"plain {t}")) for t in ("light", "dark")),
+                      json.dumps({k: (v and [v.get("focus"), v["on"]["style"], v["off"]["style"]]) for k, v in row.items()})[:700])
+        except Exception as exc:  # noqa: BLE001
+            stopped(12, exc)
+
+    # ------------------------------------------------------------------ 13
+    if part(13, "on a phone's layout nothing the keyboard reaches is under the bar: Settings, walked with Tab to its foot"):
+        try:
+            nico = someone(b, "nico", "Nico Reyes")
+            # Each stop at nine points of it: its own, or the bar's (the bar is fixed to the foot of a phone's
+            # screen, and a control Tab brings into view is put at that foot). A stop is UNDER the bar when
+            # five or more of the nine are the bar's.
+            AT13 = """() => { const e = document.activeElement; if (!e || e === document.body) return null;
+              const r = e.getBoundingClientRect(); let own = 0, bar = 0, n = 0;
+              for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.2, 0.5, 0.8]) { n++;
+                const x = r.left + r.width * fx, y = r.top + r.height * fy;
+                if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+                const t = document.elementFromPoint(x, y);
+                if (t && (t === e || e.contains(t))) own++; else if (t && t.closest('nav.nav')) bar++; }
+              return { name: (e.getAttribute('aria-label') || e.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 30), tag: e.tagName.toLowerCase(),
+                       y: Math.round(r.top + scrollY), own, bar, n }; }"""
+            walks = {}
+            for scheme in ("light",):
+                ctx, pg = browser_as(b, nico, "phone", scheme)
+                go(pg, "/social/you")
+                pg.evaluate("() => { if (document.activeElement) document.activeElement.blur(); window.scrollTo(0, 0); }")
+                stops, seen = [], set()
+                for _ in range(70):
+                    pg.keyboard.press("Tab")
+                    pg.wait_for_timeout(220)
+                    a = pg.evaluate(AT13)
+                    if not a:
+                        if stops:
+                            break
+                        continue
+                    key = (a["tag"], a["name"], a["y"])
+                    if key in seen:
+                        break
+                    seen.add(key)
+                    stops.append(a)
+                foot = pg.evaluate("() => document.documentElement.scrollHeight")
+                walks[scheme] = (stops, foot)
+                close_ctx(ctx, pg)
+            stops, foot = walks["light"]
+            under = [s for s in stops if s["bar"] >= 5]
+            last = max((s["y"] for s in stops if not s["name"] in ("Home", "Gallery", "Make", "You", "Activity")), default=0)
+            check("Settings on a phone, walked with Tab from its top to its foot (twelve stops or more, the last of the"
+                  " page's own within 300px of its end): not one of them is under the bar",
+                  len(stops) >= 12 and foot - last < 300 and not under,
+                  f"{len(stops)} stops, the page {foot}px, its last stop at {last}; under the bar: "
+                  f"{[(s['name'], s['bar'], s['own']) for s in under][:6]}")
+        except Exception as exc:  # noqa: BLE001
+            stopped(13, exc)
 
     # ------------------------------------------------------------------ 11
     if part(11, "no page errors, no console errors and no CSP violations"):

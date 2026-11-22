@@ -364,6 +364,10 @@
        one field on the page look like a terminal. The focus is the page's
        2px ring (above), not a one-pixel border. */
     .search input { width: 200px; max-width: 48vw; min-height: 44px; box-sizing: border-box; font-family: var(--font-ui); font-size: 16px; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 12px 7px 30px; }
+    /* ITS HINT IS OURS, NOT THE BROWSER'S: the second ink at full strength, as
+       the gallery's search is. Left to the browser it was Chromium's grey, 3.45
+       to 1 on the dark field (the colour audit of Nov 21, fix A). */
+    .search input::placeholder { color: var(--text-2); opacity: 1; }
     .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-3); }
     /* OUR CLEAR, NOT THE BROWSER'S: WebKit's own is a blue x in neither
        theme's colours. 44px, the page's tap floor; shown only with words in

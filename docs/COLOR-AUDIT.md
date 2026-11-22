@@ -302,6 +302,10 @@ A, B, C and E are bugs; D is tidying nobody would see. By the working
 agreements a bug fix needs no OK, but the owner was told none is built and
 to say if they would rather see any first.
 
+BUILT, ALL FIVE, the evening of Nov 21 (`DECISIONS.md`, "The colour
+audit's five fixes, built"): what each became, the check that holds it and
+how each check was shown red. What follows is the finding as it was put.
+
 **A. Six hints in text boxes are too faint.** The words in a box before
 anything is typed. FIRST REPORTED AS ONE (the Gallery's search); the other
 five were found on building it, and the report corrected.

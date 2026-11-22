@@ -657,9 +657,13 @@ def _decl(sels):
 
 
 _wait = {k.strip(): v.strip() for k, v in _decl([".skribl-inline-line.is-waiting"]).items()}
+# ...AND IT IS NOBODY'S WHILE IT WAITS (the colour audit of Nov 21, fix B): no
+# height and no opacity hid it from the eye and left Tab stopping on its four
+# controls, so it is out of the keyboard's way and a screen reader's too
+# (verify_inline walks it). This row is the rule's own words, all five.
 check("at rest a waiting line has no room and shows nothing: no height, no top margin, nothing seen, nothing"
-      " spilling",
-      _wait == {"height": "0", "margin-top": "0", "opacity": "0", "overflow": "hidden"}, str(_wait))
+      " spilling, and nothing for a keyboard or a screen reader to land on",
+      _wait == {"height": "0", "margin-top": "0", "opacity": "0", "overflow": "hidden", "visibility": "hidden"}, str(_wait))
 _open = re.search(r"\.skribl-inline-line\.is-opening\{([^{}]*)\}", _css)
 _rm = re.search(r"@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{\s*\.skribl-inline-line\.is-opening\s*\{\s*"
                 r"transition:\s*opacity[^;}]*\}\s*\}", _css)

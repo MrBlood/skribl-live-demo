@@ -441,11 +441,12 @@ in the mock page.
      colour crisp audit"). FIVE FIXES (A to E: six hints in text boxes too
      faint, four keyboard stops that show nothing, the chosen pill in forced
      colours, a token nothing reads, focus under a phone's bar) are bugs
-     and need no OK; read
-     DECISIONS for whether they have been built. ELEVEN CHOICES wait for
-     the owner's answer, Cal's pick on each; 2, 3, 4 and 11 get a mock
-     before anything is built. The token table is `docs/COLOR-TOKENS.md`,
-     made by `harness/tools/coloraudit.py`.
+     and needed no OK: BUILT that evening (`DECISIONS.md`, "The colour
+     audit's five fixes, built"). ELEVEN CHOICES: answered "All yes" the
+     same afternoon (item 8); 2, 3, 4 and 11 get a mock before anything is
+     built. The token table is `docs/COLOR-TOKENS.md`, made by
+     `harness/tools/coloraudit.py` (its `--check` says whether it is still
+     true).
   6. MAIN WAS RED AFTER THE SITE'S HALF (#1036), one row of
      `verify_socialposts` 13: a name that fitted this box's font and not
      CI's (`DECISIONS.md`, "a name that fits in one font and not in

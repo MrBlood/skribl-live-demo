@@ -51635,3 +51635,107 @@ offset; no scroll; no "in a frame".
 `docs/DEVICE-CHECKLIST.md`, "Blooby on the Home Screen", asks for the
 line with the two pictures. FLIP AND THE PAD: shared, one module, the same
 line in both. NOT SEEN ON AN IPHONE.
+
+## After v330 -- The colour audit's five fixes, built
+
+The five things the colour crisp audit found that are bugs or dead weight
+(`docs/COLOR-AUDIT.md`, "Five things to fix"), built the evening of Nov 21.
+No mock: none changes a look anybody chose. They were half checked when
+the session stalled that afternoon, and the moving bottom bar came before
+them when it came back.
+
+A. A HINT IN A TEXT BOX CAN BE READ. Six placeholders were under 4.5 to 1,
+none of them on the site: four left to the browser's grey (the recovery
+box, Skribl's Gallery's search and its Report note, the Library's search;
+Chromium's `#757575` read 3.4 to 4.6, and Safari's grey is another), two
+set to the editors' dim ink from before the second ink was the rule (the
+Post sheet's title and caption, 3.05 and 2.47). The name field's was the
+dim ink too. Each takes its page's second ink at full strength
+(`styles.css` `.post-input` and `.name-input`; `posted.css`
+`.reckey-input`; the Gallery's and the Library's own sheets). As built the
+least is 7.77 in light and 7.29 in dark; the Gallery's and the Library's
+9.07 and 8.59. `verify_a11y` 11c reads every placeholder on the Pad, Flip,
+the Library, the feed and the Gallery as painted (its colour times its
+opacity over the field's ground), light and dark. SEVEN BREAKS, each red
+in its own page's row: the Post sheet's hint dim again; the name's; the
+hint at full colour and half strength; the recovery box's, the Gallery's
+search's, its note's and the Library's left to the browser.
+
+B. A WAITING LINE IS NOBODY'S. In the in-post player a drawing not yet
+played keeps its line of controls hidden (no height, no opacity), and Tab
+still stopped on Scrub, Repeat, Full screen and the speed: 24 of the 26
+keyboard stops in the audit that showed nothing. The waiting line is
+`visibility: hidden` as well, so it is out of the keyboard's way and a
+screen reader's until it opens. Eighteen bytes of the in-post player's
+budget, in its ledger (`EMBED_RATCHET` 82,589). `verify_inline` holds
+that at rest none of the line's controls takes focus and a Tab from the
+drawing lands outside it, and that once opened three or more take it, a
+drawing and a Flip alike. FOUR BREAKS red: the mend taken out (the
+waiting line's controls take focus again); the open line's rule made to
+win over the wait (the same row); an opened line's controls kept from the
+keyboard (the second row, and thirteen others a hidden control breaks);
+the old budget (over by 18 bytes). THE FIRST ROW WAS RED AS BUILT AT
+FIRST: its own probe focused the play button, which takes no focus, where
+the keyboard's Play is the drawing's box. Two breaks had read red beside
+that, which proved nothing; the probe was put right, the row read green
+as built, and both breaks were run again and read red.
+
+C. WHERE A TINT CANNOT SHOW, AN EDGE: the site's chosen pill in forced
+colours. `docs/SOCIAL-SITE.md` section 38. `verify_socialsettings` 12.
+SEVEN BREAKS, each red in a row of its own: no chosen edge anywhere; none
+on Settings' switch; on the Gallery's pills; on the rules' tabs; no focus
+ring outside it; none on the rules' tab alone; and the block leaking out
+of the mode (an outline on every option for everybody).
+
+D. EVERY TOKEN IS READ BY SOMETHING. `--line-mid-2` was declared in the
+editors' sheet, light and dark, and nothing read it; it rode along in
+`player.css`, which is on a byte budget (130,797 bytes to 130,734).
+Deleted. `verify_theme` gains the row that would have found it (every
+token the sheet declares is read by a stylesheet, a template or a script;
+the derived sheets are not readers): red naming it before the deletion,
+green after.
+
+E. NOTHING THE KEYBOARD REACHES IS UNDER A BAR. Section 38 too.
+`verify_socialsettings` 13 (Settings, walked with Tab) and
+`verify_socialcomments` 50 (a post's page with its answer bar, ten
+comments long). THREE BREAKS red: the bar's room not kept (Settings' See
+reports and both Sign out buttons wholly under the bar); neither room kept
+(on the post's page a comment's Reply, Repost, Like and its dots under
+both bars); and the answer bar's room alone taken away (the same four of
+each comment under it).
+
+THE TOKEN TABLE (`docs/COLOR-TOKENS.md`) is made again on these sheets,
+and says which it read by CONTENT STAMP now, where it named commits: a
+pull request that changes a sheet and re-makes the table in one commit
+cannot know that commit, and a squash-merge gives it another name anyway.
+`coloraudit.py --check` reads the stamps back and says in a second, with
+no browser, whether a sheet has changed since.
+
+TWO OLDER CHECKS THE FIXES MADE WRONG, found by the whole run of the
+twenty-three affected suites and mended in the same pull request:
+`verify_seam` read the waiting line's rule word for word and did not know
+fix B's fifth declaration (523 of 524); and `verify_socialprofile` 18,
+under Reduce Motion, read a deleted card's fold ON THE SCREEN (97 of 98,
+beside the others and alone). The fold was the same (the room 440.7px both
+times); the page had started 32px further down, because the test scrolls
+the card's dots into view and fix E keeps them clear of the bar, and the
+browser's pull back to the shortened page's end was 32px more. The row
+reads the next card on the page now (its top plus the scroll): green as
+built, and red on a fold that glides under Reduce Motion, on a room that
+never closes, and on a glide made one jump.
+
+LEFT, AND SAID: the audit also noted that Skribl's own pages do not carry
+the one-line `color-scheme` hint in the head that the site does, "to add
+with the fixes". Not added here. Each page's own sheet says its scheme and
+the theme is stamped before anything is drawn, so no wrong pixel is
+known; the line would only choose the colour of an empty window while a
+slow sheet is still on its way. It stays on the list as a small thing,
+not a bug.
+
+FLIP AND THE PAD: A and D are theirs and shared (one stylesheet); B is
+the player's, so the Pad, Flip, the link page and the site get it
+together; C and E are the site's. AGAINST THE FOUR: kind, to the people
+who use a keyboard, a screen reader or forced colours, and to anybody
+reading a hint in dim light; simple, nothing new on any screen; powerful
+and playful, not touched. NOT TESTED HERE: Safari, a real Windows
+high-contrast theme, a screen reader's own voice.

@@ -175,6 +175,34 @@ check("no prefers-color-scheme rule in the stylesheet: the ramp is one block, re
       "a media rule would be a second copy of the light ramp to drift — the OS "
       "is followed by stamping data-theme, in _skribl_theme_boot.html and lib/theme.js")
 
+# A TOKEN NOTHING READS IS A COLOUR THAT CANNOT BE WRONG, AND SHIPS ANYWAY.
+# --line-mid-2 sat in both ramps and was read by no stylesheet, script,
+# template or line of python (the colour audit of Nov 21, fix D); it rode in
+# the link player's stylesheet too, which carries the light block whole and is
+# on a byte budget. Read here: every name this sheet declares, against var()
+# in every hand-written sheet of Skribl's and of the site's, and the bare name
+# in any script, template or python (a script may read or set one by name).
+# THE THREE DERIVED SHEETS ARE NOT READERS: player.css, fullband.css and
+# gallerysection.css copy what the sources give them (harness/tools/
+# cssgraph.py), so a name that lives only there is read by nothing.
+_DERIVED = {"player.css", "fullband.css", "gallerysection.css"}
+_bare = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+_declared = sorted(set(re.findall(r"(--[\w-]+)\s*:", _bare)))
+_sheets = [p for d in (ROOT / "skribl" / "static", ROOT / "social" / "static")
+           for p in sorted(d.glob("*.css")) if p.name not in _DERIVED]
+_css_text = "\n".join(re.sub(r"/\*.*?\*/", " ", p.read_text(encoding="utf-8"), flags=re.S) for p in _sheets)
+_other_text = "\n".join(p.read_text(encoding="utf-8", errors="replace")
+                        for d, pats in ((ROOT / "skribl", ("static/*.js", "static/lib/*.js", "templates/skribl/*.html", "*.py")),
+                                        (ROOT / "social", ("static/*.js", "templates/social/*.html", "*.py")))
+                        for pat in pats for p in sorted(d.glob(pat)))
+_unread = [t for t in _declared
+           if not re.search(r"var\(\s*" + re.escape(t) + r"\s*[,)]", _css_text)
+           and not re.search(re.escape(t) + r"(?![\w-])", _other_text)]
+check("the stylesheet declares tokens, and every one is read by something (a var() in a hand-written"
+      " sheet, or its name in a script, a template or python): none rides along unread",
+      len(_declared) > 100 and not _unread,
+      ", ".join(_unread[:8]) or f"{len(_declared)} names, {len(_sheets)} sheets read")
+
 print("\nTHEME — both surfaces carry the same switch, wired to the same key")
 MENU = (TPL / "_skribl_menu.html").read_text(encoding="utf-8")   # the ⋯ menu both editors include (after v323)
 for name in ("skribl_editor.html", "skribl_flip.html"):

@@ -303,6 +303,21 @@ body {
    on the bar (a post's page: THE ANSWER BAR, below), so the page's last
    line and the toast clear it as they clear the bar. */
 .main { padding-bottom: calc(88px + var(--ans-room, 0px) + env(safe-area-inset-bottom)); }
+/* ...AND WHAT THE KEYBOARD REACHES CLEARS THEM TOO. The padding above is for
+   the page's last line. A control that Tab (a paired keyboard, Switch
+   Control, a browser window under 900px) brings into view is put at the very
+   foot of the screen, which is under the bar: focused, ringed and unseen. On
+   a post's page five stops in a row sat wholly under it, and in Settings
+   both Sign out buttons (the colour audit of Nov 21, fix E; WCAG 2.2's Focus
+   Not Obscured). The page's own scroller keeps the bars' height clear when
+   it brings anything into view: the bar's 65px, and the answer bar's 60 where
+   a post's page stands one on it (--ans-room is said on the body, which the
+   scroller cannot read, so it is said again here). A desk has no bar at its
+   foot and asks nothing. */
+@media (max-width: 899.98px) {
+  html { scroll-padding-bottom: calc(65px + env(safe-area-inset-bottom)); }
+  html:has(.ans-bar) { scroll-padding-bottom: calc(125px + env(safe-area-inset-bottom)); }
+}
 .col { width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
 
 /* THE BAR along the bottom of a phone: Home, the Gallery, Make, and You
@@ -2877,6 +2892,26 @@ button.fo-n {
 }
 .fo-seg[data-pill] > .fo-slider { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .fo-seg > .fo-slider { transition: none; } }
+/* WHERE A TINT CANNOT SHOW, AN EDGE (the owner's own rule for a chosen thing:
+   "a ring only where a tint cannot show"). Forced colours, Windows' high
+   contrast and its like, replace every background, so a state said with a
+   tint is not said at all there: the chosen option of the one pill (this
+   one, and Settings' switch and Who can draw back, which are .theme-switch),
+   the rules' tab you are on, the row a list has picked out. Read off the
+   picture, the chosen and the rest were painted alike (the colour audit of
+   Nov 21, fix C). THE EDITORS' PILL HAS WORN THIS SINCE IT WAS MADE
+   (styles.css, the same three rules), and the site's copy of it had none:
+   every option an outline, the chosen one the system's Highlight, and a
+   focused one its ring outside, where the rule above would paint over it.
+   (The pill that slides is a background and nothing more, so the mode has
+   already put it away.) Nothing here is seen outside the mode. */
+@media (forced-colors: active) {
+  .fo-seg > button, .theme-switch > button { outline: 1px solid ButtonText; outline-offset: -1px; }
+  :is(.fo-seg, .theme-switch) > button[aria-pressed="true"], .legal-nav a[aria-current], .mn-row[aria-selected="true"] {
+    outline: 3px solid Highlight; outline-offset: -3px;
+  }
+  :is(.fo-seg, .theme-switch) > button:focus-visible, .legal-nav a[aria-current]:focus-visible { outline-width: 2px; outline-offset: 1px; }
+}
 /* HOME'S PILL, under the composer, over the posts. A tap glides the pill,
    fades the posts, changes them while they can't be seen, and fades them
    back (follows.js); the page doesn't scroll. Reduce Motion: a fade. */

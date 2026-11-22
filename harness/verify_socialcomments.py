@@ -184,6 +184,11 @@ built, tried and set aside; docs/SOCIAL-SITE.md section 18):
      Comments, no band, no ring); nothing moved: the parts in the page's
      order, a desk's words' column packed and a drawing in its own column.
 
+ 50. NOTHING THE KEYBOARD REACHES IS UNDER A BAR (the colour audit of Nov
+     21, fix E): a post's page on a phone, where the answer bar stands on
+     the bar, walked with Tab from its top to its foot; every stop read at
+     nine points of it, and not one of them covered by either bar.
+
 SOCIALCOMMENTS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
 part and green as built: DECISIONS.md, "Comments at /social", "Comments on
@@ -5593,6 +5598,69 @@ with sync_playwright() as p:
                               for k, v in seen49.items()})[:1500])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(49, exc)
+
+    # NOTHING THE KEYBOARD REACHES IS UNDER A BAR (the colour audit of Nov 21,
+    # fix E). A phone's bar is fixed to the foot of the screen and a post's
+    # page stands its answer bar on it: 125px that a control brought into view
+    # by Tab (a paired keyboard, Switch Control, a narrow window) was put
+    # under, focused and unseen; five stops in a row on this page. The page's
+    # scroller keeps that room clear now (social.css, scroll-padding-bottom).
+    if part(50, "on a phone nothing the keyboard reaches is under the answer bar or the bar: a post's page, walked with Tab"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            p50 = make_post(juno, "Section 50, a page long enough to walk", seed=501)
+            for i in range(10):     # ten, so the page is two screens and more in any face (CI's is wider than this box's)
+                said(theo if i % 2 else juno, p50, f"Section 50, comment {i + 1}, said so the page runs on past the screen")
+            # Each stop at nine points of it: its own, a bar's (which), or something else's. UNDER a bar when five
+            # or more of the nine are a bar's. The bars' own buttons are their own.
+            AT50 = """() => { const e = document.activeElement; if (!e || e === document.body) return null;
+              const r = e.getBoundingClientRect(); let own = 0, bar = 0, n = 0; const which = {};
+              for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.2, 0.5, 0.8]) { n++;
+                const x = r.left + r.width * fx, y = r.top + r.height * fy;
+                if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+                const t = document.elementFromPoint(x, y);
+                if (t && (t === e || e.contains(t))) { own++; continue; }
+                const over = t && t.closest('nav.nav, .ans-bar');
+                if (over) { bar++; which[over.classList.contains('ans-bar') ? 'the answer bar' : 'the bar'] = 1; } }
+              return { name: (e.getAttribute('aria-label') || e.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 30), tag: e.tagName.toLowerCase(),
+                       y: Math.round(r.top + scrollY), own, bar, n, which: Object.keys(which), inBar: !!e.closest('nav.nav, .ans-bar') }; }"""
+            ctx, pg = browser_as(b, theo, "phone")
+            pg.goto(BASE + f"/social/p/{p50}")
+            pg.wait_for_function("() => document.readyState === 'complete' && !!document.querySelector('.ans-bar')", timeout=15000)
+            pg.wait_for_timeout(600)
+            bars = pg.evaluate("""() => { const a = document.querySelector('.ans-bar').getBoundingClientRect(), n = document.querySelector('nav.nav').getBoundingClientRect();
+              return { answer: [Math.round(a.top), Math.round(a.height)], bar: [Math.round(n.top), Math.round(n.height)], screen: innerHeight,
+                       page: document.documentElement.scrollHeight, fixed: getComputedStyle(document.querySelector('.ans-bar')).position }; }""")
+            pg.evaluate("() => { if (document.activeElement) document.activeElement.blur(); window.scrollTo(0, 0); }")
+            stops50, seen50 = [], set()
+            for _ in range(90):
+                pg.keyboard.press("Tab")
+                pg.wait_for_timeout(220)
+                a = pg.evaluate(AT50)
+                if not a:
+                    if stops50:
+                        break
+                    continue
+                key = (a["tag"], a["name"], a["y"])
+                if key in seen50:
+                    break
+                seen50.add(key)
+                stops50.append(a)
+            close_ctx(ctx, pg)
+            under50 = [s for s in stops50 if s["bar"] >= 5 and not s["inBar"]]
+            own50 = [s for s in stops50 if not s["inBar"]]
+            last50 = max((s["y"] for s in own50), default=0)
+            check("a post's page on a phone (its answer bar fixed and standing on the bar, the page two screens or more), walked "
+                  "with Tab from its top to its foot (twenty stops or more of the page's own, the last within 400px of its end): "
+                  "not one of them is under the answer bar or the bar",
+                  bars["fixed"] == "fixed" and bars["page"] >= 2 * bars["screen"] and len(own50) >= 20
+                  and bars["page"] - last50 < 400 and not under50,
+                  f"{len(stops50)} stops ({len(own50)} the page's own), the page {bars['page']}px in a screen of {bars['screen']}, "
+                  f"its last stop at {last50}; the bars {bars['answer']} and {bars['bar']}; under a bar: "
+                  f"{[(s['name'], s['which'], s['bar'], s['own']) for s in under50][:8]}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(50, exc)
 
     if part(19, "no page errors, no console errors and no CSP violations"):
         try:
