@@ -52756,7 +52756,10 @@ it's does, so the look changes with the keyboard still up and shows on
 the drawing. Size, Thickness and Speed come back when the keyboard is put
 away. The drawing gains 12px in both places. The chips' colours are the
 drawer's at rest (chosen Skribl 9.65 and 8.59 to 1, Make yours 8.39 and
-8.26, Print and Script 14.84 and 18.14, dark and light).
+8.26, Print and Script 14.84 and 18.14, dark and light). How it works says
+so: "while you type, the drawer is your words, Write it and Style, on the
+keyboard" (it said "just your words and Write it"; verify_helpclaims
+caught it, its claim naming the old check, and names the new one).
 
 THE CHECKS, `verify_text` 16 and 24: the typing drawer is the words,
 Write it and Style (44px, no caption, every chip's words inside it, Make

@@ -65,7 +65,7 @@ CLAIMS = {
              "verify_text.py::once the words are dragged, the drawer steps aside",
              "verify_text.py::so the words reach the top of the drawing",
              "verify_text.py::let go, and the drawer comes back",
-             "verify_text.py::is only the words and Write it",
+             "verify_text.py::is the words, Write it and Style under them",
              "verify_text.py::a tap on a tile opens its slider right under it",
              "verify_text.py::Write it closes the drawer and the words write themselves",
              "verify_text.py::one Undo takes the whole line back",
