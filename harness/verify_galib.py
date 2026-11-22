@@ -446,6 +446,9 @@ with sync_playwright() as p:
         .filter(l => l[5] > 0 && !(l[1] === 0 && l[2] === 0 && l[3] === 0 && l[4] > 0)); };
       """
     MENU = """() => { """ + SEEN + DROP + """const s = document.getElementById('pageMenu'), b = document.getElementById('pageMenuBtn');
+      // a desk's tooltip (lib/tooltip.js puts one on the page; tooltip.css dresses it) as it would float here
+      const tip = (() => { const t = document.createElement('div'); t.className = 'skribl-tip'; document.body.appendChild(t);
+        const v = drop(getComputedStyle(t).boxShadow); t.remove(); return v; })();
       const sr = s.getBoundingClientRect(), br = b.getBoundingClientRect(), cs = getComputedStyle(s);
       const scrim = getComputedStyle(document.getElementById('pageMenuOverlay'), '::before');
       const l = s.querySelector('.pm-list'), lc = l ? getComputedStyle(l) : null, t = s.querySelector('.pm-seg');
@@ -456,11 +459,16 @@ with sync_playwright() as p:
                lift: lc ? drop(lc.boxShadow) : null, glass: drop(cs.boxShadow),
                places: l ? l.querySelectorAll('a[data-dest]').length : 0, track: t && getComputedStyle(t).backgroundColor,
                weight: getComputedStyle(s.querySelector('.pm-item')).fontWeight,
-               scrim: scrim.backgroundColor, scrimBf: scrim.backdropFilter }; }"""
+               scrim: scrim.backgroundColor, scrimBf: scrim.backdropFilter, tip }; }"""
     PAD = """() => { """ + SEEN + DROP + """const m = document.getElementById('menuSheet'), l = m.querySelector('.menu-list'), t = m.querySelector('.menu-editor-seg');
+      // a desk's tooltip (lib/tooltip.js puts one on the page; tooltip.css dresses it) as it would float here
+      const tip = (() => { const t = document.createElement('div'); t.className = 'skribl-tip'; document.body.appendChild(t);
+        const v = drop(getComputedStyle(t).boxShadow); t.remove(); return v; })();
+      const pr = document.createElement('div'); pr.style.boxShadow = 'var(--chip-lift)'; document.body.appendChild(pr);
+      const chip = drop(getComputedStyle(pr).boxShadow); pr.remove();
       return { bg: getComputedStyle(m).backgroundColor, card: getComputedStyle(l).backgroundColor,
                lift: drop(getComputedStyle(l).boxShadow), glass: drop(getComputedStyle(m).boxShadow),
-               line: seen(getComputedStyle(l)), track: getComputedStyle(t).backgroundColor }; }"""
+               line: seen(getComputedStyle(l)), track: getComputedStyle(t).backgroundColor, tip, chip }; }"""
     for theme in ("dark", "light"):
         pg = open_page(ctx, "/skribl-pad", theme)
         pg.evaluate("() => document.getElementById('menuBtn').click()"); pg.wait_for_timeout(700)
@@ -481,6 +489,13 @@ with sync_playwright() as p:
                   bool(pad["lift"]) and m["lift"] == pad["lift"] and bool(pad["glass"]) and m["glass"] == pad["glass"]
                   and all(l[3] <= 2.5 for l in m["lift"] + m["glass"]),
                   f"card {m['lift']} pad {pad['lift']}; sheet {m['glass']} pad {pad['glass']}")
+            # FOUR LOOKS' 2 (the owner's "All yes", Nov 22): a desk's tooltip floats, its edge and the tray's one
+            # short shadow. tooltip.css is one sheet for the editors and these two pages, and these pages map its
+            # tokens onto their own palettes: so the token is held here, against the Pad's own.
+            check(f"{path} {theme}: ...and a desk's tooltip floats as the Pad's does: its edge and the one short "
+                  "shadow (--chip-lift, mapped on this page's palette), value for value, nothing else soft",
+                  bool(pad["chip"]) and pad["tip"] == pad["chip"] and m["tip"] == pad["chip"],
+                  f"here {m['tip']}; the Pad's tip {pad['tip']}; the Pad's --chip-lift {pad['chip']}")
             if theme == "dark":
                 check(f"{path}: on a desktop it is the editors' popover under the ••• -- 336 wide, a 22 corner, "
                       "12px of room, cards at 16, right edges flush, 8px below",
