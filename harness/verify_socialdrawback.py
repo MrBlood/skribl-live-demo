@@ -2052,6 +2052,25 @@ with app.test_request_context("/social/"):
                   json.dumps({"at once": [s1, at_once["label"], at_once["note"], at_once["pen"], at_once["penName"]], "rested": s2,
                               "toast": toast, "eyes under the toast": covered, "kept": flagged})[:1300])
 
+            # UNDO, WHILE ITS TOAST IS UP, then hidden again for what follows.
+            # THE TOAST WAITS FOR NOBODY: it goes 7 seconds after it rises
+            # (mutes.js, UNDO_MS), hovered, focused or not. This tap was made
+            # after the four browsers below (what Theo, nobody and Sam see,
+            # and Sam's Activity), and under load those took longer than 7
+            # seconds: the toast had gone and the tap waited out its 30 (red
+            # beside others Nov 20 and twice Nov 21, green alone). Undo is
+            # tapped while it is up now, as a person reaching for it does, and
+            # the eye hides it again before the others look.
+            pg.tap(".mu-toast.is-up .mu-undo")
+            pg.wait_for_timeout(900)
+            undone = pg.evaluate(STRIP11)
+            undo_toast = pg.evaluate("() => { const t = document.querySelector('.mu-toast.is-up'); return t ? t.querySelector('.mu-toast-words').textContent.trim() : null; }")
+            undo_flag = flag(b_sam)
+            pg.wait_for_timeout(400)
+            pg.tap(eye)
+            pg.wait_for_function("() => !!document.querySelector('.mu-toast.is-up')", timeout=8000)
+            pg.wait_for_timeout(300)
+
             # WHAT EVERYONE ELSE SEES: it is simply not on her post.
             seen_theo, seen_out, seen_sam = strip_of(theo), strip_of(None), strip_of(sam)
             ctx2, pg2 = browser_as(b, theo)
@@ -2086,16 +2105,7 @@ with app.test_request_context("/social/"):
                   json.dumps({"on his page": f"/social/p/{b_sam}" in his_page, "its page": his_post[0], "card": sam_card and [sam_card["on"], sam_card["who"]],
                               "his Activity before": sam_before, "after": sam_after})[:900])
 
-            # UNDO, A RELOAD, AND THE EYE AGAIN.
-            pg.tap(".mu-toast.is-up .mu-undo")
-            pg.wait_for_timeout(900)
-            undone = pg.evaluate(STRIP11)
-            undo_toast = pg.evaluate("() => { const t = document.querySelector('.mu-toast.is-up'); return t ? t.querySelector('.mu-toast-words').textContent.trim() : null; }")
-            undo_flag = flag(b_sam)
-            pg.wait_for_timeout(400)
-            pg.tap(eye)
-            pg.wait_for_function("() => !!document.querySelector('.mu-toast.is-up')", timeout=8000)
-            pg.wait_for_timeout(300)
+            # A RELOAD, AND THE EYE AGAIN.
             open_post(pg, cat)
             reloaded = pg.evaluate(STRIP11)
             pg.evaluate("() => document.querySelector('.db-strip').scrollIntoView({ block: 'center' })")
