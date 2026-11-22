@@ -4435,6 +4435,35 @@ print("PLAN " + json.dumps(out))
                   all(v.get("ink") and abs(v["off"]) <= 1 and v["head"] is not None and abs(v["head"]) <= 1 for v in marks.values())
                   and bool(desk_mark.get("ink")) and abs(desk_mark["box"]) <= 0.5,
                   f"{json.dumps(marks)}; a desk {json.dumps(desk_mark)}")
+            # ...AND ON HOME AND THE GALLERY (the owner's pick A of "Blooby and Search", Nov 22: "I like A"): the
+            # mark's ink in the middle of a phone's top, as Bluesky's butterfly sits, read off the paint the same way;
+            # the ☰ at the top's start and the bell (or Sign in) at its end, where they were, the mark clear of both.
+            SIDES21 = """() => { const top = document.querySelector('body > .top'); if (!top) return null;
+              const r = (s) => { const e = top.querySelector(s); if (!e || !e.getClientRects().length) return null;
+                const q = e.getBoundingClientRect(); return [q.left, q.right]; };
+              return { menu: r('.top-menu'), end: r('.top-bell') || r('.top-signin'), mark: r('.brand .brand-mark'), w: innerWidth }; }"""
+            homes = {}
+            for who21, tag21 in ((wren, "signed in"), (None, "signed out")):
+                for scheme in ("light", "dark"):
+                    hctx, hpg = browser_as(b, who21, "phone", scheme, scale=2)
+                    for name21, path21 in (("Home", "/social/"), ("the Gallery", "/social/explore")):
+                        got21 = mark_of(hpg, path21)
+                        got21["sides"] = hpg.evaluate(SIDES21)
+                        homes[f"{name21}, {tag21}, {scheme}"] = got21
+                    close_ctx(hctx, hpg)
+
+            def sides_ok(v):
+                s = v.get("sides") or {}
+                m, end = s.get("mark"), s.get("end")
+                # the ☰ (signed in, Home and the Gallery) at the top's start, 10px past it as built; the bell or
+                # Sign in at the end; the mark between them, touching neither
+                menu_ok = s.get("menu") is None or (abs(s["menu"][0] - 6) <= 1 and s["menu"][1] < m[0])
+                return bool(m and end) and menu_ok and end[1] >= s["w"] - 17 and end[0] > m[1]
+            check("on a phone the mark's ink is in the middle of the top on Home and the Gallery too, within a pixel, signed"
+                  " in and out, light and dark (the owner's pick A, as Bluesky's butterfly sits); the ☰ stays at the top's"
+                  " start and the bell or Sign in at its end, the mark touching neither",
+                  len(homes) == 8 and all(v.get("ink") and abs(v["off"]) <= 1 and sides_ok(v) for v in homes.values()),
+                  json.dumps({k: {"ink": v.get("ink"), "off": v.get("off"), "sides": v.get("sides"), "why": v.get("why")} for k, v in homes.items()})[:1600])
 
             # A WRONG ADDRESS (owed from this section's own build, Nov 20: "a kind page for a wrong address"; it
             # was the app's bare "Not Found", with no bar and no way home). GONE TO, the way a person goes there:
