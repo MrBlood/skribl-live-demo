@@ -397,6 +397,13 @@
     sending = true;
     postBtn.setAttribute('aria-busy', 'true');
     tell(sayBox, say('posting'));
+    /* THE KEYBOARD GOES DOWN AS POST IS PRESSED (Nov 21): a post that goes
+       changes page, and an iPhone left to change page with its keyboard up
+       can keep the foot of the screen for covered afterwards (social.js,
+       THE BAR STAYS AT THE SCREEN'S FOOT). The sheet's foot follows the
+       keyboard down while it posts; a post that does not go keeps its
+       words, and a tap in them brings the keyboard back. */
+    if (window.SocialViewport) window.SocialViewport.drop();
     var body = { words: words.value };
     if (att && att.kind === 'skribl') body.skribl = att.id;
     else if (att) body.payload = att.payload;

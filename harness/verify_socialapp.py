@@ -79,6 +79,21 @@ Chromium's virtual authenticator for the site's people.
      only the editor seen, its × back on the page, asked again without a
      reload; a visitor, the editor's own page with it. EVERY WORD at 4.5:1,
      every row 44px and more, phone and desk, light and dark.
+  12. THE BAR STAYS AT THE SCREEN'S FOOT (the owner, Nov 21, from the Home
+     Screen app: "When I scroll the bottom menu scrolls too?"). An iPhone's
+     own fault: after its keyboard has been up it can go on taking the foot
+     of the screen for covered, and everything pinned rides the page
+     (social.js has the story). THIS BOX HAS NO IPHONE ENGINE, so the fault
+     is stood in for (a visual viewport left short of the window, or offset
+     in it, with nothing being typed) and what is read is what the page
+     does: on a healthy phone, nothing; stuck, one pixel of scroll and back,
+     ending where it was; three times at the most for one spell, and a
+     keyboard going is a new spell; once put right, once; never while words
+     are typed, with the page pinched larger, with a finger down, on a desk,
+     or on a page that cannot scroll. And the keyboard is put away before
+     the app changes page: as Post is pressed, as a form really goes, as the
+     page goes; a search that stays on its page keeps its keyboard. Whether
+     an iPhone then measures again is the owner's phone's to say.
   10. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALAPP_PART=<n>[,<m>] runs those sections only (calibration); a section
@@ -1587,6 +1602,271 @@ with sync_playwright() as pw:
                   json.dumps({k: (v["read"], v["lowest"], v["low"][:2], v["small"][:2]) for k, v in words.items()})[:900])
         except Exception as exc:  # noqa: BLE001
             stopped(11, exc)
+
+    # ------------------------------------------------------------------ 12
+    # THE BAR STAYS AT THE SCREEN'S FOOT (the owner, Nov 21). The phone's
+    # fault cannot be made here, so it is stood in for before the page's own
+    # scripts run: a visual viewport that can be left SHORT of the window by
+    # so many pixels or OFFSET in it, at a scale, and that can be told to come
+    # right the moment the page scrolls (as the report says an iPhone does).
+    # Every scroll the page asks for is written down with where it was asked
+    # from. Not a phone: what these rows hold is what the page does.
+    if part(12, "the bar stays at the screen's foot: a phone left thinking its keyboard is up is asked to measure again"):
+        try:
+            mira = member(b, "mira", "Mira Lopez")
+            STUCK = """(() => { const t = new EventTarget(); let short = 0, off = 0, scale = 1, heals = false;
+              const vv = { get width() { return innerWidth; }, get height() { return innerHeight - short; }, get offsetTop() { return off; },
+                get offsetLeft() { return 0; }, get scale() { return scale; },
+                addEventListener: (...a) => t.addEventListener(...a), removeEventListener: (...a) => t.removeEventListener(...a) };
+              Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => vv });
+              window.__asked = [];
+              const by = window.scrollBy.bind(window);
+              window.scrollBy = function (x, y) { const dy = x && typeof x === 'object' ? x.top : y;
+                window.__asked.push({ dy, at: Math.round(performance.now()), from: Math.round(scrollY) });
+                if (heals) { short = 0; off = 0; } return by(x, y); };
+              window.__vv = (o) => { if ('short' in o) short = o.short; if ('off' in o) off = o.off; if ('scale' in o) scale = o.scale;
+                if ('heals' in o) heals = o.heals; t.dispatchEvent(new Event('resize')); }; })();"""
+            # A page tall enough to scroll, whatever is in the feed, at a place down the page.
+            TALL = """(y) => { const d = document.createElement('div'); d.style.cssText = 'height:2400px';
+              (document.querySelector('main') || document.body).appendChild(d); window.scrollTo(0, y); }"""
+            ASKED = "() => ({ asked: window.__asked.map(a => a.dy), at: window.__asked.map(a => a.at), from: window.__asked.map(a => a.from), y: Math.round(scrollY) })"
+            FINGER = """(down) => { const t = new Touch({ identifier: 3, target: document.body, clientX: 200, clientY: 400 });
+              document.body.dispatchEvent(new TouchEvent(down ? 'touchstart' : 'touchend', { touches: down ? [t] : [], targetTouches: down ? [t] : [],
+                changedTouches: [t], bubbles: true, cancelable: true, view: window })); }"""
+            REST = 900          # longer than three askings take (each waits 150 ms of rest, then 50 ms to come back)
+
+            def phone(path="/social/", y=300, init=(), who=mira):
+                ctx, pg = browser_as(b, who, ua=IPHONE_UA, init=(STANDALONE, SPLASHED, STUCK) + tuple(init))
+                go(pg, path)
+                if y is not None:
+                    pg.evaluate(TALL, y)
+                pg.wait_for_timeout(500)
+                return ctx, pg
+
+            def pairs(a):
+                """The askings as (step, back) pairs, and whether every back came 30 to 400 ms after its step."""
+                d, at = a["asked"], a["at"]
+                two = [(d[i], d[i + 1]) for i in range(0, len(d) - 1, 2)]
+                timely = all(30 <= at[i + 1] - at[i] <= 400 for i in range(0, len(d) - 1, 2))
+                return two, timely and len(d) % 2 == 0
+
+            # HEALTHY: nothing, whatever the page does.
+            ctx, pg = phone()
+            coarse = pg.evaluate("() => matchMedia('(pointer: coarse)').matches")
+            pg.evaluate("() => window.scrollTo(0, 700)")
+            pg.wait_for_timeout(400)
+            pg.evaluate("() => { window.scrollTo(0, 300); document.querySelector('nav.nav a.tab').focus(); document.activeElement.blur(); }")
+            pg.wait_for_timeout(REST)
+            well = pg.evaluate(ASKED)
+            check("on a healthy phone the page asks for no scroll of its own: scrolled, come to rest, focus moved and gone "
+                  "(this phone is a touch phone: the rows below are read on a pointer that is a finger)",
+                  coarse and well["asked"] == [] and well["y"] == 300, json.dumps({"coarse": coarse, **well}))
+
+            # STUCK, AND NOT CURED: three askings, each a pixel and back, ending where it was; then left alone.
+            pg.evaluate("() => window.__vv({ short: 336 })")
+            pg.wait_for_timeout(REST + 400)
+            stuck = pg.evaluate(ASKED)
+            two, timely = pairs(stuck)
+            check("left thinking its keyboard is up (the visual viewport 336px short of the window, nothing being typed), "
+                  "the page asks the phone to measure again: one pixel of scroll and back, from where it was, ending where it was",
+                  len(two) >= 1 and all(t == (-1, 1) for t in two) and timely and stuck["y"] == 300
+                  and all(f in (299, 300) for f in stuck["from"]), json.dumps(stuck))
+            pg.evaluate("() => window.scrollTo(0, 420)")
+            pg.wait_for_timeout(REST)
+            pg.evaluate("() => window.scrollTo(0, 300)")
+            pg.wait_for_timeout(REST)
+            left = pg.evaluate(ASKED)
+            check("...three times at the most for one stuck spell: a phone this does not cure is left alone, "
+                  "however the page is scrolled after",
+                  len(two) == 3 and left["asked"] == stuck["asked"], json.dumps({"first": stuck["asked"], "after": left["asked"]}))
+            lost = pg.evaluate("""() => { let n = 0; document.addEventListener('focusout', () => n++, { once: true });
+              const a = document.querySelector('nav.nav a.tab'); a.focus({ preventScroll: true }); a.blur(); return n; }""")
+            pg.wait_for_timeout(REST + 400)
+            again = pg.evaluate(ASKED)
+            check("...and something losing focus is a new spell (a keyboard has just gone): asked again, three times at the most",
+                  lost == 1 and len(again["asked"]) == 12 and again["y"] == 300, json.dumps({"lost focus": lost, "asked": again["asked"]}))
+            close_ctx(ctx, pg)
+
+            # CURED BY THE FIRST: one asking; and every later time it sticks, asked again (four times here, one more
+            # than a spell's three: a phone that has come right starts a new count).
+            ctx, pg = phone()
+            pg.evaluate("() => window.__vv({ short: 336, heals: true })")
+            pg.wait_for_timeout(REST)
+            once = pg.evaluate(ASKED)
+            for short in (240, 336, 120):
+                pg.evaluate("(px) => window.__vv({ short: px, heals: true })", short)
+                pg.wait_for_timeout(REST)
+            four = pg.evaluate(ASKED)
+            check("a phone that comes right at the first is asked once (and the pixel is given back); "
+                  "each later time it sticks, once again: four times, four askings",
+                  once["asked"] == [-1, 1] and four["asked"] == [-1, 1] * 4 and four["y"] == 300,
+                  json.dumps({"once": once["asked"], "four times": four["asked"], "y": four["y"]}))
+
+            # ONLY ONCE THE PAGE HAS RESTED: stuck while the page is still gliding (a scroll every 60 ms), nothing is
+            # asked until the glide is over.
+            pg.evaluate("() => { window.__asked.length = 0; window.__vv({ short: 0, heals: false }); }")
+            pg.wait_for_timeout(300)
+            glide = pg.evaluate("""() => new Promise(res => { let i = 0; window.__vv({ short: 336, heals: true });
+              const id = setInterval(() => { window.scrollTo(0, 300 + (++i) * 3); window.__last = performance.now();
+                if (i >= 12) { clearInterval(id); setTimeout(() => res({ last: Math.round(window.__last), asked: window.__asked.map(a => a.at),
+                  y: Math.round(scrollY) }), 700); } }, 60); })""")
+            check("...and only once the page has rested a moment: stuck while it is still gliding, nothing is asked until "
+                  "the glide is over (a scroll from the page would stop it)",
+                  len(glide["asked"]) == 2 and glide["asked"][0] - glide["last"] >= 100 and glide["y"] == 336,
+                  json.dumps(glide))
+            close_ctx(ctx, pg)
+
+            # OFFSET IN THE WINDOW, its height whole: stuck too. AT THE PAGE'S TOP the pixel is the other way.
+            ctx, pg = phone(y=0)
+            pg.evaluate("() => window.__vv({ off: 120, heals: true })")
+            pg.wait_for_timeout(REST)
+            off = pg.evaluate(ASKED)
+            check("offset in the window with its height whole is stuck too; and at the page's top the pixel is down and back up, "
+                  "ending at the top",
+                  off["asked"] == [1, -1] and off["y"] == 0 and off["from"][0] == 0, json.dumps(off))
+            close_ctx(ctx, pg)
+
+            # NEVER WHILE WORDS ARE TYPED: the Gallery's search box has the keyboard, really.
+            ctx, pg = phone("/social/explore")
+            pg.evaluate("() => { document.querySelector('[data-gal-q]').focus({ preventScroll: true }); window.__vv({ short: 336 }); }")
+            pg.wait_for_timeout(REST)
+            typed = pg.evaluate("() => ({ asked: window.__asked.map(a => a.dy), on: document.activeElement.getAttribute('aria-label') })")
+            pg.evaluate("() => { window.__vv({ short: 0 }); document.activeElement.blur(); }")
+            pg.wait_for_timeout(REST)
+            gone = pg.evaluate(ASKED)
+            pg.evaluate("() => { document.querySelector('[data-gal-q]').focus({ preventScroll: true }); window.__vv({ short: 336 }); }")
+            pg.wait_for_timeout(400)
+            pg.evaluate("() => document.activeElement.blur()")          # the keyboard goes, and the phone stays short
+            pg.wait_for_timeout(REST + 400)
+            after = pg.evaluate(ASKED)
+            check("never while words are being typed (the search box has focus and the keyboard is really there: the same numbers, "
+                  "no scroll asked); a keyboard that goes as it should asks nothing either",
+                  typed["on"] == "Search people and drawings" and typed["asked"] == [] and gone["asked"] == [],
+                  json.dumps({"typing": typed, "gone": gone["asked"]}))
+            check("...and when the words lose focus and the phone stays short, that is the fault: asked then",
+                  len(after["asked"]) == 6 and set(after["asked"]) == {-1, 1}, json.dumps(after["asked"]))
+            close_ctx(ctx, pg)
+
+            # NEVER WITH THE PAGE PINCHED LARGER; NEVER WITH A FINGER DOWN (and then, once it lifts).
+            ctx, pg = phone()
+            pg.evaluate("() => window.__vv({ short: 336, scale: 1.6 })")
+            pg.wait_for_timeout(REST)
+            zoomed = pg.evaluate(ASKED)
+            pg.evaluate("() => window.__vv({ short: 0, scale: 1 })")
+            pg.wait_for_timeout(300)
+            pg.evaluate(FINGER, True)
+            pg.evaluate("() => window.__vv({ short: 336 })")
+            pg.wait_for_timeout(REST)
+            held = pg.evaluate(ASKED)
+            pg.evaluate(FINGER, False)
+            pg.wait_for_timeout(REST + 400)
+            lifted = pg.evaluate(ASKED)
+            check("never with the page pinched larger (a zoomed page is shorter honestly), and never with a finger down "
+                  "(a scroll from the page would take the page from under it)",
+                  zoomed["asked"] == [] and held["asked"] == [], json.dumps({"zoomed": zoomed["asked"], "held": held["asked"]}))
+            check("...once the finger lifts and the page has rested, it is asked", len(lifted["asked"]) == 6, json.dumps(lifted["asked"]))
+            close_ctx(ctx, pg)
+
+            # NEVER ON A DESK (a mouse's pointer); NEVER ON A PAGE THAT CANNOT SCROLL.
+            ctx, pg = browser_as(b, mira, screen="desk", init=(STUCK,))
+            go(pg, "/social/")
+            pg.evaluate(TALL, 300)
+            pg.wait_for_timeout(400)
+            fine = pg.evaluate("() => !matchMedia('(pointer: coarse)').matches")
+            pg.evaluate("() => window.__vv({ short: 336 })")
+            pg.wait_for_timeout(REST)
+            desk = pg.evaluate(ASKED)
+            close_ctx(ctx, pg)
+            ctx, pg = phone("/social/you/edit", y=None)
+            fits = pg.evaluate("() => document.scrollingElement.scrollHeight <= innerHeight + 1")
+            pg.evaluate("() => window.__vv({ short: 336 })")
+            pg.wait_for_timeout(REST)
+            short_page = pg.evaluate(ASKED)
+            close_ctx(ctx, pg)
+            check("never on a desk (a mouse's pointer: a scrollbar makes the same numbers honestly), and never on a page that "
+                  "cannot scroll (Edit profile on this phone: nothing can ride there)",
+                  fine and desk["asked"] == [] and fits and short_page["asked"] == [],
+                  json.dumps({"desk": desk["asked"], "fine": fine, "a page that fits": short_page["asked"], "fits": fits}))
+
+            # THE KEYBOARD IS PUT AWAY BEFORE THE APP CHANGES PAGE.
+            # What happened, in order, kept where the next page can read it.
+            ORDER = """(() => { if (window.top !== window) return;      // the page's own, not a frame's inside it
+              const say = (w) => { try { const l = JSON.parse(sessionStorage.getItem('__order') || '[]'); l.push(w);
+                sessionStorage.setItem('__order', JSON.stringify(l)); } catch (e) {} };
+              window.__say = say;
+              addEventListener('submit', () => say('submit'), true);
+              addEventListener('pagehide', () => say('pagehide'), true);
+              addEventListener('blur', (e) => { if (e.target && e.target.matches && e.target.matches('input, textarea')) say('blur ' + (e.target.id || e.target.name)); }, true); })();"""
+            # 1. Post: the words lose the keyboard at the press, while the post is still on its way (the answer is
+            # held back here until that has been read). PRESSED AS AN IPHONE PRESSES A BUTTON: Safari there does
+            # not give a tapped button the focus, so the words keep it unless the page takes it; Chromium's own
+            # click would move the focus by itself and this row would hold nothing.
+            ctx, pg = phone(y=None, init=(ORDER,))
+            held = []
+            pg.route("**/social/posts", lambda r: held.append(r))
+            new_url = pg.evaluate("() => document.getElementById('composeSheet').getAttribute('data-post-new')")
+            pg.click("nav.nav [data-make]")
+            pg.wait_for_function("() => document.getElementById('composeSheet').classList.contains('is-open')", timeout=5000)
+            pg.wait_for_timeout(450)
+            pg.click("[data-compose-words]")
+            pg.keyboard.type("the bar stays down")
+            before = pg.evaluate("() => document.activeElement.id")
+            pg.evaluate("() => document.querySelector('[data-compose-post]').click()")
+            pg.wait_for_timeout(300)
+            mid = pg.evaluate("""() => ({ on: document.activeElement.id || document.activeElement.tagName, open: document.getElementById('composeSheet').classList.contains('is-open'),
+                busy: document.querySelector('[data-compose-post]').getAttribute('aria-busy'), here: location.pathname,
+                words: document.querySelector('[data-compose-words]').value })""")
+            waiting = len(held)
+            for r in held:
+                r.continue_()
+            try:
+                pg.wait_for_url(re.compile(r"/social/p/"), timeout=15000)
+            except PWTimeout:
+                pass
+            pg.wait_for_timeout(300)
+            posted = pg.evaluate("() => ({ here: location.pathname, order: JSON.parse(sessionStorage.getItem('__order') || '[]') })")
+            check("Post puts the keyboard away as it is pressed: the words had it, and while the post is still on its way "
+                  "(held back: the sheet open with its words, Post busy, the page not yet changed) they have lost it; and the post goes",
+                  new_url.endswith("/social/posts") and before == "composeWords" and waiting == 1 and mid["on"] != "composeWords"
+                  and mid["open"] and mid["busy"] == "true" and mid["here"] == "/social/" and mid["words"] == "the bar stays down"
+                  and posted["here"].startswith("/social/p/") and posted["order"][:1] == ["blur composeWords"],
+                  json.dumps({"url": new_url, "before": before, "held": waiting, "mid": mid, "after": posted}))
+            close_ctx(ctx, pg)
+
+            # 2. A form that really goes (Edit profile's Save): put away as it goes, before the page does.
+            ctx, pg = phone("/social/you/edit", y=None, init=(ORDER,))
+            pg.click("#editName")
+            pg.keyboard.type("!")
+            pg.keyboard.press("Backspace")
+            with pg.expect_navigation(timeout=15000):
+                pg.keyboard.press("Enter")
+            pg.wait_for_timeout(300)
+            saved = pg.evaluate("() => JSON.parse(sessionStorage.getItem('__order') || '[]')")
+            check("a form that really goes puts it away as it goes (Edit profile's Save, by the keyboard's own Go): "
+                  "the name loses focus at the submit, before the page goes",
+                  saved[:3] == ["submit", "blur editName", "pagehide"], json.dumps(saved))
+            close_ctx(ctx, pg)
+
+            # 3. A search that stays on its page keeps its keyboard; and a page left with a field in hand lets it go as it goes.
+            ctx, pg = phone("/social/explore", y=None, init=(ORDER,))
+            pg.click("[data-gal-q]")
+            pg.keyboard.type("ca")
+            pg.keyboard.press("Enter")
+            pg.wait_for_timeout(600)
+            kept = pg.evaluate("() => ({ on: document.activeElement.getAttribute('aria-label'), order: JSON.parse(sessionStorage.getItem('__order') || '[]'), here: location.pathname })")
+            pg.evaluate("() => { sessionStorage.setItem('__order', '[]'); document.querySelector('[data-gal-q]').focus({ preventScroll: true }); }")
+            with pg.expect_navigation(timeout=15000):
+                pg.evaluate("() => { window.location.assign(document.querySelector('nav.nav a.tab').href); }")
+            pg.wait_for_timeout(300)
+            leaving = pg.evaluate("() => JSON.parse(sessionStorage.getItem('__order') || '[]')")
+            check("a search that stays on its page keeps its keyboard (the Gallery's: its submit is its own, nothing loses focus)",
+                  kept["on"] == "Search people and drawings" and kept["order"] == ["submit"] and kept["here"] == "/social/explore",
+                  json.dumps(kept))
+            check("...and a page left with a field still in hand lets the keyboard go as it goes",
+                  leaving == ["pagehide", "blur q"], json.dumps(leaving))
+            close_ctx(ctx, pg)
+        except Exception as exc:  # noqa: BLE001
+            stopped(12, exc)
 
     # ------------------------------------------------------------------ 10
     if part(10, "no page errors, no console errors and no CSP violations"):

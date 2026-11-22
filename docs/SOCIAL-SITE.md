@@ -3604,3 +3604,58 @@ has a token of its own (`--menu-card-rule`) and stayed as it was.
 `verify_socialposts` 17 holds the floor (1.4 to 1 from the card and from
 the page, both themes); `verify_socialsettings` 8 holds the ramp's two
 copies together, word for word.
+
+## 37. Built: the bar stays at the screen's foot (Nov 21)
+
+The owner, from the Home Screen app, with two pictures of Home: "When I
+scroll the bottom menu scrolls too?", then "That's a big bug and messes up
+other stuff like full screen play seems to be affected".
+
+WHAT THE PICTURES SHOW. In both, the bar is whole and sits where the first
+screenful of the page ends, to the pixel, riding the page; the strip at the
+app's top edge (`social.css`, THE APP'S TOP EDGE) has gone with it.
+That morning, on the same phone, both were in place. So it is everything
+pinned to the screen at once, not the bar's own rule. `DECISIONS.md`, "The
+moving bottom bar", has the measuring.
+
+WHAT IT IS. An iPhone's own fault, reported by others for iOS 26 and again
+for iOS 27's betas: after its keyboard has been up, the phone can go on
+taking the foot of the screen for covered. The visual viewport then stays
+shorter than the window, or offset in it, with no keyboard there, and
+everything `position: fixed` is laid out that far from its edge and rides
+the page until the app is closed and opened again. No rule of the
+stylesheet can undo it, so the bar's own position is never to be "fixed"
+for it.
+
+WHAT THE SITE DOES (`social.js`, THE BAR STAYS AT THE SCREEN'S FOOT; every
+page of the site carries it):
+
+- IT WATCHES, AND ASKS THE PHONE TO MEASURE AGAIN. When the visual viewport
+  is left short of the window or offset in it, with nothing being typed,
+  the page scrolls one pixel and back (50 ms apart), which one person
+  reports puts an iPhone's Home Screen app right. Only once the page has
+  been at rest 150 ms; only where a finger works the screen and on a page
+  that scrolls; never while words are typed (a text box, or the editor's
+  frame, has the focus: the keyboard is really there), with the page
+  pinched larger, or with a finger down; three times at the most for one
+  stuck spell, a new spell when something loses focus, the page is shown
+  again, or the phone has come right in between. On a healthy page it does
+  nothing.
+- THE KEYBOARD IS PUT AWAY BEFORE THE APP CHANGES PAGE, since changing page
+  with it up is one way a phone is reported left like this: as Post is
+  pressed in the composer (`compose.js`; the sheet's foot follows the
+  keyboard down while it posts, and a post that does not go keeps its
+  words), as a form really goes (Edit profile's Save), and as the page
+  goes. A search that stays on its page (the Gallery's) keeps its keyboard.
+  `SocialViewport.drop` is the one way to say it.
+
+WHAT IS NOT KNOWN. Which step set it off on the owner's phone; and whether
+that phone listens to the asking. NOT SEEN ON AN IPHONE: this box has no
+iPhone engine, so `verify_socialapp` 12 stands the fault in and holds what
+the page does, each part shown red without it. THE SURE CURE, if the bar
+rides the page again, is for the page to scroll inside the app's frame
+(then nothing pinned depends on how the phone places it); that changes how
+every screen scrolls, so it is the owner's to say and the full battery's to
+hold. Skribl's own Gallery and Library, whose pages scroll under a header
+that sticks, do not have the guard; the Pad and Flip do not scroll their
+page on a phone.

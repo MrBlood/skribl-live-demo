@@ -51433,3 +51433,156 @@ not the post. A bug of its own, to be mended on its own.
 FLIP AND THE PAD, and the four pillars: in `docs/COLOR-AUDIT.md`, choice by
 choice. THE RUNS: no product file is changed by this entry's pull request;
 `verify_docs` 144 of 144; the full battery was not run.
+
+## After v330 -- The moving bottom bar: an iPhone left thinking its keyboard is up, and the page asks it to measure again
+
+THE OWNER, Nov 21, from the Home Screen app, with a picture of Home taken
+at 3:56 PM: "When I scroll the bottom menu scrolls too?" And with a second,
+taken at 4:31 PM: "Why haven't you fixed the moving bottom menu yet. That's
+a big bug and messes up other stuff like full screen play seems to be
+affected". (Both reached the session at 4:51 PM, as it stalled; it came
+back at 7:53 PM. The bar came first then, ahead of everything else in
+hand.)
+
+WHAT THE PICTURES SHOW, MEASURED. Each is the owner's 402 by 874 screen;
+the app's page begins 62px down, under the phone's own status bar, so it
+is 812 tall. In both the bar is drawn whole, 99px (its 65 and the 34 of
+room the phone keeps at its foot), but in the middle of the screen with
+the feed going on below it: its top 351px down the page's window in the
+first, 545 in the second. Laid against the feed's own layout on a copy of
+the site (the first card's top 116px down the page; a card without words
+91 from its top to its drawing), the first picture is scrolled 362 and the
+second 168. IN BOTH, THE BAR'S TOP IS 713px DOWN THE PAGE, which is 812
+less 99: where the first screenful ends, to the pixel. It is not following
+the screen at all; it lies where it would at the top of the page, and
+rides. AND THE STRIP AT THE APP'S TOP EDGE HAS GONE WITH IT: in the owner's
+two pictures of that morning (a post's page at 5:59 AM, the Gallery at
+6:13 AM) the page begins 6px below the status bar, behind the strip, and
+the bar is at the foot; in the afternoon's two the page begins at the
+status bar's foot itself. So everything pinned to the screen came loose at
+once, which no rule about the bar could do.
+
+WHAT IT IS NOT. In Chromium on that copy the bar is at the foot at every
+scroll, and nothing above it (the body, the root) has a transform, a
+filter, containment, a container type or an overflow of its own. Of the
+day's merges between the two sets of pictures (#1031, #1033 to #1036),
+nothing in the site's stylesheet, templates or scripts touches the root,
+the body, the bar or the strip.
+
+WHAT IT IS, as far as can be said from here: AN IPHONE'S OWN FAULT. It is
+reported by others for iOS 26 and again for iOS 27's betas (WebKit's
+297779 and 300523; Apple's developer forum, thread 800125; and two small
+sites that patched the same thing this month): after its keyboard has been
+up, the phone can go on taking the foot of the screen for covered. The
+visual viewport stays shorter than the window, or offset in it, with no
+keyboard there; everything `position: fixed` is laid out that far from its
+edge, "about a keyboard's height", and rides the page; a top bar "has slid
+off the top"; and it lasts until the app is closed and opened again. That
+is the owner's two pictures: a bar raised by up to a keyboard's height, a
+top strip gone, full screen (pinned the same way) put wrong with them.
+READ FROM THOSE PAGES BY FETCHING THEM, NOT FROM KNOWING THEM; WebKit's own
+tracker could not be opened from this box.
+
+TOLD TO THE OWNER AT ONCE: swipe the app away and open it again, which is
+what the reports say clears it.
+
+WHAT WAS BUILT (`social.js`, THE BAR STAYS AT THE SCREEN'S FOOT; a bug, so
+no mock):
+  - THE PAGE WATCHES FOR IT AND ASKS THE PHONE TO MEASURE AGAIN: one pixel
+    of scroll and back. One person reports that this puts their iPhone's
+    Home Screen app right; two projects ship it on that word. It is the
+    best there is, and it is one report. Only once the page has rested
+    150 ms; only where a finger works the screen (a desk's scrollbar makes
+    the same numbers honestly) and on a page that scrolls; never while
+    words are typed, with the page pinched larger, or with a finger down;
+    three times at the most for one stuck spell, so a phone it does not
+    cure is left alone. On a healthy page it does nothing.
+  - THE KEYBOARD IS PUT AWAY BEFORE THE APP CHANGES PAGE: as Post is
+    pressed in the composer, as a form really goes, as the page goes.
+    Changing page with it up is one of the ways a phone is reported left
+    like this (a native app's report, without its field told to let go).
+    AN iPhone does not give a tapped button the focus, so until now the
+    words kept the keyboard through Post and the page changed under it.
+    WHAT THE OWNER WILL SEE: the keyboard goes down as Post is pressed,
+    and the sheet's foot follows it down while it posts. Not asked first:
+    it is part of the mend. The owner's to take back.
+
+WHAT IS NOT KNOWN, AND SAID TO THE OWNER. Which step set it off on that
+phone (the composer's Post, Edit profile's Save, the talk cloud's new way
+in from a card, something else). And whether that phone listens: THIS BOX
+HAS NO IPHONE ENGINE, and CI's WebKit is Linux's, with no keyboard and
+none of an iPhone's own placing of pinned things. Nothing here has been
+seen on an iPhone.
+
+IF IT RIDES AGAIN, THE SURE CURE is for the page to scroll inside the
+app's frame, so that nothing pinned depends on how the phone places it
+(one of the forum's own answers). It changes how every screen of the site
+scrolls (the place kept on Back, the tap on the phone's clock to go to the
+top, every suite that scrolls a page), so it is the owner's to say, with a
+mock and the full battery. Not built.
+
+NOT IN THIS: Skribl's own Gallery and Library, whose pages scroll under a
+header that sticks; they have no guard. The Pad and Flip do not scroll
+their page on a phone (measured: a page 812 tall in a screen of 812), so
+there is nothing there to ride. FLIP AND THE PAD: not theirs.
+
+THE CHECK, AND WHAT IT CANNOT SAY. `verify_socialapp` 12 stands the fault
+in before the page's scripts run (a visual viewport that can be left short
+or offset, at a scale, and can be told to come right at the first scroll)
+and writes down every scroll the page asks for. Sixteen rows: nothing on a
+healthy phone; a pixel and back, ending where it was; three for a spell
+and a new spell when something loses focus; once when it comes right, and
+a new count after; only once the page has rested; offset as well as
+short, and the other way at the page's top; never while typing, pinched,
+with a finger down, on a desk, or on a page that cannot scroll; and the
+keyboard put away at Post (pressed as an iPhone presses a button: without
+giving it the focus, or Chromium's own click would move the focus and the
+row would hold nothing), at a form that goes and as the page goes, and
+kept by a search that stays. SEVENTEEN BREAKS, each on a copy with a
+server of its own, each red in a row of its own part: no asking; no pixel
+back; no limit of three; asked while typing; while pinched; with a finger
+down; on a desk; on a page that cannot scroll; offset not counted; short
+not counted; no new count once right; no new spell at a lost focus; no
+wait for rest; Post keeping the keyboard; a form keeping it; a search
+losing it; a page going with it. WHAT NO ROW HERE CAN SAY is that an
+iPhone measures again when asked. The owner's phone says that
+(`docs/DEVICE-CHECKLIST.md`, "Blooby on the Home Screen").
+
+AGAINST THE FOUR. Kind: the fault is the phone's and never the person's,
+nothing is lost, and nothing is asked of them but, this once, to reopen
+the app. Simple: nothing new on the screen. Powerful and playful: not
+touched.
+
+## After v330 -- "All yes" to the colour audit's eleven
+
+THE OWNER, Nov 21, in the message that brought the first picture of the
+moving bar: "Do you need all yes / All yes." To the eleven choices of the
+colour crisp audit as the page then stood (`docs/COLOR-AUDIT.md`, "Eleven
+choices, each with Cal's pick"). The list was put so that "all yes" is a
+whole answer, so the picks are the answer:
+
+  1. Thin lines on in-between screens: yes.
+  2. The soft shadows still painted in the Pad and Flip: yes, a mock first.
+  3. Skribl's own Gallery and Library cards: yes, a mock first.
+  4. A press should show, on the site as on the Pad: yes, a mock first.
+  5. Answer "more contrast" on the site: yes.
+  6. Three colours copied by hand that drifted: each set to the editors'
+     value, and a check that holds the copies together.
+  7. Undo and Redo with nothing to undo: yes (light's `--off-ink` one step
+     deeper).
+  8. Stop thinning the letters on Macs: yes.
+  9. The glow at the top of the site's page: left as it is.
+  10. Tidy the token names: yes to the first half (the greys and the
+      violets that are one colour under several names point at the one).
+      THE SECOND HALF HAD NO PICK ("the owner's": a check that fails when a
+      new colour is written straight into a rule), so "all yes" does not
+      answer it. It is asked again, with a pick this time.
+  11. Telling which one is chosen: yes, the quiet way, a mock first.
+
+WHAT THAT STARTS. 1, 5, 6, 7, 8 and the first half of 10 can be built, each
+with a check shown red first. 2, 3, 4 and 11 change how things look: the
+yes is to "a mock first", so each is mocked (now beside after, light and
+dark, a touch phone and a desk) and waits for a yes of its own to the look
+it shows. NOTHING OF THE ELEVEN IS BUILT BY THIS ENTRY. The audit's five
+fixes (A to E), which are bugs and needed no answer, were in hand when the
+bar came first; where they stand is said in the entries after this one.
