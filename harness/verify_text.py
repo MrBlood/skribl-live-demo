@@ -581,6 +581,7 @@ with sync_playwright() as p:
         want = q.evaluate("() => { const lg = getCanvasLogicalSize(); return [lg.width * 0.3, lg.height * 0.3]; }")
         check("with Text chosen, a press opens it again where the press was",
               s["open"] and a is not None and abs(a["x"] - want[0]) <= 2 and abs(a["y"] - want[1]) <= 2, f"{s['open']} {a} for {want}")
+        tap_box(q)   # on a phone the box is tapped to type (Text opens whole); Escape is the box's own key there
         type_words(q, "Hi")
         settle(q)
         y0 = q.evaluate("() => scrollY")
