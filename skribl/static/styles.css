@@ -8451,6 +8451,19 @@ html.skribl-sheet { overscroll-behavior-y: none; }
   box-shadow: var(--glass);   /* a sheet's rim and close line, the menu sheet's (Four Looks' 2); its paper is still the menu's */
 }
 .tx-drawer.typing > :not(.drawer-detent-handle, .tx-top) { display: none; }
+/* THE IPHONE'S OWN BAR OVER THE KEYBOARD (the owner's iPhone, Nov 22, iOS 26:
+   "When I push text I get this"). The phone floats its own strip (^ v and
+   the tick) over the foot of what it says can be seen, so a drawer resting
+   on the keyboard had its field and Write it under it; a tap in the field
+   then had the phone slide the page up to show it, and the page showed
+   between the drawer and the keys. On an iPhone the typing drawer keeps
+   that strip's room at its own foot (the strip is 60px from the keyboard's
+   top on the owner's screen; 68 leaves the field 8px clear, about what the
+   phone itself slid by): the field and Write it sit above the strip, the
+   strip floats over the drawer's own paper, and nothing needs sliding. Set
+   by lib/textwrite.js (fitKeyboard) on an iPhone alone; elsewhere there is
+   no strip to make room for. */
+.tx-drawer.typing.over-bar { padding-bottom: calc(12px + 68px); }
 .tx-field {
   width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px;
   border: 1px solid transparent; box-shadow: var(--card-ring); background: var(--menu-card); color: var(--text-primary);
