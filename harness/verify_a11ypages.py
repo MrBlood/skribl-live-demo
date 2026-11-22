@@ -122,9 +122,17 @@ print("\nA11Y 6 — no meaningful text under the AA contrast floor")
 _css = (ROOT / "skribl" / "static" / "styles.css").read_text(encoding="utf-8")
 
 
-def _token(name):
-    m = re.search(r"--%s:\s*(#[0-9a-fA-F]{6})" % re.escape(name), _css)
-    return m.group(1) if m else None
+def _token(name, _via=()):
+    # A NAME CAN BE ANOTHER NAME (the colour audit's choice 10, Nov 21: the
+    # second ink's four other names point at --text-secondary). Followed to
+    # the colour it names, in the same first definition the hex was read from;
+    # a loop of names, or a name that ends nowhere, reads as nothing.
+    m = re.search(r"--%s:\s*(#[0-9a-fA-F]{6}|var\(--([a-z0-9-]+)\))" % re.escape(name), _css)
+    if not m:
+        return None
+    if m.group(1).startswith("#"):
+        return m.group(1)
+    return None if m.group(2) in _via + (name,) else _token(m.group(2), _via + (name,))
 
 
 SURFACES = ["surface-base", "surface-raised", "surface-panel", "surface-control"]
