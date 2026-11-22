@@ -91,7 +91,7 @@
 <div class="fo-seg{{ ' ' ~ cls if cls }}" role="group" aria-label="{{ label }}"{{ caller() if caller }}>
   <span class="fo-slider" aria-hidden="true"></span>
   {%- for opt in opts %}
-  <button type="button" data-{{ data }}="{{ opt[0] }}" aria-pressed="{{ 'true' if opt[0] == on else 'false' }}"{% if opt|length > 2 %} title="{{ opt[2] }}"{% endif %}>{{ opt[1] }}</button>
+  <button type="button" data-{{ data }}="{{ opt[0] }}" aria-pressed="{{ 'true' if opt[0] == on else 'false' }}" data-bold="{{ opt[1] }}"{% if opt|length > 2 %} title="{{ opt[2] }}"{% endif %}>{{ opt[1] }}</button>
   {%- endfor %}
 </div>
 {%- endmacro %}

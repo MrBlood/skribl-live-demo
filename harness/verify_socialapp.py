@@ -103,6 +103,16 @@ Chromium's virtual authenticator for the site's people.
      (as a phone applies it: a word's own, or its nearest ancestor's that is
      not auto); a post's words and every field still select; and the rule
      takes the press-and-hold callout too, read from the stylesheet.
+  14. A PRESS THAT SHOWS (the owner's "All yes", Nov 22, to Four Looks' 4,
+     A): held with the browser's own :active, each kind of button dips to
+     94% and a tenth darker, gliding there in the Pad's 0.18s (read on every
+     frame); under Reduce Motion it only dims; a button's own fade is kept
+     beside the glide; on a desk a pointer brightens the purple Post.
+  15. THE CHOSEN WORD, A STEP BOLDER, ITS ROOM KEPT (Four Looks' 11, A):
+     Home's pill, the Gallery's two and Settings' Light | Dark | System,
+     light and dark, a phone and a desk: the chosen word 700 and the rest
+     600; every option keeps the room its own word needs in bold (each
+     label forced to 700, no box grows); the room is never read.
   10. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALAPP_PART=<n>[,<m>] runs those sections only (calibration); a section
@@ -2052,6 +2062,63 @@ with sync_playwright() as pw:
                   " stays lit", hov.get("desk") == "brightness(1.08)" and hov.get("phone") == "none", json.dumps(hov))
         except Exception as exc:  # noqa: BLE001
             stopped(14, exc)
+
+    # ------------------------------------------------------------------ 15
+    if part(15, "the chosen word a step bolder, its room kept: every pick-one pill on the site, light and dark, a phone"
+                " and a desk"):
+        try:
+            # THE OWNER'S "All yes", Nov 22, to Four Looks' 11 A. Home's Following | Everyone, the Gallery's two and
+            # Settings' Light | Dark | System, read as the page computes them: the chosen word at 700 and the rest at
+            # 600; every option keeps the room its own word needs in bold (each label forced to 700 for one read, put
+            # back before a frame: no box grows, so the choice moves and no box moves with it); and the room is
+            # never part of an option's name (the accessibility tree's own name, its word alone).
+            PILLS15 = """(sel) => [...document.querySelectorAll(sel)].filter(g => g.getClientRects().length).map(g => {
+              const bs = [...g.querySelectorAll(':scope > button')];
+              const w0 = bs.map(b => b.getBoundingClientRect().width);
+              bs.forEach(b => b.style.setProperty('font-weight', '700', 'important'));
+              const w7 = bs.map(b => b.getBoundingClientRect().width);
+              bs.forEach(b => b.style.removeProperty('font-weight'));
+              return bs.map((b, i) => ({ t: b.textContent.trim(), on: b.getAttribute('aria-pressed') === 'true',
+                w: getComputedStyle(b).fontWeight, bold: b.getAttribute('data-bold'),
+                grow: Math.round((w7[i] - w0[i]) * 100) / 100 })); })"""
+            PAGES15 = (("/social/", ".fo-seg"), ("/social/explore", ".fo-seg"), ("/social/you", ".theme-switch"))
+            pia = member(b, "pia15", "Pia Strand")
+            seen15, names15 = {}, {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    ctx, pg = browser_as(b, pia, screen=screen, scheme=scheme)
+                    for path, sel in PAGES15:
+                        go(pg, path, wait=700)
+                        seen15[f"{path} {screen} {scheme}"] = pg.evaluate(PILLS15, sel)
+                        if screen == "phone" and scheme == "light":
+                            # the options showing (a closed sheet's pill has no name to read): marked, then asked for
+                            pg.evaluate("""(sel) => document.querySelectorAll(sel + ' > button').forEach(b => {
+                              if (b.getClientRects().length && !b.closest('[hidden]')) b.setAttribute('data-ax15', ''); })""", sel)
+                            cdp = ctx.new_cdp_session(pg)
+                            root = cdp.send("DOM.getDocument", {"depth": 0})["root"]["nodeId"]
+                            for nid in cdp.send("DOM.querySelectorAll", {"nodeId": root, "selector": sel + " > button[data-ax15]"})["nodeIds"]:
+                                ax = cdp.send("Accessibility.getPartialAXTree", {"nodeId": nid, "fetchRelatives": False})["nodes"]
+                                word = cdp.send("DOM.getOuterHTML", {"nodeId": nid})["outerHTML"]
+                                word = re.sub(r"<[^>]+>", "", word).strip()
+                                names15[f"{path} {word}"] = (ax[0].get("name") or {}).get("value") if ax else None
+                    close_ctx(ctx, pg)
+            opts = [(k, o) for k, gs in seen15.items() for g in gs for o in g]
+            pills = {k: len(gs) for k, gs in seen15.items()}
+            check("every pick-one pill on the site sets its chosen word at 700 and the rest at 600 (Home's Following |"
+                  " Everyone, the Gallery's two, Settings' Light | Dark | System), light and dark, a phone and a desk",
+                  bool(opts) and all(pills.values()) and all(o["w"] == ("700" if o["on"] else "600") for _, o in opts),
+                  json.dumps({"pills": pills, "off": [(k, o["t"], o["on"], o["w"]) for k, o in opts
+                                                      if o["w"] != ("700" if o["on"] else "600")][:8]}))
+            check("...and every option keeps the room its own word needs in bold: each label forced to 700, no box grows"
+                  " (a pill's options carry their word in data-bold; Settings' thirds are their own and need none)",
+                  bool(opts) and all(o["grow"] <= 0.05 for _, o in opts)
+                  and all(o["bold"] == o["t"] for k, o in opts if not k.startswith("/social/you")),
+                  json.dumps([(k, o["t"], o["bold"], o["grow"]) for k, o in opts
+                              if o["grow"] > 0.05 or (not k.startswith("/social/you") and o["bold"] != o["t"])][:8]))
+            check("...and the room is never read: each option's name, as the accessibility tree has it, is its word alone",
+                  bool(names15) and all(v == k.split(" ", 1)[1] for k, v in names15.items()), json.dumps(names15)[:700])
+        except Exception as exc:  # noqa: BLE001
+            stopped(15, exc)
 
     # ------------------------------------------------------------------ 10
     if part(10, "no page errors, no console errors and no CSP violations"):

@@ -2342,8 +2342,8 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   background: var(--surface-control); border: 1px solid var(--hairline);
   border-radius: var(--r-seg); padding: var(--seg-inset);
 }
-/* ONE LABEL WEIGHT, selected or not: a label that gets bolder when chosen
-   changes width, and the pill measured under it slides to a box that moves. */
+/* A label is 600 and the chosen word 700, its room kept (THE CHOSEN WORD,
+   below), so the pill never slides to a box that moves. */
 .seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn {
   position: relative; z-index: 1;
   border: 0; background: transparent; color: var(--text-soft);

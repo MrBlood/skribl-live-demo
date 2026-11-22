@@ -818,15 +818,17 @@ with sync_playwright() as p:
                 opts = r["options"]
                 ws = [o["box"][2] for o in opts]
                 ok = (r["box"][2:] == [216, 52] and all(o["box"][3] == 44 for o in opts) and max(ws) - min(ws) < 0.05
-                      and min(ws) >= 44 and len({(o["size"], o["weight"]) for o in opts}) == 1 and opts[0]["size"] == "15px"
-                      and opts[0]["weight"] == "600" and r["card"][3] == 86 and r["next"]
+                      and min(ws) >= 44 and all(o["size"] == "15px" for o in opts)
+                      and all(o["weight"] == ("700" if o["pressed"] == "true" else "600") for o in opts)
+                      and r["card"][3] == 86 and r["next"]
                       and round(r["next"][1] - (r["card"][1] + r["card"][3]), 2) == 16 and all(o["hit"] for o in opts))
                 sizes.append((ok, f"{screen}: switch {r['box'][2:]}, choices {[o['box'][2:] for o in opts]},"
                                   f" {opts[0]['size']} at {[o['weight'] for o in opts]}, card {r['card'][3]}px,"
                                   f" Your passkeys {r['next'] and round(r['next'][1] - r['card'][1], 2)}px below its top,"
                                   f" each landing {[o['hit'] for o in opts]}"))
-            check("the switch is Pad's: 216 x 52, three 44px choices in equal thirds, 15px words at one weight (600),"
-                  " each landing where it is painted; the card 86px tall, so Your passkeys sits 102px below its top"
+            check("the switch is Pad's: 216 x 52, three 44px choices in equal thirds, 15px words at 600 and the chosen"
+                  " one at 700 (Four Looks' 11 A, Nov 22: its third is its own, so nothing moves), each landing where it is"
+                  " painted; the card 86px tall, so Your passkeys sits 102px below its top"
                   " (phone and desk)", all(o for o, _ in sizes), "; ".join(w for _, w in sizes))
             check("named Theme (a group labelled by the row's name), with nothing stored System pressed, alone, and"
                   " the one pill under it: the site's tint, the chosen word in the pill's ink, the others in its"

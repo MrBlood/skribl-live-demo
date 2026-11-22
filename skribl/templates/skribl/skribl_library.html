@@ -926,9 +926,9 @@
         <h2 class="libtabs"><span class="libtabs-list seg-track" role="tablist" aria-label="Your Skribl Library">
           <span class="seg-slider" aria-hidden="true"></span>
           <button type="button" class="libtab active" role="tab" id="tabSkribls"
-                  aria-selected="true" aria-controls="libSkribls">Skribls</button>
+                  aria-selected="true" aria-controls="libSkribls" data-bold="Skribls">Skribls</button>
           <button type="button" class="libtab" role="tab" id="tabDrafts"
-                  aria-selected="false" aria-controls="libDrafts" tabindex="-1">Drafts</button>
+                  aria-selected="false" aria-controls="libDrafts" tabindex="-1" data-bold="Drafts">Drafts</button>
         </span></h2>
         {# THE FILTER (v304): the two states a post of yours can be in, plus
            all. Not Pad/Flip — the listing does not say which a post is. #}
@@ -936,11 +936,11 @@
            draws them, on a pointer that hovers. #}
         <div class="chips seg-track" role="group" aria-label="Show">
           <span class="seg-slider" aria-hidden="true"></span>
-          <button type="button" class="chip active" data-filter="all" aria-pressed="true"
+          <button type="button" class="chip active" data-filter="all" aria-pressed="true" data-bold="All"
                   title="Every Skribl this browser knows about">All</button>
-          <button type="button" class="chip" data-filter="public" aria-pressed="false"
+          <button type="button" class="chip" data-filter="public" aria-pressed="false" data-bold="In the gallery"
                   title="The ones anyone can find in the public gallery">In the gallery</button>
-          <button type="button" class="chip" data-filter="unlisted" aria-pressed="false"
+          <button type="button" class="chip" data-filter="unlisted" aria-pressed="false" data-bold="Link only"
                   title="The ones only someone with the link can reach">Link only</button>
         </div>
         <label class="search">

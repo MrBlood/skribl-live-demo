@@ -52525,3 +52525,101 @@ back, both; the video's fall back, both; Leave's rule given back its
 fall, the new row by its rule; Flip's page actions' fall back, the new
 row, on Flip alone; /gallery's token map taken out, the two /gallery
 tooltip rows; tooltip.css given back its old shadow, the tooltip rows.
+
+## After v330 -- The chosen word, a step bolder, its room kept (Four Looks' 11, A)
+
+The owner's "All yes", Nov 22, 8:31 AM, to Four Looks' 11: A. The chosen
+side of a pick-one pill was told by its tint and its colour alone, both
+words one weight ("ONE LABEL WEIGHT", kept because a bolder word once
+made Flip's move bar grow and scroll at 360px). NOW the chosen word is
+the face's own bold, 700, and the rest stay 600, on every pill of words:
+the Pad's and Flip's (styles.css), Skribl's own Gallery, Library and page
+menu (segslider.css, and gallerysection.css made from it), and Blooby's
+(social.css: Home's Following | Everyone, the Gallery's two, the lists',
+the composer's; Settings' Light | Dark | System and the other thirds).
+
+ITS ROOM KEPT, so the choice moves and no box moves with it: each option
+of words carries its word (data-bold) and lays it out again at 700 under
+its label, unseen and no height at all (an ::after: a flex option stacks
+it under the word, a block option already does), so its box is as wide
+as its bold word whether chosen or not, and the pill measured under it
+never slides to a box that moves. The word is written where the page is
+made where a pill shows the moment the page opens (Blooby's macro, the
+Gallery's New | Hot, the Library's tabs and filter, the page menu's
+Theme), so the room is there from the first paint; lib/segslider.js
+writes and keeps it everywhere else, and asks again whenever the pill
+is placed (a sheet that opens, a turned phone, a changed label): the
+word is the one SHOWN, so Flip's scope keeps the room of "After" on a
+narrow phone and of "And following" on a wide one. The room is never
+read aloud (its alternative text is none, and it is hidden) and never
+painted or touched. Where a track's options share its width equally
+(Fill | Fit | Stretch, Settings' thirds, the page menu's Theme) a box
+cannot move anyway. A CHOICE WITH A PICTURE IN IT keeps its one weight:
+the canvas shapes (each a drawn frame beside its ratio) and the media
+tabs (Photo | Music, each an icon and a word), because their room cannot
+be kept without moving the picture; their picture is chosen with them.
+The attribute is data-bold, not the site's data-word, which names the
+words its scripts say.
+
+Pad and Flip: shared, one rule and one script for both. player.css
+carries only the rule's new comment (the player has no pill of words).
+
+THE CHECKS. `verify_onepill`: its SHAPE row ("every label at 600,
+selected or not") turned round: a label 600 and the chosen word 700, a
+label with a picture 600; a new ROOM row on every pill it reads (both
+editors' tracks, the Gallery's, the Library's, the page menu's, light
+and dark, phone and desk): every option of words carries its word and,
+with every label forced to 700 for one read, no box grows. Its new
+WORDS section: Pen | Background in both editors, the choice moved and
+each box's left and width the same to a hundredth; the two named Pen
+and Background by the accessibility tree (the room not read); Flip's
+move bar at 320, 360 and 402 never scrolls with either side chosen, and
+its scope keeps the room of the label it shows; and with no script at
+all the Gallery's and the Library's tracks already carry their words.
+`verify_socialapp` 15: Home's pill, the Gallery's two and Settings'
+thirds, light and dark, a phone and a desk: 700 chosen and 600 the rest,
+no box grows with every label forced to 700, and each option's name its
+word alone.
+Calibrated, each break red only in its rows: the editors' room taken out,
+every ROOM row on a pill of words and the WORDS scenario (Pen and
+Background each moved a fifth of a pixel; Flip's After box changed); the
+room beside the word instead of under it, the same, and Flip's move bar
+then overflowed by 48 to 68px (the old bug, caught); lib/segslider.js
+writing no word, SHAPE and ROOM; the chosen word not bolder, SHAPE alone;
+the room left readable (painted clear, no alternative text), the name
+rows ("Pen Pen"); the standalone pages' words taken out of their markup,
+the no-script row. On the site: the macro writing no word, the weight
+and room rows; the room taken out, the room row; the room left
+readable, the name row ("Following Following"); the chosen word not
+bolder, the weight row.
+
+FOUND IN ITS OWN RUN, mended before merge (the about thirty suites that
+touch a pill, on a clean checkout). (1) lib/labels.js puts a lone word in
+a span trimmed to cap height (the owner's "doesn't look centered
+vertically") and leaves a column alone, a tile with its mark above its
+word. The room made a pill's option a column, so where the word is in
+the markup (the Gallery's New | Hot, the Library's tabs and filter, the
+page menu's Theme) labels.js skipped it and the word lost its centring
+by its capitals; the Pad's and Flip's kept theirs, labels.js running
+before the pill code there. A column that only holds the room
+(data-bold) keeps its span, and verify_onepill's WORDS holds it: no
+option that keeps its room holds its word bare, on the Pad, Flip, the
+Gallery and the Library (red with the exception taken out). (2) Flip's
+move bar, with the longest page label and an offset shown, was over by
+1px at 360 in this box's face (main: 0): the scope's options give one
+more pixel a side back (6px at 400 and under, 4px at 359 and under);
+verify_move green, red at 360 with the old padding. (3) The room said
+user-select: none, and verify_a11y holds every rule that takes a
+control's selection to take the press-and-hold callout too: the room
+takes neither now (generated words are never selected). (4) Two rows
+elsewhere held the old one weight and hold the new one:
+verify_socialfollow's Home pill (13px at 600, the chosen word 700) and
+verify_socialsettings' theme switch (15px at 600, the chosen one 700),
+each red with the site's bold taken out.
+
+AND A BLIND SPOT, NOT MENDED HERE: verify_galib's "every word on the page
+reads 7:1" reads only a box's own text, so it has not read a word that
+labels.js put in its span (New | Hot among them) since labels.js. Read
+directly, the chosen New on its tint is 6.24:1 in light: over AA, under
+the page's own 7:1. The owner's to say whether that pill's ink is held to
+AA with the editors' (as Make one's white words are) or darkened.

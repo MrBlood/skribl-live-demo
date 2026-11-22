@@ -46,9 +46,12 @@
     // with a bold word in it) would stop breaking where they should.
     if (texts.length + words.length !== 1) return;
     // A tile with its mark ABOVE its word is not a centred line, and a control
-    // already trimmed by its own rule (Flip's hold badge) is done.
+    // already trimmed by its own rule (Flip's hold badge) is done. A pill's
+    // option that keeps its bold word's room (data-bold, Four Looks' 11 A)
+    // stacks only that unseen room under its word: still one centred line, so
+    // it keeps its span.
     var st = cs(el);
-    if (/flex/.test(st.display) && /column/.test(st.flexDirection)) return;
+    if (/flex/.test(st.display) && /column/.test(st.flexDirection) && !el.hasAttribute('data-bold')) return;
     if (st.textBoxTrim === 'trim-both') return;
     if (texts.length) {
       var s = doc.createElement('span');
