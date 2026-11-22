@@ -51979,9 +51979,22 @@ five pages shows (the Pad and Flip at rest and in each place they open)
 computes its page's own family, or a monospace on purpose. Red on the
 tree before: all five pages (109, 185, 6, 4 and 8 controls read), naming
 each control in Arial. As built, 471 of 471. A break for each page's rule,
-each on a copy with a server of its own: the editors' sheet without it,
-the Pad and Flip red and the other three green (469 of 471); the player's,
-the Gallery's and the Library's, each in the pull request.
+each on a copy with a server of its own, each red in its own row alone:
+the editors' sheet without it, the Pad and Flip (469 of 471); the
+player's, the player (470); the Gallery's, the Gallery (470); the
+Library's, the Library (470).
+
+AND THE CONTRAST CHECK'S NINE POINTS. `verify_contrast` reads each word at
+nine points across its box and keeps the worst, and asked which element
+lies on top only at the box's centre. With the page's font, Your drafts'
+row menu sits 7px higher and the line under "Save as a file" 4px
+higher, and one point of that line's last third, under the menu, landed
+on the menu's divider: 5.87 to 1 in light and 6.11 in dark, against 7,
+in both editors. Nobody reads the part of a word a menu lies over; on
+the menu's plain paper before, it had passed by luck. The check asks at
+every point now, as it did at the centre. On that scene alone: as it
+was, the four rows red; mended, green; mended with that line made faint
+where it shows, red again (1.66 to 1).
 
 FLIP AND THE PAD: shared, one sheet. Nothing changes on an iPhone. NOT
 SEEN ON WINDOWS: this box has no Segoe UI.
