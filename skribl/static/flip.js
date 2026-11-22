@@ -12182,9 +12182,13 @@ bindEl('clearUndo', 'click',()=>{ if(restoreClear()) chip('Animation restored');
 // yes, Q4): "New Skribl" and an Undo; Undo says "Restored" and offers a Redo,
 // which is this again, on the shape New Skribl picked (preset), as the Pad's.
 function newSkriblWithUndo(preset){
+  // ...and the words typed in Text's box, not yet written, as the Pad's New
+  // takes them (lib/textwrite.js forget); its Undo brings them back.
+  const words = window.SkriblText && window.SkriblText.forget ? window.SkriblText.forget() : '';
   clearAllPages({ media: true });
   if(preset && preset.id!==currentSizeId()){ applyCanvasSize(preset.w, preset.h); syncCanvasSeg(); }
-  if(window.SkriblNewUndo) window.SkriblNewUndo.offer({ say: chip, undo: restoreClear, redo: ()=>newSkriblWithUndo(preset) });
+  const undo = ()=>{ const ok = restoreClear(); if(words && window.SkriblText) window.SkriblText.restore(words); return ok || !!words; };
+  if(window.SkriblNewUndo) window.SkriblNewUndo.offer({ say: chip, undo: undo, redo: ()=>newSkriblWithUndo(preset) });
 }
 
 /* Smear weight — the same seg shape as grid density and mirror, because it is
@@ -12498,7 +12502,9 @@ bindEl('miInfo', 'click',()=>{ closeMenu(); openHelpDrawer(); });
     const want=window.SkriblMenuPages ? window.SkriblMenuPages.chosenSize() : null;
     const preset=want ? FLIP_SIZES.find(x=>x.id===want) : null;
     const reshape=!!(preset && preset.id!==currentSizeId());
-    const empty = frames.length===1 && frames[0].strokes.length===0 && !flipHasMedia();
+    // Words typed in Text's box and not yet written are work too (the Pad's).
+    const empty = frames.length===1 && frames[0].strokes.length===0 && !flipHasMedia()
+      && !(window.SkriblText && window.SkriblText.words && window.SkriblText.words());
     closeMenu(); disarmAll();
     if(!empty) newSkriblWithUndo(preset);
     else if(reshape){ applyCanvasSize(preset.w, preset.h); syncCanvasSeg(); }

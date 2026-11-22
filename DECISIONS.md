@@ -52009,3 +52009,84 @@ it, green; with it and a row painting a ground of its own, red again.
 
 FLIP AND THE PAD: shared, one sheet. Nothing changes on an iPhone. NOT
 SEEN ON WINDOWS: this box has no Segoe UI.
+
+## After v330 -- Text inside a post: the drawer sits on the iPhone's keyboard, and New takes the words in the box
+
+The owner, Nov 22 (about 5 AM), the Pad inside a post in the Home Screen
+app, four pictures: "When I hit text I get this. If I tap the checkmark it
+shows this. If I type a letter, I get this. If I start new, any text I
+typed stays in the box and says this is a fresh on[e]." Picking Text
+brought the keyboard up over Text's drawer, the field under the keys; the
+keyboard's tick showed the drawer; a tap on the field slid the whole view
+up, the header off the top; typed words showed at the top of the drawing,
+Drag to move over Add; and New, with words typed and nothing drawn, said
+"Already a fresh one" and left them in the box. Their report said where:
+the Pad's page "in a frame", Screen 402x812.
+
+THE CAUSE. Inside a post the editor is in a frame (the site's composer
+holds it in one filling the screen, social.css .facepad). An iPhone takes
+its keyboard off the visual viewport of the OUTERMOST window alone; a
+frame's own stays the whole frame. Text's drawer asks the visual viewport
+whether a keyboard is up ("Text on the phone: ... sits on the keyboard",
+lib/textwrite.js fitKeyboard), so inside a post it never saw one, and the
+drawer stayed in the page under the keys. On the editors' own pages there
+is no frame, which is why it worked there.
+
+THE FIX (bug fixes, merged on green):
+- What can be seen is asked of the outermost window this page may read,
+  carried into the frame's own px through each frame's place in its
+  parent, and that window's viewport is heard as well as the frame's (let
+  go when the page goes). A host on another address keeps its viewport to
+  itself; there the frame's own is asked, as before.
+- The typing view comes on with the keyboard's own height (how much
+  shorter the outermost visual viewport is than its window), not how much
+  of the page the keyboard covers. An iPhone slides the view up to show a
+  tapped field, and a slide of nearly the keyboard's height left too little
+  of the page covered for the old test, so the drawer stayed whole and the
+  drawing went up out of sight (their third picture).
+- While the words are typed they stay below the header and the top of
+  what shows, and above the drawer, as far as the drawing reaches (with
+  the view slid far enough the drawing can end above what shows, as
+  Flip's does slid 300px; the words then sit on its foot). When the
+  keyboard goes they are back where they were put, as they already came
+  back from above the drawer.
+- New Skribl counts words typed in Text's box and not yet written as
+  work: it takes them with the rest, says "New Skribl" with its Undo, and
+  the Undo brings them back (SkriblText words, forget and restore). The
+  Pad's Make another, on the posted card, is the same New.
+
+THE CHECK, `verify_text` 24: the editor in a frame filling the screen, on
+a stand-in host page at this address, and a keyboard (TEXT 16's 336px)
+told to the outermost window alone, the frame's own viewport the whole
+frame. Pad and Flip: the drawer sits on the keyboard as the words and
+Write it, the field above the keys, the words above the drawer and below
+the header, its room kept; slid up 150px and 300px, it still sits on what
+can be seen, the words between the top of what shows (or the header) and
+the drawer, or on the drawing's foot; words put at the top of the drawing
+come below the header while typed and go back after; with the keyboard
+gone the whole drawer is back and the words where they were put; and New
+takes the words, says so with its Undo, Text opens empty, the Undo brings
+them back. 10 of 10.
+
+CALIBRATION, each break on a copy with a server of its own, part 24
+alone, each red only in its own rows: the frame asking only itself (the
+tree before), all six keyboard rows; the outermost viewport not heard,
+the same six; the old covered-page test, the two slid rows; no floor for
+the words, the slid and header rows (four); New not counting the words,
+on the Pad the Pad's New row alone, on Flip Flip's alone; forget keeping
+the words, both New rows; restore doing nothing, both; the Pad's Undo not
+restoring them, the Pad's; Flip's, Flip's.
+
+NOT SEEN ON AN IPHONE: this box has no WebKit and no keyboard. What is
+checked is what the page does with the numbers an iPhone reports, stood in
+on the outermost window. How far a real iPhone slides the view for a
+tapped field, and whether it slides it back, is the owner's phone's to
+say.
+
+NOTED, NOT BUILT: the Post sheet's keyboard lift (lib/postsheet.js) also
+asks its own frame. Inside the site's post its fields are not shown (no
+title in a post, and the site asks for no gallery caption), so nothing
+meets it today; a host that asks for the gallery choice would.
+
+WHAT IT DOES TO FLIP: shared. One module (lib/textwrite.js); New is each
+editor's own, the same three calls.

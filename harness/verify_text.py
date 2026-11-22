@@ -130,6 +130,26 @@ Thickness and Speed as tiles. Each row holds a promise:
      message from anywhere but that frame closes nothing; and Your hand
      opened by itself, with or without the flag, is as it always was. Pad
      and Flip, one module.
+ 24. INSIDE A POST, ON A PHONE'S KEYBOARD; AND NEW TAKES THE WORDS (the
+     owner's iPhone, Nov 22, the Pad inside a post in the Home Screen app:
+     Text opened with the keyboard over its drawer, the field under the
+     keys; the words went up under the header; New said "Already a fresh
+     one" and left the words in the box). The editor in a host's frame
+     filling the screen, as the site's composer holds it, on a stand-in
+     host page; the keyboard told to the OUTERMOST window alone (its visual
+     viewport shorter, and offset where the phone slides the view up to
+     show the field), as an iPhone tells it, the frame's own the whole
+     frame. With the keyboard up the drawer sits on it as the words and
+     Write it, the field above the keys, the words above the drawer and
+     below the header, its room kept; slid up 150px and 300px of a 336px
+     keyboard, it still sits on what can be seen and the words stay
+     between the top of what shows (or the header) and the drawer, or on
+     the drawing's foot where the drawing ends above what shows; words put
+     at the top of the drawing come below the header while typed and go
+     back after; with the keyboard gone the whole drawer is back and the
+     words where they were put. And words typed and not yet written are
+     work: New Skribl takes them, saying so with its Undo, Text opens
+     empty after, and the Undo brings them back. Pad and Flip.
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
@@ -2092,6 +2112,186 @@ with sync_playwright() as p:
         check("on the Pad's own page (not inside a post) there is no layer, no module and no sheet for it: Make yours goes"
               " to Your hand as TEXT 11 reads",
               own == {"module": False, "layer": False, "sheet": False}, json.dumps(own))
+
+    # ------------------------------------------------------------------ 24
+    if part("TEXT 24 — inside a post, on a phone's keyboard; and New takes the words"):
+        # THE EDITOR IN A HOST'S FRAME, as the site's composer holds it (a
+        # frame filling the screen, social.css .facepad), on a stand-in host
+        # page at this address. A KEYBOARD AS AN IPHONE HAS ONE, TOLD TO THE
+        # OUTERMOST WINDOW ALONE: its visual viewport shorter, and offset where
+        # the phone slides the view up to show a tapped field; the frame's own
+        # stays the whole frame. Chromium has no keyboard to open.
+        FH, KB = 812, 336    # the owner's frame (their report: Screen 402x812); the keyboard TEXT 16 stands in
+        INFRAME = dict(viewport={"width": 402, "height": FH}, device_scale_factor=2, is_mobile=True, has_touch=True)
+        HOSTPAGE = ("<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'>"
+                    "<style>html,body{margin:0;height:100%} iframe{position:fixed;inset:0;width:100%;height:100%;border:0}</style>"
+                    "<iframe title='A post' src='{src}'></iframe>")
+        OUTER_KB = """(() => { if (window !== window.top) return;
+          const t = new EventTarget(); let h = null, off = 0;
+          const vv = { get width() { return innerWidth; }, get height() { return h === null ? innerHeight : h; },
+            get offsetTop() { return off; }, get offsetLeft() { return 0; }, get scale() { return 1; },
+            addEventListener: (...a) => t.addEventListener(...a), removeEventListener: (...a) => t.removeEventListener(...a) };
+          Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => vv });
+          window.__keyboard = (px, slid) => { h = px ? innerHeight - px : null; off = slid || 0;
+            t.dispatchEvent(new Event('resize')); t.dispatchEvent(new Event('scroll')); }; })();"""
+        SEEN = """(cv) => { const s = document.getElementById('txSheet'), f = document.getElementById('txField'), pl = document.getElementById('txPlace');
+          const r = s.getBoundingClientRect(), fr = f.getBoundingClientRect(), w = pl.hidden ? null : pl.getBoundingClientRect();
+          const ce = document.querySelector(cv), c = ce.getBoundingClientRect(), cs = getComputedStyle(ce), k = c.height / (ce.offsetHeight || c.height);
+          const a = SkriblText.anchor();   // the drawing inside its border, as the words are kept on it (lib/textwrite.js screenBox)
+          return { open: SkriblText.isOpen(), typing: s.classList.contains('typing'), sheet: [r.top, r.bottom], field: [fr.top, fr.bottom],
+                   focus: document.activeElement && document.activeElement.id, words: w && [w.top, w.bottom],
+                   drawing: [c.top + (parseFloat(cs.borderTopWidth) || 0) * k, c.bottom - (parseFloat(cs.borderBottomWidth) || 0) * k],
+                   header: SkriblDrawerDetent.stuckBottom(), anchor: a && [a.x, a.y], own: visualViewport.height,
+                   room: !document.getElementById('txSpacer').hidden }; }"""
+        SAID = {"pad": "() => { const t = document.getElementById('toast'); return t && !t.hidden ? t.textContent : ''; }",
+                "flip": "() => { const t = document.getElementById('flipChip'); return t ? t.textContent : ''; }"}
+        NEW = {"pad": "() => document.getElementById('clearMenuItem').click()",
+               "flip": "() => document.getElementById('miClearAll').click()"}
+
+        def r1(v):
+            return [round(x) for x in v] if v else v
+
+        def in_a_post(ed):
+            """The editor inside the stand-in host's frame, once Text can be chosen."""
+            c = b.new_context(color_scheme="light", **INFRAME)
+            c.add_init_script(OUTER_KB)
+            c.add_init_script("if (window !== window.top && !sessionStorage.getItem('tx-seeded')) { sessionStorage.setItem('tx-seeded', '1');"
+                              " localStorage.setItem(%s, %s); }" % (json.dumps(PREFS), json.dumps(json.dumps({"style": "print", "size": "M", "speed": 4}))))
+            src = ROUTE[ed] + "?compose=1"
+            c.route(BASE + "/__a-host", lambda r: r.fulfill(status=200, content_type="text/html", body=HOSTPAGE.replace("{src}", src)))
+            q = c.new_page()
+            errs = []
+            q.on("pageerror", lambda e: errs.append(str(e)[:160]))
+            q.goto(BASE + "/__a-host")
+            fr = None
+            for _ in range(150):
+                fr = next((f for f in q.frames if f != q.main_frame and ROUTE[ed] in (f.url or "")), None)
+                if fr:
+                    try:
+                        fr.wait_for_function("() => !!window.SkriblText && !!window.SkriblDrawerDetent", timeout=500)
+                        break
+                    except Exception:  # noqa: BLE001 -- not up yet
+                        fr = None
+                q.wait_for_timeout(150)
+            if not fr:
+                raise RuntimeError("the editor never came up in the frame")
+            fr.evaluate("() => window.SkriblHints && SkriblHints.hide()")
+            q.wait_for_timeout(300)
+            return c, q, fr, errs
+
+        got = {}
+        for ed in ("pad", "flip"):
+            g = got[ed] = {}
+            try:
+                c, q, fr, errs = in_a_post(ed)
+                fr.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
+                fr.wait_for_function("() => SkriblText.isOpen()", timeout=5000)
+                settle(fr)
+                q.keyboard.type("Hello")
+                q.wait_for_timeout(300)
+                g["free"] = fr.evaluate(SEEN, CANVAS[ed])
+                put = g["free"]["anchor"]
+                q.evaluate("() => window.__keyboard(%d)" % KB)
+                q.wait_for_timeout(500)
+                g["up"] = fr.evaluate(SEEN, CANVAS[ed])
+                # The phone slides the view up to show the field, by some or
+                # nearly all of the keyboard (the owner's third picture).
+                for slid in (150, 300):
+                    q.evaluate("() => window.__keyboard(%d, %d)" % (KB, slid))
+                    q.wait_for_timeout(500)
+                    g[slid] = fr.evaluate(SEEN, CANVAS[ed])
+                q.evaluate("() => window.__keyboard(0)")
+                q.wait_for_timeout(700)
+                g["down"] = fr.evaluate(SEEN, CANVAS[ed])
+                # Words put at the top of the drawing, under the header while the
+                # drawer shows (the owner's fourth picture: Drag to move over Add).
+                top = fr.evaluate("() => ({ x: (%s)()[0] / 2, y: 8 - SkriblText.plan().box.y0 })" % LOGICAL[ed])
+                fr.evaluate("(p) => SkriblText.place(p)", top)
+                q.wait_for_timeout(300)
+                g["high"] = fr.evaluate(SEEN, CANVAS[ed])
+                q.evaluate("() => window.__keyboard(%d)" % KB)
+                q.wait_for_timeout(500)
+                g["high_up"] = fr.evaluate(SEEN, CANVAS[ed])
+                q.evaluate("() => window.__keyboard(0)")
+                q.wait_for_timeout(700)
+                g["high_down"] = fr.evaluate(SEEN, CANVAS[ed])
+                g["put"], g["top"] = put, [top["x"], top["y"]]
+                # NEW with the words in the box and nothing drawn.
+                fr.evaluate("() => SkriblText.close()")
+                q.wait_for_timeout(400)
+                fr.evaluate(NEW[ed])
+                q.wait_for_timeout(500)
+                g["said"] = fr.evaluate(SAID[ed])
+                g["left"] = fr.evaluate("() => SkriblText.words()")
+                fr.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
+                fr.wait_for_function("() => SkriblText.isOpen()", timeout=5000)
+                q.wait_for_timeout(300)
+                g["box"] = fr.evaluate("() => document.getElementById('txField').value")
+                fr.evaluate("() => { const u = document.querySelector('#toast .toast-action, #flipChip .toast-action'); if (u) u.click(); }")
+                q.wait_for_timeout(400)
+                g["back"] = [fr.evaluate("() => SkriblText.words()"), fr.evaluate("() => document.getElementById('txField').value")]
+                g["errors"] = errs[:3]
+                c.close()
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the rows' red
+                g["stopped"] = str(exc).splitlines()[0][:200]
+
+        line = FH - KB
+        for ed in ("pad", "flip"):
+            g = got[ed]
+            up, free, down = g.get("up") or {}, g.get("free") or {}, g.get("down") or {}
+            check(f"{ed} inside a post (a host's frame), with the keyboard up, told to the outermost window alone as an"
+                  f" iPhone tells it: Text's drawer sits on the keyboard as the words and Write it, the field above the keys,"
+                  f" the words above the drawer and below the header, the drawer's room kept in the page (the owner's iPhone,"
+                  f" Nov 22: the field was under the keys)",
+                  not g.get("stopped") and free.get("typing") is False and up.get("typing") is True and up.get("room") is True
+                  and up.get("focus") == "txField" and abs(up["sheet"][1] - line) <= 1 and up["field"][1] <= line
+                  and up["words"] is not None and up["words"][1] <= up["sheet"][0] + 0.5 and up["words"][0] >= up["header"] - 0.5
+                  and up["own"] == FH,
+                  g.get("stopped") or json.dumps({k: {kk: (r1(vv) if isinstance(vv, list) else vv) for kk, vv in (g.get(k) or {}).items()}
+                                                  for k in ("free", "up")}))
+            # Slid up: the drawer on what can be seen; the words below its top
+            # (and the header), as far as the drawing reaches, above the drawer.
+            slid_ok, said = True, []
+            for slid in (150, 300):
+                s = g.get(slid) or {}
+                if not s:
+                    slid_ok = False
+                    continue
+                lid = max(slid, s["header"]) + 12
+                room = s["drawing"][1] - lid >= (s["words"][1] - s["words"][0] if s["words"] else 0) - 0.5
+                words_ok = s["words"] is not None and s["words"][1] <= s["sheet"][0] - 12 + 0.5 and (
+                    s["words"][0] >= lid - 1 if room else abs(s["words"][1] - s["drawing"][1]) <= 1.5)
+                slid_ok = slid_ok and s["typing"] is True and abs(s["sheet"][1] - (slid + line)) <= 1 and words_ok
+                said.append(f"slid {slid}: drawer {r1(s['sheet'])} for {slid + line}, words {r1(s['words'])},"
+                            f" what shows from {lid - 12}, the drawing to {round(s['drawing'][1])}{'' if room else ' (no room: on its foot)'}")
+            check(f"{ed}: ...and where the phone slides the view up to show the field (150px, and 300px of a {KB}px keyboard, the"
+                  f" owner's third picture), the drawer still sits on what can be seen, and the words stay between its top"
+                  f" (or the header) and the drawer, or on the drawing's foot where it ends above what shows",
+                  not g.get("stopped") and slid_ok, "; ".join(said) or g.get("stopped"))
+            high, high_up, high_down = g.get("high") or {}, g.get("high_up") or {}, g.get("high_down") or {}
+            check(f"{ed}: words put at the top of the drawing, under the header while the drawer shows, come below the header"
+                  f" while the words are typed (the owner's fourth picture: Drag to move over Add), and go back where they were"
+                  f" put when the keyboard goes",
+                  not g.get("stopped") and high.get("words") is not None and high["words"][0] < high["header"]
+                  and high_up.get("typing") is True and high_up["words"][0] >= high_up["header"] + 12 - 1
+                  and high_up["words"][1] <= high_up["sheet"][0] + 0.5
+                  and high_down.get("typing") is False and high_down["anchor"] is not None
+                  and abs(high_down["anchor"][1] - g["top"][1]) <= 1,
+                  g.get("stopped") or f"put at {r1(high.get('words'))} under a header to {round(high.get('header', 0))};"
+                  f" typed: {r1(high_up.get('words'))}, drawer from {round(high_up['sheet'][0]) if high_up else None};"
+                  f" after: anchor {r1(high_down.get('anchor'))} for {r1(g.get('top'))}")
+            check(f"{ed}: ...and with the keyboard gone, the whole drawer is back in the page and the words where they were put",
+                  not g.get("stopped") and down.get("typing") is False and down.get("room") is False
+                  and down["anchor"] is not None and g["put"] is not None
+                  and all(abs(a - p) <= 1 for a, p in zip(down["anchor"], g["put"])),
+                  g.get("stopped") or f"typing {down.get('typing')}, room {down.get('room')}, words at {r1(down.get('anchor'))} for {r1(g.get('put'))}")
+            check(f"{ed}: words typed in Text's box and not yet written are work (the owner's iPhone, Nov 22: \"Already a fresh"
+                  f" one\", the words still there): New Skribl takes them and says so with its Undo, Text opens empty after,"
+                  f" and the Undo brings them back",
+                  not g.get("stopped") and "New Skribl" in (g.get("said") or "") and "Already" not in (g.get("said") or "")
+                  and g.get("left") == "" and g.get("box") == "" and g.get("back") == ["Hello", "Hello"] and not g.get("errors"),
+                  g.get("stopped") or f"said {g.get('said')!r}; left {g.get('left')!r}; Text opened with {g.get('box')!r};"
+                  f" after Undo {g.get('back')}; errors {g.get('errors')}")
 
     b.close()
 
