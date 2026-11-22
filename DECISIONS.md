@@ -51819,6 +51819,14 @@ name dropped).
 
 THE TOKEN TABLE is made again on these sheets.
 
+THREE ROWS PINNED THE OLD INKS. Choice 6 moved two of the pill's inks,
+and three rows held the drifted copies as written values:
+`verify_socialsettings`' Theme switch (56 of 57, beside the others and
+alone), `verify_socialfollow`'s pill (PILL_ON, PILL_OFF) and
+`verify_composer`'s waiting Post in dark. Each reads the editors' values
+now; with the old ones put back on a copy, each was red in that row alone
+(follow 78 of 79, composer 43 of 44).
+
 FLIP AND THE PAD: 1, 7, 8 and 10 are theirs and shared (one stylesheet);
 5 and 6 are the site's. AGAINST THE FOUR: kind, above all, to the people
 who ask their device for more contrast, or read on a screen between the
