@@ -69,6 +69,9 @@ each in a browser with a virtual passkey.
      Post sends it; not under a Flip. A page gone stale is told kindly. The
      composer's reading of "can be drawn back on" and the site's agree.
      Every new word at 4.5:1.
+ 13. EACH LINK'S WORDS TAKE THEIR OWN TAPS: on a draw-back's card the time's
+     words (its plays with it) open the post wherever "Drew back on Ana's"
+     reaches up under them, and her link's words open her post.
 
 SOCIALDRAWBACK_PART=<n>[,<m>] runs those sections only (calibration). Every
 row was shown red by breaking one part and green as built: DECISIONS.md,
@@ -2962,6 +2965,60 @@ with app.test_request_context("/social/"):
                   all(len(d) == 12 and all(v >= 4.5 for v in d.values()) for d in paint.values()), json.dumps(paint))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(12, exc)
+
+    # ------------------------------------------------------------------ 13
+    # EACH LINK'S WORDS TAKE THEIR OWN TAPS (found in the colour audit of Nov
+    # 21, a bug of its own). On a draw-back's card "Drew back on Ana's" lies
+    # right under the time, and her link reaches 13px up into the time's line
+    # to be 44px to a finger; the time's link ("6h · 2 plays", the plays in
+    # it) reaches down into hers the same way. Whichever was later took the
+    # overlap, so a tap on the lower half of the time's own words opened her
+    # page and not the post. READ ON A GRID OF TAPS over each link's own words
+    # (where the words are painted, a range round them, not the link's box),
+    # on a card whose time is long enough to reach over her link (its plays
+    # set), a touch phone and a desk.
+    if part(13, "a draw-back's card: the time's words open the post, her link's words her post, wherever they lie over each other"):
+        try:
+            ana = someone(b, "ana", "Ana Ruiz")
+            theo = someone(b, "theo", "Theo Lin")
+            cat13 = post_payload(ana, "Section 13, the cat", CAT)
+            back13 = (draw_back(theo, cat13, answer(n=10, seed=131))[1] or {}).get("post")
+            db_write("update skribl_posts set views_total = 2 where public_id = (select skribl_id from social_posts where public_id = ?)",
+                     (back13 or "",))
+            TAPS = r"""(post) => { const c = document.querySelector('.post-card[data-post="' + post + '"]'); if (!c) return null;
+              c.scrollIntoView({ block: 'center' });
+              const when = c.querySelector('.post-when'), who = c.querySelector('.post-on-who');
+              const words = (el) => { const g = document.createRange(); g.selectNodeContents(el); return [...g.getClientRects()].filter(r => r.width > 1); };
+              const name = (x, y) => { const t = document.elementFromPoint(x, y), a = t && t.closest('a, button');
+                return a === when ? 'time' : a === who ? 'hers' : a ? (a.className || a.tagName).toString().split(' ')[0]
+                  : 'none:' + (t ? t.tagName.toLowerCase() + '.' + String(t.className).split(' ')[0] : 'nothing') + '@' + Math.round(x) + ',' + Math.round(y); };
+              // inside the words, not on the sliver at a run's very end (a range's box runs a hair past its last glyph,
+              // onto the card's own ground, which opens the post as the time does)
+              const grid = (rects) => { const o = {}; for (const r of rects) for (let fx = 0.06; fx < 0.95; fx += 0.08) for (const fy of [0.2, 0.5, 0.8]) {
+                const k = name(r.left + r.width * fx, r.top + r.height * fy); o[k] = (o[k] || 0) + 1; } return o; };
+              const tw = words(when), hw = words(who), hb = who.getBoundingClientRect();
+              // the precondition: the time's words lie, somewhere, inside her link's box (else this card tests nothing)
+              const over = tw.some(r => r.right > hb.left && r.left < hb.right && r.bottom > hb.top && r.top < hb.bottom);
+              return { time: grid(tw), hers: grid(hw), over, plays: !!c.querySelector('.post-plays-n'), hersTall: Math.round(hb.height),
+                       centre: name(hb.left + hb.width / 2, hb.top + hb.height / 2) }; }"""
+            # Read where the card is sure to be: on its maker's own Posts tab, newest first (Home signed out has no
+            # feed, and a feed of everyone holds every section's posts).
+            seen13 = {}
+            for screen in ("phone", "desk"):
+                ctx, pg = browser_as(b, theo, screen=screen)
+                pg.goto(BASE + "/social/@theo")
+                ready(pg)
+                pg.wait_for_timeout(500)
+                seen13[screen] = pg.evaluate(TAPS, back13 or "")
+                close_ctx(ctx, pg)
+            check("on a draw-back's card, where the time's words (its plays with it) lie over the reach of \"Drew back on Ana's\":"
+                  " every tap on the time's own words is the time's (the post), every tap on her link's words is hers, and her"
+                  " link is still 44px or more to a finger; a touch phone and a desk",
+                  bool(back13) and all(v and v["plays"] and v["over"] and set(v["time"]) == {"time"} and set(v["hers"]) == {"hers"}
+                                       and v["hersTall"] >= 44 and v["centre"] == "hers" for v in seen13.values()),
+                  json.dumps(seen13))
+        except Exception as exc:  # noqa: BLE001
+            stopped(13, exc)
 
     # ----------------------------------------------------------------- 10
     if part(10, "no page errors, no console errors and no CSP violations"):
