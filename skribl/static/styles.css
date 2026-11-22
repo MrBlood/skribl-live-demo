@@ -9138,8 +9138,8 @@ body.lc-open .skribl-tip { display: none !important; }   /* the card grows out o
   background: var(--surface-control); border: 1px solid var(--hairline);
   border-radius: var(--r-seg); padding: var(--seg-inset);
 }
-/* ONE LABEL WEIGHT, selected or not: a label that gets bolder when chosen
-   changes width, and the pill measured under it slides to a box that moves. */
+/* A label is 600 and the chosen word 700, its room kept (THE CHOSEN WORD,
+   below), so the pill never slides to a box that moves. */
 .seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn {
   position: relative; z-index: 1;
   border: 0; background: transparent; color: var(--text-soft);
@@ -9162,6 +9162,28 @@ body.lc-open .skribl-tip { display: none !important; }   /* the card grows out o
 :is(.seg, .smooth-seg, .gif-seg, .photo-fit-group):not([data-pill]) > button:is(.on, .active),
 #toolGroup:not([data-pill]) > .tool-btn.active { background: var(--seg-on-fill) !important; }
 :is(.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn):is(.on, .active) { color: var(--seg-on-ink); }
+/* THE CHOSEN WORD, A STEP BOLDER, ITS ROOM KEPT (the owner's "All yes" to
+   Four Looks' 11 A, Nov 22). The choice is told twice, by its tint and by
+   its word at 700. A word that got bolder used to change its box's width,
+   and the pill measured under it slid to a box that moved (it once made
+   Flip's move bar grow and scroll at 360px): so each option of words keeps
+   the room its own word needs in bold. lib/segslider.js writes the word it
+   shows into data-bold, and the ::after below lays that word out at 700,
+   unseen and no height at all, under the label: a flex option stacks it
+   under the word (a row would put it beside), a block option (the GIF
+   background's) already does. The box is as wide as the bold word, chosen
+   or not. Bold only where the room is kept, so no chosen word can push its
+   box; a choice with a picture in it keeps its one weight. The room is
+   never read aloud (its alternative text is none), painted or touched.
+   Where options share their track's width (Fill | Fit | Stretch), no box
+   can move anyway. */
+:is(.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn)[data-bold]:is(.on, .active) { font-weight: 700; }
+:is(.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn)[data-bold]::after {
+  content: attr(data-bold); content: attr(data-bold) / "";
+  display: block; height: 0; overflow: hidden; visibility: hidden;
+  font-weight: 700; pointer-events: none; -webkit-user-select: none; user-select: none;
+}
+:is(.seg button, .smooth-btn)[data-bold] { flex-direction: column; }
 
 /* The size readout while the pen is dragged sideways (lib/penswoosh.js). */
 .swoosh-readout {

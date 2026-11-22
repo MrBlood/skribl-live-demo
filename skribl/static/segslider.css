@@ -59,7 +59,7 @@
   color: var(--seg-off-ink);
   font: inherit;
   font-size: 13px;
-  font-weight: 600;   /* ONE LABEL WEIGHT, selected or not */
+  font-weight: 600;   /* the chosen word is 700, its room kept (below) */
   letter-spacing: 0;
   line-height: 1;
   white-space: nowrap;
@@ -98,6 +98,19 @@
   background: var(--seg-on-fill);
 }
 .seg-track > button:is(.active, [aria-pressed="true"], [aria-selected="true"]) { color: var(--seg-on-ink); }
+/* THE CHOSEN WORD, A STEP BOLDER, ITS ROOM KEPT (the owner's "All yes" to
+   Four Looks' 11 A, Nov 22), as styles.css says it for the editors' tracks:
+   an option's word (data-bold, written in its markup and kept by
+   lib/segslider.js) is laid out again at 700 under it, unseen and no height
+   at all, so its box is as wide as its bold word whether it is chosen or
+   not, and the pill never slides to a box that moves. */
+.seg-track > button[data-bold]:is(.active, [aria-pressed="true"], [aria-selected="true"]) { font-weight: 700; }
+.seg-track > button[data-bold] { flex-direction: column; }
+.seg-track > button[data-bold]::after {
+  content: attr(data-bold); content: attr(data-bold) / "";
+  display: block; height: 0; overflow: hidden; visibility: hidden;
+  font-weight: 700; pointer-events: none; -webkit-user-select: none; user-select: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .seg-track > .seg-slider { transition: none; }

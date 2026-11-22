@@ -2,7 +2,8 @@
 
 THE DECISION. The owner chose one pill for every pick-one control in the
 product ("a on the pill"): a 12px track with a 3px inset, a 9px pill that
-slides, a soft tint under the selected option, one label weight. It replaced
+slides, a soft tint under the selected option, and (since Four Looks' 11 A,
+Nov 22) the chosen word a step bolder with its room kept. It replaced
 five shapes that had grown one per family -- a 999px capsule round a 9px pill
 on the GIF background, a solid slab with white words on Flip's tool tray, an
 underline on the library's tabs, monospace chips, and the dock's own.
@@ -19,8 +20,10 @@ controls, and each is measured where it lives:
   2. THE SHAPE. Concentric: the track's corner is the pill's plus the inset
      the pill sits at. Editor and page tracks are 12 / 3 / 9; the dock is the
      one pill at the dock's scale and keeps only the rule. The fill is the
-     tint token, no shadow; every label is 600, selected or not; the selected
-     label is the selected-ink token.
+     tint token, no shadow; a label is 600 and the chosen word 700 (a label
+     with a picture keeps 600); the selected label is the selected-ink
+     token. THE ROOM: every option of words keeps the room its word needs in
+     bold, so with every label forced to 700 no box grows.
   3. CONTRAST, PAINTED. Every option's label against what is ACTUALLY behind
      it, read from pixels (the tint composited over the track over whatever
      glass is under that) -- at least 4.5:1, both themes. The light theme's
@@ -44,6 +47,9 @@ controls, and each is measured where it lives:
      over focus) and unforced on the tracks whose overflow: hidden clipped the
      ring to a sliver -- counted in pixels on each side of the option.
  10. HEIGHTS. The library's filter keeps the chip's 34 to the eye.
+ 12. WORDS. The choice moved (Pen | Background, both editors) and no box
+     moved with it; the room never read (the accessibility tree's name);
+     Flip's move bar at 320, 360 and 402 never scrolls, either side chosen.
 
 Checked red on the tree before the one pill, and per component by mutation;
 DECISIONS.md records which mutation each section was shown red on.
@@ -108,6 +114,12 @@ CENSUS = r"""() => {
     if (!hit || !(g === hit || g.contains(hit))) continue;
     const pills = g.querySelectorAll(PILLS);
     const btns = [...g.children].filter(b => b.tagName === 'BUTTON' && b.getBoundingClientRect().width > 0);
+    // THE CHOSEN WORD'S ROOM (Four Looks' 11 A): every option's width as it is, and again with every label
+    // forced to 700 for one read (put back before anything can paint or watch it).
+    const w0 = btns.map(b => b.getBoundingClientRect().width);
+    btns.forEach(b => b.style.setProperty('font-weight', '700', 'important'));
+    const w7 = btns.map(b => b.getBoundingClientRect().width);
+    btns.forEach(b => b.style.removeProperty('font-weight'));
     const sel = btns.find(b => b.classList.contains('on') || b.classList.contains('active')
       || b.getAttribute('aria-selected') === 'true'
       || (g.matches('.seg-track') && b.getAttribute('aria-pressed') === 'true'));
@@ -132,8 +144,10 @@ CENSUS = r"""() => {
       selInk: sel ? getComputedStyle(sel).color : null,
       hasSel: !!sel,
       selText: sel ? (sel.textContent || '').trim() : null,
-      btns: btns.map(b => { const bb = b.getBoundingClientRect(); const cs = getComputedStyle(b);
+      btns: btns.map((b, i) => { const bb = b.getBoundingClientRect(); const cs = getComputedStyle(b);
         return { t: (b.textContent || '').trim().slice(0, 16), w: cs.fontWeight, ink: cs.color,
+                 bold: b.getAttribute('data-bold'), pic: !!b.querySelector('svg, img, canvas, video, i'),
+                 grow: Math.round((w7[i] - w0[i]) * 100) / 100,
                  sel: b === sel, x: bb.left, y: bb.top, width: bb.width, height: bb.height,
                  text: !!(b.textContent || '').trim(), spill: (() => {
                    // The WORDS against the room inside the button. Not scrollWidth:
@@ -213,8 +227,19 @@ def audit(page, route, theme, form, state):
         if not g["dock"]:
             check(f"SHAPE: {tag} is 12 / 3 / 9", (g["trackR"], g["inset"], g["pillR"]) == (12, 3, 9),
                   f"{g['trackR']} / {g['inset']} / {g['pillR']}")
-            weights = sorted({b["w"] for b in g["btns"] if b["text"]})
-            check(f"SHAPE: {tag} sets every label at 600, selected or not", weights in ([], ["600"]), str(weights))
+            # THE CHOSEN WORD, A STEP BOLDER, ITS ROOM KEPT (the owner's "All yes" to Four Looks' 11 A, Nov 22):
+            # a label of words is 600 and the chosen one 700; a label with a picture in it keeps 600 (its room
+            # cannot be kept without moving the picture). And every option of words keeps the room its word
+            # needs in bold: with every label forced to 700, no option's box grows, so the choice moves and no
+            # box moves with it.
+            off = [(b["t"], b["w"], "chosen" if b["sel"] else "not") for b in g["btns"] if b["text"]
+                   and b["w"] != ("700" if b["sel"] and not b["pic"] else "600")]
+            check(f"SHAPE: {tag} sets a label at 600 and the chosen word at 700 (a label with a picture keeps 600)",
+                  not off, str(off))
+            roomless = [(b["t"], b["bold"], b["grow"]) for b in g["btns"] if b["text"] and not b["pic"]
+                        and (not b["bold"] or b["grow"] > 0.05)]
+            check(f"ROOM: {tag} every option of words keeps the room its word needs in bold (forced to 700, no box grows)",
+                  not roomless, str(roomless))
         check(f"SHAPE: {tag} fills the pill with the tint token and no shadow",
               g["pillBg"] == g["tokBg"] and g["pillShadow"] == "none", f"{g['pillBg']} vs {g['tokBg']}; {g['pillShadow']}")
         check(f"SHAPE: {tag} inks the selected option with the selected-ink token",
@@ -962,6 +987,71 @@ with sync_playwright() as p:
             check(f"TINTS [{theme}]: the Library's playing row is a tint with no ring and no edge line (R1)",
                   len(on) == 1 and off and on[0]["shadow"] == "none" and on[0]["left"] == on[0]["top"]
                   and on[0]["bg"] != off[0]["bg"], str(rows))
+            c.close()
+
+    # ---------------------------------------------------------------- 12
+    if want("words"):
+        print("\nTHE CHOSEN WORD -- a step bolder, its room kept: the choice moves and nothing moves with it")
+        # THE OWNER'S "All yes", Nov 22, to Four Looks' 11 A, in the scenario the room is for: the choice moved
+        # from one side to the other, and every option's box read before and after, to a hundredth of a pixel.
+        # Then the room is never read (the accessibility tree's own name), and Flip's move bar, the narrow
+        # phone's tightest row, never scrolls with either side chosen.
+        RECTS = """(sel) => [...document.querySelectorAll(sel + ' > button')].map(b => { const r = b.getBoundingClientRect();
+          return [+r.left.toFixed(2), +r.width.toFixed(2), getComputedStyle(b).fontWeight]; })"""
+        for route, ed in (("/skribl-pad", "pad"), ("/flip", "flip")):
+            c = ctx_for("dark", "desk"); q = c.new_page()
+            browsing.goto(q, BASE, route); settle(q)
+            browsing.pad_drawer(q, "draw")
+            before = q.evaluate(RECTS, "#paintTargetSeg")
+            q.click("#paintTargetSeg [data-target='background']"); settle(q, 500)
+            after = q.evaluate(RECTS, "#paintTargetSeg")
+            cdp = c.new_cdp_session(q)
+            root = cdp.send("DOM.getDocument", {"depth": 0})["root"]["nodeId"]
+            names = []
+            for nid in cdp.send("DOM.querySelectorAll", {"nodeId": root, "selector": "#paintTargetSeg > button"})["nodeIds"]:
+                ax = cdp.send("Accessibility.getPartialAXTree", {"nodeId": nid, "fetchRelatives": False})["nodes"]
+                names.append((ax[0].get("name") or {}).get("value") if ax else None)
+            q.click("#paintTargetSeg [data-target='stroke']"); settle(q, 300)
+            check(f"WORDS: {route} Pen | Background: the choice moved to Background, its word 700 and Pen's 600, and no"
+                  " box moved (each option's left and width the same to a hundredth)",
+                  len(before) == 2 and [x[:2] for x in before] == [x[:2] for x in after]
+                  and before[0][2] == "700" and before[1][2] == "600" and after[0][2] == "600" and after[1][2] == "700",
+                  f"{before} -> {after}")
+            check(f"WORDS: {route} ...and the room is never read: the two are named Pen and Background",
+                  names == ["Pen", "Background"], str(names))
+            c.close()
+        # The tracks a page shows the moment it opens (the Gallery's New | Hot, the Library's tabs and filter)
+        # carry their words in their markup, so their room is kept from the first paint, before any script:
+        # read with scripts off, each option's word is there and is the word it shows.
+        c = browser.new_context(viewport={"width": 1400, "height": 900}, java_script_enabled=False)
+        q = c.new_page()
+        nojs = {}
+        for path in ("/gallery", "/library"):
+            q.goto(BASE + path, wait_until="load")
+            nojs[path] = q.evaluate("""() => [...document.querySelectorAll('.seg-track > button')].map(b =>
+              [b.textContent.trim(), b.getAttribute('data-bold')])""")
+        c.close()
+        check("WORDS: with no script at all, the Gallery's and the Library's tracks already keep their room: each"
+              " option's word is in its markup (New | Hot, Skribls | Drafts, All | In the gallery | Link only, the"
+              " menu's Theme)",
+              all(nojs.values()) and all(t == w for v in nojs.values() for t, w in v), str(nojs))
+        for w in (320, 360, 402):
+            c = browser.new_context(viewport={"width": w, "height": 800}, device_scale_factor=1, color_scheme="dark",
+                                    has_touch=True, is_mobile=True)
+            q = c.new_page()
+            browsing.goto(q, BASE, "/flip"); settle(q)
+            q.evaluate("() => setTool('artmove')"); settle(q, 500)
+            BAR = """() => { const m = document.getElementById('movebar'), s = document.getElementById('mbScope');
+              const b = [...s.querySelectorAll(':scope > button')];
+              return { over: m.scrollWidth - m.clientWidth, w: b.map(x => +x.getBoundingClientRect().width.toFixed(2)),
+                       bold: b.map(x => x.getAttribute('data-bold')), shown: b.map(x => x.innerText.trim()) }; }"""
+            one = q.evaluate(BAR)
+            q.click("#mbScope [data-scope='after']"); settle(q, 400)
+            aft = q.evaluate(BAR)
+            check(f"WORDS: Flip's move bar at {w}px never scrolls, This page or After chosen, and neither option's box"
+                  " moves; each keeps the room of the label it shows",
+                  one["over"] <= 0 and aft["over"] <= 0 and one["w"] == aft["w"] and one["bold"] == one["shown"],
+                  f"{one} -> {aft}")
             c.close()
 
     browser.close()

@@ -363,6 +363,9 @@ html[data-input="pointer"] #skriblGallery :focus-visible { outline: none !import
 #skriblGallery .seg-track[data-pill] > .seg-slider { opacity: 1; }
 #skriblGallery .seg-track:not([data-pill]) > button:is(.active, [aria-pressed="true"], [aria-selected="true"]) { background: var(--seg-on-fill); }
 #skriblGallery .seg-track > button:is(.active, [aria-pressed="true"], [aria-selected="true"]) { color: var(--seg-on-ink); }
+#skriblGallery .seg-track > button[data-bold]:is(.active, [aria-pressed="true"], [aria-selected="true"]) { font-weight: 700; }
+#skriblGallery .seg-track > button[data-bold] { flex-direction: column; }
+#skriblGallery .seg-track > button[data-bold]::after { content: attr(data-bold); content: attr(data-bold) / ""; display: block; height: 0; overflow: hidden; visibility: hidden; font-weight: 700; pointer-events: none; -webkit-user-select: none; user-select: none; }
 @media (prefers-reduced-motion: reduce) {
   #skriblGallery .seg-track > .seg-slider { transition: none; }
 }

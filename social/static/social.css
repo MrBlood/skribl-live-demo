@@ -1119,7 +1119,7 @@ body.focus .top { justify-content: center; }
   border-radius: 9px; background: transparent; color: var(--pill-off-ink); font: 600 15px/1 var(--font);
   cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color 0.2s ease;
 }
-.theme-switch > button[aria-pressed="true"] { color: var(--pill-on-ink); }
+.theme-switch > button[aria-pressed="true"] { color: var(--pill-on-ink); font-weight: 700; }   /* its third is its own: nothing moves (Four Looks' 11 A) */
 .theme-switch > .theme-pill {
   position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; border-radius: 9px; background: var(--pill-on-fill);
   opacity: 0; pointer-events: none;
@@ -2998,6 +2998,20 @@ button.fo-n {
 .fo-seg > button:first-of-type::before { left: -4px; }
 .fo-seg > button:last-of-type::before { right: -4px; }
 .fo-seg > button[aria-pressed="true"] { color: var(--pill-on-ink); }
+/* THE CHOSEN WORD, A STEP BOLDER, ITS ROOM KEPT (the owner's "All yes" to
+   Four Looks' 11 A, Nov 22). The chosen side is told twice, by its tint and
+   by its word at 700. Each option carries its word (data-bold, _follow.html)
+   and lays it out again at 700 under the label, unseen and no height at
+   all, so its box is as wide as its bold word chosen or not: the choice
+   moves and no box moves with it. The same rule as the editors' and
+   Skribl's own Gallery's pills (styles.css, segslider.css). */
+.fo-seg > button[data-bold][aria-pressed="true"] { font-weight: 700; }
+.fo-seg > button[data-bold] { flex-direction: column; }
+.fo-seg > button[data-bold]::after {
+  content: attr(data-bold); content: attr(data-bold) / "";
+  display: block; height: 0; overflow: hidden; visibility: hidden;
+  font-weight: 700; pointer-events: none; -webkit-user-select: none; user-select: none;
+}
 .fo-seg:not([data-pill]) > button[aria-pressed="true"] { background: var(--pill-on-fill); }
 .fo-seg > .fo-slider {
   position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; border-radius: 9px; background: var(--pill-on-fill);

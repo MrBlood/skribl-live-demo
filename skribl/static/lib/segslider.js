@@ -117,12 +117,35 @@
     }
   }
 
+  /* THE CHOSEN WORD'S ROOM (the owner's "All yes" to Four Looks' 11 A, Nov
+   * 22). The chosen option's word is a step bolder (styles.css,
+   * segslider.css), and every option keeps the room its own word needs in
+   * bold, so the choice moves and no box moves with it: the sheet lays the
+   * word out again at 700, unseen and no height at all, from data-bold, which
+   * this writes. The word is the one SHOWN (innerText): Flip's scope says
+   * "And following" on a wide screen and "After" on a narrow one, each a
+   * span of its own. An option that holds a picture (the canvas shapes, the
+   * media tabs) keeps its one weight and is left: its room cannot be kept
+   * without moving the picture. Asked again whenever the pill is, so a sheet
+   * that opens, a turned phone or a changed label is read afresh. */
+  var PICTURE = 'svg, img, canvas, video, i';
+  function words(group) {
+    var kids = group.children;
+    for (var i = 0; i < kids.length; i++) {
+      var b = kids[i];
+      if (b.tagName !== 'BUTTON') continue;
+      var w = b.querySelector(PICTURE) ? '' : (b.innerText || b.textContent || '').replace(/\s+/g, ' ').trim();
+      if (w) { if (b.getAttribute('data-bold') !== w) b.setAttribute('data-bold', w); }
+      else if (b.hasAttribute('data-bold')) b.removeAttribute('data-bold');
+    }
+  }
+
   function track(group) {
     if (!group || group.__segTracked) return;
     group.__segTracked = true;
     pillOf(group, true);
 
-    var reflow = function () { place(group); };
+    var reflow = function () { words(group); place(group); };
     var ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(reflow) : null;
     var watch = function (el) { if (ro && el && el.tagName === 'BUTTON' && el.parentNode === group) ro.observe(el); };
     if (ro) {
@@ -134,7 +157,7 @@
         for (var i = 0; i < muts.length; i++) [].forEach.call(muts[i].addedNodes || [], watch);
         reflow();
       }).observe(group, {
-        subtree: true, childList: true, attributes: true,
+        subtree: true, childList: true, characterData: true, attributes: true,
         attributeFilter: ['class', 'hidden', 'aria-pressed', 'aria-selected']
       });
     }
@@ -276,5 +299,5 @@
   // attach() is track() under the name the script-built groups were given:
   // the pill it used to make is made by track() now, once.
   global.SkriblSegSlider = { track: track, trackAll: trackAll, place: place, attach: track,
-                             syncPressed: syncPressed, syncAll: syncAll };
+                             syncPressed: syncPressed, syncAll: syncAll, words: words };
 })(window);
