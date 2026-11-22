@@ -88,7 +88,8 @@ Chromium's virtual authenticator for the site's people.
      in it, with nothing being typed) and what is read is what the page
      does: on a healthy phone, nothing; stuck, one pixel of scroll and back,
      ending where it was; three times at the most for one spell, and a
-     keyboard going is a new spell; once put right, once; never while words
+     keyboard going, or the phone stuck differently, is a new spell; once
+     put right, once; never while words
      are typed, with the page pinched larger, with a finger down, on a desk,
      or on a page that cannot scroll. And the keyboard is put away before
      the app changes page: as Post is pressed, as a form really goes, as the
@@ -1685,6 +1686,18 @@ with sync_playwright() as pw:
             again = pg.evaluate(ASKED)
             check("...and something losing focus is a new spell (a keyboard has just gone): asked again, three times at the most",
                   lost == 1 and len(again["asked"]) == 12 and again["y"] == 300, json.dumps({"lost focus": lost, "asked": again["asked"]}))
+            # STUCK DIFFERENTLY is a new spell too: short by another amount (as it is from one place in the page to the
+            # next), asked again, three times at the most; and the same amount again is nothing new.
+            pg.evaluate("() => window.__vv({ short: 300 })")
+            pg.wait_for_timeout(REST + 400)
+            shifted = pg.evaluate(ASKED)
+            pg.evaluate("() => window.__vv({ short: 300 })")
+            pg.wait_for_timeout(REST)
+            same = pg.evaluate(ASKED)
+            check("...and stuck differently is a new spell (short by another amount: the report that this works asks once for "
+                  "each shift): asked again, three times at the most; the same amount said again is nothing new",
+                  len(shifted["asked"]) == 18 and same["asked"] == shifted["asked"] and same["y"] == 300,
+                  json.dumps({"after the shift": len(shifted["asked"]), "said again": len(same["asked"]), "y": same["y"]}))
             close_ctx(ctx, pg)
 
             # CURED BY THE FIRST: one asking; and every later time it sticks, asked again (four times here, one more

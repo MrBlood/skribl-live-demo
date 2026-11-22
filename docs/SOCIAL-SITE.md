@@ -3639,8 +3639,9 @@ page of the site carries it):
   frame, has the focus: the keyboard is really there), with the page
   pinched larger, or with a finger down; three times at the most for one
   stuck spell, a new spell when something loses focus, the page is shown
-  again, or the phone has come right in between. On a healthy page it does
-  nothing.
+  again, the phone has come right in between, or it is stuck differently
+  (short or offset by another amount: the report that this works asks once
+  for each such shift). On a healthy page it does nothing.
 - THE KEYBOARD IS PUT AWAY BEFORE THE APP CHANGES PAGE, since changing page
   with it up is one way a phone is reported left like this: as Post is
   pressed in the composer (`compose.js`; the sheet's foot follows the

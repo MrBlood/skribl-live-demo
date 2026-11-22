@@ -51440,9 +51440,10 @@ THE OWNER, Nov 21, from the Home Screen app, with a picture of Home taken
 at 3:56 PM: "When I scroll the bottom menu scrolls too?" And with a second,
 taken at 4:31 PM: "Why haven't you fixed the moving bottom menu yet. That's
 a big bug and messes up other stuff like full screen play seems to be
-affected". (Both reached the session at 4:51 PM, as it stalled; it came
-back at 7:53 PM. The bar came first then, ahead of everything else in
-hand.)
+affected". (Sent while a long turn was running, so both were read
+together at 4:51 PM, as the session stalled; it came back at 7:53 PM. The
+bar came first then, ahead of everything else in hand. The owner had
+waited four hours for it.)
 
 WHAT THE PICTURES SHOW, MEASURED. Each is the owner's 402 by 874 screen;
 the app's page begins 62px down, under the phone's own status bar, so it
@@ -51496,7 +51497,10 @@ no mock):
     the same numbers honestly) and on a page that scrolls; never while
     words are typed, with the page pinched larger, or with a finger down;
     three times at the most for one stuck spell, so a phone it does not
-    cure is left alone. On a healthy page it does nothing.
+    cure is left alone; and a phone stuck differently (short or offset by
+    another amount, as it is from one place in the page to the next) is a
+    new spell, since the report that this works asks once for each such
+    shift. On a healthy page it does nothing.
   - THE KEYBOARD IS PUT AWAY BEFORE THE APP CHANGES PAGE: as Post is
     pressed in the composer, as a form really goes, as the page goes.
     Changing page with it up is one of the ways a phone is reported left
@@ -51524,26 +51528,34 @@ mock and the full battery. Not built.
 NOT IN THIS: Skribl's own Gallery and Library, whose pages scroll under a
 header that sticks; they have no guard. The Pad and Flip do not scroll
 their page on a phone (measured: a page 812 tall in a screen of 812), so
-there is nothing there to ride. FLIP AND THE PAD: not theirs.
+there is nothing there to ride, and no pixel of scroll to ask with. BUT
+THE EDITORS READ THE SAME NUMBERS: a drawer's detents, the Post sheet's
+room for the keyboard and the Text tool's writing box all go by the
+visual viewport's height (`lib/drawerdetent.js`, `lib/postsheet.js`,
+`lib/textwrite.js`), so a phone left stuck could lay those out for a
+keyboard that is not there. Not seen, not asked about yet, and not
+touched here: if the owner meets it, it is the same fault and belongs
+with the sure cure. FLIP AND THE PAD: nothing of theirs is changed.
 
 THE CHECK, AND WHAT IT CANNOT SAY. `verify_socialapp` 12 stands the fault
 in before the page's scripts run (a visual viewport that can be left short
 or offset, at a scale, and can be told to come right at the first scroll)
-and writes down every scroll the page asks for. Sixteen rows: nothing on a
-healthy phone; a pixel and back, ending where it was; three for a spell
-and a new spell when something loses focus; once when it comes right, and
-a new count after; only once the page has rested; offset as well as
+and writes down every scroll the page asks for. Seventeen rows: nothing on
+a healthy phone; a pixel and back, ending where it was; three for a spell,
+and a new spell when something loses focus or the phone is stuck
+differently; once when it comes right, and a new count after; only once
+the page has rested; offset as well as
 short, and the other way at the page's top; never while typing, pinched,
 with a finger down, on a desk, or on a page that cannot scroll; and the
 keyboard put away at Post (pressed as an iPhone presses a button: without
 giving it the focus, or Chromium's own click would move the focus and the
 row would hold nothing), at a form that goes and as the page goes, and
-kept by a search that stays. SEVENTEEN BREAKS, each on a copy with a
+kept by a search that stays. EIGHTEEN BREAKS, each on a copy with a
 server of its own, each red in a row of its own part: no asking; no pixel
 back; no limit of three; asked while typing; while pinched; with a finger
 down; on a desk; on a page that cannot scroll; offset not counted; short
-not counted; no new count once right; no new spell at a lost focus; no
-wait for rest; Post keeping the keyboard; a form keeping it; a search
+not counted; no new count once right; no new spell at a lost focus, nor
+at a shift; no wait for rest; Post keeping the keyboard; a form keeping it; a search
 losing it; a page going with it. WHAT NO ROW HERE CAN SAY is that an
 iPhone measures again when asked. The owner's phone says that
 (`docs/DEVICE-CHECKLIST.md`, "Blooby on the Home Screen").

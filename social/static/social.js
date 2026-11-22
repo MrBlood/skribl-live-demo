@@ -618,8 +618,10 @@
        - never with a finger down, and only once the page has been at rest a
          moment (a scroll from here would stop a glide);
        - three times at the most for one stuck spell, so a phone this does
-         not cure is left alone; a keyboard going, or the page shown again,
-         is a new spell.
+         not cure is left alone. A new spell: a keyboard going, the page
+         shown again, and the phone stuck DIFFERENTLY (short or offset by
+         another amount, as it is from one place in the page to the next:
+         the report that this works asks once for each such shift).
      On a healthy page nothing happens at all.
 
      AND THE KEYBOARD IS PUT AWAY BEFORE THE APP CHANGES PAGE: a form that
@@ -643,13 +645,16 @@
     if (a && a.tagName !== 'IFRAME' && typing(a) && a.blur) a.blur();
   }
   (function watchViewport() {
-    var rest = 0, back = 0, tries = 0, fingers = 0;
+    var rest = 0, back = 0, tries = 0, fingers = 0, how = '';
     function settle() {
       rest = 0;
       var byFinger = false;
       try { byFinger = window.matchMedia('(pointer: coarse)').matches; } catch (e) { /* a desk, then */ }
       if (!byFinger) return;
-      if (!viewportStuck()) { tries = 0; return; }
+      if (!viewportStuck()) { tries = 0; how = ''; return; }
+      var vv = window.visualViewport;
+      var now = Math.round(vv.offsetTop) + '/' + Math.round(window.innerHeight - vv.height);
+      if (now !== how) { how = now; tries = 0; }
       if (tries >= STUCK_TRIES || fingers || typing(doc.activeElement)) return;
       var page = doc.scrollingElement || doc.documentElement;
       if (page.scrollHeight - window.innerHeight < 2) return;
