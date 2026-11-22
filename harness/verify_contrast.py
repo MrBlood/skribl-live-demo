@@ -900,7 +900,15 @@ def surfaces(name, ids, q, canvas, btn):
         for i in range(20):
             q.mouse.move(cx - 40 + i * 4, cy + 40 + math.sin(i / 4) * 30)
         q.mouse.up(); q.wait_for_timeout(400)
-        q.evaluate("""async () => { for (const n of ['A row to read', 'Another to read', 'A third to read']) {
+        # THREE, AS IT SAYS: what the walk's earlier sheets saved goes first.
+        # A row's menu left "A row to read" behind, so this sheet held four;
+        # four fitted a desk's sheet by a few pixels, and when the buttons
+        # took the page's font (7px taller) the fourth's middle went under
+        # the sheet's fold, where ONE CARD read the page behind it. A list
+        # too long for its sheet scrolls, as it should; this scene is three.
+        q.evaluate("""async () => { try { for (const d of (await SkriblSavedDrafts.list()) || [])
+            if (d && d.id) await SkriblSavedDrafts.remove(d.id); } catch (e) {}
+          for (const n of ['A row to read', 'Another to read', 'A third to read']) {
           SkriblSavedDrafts.forget(); if (window.SkriblName) SkriblName.set(n); await SkriblSavedDrafts.save(); } }""")
         q.wait_for_timeout(600)
         via("openCloudDraftItem")()
