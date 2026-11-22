@@ -115,9 +115,13 @@ of the editors' colours, exact or drifted; and what each stylesheet says
 blocks for forced colours and more contrast). The owner's colour audit of
 Nov 21 asked for the table (`docs/COLOR-AUDIT.md`). It needs a running copy
 and a browser, and refuses a copy that is not serving this tree's
-stylesheets. The table says which commits of the sheets it read; made again
-on the same sheets it is the same file, so `git diff` after a re-make says
-whether it is still true. Contrast in it is WCAG's sum on sRGB; OKLCH and
+stylesheets. The table says which sheets it read, by content stamp (the
+first eight of each file's SHA-256, the `?v=` its link carries), and
+`coloraudit.py --check docs/COLOR-TOKENS.md` says in a second, with no
+browser, whether either has changed since; made again on the same sheets it
+is the same file. (It first named each sheet's last commit, which a pull
+request that changes a sheet and re-makes the table in one commit cannot
+know.) Contrast in it is WCAG's sum on sRGB; OKLCH and
 Delta E OK are for comparing colours and never say whether words can be
 read.
 

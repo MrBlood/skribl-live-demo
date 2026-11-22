@@ -66,7 +66,6 @@
   --line: #252b37;
   --line-2: #262c38;
   --line-mid: #2a2f3d;
-  --line-mid-2: #2c333f;
   --line-strong: #2e3340;
   --line-loud: #3a4150;
 
@@ -2403,7 +2402,6 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   --line:                    #e0e5ec;
   --line-2:                  #dde2ea;
   --line-mid:                #d5dbe4;
-  --line-mid-2:              #d0d7e1;
   --line-strong:             #ccd3de;
   --line-loud:               #b7c0cf;
 

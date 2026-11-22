@@ -3660,3 +3660,44 @@ every screen scrolls, so it is the owner's to say and the full battery's to
 hold. Skribl's own Gallery and Library, whose pages scroll under a header
 that sticks, do not have the guard; the Pad and Flip do not scroll their
 page on a phone.
+
+## 38. Built: the chosen one in forced colours, and nothing the keyboard reaches under a bar (Nov 21)
+
+Two of the colour audit's five fixes are the site's (`docs/COLOR-AUDIT.md`,
+C and E). Bugs, so no mock; nothing changes for anybody who uses neither
+setting nor a keyboard on a phone.
+
+WHERE A TINT CANNOT SHOW, AN EDGE (C). A chosen thing on the site is a
+tint behind it and violet words, by the owner's own choice ("one pill,
+everywhere"), and the owner's rule beside it is "a ring only where a tint
+cannot show". Forced colours (Windows' high contrast and its like)
+replaces every background, so there the tint is not there at all: read off
+the picture, the chosen option and the rest were painted alike. In that
+mode alone, every option of the one pill (`.fo-seg`: Following | Everyone,
+New | Hot; `.theme-switch`: Light | System | Dark, Who can draw back, the
+notifications' choices) wears an outline, the chosen one the system's
+Highlight, 3px, inside its box; the rules' tab you are on
+(`.legal-nav a[aria-current]`) and the row a list has picked out
+(`.mn-row[aria-selected]`) the same. A chosen one reached with the
+keyboard keeps its focus ring OUTSIDE it, where the chosen edge would
+otherwise paint over it. The editors' pill has worn this since it was made
+(`styles.css`); the site's copy had none. `verify_socialsettings` 12 holds
+it on Settings' switch, the Gallery's two pills and the rules' tabs, light
+and dark: said by the browser and read off the paint (40 pixels or more of
+the chosen one's box in a colour no other's holds), the ring outside, and
+no outline on any of them outside the mode.
+
+NOTHING THE KEYBOARD REACHES IS UNDER A BAR (E). A phone's bar is fixed to
+the foot of the screen and a post's page stands its answer bar on it. The
+page's last line clears both (`.main`'s padding), but a control that Tab
+brings into view (a paired keyboard, Switch Control, a narrow window) was
+put at the very foot of the screen, under them: focused, ringed and
+unseen. On a post's page five stops in a row; in Settings, See reports and
+both Sign out buttons. Under 900px the page's own scroller keeps the bars'
+height clear when it brings anything into view (`scroll-padding-bottom` on
+the root: the bar's 65px and the phone's own room at its foot; 125px where
+a post's page has its answer bar, said again there because the scroller
+cannot read what the body says). A desk has no bar at its foot and asks
+nothing. `verify_socialsettings` 13 walks Settings with Tab from top to
+foot, and `verify_socialcomments` 50 a post's page with ten comments, each
+stop read at nine points of it: not one under either bar.

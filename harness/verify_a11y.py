@@ -1378,6 +1378,86 @@ with sync_playwright() as p:
               or f"{len(_fields)} controls, smallest "
                  f"{min(f['fs'] for f in _fields)}px")
 
+    # --------------------------------------------------------- section 11c
+    print("\nA11Y 11c — the hint in a text box can be read: 4.5 to 1 on its field, light and dark")
+    # THE WORDS IN A BOX BEFORE ANYTHING IS TYPED ARE WORDS, AND NOTHING READ
+    # THEM. verify_contrast makes every hint see-through to photograph a sheet
+    # and reads the words that are left; the colour audit of Nov 21 read the
+    # screens it opened and reported ONE faint hint where there were SIX: the
+    # Post sheet's title and caption in the editors' dim ink (3.05 to 1 in
+    # light, 2.47 in dark), and four left to the browser's own grey (the
+    # gallery's search and its Report note, the library's search, the recovery
+    # box: 3.45 to 4.15). A hint left to the browser is whatever grey that
+    # browser has, and Safari's is not Chromium's; ours is the page's second
+    # ink at full strength.
+    #
+    # EVERY FIELD THAT HAS A HINT, OPEN OR NOT, on the walk 11b makes (its two
+    # reveals too): the hint's ink as the browser resolves ::placeholder, times
+    # its opacity, laid over the field's own ground (its background, and what
+    # is under that where it is see-through). Read both ways against the paint
+    # when this row was written, each box open, the hint's own pixels (the
+    # ones that change when it is made see-through): the same to the hundredth.
+    # The floor is WCAG's for small words. The feed is a host's own page and
+    # has one hint; it is held to the same floor.
+    HINT_FLOOR = 4.5
+    HINTS = r"""() => {
+      const SKIP = ['checkbox','radio','range','color','file','button','submit','hidden','image','reset'];
+      const rgba = (s) => { let m = /^rgba?\(([^)]+)\)$/.exec(s);
+        if (m) { const p = m[1].split(/[\s,\/]+/).filter(Boolean).map(parseFloat); return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1]; }
+        m = /^color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\)$/.exec(s);
+        return m ? [m[1] * 255, m[2] * 255, m[3] * 255, m[4] === undefined ? 1 : +m[4]] : null; };
+      const over = (f, b) => [0, 1, 2].map(i => f[i] * f[3] + b[i] * (1 - f[3])).concat([1]);
+      const ground = (el) => { const st = [];
+        for (let e = el; e; e = e.parentElement) { const c = rgba(getComputedStyle(e).backgroundColor);
+          if (c && c[3] > 0.001) { st.push(c); if (c[3] >= 0.999) break; } }
+        const scheme = getComputedStyle(document.documentElement).colorScheme || '';
+        let g = (st.length && st[st.length - 1][3] >= 0.999) ? st.pop() : (/dark/.test(scheme) && !/light/.test(scheme) ? [18, 18, 18, 1] : [255, 255, 255, 1]);
+        while (st.length) g = over(st.pop(), g);
+        return g; };
+      const lum = (c) => { const v = c.slice(0, 3).map(x => x / 255).map(x => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
+        return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+      const hex = (c) => '#' + c.slice(0, 3).map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+      const out = [];
+      for (const el of document.querySelectorAll('input[placeholder], textarea[placeholder]')) {
+        if (SKIP.indexOf((el.type || '').toLowerCase()) >= 0 || !el.getAttribute('placeholder').trim()) continue;
+        const ps = getComputedStyle(el, '::placeholder'), c = rgba(ps.color);
+        const id = el.id || el.name || el.className.toString().trim().slice(0, 26) || el.tagName;
+        if (!c) { out.push({ id, ratio: 0, ink: ps.color, ground: '?' }); continue; }
+        c[3] *= parseFloat(ps.opacity || '1');
+        const g = ground(el), ink = over(c, g), a = lum(ink), b = lum(g);
+        out.push({ id, ink: hex(ink), ground: hex(g), ratio: Math.round((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) * 100) / 100 });
+      }
+      return out; }"""
+    for _path, _name, _least in (("/", "Pad", 7), ("/flip", "Flip", 7), ("/library", "the library", 2),
+                                 ("/feed", "the host feed", 1), ("/gallery", "the gallery", 2)):
+        _low, _seen = [], {}
+        for _theme in ("light", "dark"):
+            _pg = browser.new_page(viewport={"width": 390, "height": 844})
+            _pg.goto(BASE + _path + "?theme=" + _theme, wait_until="load")
+            _pg.wait_for_timeout(700)
+            _stamped = _pg.evaluate("() => document.documentElement.getAttribute('data-theme')")
+            _pg.evaluate("""() => {
+              try { window.SkriblRecoveryKey && window.SkriblRecoveryKey.openRecover(); } catch (e) {}
+              try { const z = document.getElementById('zoomVal'); if (z) z.click(); } catch (e) {}
+            }""")
+            _pg.wait_for_timeout(250)
+            _hints = _pg.evaluate(HINTS)
+            _pg.close()
+            _seen[_theme] = (len(_hints), _stamped)
+            _low += [f"{_theme} {h['id']} {h['ink']} on {h['ground']} {h['ratio']}" for h in _hints if h["ratio"] < HINT_FLOOR]
+            _least_read = min((h["ratio"] for h in _hints), default=None)
+            _seen[_theme] += (_least_read,)
+        # A WALK THAT FOUND NOTHING PASSES EVERYTHING, and so does a theme that
+        # was never put on: each page's count of hints is written down, and an
+        # editor or a page of Skribl's has to say it wears the theme asked for.
+        check(f"{_name}: there are hints to read, in the theme asked for (light, then dark)",
+              all(_seen[t][0] >= _least for t in _seen)
+              and (_name == "the host feed" or all(_seen[t][1] == t for t in _seen)),
+              f"{ {t: (v[0], v[1]) for t, v in _seen.items()} }, expected at least {_least} each")
+        check(f"{_name}: every hint in a text box reads {HINT_FLOOR} to 1 or more on its field, light and dark",
+              not _low,
+              "; ".join(_low[:6]) or f"the least: light {_seen['light'][2]}, dark {_seen['dark'][2]}")
+
     # ------------------------------------------------------------ section 12
     print("\nA11Y 12 — every segmented control is a named group whose options say what they are")
     # Outside review of v290, findings 7 and 8. Tips said role="group"

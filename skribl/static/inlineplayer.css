@@ -336,8 +336,13 @@
 /* THE LINE under a post (v322). Why: inlineplayer.js. */
 .skribl-inline-line{position:relative;display:flex;flex-direction:column;gap:6px;margin:10px 0 0;font-size:14px;line-height:1.4;visibility:hidden;-webkit-tap-highlight-color:transparent}
 .skribl-inline-line.is-on{visibility:visible}
-/* A LINE THAT WAITS (line_waits=...) has no room until the first play. */
-.skribl-inline-line.is-waiting{height:0;margin-top:0;opacity:0;overflow:hidden}
+/* A LINE THAT WAITS (line_waits=...) has no room until the first play, AND IS
+   NOBODY'S UNTIL THEN: hidden to the eye alone, its four controls (the scrub,
+   Repeat, Full screen, the speed) were still stops for the Tab key and a
+   screen reader, each one focused with nothing on the screen to show it (the
+   colour audit of Nov 21, fix B: 24 of the 26 keyboard stops that showed
+   nothing). After .is-on, which says visible, so this one wins. */
+.skribl-inline-line.is-waiting{height:0;margin-top:0;opacity:0;overflow:hidden;visibility:hidden}
 .skribl-inline-line.is-opening{overflow:hidden;transition:height .3s,margin-top .3s,opacity .2s .1s}
 @media (prefers-reduced-motion:reduce){.skribl-inline-line.is-opening{transition:opacity .2s}}
 .skribl-inline-row{display:flex;align-items:center;gap:4px}

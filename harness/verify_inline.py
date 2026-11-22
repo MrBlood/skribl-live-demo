@@ -1922,7 +1922,16 @@ with sync_playwright() as sp:
     #   any host's page. Spent first: nothing was there to spend; the two
     #   values are the whole of it. 82,571 B measured, against 82,512 before
     #   it.
-    EMBED_RATCHET = 82_571
+    # RAISED (a bug fix: the colour audit of Nov 21, fix B, four keyboard stops
+    #   that showed nothing), for one named cost: +18 B, all inlineplayer.css
+    #   -- a line that waits says visibility: hidden, so its scrub, Repeat,
+    #   Full screen and speed are not stops for the Tab key or a screen reader
+    #   while nobody can see them. WHICH CALLER PAYS: every page that shows a
+    #   post, for a host whose cards wait (line_waits=). Spent first: the one
+    #   declaration is the whole of it; putting it in overflow's place would
+    #   leave the line's unseen controls spilling past a box with no height.
+    #   82,589 B measured, against 82,571 before it.
+    EMBED_RATCHET = 82_589
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -2636,6 +2645,42 @@ with sync_playwright() as sp:
           and _bare_h > 40 and _rest["padBare"]["on"] and not _rest["padBare"]["says"] and _rest["flipBare"]["h"] > 40,
           json.dumps(_rest)[:900])
 
+    # NOBODY'S UNTIL IT OPENS. A line with no room and no opacity was still
+    # the keyboard's and a screen reader's: Tab from the play button stopped on
+    # the scrub, Repeat, Full screen and the speed, each focused with nothing
+    # on the screen to show it (the colour audit of Nov 21, fix B: 24 of the
+    # 26 keyboard stops that showed nothing were these four, on every waiting
+    # drawing of a page). Read both ways: what takes focus when a script asks
+    # it to, and where a real Tab from the drawing's box lands. THE SAME POST
+    # WITHOUT THE WAIT is read beside it, so a probe that sees no stops
+    # anywhere cannot pass this.
+    _STOPS = """(id) => { const a = document.getElementById(id), line = a.querySelector('.skribl-inline-line');
+      const ctl = [...line.querySelectorAll('button, [tabindex], a[href], input, select, textarea')]
+        .filter(e => e.tabIndex >= 0 && !e.disabled && !e.closest('[hidden]') && getComputedStyle(e).display !== 'none');
+      const took = ctl.filter(e => { e.focus({ preventScroll: true }); const t = document.activeElement === e; if (t) e.blur(); return t; })
+        .map(e => e.getAttribute('aria-label') || e.className.toString().split(' ')[0]);
+      return { there: ctl.length, took, shown: line.checkVisibility ? line.checkVisibility({ visibilityProperty: true }) : null }; }"""
+
+    def _tab_from_play(page, key):
+        # The drawing's box is the keyboard's Play (the play button inside it is the eye's); its line follows it.
+        was = page.evaluate(f"""() => {{ const box = document.querySelector('#{key} .skribl-inline'); box.focus({{ preventScroll: true }});
+            return document.activeElement === box; }}""")
+        page.keyboard.press("Tab")
+        page.wait_for_timeout(120)
+        return page.evaluate(f"""(was) => {{ const e = document.activeElement, line = document.querySelector('#{key} .skribl-inline-line');
+            return {{ from: was, inLine: !!e && line.contains(e), on: e ? (e.getAttribute('aria-label') || e.className.toString().split(' ')[0] || e.tagName) : null }}; }}""", was)
+    _stops = {k: _lp.evaluate(_STOPS, k) for k in ("padWait", "padBare", "flipWait", "flipBare")}
+    _tabs = {k: _tab_from_play(_lp, k) for k in ("padWait", "padBare", "flipWait", "flipBare")}
+    _lp.evaluate("() => { if (document.activeElement) document.activeElement.blur(); }")
+    check("...and at rest a waiting line is nobody's: none of its controls takes focus, a Tab from the play button"
+          " lands outside it, and it is not there for a screen reader; the same post without the wait keeps its"
+          " stops (three or more take focus, and Tab lands on one)",
+          all(_stops[k]["there"] >= 3 and not _stops[k]["took"] and _stops[k]["shown"] is False
+              and _tabs[k]["from"] and not _tabs[k]["inLine"] for k in ("padWait", "flipWait"))
+          and all(len(_stops[k]["took"]) >= 3 and _stops[k]["shown"] and _tabs[k]["from"] and _tabs[k]["inLine"]
+                  for k in ("padBare", "flipBare")),
+          json.dumps({"stops": {k: (v["there"], v["took"][:4], v["shown"]) for k, v in _stops.items()}, "tab": _tabs})[:900])
+
     # The first play, read on every frame: the line's room, its top margin,
     # whether anything of it shows, and where the post under it is.
     _FRAMES = """([id, ms]) => new Promise(done => {
@@ -2700,6 +2745,11 @@ with sync_playwright() as sp:
           json.dumps({"pad": _pend, "flip": _fend}))
     check("paused, it stays open: the line keeps its height and shows",
           _paused["state"] == "paused" and abs(_paused["h"] - _bare_h) < 0.6 and _paused["seen"], json.dumps(_paused))
+    _opened = {k: _lp.evaluate(_STOPS, k) for k in ("padWait", "flipWait")}
+    check("...and once it has opened its controls are the keyboard's again (three or more take focus, a drawing"
+          " and a Flip alike)",
+          all(len(v["took"]) >= 3 and v["shown"] for v in _opened.values()),
+          json.dumps({k: (v["there"], v["took"][:4], v["shown"]) for k, v in _opened.items()}))
     check("no page errors with a waiting line", not _lerrs, "; ".join(_lerrs[:2]))
     _lc.close()
 

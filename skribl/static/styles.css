@@ -43,7 +43,6 @@
   --line: #252b37;
   --line-2: #262c38;
   --line-mid: #2a2f3d;
-  --line-mid-2: #2c333f;
   --line-strong: #2e3340;
   --line-loud: #3a4150;
 
@@ -4573,7 +4572,12 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.post-input::placeholder { color: var(--text-dim); }
+/* A HINT IN A FIELD IS THE SECOND INK, at full strength, as Export's and Text's
+   are and every hint on the site is. Post's two wore the dim ink (3.05 to 1 in
+   light, 2.47 in dark: the colour audit of Nov 21, fix A), from before the
+   second ink was the rule for every word. opacity: a browser that fades its
+   hints (Firefox) must not fade ours. */
+.post-input::placeholder { color: var(--text-secondary); opacity: 1; }
 
 .post-input:focus {
   outline: none;
@@ -7651,7 +7655,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
   /* 16px: below it iOS Safari zooms the whole page on focus. See .zoom-hud .zoom-val-input. */
   font-size: 16px; font-weight: 600; font-family: inherit; outline: none;
 }
-.name-input::placeholder { color: var(--text-dim); font-weight: 500; }
+.name-input::placeholder { color: var(--text-secondary); opacity: 1; font-weight: 500; }   /* the second ink, as every hint (it was the dim ink, 3 to 1) */
 /* Just firm the hairline on focus — no second ring. The global
    `input:focus-visible` rule near the end of this file paints a 2px focus-ring
    outline 2px OUTSIDE this border (a double ring), and its :focus-visible
@@ -9530,7 +9534,6 @@ body.replaying .media-card { pointer-events: none; }
   --line:                    #e0e5ec;
   --line-2:                  #dde2ea;
   --line-mid:                #d5dbe4;
-  --line-mid-2:              #d0d7e1;
   --line-strong:             #ccd3de;
   --line-loud:               #b7c0cf;
 
