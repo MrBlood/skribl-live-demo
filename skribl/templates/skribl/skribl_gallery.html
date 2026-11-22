@@ -658,15 +658,21 @@
        field is Ask's white field. TWO INKS: --text-3 is --text-2 (above), 7.1
        to 7.6:1 on the page and the cards in both themes, and the monospace
        capitals are the app's own sans in sentence case. */
+    /* THE EDGE ALONE (the owner's "All yes", Nov 22, to Four Looks' 3, A):
+       a card here is every other card, its edge and no soft drop under it
+       (the drop was 6px down, 18px of blur, greying the page beside it); in
+       dark the edge is 26%, the one the owner chose for the rest (Nov 21).
+       --card-drop stays a shadow, one that paints nothing, so the rules that
+       list it after the edge keep working. */
     :root {
       --card: #231e3b;
-      --card-line: rgba(167, 146, 255, 0.12);
-      --card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+      --card-line: rgba(167, 146, 255, 0.26);
+      --card-drop: 0 0 0 0 transparent;
     }
     :root[data-theme="light"] {
       --card: #ffffff;
       --card-line: rgba(124, 92, 255, 0.34);
-      --card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
+      --card-drop: 0 0 0 0 transparent;
     }
     /* SHARP: the second ink one step further from the ground than the
        editors' (7:1 and up on the page, the cards and a lit row), the
@@ -689,12 +695,12 @@
        edges", B): every outline keeps its border's width, transparent, so
        nothing moves, and wears a ring of --edge (pagemenu.css) outside it,
        in the line as it looked over what it was drawn on, laid over it and
-       made solid; the tiles keep their lift. --card-edge is the site's and
+       made solid (since Nov 22 a tile has no lift: THE EDGE ALONE, above). --card-edge is the site's and
        the editors' (a card's lilac line over its own white); a field's edge
        is the site's --field-line, which reads 3:1 on its white (the search
        read 2.68:1 in the card's line). The accent button has no edge. */
     :root {
-      --card-edge: color-mix(in srgb, rgb(167 146 255) 12%, var(--card));
+      --card-edge: color-mix(in srgb, rgb(167 146 255) 26%, var(--card));
       --field-line: rgba(167, 146, 255, 0.7);
       --control-edge: color-mix(in srgb, rgb(255 255 255) 9%, var(--control));
       /* A solid track's edge (No dinge): the card's lilac line is the solid

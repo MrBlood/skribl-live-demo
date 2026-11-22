@@ -1157,8 +1157,10 @@ with sync_playwright() as p:
     # side, the screen pixels that stand 1.15:1 apart from both what is beside
     # it and what is inside. Every one of them was three. The page menu's rows
     # wear the Pad's thin line, one screen pixel from where the words start;
-    # the tiles and the rows keep their lift on the light page; a search's edge
-    # reads 3:1 on its white (2.68:1 in the card's line, before).
+    # a search's edge reads 3:1 on its white (2.68:1 in the card's line,
+    # before). THE TILES AND THE ROWS KEPT THEIR LIFT on the light page until
+    # the owner's "All yes", Nov 22, to Four Looks' 3, A: the edge alone, as
+    # every other card; the row that held the lift now holds its absence.
     def _cr(p_, q_):
         a_, b_ = sorted((_lum(p_), _lum(q_)), reverse=True)
         return (a_ + 0.05) / (b_ + 0.05)
@@ -1236,9 +1238,40 @@ with sync_playwright() as p:
           " row's own left, on both pages, light and dark",
           len(_rows) == 4 and all(v["past the words"] == 1 and v["at the row's left"] == 0 for v in _rows.values()),
           json.dumps(_rows))
-    check("...a tile and a row sit on the light page with the cards' own lift: the page just under each darker than"
-          " with that card's shadow cut to its ring",
-          len(_lift) == 2 and all(v[0] < v[1] - 2 for v in _lift.values()), json.dumps(_lift))
+    check("...a tile and a row sit flat on the light page, the edge alone (the owner's \"All yes\", Nov 22, to Four"
+          " Looks' 3, A): the page just under each is what it is with that card's shadow cut to its ring",
+          len(_lift) == 2 and all(abs(v[0] - v[1]) <= 0.5 for v in _lift.values()), json.dumps(_lift))
+    # THE EDGE ALONE, read off each card's own shadow: no layer of it soft (a blur, painted), on the Gallery's tile,
+    # the Library's stage and a row, light and dark; and in dark its ring the 26% edge every other card wears (a
+    # probe inside the card mixes the same colour, so the two are said the same way).
+    _SH = r"""(sel) => { const e = [...document.querySelectorAll(sel)].find(x => x.getClientRects().length); if (!e) return null;
+      const cs = getComputedStyle(e).boxShadow, layers = []; let depth = 0, cur = '';
+      for (const ch of cs) { depth += ch === '(' ? 1 : ch === ')' ? -1 : 0; if (ch === ',' && depth === 0) { layers.push(cur.trim()); cur = ''; } else cur += ch; }
+      if (cur.trim()) layers.push(cur.trim());
+      const soft = layers.filter(l => { const col = (l.match(/^(?:rgba?|color)\([^)]*\)/) || [''])[0];
+        const a = /rgba\(/.test(col) ? parseFloat(col.split(',')[3]) : /\/ *([\d.]+)\)/.test(col) ? parseFloat(col.match(/\/ *([\d.]+)\)/)[1]) : 1;
+        const px = l.replace(col, '').match(/-?[\d.]+px/g) || []; return a > 0 && px.length >= 3 && parseFloat(px[2]) > 0; });
+      const probe = document.createElement('i'); probe.style.color = 'color-mix(in srgb, rgb(167 146 255) 26%, var(--card))'; e.appendChild(probe);
+      const want = getComputedStyle(probe).color; probe.remove();
+      return { soft, ring: (layers[0].match(/^(?:rgba?|color)\([^)]*\)/) || [''])[0], want }; }"""
+    _flat = {}
+    for _scheme in ("light", "dark"):
+        _c = b.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=1, is_mobile=True, has_touch=True,
+                           color_scheme=_scheme, storage_state=state)
+        for _path, _sels in (("/gallery", [".tile"]), ("/library", [".player", ".posted-row:not(.active)"])):
+            _p = open_page(_c, _path, _scheme)
+            _p.wait_for_timeout(500)
+            for _sel in _sels:
+                _flat[f"{_scheme} {_path} {_sel}"] = _p.evaluate(_SH, _sel)
+            _p.close()
+        _c.close()
+    check("...no card on either page casts a soft shadow (no layer of its own shadow blurred and painted): the Gallery's"
+          " tile, the Library's stage and a row, light and dark (Four Looks' 3, A)",
+          len(_flat) == 6 and all(v and not v["soft"] for v in _flat.values()),
+          json.dumps({k: v and v["soft"] for k, v in _flat.items()}))
+    check("...and in dark a card's edge is the 26% one every other card wears (it was 12%)",
+          all(v and v["ring"] == v["want"] for k, v in _flat.items() if k.startswith("dark")),
+          json.dumps({k: v and [v["ring"], v["want"]] for k, v in _flat.items() if k.startswith("dark")}))
     _fl = [_edges.get(f"light {s}") or {} for s in (".find input", ".search input")]
     check("...and the Gallery's and the Library's search fields' edges read 3:1 or more against their own white",
           all(f.get("px") and _cr(f["px"][0], f["inside"]) >= 3.0 for f in _fl),

@@ -52401,3 +52401,27 @@ stricter check the owner said yes to. Calibrated: a colour typed into a
 rule of social.css, red (14, its ceiling 13); the same colour in a
 comment and as a token used through var(), green; a new sheet holding
 one colour, red.
+
+## After v330 -- Skribl's own Gallery and Library cards: the edge alone (Four Looks' 3, A)
+
+The owner's "All yes", Nov 22, 8:31 AM, to Four Looks' 3: A. The two pages
+outside Blooby, /gallery and /library, still wore a soft drop under each
+card (light: 0 1px 2px at 8% and 0 6px 18px at 9%; dark: a 4% top light
+and 0 6px 18px black at 35%), and in dark the faint 12% edge the owner had
+doubled everywhere else (Nov 21). NOW a card there is every other card:
+its edge and no drop. `--card-drop` stays a shadow, one that paints
+nothing (0 0 0 0 transparent), so the rules that list it after the edge
+keep working; in dark `--card-edge` and `--card-line` are 26%. In
+skribl_gallery.html and skribl_library.html (a Gallery tile; the
+Library's stage, a posted row and a draft's row), and in
+gallerysection.css, which cssgraph makes from /gallery's sheets (emitted,
+not edited by hand). Pad and Flip: not theirs; Blooby's Gallery was already
+this way.
+
+THE CHECK, `verify_galib` 10. Its row "a tile and a row sit on the light
+page with the cards' own lift" held the drop; it is turned round to hold
+its absence (the page just under each card is what it is with that card's
+shadow cut to its ring). Two rows join it: no card on either page casts a
+soft shadow (no layer of its own shadow blurred and painted), light and
+dark; and in dark a card's ring is the 26% edge (a probe in the card mixes
+the same colour, so the two are said alike).
