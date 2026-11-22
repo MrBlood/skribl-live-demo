@@ -3495,6 +3495,7 @@ print("PLAN " + json.dumps(out))
         DSAMPLE = """([sel, nextSel, ms]) => { window.__df = []; const c = document.querySelector(sel), n = document.querySelector(nextSel), t0 = performance.now();
           const step = () => { window.__df.push({ t: Math.round(performance.now() - t0), there: c.isConnected,
               op: c.isConnected ? +getComputedStyle(c).opacity : null, next: n ? Math.round(n.getBoundingClientRect().top * 10) / 10 : null,
+              doc: n ? Math.round((n.getBoundingClientRect().top + scrollY) * 10) / 10 : null,
               y: Math.round(scrollY), at: location.pathname + location.search });
             if (performance.now() - t0 < ms) requestAnimationFrame(step); };
           requestAnimationFrame(step); }"""
@@ -3513,18 +3514,30 @@ print("PLAN " + json.dumps(out))
             return pg_.evaluate("() => window.__df")
 
         def judged(fs):
-            """What the frames say: the fade, the room, and whether anything jumped."""
+            """What the frames say: the fade, the room, and whether anything jumped.
+
+            THE NEXT CARD IS READ WHERE IT IS ON THE PAGE (its top plus the
+            scroll), not on the screen. Deleting the last card but one at the
+            foot of a page makes the page shorter, and the browser pulls the
+            scroll back to the new end in the same frame: on the screen the
+            next card then moves by its room LESS that pull, which is only how
+            far down the page happened to be. It read 130.7 one day and 98.7
+            the next (the colour audit's fix E keeps a control the test scrolls
+            to clear of the bar, so the page started 32px further down), with
+            the room 440.7 both times. The room is the card's to close; the
+            scroll is the browser's."""
             seen = [f for f in fs if f["there"] and f["op"] is not None]
             ops = [f["op"] for f in seen]
-            tops = [f["next"] for f in fs if f["next"] is not None]
+            tops = [f["doc"] for f in fs if f.get("doc") is not None]
             steps = [abs(b_ - a_) for a_, b_ in zip(tops, tops[1:])]
             way = abs(tops[-1] - tops[0]) if tops else 0
             # where the next card was while the deleted one could still be seen
-            while_seen = [f["next"] for f in fs if f["there"] and f["op"] is not None and f["op"] > 0.03]
+            while_seen = [f["doc"] for f in fs if f["there"] and f["op"] is not None and f["op"] > 0.03 and f.get("doc") is not None]
             return {"fading": len([o for o in ops if 0.03 < o < 0.97]), "gone": bool(fs) and not fs[-1]["there"],
                     "way": round(way, 1), "moving": len([x for x in steps if x > 0.3]), "step": round(max(steps or [0]), 1),
                     "still while seen": bool(while_seen) and max(while_seen) - min(while_seen) <= 0.5,
-                    "at": sorted({f["at"] for f in fs}), "scroll": sorted({f["y"] for f in fs})[:1] + sorted({f["y"] for f in fs})[-1:]}
+                    "at": sorted({f["at"] for f in fs}), "scroll": sorted({f["y"] for f in fs})[:1] + sorted({f["y"] for f in fs})[-1:],
+                    "scrolled": [fs[0]["y"], fs[-1]["y"]] if fs else []}
         SAID_INK = """() => { const rgba = s => { const m = (s.match(/[\\d.]+/g) || []).map(Number); return [m[0], m[1], m[2], m.length > 3 ? m[3] : 1]; };
           const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                              return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
