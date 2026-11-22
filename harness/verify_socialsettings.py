@@ -34,7 +34,7 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
   6. FINDING SETTINGS: (a) the gear says Settings, at the top of your own
      profile on a phone and in your row of buttons on a desk; (b) on a desk,
      Settings in the rail above you on every page, lit on Settings and the
-     pages it leads to; a phone's bar keeps its four places; (c), the ☰ on a
+     pages it leads to; a phone's bar keeps its five places; (c), the ☰ on a
      phone, came with the map's step 5, and is section 10.
   7. SIGNED OUT, NOTHING NEW: no switch and no Settings anywhere; the device
      decides; the Pad's own switch (through Make) sets the one choice.
@@ -1191,8 +1191,8 @@ with sync_playwright() as p:
                     canvasSize: { cssWidth: 816, cssHeight: 612 }, frames: [{ strokes: pts, strokeGroups: [pts.length], background: { color: '#f6f2ea' } }] } }) });
                 return [r.status, await r.json().catch(() => ({}))]; }""")
             post = ans.get("post") if st == 200 else None
-            pages = ["/social/", "/social/explore", "/social/activity", "/social/@mira", "/social/@nico", "/social/you/edit",
-                     "/social/you", "/social/invites", "/social/you/delete"] + ([f"/social/p/{post}"] if post else [])
+            pages = ["/social/", "/social/explore", "/social/search", "/social/activity", "/social/@mira", "/social/@nico",
+                     "/social/you/edit", "/social/you", "/social/invites", "/social/you/delete"] + ([f"/social/p/{post}"] if post else [])
             lit_on = {"/social/you", "/social/invites", "/social/you/delete"}
             rails, bars = {}, {}
             for scheme in ("light", "dark"):
@@ -1222,8 +1222,8 @@ with sync_playwright() as p:
                   " to Settings), lit like Home where it leads (Settings, Invites, deleting the account: the page's"
                   " mark, its name bold, the pen's line under it) and only there, You lit there too",
                   not bad and len(rails) == 2 * len(pages), "; ".join(bad)[:1600] or f"{len(rails)} rails read")
-            check("a phone's bar keeps its four places (Home, Gallery, Make, You) on every one of those pages: no"
-                  " Settings in it", all(v == ["Home", "Gallery", "Make", "You"] for v in bars.values()) and len(bars) == len(pages),
+            check("a phone's bar keeps its five places (Home, Gallery, Make, Search, You) on every one of those pages: no"
+                  " Settings in it", all(v == ["Home", "Gallery", "Make", "Search", "You"] for v in bars.values()) and len(bars) == len(pages),
                   json.dumps(bars))
         except Exception as exc:  # noqa: BLE001
             stopped(6, exc)
@@ -1243,15 +1243,16 @@ with sync_playwright() as p:
                             places: [...document.querySelectorAll('nav.nav > a, nav.nav > button')].filter(e => e.getClientRects().length && !e.classList.contains('brand'))
                                      .map(e => (e.querySelector('.tab-name') || e).textContent.trim()) })""")
                         # How it works is a desk's rail's alone (the owner's "All yes",
-                        # Nov 19): a phone's bar keeps its four places.
-                        places = (["Home", "Gallery", "Make", "Sign in"] if screen == "phone"
-                                  else ["Home", "Gallery", "Make", "How it works", "Sign in"])
+                        # Nov 19): a phone's bar keeps its five places, Search after Make
+                        # (Nov 22), and a desk's rail has Search under the Gallery.
+                        places = (["Home", "Gallery", "Make", "Search", "Sign in"] if screen == "phone"
+                                  else ["Home", "Gallery", "Search", "Make", "How it works", "Sign in"])
                         outs.append((not seen["switch"] and seen["settings"] == 0 and seen["places"] == places
                                      and st["stamp"] == scheme and st["page"] == PAGE_RGB[scheme],
                                      f"{screen} {scheme} {path}: {seen}, {st['stamp']} {st['page']}"))
                     close_ctx(ctx, pg)
             check("signed out the site shows nothing of Settings: no Theme switch and no way to Settings anywhere, the bar as"
-                  " it was (Home, Gallery, Make, Sign in) and a desk's rail with How it works above Sign in, and the device"
+                  " it was (Home, Gallery, Make, Search, Sign in) and a desk's rail with How it works above Sign in, and the device"
                   " decides",
                   all(o for o, _ in outs), "; ".join(w for o, w in outs if not o) or f"{len(outs)} pages")
             ctx, pg = browser_as(b, None, "phone", "light", theme=None)
@@ -1776,7 +1777,7 @@ with sync_playwright() as p:
                 close_ctx(ctx, pg)
             stops, foot = walks["light"]
             under = [s for s in stops if s["bar"] >= 5]
-            last = max((s["y"] for s in stops if not s["name"] in ("Home", "Gallery", "Make", "You", "Activity")), default=0)
+            last = max((s["y"] for s in stops if not s["name"] in ("Home", "Gallery", "Make", "Search", "You", "Activity")), default=0)
             check("Settings on a phone, walked with Tab from its top to its foot (twelve stops or more, the last of the"
                   " page's own within 300px of its end): not one of them is under the bar",
                   len(stops) >= 12 and foot - last < 300 and not under,

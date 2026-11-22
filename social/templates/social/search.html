@@ -1,0 +1,84 @@
+{#  SEARCH, ITS OWN PAGE (the owner's "Yes to all", Nov 22, to round two of
+    the "Blooby and Search" mock: "Search is different than gallery which is
+    fine the way it is"). The magnifier in a phone's bar opens it, and on a
+    desk the rail's Search under the Gallery (base.html). Its top is Home's
+    and the Gallery's: the ☰, the wordmark, the bell.
+
+    THE BOX ON TOP, the Gallery's own (16px, 44px tall, "Search people and
+    drawings"), and what it finds is what the Gallery's box finds
+    (gallery.py search_page, people.py): People first, up to three, the
+    people you follow first, See all when there are more; then Drawings, the
+    tiles of everyone's, newest first. The Gallery's pills are the Gallery's,
+    so this page has none. explore.js moves it all, as it moves the Gallery:
+    a search once the typing pauses or at once with the keyboard's Search,
+    the part that changes faded out and back, the address saying what is
+    shown.
+
+    BEFORE A SEARCH, YOUR RECENT SEARCHES (search.js): the people you opened
+    from here and the words you searched, newest first, an × on each and
+    Clear all above them, kept on this phone alone. Nothing searched yet: one
+    quiet line, "Find people and drawings." Both wait hidden until search.js
+    has read the phone, so neither shows and then turns into the other.
+
+    SEE ALL is this page asked for the people alone (?who=people), as the
+    Gallery's is: "People", the box, twenty rows and Load more. #}
+{% extends 'social/base.html' %}
+{% import 'social/_icons.html' as ic %}
+{#  Whose list (search.js): the person signed in, by their @handle, or nobody's. #}
+{% set recent_key = 'blooby.search.v1' ~ (('.' ~ me.handle|lower) if me else '') %}
+{% from 'social/_gallery.html' import gallery_tile, gallery_words with context %}
+{% from 'social/_follow.html' import follow_sheets with context %}
+{% from 'social/_people.html' import people_box, people_rows with context %}
+
+{% block title %}{% if who %}People{% else %}Search{% endif %} · Blooby{% endblock %}
+{% block scripts %}<script src="{{ social_asset('follows.js') }}" defer></script>
+<script src="{{ social_asset('explore.js') }}" defer></script>
+<script src="{{ social_asset('search.js') }}" defer></script>{% endblock %}
+
+{% block main %}
+<div class="page-head">
+  <h1 class="page-title">{% if who %}People{% else %}Search{% endif %}</h1>
+</div>
+<p class="sr" data-follow-said role="status"></p>
+<div class="gal-bar">
+  <form class="gal-find" role="search" action="{{ url_for('social.search') }}" method="get" data-gal-find>
+    {%- if who %}<input type="hidden" name="who" value="{{ who }}">{% endif %}
+    <input type="search" name="q" value="{{ q }}" placeholder="Search people and drawings" aria-label="Search people and drawings"
+           autocomplete="off" maxlength="80" enterkeyhint="search" data-gal-q>
+  </form>
+</div>
+{% if who %}
+<div class="gal-swap" data-gal-swap data-who="{{ who }}" data-more="{{ more_url }}" data-explore="{{ url_for('social.search') }}" data-recent-key="{{ recent_key }}">
+  <ul class="fp-list" data-gal-grid aria-label="People">{{ people_rows(people) }}</ul>
+  <p class="feed-none gal-none" data-gal-none="people"{% if people %} hidden{% endif %}>Nobody by that name yet. Try the start of a name or an @handle.</p>
+  <p class="say fp-say" data-say role="status" hidden></p>
+  <button class="btn btn-wide feed-more" type="button" data-gal-next="{{ next or '' }}"{% if not next %} hidden{% endif %}>Load more</button>
+</div>
+{% else %}
+{#  data-blank: an emptied box asks the server for nothing and shows nothing
+    of its own (explore.js); what shows then is the recent searches. #}
+<div class="gal-swap" data-gal-swap data-blank data-more="{{ more_url }}" data-explore="{{ url_for('social.search') }}" data-recent-key="{{ recent_key }}">
+  <section class="rs" data-recent aria-labelledby="rsHead" hidden>
+    <div class="rs-head"><h2 class="fp-sec" id="rsHead">Recent</h2><button class="rs-clear" type="button" data-recent-clear>Clear all<span class="sr"> recent searches</span></button></div>
+    <ul class="fp-list" data-recent-list></ul>
+  </section>
+  <p class="feed-none rs-none" data-recent-none hidden>Find people and drawings.</p>
+  <div class="fp-box" data-fp-box>{% if q %}{{ people_box(people, people_more, q, 'social.search') }}{% endif %}</div>
+  <div class="gal-grid" data-gal-grid>{% for t in tiles %}{{ gallery_tile(t) }}{% endfor %}</div>
+  <p class="feed-none gal-none" data-gal-none="search"{% if tiles or not q or people %} hidden{% endif %}>Nothing matches that. Try part of a word or a name.</p>
+  <p class="feed-none gal-none" data-gal-none="search-people"{% if tiles or not q or not people %} hidden{% endif %}>No drawings match that.</p>
+  <button class="btn btn-wide feed-more" type="button" data-gal-next="{{ next or '' }}"{% if not next %} hidden{% endif %}>Load more</button>
+</div>
+{#  A recent search's row, for search.js to fill: words searched, and a
+    person opened (their face as every row has it: the still picture, framed
+    as the server framed it; or the empty circle). #}
+<template data-recent-words><li class="fp-row rs-row"><a class="fp-who rs-go"><span class="fp-words"><b class="rs-words"></b></span></a><button class="icon-btn rs-x" type="button" data-label="Remove {} from recent searches">{{ ic.close() }}</button></li></template>
+<template data-recent-person><li class="fp-row rs-row"><a class="fp-who"><span class="face-ring"></span><span class="fp-words"><b></b><span></span></span></a><button class="icon-btn rs-x" type="button" data-label="Remove {} from recent searches">{{ ic.close() }}</button></li></template>
+<p class="sr" data-recent-said role="status" data-gone="{} is off your recent searches." data-cleared="Your recent searches are cleared."></p>
+{% endif %}
+<p class="say" data-gal-say role="status" hidden></p>
+{{ gallery_words() }}
+{% endblock %}
+
+{#  FOLLOW, ON THIS PAGE TOO: the sheets a Follow raises, as on the Gallery. #}
+{% block overlays %}{% if accounts %}{{ follow_sheets(none, none, false, true) }}{% endif %}{% endblock %}

@@ -453,35 +453,84 @@ def explore_page():
                            people=people, people_more=more is not None, **common)
 
 
+@_rests()
+def search_page():
+    """SEARCH, ITS OWN PAGE (the owner's "Yes to all", Nov 22, to round two of
+    the "Blooby and Search" mock: the magnifier in a phone's bar between Make
+    and You, and on a desk's rail under the Gallery). The box on top. With a
+    search, what the Gallery's box finds: People first (up to three, See
+    all), then the drawings of everyone, newest first; the Gallery's pills
+    are the Gallery's, so it has none. Before a search, nothing from here:
+    the page holds the person's recent searches (search.js, kept on their
+    phone alone) or one quiet line. Its See all is its own (?who=people), so
+    the bar stays lit on Search."""
+    from .people import PAGE, SECTION, find
+    me = current_person()
+    _, _, q = wants(request.args, me)
+    who = who_wants(request.args, q)
+    common = dict(here="search", q=q, who=who, more_url=url_for("social.search_more"),
+                  token=csrf_token() if me is not None else None, signin_here=_signin_here())
+    if who:
+        people, nxt = find(me, q, PAGE)
+        return render_template("social/search.html", tiles=[], next=nxt, people=people, people_more=False, **common)
+    if not q:
+        return render_template("social/search.html", tiles=[], next=None, people=[], people_more=False, **common)
+    entries, nxt = page(me, "everyone", "new", q)
+    people, more = find(me, q, SECTION)
+    return render_template("social/search.html", tiles=tiles(entries, me), next=nxt, people=people,
+                           people_more=more is not None, **common)
+
+
+def _more(at):
+    """A page of the Gallery's (at "social.explore") or of Search's ("social.search")
+    as its tiles: {html, next, show, sort, q}, and for a new pick's first page
+    its People section too ({people}: finding people, whatever the pills
+    say; its See all to `at`'s own page). See all's (?who=people): a page of
+    the people alone, as their rows ({html, next, q, who}). Search has no
+    pills: everyone's drawings, newest first, whatever the address says; and
+    no search there is nothing at all (the page shows its recent searches)."""
+    from .people import PAGE, SECTION, find
+    me = current_person()
+    show, sort, q = wants(request.args, me)
+    if at == "social.search":
+        show, sort = "everyone", "new"
+    before = request.args.get("before") or None
+    if who_wants(request.args, q):
+        people, nxt = find(me, q, PAGE, before)
+        html = render_template("social/_people_rows.html", people=people)
+        return jsonify({"html": html, "next": nxt, "q": q, "who": "people"})
+    if at == "social.search" and not q:
+        return jsonify({"html": "", "next": None, "show": show, "sort": sort, "q": q, "people": ""})
+    if before and len(before) > 200:
+        before = "?"
+    entries, nxt = page(me, show, sort, q, before)
+    html = render_template("social/_gallery_tiles.html", tiles=tiles(entries, me))
+    out = {"html": html, "next": nxt, "show": show, "sort": sort, "q": q}
+    if not before:
+        people, more = find(me, q, SECTION) if q else ([], None)
+        out["people"] = render_template("social/_people_box.html", people=people, people_more=more is not None,
+                                        q=q, at=at)
+    return jsonify(out)
+
+
 def register(bp):
-    """Add the Gallery's page of tiles to the site's blueprint (the page
-    itself is social/__init__.py's explore, which holds without accounts)."""
+    """Add the Gallery's page of tiles, and Search, to the site's blueprint
+    (the Gallery's page itself is social/__init__.py's explore, which holds
+    without accounts; Search is the site's alone, as the people it finds)."""
 
     @bp.get("/explore/more")
     @_rests(json_answer=True)
     def explore_more():
-        """A page of the Gallery as its tiles: {html, next, show, sort, q},
-        and for a new pick's first page its People section too ({people}:
-        finding people, whatever the pills say). See all's (?who=people): a
-        page of the people alone, as their rows ({html, next, q, who})."""
-        from .people import PAGE, SECTION, find
-        me = current_person()
-        show, sort, q = wants(request.args, me)
-        before = request.args.get("before") or None
-        if who_wants(request.args, q):
-            people, nxt = find(me, q, PAGE, before)
-            html = render_template("social/_people_rows.html", people=people)
-            return jsonify({"html": html, "next": nxt, "q": q, "who": "people"})
-        if before and len(before) > 200:
-            before = "?"
-        entries, nxt = page(me, show, sort, q, before)
-        html = render_template("social/_gallery_tiles.html", tiles=tiles(entries, me))
-        out = {"html": html, "next": nxt, "show": show, "sort": sort, "q": q}
-        if not before:
-            people, more = find(me, q, SECTION) if q else ([], None)
-            out["people"] = render_template("social/_people_box.html", people=people, people_more=more is not None,
-                                            q=q)
-        return jsonify(out)
+        return _more("social.explore")
+
+    @bp.get("/search")
+    def search():
+        return search_page()
+
+    @bp.get("/search/more")
+    @_rests(json_answer=True)
+    def search_more():
+        return _more("social.search")
 
     return bp
 

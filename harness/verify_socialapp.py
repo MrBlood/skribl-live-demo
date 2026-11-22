@@ -63,7 +63,7 @@ Chromium's virtual authenticator for the site's people.
      THE DOOR: the ☰'s first row, with its mark, as tall as the others,
      opening /social/how, for a visitor too; on a desk a tab in the rail
      above Settings (above Sign in before that), lit on its own page; a
-     phone's bar keeps its four. THE PAGE: its head and three parts, nothing
+     phone's bar keeps its five. THE PAGE: its head and three parts, nothing
      past the screen. THE EXAMPLES: three of Skribl's in-post player, each a
      drawing from its file, their boxes the drawings' shape before the
      drawings come (nothing moves); each play button says what the files
@@ -1305,12 +1305,13 @@ with sync_playwright() as pw:
                 door[key]["lands"] = pg.evaluate("() => [location.pathname, document.title, !!document.querySelector('[data-site-menu]')]")
                 close_ctx(ctx, pg)
             check("the ☰'s first row is How it works, with its mark, as tall as the rows under it (56px), painted, to the"
-                  " site's own page; signed in above Settings, a visitor above Sign in; a phone's bar keeps its four places;"
+                  " site's own page; signed in above Settings, a visitor above Sign in; a phone's bar keeps its five places;"
                   " the page it opens has no ☰ of its own",
                   door["signed in"]["rows"][:2] == ["How it works", "Settings"] and door["a visitor"]["rows"][:2] == ["How it works", "Sign in"]
                   and all(d["href"] == "/social/how" and d["h"] == 56 and set(d["hs"]) == {56} and d["mark"] and d["hit"]
                           and d["lands"] == ["/social/how", "How it works · Blooby", False] for d in door.values())
-                  and door["signed in"]["bar"] == ["Home", "Gallery", "Make", "You"] and door["a visitor"]["bar"] == ["Home", "Gallery", "Make", "Sign in"],
+                  and door["signed in"]["bar"] == ["Home", "Gallery", "Make", "Search", "You"]
+                  and door["a visitor"]["bar"] == ["Home", "Gallery", "Make", "Search", "Sign in"],
                   json.dumps(door))
             RAIL = """() => { const tabs = [...document.querySelectorAll('nav.nav > .tab')].filter(e => e.getClientRects().length);
               const name = e => e.querySelector('.tab-name').firstChild.textContent.trim();
