@@ -356,12 +356,31 @@
       }
     }
 
+    /* The page behind holds where it stands while the editor is up (social.css
+       body.facepad-open: fixed at its own scroll, which a phone cannot move to
+       show what is typed), and is put back at that scroll once it has gone. */
+    var held = null;
+    function hold() {
+      if (held !== null) return;
+      held = window.scrollY || window.pageYOffset || 0;
+      doc.body.style.setProperty('--facepad-held', (-held) + 'px');
+      doc.body.classList.add('facepad-open');
+    }
+    function letGo() {
+      doc.body.classList.remove('facepad-open');
+      doc.body.style.removeProperty('--facepad-held');
+      if (held === null) return;
+      var y = held;
+      held = null;
+      try { window.scrollTo({ top: y, behavior: 'instant' }); } catch (e) { window.scrollTo(0, y); }
+    }
+
     function settle() {
       if (open) return;
       clearTimeout(timer);
       wrap.hidden = true;
       wrap.classList.remove('is-closing');
-      doc.body.classList.remove('facepad-open');
+      letGo();
     }
 
     var pad = window.SkriblComposeHost.create({
@@ -373,7 +392,7 @@
         clearTimeout(timer);
         wrap.classList.remove('is-closing');
         wrap.hidden = false;
-        doc.body.classList.add('facepad-open');
+        hold();
         /* Read a size, so the glide starts from where the sheet rests closed. */
         void wrap.offsetHeight;
         wrap.classList.add('is-open');

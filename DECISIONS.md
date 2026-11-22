@@ -52785,3 +52785,100 @@ NOT SEEN ON AN IPHONE: the drawer is the real one at the owner's size in
 Chrome; the keyboard and the strip are the owner's pictures' places.
 
 PAD AND FLIP: shared, one drawer for both.
+
+## After v330 -- Text opens whole on a phone; a tap on the box brings the keyboard (the owner's yes)
+
+With their yes to Style under the box, the owner asked: "how to I see the
+rest of the drawer? How would I even know it was there? Maybe slide open
+then slide keyboard up, but how to see everything?" Choosing Text on a
+phone raised the keyboard at once (the box took the focus as the drawer
+opened), so the drawer was only ever seen folded to the typing view, and
+Size, Thickness and Speed only after the keyboard's tick. A phone raises
+its keyboard for a tap and for nothing else, so it cannot slide up on its
+own after the drawer has. Proposed in three frames on the mock (Style
+While Typing, its bottom): on a phone Text opens whole with no keyboard;
+a tap on the box brings it; the tick puts it away with the words kept.
+The owner: "Yes".
+
+THE BUILD (lib/textwrite.js): on a phone (no hover), choosing Text, or a
+press that opens it where the words go, opens the whole drawer and puts
+nothing in focus, as Make opens since Nov 20; with a keyboard of its own
+(a desk, a laptop) the words take the focus at once, as they did. A tap
+on the box is the page's: its touchend stopped, and the words put in
+focus by the page itself with no scroll, as choosing Text did, which
+never slid the page in the owner's pictures; the phone's own tap on a
+box low on the screen slid the whole page up to show it (their 10:06
+picture). Only a tap (a finger that moved over 10px is a drag, the
+page's) and only to start typing: once the words are in focus a tap is
+the phone's own and places the caret. How it works says "its whole drawer
+opens under the tools ... tap the box and type your words".
+
+THE CHECKS, `verify_text`: Text's drawer comes up whole with no keyboard
+asked for on a phone (2, Pad and Flip; 3); a tap on the box is taken by
+the page (its default stopped, read from the tap's own event) and puts
+the words in focus, a second tap is the phone's (3); a desk types at once
+(3, Pad and Flip); the flows that type tap the box first, as a person
+will (16, 24); and the Escape flow taps the box first, the drawer's own
+Escape coming from the box's focus (on a desk it is in focus at once).
+Parts 2, 3, 16 and 24 10/10, 15/15, 10/10, 14/14. Three breaks, each on a
+copy, each red only in its rows: the words put in focus as Text opens on a
+phone again (the no-keyboard rows, Pad and Flip, and the tap row, whose
+first tap then has nothing to start); the tap left to the phone (the tap
+row); the words never put in focus, a desk too (the desk row).
+
+NOT SEEN ON AN IPHONE: whether the page's own focus on a tap raises the
+phone's keyboard without its slide is the owner's phone's to say; the
+same focus from choosing Text did, in their pictures.
+
+PAD AND FLIP: shared, one drawer and one script for both.
+
+## After v330 -- Text on the iPhone inside the site: the page behind holds still, and a drag keeps the keyboard
+
+The owner's iPhone, Nov 22, 1:48 to 1:53 PM, the Pad over Make, four
+pictures, before Text opened whole on a phone: "when I type Y screen
+flickers and jumps. When I type E again flickers and S same. Screen jumps
+every time. And it looks like timeline is scrolling a little each time.
+Also, cannot drag word. Each time I touch it it jumps to right or up and
+over to the right." Their first picture was right: the box, Style under
+it, the strip below the drawer. Then with each letter the editor's header
+went up, the drawer moved, and in the last a post of the timeline showed
+under the keyboard's strip, where the editor had been.
+
+THE PAGE BEHIND. Nothing in Text scrolls as words are typed. A phone
+scrolls the page to show what is typed, and while the editor is over the
+site the site's page was held with overflow: hidden alone, which does not
+hold a phone's page: it scrolled, the overlay went with it (a phone
+carries a fixed layer with its page while its keyboard is up), and the
+editor's own reading of where it sat moved the drawer each time. The
+editor's own pages have no page behind them, which is why Text there
+behaved (#1049 said so of the frame). THE FIX (social.css
+body.facepad-open, social.js padOver): while the editor is up the page is
+fixed where it stood (its scroll then in --facepad-held), and scrolled
+back to that same place once the editor has gone.
+
+A DRAG WITH THE KEYBOARD UP. Once a press on the words became a drag, the
+drawer stepped aside (veil): it put the keyboard away and carried the page
+to the drawing's top, mid-drag, so the drawing moved under the finger and
+the words leapt from it. With the keyboard up the words now move where
+they show, above the drawer on the keys, and the keyboard and the page
+stay (lib/textwrite.js); without it the drawer steps aside as before.
+
+THE CHECKS. `verify_socialprofile` 21: on a page scrolled 400px the page
+behind holds while the editor is up (fixed, tries to scroll it move
+nothing) and is back at 400 once it has gone. `verify_text` 16: a drag on
+the words with the keyboard up moves them, the words in focus all
+through, the drawer on the keys and the page where it was. CALIBRATION.
+Each part broken on a copy of the branch, its part run alone:
+`verify_text` 16 11/11 as built, and 10/11 with the drawer stepping
+aside on every drag, red only in the drag row (mid-drag the words out of
+focus, the drawer off the keys, the page carried from 292px to its top);
+`verify_socialprofile` 21 green as built, red with the page held by
+overflow: hidden alone (not fixed: a scroll moved the page 800px under
+the editor), and red with the scroll back left out (the page back at its
+top, not at 400).
+
+NOT SEEN ON AN IPHONE: whether the phone, the page behind held, still
+pans what it shows on each letter is the owner's phone's to say; nothing
+here can raise its keyboard.
+
+PAD AND FLIP: shared (one drawer, one overlay).

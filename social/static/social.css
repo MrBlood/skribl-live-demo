@@ -1402,7 +1402,14 @@ body.focus .top { justify-content: center; }
   color: var(--ink-2); font-size: 16px; line-height: 1.45; text-align: center; transition: opacity 0.2s ease;
 }
 .facepad.is-ready .facepad-wait { opacity: 0; }
-body.facepad-open { overflow: hidden; }
+/* WHILE THE EDITOR IS OVER IT, THE PAGE BEHIND HOLDS STILL (the owner's
+   iPhone, Nov 22, the Pad over Make: each letter typed in Text scrolled the
+   timeline behind a little, the overlay with it, so the screen jumped and a
+   post showed under the keyboard's strip). overflow: hidden does not hold a
+   phone's page: the phone scrolls it to show what is typed. So the page is
+   fixed where it stood (--facepad-held, its scroll then, social.js padOver)
+   and scrolled back to that same place once the editor has gone. */
+body.facepad-open { overflow: hidden; position: fixed; top: var(--facepad-held, 0px); left: 0; right: 0; }
 @media (min-width: 900px) {
   .facepad { align-items: center; }
   .facepad-sheet {

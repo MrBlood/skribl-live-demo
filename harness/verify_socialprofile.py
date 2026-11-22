@@ -130,6 +130,10 @@ events with pressure, a hand's timing).
       nothing attached, focus back on the tile; Add brings it attached,
       the sheet under it; with a drawing attached already the sheet opens on
       it and says a post holds one; a Flip draft in Flip the same.
+  21. THE PAGE BEHIND HOLDS STILL while the editor is over it (the owner's
+      iPhone, Nov 22: each letter typed in Text scrolled the timeline behind
+      the Pad): fixed where it stood, tries to scroll it moving nothing, and
+      scrolled back to that same place once the editor has gone.
 
 The layers (the site imports only Skribl's documented names, and its
 templates only documented partials, the face player's now among them) stay
@@ -4321,6 +4325,42 @@ print("PLAN " + json.dumps(out))
                    and second.get("attached") == {"kind": "payload", "id": None}
                    and second.get("says") == "A post holds one drawing. Remove this one to use another."),
               json.dumps({"added": added, "post lit": seen20["pad"].get("post lit"), "second": second}))
+
+    # ------------------------------------------------------------------ 21
+    if part(21, "the page behind holds still while the editor is over it, and is where it stood once it goes"):
+        # The owner's iPhone, Nov 22, the Pad over Make: each letter typed in Text scrolled the timeline behind a
+        # little, and the overlay with it, so the screen jumped and a post showed under the keyboard's strip.
+        # overflow: hidden does not hold a phone's page (the phone scrolls it to show what is typed): the page is
+        # fixed where it stood while the editor is up (social.css body.facepad-open, social.js padOver) and
+        # scrolled back to that place once the editor has gone. Read on a page scrolled 400px (made tall enough
+        # here), with tries to scroll it while the editor is up.
+        holda = member(b, "holda", "Holda Still")
+        pg = holda.pg
+        pg.goto(BASE + "/social/@holda")
+        pg.wait_for_timeout(400)
+        open_face_sheet(pg)
+        pg.evaluate("""() => { const s = document.createElement('div'); s.id = 'holdMark'; s.style.height = '2400px';
+            document.getElementById('main').appendChild(s); window.scrollTo({ top: 400, behavior: 'instant' }); }""")
+        pg.wait_for_timeout(200)
+        MARK = "() => ({ y: Math.round(scrollY), mark: Math.round(document.getElementById('holdMark').getBoundingClientRect().top) })"
+        before = pg.evaluate(MARK)
+        pg.evaluate(GLIDE, ["#faceSheet [data-face-open]", 900])
+        up = pg.evaluate(OVERLAY)
+        held = pg.evaluate("""() => { const cs = getComputedStyle(document.body), m = () => Math.round(document.getElementById('holdMark').getBoundingClientRect().top);
+            const at = m(); window.scrollTo({ top: 900, behavior: 'instant' }); window.scrollBy(0, 300);
+            return { position: cs.position, at: at, tried: m() }; }""")
+        fr = pad_frame(pg)
+        close_glide(pg, fr)
+        pg.wait_for_timeout(400)
+        after, gone = pg.evaluate(MARK), pg.evaluate(OVERLAY)
+        check("while the editor is over the page, the page behind holds still: fixed where it stood (scrolled 400px, it"
+              " shows the same), and tries to scroll it move nothing; once the editor has gone it is scrolled to that same"
+              " place, nothing behind having moved (the owner's iPhone, Nov 22: each letter typed scrolled the timeline"
+              " behind the Pad)",
+              before["y"] == 400 and up and up["open"] and held["position"] == "fixed" and held["at"] == before["mark"]
+              and held["tried"] == before["mark"] and gone and gone["hidden"] and after == before,
+              json.dumps({"before": before, "up": up and up.get("open"), "held": held, "after": after,
+                          "gone": gone and gone.get("hidden")}))
 
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):
