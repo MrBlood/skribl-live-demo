@@ -383,6 +383,11 @@ and the first half of 10 (`DECISIONS.md`, "The colour audit's yes,
 built"). 2, 3, 4 and 11 wait for their mocks; 9 was "leave it"; 10's
 second half had no pick, so it is asked again.
 
+ANSWERED AGAIN, Nov 22, 8:31 AM, to the mocks ("Four Looks"): "All yes":
+11 A, 3 A, 4 A, 2 after, and 10's second half yes (`DECISIONS.md`, "Four
+Looks, the owner's 'All yes'"). Each is built in a pull request of its
+own; 10's second half first (`verify_surfaces`).
+
 1. **Thin lines on in-between screens. Pick: yes.** Add the steps of
    `--hair` between the three, so a line is one sharp pixel at 125 to 175%
    and 2.75x too. Tried: the card, the tile and the Pad's menu card go from

@@ -242,6 +242,44 @@ check("no hard-coded neutral outside :root in either sheet",
       + " — every grey the chrome paints has to be a token, or it will not "
         "follow a light theme")
 
+print("\nSURFACES — no new colour written straight into a rule")
+# THE OWNER'S "All yes", Nov 22, 8:31 AM, to the colour audit's choice 10, its
+# second half (docs/COLOR-AUDIT.md): a colour written into a rule, not named
+# by a token, is how a copy drifts from its original (choice 6 found three).
+# Every sheet's count is held where it stood that morning, read the audit's
+# own way (harness/tools/coloraudit.py, inventory(): a colour in a
+# declaration that is not a custom property, comments set aside), and never
+# chased down: a sheet whose count falls says so here, and its ceiling may
+# come down with it. A sheet that is not in the list starts at none. A token
+# (a custom property) may still be defined with a colour: that is where a
+# colour belongs. player.css is left out: cssgraph makes it from styles.css,
+# so its colours are styles.css's.
+sys.path.insert(0, str(ROOT / "harness" / "tools"))
+import coloraudit  # noqa: E402
+
+COLOUR_CEILING = {
+    "skribl/static/styles.css": 238, "social/static/social.css": 13,
+    "skribl/static/face.css": 1, "skribl/static/flip.css": 33, "skribl/static/fullband.css": 26,
+    "skribl/static/fullbar.css": 63, "skribl/static/gallerysection.css": 94, "skribl/static/inlineplayer.css": 56,
+    "skribl/static/letters.css": 5, "skribl/static/pagemenu.css": 1, "skribl/static/posted.css": 10,
+    "skribl/static/postfull.css": 2, "skribl/static/segslider.css": 1, "skribl/static/tooltip.css": 1,
+}
+over, under = [], []
+for sheet in sorted([*(ROOT / "skribl" / "static").glob("*.css"), *(ROOT / "social" / "static").glob("*.css")]):
+    rel = sheet.relative_to(ROOT).as_posix()
+    if rel == "skribl/static/player.css":
+        continue
+    n, most = coloraudit.inventory(rel)["literals"], COLOUR_CEILING.get(rel, 0)
+    if n > most:
+        over.append(f"{rel}: {n}, its ceiling {most}")
+    elif n < most:
+        under.append(f"{rel}: {n} (its ceiling {most} may come down)")
+check("no sheet writes more colours straight into its rules than it did on Nov 22 (the editors' styles.css 238, the"
+      " site's social.css 13, each other sheet its own; a new sheet none): a new colour is a named token",
+      not over, "; ".join(over) + " -- name it as a token (a custom property) and use the token")
+for line in under:
+    print(f"    fewer than its ceiling: {line}")
+
 print("\nSURFACES — no stylesheet hides in a JavaScript string")
 # FOUR runtime <style> elements were found here, in two duplicated pairs:
 # editor_photo.js/flip.js built the slider-nudger sheet, editor_music.js/flip.js
