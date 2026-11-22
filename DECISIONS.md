@@ -51711,6 +51711,19 @@ cannot know that commit, and a squash-merge gives it another name anyway.
 `coloraudit.py --check` reads the stamps back and says in a second, with
 no browser, whether a sheet has changed since.
 
+TWO OLDER CHECKS THE FIXES MADE WRONG, found by the whole run of the
+twenty-three affected suites and mended in the same pull request:
+`verify_seam` read the waiting line's rule word for word and did not know
+fix B's fifth declaration (523 of 524); and `verify_socialprofile` 18,
+under Reduce Motion, read a deleted card's fold ON THE SCREEN (97 of 98,
+beside the others and alone). The fold was the same (the room 440.7px both
+times); the page had started 32px further down, because the test scrolls
+the card's dots into view and fix E keeps them clear of the bar, and the
+browser's pull back to the shortened page's end was 32px more. The row
+reads the next card on the page now (its top plus the scroll): green as
+built, and red on a fold that glides under Reduce Motion, on a room that
+never closes, and on a glide made one jump.
+
 LEFT, AND SAID: the audit also noted that Skribl's own pages do not carry
 the one-line `color-scheme` hint in the head that the site does, "to add
 with the fixes". Not added here. Each page's own sheet says its scheme and
