@@ -154,8 +154,9 @@
       img.className = 'skribl-face-still';
       img.alt = '';
       img.decoding = 'async';
-      /* A face drawn again since, its old picture gone: the empty circle,
-         never a broken picture. */
+      /* A picture that cannot be had (the phone offline): the empty
+         circle, never a broken picture. (A face gone from the site comes
+         back as Skribl's own blank paper, from the same address.) */
       img.addEventListener('error', circle);
       img.src = r.f;
       f.appendChild(img);

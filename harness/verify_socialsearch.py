@@ -46,7 +46,7 @@ people.
      yet, one quiet line; typed, what the Gallery's box finds, See all its
      own; the words searched with the keyboard's Search and a person opened
      kept on the phone, newest first, an × each (named, 44px), Clear all, ten
-     at most, a face's picture gone the empty circle, each person's own
+     at most, a face's picture not to be had the empty circle, each person's own
      list; a recent search searches again in place; an emptied box brings
      the list back; storage refused, nothing
      breaks; the list and what is found trade places only unseen, read on
@@ -1469,13 +1469,14 @@ with app.app_context():
             check("ten at most, newest first: twelve searched, the ten newest kept and shown, word 12 first",
                   [r.get("q") for r in (ten or [])] == [f"word {i:02d}" for i in range(12, 2, -1)]
                   and shown_ten == [f"word {i:02d}" for i in range(12, 2, -1)], json.dumps({"kept": ten, "shown": shown_ten}))
-            # A face drawn again since: its old picture gone, the empty circle.
+            # A face whose picture cannot be had (a phone offline; here an address with nothing there): the empty
+            # circle. (A face gone from the site is never this: its address answers with Skribl's blank paper.)
             pg.evaluate("(k) => localStorage.setItem(k, JSON.stringify([{ t: 'p', h: 'pam', n: 'Pam Lee', u: '/social/@pam',"
-                        " f: '/s/nosuchface0/poster', v: {} }]))", KEY)
+                        " f: '/static/skribl/no-such-face.png', v: {} }]))", KEY)
             go(pg, "/social/search", wait=900)
             gone_face = pg.evaluate(PAGE13)["rows"]
-            check("a recent person whose face picture is gone (drawn again since) shows the empty circle, never a broken"
-                  " picture", [r["face"] for r in gone_face] == ["circle"], json.dumps(gone_face))
+            check("a recent person whose face picture cannot be had (a phone offline) shows the empty circle, never a"
+                  " broken picture", [r["face"] for r in gone_face] == ["circle"], json.dumps(gone_face))
             close_ctx(ctx, pg)
             # Each person's own: nobody's list is not Mira's, and the Gallery has none.
             ctx, pg = browser_as(b, None, "phone", "light")

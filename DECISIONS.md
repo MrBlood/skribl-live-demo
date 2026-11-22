@@ -52299,8 +52299,8 @@ five.
    See all) and the people opened from what was found, newest first, ten at
    most, the same words or person again going back to the top. A person's
    row as the People rows are (64px, face, name, @handle, a link to their
-   page; a face drawn again since, its old picture gone, the empty circle,
-   never a broken picture); words in a name's size but not its weight (17px 400: what you
+   page; a face whose picture cannot be had, a phone offline, the empty
+   circle, never a broken picture); words in a name's size but not its weight (17px 400: what you
    typed, not somebody); an × each, 44px, named for what it takes away, a
    screen reader told what went; Clear all at Recent's end in See all's
    small violet words (16px 600; the mock drew 15px: same role, same
