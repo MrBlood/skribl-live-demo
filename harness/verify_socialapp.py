@@ -1962,6 +1962,97 @@ with sync_playwright() as pw:
         except Exception as exc:  # noqa: BLE001
             stopped(13, exc)
 
+    # ------------------------------------------------------------------ 14
+    if part(14, "a press that shows: a button dips to 94% and a tenth darker while held, gliding there; under Reduce"
+                " Motion it only dims; a button's own fade kept; a pointer brightens the purple Post on a desk"):
+        try:
+            # THE OWNER'S "All yes", Nov 22, to Four Looks' 4, A (the Pad's own press). Held with the browser's own
+            # :active (DevTools' forced state, as the mock held it), each kind of Blooby's button read as the page
+            # computes it: its scale and filter at rest and held, and held under Reduce Motion; its transition
+            # listing the glide while keeping its own (a count's colour, Follow's fill); the tap flash off; and the
+            # glide read on every frame (the scale passes through values between 1 and 0.94: never a jump).
+            def force(pg_, cdp_, sel, states):
+                root = cdp_.send("DOM.getDocument", {"depth": 0})["root"]["nodeId"]
+                nid = cdp_.send("DOM.querySelector", {"nodeId": root, "selector": sel})["nodeId"]
+                cdp_.send("CSS.enable")
+                cdp_.send("CSS.forcePseudoState", {"nodeId": nid, "forcedPseudoClasses": list(states)})
+
+            READ14 = """(sel) => { const e = document.querySelector(sel); if (!e) return null; const c = getComputedStyle(e);
+              return { scale: c.scale, filter: c.filter, trans: c.transitionProperty, flash: c.webkitTapHighlightColor }; }"""
+            GLIDE14 = """(sel) => { const e = document.querySelector(sel); window.__p14 = []; if (!e) return; const t0 = performance.now();
+              (function f() { window.__p14.push(getComputedStyle(e).scale); if (performance.now() - t0 < 600) requestAnimationFrame(f); })(); }"""
+            KINDS = {"Make, in the bar": "nav.nav .tab-make", "the heart": ".post-row .lk-heart", "a repost": ".post-row .rp-btn",
+                     "a post's comments": ".post-row .post-count:not(.db-pen)", "the bell": "header.top .top-bell"}
+            pia = member(b, "pia", "Pia Strand")
+            vik = member(b, "vik", "Vik Moss")
+            held, still, glide = {}, {}, {}
+            for reduced in (False, True):
+                ctx, pg = browser_as(b, pia, reduced=reduced)
+                cdp = ctx.new_cdp_session(pg)
+                go(pg, "/social/")
+                pg.evaluate("""async () => { const t = document.querySelector('meta[name="social-csrf"]').content;
+                  await fetch('/social/posts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Social-CSRF': t },
+                    body: JSON.stringify({ words: 'A post to press on' }) }); }""")
+                go(pg, "/social/", wait=900)
+                for name, sel in KINDS.items():
+                    rest = pg.evaluate(READ14, sel)
+                    if not reduced:
+                        pg.evaluate(GLIDE14, sel)
+                        pg.wait_for_timeout(60)
+                    force(pg, cdp, sel, ["active"])
+                    pg.wait_for_timeout(650)
+                    frames = None if reduced else pg.evaluate("() => window.__p14")
+                    down = pg.evaluate(READ14, sel)
+                    force(pg, cdp, sel, [])
+                    pg.wait_for_timeout(300)
+                    (still if reduced else held)[name] = {"rest": rest, "held": down}
+                    if frames is not None:
+                        mids = sorted({float(v) for v in frames if v not in ("none", "") and 0.94 < float(v) < 1})
+                        glide[name] = len(mids)
+                if not reduced:
+                    go(pg, "/social/@vik", wait=700)
+                    fo = ".prof .fo-btn, .fo-btn"
+                    rest = pg.evaluate(READ14, fo)
+                    force(pg, cdp, fo, ["active"])
+                    pg.wait_for_timeout(450)
+                    held["Follow"] = {"rest": rest, "held": pg.evaluate(READ14, fo)}
+                    force(pg, cdp, fo, [])
+                close_ctx(ctx, pg)
+            # A desk: the purple Post in the composer brightens under a pointer; a phone's never does.
+            hov = {}
+            for screen in ("desk", "phone"):
+                ctx, pg = browser_as(b, pia, screen=screen)
+                cdp = ctx.new_cdp_session(pg)
+                go(pg, "/social/", wait=700)
+                pg.click("nav.nav .tab-make")
+                pg.wait_for_timeout(900)
+                sel = "#composeSheet .btn-primary"
+                force(pg, cdp, sel, ["hover"])
+                pg.wait_for_timeout(300)
+                hov[screen] = (pg.evaluate(READ14, sel) or {}).get("filter")
+                close_ctx(ctx, pg)
+            check("held, each kind of Blooby's button dips to 94% and a tenth darker (Make in the bar, the heart, a repost, a"
+                  " post's comments, the bell, Follow), and at rest is as it was; the phone's own tap flash off on each",
+                  len(held) == 6 and all(v["rest"] and v["rest"]["scale"] == "none" and v["rest"]["filter"] == "none"
+                                         and v["held"]["scale"] == "0.94" and v["held"]["filter"] == "brightness(0.9)"
+                                         and v["rest"]["flash"] == "rgba(0, 0, 0, 0)" for v in held.values()),
+                  json.dumps(held)[:1500])
+            check("...gliding there in the Pad's 0.18s: the scale passes through values between 1 and 0.94 on the frames"
+                  " between (never a jump), for every kind",
+                  len(glide) == 5 and all(n >= 2 for n in glide.values()), json.dumps(glide))
+            check("...a button's own fade kept beside the glide: a repost's colour, Follow's fill and colour (the glide"
+                  " listed with them, not in their place)",
+                  "color" in held["a repost"]["rest"]["trans"] and "scale" in held["a repost"]["rest"]["trans"]
+                  and "background-color" in held["Follow"]["rest"]["trans"] and "scale" in held["Follow"]["rest"]["trans"],
+                  json.dumps({k: held[k]["rest"]["trans"] for k in ("a repost", "Follow")}))
+            check("...under Reduce Motion a held button only dims: nothing moves",
+                  len(still) == 5 and all(v["held"]["scale"] == "none" and v["held"]["filter"] == "brightness(0.9)"
+                                          for v in still.values()), json.dumps(still)[:900])
+            check("...and on a desk a pointer brightens the purple Post (as Danger and Follow brighten); a phone's never"
+                  " stays lit", hov.get("desk") == "brightness(1.08)" and hov.get("phone") == "none", json.dumps(hov))
+        except Exception as exc:  # noqa: BLE001
+            stopped(14, exc)
+
     # ------------------------------------------------------------------ 10
     if part(10, "no page errors, no console errors and no CSP violations"):
         try:

@@ -681,6 +681,9 @@
     doc.addEventListener('touchcancel', touched, quiet);
     wait();
   })();
+  /* A PRESS THAT SHOWS (social.css): iOS applies :active on a touch only on a page that
+     listens for touchstart. The viewport's watch above listens too; this one says why. */
+  doc.addEventListener('touchstart', function () {}, { passive: true });
   doc.addEventListener('submit', function (e) { if (!e.defaultPrevented) dropKeyboard(); });
   window.addEventListener('pagehide', dropKeyboard);
   window.SocialViewport = { stuck: viewportStuck, drop: dropKeyboard };

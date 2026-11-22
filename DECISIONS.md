@@ -52425,3 +52425,39 @@ shadow cut to its ring). Two rows join it: no card on either page casts a
 soft shadow (no layer of its own shadow blurred and painted), light and
 dark; and in dark a card's ring is the 26% edge (a probe in the card mixes
 the same colour, so the two are said alike).
+
+
+## After v330 -- A press that shows, on Blooby (Four Looks' 4, A)
+
+The owner's "All yes", Nov 22, 8:31 AM, to Four Looks' 4: A, the Pad's own
+press. Blooby's buttons did nothing under a finger (the phone's own grey
+tap flash switched off on most of them), where the Pad's and Flip's dip.
+NOW, while held, a button (a .btn, an icon button, a post's counts, a
+repost, the heart, the bar's places, Follow, the answer bar's Say) dips to
+94% and a tenth darker, gliding there in the Pad's 0.18s and back the same
+way; under Reduce Motion it only dims; the phone's grey flash is off on
+each, so one tap never flashes twice; and on a desk a pointer brightens
+the main purple button (the composer's Post), as Danger and Follow already
+brighten, a hover being a pointer's alone.
+
+HOW, so nothing else moves: the dip is the `scale` property, so a
+button's own transform is never replaced; the glide is a rule of no weight
+(`:where`), so a button with a transition of its own keeps it and lists
+the glide in it (`--press-glide`: Follow's fill and colour, a post's and a
+comment's repost colour). iOS applies :active on a touch only on a page
+that listens for touchstart: social.js says so with a listener of its own
+(the viewport's watch listens too, for its own reasons). Pad and Flip:
+theirs already; nothing of theirs changes.
+
+THE CHECK, `verify_socialapp` 14, each kind held with the browser's own
+:active (as the mock held it): Make in the bar, the heart, a repost, a
+post's comments, the bell and Follow dip to 0.94 and brightness(0.9) and
+rest at none, the tap flash off on each; the scale read on every frame
+passes through values between 1 and 0.94 (eight frames, never a jump); a
+repost keeps its colour fade and Follow its fill's beside the glide;
+under Reduce Motion a held button only dims; on a desk the purple Post
+brightens under a pointer, a phone's never. Calibrated, each break red
+only in its rows: the press rule out (held, glide and Reduce Motion red);
+the glide made heavy enough to replace a button's own fade (the fade row);
+no glide (the glide row); no Reduce Motion rule (its row); no desk hover
+(its row); the tap flash left on (the held row).
