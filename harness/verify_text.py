@@ -130,6 +130,26 @@ Thickness and Speed as tiles. Each row holds a promise:
      message from anywhere but that frame closes nothing; and Your hand
      opened by itself, with or without the flag, is as it always was. Pad
      and Flip, one module.
+ 24. INSIDE A POST, ON A PHONE'S KEYBOARD; AND NEW TAKES THE WORDS (the
+     owner's iPhone, Nov 22, the Pad inside a post in the Home Screen app:
+     Text opened with the keyboard over its drawer, the field under the
+     keys; the words went up under the header; New said "Already a fresh
+     one" and left the words in the box). The editor in a host's frame
+     filling the screen, as the site's composer holds it, on a stand-in
+     host page; the keyboard told to the OUTERMOST window alone (its visual
+     viewport shorter, and offset where the phone slides the view up to
+     show the field), as an iPhone tells it, the frame's own the whole
+     frame. With the keyboard up the drawer sits on it as the words and
+     Write it, the field above the keys, the words above the drawer and
+     below the header, its room kept; slid up 150px and 300px of a 336px
+     keyboard, it still sits on what can be seen and the words stay
+     between the top of what shows (or the header) and the drawer, or on
+     the drawing's foot where the drawing ends above what shows; words put
+     at the top of the drawing come below the header while typed and go
+     back after; with the keyboard gone the whole drawer is back and the
+     words where they were put. And words typed and not yet written are
+     work: New Skribl takes them, saying so with its Undo, Text opens
+     empty after, and the Undo brings them back. Pad and Flip.
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
