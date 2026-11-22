@@ -471,8 +471,13 @@ in the mock page.
      `docs/DEVICE-CHECKLIST.md`, "Blooby on the Home Screen", says how.
   8. "ALL YES." (4:51 PM, with the first picture of the bar), to the
      colour audit's eleven choices (`DECISIONS.md`, ""All yes" to the
-     colour audit's eleven"): what each is, which are built and which wait
-     for their mock, is there.
+     colour audit's eleven"). BUILT that night: 1, 5, 6, 7, 8 and the
+     first half of 10 (`DECISIONS.md`, "The colour audit's yes, built").
+     STILL OWED: the mocks for 2, 3, 4 and 11 (each waits for a yes of its
+     own to the look it shows), and 10's second half to ask again (Cal's
+     pick: yes, a check that holds today's counts of colours written into
+     rules). The "more contrast" values are Cal's, by measurement: the
+     owner's to adjust.
 - **THE KEYBOARD FIX IS THE OWNER'S PHONE TO SAY** (`DECISIONS.md`, "No
   strip of Home under a sheet on a phone's keyboard"). The tell: in Make,
   the words tapped, the sheet's own lilac paper down to the keys and

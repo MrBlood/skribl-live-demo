@@ -378,6 +378,11 @@ and 11 change how things look, so each gets a mock first (now beside after,
 light and dark, a touch phone and a desk). The rest can be built straight
 away, each with a check shown red first.
 
+ANSWERED "All yes." the same afternoon. BUILT that night: 1, 5, 6, 7, 8
+and the first half of 10 (`DECISIONS.md`, "The colour audit's yes,
+built"). 2, 3, 4 and 11 wait for their mocks; 9 was "leave it"; 10's
+second half had no pick, so it is asked again.
+
 1. **Thin lines on in-between screens. Pick: yes.** Add the steps of
    `--hair` between the three, so a line is one sharp pixel at 125 to 175%
    and 2.75x too. Tried: the card, the tile and the Pad's menu card go from

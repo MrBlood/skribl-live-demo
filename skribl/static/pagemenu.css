@@ -59,7 +59,16 @@
    is a line of --edge above or below its row. The ring's ink is the line as
    it looked over what the border was drawn on, laid over it and made solid. */
 :root { --hair: 1; --edge: calc(1px * var(--hair)); }
+/* A step for each density between 1x, 2x and 3x too (the colour audit of
+   Nov 21, choice 1): styles.css, THE CANVAS'S EDGE, says why. */
+@media (min-resolution: 1.25dppx) { :root { --hair: 0.8; } }
+@media (min-resolution: 1.5dppx) { :root { --hair: 0.6667; } }
+@media (min-resolution: 1.75dppx) { :root { --hair: 0.5715; } }
 @media (min-resolution: 2dppx) { :root { --hair: 0.5; } }
+@media (min-resolution: 2.25dppx) { :root { --hair: 0.4445; } }
+@media (min-resolution: 2.5dppx) { :root { --hair: 0.4; } }
+@media (min-resolution: 2.625dppx) { :root { --hair: 0.381; } }
+@media (min-resolution: 2.75dppx) { :root { --hair: 0.3637; } }
 @media (min-resolution: 3dppx) { :root { --hair: 0.3334; } }
 /* ---- THE MENU'S PAPER, restated (after v324: the Gallery and Library menu
    mock, A, "All yes") -------------------------------------------------------

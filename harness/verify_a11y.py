@@ -1458,6 +1458,58 @@ with sync_playwright() as p:
               not _low,
               "; ".join(_low[:6]) or f"the least: light {_seen['light'][2]}, dark {_seen['dark'][2]}")
 
+    print("\nA11Y 11d — switched off, Undo and Redo can still be told: 3 to 1 on their ground, at full strength")
+    # A CONTROL THAT IS OFF KEEPS ITS SHAPE AND ONLY ITS WORDS GO QUIET (No
+    # dinge, Nov 17: --off-ink at full strength, where the whole button had
+    # faded to 30 to 42%). Dark's quiet ink read 3.99 to 1 on the Pad's ground
+    # and light's 2.38: off, and hard to tell what it was. The colour audit of
+    # Nov 21 put it to the owner as choice 7 ("All yes"): light one step
+    # deeper, 3.01, still clearly off. Nothing read it, so nothing held it.
+    #
+    # WCAG asks nothing of a control that is off; the floor is ours, the
+    # number the owner said yes to. Read as 11c reads a hint: the button's own
+    # ink as the browser resolves it, times its opacity, over what is painted
+    # behind it. Checked against the paint when this row was written (each
+    # button photographed with its ink and with it see-through, the pixels
+    # that change): the same to the hundredth, both editors, both themes.
+    # A fresh editor has nothing to undo, so both are off as the page opens.
+    OFF_FLOOR = 3.0
+    OFFS = r"""() => {
+      const rgba = (s) => { let m = /^rgba?\(([^)]+)\)$/.exec(s);
+        if (m) { const p = m[1].split(/[\s,\/]+/).filter(Boolean).map(parseFloat); return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1]; }
+        m = /^color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\)$/.exec(s);
+        return m ? [m[1] * 255, m[2] * 255, m[3] * 255, m[4] === undefined ? 1 : +m[4]] : null; };
+      const over = (f, b) => [0, 1, 2].map(i => f[i] * f[3] + b[i] * (1 - f[3])).concat([1]);
+      const ground = (el) => { const st = [];
+        for (let e = el; e; e = e.parentElement) { const c = rgba(getComputedStyle(e).backgroundColor);
+          if (c && c[3] > 0.001) { st.push(c); if (c[3] >= 0.999) break; } }
+        let g = (st.length && st[st.length - 1][3] >= 0.999) ? st.pop() : [255, 255, 255, 1];
+        while (st.length) g = over(st.pop(), g);
+        return g; };
+      const lum = (c) => { const v = c.slice(0, 3).map(x => x / 255).map(x => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
+        return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+      const hex = (c) => '#' + c.slice(0, 3).map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+      return [...document.querySelectorAll('button:disabled')].filter(el => el.getClientRects().length
+          && /^(Undo|Redo)\b/.test(el.getAttribute('aria-label') || el.title || '')).map(el => {
+        const cs = getComputedStyle(el), c = rgba(cs.color), g = ground(el);
+        const ink = over([c[0], c[1], c[2], c[3] * parseFloat(cs.opacity || '1')], g), a = lum(ink), b = lum(g);
+        return { name: (el.getAttribute('aria-label') || el.title).split(' ')[0], ink: hex(ink), ground: hex(g), opacity: cs.opacity,
+                 ratio: Math.round((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) * 100) / 100 }; }); }"""
+    for _path, _name in (("/", "Pad"), ("/flip", "Flip")):
+        _off = {}
+        for _theme in ("light", "dark"):
+            _pg = browser.new_page(viewport={"width": 390, "height": 844})
+            _pg.goto(BASE + _path + "?theme=" + _theme, wait_until="load")
+            _pg.wait_for_timeout(700)
+            _off[_theme] = (_pg.evaluate("() => document.documentElement.getAttribute('data-theme')"), _pg.evaluate(OFFS))
+            _pg.close()
+        check(f"{_name}: with nothing to undo, Undo and Redo are both off, at full strength, and read {OFF_FLOOR} to 1 or more "
+              "on what is behind them, light and dark",
+              all(st == t and sorted(o["name"] for o in offs) == ["Redo", "Undo"]
+                  and all(o["opacity"] == "1" and o["ratio"] >= OFF_FLOOR for o in offs) for t, (st, offs) in _off.items()),
+              "; ".join(f"{t}: " + ", ".join(f"{o['name']} {o['ink']} on {o['ground']} {o['ratio']} (opacity {o['opacity']})" for o in offs)
+                        for t, (st, offs) in _off.items()))
+
     # ------------------------------------------------------------ section 12
     print("\nA11Y 12 — every segmented control is a named group whose options say what they are")
     # Outside review of v290, findings 7 and 8. Tips said role="group"

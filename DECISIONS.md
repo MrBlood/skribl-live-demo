@@ -51739,3 +51739,88 @@ who use a keyboard, a screen reader or forced colours, and to anybody
 reading a hint in dim light; simple, nothing new on any screen; powerful
 and playful, not touched. NOT TESTED HERE: Safari, a real Windows
 high-contrast theme, a screen reader's own voice.
+
+## After v330 -- The colour audit's yes, built: one sharp pixel between the steps, "more contrast" on the site, the copies held, and four small ones
+
+Six of the owner's "All yes." to the colour audit's eleven (`DECISIONS.md`,
+""All yes" to the colour audit's eleven"): the ones that could be built
+straight away, each with a check shown red first. 2, 3, 4 and 11 wait for
+their mocks; 9 was "leave it"; 10's second half had no pick and is asked
+again.
+
+1. ONE SHARP PIXEL BETWEEN THE STEPS. --hair was 1, a half and a third: one
+sharp screen pixel at 1x, 2x and 3x and two soft ones between (a Windows
+screen at 125, 150 or 175%; many Android phones at 2.625 and 2.75). A step
+for each density between: 1.25, 1.5, 1.75, 2.25, 2.5, 2.625 and 2.75, each
+1 over its density to four places, in the editors' sheet (and so the
+link player's and the Gallery section's, which are made from it), the
+page menus' and the site's. The editors' rows had kept their own copy of
+the three old steps; they take the body's now. `verify_socialposts` 17:
+--hair times the density is one at all ten densities on the site, the Pad,
+the Gallery and the Library, and a post's card's edge is one screen pixel
+as painted at the five the audit read, light and dark. FOUR BREAKS red:
+the site's steps taken out, the editors', the page menus', and one step
+given a wrong value. NOT SEEN on a Windows screen or an Android phone:
+Chromium at those densities. The link player's stylesheet grew 426 bytes
+for it, in its ledger.
+
+5. "MORE CONTRAST", ANSWERED. With the device's setting on, not one pixel of
+the site changed. Now, for somebody who asks: the grey words a step
+stronger (light #374151, 10.31 to 1 on a card where #4b5563 reads 7.56;
+dark #d6dbe3, 11.44 where #b7bfcc reads 8.59) and every edge firmer (a
+card's edge 3.42 from the card and 3.21 from the page in light, 3.15 and
+3.71 in dark, where it reads 1.5 to 1.9; the thin rule, the line between
+two rows and the bar's top line about twice as strong; a tile's line
+stronger). Each theme carries its own -hc values beside its ramp; one
+mapping after both dark copies puts them over the names, as specific as
+each, so it holds in light, dark chosen and dark by the device. Nobody
+without the setting sees any of it. The values are Cal's, by measurement,
+for "a step stronger" and "firmer": the owner's to adjust.
+`verify_socialsettings` 15, light, dark chosen and dark unstamped, with
+the setting and without. FIVE BREAKS red: no mapping; the unstamped dark
+arm missing; the mapping leaking to everyone; light's grey not stronger;
+dark's edge too soft. Its first reading took a colour-mix (spelt in
+fractions) for 0 to 255 and called every edge black; mended before it was
+believed.
+
+6. A COPY IS ITS ORIGINAL. Three of the site's copies had drifted from what
+they copy: the thin rule (12% and 14% where the editors' is 10% and 12%),
+the chosen pill's words in dark (#d4c9ff where the Gallery's moved to
+#dad1ff) and the other pill's words in light (#3f4756 where it moved to
+#3b4251). Each is its original's value again. `verify_socialsettings` 14
+holds all ten copies to their originals, light and dark, as the pages
+resolve them, and holds that the list is the sheet's own (every token
+line whose comment names one of the editors' is in it). EIGHT BREAKS red:
+each drifted copy put back; an original moved; the Gallery's moved; a
+new copy said in a comment and not held; another copy moved.
+
+7. UNDO AND REDO WITH NOTHING TO UNDO. Light's --off-ink one step deeper,
+#928ab8: 3.01 to 1 on the Pad's ground (2.38 before), still plainly off;
+dark's reads 3.99. `verify_a11y` 11d, both editors, both themes, as
+painted. FIVE BREAKS red: light's old value; dark's made dim; the buttons
+faded; the Pad's rule gone; Flip's.
+
+8. NO SHEET THINS ITS LETTERS. Six lines asked the browser to draw letters
+with grey smoothing alone (the editors' body and the amber pill, the
+site's body, the Gallery's, the Library's and the feed's own pages). It
+does nothing on an iPhone or on Windows; on a Mac it draws letters thinner
+than the system would. Gone. `verify_theme` holds it gone, as a
+declaration in any sheet or template (a sentence about it is not it):
+SIX BREAKS red (the line put back in five of the six places, and in a
+sheet made from the editors'); a comment that names it stays green. NOT
+SEEN ON A MAC.
+
+10, THE FIRST HALF. ONE COLOUR, ONE NAME TO SET IT BY. The second ink's
+four other names point at --text-secondary and the violet's four roles at
+--accent, in both ramps; no colour moved (the token table, made again,
+moves only the rows the other choices meant to move). `verify_theme`:
+FOUR BREAKS red (a grey written out in dark, one in light, a violet, a
+name dropped).
+
+THE TOKEN TABLE is made again on these sheets.
+
+FLIP AND THE PAD: 1, 7, 8 and 10 are theirs and shared (one stylesheet);
+5 and 6 are the site's. AGAINST THE FOUR: kind, above all, to the people
+who ask their device for more contrast, or read on a screen between the
+steps; simple, nothing new to learn anywhere; powerful and playful, not
+touched.

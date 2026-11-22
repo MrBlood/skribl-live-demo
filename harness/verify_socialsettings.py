@@ -69,6 +69,14 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
      its ring outside; and outside the mode none of it is seen.
  13. ON A PHONE'S LAYOUT NOTHING THE KEYBOARD REACHES IS UNDER THE BAR (fix
      E): Settings walked with Tab to its foot, each stop read at nine points.
+ 15. "MORE CONTRAST", ANSWERED (the colour audit of Nov 21, choice 5): with
+     the device's setting on, the grey words a step stronger and every edge
+     firmer, light, dark chosen and dark by the device; without it, nothing
+     moves.
+ 14. A COPY IS ITS ORIGINAL (the colour audit of Nov 21, choice 6): each of
+     the site's ten copied colours against the editors' or Skribl's
+     Gallery's, light and dark, as the pages resolve them; and the list is
+     the sheet's own account of what it copied.
 
 SOCIALSETTINGS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
@@ -1773,6 +1781,146 @@ with sync_playwright() as p:
                   f"{[(s['name'], s['bar'], s['own']) for s in under][:6]}")
         except Exception as exc:  # noqa: BLE001
             stopped(13, exc)
+
+    # ------------------------------------------------------------------ 15
+    # "MORE CONTRAST", ANSWERED (the colour audit of Nov 21, choice 5; the
+    # owner's "All yes"). With the device's setting on, not one pixel of the
+    # site changed. It does now, for somebody who asks: the grey words a step
+    # stronger and every edge firmer, light, dark chosen and dark by the
+    # device; and nobody without the setting sees any of it. READ AS PAINTED
+    # where words are concerned (a post's grey line on Home's card, its ink as
+    # the browser resolves it over the card), and the edge as the ring's own
+    # colour over the card and over the page beside it.
+    if part(15, "more contrast, answered: the grey words a step stronger and every edge firmer, only for somebody who asks"):
+        try:
+            nico = someone(b, "nico", "Nico Reyes")
+            # A card on Home to read: her own post, which her Home shows first (made through the page, as part 9's).
+            nico.pg.goto(BASE + "/social/")
+            st15 = nico.pg.evaluate("""async () => { const tok = document.querySelector('meta[name=social-csrf]').content;
+                const r = await fetch('/social/posts', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-Social-CSRF': tok },
+                  body: JSON.stringify({ words: 'Section 15, a card to read in more contrast' }) });
+                return r.status; }""")
+            # A COLOUR-MIX IS SPELT color(srgb r g b) IN FRACTIONS, a card's edge among them: read as such (the first
+            # reading took the fractions for 0 to 255 and called every edge black).
+            HC = r"""() => { const rgba = (s) => { let m = /^color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\)$/.exec(s);
+                if (m) return [m[1] * 255, m[2] * 255, m[3] * 255, m[4] === undefined ? 1 : +m[4]];
+                m = (s.match(/[\d.]+/g) || []).map(Number); return [m[0], m[1], m[2], m.length > 3 ? m[3] : 1]; };
+              const over = (f, b) => [0, 1, 2].map(i => f[i] * f[3] + b[i] * (1 - f[3]));
+              const lum = (c) => { const v = c.map(x => x / 255).map(x => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
+                return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+              const cr = (a, b) => { const x = lum(a), y = lum(b); return Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100; };
+              const hex = (c) => '#' + c.map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+              const root = getComputedStyle(document.documentElement);
+              const tok = (n) => { const p = document.createElement('i'); p.style.color = 'var(' + n + ')'; document.body.appendChild(p); const c = getComputedStyle(p).color; p.remove(); return rgba(c); };
+              const card = document.querySelector('.post-card'), sub = card && card.querySelector('.post-sub');
+              const cardBg = card ? rgba(getComputedStyle(card).backgroundColor) : [255, 255, 255, 1];
+              const page = rgba(getComputedStyle(document.body).backgroundColor);
+              const words = sub ? over(rgba(getComputedStyle(sub).color), cardBg) : null;
+              const edge = over(tok('--card-edge'), cardBg);
+              return { theme: document.documentElement.getAttribute('data-theme'), scheme: root.colorScheme,
+                       ink2: hex(over(tok('--ink-2'), page)), words: words ? hex(words) : null, wordsOnCard: words ? cr(words, cardBg.slice(0, 3)) : null,
+                       edge: hex(edge), edgeOnCard: cr(edge, cardBg.slice(0, 3)), edgeOnPage: cr(edge, page.slice(0, 3)),
+                       rule: tok('--rule')[3], rowLine: tok('--row-line')[3], navLine: tok('--nav-line')[3], cardLine: tok('--card-line')[3] }; }"""
+            seen15 = {}
+            # DARK BY THE DEVICE, NOTHING STAMPED: with scripts the boot stamps the device's theme, so this one is read
+            # as part 8 reads it, before any script (the sheet's own arm for an unstamped dark device).
+            for label, scheme, theme in (("light", "light", "light"), ("dark chosen", "light", "dark"), ("dark by the device", "dark", None)):
+                for more in (False, True):
+                    ctx, pg = browser_as(b, nico, "phone", scheme, theme=theme, js=label != "dark by the device")
+                    if more:
+                        pg.emulate_media(contrast="more")
+                    if label == "dark by the device":
+                        pg.goto(BASE + "/social/")
+                        pg.wait_for_timeout(300)
+                    else:
+                        go(pg, "/social/", wait=700)
+                    seen15[(label, more)] = pg.evaluate(HC)
+                    close_ctx(ctx, pg)
+            WANT = {"light": ("#374151", 9.0, 3.0), "dark chosen": ("#d6dbe3", 11.0, 3.0), "dark by the device": ("#d6dbe3", 11.0, 3.0)}
+            REST = {"light": "#4b5563", "dark chosen": "#b7bfcc", "dark by the device": "#b7bfcc"}
+            bad15 = []
+            for label, (ink, floor, edge_floor) in WANT.items():
+                on, off = seen15[(label, True)], seen15[(label, False)]
+                if not (on["ink2"] == ink and on["words"] and on["wordsOnCard"] >= floor and on["edgeOnCard"] >= edge_floor and on["edgeOnPage"] >= edge_floor):
+                    bad15.append(f"{label} with the setting: {on}")
+                if not (on["rule"] >= 2 * off["rule"] - 0.001 and on["rowLine"] >= 2 * off["rowLine"] - 0.001 and on["navLine"] >= 2 * off["navLine"] - 0.001
+                        and on["cardLine"] > off["cardLine"]):
+                    bad15.append(f"{label} lines: {on['rule'], on['rowLine'], on['navLine'], on['cardLine']} against {off['rule'], off['rowLine'], off['navLine'], off['cardLine']}")
+                if not (off["ink2"] == REST[label] and off["edgeOnCard"] < 2 and off["wordsOnCard"] and off["wordsOnCard"] < on["wordsOnCard"]):
+                    bad15.append(f"{label} without it: {off}")
+            check("with \"more contrast\" on, the site answers it, light, dark chosen and dark by the device: a post's grey line in"
+                  " the stronger ink (9:1 or more on its card in light, 11:1 in dark), a card's edge 3:1 or more from the card and"
+                  " from the page, and the thin rule, the line between two rows and the bar's top line twice as strong, a tile's"
+                  " line stronger; without the setting every one of them is as it was",
+                  st15 == 200 and len(seen15) == 6 and not bad15 and all(seen15[(l, m)]["theme"] == (None if l == "dark by the device" else l.split()[0])
+                                                         for l in WANT for m in (False, True)),
+                  "; ".join(bad15)[:1200] or json.dumps({f"{k[0]}{' +' if k[1] else ''}": (v["ink2"], v["wordsOnCard"], v["edgeOnCard"], v["edgeOnPage"]) for k, v in seen15.items()}))
+        except Exception as exc:  # noqa: BLE001
+            stopped(15, exc)
+
+    # ------------------------------------------------------------------ 14
+    # A COPY IS ITS ORIGINAL (the colour audit of Nov 21, choice 6; the owner's
+    # "All yes"). The site names its own tokens, and where a role is the
+    # editors' or the Gallery's it copies the value and says whose in a
+    # comment beside it. Nothing held a copy to its original but that comment,
+    # and three had drifted: the thin rule between rows (12% and 14% where the
+    # editors' --menu-card-rule is 10% and 12%), the chosen pill's words in
+    # dark (#d4c9ff where the Gallery's moved to #dad1ff) and the other pill's
+    # words in light (#3f4756 where the Gallery's moved to #3b4251). Nobody
+    # could see these side by side: drift, not a look. Each is its original's
+    # value again, and this holds them there.
+    #
+    # READ AS EACH PAGE RESOLVES IT, light and dark: the site's token on the
+    # site, its original on the Pad or on Skribl's Gallery, each laid on a
+    # probe's ink so the browser says the colour in one spelling (a var()
+    # followed, 0.10 and 0.1 the same). AND THE LIST IS THE SHEET'S OWN: every
+    # token line in social.css whose comment names a token of the editors' is
+    # in it, and the pill's three, which its comment gives to the Gallery.
+    if part(14, "a copy is its original: the site's ten copied colours, each against the editors' or the Gallery's, light and dark"):
+        try:
+            COPIES = [("--fill", "pad", "--accent-fill"), ("--sheet-paper", "pad", "--menu-paper"), ("--row-bg", "pad", "--menu-card"),
+                      ("--card", "pad", "--menu-card"), ("--card-line", "pad", "--menu-card-line"), ("--rule", "pad", "--menu-card-rule"),
+                      ("--danger-fill", "pad", "--danger-fill"), ("--pill-on-fill", "gallery", "--seg-on-fill"),
+                      ("--pill-on-ink", "gallery", "--seg-on-ink"), ("--pill-off-ink", "gallery", "--seg-off-ink")]
+            INK = """(names) => { const p = document.createElement('i'); document.body.appendChild(p); const o = {};
+              for (const n of names) { p.style.color = ''; p.style.color = 'var(' + n + ')'; o[n] = p.style.color ? getComputedStyle(p).color : null; }
+              p.remove(); return o; }"""
+            pages14 = {"site": ("/social/", [c[0] for c in COPIES]), "pad": ("/skribl-pad", sorted({c[2] for c in COPIES if c[1] == "pad"})),
+                       "gallery": ("/gallery", sorted({c[2] for c in COPIES if c[1] == "gallery"}))}
+            seen14 = {}
+            for scheme in ("light", "dark"):
+                for key, (path, names) in pages14.items():
+                    ctx, pg = browser_as(b, None, "desk", scheme, theme=scheme)
+                    pg.goto(BASE + path)
+                    pg.wait_for_function("() => document.readyState === 'complete'", timeout=15000)
+                    pg.wait_for_timeout(500)
+                    seen14[(scheme, key)] = (pg.evaluate("() => document.documentElement.getAttribute('data-theme')"), pg.evaluate(INK, names))
+                    close_ctx(ctx, pg)
+            off14 = []
+            for mine, where, theirs in COPIES:
+                for scheme in ("light", "dark"):
+                    a, o = seen14[(scheme, "site")][1].get(mine), seen14[(scheme, where)][1].get(theirs)
+                    if not a or not o or a != o:
+                        off14.append(f"{scheme} {mine} {a} against {where}'s {theirs} {o}")
+            stamped14 = {f"{k[0]} {k[1]}": v[0] for k, v in seen14.items()}
+            check("each of the site's ten copied colours is its original's, light and dark, as the pages themselves resolve them: "
+                  "the action's fill, a sheet's paper, a row's and a card's ground, a card's line, the thin rule and Danger against "
+                  "the editors'; the one pill's tint and its two inks against Skribl's Gallery's",
+                  not off14 and all(v == k.split()[0] for k, v in stamped14.items()),
+                  "; ".join(off14[:6]) or f"all ten the same in both themes ({stamped14})")
+            # The sheet's own account of what it copied: a token line with a comment that names one of the editors' tokens.
+            sk14 = re.sub(r"/\*.*?\*/", "", (ROOT / "skribl" / "static" / "styles.css").read_text(encoding="utf-8"), flags=re.S)
+            theirs14 = set(re.findall(r"(--[\w-]+)\s*:", sk14))
+            said14 = sorted({(m.group(1), m.group(2)) for m in re.finditer(r"^\s*(--[\w-]+)\s*:[^;\n]*;\s*/\*\s*(--[\w-]+)", CSS, re.M)
+                             if m.group(2) in theirs14})
+            held14 = {(c[0], c[2]) for c in COPIES}
+            check("...and the list is the sheet's own: every token line in social.css whose comment names a token of the editors' is "
+                  "held (six or more of them), and the pill's three, which its comment gives to the Gallery's",
+                  len(said14) >= 6 and all(pair in held14 for pair in said14)
+                  and all(re.search(r"gallerysection\.css:[^*]*" + re.escape(n), CSS) for n in ("--seg-on-fill", "--seg-on-ink", "--seg-off-ink")),
+                  f"the sheet says {said14}; not held: {[pair for pair in said14 if pair not in held14]}")
+        except Exception as exc:  # noqa: BLE001
+            stopped(14, exc)
 
     # ------------------------------------------------------------------ 11
     if part(11, "no page errors, no console errors and no CSP violations"):

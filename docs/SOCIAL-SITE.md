@@ -3701,3 +3701,32 @@ cannot read what the body says). A desk has no bar at its foot and asks
 nothing. `verify_socialsettings` 13 walks Settings with Tab from top to
 foot, and `verify_socialcomments` 50 a post's page with ten comments, each
 stop read at nine points of it: not one under either bar.
+
+## 39. Built: "more contrast" answered, and a copy is its original (Nov 21)
+
+Two of the colour audit's choices the owner said yes to that are the
+site's (`docs/COLOR-AUDIT.md`, choices 5 and 6; `DECISIONS.md`, "The colour
+audit's yes, built").
+
+"MORE CONTRAST", ANSWERED. With a device asking for more contrast the site
+changed not one pixel. Now each theme carries "-hc" values beside its ramp
+(`--ink-2-hc`, `--card-edge-hc`, `--card-line-hc`, `--rule-hc`,
+`--row-line-hc`, `--nav-line-hc`), and one `@media (prefers-contrast: more)`
+block after both dark copies puts them over the names: the grey words a
+step stronger, a card's edge 3 to 1 or more from the card and the page,
+the thin lines twice as strong. Light, dark chosen and dark by the device
+(nothing stamped) alike; nobody without the setting sees it.
+`verify_socialsettings` 15.
+
+A COPY IS ITS ORIGINAL. Where the site's token copies the editors' or the
+Gallery's it says whose in a comment, and three had drifted: the thin rule,
+the chosen pill's words in dark and the other pill's in light. They are
+their originals' values again, and `verify_socialsettings` 14 holds all
+ten copies to their originals as the pages resolve them, and the list to
+the sheet's own comments: a new copy said in a comment and not held goes
+red.
+
+AND ONE SHARP PIXEL BETWEEN THE STEPS (choice 1, the site's and the
+editors'): `--hair` has a step for each density between 1x, 2x and 3x, so
+a line is one screen pixel on a Windows screen at 125 to 175% and on 2.625
+and 2.75x phones. `verify_socialposts` 17.
