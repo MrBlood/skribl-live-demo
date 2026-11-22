@@ -201,7 +201,8 @@
   ".rl-chips.rl-song button",
   ".player-bar .rl-song",
   "body .canvas-wrap:not(.light-bg)",
-  ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .rl-scrub"
+  ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .rl-scrub",
+  "button"
  ],
  "editor": [
   "#canvas",

@@ -51892,3 +51892,120 @@ reads #b7bfcc, as the sheet spelled out before #1043, so the row measures
 what it always did. On clean checkouts of main: as it is, the same crash;
 mended, 162 of 162; mended with the second ink made faint (#4a4f59 in
 dark), 161 of 162, that row alone red (worst 2.10 to 1).
+
+## After v330 -- Four Looks, mocked: the colour audit's four that change how things look
+
+The owner's "All yes." (Nov 21) to the colour audit's eleven left four for
+a mock first, because they change how things look: 11, 3, 4 and 2. Put to
+the owner that night as the artifact "Four Looks"
+(https://claude.ai/artifact/AYhGmSpfh9VBJPHgWL2iFo): now beside each
+option, light and dark, a touch phone (3x) and a desk, measured, with a
+pick each, so "all yes" is a whole answer. NOTHING OF IT IS BUILT.
+
+11. WHICH ONE IS CHOSEN. A: the chosen word in the font's own bold (700),
+each side keeping room for its word in bold, so nothing moves when the
+choice moves (measured 0px); the pill a hair wider, under a pixel a
+side. B: a 0.16px outline of its own ink round each letter, matched to
+add as much ink as A (12 to 13% at 1x, 2x and 3x), with no box changed;
+drawn over the font, not by it. PICK A. Flip's move bar, the reason one
+weight was chosen, does not scroll in either at 320, 360 or 402. Read in
+Inter, standing in for SF and Segoe UI, which both have a true bold; in
+this box's Arial stand-in 600 and 700 are one face.
+
+3. SKRIBL'S OWN GALLERY AND LIBRARY CARDS. A: the edge alone, every other
+card's (dark's at 26%). B: A and one crisp pixel (a line of shade at a
+card's foot in light, of light at its top in dark). PICK A. The edge
+reads clearer without the blur (1.34 to 1.47 against the page in light,
+1.49 to 1.90 in dark); soft shadows on screen, the Gallery 6 to 4 on a
+phone and 12 to 8 on a desk, the Library 8 to 1 on a desk (what stays
+soft is the replay's nib and the player's glass buttons). The test site's
+Gallery was empty: eight of its own drawings were listed public there
+for the pictures.
+
+4. A PRESS THAT SHOWS, ON BLOOBY. A: the Pad's own press (a dip to 94%
+and a tenth darker, gliding in 0.18s; under Reduce Motion it only dims).
+B: dim only. Both: the main purple button brightens under a pointer on
+a desk, as Danger and Follow do. PICK A: a dim alone is 1.07 to 1 on a
+dark button. The first pictures had Draw back turn purple when pressed:
+the replay had ended between two shots and lit it, as it does on
+purpose; the replay is paused before the pictures now.
+
+2. THE PAD'S AND FLIP'S LAST SOFT SHADOWS: one rule each, after the
+owner's "shadows are good if they add crispness, not if they are too
+big". What floats over the drawing (Keep drawing, Draw along, a button's
+card, a draft's little menu, Text's handle) takes the tray's short
+shadow; a sheet (Your drafts, Ask, the little book) the menu sheet's own
+paper; Ask's video keeps its edge and loses its shadow; the green dots'
+glow becomes a rim; knobs, the canvas's inner shade, the wordmark and
+the replay's nib stay. Each keeps its own one-pixel edge: THE FIRST
+"AFTER" DROPPED THEM (the whole shadow list was replaced), and was
+redone, before anything was published, to replace only what blurs.
+
+10, ITS SECOND HALF, asked again on the page: a check that fails when a
+new colour is written straight into a rule, holding today's 238 (the
+editors) and 13 (the site). Cal's pick: yes; the owner's call.
+
+FOUND MAKING IT, a bug of its own: the editors' buttons were not in the
+page's font (the next entry).
+
+## After v330 -- A button takes the page's font
+
+Found making Four Looks (Nov 21), a bug of its own, so it merges on
+green. A browser gives a button, a field and a choice a font of its own,
+and the body's family does not reach them by itself. The site hands its
+font to each control, one by one; the editors, Skribl's Gallery and
+Library and the link player did not. So their buttons were drawn in the
+browser's own button font: in Chrome and Edge on Windows (and here), Arial,
+beside words in Segoe UI. With words in them: the Pad's Post, the name's
+Done, the menu's rows (Settings, Your drafts, How it works), Pen |
+Background, Flip's Reset, Done, Draw and its "0, 0". An iPhone's button
+font is the system's, so the owner's phone never showed it.
+
+THE FIX: one rule beside each page's own body font, the family only
+(each control's size and weight stay its own rule's, and a rule that
+names a monospace still wins): the editors' sheet (and the link player's
+and the Gallery section's, made from it; the player lists the selector
+live, +58 bytes in both of its ledgers), the Gallery's and the Library's
+own pages.
+
+READ IN CI'S FACE before it went up: with the body's font set to DejaVu
+Sans (CI's Linux, wider than any face here), the Pad at rest, its draw
+drawer and its menu, and Flip at rest, its move bar, its tray and its
+menu, at 320, 360 and 402 on a touch phone and on a desk: nothing new
+overflows anywhere.
+
+THE CHECK, `verify_a11y` 11e: every button, field and choice each of the
+five pages shows (the Pad and Flip at rest and in each place they open)
+computes its page's own family, or a monospace on purpose. Red on the
+tree before: all five pages (109, 185, 6, 4 and 8 controls read), naming
+each control in Arial. As built, 471 of 471. A break for each page's rule,
+each on a copy with a server of its own, each red in its own row alone:
+the editors' sheet without it, the Pad and Flip (469 of 471); the
+player's, the player (470); the Gallery's, the Gallery (470); the
+Library's, the Library (470).
+
+AND THE CONTRAST CHECK'S NINE POINTS. `verify_contrast` reads each word at
+nine points across its box and keeps the worst, and asked which element
+lies on top only at the box's centre. With the page's font, Your drafts'
+row menu sits 7px higher and the line under "Save as a file" 4px
+higher, and one point of that line's last third, under the menu, landed
+on the menu's divider: 5.87 to 1 in light and 6.11 in dark, against 7,
+in both editors. Nobody reads the part of a word a menu lies over; on
+the menu's plain paper before, it had passed by luck. The check asks at
+every point now, as it did at the centre. On that scene alone: as it
+was, the four rows red; mended, green; mended with that line made faint
+where it shows, red again (1.66 to 1).
+
+AND "THREE SAVED" HELD FOUR. The contrast walk's Your drafts with three
+drafts saved its three on top of the draft an earlier sheet had left (a
+row's menu leaves "A row to read"), so the card had four rows. Four
+fitted a desk's sheet by a few pixels; 7px taller, the fourth row's
+middle went under the sheet's fold in this box's face, and ONE CARD
+read the page behind it (in CI's face, the whole harness on the branch,
+it stayed green). A list too long for its sheet scrolls, as it should;
+the scene clears the walk's drafts first and shows its three. On the two
+scenes in their order: without the clear, both ONE CARD rows red; with
+it, green; with it and a row painting a ground of its own, red again.
+
+FLIP AND THE PAD: shared, one sheet. Nothing changes on an iPhone. NOT
+SEEN ON WINDOWS: this box has no Segoe UI.

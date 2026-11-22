@@ -471,6 +471,16 @@ body {
   justify-content: center;
   font-variant-numeric: tabular-nums;
 }
+/* A BUTTON TAKES THE PAGE'S FONT (found making the chosen-word mock, Nov
+   21). A browser gives a button, a field and a choice a font of its own,
+   and the body's family does not reach them by itself: the Pad's Post, the
+   name's Done, the menu's rows, Pen | Background, Flip's Reset, Done and
+   "0, 0" were drawn in Chrome's and Edge's own button font, Arial on
+   Windows, beside words in Segoe UI. An iPhone's button font is the
+   system's, so it never showed there. The family only: each control's size
+   and weight stay its own rule's, and a family a rule names (a monospace)
+   still wins. verify_a11y 11e. */
+button, input, select, textarea { font-family: inherit; }
 
 .app {
   background:
