@@ -109,7 +109,7 @@
 .seg-track > button[data-bold]::after {
   content: attr(data-bold); content: attr(data-bold) / "";
   display: block; height: 0; overflow: hidden; visibility: hidden;
-  font-weight: 700; pointer-events: none; -webkit-user-select: none; user-select: none;
+  font-weight: 700; pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

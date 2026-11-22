@@ -3010,7 +3010,7 @@ button.fo-n {
 .fo-seg > button[data-bold]::after {
   content: attr(data-bold); content: attr(data-bold) / "";
   display: block; height: 0; overflow: hidden; visibility: hidden;
-  font-weight: 700; pointer-events: none; -webkit-user-select: none; user-select: none;
+  font-weight: 700; pointer-events: none;
 }
 .fo-seg:not([data-pill]) > button[aria-pressed="true"] { background: var(--pill-on-fill); }
 .fo-seg > .fo-slider {
