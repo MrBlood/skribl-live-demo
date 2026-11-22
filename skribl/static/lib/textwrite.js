@@ -701,6 +701,12 @@
     // until the click: the keyboard going first would bring the drawer back
     // under the finger, and the press would land on whatever moved there.
     els.go.addEventListener('mousedown', function (e) { if (document.activeElement === els.field) e.preventDefault(); });
+    // So does a press on a Style chip: Style stays under the words while they
+    // are typed, so the look can change with the keyboard still up and be
+    // watched on the drawing (styles.css, the owner's yes, Nov 22).
+    els.styles.addEventListener('mousedown', function (e) {
+      if (document.activeElement === els.field && e.target.closest('[data-style]')) e.preventDefault();
+    });
     // The drawers' grabber: a tap closes Text, a pull down closes it, as
     // every drawer's does (lib/drawerdetent.js).
     if (window.SkriblDrawerDetent) {
@@ -1247,13 +1253,6 @@
       watching = v;
     }
   }
-  // AN IPHONE FLOATS ITS OWN BAR (^ v and the tick) over the foot of what it
-  // says can be seen, which no visual viewport reports (the owner's iPhone,
-  // Nov 22, iOS 26): the typing drawer keeps that bar's room at its own foot
-  // there (styles.css .tx-drawer.typing.over-bar). An iPad's wider than a
-  // phone, so its drawer never types on the keyboard at all.
-  var APPLE = /iP(hone|od|ad)/.test(navigator.userAgent || '')
-    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   function fitKeyboard() {
     var s = els && els.sheet;
     if (!s) return;
@@ -1272,7 +1271,6 @@
     }
     var was = s.classList.contains('typing');
     s.classList.toggle('typing', typing);
-    s.classList.toggle('over-bar', typing && APPLE);
     s.style.bottom = typing ? lift + 'px' : '';
     s.style.maxHeight = typing ? Math.max(160, Math.round(v.bottom - v.top - 12)) + 'px' : '';
     if (want && isOpen()) { anchor = clampAnchor(want); position(); }

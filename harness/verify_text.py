@@ -63,9 +63,11 @@ Thickness and Speed as tiles. Each row holds a promise:
      the recorder off again, as it found it (19), and one Undo takes back
      only the words.
  16. THE KEYBOARD (the owner's iPhone: the bar over it covered the field):
-     with the keyboard up, the drawer sits on it and is only the words and
-     Write it, the words above it, its room in the page kept so nothing above
-     it moves (with no keyboard up, the whole drawer); the keyboard's done
+     with the keyboard up, the drawer sits on it and is the words, Write it
+     and Style under them (44px, no caption; a tap on a chip changes the look
+     and keeps the keyboard, the chips still named Style), the words above
+     it, its room in the page kept so nothing above it moves (with no
+     keyboard up, the whole drawer); the keyboard's done
      key puts it away and writes nothing, the drawer back under the tools
      with its words and Write it on screen and the words where they were
      put; the grabber and Write it pressed with the keyboard up do what they
@@ -149,7 +151,12 @@ Thickness and Speed as tiles. Each row holds a promise:
      back after; with the keyboard gone the whole drawer is back and the
      words where they were put. And words typed and not yet written are
      work: New Skribl takes them, saying so with its Undo, Text opens
-     empty after, and the Undo brings them back. Pad and Flip.
+     empty after, and the Undo brings them back. Pad and Flip. And told as
+     an iPhone, its strip (^ v and the tick) in both places the owner's
+     pictures showed it: over the foot of what can be seen (the field and
+     Write it at least the strip's 60px above the keys, Style's chips under
+     the words where the strip lies) and, once the phone leaves it room,
+     below it (the drawer on that, nothing empty under the chips).
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
@@ -1133,8 +1140,12 @@ with sync_playwright() as p:
           const shown = (sel) => { const e = document.querySelector(sel); return !!e && !!e.getClientRects().length; };
           const b = pl.hidden ? null : pl.getBoundingClientRect(), row = s.querySelector('.tx-top').getBoundingClientRect();
           const sp = document.getElementById('txSpacer'), d = document.querySelector(ds).getBoundingClientRect();
+          const sty = document.getElementById('txStyles'), sr = sty.getClientRects().length ? sty.getBoundingClientRect() : null;
+          const on = sty.querySelector('.tx-style.on');
           return { open: SkriblText.isOpen(), typing: s.classList.contains('typing'), bottom: Math.round(r.bottom), top: r.top, edge: innerHeight - 336,
                    field: shown('#txField'), go: shown('#txGo'), style: shown('#txStyles'), tiles: shown('#txTiles'),
+                   srow: sr && [sr.top, sr.bottom], chipH: sr ? Math.round(sty.querySelector('.tx-style').getBoundingClientRect().height) : null,
+                   caption: shown('#txStyleLabel'), chosen: on && on.getAttribute('data-style'),
                    room: sp.hidden ? null : sp.offsetHeight, dock: Math.round(d.top), row: [row.top, row.bottom], vh: innerHeight, stuck: eval(STUCK)(),
                    focus: document.activeElement && document.activeElement.id, words: b && [Math.round(b.top), Math.round(b.bottom)] }; }"""
         ROOM = """() => { const s = document.getElementById('txSheet'), cs = getComputedStyle(s);
@@ -1167,10 +1178,32 @@ with sync_playwright() as p:
         high = q.evaluate("() => SkriblText.anchor()")
         check("phone: with the keyboard up, the drawer sits on it",
               abs(t["bottom"] - t["edge"]) <= 1, f"drawer ends at {t['bottom']}, the keyboard starts at {t['edge']}")
-        check("...and is only the words and Write it, no taller, the words above it",
-              t["typing"] and t["field"] and t["go"] and not (t["style"] or t["tiles"])
+        check("...and is the words, Write it and Style under them (the owner's yes, Nov 22: the four looks, 44px, no"
+              " caption over them), Size, Thickness and Speed put away, no taller, the words above it",
+              t["typing"] and t["field"] and t["go"] and t["style"] and not t["tiles"] and not t["caption"]
+              and t["srow"] is not None and t["srow"][0] >= t["row"][1] and t["chipH"] == 44
               and t["words"] is not None and t["words"][0] >= 0 and t["words"][1] <= t["top"] + 0.5
-              and t["bottom"] <= t["row"][1] + 16, json.dumps(t))
+              and t["bottom"] <= t["srow"][1] + 16, json.dumps(t))
+        # The look changed with the keyboard up: the field keeps its focus (a press on a chip takes none, as Write
+        # it's does), so the keyboard stays, and the drawing shows the new look.
+        cdp = c.new_cdp_session(q)
+        root = cdp.send("DOM.getDocument", {"depth": 0})["root"]["nodeId"]
+        node = cdp.send("DOM.querySelector", {"nodeId": root, "selector": "#txStyles"})["nodeId"]
+        ax = cdp.send("Accessibility.getPartialAXTree", {"nodeId": node, "fetchRelatives": False})["nodes"]
+        named = (ax[0].get("name") or {}).get("value") if ax else None
+        q.tap('#txStyles [data-style="script"]')
+        q.wait_for_timeout(400)
+        ts = q.evaluate(TYPING, [DOCK["pad"], STUCK])
+        q.tap('#txStyles [data-style="print"]')
+        q.wait_for_timeout(400)
+        tp = q.evaluate(TYPING, [DOCK["pad"], STUCK])
+        check("...a tap on a Style chip with the keyboard up changes the look and keeps the keyboard: the field keeps its"
+              " focus, the drawer stays on the keys (Script, then Print again); and the chips are still named Style for a"
+              " screen reader, their caption put away",
+              t["chosen"] == "print" and ts["chosen"] == "script" and ts["focus"] == "txField" and ts["typing"]
+              and tp["chosen"] == "print" and tp["focus"] == "txField" and tp["typing"] and named == "Style",
+              json.dumps({"before": t["chosen"], "script": [ts["chosen"], ts["focus"], ts["typing"]],
+                          "print": [tp["chosen"], tp["focus"], tp["typing"]], "named": named}))
         check("...its room in the page kept, so nothing above it moves",
               t["room"] is not None and abs(t["room"] - room0) <= 1 and t["dock"] == before["dock"],
               f"room {t['room']} for a drawer of {room0}; the tools at {before['dock']} -> {t['dock']}")
@@ -2235,17 +2268,21 @@ with sync_playwright() as p:
             except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the rows' red
                 g["stopped"] = str(exc).splitlines()[0][:200]
 
-        # AN IPHONE'S OWN BAR (the owner's iPhone, Nov 22, iOS 26: "When I push text I get this"). The phone
-        # floats its strip (^ v and the tick) over the foot of what it says can be seen, and no visual viewport
-        # reports it: the drawer rested on the keyboard with its field and Write it under the strip, and a tap
-        # had the phone slide the page up to show them, the page then showing between the drawer and the keys.
-        # On an iPhone the typing drawer keeps the strip's room at its own foot. The phone told as an iPhone
-        # (its name), the same keyboard told to the outermost window: the drawer still on the keys, the field
-        # and Write it the strip's 60px (the owner's screen) above them.
+        # AN IPHONE'S OWN BAR (the owner's iPhone, Nov 22, iOS 26). The phone floats its strip (^ v and the tick)
+        # over its keys, and the owner's pictures showed it in two places: right after Text opens, over the foot of
+        # what the phone says can be seen (the drawer resting on the keys, its field and Write it under the strip);
+        # once typed, below it (what can be seen ending the strip's room higher, 481 against 547 on their screen,
+        # the drawer on that and the strip under it). The owner's yes to the Style While Typing mock: Style stays
+        # under the words while they are typed, where the strip can lie, and nothing under the words is empty
+        # paper (the room #1061 kept for the strip was, in the second place). The phone told as an iPhone (its
+        # name); both places told to the outermost window, as the phone tells them.
         IOS_UA = ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko)"
                   " Version/26.0 Mobile/15E148 Safari/604.1")
-        BAR = 60
+        BAR, ROOMED = 60, 66   # the strip, from the keys' top; how much higher what can be seen ends once it has room
         GO = "() => { const r = document.getElementById('txGo').getBoundingClientRect(); return [r.top, r.bottom]; }"
+        STY = """() => { const e = document.getElementById('txStyles'); if (!e.getClientRects().length) return null;
+          const r = e.getBoundingClientRect(), c = e.querySelector('.tx-style').getBoundingClientRect();
+          return [r.top, r.bottom, Math.round(c.height)]; }"""
         bar = {}
         for ed in ("pad", "flip"):
             try:
@@ -2255,11 +2292,10 @@ with sync_playwright() as p:
                 settle(fr)
                 q.evaluate("() => window.__keyboard(%d)" % KB)
                 q.wait_for_timeout(500)
-                bar[ed] = {"up": fr.evaluate(SEEN, CANVAS[ed]), "go": fr.evaluate(GO),
-                           "band": fr.evaluate("() => document.getElementById('txSheet').classList.contains('over-bar')")}
-                q.evaluate("() => window.__keyboard(0)")
-                q.wait_for_timeout(700)
-                bar[ed]["after"] = fr.evaluate("() => document.getElementById('txSheet').classList.contains('over-bar')")
+                bar[ed] = {"up": fr.evaluate(SEEN, CANVAS[ed]), "go": fr.evaluate(GO), "sty": fr.evaluate(STY)}
+                q.evaluate("() => window.__keyboard(%d)" % (KB + ROOMED))
+                q.wait_for_timeout(500)
+                bar[ed].update({"roomed": fr.evaluate(SEEN, CANVAS[ed]), "sty2": fr.evaluate(STY)})
                 bar[ed]["errors"] = errs[:3]
                 c.close()
             except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the rows' red
@@ -2267,22 +2303,23 @@ with sync_playwright() as p:
 
         line = FH - KB
         for ed in ("pad", "flip"):
-            g, i = got[ed], bar.get(ed) or {}
-            iu, ig = i.get("up") or {}, i.get("go") or [0, 1e9]
-            check(f"{ed} on an iPhone, inside a post, with the keyboard up: its own bar (^ v and the tick) floats over the"
-                  f" foot of what it says can be seen (iOS 26; the owner's iPhone, Nov 22), so the drawer, still resting on"
-                  f" the keys, keeps the bar's room at its own foot: the field and Write it at least the bar's {BAR}px above"
-                  f" the keys, the bar over the drawer's own paper, nothing for the phone to slide up to show",
-                  not i.get("stopped") and iu.get("typing") is True and i.get("band") is True and iu.get("focus") == "txField"
+            i = bar.get(ed) or {}
+            iu, ig, st = i.get("up") or {}, i.get("go") or [0, 1e9], i.get("sty")
+            check(f"{ed} on an iPhone, inside a post, its strip (^ v and the tick) over the foot of what it says can be seen"
+                  f" (right after Text opens; the owner's iPhone, Nov 22): the drawer rests on the keys, the field and Write it"
+                  f" at least the strip's {BAR}px above them, and Style's chips (44px) under the words where the strip lies",
+                  not i.get("stopped") and iu.get("typing") is True and iu.get("focus") == "txField"
                   and abs(iu["sheet"][1] - line) <= 1 and iu["field"][1] <= line - BAR and ig[1] <= line - BAR
-                  and i.get("after") is False and not i.get("errors"),
+                  and st is not None and st[0] >= iu["field"][1] and st[1] <= line and st[2] == 44 and not i.get("errors"),
                   i.get("stopped") or f"drawer {r1(iu.get('sheet'))} for the keys at {line}, field {r1(iu.get('field'))},"
-                  f" Write it {r1(ig)}, the bar's room {i.get('band')} (after the keys: {i.get('after')}); errors {i.get('errors')}")
-            up = g.get("up") or {}
-            check(f"{ed}: ...and away from an iPhone there is no bar to make room for: the field within the bar's height of"
-                  f" the keys, as the drawer has always rested",
-                  not g.get("stopped") and up.get("typing") is True and line - BAR < up["field"][1] <= line,
-                  g.get("stopped") or f"field {r1(up.get('field'))} for the keys at {line}")
+                  f" Write it {r1(ig)}, Style {st}; errors {i.get('errors')}")
+            ru, st2 = i.get("roomed") or {}, i.get("sty2")
+            check(f"{ed}: ...and once the phone leaves its strip room ({ROOMED}px higher, the owner's 11:59 picture), the drawer"
+                  f" rests on that, the words and Style above it, and nothing under the chips but the drawer's own 12px (no"
+                  f" empty band)",
+                  not i.get("stopped") and ru.get("typing") is True and abs(ru["sheet"][1] - (line - ROOMED)) <= 1
+                  and st2 is not None and ru["field"][1] <= st2[0] and ru["sheet"][1] - st2[1] <= 12.5,
+                  i.get("stopped") or f"drawer {r1(ru.get('sheet'))} for {line - ROOMED}, field {r1(ru.get('field'))}, Style {st2}")
         for ed in ("pad", "flip"):
             g = got[ed]
             up, free, down = g.get("up") or {}, g.get("free") or {}, g.get("down") or {}
