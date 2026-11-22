@@ -52882,3 +52882,26 @@ pans what it shows on each letter is the owner's phone's to say; nothing
 here can raise its keyboard.
 
 PAD AND FLIP: shared (one drawer, one overlay).
+
+## After v330 -- Text on the owner's iPhone after #1065: two bugs left, and the handoff for Tuesday
+
+The owner's iPhone, Nov 22 from 2:50 PM, six pictures of Text in the Pad
+over Make, after #1065. "The text drawer looks great when we start and
+when I click in box": Text opens whole with no keyboard, and a tap on the
+box brings the keyboard with the drawer on the keys. The page behind no
+longer moves.
+
+TWO BUGS LEFT, NOT MENDED. (1) Inside the site, each letter still moves
+the Pad: "1st letter jumps and second letter jumps again. Third letter
+jumps to this. 4th is still there." After the third the typing view
+dropped (Size, Thickness and Speed showed) with the keyboard up and the
+box in focus. On the Pad on its own page: "The drawer works", so this
+one is the frame's. (2) The words cannot be dragged with a finger, on the
+Pad on its own too: "can't drag letters, still jumps right every touch".
+`verify_text` 16's drag row drags with a mouse and reads only the
+direction, so a jump to the right passes it: an instrument that could not
+tell, to be shown red first.
+
+The owner stopped for the week here ("let's not start anything new"). The
+handoff for the next session, with where to look, a lead for each bug and
+what is waiting on the owner, is `docs/NEXT-SESSION.md`.
