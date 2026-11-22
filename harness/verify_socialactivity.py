@@ -4,9 +4,9 @@ virtual authenticator for the site's people.
 
   1. THE BELL AND THE RAIL: signed in, a phone's Home and Explore (the bar's
      Gallery) have a bell drawn in our pen at the top right, where Sign in
-     sits signed out (44px, painted, to Activity); the bar keeps its four
+     sits signed out (44px, painted, to Activity); the bar keeps its five
      places; signed out, a post's page and a profile have none; a desk's rail
-     has Activity after the Gallery, lit on its own page (the bell filled, the pen's line); with
+     has Activity after Search (under the Gallery), lit on its own page (the bell filled, the pen's line); with
      nothing new, no dot anywhere.
   2. THE DOT: something new rings a dot on the bell's shoulder, painted, in
      --new-dot (#e64a78 on light, Blooby's blush on dark), 3:1 or more on its
@@ -725,21 +725,21 @@ with sync_playwright() as p:
             bells = [got["home"]["bell"], got["explore"]["bell"]]
             check("signed in, a phone's Home and the Gallery (Explore) have the bell at the top right, where Sign in sits"
                   " signed out: a 44px link to Activity, painted, drawn in our pen (not filled), named Activity, on the"
-                  " top's middle; the bar keeps its four places (Home, Gallery, Make, You)",
+                  " top's middle; the bar keeps its five places (Home, Gallery, Make, Search, You)",
                   all(x and x["w"] >= 44 and x["h"] >= 44 and x["hit"] and x["pen"] and not x["filled"]
                       and x["href"] == "/social/activity" and x["label"] == "Activity" and x["right"] <= 16
                       and abs(x["mid"]) <= 1 for x in bells)
                   and signed_out["signin"] and signed_out["signin"]["right"] <= 16 and abs(signed_out["signin"]["mid"]) <= 1
-                  and got["home"]["bar"] == ["Home", "Gallery", "Make", "You"]
-                  and got["explore"]["bar"] == ["Home", "Gallery", "Make", "You"],
+                  and got["home"]["bar"] == ["Home", "Gallery", "Make", "Search", "You"]
+                  and got["explore"]["bar"] == ["Home", "Gallery", "Make", "Search", "You"],
                   f"bells {bells}; signed out's Sign in {signed_out['signin']}; bars {got['home']['bar']} / {got['explore']['bar']}")
             check("signed out there is no bell (Sign in stays there), and a post's page and a profile have none (their tops"
                   " say their own)",
                   signed_out["bell"] is None and got["post"] is None and got["profile"] is None,
                   f"signed out {signed_out['bell']}; post {got['post']}; profile {got['profile']}")
-            check("on a desk the rail has Activity after the Gallery (its bell drawn, a 52px row to Activity), and the"
-                  " phone's top is not shown",
-                  desk["rail"] == ["brand", "Home", "Gallery", "Activity", "Make", "How it works", "Settings", "You"] and desk["act"]
+            check("on a desk the rail has Activity after Search, under the Gallery (its bell drawn, a 52px row to"
+                  " Activity), and the phone's top is not shown",
+                  desk["rail"] == ["brand", "Home", "Gallery", "Search", "Activity", "Make", "How it works", "Settings", "You"] and desk["act"]
                   and desk["act"]["pen"] and not desk["act"]["filled"] and desk["act"]["h"] >= 52
                   and desk["act"]["href"] == "/social/activity" and desk["act"]["hit"] and desk["top"] is None,
                   f"rail {desk['rail']}; Activity {desk['act']}; top {desk['top']}")

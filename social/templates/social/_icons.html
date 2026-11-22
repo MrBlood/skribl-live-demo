@@ -97,6 +97,24 @@
 <svg class="ic pen-ic ic-blooby{% if filled %} is-lit{% endif %}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path class="bl-body" d="M 11.96,3.92 C 12.17,3.94 12.84,3.95 13.25,4.08 C 13.65,4.21 14.04,4.43 14.40,4.68 C 14.76,4.93 15.06,5.24 15.40,5.59 C 15.73,5.93 16.09,6.32 16.41,6.74 C 16.73,7.15 17.02,7.56 17.30,8.08 C 17.59,8.60 17.90,9.31 18.10,9.88 C 18.31,10.45 18.40,10.90 18.54,11.50 C 18.68,12.10 21.17,13.19 18.93,13.51 C 16.69,13.82 7.36,13.72 5.12,13.38 C 2.88,13.03 5.34,12.06 5.48,11.46 C 5.62,10.85 5.79,10.31 5.96,9.75 C 6.13,9.19 6.26,8.57 6.51,8.09 C 6.75,7.60 7.11,7.24 7.43,6.83 C 7.75,6.42 8.05,5.96 8.42,5.60 C 8.79,5.25 9.25,4.94 9.65,4.68 C 10.04,4.43 10.43,4.20 10.80,4.08 C 11.18,3.95 11.71,3.95 11.89,3.93{% if filled %} Z{% endif %}"/><path class="bl-eye" d="M 10.30,7.05 C 10.77,7.05 11.15,7.70 11.15,8.50 C 11.15,9.30 10.77,9.95 10.30,9.95 C 9.83,9.95 9.45,9.30 9.45,8.50 C 9.45,7.70 9.83,7.05 10.30,7.05 Z"/><path class="bl-eye" d="M 13.50,6.85 C 13.97,6.85 14.35,7.50 14.35,8.30 C 14.35,9.10 13.97,9.75 13.50,9.75 C 13.03,9.75 12.65,9.10 12.65,8.30 C 12.65,7.50 13.03,6.85 13.50,6.85 Z"/>{% if filled %}<path class="bl-blush" d="M 15.0,10.9 L 15.9,11.1"/>{% endif %}<path class="bl-card" d="M 5.6,12.9 L 18.4,12.9 C 19.3,12.9 19.9,13.5 19.9,14.4 L 19.9,20.2 C 19.9,21.1 19.3,21.7 18.4,21.7 L 5.6,21.7 C 4.7,21.7 4.1,21.1 4.1,20.2 L 4.1,14.4 C 4.1,13.5 4.7,12.9 5.6,12.9 Z"/><path class="bl-squig" d="M 6.56,19.41 C 6.79,18.91 7.47,17.00 7.98,16.42 C 8.49,15.84 9.25,15.72 9.62,15.93 C 9.99,16.14 9.93,17.08 10.22,17.65 C 10.51,18.23 10.85,19.20 11.36,19.36 C 11.87,19.51 12.83,19.09 13.28,18.60 C 13.73,18.10 13.63,16.87 14.05,16.40 C 14.48,15.92 15.26,15.57 15.82,15.74 C 16.38,15.92 17.16,17.17 17.42,17.46"/><circle class="bl-hand" cx="5.2" cy="13.1" r="1.55"/><circle class="bl-hand" cx="18.8" cy="13.1" r="1.55"/></svg>
 {%- endmacro %}
 
+{# Search's magnifier, in the pen (the owner's "Yes to all", Nov 22, to round
+   two of the "Blooby and Search" mock): the lens in one line that closes on
+   itself, a touch out of round as a hand draws one, and its handle a short
+   stroke down to the right. Its ink centred across its box. Drawn 4.7%
+   larger than the mock's, so it reaches what Home's and Sign in's do (25.5px
+   on the bar, not 24.5): a round line looks smaller than a square one as
+   wide (verify_social 2, every icon one size). ON SEARCH'S OWN PAGE its line
+   is heavier (2.9), where Home's house is filled (a filled lens would be a
+   blot, not a magnifier), and the lens is the mock's own size, so the
+   heavier line reaches where the lighter one did: the place you are on does
+   not grow its icon, as Home's house fills in its own outline. #}
+{% macro search(lit=false) -%}
+<svg class="ic pen-ic ic-find" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="{{ '2.9' if lit else '2.1' }}" stroke-linecap="round" stroke-linejoin="round">
+{%- if lit %}<path d="M 16.9,10.3 C 17.0,14.1 14.0,17.0 10.4,16.9 C 6.8,16.8 4.0,13.9 4.1,10.3 C 4.2,6.8 7.0,4.0 10.5,4.1 C 14.0,4.2 16.8,6.9 16.9,10.3 Z"/><path d="M 15.3,15.4 C 16.8,16.9 18.4,18.5 19.9,20.0"/>
+{%- else %}<path d="M 17.13,10.22 C 17.24,14.20 14.10,17.23 10.33,17.13 C 6.56,17.03 3.63,13.99 3.73,10.22 C 3.84,6.56 6.77,3.62 10.43,3.73 C 14.10,3.83 17.03,6.66 17.13,10.22 Z"/><path d="M 15.46,15.56 C 17.03,17.13 18.70,18.81 20.27,20.38"/>{% endif -%}
+</svg>
+{%- endmacro %}
+
 {# Activity's bell, in the pen (notifications; the owner's "all yes", Nov 12):
    the bell in one line, up its side, over and down; its mouth a line of its
    own, a little wider each side and sagging a touch, as a bell's lip is seen

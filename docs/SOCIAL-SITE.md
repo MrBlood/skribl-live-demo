@@ -2308,6 +2308,25 @@ nothing changes in either (Skribl's own /gallery keeps its own search).
                                     pick's /explore/more brings {people}, its
                                     People section
 
+SEARCH OF ITS OWN (the owner's "Yes to all", Nov 22, to round two of the
+"Blooby and Search" mock): the magnifier in a phone's bar, which holds five
+places with Make in the middle (Home, Gallery, Make, Search, You), and on a
+desk's rail under the Gallery. Its page finds what the Gallery's box finds,
+without the Gallery's pills (everyone's drawings, newest first), its See
+all its own; before a search, the recent searches kept on the phone
+(search.js: the words searched and the people opened, newest first, ten at
+most, an × each and Clear all); nothing searched yet, one quiet line. The
+Gallery's box stays. DECISIONS.md, "Five places and Search of its own".
+
+    /social/search                  Search: the box; before a search, the
+                                    recent searches or the quiet line
+    /social/search?q=<words>[&who=people]
+                                    what the box finds; See all: the people
+                                    alone, twenty a page
+    /social/search/more?q=<words>[&who=people][&before=<cursor>]
+                                    as /explore/more, for Search; no words,
+                                    nothing (the page shows its list)
+
 ## 18. The comment thread (the owner's yes, Nov 17; built in three steps)
 
 The owner, Nov 17, with a picture of another site's comments: "take a look

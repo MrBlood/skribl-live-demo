@@ -36,7 +36,23 @@ people.
      the @handle 7.10 / 10.12, the headings 16.86 / 16.56 on the page
      ground), read off the paint too; every word at 4.5:1, every target
      44px, the box 16px.
- 11. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
+ 12. SEARCH OF ITS OWN, ITS PLACE (the owner's "Yes to all", Nov 22, to
+     round two of the "Blooby and Search" mock): a phone's bar Home, Gallery,
+     Make, Search, You, one width each, Make's round in the very middle; a
+     desk's rail with Search right under the Gallery; Search lit on its own
+     page alone, its magnifier's line heavier there; a keyboard takes the
+     places in the order seen, phone and desk, signed in and out.
+ 13. SEARCH'S PAGE: the Gallery's box, the ☰ and the bell; nothing searched
+     yet, one quiet line; typed, what the Gallery's box finds, See all its
+     own; the words searched with the keyboard's Search and a person opened
+     kept on the phone, newest first, an × each (named, 44px), Clear all, ten
+     at most, a face's picture not to be had the empty circle, each person's own
+     list; a recent search searches again in place; an emptied box brings
+     the list back; storage refused, nothing
+     breaks; the list and what is found trade places only unseen, read on
+     every frame; every word 4.5:1, every target 44px, the box 16px.
+ 11. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last, after
+     12 and 13).
 
 SOCIALSEARCH_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
@@ -1202,6 +1218,356 @@ with app.app_context():
                   f"low {lows[:4]}; small {smalls[:4]}; fields {fields[:3]}; read {json.dumps({' / '.join(k): v for k, v in reads.items()})[:400]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(10, exc)
+
+    # ------------------------------------------------------------------ 12
+    # SEARCH OF ITS OWN, ITS PLACE (the owner's "Yes to all", Nov 22, to round two of the "Blooby and Search" mock).
+    # The places shown, in the order SEEN (a phone's bar left to right, a desk's rail top to bottom), each with its
+    # link, whether it is the page you are on, where its icon's middle is, whether it is painted where it stands,
+    # and the magnifier's line; and the order a KEYBOARD takes them in, read by Tab from the first.
+    PLACES12 = r"""() => { const vis = [...document.querySelectorAll('nav.nav > a, nav.nav > button')]
+        .filter(e => e.getClientRects().length && !e.classList.contains('brand'));
+      const name = e => { const n = e.querySelector('.tab-name'); return (n && n.firstChild ? n.firstChild.textContent : e.textContent).trim(); };
+      const desk = innerWidth >= 900;
+      const seen = vis.slice().sort((a, b) => { const p = a.getBoundingClientRect(), q = b.getBoundingClientRect();
+                                                return desk ? p.top - q.top : p.left - q.left; });
+      return { dom: vis.map(name), seen: seen.map(e => { const r = e.getBoundingClientRect(), ic = e.querySelector('.tab-ic svg, .tab-ic .face-ring');
+          const i = ic && ic.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          const lens = e.querySelector('svg.ic-find');
+          return { name: name(e), href: e.getAttribute('href'), current: e.getAttribute('aria-current'),
+                   left: Math.round(r.left * 10) / 10, top: Math.round(r.top * 10) / 10, bottom: Math.round(r.bottom * 10) / 10,
+                   w: Math.round(r.width * 10) / 10, icx: i ? Math.round((i.left + i.width / 2) * 10) / 10 : null,
+                   hit: !!at && (at === e || e.contains(at)), lens: lens ? +lens.getAttribute('stroke-width') : null }; }),
+        vw: innerWidth }; }"""
+    TABS12 = r"""(n) => { const first = [...document.querySelectorAll('nav.nav > .tab')].find(e => e.getClientRects().length);
+      first.focus(); return n; }"""
+    FOCUSED12 = r"""() => { const e = document.activeElement; if (!e || !e.closest('nav.nav')) return null;
+      const n = e.querySelector('.tab-name'); return (n && n.firstChild ? n.firstChild.textContent : e.textContent).trim(); }"""
+
+    if part(12, "Search of its own, its place: five in a phone's bar, Make in the middle; a desk's rail with Search"
+                " under the Gallery; lit on its own page alone; a keyboard takes them in the order seen"):
+        try:
+            w = world(b)
+            got12 = {}
+            for screen in ("phone", "desk"):
+                for who in (w["mira"], None):
+                    ctx, pg = browser_as(b, who, screen, "light")
+                    for path in ("/social/", "/social/search"):
+                        go(pg, path, wait=500)
+                        v = pg.evaluate(PLACES12)
+                        pg.evaluate(TABS12, 0)
+                        keys = [pg.evaluate(FOCUSED12)]
+                        for _ in range(len(v["seen"]) - 1):
+                            pg.keyboard.press("Tab")
+                            keys.append(pg.evaluate(FOCUSED12))
+                        v["keys"] = keys
+                        got12[(screen, "in" if who else "out", path)] = v
+                    close_ctx(ctx, pg)
+            want = {("phone", "in"): ["Home", "Gallery", "Make", "Search", "You"],
+                    ("phone", "out"): ["Home", "Gallery", "Make", "Search", "Sign in"],
+                    ("desk", "in"): ["Home", "Gallery", "Search", "Activity", "Make", "How it works", "Settings", "You"],
+                    ("desk", "out"): ["Home", "Gallery", "Search", "Make", "How it works", "Sign in"]}
+            names = {" ".join(k): [x["name"] for x in v["seen"]] for k, v in got12.items()}
+            check("the places, in the order seen: a phone's bar Home, Gallery, Make, Search, You (Sign in before you"
+                  " sign in); a desk's rail Home, Gallery, Search, Activity, Make, How it works, Settings, You (Search"
+                  " under the Gallery, Make the big button below); on Home and on Search",
+                  len(got12) == 8 and all(names[" ".join(k)] == want[k[:2]] for k in got12), json.dumps(names))
+            bar = {}
+            for k, v in got12.items():
+                if k[0] != "phone":
+                    continue
+                ws = [x["w"] for x in v["seen"]]
+                make = next((x for x in v["seen"] if x["name"] == "Make"), {})
+                bar[" ".join(k)] = {"w": sorted(set(ws)), "make": make.get("icx"), "mid": v["vw"] / 2,
+                                    "hit": all(x["hit"] for x in v["seen"])}
+            check("a phone's five places are one width each, the bar's room in five (77.2px of a 402px phone), Make's"
+                  " purple round in the very middle of the screen (201), each painted where it stands",
+                  len(bar) == 4 and all(len(x["w"]) == 1 and abs(x["w"][0] - (402 - 16) / 5) <= 0.1
+                                        and x["make"] is not None and abs(x["make"] - x["mid"]) <= 0.5 and x["hit"]
+                                        for x in bar.values()), json.dumps(bar))
+            lit = {}
+            for k, v in got12.items():
+                s_ = next((x for x in v["seen"] if x["name"] == "Search"), None)
+                lit[" ".join(k)] = {"href": s_ and s_["href"], "lens": s_ and s_["lens"],
+                                    "current": [x["name"] for x in v["seen"] if x["current"] == "page"]}
+            check("Search's place leads to /social/search, and is the place lit on its own page alone (its magnifier's"
+                  " line heavier there, 2.9 to the 2.1 it is drawn in elsewhere); on Home, Home is lit and Search is not",
+                  len(lit) == 8 and all(x["href"] == "/social/search" for x in lit.values())
+                  and all((x["current"] == ["Search"] and x["lens"] == 2.9) if k.endswith("/social/search")
+                          else (x["current"] == ["Home"] and x["lens"] == 2.1) for k, x in lit.items()),
+                  json.dumps(lit))
+            rail = {}
+            for k, v in got12.items():
+                if k[0] != "desk":
+                    continue
+                g = next((x for x in v["seen"] if x["name"] == "Gallery"), None)
+                s_ = next((x for x in v["seen"] if x["name"] == "Search"), None)
+                rail[" ".join(k)] = round(s_["top"] - g["bottom"], 1) if g and s_ else None
+            check("on a desk's rail Search sits right under the Gallery, the rail's own 4px between them",
+                  len(rail) == 4 and all(x == 4 for x in rail.values()), json.dumps(rail))
+            keys = {" ".join(k): v["keys"] for k, v in got12.items()}
+            check("a keyboard takes the places in the order they are seen, phone and desk, signed in and out (one Search"
+                  " link shown at each width, each where it is read; CSS order would move the picture and not the focus)",
+                  len(keys) == 8 and all(v["keys"] == [x["name"] for x in v["seen"]] for v in got12.values()),
+                  json.dumps(keys))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(12, exc)
+
+    # ------------------------------------------------------------------ 13
+    # SEARCH'S PAGE: the box and what it finds; before a search, the recent searches (search.js), kept on the phone.
+    PAGE13 = r"""() => { const q = document.querySelector('[data-gal-q]'), qr = q && q.getBoundingClientRect();
+      const rec = document.querySelector('[data-recent]'), none = document.querySelector('[data-recent-none]');
+      const painted = e => { if (!e || !e.getClientRects().length) return false; const r = e.getBoundingClientRect();
+        const x = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!x && (x === e || e.contains(x)); };
+      const rows = [...document.querySelectorAll('[data-recent-list] > li')].map(li => {
+        const r = li.getBoundingClientRect(), x = li.querySelector('.rs-x'), xr = x.getBoundingClientRect(), a = li.querySelector('a');
+        const ring = li.querySelector('.face-ring');
+        return { words: [...li.querySelectorAll('.fp-words b, .fp-words span')].map(e => e.textContent).join(' '),
+                 href: a.getAttribute('href'), h: Math.round(r.height), x: [Math.round(xr.width), Math.round(xr.height)],
+                 label: x.getAttribute('aria-label'), xHit: painted(x),
+                 face: ring ? (ring.querySelector('.skribl-face img') ? 'picture' : ring.querySelector('.face-blank') ? 'circle' : 'none') : null,
+                 weight: getComputedStyle(li.querySelector('.fp-words b')).fontWeight }; });
+      const clear = document.querySelector('[data-recent-clear]'), cr = clear && clear.getBoundingClientRect();
+      return { title: document.title, h1: (document.querySelector('.page-title') || {}).textContent,
+               box: q ? [q.type, q.getAttribute('aria-label'), q.placeholder, parseFloat(getComputedStyle(q).fontSize), Math.round(qr.height), q.value] : null,
+               pills: !!document.querySelector('[data-gal-show], [data-gal-sort]'),
+               top: [!!document.querySelector('.top-menu') && painted(document.querySelector('.top-menu')),
+                     !!document.querySelector('.top-bell') && painted(document.querySelector('.top-bell'))],
+               recent: !!rec && !rec.hidden, rows, clear: clear && !rec.hidden ? [clear.textContent.replace(/\s+/g, ' ').trim(), Math.round(cr.height), painted(clear)] : null,
+               none: none && !none.hidden ? [none.textContent.trim(), painted(none)] : null,
+               people: [...document.querySelectorAll('[data-fp-box] .fp-row .fp-words span')].map(e => e.textContent.trim()),
+               all: (() => { const a = document.querySelector('[data-fp-box] .fp-all a'); return a ? a.getAttribute('href') : null; })(),
+               tiles: [...document.querySelectorAll('[data-gal-grid] .gal-tile')].map(t => t.getAttribute('href')),
+               nones: [...document.querySelectorAll('[data-gal-none]')].filter(n => !n.hidden).map(n => n.getAttribute('data-gal-none')),
+               key: (document.querySelector('[data-gal-swap]') || {}).getAttribute ? document.querySelector('[data-gal-swap]').getAttribute('data-recent-key') : null,
+               said: (document.querySelector('[data-recent-said]') || {}).textContent || '',
+               path: location.pathname + location.search, stay: !!window.__stay }; }"""
+    KEPT13 = "(k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return 'refused'; } }"
+    # Every frame: the part that fades, how seen it is, and whether the recent searches are in it or the people found.
+    FRAMES13 = r"""(ms) => { window.__rsFrames = []; const t0 = performance.now();
+      (function f() { const s = document.querySelector('[data-gal-swap]'), r = document.querySelector('[data-recent]');
+        window.__rsFrames.push([Math.round(performance.now() - t0), Math.round(+getComputedStyle(s).opacity * 1000) / 1000, !r.hidden,
+                                document.querySelectorAll('[data-fp-box] .fp-row').length]);
+        if (performance.now() - t0 < ms) requestAnimationFrame(f); })(); }"""
+    REFUSE13 = ("Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new DOMException('refused',"
+                " 'SecurityError'); } });")
+
+    def rest13(pg):
+        """The part that fades back to whole after a search, a pick of a recent one, or an emptied box."""
+        pg.wait_for_timeout(450)
+        try:
+            pg.wait_for_function("() => { const s = document.querySelector('[data-gal-swap]'); return !s.classList.contains('is-out')"
+                                 " && getComputedStyle(s).opacity === '1'; }", timeout=8000)
+        except Exception:  # noqa: BLE001 -- one that never comes back is its row's own red
+            pass
+        pg.wait_for_timeout(250)
+
+    if part(13, "Search's page: the box, what it finds as the Gallery finds it; before a search the quiet line, then the"
+                " recent searches (newest first, an × each, Clear all, ten at most, kept on the phone for each person);"
+                " changed only unseen; every word 4.5:1, every target 44px"):
+        try:
+            w = world(b)
+            mira = w["mira"]
+            KEY = "blooby.search.v1.mira"
+            ctx, pg = browser_as(b, mira, "phone", "light")
+            go(pg, "/social/search", wait=500)
+            first = pg.evaluate(PAGE13)
+            check("Search, nothing searched yet: its title and heading Search, the Gallery's box (\"Search people and"
+                  " drawings\", 16px or more, 44px tall, empty), no pills, the ☰ and the bell at its top as the Gallery"
+                  " has; under the box one quiet line, \"Find people and drawings.\", painted; no Recent, no tiles, no"
+                  " \"nothing matches\" words; the list kept under this person's own name",
+                  first["title"] == "Search · Blooby" and first["h1"] == "Search" and first["box"]
+                  and first["box"][:3] == ["search", "Search people and drawings", "Search people and drawings"]
+                  and first["box"][3] >= 16 and first["box"][4] >= 44 and first["box"][5] == "" and not first["pills"]
+                  and first["top"] == [True, True] and first["none"] == ["Find people and drawings.", True]
+                  and not first["recent"] and not first["tiles"] and not first["nones"] and first["key"] == KEY,
+                  json.dumps(first))
+            search_box(pg, "pa")
+            typed = pg.evaluate(PAGE13)
+            go(pg, "/social/explore?q=pa", wait=500)
+            gallery = pg.evaluate(PAGE13)
+            go(pg, "/social/search?q=pa", wait=500)
+            check("typed (\"pa\", key by key): the people the Gallery's box finds, in its order (Theo Park first, whom"
+                  " Mira follows), See all to Search's own people alone, then the same drawings the Gallery's box finds;"
+                  " the address says the search; the quiet line gone",
+                  typed["people"] == ["@theo", "@pam", "@patti"] and typed["people"] == gallery["people"]
+                  and typed["all"] == "/social/search?q=pa&who=people" and typed["tiles"] and typed["tiles"] == gallery["tiles"]
+                  and typed["path"] == "/social/search?q=pa" and typed["none"] is None and not typed["recent"],
+                  json.dumps({"search": {k: typed[k] for k in ("people", "all", "tiles", "path", "none", "recent")},
+                              "gallery": {k: gallery[k] for k in ("people", "all", "tiles")}}))
+            # Kept: words searched with the keyboard's Search, and a person opened from what was found.
+            pg.focus("[data-gal-q]")
+            pg.keyboard.press("End")
+            pg.keyboard.press("Enter")
+            pg.wait_for_timeout(300)
+            after_enter = pg.evaluate(KEPT13, KEY)
+            with pg.expect_navigation(timeout=15000):
+                press(pg, pg.locator("[data-fp-box] .fp-row .fp-who", has_text="@pam").first)
+            pg.wait_for_function("() => document.readyState === 'complete'", timeout=15000)
+            opened = [pg.evaluate("() => location.pathname"), pg.evaluate(KEPT13, KEY)]
+            go(pg, "/social/search", wait=500)
+            back = pg.evaluate(PAGE13)
+            check("kept on the phone: the words searched with the keyboard's Search (\"pa\"), then Pam Lee opened from"
+                  " what was found goes to the top; back on Search, Recent shows them newest first (Pam Lee, her face"
+                  " and @handle, a link to her page; then \"pa\" in a name's size but not its weight), an × on each"
+                  " named for what it takes away, 44px and painted; Clear all, 44px tall; no quiet line",
+                  after_enter == [{"t": "q", "q": "pa"}] and opened[0] == "/social/@pam"
+                  and [r.get("t") + ":" + (r.get("h") or r.get("q")) for r in (opened[1] or [])] == ["p:pam", "q:pa"]
+                  and back["recent"] and [r["words"] for r in back["rows"]] == ["Pam Lee @pam", "pa"]
+                  and back["rows"][0]["href"] == "/social/@pam" and back["rows"][0]["face"] in ("picture", "circle")
+                  and back["rows"][1]["href"] == "/social/search?q=pa" and back["rows"][1]["weight"] == "400"
+                  and back["rows"][0]["weight"] == "600"
+                  and [r["label"] for r in back["rows"]] == ["Remove Pam Lee from recent searches", "Remove “pa” from recent searches"]
+                  and all(r["x"] == [44, 44] and r["xHit"] and r["h"] >= 64 for r in back["rows"])
+                  and back["clear"] and back["clear"][0] == "Clear all recent searches" and back["clear"][1] >= 44 and back["clear"][2]
+                  and back["none"] is None,
+                  json.dumps({"enter": after_enter, "opened": opened, "back": {k: back[k] for k in ("recent", "rows", "clear", "none")}}))
+            # A recent search searches again, in place; an emptied box brings the list back.
+            pg.evaluate("() => { window.__stay = 1; }")
+            press(pg, pg.locator("[data-recent-list] li a.rs-go").first)
+            rest13(pg)
+            again = pg.evaluate(PAGE13)
+            kept_again = pg.evaluate(KEPT13, KEY)
+            pg.fill("[data-gal-q]", "")
+            pg.dispatch_event("[data-gal-q]", "input")
+            rest13(pg)
+            emptied = pg.evaluate(PAGE13)
+            check("a recent search tapped searches again here, in place (the page never leaves): the box says it, the"
+                  " address says it, the people found show, and it goes back to the top of the list; the box emptied,"
+                  " the list is back and what was found is gone",
+                  again["stay"] and again["box"][5] == "pa" and again["path"] == "/social/search?q=pa"
+                  and again["people"] == ["@theo", "@pam", "@patti"] and not again["recent"]
+                  and [r.get("h") or r.get("q") for r in (kept_again or [])] == ["pa", "pam"]
+                  and emptied["stay"] and emptied["recent"] and [r["words"] for r in emptied["rows"]] == ["pa", "Pam Lee @pam"]
+                  and not emptied["people"] and not emptied["tiles"] and emptied["path"] == "/social/search" and not emptied["nones"],
+                  json.dumps({"again": {k: again[k] for k in ("stay", "box", "path", "people", "recent")}, "kept": kept_again,
+                              "emptied": {k: emptied[k] for k in ("stay", "recent", "rows", "people", "tiles", "path", "nones")}}))
+            # An × takes one away; Clear all the rest.
+            press(pg, "[data-recent-list] li:first-child .rs-x")
+            pg.wait_for_timeout(250)
+            one = [pg.evaluate(PAGE13), pg.evaluate(KEPT13, KEY)]
+            press(pg, "[data-recent-clear]")
+            pg.wait_for_timeout(250)
+            cleared = [pg.evaluate(PAGE13), pg.evaluate(KEPT13, KEY)]
+            check("an × takes its row away, from the screen and the phone, and a screen reader hears what went; Clear"
+                  " all takes the rest, says so, and the quiet line is back",
+                  [r["words"] for r in one[0]["rows"]] == ["Pam Lee @pam"] and [r.get("h") for r in (one[1] or [])] == ["pam"]
+                  and one[0]["said"] == "“pa” is off your recent searches."
+                  and not cleared[0]["recent"] and cleared[1] == [] and cleared[0]["none"] == ["Find people and drawings.", True]
+                  and cleared[0]["said"] == "Your recent searches are cleared.",
+                  json.dumps({"one": [one[0]["rows"], one[1], one[0]["said"]], "cleared": [cleared[0]["recent"], cleared[1],
+                                                                                         cleared[0]["none"], cleared[0]["said"]]}))
+            # Ten at most, newest first.
+            for i in range(1, 13):
+                pg.fill("[data-gal-q]", f"word {i:02d}")
+                pg.keyboard.press("Enter")
+            pg.wait_for_timeout(300)
+            ten = pg.evaluate(KEPT13, KEY)
+            pg.fill("[data-gal-q]", "")
+            pg.dispatch_event("[data-gal-q]", "input")
+            rest13(pg)
+            shown_ten = [r["words"] for r in pg.evaluate(PAGE13)["rows"]]
+            check("ten at most, newest first: twelve searched, the ten newest kept and shown, word 12 first",
+                  [r.get("q") for r in (ten or [])] == [f"word {i:02d}" for i in range(12, 2, -1)]
+                  and shown_ten == [f"word {i:02d}" for i in range(12, 2, -1)], json.dumps({"kept": ten, "shown": shown_ten}))
+            # A face whose picture cannot be had (a phone offline; here an address with nothing there): the empty
+            # circle. (A face gone from the site is never this: its address answers with Skribl's blank paper.)
+            pg.evaluate("(k) => localStorage.setItem(k, JSON.stringify([{ t: 'p', h: 'pam', n: 'Pam Lee', u: '/social/@pam',"
+                        " f: '/static/skribl/no-such-face.png', v: {} }]))", KEY)
+            go(pg, "/social/search", wait=900)
+            gone_face = pg.evaluate(PAGE13)["rows"]
+            check("a recent person whose face picture cannot be had (a phone offline) shows the empty circle, never a"
+                  " broken picture", [r["face"] for r in gone_face] == ["circle"], json.dumps(gone_face))
+            close_ctx(ctx, pg)
+            # Each person's own: nobody's list is not Mira's, and the Gallery has none.
+            ctx, pg = browser_as(b, None, "phone", "light")
+            go(pg, "/social/search", wait=500)
+            nobody = pg.evaluate(PAGE13)
+            go(pg, "/social/explore", wait=500)
+            search_box(pg, "pa")
+            pg.fill("[data-gal-q]", "")
+            pg.dispatch_event("[data-gal-q]", "input")
+            rest13(pg)
+            gal_empty = pg.evaluate(PAGE13)
+            close_ctx(ctx, pg)
+            check("each person's own list: signed out the page keeps nobody's (its own key), and shows the quiet line;"
+                  " the Gallery is as it was, no recent searches there, and its emptied box brings every drawing back",
+                  nobody["key"] == "blooby.search.v1" and nobody["none"] == ["Find people and drawings.", True]
+                  and not nobody["recent"] and gal_empty["key"] is None and not gal_empty["recent"] and gal_empty["none"] is None
+                  and len(gal_empty["tiles"]) >= 1 and gal_empty["path"] == "/social/explore",
+                  json.dumps({"nobody": {k: nobody[k] for k in ("key", "none", "recent")},
+                              "gallery": {k: gal_empty[k] for k in ("key", "recent", "none", "path")} | {"tiles": len(gal_empty["tiles"])}}))
+            # A phone that keeps nothing (storage refused): the quiet line, and searching works.
+            ERR0 = len(ERRS)
+            ctx, pg = browser_as(b, mira, "phone", "light", init=REFUSE13)
+            go(pg, "/social/search", wait=500)
+            refused = pg.evaluate(PAGE13)
+            search_box(pg, "pa")
+            pg.keyboard.press("Enter")
+            pg.wait_for_timeout(300)
+            refused_typed = pg.evaluate(PAGE13)
+            close_ctx(ctx, pg)
+            check("a phone that keeps nothing (storage refused, as a private window can): the quiet line, the search finds"
+                  " the same people, nothing breaks",
+                  refused["none"] == ["Find people and drawings.", True] and not refused["recent"]
+                  and refused_typed["people"] == ["@theo", "@pam", "@patti"] and len(ERRS) == ERR0,
+                  json.dumps({"refused": refused["none"], "people": refused_typed["people"], "errors": ERRS[ERR0:][:3]}))
+            # Kind: the list and what is found trade places only while the part that fades cannot be seen.
+            kind = {}
+            for screen in ("phone", "desk"):
+                ctx, pg = browser_as(b, mira, screen, "light")
+                go(pg, "/social/search", wait=400)
+                pg.evaluate("(k) => localStorage.setItem(k, JSON.stringify([{ t: 'q', q: 'kiwi' }, { t: 'q', q: 'pa' }]))", KEY)
+                go(pg, "/social/search", wait=500)
+                pg.focus("[data-gal-q]")
+                pg.evaluate(FRAMES13, 2400)
+                pg.keyboard.type("pa", delay=25)
+                pg.wait_for_timeout(2500)
+                went = pg.evaluate("() => window.__rsFrames")
+                pg.evaluate(FRAMES13, 2400)
+                pg.fill("[data-gal-q]", "")
+                pg.dispatch_event("[data-gal-q]", "input")
+                pg.wait_for_timeout(2500)
+                came = pg.evaluate("() => window.__rsFrames")
+                close_ctx(ctx, pg)
+                gone_at = next((f for f in went if not f[2]), None)
+                found_at = next((f for f in went if f[3] > 0), None)
+                back_at = next((f for f in came if f[2]), None)
+                kind[screen] = {"list gone": gone_at and gone_at[1], "people in": found_at and found_at[1],
+                                "list back": back_at and back_at[1], "ends": [went[-1][1:], came[-1][1:]],
+                                "fading": sum(1 for f in went if 0.02 < f[1] < 0.98), "rising": sum(1 for f in came if 0.02 < f[1] < 0.98)}
+            check("kind, never jumpy: the recent searches go, and the people found come, only while the part that fades"
+                  " cannot be seen (under 5%), and the list comes back the same way when the box is emptied; each fades"
+                  " over several frames to whole (phone and desk)",
+                  len(kind) == 2 and all(k["list gone"] is not None and k["list gone"] < 0.05 and k["people in"] is not None
+                                         and k["people in"] < 0.05 and k["list back"] is not None and k["list back"] < 0.05
+                                         and k["fading"] >= 2 and k["rising"] >= 2 and k["ends"][0][0] == 1 and k["ends"][1][0] == 1
+                                         for k in kind.values()), json.dumps(kind))
+            # Every word 4.5:1, every target 44px, the box 16px: the quiet line, the list, what is found.
+            lows, smalls, fields, reads = [], [], [], {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    ctx, pg = browser_as(b, mira, screen, scheme)
+                    go(pg, "/social/search", wait=400)
+                    pg.evaluate("(k) => localStorage.removeItem(k)", KEY)
+                    for name, setup in (("the quiet line", None), ("the list", "list"), ("what is found", "pa")):
+                        if setup == "list":
+                            pg.evaluate("(k) => localStorage.setItem(k, JSON.stringify([{ t: 'p', h: 'pam', n: 'Pam Lee', u: '/social/@pam' },"
+                                        " { t: 'q', q: 'a cat sleeping' }]))", KEY)
+                        go(pg, "/social/search" + ("?q=pa" if setup == "pa" else ""), wait=500)
+                        got = pg.evaluate(READ, "main")
+                        tag = f"{screen} {scheme} {name}"
+                        reads[tag] = [got["read"], got["lowest"]]
+                        lows += [f"{tag}: {x}" for x in got["low"]]
+                        smalls += [f"{tag}: {x}" for x in got["small"]]
+                        fields += [f"{tag}: {x}" for x in got["fields"]]
+                    close_ctx(ctx, pg)
+            check("every word on Search at 4.5:1 or more on what is painted behind it, every target 44px or more (an"
+                  " ×, Clear all, a recent row, See all), the box 16px or more: the quiet line, the list and what is"
+                  " found, phone and desk, light and dark",
+                  len(reads) == 12 and all(v[0] >= 2 for v in reads.values()) and not lows and not smalls and not fields,
+                  f"low {lows[:4]}; small {smalls[:4]}; fields {fields[:3]}; read {json.dumps(reads)[:500]}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(13, exc)
 
     # ------------------------------------------------------------------ 11
     if part(11, "no page errors, no console errors and no CSP violations"):

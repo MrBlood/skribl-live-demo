@@ -14,9 +14,11 @@ what it promises, through the demo's own server:
      its own domain (SKRIBL_SOCIAL_HOME_HOSTS) it opens the site's Home,
      while the demo's name keeps the Pad.
   2. THE BAR AND THE RAIL: on a touch phone the bar holds Home, Gallery
-     (Explore's place, its name since the map's step 3), Make and Sign in
-     (You once signed in, piece 2: verify_socialauth), and
-     on a desk the rail holds the wordmark and the same four; the
+     (Explore's place, its name since the map's step 3), Make, Search (since
+     Nov 22, the owner's "Yes to all" to round two of "Blooby and Search")
+     and Sign in (You once signed in, piece 2: verify_socialauth), and on a
+     desk the rail holds the wordmark and the same five, Search under the
+     Gallery, How it works above Sign in; the
      page you are on carries the pen's line (painted, not merely there),
      which draws itself as the page comes in (read on every frame: it waits
      while the page fades in, then draws on several frames, never faster than
@@ -469,13 +471,14 @@ with sync_playwright() as p:
         ph, dk = names("phone", "home"), names("desk", "home")
         # Signed out, You's place says Sign in (piece 2, as the approved mock
         # has it); You itself, signed in, is verify_socialauth's to hold.
-        check("on a touch phone the bar holds Home, Gallery, Make and Sign in, and nothing else (You's place,"
-              " before sign-in)",
-              ph == ["Home", "Gallery", "Make", "Sign in"] and seen[("phone", "home")][2] is not None,
+        check("on a touch phone the bar holds Home, Gallery, Make, Search and Sign in, and nothing else (You's place,"
+              " before sign-in; Make in the middle, the owner's \"Yes to all\", Nov 22)",
+              ph == ["Home", "Gallery", "Make", "Search", "Sign in"] and seen[("phone", "home")][2] is not None,
               f"the bar {ph}; the wordmark at the top {seen[('phone', 'home')][2]}")
-        check("on a desk the rail holds the wordmark, Home, Gallery, Make, How it works (the owner's \"All yes\","
-              " Nov 19: a desk's rail alone, a phone's bar keeps its four) and Sign in, and nothing else",
-              dk == ["Blooby, home", "Home", "Gallery", "Make", "How it works", "Sign in"] and seen[("desk", "home")][2] is None,
+        check("on a desk the rail holds the wordmark, Home, Gallery, Search (under the Gallery, Nov 22), Make, How it"
+              " works (the owner's \"All yes\", Nov 19: a desk's rail alone, not in a phone's bar) and Sign in, and nothing"
+              " else",
+              dk == ["Blooby, home", "Home", "Gallery", "Search", "Make", "How it works", "Sign in"] and seen[("desk", "home")][2] is None,
               f"the rail {dk}; the phone's wordmark {seen[('desk', 'home')][2]}")
         # THE WORDMARK IS blooby. (the owner, Nov 12: the name, then "i
         # actually like the blooby blush period"): the word in the site's
@@ -579,21 +582,23 @@ with sync_playwright() as p:
                         sizes[(scheme, page)] = {i["name"]: icon_ink(png, i["box"]) for i in items}
                         drawn_at[(scheme, page)] = {i["name"]: i["icw"] for i in items}
                         said[(scheme, page)] = {n: pg.get_by_role(r, name=n, exact=True).count()
-                                                for n, r in (("Home", "link"), ("Gallery", "link"), ("Make", "button"), ("Sign in", "link"))}
+                                                for n, r in (("Home", "link"), ("Gallery", "link"), ("Make", "button"), ("Search", "link"),
+                                                             ("Sign in", "link"))}
                 c.close()
         words_ok = all(all(v["word"][0] <= 1 and v["word"][1] <= 1 for v in alone[("phone", s_, p_)].values())
                        for s_ in ("light", "dark") for p_ in ("home", "explore")) \
             and all(all(v["word"][0] >= 30 for n, v in alone[("desk", s_, p_)].items()) for s_ in ("light", "dark") for p_ in ("home", "explore")) \
             and all(all(n >= 1 for n in v.values()) for v in said.values())
         check("on a touch phone the bar is its icons alone: no word painted under them, each place's name still its"
-              " accessible name (Home, Gallery, Make, Sign in, as a screen reader says them); a desk's rail keeps its words",
+              " accessible name (Home, Gallery, Make, Search, Sign in, as a screen reader says them); a desk's rail keeps its"
+              " words",
               words_ok, json.dumps({"phone": {f"{k[1]} {k[2]}": {n: v["word"] for n, v in d.items()} for k, d in alone.items() if k[0] == "phone"},
                                     "said": {f"{k[0]} {k[1]}": v for k, v in said.items()}})[:700])
         def one_size(d):
-            lines = [d[n] for n in ("Home", "Gallery", "Sign in")]
-            return all(v and 24.5 <= max(v) <= 26.8 for v in lines) and bool(d["Make"]) and 31 <= d["Make"][0] <= 33
-        check("...and every icon looks one size, read off its paint: the line drawings (Home, the Gallery's Blooby, Sign in)"
-              " at 92%, reaching 24.5 to 26.8px, and Make's purple round, 31 to 33 across (a circle drawn a seventh"
+            lines = [d.get(n) for n in ("Home", "Gallery", "Search", "Sign in")]
+            return all(v and 24.5 <= max(v) <= 26.8 for v in lines) and bool(d.get("Make")) and 31 <= d["Make"][0] <= 33
+        check("...and every icon looks one size, read off its paint: the line drawings (Home, the Gallery's Blooby, Search's"
+              " magnifier, Sign in) at 92%, reaching 24.5 to 26.8px, and Make's purple round, 31 to 33 across (a circle drawn a seventh"
               " bigger), light and dark, Home and the Gallery",
               len(sizes) == 4 and all(one_size(d) for d in sizes.values()),
               json.dumps({f"{k[0]} {k[1]}": v for k, v in sizes.items()}))

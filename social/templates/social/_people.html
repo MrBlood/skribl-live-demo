@@ -12,12 +12,14 @@
                         says how). Your own row has none, as your own page
                         has none.
     people_rows(people) the rows alone (See all's Load more).
-    people_box(people, more, q)   the Gallery's People section, with a search
-                        that finds somebody: "People", up to three rows, "See
-                        all" when there are more (the people alone, the same
-                        page asked ?who=people), then the "Drawings" heading
-                        over the tiles. Finding nobody, only the drawings'
-                        heading, for a screen reader, as before.
+    people_box(people, more, q, at)   the People section of the Gallery
+                        (at "social.explore") or of Search ("social.search"),
+                        with a search that finds somebody: "People", up to
+                        three rows, "See all" when there are more (the people
+                        alone, the same page asked ?who=people), then the
+                        "Drawings" heading over the tiles. Finding nobody,
+                        only the drawings' heading, for a screen reader, as
+                        before.
 
     Import these WITH CONTEXT: the rows read the page's me and skribl_bp. #}
 {% from 'social/_post.html' import face with context %}
@@ -32,13 +34,13 @@
 {%- for r in people %}{{ person_row(r) }}{% endfor -%}
 {%- endmacro %}
 
-{% macro people_box(people, more, q) -%}
+{% macro people_box(people, more, q, at='social.explore') -%}
 {%- if people %}
 <section class="fp-people" aria-labelledby="fpPeople">
   <h2 class="fp-sec" id="fpPeople">People</h2>
   <ul class="fp-list">{{ people_rows(people) }}</ul>
   {%- if more %}
-  <p class="fp-all"><a href="{{ url_for('social.explore', q=q, who='people') }}">See all<span class="sr"> people</span><span aria-hidden="true">›</span></a></p>
+  <p class="fp-all"><a href="{{ url_for(at, q=q, who='people') }}">See all<span class="sr"> people</span><span aria-hidden="true">›</span></a></p>
   {%- endif %}
   <p class="say fp-say" data-say role="status" hidden></p>
 </section>

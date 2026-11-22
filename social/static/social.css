@@ -461,11 +461,17 @@ body {
 .nav .tab-make .ic { width: 19px; height: 19px; }
 /* You says whose it is only on a desk's rail; the bar says You. */
 .nav .tab-who { display: none; }
-/* Settings is a desk's rail's alone: a phone's bar keeps its four places. */
+/* Settings is a desk's rail's alone: a phone's bar keeps its five places. */
 .nav .tab-settings { display: none; }
 /* ...and so is How it works (the owner's "All yes", Nov 19): on a phone it
    is the ☰'s first row. */
 .nav .tab-how { display: none; }
+/* SEARCH (the owner's "Yes to all", Nov 22, to round two of "Blooby and
+   Search"): five places in a phone's bar, Make in the middle (Home, Gallery,
+   Make, Search, You), each 77px of a 402px phone; on a desk's rail Search is
+   under the Gallery, and Make stays the big button below. Two links, one
+   shown at each width (base.html), so a keyboard's order is the order seen. */
+.nav .tab-search.is-rail { display: none; }
 /* Before sign-in, a phone's first screen says Sign in at its top right too,
    as the approved mock does; it scrolls away with the wordmark. */
 .top-signin {
@@ -653,6 +659,8 @@ html.is-app .app-edge {
      foot is its own, and what follows keeps the rail's 4px. */
   .nav .tab-how { display: flex; margin-top: auto; }
   .nav .tab-how + .tab-settings, .nav .tab-how + .tab-you { margin-top: 4px; }
+  .nav .tab-search.is-rail { display: flex; }
+  .nav .tab-search.is-bar { display: none; }
   .nav .tab-me { min-height: 60px; }
   .nav .tab-me .tab-name { display: none; }
   .nav .tab-me .tab-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
@@ -849,6 +857,25 @@ html.is-app .app-edge {
   display: inline-flex; align-items: center; gap: 4px; min-height: 44px;
   color: var(--accent-ink); font-size: 16px; font-weight: 600; text-decoration: none;
 }
+
+/* ---- SEARCH, ITS OWN PAGE (the owner's "Yes to all", Nov 22, to round two
+ * of the "Blooby and Search" mock; search.html, search.js). The Gallery's
+ * box, and what it finds as the Gallery shows it. Before a search, the
+ * recent searches: "Recent", the People heading's own words, with Clear all
+ * at its end in See all's small violet words, 44px to a finger; then a row
+ * each, as a person's row is (64px, the card's edge between two): a person
+ * their face, name and @handle; words searched in the first ink at 17px, a
+ * name's size but not its weight (they are what you typed, not somebody);
+ * an × at the row's end in the page's second ink, 44px. SAME ROLE, SAME
+ * TOKEN: nothing here has a colour of its own. Nothing searched yet: one
+ * quiet line, the site's own (.feed-none). ---- */
+.rs-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rs-head .fp-sec { margin: 0; }
+.rs-clear {
+  flex: none; min-height: 44px; margin: 0; padding: 0 2px; border: 0; background: none; cursor: pointer;
+  color: var(--accent-ink); font: 600 16px/1.2 var(--font);
+}
+.fp-words b.rs-words { font-weight: 400; }
 
 /* ---- THE EYE, on your own Gallery tab (the owner's "Yes, the eye in view",
    Nov 14; the tile-eye mock's own CSS, in the site's tokens) ---------------

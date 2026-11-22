@@ -33,6 +33,14 @@
  * never puts back what the person has moved on from. A pick that cannot be
  * had puts the pills back to what the tiles show, and says so kindly.
  *
+ * SEARCH'S OWN PAGE moves the same way (search.html: the box and what it
+ * finds, no pills; the owner's "Yes to all", Nov 22). There an emptied box
+ * asks the server for nothing and shows nothing of its own ([data-blank]):
+ * what shows then is the recent searches, search.js's. Each time what is
+ * shown changes, while it cannot be seen, this file says so on the part
+ * that fades ('gal:swap', with the words it shows), so search.js puts its
+ * list in or takes it out unseen too.
+ *
  * The words are the page's ([data-gal-words]): this file says nothing of its
  * own.
  */
@@ -48,6 +56,7 @@
   });
   var page = swap.getAttribute('data-explore');
   var who = swap.getAttribute('data-who') || '';
+  var blank = swap.hasAttribute('data-blank');
   var box = swap.querySelector('[data-fp-box]');
   var grid = swap.querySelector('[data-gal-grid]');
   var more = swap.querySelector('[data-gal-next]');
@@ -84,6 +93,7 @@
     return p.length ? '?' + p.join('&') : '';
   }
   function ask(s, before) {
+    if (blank && !s.q) return Promise.resolve({ html: '', next: null, people: '' });
     return fetch(url + query(s, before), { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); });
   }
@@ -91,7 +101,7 @@
      search that found people but no drawings says so of the drawings). */
   function empties() {
     var key = grid.children.length ? '' : who ? who
-      : !shown.q ? shown.show : (box && box.querySelector('.fp-row') ? 'search-people' : 'search');
+      : !shown.q ? (blank ? '' : shown.show) : (box && box.querySelector('.fp-row') ? 'search-people' : 'search');
     Array.prototype.forEach.call(nones, function (n) { n.hidden = n.getAttribute('data-gal-none') !== key; });
   }
   /* The tiles fade out (social.css, .gal-swap.is-out); this waits for them
@@ -139,6 +149,7 @@
       more.hidden = !j.next;
       more.disabled = false;
       empties();
+      swap.dispatchEvent(new CustomEvent('gal:swap', { detail: { q: s.q } }));
       if (window.history && history.replaceState) history.replaceState(history.state, '', page + query(s));
       if (window.scrollY !== y) window.scrollTo(0, y);
       requestAnimationFrame(function () {

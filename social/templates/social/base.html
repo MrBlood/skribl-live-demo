@@ -33,7 +33,7 @@
     ACTIVITY (notifications; the owner's "all yes", Nov 12): signed in, a
     bell drawn in our pen at the top right of a phone's Home and Gallery,
     where Sign in sits before you sign in, and Activity in a desk's rail
-    after Gallery (the bar keeps its four places: it is not in the bar).
+    after Search (it is not in the bar: the bar holds its five places).
 
     THE BAR SAYS GALLERY (the map's step 3; the Gallery mock's "The bar says
     Gallery, with Blooby's Explore icon kept"): Explore became the Gallery of
@@ -53,14 +53,23 @@
     SETTINGS IN A DESK'S RAIL (the Settings mock's b): above your name at the
     rail's foot, on every page, lit like Home on Settings and the pages it
     leads to (Invites, deleting the account), where You stays lit too, as
-    the mock's picture has it. A phone's bar keeps its four places, as it
+    the mock's picture has it. A phone's bar keeps its five places, as it
     did for Activity: there Settings is the word on your profile, and a row
     of the ☰'s sheet.
 
+    SEARCH, A PLACE OF ITS OWN (the owner's "Yes to all", Nov 22, to round
+    two of the "Blooby and Search" mock): the magnifier, drawn in our pen, in
+    a phone's bar, which holds five places with Make in the middle: Home,
+    Gallery, Make, Search, You. On a desk's rail Search is under the Gallery
+    and Make stays the big button below. Two links, one shown at each width,
+    each where it is read: a keyboard's order is the order seen (CSS order
+    would move the picture and leave the focus behind). Its page has the
+    top Home and the Gallery have, the ☰ and the bell (search.html).
+
     THE ☰ ON A PHONE (the quick-patterns mock; the owner's "Yes on
     everything", Nov 13, the map's step 5): drawn in our pen, at the top left
-    of Home and the Gallery, beside the wordmark, in the top's ink, as the
-    bell at its other end. It opens the site's own sheet (_menu.html):
+    of Home, the Gallery and Search, beside the wordmark, in the top's ink,
+    as the bell at its other end. It opens the site's own sheet (_menu.html):
     Settings, Community rules, Privacy, Your reports (an admin's) and Sign
     out; signed out, Sign in, Community rules and Privacy. A desk has none:
     the top is a phone's alone, and the rail already holds Settings.
@@ -170,12 +179,12 @@
    verify_a11y fails). #}
 <header class="top">
   {% block top %}
-  {% if accounts and not hide_nav and here in ('home', 'explore') %}
+  {% if accounts and not hide_nav and here in ('home', 'explore', 'search') %}
   <button class="icon-btn top-menu" type="button" data-site-menu aria-haspopup="dialog" aria-controls="siteMenu"
           aria-expanded="false" aria-label="Menu" title="Menu">{{ ic.menu() }}</button>{% endif %}
   <a class="brand" href="{{ url_for('social.home') }}" aria-label="Blooby, home">{% include 'social/_blooby_mark.html' %}</a>
   {% if accounts and not me and not hide_nav %}<a class="top-signin" href="{{ url_for('social.signin') }}">Sign in</a>{% endif %}
-  {% if accounts and me and not hide_nav and here in ('home', 'explore') %}{% set dot = activity_dot() %}
+  {% if accounts and me and not hide_nav and here in ('home', 'explore', 'search') %}{% set dot = activity_dot() %}
   <a class="icon-btn top-bell" href="{{ url_for('social.activity') }}" data-activity title="Activity"
      aria-label="{{ 'Activity, something new' if dot == 'new' else 'Activity' }}">{{ ic.bell(dot=dot) }}</a>{% endif %}
   {% endblock %}
@@ -187,6 +196,13 @@
     <span class="tab-ic">{{ ic.home(here == 'home') }}{% if here == 'home' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Home{% if here == 'home' %}{{ ic.underline() }}{% endif %}</span></a>
   <a class="tab" href="{{ url_for('social.explore') }}"{% if here == 'explore' %} aria-current="page"{% endif %}>
     <span class="tab-ic">{{ ic.explore(here == 'explore') }}{% if here == 'explore' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Gallery{% if here == 'explore' %}{{ ic.underline() }}{% endif %}</span></a>
+  {% if accounts %}
+  {# Search: a desk's rail shows this one, under the Gallery; a phone's bar
+     the one after Make (SEARCH, A PLACE OF ITS OWN, above). #}
+  {% set search_tab %}<span class="tab-ic">{{ ic.search(here == 'search') }}{% if here == 'search' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Search{% if here == 'search' %}{{ ic.underline() }}{% endif %}</span>{% endset %}
+  <a class="tab tab-search is-rail" href="{{ url_for('social.search') }}"{% if here == 'search' %} aria-current="page"{% endif %}>
+    {{ search_tab }}</a>
+  {% endif %}
   {% if accounts and me %}{% set dot = activity_dot() %}
   <a class="tab tab-activity" href="{{ url_for('social.activity') }}" data-activity{% if here == 'activity' %} aria-current="page"{% endif %}{% if dot == 'new' %} aria-label="Activity, something new"{% endif %}>
     <span class="tab-ic">{{ ic.bell(here == 'activity', dot) }}{% if here == 'activity' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Activity{% if here == 'activity' %}{{ ic.underline() }}{% endif %}</span></a>
@@ -194,7 +210,9 @@
   <button class="tab tab-make" type="button" data-make aria-haspopup="dialog" aria-controls="{{ 'composeSheet' if composing else 'makeSheet' }}" aria-expanded="false">
     <span class="tab-ic">{{ ic.pen() }}</span><span class="tab-name">Make</span></button>
   {% if accounts %}
-  {# How it works, a desk's rail only (a phone's bar keeps its four places:
+  <a class="tab tab-search is-bar" href="{{ url_for('social.search') }}"{% if here == 'search' %} aria-current="page"{% endif %}>
+    {{ search_tab }}</a>
+  {# How it works, a desk's rail only (a phone's bar keeps its five places:
      there it is the ☰'s first row), above Settings, or above Sign in before
      that (the owner's "All yes", Nov 19). #}
   <a class="tab tab-how" href="{{ url_for('social.how') }}"{% if here == 'how' %} aria-current="page"{% endif %}>
@@ -223,7 +241,7 @@
    for your face) sits outside #main: opening one makes #main inert, and a
    sheet inside it would go inert with it. #}
 {% if composing %}{% include 'social/_compose.html' %}{% elif not hide_nav %}{% include 'social/_make.html' %}{% endif %}
-{% if accounts and not hide_nav and here in ('home', 'explore') %}{% include 'social/_menu.html' %}{% endif %}
+{% if accounts and not hide_nav and here in ('home', 'explore', 'search') %}{% include 'social/_menu.html' %}{% endif %}
 {% block overlays %}{% endblock %}
 </body>
 </html>

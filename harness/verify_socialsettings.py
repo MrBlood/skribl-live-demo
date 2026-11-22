@@ -34,7 +34,7 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
   6. FINDING SETTINGS: (a) the gear says Settings, at the top of your own
      profile on a phone and in your row of buttons on a desk; (b) on a desk,
      Settings in the rail above you on every page, lit on Settings and the
-     pages it leads to; a phone's bar keeps its four places; (c), the ☰ on a
+     pages it leads to; a phone's bar keeps its five places; (c), the ☰ on a
      phone, came with the map's step 5, and is section 10.
   7. SIGNED OUT, NOTHING NEW: no switch and no Settings anywhere; the device
      decides; the Pad's own switch (through Make) sets the one choice.
@@ -45,8 +45,9 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
      painted behind it (the pill's chosen word on its tint), every target 44px
      to a finger, no field under 16px; phone (touch) and desk, light and dark.
  10. THE ☰ ON A PHONE (the quick-patterns mock; the owner's "Yes on
-     everything", Nov 13, the map's step 5): at the top left of Home and the
-     Gallery on a touch phone, first in the top, painted, 44px every way,
+     everything", Nov 13, the map's step 5): at the top left of Home, the
+     Gallery and Search on a touch phone, first in the top (the wordmark
+     clear of it, in the middle since Nov 22), painted, 44px every way,
      named Menu, three strokes in our pen of one length (the owner's "B,
      equal lines", Nov 14), in the top's ink;
      a desk has none, nor any other page; it opens the site's own sheet, the
@@ -1191,8 +1192,8 @@ with sync_playwright() as p:
                     canvasSize: { cssWidth: 816, cssHeight: 612 }, frames: [{ strokes: pts, strokeGroups: [pts.length], background: { color: '#f6f2ea' } }] } }) });
                 return [r.status, await r.json().catch(() => ({}))]; }""")
             post = ans.get("post") if st == 200 else None
-            pages = ["/social/", "/social/explore", "/social/activity", "/social/@mira", "/social/@nico", "/social/you/edit",
-                     "/social/you", "/social/invites", "/social/you/delete"] + ([f"/social/p/{post}"] if post else [])
+            pages = ["/social/", "/social/explore", "/social/search", "/social/activity", "/social/@mira", "/social/@nico",
+                     "/social/you/edit", "/social/you", "/social/invites", "/social/you/delete"] + ([f"/social/p/{post}"] if post else [])
             lit_on = {"/social/you", "/social/invites", "/social/you/delete"}
             rails, bars = {}, {}
             for scheme in ("light", "dark"):
@@ -1222,8 +1223,8 @@ with sync_playwright() as p:
                   " to Settings), lit like Home where it leads (Settings, Invites, deleting the account: the page's"
                   " mark, its name bold, the pen's line under it) and only there, You lit there too",
                   not bad and len(rails) == 2 * len(pages), "; ".join(bad)[:1600] or f"{len(rails)} rails read")
-            check("a phone's bar keeps its four places (Home, Gallery, Make, You) on every one of those pages: no"
-                  " Settings in it", all(v == ["Home", "Gallery", "Make", "You"] for v in bars.values()) and len(bars) == len(pages),
+            check("a phone's bar keeps its five places (Home, Gallery, Make, Search, You) on every one of those pages: no"
+                  " Settings in it", all(v == ["Home", "Gallery", "Make", "Search", "You"] for v in bars.values()) and len(bars) == len(pages),
                   json.dumps(bars))
         except Exception as exc:  # noqa: BLE001
             stopped(6, exc)
@@ -1243,15 +1244,16 @@ with sync_playwright() as p:
                             places: [...document.querySelectorAll('nav.nav > a, nav.nav > button')].filter(e => e.getClientRects().length && !e.classList.contains('brand'))
                                      .map(e => (e.querySelector('.tab-name') || e).textContent.trim()) })""")
                         # How it works is a desk's rail's alone (the owner's "All yes",
-                        # Nov 19): a phone's bar keeps its four places.
-                        places = (["Home", "Gallery", "Make", "Sign in"] if screen == "phone"
-                                  else ["Home", "Gallery", "Make", "How it works", "Sign in"])
+                        # Nov 19): a phone's bar keeps its five places, Search after Make
+                        # (Nov 22), and a desk's rail has Search under the Gallery.
+                        places = (["Home", "Gallery", "Make", "Search", "Sign in"] if screen == "phone"
+                                  else ["Home", "Gallery", "Search", "Make", "How it works", "Sign in"])
                         outs.append((not seen["switch"] and seen["settings"] == 0 and seen["places"] == places
                                      and st["stamp"] == scheme and st["page"] == PAGE_RGB[scheme],
                                      f"{screen} {scheme} {path}: {seen}, {st['stamp']} {st['page']}"))
                     close_ctx(ctx, pg)
             check("signed out the site shows nothing of Settings: no Theme switch and no way to Settings anywhere, the bar as"
-                  " it was (Home, Gallery, Make, Sign in) and a desk's rail with How it works above Sign in, and the device"
+                  " it was (Home, Gallery, Make, Search, Sign in) and a desk's rail with How it works above Sign in, and the device"
                   " decides",
                   all(o for o, _ in outs), "; ".join(w for o, w in outs if not o) or f"{len(outs)} pages")
             ctx, pg = browser_as(b, None, "phone", "light", theme=None)
@@ -1402,29 +1404,31 @@ with sync_playwright() as p:
             PAPER = {"light": "rgb(243, 240, 255)", "dark": "rgb(23, 20, 42)"}       # --sheet-paper
             ROWBG = {"light": "rgb(255, 255, 255)", "dark": "rgb(35, 30, 59)"}       # --row-bg
 
-            # (a) where it is, light and dark, signed in and out, Home and the Gallery
+            # (a) where it is, light and dark, signed in and out, Home, the Gallery and Search (whose top is the
+            # Gallery's since Nov 22). The wordmark is in the middle of the top since Nov 22 (the owner's pick A of
+            # "Blooby and Search"; verify_socialposts 21 reads it there): here it need only be clear of the ☰.
             seen = {}
             for scheme in ("light", "dark"):
                 for who in (plain, None):
                     ctx, pg = browser_as(b, who, "phone", scheme, theme=None)
-                    for path in ("/social/", "/social/explore"):
+                    for path in ("/social/", "/social/explore", "/social/search"):
                         go(pg, path)
                         seen[(scheme, who.handle if who else "nobody", path)] = pg.evaluate(MENU)
                     close_ctx(ctx, pg)
             bad = []
             for k, m in seen.items():
                 if not (m and m["painted"] and m["reach"] and m["w"] == 44 and m["h"] == 44 and m["x"] == 6 and m["first"]
-                        and m["gap"] == 2 and abs(m["mid"]) <= 0.5 and m["label"] == "Menu" and m["popup"] == "dialog"
+                        and m["gap"] >= 2 and abs(m["mid"]) <= 0.5 and m["label"] == "Menu" and m["popup"] == "dialog"
                         and m["controls"] == "siteMenu" and m["expanded"] == "false" and m["pen"] and len(m["lengths"]) == 3
                         and max(m["lengths"]) - min(m["lengths"]) <= 0.5 and same_colour(m["color"], m["ink"])
                         and (m["bell"] is None or same_colour(m["color"], m["bell"])) and m["k"] >= 3):
                     bad.append(f"{k}: {json.dumps(m)}")
-            check("on a touch phone Home and the Gallery have the ☰ at the top left, first in the top, the wordmark 2px"
-                  " after it: painted where it stands, 44px to a finger every way, its box reaching 10px past the top's"
+            check("on a touch phone Home, the Gallery and Search have the ☰ at the top left, first in the top, the wordmark"
+                  " clear of it (in the top's middle since Nov 22): painted where it stands, 44px to a finger every way, its box reaching 10px past the top's"
                   " edge as the mock placed it, its middle on the top's; named Menu, opening a dialog; drawn in our pen,"
                   " three strokes of one length, within half a unit (the owner's equal lines, Nov 14: the last was"
                   " shorter); in the top's ink (the bell's), 3:1 or more as a mark; signed in"
-                  " and signed out, light and dark", not bad and len(seen) == 8, "; ".join(bad)[:1200] or f"{len(seen)} read")
+                  " and signed out, light and dark", not bad and len(seen) == 12, "; ".join(bad)[:1200] or f"{len(seen)} read")
             print("    the ☰'s strokes and ink:", json.dumps({f"{k[0]} {k[1]} {k[2]}": [m and m["lengths"], m and m["k"]]
                                                           for k, m in list(seen.items())[:2]}))
 
@@ -1432,18 +1436,18 @@ with sync_playwright() as p:
             none = {}
             for screen in ("phone", "desk"):
                 ctx, pg = browser_as(b, plain, screen, "light", theme=None)
-                paths = (("/social/", "/social/explore") if screen == "desk" else
+                paths = (("/social/", "/social/explore", "/social/search") if screen == "desk" else
                          (f"/social/@{plain.handle}", "/social/activity", "/social/you", "/social/rules"))
                 for path in paths:
                     go(pg, path)
                     none[(screen, path)] = pg.evaluate("() => { const b = document.querySelector('[data-site-menu]');"
                                                        " return b ? b.getClientRects().length : 'none'; }")
                 close_ctx(ctx, pg)
-            check("a desk has none (on Home and the Gallery nothing of it is painted: the top is a phone's, and the rail"
-                  " already has Settings), and on a phone it is Home's and the Gallery's alone: not on your profile,"
-                  " Activity, Settings or the rules",
+            check("a desk has none (on Home, the Gallery and Search nothing of it is painted: the top is a phone's, and"
+                  " the rail already has Settings), and on a phone it is Home's, the Gallery's and Search's alone: not on"
+                  " your profile, Activity, Settings or the rules",
                   all(v == 0 for (s_, _), v in none.items() if s_ == "desk")
-                  and all(v == "none" for (s_, _), v in none.items() if s_ == "phone") and len(none) == 6,
+                  and all(v == "none" for (s_, _), v in none.items() if s_ == "phone") and len(none) == 7,
                   json.dumps({f"{k[0]} {k[1]}": v for k, v in none.items()}))
 
             # (c) its sheet, signed in, on Home and the Gallery
@@ -1776,7 +1780,7 @@ with sync_playwright() as p:
                 close_ctx(ctx, pg)
             stops, foot = walks["light"]
             under = [s for s in stops if s["bar"] >= 5]
-            last = max((s["y"] for s in stops if not s["name"] in ("Home", "Gallery", "Make", "You", "Activity")), default=0)
+            last = max((s["y"] for s in stops if not s["name"] in ("Home", "Gallery", "Make", "Search", "You", "Activity")), default=0)
             check("Settings on a phone, walked with Tab from its top to its foot (twelve stops or more, the last of the"
                   " page's own within 300px of its end): not one of them is under the bar",
                   len(stops) >= 12 and foot - last < 300 and not under,
