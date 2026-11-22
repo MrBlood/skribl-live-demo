@@ -52723,3 +52723,65 @@ other three rows passed on the wrong page, which is how a fast runner
 could have passed it all along.
 
 PAD AND FLIP: not theirs; the site's pill and a site suite.
+
+## After v330 -- Style stays under the words while they are typed (the owner's yes)
+
+The owner's iPhone, Nov 22, 11:59 AM, after #1061 (Text's drawer clears
+the iPhone's own bar) went live: the typing drawer with an empty band under
+the box: "I checked it, but the rest of the drawer is missing?" Nothing
+was missing: while the words are typed on a phone the drawer has been the
+box and Write it alone since #1049. The empty band was #1061's: room kept
+for the phone's own strip (^ v and the tick), which in the owner's first
+picture lay over the drawer's foot. Their three pictures show the phone
+puts that strip in two places: right after Text opens, over the foot of
+what it says can be seen; once typed (or a tap in the box), below it, the
+phone leaving it room itself, where #1061's room was only empty paper.
+Nothing a page can read tells the two apart (DECISIONS, the strip's
+pictures; a developer's report that Safari leaves the strip room while a
+page in an app can end at the keys fits both).
+
+Asked whether Style could stay under the box while typing, the owner said
+yes, and the mock ("Style While Typing", their phone's size, light and
+dark, now beside with Style, the strip in both places, measured) showed
+the four chips filling exactly the room #1061 had left. THE BUILD: while
+the words are typed on a phone the drawer is the words, Write it and
+Style's four chips (styles.css): 44px (a finger's; right after Text opens
+the strip lies over them exactly, and the words are clear above it), no
+caption over them (the group keeps its name, Style, for a screen reader),
+Make yours without its plus (two words whole on the smaller chip; the
+mock's first version cut it to Make, caught before the build). The room
+for the strip is gone, and with it lib/textwrite.js's test for an iPhone.
+A press on a chip with the keyboard up keeps the box's focus, as Write
+it's does, so the look changes with the keyboard still up and shows on
+the drawing. Size, Thickness and Speed come back when the keyboard is put
+away. The drawing gains 12px in both places. The chips' colours are the
+drawer's at rest (chosen Skribl 9.65 and 8.59 to 1, Make yours 8.39 and
+8.26, Print and Script 14.84 and 18.14, dark and light). How it works says
+so: "while you type, the drawer is your words, Write it and Style, on the
+keyboard" (it said "just your words and Write it"; verify_helpclaims
+caught it, its claim naming the old check, and names the new one).
+
+THE CHECKS, `verify_text` 16 and 24: the typing drawer is the words,
+Write it and Style (44px, no caption, every chip's words inside it, Make
+yours whole), the tiles put away; a tap on a chip changes the look and
+keeps the keyboard; the chips are named Style; and told as an iPhone,
+with the strip over the drawer's foot the words are the strip's 60px
+above the keys and the chips under them, and once the phone leaves it
+room the drawer rests on that with nothing under the chips but its own
+edge (part 16 10/10, part 24 14/14). Five breaks, each on a copy, each
+red only in its rows: Style hidden while typing (the Style and chip-tap
+rows; all four iPhone rows); the chips at 56px (the Style row; the first
+place's rows); a press on a chip taking the focus (the chip-tap row); the
+empty room back (the second place's rows); the plus over Make yours (the
+Style row).
+
+STILL THE OWNER'S: how to see the whole drawer (their question with the
+yes: "how would I even know it was there?"). Proposed, with three frames
+on the mock: on a phone Text opens whole with no keyboard, as Make does
+since Nov 20; a tap on the box brings the keyboard; the keyboard's tick
+puts it away with the words kept. Not built.
+
+NOT SEEN ON AN IPHONE: the drawer is the real one at the owner's size in
+Chrome; the keyboard and the strip are the owner's pictures' places.
+
+PAD AND FLIP: shared, one drawer for both.

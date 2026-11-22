@@ -8438,11 +8438,11 @@ html.skribl-sheet { overscroll-behavior-y: none; }
 /* While the words are typed on a phone, with the keyboard up, the drawer sits
    on the keyboard (lib/textwrite.js fitKeyboard) out of the page's flow
    (#txSpacer keeps its room, so nothing above moves), and is the grabber, the
-   words and Write it, so the drawing shows above it with the words on it.
-   The menu's paper there, not the glass: a fixed card's glass would show the
-   page moving under it. As tall as that row and no taller: a phone's drawers
-   keep 240px whatever they hold, and on the keyboard that was 150px of empty
-   paper over the drawing. */
+   words, Write it and Style, so the drawing shows above it with the words on
+   it. The menu's paper there, not the glass: a fixed card's glass would show
+   the page moving under it. As tall as those rows and no taller: a phone's
+   drawers keep 240px whatever they hold, and on the keyboard that was 150px
+   of empty paper over the drawing. */
 .tx-spacer[hidden] { display: none; }
 .tx-drawer.typing {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 150; margin: 0; min-height: 0;
@@ -8450,20 +8450,24 @@ html.skribl-sheet { overscroll-behavior-y: none; }
   background: var(--menu-paper); -webkit-backdrop-filter: none; backdrop-filter: none;
   box-shadow: var(--glass);   /* a sheet's rim and close line, the menu sheet's (Four Looks' 2); its paper is still the menu's */
 }
-.tx-drawer.typing > :not(.drawer-detent-handle, .tx-top) { display: none; }
-/* THE IPHONE'S OWN BAR OVER THE KEYBOARD (the owner's iPhone, Nov 22, iOS 26:
-   "When I push text I get this"). The phone floats its own strip (^ v and
-   the tick) over the foot of what it says can be seen, so a drawer resting
-   on the keyboard had its field and Write it under it; a tap in the field
-   then had the phone slide the page up to show it, and the page showed
-   between the drawer and the keys. On an iPhone the typing drawer keeps
-   that strip's room at its own foot (the strip is 60px from the keyboard's
-   top on the owner's screen; 68 leaves the field 8px clear, about what the
-   phone itself slid by): the field and Write it sit above the strip, the
-   strip floats over the drawer's own paper, and nothing needs sliding. Set
-   by lib/textwrite.js (fitKeyboard) on an iPhone alone; elsewhere there is
-   no strip to make room for. */
-.tx-drawer.typing.over-bar { padding-bottom: calc(12px + 68px); }
+.tx-drawer.typing > :not(.drawer-detent-handle, .tx-top, .tx-styles) { display: none; }
+/* STYLE STAYS UNDER THE BOX WHILE THE WORDS ARE TYPED (the owner's yes,
+   Nov 22, to the Style While Typing mock): the four looks, each written in
+   itself, so the look can change and be watched on the drawing, with no
+   caption over them (the group keeps its name, Style, for a screen reader).
+   44px, a finger's. An iPhone floats its own strip over the keys (^ v and
+   the tick): right after Text opens it lay over the foot of what the phone
+   says can be seen, once typed the phone left room for it below (the
+   owner's pictures). In the first the strip lies over the chips and the box
+   is clear above it; in the second the chips show above the strip; under
+   the box nothing is ever empty paper (the room kept for the strip before
+   was, in the second). Size, Thickness and Speed come back with the
+   keyboard put away. */
+.tx-drawer.typing > .tx-styles { margin-top: 0; }
+.tx-drawer.typing .tx-style { height: 44px; }
+/* Make yours is two lines there with no room for its plus over them: the
+   words whole, the plus put away until the drawer is whole again. */
+.tx-drawer.typing .tx-make b { display: none; }
 .tx-field {
   width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px;
   border: 1px solid transparent; box-shadow: var(--card-ring); background: var(--menu-card); color: var(--text-primary);
