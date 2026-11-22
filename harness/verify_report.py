@@ -101,6 +101,16 @@ with sync_playwright() as p:
                   for line in text.splitlines()),
               repr([l for l in text.splitlines() if l.startswith("Points")]))
 
+        # WHAT THE PHONE TAKES ITS SCREEN FOR (Nov 21: the owner's bottom bar
+        # rode the page in the Home Screen app, and nothing on a phone shows
+        # the numbers that say why). Read against the page's own, here a
+        # browser tab with nothing wrong.
+        vp = [l for l in text.splitlines() if l.startswith("Viewport: ")]
+        here = pg.evaluate("() => Math.round(visualViewport.height) + ' of ' + innerHeight + ' seen, offset '"
+                           " + Math.round(visualViewport.offsetTop) + ', scrolled ' + Math.round(scrollY) + ', browser tab'")
+        check(f"{surface}: what the phone takes its screen for is included (how much of the window is seen, from where, "
+              "the scroll, and that this is a browser tab)", vp == ["Viewport: " + here], repr(vp) + " against " + here)
+
         # The privacy contract, asserted rather than asserted-about.
         check(f"{surface}: no stroke coordinates are included",
               '"x"' not in text and "clientX" not in text, repr(text[:200]))
@@ -128,6 +138,46 @@ with sync_playwright() as p:
               not pg.is_visible("#reportDetails"))
         check(f"{surface}: no JS errors across the flow", not errs, "; ".join(errs[:2]))
         pg.close()
+
+    # -----------------------------------------------------------------------
+    print("\nREPORT — a phone left thinking its keyboard is up says so, in the Home Screen app and inside a post")
+    #
+    # THE FAULT IS STOOD IN FOR (this box has no iPhone): before the page's
+    # scripts run, the visual viewport is left 336px short of the window and
+    # 120px down it, and the phone says it is the Home Screen app. Then the
+    # same with the editor in a frame, as it is inside a post: the numbers
+    # reported are the outermost window's, where the fault is.
+    STUCK = """(() => { if (window.top !== window) return;
+      const vv = { get width() { return innerWidth; }, get height() { return innerHeight - 336; }, get offsetTop() { return 120; },
+        get offsetLeft() { return 0; }, get scale() { return 1; }, addEventListener() {}, removeEventListener() {} };
+      Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => vv });
+      Object.defineProperty(navigator, 'standalone', { value: true, configurable: true }); })();"""
+    REPORT = """() => { window.SkriblReport.init(); document.querySelector('[data-skribl-report]').click();
+      return new Promise(r => setTimeout(() => r(document.getElementById('reportDetails').innerText.split('\\n').filter(l => l.startsWith('Viewport: '))), 350)); }"""
+    ctx = b.new_context(viewport={"width": 402, "height": 812}, is_mobile=True, has_touch=True)
+    ctx.add_init_script(STUCK)
+    pg = ctx.new_page()
+    pg.goto(BASE + "/skribl-pad", wait_until="load")
+    pg.wait_for_timeout(1200)
+    said = pg.evaluate(REPORT)
+    check("a phone left stuck, in the Home Screen app: the report says how much of the window it takes for seen, how far down, "
+          "and that it is the app", said == ["Viewport: 476 of 812 seen, offset 120, scrolled 0, Home Screen app"], repr(said))
+    pg.goto(BASE + "/library", wait_until="load")
+    pg.wait_for_timeout(600)
+    pg.evaluate("""() => { const f = document.createElement('iframe'); f.id = 'inPost'; f.src = '/skribl-pad';
+      f.style.cssText = 'position:fixed;left:0;top:100px;width:402px;height:600px;border:0;z-index:99999'; document.body.appendChild(f);
+      const tall = document.createElement('div'); tall.style.height = '2400px'; document.body.appendChild(tall); window.scrollTo(0, 240); }""")
+    pg.wait_for_function("() => { const w = document.getElementById('inPost').contentWindow; return !!(w && w.SkriblReport && w.document.querySelector('[data-skribl-report]')); }",
+                         timeout=20000)
+    pg.wait_for_timeout(800)
+    inner = [f for f in pg.frames if f.url.endswith("/skribl-pad")][0]
+    framed = inner.evaluate(REPORT)
+    own = inner.evaluate("() => innerHeight")
+    check("the editor inside a post (in a frame, 600px tall, over a page scrolled 240px): the report says the outermost window's "
+          "numbers, where the fault is, its scroll, and that it is in a frame",
+          own == 600 and framed == ["Viewport: 476 of 812 seen, offset 120, scrolled 240, Home Screen app, in a frame"],
+          repr(framed) + f"; the frame's own height {own}")
+    ctx.close()
 
     # -----------------------------------------------------------------------
     print("\nREPORT — a title the user typed never reaches the report")

@@ -463,7 +463,11 @@ in the mock page.
      page since. If it has, the sure cure in that entry (the page
      scrolling inside the app's frame) is the next thing to put to them:
      a design change, a mock, the full battery. Skribl's own Gallery and
-     Library have no guard yet.
+     Library have no guard yet. IF IT RIDES AGAIN, ASK FOR THE NUMBERS
+     FIRST: the Pad's and Flip's Report a problem now copies a Viewport
+     line (what the phone takes its screen for; `DECISIONS.md`, "Report a
+     problem says what the phone takes its screen for"), and
+     `docs/DEVICE-CHECKLIST.md`, "Blooby on the Home Screen", says how.
   8. "ALL YES." (4:51 PM, with the first picture of the bar), to the
      colour audit's eleven choices (`DECISIONS.md`, ""All yes" to the
      colour audit's eleven"): what each is, which are built and which wait

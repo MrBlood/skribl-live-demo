@@ -116,7 +116,28 @@
           + (global.SkriblDraftStore && global.SkriblDraftStore.state ? '; ' + global.SkriblDraftStore.state() : '');
       }, '?'),
       'Screen: ' + safe(function () { return global.innerWidth + 'x' + global.innerHeight; }, '?')
-        + ' @ ' + safe(function () { return global.devicePixelRatio || 1; }, 1) + 'x'
+        + ' @ ' + safe(function () { return global.devicePixelRatio || 1; }, 1) + 'x',
+      // WHAT THE PHONE TAKES ITS SCREEN FOR (Nov 21: the owner's bottom bar
+      // rode the page in the Home Screen app). An iPhone can go on taking the
+      // foot of the screen for covered after its keyboard has gone, and
+      // everything pinned to the screen is then laid out for a keyboard that
+      // is not there. Nothing on the page shows the numbers that say so, and
+      // a phone has no console: how much of the window the visual viewport
+      // says is seen, how far down it starts, how far the page is scrolled,
+      // and whether this is the Home Screen app. The window asked is the
+      // outermost one (an editor opened inside a post is in a frame, and the
+      // fault is the whole window's).
+      'Viewport: ' + safe(function () {
+        var w = safe(function () { return global.top.document ? global.top : global; }, global);
+        var v = w.visualViewport;
+        var seen = !v ? 'no visual viewport'
+          : Math.round(v.height) + ' of ' + w.innerHeight + ' seen, offset ' + Math.round(v.offsetTop)
+            + (Math.abs((v.scale || 1) - 1) > 0.01 ? ', zoom ' + Math.round(v.scale * 100) / 100 : '');
+        var app = w.navigator.standalone === true
+          || !!(w.matchMedia && w.matchMedia('(display-mode: standalone)').matches);
+        return seen + ', scrolled ' + Math.round(w.scrollY || 0)
+          + (app ? ', Home Screen app' : ', browser tab') + (w !== global ? ', in a frame' : '');
+      }, '?')
     ];
 
     // Flip and Pad expose different globals; ask for what each one has and skip
