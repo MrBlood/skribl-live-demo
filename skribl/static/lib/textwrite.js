@@ -557,6 +557,14 @@
       // it; lib/sheetswipe.js measures a sheet the same way).
       var limit = (layoutTop(sh) - 12 - sb.top) / sb.ky - b.y1;
       if (limit < maxY) maxY = Math.max(minY, limit);
+      // ...and below the top of what can be seen: the header, or the top of
+      // the screen where a phone has slid the view up to show the field (the
+      // owner's iPhone, Nov 22: the words went up out of sight while typed,
+      // then under the header). Where both cannot be, right above the drawer.
+      var v = seen(), D = window.SkriblDrawerDetent;
+      var lid = Math.max(v ? v.top : 0, D && D.stuckBottom ? D.stuckBottom() : 0);
+      var floor = (lid + 12 - sb.top) / sb.ky - b.y0;
+      if (floor > minY) minY = Math.min(floor, maxY);
     }
     y = minY > maxY ? Math.max(lg.height / 2, minY) : Math.max(minY, Math.min(maxY, y));
     return { x: x, y: y };
@@ -644,6 +652,10 @@
       window.visualViewport.addEventListener('resize', fitKeyboard);
       window.visualViewport.addEventListener('scroll', fitKeyboard);
     }
+    // ...and, inside a frame, the outermost window's (fitKeyboard, seen).
+    watchOuter(true);
+    window.addEventListener('pagehide', function () { watchOuter(false); });
+    window.addEventListener('pageshow', function (e) { if (e.persisted) watchOuter(true); });
     s.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { e.preventDefault(); close(); }
     });
@@ -1190,12 +1202,60 @@
   // The keyboard is up when what can be seen ends well above the page's
   // bottom; the drawer is only the words while the words are typed into it
   // with a keyboard up, never merely because the field has focus.
+  //
+  // WHAT CAN BE SEEN, THROUGH A FRAME (the owner's iPhone, Nov 22, the Pad
+  // inside a post: the keyboard came up over Text's drawer, the field under
+  // its keys, and the words went up under the header). iOS takes its
+  // keyboard off the visual viewport of the OUTERMOST window alone: a
+  // frame's own stays the whole frame. An editor inside a host's post is in
+  // a frame, so it never saw the keyboard and the drawer never lifted. So
+  // what can be seen is asked of the outermost window this page may read (a
+  // host on another address keeps its own to itself, and this window's is
+  // asked), carried into this window's px through each frame's place in its
+  // parent. Outside a frame it is this window's, as it always was.
+  function outer() {
+    var w = window, off = 0;
+    try {
+      while (w.frameElement && w.parent && w.parent !== w) {
+        var f = w.frameElement, r = f.getBoundingClientRect();
+        off += r.top + f.clientTop + (parseFloat(w.parent.getComputedStyle(f).paddingTop) || 0);
+        w = w.parent;
+      }
+    } catch (e) {}
+    return { w: w, off: off };
+  }
+  // { top, bottom } of what can be seen, in this window's px, and how much
+  // shorter than its window the outermost one's is (kb: the keyboard); null
+  // with no visual viewport to ask.
+  function seen() {
+    var o = outer(), v = o.w.visualViewport;
+    return v ? { top: v.offsetTop - o.off, bottom: v.offsetTop + v.height - o.off, kb: o.w.innerHeight - v.height } : null;
+  }
+  // The outermost window's visual viewport tells this page of its keyboard
+  // too; let go when this page goes, so a host never calls into a page that
+  // has gone (a frame put back from the back-forward cache asks again).
+  var watching = null;
+  function watchOuter(on) {
+    var o = on ? outer() : null, v = o && o.w !== window ? o.w.visualViewport : null;
+    if (watching && watching !== v) {
+      try { watching.removeEventListener('resize', fitKeyboard); watching.removeEventListener('scroll', fitKeyboard); } catch (e) {}
+      watching = null;
+    }
+    if (v && !watching) {
+      v.addEventListener('resize', fitKeyboard);
+      v.addEventListener('scroll', fitKeyboard);
+      watching = v;
+    }
+  }
   function fitKeyboard() {
     var s = els && els.sheet;
     if (!s) return;
-    var v = window.visualViewport, phone = window.innerWidth <= 640;
-    var lift = (phone && v && !s.hidden) ? Math.max(0, Math.round(window.innerHeight - (v.offsetTop + v.height))) : 0;
-    var typing = lift > 80 && document.activeElement === els.field && !s.hidden;
+    var v = seen(), phone = window.innerWidth <= 640;
+    var lift = (phone && v && !s.hidden) ? Math.max(0, Math.round(window.innerHeight - v.bottom)) : 0;
+    // Up is the keyboard's own height, not how much of this page it covers:
+    // an iPhone can slide the view up to show a tapped field until little
+    // or none of the page is left under the keys (the owner's third picture).
+    var typing = phone && !!v && v.kb > 80 && document.activeElement === els.field && !s.hidden;
     if (typing !== s.classList.contains('typing') && els.spacer) {
       if (typing) {
         var cs = getComputedStyle(s);
@@ -1206,7 +1266,7 @@
     var was = s.classList.contains('typing');
     s.classList.toggle('typing', typing);
     s.style.bottom = typing ? lift + 'px' : '';
-    s.style.maxHeight = typing ? Math.max(160, Math.round(v.height - 12)) + 'px' : '';
+    s.style.maxHeight = typing ? Math.max(160, Math.round(v.bottom - v.top - 12)) + 'px' : '';
     if (want && isOpen()) { anchor = clampAnchor(want); position(); }
     // Back in the page from the keyboard: on screen again, where the page left it.
     if (was && !typing && isOpen()) comeBack();
@@ -1328,6 +1388,27 @@
     anchor = null; want = null;
     tidy();
   }
+  // NEW TAKES THE WORDS IN THE BOX (the owner's iPhone, Nov 22: "If I start
+  // new, any text I typed stays in the box and says this is a fresh one").
+  // Words typed and not yet written are a line of the drawing being made, so
+  // a New Skribl counts them (words), takes them with the rest (forget,
+  // which says what the box held) and its Undo brings them back (restore).
+  // The box and this tab's copy of it, whether the drawer is open or not.
+  function words() {
+    if (els) return els.field.value;
+    try { return sessionStorage.getItem(WORDS_KEY) || ''; } catch (e) { return ''; }
+  }
+  function forget() {
+    var had = words();
+    try { sessionStorage.removeItem(WORDS_KEY); } catch (e) {}
+    if (els) { els.field.value = ''; if (isOpen()) refresh(); }
+    return had;
+  }
+  function restore(w) {
+    if (!w) return;
+    try { sessionStorage.setItem(WORDS_KEY, w); } catch (e) {}
+    if (els) { els.field.value = w; if (isOpen()) refresh(); }
+  }
   function go() {
     if (!els || !plan || !plan.strokes.length || !anchor) return;
     var p = plan, at = { x: anchor.x, y: anchor.y };
@@ -1394,6 +1475,10 @@
     close: close,
     // The editor's drawers closed Text's (another drawer opened): tidy up.
     closed: closed,
+    // New Skribl and its Undo: the words typed in the box and not yet written.
+    words: words,
+    forget: forget,
+    restore: restore,
     isOpen: isOpen,
     isWriting: function () { return !!job; },
     finish: function () { if (job) job.finish(); },

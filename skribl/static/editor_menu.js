@@ -117,6 +117,8 @@ function clearAllWithUndo(again) {
   }
   resetAll();
   const prevName = window.SkriblName && window.SkriblName.reset ? window.SkriblName.reset() : null;
+  // ...and the words typed in Text's box, not yet written (lib/textwrite.js forget).
+  const prevWords = window.SkriblText && window.SkriblText.forget ? window.SkriblText.forget() : '';
   if (!snap || !window.SkriblNewUndo) return;
   // The offer, its words and its Redo are lib/newundo.js's, Flip's too. Redo
   // is Start again (`again`, the new shape with it), or the clear alone.
@@ -125,6 +127,7 @@ function clearAllWithUndo(again) {
     undo: () => {
       loadSkribl(snap);
       if (window.SkriblName) window.SkriblName.restore(prevName);   // its names come back with it
+      if (prevWords && window.SkriblText) window.SkriblText.restore(prevWords);   // the words in Text's box
       if (window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(prevDraft);   // and its saved draft
     },
     redo: again || clearAllWithUndo
@@ -146,8 +149,11 @@ function clearAllWithUndo(again) {
     // A photo, a track or a picked ground on its own is work too (after v326,
     // the Pad review: a photo alone met "Already a fresh one" and stayed),
     // as the drafts count it below and How it works promises.
+    // ...and so are words typed in Text's box and not yet written (the
+    // owner's iPhone, Nov 22: "Already a fresh one", the words still there).
     const work = hasContent || recorded || (typeof _mediaPresent === 'function' && _mediaPresent())
-      || (window.SkriblCanvasGround && bgColor !== window.SkriblCanvasGround.start());
+      || (window.SkriblCanvasGround && bgColor !== window.SkriblCanvasGround.start())
+      || !!(window.SkriblText && window.SkriblText.words && window.SkriblText.words());
     // Redo after an Undo is this Start again, the shape it picked included.
     // It kept the old drawing's shape, so a Redo was not the new drawing.
     const again = () => {
