@@ -52369,4 +52369,7 @@ joins the screens with the arrow (where a post's is, 44px, "Back",
 "People", the search's address behind it), Search joins the places with
 none, a desk shows See all's heading and no arrow, and a new row walks See
 all's arrow: from its search, back to it with its words; cold, to the
-search's own address.
+search's own address. Calibrated, section 21 alone: as built 12 of 12; no
+arrow (main as it was), its row red and the walk unable to go on; the
+arrow to Home, its row and the walk red; the big heading left on a phone,
+its row red.
