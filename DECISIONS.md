@@ -52239,3 +52239,28 @@ centred but not its mark, the new row alone red (-7.75px, the owner's Nov
 the other screens' rows.
 
 NOT SEEN ON AN IPHONE: Chrome here at a phone's size with touch.
+
+## After v330 -- Five places and Search of its own, mocked (Blooby and Search, round two)
+
+The owner's same answer (Nov 22, about 6:10 AM): "I like the search icon
+but does blooby icon (real gallery) not fit on phone? Search is different
+than gallery which is fine the way it is." It fits: five places in a
+phone's bar, 77.2px each (96.5 today; a finger needs 44).
+
+THE MOCK, round two at the same link
+(https://claude.ai/artifact/WU8UqoUZ1ovwnYLHWWxDD1), the wordmark centred
+as built in every picture, nothing else built:
+1. FIVE PLACES, two orders: Home, Gallery, Search, Make, You (the two
+   places for looking side by side; the magnifier under the wordmark, 201
+   of 402); or Home, Gallery, Make, Search, You (Make, the one coloured
+   button, under the wordmark). The magnifier is the bar's own pen and ink.
+2. SEARCH, ITS OWN PAGE: titled Search, the box on top; tapped, the recent
+   searches (people opened, words searched, newest first, an x each, Clear
+   all, kept on the phone); typed, the people the box finds, then the
+   drawings, as the Gallery's search finds them; with nothing searched
+   yet, one quiet line. The Gallery stays as it is, its own box included.
+3. A DESK: Search on the rail under the Gallery; Make stays the big button.
+
+Cal's picks: Make in the middle; Search with recent searches; the rail.
+Waits for the owner's answer. "The bar keeps its four" (Nov 17) gives way
+to five if the owner says yes.
