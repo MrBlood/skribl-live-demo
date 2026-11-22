@@ -52785,3 +52785,49 @@ NOT SEEN ON AN IPHONE: the drawer is the real one at the owner's size in
 Chrome; the keyboard and the strip are the owner's pictures' places.
 
 PAD AND FLIP: shared, one drawer for both.
+
+## After v330 -- Text opens whole on a phone; a tap on the box brings the keyboard (the owner's yes)
+
+With their yes to Style under the box, the owner asked: "how to I see the
+rest of the drawer? How would I even know it was there? Maybe slide open
+then slide keyboard up, but how to see everything?" Choosing Text on a
+phone raised the keyboard at once (the box took the focus as the drawer
+opened), so the drawer was only ever seen folded to the typing view, and
+Size, Thickness and Speed only after the keyboard's tick. A phone raises
+its keyboard for a tap and for nothing else, so it cannot slide up on its
+own after the drawer has. Proposed in three frames on the mock (Style
+While Typing, its bottom): on a phone Text opens whole with no keyboard;
+a tap on the box brings it; the tick puts it away with the words kept.
+The owner: "Yes".
+
+THE BUILD (lib/textwrite.js): on a phone (no hover), choosing Text, or a
+press that opens it where the words go, opens the whole drawer and puts
+nothing in focus, as Make opens since Nov 20; with a keyboard of its own
+(a desk, a laptop) the words take the focus at once, as they did. A tap
+on the box is the page's: its touchend stopped, and the words put in
+focus by the page itself with no scroll, as choosing Text did, which
+never slid the page in the owner's pictures; the phone's own tap on a
+box low on the screen slid the whole page up to show it (their 10:06
+picture). Only a tap (a finger that moved over 10px is a drag, the
+page's) and only to start typing: once the words are in focus a tap is
+the phone's own and places the caret. How it works says "its whole drawer
+opens under the tools ... tap the box and type your words".
+
+THE CHECKS, `verify_text`: Text's drawer comes up whole with no keyboard
+asked for on a phone (2, Pad and Flip; 3); a tap on the box is taken by
+the page (its default stopped, read from the tap's own event) and puts
+the words in focus, a second tap is the phone's (3); a desk types at once
+(3, Pad and Flip); the flows that type tap the box first, as a person
+will (16, 24); and the Escape flow taps the box first, the drawer's own
+Escape coming from the box's focus (on a desk it is in focus at once).
+Parts 2, 3, 16 and 24 10/10, 15/15, 10/10, 14/14. Three breaks, each on a
+copy, each red only in its rows: the words put in focus as Text opens on a
+phone again (the no-keyboard rows, Pad and Flip, and the tap row, whose
+first tap then has nothing to start); the tap left to the phone (the tap
+row); the words never put in focus, a desk too (the desk row).
+
+NOT SEEN ON AN IPHONE: whether the page's own focus on a tap raises the
+phone's keyboard without its slide is the owner's phone's to say; the
+same focus from choosing Text did, in their pictures.
+
+PAD AND FLIP: shared, one drawer and one script for both.
