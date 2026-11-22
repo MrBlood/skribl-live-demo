@@ -52461,3 +52461,67 @@ only in its rows: the press rule out (held, glide and Reduce Motion red);
 the glide made heavy enough to replace a button's own fade (the fade row);
 no glide (the glide row); no Reduce Motion rule (its row); no desk hover
 (its row); the tap flash left on (the held row).
+
+## After v330 -- The Pad's and Flip's last soft shadows (Four Looks' 2, after)
+
+The owner's "All yes", Nov 22, 8:31 AM, to Four Looks' 2: the mock's
+"after", one rule each. NOW, in the editors (styles.css, flip.css,
+tooltip.css):
+
+- A SHEET, one that rises from the foot or opens in the middle, wears the
+  menu sheet's own rim and one close line (`--glass`), no fall: Your
+  drafts, Ask and How it works' drawer, the little book. They had falls of
+  24 to 60px.
+- WHAT FLOATS OVER THE DRAWING keeps its own edge and takes the tray's one
+  short shadow (`--chip-lift`), the way the tray, the shape picker and the
+  stamps shelf wear it since the Little V: Draw along's pill, a button's
+  card and Name every button's banner (with its note), a draft's menu,
+  Text's drag label, Post's pill on the canvas, the posted picture, a
+  desk's tooltip. In dark the top light is the tray's one 8% line; the
+  mock's overlay had kept a card's own 7% line under it as well.
+- A VIDEO INSIDE A CARD (Ask's answer, the little book, a button's card)
+  keeps its edge alone.
+- THE MEDIA DOT'S LIGHT is a rim of its own colour, 0.75px at 60%, never a
+  glow: green, and the amber "re-add it" dot amber (its glow had been the
+  dark theme's yellow in both themes).
+- KEPT, as the mock kept them: a knob you drag (its tiny shadow), the
+  canvas's inner shade, the wordmark's pressed-in look, a replay pen's
+  light; and, not in the mock and not the editors' sheets, the link
+  player's controls on the drawing (their shade is what keeps them
+  readable on any drawing), the replay's and music's moving lights, the
+  colour lenses, the zoom readout while it is dragged.
+
+FOUND WHILE BUILDING, the same kinds by the same rule, never opened by the
+audit's walk so never in the mock: Leave Pad? / Leave Flip? (Your drafts'
+twin, the same fall), Text's drawer while typing over a keyboard, Add to
+Home Screen's steps sheet (sheets: the glass); Add to Home Screen's card
+on the canvas, the pen's size readout while it is swooshed, Flip's page
+actions (floats: the lift); Flip's export card (a sheet in the middle: the
+glass, its own line traded for the rim, as Your drafts has it). Named here
+and in the pull request, so any of them can be said no to.
+
+THE TOOLTIP IS ONE SHEET for the editors, /gallery and /library, so the
+two pages map `--chip-lift` onto their palettes beside its other names
+(tooltip.css's header asks for that), and gallerysection.css is
+re-emitted with it. The colour ceilings come down with what left the
+rules: styles.css 238 to 216, flip.css 33 to 31, gallerysection.css 94
+to 93, tooltip.css 1 to none.
+
+THE CHECKS. `verify_contrast`, CRISP, THE EDITORS: the list of soft
+things "still to be decided" (`CRISP_LEFT`) becomes what the owner kept
+(`CRISP_KEPT`: the canvas's shade, three knobs, the replay's nib), and
+the tooltip needs no place of its own. A new row reads what each former
+soft shadow wears, as painted where the suite opens it (by the tokens the
+same page resolves) and off its own rule where it does not (Leave, Text
+over the keyboard, the Home Screen card and steps, the pen's size, Flip's
+export card and page actions). `verify_galib` 3: on /gallery and
+/library, light and dark, a tooltip wears the Pad's own `--chip-lift`,
+and the Pad's tooltip does too. Calibrated, each break red only in its
+rows (the contrast suite trimmed to the break's own surface): the little
+book given back its fall, the census and the new row; Your drafts' sheet
+with no shadow at all, the new row alone (what the census could not
+see); Draw along's pill without its edge, the new row; the dot's glow
+back, both; the video's fall back, both; Leave's rule given back its
+fall, the new row by its rule; Flip's page actions' fall back, the new
+row, on Flip alone; /gallery's token map taken out, the two /gallery
+tooltip rows; tooltip.css given back its old shadow, the tooltip rows.
