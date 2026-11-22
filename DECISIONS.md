@@ -51872,3 +51872,23 @@ is as it was. With 8 seconds stood in before the old tap, red (the same
 timeout); the same 8 seconds where the slow work now is, green.
 
 FLIP AND THE PAD: not theirs; this is the site's card.
+
+## After v330 -- Main red after the yes-choices: a name that names another name
+
+Main's full run on #1043 was red in one suite, on both databases:
+`verify_a11ypages` stopped before it reported. It reads a few of the
+editors' colour tokens straight out of the sheet, looking for a written
+hex, and choice 10 (the first half, "one colour, one name") had made
+`--text-muted` a name for `--text-secondary` (`var(--text-secondary)`),
+the same grey under one name. The lookup found nothing and the contrast
+row under it fell over on nothing. The colour had not moved; the check's
+way of reading it had. MISSED BEFORE #1043 MERGED: it reads the editors'
+sheet, which choice 10 changed, and it was not among the twenty-six
+suites run for it.
+
+THE MEND: the lookup follows a name to the colour it names, in the same
+first definition it read before (a loop of names reads as nothing). It
+reads #b7bfcc, as the sheet spelled out before #1043, so the row measures
+what it always did. On clean checkouts of main: as it is, the same crash;
+mended, 162 of 162; mended with the second ink made faint (#4a4f59 in
+dark), 161 of 162, that row alone red (worst 2.10 to 1).
