@@ -834,7 +834,10 @@ with sync_playwright() as p:
                       and [o["pressed"] for o in r["options"]] == ["true", "false", "false"] and r["placed"] and r["under"]
                       and r["tintOp"] > 0.99 and r["pill"][3] == 44 and same_colour(r["tint"], "rgba(124, 92, 255, 0.22)")
                       and same_colour(r["options"][0]["color"], "rgb(63, 39, 168)")
-                      and all(same_colour(o["color"], "rgb(63, 71, 86)") for o in r["options"][1:])
+                      # the others' ink is the editors' #3b4251 since the
+                      # colour audit's choice 6 (it was the site's own copy,
+                      # #3f4756, drifted a step: part 14 holds the copies)
+                      and all(same_colour(o["color"], "rgb(59, 66, 81)") for o in r["options"][1:])
                       and same_colour(r["track"]["bg"], "rgb(231, 224, 255)") and same_colour(r["track"]["line"], "rgba(124, 92, 255, 0.34)")
                       for r in rows.values()),
                   json.dumps({k: v and {x: v[x] for x in ("role", "name", "pressed", "placed", "under", "pill", "tint", "track")}
