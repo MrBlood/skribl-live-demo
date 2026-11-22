@@ -8465,6 +8465,9 @@ html.skribl-sheet { overscroll-behavior-y: none; }
    keyboard put away. */
 .tx-drawer.typing > .tx-styles { margin-top: 0; }
 .tx-drawer.typing .tx-style { height: 44px; }
+/* Make yours is two lines there with no room for its plus over them: the
+   words whole, the plus put away until the drawer is whole again. */
+.tx-drawer.typing .tx-make b { display: none; }
 .tx-field {
   width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px;
   border: 1px solid transparent; box-shadow: var(--card-ring); background: var(--menu-card); color: var(--text-primary);

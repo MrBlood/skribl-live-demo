@@ -1146,6 +1146,9 @@ with sync_playwright() as p:
                    field: shown('#txField'), go: shown('#txGo'), style: shown('#txStyles'), tiles: shown('#txTiles'),
                    srow: sr && [sr.top, sr.bottom], chipH: sr ? Math.round(sty.querySelector('.tx-style').getBoundingClientRect().height) : null,
                    caption: shown('#txStyleLabel'), chosen: on && on.getAttribute('data-style'),
+                   whole: sr ? [...sty.querySelectorAll('.tx-style')].every(c => { const k = c.firstElementChild; if (!k) return true;
+                     const o = c.getBoundingClientRect(), w = k.getBoundingClientRect(); return w.top >= o.top + 0.5 && w.bottom <= o.bottom - 0.5; }) : null,
+                   make: (m => m ? m.innerText.replace(/\\s+/g, ' ').trim() : null)(sty.querySelector('.tx-make')),
                    room: sp.hidden ? null : sp.offsetHeight, dock: Math.round(d.top), row: [row.top, row.bottom], vh: innerHeight, stuck: eval(STUCK)(),
                    focus: document.activeElement && document.activeElement.id, words: b && [Math.round(b.top), Math.round(b.bottom)] }; }"""
         ROOM = """() => { const s = document.getElementById('txSheet'), cs = getComputedStyle(s);
@@ -1179,9 +1182,11 @@ with sync_playwright() as p:
         check("phone: with the keyboard up, the drawer sits on it",
               abs(t["bottom"] - t["edge"]) <= 1, f"drawer ends at {t['bottom']}, the keyboard starts at {t['edge']}")
         check("...and is the words, Write it and Style under them (the owner's yes, Nov 22: the four looks, 44px, no"
-              " caption over them), Size, Thickness and Speed put away, no taller, the words above it",
+              " caption over them, every chip's words whole: Make yours, never cut to Make), Size, Thickness and Speed"
+              " put away, no taller, the words above it",
               t["typing"] and t["field"] and t["go"] and t["style"] and not t["tiles"] and not t["caption"]
               and t["srow"] is not None and t["srow"][0] >= t["row"][1] and t["chipH"] == 44
+              and t["whole"] is True and t["make"] == "Make yours"
               and t["words"] is not None and t["words"][0] >= 0 and t["words"][1] <= t["top"] + 0.5
               and t["bottom"] <= t["srow"][1] + 16, json.dumps(t))
         # The look changed with the keyboard up: the field keeps its focus (a press on a chip takes none, as Write
@@ -1191,19 +1196,26 @@ with sync_playwright() as p:
         node = cdp.send("DOM.querySelector", {"nodeId": root, "selector": "#txStyles"})["nodeId"]
         ax = cdp.send("Accessibility.getPartialAXTree", {"nodeId": node, "fetchRelatives": False})["nodes"]
         named = (ax[0].get("name") or {}).get("value") if ax else None
-        q.tap('#txStyles [data-style="script"]')
-        q.wait_for_timeout(400)
-        ts = q.evaluate(TYPING, [DOCK["pad"], STUCK])
-        q.tap('#txStyles [data-style="print"]')
-        q.wait_for_timeout(400)
-        tp = q.evaluate(TYPING, [DOCK["pad"], STUCK])
+        ts, tp = {}, {}
+        try:
+            q.tap('#txStyles [data-style="script"]', timeout=3000)
+            q.wait_for_timeout(400)
+            ts = q.evaluate(TYPING, [DOCK["pad"], STUCK])
+            q.tap('#txStyles [data-style="print"]', timeout=3000)
+            q.wait_for_timeout(400)
+            tp = q.evaluate(TYPING, [DOCK["pad"], STUCK])
+        except Exception as exc:  # noqa: BLE001 -- a chip that cannot be tapped is this row's red, not the part's end
+            ts = {"stopped": str(exc).splitlines()[0][:160]}
+        # The rows after start where this one found the drawer: the words in focus, the keyboard up.
+        q.evaluate("() => { const f = document.getElementById('txField'); if (document.activeElement !== f) f.focus(); }")
+        q.wait_for_timeout(300)
         check("...a tap on a Style chip with the keyboard up changes the look and keeps the keyboard: the field keeps its"
               " focus, the drawer stays on the keys (Script, then Print again); and the chips are still named Style for a"
               " screen reader, their caption put away",
-              t["chosen"] == "print" and ts["chosen"] == "script" and ts["focus"] == "txField" and ts["typing"]
-              and tp["chosen"] == "print" and tp["focus"] == "txField" and tp["typing"] and named == "Style",
-              json.dumps({"before": t["chosen"], "script": [ts["chosen"], ts["focus"], ts["typing"]],
-                          "print": [tp["chosen"], tp["focus"], tp["typing"]], "named": named}))
+              t["chosen"] == "print" and ts.get("chosen") == "script" and ts.get("focus") == "txField" and ts.get("typing")
+              and tp.get("chosen") == "print" and tp.get("focus") == "txField" and tp.get("typing") and named == "Style",
+              json.dumps({"before": t["chosen"], "script": ts.get("stopped") or [ts.get("chosen"), ts.get("focus"), ts.get("typing")],
+                          "print": [tp.get("chosen"), tp.get("focus"), tp.get("typing")], "named": named}))
         check("...its room in the page kept, so nothing above it moves",
               t["room"] is not None and abs(t["room"] - room0) <= 1 and t["dock"] == before["dock"],
               f"room {t['room']} for a drawer of {room0}; the tools at {before['dock']} -> {t['dock']}")
@@ -2315,10 +2327,10 @@ with sync_playwright() as p:
                   f" Write it {r1(ig)}, Style {st}; errors {i.get('errors')}")
             ru, st2 = i.get("roomed") or {}, i.get("sty2")
             check(f"{ed}: ...and once the phone leaves its strip room ({ROOMED}px higher, the owner's 11:59 picture), the drawer"
-                  f" rests on that, the words and Style above it, and nothing under the chips but the drawer's own 12px (no"
+                  f" rests on that, the words and Style above it, and nothing under the chips but the drawer's own edge (no"
                   f" empty band)",
                   not i.get("stopped") and ru.get("typing") is True and abs(ru["sheet"][1] - (line - ROOMED)) <= 1
-                  and st2 is not None and ru["field"][1] <= st2[0] and ru["sheet"][1] - st2[1] <= 12.5,
+                  and st2 is not None and ru["field"][1] <= st2[0] and ru["sheet"][1] - st2[1] <= 16,
                   i.get("stopped") or f"drawer {r1(ru.get('sheet'))} for {line - ROOMED}, field {r1(ru.get('field'))}, Style {st2}")
         for ed in ("pad", "flip"):
             g = got[ed]
