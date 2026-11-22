@@ -751,7 +751,12 @@
       if (!drag.moved) {
         if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 4) return;
         drag.moved = true;
-        veil(true);
+        // With the keyboard up the words move where they show, above the
+        // drawer on the keys: the keyboard stays and so does the page (the
+        // owner's iPhone, Nov 22: a drag put the keyboard away and carried the
+        // page to the drawing's top mid-drag, and the words leapt from under
+        // the finger). Without it, the drawer steps aside as before.
+        if (!(els.sheet && els.sheet.classList.contains('typing'))) veil(true);
       }
       drag.px = e.clientX; drag.py = e.clientY;
       dragTo();

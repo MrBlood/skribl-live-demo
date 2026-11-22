@@ -70,7 +70,8 @@ Thickness and Speed as tiles. Each row holds a promise:
      with the keyboard up, the drawer sits on it and is the words, Write it
      and Style under them (44px, no caption; a tap on a chip changes the look
      and keeps the keyboard, the chips still named Style), the words above
-     it, its room in the page kept so nothing above it moves (with no
+     it, its room in the page kept so nothing above it moves; a drag on the
+     words moves them and keeps the keyboard and the page (with no
      keyboard up, the whole drawer); the keyboard's done
      key puts it away and writes nothing, the drawer back under the tools
      with its words and Write it on screen and the words where they were
@@ -1266,6 +1267,32 @@ with sync_playwright() as p:
         check("...its room in the page kept, so nothing above it moves",
               t["room"] is not None and abs(t["room"] - room0) <= 1 and t["dock"] == before["dock"],
               f"room {t['room']} for a drawer of {room0}; the tools at {before['dock']} -> {t['dock']}")
+        # A DRAG ON THE WORDS WITH THE KEYBOARD UP (the owner's iPhone, Nov 22: "cannot drag word. Each time I touch
+        # it it jumps"): the words move by the drag where they show, above the drawer on the keys, and the keyboard
+        # stays (the words keep their focus) and so does the page. Then put back where they were put, for the rows
+        # after.
+        y0d, a0 = q.evaluate("() => scrollY"), q.evaluate("() => SkriblText.anchor()")
+        pb = q.evaluate("() => { const r = document.getElementById('txPlace').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }")
+        q.mouse.move(pb[0], pb[1])
+        q.mouse.down()
+        q.mouse.move(pb[0] + 12, pb[1] - 8, steps=3)
+        q.mouse.move(pb[0] + 40, pb[1] - 30, steps=6)
+        q.wait_for_timeout(250)
+        dmid, ymid = q.evaluate(TYPING, [DOCK["pad"], STUCK]), q.evaluate("() => scrollY")
+        q.mouse.up()
+        q.wait_for_timeout(300)
+        dend, yend, a1 = q.evaluate(TYPING, [DOCK["pad"], STUCK]), q.evaluate("() => scrollY"), q.evaluate("() => SkriblText.anchor()")
+        q.evaluate("(p) => SkriblText.place(p)", put)
+        q.evaluate("() => { const f = document.getElementById('txField'); if (document.activeElement !== f) f.focus(); }")
+        q.wait_for_timeout(300)
+        check("...a drag on the words with the keyboard up moves them by the drag where they show and keeps the keyboard:"
+              " the words in focus all through, the drawer on the keys, the page where it was (the owner's iPhone, Nov 22:"
+              " a drag put the keyboard away and the words leapt from the finger)",
+              dmid["focus"] == "txField" and dmid["typing"] and dend["focus"] == "txField" and dend["typing"]
+              and ymid == y0d and yend == y0d and a0 is not None and a1 is not None
+              and a1["x"] > a0["x"] + 5 and a1["y"] < a0["y"] - 5,
+              json.dumps({"mid": [dmid["focus"], dmid["typing"], ymid], "end": [dend["focus"], dend["typing"], yend],
+                          "page": y0d, "words": [a0, a1]}))
         # While typing, the page scrolled up to see the top of the drawing; the
         # drawer, back in the page when the keyboard goes, must come on screen.
         q.evaluate("() => window.scrollTo({ top: 0, behavior: 'instant' })")
