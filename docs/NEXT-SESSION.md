@@ -281,6 +281,25 @@ REFERENCE, with his strokes over it.
 
 THE OWNER ASKED FOR A MOCK FIRST. Build nothing until they say yes to it.
 
+## Also on Tuesday's list: the Draw back banner covers the drawing (the owner, Nov 23, on a desk)
+
+"the drawing back on someone's drawing toast never goes away when drawing
+back so you can't draw there (under it)."
+
+While drawing back, the pill "Drawing back on Ana's drawing · Theirs"
+stays over the top middle of the canvas for the whole drawing. On their
+own drawing it reads "Drawing back on your own drawing". Nothing can be
+drawn under it.
+
+`WORKING-AGREEMENTS.md`, "The canvas is the hero": something that covers
+the canvas moves or goes once its job is done. That makes this a bug.
+
+The catch: the pill holds the Theirs switch (faint, full, hidden), which
+must stay reachable. Where the switch goes is a small design choice, so
+mock it first with two or three options and say what it does to Flip.
+Cal's pick to offer: the pill glides away once the pen first touches, and
+Theirs lives in a small control by the tools that brings it back.
+
 ## What happened Nov 21 and 22 (all merged)
 
 Nov 21, evening:
