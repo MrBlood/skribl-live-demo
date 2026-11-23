@@ -41,6 +41,37 @@ check that cries wolf, with a calibrated check), open a PR, merge on green.
 Not sealed since v330. That is fine: seal only when there is a reason
 (`WORKING-AGREEMENTS.md`, "Sealing a release").
 
+## The environment this work runs in (cloud settings, as of Nov 23)
+
+Start the session in the environment named **skribl-live-demo**, not
+Default. Default allows only the demo site; skribl-live-demo has
+everything below.
+
+- NETWORK: limited. The allowed hosts are:
+  - `skribl-live-demo.onrender.com`, the live demo;
+  - `skribls.net` and `media.skribls.net`, the owner's site and its media;
+  - `sketch.social`, added Nov 23 for the walk below.
+
+  Package managers and MCP servers are allowed too.
+- SETUP SCRIPT, added Nov 23: it builds the test Python at
+  `/tmp/skribl-venv`, the venv `harness/bootstrap.sh` uses (Python 3.12,
+  the hash-locked install from `constraints.txt`, then
+  `harness/requirements.txt`).
+  - It runs when a container is built fresh, and skips itself when the
+    venv is already there or the repository is not.
+  - It was tried here from scratch, and on both skips. It has NOT yet been
+    seen on a fresh container: check that `/tmp/skribl-venv` is there.
+  - If it is missing or half-made, `harness/bootstrap.sh` makes or
+    finishes it (the script leaves bootstrap's own mark on a cut-off
+    install).
+- `harness/bootstrap.sh` still boots a server when one is wanted, and
+  `harness/run_parallel.py` boots its own.
+- If the work needs a host the environment blocks, ask for it with the
+  session's own tools; the owner approves a card. On Nov 23 the owner's
+  own edit to the settings had not reached the environment, and adding the
+  host from the session did.
+- No secrets are saved on the environment, and none are needed.
+
 ## First: Text on the owner's iPhone, two bugs not yet mended
 
 The owner's iPhone 17 (iOS 26), the Home Screen app, Nov 22 from 2:50 PM,
@@ -180,6 +211,48 @@ By "The way back" (`DECISIONS.md`) and "Never stranded"
 were. It is a bug, so it needs no yes. Start at padOver's help() in
 `social/static/social.js`, which opens the editor and asks for its help,
 and at how the editor's help sheet closes.
+
+## Also on Tuesday's list: a walk of sketch.social (the owner's ask, Nov 23)
+
+The owner: "can you add that to the list of things to do when we start a
+new session tomorrow night?"
+
+The ask is a walk of https://sketch.social to see how it works and all of
+its functions, then a write-up of what it means for Blooby. That means
+how it behaves, never its look: the same rule as Bluesky's app in
+`WORKING-AGREEMENTS.md`. It is a drawing community: "Draw, Share & Remix
+Art".
+
+What a first look found (Nov 23: three public pages, signed out, in the
+browser here):
+
+- THE FEED: My Feed, Latest, Trending and Challenges, as a grid or a
+  list. Each drawing's card shows its counts, Save for later, and Remix.
+  Remix is an answer drawn on someone else's drawing: the nearest thing to
+  our Draw back.
+- THE DRAWING APP (`/sketch`):
+  - brushes: round, square, halftone, soft airbrush, blend;
+  - an eraser, a fill bucket, text, and a freehand lasso;
+  - layers, a colour picker, zoom and pan;
+  - Download Canvas and Post Sketch.
+- THE REST: profiles, challenges, a forum, help, guidelines and updates.
+  The sitemap lists about 1,300 public pages, mostly drawings, some of
+  them deleted.
+
+How to walk it:
+
+- As a visitor, in the browser here, politely: a modest number of pages.
+- Skip every path its robots file asks crawlers to skip: `/api/`,
+  settings, moderation, making or entering challenges, medal-draw and
+  history.
+- Posting, remixing, commenting, following, bookmarks and notifications
+  need an account. Ask the owner before signing up or posting anything
+  there: it puts things on someone else's site.
+- Look first at whether a drawing replays its strokes, and at how Remix
+  works.
+
+The write-up is for the owner: what each function does, how it feels, and
+which ideas could serve Blooby as the place where people talk in drawings.
 
 ## What happened Nov 21 and 22 (all merged)
 
