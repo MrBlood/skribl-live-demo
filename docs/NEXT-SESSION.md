@@ -254,6 +254,33 @@ How to walk it:
 The write-up is for the owner: what each function does, how it feels, and
 which ideas could serve Blooby as the place where people talk in drawings.
 
+## Also on Tuesday's list: a question to mock first, draw-backs as layers (the owner, Nov 23)
+
+The owner asked whether a draw-back should be a separate layer. Today it
+is its own post, the answerer's, holding one joined COPY of her drawing
+with his (`social/drawback.py`): hers first, squeezed to about three
+seconds, then his.
+
+Cal's view, given to the owner and not yet decided: keep the separate
+post, but store the drawing as two layers. That means her drawing BY
+REFERENCE, with his strokes over it.
+
+- What it would give:
+  - Her deleting her drawing takes it out of every draw-back. Today a
+    copy lives on in his post.
+  - Recolours become possible (they are refused now because of the
+    copy).
+  - A viewer could choose her part faint, full or hidden, and watch it at
+    its own speed.
+- What it costs:
+  - The player plays two layers, within the in-post player's byte budget
+    (`harness/verify_inline.py`).
+  - Existing draw-backs are converted, or left as they are.
+  - A choice of what a draw-back shows once her drawing is gone. Cal's
+    guess: his strokes alone, with a quiet "the original was removed".
+
+THE OWNER ASKED FOR A MOCK FIRST. Build nothing until they say yes to it.
+
 ## What happened Nov 21 and 22 (all merged)
 
 Nov 21, evening:
