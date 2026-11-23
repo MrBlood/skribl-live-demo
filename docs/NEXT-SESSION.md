@@ -300,6 +300,31 @@ mock it first with two or three options and say what it does to Flip.
 Cal's pick to offer: the pill glides away once the pen first touches, and
 Theirs lives in a small control by the tools that brings it back.
 
+## Also on Tuesday's list: repost of your own drawing, and Pin this post (the owner, Nov 23)
+
+### Repost does not seem to repost your own drawing
+
+"repost does not seem to repost (my own drawing), but quote post does."
+
+- First find whether this is a rule or a bug.
+- Some sites refuse a repost of your own post, or only light the button.
+  Bluesky allows it, and it shows in your followers' feeds.
+- If our code refuses it on purpose, say so to the owner and ask whether
+  it should change. If it fails, it is a bug: mend it, and check it the
+  way the repost suites do (`harness/verify_socialreposts.py`).
+
+### An idea to weigh: "Pin this post" in a post's ⋯ menu
+
+The owner's idea: your chosen post stays at the top of your profile.
+
+- Ask first how it serves talking in drawings (the roots). Cal's reading:
+  it lets a person lead with the drawing that says who they are, which
+  fits.
+- It is a new feature, so mock it first. Show where Pin sits in the ⋯
+  menu, how the pinned post is marked on the profile, and that only one
+  post is pinned at a time.
+- Build nothing until the owner says yes.
+
 ## What happened Nov 21 and 22 (all merged)
 
 Nov 21, evening:
