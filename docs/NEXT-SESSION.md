@@ -1,4 +1,4 @@
-# Next session: the handoff (Nov 22, 2026, Mountain Time: written at about 3:15 PM, for Tuesday evening, Nov 24)
+# Next session: the handoff (Nov 22, 2026, Mountain Time: written at about 3:15 PM, added to on the morning of Nov 23, for Tuesday evening, Nov 24)
 
 A snapshot from the session of Nov 20 to 22, written as its last step at
 the owner's request: "I will start a new session on Tuesday evening, so
@@ -20,6 +20,19 @@ Two of main's full runs were still going when this was written:
   session's last check read it at 3:55 PM and told the owner; that result
   is in the old conversation, not here;
 - the one on the pull request that brought this handoff (documents only).
+
+THE RUN ON #1065 FINISHED RED, read at 3:55 PM. It failed in shard 1 on
+both databases. The SQLite log names the row: `verify_tools` V214b,
+"every touchend handler on ANY receiver is paired with a touchcancel
+handler, or named in the allowlist with a reason", pointing at
+`textwrite.js:els.field.function`. That is #1065's tap on Text's box,
+which listens for touchend and has no touchcancel. (The PostgreSQL log's
+summary was not read; it ran the same suites.)
+
+- The app is not hurt: the next touchstart resets the tap.
+- The rule stands. Add a touchcancel that clears the tap's start, and
+  show V214b red without it and green with it.
+- Expect the same row on every later run until it is mended.
 
 Read main's newest full runs, every job, before believing main is green.
 A red is work in progress: read the failing row, mend the defect (or the
@@ -125,6 +138,48 @@ over to the right."
 
 The Pad and Flip share the drawer and its script: whatever mends it mends
 both, and says so.
+
+## Found after this was written (the owner on a desk, Nov 22 evening and Nov 23 morning)
+
+### 1. With Text open, a click anywhere on the drawing moves the words there
+
+"The text on a desktop moves wherever you click. so if I click at the
+bottom, it moves there. if I click in upper right corner, it moves there".
+
+- That is today's design: `place()` says "with the drawer up, moves the
+  words there".
+- It is very likely bug 2's mechanism on a phone.
+- THE OWNER'S TO DECIDE, asked and not yet answered: should a click move
+  the words, or only a drag?
+- Cal's pick: once the words are down, only a drag moves them (their box
+  says "Drag to move"), and a click elsewhere leaves them where they are.
+- Settle this before mending bug 2: the answer may be the mend.
+
+### 2. How it works' row of examples cannot be scrolled with a mouse
+
+This is the Pad's How it works sheet ("What would you like to do?"),
+opened from the site's How it works page, on a desk.
+
+- The row of example cards (Draw, Add music, Post, and more past the right
+  edge) scrolls sideways with a finger.
+- A mouse has no way to it: no scrollbar, no arrows.
+- The answer changes how the row looks on a desk (arrows on a device that
+  hovers, a scrollbar that shows, or a row that wraps), so mock it first.
+- Check Flip's sheet too.
+
+### 3. No way back from How it works to where you were
+
+- Choosing Pad on the site's How it works page opens the Pad with its own
+  How it works over it.
+- Closing How it works leaves you in the Pad, though you came from the
+  site's page.
+- The same happens with Flip's How it works from the main menu.
+
+By "The way back" (`DECISIONS.md`) and "Never stranded"
+(`WORKING-AGREEMENTS.md`), closing it should bring you back where you
+were. It is a bug, so it needs no yes. Start at padOver's help() in
+`social/static/social.js`, which opens the editor and asks for its help,
+and at how the editor's help sheet closes.
 
 ## What happened Nov 21 and 22 (all merged)
 
