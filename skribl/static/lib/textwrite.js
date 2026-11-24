@@ -739,17 +739,12 @@
     // The words move with a finger, a pen or a mouse, before they are ink;
     // once the move is a drag the drawer steps aside (above), and it is back
     // when the words are let go. The words stay where the finger holds them,
-    // also while the page glides home under it (followLoop).
-    els.place.addEventListener('pointerdown', function (e) {
-      var sb = screenBox();
-      if (!anchor || !sb) return;
-      e.preventDefault();
-      try { els.place.setPointerCapture(e.pointerId); } catch (_) {}
-      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, px: e.clientX, py: e.clientY, moved: false,
-               dx: (e.clientX - sb.left) / sb.k - anchor.x, dy: (e.clientY - sb.top) / sb.ky - anchor.y };
-      els.place.classList.add('dragging');
-    });
-    els.place.addEventListener('pointermove', function (e) {
+    // also while the page glides home under it (followLoop). A press is taken
+    // by grab(), from their box or from the drawing's own press (press(),
+    // below); the moves and the lift are heard on the window, wherever the
+    // pointer is, so a drag taken either way is the same drag.
+    els.place.addEventListener('pointerdown', grab);
+    window.addEventListener('pointermove', function (e) {
       if (!drag || e.pointerId !== drag.id) return;
       if (!drag.moved) {
         if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 4) return;
@@ -763,7 +758,7 @@
       }
       drag.px = e.clientX; drag.py = e.clientY;
       dragTo();
-    });
+    }, true);
     var endDrag = function (e) {
       if (!drag || (e && e.pointerId !== drag.id)) return;
       var was = drag;
@@ -771,8 +766,8 @@
       els.place.classList.remove('dragging');
       if (was.moved) veil(false);
     };
-    els.place.addEventListener('pointerup', endDrag);
-    els.place.addEventListener('pointercancel', endDrag);
+    window.addEventListener('pointerup', endDrag, true);
+    window.addEventListener('pointercancel', endDrag, true);
     window.addEventListener('resize', function () { fitKeyboard(); if (isOpen() && want) { anchor = clampAnchor(want); position(); } });
     // The tiles' pictures follow the tiles' width and the theme: the tile's
     // grey and ground change with it, the ground over the tile's .15s fade,
@@ -784,6 +779,35 @@
       new MutationObserver(themed).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     }
     return els;
+  }
+  // The words taken by a press: where the finger holds them, in the drawing.
+  function grab(e) {
+    var sb = screenBox();
+    if (!anchor || !sb || !els) return false;
+    e.preventDefault();
+    try { els.place.setPointerCapture(e.pointerId); } catch (_) {}
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, px: e.clientX, py: e.clientY, moved: false,
+             dx: (e.clientX - sb.left) / sb.k - anchor.x, dy: (e.clientY - sb.top) / sb.ky - anchor.y };
+    els.place.classList.add('dragging');
+    return true;
+  }
+  // A PRESS ON THE WORDS HOLDS THEM, WHEREVER THE SCREEN SENDS IT (the
+  // owner's iPhone, Nov 22: "can't drag letters, still jumps right every
+  // touch", inside the site and on the Pad on its own). The finger on the
+  // words reached the drawing's press there, not their box, and that press
+  // moves the words to it, so every touch moved them and none held them.
+  // The drawing's press (both editors') asks here first: on the words, by
+  // where they are in the drawing, it takes them as their box would.
+  function onWords(pos) {
+    if (!anchor || !plan || !plan.strokes.length || !els || els.place.hidden || !isOpen()) return false;
+    var b = plan.box;
+    return pos.x >= anchor.x + b.x0 && pos.x <= anchor.x + b.x1 &&
+           pos.y >= anchor.y + b.y0 && pos.y <= anchor.y + b.y1;
+  }
+  function press(e, pos) {
+    if (!editor || !bind()) return;
+    if (e && onWords(pos) && grab(e)) return;
+    place(pos);
   }
   // The words where the finger holds them, on the drawing as it is now.
   function dragTo() {
@@ -1512,6 +1536,9 @@
     dials: function () { return { size: state.size, weight: thickness(), own: state.weight != null }; },
     attach: function (hooks) { editor = hooks; resume(); },
     place: function (pos) { place(pos); },
+    // The drawing's press with Text chosen: on the words it holds them,
+    // anywhere else it says where they go (onWords, above).
+    press: function (e, pos) { press(e, pos); },
     start: start,
     close: close,
     // The editor's drawers closed Text's (another drawer opened): tidy up.

@@ -52987,3 +52987,55 @@ CALIBRATION: V214b's section run alone over main's `skribl/static`, red
 allowlist's one exemption still real.
 
 PAD AND FLIP: shared (one drawer, one script).
+
+## After v330 -- Text: a press on the words holds them, wherever the screen sends it
+
+The owner's iPhone, Nov 22 (the handoff's bug 2): "can't drag letters,
+still jumps right every touch. Not draggable", inside the site and on the
+Pad on its own ("can't drag on skribl pad standalone"); before #1065, "Each
+time I touch it it jumps to right or up and over to the right."
+
+WHERE THE FINGER WENT. Only the drawing's press moves the words to a press
+(`editor_draw.js` and `flip.js`, `SkriblText.place`), and it puts their
+middle under it. So on the owner's iPhone a finger on the words reached the
+drawing, not the words' own box, whose press starts their drag: every touch
+moved them to the finger and none held them. Chromium sends a finger on the
+words to their box (driven here through the browser's own touch input, it
+moved them by exactly the drag), so why the iPhone did not is not known; no
+WebKit here. Let through the box to the drawing on a copy of the tree as it
+was, a finger pressed three quarters across the words moved them 23px right
+on the Pad (20 on Flip), and a drag of 36 right and 28 up moved them no
+further: the owner's words, in numbers.
+
+THE MEND, which holds whichever way the press goes: the drawing's press
+asks `lib/textwrite.js` first (`SkriblText.press`). On the words, by where
+they are in the drawing, it takes them as their box does (one `grab`, the
+box's own press too); anywhere else it places them as before. The moves and
+the lift are heard on the window, so a drag taken either way is the same
+drag. What #1065 did for a drag while typing stays: the keyboard and the
+page stay where they are.
+
+THE CHECKS. `verify_text` 16's drag row, the keyboard up, drags with a
+FINGER and reads the follow (the drag's own amount, within 1.5px), not the
+way: it dragged with a mouse and read only right and up, which a jump to
+the right passes. A new part 25: a finger's drag pressed off the words'
+middle, on the Pad and on Flip, on the box as Chromium sends it and let
+through to the drawing as the owner's iPhone did; the words move by the
+drag and stay where they are let go. CALIBRATION, each on a copy with a
+server of its own, parts 16 and 25 alone: as built, 11/11 and 4/4; the mend
+taken out, part 25's two let-through rows red (23.4 and 19.6px right for
+the drag) and the rest green; a jump right put into the drag (20 drawing
+units), part 16's finger row red (54.2 for 40) and all four of part 25's.
+
+NOT SEEN ON AN IPHONE: whether the owner's finger now holds the words is
+the owner's phone's to say. THE TELL: with words in Text's box, a finger on
+their right half and a drag: they go with the finger, the dashed box under
+it all the way, where the old build moved them right and left them. If
+they still jump, the Pad's input log (`?inputlog` in the address, then
+Copy) says which element took each press.
+
+STILL THE OWNER'S: whether a press away from the words moves them there
+(today's design, and a desk's) or only a drag moves them. This leaves it as
+it was.
+
+PAD AND FLIP: shared (one script; each editor's press asks it).
