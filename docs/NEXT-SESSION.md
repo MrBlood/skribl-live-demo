@@ -460,6 +460,18 @@ are `FINAL_RECOMMENDATION.md`'s.
 
 Both are still in git history.
 
+## For reference: the owner's Blooby brand and mascot ideas (Nov 24), ideas only
+
+The owner kept an outside piece of brand ideas as "fodder", to read as
+ideas and not to act on: `docs/research/blooby-brand-and-mascot-vision/`.
+
+- The owner likes the peeking Blooby most.
+- Cal's notes are beside it, in `CAL-FEEDBACK.md`: peek from edges, never
+  over a drawing; give him room; draw him by hand in the Pad. Also worth
+  keeping: Blooby as the first drawing people draw back on.
+- Nothing in it is decided or on the build list. Any change on screen is a
+  mock first, and the owner's yes.
+
 ## What happened Nov 21 and 22 (all merged)
 
 Nov 21, evening:
