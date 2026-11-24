@@ -667,6 +667,9 @@
       var n = els.field.value.length;
       try { els.field.setSelectionRange(n, n); } catch (err) {}
     });
+    // A touch the phone takes away (a scroll it claims, a call) ends in no
+    // touchend, so its start must not wait for the next one: it is no tap.
+    els.field.addEventListener('touchcancel', function () { tapFrom = null; });
     els.field.addEventListener('focus', function () { fitKeyboard(); setTimeout(fitKeyboard, 120); });
     els.field.addEventListener('blur', function () { fitKeyboard(); setTimeout(fitKeyboard, 120); });
     if (window.visualViewport) {
