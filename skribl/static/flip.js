@@ -2644,7 +2644,7 @@ const _padDown = e=>{ if(playing) return; if(pinching) return;
   // WHERE the words go and the typing sheet comes up. Nothing is ink, and
   // nothing goes on the page, until Write it.
   if(flipTool==='shape' && shapeKind==='text' && window.SkriblText){
-    window.SkriblText.place(pos(e));
+    window.SkriblText.press(e, pos(e));
     return;
   }
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }

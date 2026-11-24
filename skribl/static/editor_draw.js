@@ -330,7 +330,7 @@ function startDraw(e) {
   if (window.SkriblTextTool && window.SkriblTextTool.wants()) {
     const _sp = document.getElementById('shapePop');
     if (_sp && !_sp.hidden) _sp.hidden = true;
-    window.SkriblText.place(getPos(e));
+    window.SkriblText.press(e, getPos(e));
     return;
   }
   // Post-record lock: the completed replay can't be drawn over. The visible

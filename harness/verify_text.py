@@ -70,9 +70,10 @@ Thickness and Speed as tiles. Each row holds a promise:
      with the keyboard up, the drawer sits on it and is the words, Write it
      and Style under them (44px, no caption; a tap on a chip changes the look
      and keeps the keyboard, the chips still named Style), the words above
-     it, its room in the page kept so nothing above it moves; a drag on the
-     words moves them and keeps the keyboard and the page (with no
-     keyboard up, the whole drawer); the keyboard's done
+     it, its room in the page kept so nothing above it moves; a finger's
+     drag on the words moves them by the drag's own amount and keeps the
+     keyboard and the page (with no keyboard up, the whole drawer); the
+     keyboard's done
      key puts it away and writes nothing, the drawer back under the tools
      with its words and Write it on screen and the words where they were
      put; the grabber and Write it pressed with the keyboard up do what they
@@ -162,6 +163,13 @@ Thickness and Speed as tiles. Each row holds a promise:
      Write it at least the strip's 60px above the keys, Style's chips under
      the words where the strip lies) and, once the phone leaves it room,
      below it (the drawer on that, nothing empty under the chips).
+ 25. A FINGER ON THE WORDS (the owner's iPhone, Nov 22: "can't drag
+     letters, still jumps right every touch", inside the site and on the
+     Pad on its own): a finger's drag on the words, pressed off their
+     middle, moves them by the drag's own amount and let go they stay,
+     whether the press lands on their box (as Chromium sends it) or on
+     the drawing under it (as the owner's iPhone did, where every touch
+     moved them to the finger). Pad and Flip.
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
@@ -297,6 +305,36 @@ def tap(q, x, y):
     else:
         q.mouse.click(x, y)
     q.wait_for_timeout(350)
+
+
+def finger_drag(q, x, y, dx, dy, steps=10, held=None, hold_ms=0):
+    """A FINGER's drag, through the browser's own touch input (CDP), as a phone gives it: hit-tested where it
+    lands, a touch and a pointer of type touch, never a mouse (the owner's iPhone, Nov 22: a drag check driven
+    with a mouse passed while a finger could not drag the words). Pressed at (x, y), moved by (dx, dy) in
+    `steps`, held `hold_ms`, `held(q)` read while it is still down, then lifted. Returns what `held` read."""
+    cdp = getattr(q, "_tx_cdp", None)
+    if cdp is None:
+        cdp = q.context.new_cdp_session(q)
+        q._tx_cdp = cdp
+
+    def at_(px, py):
+        return [{"x": px, "y": py, "id": 1, "radiusX": 3, "radiusY": 3, "force": 1}]
+    cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": at_(x, y)})
+    q.wait_for_timeout(50)
+    for i in range(1, steps + 1):
+        cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": at_(x + dx * i / steps, y + dy * i / steps)})
+        q.wait_for_timeout(20)
+    if hold_ms:
+        q.wait_for_timeout(hold_ms)
+    got = held(q) if held else None
+    cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+    q.wait_for_timeout(300)
+    return got
+
+
+# The words' box on screen, [left, top, width, height], and its middle.
+BOXR = "() => { const r = document.getElementById('txPlace').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }"
+BOXC = "() => { const r = document.getElementById('txPlace').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }"
 
 
 def settle(q, ms=2500):
@@ -1271,28 +1309,26 @@ with sync_playwright() as p:
         # it it jumps"): the words move by the drag where they show, above the drawer on the keys, and the keyboard
         # stays (the words keep their focus) and so does the page. Then put back where they were put, for the rows
         # after.
+        # A FINGER, and the follow read, not the way (the owner's iPhone, Nov 22: "can't drag letters, still jumps
+        # right every touch"; this row dragged with a mouse and read only that the words went right and up, which a
+        # jump to the right passes).
         y0d, a0 = q.evaluate("() => scrollY"), q.evaluate("() => SkriblText.anchor()")
-        pb = q.evaluate("() => { const r = document.getElementById('txPlace').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }")
-        q.mouse.move(pb[0], pb[1])
-        q.mouse.down()
-        q.mouse.move(pb[0] + 12, pb[1] - 8, steps=3)
-        q.mouse.move(pb[0] + 40, pb[1] - 30, steps=6)
-        q.wait_for_timeout(250)
-        dmid, ymid = q.evaluate(TYPING, [DOCK["pad"], STUCK]), q.evaluate("() => scrollY")
-        q.mouse.up()
-        q.wait_for_timeout(300)
+        pb = q.evaluate(BOXC)
+        dmid, ymid, cmid = finger_drag(q, pb[0], pb[1], 40, -30, hold_ms=250, held=lambda q: (
+            q.evaluate(TYPING, [DOCK["pad"], STUCK]), q.evaluate("() => scrollY"), q.evaluate(BOXC)))
         dend, yend, a1 = q.evaluate(TYPING, [DOCK["pad"], STUCK]), q.evaluate("() => scrollY"), q.evaluate("() => SkriblText.anchor()")
         q.evaluate("(p) => SkriblText.place(p)", put)
         q.evaluate("() => { const f = document.getElementById('txField'); if (document.activeElement !== f) f.focus(); }")
         q.wait_for_timeout(300)
-        check("...a drag on the words with the keyboard up moves them by the drag where they show and keeps the keyboard:"
-              " the words in focus all through, the drawer on the keys, the page where it was (the owner's iPhone, Nov 22:"
-              " a drag put the keyboard away and the words leapt from the finger)",
+        moved = [round(cmid[0] - pb[0], 1), round(cmid[1] - pb[1], 1)]
+        check("...a finger's drag on the words with the keyboard up moves them by the drag's own amount where they show"
+              " and keeps the keyboard: the words in focus all through, the drawer on the keys, the page where it was (the"
+              " owner's iPhone, Nov 22: a drag put the keyboard away and the words leapt from the finger)",
               dmid["focus"] == "txField" and dmid["typing"] and dend["focus"] == "txField" and dend["typing"]
               and ymid == y0d and yend == y0d and a0 is not None and a1 is not None
-              and a1["x"] > a0["x"] + 5 and a1["y"] < a0["y"] - 5,
+              and abs(moved[0] - 40) <= 1.5 and abs(moved[1] + 30) <= 1.5,
               json.dumps({"mid": [dmid["focus"], dmid["typing"], ymid], "end": [dend["focus"], dend["typing"], yend],
-                          "page": y0d, "words": [a0, a1]}))
+                          "page": y0d, "moved": moved, "for": [40, -30], "words": [a0, a1]}))
         # While typing, the page scrolled up to see the top of the drawing; the
         # drawer, back in the page when the keyboard goes, must come on screen.
         q.evaluate("() => window.scrollTo({ top: 0, behavior: 'instant' })")
@@ -2466,6 +2502,45 @@ with sync_playwright() as p:
                   and g.get("left") == "" and g.get("box") == "" and g.get("back") == ["Hello", "Hello"] and not g.get("errors"),
                   g.get("stopped") or f"said {g.get('said')!r}; left {g.get('left')!r}; Text opened with {g.get('box')!r};"
                   f" after Undo {g.get('back')}; errors {g.get('errors')}")
+
+    # ------------------------------------------------------------------ 25
+    if part("TEXT 25 — a finger on the words"):
+        # THE OWNER'S IPHONE, Nov 22: "can't drag letters, still jumps right every touch", inside the site and on
+        # the Pad on its own ("can't drag on skribl pad standalone"). Every touch moved the words to the finger and
+        # none held them. Only the drawing's press moves the words to a press (editor_draw.js, flip.js), so there
+        # the finger on the words reached the drawing, not the words' own box. Chromium sends it to the box, which
+        # is the first of each pair below; the second lets the press through the box to the drawing, as the
+        # owner's iPhone did, and asks the same of it. A finger each time, pressed off the words' middle (three
+        # quarters across, where a jump to the finger shows), and the follow read: the words move by the drag's
+        # own amount, not just its way, the page gliding home under the finger as it does (17).
+        DX, DY = 36, -28
+        for ed in ("pad", "flip"):
+            for through in (False, True):
+                c, q = open_editor(b, ed, prefs={"style": "print", "size": "M", "speed": 4})
+                choose_text(q)
+                type_words(q, "Hello")
+                settle(q)
+                if through:
+                    q.evaluate("() => { document.getElementById('txPlace').style.pointerEvents = 'none'; }")
+                bx = q.evaluate(BOXR)
+                x, y = bx[0] + bx[2] * 0.75, bx[1] + bx[3] * 0.5
+                c0 = q.evaluate(BOXC)
+                hit = q.evaluate("([x, y]) => { const e = document.elementFromPoint(x, y); return e ? (e.id || e.tagName) : null; }", [x, y])
+                mid, amid = finger_drag(q, x, y, DX, DY, hold_ms=900,
+                                        held=lambda q: (q.evaluate(BOXC), q.evaluate("() => SkriblText.anchor()")))
+                settle(q)
+                a2 = q.evaluate("() => SkriblText.anchor()")
+                moved = [round(mid[0] - c0[0], 1), round(mid[1] - c0[1], 1)]
+                way = "let through the box to the drawing, as the owner's iPhone did" if through else "on the words' box"
+                want_hit = CANVAS[ed].lstrip("#") if through else "txPlace"
+                check(f"{ed}: a finger's drag {way} moves the words by the drag's own amount, the page gliding home under"
+                      f" the finger, and let go they stay where they were let go",
+                      hit == want_hit and abs(moved[0] - DX) <= 1.5 and abs(moved[1] - DY) <= 1.5
+                      and amid is not None and a2 is not None
+                      and abs(a2["x"] - amid["x"]) <= 0.5 and abs(a2["y"] - amid["y"]) <= 0.5 and not q._tx_errors,
+                      json.dumps({"pressed on": hit, "moved": moved, "for": [DX, DY], "held": amid, "let go": a2,
+                                  "errors": q._tx_errors[:2]}))
+                c.close()
 
     b.close()
 
