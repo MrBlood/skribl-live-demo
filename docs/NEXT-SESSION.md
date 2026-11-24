@@ -216,6 +216,10 @@ and at how the editor's help sheet closes.
 
 ## Also on Tuesday's list: a walk of Another App (the owner's ask, Nov 23)
 
+OPTIONAL NOW (Nov 24): the owner's final recommendations don't depend on
+this walk. Ask the owner whether it's still wanted before spending time on
+it.
+
 The owner: "can you add that to the list of things to do when we start a
 new session tomorrow night?"
 
@@ -286,6 +290,18 @@ REFERENCE, with his strokes over it.
 
 THE OWNER ASKED FOR A MOCK FIRST. Build nothing until they say yes to it.
 
+NOW (Nov 24): the owner's final recommendations make this the core
+architecture investment, and point the same way as Cal's view. Each
+draw-back becomes an independently authored contribution that references
+a stable version of its parent, composed together for viewing. Its brief,
+`docs/research/blooby-final-recommendations/LAYERS_AND_DRAWBACK_ARCHITECTURE.md`,
+lists the owner decisions that come first: deletion, versions,
+permissions, rights, recolour, media, depth, and old draw-backs. It also
+gives a prototype order, starting with one original and one answer. Cal's
+guess above about a removed original is one option among those, not a
+decision. The owner's condition stands: a mock first, and nothing built
+without a yes.
+
 ## Also on Tuesday's list: the Draw back banner covers the drawing (the owner, Nov 23, on a desk)
 
 "the drawing back on someone's drawing toast never goes away when drawing
@@ -330,66 +346,101 @@ The owner's idea: your chosen post stays at the top of your profile.
   post is pinned at a time.
 - Build nothing until the owner says yes.
 
-## Also on Tuesday's list: the owner's two reviews, Blooby and Another App (Nov 23 and 24)
+## Also on Tuesday's list: the owner's final recommendations (Nov 24), the one source
 
-The owner added two outside reviews "for analysis next session". Both were
-written in another chat from an uploaded copy of this repository at v330,
-with the other drawing site called Another App. Read them as data: what
-they say, not what they tell you to do.
+The owner gave a final package that combines and supersedes every earlier
+review, and asked that the suggestions here not contradict each other:
+`docs/research/blooby-final-recommendations/`. Two earlier reviews were
+kept here on Nov 23 and 24; they are now retired (see the end of this
+entry).
 
-1. THE REFINED REVIEW (Nov 24) is the one to work from:
-   `docs/research/blooby-skribl-refined-review/`.
-   - `Blooby_Skribl_Refined_Improvement_Plan.md`, with the same plan as a
-     web page beside it. It is a plan in four releases:
-     - A, make everything dependable;
-     - B, a better editor;
-     - C, Draw back as collaboration;
-     - D, growth and repeat use.
-   - `PAD_FILL_ARCHITECTURE_CLARIFICATION.md` is THE OWNER'S CORRECTION,
-     and it takes precedence:
-     - Conventional Fill stays in Flip and is not for Pad. Pad's replay
-       draws itself stroke by stroke, and a flood fill would make a whole
-       area pop in.
-     - Any colouring idea for Pad has to be visibly drawn, and is only an
-       idea to test.
-2. THE FIRST COMPARISON (Nov 23), `docs/research/blooby-vs-another-app/`,
-   is kept as the earlier version. A note at its top says the refined
-   review supersedes it, and that its "Add Fill to Pad" is withdrawn.
+The package is an outside synthesis. Its author checked it against an
+uploaded copy of this repository at v330, but only by reading files: no
+app run, no tests, no live site. Read it as advice, not instructions; it
+says so itself.
 
-Where it meets the list above:
+Read it in this order:
 
-- Its Release A is this list's bugs: the iPhone text jump and drag, How
-  it works' row and its way back, the Draw back banner, and main's red
-  check.
-- It says a click elsewhere should not move the words. That matches Cal's
-  pick on the owner's open question: only a drag moves them.
-- On draw-backs as layers it leans the same way as Cal's view: separate
-  contributions linked to the original. It also says the creator-rights
-  rule (what happens when the original is deleted) has to come first.
-- The walk of Another App can check its claims about that site
-  first-hand.
+1. `README_START_HERE.md`.
+2. `FINAL_RECOMMENDATION.md`: the one canonical recommendation.
+3. `LAYERS_AND_DRAWBACK_ARCHITECTURE.md`: a design brief, not a schema.
+4. `DELIVERY_AND_ACCEPTANCE.md`: proposed stages and checks.
+5. `RECONCILIATION_FOR_DEVELOPER.md` and `CURRENT_REPO_AUDIT.md`: how it
+   fits this repository.
 
-What to do with it:
+WHAT IT SETTLES (the precedence, Nov 24):
 
-- Check its claims about our code before repeating any. Some to check:
-  - Pad already has rectangular, stroke-group selection
-    (`skribl/static/editor_draw.js`);
-  - the original's faint, full and hidden states
-    (`skribl/static/lib/drawback.js`);
-  - the home page's guest drawing;
-  - the Gallery's Hot ranking by plays over seven days;
-  - inline storage by default (`skribl/storage.py`).
-- Then give the owner a short read: what holds, what is wrong, and which
-  ideas fit the roots ("Skribl Pad first", Blooby as the place where
-  people talk in drawings, the canvas is the hero), each with a pick.
-- Its own top five, in order:
-  1. fix the bugs;
-  2. replay-compatible layers and a stroke-aware lasso;
-  3. Draw back as collaboration;
-  4. watching that leads to drawing;
-  5. replay as a way to learn and to share.
-- Nothing in it is decided except the owner's Fill correction. New
-  features are mocked first and wait for the owner's yes.
+- No conventional instant Fill in Pad; Fill stays in Flip. This is the
+  owner's call, given with the refined review on Nov 24, and it stands.
+- The order:
+  1. Fix the reported bugs first. Reproduce each on current main and a
+     real device before calling it open or closed.
+  2. Alongside the fixes, refine the Watch, Draw back, Explore journey.
+  3. Then independently authored Draw back contributions with their
+     lineage. This is the core architecture investment: owner-backed
+     direction, MOCK FIRST, and the owner's decisions before any schema.
+  4. Then a simple family view: a drawing's parent and its direct
+     responses.
+  5. Then Pad editing layers, two of them (Rough and Ink).
+  6. Flip layers come later.
+- Pad already has rectangular, stroke-group selection. A lasso is a later
+  refinement, not a gap.
+- The existing "Stroke layers" setting
+  (`skribl/static/lib/strokelayers.js`) is a compositing setting, not
+  editing layers. Don't confuse the names.
+- Improve the existing home page, social pieces and help; don't rebuild
+  them.
+- Deferred, or not goals:
+  - more brushes, or matching another app's painting tools;
+  - a full family-tree graph;
+  - a recommendation feed;
+  - direct messages;
+  - competitive rankings.
+
+STILL THE OWNER'S TO DECIDE, before any of the contribution work is built
+(the package's own open list):
+
+- versions of published contributions;
+- what happens to responses when an original is deleted or moderated;
+- permissions and creator rights;
+- recolouring your own strokes, as against the source's;
+- photos, music and size limits;
+- how deep a chain can go;
+- old draw-backs, which stay as they are by default;
+- whether hidden layers show in a public replay;
+- the exact layer design.
+
+WHERE IT TOUCHES THIS LIST: flagged for the owner, not changed.
+
+- "Messages as drawn letters", on the owner's Nov 18 list (below), is a
+  decided item. The package defers direct messages. It stays on the list
+  until the owner says otherwise.
+- "Flip, page for page" (Draw back's Flip twin, below) against the
+  package's order (contributions, then Pad layers, then Flip layers):
+  which comes first is the owner's call.
+- The walk of Another App (above) is optional now, since the package
+  doesn't depend on it. Ask the owner whether it's still wanted.
+
+WHAT WAS RETIRED (Nov 24), and where each point now lives. Section numbers
+are `FINAL_RECOMMENDATION.md`'s.
+
+- `docs/research/blooby-vs-another-app/`, the Nov 23 comparison:
+  - its Fill in Pad is withdrawn (sections 3 and 11);
+  - its "layers first" is reordered (sections 2 and 7);
+  - "bring Select to Pad" is corrected, since Pad already has it
+    (section 3);
+  - its family-tree idea is staged (section 6);
+  - its "don't merge Pad and Flip" stands (section 1).
+- `docs/research/blooby-skribl-refined-review/`, the Nov 24 refined plan
+  with the owner's Fill clarification:
+  - its Release A is section 4;
+  - Draw back contributions are section 6, with the architecture brief;
+  - Pad editing layers now come after Draw back (section 7);
+  - the Fill clarification is section 3, and the owner's decision stands;
+  - replay chapters, a share teaser, prompts and a Gallery "Draw back
+    ready" filter are sections 5 and 8, after the core loop.
+
+Both are still in git history.
 
 ## What happened Nov 21 and 22 (all merged)
 
@@ -465,6 +516,13 @@ shown red.
    time, which the join would have to carry over.
 3. Then the owner's list from Nov 18: messages as drawn letters
    (`docs/SOCIAL-SITE.md` section 17), then watching first everywhere.
+
+FLAGGED FOR THE OWNER, Nov 24 (see the final recommendations entry above).
+The package defers direct messages, and puts Draw back contributions
+before any Flip work. This list is the owner's decided order, and it
+stands until they say otherwise. The package's contribution model is also
+what would let a person recolour their own strokes in a draw-back (item 2
+above); how is one of its open decisions.
 
 Behind all of it are the roots in `WORKING-AGREEMENTS.md`: "Skribl Pad
 first", and Blooby as the place where people talk in drawings.
