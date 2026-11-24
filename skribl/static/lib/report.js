@@ -139,6 +139,12 @@
           + (app ? ', Home Screen app' : ', browser tab') + (w !== global ? ', in a frame' : '');
       }, '?')
     ];
+    // WHAT THE KEYBOARD DID TO TEXT (the owner's iPhone, Nov 22, the Pad
+    // over Make: each letter moved it, and the menu that copies this puts
+    // the keyboard away): Text's own readings while its drawer was up
+    // (lib/textwrite.js trail), one a line, never the words.
+    var typed = safe(function () { return global.SkriblText && global.SkriblText.trail ? global.SkriblText.trail() : ''; }, '');
+    if (typed) typed.split('\n').forEach(function (t) { lines.push('Text: ' + t); });
 
     // Flip and Pad expose different globals; ask for what each one has and skip
     // the rest rather than reporting a misleading zero.
