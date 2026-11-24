@@ -4,6 +4,8 @@
 **Blooby source:** uploaded `skribl-live-demo-main (1).zip` / Skribl v330  
 **Another App:** its public editor and help pages (its address is kept out of this repository)
 
+> **Repository note (November 24, 2026):** The owner's refined follow-up, in `docs/research/blooby-skribl-refined-review/`, supersedes this comparison where the two differ. Above all, conventional Fill stays in Flip and is not planned for Pad, whose replay draws itself stroke by stroke: the owner's clarification, in that folder's `PAD_FILL_ARCHITECTURE_CLARIFICATION.md`. Do not read this report's "Add Fill to Pad" or "Bring Fill and Select to Pad" as an accepted build request.
+
 > This is a readable, static export of the prior comparison. Interactive checkboxes, live images, and in-chat widgets have been converted to ordinary text. The assessment is based on the uploaded code and publicly exposed Another App information, **not** a benchmarked hands-on session in both products.
 
 ## The big picture

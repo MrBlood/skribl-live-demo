@@ -1,0 +1,367 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Blooby + Skribl: A Deeper Improvement Plan</title><style>
+:root{color-scheme:dark;--bg:#131020;--card:#201a32;--ink:#f4efff;--muted:#bbb0d0;--line:#3b3156;--accent:#bba3ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.68}
+main{max-width:970px;margin:0 auto;padding:55px 38px 95px}h1{font-size:2.5rem;line-height:1.2;color:white;margin-bottom:1.4rem}h2{margin-top:3.3rem;padding-top:.8rem;border-top:1px solid var(--line);font-size:1.55rem}h3{margin-top:2.1rem;font-size:1.2rem;color:#e3d7ff}
+p,li{font-size:1rem}p{margin:1em 0}strong{color:#f6f0ff}a{color:var(--accent)}blockquote{background:#241c3d;border-left:4px solid var(--accent);padding:8px 22px;margin:1.4rem 0}
+table{border-collapse:collapse;width:100%;margin:1.5rem 0;font-size:.92rem}th,td{border:1px solid var(--line);padding:11px 13px;text-align:left;vertical-align:top}th{background:#28203f}tr:nth-child(even) td{background:#1a1629}
+pre{padding:20px;background:#201a32;border:1px solid var(--line);border-radius:10px;overflow:auto}code{font-family:ui-monospace,Menlo,monospace;font-size:.92em}p code,li code{padding:2px 5px;background:#28203f;border-radius:4px}
+@media(max-width:640px){main{padding:27px 18px 65px}h1{font-size:1.9rem}table{font-size:.76rem}th,td{padding:8px}}
+</style></head><body><main><h1>Blooby + Skribl: A Deeper Improvement Plan</h1>
+<p><strong>Product strategy and technical recommendations · November 2026</strong><br />
+<strong>Context:</strong> Based on the uploaded v330 project and the current Another App editor.</p>
+<blockquote>
+<p><strong>Repository note (November 24, 2026):</strong> This is a portable, text-first copy of the prior in-chat review, with the competing application's name replaced by <strong>Another App</strong>. Inline interactive illustrations are represented as descriptions or text diagrams. <strong>The original Fill-in-Pad recommendation is superseded by the companion file <code>PAD_FILL_ARCHITECTURE_CLARIFICATION.md</code></strong>, following the product owner's clarification that stroke-by-stroke self-drawing is fundamental to Skribl Pad. Do not interpret the recommendation to add conventional flood fill to Pad as an accepted requirement.</p>
+</blockquote>
+<p>After going back into the actual source code, I would change the priorities from our first comparison.</p>
+<p><strong>I think Blooby has the potential to be more engaging than a traditional drawing website, but it needs to become dramatically easier to create, finish, share, and respond to drawings.</strong></p>
+<p>There are three parts to the product:</p>
+<ul>
+<li><strong>Skribl Pad:</strong> The place people create drawings that replay themselves.</li>
+<li><strong>Skribl Flip:</strong> The place people make animations.</li>
+<li><strong>Blooby:</strong> The social platform that connects the drawings, artists, and conversations.</li>
+</ul>
+<p>These three pieces should reinforce each other, but they shouldn't become one complicated interface.</p>
+<p>My recommendation is to concentrate on <strong>reliable everyday drawing, replay-based social interaction, and making people want to return</strong> before attempting to match every advanced feature in Another App.</p>
+<h2>1. First priority: Fix the experience people already have</h2>
+<p>The most important discovery from your project's November 23 handoff is that there are already specific, observed usability issues worth fixing before adding major features.</p>
+<p>Your handoff records two iPhone text-tool problems: text jumping or moving unexpectedly while typing inside Blooby's embedded Pad, and text that doesn't drag properly with a finger. It also describes a desktop help carousel that cannot be scrolled using a mouse.</p>
+<p>These are more urgent than adding another brush.</p>
+<p><strong>What I would change:</strong></p>
+<ol>
+<li>When a user places text on the canvas, it should stay there until they deliberately drag it. Clicking elsewhere should not unexpectedly relocate it.</li>
+<li>Typing inside the embedded Pad should not move the drawing area or hide the text controls.</li>
+<li>Every horizontally scrolling help carousel should have visible desktop navigation.</li>
+<li>Any fix to shared text behavior must be tested in both Pad and Flip, on standalone pages and inside Blooby.</li>
+</ol>
+<p>I would make these the first release because the goal is simple: <strong>a first-time artist should never have to fight the editor to make something.</strong></p>
+<h2>2. Build the right drawing tools—not the most drawing tools</h2>
+<p>Another App has a clear advantage in editable layers, fill, blend brushes, and selection modes. Its current editor also has configurable fill tolerance, feathering, and layer controls.</p>
+<p>I would concentrate on four improvements.</p>
+<h3>A. Add two real editable layers to Skribl Pad</h3>
+<p><strong>Highest-value major editor feature.</strong></p>
+<p>Start with just two layers:</p>
+<ul>
+<li><strong>Clean ink:</strong> The finished strokes, with visibility and lock controls.</li>
+<li><strong>Rough sketch:</strong> The construction lines, with visibility, opacity, and lock controls.</li>
+</ul>
+<p>An artist sketches on Rough, reduces its opacity, and draws the final lines on Clean. Each layer can be hidden, reordered, and locked. A Merge action can come later.</p>
+<p>There's an architectural issue to solve first: your current recording format primarily stores timed points and stroke groups. A genuine layer must survive saving, undoing, exporting, publishing, and playback.</p>
+<p>I would introduce a versioned layer identifier for each stroke group and update both playback engines together. Existing drawings without layer identifiers should still play exactly as before.</p>
+<p><strong>The success test:</strong> Draw Blooby on Rough, ink him on Clean, hide Rough, publish, and watch him redraw correctly. Save and reopen the editable version, and both layers must remain available.</p>
+<h3>B. Add a Fill Bucket to Pad — ORIGINAL SUGGESTION, NOW SUPERSEDED</h3>
+<p><strong>Original priority assessment: High · Complexity: Medium–high.</strong></p>
+<p>The existing Fill tool in Flip is the starting point. Artists should not have to move into an animation workflow just to color a basic shape.</p>
+<p>I originally proposed a Fill tool with:</p>
+<ul>
+<li>One-tap fill of a closed area.</li>
+<li>An adjustable tolerance setting tucked into the tool's options.</li>
+<li>An option to fill behind black outlines.</li>
+<li>Undo that reverses a single fill.</li>
+<li>Correct behavior on transparent backgrounds.</li>
+</ul>
+<p><strong>The unusual requirement:</strong> A fill must be part of the recorded drawing, not simply painted into a bitmap that the replay cannot reconstruct.</p>
+<p>I proposed defining a replayable fill operation and validating what happens if the outline is moved, recolored, or deleted later. A raster snapshot might be useful as a rendering cache, but it shouldn't be the only editable representation.</p>
+<p><strong>Important correction:</strong> The product owner clarified that Pad intentionally omits instant fill because its identity is the visible process of a drawing drawing itself, whereas Flip is animation-oriented and already has Fill. <strong>Do not implement conventional flood fill in Pad based on the paragraph above.</strong> See <code>PAD_FILL_ARCHITECTURE_CLARIFICATION.md</code> for a revised recommendation that protects this product distinction.</p>
+<h3>C. Improve selection rather than replace it</h3>
+<p>One correction to my earlier comparison: <strong>Pad already has rectangular, stroke-group-based selection</strong> in <code>skribl/static/editor_draw.js</code>, not just Flip. That gives us a better starting point than I initially credited.</p>
+<p>I would add a freehand lasso using your existing <code>SkriblSelect</code> infrastructure. Start by selecting complete stroke groups.</p>
+<p>That approach preserves the integrity of lines when replaying. Cutting individual points out of a stroke risks introducing unnatural connections and strange playback behavior.</p>
+<p>The first release should support drawing a freehand selection, moving the selected strokes, duplicating them, undoing the operation, and reopening the edited drawing.</p>
+<p>I would defer feathered, pixel-accurate selection until you decide how raster edits should coexist with timed strokes.</p>
+<h3>D. Make the default toolset much smaller than the available toolset</h3>
+<p>The original example of everyday actions was <strong>Draw · Erase · Fill · Select · Undo · Color</strong>. Following the owner's clarification, <strong>omit Fill from Pad's proposed default shelf</strong>, leaving <strong>Draw · Erase · Select · Undo · Color</strong> unless a replay-native coloring approach is explicitly designed and approved.</p>
+<p>More advanced brushes, liquify, mirror, shaping, and specialized controls should remain available, but shouldn't compete for attention when someone is simply trying to draw.</p>
+<p>I wouldn't remove the current features. I'd use contextual controls and a customizable tool shelf so experienced artists can get to what they need.</p>
+<h2>3. Turn Draw back into Blooby's signature social feature</h2>
+<p><strong>Priority: Very high · Potential product differentiation: Very high.</strong></p>
+<p>This is where I would make the largest investment in Blooby itself.</p>
+<p>Another App makes a remix part of an artwork's family tree. Artists can follow branches and see how a drawing evolves.</p>
+<p>Your Draw back feature already does something compelling: it replays the original artist's strokes, followed by the responding artist's strokes. The existing <code>social/drawback.py</code> even compresses a long original into an introduction of roughly three seconds before the new contribution.</p>
+<p>That is a strong foundation. I would expand it in three specific ways.</p>
+<h3>A. Make each person's contribution independently watchable</h3>
+<p>Today, Draw back's server joins the original and response into one timed drawing.</p>
+<p>Instead, I'd work toward a replay with identifiable contributions. In the original interface concept, a <strong>Drawn together</strong> player shows a finished illustration plus separate bands labeled <strong>Original artist — body, face, outline</strong> and <strong>Second artist — waving hand, doodles</strong>.</p>
+<p>A viewer could:</p>
+<ul>
+<li><strong>Play all</strong> (the default, to keep things effortless).</li>
+<li><strong>Play original only</strong>.</li>
+<li><strong>Play added strokes only</strong>.</li>
+</ul>
+<p>A viewer could watch the whole collaboration, replay just one person's addition, or see the result without waiting for the original again.</p>
+<h3>B. Solve Draw back's data ownership before extending it</h3>
+<p>Your November 23 handoff already raises an important question: should a Draw back be stored as a combined copy, or as separate contributions linked to the original?</p>
+<p>I would favor the second approach for future drawings, while keeping existing combined posts compatible.</p>
+<p>Each contribution would have its own strokes and a reference to its parent. The viewer would see them composited together.</p>
+<p>Benefits:</p>
+<ul>
+<li>Recoloring the answerer's strokes would no longer require modifying the original.</li>
+<li>The viewer could show or hide particular contributions.</li>
+<li>A conversation could extend across multiple artists without repeatedly copying every preceding stroke.</li>
+<li>Drawing ancestry would be much easier to represent.</li>
+</ul>
+<p><strong>An essential decision comes first:</strong> What happens if the original artist deletes or restricts their drawing? A referenced system can honor removal more naturally, but it also changes what happens to everyone else's contributions. You need an explicit, understandable rule before changing the storage model.</p>
+<p>This is not just an engineering decision. It's a creator-rights decision.</p>
+<h3>C. Give Draw back a visual family tree</h3>
+<p>Let every drawing show the contributions that grew from it.</p>
+<pre><code class="language-text">                    Original sketch
+                  “Blooby says hello”
+                         |
+              +----------+----------+
+              |                     |
+         New colors             Funny face
+          Artist 2               Artist 3
+              |
+        Animated version
+           Artist 4
+</code></pre>
+<p>For a first version, you don't need a sophisticated graph renderer. A post could simply show its parent, its direct Draw backs, and a <strong>View all versions</strong> link.</p>
+<p>I'd build that before adding support for Draw back on multi-page Flip animations.</p>
+<p><strong>Important:</strong> You already have replay-ending actions, Draw back counters, per-contributor drawing times, notifications, and creator permission controls. Those should be retained and improved—not rebuilt.</p>
+<h2>4. Fix the current Draw back interface before expanding it</h2>
+<p>There's a very concrete problem in the handoff: the <strong>“Drawing back on…”</strong> pill can remain over the canvas and block the area where someone needs to draw.</p>
+<p>My recommendation is to move the original artist's visibility setting into a small control near the tools. Show the attribution briefly when the editor opens, then allow it to collapse once drawing starts.</p>
+<p>The creator should still be able to switch the original between <strong>faint</strong>, <strong>full</strong>, and <strong>hidden</strong>. Your code already supports these states in <code>skribl/static/lib/drawback.js</code>.</p>
+<p>The success test is straightforward: no drawing surface should be obscured by a persistent interface element, even at mobile screen sizes.</p>
+<h2>5. Improve the journey from first visit to first drawing</h2>
+<p>Another App communicates its basic loop clearly: draw something, post it, and let others remix it. Its current site also shows a guest-post option in the posting flow.</p>
+<p>Blooby should explain its own difference just as quickly.</p>
+<p>I'd give a new visitor three immediate paths:</p>
+<ol>
+<li><strong>Just draw.</strong> Open Skribl Pad with a blank canvas and start immediately.</li>
+<li><strong>Watch a drawing come alive.</strong> See a short Blooby replay, then try making your own.</li>
+<li><strong>Draw with someone.</strong> Start from a public drawing that welcomes contributions.</li>
+</ol>
+<p>Your project already has help demonstrations and a carefully designed Make flow. I'd reuse those rather than create an entirely new tutorial system.</p>
+<p>I would not make registration mandatory before someone can try Pad. Keep drawing available to visitors. Invite them to sign up when they want to keep or share their work across devices.</p>
+<p>Because your uploaded social site is still invite-only, this is a recommendation for a future public onboarding flow, not a suggestion to remove your present access controls immediately.</p>
+<p><strong>Important qualification:</strong> Blooby's home page already has an animated Blooby introduction, <strong>“Make a skribl,” “Look around,”</strong> and guest drawing access. Those are good choices. I wouldn't replace that page wholesale with the welcome concept above.</p>
+<p>What I'd improve is the path <strong>after</strong> the visitor watches the introduction.</p>
+<h2>6. Make watching a drawing lead naturally to making one</h2>
+<p><strong>Priority: Very high · Complexity: Low–medium.</strong></p>
+<p>This is a product-design opportunity, not necessarily a large new feature.</p>
+<p>Think about the following journey:</p>
+<ol>
+<li><strong>Someone opens Blooby.</strong> They see the animated introduction that already exists.</li>
+<li><strong>They watch a real drawing replay.</strong> Show a finished piece that is interesting enough to make them want to try it.</li>
+<li><strong>They see an easy next action.</strong> “Try drawing this” or “Add your own” rather than a generic invitation to explore more menus.</li>
+<li><strong>Pad opens in a useful starting state.</strong> A blank canvas for an original drawing, or a faint reference for a contribution.</li>
+<li><strong>They finish and share.</strong> They can preview their own replay, choose to save, share a link, or make a post when eligible.</li>
+</ol>
+<p>The goal is to eliminate decisions between inspiration and drawing.</p>
+<p>You already have some of the necessary actions, including Draw back at the end of a replay. I would test how prominent they should be, where they should appear, and whether people understand them.</p>
+<p>For example, a first-time visitor may understand <strong>“Add to this drawing”</strong> more readily than <strong>“Draw back.”</strong> Keep <strong>Draw back</strong> as the feature's brand name, but explain it in plain language the first time.</p>
+<p><strong>Success test:</strong> Ask five people who have never used the site to watch a drawing and add something to it. Observe where they stop, hesitate, or choose the wrong control.</p>
+<h2>7. Make the drawing replay itself more useful</h2>
+<p><strong>Priority: High · Potential differentiation: Very high.</strong></p>
+<p>Skribl already records a drawing's timing, supports variable-speed playback, and can display timed likes along its progress line.</p>
+<p>I think you can do more with that information without turning the player into a video editor.</p>
+<h3>My favorite addition: “Learn from this drawing”</h3>
+<p>Imagine somebody posts a beautifully drawn character. A viewer could choose to watch normally or learn how the artist made it.</p>
+<p>The original illustrative player had three optional chapter controls:</p>
+<ul>
+<li><strong>1. Outline:</strong> Watch the outer shape and structure take form.</li>
+<li><strong>2. Color:</strong> See how color is built and refined.</li>
+<li><strong>3. Details:</strong> Follow the finishing touches and expression.</li>
+</ul>
+<p>This is an illustrative interface, not a working replay of an uploaded drawing.</p>
+<p>I wouldn't try to automatically infer every stage of a drawing. Start by allowing the artist to mark two or three meaningful moments on the replay timeline while publishing.</p>
+<p>A viewer could then jump directly to <strong>Outline</strong>, <strong>Color</strong>, or <strong>Details</strong> and slow that segment down.</p>
+<p>Skribl becomes both entertainment and a way to learn.</p>
+<p><strong>Technical starting point:</strong> Store optional chapter markers as timestamps on the drawing's existing playback timeline. They should survive playback-speed changes and not alter the underlying recorded strokes.</p>
+<p>A related later feature is <strong>“Try this step”</strong>—pause at a chapter and open Pad with a reference. But that's a second release, not a prerequisite for the chapter markers.</p>
+<h2>8. Give the community reasons to draw together</h2>
+<p><strong>Priority: High · Complexity: Low for a manual pilot.</strong></p>
+<p>Another App explicitly promotes challenges and collaboration as community activities.</p>
+<p>Blooby already has a feed, Gallery, likes, follows, and conversations. What I'd add is a more intentional reason to participate.</p>
+<p>I would start with one recurring prompt, run manually before creating a complicated challenge system.</p>
+<blockquote>
+<p><strong>Example: This week's drawing prompt</strong><br />
+<strong>Give Blooby a new expression!</strong><br />
+Make him surprised, sleepy, mischievous, or completely ridiculous.<br />
+Use Pad · Draw back welcome</p>
+<p><em>Example community prompt, not a currently running event.</em></p>
+</blockquote>
+<p>The first version could be a featured post, with people contributing through Draw back. Their contributions would appear in a dedicated view of the original's branches.</p>
+<p>Then, once participation is proven, add a formal challenge feature with a start/end date, an organizer, eligible submissions, and an archive.</p>
+<p>I would not initially add competitive rankings or medals. The more useful goal is giving new artists an easy starting point and encouraging them to respond to one another.</p>
+<p>A successful event isn't necessarily one that gets hundreds of likes. It's one where someone who would otherwise only watch decides to draw.</p>
+<h2>9. Make the Gallery better at helping people discover drawings they can interact with</h2>
+<p><strong>Priority: Medium–high · Complexity: Medium.</strong></p>
+<p>Your Gallery already has <strong>Following / Everyone</strong>, <strong>New / Hot</strong>, search, and filters that respect blocks and mutes. Its Hot ranking uses plays over the last seven days.</p>
+<p>I wouldn't replace those.</p>
+<p>I'd add a way to discover art based on <em>what someone can do with it</em>, not just how recently or frequently it was watched.</p>
+<table>
+<thead>
+<tr>
+  <th>Gallery option</th>
+  <th>What it would show</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>New</td>
+  <td>Existing newest-first view</td>
+</tr>
+<tr>
+  <td>Hot</td>
+  <td>Existing recent-plays ranking</td>
+</tr>
+<tr>
+  <td><strong>Draw back ready</strong></td>
+  <td>Drawings whose creators permit contributions</td>
+</tr>
+<tr>
+  <td><strong>Drawing chains</strong></td>
+  <td>Drawings with multiple connected contributions</td>
+</tr>
+<tr>
+  <td><strong>Quick watches</strong></td>
+  <td>Short replays that are easy to enjoy in a few seconds</td>
+</tr>
+</tbody>
+</table>
+<p>Start with <strong>Draw back ready</strong>. You already store eligibility and creator permission information, so this is a relatively natural extension of the existing Gallery.</p>
+<p>I'd defer <strong>Drawing chains</strong> until a proper ancestry model exists.</p>
+<p>I'd also avoid making replay length the sole quality signal. A long, detailed drawing can be just as valuable as a quick doodle.</p>
+<h2>10. Improve sharing outside Blooby</h2>
+<p><strong>Priority: High · Complexity: Medium.</strong></p>
+<p>Your project already has shareable links, rich preview cards, PNG exports, GIF exports, and video export. So the underlying functionality is largely there.</p>
+<p>The next improvement is to make sharing the <em>experience of watching</em> easier.</p>
+<p>My ideal flow would be:</p>
+<ol>
+<li>Someone finishes a drawing.</li>
+<li>They preview its replay.</li>
+<li>They choose <strong>Share drawing</strong>.</li>
+<li>The app offers a link or a short animated preview, without requiring them to navigate through advanced export settings.</li>
+<li>The exported media includes optional, unobtrusive attribution to the creator and Blooby.</li>
+</ol>
+<p>I would prototype a short replay teaser for messaging and other social networks. The regular link should still lead to the full, interactive replay.</p>
+<p>This matters because people who have never heard of Blooby need to understand why its artwork is different from a static picture.</p>
+<p><strong>The key product principle:</strong> A shared Skribl should advertise its own special ability. A static thumbnail doesn't fully communicate that drawings can draw themselves.</p>
+<h2>11. Treat trust, accessibility, and performance as core features</h2>
+<p>These are less exciting than new brushes, but they're critical for a drawing-based social site.</p>
+<h3>A. Creator control and attribution</h3>
+<p>Build on the permission controls you've already implemented for Draw back. Make it clear who created the original, who contributed, and whether additional contributions are allowed.</p>
+<p>I would keep the original creator prominently credited on every branch.</p>
+<p>Also add an optional artwork-description field at publishing time. Your project has already invested heavily in screen-reader accessibility and automated accessibility checks; describing artwork itself is the logical next step.</p>
+<h3>B. Public-launch safety</h3>
+<p>Your social implementation has report, block, mute, and moderation foundations. Your roadmap intentionally delays open sign-up until the necessary safety and legal requirements are addressed.</p>
+<p>I agree with that approach.</p>
+<p>Before broad public registration, verify that moderators can handle reports involving both original drawings and derived drawings, including removal, appeals, and the visibility of related contributions.</p>
+<p>Don't rush into direct messaging just because conventional social networks have it. Private messages introduce substantial moderation requirements without improving Skribl's core drawing workflow.</p>
+<h3>C. Storage and performance</h3>
+<p>Your <code>skribl/storage.py</code> already implements inline, local-disk, and S3-compatible storage. The application currently defaults to inline storage unless the deployment is configured otherwise.</p>
+<p><strong>Before adding data-heavy layers or richer media, establish the external-storage configuration and test it in the deployment.</strong></p>
+<p>Keep the drawing payload versioned, and ensure old drawings can still be replayed.</p>
+<p>I would also add a performance acceptance test for any new layer or fill operation on a lower-powered phone, using the existing long-replay benchmarks as a baseline. (The Fill reference is historical; the accompanying clarification recommends keeping conventional Fill in Flip.)</p>
+<p>And keep the standalone Skribl player lightweight. It should not load the editor merely to show a drawing in the Blooby feed.</p>
+<h2>12. The development order I would actually follow</h2>
+<p>These are dependency-based stages, not promises about calendar dates.</p>
+<h3>Release A — Make everything dependable</h3>
+<p><em>Finish before new major editor features.</em></p>
+<p>Fix iPhone text dragging, the embedded keyboard jump, How it works navigation, the obscured Draw back canvas, and any outstanding automated test failures.</p>
+<p><strong>Definition of done:</strong> Each reported issue has a reproduction test, an observed fix, and a check on the affected devices.</p>
+<h3>Release B — Make Skribl easier to create with</h3>
+<p><em>The core editor upgrade.</em></p>
+<p>The original recommendation said to prototype two editable layers, add fill to Pad, expand selection to a freehand lasso, and simplify access to everyday tools. Complete storage and payload-design prerequisites first.</p>
+<p><strong>Corrected direction:</strong> Prototype replay-compatible layers; add a freehand, stroke-aware lasso; simplify controls. <strong>Leave conventional Fill in Flip</strong>, rather than moving it into Pad. Refer to <code>PAD_FILL_ARCHITECTURE_CLARIFICATION.md</code> before planning coloring features.</p>
+<p><strong>Definition of done:</strong> Users can create, edit, save, reopen, and replay a character drawing without losing work or changing its appearance. Coloring should remain compatible with Pad's draw-itself identity.</p>
+<h3>Release C — Make Blooby more collaborative</h3>
+<p><em>Improve what makes the social network different.</em></p>
+<p>Improve Draw back discovery, add a simple drawing family-tree view, test the original-versus-contribution replay controls, and pilot a community prompt.</p>
+<p><strong>Definition of done:</strong> A user can discover a drawing, contribute to it, and explore its other contributions without getting lost.</p>
+<h3>Release D — Improve growth and repeat use</h3>
+<p><em>Make the experience sustainable.</em></p>
+<p>Add replay chapters, improve external sharing, refine the first-time drawing journey, and use small community experiments to determine which features lead to repeat creation.</p>
+<p><strong>Definition of done:</strong> You can measure whether visitors become artists, artists get responses, and creators return to draw again.</p>
+<h2>13. How to tell whether these improvements actually work</h2>
+<p>I'd track a small number of product measures before investing in larger features. These are <strong>suggested measures</strong>, not data collected from Blooby.</p>
+<table>
+<thead>
+<tr>
+  <th>Measure</th>
+  <th>What it tells you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>First drawing completion</td>
+  <td>Can new visitors successfully make something?</td>
+</tr>
+<tr>
+  <td>Drawing-to-share rate</td>
+  <td>Do creators find their result worth showing?</td>
+</tr>
+<tr>
+  <td>Replay completion rate</td>
+  <td>Are people watching the creative process?</td>
+</tr>
+<tr>
+  <td>Draw back conversion</td>
+  <td>Does watching inspire participation?</td>
+</tr>
+<tr>
+  <td>Seven-day creator return</td>
+  <td>Do people come back to make more art?</td>
+</tr>
+<tr>
+  <td>Failed saves and publishing attempts</td>
+  <td>Is friction causing people to lose work or give up?</td>
+</tr>
+</tbody>
+</table>
+<p>I would track these as privacy-conscious aggregate events, rather than record individual drawing content for analytics.</p>
+<p>You could then run small, controlled comparisons. For example, try two versions of the Draw back invitation and see which one helps more new users complete a contribution—not merely click the button.</p>
+<h2>14. What I would deliberately avoid for now</h2>
+<p>There are several things I wouldn't spend development time on yet: a recommendation algorithm, direct messaging, dozens of additional brushes, advanced painting filters, full four-layer animation timelines, or complicated competitive challenge systems.</p>
+<p>None of those is inherently a bad idea. But they introduce substantial technical or operational work before you've established which experiences make Blooby special.</p>
+<p>I would also avoid turning Blooby and Skribl into confusingly separate products. <strong>Blooby should be the place people belong; Skribl should be the creative tool that makes the place distinctive.</strong></p>
+<p>That leaves a very clear message:</p>
+<blockquote>
+<p><strong>Blooby</strong><br />
+A place where drawings come alive.<br />
+Make a Skribl. Watch it draw itself. Add your own. See where the idea goes.</p>
+</blockquote>
+<h2>My five most important decisions for Blooby</h2>
+<p>If I were choosing what to do with the next significant development effort, this is the order I'd pick.</p>
+<table>
+<thead>
+<tr>
+  <th>Rank</th>
+  <th>Investment</th>
+  <th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><strong>Fix current drawing and navigation bugs</strong></td>
+  <td>Nobody stays with a tool that feels unpredictable.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><strong>Add simple, replay-compatible layers and improve stroke-aware selection</strong></td>
+  <td>Makes the editor more useful without undermining Pad's self-drawing model.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><strong>Develop Draw back into a genuine collaboration system</strong></td>
+  <td>Gives Blooby a differentiator beyond standard social posting.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><strong>Improve the watch-to-draw journey</strong></td>
+  <td>Converts spectators into creators without requiring a complicated new feature.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><strong>Use replay as a learning and sharing format</strong></td>
+  <td>Takes advantage of the technology Skribl already has instead of competing solely on brushes.</td>
+</tr>
+</tbody>
+</table>
+<p>The most important strategic choice is number three, even though I wouldn't build it first.</p>
+<p>Another App's appeal is that <strong>art evolves through people</strong>. Skribl's advantage is that <strong>you can watch the act of creation itself</strong>.</p>
+<p>Blooby can combine those ideas into something more distinctive: a drawing social network where people don't just share finished pictures—they contribute to the same creative story, and everyone can watch how it happened.</p>
+<p><strong>That's the product I'd build toward.</strong></p>
+</main></body></html>
