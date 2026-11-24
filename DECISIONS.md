@@ -52964,3 +52964,26 @@ direction. The recommendations themselves are not reopened.
 THE RULE UNDER ALL FIVE: the recommendations' sequence is not an
 instruction to delay a feature the owner approved on its own. Any such
 delay is discussed first, in terms of its real dependencies.
+
+## After v330 -- Main red after Text on a phone: a tap's start is forgotten when the phone takes the touch away
+
+Main's full runs have been red since #1065 (Text on a phone) merged on
+Nov 22, through every push after it (documents only). The newest, on
+#1077, was red in one row alone, on both databases' shard 1, its other
+seventeen jobs green: `verify_tools` V214b, "every touchend handler on
+ANY receiver is paired with a touchcancel handler", pointing at Text's
+box (`lib/textwrite.js`, `els.field`). #1065's tap on the box keeps where
+the finger came down and, on a touchend near it, puts the words in focus;
+it had no touchcancel. MISSED BEFORE #1065 MERGED: V214b is a scan of the
+source inside `verify_tools`, which was not among the suites run for it.
+
+The app was not hurt: the next touchstart sets the tap again. THE MEND:
+the box's touchcancel forgets the tap's start, as V214b asks of every
+gesture, so a touch the phone takes away (a scroll it claims, a call)
+leaves nothing waiting for the next touchend.
+
+CALIBRATION: V214b's section run alone over main's `skribl/static`, red
+(`textwrite.js:els.field.function`), and over the mended tree, green, the
+allowlist's one exemption still real.
+
+PAD AND FLIP: shared (one drawer, one script).
