@@ -52905,3 +52905,27 @@ tell, to be shown red first.
 The owner stopped for the week here ("let's not start anything new"). The
 handoff for the next session, with where to look, a lead for each bug and
 what is waiting on the owner, is `docs/NEXT-SESSION.md`.
+
+## After v330 -- The owner's final recommendations kept as research; Fill stays in Flip, not Pad
+
+The owner, Nov 24, gave an outside review in three rounds, then a final
+package that combines them, and asked that the suggestions not contradict
+each other. The final package, which supersedes the two earlier reviews,
+is `docs/research/blooby-final-recommendations/`; start with its
+`README_START_HERE.md`. The earlier reviews are retired from the tree and
+are still in git history. The package is advice, not decisions: its author
+checked it against the files of v330, but did not run the app, the tests
+or the live site.
+
+THE OWNER'S DECISION in it, Nov 24: conventional instant Fill is not for
+Pad; Fill stays in Flip. Pad records a drawing as it draws itself, stroke
+by stroke, and a flood fill would make a whole area pop in. Any colouring
+idea for Pad has to be visibly drawn, and is only an idea to test.
+
+The direction the owner backs, as the package records it, is still mock
+first and undecided in its details. Draw back answers become
+independently authored contributions, linked to the drawing they answer.
+That comes ahead of Pad editing layers, and Flip layers come after those.
+Its open questions are the owner's to settle before any schema: deletion,
+versions, permissions, rights, recolouring, media, depth, and old
+draw-backs.
