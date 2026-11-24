@@ -53028,8 +53028,11 @@ the drag) and the rest green; a jump right put into the drag (20 drawing
 units), part 16's finger row red (54.2 for 40) and all four of part 25's.
 
 NOT SEEN ON AN IPHONE: whether the owner's finger now holds the words is
-the owner's phone's to say. If they still jump, the Pad's input log
-(`?inputlog` in the address, then Copy) says which element took each press.
+the owner's phone's to say. THE TELL: with words in Text's box, a finger on
+their right half and a drag: they go with the finger, the dashed box under
+it all the way, where the old build moved them right and left them. If
+they still jump, the Pad's input log (`?inputlog` in the address, then
+Copy) says which element took each press.
 
 STILL THE OWNER'S: whether a press away from the words moves them there
 (today's design, and a desk's) or only a drag moves them. This leaves it as
