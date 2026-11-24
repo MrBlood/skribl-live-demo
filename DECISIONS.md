@@ -52929,3 +52929,38 @@ That comes ahead of Pad editing layers, and Flip layers come after those.
 Its open questions are the owner's to settle before any schema: deletion,
 versions, permissions, rights, recolouring, media, depth, and old
 draw-backs.
+
+## After v330 -- The owner's clarifications to the final recommendations: what their order does and does not mean
+
+The owner, Nov 24, after reading the final recommendations and how they
+were integrated (#1075). No implementation was asked for: this is product
+direction. The recommendations themselves are not reopened.
+
+1. DRAW BACK CONTRIBUTION LAYERS ARE FOUNDATIONAL. The aim is a reusable
+   architecture that keeps each artist's contribution, ownership identity
+   and replay history separate. It is designed from the start for reuse in
+   both Pad and Flip, without first needing the full Pad or Flip
+   editing-layer interfaces.
+2. FLIP DRAW BACK AND FLIP EDITING LAYERS ARE SEPARATE FEATURES. Full Flip
+   editing layers coming later does not postpone page-for-page Flip Draw
+   back, which was already on the decided list. Evaluate it as a possible
+   early consumer of the contribution architecture: it may be feasible
+   before editable layers exist in either editor. Its place in the roadmap
+   is set by its actual dependencies, not by the order of editor-layer
+   work.
+3. MESSAGES AS DRAWN LETTERS ARE NOT CONVENTIONAL DIRECT MESSAGING. The
+   recommendations defer ordinary direct messages so that a private-chat
+   system isn't built too early. A replayable drawn letter is a different
+   feature, possibly a distinctive one for Blooby. It stays on the owner's
+   list, neither rejected nor deferred by that. How it is built and
+   delivered, its privacy requirements and its priority are separate
+   decisions.
+4. THE ANOTHER APP WALK STAYS OPTIONAL. It is research for later, not a
+   dependency of the architecture work.
+5. THE PROCESS STANDS. Current bugs and reliability come first. The
+   contribution architecture is mocked, reviewed and approved before any
+   schema change.
+
+THE RULE UNDER ALL FIVE: the recommendations' sequence is not an
+instruction to delay a feature the owner approved on its own. Any such
+delay is discussed first, in terms of its real dependencies.

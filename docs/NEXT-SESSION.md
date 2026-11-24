@@ -216,9 +216,9 @@ and at how the editor's help sheet closes.
 
 ## Also on Tuesday's list: a walk of Another App (the owner's ask, Nov 23)
 
-OPTIONAL NOW (Nov 24): the owner's final recommendations don't depend on
-this walk. Ask the owner whether it's still wanted before spending time on
-it.
+OPTIONAL (the owner, Nov 24): research for later, not a dependency of the
+architecture work. It stays available; do it when the owner asks, or when
+there is room.
 
 The owner: "can you add that to the list of things to do when we start a
 new session tomorrow night?"
@@ -301,6 +301,12 @@ gives a prototype order, starting with one original and one answer. Cal's
 guess above about a removed original is one option among those, not a
 decision. The owner's condition stands: a mock first, and nothing built
 without a yes.
+
+The owner, the same day: this foundation keeps each artist's
+contribution, ownership identity and replay history separate. It is
+designed for reuse in both Pad and Flip from the start, without waiting
+for either editor's layer interface. Page-for-page Flip Draw back may be
+an early consumer of it.
 
 ## Also on Tuesday's list: the Draw back banner covers the drawing (the owner, Nov 23, on a desk)
 
@@ -410,16 +416,28 @@ STILL THE OWNER'S TO DECIDE, before any of the contribution work is built
 - whether hidden layers show in a public replay;
 - the exact layer design.
 
-WHERE IT TOUCHES THIS LIST: flagged for the owner, not changed.
+WHERE IT TOUCHES THIS LIST: the owner settled it on Nov 24. The record
+is `DECISIONS.md`, "The owner's clarifications to the final
+recommendations".
 
-- "Messages as drawn letters", on the owner's Nov 18 list (below), is a
-  decided item. The package defers direct messages. It stays on the list
-  until the owner says otherwise.
-- "Flip, page for page" (Draw back's Flip twin, below) against the
-  package's order (contributions, then Pad layers, then Flip layers):
-  which comes first is the owner's call.
-- The walk of Another App (above) is optional now, since the package
-  doesn't depend on it. Ask the owner whether it's still wanted.
+- The contribution architecture is foundational, and is designed for
+  reuse in both Pad and Flip without first needing either editor's
+  layer interface.
+- Flip Draw back ("Flip, page for page", below) and Flip editing layers
+  are separate features. Evaluate the Flip Draw back as a possible early
+  consumer of the contribution architecture; its dependencies set its
+  place, not the order of editor-layer work.
+- "Messages as drawn letters" (below) are not the conventional direct
+  messages the package defers. They stay on the owner's list. How they're
+  built and delivered, their privacy and their priority are separate
+  decisions.
+- The walk of Another App (above) stays optional: research for later, not
+  a dependency.
+- Bugs and reliability first; the contribution architecture is mocked,
+  reviewed and approved before any schema change.
+- Under all of it: the package's sequence never delays a feature the
+  owner approved on its own. Any such delay is discussed first, in terms
+  of its real dependencies.
 
 WHAT WAS RETIRED (Nov 24), and where each point now lives. Section numbers
 are `FINAL_RECOMMENDATION.md`'s.
@@ -517,12 +535,18 @@ shown red.
 3. Then the owner's list from Nov 18: messages as drawn letters
    (`docs/SOCIAL-SITE.md` section 17), then watching first everywhere.
 
-FLAGGED FOR THE OWNER, Nov 24 (see the final recommendations entry above).
-The package defers direct messages, and puts Draw back contributions
-before any Flip work. This list is the owner's decided order, and it
-stands until they say otherwise. The package's contribution model is also
-what would let a person recolour their own strokes in a draw-back (item 2
-above); how is one of its open decisions.
+THE OWNER, Nov 24 (`DECISIONS.md`, "The owner's clarifications to the
+final recommendations"):
+
+- Item 1 is placed by its own dependencies. Evaluate it as a possible
+  early consumer of the Draw back contribution architecture; Flip editing
+  layers coming later does not delay it.
+- Messages as drawn letters (item 3) stay on this list. They are not the
+  conventional direct messages the package defers, and how, privacy and
+  priority are separate decisions.
+- The package's contribution model is also what would let a person
+  recolour their own strokes in a draw-back (item 2). How it does so is
+  one of its open decisions.
 
 Behind all of it are the roots in `WORKING-AGREEMENTS.md`: "Skribl Pad
 first", and Blooby as the place where people talk in drawings.
