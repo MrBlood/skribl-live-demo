@@ -53367,3 +53367,57 @@ time. It now reads each place in its own frame and lets a slow frame carry
 its share of the time.
 
 PAD AND FLIP: shared (one sheet, one script).
+
+## After v330 -- Pin this post: one of your own posts first on your page
+
+The owner's idea, Nov 23: pin a post to your page (part two of the map,
+its item 9). Mocked as "Pin This Post": Pin in the post's ⋯ (A), and the
+pinned post first in the Posts tab with a small "Pinned" line (A) or above
+the tabs (B). Cal's pick A and A; the owner, Nov 25, about 5:05 AM: "all
+yes".
+
+THE CHANGE (`social/pins.py`, `_post.html`, `posts.js`, `profiles.py`,
+`posts.py`): "Pin to your page" in the ⋯ of your own posts, after
+Bookmark, its pin drawn in our pen, and "Unpin from your page" once it is
+the one; none on anybody else's post, a comment or a drawing shown outside
+a post. One pin a person: pinning another puts the first back in its
+place, and the site's toast says so ("Pinned. It’s first on your page, and
+your other pin is back in its place."), with Undo, which puts back what
+was. The pinned post leads your Posts tab with "Pinned" where "You
+reposted" would be (the same line, the same 16px mark), for you, for
+anybody who visits and for nobody signed in, by the tab's own rules (a
+block either way, or anybody taken down, and it is not there; a post taken
+down, only its author sees it); shown once, the rest newest first under
+it. The tabs do not move and Home is unchanged.
+
+THE DATA: `social_pins` (unique on the person, the post indexed),
+migration `a4d7e2b9c1f6` with its downgrade; `/p/<id>/pin` with the token
+and Origin, 120 an hour, for somebody signed in and not taken down, on a
+post of their own not taken down; your own pin always taken away. A post
+goes with its pin, in code (`posts.drop_post`); an account's pin is only
+ever on a post of theirs, so it goes with their posts. (A second delete by
+person was written first and taken out: a break that removed it stayed
+green, because it could never matter.)
+
+THE CHECKS, `verify_socialprofile` 22: the row after Bookmark, 44px and
+painted, none on somebody else's post; the toast with Undo and the next ⋯
+saying Unpin; the tab leading with the pinned post and "Pinned", once, for
+you, a visitor and nobody; a second pin moving the first, the toast saying
+so, Undo putting it back, one row a person; Unpin's toast and the tab
+newest first again; who may pin (somebody else's post and a missing one
+404, a body that is not a yes or a no 400, signed out refused); and with
+SQLite's cascade off on a copy, a post deleted and an account deleted
+each take the pin by the code. `verify_socialauth` 14 names the table and
+its two indexes.
+
+CALIBRATION, part 22 against a server for each tree: as built 7/7; main,
+red (no row, and the part cannot go on); one break at a time, each red on
+its own row: no lead (the tab), no skip (shown twice), the row on
+somebody else's post, the server pinning somebody else's post, no
+`drop_post_pin` (only the cascade-off row: the cascade hid it), a second
+pin that does not move the first, `was` never said (the toast), no
+"Pinned" line, an Undo that does nothing, and a visitor shown no pin.
+`verify_socialauth` 14 on main: red on the table list, both chains and
+gunicorn's head (15/18); 18/18 as built.
+
+PAD AND FLIP: not for the editors; a post is the site's.

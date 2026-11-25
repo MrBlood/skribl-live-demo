@@ -1,6 +1,6 @@
 """Pins: one post of your own kept first on your page's Posts tab (the owner's
 idea, Nov 23; the Pin mock's A and A, the owner's "all yes", Nov 25;
-docs/SOCIAL-SITE.md section 17).
+docs/SOCIAL-SITE.md section 40).
 
 One table on the site's own chain (social_alembic_version); nothing of
 Skribl's is read or altered. social_pins:

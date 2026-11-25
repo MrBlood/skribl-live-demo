@@ -505,7 +505,8 @@ through `delete_post` and its bio with its row; its other skribls still stay,
 as piece 2's confirm says.
 
 **Not yet:** a pinned skribl (it needs a place on the person and a way into
-Skribl's Gallery section to show one card first; next); counts; a face
+Skribl's Gallery section to show one card first; next; since built as a
+pinned post, section 40); counts; a face
 deleted from the Library leaves its circle empty (the site cannot ask Skribl
 whether a skribl is still there through a documented seam).
 
@@ -2002,9 +2003,9 @@ follow step 7.
    built: Add to Home Screen below, push notifications in section 19.
 8. Direct messages: one to one, a drawing as easily as words, who may
    message you, and a requests inbox.
-9. The smaller things most sites have: pin a post to your profile, edit a
-   post's words (shown "edited"; the owner's yes), tags, download your data,
-   and words that describe a drawing to a screen reader.
+9. The smaller things most sites have: pin a post to your profile (built:
+   section 40), edit a post's words (shown "edited"; the owner's yes), tags,
+   download your data, and words that describe a drawing to a screen reader.
 
 **The composer is built** (part two's item 1; DECISIONS, "The composer: one
 Make, and an older drawing's conversation comes with it"). ONE MAKE,
@@ -3753,3 +3754,30 @@ AND ONE SHARP PIXEL BETWEEN THE STEPS (choice 1, the site's and the
 editors'): `--hair` has a step for each density between 1x, 2x and 3x, so
 a line is one screen pixel on a Windows screen at 125 to 175% and on 2.625
 and 2.75x phones. `verify_socialposts` 17.
+
+## 40. Built: Pin this post (Nov 25)
+
+Part two's item 9, its first piece (the owner's idea, Nov 23; the Pin
+mock's A and A, the owner's "all yes", Nov 25; `DECISIONS.md`, "Pin this
+post"). IN THE ⋯ OF YOUR OWN POSTS, after Bookmark: "Pin to your page",
+its pin drawn in our pen, and "Unpin from your page" once it is the one;
+none on anybody else's post, a comment or a drawing shown outside a post.
+ONE AT A TIME: pinning another puts the first back in its place, and the
+site's toast says so ("Pinned. It’s first on your page, and your other pin
+is back in its place."), with Undo, which puts back what was. FIRST ON
+YOUR POSTS TAB, with a small "Pinned" line where "You reposted" would be,
+for you and for anybody who visits, signed in or not, by the tab's own
+rules (a block either way, or anybody taken down, and it is not there; a
+post taken down, only its author sees it, with its note); shown once, the
+rest newest first under it. The tabs are unmoved and Home is unchanged.
+
+DATA: `social_pins`, one row a person (unique on `person_id`, `post_id`
+indexed), migration `a4d7e2b9c1f6` with its downgrade. The route
+`/p/<id>/pin` (`pins.py`) takes `{pinned}` with the token and Origin, 120
+an hour (`security.LIMITS`, "pin"), for somebody signed in and not taken
+down, on a post of their own not taken down; a pin of your own is taken
+away whatever became of the post. It answers `was`, the post pinned
+before. DELETING IS REAL AND SAID IN CODE: a post goes with its pin
+(`posts.drop_post`), and an account's pin, only ever on a post of theirs,
+with its posts. `verify_socialprofile` 22 (with SQLite's cascade off, on a
+copy), `verify_socialauth` 14 (the table and its indexes).

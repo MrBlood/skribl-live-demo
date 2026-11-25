@@ -1,5 +1,5 @@
 """Pin this post (the owner's idea, Nov 23; the Pin mock's A and A, the
-owner's "all yes", Nov 25; docs/SOCIAL-SITE.md section 17): one post of your
+owner's "all yes", Nov 25; docs/SOCIAL-SITE.md section 40): one post of your
 own kept first on your page's Posts tab, with a small "Pinned" line, for you
 and for anyone who visits.
 
