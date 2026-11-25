@@ -35,11 +35,13 @@ On the Pad (How it works' cat) and Flip (its bouncing ball):
   stays); the page stays.
   THE EYEDROPPER: the drawer stays out while it picks (nothing covers the
   drawing to step aside for).
-  STILL WHERE IT POINTS: on Flip, which draws with a drawer open, a stroke
-  with the drawer beside lands where it is drawn; the Pad's first press on
-  the drawing puts a drawer away, as below, and the drawing glides home. On
-  both, the drawer gone, a stroke lands where it is drawn (the drawing's
-  place is read again: a resize at the slide's end).
+  STILL WHERE IT POINTS: a press on the drawing puts a drawer away, as
+  below; Flip draws with that press, and the drawing holds still under the
+  pen while it is down, every point landing where it is drawn, then glides
+  home (gliding under the pen landed the stroke as much as the slide off);
+  the Pad's draws nothing, and the drawing glides home. On both, the drawer
+  gone, a stroke lands where it is drawn (the drawing's place is read
+  again: a resize at the slide's end).
 
 Elsewhere:
 
@@ -323,12 +325,30 @@ with sync_playwright() as pw:
         open_(q, ed, "draw", wait=900)
         slid = q.evaluate(SHIFT)
         if ed == "Flip":
-            # Flip draws with a drawer open: the stroke goes where it is drawn, the drawer staying.
-            first, lg = stroke(q, ed)
-            check(f"Flip: with the drawer beside (the drawing slid {slid}), a stroke begun a quarter across and three quarters down"
-                  " the drawing lands there in it",
-                  bool(slid) and lands(first, lg) and q.evaluate(f"() => {ED[ed]['ctl']}.current()") == "draw",
-                  json.dumps({"first": first, "logical": lg, "slid": slid}))
+            # Flip draws with the press that puts a drawer away (its own rule, as below): the drawing holds
+            # still under the pen, every point landing where it is drawn, and glides home once the pen lifts.
+            box = q.evaluate("(cv) => { const c = document.getElementById(cv).getBoundingClientRect(); return [c.left, c.top, c.width, c.height]; }", ED[ed]["cv"])
+            n0 = q.evaluate(PTS[ed][0])
+            x, y = box[0] + box[2] * 0.25, box[1] + box[3] * 0.75
+            q.mouse.move(x, y)
+            q.mouse.down()
+            lefts = []
+            for k in range(1, 9):
+                q.mouse.move(x + k * 6, y - k * 3)
+                q.wait_for_timeout(45)
+                lefts.append(q.evaluate("(cv) => document.getElementById(cv).getBoundingClientRect().left", ED[ed]["cv"]))
+            q.mouse.up()
+            q.wait_for_timeout(900)
+            pts = q.evaluate("(n) => frame().strokes.slice(n).map(p => [p.x, p.y])", n0)
+            lg = q.evaluate(PTS[ed][2])
+            home = not q.evaluate(SHIFT) and not q.evaluate("() => skriblDrawers.beside()")
+            last_at = ((x + 48 - box[0]) / box[2], (y - 24 - box[1]) / box[3])
+            check(f"Flip: with the drawer beside (the drawing slid {slid}), a stroke drawn on the drawing holds it still under the pen"
+                  " while it is down, its first and last points landing where they were drawn, and it glides home after",
+                  bool(slid) and len(pts) >= 2 and all(abs(v - box[0]) <= 0.5 for v in lefts) and lands(pts[0], lg)
+                  and lands(pts[-1], lg, *last_at) and home,
+                  json.dumps({"lefts": [round(v, 1) for v in lefts], "from": round(box[0], 1), "first": pts[:1], "last": pts[-1:],
+                              "logical": lg, "slid": slid, "home": home}))
             close_(q, ed)
         else:
             # The Pad's first press on the drawing puts a drawer away, as it does below (and draws nothing).
