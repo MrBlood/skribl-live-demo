@@ -53300,6 +53300,7 @@ near a sixteenth of the way a frame, so a lost frame stays near an eighth.
 
 PAD AND FLIP: Draw back is the Pad's alone today; Flip's page-for-page Draw
 back, on the list, takes the same control.
+
 ## After v330 -- Main red after #1082: the site's one pill follows the Gallery's chosen ink
 
 Main's full run after #1082 went red on both databases in shard 7:

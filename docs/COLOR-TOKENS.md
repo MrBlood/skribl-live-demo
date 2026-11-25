@@ -7,7 +7,7 @@ what it found, is `docs/COLOR-AUDIT.md`.
 the first eight of the file's SHA-256, the `?v=` its link carries):
 
 - `social/static/social.css`, content stamp `03f32e71`
-- `skribl/static/styles.css`, content stamp `a1ad4c55`
+- `skribl/static/styles.css`, content stamp `b8638f18`
 
 `python3 harness/tools/coloraudit.py --check docs/COLOR-TOKENS.md` says in a second, with no browser,
 whether either has changed since. Making it again needs a running copy and a browser (the command is in
