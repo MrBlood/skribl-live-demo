@@ -53421,3 +53421,85 @@ pin that does not move the first, `was` never said (the toast), no
 gunicorn's head (15/18); 18/18 as built.
 
 PAD AND FLIP: not for the editors; a post is the site's.
+
+## After v330 -- Draw back, two hands: the nine answers, and its first step behind the owner's switch
+
+The owner's final recommendations ask, before any schema, how a draw-back
+kept as two people's own work behaves
+(`docs/research/blooby-final-recommendations/LAYERS_AND_DRAWBACK_ARCHITECTURE.md`,
+section E). Mocked Nov 24 as "Draw Back, Two Hands": the three views, her
+removal, and nine questions, Cal's pick A each, with a tenth: start the
+first step behind a switch. The owner, Nov 25, about 5:05 AM: "all yes".
+
+THE NINE ANSWERS, as decided:
+
+1. Her drawing is removed (she deletes it, or it is taken down): his post
+   shows his strokes alone, with a quiet "Ana’s drawing was removed".
+2. A posted drawing changed later: posted drawings don't change; an edit
+   makes a new version, and a draw-back keeps the version it answered.
+3. She changes her say afterwards (who can draw back, private, a block): it
+   stops new draw-backs; ones already made stay. Anyone who can't see her
+   post sees his strokes alone, with "The original isn’t shown to you".
+4. What drawing back lets each do with the other's strokes: Blooby shows
+   the two together, with both names, on Blooby and its share links.
+   Nobody can export, copy, recolour or reuse the other's strokes on their
+   own. (A product rule, not legal advice.)
+5. Recolouring: each person recolours only their own strokes.
+6. Paper, size, photo and music: hers, as today.
+7. How long a chain can get: one original and one answer first; once that
+   is solid, up to five hands deep; past five, the nearest five with a link
+   up the chain.
+8. Draw-backs made before: stay exactly as they are, one joined drawing.
+   Nothing is converted.
+9. Hidden in the replay (for the Pad's own layers, later): what an artist
+   hides stays hidden for everyone, in the picture and the replay.
+
+THE FIRST STEP, BUILT, behind the owner's switch: `SKRIBL_SOCIAL_TWO_HANDS`
+in the site's settings (on the live site, its environment on Render). Off,
+where it starts, nothing changes for anyone. On, a new draw-back's drawing
+is his strokes alone, as drawn, on her paper and shape, with no picture or
+music of his; its row points to her drawing as it was
+(`drawn_on_skribl_id`); beside it the site keeps the picture of both (the
+Pad's own card) and the line of both (Skribl's new `line_of`, of the
+joined drawing) in `social_two_hands`; his own drawing rests on his lines
+alone (the Pad's second card, `thumbnailOwn`). The switch decides how a new
+one is kept, never how one is read.
+
+WHAT IT LOOKS LIKE. Where her drawing is shown to the viewer, as a
+draw-back always has: Both, hers squeezed to three seconds and then his,
+played from the site through the player's new `api` seam and resting on
+the picture of both (`poster`), the same player and not one byte more of
+it. On its own page the one pill under the drawing, Both · Ana’s · Theo’s
+(First and Second on your own drawing), each view its own player at its
+own pace, the view chosen fading in where the other stood. Removed: his
+strokes alone, from Skribl, "Ana’s drawing was removed". Behind a block:
+his strokes alone, "The original isn’t shown to you". Cards play Both;
+the views are on the page, where the mock showed them.
+
+NOT YET, SAID PLAINLY. A two-hands draw-back is not drawn back on (the
+seventh answer). Plays of Both are not counted: Skribl counts a play only
+when its own route serves a drawing, and Both comes from the site's. A
+quote of a two-hands draw-back shows his own picture, not both. Recolour
+stays off while drawing back (the fifth answer opens it for his own
+strokes). Each is a step of its own.
+
+DELETING IS REAL AND SAID IN CODE: his post takes what is kept beside it,
+and her post lets go of every draw-back on it (`drop_post_hands`, from
+`drop_post`); the cascades are the net.
+
+THE CHECKS, `verify_socialdrawback` 15, on a second server on the same
+database with the switch on (15 rows): the switch off joins as before; on,
+his drawing alone on her paper, pointing to hers, the two pictures and the
+line; Both from the site as the join plays, the line kept the two
+together's; hers alone and his alone; her photo and song in every view and
+never in his drawing; the card's `api` and `poster`; the three views on
+its page, phone and desk; a block; a takedown; not drawn back on; an old
+draw-back untouched; her removal; with SQLite's cascade off, the code
+alone; and through the real Pad, his drawing resting on his lines alone
+(none of her ink there) while the picture of both has her cat.
+`verify_hostseams` holds `line_of` to the function that stores a line,
+and `verify_socialauth` 14 names the table.
+
+PAD AND FLIP: the Pad's second card is the Pad's (`editor_post.js`); Flip
+has no Draw back yet, and its page-for-page Draw back is meant to be the
+contribution model's first user once this works on the Pad.

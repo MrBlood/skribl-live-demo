@@ -3807,8 +3807,8 @@ second card, `thumbnailOwn`).
 WHAT PEOPLE SEE (`posts.hands_states`, per viewer, one read a page):
 - her drawing shown to them: BOTH, as a draw-back has always looked and
   played (hers squeezed to three seconds, then his), from the site
-  (`/social/hands/play/<view>/<id>`, the player's `api` seam), resting on
-  the picture of both (`/social/hands/picture/<id>`); on its own page, the
+  (`/social/hands/play/<view>/<skribl_id>`, the player's `api` seam), resting on
+  the picture of both (`/social/hands/picture/<skribl_id>`); on its own page, the
   one pill under the drawing, Both · Ana’s · Theo’s, each view its own
   player at its own pace (`post.html`, `posts.js`);
 - her drawing removed (she deleted it, or it or she was taken down): his
