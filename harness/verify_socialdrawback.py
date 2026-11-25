@@ -3721,6 +3721,19 @@ with app.app_context():
                   and opened["ink"] == 0 and opened["state"]["pages"] == N16 and opened["pill"] == "Drawing back on Ana’s",
                   json.dumps(opened))
 
+            # NOTHING OVER THE PILL ON A FIRST VISIT (Flip's "New here?" sits where Theirs is), and HER PAPER STAYS
+            # HERS when the theme changes while his pages are still blank (a blank Flip follows the theme).
+            calm = fr.evaluate("""() => { const h = document.querySelector('.skribl-hint');
+              return { hint: !!h && !h.hidden && h.classList.contains('in') }; }""")
+            pg.emulate_media(color_scheme="dark")
+            pg.wait_for_timeout(500)
+            calm["dark"] = fr.evaluate("() => [String(bgColor).toLowerCase(), document.documentElement.dataset.theme || null, matchMedia('(prefers-color-scheme: dark)').matches]")
+            pg.emulate_media(color_scheme="light")
+            pg.wait_for_timeout(300)
+            check("nothing over the pill on a first visit (Flip's \"New here?\" steps aside while drawing back); and her"
+                  " paper stays hers when the phone goes dark while his pages are still blank",
+                  calm["hint"] is False and calm["dark"][0] == "#f6f2ea" and calm["dark"][2] is True, json.dumps(calm))
+
             # HER PAGE UNDER THE PEN IS THE PAGE HE IS ON. A point on her ball on page 1, and on page 6.
             def ball_at(i):
                 pts = [p for p in ball["frames"][i]["strokes"] if p["y"] < 500 and p["color"] == "#7c5cff" and p.get("size", 0) >= 6]

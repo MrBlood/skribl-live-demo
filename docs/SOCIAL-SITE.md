@@ -2915,9 +2915,25 @@ draw-backs, newest first; and "Watch again" and Draw back rising at a
 drawing's foot when its replay ends (Skribl's player says `skribl:ended`).
 
 NO PEN WHERE IT CAN'T BE DONE YET (DECISIONS.md, "Draw back: no pen where it
-can't be done yet"): a Flip of pages or a drawing with recolours, read when
-its post is made (`undrawable`); a post from before keeps its pen, answered
-when opened.
+can't be done yet"): a drawing with recolours, and a Flip that loops, keeps a
+page under, plays to a beat or has a page that draws itself, read when its
+post is made (`undrawable`: "recolors", "loop", "under", "beat", "draw"); a
+post from before keeps its pen, answered when opened (and so does a Flip
+posted before Flips could be drawn back on, which said "pages").
+
+A FLIP, PAGE FOR PAGE (the owner's "all yes", Nov 25, to the Flip Draw Back
+mock; DECISIONS.md, "Flip's Draw back, page for page: built"). The pen on a
+Flip's card opens the composer and Flip over it: one empty page of his for
+each of hers, in her order and at her timing (her holds, her pages per
+second), on her shape, paper and picture, her page faint under the page he
+is on and her pages faint in the page strip. Nothing adds, moves or deletes a
+page, or changes her timing, while he draws back (each way in says so), and
+the eraser is off. The server joins the two page for page
+(`drawback.py` `_join_pages`): each of her pages with his on it, at her
+speed, as one animation with both hands in it; behind the owner's switch his
+pages are kept alone, pointing to hers (`_own_pages`), and Both, hers and his
+play from the site as for a drawing (`_his_pages` for his alone). Her song
+plays under both once posted, as on the Pad.
 
 THE AUTHOR'S BACKGROUND AND MUSIC (DECISIONS.md, "Draw back: your own
 drawing, and the author's background and music"): a draw-back keeps her
@@ -2936,7 +2952,7 @@ and a quote the whole. Nobody is named to a viewer any of them is hidden
 from, nor once the drawing it answers is gone.
 
 STILL TO COME, in the decided order: her say (hide one from her post; who
-can draw back); drawing back on a Flip, page for page; recolours.
+can draw back); recolours.
 `verify_socialdrawback.py` holds what is built.
 
 ---
@@ -3829,3 +3845,37 @@ is kept beside it, and her post lets go of every draw-back on it, which
 then shows its maker's strokes alone (`posts.drop_post_hands`).
 `verify_socialdrawback` 15 (a second server with the switch on, on the
 same database), `verify_hostseams` (`line_of`), `verify_socialauth` 14.
+
+## 42. Built: Flip's Draw back, page for page (Nov 25)
+
+The owner's "all yes" (Nov 25, about 8:20 AM) to the Flip Draw Back mock:
+five answers, A each (`DECISIONS.md`, "Flip's Draw back, mocked", and
+"Flip's Draw back, page for page: built").
+
+THE PEN on a Flip's card, after the heart, as on a drawing (`posts.cards`
+`can_back`: a Flip whose `undrawable` is nothing, or "pages" from before).
+It opens the composer and Flip over it (`compose.js` `pagesOf`, the editor
+that matches the drawing), "Drawing back on Ana’s".
+
+IN FLIP (Skribl's `lib/drawback.js`, its host `flip.js`): one empty page of
+his for each of hers, in her order and at her timing (answer 1: her holds,
+her pages per second); her shape, her paper and her picture (Flip's own
+backdrop while drawing back, never posted as his); her page faint under the
+page he is on (answer 5: her pages faint in the strip too), Theirs faint,
+full and hidden as on the Pad, the pill folding into the drawing's corner at
+the first stroke. What would add, move or delete a page or change her timing
+says "Pages can’t be added, moved or deleted while drawing back." or "The
+timing is Ana’s while drawing back.", and the eraser is off (answer 4). Fill
+floods inside her lines. New Skribl starts his pages again on hers.
+
+THE JOIN (`drawback.py` `_join_pages`; answer 2): each of her pages with his
+on it, her strokes then his, at her speed, as one animation; her picture and
+song on the first page. A page short, an eraser on any page, or a picture or
+song of his are refused with why. Behind the owner's switch (section 41;
+answer 3) his pages are kept alone, each on her page's paper at her timing,
+pointing to hers (`_own_pages`), and Both, hers and his play from the site
+(`_his_pages` lays her picture and song under his alone).
+
+NOT IN THE FIRST STEP: a Flip that loops, keeps a page under, plays to a
+beat, or has a page that draws itself (`undrawable` says which; no pen).
+`verify_socialdrawback` 16.
