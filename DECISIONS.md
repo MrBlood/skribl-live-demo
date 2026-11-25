@@ -53107,3 +53107,40 @@ If a letter still moves the Pad, those lines, copied, say what the phone
 did.
 
 PAD AND FLIP: shared (one script, one report).
+
+## After v330 -- How it works opened from the site's page: closed as it is read, back to the page
+
+The owner, Nov 23, on a desk: choosing the Pad on the site's How it works
+page opened the Pad with its own How it works over it, and closing How it
+works left you in the Pad, though you came from the site's page; Flip the
+same. By "The way back" and "Never stranded", closing it brings you back
+where you were. A bug, so no yes was needed; on the owner's list ("all yes",
+Nov 24) as the first thing to mend.
+
+WHY: the site asks the editor it holds to open How it works
+(`skribl:compose:help`), and the editor did, but nothing told the site when
+it closed. The editor's own × already went back the right way: it sends
+`cancel`, and the site closes the editor (keeping it, ready) and puts focus
+back on the row that was tapped.
+
+THE MEND (`editor_compose.js`, both editors, inside a post alone): asked for
+by the host, How it works is the host page's errand. Closed as a person
+closes what they have read (its ×, the dim around it, Escape: only once it
+has begun to close, so a key Ask's own box takes is not one), the editor
+goes as its own × sends it. Closed by something it offers to try in the
+editor (Ask's Show me, the little book's Draw along, a card's Try it, each
+of which closes it from inside), the person stays to try it, and the help is
+the editor's own from then on. Nothing can be drawn while it is open, so
+going loses nothing.
+
+THE CHECK (`verify_socialapp` 11, signed in, Pad and Flip): How it works
+closed by its × and by Escape is back on the page, nothing attached, focus
+on the row; closed by a thing to try, the editor stays, and its own × is
+still the way back. CALIBRATION, part 11 alone on copies with their own
+servers: as built 18/18; the mend taken out, that row alone red (the help's
+× left the editor up, `composePad` in front, the way the owner found it).
+
+THE TELL: on the site's How it works page, The Pad, then the ×
+on its How it works: you are back on the page, not in the Pad.
+
+PAD AND FLIP: shared (one script, both editors' compose mode).

@@ -1580,6 +1580,51 @@ with sync_playwright() as pw:
                   " button Add; its × is back on the page with nothing attached, focus on the row; asked again, the same"
                   " editor (no reload) shows its help again",
                   tool_ok(opened["pad"], "/skribl-pad") and tool_ok(opened["flip"], "/flip"), json.dumps(opened)[:1200])
+            # CLOSED AS IT IS READ, BACK WHERE YOU WERE (the owner, Nov 23: How it works opened from this page closed
+            # into the Pad, not back to the page; "Never stranded"). Closed by its × and by Escape, the editor goes
+            # as its own × sends it: back on this page, nothing attached, focus on the row. Closed by what it offers
+            # to try in the editor (Ask's Show me, the little book's Draw along: each calls closeHelpDrawer from
+            # inside), the editor stays, and its own × is still the way back.
+            closed = {}
+            ctx, pg = browser_as(b, mira)
+            go(pg, "/social/how")
+            for kind, path, wrap_id in (("pad", "/skribl-pad", "composePad"), ("flip", "/flip", "composeFlip")):
+                got = closed[kind] = {}
+                try:
+                    row = f'[data-how-editor="{kind}"]'
+                    help_up = ("() => !document.getElementById('helpDrawer').hidden"
+                               " && document.getElementById('helpDrawer').classList.contains('open')")
+                    for how in ("×", "Escape", "a thing to try"):
+                        pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", row)
+                        pg.tap(row)
+                        fr = editor11(pg, path)
+                        fr.wait_for_function(help_up, timeout=15000)
+                        pg.wait_for_timeout(700)
+                        if how == "×":
+                            fr.click("#helpClose")
+                        elif how == "Escape":
+                            fr.press("#helpClose", "Escape")   # a key in the drawer, where its focus is
+                        else:
+                            fr.evaluate("() => closeHelpDrawer()")
+                        pg.wait_for_timeout(1500)
+                        got[how] = pg.evaluate(HOST11, kind)
+                        if how == "a thing to try":
+                            fr.click("#composeCloseBtn")
+                            pg.wait_for_timeout(1300)
+                            got["then ×"] = pg.evaluate(HOST11, kind)
+                except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+                    got["stopped"] = str(exc).splitlines()[0][:200]
+            close_ctx(ctx, pg)
+            BACK11 = {"at": "/social/how", "sheet": False, "sheetSeen": False, "editor": None, "front": False, "attached": None,
+                      "focus": "the row"}
+            check("...and How it works, closed as it is read (its ×, Escape), takes the editor away with it: back on this"
+                  " page, nothing attached, focus on the row; closed by something it offers to try, the editor stays, its"
+                  " own × still the way back (Pad and Flip)",
+                  all(not v.get("stopped") and v.get("×") == BACK11 and v.get("Escape") == BACK11
+                      and (v.get("a thing to try") or {}).get("editor") == w and (v.get("a thing to try") or {}).get("front")
+                      and v.get("then ×") == BACK11
+                      for v, w in ((closed["pad"], "composePad"), (closed["flip"], "composeFlip"))),
+                  json.dumps(closed)[:1400])
             walked = {}
             for kind, path in (("pad", "/skribl-pad"), ("flip", "/flip")):
                 ctx, pg = browser_as(b, None)
