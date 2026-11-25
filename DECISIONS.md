@@ -53828,3 +53828,51 @@ leaving hers out (the lens row); the composer refusing recolours again
 
 PAD AND FLIP: shared (`lib/recolor.js`, `lib/drawback.js`); the site's
 join and rule serve both.
+
+## After v330 -- Drawers beside the drawing on a desk, mocked: the owner's "all yes"
+
+The owner, Nov 25, about 12:05 PM: "What's next? When is desktop change?",
+the idea from the friend's design packs (drawers beside the drawing on a
+desk), mocked first as "Drawers Beside the Drawing"
+(https://claude.ai/artifact/M4h4mKPYsZuoWL4MJTzkGy) on the real Pad (How it
+works' cat) and Flip (its bouncing ball), with a few lines of CSS laid on
+the page and nothing in the tree touched; then, at the owner's questions,
+every drawer ("Do the other drawers open on the side too?"), Music all the
+way open with the loop as long as it can be, and Music with Restart open.
+The owner, about 1:00 PM: "All yes". Nothing is built yet.
+
+MEASURED (with Pen open, how much of the drawing is on screen): the Pad
+today 60% at 1280x800, 66% at 1440x900, 64% at 1536x864, 73% at 1920x1080
+(the page scrolls 335px); Flip 42%, 53%, 49%, 65%. Beside (A), 100% at
+every one, the drawing at its own size, nothing scrolled. Over the edge
+(B): the Pad 88-98%, Flip 92-100%. With a 30-second song: Music 31% today,
+the Length door open with the loop at its longest (the first 20s) 13%,
+Restart's door 0% (the drawer 946px tall); beside, 100% each.
+
+THE THREE ANSWERS:
+
+1. ON A DESK, EVERY DRAWER OPENS BESIDE THE DRAWING: Pen, Photo, Music and
+   Text, at the drawing's right, phone-width (392px), its top level with the
+   drawing's (A, Cal's pick; B, the drawer over the drawing's edge with
+   nothing moving, covered 2-12% of the Pad's drawing; today's scroll hides
+   its top while you choose what to draw with).
+2. THE DRAWING AND WHAT SITS UNDER IT SLIDE LEFT TOGETHER, only as far as
+   the drawer needs (the Pad 63-196px on those desks; Flip 0-64px, still
+   from 1536px up); the header stays.
+3. WHERE THE TWO DON'T FIT SIDE BY SIDE (a narrow window, a tablet), the
+   drawer opens below, as today. Phones don't change.
+
+WHAT COMES WITH IT, as the mock said: the drawer slides in from the right
+as the drawing glides left, both glide back when it closes, and under
+Reduce Motion they simply move; beside, the drawer's tiles are the phone's
+size (the wide drawer below, whose tiles span a desk, stays where the
+drawer still opens below); a drawer taller than the screen (Music with
+Restart open on a 900px-high desk) is held to the screen and glides inside
+itself to show what a door opens, the page's rule ("Every drawer shows
+what a tap opens") inside the drawer; the tools tray, the shape picker and
+Flip's stamps shelf stay as they are (the tray rises over the dock and
+never scrolls the page: checked); Flip's page bar and strip slide with the
+drawing. No colour or word changes.
+
+PAD AND FLIP: shared, one rule for both editors, each sliding what sits
+under its own drawing.
