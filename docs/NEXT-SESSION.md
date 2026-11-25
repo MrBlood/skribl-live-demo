@@ -52,17 +52,26 @@ section 43). One-glance tell on the owner's phone: draw back on a drawing,
 open the colour drawer, and Recolor is no longer dimmed; a tap on one of
 her lines says "That line is Ana’s. Recolor changes yours."
 
-## Drawers beside the drawing on a desk: all yes, building
+## Drawers beside the drawing on a desk: all yes, built
 
 The owner's "When is desktop change?" mocked (https://claude.ai/artifact/M4h4mKPYsZuoWL4MJTzkGy)
 and answered "All yes" about 1:00 PM: on a desk every drawer opens beside
 the drawing, the drawing and what sits under it slide left only as far as
 needed, and where the two don't fit (a narrow window, a tablet) the drawer
-opens below as today (`DECISIONS.md`, "Drawers beside the drawing on a
-desk, mocked"). Being built the same day.
+opens below as today. Built the same afternoon (#1105; `DECISIONS.md`,
+"Drawers beside the drawing on a desk: built"). Its first full run taught
+three things worth keeping: the page's scrollbar gutter (10px at each edge)
+moves a drawer held to the screen, so its edge is measured; a tile's
+choices in the column never scroll the tile away; and a press on the
+drawing that puts a drawer away holds the drawing still until the pen
+lifts (Flip draws with that press).
 
-## Waiting on the owner's phone
+## Waiting on the owner's desk and phone
 
+- Drawers beside the drawing. One-glance tell on the owner's Windows desk
+  (a mouse, the window wide): open the pen's drawer, and it comes in at the
+  drawing's right while the drawing glides left; nothing scrolls. A narrow
+  window still opens it below. Not tested here on WebKit, SF or Segoe UI.
 - Flip's Draw back. One-glance tell for the new build: under a Flip's card,
   the pen after the heart (a Flip had none). Tap it: Flip opens over the
   composer on her pages, her page faint under the one you are on, her pages

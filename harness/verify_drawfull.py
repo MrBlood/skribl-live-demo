@@ -22,7 +22,10 @@ The rows, on both editors:
   again, the page comes back out and the button says so. With the window the
   screen's size, as a real full screen makes it, the canvas shows at the
   mock's sizes (the Pad's cat 1197x898 on a 1920x1080 screen, Flip's card
-  932x699). A drawer opens where it opens out of full screen, under the dock.
+  932x699). A drawer opens where it opens out of full screen: beside the
+  drawing, clear of it and level with its top, as a desk opens one wherever
+  the drawing fits whole beside it (lib/drawers.js, verify_drawerside; under
+  the dock until Nov 25).
 
   THE WATCH STILL WORKS. Playing the drawing big from here and leaving it
   comes back to the page in full screen, the button still pressed. And the
@@ -150,10 +153,13 @@ CHROME = """(dock) => [document.querySelector('.header'), document.querySelector
 MAG_ON = """() => { const m = document.getElementById('magnifyBtn'); m.classList.add('active');
   const bg = getComputedStyle(m).backgroundColor; m.classList.remove('active'); return bg; }"""
 SHOWN = "(id) => { const r = document.getElementById(id).getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }"
-# The media drawer's top, as far under the dock as it opens.
-DRAWER = """(dock) => { const d = document.querySelector(dock).getBoundingClientRect();
+# Where the media drawer opens: beside the drawing, how far clear of its right
+# and its top from the drawing's; or below, as far under the dock as it opens.
+DRAWER = """([dock, cv]) => { const d = document.querySelector(dock).getBoundingClientRect(), c = document.getElementById(cv).getBoundingClientRect();
   const card = document.getElementById('mediaCard') || document.querySelector('.media-card');
-  if (!card) return null; const r = card.getBoundingClientRect(); return r.height > 0 ? Math.round(r.top - d.bottom) : null; }"""
+  if (!card) return null; const r = card.getBoundingClientRect(); if (!(r.height > 0)) return null;
+  return skriblDrawers.beside && skriblDrawers.beside() ? { where: 'beside', clear: Math.round(r.left - c.right), top: Math.round(r.top - c.top) }
+                                : { where: 'below', under: Math.round(r.top - d.bottom) }; }"""
 # The browser saying no, as a frame that does not allow full screen answers:
 # requestFullscreen is there, and fullscreenEnabled (both spellings) is false.
 NO_FS = """for (const k of ['fullscreenEnabled', 'webkitFullscreenEnabled'])
@@ -197,10 +203,10 @@ with sync_playwright() as p:
         print(f"\nIN AND OUT -- {name}")
         c, pg, errs = editor(b, name)
         tile = pg.evaluate(MAG_ON)
-        out_gap = None
+        out_at = None
         pg.click("#mediaOpenBtn")
         pg.wait_for_timeout(500)
-        out_gap = pg.evaluate(DRAWER, DOCK[name])
+        out_at = pg.evaluate(DRAWER, [DOCK[name], CANVAS[name]])
         pg.click("#mediaOpenBtn")
         pg.wait_for_timeout(400)
         # A real full screen makes the window the screen's size; headless
@@ -227,12 +233,13 @@ with sync_playwright() as p:
               abs(got[0] - want[0]) <= 2 and abs(got[1] - want[1]) <= 2, f"shown {got[0]}x{got[1]}")
         pg.click("#mediaOpenBtn")
         pg.wait_for_timeout(500)
-        in_gap = pg.evaluate(DRAWER, DOCK[name])
+        in_at = pg.evaluate(DRAWER, [DOCK[name], CANVAS[name]])
         pg.click("#mediaOpenBtn")
         pg.wait_for_timeout(400)
-        check(f"{name}: ...a drawer opens where it opens out of full screen, under the dock",
-              in_gap is not None and out_gap is not None and in_gap >= 0 and abs(in_gap - out_gap) <= 1,
-              f"{in_gap}px under the dock in full screen, {out_gap}px out of it")
+        check(f"{name}: ...a drawer opens where it opens out of full screen: beside the drawing, clear of it, level with its top",
+              bool(in_at) and bool(out_at) and in_at["where"] == out_at["where"] == "beside"
+              and all(a["clear"] >= 8 and abs(a["top"]) <= 1 for a in (in_at, out_at)),
+              f"in full screen {in_at}, out of it {out_at}")
         press(pg)
         off = pg.evaluate(FS)
         pg.set_viewport_size({"width": 1920, "height": 945})

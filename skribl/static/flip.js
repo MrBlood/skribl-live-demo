@@ -5925,6 +5925,9 @@ const _flipDrawerCtl = skriblDrawers({
     else requestAnimationFrame(()=>{ try{ open.scrollIntoView({behavior:b, block:'end'}); }catch(_){ open.scrollIntoView(); } });
   }
 });
+// On a desk, a drawer beside the drawing; the stage, the page strip and the
+// dock slide (lib/drawers.js side), as the Pad's stage and dock do.
+_flipDrawerCtl.side({ canvas: 'pad', move: '.flip-stage, .strip-wrap, .flip-tools' });
 // Only the wrappers with live callers survive the collapse: closePop for the
 // swatch/eyedropper pick handlers, hidePhoto/hideMusic for the outside-click
 // dismisser below. openPop/openPhoto/openMusic/closeMediaDrawers/refitDrawer

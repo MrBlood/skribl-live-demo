@@ -612,13 +612,17 @@
                 x.restore();
               } else {
                 sh = pw * art.height / art.width; py = 4 + (ph - sh) / 2;
-                x.save(); rr(pl, py, pw, sh, 3); x.clip(); x.drawImage(art, pl, py, pw, sh); x.restore();
+                x.save(); rr(pl, py, pw, sh, Math.min(3, Math.max(0, (sh - 2 / dpr) / 2))); x.clip(); x.drawImage(art, pl, py, pw, sh); x.restore();
               }
               // Framed in the lane's purple, on the screen's own pixels so it
               // is crisp (as the loop's edges are): a short page's picture is
-              // small, and its frame is what shows it is there.
-              var fl = crisp(pl, dpr), ft = crisp(py, dpr);
-              rr(fl, ft, crisp(pl + pw, dpr) - fl, crisp(py + sh, dpr) - ft, sh < ph ? 3 : 4); x.strokeStyle = ink; x.stroke();
+              // small, and its frame is what shows it is there. Its corners
+              // leave each side two of the screen's pixels straight: a 7px
+              // picture's 3px corners met in the middle on a desk's screen,
+              // its sides half on one pixel and half on the next (a drawer
+              // beside the drawing gives the lane a phone's width).
+              var fl = crisp(pl, dpr), ft = crisp(py, dpr), fh = crisp(py + sh, dpr) - ft;
+              rr(fl, ft, crisp(pl + pw, dpr) - fl, fh, Math.min(sh < ph ? 3 : 4, Math.max(0, (fh - 2 / dpr) / 2))); x.strokeStyle = ink; x.stroke();
               drawn.art++; drawn.tile = +tw.toFixed(2);
             } else {
               x.fillStyle = numbered ? fill : m[3] ? laneInk(m[3], card, strong) : acc;

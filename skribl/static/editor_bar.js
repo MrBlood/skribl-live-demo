@@ -32,6 +32,10 @@ const _mediaTabs = (window.SkriblMediaTabs && _padDrawerCtl) ? window.SkriblMedi
   dot: 'mediaTabDot', sources: ['photoTabDot', 'musicTabDot']
 }) : null;
 function syncMediaTabs(name) { if (_mediaTabs) _mediaTabs.sync(name); }
+// On a desk, a drawer beside the drawing; the stage and the dock slide
+// (lib/drawers.js side). Said here, not in app.js's config: the link player
+// loads the machine and has no drawer to put beside anything.
+if (_padDrawerCtl) _padDrawerCtl.side({ canvas: 'canvas', move: '.canvas-area, #toolBar' });
 // A file dropped anywhere on the media card goes to the open drawer's input,
 // once it is the right kind of file (lib/pendingcards.js bindDrops, which Flip
 // calls too). The rows used to take drops themselves, and a drop that missed

@@ -1955,6 +1955,22 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
 }
 
 .tab-panel[hidden] { display: none; }
+/* DRAWERS BESIDE THE DRAWING, ON A DESK (lib/drawers.js sideApply; the
+   owner's "all yes", Nov 25, to the Drawers Beside the Drawing mock). Where a
+   mouse points and the drawing fits whole beside it, the open drawer (its
+   media card, for Photo and Music) is a column at the drawing's right,
+   phone-width, its top level with the drawing's, held to the screen and
+   scrolling inside itself when it is taller; the drawing and what sits under
+   it (the Pad's stage and dock, Flip's stage, page strip and dock) slide left
+   by --side-shift, a relative offset (each is position: relative already, so
+   nothing fixed inside them is caught), which the script glides. The header
+   stays. Its look is the drawer's own: no new colour or word. */
+body.drawers-beside :is(.canvas-area, #toolBar, .flip-stage, .strip-wrap, .flip-tools) { left: calc(-1 * var(--side-shift, 0px)); }
+body.drawers-beside :is(#drawPanel, #mediaCard, #txSheet).drawer-side {
+  position: fixed; top: var(--side-top, 90px); right: max(16px, env(safe-area-inset-right, 0px)); bottom: auto; left: auto;
+  width: var(--side-w, 392px); max-width: calc(100vw - 32px); max-height: calc(100vh - var(--side-top, 90px) - 16px);
+  overflow-y: auto; overscroll-behavior: contain; margin: 0; z-index: 45;
+}
 
 /* Replay auto-hide: while a preview replays, fade the bottom tool island out so
    the drawing is the show. The header stays (it holds Stop). Opacity only — the
@@ -2680,6 +2696,13 @@ body.recoloring #canvas { cursor: crosshair !important; }
   .mt-pick-vs { display: block; }
   .mt-pick-vs .mt-pick-sep { display: none; }
 }
+/* Beside the drawing on a desk (lib/drawers.js) the drawer is phone-width, and
+   its longest words no longer fit one row beside the pair: the phone's two
+   rows there too, so its height holds as it changes (on one row it went 36px
+   to 37.8px as the words grew). */
+body.drawers-beside .drawer-side .mt-pick { min-height: 38px; }
+body.drawers-beside .drawer-side .mt-pick-vs { display: block; }
+body.drawers-beside .drawer-side .mt-pick-vs .mt-pick-sep { display: none; }
 .mt-pick-text b { color: var(--text-primary); font-weight: 650; }
 /* Skribl's mark, the two stars in the small violet words' ink (the menu's
    --accent-ink): before Skribl's pick in the Length door, and before the

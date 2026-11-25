@@ -380,6 +380,17 @@
         h.refresh();
         if (rv) rv.draw();
         if (!body || !tile || open !== k) return;
+        // BESIDE THE DRAWING (lib/drawers.js, a desk): the drawer is its own
+        // column and the page stays; the same sum inside the column, the tile
+        // tapped kept in it.
+        var box = det && det.sideBox ? det.sideBox(body) : null;
+        if (box) {
+          var bx = box.getBoundingClientRect();
+          var inside = Math.min(body.getBoundingClientRect().top + body.offsetHeight - bx.bottom + 12,
+                                tile.getBoundingClientRect().top - bx.top - 8);
+          if (inside > 0) box.scrollBy({ top: inside, behavior: still() ? 'auto' : 'smooth' });
+          return;
+        }
         var vh = global.visualViewport ? global.visualViewport.height : global.innerHeight;
         var top = det && det.stuckBottom ? det.stuckBottom() : 0;
         var need = body.getBoundingClientRect().top + body.offsetHeight - vh + 12;
