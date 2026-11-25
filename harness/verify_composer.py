@@ -857,8 +857,9 @@ with sync_playwright() as p:
             # WAITING, CRISP (No dinge, the owner's "All yes", Nov 16): Post waits on
             # the second button's lilac in the chosen violet, at full strength; it
             # faded the purple to 45%. (Dark's violet is the editors' #dad1ff
-            # since the colour audit's choice 6; the site's copy was #d4c9ff.)
-            WAIT = {"light": ("rgb(231, 224, 255)", "rgb(63, 39, 168)"), "dark": ("rgb(51, 42, 88)", "rgb(218, 209, 255)")}
+            # since the colour audit's choice 6; the site's copy was #d4c9ff.
+            # Light's is the Gallery's chosen ink since Nov 24, #301c8c, 7:1.)
+            WAIT = {"light": ("rgb(231, 224, 255)", "rgb(48, 28, 140)"), "dark": ("rgb(51, 42, 88)", "rgb(218, 209, 255)")}
             bad = {}
             for k, v in looks.items():
                 c, po = v["cancel"], v["post"]
