@@ -41,11 +41,12 @@ at once, at her speed, as one animation (answer 2): join() lays his strokes
 on her page, page by page, and keeps her pages' holds, her pages per second
 and her shape, paper, picture and song. Kept as the Pad's (answer 3): joined
 while the owner's switch is off, two hands once it is on (own() and view()
-learn pages too). NOT IN THE FIRST STEP (said in the mock): a Flip with a
-loop, a page kept underneath or beat timing; and, found in the building, one
-with a page that draws itself, whose timing is its strokes' own, so "hers and
-his at once" has no one answer yet (the owner's to say). drawable() names
-each ("loop", "under", "beat", "draw"), so its row offers no pen."""
+learn pages too). A PAGE THAT DRAWS ITSELF plays hers, then his (the owner,
+Nov 25: "draw-on pages play hers then his"): her strokes as she drew them,
+then his a beat after her last point, at his own pace, so the page lasts as
+long as the two together. NOT IN THE FIRST STEP (said in the mock): a Flip
+with a loop, a page kept underneath or beat timing; drawable() names each
+("loop", "under", "beat"), so its row offers no pen."""
 
 #: How long the original plays before the answer, at most (choice 4's B).
 OVERTURE_MS = 3000
@@ -191,14 +192,12 @@ def all_points(payload):
 
 def _pages_drawable(payload, pages, answer):
     """drawable() for a Flip (flip_pages): what the first step can't do yet
-    (the mock's "not in the first step", and a page that draws itself:
-    drawback.py's opening), then the answer's own picture and song, as the
-    Pad's."""
+    (the mock's "not in the first step"), then the answer's own picture and
+    song, as the Pad's. A page that draws itself can be drawn back on: it
+    plays hers, then his (drawback.py's opening)."""
     for k in ("loop", "under", "beat"):
         if payload.get(k) is not None:
             return k
-    if any(f.get("draw") is True for f in pages):
-        return "draw"
     if answer and (any(_truthy(f.get("photo")) for f in pages) or _truthy(payload.get("photo"))):
         return "photo"
     if answer and (any(_truthy(f.get("music")) for f in pages) or _truthy(payload.get("music"))):
@@ -220,8 +219,8 @@ def _truthy(v):
 def drawable(payload, answer=False):
     """None when `payload` can be drawn back on, else why not: "pages" (no
     frames, or pages that are not a Flip's), "recolors"; for a Flip
-    (flip_pages, page for page since Nov 25) "loop", "under", "beat" or
-    "draw" (a page that draws itself), the first step's limits. (A two-hands
+    (flip_pages, page for page since Nov 25) "loop", "under" or "beat", the
+    first step's limits. (A two-hands
     draw-back is not drawn back on yet, whatever its drawing: its post says
     "hands", posts.py.) With `answer`,
     whether it can be the strokes of an answer: then a picture under it
@@ -336,10 +335,10 @@ def _join_pages(original, answer):
     """A Flip draw-back's drawing (answers 1 and 2): page for page, her page
     with his on it, as one animation at her speed. Each page: her strokes
     as she drew them, then his a beat on from her last point at his own pace
-    (a still page shows them whole; the times only keep the order and the
-    line's count); her paper and her hold. Her picture and song on the first
-    page, her shape and pages per second (_paged). Both drawable() and
-    same_pages()."""
+    (a still page shows them whole; a page that draws itself draws hers, then
+    his: the owner's "hers then his"); her paper, her hold, and whether it
+    draws itself. Her picture and song on the first page, her shape and pages
+    per second (_paged). Both drawable() and same_pages()."""
     ofs, afs = flip_pages(original), _frames(answer)
     frames = []
     for i, of in enumerate(ofs):

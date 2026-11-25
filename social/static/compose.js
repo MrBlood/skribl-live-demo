@@ -247,8 +247,8 @@
      posted (drawback.py drawable(), read here so the line shows only where
      it is true; verify_socialdrawback holds the two side by side): one page,
      played as a replay, no loop, nothing kept under it, no beat, no
-     recolours; or since Nov 25 a Flip, page for page, with none of those and
-     no page that draws itself. has() is the site's own "is there one": an empty list or an
+     recolours; or since Nov 25 a Flip, page for page, with none of those (a
+     page that draws itself plays hers, then his). has() is the site's own "is there one": an empty list or an
      empty set of them is none (a list's keys are its places, so one line
      reads both). */
   function has(v) {
@@ -266,11 +266,11 @@
   function drawableHere(p) {
     if (!p || typeof p !== 'object') return false;
     if (p.loop != null || p.under != null || p.beat != null) return false;
-    /* A Flip, page for page since Nov 25: none of its pages draws itself
-       (the first step's limits, drawback.py). */
+    /* A Flip, page for page since Nov 25 (drawback.py): a page that draws
+       itself too, playing hers then his. */
     var pages = pagesOf(p);
     if (pages) {
-      for (var i = 0; i < pages.length; i++) if (pages[i].draw === true || has(pages[i].recolors)) return false;
+      for (var i = 0; i < pages.length; i++) if (has(pages[i].recolors)) return false;
       return !has(p.recolors);
     }
     if (!Array.isArray(p.frames) || p.frames.length !== 1) return false;

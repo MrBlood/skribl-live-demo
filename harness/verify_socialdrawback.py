@@ -89,9 +89,10 @@ each in a browser with a virtual passkey.
      goes goes by the code; and through the real Pad, his drawing resting on
      his lines alone.
  16. A FLIP, PAGE FOR PAGE (the owner's "all yes", Nov 25, to the Flip Draw
-     Back mock, five answers A): what a Flip says it can't do yet (a loop, a
-     page that draws itself); the way in hands her pages over; posted, his
-     pages laid on hers page for page, her timing kept; a page short, an
+     Back mock, five answers A): what a Flip says it can't do yet (a loop);
+     the way in hands her pages over; posted, his pages laid on hers page for
+     page, her timing kept, a page that draws itself playing hers then his
+     (the owner's answer, Nov 25); a page short, an
      eraser, a picture of his refused; the pen on a Flip's card. The whole
      way: the pen opens Flip (not the Pad) on her pages, shape and paper,
      her page faint under the page he is on, her pages faint in the strip;
@@ -3014,11 +3015,11 @@ with app.test_request_context("/social/"):
             ours_ = {k: _rules.drawable(v) is None for k, v in cases.items()}
             check("THE COMPOSER SHOWS THE LINE EXACTLY WHERE THE SITE WILL LET IT BE DRAWN BACK ON: its own reading and the"
                   " site's (drawback.drawable) agree on nineteen drawings, the yes and the no: one page, a replay, a"
-                  " picture and music, empty recolours, a Flip page for page (yes); two pages said to be a replay, none,"
-                  " a flip of one page, a loop, one kept under, a beat, recolours, a Flip that loops, a Flip with a page"
-                  " that draws itself (no)",
-                  theirs_ == ours_ and sum(ours_.values()) == 7 and len(ours_) == 19 and ours_["the Flip demo"]
-                  and not ours_["the Flip demo, looped"] and not ours_["a Flip with a page that draws itself"],
+                  " picture and music, empty recolours, a Flip page for page, a Flip with a page that draws itself"
+                  " (yes: hers, then his); two pages said to be a replay, none, a flip of one page, a loop, one kept"
+                  " under, a beat, recolours, a Flip that loops (no)",
+                  theirs_ == ours_ and sum(ours_.values()) == 8 and len(ours_) == 19 and ours_["the Flip demo"]
+                  and not ours_["the Flip demo, looped"] and ours_["a Flip with a page that draws itself"],
                   json.dumps({"the site": ours_, "differ": {k: [ours_[k], theirs_.get(k)] for k in ours_ if ours_[k] != theirs_.get(k)}}))
 
             # THE WORDS AS PAINTED, light and dark.
@@ -3614,11 +3615,15 @@ with app.app_context():
             draws = post_payload(ana16, "Section 16, a page that draws itself", drawn)
             before = post_payload(ana16, "Section 16, a Flip from before", ball)
             db_write("update social_posts set undrawable = 'pages' where public_id = ?", (before or "",))
+            # One posted the morning a page that draws itself was refused ("draw", #1098): drawn back on now.
+            morning = post_payload(ana16, "Section 16, a page that draws itself, from the morning", drawn)
+            db_write("update social_posts set undrawable = 'draw' where public_id = ?", (morning or "",))
             und = {k: (db("select undrawable from social_posts where public_id = ?", (v or "",)) or [[None]])[0][0]
                    for k, v in (("plain", fl16), ("loop", looped), ("draw", draws))}
-            check("a Flip says what the first step can't do when it is posted: nothing for her bouncing ball (it can be"
-                  " drawn back on), \"loop\" for one that loops, \"draw\" for one with a page that draws itself",
-                  und == {"plain": None, "loop": "loop", "draw": "draw"}, json.dumps(und))
+            check("a Flip says what the first step can't do when it is posted: nothing for her bouncing ball or for one"
+                  " with a page that draws itself (each can be drawn back on: such a page plays hers, then his),"
+                  " \"loop\" for one that loops",
+                  und == {"plain": None, "loop": "loop", "draw": None}, json.dumps(und))
 
             # THE ROUTE hands her Flip over, page for page; the first step's limits are refused, saying why.
             tc16 = theo16.client()
@@ -3627,12 +3632,14 @@ with app.app_context():
             r_loop = tc16.get_json(f"/social/p/{looped}/drawback")
             r_draw = tc16.get_json(f"/social/p/{draws}/drawback")
             okp = (r_ok[1] or {}).get("payload") or {} if isinstance(r_ok[1], dict) else {}
+            drp = (r_draw[1] or {}).get("payload") or {} if isinstance(r_draw[1], dict) else {}
             check("the composer's way in hands her Flip over whole (her ten pages, her hold on page 6, her pages per"
-                  " second, her shape); a Flip with a loop or a page that draws itself is refused, saying which",
+                  " second, her shape), and one with a page that draws itself (that page saying so); a Flip with a loop"
+                  " is refused, saying so",
                   r_ok[0] == 200 and len(okp.get("frames") or []) == N16 and (okp.get("frames") or [{}] * 6)[5].get("hold") == 2
                   and okp.get("fps") == ball["fps"] and okp.get("canvasSize", {}).get("cssWidth") == 816
                   and r_loop[0] == 400 and (r_loop[1] or {}).get("why") == "loop"
-                  and r_draw[0] == 400 and (r_draw[1] or {}).get("why") == "draw",
+                  and r_draw[0] == 200 and len(drp.get("frames") or []) == N16 and (drp.get("frames") or [{}] * 4)[3].get("draw") is True,
                   json.dumps({"ok": r_ok[0], "pages": len(okp.get("frames") or []), "loop": r_loop, "draw": r_draw})[:600])
 
             # THE JOIN, ON THE SERVER: his pages laid on hers, page for page.
@@ -3685,15 +3692,40 @@ with app.app_context():
                   said16 == {"short": (400, "drawback_shape", None), "erase": (400, "drawback_unsupported", "erase"),
                              "photo": (400, "drawback_unsupported", "photo")}, json.dumps(said16))
 
+            # A PAGE THAT DRAWS ITSELF PLAYS HERS, THEN HIS (the owner, Nov 25: "draw-on pages play hers then his").
+            # His answer hands that page back still saying it draws itself (Flip keeps her timing on his pages).
+            mine_d = his_pages({3: shadow(3, n=12), 6: shadow(6, n=5)})
+            mine_d["frames"][3]["draw"] = True
+            st_d, j_d = draw_back(theo16, draws, mine_d)
+            dpost = j_d.get("post") if isinstance(j_d, dict) else None
+            dp = ((stored(dpost) or {}).get("payload") or {}).get("frames") or []
+            her4 = drawn["frames"][3]["strokes"]
+            pts4 = (dp[3].get("strokes") or []) if len(dp) == N16 else []
+            ts4 = [q["t"] for q in pts4]
+            order = (len(pts4) == len(her4) + 12 and xy(pts4[:len(her4)]) == xy(her4)
+                     and xy(pts4[len(her4):]) == xy(mine_d["frames"][3]["strokes"])
+                     and ts4 == sorted(ts4) and min(ts4[len(her4):]) > max(ts4[:len(her4)]))
+            check("a page that draws itself plays hers, then his: posted, that page still draws itself, her strokes"
+                  " first as she drew them and his after her last point, at his own pace; a still page stays still",
+                  st_d == 200 and len(dp) == N16 and dp[3].get("draw") is True and order and not dp[6].get("draw")
+                  and len(dp[6].get("strokes") or []) == len(drawn["frames"][6]["strokes"]) + 5,
+                  json.dumps({"status": st_d, "err": j_d if st_d != 200 else None, "pages": len(dp),
+                              "page 4": {"draw": dp[3].get("draw") if len(dp) > 3 else None, "points": len(pts4),
+                                         "hers end": max(ts4[:len(her4)]) if len(ts4) > len(her4) else None,
+                                         "his start": min(ts4[len(her4):]) if len(ts4) > len(her4) else None}})[:600])
+
             # THE PEN on her Flip's card; none on the Flip that loops; one on a Flip from before (answered when opened).
             ctx, pg = browser_as(b, theo16)
             home(pg)
-            seen16 = {k: pg.evaluate(CARD, v) for k, v in (("plain", fl16), ("loop", looped), ("before", before))}
+            seen16 = {k: pg.evaluate(CARD, v) for k, v in (("plain", fl16), ("loop", looped), ("before", before),
+                                                           ("draws", draws), ("morning", morning))}
             close_ctx(ctx, pg)
-            check("the pen after the heart on her Flip's card, 44px, as on a drawing; none on her Flip that loops; one"
-                  " on a Flip posted before Flips could be drawn back on (it said \"pages\"), answered when opened",
+            check("the pen after the heart on her Flip's card, 44px, as on a drawing, and on one with a page that draws"
+                  " itself; none on her Flip that loops; one on a Flip posted before Flips could be drawn back on (it said"
+                  " \"pages\"), and on one posted the morning a page that draws itself was refused (\"draw\")",
                   all(seen16[k] and seen16[k]["pen"] and seen16[k]["pen"]["w"] >= 44 and seen16[k]["pen"]["h"] >= 44
-                      and seen16[k]["kids"].index("pen") == seen16[k]["kids"].index("heart") + 1 for k in ("plain", "before"))
+                      and seen16[k]["kids"].index("pen") == seen16[k]["kids"].index("heart") + 1
+                      for k in ("plain", "before", "draws", "morning"))
                   and seen16["loop"] and seen16["loop"]["pen"] is None,
                   json.dumps({k: (v or {}).get("kids") for k, v in seen16.items()}))
 
