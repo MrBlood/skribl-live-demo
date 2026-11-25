@@ -256,7 +256,8 @@ and puts the tool in front of people who already exist.
    lives, the Pad's faint underlay, how it plays, jams and the first
    artist's say are in DECISIONS.md, "Draw back, mocked". Built on the Pad
    from Nov 19; on a Flip, page for page, Nov 25 (DECISIONS.md, "Flip's Draw
-   back, page for page: built").
+   back, page for page: built"); with recolours, each hand's its own, the
+   same day (DECISIONS.md, "Recolor while drawing back: built").
 
 **Deliberately not doing:**
 
