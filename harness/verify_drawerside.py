@@ -39,11 +39,12 @@ On the Pad (How it works' cat) and Flip (its bouncing ball):
   drawer, with it beside, and home again (the slide's end sends a resize,
   which clears Flip's kept place of the drawing).
   STILL WHERE IT POINTS: a press on the drawing puts a drawer away, as
-  below; Flip draws with that press, and the drawing holds still under the
-  pen while it is down, every point landing where it is drawn, then glides
-  home (gliding under the pen landed the stroke as much as the slide off);
-  the Pad's draws nothing, and the drawing glides home. On both, the drawer
-  gone, a stroke lands where it is drawn.
+  below. Flip draws with it and its drawer goes on the click that ends the
+  stroke, so the drawing holds still while the pen is down, every point
+  landing where it is drawn, and glides home after (a drawer put away on
+  the press would glide it under the pen); the Pad's first press draws
+  nothing, and the drawing glides home. On both, the drawer gone, a stroke
+  lands where it is drawn.
 
 Elsewhere:
 
@@ -328,8 +329,9 @@ with sync_playwright() as pw:
         open_(q, ed, "draw", wait=900)
         slid = q.evaluate(SHIFT)
         if ed == "Flip":
-            # Flip draws with the press that puts a drawer away (its own rule, as below): the drawing holds
-            # still under the pen, every point landing where it is drawn, and glides home once the pen lifts.
+            # Flip draws with a press on the drawing, and its drawer goes on the click that ends it (its own
+            # rule, as below): the drawing holds still while the pen is down, every point landing where it is
+            # drawn, and glides home after. A drawer put away on the press would glide it under the pen.
             box = q.evaluate("(cv) => { const c = document.getElementById(cv).getBoundingClientRect(); return [c.left, c.top, c.width, c.height]; }", ED[ed]["cv"])
             n0 = q.evaluate(PTS[ed][0])
             x, y = box[0] + box[2] * 0.25, box[1] + box[3] * 0.75

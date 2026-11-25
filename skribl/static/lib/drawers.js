@@ -87,22 +87,6 @@
    * resized while one is beside decides again, without gliding. */
   var SIDE_W = 392, SIDE_EDGE = 16, SIDE_MS = 280, SIDE_EASE = 'cubic-bezier(.22,.8,.24,1)';
   var selfResize = false;
-  // Whether a pen (a mouse button, a stylus) is down, and what waits for it
-  // to lift: run after the page's own pointerup, on the next frame.
-  var penDown = false, onLift = [];
-  function afterPen(fn) { onLift.push(fn); }
-  if (typeof window !== 'undefined') {
-    window.addEventListener('pointerdown', function () { penDown = true; }, true);
-    var lifted = function () {
-      penDown = false;
-      if (!onLift.length) return;
-      var run = onLift; onLift = [];
-      requestAnimationFrame(function () { run.forEach(function (fn) { fn(); }); });
-    };
-    window.addEventListener('pointerup', lifted, true);
-    window.addEventListener('pointercancel', lifted, true);
-    window.addEventListener('blur', lifted);
-  }
   function still() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
   function sideBoxOf(panel) { return (panel.closest && panel.closest('.media-card')) || panel; }
   function movers(side) { return side.move ? Array.prototype.slice.call(document.querySelectorAll(side.move)) : []; }
@@ -221,20 +205,8 @@
       if (name == null && prev != null) holdHeight();
       if (prev != null) _set(prev, false);   // current() must see the new state
       if (name != null) _set(name, true);
-      if (side) toSide(name != null && name !== 'tools' ? panels[name].panel : null);
+      if (side) sideApply(side, name != null && name !== 'tools' ? panels[name].panel : null, true);
       if (cfg.reveal) cfg.reveal(name != null ? panels[name].panel : null, name);
-    }
-    // A drawer beside put away by a press on the drawing (Flip draws with
-    // that press; the Pad's puts the drawer away): the drawing stays where
-    // it is under the pen, and glides home once it lifts. Gliding under the
-    // pen landed the stroke's points as much as the slide off.
-    function toSide(panel) {
-      if (panel || !penDown || !document.body.classList.contains('drawers-beside')) { sideApply(side, panel, true); return; }
-      var box = document.querySelector('.drawer-side');
-      if (box) box.classList.remove('drawer-side');
-      afterPen(function () {
-        if (currentName == null || currentName === 'tools') sideApply(side, null, true);
-      });
     }
     // Beside the drawing on a desk, once the editor says what slides (side()).
     // A window resized with a drawer beside decides again (no glide), once
