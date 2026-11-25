@@ -53206,3 +53206,25 @@ shows its scene did its work: 16's words pushed up from the foot while
 typed (916 to 779) and back to 916; 17's clear of the header once let go.
 
 PAD AND FLIP: shared (one script; each editor's press asks it).
+
+## After v330 -- Flip's page bar on a desk: 10px a side, so Delete stands apart again
+
+FOUND after #1047 (the buttons took the page's font): in this box's Inter,
+Flip's labelled page bar on a desk ran 4px past its 694px column, so
+Delete's own gap (its auto margin) had nothing left to take and fell to
+8px, the same as the gaps inside a group. Mocked as "Four Small Picks", 4:
+A, a hair less padding, 12px to 10px a side; B, Draw, Loop and Under as
+their marks alone. The owner, Nov 24: "4. A".
+
+THE CHANGE (`flip.css`, a desk's regular size): a page bar button's side
+padding is 10px. Every word kept. The Select and Move bars are the same
+bar (`.pagebar`) and take the same; a phone's compact bar is untouched.
+
+THE CHECK, `verify_pages`' "in groups" rows (Order · Copy · how it plays ·
+Delete), which were red here and green in CI's face: in this box's Inter,
+12px 101/103 (the gap between groups 8px, light and dark) and 10px
+103/103; in CI's face (Liberation Sans, Inter left out by a fontconfig, the
+platform font read back by CDP), 103/103 at both. Not tested here: the
+owner's Segoe UI.
+
+PAD AND FLIP: Flip's alone (the Pad has no page bar).

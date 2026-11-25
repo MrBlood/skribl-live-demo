@@ -1149,7 +1149,13 @@
    only parts whose width varies). Below it every button keeps its glyph and its
    38px box. */
 :where(body[data-size="regular"]) .pb-tx { display: inline; }
-:where(body[data-size="regular"]) .pb { padding: 0 12px; }
+/* 10px a side, not 12 (the owner's A, Nov 24). Since the buttons took the
+   page's font (#1047), the labelled page bar at 12px ran 4px past a desk's
+   694px column in a wide face (Inter), so Delete's own gap (its auto margin)
+   had nothing left to take: 8px, where at 10px it stands apart by 32. Every
+   word kept; the Select and Move bars are the same bar and take the same.
+   The 620 and 645 above were measured at 12px, before #1047. */
+:where(body[data-size="regular"]) .pb { padding: 0 10px; }
 @media (max-width: 400px) {
   .pagebar { gap: 6px; padding: 7px 10px; }
   .pb { padding: 0 8px; }
