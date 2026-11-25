@@ -1120,10 +1120,10 @@ with sync_playwright() as p:
         jp.wait_for_timeout(1200)
         thanks = jp.evaluate("() => document.querySelector('[data-report-say]').textContent")
         reported = db("select reason, note from social_reports where kind = 'post' and target = ?", (pid,))
-        check("your own post's ⋯ says Bookmark (bookmarks), Copy link, Share…, Delete post; Copy link gives the link"
-              " (or says it to copy by hand); somebody else's says Bookmark, Copy link, Share…, Mute @them (mutes),"
-              " Report this post",
-              mine == ["Bookmark", "Copy link", "Share…", "Delete post"]
+        check("your own post's ⋯ says Bookmark (bookmarks), Pin to your page (pins), Copy link, Share…, Delete post;"
+              " Copy link gives the link (or says it to copy by hand); somebody else's says Bookmark, Copy link,"
+              " Share…, Mute @them (mutes), Report this post",
+              mine == ["Bookmark", "Pin to your page", "Copy link", "Share…", "Delete post"]
               and theirs == ["Bookmark", "Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
               and (copied == "Link copied." or copied.startswith("Here’s the link to copy: " + BASE + f"/social/p/{pid}")),
               f"mine {mine}; theirs {theirs}; copied {copied!r}")
@@ -3494,7 +3494,8 @@ print("PLAN " + json.dumps(out))
                          (".post-page .post-row [data-post-menu]", "#postSheet [data-act=report]"), "reportSheet", False, False))
             # Your own post that can be drawn back on has a card between the two since Her say (Nov 20): "Who can
             # draw back", Settings' pill in it (verify_socialdrawback 12 holds what it does).
-            WANT16 = {"your post's ⋯": [["Bookmark", "Copy link", "Share…"], ["Who can draw back"], ["Delete post"]],
+            WANT16 = {"your post's ⋯": [["Bookmark", "Pin to your page", "Copy link", "Share…"], ["Who can draw back"],
+                                        ["Delete post"]],
                       "their post's ⋯": [["Bookmark", "Copy link", "Share…", "Mute @ben"], ["Report this post", "Block @ben"]],
                       "a comment's ⋯": [["Bookmark", "Copy link", "Share…"], ["Remove from my post", "Report this comment"]],
                       "a person's ⋯": [["Mute @ben"], ["Report @ben", "Block @ben"]],
