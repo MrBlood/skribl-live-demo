@@ -53500,6 +53500,21 @@ alone; and through the real Pad, his drawing resting on his lines alone
 `verify_hostseams` holds `line_of` to the function that stores a line,
 and `verify_socialauth` 14 names the table.
 
+CALIBRATION, part 15 against its pair of servers for each tree: as built
+every row green; main red (it cannot run without the new columns). One
+break at a time, each red on its own row: the switch read as off (every
+two-hands row); his Pad's ground kept (his drawing's row); her photo kept
+in his drawing, and his view without her photo and song (each the photo
+row); hers alone serving his drawing (hers alone, and the photo row); his
+drawing resting on the picture of both (his picture's row, and the real
+Pad's); the block not read (the block row); the takedown not read (the
+takedown row); no `drop_post_hands` (her removal, and the cascade-off
+row); a two-hands draw-back drawn back on (both doors); a pen on its card
+(the card's row); no pill, and the script that switches views put away
+(the three views' step cannot go on); the card's `api` and its `poster`
+each left Skribl's (the card's row); a draw-back from before read as two
+hands (the old draw-back's row); the line of both not kept (Both's row).
+
 PAD AND FLIP: the Pad's second card is the Pad's (`editor_post.js`); Flip
 has no Draw back yet, and its page-for-page Draw back is meant to be the
 contribution model's first user once this works on the Pad.
