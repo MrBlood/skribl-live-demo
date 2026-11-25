@@ -2910,8 +2910,10 @@ with sync_playwright() as p:
               _late["whole"], str(_late))
         _sc.close()
 
-    # Space on a desk starts a Flip from anywhere, the page scrolled down to a drawer.
-    _dc = b.new_context(viewport={"width": 1280, "height": 900})
+    # Space on a desk starts a Flip from anywhere, the page scrolled down to a drawer:
+    # a desk where the drawer opens below the drawing (on a wider one it opens
+    # beside it and the page has nothing to scroll: lib/drawers.js, verify_drawerside).
+    _dc = b.new_context(viewport={"width": 960, "height": 900})
     _q = _drawn(_dc, "/flip")
     browsing.pad_drawer(_q, "draw"); _q.wait_for_timeout(1400)
     _q.evaluate("() => { window.scrollTo(0, document.documentElement.scrollHeight); document.activeElement && document.activeElement.blur(); }")
@@ -2919,7 +2921,7 @@ with sync_playwright() as p:
     _hid = _q.evaluate(INVIEW, "#pad")
     _q.keyboard.press("Space"); _q.wait_for_timeout(200); browsing.wait_scroll_still(_q)
     _shown = _q.evaluate(INVIEW, "#pad")
-    check("/flip at 1280x900, scrolled to an open drawer: Space plays it with the whole Flip in view",
+    check("/flip at 960x900 (the drawer below), scrolled to an open drawer: Space plays it with the whole Flip in view",
           not _hid["whole"] and _shown["whole"] and _q.evaluate("() => playing"), f"before {_hid}; on Space {_shown}")
     _dc.close()
 

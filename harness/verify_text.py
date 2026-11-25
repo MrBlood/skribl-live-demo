@@ -359,7 +359,8 @@ STUCK = """() => { const h = document.querySelector('.header'); if (!h) return 0
 AWAY = """(cv) => { const c = document.querySelector(cv).getBoundingClientRect(), s = document.getElementById('txSheet').getBoundingClientRect();
   const pl = document.getElementById('txPlace'), w = pl.hidden ? null : pl.getBoundingClientRect();
   const h = document.querySelector('.header, .flip-header, header'), top = Math.max(c.top, h ? h.getBoundingClientRect().bottom : 0, 0) + 12;
-  const foot = Math.min(c.bottom, s.top, innerHeight) - 12;
+  const under = s.width > 0 && s.left < c.right && s.right > c.left && s.top > c.top;   // below the drawing, not beside it
+  const foot = Math.min(c.bottom, under ? s.top : Infinity, innerHeight) - 12;
   for (const fy of [0.5, 0.2, 0.8]) for (const fx of [0.15, 0.85, 0.5]) {
     const x = c.left + c.width * fx, y = top + (foot - top) * fy;
     if (y <= top || y >= foot) continue;
@@ -1154,10 +1155,14 @@ with sync_playwright() as p:
                 small = [t for t in taps if t[1] < 44]
                 check(f"{dev_name} {theme}: every button is 44px and up, the field 16px",
                       not small and len(taps) >= 10 and fs >= 16, f"{small or len(taps)} buttons, field {fs}px")
-                w = g["words"]
+                w, sh = g["words"], g["sheet"]
+                # Apart, whichever way the drawer lies: below the drawing, or
+                # beside it on a desk (lib/drawers.js). Boxes are [top, bottom, left, right].
+                apart = (w is not None and sh is not None
+                         and (w[1] <= sh[0] + 0.5 or sh[1] <= w[0] + 0.5 or w[3] <= sh[2] + 0.5 or sh[3] <= w[2] + 0.5))
                 check(f"{dev_name} {theme}: the drawer never covers the words",
-                      w is not None and g["sheet"] is not None and w[1] <= g["sheet"][0] + 0.5 and w[1] <= g["canvas"][1] + 0.5,
-                      f"box {w}, drawer from {g['sheet']}, drawing {g['canvas']}")
+                      apart and w[1] <= g["canvas"][1] + 0.5,
+                      f"box {w}, drawer {sh}, drawing {g['canvas']}")
 
     # ------------------------------------------------------------------ 14
     if part("TEXT 14 — kind transitions"):
@@ -1531,6 +1536,8 @@ with sync_playwright() as p:
         for ed in ("pad", "flip"):
             c, q = open_editor(b, ed, dev=DESK, prefs={"style": "skribl", "size": "L", "speed": 4})
             ready(q)
+            settle(q)
+            d0 = q.evaluate(GEO, [CANVAS[ed], DOCK[ed]])
             x, y = grab(q)
             for i in range(1, 8):
                 q.mouse.move(x, y - 10 * i)
@@ -1542,9 +1549,13 @@ with sync_playwright() as p:
             q.wait_for_timeout(300)
             settle(q)
             d2 = q.evaluate(GEO, [CANVAS[ed], DOCK[ed]])
-            check(f"{ed} desk: the drawer steps aside while the words are dragged, and is back under the tools after, the words where they were let go",
-                  d1["veiled"] and not d2["veiled"] and d2["sheet"][0] >= d2["dock"][1] and d2["anchor"] == a_up,
-                  f"veiled {d1['veiled']} -> {d2['veiled']}; the drawer from {round(d2['sheet'][0])}, the tools end {round(d2['dock'][1])}; words {a_up} -> {d2['anchor']}")
+            # Back where it was: under the tools, or beside the drawing on a
+            # desk where the two fit (lib/drawers.js), which this one is.
+            check(f"{ed} desk: the drawer steps aside while the words are dragged, and is back where it was after (beside the drawing"
+                  f" on this desk), the words where they were let go",
+                  d1["veiled"] and not d2["veiled"] and d0["sheet"] is not None and d2["sheet"] is not None
+                  and all(abs(u - v) <= 1 for u, v in zip(d0["sheet"], d2["sheet"])) and d2["anchor"] == a_up,
+                  f"veiled {d1['veiled']} -> {d2['veiled']}; the drawer {[round(v) for v in d0['sheet'] or []]} -> {[round(v) for v in d2['sheet'] or []]}; words {a_up} -> {d2['anchor']}")
             c.close()
 
         # Reduce Motion: home and back, with nothing in between.

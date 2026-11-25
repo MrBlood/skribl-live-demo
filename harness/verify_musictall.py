@@ -78,7 +78,10 @@ def eds(name):
     return EDITORS if not PART or PART == name else []
 
 
-DESK = dict(viewport={"width": 1280, "height": 900})
+# A desk where the drawer opens below the drawing, the page keeping Hear the
+# loop under the thumb; on a wider one the drawer is beside the drawing
+# (lib/drawers.js) and grows down as the box does.
+DESK = dict(viewport={"width": 960, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
 FACES = (("phone", PHONE), ("desk", DESK))
 

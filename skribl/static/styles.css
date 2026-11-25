@@ -2696,6 +2696,13 @@ body.recoloring #canvas { cursor: crosshair !important; }
   .mt-pick-vs { display: block; }
   .mt-pick-vs .mt-pick-sep { display: none; }
 }
+/* Beside the drawing on a desk (lib/drawers.js) the drawer is phone-width, and
+   its longest words no longer fit one row beside the pair: the phone's two
+   rows there too, so its height holds as it changes (on one row it went 36px
+   to 37.8px as the words grew). */
+body.drawers-beside .drawer-side .mt-pick { min-height: 38px; }
+body.drawers-beside .drawer-side .mt-pick-vs { display: block; }
+body.drawers-beside .drawer-side .mt-pick-vs .mt-pick-sep { display: none; }
 .mt-pick-text b { color: var(--text-primary); font-weight: 650; }
 /* Skribl's mark, the two stars in the small violet words' ink (the menu's
    --accent-ink): before Skribl's pick in the Length door, and before the

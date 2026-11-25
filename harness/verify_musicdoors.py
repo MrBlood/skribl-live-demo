@@ -136,7 +136,11 @@ def part(name):
 def eds(name):
     """The editors a part runs on: none, when calibration asks for another part."""
     return EDITORS if part(name) else []
-DESK = dict(viewport={"width": 1280, "height": 900})
+# A desk where the drawer opens below the drawing, as these rows were written
+# for; on a wider one it opens beside it (lib/drawers.js, verify_drawerside),
+# and BESIDE is that, for the one line's height.
+DESK = dict(viewport={"width": 960, "height": 900})
+BESIDE = dict(viewport={"width": 1440, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
 WEARS = r"""([sel, tok]) => { const e = [...document.querySelectorAll(sel)].find(x => !x.closest('[hidden]'));
   if (!e) return null; const p = document.createElement('i'); p.style.cssText = 'position:absolute;width:0;height:0;background-color:' + tok;
@@ -699,7 +703,7 @@ with sync_playwright() as pw:
     for _n, _p in eds("line"):
         hs = {}
         for dev, o in (("320", dict(PHONE, viewport={"width": 320, "height": 700})), ("375", dict(PHONE, viewport={"width": 375, "height": 760})),
-                       ("390", dict(PHONE, viewport={"width": 390, "height": 844})), ("phone", PHONE), ("desk", DESK)):
+                       ("390", dict(PHONE, viewport={"width": 390, "height": 844})), ("phone", PHONE), ("desk", DESK), ("beside", BESIDE)):
             c, pg, _ = editor(b, _n, _p, opts=o, door="exact")
             H = "() => Math.round(document.getElementById('musicPickLine').getBoundingClientRect().height * 10) / 10"
             row = [pg.evaluate(H)]
@@ -712,8 +716,9 @@ with sync_playwright() as pw:
             pg.evaluate(LONGEST); pg.wait_for_timeout(150); row.append(pg.evaluate(H))
             hs[dev] = (row, pg.evaluate("() => document.getElementById('musicPickText').textContent"))
             c.close()
-        check(f"{_n}: the one line's height never changes as it says other things: two rows on a phone, 320 to 402px, one on a desk as tall as the Undo and Redo",
-              all(len(set(r)) == 1 for r, _ in hs.values()) and all(36 < hs[d][0][0] < 45 for d in ("320", "375", "390", "phone"))
+        check(f"{_n}: the one line's height never changes as it says other things: two rows on a phone, 320 to 402px, and"
+              " beside the drawing on a desk (phone-width there); one on a desk where the drawer is below, as tall as the Undo and Redo",
+              all(len(set(r)) == 1 for r, _ in hs.values()) and all(36 < hs[d][0][0] < 45 for d in ("320", "375", "390", "phone", "beside"))
               and abs(hs["desk"][0][0] - 36) < 0.6,
               f"the pick, a change, the way back, a tempo, the longest words: {hs}")
 
