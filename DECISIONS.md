@@ -53876,3 +53876,156 @@ drawing. No colour or word changes.
 
 PAD AND FLIP: shared, one rule for both editors, each sliding what sits
 under its own drawing.
+
+## After v330 -- Drawers beside the drawing on a desk: built
+
+The owner's "All yes" (Nov 25, about 1:00 PM) to the Drawers Beside the
+Drawing mock ("Drawers beside the drawing on a desk, mocked", above), built
+the same afternoon (#1105).
+
+THE RULE, ONE FOR BOTH EDITORS (`lib/drawers.js` sideApply, asked by the
+drawer machine as a drawer opens). With a mouse (hover and a fine pointer)
+and where the drawing fits whole beside a 392px drawer, the drawer (its
+media card for Photo and Music) is a column at the drawing's right, its top
+level with the drawing's with the page at its top, held to the screen and
+scrolling inside itself when it is taller. The drawing and what sits under
+it (the Pad's stage and dock; Flip's stage, page strip and dock) slide left
+until the drawing ends 16px from the drawer, and no further: the Pad 192px
+on a 1440x900 desk, 120 on 1536x864, 72 on 1920x1080; Flip 60 on 1440x900
+and none from 1536px up. The header stays. Elsewhere (a window too narrow,
+900px; a tablet; a phone) a drawer opens below as before, and a window
+resized with a drawer open decides again. The tools tray is no drawer here.
+
+THE DRAWER'S RIGHT EDGE IS MEASURED. The page keeps a scrollbar's gutter at
+each edge (`styles.css`, html's scrollbar-gutter: stable both-edges, 10px on
+a desk), which `clientWidth` does not count, and a drawer held to the screen
+ends 16px in from the gutter: reckoned from `clientWidth`, the drawing
+cleared the drawer by 6px, not 16 (`verify_drawerside`'s first run).
+
+THE SLIDE IS A RELATIVE OFFSET (`styles.css` body.drawers-beside, each of
+those elements position: relative already, so nothing fixed inside them is
+caught as a transform would catch it), glided by the script with Web
+Animations so the elements' own transitions (the dock's fade) stay theirs:
+280ms there and back; the drawer comes in from the right; under Reduce
+Motion both simply move. At the slide's end the page hears a resize, as
+`lib/chromefit.js` sends one when the canvas moves: Flip keeps its
+drawing's place for its brush ring (`_padRectCached`, cleared on a resize),
+which would otherwise sit as far from the pointer as the drawing slid.
+(The strokes themselves read the drawing's place afresh: the calibration
+showed it, the resize taken out and every stroke row still green, so the
+ring got a row of its own.)
+
+A PRESS ON THE DRAWING PUTS A DRAWER AWAY, as below, each editor by its own
+rule: the Pad's first press draws nothing and the drawing glides home;
+Flip's draws, and its drawer goes on the click that ends the stroke, so the
+drawing holds still while the pen is down and glides home after. Written
+first as a hold in `lib/drawers.js` (the drawing kept where it was until
+the pen lifted), and taken out: the calibration broke it and every row
+stayed green, because Flip never puts a drawer away on the press. The row
+stays, a guard for that order (shown red by Flip's tap-away moved to the
+press).
+
+WHILE A DRAWER IS BESIDE, THE REVEALS MOVE ITS COLUMN, NEVER THE PAGE
+(`lib/drawerdetent.js` sideBox): the drawer opens at its top
+(revealPanelEnd); what a tile opens shows by the column gliding just far
+enough for its end, or until the tile tapped is 8px under the column's top,
+whichever comes first (showOpened: on a 1280x560 desk Flip's Feel cannot
+show both, and the tile stays, as a Music door's does); the Music doors'
+own sum does the same (`lib/musicdrawer.js`): Restart's door with a song
+in, 946px, glides the column, its tile still in view. The eyedropper's veil
+steps nowhere: nothing covers the drawing.
+
+MUSIC'S ONE LINE BESIDE THE DRAWING is the phone's two rows (styles.css):
+the drawer is a phone's width there, and the line kept its height as it
+said other things only in the phone's shape (`verify_musicdoors`).
+
+A SHORT PAGE'S LITTLE PICTURE STAYS CRISP IN A PHONE-WIDE LANE
+(`lib/musictimeline.js`). Beside the drawing the music drawer is a phone's
+width, and on a desk's screen (one pixel to a point) Flip's quarter-second
+page drew its picture 7px tall, whose 3px corners met in the middle: its
+frame's sides lay half on one pixel and half on the next, 128 off the
+purple (`verify_musiclane`, Flip on a desk in dark, red beside, green
+below). The corners now leave each side two of the screen's pixels
+straight, the picture's clip the same; a picture at the lane's height
+keeps its 4px corners.
+
+THE CHECKS, `verify_drawerside.py` (new), 39 rows: on the Pad and Flip at
+1440x900, 1536x864 and 1920x1080, each drawer beside (392px at the
+drawing's right, ending 16px in from where a drawer held to the screen can
+end, its top level with the drawing's; the drawing whole at its own size,
+16px clear of it; the page not scrolled); the slide only as far as needed,
+with the dock (and Flip's strip) by as much and the header still, and all
+of it back on closing; the drawing's left read on every frame, opening and
+closing, over three frames or more with no step past 60% of the way, one
+frame under Reduce Motion; the pen's Feel on 1280x600 and 1280x560 desks,
+both ways of the column's rule, and Restart's door with a song on a
+1440x900 one, shown by the column, the page still; the eyedropper leaving
+the drawer out; a press on the drawing putting a drawer away, Flip's
+drawing still while the pen is down (every point where it is drawn), and a
+stroke after the drawer has gone landing where it is drawn, on both
+editors; Flip's brush ring on the pointer before a drawer, beside and home
+again; below on a 900x800 desk, a tablet and a phone; a resize deciding
+again; the tools tray never beside.
+
+CALIBRATED, each break in its own tree with its own server: on main,
+`verify_drawerside` 28 of 39 rows red (the 11 green hold on main too:
+below on a narrow desk, a tablet and a phone, the tools tray, strokes with
+no drawer beside); and seventeen breaks, each red on its own rows: nothing
+slides, on the Pad (14) and on Flip (14); a finger counted as a mouse (1,
+Flip's tablet: the Pad's drawing does not fit beside at that size anyway);
+40px further than needed (12); no glide (2); closing leaves it slid (8);
+the dock and the strip left behind (4); the drawer's top at the screen's
+(8); a tile's choices scroll the page (5); a door scrolls the page (1);
+the eyedropper puts it away (2); no resize at the slide's end (1, the brush
+ring: the first calibration had no ring row, and every row stayed green);
+a resize decides nothing (2); the tools tray beside too (2); the drawer's
+edge read as the screen's (8); a tile tapped may leave the column (2);
+Flip's tap-away moved to the press (1). The older suites' changed rows the
+same way: Music's line beside, red without its three rules (2); the drag
+row, red with the drawer 40px off after the drag (2); full screen, red on
+main (2) and with the drawer's top at the screen's (2). `verify_text`'s
+"the drawer never covers the words" cannot be made red beside by moving
+the drawer (the suite places the words where they show, its AWAY reading
+the page, and a drawer beside covers none of the drawing): its predicate
+was shown on boxes known bad and good, and its phone rows, where the
+drawer spans the width, ask what they asked before.
+
+SUITES WRITTEN FOR A DRAWER BELOW keep their desk where it still opens
+below, and say so: `verify_drawerreveal` (960x800, its short desk 720x560:
+at 800 Flip's drawing, small on a short screen, fits beside),
+`verify_musicdoors`, `verify_musictall`, `verify_musictempo`,
+`verify_musicundo` (960x900), `verify_parity`'s Flip Space row (960x900).
+`verify_musicdoors` reads the one line beside the drawing too;
+`verify_text` reads "the drawer never covers the words" as two boxes apart
+whichever way the drawer lies, and the drag row as the drawer back where it
+was; `verify_drawfull` reads the drawer beside the drawing in full screen as
+out of it (it was "under the dock").
+
+THE SUITES, here, three at a time on their own servers, a red run again
+alone before it was believed: the fifty-three that open a drawer on a desk
+found what the paragraphs above fixed (the player's bytes, the lane's
+frame) and the rows that assumed a drawer below; the new suite's own first
+runs found the rest (the gutter, the column's tile, the Pad's first press,
+Flip's small drawing at 1024 and 800). On the final code, all green:
+`verify_drawerside` 39/39, `verify_text` 245/245, `verify_ux` 491/491,
+`verify_parity` 436/436, `verify_musicdoors` 118/118,
+`verify_drawerreveal` 217/217, `verify_a11y` 478/478, `verify_layout`
+257/257, `verify_tools` 142/142, `verify_socialdrawback` 147/147,
+`verify_drawtiles` 289/289, `verify_musictall` 72/72, `verify_tray`
+153/153, `verify_drawfull` 48/48, `verify_sizeclass` 89/89,
+`verify_pointerpad` 56/56; and, alone after their own fixes,
+`verify_musiclane` 44/44, `verify_musictempo` 56/56, `verify_musicundo`
+106/106, `verify_player_isolation` 85/85, `verify_jsstrip` 35/35.
+`verify_recolor` and `verify_hello` each read rows red here in this box's
+Inter (116/118, 49/50), the same on main here, and are green in CI's face
+(118/118, 50/50). The full battery was not run; main's run after the merge
+is it.
+
+PAD AND FLIP: shared (`lib/drawers.js`, `lib/drawerdetent.js`, one rule);
+each editor says what slides with its drawing, with the machine's `side()`,
+from its own script (`editor_bar.js`, `flip.js`): said first in `app.js`'s
+config, it cost the link player 60 bytes it never runs and went over the
+player's ratchet (`verify_player_isolation`, `verify_jsstrip`), so it was
+carved as `add()` was for Text.
+
+NOT TESTED HERE: WebKit (Safari on a Mac with a mouse), SF and Segoe UI.
