@@ -246,9 +246,11 @@
   /* WHETHER A DRAWING CAN BE DRAWN BACK ON, as the site will say when it is
      posted (drawback.py drawable(), read here so the line shows only where
      it is true; verify_socialdrawback holds the two side by side): one page,
-     played as a replay, no loop, nothing kept under it, no beat, no
-     recolours; or since Nov 25 a Flip, page for page, with none of those (a
-     page that draws itself plays hers, then his). has() is the site's own "is there one": an empty list or an
+     played as a replay, no loop, nothing kept under it, no beat; or since
+     Nov 25 a Flip, page for page, with none of those (a page that draws
+     itself plays hers, then his). Recolours are no bar since Nov 25 (the
+     owner's yes to the Recolor mock: the site keeps each hand's to its own
+     lines). has() is the site's own "is there one": an empty list or an
      empty set of them is none (a list's keys are its places, so one line
      reads both). */
   function has(v) {
@@ -268,16 +270,11 @@
     if (p.loop != null || p.under != null || p.beat != null) return false;
     /* A Flip, page for page since Nov 25 (drawback.py): a page that draws
        itself too, playing hers then his. */
-    var pages = pagesOf(p);
-    if (pages) {
-      for (var i = 0; i < pages.length; i++) if (has(pages[i].recolors)) return false;
-      return !has(p.recolors);
-    }
+    if (pagesOf(p)) return true;
     if (!Array.isArray(p.frames) || p.frames.length !== 1) return false;
     var f = p.frames[0];
     if (!f || typeof f !== 'object' || Array.isArray(f)) return false;
-    if (p.playbackMode != null && p.playbackMode !== 'replay') return false;
-    return !has(f.recolors) && !has(p.recolors);
+    return p.playbackMode == null || p.playbackMode === 'replay';
   }
   /* The line is there while what is attached can be drawn back on. */
   function whoFit() {

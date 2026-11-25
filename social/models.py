@@ -409,8 +409,9 @@ class Post(SocialBase):
     #: for a Flip since Nov 25, "loop", "under", "beat"), so the row offers
     #: no pen where it can't be done. None: it can, or a post from before the
     #: column, whose pen stays and is answered when opened (and so is a
-    #: Flip's "pages" from before Flips could be drawn back on, and its
-    #: "draw" from the morning a page that draws itself was refused).
+    #: Flip's "pages" from before Flips could be drawn back on, its "draw"
+    #: from the morning a page that draws itself was refused, and
+    #: "recolors" from before recolours could be drawn back on, Nov 25).
     undrawable = sa.Column(sa.String(12), nullable=True)
     #: HER SAY (the owner's "All yes to everything", Nov 20, to the Her say
     #: mock): HIDDEN FROM THE POST IT DRAWS BACK ON, by that post's maker

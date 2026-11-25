@@ -29,10 +29,18 @@ keeps the original's ground (its colour) and neither picture, so ink laid
 down before a take began (rare: the Pad starts a take with the first
 stroke) is not carried. A photo under a drawing is: see below.
 
-WHAT CAN BE DRAWN BACK ON, FOR NOW: a drawing of one page with no
-recolours (recolours index the strokes by number and time, which a join would
-have to carry over too: a step of its own). drawable() says which, and the
-row offers Draw back only where it can be done (posts.py, the pen).
+WHAT CAN BE DRAWN BACK ON: a drawing of one page. drawable() says which,
+and the row offers Draw back only where it can be done (posts.py, the pen).
+
+RECOLOURS TOO (the owner's "all yes", Nov 25, to the Recolor While Drawing
+Back mock; Two Hands' fifth answer: "each person recolours only their own
+strokes"). A drawing with recolours can be drawn back on, and an answer can
+carry its own: the Pad's Recolor finds only his lines (hers lie on a layer
+of their own, lib/drawback.js). A recolour moment names its line by number
+and the moment by how many points there were, so the join keeps each
+hand's moments to its own lines (_moments): hers as she made them, his moved
+past hers. Played, her lines draw in and take their colours where she gave
+them, then his do the same.
 
 AND A FLIP, PAGE FOR PAGE (the owner's "all yes", Nov 25, to the Flip Draw
 Back mock: five answers, A each). One of his pages for each of hers, in her
@@ -102,6 +110,8 @@ def own(original, answer):
     of, af = _frame0(original), _frame0(answer)
     frame = {"strokes": [dict(p) for p in _points(af)], "strokeGroups": _groups(af, len(_points(af))),
              "background": of.get("background")}
+    if _recolors(af):
+        frame["recolors"] = _recolors(af)     # his, to his own lines, as he made them
     out = {"version": answer.get("version", 2), "schemaVersion": answer.get("schemaVersion", 2),
            "playbackMode": "replay", "pauseMode": answer.get("pauseMode") or "tight", "fps": None,
            "frames": [frame], "canvasSize": original.get("canvasSize")}
@@ -202,8 +212,6 @@ def _pages_drawable(payload, pages, answer):
         return "photo"
     if answer and (any(_truthy(f.get("music")) for f in pages) or _truthy(payload.get("music"))):
         return "music"
-    if any(f.get("recolors") for f in pages) or payload.get("recolors"):
-        return "recolors"
     return None
 
 
@@ -218,9 +226,11 @@ def _truthy(v):
 
 def drawable(payload, answer=False):
     """None when `payload` can be drawn back on, else why not: "pages" (no
-    frames, or pages that are not a Flip's), "recolors"; for a Flip
-    (flip_pages, page for page since Nov 25) "loop", "under" or "beat", the
-    first step's limits. (A two-hands
+    frames, or pages that are not a Flip's); for a Flip (flip_pages, page
+    for page since Nov 25) "loop", "under" or "beat", the first step's
+    limits. Recolours are no bar since Nov 25 (the join keeps each hand's to
+    its own lines: _moments); a post from before says "recolors" and keeps
+    its pen (posts.py). (A two-hands
     draw-back is not drawn back on yet, whatever its drawing: its post says
     "hands", posts.py.) With `answer`,
     whether it can be the strokes of an answer: then a picture under it
@@ -243,8 +253,6 @@ def drawable(payload, answer=False):
         return "photo"
     if answer and (_truthy(f0.get("music")) or _truthy(payload.get("music"))):
         return "music"
-    if f0.get("recolors") or payload.get("recolors"):
-        return "recolors"
     return None
 
 
@@ -264,6 +272,49 @@ def _groups(f0, n):
 def _t(p):
     t = p.get("t")
     return t if isinstance(t, (int, float)) and not isinstance(t, bool) else 0
+
+
+def _count(v):
+    """`v` as a whole number from 0 (lib/recolorplay.js whole()), or None."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v or v in (float("inf"), float("-inf")):
+        return None
+    return int(v) if v >= 0 and float(v).is_integer() else None
+
+
+def _recolors(f):
+    """A page's recolour moments, each a copy, or []."""
+    lst = f.get("recolors") if isinstance(f, dict) else None
+    return [dict(e) for e in lst if isinstance(e, dict)] if isinstance(lst, list) else []
+
+
+def _moments(of, af, strokes):
+    """Each hand's recolour moments on a joined page (the owner's "all yes",
+    Nov 25, to the Recolor mock: each person recolours only their own lines),
+    or None when there are none. A moment names its line by group (`g`),
+    when it was made by how many points the page had (`n`) and its gesture
+    (`k`: moments that share one are one, lib/recolorplay.js). Hers come
+    first, as she made them: her groups and her points open the page. His
+    follow, each moved past hers: his `g` after her groups, his `n` after her
+    points, his `k` after her last. A moment's clock (`t`, where it has one)
+    is the joined page's time of the point before it, so it reads with the
+    page it is on."""
+    hers, his = _recolors(of), _recolors(af)
+    if not hers and not his:
+        return None
+    ops = _points(of)
+    by = {"g": len(_groups(of, len(ops))), "n": len(ops),
+          "k": max([k for k in (_count(e.get("k")) for e in hers) if k is not None], default=-1) + 1}
+    for e in his:
+        for key, add in by.items():
+            v = _count(e.get(key))
+            if v is not None:
+                e[key] = v + add
+    out = hers + his
+    for e in out:
+        n = _count(e.get("n"))
+        if "t" in e and n and n <= len(strokes):
+            e["t"] = _t(strokes[n - 1])
+    return out
 
 
 def played(points, pause_mode):
@@ -349,6 +400,9 @@ def _join_pages(original, answer):
             strokes[0]["start"] = True
         strokes += _timed(aps, (_t(strokes[-1]) if strokes else 0) + PAUSE_CAPS["tight"])
         frame = {"strokes": strokes, "strokeGroups": _groups(of, len(ops)) + _groups(af, len(aps))}
+        moments = _moments(of, af, strokes)
+        if moments:
+            frame["recolors"] = moments
         if i == 0:
             frame.update(photo=_media_of(original, of, "photo"), music=_media_of(original, of, "music"))
         frames.append(_her_page(of, frame))
@@ -370,7 +424,10 @@ def _own_pages(original, answer):
         aps = [dict(p) for p in _points(af)]
         if aps:
             aps[0]["start"] = True
-        frames.append(_her_page(of, {"strokes": aps, "strokeGroups": _groups(af, len(aps))}))
+        page = {"strokes": aps, "strokeGroups": _groups(af, len(aps))}
+        if _recolors(af):
+            page["recolors"] = _recolors(af)
+        frames.append(_her_page(of, page))
     return _paged(original, answer, frames)
 
 
@@ -434,6 +491,10 @@ def join(original, answer):
     frame = {"strokes": strokes,
              "strokeGroups": _groups(of, len(ops)) + _groups(af, len(aps)),
              "background": of.get("background"), "photo": photo, "music": music}
+    # EACH HAND'S RECOLOURS, to its own lines (_moments).
+    moments = _moments(of, af, strokes)
+    if moments:
+        frame["recolors"] = moments
     out = {"version": answer.get("version", 2), "schemaVersion": answer.get("schemaVersion", 2),
            "playbackMode": "replay", "pauseMode": answer.get("pauseMode") or "tight", "fps": None,
            "frames": [frame], "canvasSize": original.get("canvasSize")}

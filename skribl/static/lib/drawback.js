@@ -34,11 +34,21 @@
  * WHAT STEPS ASIDE WHILE DRAWING BACK (the owner's "All yes", Nov 19): the
  * eraser (a draw-back replays as one drawing, so an eraser over her lines
  * would erase them too: "you add, never erase"; Undo still takes back a line
- * of yours), Recolour, and the background: her paper's colour and the
- * picture and music drawer ("the original reserves the right for a
- * background", the owner's own words). Each is dimmed and, tapped, says why
- * in the editor's own toast. The eraser is held at the one switch every way
- * to it goes through (setTool: its button, its key, Tune's), so none slips by.
+ * of yours) and the background: her paper's colour and the picture and music
+ * drawer ("the original reserves the right for a background", the owner's
+ * own words). Each is dimmed and, tapped, says why in the editor's own
+ * toast. The eraser is held at the one switch every way to it goes through
+ * (setTool: its button, its key, Tune's), so none slips by.
+ *
+ * RECOLOR WORKS, ON HIS LINES (the owner's "all yes", Nov 25, to the Recolor
+ * While Drawing Back mock; Two Hands' fifth answer: "each person recolours
+ * only their own strokes"). It stepped aside too until then. Her lines are
+ * on this layer, never among the editor's, so Recolor finds only his; a tap
+ * that finds none of his but lands on one of hers says whose it is
+ * (tapOnHers, asked by lib/recolor.js as SkriblDrawBack.hers: "That line is
+ * Ana's. Recolor changes yours."),
+ * and Recolor's lens lays this layer in, faint as shown (under()). The site
+ * keeps each hand's recolours to its own lines (social/drawback.py).
  *
  * Pad and Flip: one module. A FLIP, PAGE FOR PAGE (the owner's "all yes",
  * Nov 25, to the Flip Draw Back mock, five answers A): her pages are kept page
@@ -310,7 +320,6 @@
   function timingWords() { return 'The timing is ' + hers() + ' while drawing back.'; }
   function shapeWords() { return 'The shape is ' + hers() + ' while drawing back.'; }
   var ASIDE = [
-    { sel: '#recolorBtn', words: function () { return 'Recolour is off while drawing back.'; } },
     { sel: '.bg-swatch[data-bg], #customBgBtn, #customBgInput', words: function () { return 'The background is ' + hers() + '.'; } },
     { sel: '#mediaOpenBtn', words: function () { return 'The background and music are ' + hers() + '.'; } }
   ];
@@ -323,6 +332,37 @@
     if (!run) return false;
     tell(kind === 'timing' ? timingWords() : kind === 'shape' ? shapeWords() : pagesWords(), near || null);
     return true;
+  }
+
+  /* ---- Recolor, on his lines (the header's RECOLOR WORKS) ------------------ */
+  /* Whether one of her lines on the page under the pen lies within `slack` of
+     `p` (both in her drawing's units), while her lines show; if so, says
+     whose it is, in the editor's own toast. Asked by lib/recolor.js when a
+     tap finds none of his (SkriblDrawBack.hers). */
+  function tapOnHers(p, slack) {
+    if (!run || !p || !STATES[run.state].alpha) return false;
+    var page = run.pages[run.page] || [], s = Math.max(0, +slack || 0);
+    for (var k = 0; k < page.length; k++) {
+      var st = page[k];
+      for (var j = 0; j < st.length; j++) {
+        var b = st[j], a = j ? st[j - 1] : b;
+        if (b.erase || a.erase) continue;
+        var dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy, t = 0;
+        if (L > 0) { t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / L; t = t < 0 ? 0 : t > 1 ? 1 : t; }
+        var d = Math.hypot(a.x + t * dx - p.x, a.y + t * dy - p.y) - Math.max(a.size || 1, b.size || 1) / 2;
+        if (d <= s) {
+          tell(run.own ? 'That line is in the original. Recolor changes your new lines.'
+                       : 'That line is ' + (run.first ? run.first + '\u2019s' : 'theirs') + '. Recolor changes yours.');
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  /* Her layer as shown (faint or full), for Recolor's lens; null when hidden
+     or not drawing back. */
+  function under() {
+    return run && STATES[run.state].alpha ? run.guide : null;
   }
   function guard() {
     if (guarded) return;
@@ -493,7 +533,7 @@
   }
 
   window.SkriblDrawBack = {
-    take: take, stop: stop, paintUnder: paintUnder, page: page, inkPage: inkPage, refuse: refuse,
+    take: take, stop: stop, paintUnder: paintUnder, page: page, inkPage: inkPage, refuse: refuse, hers: tapOnHers, under: under,
     state: function () {
       return run ? { theirs: STATES[run.state].key, strokes: strokesOf().length, size: run.size, photo: !!run.photo,
                      pages: run.pages.length, page: run.page } : null;

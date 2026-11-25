@@ -702,11 +702,13 @@ def cards(entries, viewer, words=True, aligned=False):
         by = e.get("by")
         mine = viewer is not None and viewer.id == who.id
         # WHETHER ITS DRAWING CAN BE DRAWN BACK ON AT ALL (a drawing of one
-        # page, no recolours: drawback.drawable). A photo or music is no bar
-        # since the owner's yes, Nov 19: a draw-back keeps the author's.
-        # Recolours are the post's `undrawable`, read when it was made; a
-        # post from before that keeps its pen, answered when opened ("photo"
-        # and "music" recorded before the yes bar nothing now).
+        # page: drawback.drawable). A photo or music is no bar since the
+        # owner's yes, Nov 19: a draw-back keeps the author's. What can't is
+        # the post's `undrawable`, read when it was made; a post from before
+        # that keeps its pen, answered when opened ("photo" and "music"
+        # recorded before the yes bar nothing now). Recolours are no bar since
+        # the owner's yes, Nov 25, to the Recolor mock (each hand's kept to
+        # its own lines), so a post that said "recolors" has its pen too.
         # A FLIP, PAGE FOR PAGE since Nov 25 (drawback.py): a Flip posted
         # since says what the first step can't do ("loop", "under", "beat")
         # or nothing; one posted before said "pages" for every Flip, so it
@@ -716,8 +718,8 @@ def cards(entries, viewer, words=True, aligned=False):
         und = getattr(p, "undrawable", None)
         kind = (sk or {}).get("kind")
         can_back = (e["kind"] == "p" and not down and sk is not None and not getattr(p, "two_hands", False)
-                    and ((kind == "pad" and und not in ("pages", "recolors", "hands"))
-                         or (kind == "flip" and und in (None, "pages", "draw"))))
+                    and ((kind == "pad" and und not in ("pages", "hands"))
+                         or (kind == "flip" and und in (None, "pages", "draw", "recolors"))))
         made[id(e)] = {"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
                        "plays": plays_text(sk["views"]) if sk else None,
                        "comments": said.get(key, 0),

@@ -56,6 +56,16 @@
  *
  * THE BAR HAS REDO BESIDE UNDO (the owner, with the lens): both press the
  * editor's own, and each is off when the editor's is.
+ *
+ * WHILE DRAWING BACK (the owner's "all yes", Nov 25, to the Recolor mock;
+ * Two Hands' fifth answer: "each person recolours only their own
+ * strokes"). Her lines lie on a layer of their own (lib/drawback.js), never
+ * among the editor's, so a tap finds only his. A tap (or a lifted aim) that
+ * finds none of his but lands on one of hers says whose it is
+ * (SkriblDrawBack.hers, "That line is Ana's. Recolor changes yours."); a
+ * drag says nothing. The lens lays her layer in too, faint as the drawing
+ * shows it (SkriblDrawBack.under), so her lines don't vanish under a
+ * finger; only his light.
  */
 (function () {
   'use strict';
@@ -439,6 +449,13 @@
       var B = shownBox(), bx = o.surface.width / (B.width || 1), by = o.surface.height / (B.height || 1), half = LENS_R / ZOOM;
       var sx = (p.cx - B.left - half) * bx, sy = (p.cy - B.top - half) * by, sw = 2 * half * bx, sh = 2 * half * by;
       blit(x, art, sx, sy, sw, sh, c0 - LENS_R, c0 - LENS_R, 2 * LENS_R, 2 * LENS_R);
+      // Her lines while drawing back, faint, as the drawing shows them (her
+      // layer is the drawing's size on the page, not its backing's).
+      var db = window.SkriblDrawBack, under = db && db.under ? db.under() : null;
+      if (under && under.width && o.surface.width) {
+        var ux = under.width / o.surface.width, uy = under.height / o.surface.height;
+        blit(x, under, sx * ux, sy * uy, sw * ux, sh * uy, c0 - LENS_R, c0 - LENS_R, 2 * LENS_R, 2 * LENS_R);
+      }
       // The light at the lens's own size (its glow as wide here as on the
       // drawing), the drawing's units ZOOM times larger round the point.
       if (lit && ix) {
@@ -721,11 +738,17 @@
       if (s.aim) {                         // let go: the lit line takes the colour
         var p = s.aim;
         aimStop();
-        tryAt(p);
+        if (!tryAt(p)) theirs(p);
       } else if (!s.moved) {
-        tryAt(s.from);
+        if (!tryAt(s.from)) theirs(s.from);
       }
       end(false);
+    }
+    /* None of his under a tap, while drawing back: one of hers there says
+       whose it is (the header's WHILE DRAWING BACK). */
+    function theirs(p) {
+      var db = window.SkriblDrawBack;
+      if (db && db.hers) db.hers(p, SLACK * perCss());
     }
     function cancel(e) { if (session && same(session, e)) end(false); }
     function end(pinch) {
@@ -746,21 +769,23 @@
       }
     }
 
+    /* The line under `p` takes the pen's colour. True when there is a line
+       of the editor's under it (whether or not its colour changed). */
     function tryAt(p) {
       var s = session;
-      if (!s || !ix) return;
+      if (!s || !ix) return false;
       var h = hit(ix, p.x, p.y, SLACK * perCss());
-      if (!h) return;
+      if (!h) return false;
       var line = lineOf(ix, h.g);
-      if (s.touched[line[0]]) return;
+      if (s.touched[line[0]]) return true;
       var hex = o.color(), pts = ix.pts, a = ix.st[line[0]], b = ix.st[line[1] + 1];
       var change = false;
       for (var i = a; i < b && !change; i++) if (tint(pts[i].color, hex) !== pts[i].color) change = true;
       for (var g = line[0]; g <= line[1]; g++) s.touched[g] = true;
-      if (!change) return;
+      if (!change) return true;
       if (!s.changed && o.begin) o.begin();
       run.hold();
-      if (!o.apply(line[0], line[1], hex, h.i)) return;
+      if (!o.apply(line[0], line[1], hex, h.i)) return true;
       s.changed = true;
       hix = null;
       // The lines as they now stand: the editor may have put new point
@@ -768,6 +793,7 @@
       ix.pts = o.lines().pts;
       o.repaint();
       run.add(ix.pts.slice(a, b), h.i - a);
+      return true;
     }
 
     if (o.button) {
