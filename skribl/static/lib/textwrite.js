@@ -12,7 +12,7 @@
  * line's width, in the pen's own px and for the words alone; 1/4x to 16x,
  * where 1x is the hand's own pace, and how long the words will take). The
  * words show in the middle of the drawing that can be seen, inside a dashed
- * box that says Drag to move; a tap on the drawing moves them there. Write it
+ * box that says Drag to move, and only a drag moves them. Write it
  * puts them in: the drawer goes and the words write themselves on the
  * canvas, a stroke at a time, at the speed chosen.
  *
@@ -807,9 +807,17 @@
     return pos.x >= anchor.x + b.x0 && pos.x <= anchor.x + b.x1 &&
            pos.y >= anchor.y + b.y0 && pos.y <= anchor.y + b.y1;
   }
+  // ONCE THE WORDS ARE DOWN, ONLY A DRAG MOVES THEM (the owner, Nov 22, on a
+  // desk: "The text on a desktop moves wherever you click", and "all yes",
+  // Nov 24, to Cal's pick). A press away from them leaves them where they
+  // are, so a stray tap never sends them flying. Before any words show, a
+  // press still says where they will go, and with the drawer closed it opens
+  // Text there.
+  function showing() { return !!(els && !els.place.hidden && plan && plan.strokes.length && isOpen()); }
   function press(e, pos) {
     if (!editor || !bind()) return;
     if (e && onWords(pos) && grab(e)) return;
+    if (showing()) return;
     place(pos);
   }
   // The words where the finger holds them, on the drawing as it is now.
@@ -1395,8 +1403,8 @@
   }
   /* CHOOSING TEXT OPENS THE DRAWER (the owner's "A": picking Text "just closes
      the menu", and on a finished take the tap that came next was refused).
-     The words start in the middle of the drawing that can be seen; a drag, or
-     a tap where they should go, moves them. The drawer is opened first, so
+     The words start in the middle of the drawing that can be seen, and a
+     drag moves them (press, above). The drawer is opened first, so
      "can be seen" is with it open. */
   function start() {
     if (!editor || !bind()) return;
@@ -1429,8 +1437,9 @@
     var max = scroller.scrollHeight - window.innerHeight - scroller.scrollTop;
     return Math.max(-scroller.scrollTop, Math.min(want, max));
   }
-  /* The tap that says where the words go: it opens the drawer there, or, with
-     the drawer up, moves the words there. */
+  /* The tap that says where the words go: it opens the drawer there, or,
+     with the drawer up and no words yet, says where they will be. The checks
+     call it too (SkriblText.place), to put words where a step needs them. */
   function place(pos, opening) {
     if (!editor || !bind()) return;
     if (job) job.finish();

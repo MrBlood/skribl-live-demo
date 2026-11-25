@@ -29,7 +29,8 @@ Thickness and Speed as tiles. Each row holds a promise:
      the pen's colour, the drawer covering none of them, and nothing is ink
      yet; dragging the box moves the words by the drag, and they stay under
      the finger while the page glides (17); let go, they stay where they were
-     let go; a press elsewhere moves them there and the drawer stays still; a
+     let go; once they are down only a drag moves them, so a press away from
+     them leaves them be and the drawer stays still; a
      colour chosen while the drawer is up is the one they show in.
   5. WRITTEN IN TIME: Write it closes the drawer and the words write
      themselves, stroke by stroke over the time the drawer said; each point
@@ -169,7 +170,9 @@ Thickness and Speed as tiles. Each row holds a promise:
      middle, moves them by the drag's own amount and let go they stay,
      whether the press lands on their box (as Chromium sends it) or on
      the drawing under it (as the owner's iPhone did, where every touch
-     moved them to the finger). Pad and Flip.
+     moved them to the finger). Pad and Flip. And once they are down only a
+     drag moves them: a finger's press away from them, and on a desk a click,
+     leaves them where they are; a drag with the mouse still moves them.
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
@@ -351,6 +354,21 @@ STUCK = """() => { const h = document.querySelector('.header'); if (!h) return 0
   return (cs.position === 'sticky' || cs.position === 'fixed') ? (parseFloat(cs.top) || 0) + h.getBoundingClientRect().height : 0; }"""
 
 
+# A point on the drawing that can be seen and pressed: below the header, above
+# the drawer, and 40px clear of the words' box; None when there is none.
+AWAY = """(cv) => { const c = document.querySelector(cv).getBoundingClientRect(), s = document.getElementById('txSheet').getBoundingClientRect();
+  const pl = document.getElementById('txPlace'), w = pl.hidden ? null : pl.getBoundingClientRect();
+  const h = document.querySelector('.header, .flip-header, header'), top = Math.max(c.top, h ? h.getBoundingClientRect().bottom : 0, 0) + 12;
+  const foot = Math.min(c.bottom, s.top, innerHeight) - 12;
+  for (const fy of [0.5, 0.2, 0.8]) for (const fx of [0.15, 0.85, 0.5]) {
+    const x = c.left + c.width * fx, y = top + (foot - top) * fy;
+    if (y <= top || y >= foot) continue;
+    if (w && x > w.left - 40 && x < w.right + 40 && y > w.top - 40 && y < w.bottom + 40) continue;
+    const e = document.elementFromPoint(x, y); if (e && (e === document.querySelector(cv) || document.querySelector(cv).contains(e))) return [x, y];
+  }
+  return null; }"""
+
+
 def place_words(q, fx, fy):
     """A press that says where the words go, made where a person could make
     it. With the drawer up, the page shows it, and the top of the drawing can
@@ -363,6 +381,22 @@ def place_words(q, fx, fy):
         settle(q)
         x, y = at(q, fx, fy)
     tap(q, x, y)
+
+
+def set_words(q, fx, fy):
+    """Words already showing, set at FX, FY of the drawing. A press puts them
+    only before they show (once they do, only a drag moves them), so this is
+    the call that press makes, the page first scrolled to that part as
+    place_words scrolls it."""
+    settle(q)
+    x, y = at(q, fx, fy)
+    top, foot = q.evaluate(STUCK), q.evaluate("() => innerHeight")
+    if not (top + 8 <= y <= foot - 8):
+        q.mouse.wheel(0, y - (top + foot) / 2)
+        settle(q)
+    w, h = q.evaluate(LOGICAL[q._tx_editor])
+    q.evaluate("(p) => SkriblText.place(p)", {"x": w * fx, "y": h * fy})
+    settle(q)
 
 
 def press_grabber(q):
@@ -727,21 +761,25 @@ with sync_playwright() as p:
         a2 = q.evaluate("() => SkriblText.anchor()")
         check("let go, and the words stay where they were let go in the drawing",
               a1 is not None and a2 is not None and abs(a2["x"] - a1["x"]) <= 0.5 and abs(a2["y"] - a1["y"]) <= 0.5, f"{a1} -> {a2}")
-        # A press elsewhere on the drawing moves the words there, and the
-        # drawer stays where it is.
-        # Once the page has glided back, but before the drawer's own settling
-        # after its return is done (1.2 s): the press is the person's own, and
-        # that settling moves the page no more.
-        pressed = q.evaluate("""([fx, fy]) => new Promise(res => { const s = document.getElementById('txSheet'), out = [];
-          const r = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize();
-          const want = [lg.width * fx, lg.height * fy];
-          SkriblText.place({ x: want[0], y: want[1] });
-          const t0 = performance.now();
-          (function f() { out.push(Math.round(s.getBoundingClientRect().top)); if (performance.now() - t0 < 1400) requestAnimationFrame(f); else res({ want: want, tops: out }); })(); })""", [0.35, 0.8])
-        a3, want, tops = q.evaluate("() => SkriblText.anchor()"), pressed["want"], pressed["tops"]
-        check("a press elsewhere moves the words there, and the drawer stays still",
-              abs(a3["x"] - want[0]) <= 1 and abs(a3["y"] - want[1]) <= 1 and len(set(tops)) == 1,
-              f"words at {round(a3['x'])},{round(a3['y'])} for a press at {round(want[0])},{round(want[1])}; the drawer at {sorted(set(tops))[:4]}")
+        # ONCE THE WORDS ARE DOWN, ONLY A DRAG MOVES THEM (the owner, Nov 22,
+        # on a desk: "The text on a desktop moves wherever you click"; "all
+        # yes", Nov 24): a finger's press on the drawing away from the words
+        # leaves them where they are, and the drawer stays where it is. Once
+        # the page has glided back, but before the drawer's own settling after
+        # its return is done (1.2 s). It moved them to the press until then
+        # (this row read SkriblText.place's answer, never a press).
+        away = q.evaluate(AWAY, CANVAS["pad"])
+        a2b = q.evaluate("() => SkriblText.anchor()")
+        q.evaluate("""() => { window.__tops = []; const s = document.getElementById('txSheet'), t0 = performance.now();
+          (function f() { window.__tops.push(Math.round(s.getBoundingClientRect().top)); if (performance.now() - t0 < 1400) requestAnimationFrame(f); })(); }""")
+        if away:
+            q.touchscreen.tap(away[0], away[1])
+        q.wait_for_timeout(1500)
+        a3, tops = q.evaluate("() => SkriblText.anchor()"), q.evaluate("() => window.__tops")
+        check("a press away from the words leaves them where they are (only a drag moves them), and the drawer stays still",
+              away is not None and a2b is not None and a3 is not None
+              and abs(a3["x"] - a2b["x"]) <= 0.5 and abs(a3["y"] - a2b["y"]) <= 0.5 and len(set(tops)) == 1,
+              f"pressed at {away}; the words {a2b} -> {a3}; the drawer at {sorted(set(tops))[:4]}")
         # The pen changed while the drawer is up: the words show in its colour.
         q.evaluate("() => { color = '#e0452b'; }")
         q.wait_for_timeout(200)
@@ -1253,10 +1291,11 @@ with sync_playwright() as p:
         c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 4})
         n0 = q.evaluate(COUNT["pad"])
         choose_text(q)
+        # At the drawing's foot, where the drawer on the keyboard will be: the
+        # press first, as a person puts the words before they show.
+        place_words(q, 0.5, 0.97)
         type_words(q, "Hello")
         q.evaluate("() => document.getElementById('txField').blur()")
-        # At the drawing's foot, where the drawer on the keyboard will be.
-        place_words(q, 0.5, 0.97)
         settle(q)
         put = q.evaluate("() => SkriblText.anchor()")
         room0, before = q.evaluate(ROOM), q.evaluate(TYPING, [DOCK["pad"], STUCK])
@@ -1461,8 +1500,9 @@ with sync_playwright() as p:
                   g3["label"] is not None and (g3["label"][0] >= g3["stuck"] + 7 or abs(g3["row"][1] - (g3["vh"] - 8)) <= 2)
                   and g3["sheet"][1] >= g3["vh"] - 9,
                   f"the words' label from {round(g3['label'][0]) if g3['label'] else None}, the header to {round(g3['stuck'])}; the row ends {round(g3['row'][1])} of {g3['vh']}; the drawer ends {round(g3['sheet'][1])}")
-            # Lower down: a press moves the words there, a short drag, let go.
-            place_words(q, 0.5, 0.8)
+            # Lower down: the words set there (a press no longer moves words
+            # that show), a short drag, let go.
+            set_words(q, 0.5, 0.8)
             x, y = grab(q)
             for i in range(1, 6):
                 q.mouse.move(x, y + 4 * i)
@@ -2617,7 +2657,51 @@ with sync_playwright() as p:
                       and abs(a2["x"] - amid["x"]) <= 0.5 and abs(a2["y"] - amid["y"]) <= 0.5 and not q._tx_errors,
                       json.dumps({"pressed on": hit, "moved": moved, "for": [DX, DY], "held": amid, "let go": a2,
                                   "errors": q._tx_errors[:2]}))
+                if not through:
+                    # ...and a finger's press away from them leaves them where they are: only a drag moves them
+                    # (the owner's "all yes", Nov 24).
+                    away = q.evaluate(AWAY, CANVAS[ed])
+                    b4 = q.evaluate("() => SkriblText.anchor()")
+                    if away:
+                        q.touchscreen.tap(away[0], away[1])
+                    q.wait_for_timeout(600)
+                    af = q.evaluate("() => SkriblText.anchor()")
+                    check(f"{ed}: a finger's press on the drawing away from the words leaves them where they are",
+                          away is not None and b4 is not None and af is not None
+                          and abs(af["x"] - b4["x"]) <= 0.5 and abs(af["y"] - b4["y"]) <= 0.5,
+                          f"pressed at {away}; the words {b4} -> {af}")
                 c.close()
+        # ON A DESK, A CLICK AWAY FROM THE WORDS LEAVES THEM TOO (the owner, Nov 22: "The text on a desktop moves
+        # wherever you click. so if I click at the bottom, it moves there"), and a drag with the mouse still moves them.
+        for ed in ("pad", "flip"):
+            c, q = open_editor(b, ed, dev=DESK, prefs={"style": "print", "size": "M", "speed": 4})
+            choose_text(q)
+            type_words(q, "Hello")
+            settle(q)
+            away = q.evaluate(AWAY, CANVAS[ed])
+            b4 = q.evaluate("() => SkriblText.anchor()")
+            if away:
+                q.mouse.click(away[0], away[1])
+            q.wait_for_timeout(500)
+            af = q.evaluate("() => SkriblText.anchor()")
+            c0 = q.evaluate(BOXC)
+            q.mouse.move(c0[0], c0[1])
+            q.mouse.down()
+            q.mouse.move(c0[0] + 30, c0[1] - 20, steps=6)
+            # Read while it is held, once the page has glided home under it (17): let go, the drawer comes back
+            # and the page glides to it, the words going with the drawing.
+            q.wait_for_timeout(900)
+            c1 = q.evaluate(BOXC)
+            q.mouse.up()
+            q.wait_for_timeout(300)
+            check(f"{ed} on a desk: a click on the drawing away from the words leaves them where they are, and a drag with"
+                  f" the mouse still moves them by the drag",
+                  away is not None and b4 is not None and af is not None
+                  and abs(af["x"] - b4["x"]) <= 0.5 and abs(af["y"] - b4["y"]) <= 0.5
+                  and abs(c1[0] - c0[0] - 30) <= 1.5 and abs(c1[1] - c0[1] + 20) <= 1.5 and not q._tx_errors,
+                  f"clicked at {away}; the words {b4} -> {af}; dragged {[round(c1[0] - c0[0], 1), round(c1[1] - c0[1], 1)]}"
+                  f" for [30, -20]; errors {q._tx_errors[:2]}")
+            c.close()
 
     b.close()
 

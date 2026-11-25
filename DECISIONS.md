@@ -53170,3 +53170,39 @@ sheets) follows by `cssgraph.py --emit`; the player's sheet is unmoved.
 PAD AND FLIP: not for them. The editors' pills are held to AA with the app
 (their white action words too), as the record above says; this is the
 Gallery page's own 7:1.
+
+## After v330 -- Text: once the words are down, only a drag moves them
+
+The owner, Nov 22, on a desk: "The text on a desktop moves wherever you
+click. so if I click at the bottom, it moves there. if I click in upper
+right corner, it moves there". It was the design: with the drawer up, a
+press anywhere on the drawing moved the words to it. Cal's pick, a drag
+alone, and the owner's "all yes", Nov 24.
+
+THE CHANGE (`lib/textwrite.js` press, both editors): with words showing, a
+press on the drawing away from them leaves them where they are, so a stray
+tap never sends them flying; a press on them takes them, as their box
+does. Before any words show, a press still says where they will go, and
+with the drawer closed it opens Text there, as before. How it works says
+only a drag moves them.
+
+THE CHECKS. `verify_text` 4: a finger's press on the drawing away from the
+words, the drawer up, leaves them where they are and the drawer still (the
+row before read `SkriblText.place`'s own answer, never a press). 25: a
+finger's press away on the Pad and on Flip, and on a desk a click away
+(the owner's case), leave them, while a mouse drag still moves them by the
+drag. CALIBRATION, parts 4 and 25 alone on copies with servers of their
+own: as built, 8/8 and 8/8; the script as it was, the five press-away rows
+red (the words went to the press: on a desk from 353 to 106 across), every
+other row green.
+
+TWO SCENES THAT A PRESS SET UP. 16 put the words at the drawing's foot by
+a press there once they were typed, and 17 sent them lower down by a press
+once they showed; a press does neither now, so three rows read words that
+had not moved (242/245, beside others and alone). 16 presses first, before
+the words show, as a person puts them; 17 sets them by the call that press
+makes (`set_words`), the page scrolled to them first as before. Each row
+shows its scene did its work: 16's words pushed up from the foot while
+typed (916 to 779) and back to 916; 17's clear of the header once let go.
+
+PAD AND FLIP: shared (one script; each editor's press asks it).
