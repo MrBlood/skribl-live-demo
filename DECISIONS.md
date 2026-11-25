@@ -53710,3 +53710,45 @@ his); the composer refusing such a page (the two readings).
 
 PAD AND FLIP: the site's alone (the join and the rule); Flip already hands
 back his pages with her "draws itself" on them, and the Pad has no pages.
+
+## After v330 -- Recolor while drawing back, mocked: the owner's "all yes"
+
+The decided order's next step after Flip's Draw back ("Recolours on a
+draw-back", `docs/NEXT-SESSION.md`). Mocked Nov 25 as "Recolor While
+Drawing Back" (https://claude.ai/artifact/XUcG9eV3zEBTpGn936wneo), on the
+real Pad and Flip with two small changes served in place of the real files
+and nothing in the tree touched: Ana's balloons (How it works' Recolor
+example, drawn in ink and recoloured pink and purple) answered by Theo's
+fourth balloon, drawn in ink and recoloured orange; phone and desk, light
+and dark, now beside each option. The owner, about 11:20 AM: "All yes".
+Nothing is built yet.
+
+THE FOUR ANSWERS:
+
+1. Recolor works while drawing back, on his own lines only (Two Hands'
+   fifth answer: "each person recolours only their own strokes"). Her
+   lines lie on a layer of their own, so Recolor never finds them.
+2. A tap on her line says whose it is, in the editor's own toast: "That
+   line is Ana’s. Recolor changes yours." On one's own drawing: "That
+   line is in the original. Recolor changes your new lines." (A, Cal's
+   pick; B said nothing, which reads as broken; C put "Tap your line" in
+   the bar for everyone, every time, and still said nothing on hers.)
+3. The magnifier shows her lines faint, as the drawing does, and lights
+   only his. Without it her lines vanish inside the magnifier: the mock
+   showed both, held beside her knot.
+4. A drawing that has recolours gets the pen; today the site says
+   "recolors" and shows none. Posted, her lines draw in and take their
+   colours where she gave them, then his draw in and take his.
+
+WHAT THE MOCK FOUND, for the build. The toast is each editor's own (the
+Pad's `showToast`, Flip's `chip`), 18.1:1 in light and 13.0:1 in dark as
+painted, under the header, covering none of the Recolor bar's four
+buttons; the bar's words stay (two lines at 15px, nothing cut). Today's
+"Recolour is off while drawing back." goes, the one place the editor spelt
+it so (the button says Recolor). The join must keep each person's
+recolour moments to their own lines: his `g` after her groups, his `n`
+after her points and his `k` after hers, since moments that share a `k`
+are one moment (`lib/recolorplay.js`).
+
+PAD AND FLIP: shared (`lib/recolor.js`, `lib/drawback.js`, one each for
+both editors); on Flip, his lines on the page he is on, page for page.
