@@ -371,14 +371,17 @@
     mute row's two lines). Repost, or once the repost is yours Undo repost;
     and Quote, the bar's Make pencil, which opens the composer with the post
     small under the words. A drawing shown outside a post shows Quote alone
-    (only its maker posts it). posts.js fills it for the post whose repost
-    was pressed; no Cancel, as the ⋯ has none. #}
+    (only its maker posts it); TO ITS MAKER, Post it where Repost would be
+    (the owner's A, Nov 24, "Four Small Picks" 3), which opens the composer
+    with it attached for their own words (compose.js post). posts.js fills
+    it for the post whose repost was pressed; no Cancel, as the ⋯ has none. #}
 <div class="make post-sheet" id="repostSheet" hidden>
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="repostSheetTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="repostSheetTitle">Repost</h2>
     <div class="post-acts">
+      <button class="post-act mu-act rp-act" type="button" data-rp="post" hidden>{{ ic.plus() }}<span class="mu-words"><b>Post it</b><span class="mu-say">Put it in a post of yours, with your own words</span></span></button>
       <button class="post-act mu-act rp-act" type="button" data-rp="repost">{{ ic.repost() }}<span class="mu-words"><b data-rp-name>Repost</b><span class="mu-say" data-rp-say>Show it to the people who follow you</span></span></button>
       <button class="post-act mu-act rp-act" type="button" data-rp="quote">{{ ic.quote() }}<span class="mu-words"><b>Quote</b><span class="mu-say">Repost it with your own words, or a drawing</span></span></button>
     </div>
