@@ -429,9 +429,9 @@
      it away), the sheet goes down, every place on the page that shows it
      says so at once (data-pinned: the next ⋯ says Unpin), and the post that
      was pinned before (`was`) is told it is not; the site's toast says what
-     happened, with Undo, which puts back what was. One request at a time;
-     taps made meanwhile are where it ends up. A refusal puts it back, and
-     the toast says why in a bookmark's words, which name no bookmark. */
+     happened, with Undo, which puts back what was. One request at a time:
+     a tap made while one is out is let go. A refusal puts it back, and the
+     toast says why in a bookmark's words, which name no bookmark. */
   function pinShow(id, on) {
     Array.prototype.forEach.call(doc.querySelectorAll('.post-card[data-post], .post-page[data-post]'), function (el) {
       var o = postOf(el);
