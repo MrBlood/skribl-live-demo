@@ -1848,3 +1848,13 @@ body:not([data-size="compact"]):not(.one-page) :is(#pbCopy, #pbDraw, #addinbetwe
 .pagebar { background: transparent; }
 .frame :is(.num, .del, .pageops, .loopchip, .underlabel, .noplaytag), .frame .holdbadge.idle {
   background: var(--chip-glass); box-shadow: 0 0 0 var(--edge) var(--chip-line); }
+
+/* DRAWING BACK, PAGE FOR PAGE (lib/drawback.js; the owner's "all yes", Nov
+   25, answer 1): what would add, move or delete a page, or change how long
+   one lasts, steps aside, dimmed as the eraser is (styles.css, the Pad's
+   rule), still there to say why when tapped. Flip's alone: the add row, the
+   page bar's moves, Copy, Draw, Loop, Under and Delete, a tile's hold and ✕,
+   the ⋯'s halves of them, the pages per second and the menu's shape. */
+body.drawback :is(#addcopy, #addblank, #addinbetween, #addtween, #pbLeft, #pbRight, #pbCopy, #pbDraw, #pbLoop,
+  #pbUnder, #pbDel, #drawOnBtn, #fpsBeat, #fps button, #beatRoundSeg button, #canvasSeg button,
+  .frame .del, .frame .holdbadge, .pageops-item[data-db]) { opacity: .4; }

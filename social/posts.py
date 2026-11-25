@@ -707,9 +707,16 @@ def cards(entries, viewer, words=True, aligned=False):
         # Recolours are the post's `undrawable`, read when it was made; a
         # post from before that keeps its pen, answered when opened ("photo"
         # and "music" recorded before the yes bar nothing now).
-        can_back = (e["kind"] == "p" and not down and sk is not None and sk.get("kind") == "pad"
-                    and getattr(p, "undrawable", None) not in ("pages", "recolors", "hands")
-                    and not getattr(p, "two_hands", False))
+        # A FLIP, PAGE FOR PAGE since Nov 25 (drawback.py): a Flip posted
+        # since says what the first step can't do ("loop", "under", "beat",
+        # "draw") or nothing; one posted before said "pages" for every Flip,
+        # so it keeps its pen too, answered when opened, as a post from
+        # before the column always was.
+        und = getattr(p, "undrawable", None)
+        kind = (sk or {}).get("kind")
+        can_back = (e["kind"] == "p" and not down and sk is not None and not getattr(p, "two_hands", False)
+                    and ((kind == "pad" and und not in ("pages", "recolors", "hands"))
+                         or (kind == "flip" and und in (None, "pages"))))
         made[id(e)] = {"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
                        "plays": plays_text(sk["views"]) if sk else None,
                        "comments": said.get(key, 0),
@@ -1096,7 +1103,7 @@ def register(bp, skribl_blueprint="skribl"):
         strokes drawn on its shape."""
         import json
         from skribl import read_payload
-        from .drawback import _points, drawable, hands, join, own, same_shape, two_hands
+        from .drawback import all_points, drawable, hands, join, own, same_pages, same_shape, two_hands
         from .reposts import quotable
         if not isinstance(oid, str) or not (0 < len(oid) <= 32):
             return None, _json_error("drawback_gone", 404)
@@ -1110,8 +1117,8 @@ def register(bp, skribl_blueprint="skribl"):
         original = read_payload(on.post.skribl_id, viewer_id=me.public_id, inline_media=True)
         if original is None:
             return None, _json_error("drawback_gone", 404)
-        if not isinstance(payload, dict) or not _points((payload.get("frames") or [{}])[0]
-                                                        if isinstance(payload.get("frames"), list) else {}):
+        # Something drawn, on any page (a Flip's answer may leave pages empty).
+        if not isinstance(payload, dict) or not all_points(payload):
             return None, _json_error("no_drawing", 400)
         # Whose drawing it is that can't be joined yet, so the composer can
         # say how to fix it (a picture of yours can come out; hers can't).
@@ -1125,9 +1132,12 @@ def register(bp, skribl_blueprint="skribl"):
         # YOU ADD, NEVER ERASE (the owner's "All yes", Nov 19): a draw-back
         # replays as one drawing, so an eraser in his would erase hers too.
         # The Pad turns the eraser off while drawing back; this holds the line.
-        if any(p.get("erase") for p in _points(payload["frames"][0])):
+        if any(p.get("erase") for p in all_points(payload)):
             return None, _json_error("drawback_unsupported", 400, why="erase", on="yours")
-        if not same_shape(original, payload):
+        # ON HER SHAPE, AND PAGE FOR PAGE: one page of his for each of hers
+        # (a Flip's, answer 1; the Pad's one). Said as the shape is: Open
+        # Draw back again.
+        if not same_shape(original, payload) or not same_pages(original, payload):
             return None, _json_error("drawback_shape", 400)
         # WHOSE HANDS, AND HOW LONG EACH DREW (drawback.hands; the walkthrough's
         # mocks, choice 6): read from the two drawings before the join squeezes

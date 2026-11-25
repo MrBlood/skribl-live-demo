@@ -247,19 +247,36 @@
      posted (drawback.py drawable(), read here so the line shows only where
      it is true; verify_socialdrawback holds the two side by side): one page,
      played as a replay, no loop, nothing kept under it, no beat, no
-     recolours. has() is the site's own "is there one": an empty list or an
+     recolours; or since Nov 25 a Flip, page for page, with none of those and
+     no page that draws itself. has() is the site's own "is there one": an empty list or an
      empty set of them is none (a list's keys are its places, so one line
      reads both). */
   function has(v) {
     if (v && typeof v === 'object') return Object.keys(v).length > 0;
     return !!v;
   }
+  /* A FLIP'S PAGES (drawback.py flip_pages): more than one page, played as
+     pages; null for anything else (a drawing of one page, a Pad's). */
+  function pagesOf(p) {
+    var fr = p && typeof p === 'object' && Array.isArray(p.frames) ? p.frames : null;
+    if (!fr || fr.length < 2 || (p.playbackMode != null && p.playbackMode !== 'flip')) return null;
+    for (var i = 0; i < fr.length; i++) if (!fr[i] || typeof fr[i] !== 'object' || Array.isArray(fr[i])) return null;
+    return fr;
+  }
   function drawableHere(p) {
-    if (!p || typeof p !== 'object' || !Array.isArray(p.frames) || p.frames.length !== 1) return false;
+    if (!p || typeof p !== 'object') return false;
+    if (p.loop != null || p.under != null || p.beat != null) return false;
+    /* A Flip, page for page since Nov 25: none of its pages draws itself
+       (the first step's limits, drawback.py). */
+    var pages = pagesOf(p);
+    if (pages) {
+      for (var i = 0; i < pages.length; i++) if (pages[i].draw === true || has(pages[i].recolors)) return false;
+      return !has(p.recolors);
+    }
+    if (!Array.isArray(p.frames) || p.frames.length !== 1) return false;
     var f = p.frames[0];
     if (!f || typeof f !== 'object' || Array.isArray(f)) return false;
     if (p.playbackMode != null && p.playbackMode !== 'replay') return false;
-    if (p.loop != null || p.under != null || p.beat != null) return false;
     return !has(f.recolors) && !has(p.recolors);
   }
   /* The line is there while what is attached can be drawn back on. */
@@ -361,8 +378,9 @@
       if (!over || sending) return;
       if (att) { tell(sayBox, say('one_drawing')); return; }
       tell(sayBox, '');
-      /* Drawing back, Draw opens the Pad with theirs under the pen again. */
-      if (back && back.payload && kind === 'pad') { over.underlay({ payload: back.payload, first: back.first, own: !!back.own }, chip); return; }
+      /* Drawing back, Draw opens the Pad with theirs under the pen again
+         (Flip, a Flip's pages). */
+      if (back && back.payload && kind === (back.kind || 'pad')) { over.underlay({ payload: back.payload, first: back.first, own: !!back.own }, chip); return; }
       over.open(chip);
     });
   });
@@ -563,7 +581,36 @@
      is the one that counts): theirs as it plays, squeezed to about three
      seconds, then yours at your pace, on their shape and paper. */
   var OVERTURE = 3000, CAPS = { keep: Infinity, trim: 250, tight: 50 };
+  /* A FLIP'S, PAGE FOR PAGE (drawback.py _join_pages, the owner's "all
+     yes", Nov 25): each of her pages with his on it, at her speed, on her
+     paper and her shape; her picture and song on the first page. */
+  function joinedPages(orig, mine, pages) {
+    var mf = Array.isArray(mine.frames) ? mine.frames : [];
+    var has = function (m) { return !!(m && m.data); };
+    var frames = pages.map(function (of, i) {
+      var m = mf[i] || {}, op = of.strokes || [], mp = m.strokes || [];
+      var out = op.map(function (p) { return Object.assign({}, p); });
+      var t = (out.length ? out[out.length - 1].t || 0 : 0) + CAPS.tight;
+      mp.forEach(function (p, j) {
+        if (j) { var g = (p.t || 0) - (mp[j - 1].t || 0); if (g > 0) t += g; }
+        var c = Object.assign({}, p); c.t = Math.round(t); if (!j) c.start = true; out.push(c);
+      });
+      var f = { strokes: out, strokeGroups: (of.strokeGroups || []).concat(m.strokeGroups || []), background: of.background || null };
+      if (of.hold != null) f.hold = of.hold;
+      if (of.draw === true) f.draw = true;
+      if (!i) {
+        f.photo = has(of.photo) ? of.photo : has(orig.photo) ? orig.photo : null;
+        f.music = has(of.music) ? of.music : has(orig.music) ? orig.music : null;
+      }
+      return f;
+    });
+    var out = Object.assign({}, mine, { playbackMode: 'flip', fps: orig.fps, canvasSize: orig.canvasSize, frames: frames });
+    if (orig.subdiv != null) out.subdiv = orig.subdiv; else delete out.subdiv;
+    return out;
+  }
   function joined(orig, mine) {
+    var pages = pagesOf(orig);
+    if (pages) return joinedPages(orig, mine, pages);
     var of = (orig.frames && orig.frames[0]) || {}, mf = (mine.frames && mine.frames[0]) || {};
     var op = of.strokes || [], mp = mf.strokes || [];
     var cap = CAPS[orig.pauseMode] || CAPS.tight, at = 0, times = [];
@@ -587,7 +634,9 @@
   }
   function drawingBack(next) {
     back = next;
-    tools.forEach(function (chip) { chip.hidden = !!next && chip.getAttribute('data-compose-open') !== 'pad'; });
+    /* The editor that draws back on it: the Pad, or Flip for a Flip (page
+       for page, the owner's "all yes", Nov 25), known once it has come. */
+    tools.forEach(function (chip) { chip.hidden = !!next && chip.getAttribute('data-compose-open') !== (next.kind || 'pad'); });
     if (yoursBtn) yoursBtn.hidden = !!next;
     /* "Drawing back on Ana’s", at the sheet's top, over the words. */
     var line = q('[data-compose-backline]');
@@ -640,10 +689,11 @@
         if (!j || !j.payload) { tell(sayBox, why(j)); return; }
         tell(sayBox, '');
         back.payload = j.payload;
+        back.kind = pagesOf(j.payload) ? 'flip' : 'pad';
         if (j.first) back.first = j.first;
         if (j.own) back.own = true;
         drawingBack(back);
-        if (overs.pad) overs.pad.underlay({ payload: back.payload, first: back.first, own: !!back.own }, o.from || null);
+        if (overs[back.kind]) overs[back.kind].underlay({ payload: back.payload, first: back.first, own: !!back.own }, o.from || null);
       });
   }
 

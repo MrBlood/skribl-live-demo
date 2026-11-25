@@ -40,8 +40,15 @@
  * in the editor's own toast. The eraser is held at the one switch every way
  * to it goes through (setTool: its button, its key, Tune's), so none slips by.
  *
- * Pad and Flip: one module. The Pad uses it now; drawing back on a Flip,
- * page for page, is Flip next (its own mock). */
+ * Pad and Flip: one module. A FLIP, PAGE FOR PAGE (the owner's "all yes",
+ * Nov 25, to the Flip Draw Back mock, five answers A): her pages are kept page
+ * by page, and the page under the pen is the page Flip is on (page(), which
+ * Flip's render() tells); her pages faint under his in the page strip
+ * (inkPage, from Flip's tile painter); the editor itself lays her pages, her
+ * timing, her shape, paper and picture (a host: window.SkriblDrawBackHost,
+ * flip.js), and what would add, move or delete a page, or change her timing,
+ * steps aside as the eraser does: dimmed, and saying why (refuse(), asked by
+ * every one of Flip's ways in). The Pad, one page, is as it was. */
 (function () {
   'use strict';
   var FAINT = 0.32;
@@ -53,17 +60,26 @@
   var run = null;
 
   function target() { return document.getElementById('canvas') || document.getElementById('pad'); }
-  function strokesOf(payload) {
+  /* Her strokes, each a list of points, from one page's points. */
+  function strokesIn(pts) {
     var out = [], cur = null;
-    var f0 = payload && payload.frames && payload.frames[0];
-    var pts = (f0 && f0.strokes) || (payload && payload.strokes) || [];
-    pts.forEach(function (p) {
+    (pts || []).forEach(function (p) {
       if (!p || typeof p.x !== 'number' || typeof p.y !== 'number') return;
       if (p.start || !cur) { cur = []; out.push(cur); }
       cur.push(p);
     });
     return out;
   }
+  /* Her drawing, page by page: a drawing's one page (or, from before pages,
+     its points at the top), a Flip's every one. */
+  function pagesOf(payload) {
+    var fr = payload && Array.isArray(payload.frames) && payload.frames.length ? payload.frames : null;
+    if (!fr) return [strokesIn(payload && payload.strokes)];
+    return fr.map(function (f, i) {
+      return strokesIn((f && f.strokes) || (!i && fr.length === 1 && payload.strokes) || []);
+    });
+  }
+  function strokesOf() { return run ? run.pages[run.page] || [] : []; }
   function photoOf(payload) {
     var f0 = payload && payload.frames && payload.frames[0];
     var ph = (f0 && f0.photo && f0.photo.data) ? f0.photo : (payload && payload.photo && payload.photo.data) ? payload.photo : null;
@@ -136,13 +152,16 @@
     c.globalAlpha = 1;
   }
 
-  /* Her strokes, opaque, at `s` canvas pixels to one of hers. */
-  function ink(ctx, s) {
+  /* Her strokes, opaque, at `s` canvas pixels to one of hers (`sy` down,
+     where a picture is not her shape: Flip's page tiles), on page `i` (the
+     page under the pen when not said). */
+  function ink(ctx, s, i, sy, ex, ey) {
+    var page = run.pages[i == null ? run.page : i] || [];
     ctx.save();
-    ctx.setTransform(s, 0, 0, s, 0, 0);
+    ctx.setTransform(s, 0, 0, sy == null ? s : sy, ex || 0, ey || 0);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    run.strokes.forEach(function (st) {
+    page.forEach(function (st) {
       for (var j = 0; j < st.length; j++) {
         var p = st[j], q = j ? st[j - 1] : p;
         if (p.erase) continue;
@@ -170,6 +189,36 @@
     return true;
   }
 
+  /* HER PAGE `i` ON A PICTURE OF HIS (Flip's page tiles, its card, and what
+     its Fill floods against): her strokes, opaque on a canvas of their own
+     and laid down at `alpha` at once, so a line crossing itself never beads,
+     in `ctx`'s own transform (the drawing's units to its pixels). */
+  function inkPage(ctx, i, alpha) {
+    if (!run || !ctx || !run.pages[i] || !run.pages[i].length || !(alpha > 0)) return false;
+    var cv = ctx.canvas, m = ctx.getTransform ? ctx.getTransform() : { a: 1, d: 1, e: 0, f: 0 };
+    var o = run.tile || (run.tile = document.createElement('canvas'));
+    if (o.width !== cv.width) o.width = cv.width;
+    if (o.height !== cv.height) o.height = cv.height;
+    var oc = o.getContext('2d');
+    oc.setTransform(1, 0, 0, 1, 0, 0);
+    oc.clearRect(0, 0, o.width, o.height);
+    ink(oc, m.a, i, m.d, m.e, m.f);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(o, 0, 0);
+    ctx.restore();
+    return true;
+  }
+
+  /* THE PAGE UNDER THE PEN (a Flip's: its render() says which page is on
+     screen). Painted again only when it changes. */
+  function page(i) {
+    if (!run || i === run.page || !(i >= 0 && i < run.pages.length)) return;
+    run.page = i;
+    paint();
+  }
+
   function place() {
     if (!run) return;
     if (run.folded) { corner(); return; }
@@ -194,7 +243,8 @@
   var INSET = 10, CHIP = 44;
   function frameOf() {
     var cv = target();
-    var wrap = cv && cv.closest ? cv.closest('.canvas-wrap') : null;
+    // The Pad's frame, or Flip's (its stage holds it, as the Pad's area does).
+    var wrap = cv && cv.closest ? cv.closest('.canvas-wrap, .flip-wrap') : null;
     return wrap && wrap.parentNode ? { wrap: wrap, area: wrap.parentNode } : null;
   }
   function corner() {
@@ -254,11 +304,26 @@
     else if (typeof window.chip === 'function') window.chip(words);
   }
   function hers() { return run && run.own ? 'the original\u2019s' : run && run.first ? run.first + '\u2019s' : 'theirs'; }
+  /* A FLIP'S PAGES ARE HERS (answer 1): one of his on each, in her order and
+     at her timing. Said as the owner said it, and for her timing, whose. */
+  function pagesWords() { return 'Pages can\u2019t be added, moved or deleted while drawing back.'; }
+  function timingWords() { return 'The timing is ' + hers() + ' while drawing back.'; }
+  function shapeWords() { return 'The shape is ' + hers() + ' while drawing back.'; }
   var ASIDE = [
     { sel: '#recolorBtn', words: function () { return 'Recolour is off while drawing back.'; } },
     { sel: '.bg-swatch[data-bg], #customBgBtn, #customBgInput', words: function () { return 'The background is ' + hers() + '.'; } },
     { sel: '#mediaOpenBtn', words: function () { return 'The background and music are ' + hers() + '.'; } }
   ];
+  /* A FLIP'S PAGES AND TIMING: every way in (its buttons, keys, the \u22ef, a hold
+     on a tile, the menu's shape) is a function of Flip's that asks first and
+     refuses (flip.js dbHeld), so a door is never only a button; what it says
+     is said here, the same way each time. Its buttons are dimmed by
+     flip.css. */
+  function refuse(kind, near) {
+    if (!run) return false;
+    tell(kind === 'timing' ? timingWords() : kind === 'shape' ? shapeWords() : pagesWords(), near || null);
+    return true;
+  }
   function guard() {
     if (guarded) return;
     guarded = true;
@@ -315,14 +380,22 @@
     stop();
     var cs = payload.canvasSize || {};
     var size = (cs.cssWidth && cs.cssHeight) ? { w: +cs.cssWidth, h: +cs.cssHeight } : { w: 816, h: 612 };
-    // Her shape and her paper, before anything is drawn (app.js, editor_draft.js).
-    if (typeof establishEditorCanvas === 'function') {
-      establishEditorCanvas(size.w, size.h);
-      if (typeof layoutEditorCanvas === 'function') layoutEditorCanvas();
-      if (window.growBeforePaint) window.growBeforePaint();
-      if (window.syncCanvasSeg) window.syncCanvasSeg();
+    // FLIP LAYS HER PAGES ITSELF (flip.js, the host): one empty page of his
+    // for each of hers at her timing, on her shape, her paper and her
+    // picture, which its own backdrop paints (so its tiles, its card and its
+    // Fill see it too) and its post leaves out (hers stay hers).
+    var host = window.SkriblDrawBackHost || null;
+    if (host && host.lay) host.lay({ payload: payload, size: size, ground: groundOf(payload), photo: photoOf(payload) });
+    else {
+      // Her shape and her paper, before anything is drawn (app.js, editor_draft.js).
+      if (typeof establishEditorCanvas === 'function') {
+        establishEditorCanvas(size.w, size.h);
+        if (typeof layoutEditorCanvas === 'function') layoutEditorCanvas();
+        if (window.growBeforePaint) window.growBeforePaint();
+        if (window.syncCanvasSeg) window.syncCanvasSeg();
+      }
+      if (typeof setCanvasGround === 'function') setCanvasGround(groundOf(payload));
     }
-    if (typeof setCanvasGround === 'function') setCanvasGround(groundOf(payload));
     cv = target();
     var guide = document.createElement('canvas');
     guide.className = 'da-guide db-under';
@@ -351,8 +424,8 @@
     pill.appendChild(btn);
     document.body.appendChild(pill);
     document.body.classList.add('drawback');
-    run = { strokes: strokesOf(payload), size: size, guide: guide, pill: pill, btn: btn, state: 0, off: null,
-            first: first, own: !!(o && o.own), folded: false,
+    run = { pages: pagesOf(payload), page: 0, size: size, guide: guide, pill: pill, btn: btn, state: 0, off: null,
+            first: first, own: !!(o && o.own), folded: false, host: host,
             onResize: function () { place(); paint(); paintPhoto(); }, onScroll: function () { corner(); } };
     // THE FIRST STROKE folds the pill (fold, above): down on the drawing and
     // up after moving, as Draw along counts one (lib/drawalong.js); a pinch
@@ -373,9 +446,11 @@
     document.addEventListener('pointermove', run.onMove, true);
     document.addEventListener('pointerup', run.onUp, true);
     document.addEventListener('pointercancel', run.onUp, true);
-    // HER PHOTO, under the canvas where the Pad's own would lie.
+    // HER PHOTO, under the canvas where the Pad's own would lie (Flip's lies
+    // in Flip's own backdrop: the host's).
     var ph = photoOf(payload);
-    if (ph) {
+    run.photo = ph;
+    if (ph && !host) {
       var pc = document.createElement('canvas');
       pc.className = 'photo-bg-img db-photo';
       pc.setAttribute('aria-hidden', 'true');
@@ -389,8 +464,9 @@
     guard();
     // What the editor says goes under the pill, never over it (lib/drawalong.js).
     if (window.SkriblDrawAlong && window.SkriblDrawAlong.keepNotesClear) window.SkriblDrawAlong.keepNotesClear();
-    // If the eraser was in hand, the pen takes over.
-    if (typeof tool !== 'undefined' && tool === 'eraser' && typeof window.setTool === 'function') window.setTool('pen');
+    // If the eraser was in hand, the pen takes over (the Pad's tool, Flip's).
+    if (((typeof tool !== 'undefined' && tool === 'eraser') || (typeof flipTool !== 'undefined' && flipTool === 'eraser'))
+        && typeof window.setTool === 'function') window.setTool('pen');
     btn.addEventListener('click', function () {
       if (!run) return;
       run.state = (run.state + 1) % STATES.length;
@@ -410,11 +486,17 @@
     say();
     place();
     paint();
+    // Her pages are known now: Flip paints its strip again with them faint
+    // under his, and the page it is on under the pen.
+    if (host && host.ready) host.ready();
     return true;
   }
 
   window.SkriblDrawBack = {
-    take: take, stop: stop, paintUnder: paintUnder,
-    state: function () { return run ? { theirs: STATES[run.state].key, strokes: run.strokes.length, size: run.size, photo: !!run.photo } : null; }
+    take: take, stop: stop, paintUnder: paintUnder, page: page, inkPage: inkPage, refuse: refuse,
+    state: function () {
+      return run ? { theirs: STATES[run.state].key, strokes: strokesOf().length, size: run.size, photo: !!run.photo,
+                     pages: run.pages.length, page: run.page } : null;
+    }
   };
 }());
