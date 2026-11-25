@@ -978,6 +978,39 @@
   window.SocialPlayOwn = playOwn;
   if (!(/^#c-/.test(window.location.hash || '') && doc.querySelector('[data-comments]'))) playOwn();
 
+  /* ---- DRAW BACK, TWO HANDS: what you watch (the owner's "all yes", Nov
+     25, to the Two Hands mock: "It changes only what you watch, never the
+     drawing") ------------------------------------------------------------
+     On a two-hands draw-back's own page, the one pill under the drawing:
+     Both, hers alone, his alone, each its own player (post.html). A choice
+     glides the pill's tint, puts away the view that was, and fades the
+     chosen one in where it stood, the same shape; if the one put away was
+     playing, the chosen one plays from its start. */
+  doc.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('.hands-seg > button[data-hands]') : null;
+    var box = b ? b.closest('[data-hands-box]') : null;
+    if (!box || b.getAttribute('aria-pressed') === 'true') return;
+    var want = b.getAttribute('data-hands');
+    var was = box.querySelector('[data-hands-view]:not([hidden])');
+    var now = box.querySelector('[data-hands-view="' + want + '"]');
+    if (!now || now === was) return;
+    var Inline = window.SkriblInline;
+    var before = was && Inline ? Inline.mount(was)[0] : null;
+    var playing = !!(before && before.state && before.state().state === 'playing');
+    Array.prototype.forEach.call(b.parentNode.querySelectorAll('button[data-hands]'), function (o) {
+      o.setAttribute('aria-pressed', o === b ? 'true' : 'false');
+    });
+    if (window.SocialPill) window.SocialPill.choose(b.parentNode, b);
+    if (before && before.pause) before.pause();
+    if (was) was.hidden = true;
+    now.classList.remove('is-in');
+    now.hidden = false;
+    void now.offsetWidth;
+    now.classList.add('is-in');
+    var after = Inline ? Inline.mount(now)[0] : null;
+    if (playing && after && after.play) after.play();
+  });
+
   /* ---- the feed: Load more ------------------------------------------------ */
   var feed = doc.querySelector('[data-feed]');
   var more = doc.querySelector('[data-feed-next]');

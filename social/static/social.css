@@ -2161,6 +2161,20 @@ a.post-face { text-decoration: none; }
 .post-page .post-head .db-face { box-shadow: 0 0 0 2px var(--page); }
 .post-page .post-words.is-big { font-size: 20px; line-height: 1.4; }
 .post-caption { margin: 8px 0 0; color: var(--ink-2); font-size: 15px; }
+/* DRAW BACK, TWO HANDS (posts.hands_states; the owner's "all yes", Nov 25,
+   to the Two Hands mock). Where her drawing is not shown, his strokes play
+   alone and one quiet line under them says why, as a caption is quiet. On
+   his post's own page, while hers is shown, the one pill under the drawing,
+   its width, the three choices equal (the mock's "small choice under a
+   draw-back"); the view chosen fades in where the other was, the same
+   shape, so nothing moves (under Reduce Motion it is simply there). */
+.hands-note { margin: 8px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.35; }
+.hands-view[hidden] { display: none; }
+.hands-seg { display: flex; width: 100%; margin: 12px 0 0; }
+.hands-seg > button { flex: 1; }
+.hands-view.is-in { animation: hands-in 0.24s ease-out; }
+@keyframes hands-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .hands-view.is-in { animation: none; } }
 .post-meta { margin: 12px 0 0; color: var(--ink-2); font-size: 15px; }
 .comments { margin-top: 24px; }
 /* A QUIET LABEL WHERE A BOLD HEADING STOOD (the Calm Post Page; the owner's

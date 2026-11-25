@@ -1562,6 +1562,27 @@ check("...and a row with its columns never reads its drawing: its payload made u
       and _gp_must_read.startswith("raised"),
       f"columns set: {_gp_unread}; a column NULL: {_gp_must_read}")
 
+print("\nA DRAWING A HOST BUILDS — line_of(): its line, as Skribl says a stored drawing's (line_of)")
+# The Skribl site's two-hands draw-back (social/drawback.py) plays a drawing it
+# builds from two (hers under his) and says that drawing's line, the scrubber's
+# shape and its times, as Skribl would have stored it. Not a second definition:
+# the very function that stores a drawing's line.
+from skribl.validation import _payload_line as _stored_line  # noqa: E402
+_lo_pts = [{"x": 10 + i, "y": 20 + (i % 7), "t": i * 40 + (900 if i == 30 else 0), "start": i in (0, 30)} for i in range(60)]
+_lo = {"version": 2, "playbackMode": "replay", "pauseMode": "trim", "frames": [{"strokes": _lo_pts}]}
+_lo_flip = {"version": 2, "playbackMode": "flip", "frames": [{"strokes": _lo_pts}, {"strokes": _lo_pts}]}
+check("it is a documented name: line_of in skribl.__all__, its docstring naming describe_posts and a drawing a host"
+      " builds itself",
+      "line_of" in skribl.__all__ and "describe_posts" in (skribl.line_of.__doc__ or "")
+      and "builds" in (skribl.line_of.__doc__ or ""))
+check("line_of says what storing the drawing would have said (the drawn time, the replay's, the speed, the shape:"
+      " a pause past the trim played as its cap, a step back in time as none), none for a Flip or for what is not a"
+      " drawing",
+      skribl.line_of(_lo) == _stored_line(_lo) and (skribl.line_of(_lo) or {}).get("play") == 57 * 40 + 250
+      and (skribl.line_of(_lo) or {}).get("drawn") == 57 * 40 + 940
+      and skribl.line_of(_lo_flip) is None and skribl.line_of(None) is None and skribl.line_of("x") is None,
+      f"{skribl.line_of(_lo)}; flip {skribl.line_of(_lo_flip)}")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

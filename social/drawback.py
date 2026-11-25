@@ -37,6 +37,94 @@ row offers Draw back only where it can be done (posts.py, the pen)."""
 #: How long the original plays before the answer, at most (choice 4's B).
 OVERTURE_MS = 3000
 
+# ---- TWO HANDS (the owner's "all yes", Nov 25, to the Two Hands mock: its
+# nine answers, A each, and its first step; docs/SOCIAL-SITE.md section 41) ----
+# A draw-back kept as two people's own work. His post's drawing holds HIS
+# strokes alone, on her paper; the post points to her drawing as it was
+# (Post.drawn_on_skribl_id); and the site lays hers under his as it plays
+# (join, the same as today's, at the moment of watching), so it looks as a
+# draw-back always has. Her work stays hers to take back: once her drawing is
+# removed (deleted, or taken down), his post shows his strokes alone and says
+# so; to somebody her post is not shown (a block, either way), the same, and
+# it says that. Three views on his post's own page: Both (hers, then his, as
+# today), hers alone and his alone, each at its own pace (views below).
+#
+# THE OWNER'S SWITCH. Made so only while SKRIBL_SOCIAL_TWO_HANDS is on in the
+# site's settings, which only whoever runs the site can set (the live site's
+# own settings, on its host); off, every draw-back is joined as before. What
+# was made while it was on stays two hands whichever way it is set: the
+# switch says how a NEW draw-back is kept, never how one is read.
+#
+# THE FIRST STEP: one original and one answer (the seventh answer). A
+# two-hands draw-back is not drawn back on yet (drawable's "hands"); drawing
+# back on a joined one from before makes a two-hands one whose original is
+# that joined drawing. Draw-backs from before stay exactly as they are (the
+# eighth).
+
+#: What the switch reads as on.
+_ON = ("1", "true", "yes", "on")
+
+
+def two_hands():
+    """Whether a new draw-back is kept as two hands: the owner's switch,
+    SKRIBL_SOCIAL_TWO_HANDS in the app's config or its environment."""
+    import os
+    from flask import current_app
+    v = current_app.config.get("SKRIBL_SOCIAL_TWO_HANDS")
+    if v is None:
+        v = os.environ.get("SKRIBL_SOCIAL_TWO_HANDS", "")
+    return str(v).strip().lower() in _ON
+
+
+def own(original, answer):
+    """What a two-hands draw-back's drawing keeps: `answer`'s strokes alone,
+    as it was drawn, on `original`'s paper (its ground and its shape, where
+    he drew them), with no picture and no music (hers stay hers: drawable's
+    `answer` refused his own). Both drawable(). Its resting picture is the
+    caller's (posts._drawing_back: his lines alone)."""
+    of, af = _frame0(original), _frame0(answer)
+    frame = {"strokes": [dict(p) for p in _points(af)], "strokeGroups": _groups(af, len(_points(af))),
+             "background": of.get("background")}
+    out = {"version": answer.get("version", 2), "schemaVersion": answer.get("schemaVersion", 2),
+           "playbackMode": "replay", "pauseMode": answer.get("pauseMode") or "tight", "fps": None,
+           "frames": [frame], "canvasSize": original.get("canvasSize")}
+    if frame["strokes"]:
+        frame["strokes"][0]["start"] = True
+    for k2 in ("playSpeed", "visibility", "caption"):
+        if answer.get(k2) is not None:
+            out[k2] = answer[k2]
+    return out
+
+
+#: The three views of a two-hands draw-back (the mock's choice under it):
+#: both hands (hers, then his, as a draw-back has always played), hers alone,
+#: his alone.
+VIEWS = ("both", "hers", "his")
+
+
+def view(original, mine, which):
+    """A two-hands draw-back's drawing as `which` view plays it: "both", hers
+    then his (join, as a draw-back always played); "hers", her drawing as she
+    posted it; "his", his strokes at his own pace on her paper, her picture
+    under them and her song with them, as he drew them there. `original` as
+    the viewer may see it (read_payload), `mine` his post's own drawing
+    (own). None for any other `which`."""
+    if which == "hers":
+        return original
+    if which == "both":
+        return join(original, mine)
+    if which != "his":
+        return None
+    of = _frame0(original) or {}
+    out = dict(mine)
+    frame = dict(_frame0(mine) or {})
+    photo = of.get("photo") if _truthy(of.get("photo")) else original.get("photo") if _truthy(original.get("photo")) else None
+    music = of.get("music") if _truthy(of.get("music")) else original.get("music") if _truthy(original.get("music")) else None
+    frame.update(background=of.get("background"), photo=photo, music=music)
+    out["frames"] = [frame]
+    out["canvasSize"] = original.get("canvasSize") or mine.get("canvasSize")
+    return out
+
 #: The pause rules a replay knows (app.js PAUSE_CAPS), in milliseconds.
 PAUSE_CAPS = {"keep": None, "trim": 250, "tight": 50}
 
@@ -59,7 +147,9 @@ def _truthy(v):
 
 def drawable(payload, answer=False):
     """None when `payload` can be drawn back on, else why not: "pages" (a
-    Flip of more than one page, or no frames), "recolors". With `answer`,
+    Flip of more than one page, or no frames), "recolors". (A two-hands
+    draw-back is not drawn back on yet, whatever its drawing: its post says
+    "hands", posts.py.) With `answer`,
     whether it can be the strokes of an answer: then a picture under it
     ("photo") or music ("music") are refused too, since a draw-back keeps the
     author's background and music and the answer adds neither (the owner,

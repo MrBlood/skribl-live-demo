@@ -34,7 +34,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
 __all__ = ["SocialBase", "Person", "PersonWord", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
-           "Comment", "Like", "Bookmark", "Repost", "Mention", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX",
+           "Comment", "Like", "Bookmark", "TwoHands", "Repost", "Mention", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX",
            "WORD_MAX",
            "BIO_MAX",
            "BIO_LINES",
@@ -434,6 +434,19 @@ class Post(SocialBase):
     #: before the column, said from the two drawings' stored lines while the
     #: original is there (drawback.hands_from_lines).
     hands_json = sa.Column(sa.Text(), nullable=True)
+    #: DRAW BACK, TWO HANDS (the owner's "all yes", Nov 25, to the Two Hands
+    #: mock: its nine answers, A each, and its first step): this draw-back's
+    #: drawing holds its maker's strokes ALONE, and the site lays the
+    #: original's under them when it plays (drawback.py), never a copy of
+    #: hers. Made so only while the owner's switch is on (drawback.two_hands);
+    #: kept for good, as is_drawback is, so a post whose original has gone
+    #: still knows to show its maker's strokes alone and say why.
+    two_hands = sa.Column(sa.Boolean(), nullable=False, default=False, server_default=sa.false())
+    #: The drawing it answered, as it was (Skribl's id for the original's
+    #: drawing when it was drawn back on: the second answer, "a draw-back
+    #: keeps the version it answered"). Let go of, in code, when the original
+    #: goes (posts.drop_post). None on every other post.
+    drawn_on_skribl_id = sa.Column(sa.String(32), nullable=True)
 
     __table_args__ = (
         #: A drawing, a quote (whose words may be all it has), or words.
@@ -720,6 +733,28 @@ class Pin(SocialBase):
         #: A post's: deleting it takes its pin by this.
         sa.Index("ix_social_pins_post_id", "post_id"),
     )
+
+
+class TwoHands(SocialBase):
+    """WHAT A TWO-HANDS DRAW-BACK KEEPS BESIDE ITS OWN DRAWING (Draw back,
+    two hands; drawback.py), made when it is posted, from the two drawings
+    then: the picture it rests on while hers is there (her drawing under his
+    lines, as the Pad painted it: lib/drawback.js paintUnder; a share card
+    like any drawing's), and the line both hands make together (Skribl's
+    line_of the joined drawing: its scrubber's shape and its times). His own
+    drawing's picture and line are his alone, so these are the site's,
+    shown only to somebody her drawing is shown to (posts.hands_states),
+    and they go, in code, when her drawing goes or his post does
+    (posts.drop_post); the ON DELETE CASCADE is the net."""
+    __tablename__ = "social_two_hands"
+
+    #: The draw-back they belong to.
+    post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), primary_key=True)
+    #: A data: URL of an image (PNG or JPEG), as a drawing's thumbnail is.
+    picture = sa.Column(sa.Text(), nullable=True)
+    #: JSON: the joined drawing's line, as Skribl describes a drawing's.
+    line_json = sa.Column(sa.Text(), nullable=True)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
 
 
 class Repost(SocialBase):

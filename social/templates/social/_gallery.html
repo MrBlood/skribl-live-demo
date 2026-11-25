@@ -119,6 +119,13 @@
 {%- if sk and sk.ground %} style="--plate-ground: {{ sk.ground }}"{% endif -%}
 {%- endmacro %}
 
+{#  A drawing's resting picture: Skribl's, or the site's where it has one of
+    its own to show (a two-hands draw-back whose original is shown: the
+    picture of both, posts.cards `poster`). #}
+{% macro poster_src(sk) -%}
+{{ sk.poster or url_for(skribl_bp ~ '.skribl_poster', public_id=sk.id) }}
+{%- endmacro %}
+
 {% macro plate_fill(sk) -%}
 {%- if sk and sk.on_photo %}<span class="plate-fill" aria-hidden="true"><span style="{{ plate_frame(sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=sk.id) }}" alt="" loading="lazy" decoding="async"></span></span>{% endif -%}
 {%- endmacro %}
@@ -128,7 +135,7 @@
 {%- if pick %}<button class="gal-tile is-pick" type="button" data-pick-drawing="{{ t.sk.id }}" aria-label="Post {{ t.label }}">{% else -%}
 <a class="gal-tile" href="{{ t.url }}" {% if t.kind == 's' %}data-drawing="{{ t.sk.id }}"{% else %}data-post="{{ t.post }}"{% endif %} data-handle="{{ t.who.handle }}" aria-label="{{ t.label }}"
    {%- if t.eye %} data-label-shown="{{ t.shown_label }}" data-label-hidden="{{ t.hidden_label }}"{% endif %}>{% endif %}
-  <span class="gal-pic"{{ plate_ground(t.sk) }}>{{ plate_fill(t.sk) }}<span class="gal-plate" style="{{ plate_frame(t.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=t.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
+  <span class="gal-pic"{{ plate_ground(t.sk) }}>{{ plate_fill(t.sk) }}<span class="gal-plate" style="{{ plate_frame(t.sk) }}"><img src="{{ poster_src(t.sk) }}" alt="" loading="lazy" decoding="async"></span>
     <span class="gal-dur">{{ ic.tri() }}{% if t.says %}<span>{{ t.says }}</span>{% endif %}</span></span>
   <span class="gal-by">{{ face(t.who) }}<b>{{ t.name }}</b>
     {%- if t.likes or t.comments %}<span class="gal-n">

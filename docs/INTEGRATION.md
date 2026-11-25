@@ -225,6 +225,31 @@ narrow for the names. It is your words, written as text, never as markup.
 Without `parts` everything is as it was. What a hand is, and whose names
 are said to whom, are the host's: Skribl never knows.
 
+**A drawing a host builds and serves itself** (Nov 25: the Skribl site's
+two-hands draw-backs, which keep each person's strokes in a drawing of
+their own and lay one under the other as they play). Two more arguments,
+both optional, and one function:
+
+```jinja
+{{ skribl_inline(post.skribl_id, canvas_w=post.canvas_w, canvas_h=post.canvas_h,
+                 line_info=both_line, api=url_for('my.drawing_base'),
+                 poster=url_for('my.picture', skribl_id=post.skribl_id)) }}
+```
+
+`api` is where the player asks for the drawing: it adds `/` and the id, as
+it does to Skribl's own listing endpoint, and reads Skribl's envelope,
+`{"skribl": <the drawing>}`. `poster` is the picture the box rests on.
+Leave them out and both are Skribl's. Nothing the player runs or downloads
+changes: it is the same player, handed a drawing from somewhere else. Your
+route answers for who may see what it serves (Skribl's `read_payload` reads
+each drawing as the viewer may see it). A play is counted only by Skribl's
+own route, so a drawing served from yours counts none.
+
+`line_of(payload)` (exported) is the line Skribl would store for a drawing,
+`{"drawn", "play", "speed", "shape"}`: the times and the scrubber's shape
+`describe_posts` gives each stored drawing, for the one you built, to pass
+as `line_info`. It reads nothing and stores nothing.
+
 **Full screen on a post** (Nov 16: the owner's "yes to A", full screen on the
 Skribl site's posts). Pass `full=True` and the line ends in a full-screen
 button, after loop, that opens the link page's own full screen around this
