@@ -53634,7 +53634,8 @@ kept; a page short, an eraser on any page, a picture of his refused; the pen
 on a Flip's card (and on a Flip from before), none on one that loops; the
 whole way on a touch phone: Flip over the composer on her pages, nothing
 over the pill, her paper through a theme change, her page under the page
-he is on, her pages faint in the strip, what steps aside and every way in,
+he is on, her pages faint in the strip, what steps aside (her paper and her
+picture and music too, as on the Pad) and every way in,
 his lines his page's alone and the pill folded into Flip's frame, Fill
 inside her lines, New Skribl and its Undo, Add and Post joined, the card of
 both read off its picture; her picture as Flip's backdrop, left out of what
@@ -53650,7 +53651,7 @@ server is a helper both 15 and 16 use (`switch_on`).
 
 CALIBRATION, part 16, a worktree for each tree, each break asserted to
 apply exactly once before anything ran, three at a time: as built 19 of 19;
-main red (no pen on a Flip, and nothing past it can go on). Twenty-six
+main red (no pen on a Flip, and nothing past it can go on). Twenty-eight
 breaks, one at a time, each red on its own row: a Flip's limits not read
 (what it says, the way in, the refusals, the pen); his strokes left off the
 join; the page count not asked; the eraser read on page 1 alone; no pen on a
@@ -53663,7 +53664,9 @@ pages (the section cannot go on); the card of his lines alone; her picture
 posted as his (refused by the site, so the post cannot go on); a re-edit
 not on her pages; hers kept in his two-hands drawing; his view without her
 picture; "New here?" left standing; her paper following the theme; nothing
-dimmed; the module not loaded in Flip (the section cannot go on).
+dimmed; her paper, and her picture and music, not held (the Pad's own rule,
+read on Flip too); the module not loaded in Flip (the section cannot go
+on).
 
 PAD AND FLIP: shared. `lib/drawback.js` learns pages (one for the Pad) and a
 host (Flip); the Pad's own path is unchanged, its sections 4, 14 and 15
