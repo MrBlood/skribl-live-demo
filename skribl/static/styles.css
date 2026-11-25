@@ -8979,6 +8979,24 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .learn-all .learn-title { font-size: 15px; font-weight: 650; }
 .learn-all :is(.learn-line, .learn-try, .learn-n) { display: none; }
 @media (min-width: 641px) { .learn-all > .learn-card { flex-basis: 200px; } }
+/* THE ROW WITH A MOUSE (the owner's A2, Nov 24, "Four Small Picks" 2): a
+   round ‹ and › at the row's ends, centred on its cards (inside the row's 2px
+   and 8px of padding above and below them), only where there is a mouse (a
+   device that hovers, with a fine pointer); a finger slides the row as
+   before. Its box takes the row's bleed to the sheet's edges, so they sit 6px
+   inside them; white with the card's edge, the card's own colour in dark. */
+.learn-row { position: relative; margin: 0 -18px; }
+.learn-row > .learn-all { margin: 0; }
+.learn-arrow { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .learn-arrow:not([hidden]) { position: absolute; z-index: 2; top: 2px; bottom: 8px; margin: auto 0; display: grid; place-items: center;
+    width: 44px; height: 44px; padding: 0; border-radius: 50%; border: 1px solid transparent; cursor: pointer;
+    background: var(--menu-card); color: var(--text-primary); box-shadow: var(--card-ring), var(--chip-lift); }
+  .learn-arrow[data-learn-step="-1"] { left: 6px; }
+  .learn-arrow[data-learn-step="1"] { right: 6px; }
+  .learn-arrow:hover { background: color-mix(in srgb, var(--accent) 6%, var(--menu-card)); }
+  .learn-arrow:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+}
 .ask-best[hidden] { display: none; }
 .help-look.ask-searching .help-intro { display: none; }   /* the intro is for the whole list, not for answers */
 .ask-best { margin: 0 18px; }

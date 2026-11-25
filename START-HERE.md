@@ -893,7 +893,7 @@ rather than a shared rule.
 | `handwords.js` | Pad+Flip | YOUR HAND'S WORDS on an empty canvas (the owner's pick after the "Empty canvas ideas" mock): "Draw anything" on the Pad and "Draw page 1" on Flip, in the owner's own hand. |
 | `headerglass.js` | Pad+Flip | The header's ground, only while the drawing is under it. |
 | `hello.js` | Pad+Flip | Skribl says hi: the first time Skribl opens, on any screen (FUTURE.md 6m). |
-| `helplearn.js` | Pad+Flip | How it works, shown: the Watch tab of the help panel, and its two tabs. |
+| `helplearn.js` | Pad+Flip | How it works, shown: the Watch tab of the help panel, and its two tabs; the examples row's ‹ and › where there is a mouse. |
 | `helpsearch.js` | Pad+Flip | Help drawer search + live section counts. |
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |
 | `holdtiming.js` | Pad+Flip+player+library+in-post | Per-page timing — the ONE definition of how long a page lasts and how much of a drawing page has been revealed, shared by the Flip editor and every surface that plays one. |

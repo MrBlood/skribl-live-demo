@@ -33,6 +33,10 @@ this holds the cards to what they claim, on both editors:
      leaves it.
   6. REDUCED MOTION: nothing plays; each replay shows its finished drawing and
      each clip its poster, and the clips are not even fetched.
+  7. THE ROW WITH A MOUSE (the owner's A2, Nov 24): a round < and > at the row's
+     ends, centred on its cards, only where there is a mouse; > glides a page
+     on and < back, each gone at its end, the focus handed over when one goes;
+     on a touch phone neither is painted; under Reduce Motion a click steps.
 """
 import json
 import math
@@ -761,6 +765,160 @@ with sync_playwright() as p:
               f2["failed"] == 1 and f2["said"] == "1 example couldn\u2019t load." and f2["players"] == f2["demos"] - 1,
               f"{f2} (cut {_one[0]})")
         ctx.close()
+
+    # ---- 7. THE ROW WITH A MOUSE ----------------------------------------------
+    # The owner's A2, Nov 24 ("Four Small Picks" 2: "Can the arrows be centered on
+    # the row?", then "Yes"): a finger slid the row and nothing else did, so a
+    # mouse reached 3 of 36 examples. A round < and >, 44px, at the row's ends and
+    # centred on its cards, only where there is a mouse: > glides a page on and <
+    # back, each gone at its end; the focus never falls when one goes.
+    print("\nTHE ROW WITH A MOUSE -- the arrows at its ends")
+    ROWA = """() => { const row = document.getElementById('learnAll'); if (!row) return null;
+      const rr = row.getBoundingClientRect(), cs = getComputedStyle(row);
+      const top = rr.top + parseFloat(cs.paddingTop), bottom = rr.bottom - parseFloat(cs.paddingBottom);
+      const arrows = [...document.querySelectorAll('.learn-arrow[data-learn-step]')].map(b => {
+        const r = b.getBoundingClientRect(), on = getComputedStyle(b).display !== 'none' && r.width > 0;
+        const at = on ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+        return { step: b.dataset.learnStep, on, w: Math.round(r.width), h: Math.round(r.height), round: getComputedStyle(b).borderRadius,
+                 mid: on ? +((r.top + r.bottom) / 2 - (top + bottom) / 2).toFixed(1) : null,
+                 inset: on ? +(b.dataset.learnStep === '1' ? rr.right - r.right : r.left - rr.left).toFixed(1) : null,
+                 painted: !!at && (at === b || b.contains(at)), bg: getComputedStyle(b).backgroundColor, label: b.getAttribute('aria-label') }; });
+      const cards = [...row.querySelectorAll('.learn-card')].filter(c => c.getClientRects().length), last = cards[cards.length - 1].getBoundingClientRect();
+      const a = document.activeElement;
+      return { at: Math.round(row.scrollLeft), end: Math.round(row.scrollWidth - row.clientWidth), arrows,
+               card: getComputedStyle(cards[0]).backgroundColor, lastWhole: last.right <= rr.right + 1 && last.left >= rr.left - 1,
+               focus: a ? (a.dataset && a.dataset.learnStep ? 'step ' + a.dataset.learnStep : a.tagName) : null }; }"""
+    # Each frame's time and the row's place. A frame this box was slow to
+    # draw (the examples play beside the row: 100ms and more at times) may
+    # carry its share of the glide's time; a step that outruns its own time is
+    # a jump on any machine.
+    GLIDE = """() => { window.__rf = []; const row = document.getElementById('learnAll'), t0 = performance.now();
+      const step = (now) => { window.__rf.push([now - t0, row.scrollLeft]); if (now - t0 < 1500) requestAnimationFrame(step); };
+      requestAnimationFrame(step); }"""
+
+    def glided(fr):
+        """How the row went: its places, the way, how long it moved, whether only forward, and the steps that
+        carried more than a fifth of the way AND more than 2.5 times their share of the time it moved."""
+        xs = [x for _, x in fr]
+        way = (xs[-1] - xs[0]) if xs else 0
+        moving = [i for i in range(1, len(fr)) if abs(fr[i][1] - fr[i - 1][1]) > 0.5]
+        if not moving or way <= 0:
+            return {"places": len({round(x) for x in xs}), "way": way, "ms": 0, "forward": True, "outran": [], "largest": 0}
+        t_start, t_end = fr[moving[0] - 1][0], fr[moving[-1]][0]
+        ms = max(1.0, t_end - t_start)
+        outran = []
+        for i in moving:
+            frac = (fr[i][1] - fr[i - 1][1]) / way
+            share = (fr[i][0] - fr[i - 1][0]) / ms
+            if frac > 0.2 and frac > 2.5 * share:
+                outran.append([round(frac, 2), round(share, 2)])
+        steps = [fr[i][1] - fr[i - 1][1] for i in range(1, len(fr))]
+        return {"places": len({round(x) for x in xs}), "way": round(way), "ms": round(ms), "forward": all(s_ >= -0.5 for s_ in steps),
+                "outran": outran, "largest": round(max(steps) / way, 2)}
+    NEXT = '.learn-arrow[data-learn-step="1"]'
+    BACK = '.learn-arrow[data-learn-step="-1"]'
+    shown = lambda pg, sel: pg.evaluate("(s) => { const b = document.querySelector(s); return !!b && !b.hidden; }", sel)
+
+    def rest(pg):
+        """The row at rest: its place the same on three readings 100ms apart (a glide takes as long as
+        the frames it is given; a fixed wait raced it)."""
+        pg.evaluate("() => { window.__restN = 0; window.__restV = -1; }")
+        pg.wait_for_function("""() => { const v = document.getElementById('learnAll').scrollLeft, w = window;
+          w.__restN = w.__restV === v ? (w.__restN || 0) + 1 : 0; w.__restV = v; return w.__restN >= 3; }""",
+                             polling=100, timeout=5000)
+
+    def open_row(pg, route):
+        browsing.goto(pg, BASE, route)
+        pg.wait_for_timeout(700)
+        pg.evaluate(OPEN); pg.wait_for_timeout(500)
+        pg.evaluate(SHEET); pg.wait_for_timeout(800)
+        pg.evaluate(STRIP); pg.wait_for_timeout(400)
+
+    for name, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        try:
+            looks = {}
+            for scheme in ("light", "dark"):
+                ctx = b.new_context(viewport={"width": 1280, "height": 860}, color_scheme=scheme)
+                pg = ctx.new_page()
+                open_row(pg, route)
+                a0 = pg.evaluate(ROWA)
+                looks[scheme] = a0
+                if scheme == "dark":
+                    ctx.close()
+                    continue
+                # One click on >, read on every frame.
+                pg.evaluate(GLIDE)
+                pg.click(NEXT, timeout=5000)
+                pg.wait_for_timeout(1200)
+                fr = pg.evaluate("() => window.__rf")
+                a1 = pg.evaluate(ROWA)
+                # On to the end by the keyboard on >; then < back to the start.
+                pg.focus(NEXT, timeout=5000)
+                n = 0
+                while n < 30 and shown(pg, NEXT):
+                    pg.keyboard.press("Enter")
+                    pg.wait_for_timeout(150)
+                    rest(pg)
+                    n += 1
+                a2 = pg.evaluate(ROWA)
+                m = 0
+                while m < 30 and shown(pg, BACK):
+                    pg.click(BACK, timeout=5000)
+                    pg.wait_for_timeout(150)
+                    rest(pg)
+                    m += 1
+                a3 = pg.evaluate(ROWA)
+                ctx.close()
+            ok_look = {}
+            for scheme, a in looks.items():
+                nx = next((x for x in (a or {}).get("arrows", []) if x["step"] == "1"), None)
+                bk = next((x for x in (a or {}).get("arrows", []) if x["step"] == "-1"), None)
+                ok_look[scheme] = bool(a and nx and bk and nx["on"] and not bk["on"] and nx["w"] == 44 and nx["h"] == 44 and nx["round"] == "50%"
+                                       and abs(nx["mid"]) <= 0.5 and abs(nx["inset"] - 6) <= 0.5 and nx["painted"]
+                                       and nx["label"] == "More examples" and nx["bg"] == a["card"] and a["at"] == 0)
+            check(f"{name} on a desk with a mouse, light and dark: a round > 44px at the row's right end (6px in), centred on its"
+                  " cards to half a pixel, painted where it stands, named \"More examples\", on the cards' own ground; no < at the start",
+                  all(ok_look.values()) and len(ok_look) == 2,
+                  json.dumps({k: [x for x in (v or {}).get("arrows", [])] + [(v or {}).get("card")] for k, v in looks.items()})[:900])
+            g_ = glided(fr)
+            bk1 = next((x for x in (a1 or {}).get("arrows", []) if x["step"] == "-1"), {})
+            check(f"{name}: a click on > glides the row on by about a page, read on every frame: many places over 400ms or more,"
+                  " only ever forward, and no frame more than a fifth of the way unless the machine took that long to draw it"
+                  " (never more than 2.5 times its share of the time); and < comes",
+                  g_["way"] >= 400 and g_["places"] >= 8 and g_["ms"] >= 400 and g_["forward"] and not g_["outran"] and bk1.get("on"),
+                  f"{json.dumps(g_)}; < {bk1.get('on')}")
+            nx2 = next((x for x in (a2 or {}).get("arrows", []) if x["step"] == "1"), {})
+            bk3 = next((x for x in (a3 or {}).get("arrows", []) if x["step"] == "-1"), {})
+            check(f"{name}: on to the end by the keyboard, every example reached (the last whole in the row), > gone and the focus"
+                  " handed to < (never to the page); < back to the start, gone there",
+                  a2 and a2["at"] >= a2["end"] - 2 and a2["lastWhole"] and not nx2.get("on") and a2["focus"] == "step -1"
+                  and a3 and a3["at"] == 0 and not bk3.get("on") and n < 30 and m < 30,
+                  json.dumps({"end": [a2 and a2["at"], a2 and a2["end"], a2 and a2["lastWhole"], a2 and a2["focus"], n],
+                              "start": [a3 and a3["at"], bk3.get("on"), m]}))
+        except Exception as exc:  # noqa: BLE001 -- an arrow that is not there is this part's red, never a stop
+            check(f"{name}: the row with a mouse ran to its end", False, str(exc).splitlines()[0][:200])
+    try:
+        # A touch phone: no arrow is painted; a finger slides the row as before.
+        ctx = b.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True, device_scale_factor=1)
+        pg = ctx.new_page()
+        open_row(pg, "/skribl-pad")
+        ap = pg.evaluate(ROWA)
+        ctx.close()
+        check("on a touch phone neither arrow is painted (they are for a mouse); a finger slides the row as before",
+              ap and not any(x["on"] for x in ap["arrows"]), json.dumps(ap and ap["arrows"]))
+        # Reduce Motion: a click steps the row there, nothing between.
+        ctx = b.new_context(viewport={"width": 1280, "height": 860}, reduced_motion="reduce")
+        pg = ctx.new_page()
+        open_row(pg, "/skribl-pad")
+        pg.evaluate(GLIDE)
+        pg.click(NEXT, timeout=5000)
+        pg.wait_for_timeout(1200)
+        fr_r = [x for _, x in pg.evaluate("() => window.__rf")]
+        ctx.close()
+        check("under Reduce Motion a click on > steps the row there: two places, nothing between",
+              len({round(v) for v in fr_r}) == 2 and fr_r[-1] - fr_r[0] >= 400, f"{sorted({round(v) for v in fr_r})[:6]}")
+    except Exception as exc:  # noqa: BLE001
+        check("the row with a mouse, on a phone and under Reduce Motion, ran to its end", False, str(exc).splitlines()[0][:200])
     b.close()
 
 passed = sum(1 for r in results if r[0])
