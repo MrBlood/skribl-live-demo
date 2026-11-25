@@ -35,13 +35,15 @@ On the Pad (How it works' cat) and Flip (its bouncing ball):
   stays); the page stays.
   THE EYEDROPPER: the drawer stays out while it picks (nothing covers the
   drawing to step aside for).
+  THE BRUSH RING: Flip's ring stays on the pointer over the drawing before a
+  drawer, with it beside, and home again (the slide's end sends a resize,
+  which clears Flip's kept place of the drawing).
   STILL WHERE IT POINTS: a press on the drawing puts a drawer away, as
   below; Flip draws with that press, and the drawing holds still under the
   pen while it is down, every point landing where it is drawn, then glides
   home (gliding under the pen landed the stroke as much as the slide off);
   the Pad's draws nothing, and the drawing glides home. On both, the drawer
-  gone, a stroke lands where it is drawn (the drawing's place is read
-  again: a resize at the slide's end).
+  gone, a stroke lands where it is drawn.
 
 Elsewhere:
 
@@ -360,11 +362,35 @@ with sync_playwright() as pw:
             check(f"Pad: with the drawer beside (the drawing slid {slid}), the first press on the drawing puts it away, as below,"
                   " and the drawing glides home",
                   bool(slid) and away and not q.evaluate(SHIFT), json.dumps({"slid": slid, "away": away}))
-        # Home again, its place read again (the resize at the slide's end): a stroke lands where it is drawn.
+        # Home again: a stroke lands where it is drawn.
         first, lg = stroke(q, ed, 0.7, 0.3)
         c.close()
         check(f"{ed}: the drawer gone and the drawing home, a stroke begun seven tenths across and three tenths down lands there",
               lands(first, lg, 0.7, 0.3), json.dumps({"first": first, "logical": lg}))
+
+    # Flip's brush ring keeps the drawing's place (flip.js _padRectCached,
+    # cleared on a resize): the slide's end sends one, or the ring would sit
+    # as far from the pointer as the drawing slid, there and back.
+    RING = """([x, y]) => { const r = document.querySelector('.flip-brush-cursor').getBoundingClientRect();
+      return r.width > 0 && getComputedStyle(document.querySelector('.flip-brush-cursor')).display !== 'none'
+        ? [Math.round((r.left + r.width / 2 - x) * 10) / 10, Math.round((r.top + r.height / 2 - y) * 10) / 10] : null; }"""
+    c, q = boot(b, "Flip", (1440, 900), load=False)
+    offs = []
+    for step in ("before", "beside", "home"):
+        if step == "beside":
+            open_(q, "Flip", "draw")
+        elif step == "home":
+            close_(q, "Flip")
+        box = q.evaluate("() => { const c = document.getElementById('pad').getBoundingClientRect(); return [c.left, c.top, c.width, c.height]; }")
+        pt = (box[0] + box[2] * 0.4, box[1] + box[3] * 0.5)
+        q.mouse.move(pt[0] - 12, pt[1] - 6)
+        q.mouse.move(*pt)
+        q.wait_for_timeout(120)
+        offs.append((step, q.evaluate(RING, list(pt))))
+    c.close()
+    check("Flip: the brush ring stays on the pointer over the drawing before the drawer, with it beside (the drawing slid), and home"
+          " again (the slide's end reads the drawing's place again)",
+          all(o is not None and abs(o[0]) <= 1.5 and abs(o[1]) <= 1.5 for _, o in offs), json.dumps(offs))
 
     # ------------------------------------------------------------ below
     print("\nBELOW — where the two don't fit, with a finger, and on a phone; a resize decides again; the tools tray as it was")
