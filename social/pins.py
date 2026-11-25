@@ -28,8 +28,9 @@ is not taken down. Taking a pin away always works on your own, by the
 address alone: it is yours, whatever became of the post since.
 
 DELETING IS REAL AND SAID IN CODE: a post goes with its pin (drop_post_pin,
-from posts.drop_post), an account with its own (drop_person_pin, from
-accounts.delete_person). The ON DELETE CASCADEs are the net under that.
+from posts.drop_post), and so an account with its own, which is only ever on
+a post of theirs (accounts.delete_person drops each of their posts). The ON
+DELETE CASCADEs are the net under that.
 
 Every state-changing request shows the site's token and Origin and is limited
 per person (security.LIMITS, "pin") before it reads anything (security.over).
@@ -71,12 +72,6 @@ def lead(person, viewer):
 def drop_post_pin(post_id):
     """A post's pin, whoever's page it led (from posts.drop_post)."""
     site().session().execute(sa.delete(Pin).where(Pin.post_id == post_id)
-                             .execution_options(synchronize_session=False))
-
-
-def drop_person_pin(person_id):
-    """A person's own pin (from accounts.delete_person)."""
-    site().session().execute(sa.delete(Pin).where(Pin.person_id == person_id)
                              .execution_options(synchronize_session=False))
 
 

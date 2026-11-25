@@ -4494,7 +4494,8 @@ print("PLAN " + json.dumps(out))
                   json.dumps({"theirs": st_theirs, "bad": st_bad, "none": st_none, "mine": st_mine, "out": st_out,
                               "pinned": pinned_gone, "delete": d, "left": after_del}))
             # SAID IN CODE, with SQLite's cascade off (SKRIBL_SQLITE_FOREIGN_KEYS=0, on a copy): a post goes with
-            # its pin (posts.drop_post), an account with its own (accounts.delete_person), the code alone.
+            # its pin (posts.drop_post), and an account with its own, always on a post of theirs
+            # (accounts.delete_person drops each), the code alone.
             c.post_json(f"/social/p/{ps[1]}/pin", {"pinned": True})
             rob = _people.get("pinrob") or member(b, "pinrob", "Rob Pinner")
             robs = site_post(rob, f"Rob's pinned post {tag}", tab_drawing(seed=150))
@@ -4540,7 +4541,7 @@ with app.app_context():
             except Exception:  # noqa: BLE001
                 out22 = {"err": (probe.stderr or probe.stdout)[-600:]}
             check("with SQLite's cascade off (on a copy), a pinned post deleted takes its pin, and an account deleted its"
-                  " own pin, by the code (posts.drop_post, accounts.delete_person)",
+                  " own pin with its posts, by the code (posts.drop_post, accounts.delete_person)",
                   out22.get("fk") == 0 and out22.get("post") == [1, 0] and out22.get("person") == [1, 0], json.dumps(out22)[:500])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             check("pin this post: the part ran to its end", False, str(exc).splitlines()[0][:200] if str(exc) else repr(exc))
