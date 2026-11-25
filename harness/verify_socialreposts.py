@@ -15,8 +15,9 @@ authenticator for the site's people.
      ("Show it to the people who follow you") and Quote ("Repost it with your
      own words, or a drawing"), the arrows and Quote's own quote marks; once
      yours, Undo repost ("Take it off your page and your followers’ Home"); a
-     drawing shown outside a post, Quote alone; signed out, "Repost this
-     post?"; it rises gliding, read on every frame.
+     drawing shown outside a post, Quote alone, and to its maker Post it ("Put
+     it in a post of yours, with your own words") where Repost would be;
+     signed out, "Repost this post?"; it rises gliding, read on every frame.
   3. A TAP REPOSTS: the sheet goes down, the repost lights and its count moves
      at once, before the site answers, and after a reload; its count fades
      in and the button grows round the arrows while the heart moves along,
@@ -90,6 +91,10 @@ authenticator for the site's people.
      let go (0, "This comment is gone."), a place's too, an account's; with
      SQLite's cascade off; the CHECKs; the chain going down refuses while
      any is there.
+ 21. POST IT (the owner's A, Nov 24): on a drawing of yours shown outside a
+     post, the composer with it attached as it is, for your words; closed
+     unposted, the focus back on the repost; posted, a post of yours holding
+     it, and the drawing's page the post's.
  12. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALREPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a
@@ -690,6 +695,8 @@ SHEET = r"""() => { const s = document.getElementById('repostSheet'); if (!s) re
 PEN = "() => [...document.querySelectorAll('.tab-make svg path')].map(p => p.getAttribute('d'))"
 QUOTE_MARK = ["M9.25 6.5C6.35 7.6 4.75 9.9 4.75 13v4.5h5.5V12h-2.5c.1-1.6.8-2.7 2.3-3.5z",
               "M18.25 6.5c-2.9 1.1-4.5 3.4-4.5 6.5v4.5h5.5V12h-2.5c.1-1.6.8-2.7 2.3-3.5z"]
+# Post it's mark (the owner's A, Nov 24): Follow's plus, two strokes in the pen.
+PLUS = ["M 12.0,5.2 C 12.1,9.4 11.9,14.6 12.0,18.8", "M 5.2,12.1 C 9.4,11.9 14.6,12.0 18.8,12.0"]
 
 
 def open_rp(pg, sel):
@@ -1198,31 +1205,41 @@ with sync_playwright() as p:
                 open_rp(pg, PAGE_ROW + " .rp-btn")
                 sheets[(screen, "a drawing")] = pg.evaluate(SHEET)
                 close_ctx(ctx, pg)
+                # The same drawing to its maker: Post it where Repost would be.
+                ctx, pg = browser_as(b, pia, screen=screen, scheme="dark" if screen == "desk" else "light")
+                go(pg, f"/social/b/{d2}")
+                open_rp(pg, PAGE_ROW + " .rp-btn")
+                sheets[(screen, "your drawing")] = pg.evaluate(SHEET)
+                close_ctx(ctx, pg)
             names = {" ".join(k): [(r["name"], r["say"]) for r in (v or {}).get("rows", [])] for k, v in sheets.items()}
             want = {"a post": [("Repost", "Show it to the people who follow you"),
                                ("Quote", "Repost it with your own words, or a drawing")],
                     "yours": [("Undo repost", "Take it off your page and your followers’ Home"),
                               ("Quote", "Repost it with your own words, or a drawing")],
-                    "a drawing": [("Quote", "Repost it with your own words, or a drawing")]}
+                    "a drawing": [("Quote", "Repost it with your own words, or a drawing")],
+                    "your drawing": [("Post it", "Put it in a post of yours, with your own words"),
+                                     ("Quote", "Repost it with your own words, or a drawing")]}
             check("a tap raises the repost sheet, \"Repost\", one card: Repost (\"Show it to the people who follow"
                   " you\") and Quote (\"Repost it with your own words, or a drawing\"); once yours, Undo repost (\"Take"
-                  " it off your page and your followers’ Home\"); a drawing shown outside a post, Quote alone; the ⋯'s"
-                  " own sheet staying down (phone and desk)",
-                  len(sheets) == 6 and all(v and v["open"] and v["title"] == "Repost" and v["cards"] == 1 and v["menuDown"]
+                  " it off your page and your followers’ Home\"); a drawing shown outside a post, Quote alone, and to"
+                  " its maker Post it (\"Put it in a post of yours, with your own words\") where Repost would be (the"
+                  " owner's A, Nov 24); the ⋯'s own sheet staying down (phone and desk)",
+                  len(sheets) == 8 and all(v and v["open"] and v["title"] == "Repost" and v["cards"] == 1 and v["menuDown"]
                                            and [(r["name"], r["say"]) for r in v["rows"]] == want[k[1]]
                                            for k, v in sheets.items()),
                   json.dumps(names)[:700])
             looks = []
             for k, v in sheets.items():
                 for r in (v or {}).get("rows", []):
-                    icon = ARROWS if r["act"] == "repost" else QUOTE_MARK
+                    icon = ARROWS if r["act"] == "repost" else PLUS if r["act"] == "post" else QUOTE_MARK
                     if not (r["d"] == icon and r["d"] != pens[k[0]] and r["nameSize"] == "17px" and r["nameWeight"] == "600" and r["nameColor"] == v["ink"]
                             and r["saySize"] == "15px" and r["sayColor"] == v["ink2"] and r["h"] >= 56 and r["hit"]):
                         looks.append((" ".join(k), r["act"], {x: r[x] for x in ("nameSize", "nameWeight", "saySize", "h", "hit")},
                                       "the bar's Make pencil" if r["d"] == pens[k[0]] else r["d"][:1]))
             check("each row the ⋯'s own with the mute row's two lines: its name 17px 600 in the ink, what it does 15px in"
                   " the second ink, 56px or more, painted where it stands; Repost's icon the arrows, Quote's a pair of quote"
-                  " marks of its own, never the bar's Make pencil", pens.get("phone") and not looks, json.dumps(looks)[:600])
+                  " marks of its own, Post it's Follow's plus in the pen, never the bar's Make pencil",
+                  pens.get("phone") and not looks, json.dumps(looks)[:600])
             # SIGNED OUT: the small sheet that says how; nothing is done.
             out = {}
             ctx, pg = browser_as(b, None)
@@ -3175,6 +3192,76 @@ with sync_playwright() as p:
                   json.dumps({k_: {"said": g.get("said"), "wait": g.get("wait"), "why": g.get("why"), "px": g.get("px")} for k_, g in none20.items()})[:600])
         except Exception as exc:  # noqa: BLE001
             stopped(20, exc)
+
+    # POST IT (the owner's A, Nov 24, "Four Small Picks" 3: "repost does not
+    # seem to repost (my own drawing), but quote post does"): a drawing of
+    # yours shown outside a post, its sheet's Post it opens the composer with
+    # the drawing attached as it is (an older drawing, as Yours attaches one),
+    # for your own words; posted, it is a post of yours holding that drawing,
+    # and the drawing's page is the post's.
+    if part(21, "Post it, a drawing of yours shown outside a post: the composer with it attached for your words; closed"
+                " unposted, back on the repost; posted, a post of yours holding it"):
+        try:
+            ines = someone(b, "ines", "Ines Roy")
+            d21 = make_drawing(ines, "Section 21, Ines's drawing", seed=7)
+            READ21 = """() => { const s = document.getElementById('repostSheet'), c = window.SocialComposer;
+              const post = document.querySelector('#composeSheet [data-compose-post]');
+              return { sheetDown: !s.classList.contains('is-open') || s.hidden, open: !!c && c.isOpen(),
+                       attached: c ? c.attached() : null, quoted: c ? c.quoted() : null,
+                       words: document.getElementById('composeWords').value,
+                       ready: post ? post.getAttribute('aria-disabled') : null }; }"""
+            ATT21 = "() => !!window.SocialComposer && !!SocialComposer.attached() && SocialComposer.isOpen()"
+            got21 = {}
+            for screen in ("phone", "desk"):
+                ctx, pg = browser_as(b, ines, screen=screen, scheme="dark" if screen == "desk" else "light")
+                go(pg, f"/social/b/{d21}")
+                open_rp(pg, PAGE_ROW + " .rp-btn")
+                press(pg, '#repostSheet [data-rp="post"]')
+                try:
+                    pg.wait_for_function(ATT21, timeout=8000)
+                except Exception:  # noqa: BLE001 -- nothing attached is the row's red, read below
+                    pass
+                pg.wait_for_timeout(500)
+                got21[screen] = pg.evaluate(READ21)
+                if screen == "desk":
+                    pg.keyboard.press("Escape")
+                    pg.wait_for_timeout(800)
+                    got21["closed"] = pg.evaluate("""() => { const a = document.activeElement;
+                      return { open: !!window.SocialComposer && SocialComposer.isOpen(),
+                               onRepost: !!(a && a.closest && a.closest('.post-page > .post-row .rp-btn')) }; }""")
+                close_ctx(ctx, pg)
+            want21 = {"sheetDown": True, "open": True, "attached": {"kind": "skribl", "id": d21}, "quoted": None,
+                      "words": "", "ready": "false"}
+            check("Post it, on a drawing of yours shown outside a post: the sheet goes down and the composer comes up with"
+                  " the drawing attached as it is (an older drawing, as Yours attaches one), nothing quoted, your words"
+                  " to come, Post ready (phone and desk)",
+                  bool(d21) and got21.get("phone") == want21 and got21.get("desk") == want21,
+                  json.dumps({k_: v for k_, v in got21.items() if k_ != "closed"}))
+            check("...closed unposted (Escape on a desk), the focus is back on the repost that opened it",
+                  got21.get("closed") == {"open": False, "onRepost": True}, json.dumps(got21.get("closed")))
+            # Posted, with words: a post of hers holding that drawing; its page goes to the post.
+            ctx, pg = browser_as(b, ines, screen="phone")
+            go(pg, f"/social/b/{d21}")
+            open_rp(pg, PAGE_ROW + " .rp-btn")
+            press(pg, '#repostSheet [data-rp="post"]')
+            pg.wait_for_function(ATT21, timeout=8000)
+            pg.fill("#composeWords", "My morning cat, posted")
+            with pg.expect_navigation(timeout=15000):
+                press(pg, "#composeSheet [data-compose-post]")
+            pg.wait_for_timeout(400)
+            went = urllib.parse.urlparse(pg.url).path
+            go(pg, f"/social/b/{d21}")
+            then = urllib.parse.urlparse(pg.url).path
+            close_ctx(ctx, pg)
+            made = db("select p.public_id, p.words, pe.handle from social_posts p join social_people pe on pe.id = p.person_id"
+                      " where p.skribl_id = ?", (d21 or "",))
+            check("...posted with her words, it is a post of hers holding that drawing, she lands on it, and the"
+                  " drawing's own page is the post's now",
+                  len(made) == 1 and made[0][1] == "My morning cat, posted" and made[0][2] == "ines"
+                  and went == f"/social/p/{made[0][0]}" and then == went,
+                  json.dumps({"made": made, "went": went, "then": then}))
+        except Exception as exc:  # noqa: BLE001
+            stopped(21, exc)
 
     if part(12, "no page errors, no console errors and no CSP violations"):
         try:

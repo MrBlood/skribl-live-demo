@@ -53228,3 +53228,34 @@ platform font read back by CDP), 103/103 at both. Not tested here: the
 owner's Segoe UI.
 
 PAD AND FLIP: Flip's alone (the Pad has no page bar).
+
+## After v330 -- Post it: a drawing of yours shown outside a post, from its repost sheet
+
+The owner, Nov 23: "repost does not seem to repost (my own drawing), but
+quote post does." It was the rule: a drawing shown outside a post (your
+Gallery tab, or its own page) offered Quote alone, since only its maker
+posts it, and the sheet never said how. Mocked as "Four Small Picks", 3: A,
+"Post it" where Repost would be; B, Repost posts it at once with no words.
+The owner, Nov 24: "3. A".
+
+THE CHANGE: to its maker, the repost sheet on a drawing shown outside a post
+offers Post it ("Put it in a post of yours, with your own words", Follow's
+plus in the pen) where Repost would be, then Quote; anybody else still sees
+Quote alone. Post it opens the composer with the drawing attached as it is,
+as Yours attaches an older drawing (`compose.js` post; the site's
+`_post_older`: one drawing, one conversation, its hearts, comments,
+bookmarks and quotes moving to the post), for their own words; closed
+unposted, the focus goes back to the repost. Something already attached
+stays, and the sheet says a post holds one drawing, as Yours does.
+
+THE CHECKS, `verify_socialreposts`: 2 reads the sheet as its maker too
+(Post it, then Quote); 21 follows Post it: the composer with the drawing
+attached, nothing quoted, Post ready (phone and desk); closed unposted, the
+focus on the repost; posted with words, a post of hers holding the drawing,
+she lands on it, and the drawing's page is the post's. CALIBRATION, parts 2
+and 21 alone: as built 7/7; main with the new rows, 2's sheet row red and
+21 stopped at the tap (no Post it); one break at a time: nothing attached,
+21's first row red and the rest stopped; no way back, the closed row red;
+Post it on everybody's drawing, 2's sheet row red.
+
+PAD AND FLIP: not for them; the site's sheet.

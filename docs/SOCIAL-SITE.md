@@ -2108,8 +2108,12 @@ give a little of the room past their counts. A TAP raises its own small
 sheet, the ⋯'s shape (`#repostSheet`): "Repost" ("Show it to the people who
 follow you"), or once yours "Undo repost" ("Take it off your page and your
 followers’ Home"), and "Quote" ("Repost it with your own words, or a
-drawing", the bar's Make pencil); a drawing shown outside a post shows Quote
-alone (only its maker posts it). Repost asks nothing more: the row lights
+drawing", a pair of quote marks of its own); a drawing shown outside a post
+shows Quote alone (only its maker posts it), and to its maker "Post it"
+first, where Repost would be ("Put it in a post of yours, with your own
+words", Follow's plus; the owner's A, Nov 24), which opens the composer
+with the drawing attached as it is, for their own words (`compose.js`
+post). Repost asks nothing more: the row lights
 and its count moves at once, the count fading and the button growing round
 the arrows (no toast; Undo is the sheet's own row). Signed out, "Repost
 this post?", the heart's small sheet. A REPOST IS NO POST OF ITS OWN (one

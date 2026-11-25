@@ -44,7 +44,9 @@
  * REPOSTS (the reposts mock, the owner's "All yes", Nov 14): the row's
  * repost raises its own small sheet (#repostSheet, the ⋯'s shape): Repost,
  * or Undo repost once it is yours, and Quote; a drawing shown outside a post
- * has Quote alone. Repost asks nothing more: the sheet goes down, every
+ * has Quote alone, and to its maker Post it first (the owner's A, Nov 24),
+ * which opens the composer with it attached (compose.js post). Repost asks
+ * nothing more: the sheet goes down, every
  * place on the page that shows the post lights its repost (the small violet
  * ink) and its count moves at once, as the heart's does, the count fading
  * and the button growing round the arrows, which keep their place; the site
@@ -687,8 +689,13 @@
       rpNow = p;
       rpFrom = b;
       var st = rpState(p, b), row = rpWrap.querySelector('[data-rp="repost"]');
-      /* A drawing shown outside a post: Quote alone (only its maker posts it). */
+      /* A drawing shown outside a post: Quote alone (only its maker posts it),
+         and to its maker Post it where Repost would be (the owner's A, Nov
+         24): the composer, it attached, for their own words. */
       row.hidden = !p.repost;
+      var postRow = rpWrap.querySelector('[data-rp="post"]');
+      if (postRow) postRow.hidden = !(!p.repost && p.kind === 's' && p.mine && p.skribl
+                                       && window.SocialComposer && window.SocialComposer.post);
       row.querySelector('[data-rp-name]').textContent = say(st.on ? 'rp_undo' : 'rp_do');
       row.querySelector('[data-rp-say]').textContent = say(st.on ? 'rp_undo_say' : 'rp_do_say');
       rpWrap.querySelector('[data-rp="quote"]').hidden = !p.quoted;
@@ -710,6 +717,11 @@
         /* Nothing asked first: the sheet goes down, focus back on the repost. */
         rpSheet.close();
         rpAct(rpNow, !rpState(rpNow).on);
+      } else if (a.getAttribute('data-rp') === 'post') {
+        /* The sheet goes down and the composer comes up with the drawing in
+           it; closed unposted, focus goes back to the repost. */
+        rpSheet.close();
+        window.SocialComposer.post({ id: rpNow.skribl, from: rpFrom });
       } else {
         quote(rpNow, rpFrom);
       }

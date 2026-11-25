@@ -712,12 +712,46 @@
     });
   });
 
+  /* ---- post it: a drawing of yours shown outside a post ---------------------- */
+  /* From its repost sheet (posts.js; the owner's A, Nov 24, "Four Small
+     Picks" 3): this sheet opens at once with the words, and the drawing is
+     fetched and attached as the picker's Drawings attach one (attachSkribl):
+     posted as it is, a post of yours, its conversation with it. Something
+     attached already stays, and the sheet says a post holds one drawing, as
+     Yours does; a draw-back under way gives way, as it does to a quote. */
+  function postOlder(o) {
+    if (sending || !o || !o.id) return;
+    if (back) { if (att) unattach(); drawingBack(null); }
+    if (view !== 'write') show('write', true);
+    sheet.open(o.from || null);
+    lift();
+    grow();
+    if (att) {
+      if (!(att.kind === 'skribl' && att.id === o.id)) tell(sayBox, say('one_drawing'));
+      return;
+    }
+    if (fetching) return;
+    fetching = true;
+    tell(sayBox, say('opening'));
+    fetch(wrap.getAttribute('data-skribl-api') + '/' + encodeURIComponent(o.id), { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); })
+      .then(function (body) {
+        fetching = false;
+        if (att || sending) return;
+        attachSkribl(o.id, (body && (body.skribl || body.payload)) || body);
+      }, function () {
+        fetching = false;
+        tell(sayBox, say('open_failed'));
+      });
+  }
+
   /* What a later step reads (verify_composer), and where a quote comes in
      (posts.js, the repost sheet's Quote): whether it is open, what is
      attached and what is quoted. quote({kind, id, html, from}): `kind` 'p'
      (a post), 's' (a drawing) or 'c' (a comment: the comment thread, step
      3), `html` it small (the site's /p/<id>/quoted, /b/..., /c/...), `from`
-     what takes focus back. */
+     what takes focus back. post({id, from}): a drawing of yours, attached
+     (the repost sheet's Post it). */
   window.SocialComposer = {
     open: function (from) { sheet.open(from || null); lift(); grow(); },
     draft: draft,
@@ -733,6 +767,7 @@
       lift();
       grow();
     },
+    post: postOlder,
     isOpen: sheet.isOpen,
     attached: function () { return att ? { kind: att.kind, id: att.id || null } : null; },
     /* Who can draw back on what is attached (null: nothing that can be),
