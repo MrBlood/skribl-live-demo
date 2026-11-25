@@ -32,7 +32,20 @@ stroke) is not carried. A photo under a drawing is: see below.
 WHAT CAN BE DRAWN BACK ON, FOR NOW: a drawing of one page with no
 recolours (recolours index the strokes by number and time, which a join would
 have to carry over too: a step of its own). drawable() says which, and the
-row offers Draw back only where it can be done (posts.py, the pen)."""
+row offers Draw back only where it can be done (posts.py, the pen).
+
+AND A FLIP, PAGE FOR PAGE (the owner's "all yes", Nov 25, to the Flip Draw
+Back mock: five answers, A each). One of his pages for each of hers, in her
+order and at her timing (answer 1); it plays together, each page hers and his
+at once, at her speed, as one animation (answer 2): join() lays his strokes
+on her page, page by page, and keeps her pages' holds, her pages per second
+and her shape, paper, picture and song. Kept as the Pad's (answer 3): joined
+while the owner's switch is off, two hands once it is on (own() and view()
+learn pages too). NOT IN THE FIRST STEP (said in the mock): a Flip with a
+loop, a page kept underneath or beat timing; and, found in the building, one
+with a page that draws itself, whose timing is its strokes' own, so "hers and
+his at once" has no one answer yet (the owner's to say). drawable() names
+each ("loop", "under", "beat", "draw"), so its row offers no pen."""
 
 #: How long the original plays before the answer, at most (choice 4's B).
 OVERTURE_MS = 3000
@@ -81,7 +94,10 @@ def own(original, answer):
     as it was drawn, on `original`'s paper (its ground and its shape, where
     he drew them), with no picture and no music (hers stay hers: drawable's
     `answer` refused his own). Both drawable(). Its resting picture is the
-    caller's (posts._drawing_back: his lines alone)."""
+    caller's (posts._drawing_back: his lines alone). A Flip's: his pages
+    alone, each on her page's paper, at her timing (_own_pages)."""
+    if flip_pages(original) is not None:
+        return _own_pages(original, answer)
     of, af = _frame0(original), _frame0(answer)
     frame = {"strokes": [dict(p) for p in _points(af)], "strokeGroups": _groups(af, len(_points(af))),
              "background": of.get("background")}
@@ -115,6 +131,8 @@ def view(original, mine, which):
         return join(original, mine)
     if which != "his":
         return None
+    if flip_pages(original) is not None:
+        return _his_pages(original, mine)
     of = _frame0(original) or {}
     out = dict(mine)
     frame = dict(_frame0(mine) or {})
@@ -136,6 +154,60 @@ def _frame0(payload):
     return frames[0]
 
 
+def _frames(payload):
+    """A drawing's pages, or None when it has none or one is not a page."""
+    frames = payload.get("frames") if isinstance(payload, dict) else None
+    if not isinstance(frames, list) or not frames or not all(isinstance(f, dict) for f in frames):
+        return None
+    return frames
+
+
+def flip_pages(payload):
+    """A Flip's pages, when `payload` is one: more than one page, played as
+    pages (its playbackMode "flip", or none: Skribl's own rule for which
+    editor made it, validation._payload_kind). None for anything else, a
+    drawing of one page included (a one-page Flip replays as a still, and is
+    drawn back on in the Pad)."""
+    frames = _frames(payload)
+    if frames is None or len(frames) < 2 or payload.get("playbackMode") not in (None, "flip"):
+        return None
+    return frames
+
+
+def same_pages(original, answer):
+    """The answer has one page for each of the original's (the Pad's one,
+    a Flip's every one): drawn page for page, in her order (answer 1)."""
+    a, b = _frames(original), _frames(answer)
+    return a is not None and b is not None and len(a) == len(b)
+
+
+def all_points(payload):
+    """Every point of every page, in page order."""
+    out = []
+    for f in _frames(payload) or []:
+        out.extend(_points(f))
+    return out
+
+
+def _pages_drawable(payload, pages, answer):
+    """drawable() for a Flip (flip_pages): what the first step can't do yet
+    (the mock's "not in the first step", and a page that draws itself:
+    drawback.py's opening), then the answer's own picture and song, as the
+    Pad's."""
+    for k in ("loop", "under", "beat"):
+        if payload.get(k) is not None:
+            return k
+    if any(f.get("draw") is True for f in pages):
+        return "draw"
+    if answer and (any(_truthy(f.get("photo")) for f in pages) or _truthy(payload.get("photo"))):
+        return "photo"
+    if answer and (any(_truthy(f.get("music")) for f in pages) or _truthy(payload.get("music"))):
+        return "music"
+    if any(f.get("recolors") for f in pages) or payload.get("recolors"):
+        return "recolors"
+    return None
+
+
 def _truthy(v):
     """Whether a picture or a sound is there: its data (a dict's `data`, as
     the editors write a photo and a song), or a string; a dict of settings
@@ -146,8 +218,10 @@ def _truthy(v):
 
 
 def drawable(payload, answer=False):
-    """None when `payload` can be drawn back on, else why not: "pages" (a
-    Flip of more than one page, or no frames), "recolors". (A two-hands
+    """None when `payload` can be drawn back on, else why not: "pages" (no
+    frames, or pages that are not a Flip's), "recolors"; for a Flip
+    (flip_pages, page for page since Nov 25) "loop", "under", "beat" or
+    "draw" (a page that draws itself), the first step's limits. (A two-hands
     draw-back is not drawn back on yet, whatever its drawing: its post says
     "hands", posts.py.) With `answer`,
     whether it can be the strokes of an answer: then a picture under it
@@ -155,6 +229,9 @@ def drawable(payload, answer=False):
     author's background and music and the answer adds neither (the owner,
     Nov 19: "why not just only let a drawback be on author's background and
     music?", and their yes)."""
+    pages = flip_pages(payload)
+    if pages is not None:
+        return _pages_drawable(payload, pages, answer)
     f0 = _frame0(payload)
     if f0 is None:
         return "pages"
@@ -205,11 +282,124 @@ def played(points, pause_mode):
     return out
 
 
+def _media_of(original, of, key):
+    """Her picture or her song (`key`), on her first page or, for a drawing
+    from before pages, at the top; None when there is none."""
+    return of.get(key) if _truthy(of.get(key)) else original.get(key) if _truthy(original.get(key)) else None
+
+
+def _timed(points, base):
+    """`points` laid on from `base` at their own pace, a gap back in time (a
+    new take) as none; the first one starts a stroke."""
+    out, at = [], base
+    for i, p in enumerate(points):
+        if i:
+            gap = _t(p) - _t(points[i - 1])
+            if gap > 0:
+                at += gap
+        q = dict(p)
+        q["t"] = int(round(at))
+        if i == 0:
+            q["start"] = True
+        out.append(q)
+    return out
+
+
+def _paged(original, answer, frames):
+    """A Flip draw-back's envelope around `frames`: her pages per second (and
+    the time grid it was written for), her shape; the answer's starting
+    speed, its gallery choice and its caption, as on the Pad: it is the
+    answer's post."""
+    out = {"version": answer.get("version", 2), "schemaVersion": answer.get("schemaVersion", 2),
+           "playbackMode": "flip", "fps": original.get("fps"), "frames": frames,
+           "canvasSize": original.get("canvasSize")}
+    if original.get("subdiv") is not None:
+        out["subdiv"] = original["subdiv"]
+    for k2 in ("playSpeed", "visibility", "caption"):
+        if answer.get(k2) is not None:
+            out[k2] = answer[k2]
+    return out
+
+
+def _her_page(of, frame):
+    """Her page's own paper and timing on `frame`: its ground, how long it
+    holds, and (never, in the first step) whether it draws itself."""
+    frame["background"] = of.get("background")
+    if of.get("hold") is not None:
+        frame["hold"] = of["hold"]
+    if of.get("draw") is True:
+        frame["draw"] = True
+    return frame
+
+
+def _join_pages(original, answer):
+    """A Flip draw-back's drawing (answers 1 and 2): page for page, her page
+    with his on it, as one animation at her speed. Each page: her strokes
+    as she drew them, then his a beat on from her last point at his own pace
+    (a still page shows them whole; the times only keep the order and the
+    line's count); her paper and her hold. Her picture and song on the first
+    page, her shape and pages per second (_paged). Both drawable() and
+    same_pages()."""
+    ofs, afs = flip_pages(original), _frames(answer)
+    frames = []
+    for i, of in enumerate(ofs):
+        af = afs[i]
+        ops, aps = _points(of), _points(af)
+        strokes = [dict(p) for p in ops]
+        if strokes:
+            strokes[0]["start"] = True
+        strokes += _timed(aps, (_t(strokes[-1]) if strokes else 0) + PAUSE_CAPS["tight"])
+        frame = {"strokes": strokes, "strokeGroups": _groups(of, len(ops)) + _groups(af, len(aps))}
+        if i == 0:
+            frame.update(photo=_media_of(original, of, "photo"), music=_media_of(original, of, "music"))
+        frames.append(_her_page(of, frame))
+    out = _paged(original, answer, frames)
+    # THE PICTURE IT RESTS ON: Flip's card of the two (lib/drawback.js under
+    # flip.js's card), as the Pad's.
+    if isinstance(answer.get("thumbnail"), str) and answer["thumbnail"]:
+        out["thumbnail"] = answer["thumbnail"]
+    return out
+
+
+def _own_pages(original, answer):
+    """A two-hands Flip draw-back's own drawing (own): his pages alone, each
+    on her page's paper and at her hold, her shape and pages per second; no
+    picture and no music (hers stay hers)."""
+    ofs, afs = flip_pages(original), _frames(answer)
+    frames = []
+    for of, af in zip(ofs, afs):
+        aps = [dict(p) for p in _points(af)]
+        if aps:
+            aps[0]["start"] = True
+        frames.append(_her_page(of, {"strokes": aps, "strokeGroups": _groups(af, len(aps))}))
+    return _paged(original, answer, frames)
+
+
+def _his_pages(original, mine):
+    """His alone (view "his") on a Flip: his pages, each on her page's paper
+    and at her hold, her picture and song on the first page, as he drew them
+    there."""
+    ofs, mfs = flip_pages(original), _frames(mine) or []
+    frames = []
+    for i, of in enumerate(ofs):
+        mf = dict(mfs[i]) if i < len(mfs) else {"strokes": [], "strokeGroups": []}
+        if i == 0:
+            mf.update(photo=_media_of(original, of, "photo"), music=_media_of(original, of, "music"))
+        frames.append(_her_page(of, mf))
+    out = dict(mine)
+    out["frames"] = frames
+    out["canvasSize"] = original.get("canvasSize") or mine.get("canvasSize")
+    return out
+
+
 def join(original, answer):
     """The draw-back's drawing: `original`'s strokes first, as it plays,
     squeezed to OVERTURE_MS at most, then `answer`'s at its own pace; the
     original's shape and ground, the answer's pause rule and speed. Both
-    drawable(). Each point keeps everything it carries but its time."""
+    drawable(). Each point keeps everything it carries but its time. A
+    Flip's, page for page (_join_pages)."""
+    if flip_pages(original) is not None:
+        return _join_pages(original, answer)
     of, af = _frame0(original), _frame0(answer)
     ops, aps = _points(of), _points(answer["frames"][0])
     otimes = played(ops, original.get("pauseMode"))
@@ -296,14 +486,22 @@ def drawn_ms(points):
     return int(round(total))
 
 
+def paged_ms(payload):
+    """How long a drawing took to draw, page by page (drawn_ms on each, the
+    time between pages not counted): a Pad drawing's one page is its
+    drawn_ms."""
+    return sum(drawn_ms(_points(f)) for f in _frames(payload) or [])
+
+
 def hands(original, answer, theirs, owner_id, me_id):
     """A draw-back's hands, [[person id, ms], ...] in the order they play:
     the original's (`theirs`, its own list, when it is a draw-back itself: a
     jam; else its maker `owner_id` and how long its drawing took), then
     `me_id` and how long the answer took. `original` and `answer` as join()
-    takes them, before it."""
-    before = read_hands(theirs) or [[owner_id, _whole(drawn_ms(_points(_frame0(original))))]]
-    return before + [[me_id, _whole(drawn_ms(_points(answer["frames"][0])))]]
+    takes them, before it. A Flip's, page by page (paged_ms): its line says
+    its pages, so the times are kept and not shown."""
+    before = read_hands(theirs) or [[owner_id, _whole(paged_ms(original))]]
+    return before + [[me_id, _whole(paged_ms(answer))]]
 
 
 def read_hands(raw):

@@ -675,6 +675,10 @@
   {# lib/chromefit.js and lib/canvassizes.js load in the head (_skribl_fit_boot.html): the canvas is laid out before it paints. #}
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
   {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>
+  {# Draw back, page for page: her Flip faint under the pen, when a host's
+     composer hands one over (composehost underlay). Compose only, as the
+     Pad's; flip.js is its host (window.SkriblDrawBackHost). #}
+  <script src="{{ skribl_asset('lib/drawback.js') }}" defer></script>
   {# Your hand, over the editor, inside a post: as on the Pad (lib/handover.js). #}
   <script src="{{ skribl_asset('lib/handover.js') }}" defer></script>{% endif %}
   {% if not compose %}{{ hs.steps() }}{% endif %}

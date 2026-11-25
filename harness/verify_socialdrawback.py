@@ -9,12 +9,12 @@ each in a browser with a virtual passkey.
      then the answer's at its own pace; on the original's shape and ground,
      the answer's pause rule; its row says what it draws back on and whose.
      A long original is squeezed; a short one plays as it is.
-  2. WHAT IS REFUSED: an answer drawn on another shape, a Flip of more than
-     one page, a drawing on a photo, one that is gone or behind a block, a
+  2. WHAT IS REFUSED: an answer drawn on another shape, a Flip that loops
+     (the first step's limit), a drawing on a photo, one that is gone or behind a block, a
      draw-back beside a quote; signed out the original is not handed over;
      the route hands the composer the original, as Skribl serves it.
   3. THE CARD: the pen after the heart, 44px to a finger, "Draw back" and
-     how many; none signed out, none on a Flip, none on a drawing made on a
+     how many; none signed out, none on a Flip that loops, none on a drawing made on a
      photo (the post's `undrawable`, read when it was posted); a draw-back's
      own card has one (a jam); a draw-back's card says
      "Drew back on Ana’s" (her post the link, 44px tall), her face small at
@@ -67,7 +67,7 @@ each in a browser with a virtual passkey.
      the change, the tint slides, no box moves, a failure puts it back. Her page's quiet line with Change, alone where nobody has
      drawn back. The composer's quiet line under a drawing that can be
      drawn back on, opening the pill where it stood, growing into its room;
-     Post sends it; not under a Flip. A page gone stale is told kindly. The
+     Post sends it; not under a Flip that loops. A page gone stale is told kindly. The
      composer's reading of "can be drawn back on" and the site's agree.
      Every new word at 4.5:1.
  13. EACH LINK'S WORDS TAKE THEIR OWN TAPS: on a draw-back's card the time's
@@ -88,6 +88,18 @@ each in a browser with a virtual passkey.
      back on yet; old draw-backs untouched; with SQLite's cascade off, what
      goes goes by the code; and through the real Pad, his drawing resting on
      his lines alone.
+ 16. A FLIP, PAGE FOR PAGE (the owner's "all yes", Nov 25, to the Flip Draw
+     Back mock, five answers A): what a Flip says it can't do yet (a loop, a
+     page that draws itself); the way in hands her pages over; posted, his
+     pages laid on hers page for page, her timing kept; a page short, an
+     eraser, a picture of his refused; the pen on a Flip's card. The whole
+     way: the pen opens Flip (not the Pad) on her pages, shape and paper,
+     her page faint under the page he is on, her pages faint in the strip;
+     what would add, move or delete a page or change her timing steps aside,
+     and so does the eraser; the pill folds into Flip's frame; Fill floods
+     inside her lines; New Skribl keeps her pages; posted, it lands joined
+     and rests on a picture of the two. With the owner's switch on, his
+     pages alone, pointing to hers; Both, hers and his from the site.
 
 SOCIALDRAWBACK_PART=<n>[,<m>] runs those sections only (calibration). Every
 row was shown red by breaking one part and green as built: DECISIONS.md,
@@ -677,6 +689,34 @@ CARD = """(post) => { const c = document.querySelector('.post-card[data-post="' 
            face: !!c.querySelector('.post-face .db-face .face-ring') }; }"""
 
 
+# ---- a second server on the same database, the owner's switch on (sections 15, 16) ----
+_switch_on = []
+
+
+def switch_on():
+    """The site with SKRIBL_SOCIAL_TWO_HANDS on (the suite's own server has it
+    off), on the same database with the same secret, so a sign-in is good on
+    both: its address. Started once, for whichever section asks first."""
+    if _switch_on:
+        return _switch_on[0]
+    port2 = free_port()
+    base2 = f"http://localhost:{port2}"
+    log2 = open(os.path.join(TMP, "server2.log"), "w")
+    server2 = subprocess.Popen([sys.executable, "-m", "flask", "--app", "app", "run", "--port", str(port2),
+                                "--no-reload"], cwd=ROOT, env=dict(ENV, SKRIBL_SOCIAL_TWO_HANDS="1"),
+                               stdout=log2, stderr=subprocess.STDOUT)
+    atexit.register(lambda: (server2.terminate(), server2.wait(10)))
+    for _ in range(120):
+        try:
+            with urllib.request.urlopen(base2 + "/api/skribls?limit=1", timeout=2) as r:
+                if r.status == 200:
+                    break
+        except Exception:  # noqa: BLE001
+            time.sleep(0.5)
+    _switch_on.append(base2)
+    return base2
+
+
 def home(pg):
     pg.goto(BASE + "/social/?tab=everyone")
     ready(pg)
@@ -775,7 +815,10 @@ with sync_playwright() as p:
             flip["playbackMode"] = "flip"
             flip["frames"] = [flip["frames"][0], dict(flip["frames"][0])]
             flip["fps"] = 8
-            fl = post_payload(ana, "Section 2, a flip", flip)
+            # A Flip is drawn back on page for page since Nov 25 (section 16);
+            # one that loops is the first step's limit, still refused.
+            flip["loop"] = {"from": 0, "to": 1, "times": 2}
+            fl = post_payload(ana, "Section 2, a flip that loops", flip)
             ph = drawing(n=20, seed=8)
             ph["frames"][0]["photo"] = {"data": PNG, "fit": "cover"}
             photo = post_payload(ana, "Section 2, on a photo", ph)
@@ -787,10 +830,11 @@ with sync_playwright() as p:
             }
             said = {k: (v[0], (v[1] or {}).get("error") if isinstance(v[1], dict) else v[1], (v[1] or {}).get("why") if isinstance(v[1], dict) else None)
                     for k, v in got.items()}
-            check("refused, saying why: an answer drawn on another shape (drawback_shape), a Flip of two pages"
-                  " (drawback_unsupported: pages), a post not there (drawback_gone), and a draw-back beside a quote"
-                  " (one_drawing); a drawing on a photo is not refused (the author's background, the owner's yes)",
-                  said == {"shape": (400, "drawback_shape", None), "flip": (400, "drawback_unsupported", "pages"),
+            check("refused, saying why: an answer drawn on another shape (drawback_shape), a Flip that loops"
+                  " (drawback_unsupported: loop, the first step's limit), a post not there (drawback_gone), and a"
+                  " draw-back beside a quote (one_drawing); a drawing on a photo is not refused (the author's"
+                  " background, the owner's yes)",
+                  said == {"shape": (400, "drawback_shape", None), "flip": (400, "drawback_unsupported", "loop"),
                            "nothing": (404, "drawback_gone", None), "quote": (400, "one_drawing", None)} and fl and photo,
                   json.dumps(said))
             # A PICTURE UNDER HIS ANSWER (the owner's first try, Nov 19: "I tried
@@ -838,10 +882,10 @@ with sync_playwright() as p:
             r_flip = tc.get_json(f"/social/p/{fl}/drawback")
             okp = r_ok[1] if isinstance(r_ok[1], dict) else {}
             check("the composer is handed her drawing as Skribl serves it (her points, her shape) and her first name;"
-                  " signed out nothing (401), a Flip of two pages refused with why (400)",
+                  " signed out nothing (401), a Flip that loops refused with why (400)",
                   r_ok[0] == 200 and xy((okp.get("payload") or {}).get("frames", [{}])[0].get("strokes") or []) == xy(CAT["frames"][0]["strokes"])
                   and (okp.get("payload") or {}).get("canvasSize", {}).get("cssWidth") == 816 and okp.get("first") == "Ana"
-                  and r_out[0] == 401 and r_flip[0] == 400 and (r_flip[1] or {}).get("why") == "pages",
+                  and r_out[0] == 401 and r_flip[0] == 400 and (r_flip[1] or {}).get("why") == "loop",
                   f"{r_ok[0]} first {okp.get('first')}; signed out {r_out[0]}; flip {r_flip}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(2, exc)
@@ -857,7 +901,8 @@ with sync_playwright() as p:
             flip["playbackMode"] = "flip"
             flip["frames"] = [flip["frames"][0], dict(flip["frames"][0])]
             flip["fps"] = 8
-            fl = post_payload(ana, "Section 3, a flip", flip)
+            flip["loop"] = {"from": 0, "to": 1, "times": 2}   # the first step's limit (section 16 has the pen on a Flip)
+            fl = post_payload(ana, "Section 3, a flip that loops", flip)
             ph = drawing(n=20, seed=10)
             ph["frames"][0]["photo"] = {"data": PNG, "fit": "cover"}
             photo = post_payload(ana, "Section 3, on a photo", ph)
@@ -884,7 +929,7 @@ with sync_playwright() as p:
                   " \"Draw back, 1 draw-back\" with its count beside it (light and dark)",
                   st == 200 and ok, json.dumps({k: v["cat"] for k, v in seen.items()})[:600])
             # A draw-back can itself be drawn back on (a jam): its card has the pen.
-            check("no pen on a Flip of two pages, nor for somebody signed out (the card's row as it was); a drawing made"
+            check("no pen on a Flip that loops, nor for somebody signed out (the card's row as it was); a drawing made"
                   " on a photo has one (the author's background, the owner's yes), and so has a draw-back's own card (a jam)",
                   all(v["flip"] and v["flip"]["pen"] is None and v["photo"] and v["photo"]["pen"]
                       and v["back"] and v["back"]["pen"] for v in seen.values()) and out and out["pen"] is None
@@ -1518,12 +1563,13 @@ with app.test_request_context("/social/"):
             # disorganized"; a heading is there to label something): until then
             # "No draw-backs yet" stood from the start to hold the words. The
             # bar holds them. Where it cannot be done the bar has no Draw back:
-            # signed out, and a Flip of two pages.
+            # signed out, and a Flip that loops (the first step's limit).
             fresh = post_payload(ana, "Section 6, nobody has drawn back on this", drawing(n=24, seed=61))
             pages2 = dict(drawing(n=12, seed=62))
             pages2["frames"] = [dict(pages2["frames"][0]), dict(pages2["frames"][0])]
             pages2["playbackMode"], pages2["fps"] = "flip", 8
-            flipped = post_payload(ana, "Section 6, a Flip of two pages", pages2)
+            pages2["loop"] = {"from": 0, "to": 1, "times": 2}
+            flipped = post_payload(ana, "Section 6, a Flip that loops", pages2)
             zero = {}
             for key, who, post in (("fresh", theo, fresh), ("signed out", None, fresh), ("a Flip", theo, flipped)):
                 ctx, pg = browser_as(b, who)
@@ -1532,8 +1578,8 @@ with app.test_request_context("/social/"):
                 zero[key] = pg.evaluate(WORD)
                 close_ctx(ctx, pg)
             check("on a drawing nobody has drawn back on there is no line and no heading at all (no strip, nothing saying"
-                  " \"No draw-backs yet\"), and Draw back is in the answer bar all the same, 44px; signed out, or on a Flip of"
-                  " two pages (which can't be drawn back on yet), the bar is there without it, and no strip",
+                  " \"No draw-backs yet\"), and Draw back is in the answer bar all the same, 44px; signed out, or on a Flip"
+                  " that loops (which can't be drawn back on yet), the bar is there without it, and no strip",
                   bool(fresh) and bool(flipped) and zero["fresh"].get("there") and zero["fresh"]["strip"] is False
                   and zero["fresh"]["headings"] == [] and zero["fresh"].get("h", 0) >= 44 and zero["fresh"]["inWords"] == 1
                   and all(zero[k]["bar"] and zero[k]["there"] is False and zero[k]["strip"] is False and zero[k]["inWords"] == 0
@@ -2483,10 +2529,11 @@ with app.test_request_context("/social/"):
             flip["playbackMode"] = "flip"
             flip["frames"] = [flip["frames"][0], dict(flip["frames"][0])]
             flip["fps"] = 8
-            fl = post_payload(nia, "Section 12, a flip", flip)
+            flip["loop"] = {"from": 0, "to": 1, "times": 2}   # the first step's limit (a Flip is drawn back on: section 16)
+            fl = post_payload(nia, "Section 12, a flip that loops", flip)
             set_by("everyone")
             hers_menu = {sc: menu_of(nia, cat, sc) for sc in ("phone", "desk")}
-            others_menu = {"somebody else, on her post": menu_of(tom, cat), "her Flip": menu_of(nia, fl), "her words alone": menu_of(nia, words_only)}
+            others_menu = {"somebody else, on her post": menu_of(tom, cat), "her Flip that loops": menu_of(nia, fl), "her words alone": menu_of(nia, words_only)}
 
             def pilled(v, on="everyone"):
                 return bool(v and v["card"] and v["open"] and v["nth"] == 1 and v["cards"] == 3 and v["head"] == "Who can draw back"
@@ -2511,7 +2558,7 @@ with app.test_request_context("/social/"):
                       for v in hers_menu.values()),
                   json.dumps({sc: v and v["card"] and [(c["says"], c["bold"], c["grow"]) for c in v["choices"]]
                               for sc, v in hers_menu.items()}))
-            check("...and only there: no such card in the ⋯ of somebody else's post, of her own Flip, or of her own post of"
+            check("...and only there: no such card in the ⋯ of somebody else's post, of her own Flip that loops, or of her own post of"
                   " words alone (nothing there can be drawn back on), where the sheet has its two cards",
                   all(v and v["open"] and v["card"] is False and v["cards"] == 2 for v in others_menu.values()), json.dumps(others_menu))
 
@@ -2736,8 +2783,9 @@ with app.test_request_context("/social/"):
                 requestAnimationFrame(tick); }); }"""
             FLIPDEMO = json.loads((ROOT / "skribl/static/help/demos/flip-bounce.json").read_text())
 
-            def add_from(pg_, press, kind="pad"):
-                """A drawing handed back by its editor, through the composer's own tool: the cat from the Pad, a Flip from Flip."""
+            def add_from(pg_, press, kind="pad", doc=None):
+                """A drawing handed back by its editor, through the composer's own tool: the cat from the Pad, a Flip
+                from Flip (`doc`, or the Flip demo)."""
                 box = "#composeFlip" if kind == "flip" else "#composePad"
                 press(pg_, f"#composeSheet [data-compose-open={kind}]")
                 fe_ = pg_.wait_for_selector(box + " .facepad-frame", state="attached", timeout=15000)
@@ -2746,7 +2794,7 @@ with app.test_request_context("/social/"):
                 fr_.wait_for_function("() => typeof window.SkriblComposeLoad === 'function'" if kind == "flip"
                                       else "() => typeof loadSkribl === 'function' && !!(window.__skriblBoot && window.__skriblBoot.pad)", timeout=30000)
                 pg_.wait_for_timeout(700)
-                fr_.evaluate("(d) => window.SkriblComposeLoad(d)" if kind == "flip" else "(d) => loadSkribl(d)", FLIPDEMO if kind == "flip" else CAT)
+                fr_.evaluate("(d) => window.SkriblComposeLoad(d)" if kind == "flip" else "(d) => loadSkribl(d)", (doc or FLIPDEMO) if kind == "flip" else CAT)
                 pg_.wait_for_timeout(1500)
                 if fr_.evaluate("() => typeof recording !== 'undefined' && !!recording"):
                     fr_.click("#recordBtn")
@@ -2900,7 +2948,8 @@ with app.test_request_context("/social/"):
             home(pg)
             pg.tap("nav.nav .tab-make")
             pg.wait_for_timeout(700)
-            add_from(pg, press_of("phone"), kind="flip")
+            # A Flip that loops: the first step's limit (a Flip is drawn back on page for page since Nov 25).
+            add_from(pg, press_of("phone"), kind="flip", doc=dict(FLIPDEMO, loop={"from": 2, "to": 4, "times": 2}))
             flipped = pg.evaluate(CMP12)
             flipped["attached"] = pg.evaluate("() => (window.SocialComposer.attached() || {}).kind || null")
             pg.tap("#composeSheet [data-compose-remove]")
@@ -2914,7 +2963,7 @@ with app.test_request_context("/social/"):
             faded_open = pg.evaluate(CMP12)
             close_ctx(ctx, pg)
             fh = [f[1] for f in faded["frames"]]
-            check("NOT UNDER A FLIP (nothing there can be drawn back on yet): a Flip attached, no line and nothing to"
+            check("NOT UNDER A FLIP THAT LOOPS (the first step's limit): such a Flip attached, no line and nothing to"
                   " send; and UNDER REDUCE MOTION the pill fades in where it stands, at its full height from its first"
                   " frame (its animation moves opacity alone)",
                   flipped["attached"] == "payload" and flipped["there"] is False and flipped["who"] is None
@@ -2956,17 +3005,20 @@ with app.test_request_context("/social/"):
                      "recolours on its page": dict(one_, frames=[dict(f0, recolors=[{"from": "#000", "to": "#fff"}])]),
                      "recolours on it": dict(one_, recolors={"a": 1}), "no recolours, an empty list": dict(one_, frames=[dict(f0, recolors=[])]),
                      "no recolours, an empty set": dict(one_, recolors={}), "a photo and music": on_photo_with_music(seed=140),
-                     "the Flip demo": FLIPDEMO}
+                     "the Flip demo": FLIPDEMO, "the Flip demo, looped": dict(FLIPDEMO, loop={"from": 2, "to": 4, "times": 2}),
+                     "a Flip with a page that draws itself": dict(FLIPDEMO, frames=[dict(FLIPDEMO["frames"][0], draw=True)] + FLIPDEMO["frames"][1:])}
             ctx, pg = browser_as(b, nia)
             home(pg)
             theirs_ = pg.evaluate("(cs) => Object.fromEntries(Object.entries(cs).map(([k, v]) => [k, window.SocialComposer.drawable(v)]))", cases)
             close_ctx(ctx, pg)
             ours_ = {k: _rules.drawable(v) is None for k, v in cases.items()}
             check("THE COMPOSER SHOWS THE LINE EXACTLY WHERE THE SITE WILL LET IT BE DRAWN BACK ON: its own reading and the"
-                  " site's (drawback.drawable) agree on seventeen drawings, the yes and the no: one page, a replay, a"
-                  " picture and music, empty recolours (yes); two pages, none, a flip, a loop, one kept under, a beat,"
-                  " recolours (no)",
-                  theirs_ == ours_ and sum(ours_.values()) == 6 and len(ours_) == 17,
+                  " site's (drawback.drawable) agree on nineteen drawings, the yes and the no: one page, a replay, a"
+                  " picture and music, empty recolours, a Flip page for page (yes); two pages said to be a replay, none,"
+                  " a flip of one page, a loop, one kept under, a beat, recolours, a Flip that loops, a Flip with a page"
+                  " that draws itself (no)",
+                  theirs_ == ours_ and sum(ours_.values()) == 7 and len(ours_) == 19 and ours_["the Flip demo"]
+                  and not ours_["the Flip demo, looped"] and not ours_["a Flip with a page that draws itself"],
                   json.dumps({"the site": ours_, "differ": {k: [ours_[k], theirs_.get(k)] for k in ours_ if ours_[k] != theirs_.get(k)}}))
 
             # THE WORDS AS PAINTED, light and dark.
@@ -3200,20 +3252,7 @@ with app.test_request_context("/social/"):
         try:
             # A SECOND SERVER ON THE SAME DATABASE, the owner's switch on (the
             # suite's own has it off). Same secret, so a sign-in is good on both.
-            PORT2 = free_port()
-            BASE2 = f"http://localhost:{PORT2}"
-            log2 = open(os.path.join(TMP, "server2.log"), "w")
-            server2 = subprocess.Popen([sys.executable, "-m", "flask", "--app", "app", "run", "--port", str(PORT2),
-                                        "--no-reload"], cwd=ROOT, env=dict(ENV, SKRIBL_SOCIAL_TWO_HANDS="1"),
-                                       stdout=log2, stderr=subprocess.STDOUT)
-            atexit.register(lambda: (server2.terminate(), server2.wait(10)))
-            for _ in range(120):
-                try:
-                    with urllib.request.urlopen(BASE2 + "/api/skribls?limit=1", timeout=2) as r:
-                        if r.status == 200:
-                            break
-                except Exception:  # noqa: BLE001
-                    time.sleep(0.5)
+            BASE2 = switch_on()
             hana = someone(b, "hana", "Hana Mori")
             taro = someone(b, "taro", "Taro Sato")
             kiko = someone(b, "kiko", "Kiko Ito")
@@ -3555,6 +3594,476 @@ with app.app_context():
                   json.dumps({"row": r11, "ink on his own": ink_own, "ink on both": ink_both}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(15, exc)
+
+    # ----------------------------------------------------------------- 16
+    if part(16, "a Flip, page for page: the pen on a Flip, Flip over the composer on her pages, hers faint page by page,"
+                " the pages and her timing kept, the eraser off, Fill inside her lines, joined"):
+        try:
+            # HER FLIP: How it works' bouncing ball (the mock's), her page 6 held two beats.
+            BALL = json.loads((ROOT / "skribl/static/help/demos/flip-bounce.json").read_text())
+            BALL.pop("thumbnail", None)
+            ball = json.loads(json.dumps(BALL))
+            ball["frames"][5]["hold"] = 2
+            N16 = len(ball["frames"])
+            ana16 = someone(b, "ana", "Ana Ruiz")
+            theo16 = someone(b, "theo", "Theo Lin")
+            fl16 = post_payload(ana16, "Section 16, the bouncing ball", ball)
+            looped = post_payload(ana16, "Section 16, a ball that loops", dict(ball, loop={"from": 2, "to": 4, "times": 2}))
+            drawn = json.loads(json.dumps(ball))
+            drawn["frames"][3]["draw"] = True
+            draws = post_payload(ana16, "Section 16, a page that draws itself", drawn)
+            before = post_payload(ana16, "Section 16, a Flip from before", ball)
+            db_write("update social_posts set undrawable = 'pages' where public_id = ?", (before or "",))
+            und = {k: (db("select undrawable from social_posts where public_id = ?", (v or "",)) or [[None]])[0][0]
+                   for k, v in (("plain", fl16), ("loop", looped), ("draw", draws))}
+            check("a Flip says what the first step can't do when it is posted: nothing for her bouncing ball (it can be"
+                  " drawn back on), \"loop\" for one that loops, \"draw\" for one with a page that draws itself",
+                  und == {"plain": None, "loop": "loop", "draw": "draw"}, json.dumps(und))
+
+            # THE ROUTE hands her Flip over, page for page; the first step's limits are refused, saying why.
+            tc16 = theo16.client()
+            tc16.get("/social/")
+            r_ok = tc16.get_json(f"/social/p/{fl16}/drawback")
+            r_loop = tc16.get_json(f"/social/p/{looped}/drawback")
+            r_draw = tc16.get_json(f"/social/p/{draws}/drawback")
+            okp = (r_ok[1] or {}).get("payload") or {} if isinstance(r_ok[1], dict) else {}
+            check("the composer's way in hands her Flip over whole (her ten pages, her hold on page 6, her pages per"
+                  " second, her shape); a Flip with a loop or a page that draws itself is refused, saying which",
+                  r_ok[0] == 200 and len(okp.get("frames") or []) == N16 and (okp.get("frames") or [{}] * 6)[5].get("hold") == 2
+                  and okp.get("fps") == ball["fps"] and okp.get("canvasSize", {}).get("cssWidth") == 816
+                  and r_loop[0] == 400 and (r_loop[1] or {}).get("why") == "loop"
+                  and r_draw[0] == 400 and (r_draw[1] or {}).get("why") == "draw",
+                  json.dumps({"ok": r_ok[0], "pages": len(okp.get("frames") or []), "loop": r_loop, "draw": r_draw})[:600])
+
+            # THE JOIN, ON THE SERVER: his pages laid on hers, page for page.
+            def his_pages(marks):
+                """His Flip as Flip hands one back: a page for each of hers, `marks` {page: points} drawn on some."""
+                frames = []
+                for i in range(N16):
+                    pts = marks.get(i, [])
+                    frames.append({"strokes": pts, "strokeGroups": [len(pts)] if pts else [],
+                                   "background": {"color": "#f6f2ea"}, "photo": None, "music": None})
+                return {"version": 2, "schemaVersion": 2, "playbackMode": "flip", "fps": ball["fps"],
+                        "canvasSize": {"cssWidth": 816, "cssHeight": 612, "dpr": 1}, "frames": frames}
+
+            def shadow(page, n=14, seed=0):
+                return [{"x": round(300 + i * 12 + seed, 1), "y": 540.0, "color": "#e5484d", "size": 5,
+                         "t": 50000 + page * 1000 + i * 30, "start": i == 0} for i in range(n)]
+            mine16 = his_pages({5: shadow(5), 6: shadow(6, n=9)})
+            st_j, j_j = draw_back(theo16, fl16, mine16)
+            back16 = j_j.get("post") if isinstance(j_j, dict) else None
+            s16 = stored(back16) or {}
+            p16 = s16.get("payload") or {}
+            fr16 = p16.get("frames") or []
+            pages_ok = len(fr16) == N16 and all(
+                xy(fr16[i]["strokes"][:len(ball["frames"][i]["strokes"])]) == xy(ball["frames"][i]["strokes"])
+                and len(fr16[i]["strokes"]) == len(ball["frames"][i]["strokes"]) + len(mine16["frames"][i]["strokes"])
+                and xy(fr16[i]["strokes"][len(ball["frames"][i]["strokes"]):]) == xy(mine16["frames"][i]["strokes"])
+                for i in range(N16)) if len(fr16) == N16 else False
+            check("posted, a Flip draw-back is her Flip with his pages on it, page for page: ten pages, each her points as"
+                  " she drew them and then his; her hold on page 6, her pages per second, her shape and paper; a"
+                  " draw-back on her post",
+                  st_j == 200 and s16.get("is_drawback") and s16.get("on") == post_id(fl16) and pages_ok
+                  and fr16[5].get("hold") == 2 and p16.get("fps") == ball["fps"] and p16.get("playbackMode") == "flip"
+                  and p16.get("canvasSize", {}).get("cssWidth") == 816
+                  and all((f.get("background") or {}).get("color") == "#f6f2ea" for f in fr16),
+                  json.dumps({"status": st_j, "err": j_j if st_j != 200 else None, "pages": len(fr16),
+                              "points": [len(f.get("strokes") or []) for f in fr16], "hold6": fr16[5].get("hold") if len(fr16) > 5 else None})[:700])
+            # What is refused: a page short, an eraser on a page, a picture of his own.
+            short = his_pages({5: shadow(5)})
+            short["frames"] = short["frames"][:-1]
+            erased = his_pages({5: shadow(5), 7: [dict(p, erase=True) for p in shadow(7, n=5)]})
+            pictured = his_pages({5: shadow(5)})
+            pictured["frames"][0]["photo"] = {"data": red_png(), "fit": "cover"}
+            said16 = {}
+            for k_, pay in (("short", short), ("erase", erased), ("photo", pictured)):
+                st_, j_ = draw_back(theo16, fl16, pay)
+                said16[k_] = (st_, (j_ or {}).get("error") if isinstance(j_, dict) else None,
+                              (j_ or {}).get("why") if isinstance(j_, dict) else None)
+            check("refused: an answer a page short (\"didn't land on theirs\", drawback_shape), an eraser on any of his"
+                  " pages (why erase), a picture of his own (why photo); each on his, as on the Pad",
+                  said16 == {"short": (400, "drawback_shape", None), "erase": (400, "drawback_unsupported", "erase"),
+                             "photo": (400, "drawback_unsupported", "photo")}, json.dumps(said16))
+
+            # THE PEN on her Flip's card; none on the Flip that loops; one on a Flip from before (answered when opened).
+            ctx, pg = browser_as(b, theo16)
+            home(pg)
+            seen16 = {k: pg.evaluate(CARD, v) for k, v in (("plain", fl16), ("loop", looped), ("before", before))}
+            close_ctx(ctx, pg)
+            check("the pen after the heart on her Flip's card, 44px, as on a drawing; none on her Flip that loops; one"
+                  " on a Flip posted before Flips could be drawn back on (it said \"pages\"), answered when opened",
+                  all(seen16[k] and seen16[k]["pen"] and seen16[k]["pen"]["w"] >= 44 and seen16[k]["pen"]["h"] >= 44
+                      and seen16[k]["kids"].index("pen") == seen16[k]["kids"].index("heart") + 1 for k in ("plain", "before"))
+                  and seen16["loop"] and seen16["loop"]["pen"] is None,
+                  json.dumps({k: (v or {}).get("kids") for k, v in seen16.items()}))
+
+            # THE WHOLE WAY, IN A BROWSER: the pen, Flip over the composer, her pages under his.
+            ctx, pg = browser_as(b, theo16)
+            home(pg)
+            pen16 = f'.post-card[data-post="{fl16}"] .db-pen'
+            pg.locator(pen16).scroll_into_view_if_needed()
+            pg.click(pen16)
+            fe = pg.wait_for_selector("#composeFlip .facepad-frame", state="attached", timeout=15000)
+            pg.wait_for_function("() => document.querySelector('#composeFlip').classList.contains('is-ready')", timeout=30000)
+            fr = fe.content_frame()
+            fr.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state()", timeout=15000)
+            pg.wait_for_timeout(600)
+            opened = fr.evaluate("""() => ({ pages: frames.length, page: idx, size: [CW, CH], ground: String(bgColor).toLowerCase(),
+              fps: fps, hold6: frames[5].hold, ink: frames.reduce((n, f) => n + f.strokes.length, 0),
+              state: SkriblDrawBack.state(), pad: !!document.getElementById('pad'),
+              pill: (document.querySelector('.db-pill .db-where') || {}).textContent || null,
+              padOpen: !!document.querySelector('#composePad.is-open, #composePad.is-ready') })""")
+            check("the pen on a Flip opens the composer and Flip over it (not the Pad): one empty page of his for each"
+                  " of her ten, at her timing (her hold on page 6, her pages per second), on her shape and paper; the"
+                  " pill says \"Drawing back on Ana’s\"",
+                  opened["pages"] == N16 and opened["page"] == 0 and opened["size"] == [816, 612]
+                  and opened["ground"] == "#f6f2ea" and opened["fps"] == ball["fps"] and opened["hold6"] == 2
+                  and opened["ink"] == 0 and opened["state"]["pages"] == N16 and opened["pill"] == "Drawing back on Ana’s",
+                  json.dumps(opened))
+
+            # NOTHING OVER THE PILL ON A FIRST VISIT (Flip's "New here?" sits where Theirs is), and HER PAPER STAYS
+            # HERS when the theme changes while his pages are still blank (a blank Flip follows the theme).
+            calm = fr.evaluate("""() => { const h = document.querySelector('.skribl-hint');
+              return { hint: !!h && !h.hidden && h.classList.contains('in') }; }""")
+            pg.emulate_media(color_scheme="dark")
+            pg.wait_for_timeout(500)
+            calm["dark"] = fr.evaluate("() => [String(bgColor).toLowerCase(), document.documentElement.dataset.theme || null, matchMedia('(prefers-color-scheme: dark)').matches]")
+            pg.emulate_media(color_scheme="light")
+            pg.wait_for_timeout(300)
+            check("nothing over the pill on a first visit (Flip's \"New here?\" steps aside while drawing back); and her"
+                  " paper stays hers when the phone goes dark while his pages are still blank",
+                  calm["hint"] is False and calm["dark"][0] == "#f6f2ea" and calm["dark"][2] is True, json.dumps(calm))
+
+            # HER PAGE UNDER THE PEN IS THE PAGE HE IS ON. A point on her ball on page 1, and on page 6.
+            def ball_at(i):
+                pts = [p for p in ball["frames"][i]["strokes"] if p["y"] < 500 and p["color"] == "#7c5cff" and p.get("size", 0) >= 6]
+                xs, ys = [p["x"] for p in pts], [p["y"] for p in pts]
+                return (sum(xs) / len(xs), sum(ys) / len(ys)) if pts else None
+            b1, b6 = ball_at(0), ball_at(5)
+            GUIDE = """([x, y]) => { const g = document.querySelector('.db-under'), c = document.getElementById('pad');
+              const k = g.width / CW; return g.getContext('2d').getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data[3]; }"""
+            under1 = [fr.evaluate(GUIDE, list(b1)), fr.evaluate(GUIDE, list(b6)), fr.evaluate(GUIDE, [790, 20])]
+            fr.click(".strip .frame:nth-child(6)")
+            pg.wait_for_timeout(400)
+            under6 = [fr.evaluate("() => [idx, SkriblDrawBack.state().page]"), fr.evaluate(GUIDE, list(b6)), fr.evaluate(GUIDE, list(b1))]
+            check("her page faint under his, the page he is on: on page 1 her ball where she drew it on page 1 (0.32),"
+                  " nothing where her page 6's ball is; on page 6 her squashed ball, and page 1's gone",
+                  abs(under1[0] - 82) <= 4 and under1[1] == 0 and under1[2] == 0
+                  and under6[0] == [5, 5] and abs(under6[1] - 82) <= 4 and under6[2] == 0,
+                  json.dumps({"page 1": under1, "page 6": under6}))
+
+            # THE STRIP: her pages faint under his, so a page is found by what is on it (answer 5).
+            TILE = """([i, x, y]) => { const t = document.querySelectorAll('.strip .frame:not(.ghost-paste)')[i];
+              const c = t && t.querySelector('canvas'); if (!c) return null;
+              const d = c.getContext('2d').getImageData(Math.round(x * c.width / CW), Math.round(y * c.height / CH), 1, 1).data;
+              return [d[0], d[1], d[2]]; }"""
+            paper = (246, 242, 234)
+            tiles = {"page 1 on her ball": fr.evaluate(TILE, [0, b1[0], b1[1]]), "page 6 on her ball": fr.evaluate(TILE, [5, b6[0], b6[1]]),
+                     "page 1, nothing there": fr.evaluate(TILE, [0, 790, 20])}
+            off = {k: (sum(abs(a - c) for a, c in zip(v, paper)) if v else -1) for k, v in tiles.items()}
+            check("the page strip shows her pages faint under his: each tile her ball where she drew it (the paper"
+                  " tinted, not covered), the paper where she drew nothing",
+                  off["page 1 on her ball"] > 40 and off["page 6 on her ball"] > 40 and off["page 1, nothing there"] <= 6
+                  and min(tiles["page 1 on her ball"]) > 120,
+                  json.dumps({"tiles": tiles, "off the paper": off}))
+
+            # WHAT STEPS ASIDE: pages are hers (answer 1), and her timing; the eraser (answer 4).
+            TOAST = "() => (document.getElementById('flipChip') || document.getElementById('toast') || {}).textContent || ''"
+            aside16 = {}
+            fr.click("#addblank")
+            pg.wait_for_timeout(200)
+            aside16["blank"] = [fr.evaluate("() => frames.length"), fr.evaluate(TOAST)]
+            fr.click(".strip .frame.on .holdbadge")
+            pg.wait_for_timeout(200)
+            aside16["hold"] = [fr.evaluate("() => frames[idx].hold"), fr.evaluate(TOAST)]
+            fr.click("#eraserToolBtn")
+            pg.wait_for_timeout(200)
+            aside16["eraser"] = [fr.evaluate("() => flipTool"), fr.evaluate(TOAST)]
+            fr.evaluate("() => { pageClip = [newFrame()]; spanPaste(); }")
+            aside16["paste"] = fr.evaluate("() => frames.length")
+            # Her paper and her picture and music, as on the Pad (the drawer's swatch, the media drawer).
+            fr.evaluate("() => document.querySelector('.bg-swatch[data-bg=\"#0d0f14\"]').click()")
+            pg.wait_for_timeout(200)
+            aside16["paper"] = [fr.evaluate("() => String(bgColor).toLowerCase()"), fr.evaluate(TOAST)]
+            fr.evaluate("() => document.getElementById('mediaOpenBtn').click()")
+            pg.wait_for_timeout(200)
+            aside16["media"] = [fr.evaluate("() => document.getElementById('mediaOpenBtn').getAttribute('aria-expanded')"), fr.evaluate(TOAST)]
+            aside16["dim"] = fr.evaluate("() => ['addblank', 'addcopy', 'eraserToolBtn'].map(i => getComputedStyle(document.getElementById(i)).opacity)")
+            check("while drawing back the pages stay hers: Blank adds none (\"Pages can’t be added, moved or deleted while"
+                  " drawing back.\"), a tile's hold keeps hers (\"The timing is Ana’s while drawing back.\"), Paste adds"
+                  " none; the eraser stays aside, the pen in hand; her paper stays hers (\"The background is Ana’s.\")"
+                  " and so do her picture and music (\"The background and music are Ana’s.\"); each dimmed",
+                  aside16["blank"] == [N16, "Pages can’t be added, moved or deleted while drawing back."]
+                  and aside16["hold"] == [2, "The timing is Ana’s while drawing back."]
+                  and aside16["eraser"] == ["pen", "The eraser is off while drawing back. Undo takes back your last line."]
+                  and aside16["paste"] == N16 and aside16["dim"] == ["0.4", "0.4", "0.4"]
+                  and aside16["paper"] == ["#f6f2ea", "The background is Ana’s."]
+                  and aside16["media"][0] != "true" and aside16["media"][1] == "The background and music are Ana’s.",
+                  json.dumps(aside16))
+
+            # EVERY DOOR THAT WOULD CHANGE HER PAGES OR HER TIMING, not only its button: each asked, nothing moves.
+            doors = fr.evaluate("""async () => {
+              pageClip = null;   // the row before left one there, to try Paste
+              const was = frames.slice(), holds = frames.map(f => f.hold).join(), size = [CW, CH].join(), rate = fps, tried = [];
+              const go = (name, fn) => { try { fn(); tried.push(name); } catch (e) { tried.push(name + ' threw ' + e.message); } };
+              go('duplicate', () => addFrame(true)); go('blank', () => addFrame(false));
+              go('delete', () => delFrame(3)); go('move', () => movePageTo(2, 4)); go('move one', () => movePage(2, 1));
+              go('span move', () => spanMove(1)); go('span delete', () => spanDelete()); go('copy', () => spanCopy());
+              go('draw on', () => spanSetDraw(true)); go('hold', () => holdCycle(2)); go('span hold', () => spanHold());
+              go('loop', () => loopCycle({ from: 1, to: 3 })); go('under', () => underToggle(1));
+              go('smear', () => addTween()); go('tween', () => addInbetween());
+              go('speed', () => document.querySelector('#fps button[data-fps="24"]').click());
+              go('every page draws', () => document.getElementById('drawOnBtn').click());
+              go('shape', () => [...document.querySelectorAll('#canvasSeg button')].find(x => !x.classList.contains('on')).click());
+              // A tile's ✕ on a desk; on a phone its ⋯ (only the current page's shows one), and its Delete.
+              const del = document.querySelector('.strip .frame.on .del');
+              if (del && del.offsetParent) go('a tile\u2019s \u00d7, twice', () => { del.click(); del.click(); });
+              else go('the \u22ef\u2019s Delete', () => { document.querySelector('.strip .frame.on .pageops').click();
+                [...document.querySelectorAll('.pageops-item')].find(x => x.textContent.trim() === 'Delete').click(); });
+              // A hold on a tile would lift it to move it: it lifts nothing, and says why.
+              const t = document.querySelectorAll('.strip .frame:not(.ghost-paste)')[2], r = t.getBoundingClientRect();
+              const at = { bubbles: true, clientX: r.left + 20, clientY: r.top + 30, pointerId: 7, isPrimary: true, button: 0 };
+              t.dispatchEvent(new PointerEvent('pointerdown', at));
+              await new Promise(res => setTimeout(res, 520));
+              const lifted = !!document.querySelector('.strip .frame.dragging');
+              const said = (document.getElementById('flipChip') || {}).textContent || '';
+              document.dispatchEvent(new PointerEvent('pointerup', at));
+              return { tried: tried.filter(x => / threw /.test(x)), n: tried.length,
+                       same: frames.length === was.length && frames.every((f, i) => f === was[i]),
+                       holds: frames.map(f => f.hold).join() === holds, size: [CW, CH].join() === size, fps: fps === rate,
+                       loop: docLoop, under: docUnder, draws: frames.some(f => f.draw), clip: !!(pageClip && pageClip.length),
+                       lifted, said, armed: document.querySelectorAll('.strip .frame .del.armed').length }; }""")
+            check("every way in, not only its button: Duplicate, Blank, Delete, a move (a page, a run, by one), Delete on a"
+                  " run, Copy, Draw on, a hold (a tile's, a run's), Loop, Keep under, Smear, Tween, the pages per second,"
+                  " Every page draws, the menu's shape and a tile's Delete (its ⋯ on a phone; its ✕, never armed, on a"
+                  " desk) each refuse; a hold on a tile lifts"
+                  " nothing and says why; her ten pages, in her order, at her holds and speed, on her shape",
+                  doors["tried"] == [] and doors["n"] == 19 and doors["same"] and doors["holds"] and doors["size"] and doors["fps"]
+                  and doors["loop"] is None and doors["under"] is None and not doors["draws"] and not doors["clip"]
+                  and not doors["lifted"] and doors["armed"] == 0
+                  and doors["said"] == "Pages can’t be added, moved or deleted while drawing back.",
+                  json.dumps(doors))
+
+            # HE DRAWS on page 6 (the shadow where her ball lands): the pill folds into its Theirs button.
+            box = fr.evaluate("() => { const r = padBox(); return [r.left, r.top, r.width]; }")
+            fb = fe.bounding_box()
+            k = box[2] / 816
+            x0, y0 = fb["x"] + box[0] + 330 * k, fb["y"] + box[1] + 545 * k
+            pg.mouse.move(x0, y0)
+            pg.mouse.down()
+            for s_ in range(1, 16):
+                pg.mouse.move(x0 + s_ * 9 * k, y0 + (s_ % 3) * 2 * k)
+            pg.mouse.up()
+            pg.wait_for_timeout(900)
+            drew = fr.evaluate("""() => { const p = document.querySelector('.db-pill');
+              return { page: idx, pts: frames[5].strokes.length, others: frames.filter((f, i) => i !== 5).reduce((n, f) => n + f.strokes.length, 0),
+                       folded: !!p && p.classList.contains('db-folded'), inStage: !!p && !!p.closest('.flip-stage') }; }""")
+            check("he draws on page 6 and his lines are his page's alone; the pill folds into its Theirs button in the"
+                  " drawing's corner (Flip's frame)",
+                  drew["page"] == 5 and drew["pts"] > 10 and drew["others"] == 0 and drew["folded"] and drew["inStage"],
+                  json.dumps(drew))
+
+            # FILL INSIDE HER LINES: on page 1, a tap in her ball fills her ball, not the page.
+            fr.click(".strip .frame:nth-child(1)")
+            pg.wait_for_timeout(300)
+            fr.evaluate("() => setTool('fill')")
+            pg.wait_for_timeout(150)
+            fx, fy = b1
+            pg.mouse.click(fb["x"] + box[0] + fx * k, fb["y"] + box[1] + fy * k)
+            pg.wait_for_timeout(500)
+            filled = fr.evaluate("""() => { const p = frames[0].strokes; if (!p.length) return null;
+              const xs = p.map(q => q.x), ys = p.map(q => q.y);
+              return { pts: p.length, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] }; }""")
+            bx = [p for p in ball["frames"][0]["strokes"] if p["y"] < 500]
+            hb = [min(p["x"] for p in bx), min(p["y"] for p in bx), max(p["x"] for p in bx), max(p["y"] for p in bx)]
+            check("Fill sees her lines while drawing back: a tap inside her ball on page 1 fills inside her ball (its"
+                  " runs within her ball's own box), not the whole page",
+                  filled and filled["pts"] > 0 and filled["box"][0] >= hb[0] - 4 and filled["box"][1] >= hb[1] - 4
+                  and filled["box"][2] <= hb[2] + 4 and filled["box"][3] <= hb[3] + 4,
+                  json.dumps({"fill": filled, "her ball": hb}))
+            fr.evaluate("() => setTool('pen')")
+
+            # NEW SKRIBL, drawing back: his pages empty again, hers still under them; its Undo brings his back.
+            fresh16 = fr.evaluate("""() => { newSkriblWithUndo(); return { pages: frames.length, ink: frames.reduce((n, f) => n + f.strokes.length, 0),
+              size: [CW, CH], ground: String(bgColor).toLowerCase(), hold6: frames[5].hold, fps: fps, theirs: SkriblDrawBack.state().pages }; }""")
+            back16u = fr.evaluate("() => { restoreClear(); return [frames.length, frames[0].strokes.length, frames[5].strokes.length]; }")
+            pg.wait_for_timeout(300)
+            check("New Skribl while drawing back starts his answer again on her pages: ten empty pages at her timing, on"
+                  " her shape and paper (never one blank page on the theme's), hers still under them; its Undo brings"
+                  " his back",
+                  fresh16 == {"pages": N16, "ink": 0, "size": [816, 612], "ground": "#f6f2ea", "hold6": 2, "fps": ball["fps"],
+                              "theirs": N16}
+                  and back16u[0] == N16 and back16u[1] > 0 and back16u[2] > 10,
+                  json.dumps({"new": fresh16, "undo": back16u}))
+
+            # ADD AND POST: it lands joined, page for page, on her pages.
+            fr.click("#postBtn")
+            pg.wait_for_timeout(600)
+            sub = fr.query_selector("#postSubmitBtn")
+            if sub and sub.is_visible():
+                sub.click()
+            pg.wait_for_function("() => !!window.SocialComposer.attached()", timeout=20000)
+            line16 = pg.evaluate("() => { const l = document.querySelector('[data-compose-backline]'); return l && !l.hidden ? l.textContent : null; }")
+            with pg.expect_navigation(timeout=20000):
+                pg.click("[data-compose-post]")
+            pg.wait_for_timeout(600)
+            landed16 = urllib.parse.urlparse(pg.url).path.rsplit("/", 1)[-1]
+            poster16 = pg.evaluate("() => { const i = document.querySelector('.post-page .skribl-inline-poster'); return i ? i.getAttribute('src') : null; }")
+            close_ctx(ctx, pg)
+            w16 = stored(landed16) or {}
+            wp = (w16.get("payload") or {}).get("frames") or []
+            hers_first = len(wp) == N16 and all(xy(wp[i]["strokes"][:len(ball["frames"][i]["strokes"])]) == xy(ball["frames"][i]["strokes"])
+                                                 for i in range(N16))
+            his_n = [len(wp[i]["strokes"]) - len(ball["frames"][i]["strokes"]) for i in range(len(wp))] if len(wp) == N16 else None
+            check("Add and Post (the sheet saying \"Drawing back on Ana’s\"): it lands a draw-back on hers, her ten pages"
+                  " each with his on top: his shadow on page 6, his fill on page 1, nothing of his elsewhere; her hold"
+                  " on page 6",
+                  line16 == "Drawing back on Ana’s" and w16.get("is_drawback") and w16.get("on") == post_id(fl16) and hers_first
+                  and his_n and his_n[5] > 10 and his_n[0] > 0 and sum(his_n) == his_n[0] + his_n[5]
+                  and wp[5].get("hold") == 2,
+                  json.dumps({"line": line16, "landed": landed16, "his points by page": his_n})[:600])
+            # THE PICTURE IT RESTS ON: the two together, her ball there (her purple), on her first page.
+            # Read off the picture: her ink (her ball's dark outline and her dark ground line, #1f1b2e) on the
+            # card's first page, where his strokes (all of them Skribl purple) never make anything dark.
+            dark16, kind16 = 0, None
+            try:
+                with urllib.request.urlopen(BASE + poster16 if poster16 and poster16.startswith("/") else (poster16 or ""), timeout=20) as r:
+                    kind16 = r.headers.get("Content-Type")
+                    raw16 = r.read()
+                from PIL import Image
+                import io
+                im = Image.open(io.BytesIO(raw16)).convert("RGB")
+                px = im.load()
+                # The card is her paper matted on a dark ground: find the paper (her #f6f2ea), then count the
+                # dark ink inside it alone.
+                on_paper = [(x, y) for y in range(0, im.height, 2) for x in range(0, im.width, 2)
+                            if sum(abs(c_ - d_) for c_, d_ in zip(px[x, y], (246, 242, 234))) <= 12]
+                if on_paper:
+                    x0_, x1_ = min(q[0] for q in on_paper) + 6, max(q[0] for q in on_paper) - 6
+                    y0_, y1_ = min(q[1] for q in on_paper) + 6, max(q[1] for q in on_paper) - 6
+                    for y in range(y0_, y1_, 2):
+                        for x in range(x0_, x1_, 2):
+                            r_, g_, b_ = px[x, y]
+                            if r_ < 90 and g_ < 90 and b_ < 110:
+                                dark16 += 1
+            except Exception as exc:  # noqa: BLE001 -- no picture is this row's red
+                kind16 = kind16 or str(exc)[:80]
+            check("the posted Flip draw-back rests on a picture of the two together: its card has her ink on her paper"
+                  " (her ball's outline, her ground line), never his lines alone or the blank stand-in",
+                  dark16 > 150 and kind16 and "svg" not in kind16, f"poster {poster16}; {kind16}; {dark16} dark pixels on her paper")
+
+            # HER PICTURE is Flip's own backdrop while drawing back (so the page, the strip and the card have it), never
+            # his to post; and a drawing handed back to edit lands on her pages, her picture still under them.
+            pball = json.loads(json.dumps(ball))
+            pball["frames"][0]["photo"] = {"data": red_png(), "fit": "stretch", "opacity": 1}
+            phl = post_payload(ana16, "Section 16, the ball on a picture", pball)
+            ctx, pg = browser_as(b, theo16)
+            home(pg)
+            penp = f'.post-card[data-post="{phl}"] .db-pen'
+            pg.locator(penp).scroll_into_view_if_needed()
+            pg.click(penp)
+            fe = pg.wait_for_selector("#composeFlip .facepad-frame", state="attached", timeout=15000)
+            pg.wait_for_function("() => document.querySelector('#composeFlip').classList.contains('is-ready')", timeout=30000)
+            fr = fe.content_frame()
+            fr.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state() && !!bgImageObj && bgImageObj.complete", timeout=15000)
+            pg.wait_for_timeout(500)
+            PIX = """([x, y]) => { const c = document.getElementById('pad'), k = c.width / CW;
+              const d = c.getContext('2d').getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data; return [d[0], d[1], d[2]]; }"""
+            seen_pic = {"page": fr.evaluate(PIX, [790, 20]), "tile": fr.evaluate(TILE, [0, 790, 20])}
+            fr.click(".strip .frame:nth-child(3)")
+            pg.wait_for_timeout(300)
+            box = fr.evaluate("() => { const r = padBox(); return [r.left, r.top, r.width]; }")
+            fb = fe.bounding_box()
+            k = box[2] / 816
+            x0, y0 = fb["x"] + box[0] + 200 * k, fb["y"] + box[1] + 300 * k
+            pg.mouse.move(x0, y0)
+            pg.mouse.down()
+            for s_ in range(1, 12):
+                pg.mouse.move(x0 + s_ * 8 * k, y0 + (s_ % 3) * 3 * k)
+            pg.mouse.up()
+            pg.wait_for_timeout(600)
+            fr.evaluate("""() => { const d = SkriblCompose.deliver; SkriblCompose.deliver = (p, pv) => {
+              window.__sent = { photo: p.frames.some(f => !!f.photo), music: p.frames.some(f => !!f.music), pages: p.frames.length,
+                                own: !!p.thumbnailOwn, card: !!p.thumbnail }; return d.call(SkriblCompose, p, pv); }; }""")
+            fr.click("#postBtn")
+            pg.wait_for_timeout(600)
+            sub = fr.query_selector("#postSubmitBtn")
+            if sub and sub.is_visible():
+                sub.click()
+            pg.wait_for_function("() => !!window.SocialComposer.attached()", timeout=20000)
+            sent = fr.evaluate("() => window.__sent")
+            pg.click("[data-compose-edit]")
+            pg.wait_for_timeout(1200)
+            again = fr.evaluate("""() => ({ pages: frames.length, his: frames[2].strokes.length, rest: frames.reduce((n, f, i) => n + (i === 2 ? 0 : f.strokes.length), 0),
+              picture: !!bgImage && !!bgImageObj, size: [CW, CH], hold6: frames[5].hold, theirs: SkriblDrawBack.state().pages })""")
+            again["page"] = fr.evaluate(PIX, [790, 20])
+            fr.click("#postBtn")
+            pg.wait_for_timeout(600)
+            sub = fr.query_selector("#postSubmitBtn")
+            if sub and sub.is_visible():
+                sub.click()
+            pg.wait_for_function("() => !!window.SocialComposer.attached()", timeout=20000)
+            with pg.expect_navigation(timeout=20000):
+                pg.click("[data-compose-post]")
+            pg.wait_for_timeout(600)
+            landed_p = urllib.parse.urlparse(pg.url).path.rsplit("/", 1)[-1]
+            close_ctx(ctx, pg)
+            wpp = ((stored(landed_p) or {}).get("payload") or {}).get("frames") or []
+            red_ = lambda c_: bool(c_) and c_[0] > 180 and c_[1] < 90 and c_[2] < 110
+            check("her picture is Flip's own backdrop while drawing back: under the page he is on and in the strip's tiles;"
+                  " Add hands over his pages without it (nor any song), with the card of both and his own beside it; Edit"
+                  " drawing brings his pages back on hers, her picture still under them; posted, her picture is on her"
+                  " first page",
+                  red_(seen_pic["page"]) and red_(seen_pic["tile"])
+                  and sent == {"photo": False, "music": False, "pages": N16, "own": True, "card": True}
+                  and again["pages"] == N16 and again["his"] > 5 and again["rest"] == 0 and again["picture"]
+                  and again["size"] == [816, 612] and again["hold6"] == 2 and again["theirs"] == N16 and red_(again["page"])
+                  and len(wpp) == N16 and bool((wpp[0].get("photo") or {}).get("data") or (wpp[0].get("photo") or {}).get("key")),
+                  json.dumps({"seen": seen_pic, "sent": sent, "again": again, "posted pages": len(wpp),
+                              "photo on page 1": bool(wpp and wpp[0].get("photo"))})[:800])
+
+            # TWO HANDS (the owner's switch on, a second server on the same database; answer 3): his pages
+            # alone, pointing to hers; Both, hers and his from the site, page for page.
+            BASE2 = switch_on()
+            c2 = Client(cookies=theo16.ctx.cookies(BASE), xff=theo16.xff, origin=BASE2, base=BASE2)
+            c2.get("/social/")
+            mine2 = his_pages({5: shadow(5, seed=3), 8: shadow(8, n=7, seed=5)})
+            st2, j2 = c2.post_json("/social/posts", {"words": "A shadow for her ball", "draw_back": phl, "payload": mine2})
+            two16 = j2.get("post") if isinstance(j2, dict) else None
+            r2 = db("select two_hands, drawn_on_skribl_id, undrawable, skribl_id from social_posts where public_id = ?", (two16 or "",))
+            r2 = dict(zip(("two_hands", "on_skribl", "undrawable", "skribl"), r2[0])) if r2 else {}
+            her_sk = (db("select skribl_id from social_posts where public_id = ?", (phl,)) or [[None]])[0][0]
+            o2 = ((stored(two16) or {}).get("payload") or {})
+            of2 = o2.get("frames") or []
+            own_ok = len(of2) == N16 and all(xy(of2[i].get("strokes") or []) == xy(mine2["frames"][i]["strokes"]) for i in range(N16))
+            check("with the owner's switch on, a Flip draw-back's drawing is his pages alone, as he drew them, each on her"
+                  " page's paper and at her timing (her hold on page 6, her pages per second), her shape, without her"
+                  " picture; its row two hands, pointing to her drawing, and not drawn back on yet",
+                  st2 == 200 and r2.get("two_hands") == 1 and r2.get("on_skribl") == her_sk and r2.get("undrawable") == "hands"
+                  and own_ok and of2[5].get("hold") == 2 and o2.get("fps") == ball["fps"] and o2.get("playbackMode") == "flip"
+                  and not any(f.get("photo") for f in of2)
+                  and (o2.get("canvasSize") or {}).get("cssWidth") == 816
+                  and all((f.get("background") or {}).get("color") == "#f6f2ea" for f in of2),
+                  json.dumps({"status": st2, "err": j2 if st2 != 200 else None, "row": r2,
+                              "his points by page": [len(f.get("strokes") or []) for f in of2]})[:700])
+            views = {}
+            kc = Client(cookies=ana16.ctx.cookies(BASE), xff=ana16.xff, origin=BASE2, base=BASE2)
+            for v in ("both", "hers", "his"):
+                stv, jv = kc.get_json(f"/social/hands/play/{v}/{r2.get('skribl')}")
+                views[v] = (((jv or {}).get("skribl") or {}).get("frames") or []) if stv == 200 and isinstance(jv, dict) else stv
+            n_her = [len(f["strokes"]) for f in ball["frames"]]
+            n_his = [len(f["strokes"]) for f in mine2["frames"]]
+            check("Both, from the site: her ten pages each with his on top, page for page (her points, then his), her"
+                  " picture on the first; hers alone her Flip; his alone his pages on her paper, her picture under them",
+                  isinstance(views["both"], list) and [len(f.get("strokes") or []) for f in views["both"]] == [a_ + b_ for a_, b_ in zip(n_her, n_his)]
+                  and all(xy(views["both"][i]["strokes"][:n_her[i]]) == xy(ball["frames"][i]["strokes"]) for i in range(N16))
+                  and isinstance(views["hers"], list) and [len(f.get("strokes") or []) for f in views["hers"]] == n_her
+                  and isinstance(views["his"], list) and [len(f.get("strokes") or []) for f in views["his"]] == n_his
+                  and all((f.get("background") or {}).get("color") == "#f6f2ea" for f in views["his"])
+                  and bool(views["both"][0].get("photo")) and bool(views["his"][0].get("photo")),
+                  json.dumps({k: ([len(f.get("strokes") or []) for f in v] if isinstance(v, list) else v) for k, v in views.items()}))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(16, exc)
 
     # ----------------------------------------------------------------- 10
     if part(10, "no page errors, no console errors and no CSP violations"):

@@ -315,6 +315,12 @@ if(window.SkriblChromeFit){
 
 let frames = [ newFrame() ];
 let idx = 0;
+/* DRAWING BACK, PAGE FOR PAGE (lib/drawback.js; the owner's "all yes", Nov
+   25): her Flip's pages, her timing, her shape, paper and picture, while his
+   pages answer hers, or null. Up here because the strip's tiles read it from
+   the first paint (_thumbSig). The block that keeps it is "DRAWING BACK" below
+   the composer's loader. */
+let _db = null;
 // The starting pen is Skribl purple, the first preset in lib/palette.js (Pad matches).
 let color = "#7c5cff", size = 7, erasing = false, onion = true, fps = 12;
 /* HOW FINELY TIME IS CUT, as a multiple of the speed the artist picked.
@@ -2432,6 +2438,8 @@ function render(){
     _fcvTag = _settled() ? _tagOf(frame()) : null;
   }
   renderOver();
+  // DRAWING BACK: her page under the pen is the page on screen, as it plays too.
+  if(_db && window.SkriblDrawBack) window.SkriblDrawBack.page(idx);
 }
 function renderOver(){
   // Last, so the guides read on top of the drawing rather than under it. Only
@@ -3397,6 +3405,8 @@ function buildStrip(){
       clearTimeout(_pdragArmTimer);
       _pdragArmTimer = setTimeout(()=>{
         if(!_pdrag || _pdrag.armed) return;
+        // DRAWING BACK the pages stay in her order: the hold says so and lifts nothing.
+        if(dbHeld('pages', _pdrag.el)){ _pdrag = null; return; }
         _pdrag.armed = true;
         _pdrag.el.classList.add('dragging');
         if(navigator.vibrate) try{ navigator.vibrate(8); }catch(_){}
@@ -3448,6 +3458,8 @@ function buildStrip(){
       }
       const del = ev.target.closest('.del');
       if(del){
+        // Drawing back, before it arms "Tap again to delete": the pages are hers.
+        if(dbHeld('pages', del)) return;
         if(f.strokes.length && armedDel !== i){
           disarmAll();
           armedDel = i; del.classList.add('armed'); del.title='Tap again to delete';
@@ -3686,6 +3698,12 @@ function openPageOps(trigger, i, from){
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'pageops-item' + (label === 'Delete' ? ' danger' : '');
+    // DRAWING BACK: a row that adds, moves or deletes pages, or changes how
+    // they play, is dimmed with the page bar's (flip.css); its function says
+    // why (dbHeld).
+    const dbKind = ({ 'Move left': 'pages', 'Move right': 'pages', 'Copy': 'pages', 'Delete': 'pages' })[label]
+      || (label === 'Select through here' ? null : 'timing');
+    if(dbKind) b.dataset.db = dbKind;
     b.setAttribute('role', 'menuitem');
     b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (_OPS_ICON[label] || '') + '</svg>';
     b.appendChild(document.createTextNode(label));
@@ -3818,7 +3836,9 @@ function _thumbSig(f){
     col = (col * 33 + _colourHash(p.color)) % 2147483647;
   }
   // The backdrop is not in the strokes, and neither is the eraser flag pattern.
-  return acc + '|' + col + '|' + pts.length + '|' + _backdropSig();
+  // Nor her page under it, drawing back (dbTile): a tile painted before her
+  // pages came is painted again once they have.
+  return acc + '|' + col + '|' + pts.length + '|' + _backdropSig() + (_db ? '|db' + _db.gen : '');
 }
 /* EVERYTHING THE TILE IS PAINTED OVER: what drawBackdrop reads, and the canvas
    size the page is framed in. This was the ground colour and whether there was
@@ -3902,6 +3922,9 @@ function drawThumb(cv,f,keptOnly){
   c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH);
   if(keptOnly) return false;
   drawBackdrop(c);
+  // DRAWING BACK: her page faint under his, so a page is found by what is on
+  // it (answer 5: his alone are mostly empty).
+  dbTile(c, f);
   if(_frameHolds(f, c)) layOn(c, frameCv); else paintFrame(c, f.strokes);
   const bytes = cv.width * cv.height * 4;
   if(_thumbBytes + bytes > THUMB_CACHE_BYTES) return true;   // paint direct from here on
@@ -3971,6 +3994,7 @@ function refreshThumb(i){ const el=_tiles()[i]; if(el && frames[i]) drawThumb(el
 // Reorder by one slot. Keeps `idx` pointing at the SAME page the user was on —
 // moving a page must never silently switch which page you're drawing on.
 function movePage(i,dir){
+  if(dbHeld('pages')) return;   // drawing back, before its hint says it moved
   // Below 560px the pagebar labels are hidden, so Move is two bare arrows in a
   // row that also reads "Page 62 / 64" — they look like page navigation while
   // they actually REORDER the animation. A glyph was tried and reverted: a page
@@ -3994,7 +4018,8 @@ function movePage(i,dir){
 // the user was on rather than the same slot — reordering must never silently
 // switch which page you're drawing on.
 function movePageTo(i,j){
-  if(moveMode) return;              // see the note in buildStrip's click handler
+  if(moveMode) return;
+  if(dbHeld('pages')) return;              // see the note in buildStrip's click handler
   if(i===j) return;
   if(j<0 || j>=frames.length) return;
   invalidateClearUndo(); redoStack.length=0;
@@ -4163,7 +4188,8 @@ function _drawOnHere(sp, i){
   return frameDraw(frames[sp ? sp.from : i]);
 }
 function spanSetDraw(on){
-  if(playing) return;   // the page under a playback is the one flashing by (play() says why)
+  if(playing) return;
+  if(dbHeld('timing')) return;   // her timing, drawing back (lib/drawback.js)   // the page under a playback is the one flashing by (play() says why)
   const s = spanOrCurrent();
   const from = s.from, to = s.to;
   for(let i=from; i<=to; i++){
@@ -4176,6 +4202,7 @@ function spanSetDraw(on){
 }
 function spanCopy(){
   if(playing) return;
+  if(dbHeld('pages')) return;   // copied pages are for Paste, which adds them
   const s = spanOrCurrent();
   pageClip = SkriblPageSpan.extract(frames, s).map(deepCopy);
   buildStrip();
@@ -4185,6 +4212,7 @@ function spanCopy(){
 }
 function spanDelete(){
   if(playing) return;
+  if(dbHeld('pages')) return;
   const s = pageSpan();
   if(!s) return delFrame(idx);                    // unchanged single-page path
   if(SkriblPageSpan.count(s) >= frames.length){
@@ -4212,6 +4240,7 @@ function spanDelete(){
    silently break the range apart. */
 function holdCycle(i){
   if(playing || moveMode) return;
+  if(dbHeld('timing')) return;
   const sp = pageSpan();
   if(sp && SkriblPageSpan.contains(sp, i)) return spanHold();
   invalidateClearUndo();
@@ -4219,6 +4248,7 @@ function holdCycle(i){
   buildStrip(); scheduleSave(); syncFlipDuration();
 }
 function spanHold(){
+  if(dbHeld('timing')) return;
   // One tap sets EVERY page in the span to the same hold, cycling from the
   // first page's value. Cycling each page independently would make the second
   // tap scatter them, which is the opposite of what selecting a range is for.
@@ -4233,6 +4263,7 @@ function spanHold(){
    `idx` keeps its page, so holding an arrow walks a run across the film. */
 function spanMove(dir){
   if(playing) return;
+  if(dbHeld('pages')) return;
   const s = pageSpan();
   if(!s) return movePage(idx, dir);               // unchanged single-page path
   const to = dir < 0 ? s.from - 1 : s.to + 2;     // insert before this original
@@ -4246,6 +4277,7 @@ function spanMove(dir){
 }
 function spanPaste(){
   if(playing || moveMode || !pageClip || !pageClip.length) return;
+  if(dbHeld('pages')) return;
   /* THE OTHER DOOR THAT ADDS PAGES, and it adds N at once. Review of v302:
      addFrame, addTween and addInbetween had all learned to refuse past the
      ceilings and this one still pasted a ten-page clip into a 195-page Skribl
@@ -4309,7 +4341,7 @@ function scrollStripToActive(smooth, quiet){
   try{ el.scrollIntoView({behavior: smooth?'smooth':'auto', inline:'center', block:'nearest'}); }
   catch(_){ el.scrollIntoView(); }
 }
-function addFrame(copy){ if(moveMode) return;
+function addFrame(copy){ if(moveMode) return; if(dbHeld('pages')) return;
   /* Duplicate and Blank reach the page ceiling too, and used to reach it
      silently -- the server refused the POST at the end of the work. Absent
      module -> no new refusal, the same rule budgetAllows states. */
@@ -4320,7 +4352,7 @@ function addFrame(copy){ if(moveMode) return;
   }
   disarmAll(); invalidateClearUndo(); redoStack.length=0; clearSpan(true); const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
   scrollStripToActive(true); }
-function delFrame(i){ if(moveMode || playing) return; invalidateClearUndo(); redoStack.length=0;
+function delFrame(i){ if(moveMode || playing) return; if(dbHeld('pages')) return; invalidateClearUndo(); redoStack.length=0;
   // A range is a pair of INDICES, so any page count change that this function
   // makes invalidates it. Dropping it here rather than trying to fix it up is
   // deliberate: the same reasoning the stroke selection uses when you change
@@ -4643,6 +4675,7 @@ function _loopRange(){ const sp = pageSpan(); return sp ? { from: sp.from, to: s
 function _pagesSay(r){ return r.from === r.to ? 'page ' + (r.from + 1) : 'pages ' + (r.from + 1) + '\u2013' + (r.to + 1); }
 function loopCycle(r){
   if(playing || moveMode) return;
+  if(dbHeld('timing')) return;   // her timing, drawing back
   r = r || _loopRange();
   const cur = _validLoop();
   let next;
@@ -4786,6 +4819,7 @@ function _wireLoopHandle(h, side){
 }
 function underToggle(i){
   if(playing || moveMode) return;
+  if(dbHeld('timing')) return;
   const u = _validUnder();
   if(u && u.page === i){ docUnder = null; chip('No page underneath'); }
   else if(i >= frames.length - 1){ chip('Keep under needs pages after this one'); return; }
@@ -4972,6 +5006,8 @@ function startReveal(f, durMs, fromMs){
 function playStep(){ if(scrubbingFrames) return;
   idx=_playPage(playI);
   flipBadgeFrom(playI);
+  // DRAWING BACK: her page plays with his (answer 2), a blit or a reveal.
+  if(_db && window.SkriblDrawBack) window.SkriblDrawBack.page(idx);
   const _t0 = performance.now();
   // A drawing page must never blit a cached bitmap: the cache exists because a
   // still page does not change, and this one does. It also must not FILL the
@@ -5279,6 +5315,7 @@ function syncDrawOnBtn(){
   drawOnBtn.setAttribute('aria-checked', String(on));
 }
 drawOnBtn.addEventListener('click',()=>{
+  if(dbHeld('timing', drawOnBtn)) return;
   if(playing) stop();
   const on = !_allDraw();
   for(const f of frames){ if(on) f.draw = true; else delete f.draw; }
@@ -6116,7 +6153,8 @@ customBgInput.addEventListener('input',e=>{ setBg(e.target.value,true); });
 // (lib/canvasground.js), as the Pad's canvas does.
 if(window.SkriblCanvasGround) window.SkriblCanvasGround.follow({
   ground: ()=>bgColor,
-  blank: ()=>!bgImage && !pendingPhotoMeta && frames.every(f=>!f.strokes || !f.strokes.length),
+  // ...and never while drawing back, whose paper is hers (lib/drawback.js).
+  blank: ()=>!_db && !bgImage && !pendingPhotoMeta && frames.every(f=>!f.strokes || !f.strokes.length),
   set: (hex)=>setBg(hex,false)
 });
 
@@ -6661,6 +6699,9 @@ function applyFlipDraftObject(d){
   flipDocGen++;
   if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
   applyPayload(d);
+  // DRAWING BACK: a drawing handed back to edit again lands on her pages,
+  // her shape, paper and picture, as it was drawn there (dbConform).
+  if(_db) dbConform();
   invalidateClearUndo();
   loadBgImageObj(()=>{ applyBg(); render(); });
   ensureAudio();
@@ -6669,6 +6710,170 @@ function applyFlipDraftObject(d){
   scheduleSave();
 }
 if(FLIP_COMPOSE) window.SkriblComposeLoad = applyFlipDraftObject;
+
+/* ---- DRAWING BACK, PAGE FOR PAGE --------------------------------------------
+   The owner's "all yes", Nov 25, to the Flip Draw Back mock (five answers, A
+   each; DECISIONS.md, "Flip's Draw back, mocked"). lib/drawback.js lays her
+   Flip faint under his pen, the page under the pen the page he is on, and
+   asks this editor, its host, to make the document his answer is drawn in:
+
+   ONE OF HIS PAGES FOR EACH OF HERS, IN HER ORDER AND AT HER TIMING (answer
+   1): her pages' holds, her pages per second and the time grid they were
+   written for, on her shape. While drawing back nothing adds, moves or
+   deletes a page, or changes how long one lasts: the buttons step aside,
+   dimmed (lib/drawback.js ASIDE, flip.css), and every other way in (a key,
+   a hold on a tile, the ⋯, the menu's shape) asks here first (dbHeld). New
+   Skribl and Clear all give him empty pages again, hers still under them, and
+   a drawing handed back to edit is laid on hers the same way (dbConform).
+
+   HER PAPER AND HER PICTURE are this editor's own backdrop while drawing
+   back, so its tiles, its card and Fill see them as the drawing does; they
+   are never his to post (buildSharePayload leaves the picture and any song
+   out: the site lays hers under both, social/drawback.py). Her song is not
+   played here, as on the Pad: it plays under both once posted.
+
+   THE ERASER IS OFF (answer 4), as on the Pad (lib/drawback.js wraps
+   setTool). Her pages faint under his in the strip (answer 5, dbTile). Fill
+   floods inside her lines (dbFillWalls). His post's card is the two together
+   on the first page anybody drew on, and his own lines alone beside it for a
+   host that keeps two hands (dbCard, thumbnailOwn). */
+const DB_FAINT = 0.32;   // the Pad's faintness (lib/drawback.js FAINT): her ink at 2.0:1 on her paper
+function dbHeld(kind, near){
+  return !!_db && !!window.SkriblDrawBack && window.SkriblDrawBack.refuse(kind, near);
+}
+/* #abc as #aabbcc: her paper may be written short (lib/drawback.js groundOf),
+   and setBg takes the long form. */
+function dbHex(c){
+  const m = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(c || '');
+  return m ? '#' + m[1] + m[1] + m[2] + m[2] + m[3] + m[3] : c;
+}
+function dbTile(c, f){
+  if(!_db || !window.SkriblDrawBack) return;
+  const i = frames.indexOf(f);
+  if(i >= 0) window.SkriblDrawBack.inkPage(c, i, DB_FAINT);
+}
+function dbFillWalls(f){
+  if(!_fillCv) _fillCv = document.createElement('canvas');
+  if(_fillCv.width !== Math.trunc(CW*DPR) || _fillCv.height !== Math.trunc(CH*DPR)){
+    _fillCv.width = CW*DPR; _fillCv.height = CH*DPR;
+    _fillCtx = _fillCv.getContext('2d');
+  }
+  if(!_fillCtx) _fillCtx = _fillCv.getContext('2d');
+  // The photo's own path (fillSourceImage): the ground and this page's
+  // strokes, at the drawing's own size; and her lines, whole.
+  _fillCtx.setTransform(1, 0, 0, 1, 0, 0);
+  _fillCtx.clearRect(0, 0, _fillCv.width, _fillCv.height);
+  _fillCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  _fillCtx.fillStyle = bgColor;
+  _fillCtx.fillRect(0, 0, CW, CH);
+  paintStatic(_fillCtx, f.strokes);
+  window.SkriblDrawBack.inkPage(_fillCtx, idx, 1);
+  return _fillCtx.getImageData(0, 0, _fillCv.width, _fillCv.height);
+}
+/* Her picture, laid as this editor's own (setBgImage's fields, from the
+   post's photo: its fit, strength, blur, framing). None, none. */
+function dbPhoto(){
+  const ph = _db && _db.photo;
+  if(!ph || typeof ph.data !== 'string'){
+    if(bgImage){ imageSelectionSeq++; bgImage = null; bgImageObj = null; redrawAll(); }
+    return;
+  }
+  photoFit = localFit(ph.fit);
+  photoOpacity = typeof ph.opacity === 'number' ? Math.max(0, Math.min(1, ph.opacity)) : 1;
+  photoBlur = Number(ph.blur) > 0 ? Number(ph.blur) : 0;
+  photoZoom = typeof ph.zoom === 'number' ? ph.zoom : 1;
+  const off = ph.offset || {};
+  photoOffX = typeof off.x === 'number' ? off.x : 0.5;
+  photoOffY = typeof off.y === 'number' ? off.y : 0.5;
+  photoEnabled = true; reposMode = false; imageName = '';
+  if(bgImage !== ph.data){
+    bgImage = ph.data; imageSelectionSeq++;
+    loadBgImageObj(() => { if(_db) applyBg(); });
+  }
+}
+/* HIS PAGES ON HERS: one of his for each of hers, at her hold (a page of his
+   past hers kept only while it has ink, so nothing drawn is lost: the site
+   then says it did not land on hers), her shape, her pages per second, no
+   loop, nothing kept under, no beat; her paper and her picture. */
+function dbConform(){
+  const D = _db; if(!D) return;
+  if(Number.isInteger(D.w) && Number.isInteger(D.h) && (D.w !== CW || D.h !== CH)){
+    applyCanvasSize(D.w, D.h, { silent: true });
+    sizeStage();
+  }
+  syncCanvasSeg();
+  const was = frames, cur = frames[idx];
+  frames = D.pages.map((p, i) => {
+    const f = was[i] || newFrame();
+    const h = Math.round(Number(p.hold));
+    f.hold = (isFinite(h) && h >= 1) ? h : 1;
+    if(p.draw) f.draw = true; else delete f.draw;
+    return f;
+  });
+  for(let i = D.pages.length; i < was.length; i++) if(was[i] && was[i].strokes && was[i].strokes.length) frames.push(was[i]);
+  const at = frames.indexOf(cur);
+  idx = at >= 0 ? at : Math.max(0, Math.min(idx, frames.length - 1));
+  fps = D.fps; subdiv = D.subdiv; beatBars = null; docLoop = null; docUnder = null;
+  syncFpsSeg();
+  const g = dbHex(D.ground);
+  if(/^#[0-9a-f]{6}$/i.test(g || '') && g.toLowerCase() !== String(bgColor).toLowerCase()) setBg(g);
+  dbPhoto();
+}
+/* THE PICTURE A FLIP DRAW-BACK RESTS ON (lib/postedcard.js, as every card):
+   the first page anybody drew on (lib/holdtiming.js posterOf's rule on the
+   two together), her page whole under his, on her paper and picture; `own`,
+   his lines alone on her paper, on the first page he drew on (the second
+   card, for a host that keeps two hands: the Pad's thumbnailOwn). */
+function dbFlat(own){
+  const inked = i => (frames[i] && frames[i].strokes.length) || (!own && _db && _db.pages[i] && _db.pages[i].ink);
+  let pick = 0;
+  for(let i = 0; i < frames.length; i++) if(inked(i)){ pick = i; break; }
+  const flat = document.createElement('canvas'); flat.width = CW; flat.height = CH;
+  const c = flat.getContext('2d');
+  if(own){ c.fillStyle = bgColor; c.fillRect(0, 0, CW, CH); }
+  else { drawBackdrop(c); if(window.SkriblDrawBack) window.SkriblDrawBack.inkPage(c, pick, 1); }
+  paintFrame(c, frames[pick].strokes);
+  return flat;
+}
+function dbCard(own){
+  const PC = window.SkriblPostedCard;
+  if(!PC || !PC.build) return null;
+  try { return PC.build(dbFlat(own)); } catch(_){ return null; }
+}
+window.SkriblDrawBackHost = {
+  /* A fresh answer: one empty page of his for each of hers (lib/drawback.js take). */
+  lay(o){
+    const p = (o && o.payload) || {}, her = Array.isArray(p.frames) && p.frames.length ? p.frames : [{}];
+    if(playing) stop();
+    if(moveMode) setMoveMode(false);
+    if(typeof selClear === 'function') selClear(true);
+    clearSpan(true); pageClip = null; disarmAll();
+    const sd = Math.round(Number(p.subdiv));
+    _db = {
+      gen: (_db ? _db.gen : 0) + 1,
+      w: Math.round(Number(o.size && o.size.w)), h: Math.round(Number(o.size && o.size.h)),
+      ground: o.ground, photo: o.photo || null,
+      fps: Number(p.fps) > 0 ? Number(p.fps) : 12,
+      subdiv: isFinite(sd) && sd >= 1 ? sd : 1,
+      pages: her.map(f => ({ hold: f && f.hold, draw: !!(f && f.draw === true), ink: !!(f && Array.isArray(f.strokes) && f.strokes.length) }))
+    };
+    flipDocGen++;
+    invalidateClearUndo(); actionLog.length = 0; redoStack.length = 0;
+    frames = _db.pages.map(() => newFrame()); idx = 0;
+    // The first visit's "New here?" (its top-right corner) would sit on the
+    // pill's Theirs button: he came to draw back, and How it works is in the ⋯.
+    if(window.SkriblHints && window.SkriblHints.hide) window.SkriblHints.hide('flip-intro');
+    dbConform();
+    fitPad(); buildStrip(); render(); syncPagebar(); syncFlipDuration();
+  },
+  /* Her pages are known to the module now: every tile again, her page faint
+     under each, and the page under the pen. */
+  ready(){
+    if(!_db) return;
+    _db.gen++;
+    buildStrip(); render();
+  }
+};
 // Saved drafts (v316): see lib/savedrafts.js and editor_menu.js's Pad twin.
 document.addEventListener('DOMContentLoaded', () => {
   if(!window.SkriblSavedDrafts) return;
@@ -6701,7 +6906,11 @@ function download(blob, name){ const a=document.createElement('a'); a.href=URL.c
    body matches the Pad's frame-format (media on frame 0, one frame per page). ---- */
 let sharing=false;
 function buildSharePayload(){
-  let music0=(musicData && musicEnabled) ? { data:musicData, name:musicName||null, trimStart:trimStart, trimEnd:(trimEnd!=null?trimEnd:audioDuration), crossfadeMs:loopCrossfadeMs, cut:loopCutOnSilence } : null;
+  // DRAWING BACK: his pages on hers, and her picture and song stay hers: the
+  // site lays them under both (social/drawback.py), and refuses an answer
+  // that brings its own.
+  if(_db) dbConform();
+  let music0=(musicData && musicEnabled && !_db) ? { data:musicData, name:musicName||null, trimStart:trimStart, trimEnd:(trimEnd!=null?trimEnd:audioDuration), crossfadeMs:loopCrossfadeMs, cut:loopCutOnSilence } : null;
   // Crop music down to just the loop for posting, exactly as the Pad does — a
   // 42s file trimmed to an 8s loop was posting all 42s. The cropped clip IS the
   // loop, so trimStart/trimEnd become 0..loopLen and crossfadeMs is dropped (the
@@ -6715,7 +6924,7 @@ function buildSharePayload(){
       if (cropped) music0 = { data: cropped.dataUrl, name: music0.name, trimStart: 0, trimEnd: cropped.duration, crossfadeMs: 0 };
     } catch (e) { console.warn('skribl: loop crop failed, posting the full sample', e); }
   }
-  const photo0=bgImage ? { data:bgImage, name:imageName||null, fit:(photoFit==='fill'?'stretch':photoFit), opacity:photoOpacity, blur:photoBlur, offset:{x:photoOffX,y:photoOffY}, zoom:photoZoom } : null;
+  const photo0=(bgImage && !_db) ? { data:bgImage, name:imageName||null, fit:(photoFit==='fill'?'stretch':photoFit), opacity:photoOpacity, blur:photoBlur, offset:{x:photoOffX,y:photoOffY}, zoom:photoZoom } : null;
   // PER-PAGE HOLDS HAVE NEVER TRAVELLED WITH A POST. serializeFlip() writes
   // `hold` into the draft; this function, which builds the POST body, did not
   // write it at all — so a page held for four beats previewed correctly, posted,
@@ -6760,8 +6969,11 @@ function buildSharePayload(){
   // lib/postedcard.js composites it, exactly as it does for the Pad. What Flip
   // supplies is the flat canvas, through drawFrameTo() — the same path the PNG
   // and WebM exports use, so the card cannot show something no export would.
-  const _card = _shareCardDataURL();
+  const _card = _db ? dbCard(false) : _shareCardDataURL();
   if (_card) _payload.thumbnail = _card;
+  /* DRAWING BACK, the second picture: his lines alone on her paper, for a
+     host that keeps a draw-back as two hands (the Pad's thumbnailOwn). */
+  if (_db){ const _own = dbCard(true); if (_own) _payload.thumbnailOwn = _own; }
   return _payload;
 }
 
@@ -6860,9 +7072,10 @@ async function shareSkribl(){
       // with the gallery caption, and unticked sends neither, as on the Pad.
       const _gal=document.getElementById('postPublicInput');
       if(!(_gal && _gal.checked)){ delete _payload.visibility; _payload.caption=''; }
-      const _flat=document.createElement('canvas'); _flat.width=CW; _flat.height=CH;
-      const _pick=posterPage();
-      drawFrameTo(_flat.getContext('2d'), _pick);
+      let _flat=document.createElement('canvas'); _flat.width=CW; _flat.height=CH;
+      // Drawing back, the host's first look is the two together (dbFlat).
+      if(_db) _flat=dbFlat(false);
+      else drawFrameTo(_flat.getContext('2d'), posterPage());
       window.SkriblCompose.deliver(_payload, _flat.toDataURL('image/png'));
       if(postUI) postUI.setState('idle');
       closeShare();
@@ -7246,6 +7459,7 @@ function syncCanvasSeg(){
 }
 if(canvasSeg) canvasSeg.addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b || playing) return;
+  if(dbHeld('shape', b)) return;   // her shape, drawing back
   const preset=FLIP_SIZES.find(x=>x.id===b.dataset.size); if(!preset) return;
   if(applyCanvasSize(preset.w, preset.h)) chip('Canvas '+preset.label+' \u00b7 drawings keep their position');
   syncCanvasSeg();
@@ -9259,6 +9473,7 @@ function budgetAllows(page, what){
 
 function addTween(){
   if(playing) return;
+  if(dbHeld('pages')) return;   // a page added, drawing back
   if(moveMode){ chip('Finish or cancel the move first'); return; }
   const a = frames[idx], b = frames[idx + 1];
   if(!b){ chip('A motion smear goes between two pages: add the next pose first'); return; }
@@ -9720,6 +9935,7 @@ function buildInbetween(a, b, t){
 /* Inserts one intermediate pose between this page and the next. */
 function addInbetween(){
   if(playing) return;
+  if(dbHeld('pages')) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; }
   const a = frames[idx], b = frames[idx + 1];
   if(!b){ chip('A tween goes between two pages: add the next pose first'); return; }
@@ -11284,7 +11500,11 @@ let _fillCv = null, _fillCtx = null;
    tap on the same drawing fills the same runs on any screen. Once the pad has
    grown it is read through a copy at DPR, so the flood still runs against
    what the pad shows. */
+/* DRAWING BACK, her page's lines are walls too (dbFillWalls): a tap inside
+   her ball fills her ball, not the page. Her lines are on a canvas of their
+   own over the pad, so the pad alone would let the flood through them. */
 function fillSourceImage(f){
+  if(_db && window.SkriblDrawBack) return dbFillWalls(f);
   if(!photoShowing() && RS === DPR) return ctx.getImageData(0, 0, pad.width, pad.height);
   if(!_fillCv) _fillCv = document.createElement('canvas');
   if(_fillCv.width !== Math.trunc(CW*DPR) || _fillCv.height !== Math.trunc(CH*DPR)){
@@ -12127,6 +12347,9 @@ function clearAllPages(opts){
     // the Pad's does (lib/canvasground.js). Clear all pages keeps the ground,
     // as it keeps the media.
     if(window.SkriblCanvasGround) setBg(window.SkriblCanvasGround.start()); }
+  // DRAWING BACK: his pages empty again, one for each of hers, on her
+  // paper and picture (dbConform), never one blank page on the theme's.
+  if(_db) dbConform();
   buildStrip(); render(); updateToolState();
   scheduleSave();   // persist the cleared state instead of deleting the draft
   const cu=document.getElementById('clearUndo'); if(cu) cu.disabled=false;
@@ -12174,6 +12397,7 @@ function restoreClear(){
   if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(clearFramesBackup.draftId);   // and the saved draft it was
   clearFramesBackup=null; redoStack.length=0; actionLog.length=0;
   document.getElementById('clearUndo').disabled=true;
+  if(_db) dbConform();   // drawing back: on her pages, as it was drawn there
   buildStrip(); render(); updateToolState(); scheduleSave();
   return true;
 }
@@ -12186,7 +12410,7 @@ function newSkriblWithUndo(preset){
   // takes them (lib/textwrite.js forget); its Undo brings them back.
   const words = window.SkriblText && window.SkriblText.forget ? window.SkriblText.forget() : '';
   clearAllPages({ media: true });
-  if(preset && preset.id!==currentSizeId()){ applyCanvasSize(preset.w, preset.h); syncCanvasSeg(); }
+  if(preset && preset.id!==currentSizeId() && !_db){ applyCanvasSize(preset.w, preset.h); syncCanvasSeg(); }
   const undo = ()=>{ const ok = restoreClear(); if(words && window.SkriblText) window.SkriblText.restore(words); return ok || !!words; };
   if(window.SkriblNewUndo) window.SkriblNewUndo.offer({ say: chip, undo: undo, redo: ()=>newSkriblWithUndo(preset) });
 }
@@ -12359,6 +12583,7 @@ function syncFpsSeg(){
   syncBeatRow();
 }
 fpsGroup.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
+  if(dbHeld('timing', b)) return;   // her pages per second, drawing back
   if(b.dataset.beat){ if(beatBars!=null) return;
     const n=beatNearest(); if(n==null) return;
     beatBars=n; fps=beatFps(n);

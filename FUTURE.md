@@ -254,7 +254,9 @@ and puts the tool in front of people who already exist.
    images already do the work.
    **Decided Nov 19** ("All yes" to the Draw back mock): its name, where it
    lives, the Pad's faint underlay, how it plays, jams and the first
-   artist's say are in DECISIONS.md, "Draw back, mocked". Next to build.
+   artist's say are in DECISIONS.md, "Draw back, mocked". Built on the Pad
+   from Nov 19; on a Flip, page for page, Nov 25 (DECISIONS.md, "Flip's Draw
+   back, page for page: built").
 
 **Deliberately not doing:**
 
