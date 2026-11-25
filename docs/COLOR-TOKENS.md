@@ -6,8 +6,8 @@ what it found, is `docs/COLOR-AUDIT.md`.
 **A snapshot, and nothing keeps it in step.** It is these stylesheets as they stood (a content stamp is
 the first eight of the file's SHA-256, the `?v=` its link carries):
 
-- `social/static/social.css`, content stamp `72893a68`
-- `skribl/static/styles.css`, content stamp `beb02859`
+- `social/static/social.css`, content stamp `03f32e71`
+- `skribl/static/styles.css`, content stamp `b8638f18`
 
 `python3 harness/tools/coloraudit.py --check docs/COLOR-TOKENS.md` says in a second, with no browser,
 whether either has changed since. Making it again needs a running copy and a browser (the command is in
@@ -30,7 +30,7 @@ which properties read the token, and how often.
 | `--page` | `#f6f8fa` | `oklch(97.8% 0.003 248)` | `#0f1218` | `oklch(18.2% 0.013 264)` | fill ×4; ring or shadow ×3; icon ×3 |
 | `--ink` | `#14171d` | `oklch(20.4% 0.013 264)` | `#eef1f6` | `oklch(95.7% 0.007 261)` | text ×56 |
 | `--ink-2` | `#4b5563` | `oklch(44.6% 0.026 257)` | `#b7bfcc` | `oklch(80.2% 0.020 260)` | text ×87; feeds `--text-dim` |
-| `--accent-ink` | `#4c31c4` | `oklch(44.8% 0.213 282)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | text ×27; focus ×1 |
+| `--accent-ink` | `#4c31c4` | `oklch(44.8% 0.213 282)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | text ×28; focus ×1 |
 | `--brand` | `#7c5cff` | `oklch(59.9% 0.230 286)` | `#8f74ff` | `oklch(65.2% 0.198 289)` | text ×5; icon ×4; edge ×4 |
 | `--blooby-ink` | `#1f1b2e` | `oklch(23.6% 0.036 293)` | `#1f1b2e` | `oklch(23.6% 0.036 293)` | icon ×4 |
 | `--blooby-blush` | `#ff6f91` | `oklch(72.5% 0.177 8)` | `#ff6f91` | `oklch(72.5% 0.177 8)` | icon ×3; feeds `--heart`, `--heart-line`, `--new-dot` |
@@ -79,7 +79,7 @@ which properties read the token, and how often.
 | `--heart-3` | `#d11a32` | `oklch(55.2% 0.211 23)` | `#ff2d5f` | `oklch(65.1% 0.239 15)` | feeds `--mark-3` |
 | `--heart-paper` | `#e64a78` | `oklch(63.8% 0.194 7)` | `#e64a78` | `oklch(63.8% 0.194 7)` | icon ×1 |
 | `--pill-on-fill` | `rgb(124 92 255 / 0.22)` | `oklch(59.9% 0.230 286 / 0.22)` | `rgb(124 92 255 / 0.22)` | `oklch(59.9% 0.230 286 / 0.22)` | fill ×3 |
-| `--pill-on-ink` | `#3f27a8` | `oklch(39.7% 0.191 282)` | `#dad1ff` | `oklch(88.3% 0.063 294)` | text ×3 |
+| `--pill-on-ink` | `#301c8c` | `oklch(34.1% 0.171 280)` | `#dad1ff` | `oklch(88.3% 0.063 294)` | text ×3 |
 | `--pill-off-ink` | `#3b4251` | `oklch(37.9% 0.027 265)` | `#b7bfcc` | `oklch(80.2% 0.020 260)` | text ×2 |
 | `--says-ink` | `#3a24a8` | `oklch(38.9% 0.195 280)` | `#3a24a8` | `oklch(38.9% 0.195 280)` | text ×2 |
 | `--says-glass` | `rgb(255 255 255 / 0.82)` | `oklch(100.0% 0.000 none / 0.82)` | `rgb(255 255 255 / 0.82)` | `oklch(100.0% 0.000 none / 0.82)` | fill ×2 |
@@ -203,7 +203,7 @@ here too; the audit says which are which.
 | `--control-edge-strong` | `#c9cccf` | `oklch(84.4% 0.005 255)` | `#2c3037` | `oklch(30.7% 0.014 264)` | ring or shadow ×2; edge ×1 |
 | `--deep-edge` | `#d9d9d9` | `oklch(88.5% 0.000 none)` | `#1c1d20` | `oklch(23.2% 0.005 271)` | ring or shadow ×1 |
 | `--raised-edge` | `#e0e2e4` | `oklch(91.1% 0.003 248)` | `#1c1f25` | `oklch(23.9% 0.012 264)` | ring or shadow ×1 |
-| `--hairline` | `rgb(0 0 0 / 0.09)` | `oklch(0.0% 0.000 none / 0.09)` | `rgb(255 255 255 / 0.055)` | `oklch(100.0% 0.000 none / 0.055)` | edge ×30; ring or shadow ×11; fill ×2 |
+| `--hairline` | `rgb(0 0 0 / 0.09)` | `oklch(0.0% 0.000 none / 0.09)` | `rgb(255 255 255 / 0.055)` | `oklch(100.0% 0.000 none / 0.055)` | edge ×30; ring or shadow ×9; fill ×2 |
 | `--hairline-strong` | `rgb(0 0 0 / 0.15)` | `oklch(0.0% 0.000 none / 0.15)` | `rgb(255 255 255 / 0.09)` | `oklch(100.0% 0.000 none / 0.09)` | edge ×14; ring or shadow ×2 |
 | `--text-primary` | `#11161e` | `oklch(19.9% 0.018 260)` | `#f6f7f9` | `oklch(97.6% 0.003 265)` | text ×94; fill ×3; ring or shadow ×1; feeds `--row-line` |
 | `--text-secondary` | `#3b4251` | `oklch(37.9% 0.027 265)` | `#b7bfcc` | `oklch(80.2% 0.020 260)` | text ×81; fill ×4; feeds `--text-muted`, `--text-soft`, `--text-soft-2` … |
@@ -251,7 +251,7 @@ here too; the audit says which are which.
 | `--danger-soft-2` | `#b81447` | `oklch(50.6% 0.192 12)` | `#ff8a8a` | `oklch(76.1% 0.142 21)` | not read in this sheet |
 | `--danger-soft-3` | `#b81447` | `oklch(50.6% 0.192 12)` | `#ff8f8f` | `oklch(77.0% 0.136 21)` | text ×1 |
 | `--danger-fill` | `#b3283f` | `oklch(50.8% 0.174 17)` | `#b3283f` | `oklch(50.8% 0.174 17)` | fill ×1; edge ×1 |
-| `--warn` | `#8a5b00` | `oklch(51.0% 0.108 74)` | `#ffd23f` | `oklch(87.9% 0.162 91)` | text ×2; focus ×2; fill ×2 |
+| `--warn` | `#8a5b00` | `oklch(51.0% 0.108 74)` | `#ffd23f` | `oklch(87.9% 0.162 91)` | text ×2; focus ×2; fill ×2; ring or shadow ×1 |
 | `--warn-2` | `#96560a` | `oklch(51.7% 0.115 62)` | `#ff9f43` | `oklch(78.5% 0.154 61)` | text ×1 |
 | `--good` | `#0a7350` | `oklch(49.3% 0.103 163)` | `#30e8a7` | `oklch(82.8% 0.169 163)` | fill ×2 |
 | `--accent-tint` | `#4c31c4` | `oklch(44.8% 0.213 282)` | `#d6ccff` | `oklch(87.0% 0.071 294)` | text ×1 |
@@ -266,10 +266,10 @@ here too; the audit says which are which.
 | Token | Light | Dark | Usage |
 |---|---|---|---|
 | `--label-edge` | `0 1 0 #ffffff at 0.95` | `0 1 0 #000000 at 0.55` | text shadow ×1 |
-| `--glass` | `0 0 0 1 #ffffff at 0.9`; `0 1 2 #141828 at 0.14` | `0 0 0 1 #000000 at 0.55`; `0 1 2 #000000 at 0.5` | ring or shadow ×4 |
+| `--glass` | `0 0 0 1 #ffffff at 0.9`; `0 1 2 #141828 at 0.14` | `0 0 0 1 #000000 at 0.55`; `0 1 2 #000000 at 0.5` | ring or shadow ×12 |
 | `--fill-drop` | `inset 0 1 0 #ffffff at 0.32`; `inset 0 -1 0 #241078 at 0.34`; `0 1 2 #3c288c at 0.36` | `inset 0 1 0 #ffffff at 0.32`; `inset 0 -1 0 #241078 at 0.34`; `0 1 2 #3c288c at 0.36` | ring or shadow ×3 |
-| `--menu-card-drop` | `0 1 0 #3c288c at 0.13` | `inset 0 1 0 #ffffff at 0.07` | ring or shadow ×17 |
-| `--chip-lift` | `0 1 0 #3c288c at 0.14`; `0 12 22 -12 #1e1450 at 0.45` | `inset 0 1 0 #ffffff at 0.08`; `0 12 22 -12 #000000 at 0.8` | ring or shadow ×7 |
+| `--menu-card-drop` | `0 1 0 #3c288c at 0.13` | `inset 0 1 0 #ffffff at 0.07` | ring or shadow ×14 |
+| `--chip-lift` | `0 1 0 #3c288c at 0.14`; `0 12 22 -12 #1e1450 at 0.45` | `inset 0 1 0 #ffffff at 0.08`; `0 12 22 -12 #000000 at 0.8` | ring or shadow ×16 |
 | `--card-ring` | `0 0 0 1 #d2c8ff` | `0 0 0 1 #453c6e` | ring or shadow ×38 |
 | `--paper-ring` | `0 0 0 1 #cbbeff` | `0 0 0 1 #3c3561` | ring or shadow ×6 |
 
@@ -363,15 +363,15 @@ or a near miss.
 | `--nav-on` | `--text-primary` | `#14171d` / `#11161e` | `#ffffff` / `#f6f7f9` | 0.0242 |
 | `--draw-edge` | `--btn2-hover` | `#dbd5ed` / `#ddd4ff` | `#3f375e` / `#3b3166` | 0.0273 |
 
-Exact copies: 17 of the site's 59 colour tokens.
+Exact copies: 18 of the site's 59 colour tokens.
 
 ## What the stylesheets say
 
 | Stylesheet | Tokens | Colours written into rules | color-mix() | Gradients | Shadow lines | of them soft (blur over 2.5px) | Forced-colours blocks | More-contrast blocks |
 |---|---|---|---|---|---|---|---|---|
-| `social/static/social.css` | 90 | 13 | 10 | 7 | 75 | 0 | 1 | 1 |
-| `skribl/static/styles.css` | 160 | 238 | 39 | 21 | 164 | 51 | 3 | 1 |
-| `skribl/static/flip.css` | 8 | 33 | 1 | 0 | 30 | 5 | 0 | 0 |
+| `social/static/social.css` | 91 | 13 | 10 | 7 | 75 | 0 | 1 | 1 |
+| `skribl/static/styles.css` | 160 | 216 | 40 | 21 | 164 | 30 | 3 | 1 |
+| `skribl/static/flip.css` | 8 | 31 | 1 | 0 | 30 | 3 | 0 | 0 |
 | `skribl/static/inlineplayer.css` | 1 | 56 | 7 | 2 | 5 | 2 | 0 | 0 |
 | `skribl/static/pagemenu.css` | 20 | 1 | 4 | 0 | 5 | 0 | 0 | 0 |
 

@@ -836,7 +836,8 @@ with sync_playwright() as p:
                   all(r and r["role"] == "group" and r["name"] == "Theme" and r["pressed"] == "System"
                       and [o["pressed"] for o in r["options"]] == ["true", "false", "false"] and r["placed"] and r["under"]
                       and r["tintOp"] > 0.99 and r["pill"][3] == 44 and same_colour(r["tint"], "rgba(124, 92, 255, 0.22)")
-                      and same_colour(r["options"][0]["color"], "rgb(63, 39, 168)")
+                      # the chosen word: the Gallery's 7:1 ink since Nov 24 (#301c8c)
+                      and same_colour(r["options"][0]["color"], "rgb(48, 28, 140)")
                       # the others' ink is the editors' #3b4251 since the
                       # colour audit's choice 6 (it was the site's own copy,
                       # #3f4756, drifted a step: part 14 holds the copies)

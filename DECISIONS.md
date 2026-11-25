@@ -53300,3 +53300,22 @@ near a sixteenth of the way a frame, so a lost frame stays near an eighth.
 
 PAD AND FLIP: Draw back is the Pad's alone today; Flip's page-for-page Draw
 back, on the list, takes the same control.
+
+## After v330 -- Main red after #1082: the site's one pill follows the Gallery's chosen ink
+
+Main's full run after #1082 went red on both databases in shard 7:
+`verify_socialsettings`, "each of the site's ten copied colours is its
+original's", the one pill's chosen ink against Skribl's Gallery's. #1082
+darkened the Gallery's chosen word to the Library's #301c8c (7.7:1, the
+owner's "all yes"); the site's copy of the pill (`--pill-on-ink`, "value for
+value") stayed #3f27a8. The pill is one pill: the site's copy follows, light
+only (dark is unchanged). It is the chosen word on Home's Following |
+Everyone, the lists' Followers | Following, Settings' Theme switch, and the
+composer's waiting Post, each a step darker on its own ground.
+
+THE PINS. Three rows named the old ink by its numbers and follow it:
+`verify_composer` (the waiting Post), `verify_socialfollow` (the pill's
+chosen word) and `verify_socialsettings` (Theme). The copies' row is the
+calibration: red on main in CI (56/57, the pill's ink its only miss), green
+here. `docs/COLOR-TOKENS.md` made again (`harness/tools/coloraudit.py`; it
+was stale on both sheets): the ink, and 18 exact copies of 59 (was 17).

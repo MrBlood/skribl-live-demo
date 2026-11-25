@@ -140,7 +140,7 @@
      it (gallerysection.css: --seg-on-fill, --seg-on-ink, --seg-off-ink),
      value for value. Same role, same values; the site names its own. */
   --pill-on-fill: rgba(124, 92, 255, 0.22);
-  --pill-on-ink: #3f27a8;
+  --pill-on-ink: #301c8c;
   --pill-off-ink: #3b4251;
   /* A GALLERY TILE'S "▶ 15 sec" (the map's step 3, the Gallery mock's B),
      on the drawing, which wears no theme, so the same in both: the in-post
