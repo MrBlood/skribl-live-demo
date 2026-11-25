@@ -46,6 +46,30 @@ again. `docs/SOCIAL-SITE.md` section 41 says what each viewer sees.
 - The views are on a post's own page; cards play Both.
 - Flip page for page is meant to be the contribution model's first user.
 
+## Waiting on the owner's picks (a mock, nothing built)
+
+Flip Draw Back, https://claude.ai/artifact/J9hTtwTp2r1h2pA9rwvuUF (the
+owner's "Start Flip's Draw back next, mock first", Nov 25): Ana's bouncing
+ball (How it works' Flip) answered page for page by Theo's shadow and
+bounce marks. Five choices, Cal's pick A each: pages follow hers (no adding,
+moving or deleting while drawing back); it plays together, page for page;
+kept as the Pad's (joined with the switch off, two hands on); the eraser off
+as on the Pad; her pages faint in the page strip. Not in the first step: a
+Flip with a loop, a page underneath or beat timing. Build nothing until a
+plain yes.
+
+What the mock found for the build: `lib/drawback.js` runs inside Flip as it
+is (the same `.zoom-layer`, the shared styles), but its fold looks for the
+Pad's `.canvas-wrap`, so Flip needs its frame (`.flip-wrap`) named to it;
+Flip's own paper has to become hers (`setBg`), or her dark ink vanishes on
+Flip's dark page; and her pages in the strip are Flip's `drawThumb` with
+hers painted faint after it. The pictures' script is in that session's
+scratch folder, gone with it; the page says how each picture was made.
+
+The owner has a friend's mocks of ideas to show the next session ("fresh
+eyes"): read them as advice, weigh each against `DECISIONS.md`, and answer
+with what to take, what not, and why.
+
 ## Waiting on the owner's phone
 
 - Pin: your own post's ⋯, "Pin to your page"; your page's Posts tab leads
