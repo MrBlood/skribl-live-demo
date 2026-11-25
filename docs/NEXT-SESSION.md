@@ -10,9 +10,11 @@ it never goes stale here.
 
 Every job, before believing main is green. Main went green again with
 #1078 (the "main is red" issue, #1067, closed itself at 5:26 PM), and the
-runs after #1080 and #1081 were green, every job. The runs after #1082,
-#1083 and this note were still going when it was written: those are the
-ones to read.
+runs after #1080 and #1081 were green, every job. Then the runs after #1082
+and #1086 were red in shard 7 on both databases, one row only:
+`verify_socialsettings`, the site's copy of the Gallery's pill ink (issues
+#1087 and #1090). #1089 mended it. The run after #1091 (about 9:40 PM) is
+the one to read: both issues close themselves on a run green on every job.
 
 Not sealed since v330. That is fine: seal only when there is a reason
 (`WORKING-AGREEMENTS.md`, "Sealing a release").
@@ -45,6 +47,13 @@ minutes, and nothing tonight needed the other hosts.
   `verify_galib` reads words inside the spans `lib/labels.js` makes.
 - #1083 Text: once the words are down, only a drag moves them (the owner's
   "all yes"). A press before any words show still says where they go.
+- Four Small Picks, the owner's answers that evening, all built: #1085
+  Flip's desk page bar at 10px a side (4, A); #1086 Post it on your own
+  drawing shown outside a post (3, A); #1088 Draw back's pill folds into its
+  Theirs button in the drawing's corner at the first stroke (1, B); #1091
+  How it works' row gets ‹ › with a mouse, centred on its cards (2, A2).
+- #1089 Main red after #1082: the site's copy of the pill follows the
+  Gallery's chosen ink.
 
 ## Waiting on the owner's phone
 
@@ -58,17 +67,20 @@ minutes, and nothing tonight needed the other hosts.
   CANNOT DO"); its mend wants those numbers.
 - How it works: from the site's How it works page, choose the Pad, then
   close How it works with its ×: back on the site's page.
+- Tonight's picks: a stroke while drawing back folds the pill into a ◐ in
+  the drawing's corner (a click cycles Theirs); a drawing of yours from
+  your Gallery tab, its repost arrows: Post it first; on a desk, How it
+  works' › glides the examples a page on; Flip on a desk with two pages:
+  Delete stands apart. Not tested here in Segoe UI.
 - From Nov 21 and 22: does the bottom bar still ride the page (#1040); does
   a held finger still select anything (#1051); does a press show on Blooby
   (#1058)? And the long-carried device check (`docs/DEVICE-CHECKLIST.md`).
 
 ## Waiting on the owner's picks (mocks, nothing built)
 
-- Four Small Picks, https://claude.ai/artifact/6LBvgdt8rnn3F3PaGU5ibg:
-  Draw back's pill (A: gone at the first stroke, Theirs in Media's place in
-  the dock), How it works' row with a mouse (A: ‹ › arrows, mouse only),
-  Repost on your own drawing (A: Post it), Flip's desk page bar (A: 10px
-  padding). Cal's pick is A each.
+Four Small Picks (https://claude.ai/artifact/6LBvgdt8rnn3F3PaGU5ibg) is
+answered and built (above). Two pages wait:
+
 - Draw Back, Two Hands, https://claude.ai/artifact/FQGL42ZgaWaqwsytxqZkVe:
   a draw-back kept as two people's own work (Both · hers · his to watch;
   hers removed), and the nine questions before any schema, Cal's pick A
@@ -128,6 +140,14 @@ every post, so it wants its own look.
 - `verify_galib`'s reader reads every word in a box, each by its own
   element; a row that counted pieces counts what it now sees (the Drafts
   menu's four).
+- A colour the site copies from Skribl (`social.css` says "value for
+  value") moves with its original, or `verify_socialsettings` goes red on
+  main (#1082 then #1089). Grep the old value in `social/` and `harness/`
+  before changing one.
+- A glide read on every frame, in a page that plays things (How it works'
+  examples): read each place once its frame's own callbacks have run, and
+  let a slow frame carry its share of the time (`verify_helpdemos` 7,
+  `glided`). Counting frames there measured the machine, not the glide.
 
 ## Still true (carried from earlier handoffs)
 
