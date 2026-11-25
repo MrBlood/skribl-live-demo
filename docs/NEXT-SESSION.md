@@ -1,96 +1,79 @@
-# Next session: the handoff (Nov 25, 2026, Mountain Time, written in the morning)
+# Next session: the handoff (Nov 25, 2026, Mountain Time, written mid-morning)
 
-A snapshot from the session of Wednesday morning, Nov 25. It is not
-maintained: where things stand is the newest entries at the bottom of
-`DECISIONS.md`, and how to work is `WORKING-AGREEMENTS.md`. Read this after
-`START-HERE.md`; once you have, replace it with your own or delete it, so
-it never goes stale here.
+A snapshot from a session of Wednesday morning, Nov 25. It is not
+maintained: where things stand is the newest entries at the
+bottom of `DECISIONS.md`, and how to work is `WORKING-AGREEMENTS.md`. Read
+this after `START-HERE.md`; once you have, replace it with your own or
+delete it, so it never goes stale here.
 
 ## Before anything: read main's newest full runs
 
-Every job, before believing main is green. Main was green on every job
-after #1092 (the Nov 24 handoff). A push to main cancels the run still
-going before it, so the run after this note's own merge is the one that
-covers Pin (#1093) and Two Hands (#1094) too: read it whole.
+Every job, before believing main is green. The run after #1098 (Flip's Draw
+back) is the one that covers it: read it whole. Main was green on every job
+after #1095 (it covered Pin and Two Hands). Not sealed since v330, which is
+fine (`WORKING-AGREEMENTS.md`, "Sealing a release").
 
-Not sealed since v330. That is fine: seal only when there is a reason
-(`WORKING-AGREEMENTS.md`, "Sealing a release").
+## What happened this session
 
-## What merged on Nov 25 (each has its DECISIONS.md entry)
+- THE FRIEND'S THREE DESIGN PACKS, weighed (nothing built from them):
+  https://claude.ai/artifact/SpdandvSjk9XzLcQAywQLk. Most of the 78 screens
+  show what is already built (they were drawn from v330's code). Worth a
+  mock, the owner's to pick: drawers beside the drawing on a desk (measured:
+  Pen open on a 1440×900 desk leaves 66% of the Pad's drawing on screen,
+  53% of Flip's; 49% for Flip at 1536×864); Blooby peeking in empty places
+  (drawn by hand in the Pad: their peek is the "little car" dropped on Nov
+  12); a weekly prompt that is a draw-back ("Draw back on Blooby"). Left:
+  the glossy Blooby, a permanent tool rail and side panel, words under the
+  phone bar, header buttons for Save draft, Export and Share, busy panels.
+  The friend's brand vision was already in the tree with Cal's notes of Nov
+  24 (`docs/research/blooby-brand-and-mascot-vision/`); the packs
+  themselves are not in the tree.
+- #1098 FLIP'S DRAW BACK, PAGE FOR PAGE (merged about 10:20 AM): the five
+  answers, A each, and what was decided in the building (`DECISIONS.md`,
+  "Flip's Draw back, page for page: built"; `docs/SOCIAL-SITE.md` section
+  42). Main's run after it was still going when this was written.
 
-- #1093 Pin this post: "Pin to your page" in the ⋯ of your own posts,
-  after Bookmark; one at a time; the pinned post first on your Posts tab
-  with a small "Pinned" line, for anyone (the owner's "all yes", A and A).
-- #1094 Draw back, two hands: the nine answers (A each) in
-  `DECISIONS.md`, and the first step, behind the owner's switch.
+## The owner's to say (from #1098, each a small call)
 
-## The owner's switch, and how to turn it on
-
-`SKRIBL_SOCIAL_TWO_HANDS=1` in the live site's environment on Render (the
-service's Environment page; saving it redeploys). Off, which is where it
-is, nothing changes for anyone. On, every new draw-back is kept as two
-hands; what was made while it was on stays two hands if it is turned off
-again. `docs/SOCIAL-SITE.md` section 41 says what each viewer sees.
-
-## Two hands: what is not done yet (each its own step)
-
-- Plays of Both are not counted: Skribl counts a play only on its own
-  route, and Both comes from the site's (`/social/hands/play/...`). A small
-  Skribl seam to count a play a host serves would mend it.
-- A quote of a two-hands draw-back shows his own picture, not both
-  (`reposts.Quoted.card` builds the quote's `sk` without the hands state).
-- Recolour stays off while drawing back (the fifth answer opens it for his
-  own strokes only).
-- A two-hands draw-back is not drawn back on (the seventh answer: one
-  original and one answer first, then up to five hands).
-- The views are on a post's own page; cards play Both.
-- Flip page for page is meant to be the contribution model's first user.
-
-## Answered, to build: Flip's Draw back (the owner's "all yes", Nov 25, about 8:20 AM)
-
-Flip Draw Back, https://claude.ai/artifact/J9hTtwTp2r1h2pA9rwvuUF: the
-five choices, A each, are `DECISIONS.md`, "Flip's Draw back, mocked: page
-for page, the owner's all yes", with what the mock found for the build.
-Not built yet. The order is the owner's to say when the session starts;
-Cal's suggestion was the friend's mocks first (an hour or two, and they
-may touch Draw back), then this build.
-
-The owner has a friend's mocks of ideas to show the next session ("fresh
-eyes"): read them as advice, weigh each against `DECISIONS.md`, and answer
-with what to take, what not, and why.
+- A Flip with a page that draws itself has no pen yet (beside the mock's
+  loop, kept page and beat). How should such a page play with two hands:
+  hers then his on that page, or both at once?
+- Copy and Draw on Flip's page bar are dimmed while drawing back (the mock
+  showed them lit): Copy only feeds Paste, which adds pages; Draw is her
+  timing. Keep?
 
 ## Waiting on the owner's phone
 
-- Pin: your own post's ⋯, "Pin to your page"; your page's Posts tab leads
-  with it, "Pinned" above it; pin another and the toast says the first
-  went back.
-- Two hands, once the switch is on: draw back on somebody's drawing; your
-  post looks as a draw-back always has; on its page the pill under the
-  drawing (Both · theirs · yours). Not tested here on WebKit or in SF.
-- Carried from Nov 24 (`git show 2c4ba23:docs/NEXT-SESSION.md`): Text's
-  drag and letters in Make, How it works from the site's page, the folded
-  Theirs button, Post it, the desk's arrows, Flip's page bar.
+- Flip's Draw back. One-glance tell for the new build: under a Flip's card,
+  the pen after the heart (a Flip had none). Tap it: Flip opens over the
+  composer on her pages, her page faint under the one you are on, her pages
+  faint in the strip; Blank and the rest dimmed. Draw on a page or two, Add,
+  Post. Not tested here on WebKit or in SF.
+- Carried: Pin, Two hands once the switch is on, and Nov 24's list
+  (`git show 2c4ba23:docs/NEXT-SESSION.md`).
 
 ## Then, in the decided order
 
-Flip page for page (Draw back's Flip twin), recolours on a draw-back,
-messages as drawn letters, watching first everywhere. The precedence and
-the parked list are as Nov 24's handoff said (`DECISIONS.md`, "The owner's
-clarifications to the final recommendations").
+Recolours on a draw-back, messages as drawn letters, watching first
+everywhere (`DECISIONS.md`, "The owner's clarifications to the final
+recommendations"). Two hands' own next steps are as the morning's handoff
+said (`git show 928e5d7:docs/NEXT-SESSION.md`): plays of Both not counted,
+a quote of a two-hands draw-back shows his own picture, recolour off while
+drawing back, a two-hands draw-back not drawn back on.
 
-## How this session worked, and what saves time
+## What saves time
 
-- A change to a row the ⋯ shows moves three suites' word-for-word lists
-  (`verify_socialbookmarks` 1, `verify_socialmute`, `verify_socialposts`
-  the ⋯ and its risky card): grep `"Copy link", "Share…"` in `harness/`
-  first.
-- A check that needs two settings of the same server (the switch off and
-  on) runs a second server on the same SQLite file with the same
-  SECRET_KEY: a sign-in on one is good on the other
-  (`verify_socialdrawback` 15).
-- Calibration as a script: a worktree per break (`git worktree add
-  --detach`), each break asserted to apply exactly as often as it should
-  before anything runs, three at a time, one part each.
-- The site's own modules may import only from `skribl` itself; a new need
-  is a documented seam in `skribl.__all__` with a `verify_hostseams` row
-  (`line_of`).
+- `SOCIALDRAWBACK_PART=16` runs Flip's Draw back alone in about 30 seconds
+  on its own server; `switch_on()` in the suite starts the second server
+  with the owner's switch on, once, for whichever section asks (15 and 16).
+- Calibration as a script, one worktree per break: each break a
+  (file, exact text, replacement) asserted to apply once before anything
+  runs, main as its own tree with the branch's suite copied in, three at a
+  time, the red rows read off each log. Twenty-seven trees took about
+  six minutes.
+- START-HERE's module index is generated (`harness/gen_docs.py`, from each
+  module's first comment and the templates that load it): never edit it by
+  hand; verify_docs says STALE.
+- Flip's ways in are many (buttons, keys, the ⋯, a hold on a tile): a rule
+  for Flip's pages lives in the functions that change them (`flip.js`
+  `dbHeld`), and one row tries every door.
