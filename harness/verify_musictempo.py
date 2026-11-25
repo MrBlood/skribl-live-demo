@@ -83,7 +83,11 @@ def eds(name):
     return EDITORS if not PART or PART == name else []
 
 
-DESK = dict(viewport={"width": 1280, "height": 900})
+# A desk where the drawer opens below the drawing, as these rows were written
+# for, the Beat tile with room for where the beat came from; on a wider one
+# the drawer opens beside it (lib/drawers.js, verify_drawerside), a phone's
+# width, where the tile may have room for the tempo alone ("118.8 bpm").
+DESK = dict(viewport={"width": 960, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
 
 

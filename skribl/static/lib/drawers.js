@@ -21,10 +21,12 @@
  *     }, ...
  *   },
  *   reveal(openPanelOrNull, name|null)   (required: editor's scroll behaviour)
- *   side: { canvas: id, move: selector } (optional: drawers beside the drawing
- *                                         on a desk, below; `move` is what
- *                                         sits under the drawing and slides)
- * }) -> { open(name|null), toggle(name), current(), isOpen(name) }
+ * }) -> { open(name|null), toggle(name), current(), isOpen(name), add(name, d), side(s) }
+ *
+ * side({ canvas: id, move: selector }) puts the drawers beside the drawing on
+ * a desk (below); `move` is what sits under the drawing and slides with it.
+ * Each editor's own script says it, as add() is said: the link player loads
+ * the Pad's machine and has no drawer to put anywhere.
  *
  * open(name) closes whatever else is open (firing its onClose), opens `name`,
  * then calls reveal() exactly once — the hand-rolled versions refitted after
@@ -69,7 +71,7 @@
    * Drawers Beside the Drawing mock). With a mouse (hover and a fine pointer),
    * and where the drawing fits whole beside a phone-width drawer, a drawer
    * opens at the drawing's right, its top level with the drawing's, and the
-   * drawing with what sits under it (cfg.side.move: the Pad's stage and dock,
+   * drawing with what sits under it (side()'s move: the Pad's stage and dock,
    * Flip's stage, page strip and dock) slides left only as far as the drawer
    * needs; the header stays. Measured in the mock with Pen open: the Pad
    * showed 60-73% of its drawing on four desks and Flip 42-65%, the page
@@ -191,18 +193,23 @@
       if (name == null && prev != null) holdHeight();
       if (prev != null) _set(prev, false);   // current() must see the new state
       if (name != null) _set(name, true);
-      if (cfg.side) sideApply(cfg.side, name != null && name !== 'tools' ? panels[name].panel : null, true);
+      if (side) sideApply(side, name != null && name !== 'tools' ? panels[name].panel : null, true);
       if (cfg.reveal) cfg.reveal(name != null ? panels[name].panel : null, name);
     }
+    // Beside the drawing on a desk, once the editor says what slides (side()).
     // A window resized with a drawer beside decides again (no glide), once
     // the editor has fitted its drawing to the new window.
-    if (cfg.side) {
-      window.addEventListener('resize', function () {
-        if (selfResize || currentName == null || currentName === 'tools') return;
-        requestAnimationFrame(function () {
-          if (currentName != null && currentName !== 'tools' && panels[currentName]) sideApply(cfg.side, panels[currentName].panel, false);
+    var side = null;
+    function sideOn(s) {
+      if (!side) {
+        window.addEventListener('resize', function () {
+          if (selfResize || currentName == null || currentName === 'tools') return;
+          requestAnimationFrame(function () {
+            if (currentName != null && currentName !== 'tools' && panels[currentName]) sideApply(side, panels[currentName].panel, false);
+          });
         });
-      });
+      }
+      side = s;
     }
 
     var api = {
@@ -219,7 +226,8 @@
         panels[name] = { panel: panel, button: _el(d.button), openClass: d.openClass || null, aria: !!d.aria,
                          onOpen: d.onOpen || null, onClose: d.onClose || null };
         order.push(name);
-      }
+      },
+      side: sideOn
     };
     machines.push(api);
     return api;

@@ -101,7 +101,10 @@ def eds(name):
     return EDITORS if part(name) else []
 
 
-DESK = dict(viewport={"width": 1280, "height": 900})
+# A desk where the drawer opens below the drawing, as these rows were written
+# for; on a wider one it opens beside it (lib/drawers.js, verify_drawerside),
+# where the one line takes the phone's two rows (verify_musicdoors reads it).
+DESK = dict(viewport={"width": 960, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
 WORK = {"Pad": "drawing", "Flip": "flip"}
 NOTE = {"Pad": "#toast", "Flip": "#flipChip"}
