@@ -53563,3 +53563,108 @@ ink vanishes on Flip's dark page; her pages in the strip are Flip's
 
 PAD AND FLIP: shared. One draw-back module for both editors learns pages;
 the Pad is unchanged.
+
+## After v330 -- Flip's Draw back, page for page: built
+
+The owner's "all yes" (Nov 25, about 8:20 AM) to the Flip Draw Back mock,
+its five answers A each ("Flip's Draw back, mocked", above), built the same
+day: "Then build Flip's Draw back".
+
+AS DECIDED, AS BUILT:
+
+1. PAGES: one of his for each of hers, in her order and at her timing. The
+   composer's pen on a Flip opens Flip (not the Pad) over it, laying one
+   empty page of his for each of hers, at her holds and her pages per
+   second (and the time grid they were written for), on her shape, her
+   paper and her picture. While drawing back, nothing adds, moves or
+   deletes a page or changes her timing: Duplicate, Blank, Tween, Smear,
+   Left and Right, Delete, Loop and Under, a tile's hold, the ⋯'s halves of
+   them, the pages per second, Every page draws and the menu's shape all
+   step aside, dimmed as the eraser is, and say why ("Pages can’t be added,
+   moved or deleted while drawing back." or "The timing is Ana’s while
+   drawing back."). EVERY WAY IN ASKS, NOT ONLY ITS BUTTON: each function
+   that would change her pages refuses (`flip.js` `dbHeld`), so a key, a
+   hold on a tile or the ⋯ cannot slip past a dimmed button.
+2. IT PLAYS TOGETHER: the site joins the two page for page
+   (`social/drawback.py` `_join_pages`): each of her pages with his on it,
+   her strokes then his, at her speed, her picture and song on her first
+   page; in the editor her page is under the page he is on, while it plays
+   too.
+3. KEPT AS THE PAD'S: joined while the owner's switch is off; with it on,
+   his pages alone, each on her page's paper at her timing, pointing to
+   hers (`_own_pages`), and Both, hers and his from the site (`_his_pages`
+   lays her picture and song under his alone).
+4. THE ERASER IS OFF, as on the Pad (`lib/drawback.js` wraps setTool).
+5. THE STRIP shows her pages faint under his (`lib/drawback.js` `inkPage`,
+   from Flip's tile painter), so a page is found by what is on it.
+
+DECIDED IN THE BUILDING, THE OWNER'S TO CHANGE:
+
+- A FLIP WITH A PAGE THAT DRAWS ITSELF HAS NO PEN YET, beside the mock's
+  loop, kept page and beat. Such a page's length is its strokes' own, so
+  "hers and his at once, at her speed" has no one answer (hers then his on
+  that page, or both at once); the server says "draw", like the others.
+- COPY AND DRAW ON THE PAGE BAR ARE DIMMED TOO; the mock showed them lit.
+  Copy only puts pages on Paste's clipboard, and Paste adds pages; Draw
+  makes a page draw itself, which is her timing.
+- FILL SEES HER LINES: a tap inside her ball fills her ball, not the page
+  (her lines are on a canvas of their own over Flip's, so the flood went
+  through them). Colouring her drawing in is what a Flip draw-back is for.
+- NEW SKRIBL KEEPS HER PAGES: his pages empty again, on hers, never one
+  blank page on the theme's; its Undo brings his back. A drawing handed
+  back to edit (Edit drawing) lands on her pages the same way.
+- HER PICTURE is Flip's own backdrop while drawing back, so the page, the
+  strip and the card show it; it is left out of what Flip hands the
+  composer (the site lays hers under both). Her song is not played in Flip,
+  as on the Pad.
+- FLIPS POSTED BEFORE TODAY said "pages" (every Flip did): they keep the pen,
+  answered when opened, as a post from before the column always was. One
+  that loops says so when its pen is pressed. A Flip posted from today says
+  what it can't do ("loop", "under", "beat", "draw") or nothing.
+- FLIP'S FIRST-VISIT "NEW HERE?" STEPS ASIDE while drawing back: in its
+  top-right corner it sat on the pill's Theirs button. How it works is in
+  the ⋯.
+- HER PAPER STAYS HERS when the phone changes theme while his pages are
+  blank (a blank Flip follows the theme's ground).
+
+THE CHECKS, `verify_socialdrawback` 16 (19 rows): what a Flip says when it
+is posted; the way in hands her pages over and refuses the first step's
+limits, saying which; posted, his pages on hers page for page, her timing
+kept; a page short, an eraser on any page, a picture of his refused; the pen
+on a Flip's card (and on a Flip from before), none on one that loops; the
+whole way on a touch phone: Flip over the composer on her pages, nothing
+over the pill, her paper through a theme change, her page under the page
+he is on, her pages faint in the strip, what steps aside and every way in,
+his lines his page's alone and the pill folded into Flip's frame, Fill
+inside her lines, New Skribl and its Undo, Add and Post joined, the card of
+both read off its picture; her picture as Flip's backdrop, left out of what
+is handed over, and a re-edit on her pages; with the switch on, his pages
+alone, and Both, hers and his.
+
+CHANGED ON PURPOSE: sections 2, 3, 6 and 12 used "a Flip of two pages" as
+their drawing that can't be drawn back on; it can now, so each uses a Flip
+that loops (the first step's limit), and the composer's reading and the
+site's now agree on nineteen drawings (a Flip page for page, yes; a Flip
+that loops, or with a page that draws itself, no). Section 15's second
+server is a helper both 15 and 16 use (`switch_on`).
+
+CALIBRATION, part 16, a worktree for each tree, each break asserted to
+apply exactly once before anything ran, three at a time: as built 19 of 19;
+main red (no pen on a Flip, and nothing past it can go on). Twenty-six
+breaks, one at a time, each red on its own row: a Flip's limits not read
+(what it says, the way in, the refusals, the pen); his strokes left off the
+join; the page count not asked; the eraser read on page 1 alone; no pen on a
+Flip; the Pad opened for a Flip (the section cannot go on); her page never
+following the page he is on; her pages not in the strip; Blank, Delete, the
+speed, Paste and a tile's hold each not asking (the doors row, and where the
+page count moved, every row after it); a hold on a tile lifting it; the
+fold looking for the Pad's frame; Fill without her lines; New not on her
+pages (the section cannot go on); the card of his lines alone; her picture
+posted as his (refused by the site, so the post cannot go on); a re-edit
+not on her pages; hers kept in his two-hands drawing; his view without her
+picture; "New here?" left standing; her paper following the theme; nothing
+dimmed; the module not loaded in Flip (the section cannot go on).
+
+PAD AND FLIP: shared. `lib/drawback.js` learns pages (one for the Pad) and a
+host (Flip); the Pad's own path is unchanged, its sections 4, 14 and 15
+green beside this one.

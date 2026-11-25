@@ -876,7 +876,7 @@ rather than a shared rule.
 | `draftstore.js` | Pad+Flip+library | Draft media persistence — the bytes localStorage cannot hold. |
 | `dragtrack.js` | Pad+Flip | A horizontal drag on a track: the plumbing, once, for both editors. |
 | `drawalong.js` | Pad+Flip | Draw along: a drawing from the little book, laid faintly on your own canvas one stroke at a time, for you to trace at your pace (owner, after v323: the little book mock, "Yes to all as long as it's kind"; FUTURE.md 6p). |
-| `drawback.js` | Pad, Flip | Draw back: somebody's drawing faint under your pen, so you draw with them, never over them (the owner's "All yes", Nov 19, to the Draw back mock; DECISIONS.md, "Draw back, mocked"). A Flip page for page (the owner's "all yes", Nov 25): her page under the page he is on (`page`), her pages faint in Flip's strip (`inkPage`), Flip the host that lays her pages, timing, shape, paper and picture (`window.SkriblDrawBackHost`), and what a Flip refuses said one way (`refuse`). |
+| `drawback.js` | Pad+Flip | Draw back: somebody's drawing faint under your pen, so you draw with them, never over them (the owner's "All yes", Nov 19, to the Draw back mock; DECISIONS.md, "Draw back, mocked"). |
 | `drawerdetent.js` | Pad+Flip | The draw drawer's HALF detent — one implementation, both editors. |
 | `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both editors had hand-rolled: named panels above/below a toolbar, at most one open, the opener button reflecting state, and a scroll that reveals the opened panel without stranding it under browser chrome. |
 | `drawfull.js` | Pad+Flip | Draw in full screen, on a desk: the page itself goes full screen, the header and the dock with it, and the canvas takes the room. |
