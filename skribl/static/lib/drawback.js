@@ -19,7 +19,9 @@
  * yours, about 15:1). Each stroke is painted whole on a canvas of its own and
  * laid down faded at once, so where a line crosses itself it does not bead.
  * One button, Theirs: faint, full, hidden. A pill under the header says what
- * is happening, in Draw along's pill.
+ * is happening, in Draw along's pill, until the first stroke; then it folds
+ * into its Theirs button alone in the drawing's top-left corner (fold,
+ * below).
  *
  * HER PICTURE AND HER MUSIC (the owner's yes, Nov 19: "only let a drawback be
  * on author's background and music"). Her photo lies under the canvas, where
@@ -170,9 +172,70 @@
 
   function place() {
     if (!run) return;
+    if (run.folded) { corner(); return; }
     var head = document.querySelector('.header');
     var b = head ? head.getBoundingClientRect().bottom : 0;
     run.pill.style.top = Math.max(8, b + 8) + 'px';
+  }
+
+  /* ---- the pill folds at the first stroke ---------------------------------- */
+  /* THE OWNER'S B, Nov 24 ("Four Small Picks" 1: "Can we click/toggle the
+     theirs icon in upper left"; Nov 23: "the drawing back on someone's
+     drawing toast never goes away when drawing back so you can't draw there
+     (under it)"). The pill's words say what is happening until the first
+     stroke; then it folds into its Theirs button alone, 44px and round, in
+     the drawing's top-left corner, where a click or a tap still cycles
+     faint, full and hidden. It glides there: the words fade, then the button
+     travels and settles round. It lives in the canvas's area, placed from
+     the drawing's frame as the play bar is (app.js positionScrub), so it
+     rides the page with the drawing; never under the header, never past the
+     drawing's foot. Under Reduce Motion it fades out where it was and in
+     where it lands. */
+  var INSET = 10, CHIP = 44;
+  function frameOf() {
+    var cv = target();
+    var wrap = cv && cv.closest ? cv.closest('.canvas-wrap') : null;
+    return wrap && wrap.parentNode ? { wrap: wrap, area: wrap.parentNode } : null;
+  }
+  function corner() {
+    var f = run && run.folded && frameOf();
+    if (!f) return;
+    var a = f.area.getBoundingClientRect(), w = f.wrap.getBoundingClientRect();
+    var head = document.querySelector('.header'), hb = head ? head.getBoundingClientRect().bottom : 0;
+    var top = Math.min(Math.max(w.top + INSET, hb + INSET), Math.max(w.top + INSET, w.bottom - CHIP - INSET));
+    run.pill.style.left = Math.round(w.left - a.left + INSET) + 'px';
+    run.pill.style.top = Math.round(top - a.top) + 'px';
+  }
+  function still() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  function fold() {
+    var f = run && !run.folded && frameOf();
+    if (!f) return;
+    var r = run, p = r.pill, words = p.querySelector('.db-where');
+    r.folded = true;
+    window.addEventListener('scroll', r.onScroll, { passive: true });
+    function land() {
+      if (run !== r) return;
+      // Where it was, its button at the right end inside the pill's padding,
+      // so the glide starts exactly there.
+      var from = p.getBoundingClientRect(), pad = getComputedStyle(p).paddingRight;
+      p.classList.add('db-folded');
+      f.area.appendChild(p);
+      corner();
+      if (!p.animate) return;
+      if (still()) { p.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: 'ease' }); return; }
+      var to = p.getBoundingClientRect(), a = f.area.getBoundingClientRect();
+      p.animate([{ left: (from.left - a.left) + 'px', top: (from.top - a.top) + 'px', width: from.width + 'px',
+                   height: from.height + 'px', paddingRight: pad, borderRadius: (from.height / 2) + 'px' },
+                 { left: (to.left - a.left) + 'px', top: (to.top - a.top) + 'px', width: to.width + 'px',
+                   height: to.height + 'px', paddingRight: '0px', borderRadius: (to.height / 2) + 'px' }],
+                { duration: 420, easing: 'cubic-bezier(.37, 0, .63, 1)' });
+    }
+    if (!p.animate) { land(); return; }
+    var out = still() ? p.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: 'ease', fill: 'forwards' })
+                      : words.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: 'ease', fill: 'forwards' });
+    out.onfinish = function () { land(); out.cancel(); };
   }
 
   function say() {
@@ -233,6 +296,11 @@
     document.body.classList.remove('drawback');
     document.body.removeAttribute('data-drawback');
     window.removeEventListener('resize', run.onResize);
+    window.removeEventListener('scroll', run.onScroll);
+    document.removeEventListener('pointerdown', run.onDown, true);
+    document.removeEventListener('pointermove', run.onMove, true);
+    document.removeEventListener('pointerup', run.onUp, true);
+    document.removeEventListener('pointercancel', run.onUp, true);
     if (run.ro) run.ro.disconnect();
     run = null;
   }
@@ -284,7 +352,27 @@
     document.body.appendChild(pill);
     document.body.classList.add('drawback');
     run = { strokes: strokesOf(payload), size: size, guide: guide, pill: pill, btn: btn, state: 0, off: null,
-            first: first, own: !!(o && o.own), onResize: function () { place(); paint(); paintPhoto(); } };
+            first: first, own: !!(o && o.own), folded: false,
+            onResize: function () { place(); paint(); paintPhoto(); }, onScroll: function () { corner(); } };
+    // THE FIRST STROKE folds the pill (fold, above): down on the drawing and
+    // up after moving, as Draw along counts one (lib/drawalong.js); a pinch
+    // that takes the finger away is no stroke.
+    var down = null;
+    run.onDown = function (e) {
+      down = (run && !run.folded && e.isPrimary && e.target === target()) ? { x: e.clientX, y: e.clientY, d: 0 } : null;
+    };
+    run.onMove = function (e) {
+      if (down && e.isPrimary) down.d = Math.max(down.d, Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y));
+    };
+    run.onUp = function (e) {
+      var was = down;
+      down = null;
+      if (was && was.d > 6 && e.type === 'pointerup') fold();
+    };
+    document.addEventListener('pointerdown', run.onDown, true);
+    document.addEventListener('pointermove', run.onMove, true);
+    document.addEventListener('pointerup', run.onUp, true);
+    document.addEventListener('pointercancel', run.onUp, true);
     // HER PHOTO, under the canvas where the Pad's own would lie.
     var ph = photoOf(payload);
     if (ph) {
@@ -313,8 +401,11 @@
     // The canvas changes size as the Pad lays itself out (zoom, a phone
     // turned): the original follows it.
     if (window.ResizeObserver) {
-      run.ro = new ResizeObserver(function () { paint(); paintPhoto(); });
+      run.ro = new ResizeObserver(function () { paint(); paintPhoto(); place(); });
       run.ro.observe(cv);
+      // ...and the folded button its corner, as the drawing's area changes.
+      var fa = frameOf();
+      if (fa) run.ro.observe(fa.area);
     }
     say();
     place();

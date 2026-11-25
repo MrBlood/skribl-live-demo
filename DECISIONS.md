@@ -53259,3 +53259,44 @@ and 21 alone: as built 7/7; main with the new rows, 2's sheet row red and
 Post it on everybody's drawing, 2's sheet row red.
 
 PAD AND FLIP: not for them; the site's sheet.
+
+## After v330 -- Draw back's pill folds into its Theirs button at the first stroke
+
+The owner, Nov 23, on a desk: "the drawing back on someone's drawing toast
+never goes away when drawing back so you can't draw there (under it)."
+Mocked as "Four Small Picks", 1: A, it glides away and Theirs moves into the
+dock (Cal's pick); B, it folds into a small Theirs chip in the corner. The
+owner, Nov 24: "Can we click/toggle the theirs icon in upper left" (B as
+mocked: a click cycles), then "Yes".
+
+THE CHANGE (`lib/drawback.js`, `styles.css`): the pill says "Drawing back on
+Ana's · Theirs" under the header until the first stroke (down on the drawing,
+up after moving, as Draw along counts one); then it folds into its Theirs
+button alone, 44px and round with the pill's ring, in the drawing's top-left
+corner, 10px in and never under the header, where a click or a tap still
+cycles faint, full and hidden. It glides there: the words fade (140ms), then
+the button travels and settles round (420ms, a sine ease-in-out). It lives
+in the canvas's area, placed from the drawing's frame as the play bar is, so
+it rides the page with the drawing. Under Reduce Motion it fades out where
+it was and in where it lands. Its cost, said in the mock: it sits on a 44px
+corner of her drawing, so a stroke cannot start right under it.
+
+THE CHECKS, `verify_socialdrawback` 14, through the site (Theo's pen on Ana's
+cat, the composer's Pad), on a phone, a desk, and a phone under Reduce
+Motion: the pill whole while the pen is down; let go, the button alone at the
+corner, 44px, round, painted where it stands, "Theirs: faint"; the glide read
+on every frame (the words faded and gone before it moves, then only ever
+toward the corner, no frame more than a fifth of the way); under Reduce
+Motion two places and nothing between; a click still cycles. CALIBRATION,
+part 14 alone: as built 4/4 (26 places, the largest step a sixteenth of the
+way); main with the new rows 1/4 (the cycle row green: cycling was there);
+one break at a time: no glide, the glide row red (two places); a glide under
+Reduce Motion, the Reduce Motion row red; no fade first, the glide row red;
+the folded button deaf to a click, the section stopped at the click. Two
+curves came first: a fast start put a fifth of the way into one late frame
+beside other runs, and a steeper ease-in-out lost a frame at its peak on a
+desk, every run (63 of 262px, twice its peak step). The sine curve moves
+near a sixteenth of the way a frame, so a lost frame stays near an eighth.
+
+PAD AND FLIP: Draw back is the Pad's alone today; Flip's page-for-page Draw
+back, on the list, takes the same control.
