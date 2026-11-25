@@ -3083,7 +3083,8 @@ with app.test_request_context("/social/"):
             REC14 = """() => { window.__pf = []; const t0 = performance.now();
               const step = () => { const p = document.querySelector('.db-pill');
                 if (p) { const r = p.getBoundingClientRect(), w = p.querySelector('.db-where');
-                  window.__pf.push({ l: r.left, t: r.top, o: +getComputedStyle(p).opacity, wo: +getComputedStyle(w).opacity }); }
+                  window.__pf.push({ l: r.left, t: r.top, o: +getComputedStyle(p).opacity, wo: +getComputedStyle(w).opacity,
+                                     ws: getComputedStyle(w).display !== 'none' }); }
                 if (performance.now() - t0 < 1400) requestAnimationFrame(step); };
               requestAnimationFrame(step); }"""
             REST14 = """() => { const p = document.querySelector('.db-pill'), b = p.querySelector('.db-theirs');
@@ -3150,10 +3151,13 @@ with app.test_request_context("/social/"):
                 way = math.hypot(pts[0][0] - end[0], pts[0][1] - end[1])
                 steps = [math.hypot(b_[0] - a_[0], b_[1] - a_[1]) for a_, b_ in zip(pts, pts[1:])]
                 left = [math.hypot(p_[0] - end[0], p_[1] - end[1]) for p_ in pts]
-                moved = next((i for i, s_ in enumerate(steps) if s_ > 0.5), None)
+                # The first frame that has moved: by then the words faded (to
+                # nothing, while still there) and are gone.
+                moved = next((i + 1 for i, s_ in enumerate(steps) if s_ > 0.5), None)
                 return {"places": len({(round(p_[0]), round(p_[1])) for p_ in pts}), "way": round(way, 1),
                         "largest": round(max(steps), 1), "toward": all(b_ <= a_ + 0.5 for a_, b_ in zip(left, left[1:])),
-                        "faded_first": moved is not None and fs[moved]["wo"] <= 0.05,
+                        "faded_first": moved is not None and not fs[moved]["ws"]
+                                       and min([f["wo"] for f in fs[:moved] if f["ws"]] or [1]) <= 0.1,
                         "dim": round(min(f["o"] for f in fs), 2)}
 
             looks = {f"{s}{' reduced' if r else ''}": g["rest"] for (s, r), g in got14.items()}
