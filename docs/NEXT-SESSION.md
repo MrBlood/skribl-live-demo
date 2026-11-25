@@ -41,6 +41,14 @@ page playing her strokes, then his (built the same morning). Copy stays
 dimmed, and so does Draw (it is her timing; light it only if the owner
 says so).
 
+## Recolor while drawing back: all yes, building
+
+The decided order's next step, mocked (https://claude.ai/artifact/XUcG9eV3zEBTpGn936wneo)
+and answered "All yes" about 11:20 AM: Recolor on while drawing back, his
+lines only; a tap on hers says whose it is; the magnifier shows hers
+faint; a drawing with recolours gets the pen (`DECISIONS.md`, "Recolor
+while drawing back, mocked"). Being built the same day.
+
 ## Waiting on the owner's phone
 
 - Flip's Draw back. One-glance tell for the new build: under a Flip's card,
