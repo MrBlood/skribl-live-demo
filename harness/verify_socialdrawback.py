@@ -73,6 +73,10 @@ each in a browser with a virtual passkey.
  13. EACH LINK'S WORDS TAKE THEIR OWN TAPS: on a draw-back's card the time's
      words (its plays with it) open the post wherever "Drew back on Ana's"
      reaches up under them, and her link's words open her post.
+ 14. THE PILL FOLDS AT THE FIRST STROKE (the owner's B, Nov 24): its words
+     until then; let go, its Theirs button alone, 44px and round, in the
+     drawing's top-left corner, gliding there (read on every frame), fading
+     under Reduce Motion; a click still cycles faint, full and hidden.
 
 SOCIALDRAWBACK_PART=<n>[,<m>] runs those sections only (calibration). Every
 row was shown red by breaking one part and green as built: DECISIONS.md,
@@ -3062,6 +3066,118 @@ with app.test_request_context("/social/"):
                   json.dumps(seen13))
         except Exception as exc:  # noqa: BLE001
             stopped(13, exc)
+
+    # ----------------------------------------------------------------- 14
+    # THE PILL FOLDS AT THE FIRST STROKE (the owner's B, Nov 24, "Four Small
+    # Picks" 1: "Can we click/toggle the theirs icon in upper left"; Nov 23:
+    # "the drawing back on someone's drawing toast never goes away when
+    # drawing back so you can't draw there (under it)"): its words until the
+    # first stroke, then its Theirs button alone in the drawing's top-left
+    # corner, gliding there; read on every frame.
+    if part(14, "the pill folds at the first stroke: Theirs alone, 44px, in the drawing's top-left corner, gliding there;"
+                " a click still cycles; under Reduce Motion it fades"):
+        try:
+            ana = someone(b, "ana", "Ana Ruiz")
+            theo = someone(b, "theo", "Theo Lin")
+            cat14 = post_payload(ana, "Section 14, the cat", CAT)
+            REC14 = """() => { window.__pf = []; const t0 = performance.now();
+              const step = () => { const p = document.querySelector('.db-pill');
+                if (p) { const r = p.getBoundingClientRect(), w = p.querySelector('.db-where');
+                  window.__pf.push({ l: r.left, t: r.top, o: +getComputedStyle(p).opacity, wo: +getComputedStyle(w).opacity }); }
+                if (performance.now() - t0 < 1400) requestAnimationFrame(step); };
+              requestAnimationFrame(step); }"""
+            REST14 = """() => { const p = document.querySelector('.db-pill'), b = p.querySelector('.db-theirs');
+              const wr = document.querySelector('.canvas-wrap').getBoundingClientRect(), r = p.getBoundingClientRect(), br = b.getBoundingClientRect();
+              const head = document.querySelector('.header').getBoundingClientRect().bottom;
+              const at = document.elementFromPoint(br.left + br.width / 2, br.top + br.height / 2);
+              return { at: [r.left - wr.left, r.top - Math.max(wr.top, head)].map(v => Math.round(v * 10) / 10),
+                       btn: [Math.round(br.width), Math.round(br.height)], round: getComputedStyle(p).borderRadius,
+                       words: getComputedStyle(p.querySelector('.db-where')).display,
+                       inArea: p.parentNode.classList.contains('canvas-area'),
+                       painted: !!at && (at === b || b.contains(at)), label: b.getAttribute('aria-label') }; }"""
+            got14 = {}
+            for screen, reduced in (("phone", False), ("desk", False), ("phone", True)):
+                ctx, pg = browser_as(b, theo, screen=screen, reduced=reduced)
+                home(pg)
+                pen = f'.post-card[data-post="{cat14}"] .db-pen'
+                pg.locator(pen).scroll_into_view_if_needed()
+                pg.click(pen)
+                fe = pg.wait_for_selector("#composePad .facepad-frame", state="attached", timeout=15000)
+                pg.wait_for_function("() => document.querySelector('#composePad').classList.contains('is-ready')", timeout=30000)
+                fr = fe.content_frame()
+                fr.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state()", timeout=15000)
+                pg.wait_for_timeout(500)
+                before = fr.evaluate("""() => { const p = document.querySelector('.db-pill'), w = p.querySelector('.db-where');
+                  return { words: w.textContent, shown: getComputedStyle(w).display !== 'none', folded: p.classList.contains('db-folded') }; }""")
+                # The first stroke, with the mouse, right of her cat; the pen
+                # still down, the pill as it was.
+                box = fr.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return [r.left, r.top, r.width]; }")
+                fb = fe.bounding_box()
+                k = box[2] / 816
+                x0, y0 = fb["x"] + box[0] + 660 * k, fb["y"] + box[1] + 140 * k
+                pg.mouse.move(x0, y0)
+                pg.mouse.down()
+                for s_ in range(1, 12):
+                    pg.mouse.move(x0 + s_ * 3 * k, y0 + (s_ % 4) * 6 * k)
+                held = fr.evaluate("() => document.querySelector('.db-pill').classList.contains('db-folded')")
+                fr.evaluate(REC14)
+                pg.mouse.up()
+                pg.wait_for_timeout(1500)
+                frames = fr.evaluate("() => window.__pf")
+                rest = fr.evaluate(REST14)
+                cycle = []
+                for _ in range(3):
+                    fr.click(".db-theirs")
+                    pg.wait_for_timeout(150)
+                    cycle.append(fr.evaluate("() => [SkriblDrawBack.state().theirs, document.querySelector('.db-theirs').getAttribute('aria-label')]"))
+                got14[(screen, reduced)] = {"before": before, "held": held, "frames": frames, "rest": rest, "cycle": cycle}
+                close_ctx(ctx, pg)
+
+            def placed(g):
+                r = g["rest"]
+                return (g["before"]["words"] == "Drawing back on Ana’s" and g["before"]["shown"] and not g["before"]["folded"]
+                        and g["held"] is False and r["btn"] == [44, 44] and r["round"] == "50%" and r["words"] == "none"
+                        and r["inArea"] and r["painted"] and r["label"] == "Theirs: faint"
+                        and abs(r["at"][0] - 10) <= 1 and abs(r["at"][1] - 10) <= 1)
+
+            def glide(fs):
+                """Its places on every frame: how many, the largest step against the whole way, and whether every
+                step went toward where it rests; and whether its words faded before it moved."""
+                pts = [(f["l"], f["t"]) for f in fs]
+                if len(pts) < 2:
+                    return {"places": len(pts)}
+                end = pts[-1]
+                way = math.hypot(pts[0][0] - end[0], pts[0][1] - end[1])
+                steps = [math.hypot(b_[0] - a_[0], b_[1] - a_[1]) for a_, b_ in zip(pts, pts[1:])]
+                left = [math.hypot(p_[0] - end[0], p_[1] - end[1]) for p_ in pts]
+                moved = next((i for i, s_ in enumerate(steps) if s_ > 0.5), None)
+                return {"places": len({(round(p_[0]), round(p_[1])) for p_ in pts}), "way": round(way, 1),
+                        "largest": round(max(steps), 1), "toward": all(b_ <= a_ + 0.5 for a_, b_ in zip(left, left[1:])),
+                        "faded_first": moved is not None and fs[moved]["wo"] <= 0.05,
+                        "dim": round(min(f["o"] for f in fs), 2)}
+
+            looks = {f"{s}{' reduced' if r else ''}": g["rest"] for (s, r), g in got14.items()}
+            check("until the first stroke the pill says \"Drawing back on Ana’s\", whole while the pen is down; let go, it"
+                  " folds into its Theirs button alone, 44px and round, in the drawing's top-left corner (10px in, never"
+                  " under the header), inside the drawing's area, painted where it stands, still \"Theirs: faint\""
+                  " (phone and desk)",
+                  len(got14) == 3 and all(placed(g) for g in got14.values()), json.dumps(looks))
+            moves = {f"{s}{' reduced' if r else ''}": glide(g["frames"]) for (s, r), g in got14.items()}
+            check("it glides there, read on every frame: the words fade first, then it travels only ever toward the"
+                  " corner, over many frames, no frame more than a fifth of the way at once (phone and desk)",
+                  all(m.get("places", 0) >= 8 and m["largest"] <= m["way"] / 5 and m["toward"] and m["faded_first"]
+                      for m in (moves.get("phone"), moves.get("desk")) if m) and "phone" in moves and "desk" in moves,
+                  json.dumps(moves))
+            m_ = moves.get("phone reduced") or {}
+            check("under Reduce Motion it does not travel: it fades out where it was and in at the corner, two places"
+                  " and nothing between",
+                  m_.get("places") == 2 and m_.get("dim", 1) <= 0.2, json.dumps(m_))
+            check("folded, a click on it still cycles Theirs: full, hidden and back to faint, its name saying which",
+                  all(g["cycle"] == [["full", "Theirs: full"], ["hidden", "Theirs: hidden"], ["faint", "Theirs: faint"]]
+                      for g in got14.values()) and len(got14) == 3,
+                  json.dumps({f"{s}{' reduced' if r else ''}": g["cycle"] for (s, r), g in got14.items()}))
+        except Exception as exc:  # noqa: BLE001
+            stopped(14, exc)
 
     # ----------------------------------------------------------------- 10
     if part(10, "no page errors, no console errors and no CSP violations"):
