@@ -205,8 +205,9 @@ with sync_playwright() as pw:
             far = gap is not None and ((slid > 0.5 and abs(gap - EDGE) <= 1.5) or (abs(slid) <= 0.5 and gap >= EDGE - 1))
             moved_ok = all(m0 and m1 and abs((m0[0] - m1[0]) - slid) <= 1 for m0, m1 in zip(rest["moved"], g["moved"]))
             same = lambda u, v: u is not None and v is not None and all(abs(x - y) <= 0.5 for x, y in zip(u, v))
-            check(f"{ed} {size[0]}x{size[1]}: the drawing slides left only as far as the drawer needs ({want:.0f}px here: it ends"
-                  f" {EDGE}px from the drawer), what sits under it with it by as much; the header stays; closed, everything is back",
+            ends = f"it ends {EDGE}px from the drawer" if want else f"it has {EDGE}px or more already"
+            check(f"{ed} {size[0]}x{size[1]}: the drawing slides left only as far as the drawer needs ({want:.0f}px here: {ends}),"
+                  " what sits under it with it by as much; the header stays; closed, everything is back",
                   far and abs(slid - want) <= 1.5 and moved_ok and rest["header"] == g["header"] and back is not None
                   and not back["beside"] and same(back["canvas"], cr) and all(same(u, v) for u, v in zip(back["moved"], rest["moved"])),
                   json.dumps({"slid": slid, "want": want, "gap": gap, "moved": [rest["moved"], g["moved"]], "header": [rest["header"], g["header"]],
