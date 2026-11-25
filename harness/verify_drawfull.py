@@ -158,7 +158,7 @@ SHOWN = "(id) => { const r = document.getElementById(id).getBoundingClientRect()
 DRAWER = """([dock, cv]) => { const d = document.querySelector(dock).getBoundingClientRect(), c = document.getElementById(cv).getBoundingClientRect();
   const card = document.getElementById('mediaCard') || document.querySelector('.media-card');
   if (!card) return null; const r = card.getBoundingClientRect(); if (!(r.height > 0)) return null;
-  return skriblDrawers.beside() ? { where: 'beside', clear: Math.round(r.left - c.right), top: Math.round(r.top - c.top) }
+  return skriblDrawers.beside && skriblDrawers.beside() ? { where: 'beside', clear: Math.round(r.left - c.right), top: Math.round(r.top - c.top) }
                                 : { where: 'below', under: Math.round(r.top - d.bottom) }; }"""
 # The browser saying no, as a frame that does not allow full screen answers:
 # requestFullscreen is there, and fullscreenEnabled (both spellings) is false.
