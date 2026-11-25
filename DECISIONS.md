@@ -53319,3 +53319,51 @@ chosen word) and `verify_socialsettings` (Theme). The copies' row is the
 calibration: red on main in CI (56/57, the pill's ink its only miss), green
 here. `docs/COLOR-TOKENS.md` made again (`harness/tools/coloraudit.py`; it
 was stale on both sheets): the ink, and 18 exact copies of 59 (was 17).
+
+## After v330 -- How it works' examples row: ‹ and › with a mouse, centred on its cards
+
+The owner, Nov 23, on a desk: How it works' row of examples slides with a
+finger, and a mouse has no way to it (3 of 36 examples reachable). Mocked as
+"Four Small Picks", 2: A, arrows at the row's ends, only with a mouse (Cal's
+pick); B, a thin scrollbar. The owner, Nov 24: "Can the arrows be centered
+on the row?"; A2 mocked (A had them at the middle of the first picture, 79px
+higher), then "Yes".
+
+THE CHANGE (`_skribl_help.html`, `styles.css`, `lib/helplearn.js`): a round
+‹ and › at the row's ends, 44px, centred on its cards (inside the row's
+padding), 6px in from the sheet's edges, white with the card's edge (the
+card's own colour in dark), only on a device that hovers with a fine
+pointer. › glides the row on by a page of whole cards and ‹ back; each
+shows while there is somewhere to go, and one that goes while it holds the
+focus hands it to the other. The glide is the row's own, frame by frame
+(700ms, a sine ease-in-out), landing on a card's start with the row's snap
+off while it travels; a hand on the row takes over. Under Reduce Motion the
+row steps. A phone is unchanged.
+
+THE CHECKS, `verify_helpdemos` 7, on both editors: on a desk, light and
+dark, the › round, 44px, 6px in, centred on the cards to half a pixel,
+painted, "More examples", on the cards' own ground, no ‹ at the start; a
+click on › glides a page, read on every frame (many places over 400ms or
+more, only forward, no frame more than a fifth of the way unless the machine
+took that long to draw it, never more than 2.5 times its share of the time),
+and ‹ comes; on to the end by the keyboard, every example reached, › gone and
+the focus handed to ‹; ‹ back to the start; on a touch phone neither is
+painted; under Reduce Motion a click steps.
+
+CALIBRATION, part 7 in a trimmed copy against a server for each tree: as
+built 8/8, alone and beside three other runs; main, every row red (no
+arrows); one break at a time: the row put there at once, the glide rows red
+(two places); half a glide then a hop, the glide rows red (61% of the way in
+14% of the time); the arrows at the row's top, the look rows red; shown on a
+phone, the phone row red; no hand-off of the focus, the end rows red; the
+browser's own smooth scroll (as first written), the glide rows red (too few
+places) and the Reduce Motion row red (it glides anyway).
+
+THE INSTRUMENT WAS WRONG TWICE FIRST. It counted frames, and this box draws
+about 20 a second while the examples play beside the row, so one slow frame
+carried a quarter of the way on a sound glide. And it read the row before
+the frame's own glide had moved it, pairing each place with the next frame's
+time. It now reads each place in its own frame and lets a slow frame carry
+its share of the time.
+
+PAD AND FLIP: shared (one sheet, one script).

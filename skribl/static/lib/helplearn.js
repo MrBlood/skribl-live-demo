@@ -396,6 +396,90 @@
     if (b) tryTool(b.getAttribute('data-try'));
   });
 
+  /* THE ROW WITH A MOUSE (the owner's A2, Nov 24, "Four Small Picks" 2): the
+     row of examples slid by a finger and by nothing else, so a mouse reached
+     3 of 36. › glides it on by a page of cards and ‹ back; each shows while
+     there is somewhere to go (the sheet's CSS shows them only where there is
+     a mouse). One that goes while it holds the focus hands it to the other.
+     THE GLIDE IS THE ROW'S OWN, frame by frame: the browser's smooth scroll
+     reached a page in a few leaps, which is a jump (Kind transitions). It
+     lands on a card's start, where the row's snap would put it, with the snap
+     off while it travels; a hand on the row takes over. Under Reduce Motion
+     the row steps there. */
+  var row = document.getElementById('learnAll');
+  var steps = row ? [].slice.call(document.querySelectorAll('.learn-arrow[data-learn-step]')) : [];
+  function stepsSync() {
+    var at = row.scrollLeft, end = row.scrollWidth - row.clientWidth, had = document.activeElement;
+    steps.forEach(function (b) {
+      b.hidden = b.getAttribute('data-learn-step') === '-1' ? at <= 2 : at >= end - 2;
+    });
+    if (had && had.hidden && steps.indexOf(had) >= 0) {
+      var other = steps.filter(function (b) { return b !== had && !b.hidden; })[0];
+      if (other) other.focus({ preventScroll: true });
+    }
+  }
+  var glide = null;
+  function landings() {
+    var rr = row.getBoundingClientRect(), at = row.scrollLeft, max = row.scrollWidth - row.clientWidth, out = [max];
+    var cards = row.querySelectorAll('.learn-card');
+    for (var i = 0; i < cards.length; i++) {
+      if (!cards[i].getClientRects().length) continue;
+      var m = parseFloat(getComputedStyle(cards[i]).scrollMarginLeft) || 0;
+      out.push(Math.max(0, Math.min(max, at + cards[i].getBoundingClientRect().left - rr.left - m)));
+    }
+    return out.sort(function (a, b) { return a - b; });
+  }
+  function settle() {
+    if (glide) cancelAnimationFrame(glide.raf);
+    glide = null;
+    row.style.scrollSnapType = '';
+  }
+  function stepRow(dir) {
+    var base = glide ? glide.to : row.scrollLeft, page = Math.max(0, row.clientWidth - 48), all = landings(), to;
+    if (dir > 0) {
+      var on = all.filter(function (x) { return x > base + 1; });
+      var fit = on.filter(function (x) { return x <= base + page; });
+      to = fit.length ? fit[fit.length - 1] : on[0];
+    } else {
+      var back = all.filter(function (x) { return x < base - 1; });
+      var reach = back.filter(function (x) { return x >= base - page; });
+      to = reach.length ? reach[0] : back[back.length - 1];
+    }
+    if (to === undefined) return;
+    var from = row.scrollLeft;
+    settle();
+    if ((window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) || Math.abs(to - from) < 1) {
+      row.scrollLeft = to;
+      return;
+    }
+    row.style.scrollSnapType = 'none';
+    // 700ms: a page of cards, calm, and smooth while the examples play,
+    // which costs frames on a slower machine.
+    var t0 = null, dur = 700, g = glide = { to: to, raf: 0 };
+    function frame(now) {
+      if (glide !== g) return;
+      if (t0 === null) t0 = now;
+      var k = Math.min(1, (now - t0) / dur);
+      row.scrollLeft = from + (to - from) * (0.5 - Math.cos(Math.PI * k) / 2);
+      if (k < 1) g.raf = requestAnimationFrame(frame);
+      else settle();
+    }
+    g.raf = requestAnimationFrame(frame);
+  }
+  if (row && steps.length) {
+    steps.forEach(function (b) {
+      b.addEventListener('click', function () { stepRow(+b.getAttribute('data-learn-step')); });
+    });
+    ['wheel', 'pointerdown', 'touchstart'].forEach(function (type) {
+      row.addEventListener(type, function () { if (glide) settle(); }, { passive: true });
+    });
+    row.addEventListener('scroll', stepsSync, { passive: true });
+    window.addEventListener('resize', stepsSync);
+    // The sheet opening gives the row its size: a ResizeObserver hears it.
+    if (window.ResizeObserver) new ResizeObserver(stepsSync).observe(row);
+    stepsSync();
+  }
+
   // Ask (lib/ask.js) switches the views.
   window.SkriblHelpLearn = {
     show: show,
