@@ -3781,14 +3781,24 @@ with app.app_context():
             aside16["eraser"] = [fr.evaluate("() => flipTool"), fr.evaluate(TOAST)]
             fr.evaluate("() => { pageClip = [newFrame()]; spanPaste(); }")
             aside16["paste"] = fr.evaluate("() => frames.length")
+            # Her paper and her picture and music, as on the Pad (the drawer's swatch, the media drawer).
+            fr.evaluate("() => document.querySelector('.bg-swatch[data-bg=\"#0d0f14\"]').click()")
+            pg.wait_for_timeout(200)
+            aside16["paper"] = [fr.evaluate("() => String(bgColor).toLowerCase()"), fr.evaluate(TOAST)]
+            fr.evaluate("() => document.getElementById('mediaOpenBtn').click()")
+            pg.wait_for_timeout(200)
+            aside16["media"] = [fr.evaluate("() => document.getElementById('mediaOpenBtn').getAttribute('aria-expanded')"), fr.evaluate(TOAST)]
             aside16["dim"] = fr.evaluate("() => ['addblank', 'addcopy', 'eraserToolBtn'].map(i => getComputedStyle(document.getElementById(i)).opacity)")
             check("while drawing back the pages stay hers: Blank adds none (\"Pages can’t be added, moved or deleted while"
                   " drawing back.\"), a tile's hold keeps hers (\"The timing is Ana’s while drawing back.\"), Paste adds"
-                  " none; the eraser stays aside, the pen in hand; each dimmed",
+                  " none; the eraser stays aside, the pen in hand; her paper stays hers (\"The background is Ana’s.\")"
+                  " and so do her picture and music (\"The background and music are Ana’s.\"); each dimmed",
                   aside16["blank"] == [N16, "Pages can’t be added, moved or deleted while drawing back."]
                   and aside16["hold"] == [2, "The timing is Ana’s while drawing back."]
                   and aside16["eraser"] == ["pen", "The eraser is off while drawing back. Undo takes back your last line."]
-                  and aside16["paste"] == N16 and aside16["dim"] == ["0.4", "0.4", "0.4"],
+                  and aside16["paste"] == N16 and aside16["dim"] == ["0.4", "0.4", "0.4"]
+                  and aside16["paper"] == ["#f6f2ea", "The background is Ana’s."]
+                  and aside16["media"][0] != "true" and aside16["media"][1] == "The background and music are Ana’s.",
                   json.dumps(aside16))
 
             # EVERY DOOR THAT WOULD CHANGE HER PAGES OR HER TIMING, not only its button: each asked, nothing moves.
