@@ -232,6 +232,7 @@ BATCHES = [
     ["verify_recolor.py"],                 # measures — the colour's run read on every frame, real touch drags
     ["verify_drawtiles.py"],               # measures — painted targets, the fold read on every frame
     ["verify_drawerreveal.py"],            # measures — the page read on every frame as each tile and door opens
+    ["verify_drawerside.py"],              # measures — the drawing's slide read on every frame, drawers beside it
     ["verify_recolorplay.py"],             # measures — every replay read on every frame, the exports decoded
     ["verify_menu.py"],                    # measures — painted targets, waits out each page and Undo
     ["verify_contrast.py"],                # measures — painted grounds, photographed with the words hidden
