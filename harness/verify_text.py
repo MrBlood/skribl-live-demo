@@ -383,6 +383,22 @@ def place_words(q, fx, fy):
     tap(q, x, y)
 
 
+def set_words(q, fx, fy):
+    """Words already showing, set at FX, FY of the drawing. A press puts them
+    only before they show (once they do, only a drag moves them), so this is
+    the call that press makes, the page first scrolled to that part as
+    place_words scrolls it."""
+    settle(q)
+    x, y = at(q, fx, fy)
+    top, foot = q.evaluate(STUCK), q.evaluate("() => innerHeight")
+    if not (top + 8 <= y <= foot - 8):
+        q.mouse.wheel(0, y - (top + foot) / 2)
+        settle(q)
+    w, h = q.evaluate(LOGICAL[q._tx_editor])
+    q.evaluate("(p) => SkriblText.place(p)", {"x": w * fx, "y": h * fy})
+    settle(q)
+
+
 def press_grabber(q):
     """The drawer's grabber, pressed; False when there is none on screen to
     press (the rows after say what was there instead)."""
@@ -1275,10 +1291,11 @@ with sync_playwright() as p:
         c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 4})
         n0 = q.evaluate(COUNT["pad"])
         choose_text(q)
+        # At the drawing's foot, where the drawer on the keyboard will be: the
+        # press first, as a person puts the words before they show.
+        place_words(q, 0.5, 0.97)
         type_words(q, "Hello")
         q.evaluate("() => document.getElementById('txField').blur()")
-        # At the drawing's foot, where the drawer on the keyboard will be.
-        place_words(q, 0.5, 0.97)
         settle(q)
         put = q.evaluate("() => SkriblText.anchor()")
         room0, before = q.evaluate(ROOM), q.evaluate(TYPING, [DOCK["pad"], STUCK])
@@ -1483,8 +1500,9 @@ with sync_playwright() as p:
                   g3["label"] is not None and (g3["label"][0] >= g3["stuck"] + 7 or abs(g3["row"][1] - (g3["vh"] - 8)) <= 2)
                   and g3["sheet"][1] >= g3["vh"] - 9,
                   f"the words' label from {round(g3['label'][0]) if g3['label'] else None}, the header to {round(g3['stuck'])}; the row ends {round(g3['row'][1])} of {g3['vh']}; the drawer ends {round(g3['sheet'][1])}")
-            # Lower down: a press moves the words there, a short drag, let go.
-            place_words(q, 0.5, 0.8)
+            # Lower down: the words set there (a press no longer moves words
+            # that show), a short drag, let go.
+            set_words(q, 0.5, 0.8)
             x, y = grab(q)
             for i in range(1, 6):
                 q.mouse.move(x, y + 4 * i)

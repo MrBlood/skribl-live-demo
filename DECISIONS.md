@@ -53196,4 +53196,13 @@ own: as built, 8/8 and 8/8; the script as it was, the five press-away rows
 red (the words went to the press: on a desk from 353 to 106 across), every
 other row green.
 
+TWO SCENES THAT A PRESS SET UP. 16 put the words at the drawing's foot by
+a press there once they were typed, and 17 sent them lower down by a press
+once they showed; a press does neither now, so three rows read words that
+had not moved (242/245, beside others and alone). 16 presses first, before
+the words show, as a person puts them; 17 sets them by the call that press
+makes (`set_words`), the page scrolled to them first as before. Each row
+shows its scene did its work: 16's words pushed up from the foot while
+typed (916 to 779) and back to 916; 17's clear of the header once let go.
+
 PAD AND FLIP: shared (one script; each editor's press asks it).
