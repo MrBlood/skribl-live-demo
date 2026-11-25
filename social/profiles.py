@@ -179,7 +179,13 @@ def tab_view(who, me, mine, tab, before=None, skribl_blueprint="skribl"):
     from . import bookmarks, gallery, likes, posts
     out = {"tab": tab, "cards": [], "tiles": [], "drafts": [], "next": None}
     if tab == "posts":
-        entries, out["next"] = posts.person_page(who, me, before)
+        # PIN THIS POST (pins.py): their pinned post first, on the first page,
+        # with "Pinned"; never again further down.
+        from .pins import lead
+        first = lead(who, me)
+        entries, out["next"] = posts.person_page(who, me, before, skip=first["post"].id if first else None)
+        if first is not None and not before:
+            entries = [first] + list(entries)
         out["cards"] = posts.cards(entries, me) if entries else []
     elif tab == "gallery":
         entries, out["next"] = gallery.person_page(who, me, before)

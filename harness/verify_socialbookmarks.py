@@ -710,17 +710,21 @@ with sync_playwright() as p:
                 rows[(screen, "a drawing's page")] = pg.evaluate(ROWS)
                 close_ctx(ctx, pg)
             firsts = {f"{s} {k}": [r["name"] for r in (v or {}).get("cards", [[]])[0]] for (s, k), v in rows.items()}
-            check("Bookmark first in the ⋯'s first card, above Copy link: somebody's post on Home, on its own page, a"
-                  " drawing on its own page, and your own post, on a phone and a desk",
-                  len(rows) == 8 and all(v and v["cards"] and [r["name"] for r in v["cards"][0]][:2] == ["Bookmark", "Copy link"]
-                                         and v["cards"][0][0]["act"] == "bookmark" for v in rows.values()),
+            # On your own post, Pin comes between (pins.py: "Pin to your page" after Bookmark).
+            check("Bookmark first in the ⋯'s first card, above Copy link (on your own post, above Pin to your page):"
+                  " somebody's post on Home, on its own page, a drawing on its own page, and your own post, on a phone"
+                  " and a desk",
+                  len(rows) == 8 and all(v and v["cards"] and [r["name"] for r in v["cards"][0]][:2]
+                                         == ["Bookmark", "Pin to your page" if k == "your own card" else "Copy link"]
+                                         and v["cards"][0][0]["act"] == "bookmark" for (s, k), v in rows.items()),
                   json.dumps(firsts)[:700])
             looks = []
             for (s, k), v in rows.items():
                 if not (v and v["cards"] and v["cards"][0]):
                     looks.append((s, k, "no rows"))
                     continue
-                bm, cp = v["cards"][0][0], v["cards"][0][1]
+                bm = v["cards"][0][0]
+                cp = next((r for r in v["cards"][0] if r["name"] == "Copy link"), v["cards"][0][1])
                 lefts = {round(r["left"], 1) for c in v["cards"] for r in c}
                 ok = ("ic-mark" in (bm["ic"] or "") and "pen-ic" in (bm["ic"] or "") and bm["d"] == [RIBBON, RIBBON]
                       and bm["unit"] == [None, "1"] and bm["stroke"] == "2.1" and not bm["marked"]

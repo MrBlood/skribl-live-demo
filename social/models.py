@@ -695,6 +695,33 @@ class Bookmark(SocialBase):
     )
 
 
+class Pin(SocialBase):
+    """PIN THIS POST (the owner's idea, Nov 23; the Pin mock's A and A, the
+    owner's "all yes", Nov 25): one post of your own kept first on your
+    page's Posts tab, with a small "Pinned" line, for you and anyone who
+    visits (pins.py). ONE AT A TIME: a person has one row (unique), and
+    pinning another post moves it.
+
+    DELETING IS REAL AND SAID IN CODE (pins.py, from posts.drop_post and
+    accounts.delete_person): a post goes with its pin, an account with its
+    own. The ON DELETE CASCADEs are the net under that, as for bookmarks."""
+    __tablename__ = "social_pins"
+
+    id = sa.Column(BigId, primary_key=True)
+    #: Whose page it leads.
+    person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: The post pinned: always the person's own (pins.py refuses any other).
+    post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=False)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (
+        #: One a person.
+        sa.Index("ix_social_pins_person_id", "person_id", unique=True),
+        #: A post's: deleting it takes its pin by this.
+        sa.Index("ix_social_pins_post_id", "post_id"),
+    )
+
+
 class Repost(SocialBase):
     """A repost (the map, part two, item 3; the owner's "All yes" on the
     reposts mock, Nov 14): one person showing a post (somebody's, or their

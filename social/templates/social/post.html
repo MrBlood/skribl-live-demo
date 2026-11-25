@@ -52,7 +52,7 @@
     what you went to, so it stays as it is. Somebody you muted has their
     comments folded to one line with Show (_comments.html). #}
 {% extends 'social/base.html' %}
-{% from 'social/_post.html' import post_sheets, post_words, face, player, post_row, rp_data, drawn_on with context %}
+{% from 'social/_post.html' import post_sheets, post_words, face, player, post_row, rp_data, pin_data, drawn_on with context %}
 {% from 'social/_likes.html' import liked_by, like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% from 'social/_comments.html' import answer_bar, comments_section, comment_sheets with context %}
@@ -87,7 +87,7 @@
     under it, which is no taller than this drawing (social.css, .cm-art). #}
 <article class="post-page"{% if card.sk and card.sk.canvas_w and card.sk.canvas_h %} style="--art-w: {{ card.sk.canvas_w }}; --art-h: {{ card.sk.canvas_h }}"{% endif %} data-post="{{ p.public_id }}" data-url="{{ card.url }}" data-skribl="{{ p.skribl_id or '' }}"
          data-handle="{{ who.handle }}" data-first="{{ who.display_name|first_name }}"{% if card.mine %} data-mine data-del="{{ card.delete }}"{% endif %}
-         {%- if card.muted %} data-muted{% endif %}{% if card.markable %} data-markable{% endif %}{% if card.marked %} data-marked{% endif %}{% if card.who_draws %} data-who="{{ card.who_draws }}"{% endif %}{{ rp_data(card) }} data-kind="{{ card.kind }}"{% if p.skribl_id %} data-autoplay{% else %} data-no-art{% endif %} aria-labelledby="postWho">
+         {%- if card.muted %} data-muted{% endif %}{% if card.markable %} data-markable{% endif %}{% if card.marked %} data-marked{% endif %}{% if card.who_draws %} data-who="{{ card.who_draws }}"{% endif %}{{ rp_data(card) }}{{ pin_data(card) }} data-kind="{{ card.kind }}"{% if p.skribl_id %} data-autoplay{% else %} data-no-art{% endif %} aria-labelledby="postWho">
   <header class="post-head">
     <a class="post-face{% if card.drawn_on and not card.drawn_on.gone and not card.drawn_on.own %} has-back{% endif %}" href="{{ card.profile }}" tabindex="-1" aria-hidden="true">{{ face(who, initial=true) }}
       {%- if card.drawn_on and not card.drawn_on.gone and not card.drawn_on.own %}<span class="db-face">{{ face(card.drawn_on.who, initial=true) }}</span>{% endif %}</a>

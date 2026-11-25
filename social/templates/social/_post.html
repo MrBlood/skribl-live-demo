@@ -199,6 +199,13 @@
 {#  WHO REPOSTED IT, inside the original's card at its top (the reposts mock):
     "Mira Lopez reposted", or "You reposted" for yours, in the @handle's ink
     (--ink-2), 14px 600, the arrows 16px. #}
+{#  PIN THIS POST (pins.py; the Pin mock's A, the owner's "all yes", Nov 25):
+    the Posts tab's first card, the person's pinned post, says "Pinned" the
+    way a repost says who reposted it. #}
+{% macro pinned_line(c) -%}
+<p class="rp-by pin-by">{{ ic.pin() }}<span>Pinned</span></p>
+{%- endmacro %}
+
 {% macro reposted_by(c) -%}
 <p class="rp-by">{{ ic.repost() }}<span>{% if c.by_me %}You reposted{% else %}{{ c.by.display_name }} reposted{% endif %}</span></p>
 {%- endmacro %}
@@ -206,6 +213,12 @@
 {#  What a card says of reposts and quotes for posts.js: where a repost goes,
     where the small card a quote shows comes from, and whether it can be
     quoted (where it can be bookmarked). #}
+{#  Whether the ⋯ offers Pin on it (your own post, not taken down: pins.py),
+    and whether it is the one pinned. #}
+{% macro pin_data(c) -%}
+{%- if c.pin is not none %} data-pinnable{% if c.pin %} data-pinned{% endif %}{% endif %}
+{%- endmacro %}
+
 {% macro rp_data(c) -%}
 {%- if c.repost %} data-repost="{{ c.repost }}"{% endif %}{% if c.markable %} data-quoted="{{ c.quoted_url }}"{% endif %}
 {%- endmacro %}
@@ -265,8 +278,8 @@
 {%- set p = c.post %}{% set who = c.who -%}
 <article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id or '' }}" data-kind="{{ c.kind }}"
          data-handle="{{ who.handle }}" data-first="{{ who.display_name|first_name }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
-         {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %}{% if c.who_draws %} data-who="{{ c.who_draws }}"{% endif %}{{ rp_data(c) }} aria-labelledby="pn-{{ p.public_id }}">
-  {% if c.by %}{{ reposted_by(c) }}{% endif %}
+         {%- if c.muted %} data-muted{% endif %}{% if c.markable %} data-markable{% endif %}{% if c.marked %} data-marked{% endif %}{% if c.who_draws %} data-who="{{ c.who_draws }}"{% endif %}{{ rp_data(c) }}{{ pin_data(c) }} aria-labelledby="pn-{{ p.public_id }}">
+  {% if c.pinned %}{{ pinned_line(c) }}{% elif c.by %}{{ reposted_by(c) }}{% endif %}
   <header class="post-head">
     <a class="post-face{% if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %} has-back{% endif %}" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who, initial=true) }}
       {%- if c.drawn_on and not c.drawn_on.gone and not c.drawn_on.own %}<span class="db-face">{{ face(c.drawn_on.who, initial=true) }}</span>{% endif %}</a>
@@ -304,7 +317,7 @@
     "B, equal lines", Nov 14); posts.js shows the rows for whose post it is,
     and each card always holds one. No Cancel: its grip, a tap outside it, a
     swipe down and Esc close it, as on the Pad's menu. #}
-<div class="make post-sheet" id="postSheet" hidden{% if me %} data-bookmark-p="{{ url_for('social.bookmark_post', public_id='__ID__') }}"
+<div class="make post-sheet" id="postSheet" hidden{% if me %} data-pin="{{ url_for('social.pin_post', public_id='__ID__') }}" data-bookmark-p="{{ url_for('social.bookmark_post', public_id='__ID__') }}"
      data-bookmark-s="{{ url_for('social.bookmark_drawing', skribl_id='__ID__') }}"
      data-bookmark-c="{{ url_for('social.bookmark_comment', public_id='__ID__') }}"{% endif %}>
   <div class="make-scrim" data-make-close></div>
@@ -317,6 +330,10 @@
           and the ribbon filled (posts.js says which, from the card's
           data-marked). Signed out it raises the sheet below. #}
       <button class="post-act bm-act" type="button" data-act="bookmark"{% if not me %} aria-haspopup="dialog" aria-controls="bookmarkOutSheet"{% endif %}>{{ ic.ribbon() }}<span data-bm-words>Bookmark</span></button>
+      {#- PIN THIS POST (pins.py): on your own post alone, after Bookmark;
+          Unpin once it is the one (posts.js, the card's data-pinnable and
+          data-pinned). #}
+      {% if me %}<button class="post-act pin-act" type="button" data-act="pin" hidden>{{ ic.pin() }}<span data-pin-words>Pin to your page</span></button>{% endif %}
       <button class="post-act" type="button" data-act="copy">{{ ic.link() }}<span>Copy link</span></button>
       <button class="post-act" type="button" data-act="share">{{ ic.share() }}<span>Share…</span></button>
       {% if me %}{{ mute_row('', false, 'post') }}{% endif %}
@@ -460,6 +477,11 @@
   <span data-word="bm_taken_down">Your account was taken down, so nothing new can be kept on it.</span>
   <span data-word="bm_gone">That isn’t here anymore. Reload the page to see what’s new.</span>
   <span data-word="bm_network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="pin_add">Pin to your page</span>
+  <span data-word="pin_remove">Unpin from your page</span>
+  <span data-word="pin_added">Pinned. It’s first on your page.</span>
+  <span data-word="pin_moved">Pinned. It’s first on your page, and your other pin is back in its place.</span>
+  <span data-word="pin_removed">Unpinned. It’s back in its place.</span>
   <span data-word="bm_failed">That didn’t go through. Try again?</span>
   <span data-word="rp_repost">Repost</span>
   <span data-word="rp_reposted">Reposted</span>

@@ -1235,11 +1235,13 @@ with sync_playwright() as p:
             open_sheet(pg, ".post-page .post-row .post-more", "postSheet")
             out_post = [r["name"] for r in pg.evaluate(ACTS, "#postSheet")]
             close_ctx(ctx, pg)
-            check("never on your own post (Bookmark, Copy link, Share…, Delete post), on Home or your own page's Posts,"
+            check("never on your own post (Bookmark, Pin to your page, Copy link, Share…, Delete post), on Home or your"
+                  " own page's Posts,"
                   " nor of you on your own page (no ⋯ of yours, no Mute @ann in it); never signed out (a person's ⋯ says"
                   " Report @ben alone, a post's Bookmark, Copy link, Share…, Report this post)",
-                  own_card == ["Bookmark", "Copy link", "Share…", "Delete post"] and not own_page["more"] and not own_page["self"]
-                  and own_page.get("card") == ["Bookmark", "Copy link", "Share…", "Delete post"]
+                  own_card == ["Bookmark", "Pin to your page", "Copy link", "Share…", "Delete post"]
+                  and not own_page["more"] and not own_page["self"]
+                  and own_page.get("card") == ["Bookmark", "Pin to your page", "Copy link", "Share…", "Delete post"]
                   and out_person == ["Report @ben"] and out_post == ["Bookmark", "Copy link", "Share…", "Report this post"],
                   f"own card {own_card}; own page {own_page}; signed out {out_person} / {out_post}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop

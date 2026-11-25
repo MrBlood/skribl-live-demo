@@ -305,9 +305,10 @@ def delete_person(sess, person_id):
     like on what they owned (likes); their bookmarks, and every bookmark on
     what they owned (bookmarks); their reposts, and every repost of what they
     owned, the quotes of what they owned letting go of it, each saying it is
-    gone (reposts); every mention of them and every one they wrote, the words
-    that named them staying, plain (mentions); their follows, both ways
-    (follows); their mutes, both ways (mutes); the ways they were found
+    gone (reposts); their pin, which is only ever on a post of theirs, with
+    that post (drop_post); every mention of them and every one they wrote,
+    the words that named them staying, plain (mentions); their follows, both
+    ways (follows); their mutes, both ways (mutes); the ways they were found
     (finding people); the devices nudged for them (push). Flushes; the
     request commits.
     (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
