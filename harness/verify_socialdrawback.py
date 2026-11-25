@@ -4141,6 +4141,8 @@ with app.app_context():
             FLR = dict(FL17, frames=[dict(f1, recolors=[{"g": 0, "n": len(f1["strokes"]), "k": 0, "at": 0,
                                                           "was": "#1f1b2e", "to": "#ff6f91"}]), f2])
             flr = post_payload(ana17, "Section 17, a Flip with recolours on a page", FLR)
+            flbefore = post_payload(ana17, "Section 17, a Flip with recolours from before", FLR)
+            db_write("update social_posts set undrawable = 'recolors' where public_id = ?", (flbefore or "",))
             und17 = {k: (db("select undrawable from social_posts where public_id = ?", (v or "",)) or [["?"]])[0][0]
                      for k, v in (("balloons", bal), ("flip", flb), ("flip with recolours", flr))}
             check("a drawing with recolours says nothing when it is posted: it can be drawn back on now (her balloons,"
@@ -4150,10 +4152,12 @@ with app.app_context():
             # THE PEN on her balloons' card, on a Flip with recolours, and on balloons from before ("recolors").
             ctx, pg = browser_as(b, theo17)
             home(pg)
-            seen17 = {k: pg.evaluate(CARD, v) for k, v in (("balloons", bal), ("before", before17), ("flip", flr))}
+            seen17 = {k: pg.evaluate(CARD, v) for k, v in (("balloons", bal), ("before", before17), ("flip", flr),
+                                                           ("flip before", flbefore))}
             close_ctx(ctx, pg)
             check("the pen after the heart on her balloons' card, 44px, as on any drawing; on a Flip with recolours on a"
-                  " page; and on balloons posted before recolours could be drawn back on (it said \"recolors\")",
+                  " page; and on balloons and a Flip posted before recolours could be drawn back on (each said"
+                  " \"recolors\")",
                   all(seen17[k] and seen17[k]["pen"] and seen17[k]["pen"]["w"] >= 44 and seen17[k]["pen"]["h"] >= 44
                       and seen17[k]["kids"].index("pen") == seen17[k]["kids"].index("heart") + 1 for k in seen17),
                   json.dumps({k: (v or {}).get("kids") for k, v in seen17.items()}))
