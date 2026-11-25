@@ -5896,6 +5896,9 @@ const _flipDrawerCtl = skriblDrawers({
                        // buildTray() empties the tray: the size row goes back under the cells.
                        if(reachRow){ toolTray.appendChild(reachRow); syncReachRow(); } } }
   },
+  // On a desk, a drawer beside the drawing; the stage, the page strip and the
+  // dock slide (lib/drawers.js), as the Pad's stage and dock do.
+  side: { canvas: 'pad', move: '.flip-stage, .strip-wrap, .flip-tools' },
   reveal(open, name){
     // Everything closed: back to the top, as the Pad has always done. Flip
     // returned here without scrolling, so a page scrolled to show a drawer

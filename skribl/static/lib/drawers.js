@@ -21,6 +21,9 @@
  *     }, ...
  *   },
  *   reveal(openPanelOrNull, name|null)   (required: editor's scroll behaviour)
+ *   side: { canvas: id, move: selector } (optional: drawers beside the drawing
+ *                                         on a desk, below; `move` is what
+ *                                         sits under the drawing and slides)
  * }) -> { open(name|null), toggle(name), current(), isOpen(name) }
  *
  * open(name) closes whatever else is open (firing its onClose), opens `name`,
@@ -62,6 +65,90 @@
     window.addEventListener('scroll', check, { passive: true });
     heldBy = setTimeout(release, 800);
   }
+  /* BESIDE THE DRAWING, ON A DESK (the owner's "all yes", Nov 25, to the
+   * Drawers Beside the Drawing mock). With a mouse (hover and a fine pointer),
+   * and where the drawing fits whole beside a phone-width drawer, a drawer
+   * opens at the drawing's right, its top level with the drawing's, and the
+   * drawing with what sits under it (cfg.side.move: the Pad's stage and dock,
+   * Flip's stage, page strip and dock) slides left only as far as the drawer
+   * needs; the header stays. Measured in the mock with Pen open: the Pad
+   * showed 60-73% of its drawing on four desks and Flip 42-65%, the page
+   * scrolled 335px; beside, 100% and nothing scrolled. Where the two don't
+   * fit (a narrow window), or with a finger (a tablet, a phone), a drawer
+   * opens below as it always has. The tools tray is no drawer here: it rises
+   * over the dock and never moves the page. While a drawer is beside, the
+   * page's reveals scroll its own column instead (lib/drawerdetent.js).
+   * The slide is a relative offset (styles.css body.drawers-beside; each
+   * of those elements is position: relative already), glided here with Web
+   * Animations so the elements' own transitions stay theirs; the drawer
+   * comes in from the right; under Reduce Motion both simply move. A window
+   * resized while one is beside decides again, without gliding. */
+  var SIDE_W = 392, SIDE_EDGE = 16, SIDE_MS = 280, SIDE_EASE = 'cubic-bezier(.22,.8,.24,1)';
+  var selfResize = false;
+  function still() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  function sideBoxOf(panel) { return (panel.closest && panel.closest('.media-card')) || panel; }
+  function movers(side) { return side.move ? Array.prototype.slice.call(document.querySelectorAll(side.move)) : []; }
+  // Where a drawer beside would go, { shift, top }, or null where the two
+  // don't fit. Read as if nothing had slid (the slide now, mid-glide too, is
+  // the first mover's computed `left`); the top is the drawing's own with the
+  // page at its top, where a drawer beside brings it (revealPanelEnd).
+  function sideFit(side) {
+    if (!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches)) return null;
+    var cv = _el(side.canvas), m = movers(side);
+    if (!cv || !cv.getClientRects().length) return null;
+    var off = m.length ? (parseFloat(getComputedStyle(m[0]).left) || 0) : 0;
+    var r = cv.getBoundingClientRect(), W = document.documentElement.clientWidth;
+    var left = r.left - off, right = W - (r.right - off);
+    var shift = Math.max(0, SIDE_W + 2 * SIDE_EDGE - right);
+    if (shift > left - SIDE_EDGE) return null;
+    return { shift: Math.ceil(shift), top: Math.round(Math.max(SIDE_EDGE, r.top + (window.scrollY || 0))) };
+  }
+  // The drawer `panel` beside the drawing where it fits, else below (and
+  // null: none open). `glide`: an open or a close, not a resize.
+  function sideApply(side, panel, glide) {
+    var body = document.body, root = document.documentElement;
+    var was = document.querySelector('.drawer-side');
+    var box = panel ? sideBoxOf(panel) : null;
+    var fit = box ? sideFit(side) : null;
+    var prev = body.classList.contains('drawers-beside') ? (parseFloat(root.style.getPropertyValue('--side-shift')) || 0) : 0;
+    var next = fit ? fit.shift : 0;
+    if (was && (!fit || was !== box)) was.classList.remove('drawer-side');
+    if (fit) {
+      root.style.setProperty('--side-shift', next + 'px');
+      root.style.setProperty('--side-top', fit.top + 'px');
+      root.style.setProperty('--side-w', SIDE_W + 'px');
+      if (!box.classList.contains('drawer-side')) {
+        box.classList.add('drawer-side');
+        box.scrollTop = 0;
+        if (glide && !still() && box.animate) {
+          box.animate([{ opacity: 0, transform: 'translateX(24px)' }, { opacity: 1, transform: 'none' }],
+                      { duration: SIDE_MS, easing: SIDE_EASE });
+        }
+      }
+      body.classList.add('drawers-beside');
+    } else {
+      body.classList.remove('drawers-beside');
+      root.style.removeProperty('--side-shift');
+    }
+    if (prev !== next) slide(side, prev, next, glide);
+  }
+  // The drawing and what sits under it glide from one slide to the other; at
+  // the end (or at once) everything that keeps the drawing's place hears a
+  // resize (the brush rings, the eyedropper's lens), as lib/chromefit.js does.
+  function slide(side, from, to, glide) {
+    var m = movers(side);
+    function done() {
+      selfResize = true;
+      try { window.dispatchEvent(new Event('resize')); } finally { selfResize = false; }
+    }
+    if (!glide || still() || !m.length || !m[0].animate) { done(); return; }
+    var last = null;
+    m.forEach(function (el) {
+      last = el.animate([{ left: (-from) + 'px' }, { left: (-to) + 'px' }], { duration: SIDE_MS, easing: SIDE_EASE });
+    });
+    last.onfinish = done;
+  }
+
   function skriblDrawers(cfg) {
     homeOnSettle();
     var panels = {};
@@ -104,7 +191,18 @@
       if (name == null && prev != null) holdHeight();
       if (prev != null) _set(prev, false);   // current() must see the new state
       if (name != null) _set(name, true);
+      if (cfg.side) sideApply(cfg.side, name != null && name !== 'tools' ? panels[name].panel : null, true);
       if (cfg.reveal) cfg.reveal(name != null ? panels[name].panel : null, name);
+    }
+    // A window resized with a drawer beside decides again (no glide), once
+    // the editor has fitted its drawing to the new window.
+    if (cfg.side) {
+      window.addEventListener('resize', function () {
+        if (selfResize || currentName == null || currentName === 'tools') return;
+        requestAnimationFrame(function () {
+          if (currentName != null && currentName !== 'tools' && panels[currentName]) sideApply(cfg.side, panels[currentName].panel, false);
+        });
+      });
     }
 
     var api = {
@@ -175,6 +273,8 @@
     window.addEventListener('touchcancel', lift, { passive: true });
   }
   skriblDrawers.anyOpen = function () { return machines.some(function (m) { return m.current() != null; }); };
+  // Whether a drawer is beside the drawing now (the checks ask).
+  skriblDrawers.beside = function () { return !!document.querySelector('body.drawers-beside .drawer-side'); };
 
   if (typeof window !== 'undefined') window.skriblDrawers = skriblDrawers;
   if (typeof module !== 'undefined' && module.exports) module.exports = { skriblDrawers: skriblDrawers };

@@ -79,8 +79,23 @@
    * row: Text's words and Write it) is not on screen. Where the two cannot
    * both be had on a phone, the row wins: Write it writes them where they
    * are, and the page goes home to show them writing. */
+  /* BESIDE THE DRAWING (lib/drawers.js, a desk where the two fit): the drawer
+   * is its own column at the drawing's right, held to the screen, and the
+   * drawing is whole beside it. What these reveals did to the page they do to
+   * that column instead: it opens at its top, and what a tile or a door opens
+   * is shown by the column gliding inside itself, never the page. */
+  function sideBox(el) {
+    return el && el.closest && document.body.classList.contains('drawers-beside') ? el.closest('.drawer-side') : null;
+  }
+
   function revealPanelEnd(panel, behavior, dock, keep, atLeast) {
     var mine = ++revealGen;
+    if (sideBox(panel)) {
+      // The page at its top, where the drawing is whole; the drawer at its own top.
+      if ((window.scrollY || 0) > 0) window.scrollTo({ top: 0, behavior: behavior || 'smooth' });
+      sideBox(panel).scrollTop = 0;
+      return;
+    }
     function target() {
       var r = panel.getBoundingClientRect();
       var scroller = document.scrollingElement || document.documentElement;
@@ -181,6 +196,19 @@
     var mine = ++revealGen;
     requestAnimationFrame(function () {
       if (mine !== revealGen || el.hidden || !el.getClientRects().length) return;
+      var box = sideBox(el);
+      if (box) {
+        // Inside the drawer's column: just far enough for the end of what
+        // opened to show, never past its own top; only ever down.
+        var br = box.getBoundingClientRect(), er = el.getBoundingClientRect(), at = box.scrollTop;
+        var end = at + er.top + el.offsetHeight - br.bottom + 12;
+        var cap = at + er.top - br.top - 8;
+        var go = Math.min(end, cap, box.scrollHeight - box.clientHeight);
+        if (go <= at + 1) return;
+        var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        box.scrollTo({ top: go, behavior: calm ? 'auto' : 'smooth' });
+        return;
+      }
       var scroller = document.scrollingElement || document.documentElement;
       var top = scroller.scrollTop, stuck = stuckBottom();
       // Where it ENDS, laid out: it unfolds from its top (transform-origin:
@@ -240,6 +268,8 @@
   var veiledAt = null;
   function veil(panel, on) {
     if (!panel) return;
+    // Beside the drawing the drawer covers none of it: nothing to step aside for.
+    if (on && sideBox(panel)) return;
     var scroller = document.scrollingElement || document.documentElement;
     if (on) {
       if (!panel.classList.contains('eyedropper-veiled')) veiledAt = scroller.scrollTop;
@@ -600,6 +630,6 @@
     }).observe(card);
   }
 
-  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, revealTop: revealTop, veil: veil, hush: hush,
+  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, revealTop: revealTop, veil: veil, hush: hush, sideBox: sideBox,
                                 showOpened: showOpened, shrinkGently: shrinkGently, holdThrough: holdThrough, followGrowth: followGrowth, stuckBottom: stuckBottom };
 }());

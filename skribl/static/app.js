@@ -1526,6 +1526,8 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
     // every open; see lib/toolshelf.js.
     tools: { panel: 'toolTray', button: 'toolMoreBtn', openClass: 'open', aria: true }
   },
+  // On a desk, a drawer beside the drawing; the stage and the dock slide (lib/drawers.js).
+  side: { canvas: 'canvas', move: '.canvas-area, #toolBar' },
   reveal(panel, name) {
     // The tray is anchored ABOVE the toolbar rather than docked below it, so
     // none of the scroll-to-reveal work below applies: it is already fully on
