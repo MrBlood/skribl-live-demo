@@ -38,7 +38,7 @@ row offers Draw back only where it can be done (posts.py, the pen)."""
 OVERTURE_MS = 3000
 
 # ---- TWO HANDS (the owner's "all yes", Nov 25, to the Two Hands mock: its
-# nine answers, A each, and its first step) ------------------------------------
+# nine answers, A each, and its first step; docs/SOCIAL-SITE.md section 41) ----
 # A draw-back kept as two people's own work. His post's drawing holds HIS
 # strokes alone, on her paper; the post points to her drawing as it was
 # (Post.drawn_on_skribl_id); and the site lays hers under his as it plays

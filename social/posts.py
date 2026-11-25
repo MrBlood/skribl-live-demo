@@ -33,6 +33,12 @@
                         on Home and in your Posts); a drawing's by its
                         visibility in Skribl, public or link-only, through
                         set_post_visibility as its author.
+    /hands/play/<view>/<skribl_id>, /hands/picture/<skribl_id>
+                        DRAW BACK, TWO HANDS (docs/SOCIAL-SITE.md section
+                        41): a two-hands draw-back's drawing as a view plays
+                        it (both, hers, his: JSON, Skribl's envelope), and
+                        the picture of both it rests on, only while her
+                        drawing is shown to the viewer (hands_states).
 
 ON HOME'S CARDS (the owner's yes, Nov 12): the words and the time each open
 the card's own page; the face, the name and the @handle the person's; the
@@ -74,9 +80,10 @@ or withheld since is simply absent, and its post still renders, the player
 saying the drawing is not here anymore.
 
 THROUGH SKRIBL'S SEAMS ONLY: create_post, delete_post, set_post_visibility,
-describe_posts and their exceptions (documented names, verify_social section
-8), the in-post
-player's macros, the editors' addresses with their documented compose flags.
+describe_posts, read_payload, line_of and their exceptions (documented
+names, verify_social section 8), the in-post player's macros (their `api`
+and `poster` for a two-hands draw-back), the editors' addresses with their
+documented compose flags.
 Every state-changing request shows the site's token and Origin and is limited
 per person (security.LIMITS) before it reads anything.
 """

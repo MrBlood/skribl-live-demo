@@ -3781,3 +3781,51 @@ before. DELETING IS REAL AND SAID IN CODE: a post goes with its pin
 (`posts.drop_post`), and an account's pin, only ever on a post of theirs,
 with its posts. `verify_socialprofile` 22 (with SQLite's cascade off, on a
 copy), `verify_socialauth` 14 (the table and its indexes).
+
+## 41. Built: Draw back, two hands, its first step (Nov 25)
+
+The owner's "all yes" (Nov 25, about 5:05 AM) to the Two Hands mock: its
+nine answers, A each (`DECISIONS.md`, "Draw back, two hands"), and its first
+step, behind a switch only the owner can turn on.
+
+THE SWITCH. `SKRIBL_SOCIAL_TWO_HANDS=1` in the site's settings (on the live
+site, the service's environment on Render; `1`, `true`, `yes` or `on`).
+Off, which is where it starts, every draw-back is joined as before and
+nothing changes for anyone. On, a new draw-back is kept as two hands. What
+was made while it was on stays two hands whichever way it is set later:
+the switch says how a new draw-back is kept, never how one is read.
+
+TWO HANDS (`drawback.py`, `posts.py`). His post's drawing is his strokes
+alone, as he drew them, on her paper (her ground and her shape; no picture
+and no music of his: they are hers). The post points to her drawing as it
+was (`drawn_on_skribl_id`, the second answer). Beside it the site keeps, in
+`social_two_hands`, the picture of both (the Pad's own card, her drawing
+under his lines) and the line both make (Skribl's `line_of` the joined
+drawing). His drawing rests on a picture of his lines alone (the Pad's
+second card, `thumbnailOwn`).
+
+WHAT PEOPLE SEE (`posts.hands_states`, per viewer, one read a page):
+- her drawing shown to them: BOTH, as a draw-back has always looked and
+  played (hers squeezed to three seconds, then his), from the site
+  (`/social/hands/play/<view>/<id>`, the player's `api` seam), resting on
+  the picture of both (`/social/hands/picture/<id>`); on its own page, the
+  one pill under the drawing, Both · Ana’s · Theo’s, each view its own
+  player at its own pace (`post.html`, `posts.js`);
+- her drawing removed (she deleted it, or it or she was taken down): his
+  strokes alone, from Skribl, "Ana’s drawing was removed" under them (her
+  name while she is here to be named; else "The drawing it answered was
+  removed");
+- a block between her and the viewer, either way: his strokes alone, "The
+  original isn’t shown to you".
+
+NOT YET (the seventh answer: one original and one answer first): a
+two-hands draw-back is not drawn back on (`undrawable` "hands"; no pen,
+and both doors refuse). Draw-backs from before stay one joined drawing
+(the eighth). Plays of Both are not counted (Skribl counts a play only on
+its own route); a quote of a two-hands draw-back shows his own picture;
+recolour stays off while drawing back (the fifth answer opens it for his
+own strokes, later). DELETING IS REAL AND SAID IN CODE: his post takes what
+is kept beside it, and her post lets go of every draw-back on it, which
+then shows its maker's strokes alone (`posts.drop_post_hands`).
+`verify_socialdrawback` 15 (a second server with the switch on, on the
+same database), `verify_hostseams` (`line_of`), `verify_socialauth` 14.

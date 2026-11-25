@@ -3313,6 +3313,25 @@ with app.test_request_context("/social/"):
                   views["hers"][0] == 200 and views["hers"][1] == len(ops) and views["hers"][3] == xy(ops[:3])
                   and views["his"][0] == 200 and views["his"][1] == 30 and views["his"][3] == xy(mine["frames"][0]["strokes"][:3])
                   and views["his"][2] == (her.get("frames") or [{}])[0].get("background"), json.dumps(views))
+            # HER PICTURE AND HER SONG (the sixth answer: "hers, as today"): kept
+            # out of his drawing, under his strokes and with them when they play.
+            ph = post_payload(hana, "Section 15, on a photo with music", on_photo_with_music(seed=76))
+            stph, jph = on2(taro).post_json("/social/posts", {"words": "", "draw_back": ph,
+                                                              "payload": dict(answer(n=14, seed=77), thumbnail=both_pic, thumbnailOwn=own_pic)})
+            onph = (jph or {}).get("post") if isinstance(jph, dict) else None
+            kept_media = media_of((stored(onph) or {}).get("payload"))
+            hers_media = media_of((stored(ph) or {}).get("payload"))
+            seen_media = {}
+            for v in ("both", "hers", "his"):
+                stv, jv = Client(cookies=kiko.ctx.cookies(BASE), xff=kiko.xff, origin=BASE2, base=BASE2).get_json(
+                    f"/social/hands/play/{v}/{(row2(onph) or {}).get('skribl')}")
+                seen_media[v] = [stv] + media_of((jv or {}).get("skribl") if isinstance(jv, dict) else None)
+            check("on a drawing with a photo and music: his own drawing keeps neither (they are hers); Both, hers and his"
+                  " alone each play over her photo with her song",
+                  stph == 200 and kept_media == [None, None] and all(hers_media)
+                  and all(m_ == [200] + hers_media for m_ in seen_media.values()),
+                  json.dumps({"status": stph, "his own": kept_media, "views": {k: [v_[0]] + [bool(x) for x in v_[1:]]
+                                                                              for k, v_ in seen_media.items()}}))
             # The card, as somebody else sees it on her page's Posts (Home is theirs).
             ctx, pg = browser_as(b, kiko)
             pg.goto(BASE2 + "/social/@taro")
