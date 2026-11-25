@@ -2916,10 +2916,11 @@ drawing's foot when its replay ends (Skribl's player says `skribl:ended`).
 
 NO PEN WHERE IT CAN'T BE DONE YET (DECISIONS.md, "Draw back: no pen where it
 can't be done yet"): a drawing with recolours, and a Flip that loops, keeps a
-page under, plays to a beat or has a page that draws itself, read when its
-post is made (`undrawable`: "recolors", "loop", "under", "beat", "draw"); a
-post from before keeps its pen, answered when opened (and so does a Flip
-posted before Flips could be drawn back on, which said "pages").
+page under or plays to a beat, read when its post is made (`undrawable`:
+"recolors", "loop", "under", "beat"); a post from before keeps its pen,
+answered when opened (and so does a Flip posted before Flips could be drawn
+back on, which said "pages", and one from the morning a page that draws
+itself was refused, which said "draw").
 
 A FLIP, PAGE FOR PAGE (the owner's "all yes", Nov 25, to the Flip Draw Back
 mock; DECISIONS.md, "Flip's Draw back, page for page: built"). The pen on a
@@ -3876,6 +3877,10 @@ answer 3) his pages are kept alone, each on her page's paper at her timing,
 pointing to hers (`_own_pages`), and Both, hers and his play from the site
 (`_his_pages` lays her picture and song under his alone).
 
-NOT IN THE FIRST STEP: a Flip that loops, keeps a page under, plays to a
-beat, or has a page that draws itself (`undrawable` says which; no pen).
-`verify_socialdrawback` 16.
+A PAGE THAT DRAWS ITSELF plays hers, then his (the owner's answer, Nov 25:
+"draw-on pages play hers then his"): her strokes as she drew them, then his
+a beat after her last point, at his own pace. Copy and Draw stay dimmed
+while drawing back (the owner: "Keep Copy dimmed"; Draw is her timing).
+
+NOT IN THE FIRST STEP: a Flip that loops, keeps a page under or plays to a
+beat (`undrawable` says which; no pen). `verify_socialdrawback` 16.

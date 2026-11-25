@@ -33,14 +33,13 @@ fine (`WORKING-AGREEMENTS.md`, "Sealing a release").
   "Flip's Draw back, page for page: built"; `docs/SOCIAL-SITE.md` section
   42). Main's run after it was still going when this was written.
 
-## The owner's to say (from #1098, each a small call)
+## The owner's two small calls from #1098, answered
 
-- A Flip with a page that draws itself has no pen yet (beside the mock's
-  loop, kept page and beat). How should such a page play with two hands:
-  hers then his on that page, or both at once?
-- Copy and Draw on Flip's page bar are dimmed while drawing back (the mock
-  showed them lit): Copy only feeds Paste, which adds pages; Draw is her
-  timing. Keep?
+The owner, Nov 25, about 10:30 AM: "Keep Copy dimmed; draw-on pages play
+hers then his". A Flip with a page that draws itself has the pen now, that
+page playing her strokes, then his (built the same morning). Copy stays
+dimmed, and so does Draw (it is her timing; light it only if the owner
+says so).
 
 ## Waiting on the owner's phone
 

@@ -53671,3 +53671,42 @@ on).
 PAD AND FLIP: shared. `lib/drawback.js` learns pages (one for the Pad) and a
 host (Flip); the Pad's own path is unchanged, its sections 4, 14 and 15
 green beside this one.
+
+## After v330 -- Flip's Draw back: a page that draws itself plays hers, then his (the owner's answer)
+
+The owner, Nov 25, about 10:30 AM, to the two small calls the build left
+("Flip's Draw back, page for page: built", above): "Keep Copy dimmed;
+draw-on pages play hers then his".
+
+1. A PAGE THAT DRAWS ITSELF PLAYS HERS, THEN HIS. A Flip with such a page
+   has the pen now (`drawback.drawable` no longer says "draw"). The join was
+   already "hers then his" on every page: her strokes as she drew them, then
+   his a beat after her last point, at his own pace; on a still page the two
+   show whole together, and on a page that draws itself hers draw in first,
+   then his, so the page lasts as long as the two together (`lib/holdtiming.js`
+   reveals a page's points in order). The page keeps her "draws itself" and
+   her hold. The composer's reading agrees (`compose.js` `drawableHere`). A
+   Flip posted between #1098 and this said "draw" and keeps its pen
+   (`posts.cards` `can_back`), as one that said "pages" does.
+2. COPY STAYS DIMMED while drawing back, and so does Draw: whether her page
+   draws itself is her timing (answer 1). Nothing changes there; the owner
+   can light Draw by saying so.
+
+THE CHECKS, `verify_socialdrawback`: in 16, a Flip with a page that draws
+itself says nothing when it is posted, the way in hands it over (that page
+saying so), its card has the pen and so does one from the morning that said
+"draw", and a new row: posted, that page still draws itself, her strokes
+first as she drew them and his after her last point, a still page still; in
+12, the composer's reading and the site's agree on nineteen drawings, a Flip
+with a page that draws itself a yes.
+
+CALIBRATION, parts 12 and 16, a worktree for each tree, each break asserted
+to apply exactly once: as built 44 of 44; main red on all five rows that
+changed. Four breaks, one at a time, each red on its own row: a page that
+draws itself refused again (what a Flip says, the way in, hers then his,
+and the two readings no longer agreeing); the morning's "draw" with no pen
+(the pen's row); his strokes timed from nothing, before hers (hers then
+his); the composer refusing such a page (the two readings).
+
+PAD AND FLIP: the site's alone (the join and the rule); Flip already hands
+back his pages with her "draws itself" on them, and the Pad has no pages.

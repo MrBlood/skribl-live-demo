@@ -708,15 +708,16 @@ def cards(entries, viewer, words=True, aligned=False):
         # post from before that keeps its pen, answered when opened ("photo"
         # and "music" recorded before the yes bar nothing now).
         # A FLIP, PAGE FOR PAGE since Nov 25 (drawback.py): a Flip posted
-        # since says what the first step can't do ("loop", "under", "beat",
-        # "draw") or nothing; one posted before said "pages" for every Flip,
-        # so it keeps its pen too, answered when opened, as a post from
-        # before the column always was.
+        # since says what the first step can't do ("loop", "under", "beat")
+        # or nothing; one posted before said "pages" for every Flip, so it
+        # keeps its pen too, answered when opened, as a post from before the
+        # column always was. "draw" (a page that draws itself) was refused
+        # for a morning and is drawn back on now (hers, then his): its pen too.
         und = getattr(p, "undrawable", None)
         kind = (sk or {}).get("kind")
         can_back = (e["kind"] == "p" and not down and sk is not None and not getattr(p, "two_hands", False)
                     and ((kind == "pad" and und not in ("pages", "recolors", "hands"))
-                         or (kind == "flip" and und in (None, "pages"))))
+                         or (kind == "flip" and und in (None, "pages", "draw"))))
         made[id(e)] = {"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
                        "plays": plays_text(sk["views"]) if sk else None,
                        "comments": said.get(key, 0),
