@@ -230,7 +230,7 @@
                    height: from.height + 'px', paddingRight: pad, borderRadius: (from.height / 2) + 'px' },
                  { left: (to.left - a.left) + 'px', top: (to.top - a.top) + 'px', width: to.width + 'px',
                    height: to.height + 'px', paddingRight: '0px', borderRadius: (to.height / 2) + 'px' }],
-                { duration: 360, easing: 'cubic-bezier(.4, 0, .2, 1)' });
+                { duration: 420, easing: 'cubic-bezier(.37, 0, .63, 1)' });
     }
     if (!p.animate) { land(); return; }
     var out = still() ? p.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: 'ease', fill: 'forwards' })
