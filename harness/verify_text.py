@@ -2503,6 +2503,83 @@ with sync_playwright() as p:
                   g.get("stopped") or f"said {g.get('said')!r}; left {g.get('left')!r}; Text opened with {g.get('box')!r};"
                   f" after Undo {g.get('back')}; errors {g.get('errors')}")
 
+        # EACH LETTER MOVED THE PAD, AND AFTER THE THIRD THE TYPING VIEW WENT (the owner's iPhone, Nov 22, the Pad
+        # over Make: "1st letter jumps and second letter jumps again. Third letter jumps to this. 4th is still
+        # there", then Size, Thickness and Speed showed with the keyboard up and the words in focus). Two things an
+        # iPhone does that Chromium does not, put in by hand: to show what is typed it scrolls whatever it can,
+        # which with the site's page held is the editor's own page in the frame, a step a letter; and the
+        # outermost window comes to say it is no taller than what can be seen, as if the page ended at the keys.
+        # Through both the editor stays where it was and the typing view stays up; the keyboard's tick (the words
+        # out of focus) brings the whole drawer back; and Report a problem says what the keyboard did, letter by
+        # letter, never the words.
+        HEAD = "() => { const e = document.querySelector('.header, .flip-header, header'); return e ? Math.round(e.getBoundingClientRect().top) : null; }"
+        held = {}
+        for ed in ("pad", "flip"):
+            hd = held[ed] = {}
+            try:
+                c, q, fr, errs = in_a_post(ed, IOS_UA)
+                fr.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
+                fr.wait_for_function("() => SkriblText.isOpen()", timeout=5000)
+                settle(fr)
+                fr.tap("#txField")
+                q.wait_for_timeout(300)
+                q.evaluate("() => window.__keyboard(%d)" % KB)
+                q.wait_for_timeout(500)
+                hd["before"] = [fr.evaluate("() => Math.round(scrollY)"), fr.evaluate(HEAD), fr.evaluate(SEEN, CANVAS[ed])["typing"]]
+                # The iPhone's step a letter, on the editor's own page (60px; it went three letters before it could
+                # go no further, and the frame's page has 292px to go).
+                fr.evaluate("() => document.getElementById('txField').addEventListener('input', () => window.scrollBy({ top: 60, behavior: 'instant' }))")
+                hd["letters"] = []
+                for ch in "Yes!":
+                    q.keyboard.type(ch)
+                    q.wait_for_timeout(250)
+                    hd["letters"].append([fr.evaluate("() => Math.round(scrollY)"), fr.evaluate(HEAD),
+                                          fr.evaluate(SEEN, CANVAS[ed])["typing"]])
+                # The window says it ends at the keys: the frame as tall as what can be seen, and that all of it.
+                q.set_viewport_size({"width": 402, "height": FH - KB})
+                q.evaluate("() => window.__keyboard(0)")
+                q.wait_for_timeout(600)
+                hd["short"] = fr.evaluate(SEEN, CANVAS[ed])
+                hd["short_h"] = fr.evaluate("() => innerHeight")
+                hd["report"] = fr.evaluate("() => SkriblReport.collect()")
+                # The tick: the words out of focus, and the window whole again.
+                fr.evaluate("() => document.getElementById('txField').blur()")
+                q.set_viewport_size({"width": 402, "height": FH})
+                q.wait_for_timeout(800)
+                hd["after"] = fr.evaluate(SEEN, CANVAS[ed])
+                hd["errors"] = errs[:3]
+                c.close()
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the rows' red
+                hd["stopped"] = str(exc).splitlines()[0][:200]
+        for ed in ("pad", "flip"):
+            hd = held[ed]
+            b4, ls = hd.get("before") or [None, None, None], hd.get("letters") or []
+            check(f"{ed} inside a post on an iPhone's keyboard: a letter typed moves nothing, though the phone scrolls the"
+                  f" editor's own page to show it (the owner's iPhone, Nov 22: \"1st letter jumps and second letter jumps"
+                  f" again\"): the page and its header where they were, the typing view up, letter after letter",
+                  not hd.get("stopped") and b4[2] is True and len(ls) == 4
+                  and all(abs(l[0] - b4[0]) <= 1 and l[1] == b4[1] and l[2] is True for l in ls),
+                  hd.get("stopped") or f"before {b4} (page, header, typing); after each letter {ls}")
+            sh, rep = hd.get("short") or {}, hd.get("report") or ""
+            check(f"{ed}: ...and when the window comes to say it ends at the keys (\"Third letter jumps to this\": Size,"
+                  f" Thickness and Speed with the keyboard up), the typing view stays: the words in focus, the drawer's foot"
+                  f" at the foot of what can be seen, the words above it",
+                  not hd.get("stopped") and sh.get("typing") is True and sh.get("focus") == "txField"
+                  and hd.get("short_h") is not None and abs(sh["sheet"][1] - hd["short_h"]) <= 1
+                  and sh.get("words") is not None and sh["words"][1] <= sh["sheet"][0] + 0.5,
+                  hd.get("stopped") or f"typing {sh.get('typing')}, focus {sh.get('focus')}, drawer {r1(sh.get('sheet'))}"
+                  f" in a window {hd.get('short_h')} tall, words {r1(sh.get('words'))}")
+            af = hd.get("after") or {}
+            check(f"{ed}: ...the keyboard's tick (the words out of focus) brings the whole drawer back",
+                  not hd.get("stopped") and af.get("typing") is False and af.get("room") is False and not hd.get("errors"),
+                  hd.get("stopped") or f"typing {af.get('typing')}, room {af.get('room')}; errors {hd.get('errors')}")
+            texts = [l for l in rep.splitlines() if l.startswith("Text: ")]
+            check(f"{ed}: ...and Report a problem says what the keyboard did, letter by letter (what the window said, the"
+                  f" page's scroll, the typing view), never the words",
+                  not hd.get("stopped") and sum(1 for l in texts if " letter " in l) >= 4 and any(" typing " in l for l in texts)
+                  and not any(w in l for l in texts for w in ("Yes", "Ye")),
+                  hd.get("stopped") or f"{len(texts)} Text lines: " + " | ".join(texts[-6:])[:600])
+
     # ------------------------------------------------------------------ 25
     if part("TEXT 25 — a finger on the words"):
         # THE OWNER'S IPHONE, Nov 22: "can't drag letters, still jumps right every touch", inside the site and on

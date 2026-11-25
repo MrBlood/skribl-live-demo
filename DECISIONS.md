@@ -53039,3 +53039,71 @@ STILL THE OWNER'S: whether a press away from the words moves them there
 it was.
 
 PAD AND FLIP: shared (one script; each editor's press asks it).
+
+## After v330 -- Text inside a post on an iPhone: a letter moves nothing, and the typing view stays while the words are typed
+
+The owner's iPhone, Nov 22 (the handoff's bug 1), the Pad over Make: "1st
+letter jumps and second letter jumps again. Third letter jumps to this.
+4th is still there." With each of the first letters the editor's header
+went up inside the frame and the drawer slid down under the iPhone's own
+strip; after the third, Size, Thickness and Speed showed with the keyboard
+up and the words in focus, the drawer's foot at the strip's top. On the
+Pad on its own page: "The drawer works".
+
+WHAT THE PHONE WAS DOING, read from the pictures and the words (no WebKit
+here, so not seen). (1) An iPhone scrolls whatever it can to show what is
+typed. With the site's page held since #1065, that is the editor's own page
+inside the frame, a step a letter until it can go no further: the jumps
+stopped at the fourth letter. (2) The typing view needs the keyboard's
+height, the outermost window's height less what can be seen. It went with
+the keyboard still up, so the window came to say it was no taller than
+what can be seen, as if the page ended at the keys; the whole drawer then
+came back to the foot of what could be seen, as the owner's picture shows.
+
+THE MEND (`lib/textwrite.js`). In a frame, while the words are typed, the
+editor's own page holds where it was: a scroll is put back before it is
+painted. Once typing, the keyboard is measured from the tallest the
+outermost window has been at this width, so the typing view goes only when
+the words lose their focus or what can be seen grows back (a keyboard put
+away with the words still in focus, as an Android phone's Back does, still
+brings the whole drawer back). On the editor's own page nothing is held:
+there the phone shows what is typed without moving it.
+
+AND REPORT A PROBLEM SAYS WHAT THE KEYBOARD DID (`lib/report.js`): Text's
+readings while its drawer was up, one a line, each with what the outermost
+window said, the page's scroll and the typing view; never the words. Its
+menu puts the keyboard away, so the Viewport line alone could not say what
+happened while a letter was typed; these lines can.
+
+THE CHECKS (`verify_text` 24, the Pad and Flip in the stand-in host's frame,
+told it is an iPhone). The phone's step a letter put in by hand (60px on
+the editor's page at each letter): four letters, the page and its header
+where they were, the typing view up. The window then saying it ends at the
+keys (the frame as tall as what can be seen): the typing view stays, the
+drawer's foot at the foot of what can be seen, the words above it. The
+keyboard's tick (the words out of focus): the whole drawer back. Report a
+problem: a line for each letter, and none of the words.
+CALIBRATION: each break on a copy with a server of its own,
+part 24 alone: as built, 22/22; the page not held, the letters row red
+on both editors (the page from 318 to 322 on the Pad, to 346 on Flip);
+the typing view not kept, the window row red on both (typing false, the
+whole drawer back); the readings not kept, the report row red on both
+(no Text lines). Each red only in its own row.
+
+WHAT THE HOLD CANNOT DO. Inside the frame the Pad's own page had 4px
+left to scroll with the typing view up (Flip 28), so a scroll of it
+cannot be all of three jumps on the Pad. The likelier rest: the phone
+pans its whole view to show the box, a step a letter while the drawer
+follows what can be seen back under its strip, until the view can pan
+no further. A page cannot hold the view still against the phone; the
+way is to keep the box where the phone has no reason to pan, and how far
+that is wants the phone's own numbers. Nothing here can show them; the
+Text lines will ("seen ...@" is where the view starts).
+
+NOT SEEN ON AN IPHONE: whether a letter still moves the Pad over Make is
+the owner's phone's to say. THE TELL: in Make, Text, type a letter or two,
+then ⋯ → Report a problem: its details end with lines that begin "Text:".
+If a letter still moves the Pad, those lines, copied, say what the phone
+did.
+
+PAD AND FLIP: shared (one script, one report).

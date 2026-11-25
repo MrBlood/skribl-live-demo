@@ -636,7 +636,10 @@
     els.field.addEventListener('input', function () {
       try { sessionStorage.setItem(WORDS_KEY, els.field.value); } catch (e) {}
       refresh();
+      note('letter');
     });
+    // In a frame, while the words are typed, the page holds (holdPage).
+    window.addEventListener('scroll', keepHeld, { passive: true });
     els.field.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       e.preventDefault();
@@ -1288,7 +1291,8 @@
   // with no visual viewport to ask.
   function seen() {
     var o = outer(), v = o.w.visualViewport;
-    return v ? { top: v.offsetTop - o.off, bottom: v.offsetTop + v.height - o.off, kb: o.w.innerHeight - v.height } : null;
+    return v ? { top: v.offsetTop - o.off, bottom: v.offsetTop + v.height - o.off, kb: o.w.innerHeight - v.height,
+                 h: v.height, ih: o.w.innerHeight, iw: o.w.innerWidth, framed: o.w !== window } : null;
   }
   // The outermost window's visual viewport tells this page of its keyboard
   // too; let go when this page goes, so a host never calls into a page that
@@ -1306,15 +1310,73 @@
       watching = v;
     }
   }
+  // THE WORDS STAY IN THE TYPING VIEW WHILE THEY ARE TYPED (the owner's
+  // iPhone, Nov 22, the Pad over Make: after the third letter the drawer
+  // showed Size, Thickness and Speed, the keyboard still up and the words
+  // still in focus, its foot at the top of the phone's own strip). Only the
+  // keyboard's height had gone: the outermost window came to say it was no
+  // taller than what can be seen, as if the page now ended at the keys. So
+  // once typing, the keyboard is measured from the tallest that window has
+  // been at this width, and the view goes when the words lose their focus or
+  // what can be seen grows back to that height (a keyboard put away with
+  // the words still in focus, as an Android phone's Back does).
+  var tall = 0, tallW = 0;
+  // ...AND, IN A FRAME, THE EDITOR'S OWN PAGE HOLDS STILL WHILE THEY ARE
+  // TYPED (the same evening: "1st letter jumps and second letter jumps
+  // again. Third letter jumps to this. 4th is still there"). With the site's
+  // page held (#1065), what an iPhone scrolls to show what is typed is the
+  // editor's own page inside the frame, a step a letter until it can go no
+  // further. The box sits on the keys and needs no scroll, so the page goes
+  // back to where it was when the typing began, before it is painted.
+  var heldY = null;
+  function holdPage(on) {
+    if (!on) { heldY = null; return; }
+    if (heldY !== null) return;
+    heldY = window.scrollY || window.pageYOffset || 0;
+    var D = window.SkriblDrawerDetent;
+    if (D && D.hush) D.hush();   // a reveal still settling moves it no more
+  }
+  function keepHeld() {
+    if (heldY === null || drag) return;
+    var y = window.scrollY || window.pageYOffset || 0;
+    if (Math.abs(y - heldY) < 0.5) return;
+    note('held ' + Math.round(y) + '>' + Math.round(heldY));
+    try { window.scrollTo({ top: heldY, behavior: 'instant' }); } catch (e) { window.scrollTo(0, heldY); }
+  }
+  // WHAT THE KEYBOARD DID, for Report a problem (nothing here has an iPhone's
+  // keyboard to show it): the last readings while the drawer was up, what
+  // the outermost window said, this page's scroll and what the drawer did.
+  // Never the words. Copied only when the person copies their report.
+  var trail = [], trail0 = 0, lastSaid = '';
+  function note(what) {
+    if (!els || !isOpen()) return;
+    var now = (window.performance && performance.now) ? performance.now() : Date.now();
+    if (!trail.length) trail0 = now;
+    var v = seen(), s = els.sheet;
+    var said = what
+      + (v ? ' seen ' + Math.round(v.h) + '/' + v.ih + '@' + Math.round(v.top) : '')
+      + ' page ' + Math.round(window.scrollY || 0) + '/' + window.innerHeight
+      + (document.activeElement === els.field ? ' focus' : '')
+      + (s.classList.contains('typing') ? ' typing ' + (s.style.bottom || '0px') : '');
+    if (said === lastSaid && what.indexOf('fit') === 0) return;   // a fit that changed nothing says nothing new
+    lastSaid = said;
+    trail.push('+' + Math.round(now - trail0) + 'ms ' + said);
+    if (trail.length > 24) trail.shift();
+  }
   function fitKeyboard() {
     var s = els && els.sheet;
     if (!s) return;
     var v = seen(), phone = window.innerWidth <= 640;
+    if (v && v.iw !== tallW) { tallW = v.iw; tall = 0; }
+    if (v) tall = Math.max(tall, v.ih);
     var lift = (phone && v && !s.hidden) ? Math.max(0, Math.round(window.innerHeight - v.bottom)) : 0;
     // Up is the keyboard's own height, not how much of this page it covers:
     // an iPhone can slide the view up to show a tapped field until little
     // or none of the page is left under the keys (the owner's third picture).
-    var typing = phone && !!v && v.kb > 80 && document.activeElement === els.field && !s.hidden;
+    // Once typing, from the tallest the window has been (above).
+    var kept = s.classList.contains('typing') && !!v && tall - v.h > 80;
+    var typing = phone && !!v && (v.kb > 80 || kept) && document.activeElement === els.field && !s.hidden;
+    holdPage(typing && !!v && v.framed);
     if (typing !== s.classList.contains('typing') && els.spacer) {
       if (typing) {
         var cs = getComputedStyle(s);
@@ -1327,6 +1389,7 @@
     s.style.bottom = typing ? lift + 'px' : '';
     s.style.maxHeight = typing ? Math.max(160, Math.round(v.bottom - v.top - 12)) + 'px' : '';
     if (want && isOpen()) { anchor = clampAnchor(want); position(); }
+    note(kept && v.kb <= 80 ? 'fit, kept' : 'fit');
     // Back in the page from the keyboard: on screen again, where the page left it.
     if (was && !typing && isOpen()) comeBack();
   }
@@ -1386,6 +1449,7 @@
     // Already up: the press moved the words, and that is all it did.
     if (isOpen()) { if (want) anchor = clampAnchor(want); position(); return; }
     veiled = false;
+    trail = []; lastSaid = '';
     s.classList.remove('tx-veiled', 'typing');
     if (!els.field.value) { try { els.field.value = sessionStorage.getItem(WORDS_KEY) || ''; } catch (e) {} }
     syncStyles();
@@ -1428,6 +1492,7 @@
     s.classList.remove('open', 'typing', 'tx-veiled');
     veiled = false;
     drag = null;
+    holdPage(false);
     s.style.bottom = ''; s.style.maxHeight = '';
     if (els.spacer) els.spacer.hidden = true;
     showTile(null, true);
@@ -1539,6 +1604,9 @@
     // The drawing's press with Text chosen: on the words it holds them,
     // anywhere else it says where they go (onWords, above).
     press: function (e, pos) { press(e, pos); },
+    // What the keyboard did while the drawer was up (note, above), for
+    // Report a problem: one reading a line, oldest first; '' when none.
+    trail: function () { return trail.join('\n'); },
     start: start,
     close: close,
     // The editor's drawers closed Text's (another drawer opened): tidy up.
