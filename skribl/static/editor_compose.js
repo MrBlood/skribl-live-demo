@@ -167,6 +167,7 @@
        row opens it (lib/ask.js). */
     if (d && d.type === 'skribl:compose:help') {
       if (typeof global.SkriblAskOpen === 'function') global.SkriblAskOpen();
+      errand = true;   // closed as it is read, the editor goes back (below)
       return;
     }
     if (!d || d.type !== 'skribl:compose:load' || !d.payload) return;
@@ -222,9 +223,42 @@
     }, true);
   }
 
+  /* ...AND CLOSED AS IT IS READ, THE EDITOR GOES BACK WHERE THE PERSON WAS
+     (the owner, Nov 23: How it works opened from the site's own page closed
+     into the Pad, not back to that page; WORKING-AGREEMENTS "Never stranded",
+     DECISIONS "The way back"). Asked for by the host, How it works is the host
+     page's errand: closed as a person closes what they have read (its ×, the
+     dim around it, Escape), the editor goes as its own × sends it, back to
+     the host's page. Closed by something it offers to try here (Ask's Show
+     me, the little book's Draw along, a card's Try it), the person stays to
+     try it, and the help is the editor's own from then on. Nothing can be
+     drawn while it is open, so going loses nothing: the host keeps the frame. */
+  var errand = false, readIt = false;
+  function watchErrand() {
+    var drawer = doc.getElementById('helpDrawer');
+    if (!drawer || typeof MutationObserver === 'undefined') return;
+    /* A press or a key that closes it as read: only once it has begun to close
+       (a key Ask's own box takes, or a press that misses, is not one). */
+    function read() {
+      if (!errand || drawer.hidden) return;
+      setTimeout(function () { if (drawer.classList.contains('closing')) readIt = true; }, 0);
+    }
+    doc.addEventListener('click', function (e) {
+      if (e.target && e.target.closest && e.target.closest('#helpClose, #helpBackdrop')) read();
+    }, true);
+    doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') read(); }, true);
+    new MutationObserver(function () {
+      if (!drawer.hidden || !errand) return;
+      var back = readIt;
+      errand = false; readIt = false;
+      if (back) api.cancel();
+    }).observe(drawer, { attributes: true, attributeFilter: ['hidden'] });
+  }
+
   function ready() {
     hideDuplicateFields();
     addAlwaysReady();
+    watchErrand();
     /* The header's × (compose mode only): back to the host's post. The host
      * closes its overlay on cancel and keeps the frame, so the drawing is
      * still there when the author presses the Skribl button again. */
