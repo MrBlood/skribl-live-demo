@@ -53518,3 +53518,48 @@ hands (the old draw-back's row); the line of both not kept (Both's row).
 PAD AND FLIP: the Pad's second card is the Pad's (`editor_post.js`); Flip
 has no Draw back yet, and its page-for-page Draw back is meant to be the
 contribution model's first user once this works on the Pad.
+
+## After v330 -- Flip's Draw back, mocked: page for page, the owner's "all yes"
+
+The owner, Nov 25, about 7:15 AM: "Start Flip's Draw back next, mock
+first". Mocked as "Flip Draw Back" (https://claude.ai/artifact/J9hTtwTp2r1h2pA9rwvuUF):
+Ana's bouncing ball (How it works' Flip) answered page for page by Theo's
+shadow and bounce marks, the pen on a Flip's card, the Flip editor drawing
+back, and his post, each beside how it is now. The owner, about 8:20 AM:
+"I say all yes". Nothing is built yet.
+
+THE FIVE ANSWERS, A each:
+
+1. Pages: one of his pages for each of hers, in her order and at her
+   timing. While drawing back, pages can't be added, moved or deleted:
+   Duplicate, Blank, Tween, Smear, moving a page, Delete, Loop and Under
+   step aside, dimmed, as the eraser does.
+2. It plays together: each page hers and his at once, at her speed, as one
+   animation with both hands in it.
+3. Kept as the Pad's: joined (his pages merged into hers) while the owner's
+   switch is off; two hands (his pages alone, pointing to hers) once it is
+   on, with Both · Ana’s · Theo’s on its page.
+4. The eraser is off while drawing back, as on the Pad.
+5. The page strip shows her pages faint under his, so a page is found by
+   what is on it.
+
+AS MOCKED, AND KEPT: the pen after the heart on a Flip's card, its count
+with it; Flip opens on her paper and shape with her pages lined up under
+his, each of his showing the same page of hers faint (2.0:1 on her paper,
+the Pad's faintness), Theirs faint, full and hidden; the pill says
+"Drawing back on Ana’s" until his first stroke, then folds into its Theirs
+button in the drawing's corner (the Pad's B); his post says "Drew back on
+Ana’s" with her small face, "10 pages · watching at 1×".
+
+NOT IN THE FIRST STEP: a Flip with a loop, a page kept underneath, or beat
+timing has no pen yet. Her music plays under both, as on the Pad.
+
+WHAT THE MOCK FOUND FOR THE BUILD: `lib/drawback.js` runs inside Flip as it
+is (Flip has the same `.zoom-layer` and loads the shared styles), but its
+fold looks for the Pad's `.canvas-wrap`, so it needs Flip's frame
+(`.flip-wrap`); Flip's own paper must become hers (`setBg`), or her dark
+ink vanishes on Flip's dark page; her pages in the strip are Flip's
+`drawThumb` with hers painted faint after it.
+
+PAD AND FLIP: shared. One draw-back module for both editors learns pages;
+the Pad is unchanged.
