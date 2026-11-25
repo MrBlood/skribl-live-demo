@@ -115,12 +115,43 @@
 {%- if sk and sk.ground %} style="--plate-ground: {{ sk.ground }}"{% endif -%}
 {%- endmacro %}
 
+{#  A TWO-HANDS DRAW-BACK (posts.hands_states) plays both hands from the
+    site while hers is shown to the viewer (`sk.api`, resting on the picture
+    of both: `sk.poster`, Skribl's seams); otherwise its own drawing, his
+    strokes alone, from Skribl, as any post's. #}
 {% macro player(c, waits=true) -%}
 {%- set p = c.post %}{% set sk = c.sk -%}
 {%- set marks = c.likes.marks if not c.down else none -%}
 {%- set fm = {'title': p.words or c.who.display_name, 'name': c.who.display_name if p.words else '', 'handle': '@' ~ c.who.handle} -%}
-{%- if sk and sk.canvas_w %}{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, line_waits=waits, marks=marks, full=true, full_meta=fm) }}
-{%- else %}{{ skribl_inline(p.skribl_id, bp=skribl_bp, line_waits=waits, marks=marks, full=true, full_meta=fm) }}{% endif %}
+{%- if sk and sk.canvas_w %}{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, line_waits=waits, marks=marks, full=true, full_meta=fm, api=sk.api, poster=sk.poster) }}
+{%- else %}{{ skribl_inline(p.skribl_id, bp=skribl_bp, line_waits=waits, marks=marks, full=true, full_meta=fm, api=sk.api if sk else none, poster=sk.poster if sk else none) }}{% endif %}
+{%- endmacro %}
+
+{#  DRAW BACK, TWO HANDS, HERS NOT SHOWN (the first and third answers): his
+    strokes alone play, and one quiet line under them says why: her drawing
+    was removed (she deleted it, or it was taken down), naming her while she
+    is here to be named; or a block stands between her and the viewer. #}
+{% macro hands_note(c) -%}
+{%- if c.hands and c.hands.view == 'removed' %}<p class="hands-note" role="note">{% if c.hands.first %}{{ c.hands.first }}’s drawing was removed{% else %}The drawing it answered was removed{% endif %}</p>
+{%- elif c.hands and c.hands.view == 'hidden' %}<p class="hands-note" role="note">The original isn’t shown to you</p>{% endif %}
+{%- endmacro %}
+
+{#  DRAW BACK, TWO HANDS, ON ITS OWN PAGE (the mock's three views): Both,
+    hers alone and his alone, each its own player at its own pace, one
+    shown at a time (the others wait, fetching nothing until played), and
+    the one pill under them (_follow.html hands_pill, which the page hands
+    in as this macro's caller: _follow.html imports from here; posts.js).
+    Only Both carries the likes' moments: a like is kept on its clock. #}
+{% macro hands_views(c) -%}
+{%- set p = c.post %}{% set sk = c.sk %}{% set h = c.hands -%}
+<div class="hands-views" data-hands-box>
+  <div class="hands-view" data-hands-view="both">{{ player(c, waits=false) }}</div>
+  <div class="hands-view" data-hands-view="hers" hidden>{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=h.line, bp=skribl_bp, line_waits=false, full=true,
+       full_meta={'title': h.name, 'name': '', 'handle': '@' ~ h.handle}, api=h.apis.hers, poster=url_for(skribl_bp ~ '.skribl_poster', public_id=h.hers)) }}</div>
+  <div class="hands-view" data-hands-view="his" hidden>{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=h.his_line, bp=skribl_bp, line_waits=false, full=true,
+       full_meta={'title': p.words or c.who.display_name, 'name': c.who.display_name if p.words else '', 'handle': '@' ~ c.who.handle}, api=h.apis.his) }}</div>
+  {{ caller() if caller }}
+</div>
 {%- endmacro %}
 
 {#  THE DOTS (likes, part 2): the drawing's moments, counted by this viewer,
@@ -304,7 +335,7 @@
       somebody opens that person's page, and pressed and pulled they select (posts.js opens nothing then). #}
   {% if p.words %}<p class="post-words">{{ said(p.words, c.mentions) }}</p>{% endif %}
   {#- A quote of words alone has no drawing of its own. #}
-  {% if p.skribl_id %}<div class="post-art"{{ own_ground(c.sk) }}>{{ player(c) }}</div>{% endif %}
+  {% if p.skribl_id %}<div class="post-art"{{ own_ground(c.sk) }}>{{ player(c) }}{{ hands_note(c) }}</div>{% endif %}
   {% if c.quote %}{% from 'social/_gallery.html' import quote_card with context %}{{ quote_card(c.quote) }}{% endif %}
   {{ post_row(c) }}
 </article>

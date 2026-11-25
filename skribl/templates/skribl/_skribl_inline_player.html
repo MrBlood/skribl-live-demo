@@ -186,7 +186,7 @@
   <div class="skribl-inline-err" hidden></div>
 {%- endmacro %}
 
-{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None, line_waits=false, marks=None, full=false, full_meta=None) -%}
+{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None, line_waits=false, marks=None, full=false, full_meta=None, api=None, poster=None) -%}
 {# is-muted and is-silent are the pre-script truth: sound is off by default, and
    nothing yet knows whether this Skribl has any. inlineplayer.js clears
    is-silent when the payload turns out to carry a loop.
@@ -242,6 +242,13 @@
    "name": ..., "handle": ...}, the title the bold line and the name and the
    handle under it (the Skribl site gives the post's words, and its maker's
    name and @handle). line=false has no line, so no button. #}
+{#  `api` and `poster` (after v330, the Skribl site's two-hands draw-backs:
+   docs/INTEGRATION.md, "A drawing of several hands") are a host's own
+   addresses for a drawing it builds and serves itself: `api` where the
+   player asks for the drawing (it adds the id, as it does to Skribl's own
+   listing endpoint, and reads Skribl's envelope, {"skribl": ...}), `poster`
+   the picture it rests on. Leave them out and both are Skribl's, as before.
+   The player is the same player: nothing it runs or downloads changes. #}
 {%- set shaped = line and canvas_w and canvas_h %}
 <div class="skribl-inline is-muted is-silent{% if line %} has-line{% endif %}{% if shaped %} is-shaped{% endif %}"
      data-skribl-inline
@@ -262,7 +269,7 @@
 {%- if line and full and full_meta %}
      data-skribl-full='{{ full_meta|tojson }}'
 {%- endif %}
-     data-skribl-api="{{ url_for(bp ~ '.create_skribl') }}"
+     data-skribl-api="{{ api or url_for(bp ~ '.create_skribl') }}"
      role="button"
      tabindex="0"
      aria-label="Play this Skribl">
@@ -272,7 +279,7 @@
      SK-BUG-006), so it never 404s for a post the viewer may see — and never
      serves the drawing for one they may not. #}
   <img class="skribl-inline-poster"
-       src="{{ url_for(bp ~ '.skribl_poster', public_id=public_id) }}"
+       src="{{ poster or url_for(bp ~ '.skribl_poster', public_id=public_id) }}"
        alt="{{ alt }}" loading="lazy" decoding="async">
 {# `progress` reaches the insides the same way the draft macro passes it. A
    host whose own surface draws a scrubber over the drawing wants one progress

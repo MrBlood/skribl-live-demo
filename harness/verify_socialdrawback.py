@@ -77,6 +77,17 @@ each in a browser with a virtual passkey.
      until then; let go, its Theirs button alone, 44px and round, in the
      drawing's top-left corner, gliding there (read on every frame), fading
      under Reduce Motion; a click still cycles faint, full and hidden.
+ 15. TWO HANDS (the owner's "all yes", Nov 25, to the Two Hands mock: its
+     nine answers, A each, and its first step), on a second server on the
+     same database with the owner's switch on (SKRIBL_SOCIAL_TWO_HANDS; the
+     suite's own has it off, where a draw-back is joined as before): his
+     drawing his strokes alone on her paper, pointing to hers as it was,
+     the picture and the line of both beside it; Both on cards, from the
+     site, as the join plays; the three views on its own page, the one
+     pill; her removal and a block, his strokes alone and why; not drawn
+     back on yet; old draw-backs untouched; with SQLite's cascade off, what
+     goes goes by the code; and through the real Pad, his drawing resting on
+     his lines alone.
 
 SOCIALDRAWBACK_PART=<n>[,<m>] runs those sections only (calibration). Every
 row was shown red by breaking one part and green as built: DECISIONS.md,
@@ -249,10 +260,11 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 class Client:
     """The site's own requests, without a browser, as a signed-in person."""
 
-    def __init__(self, cookies=None, xff=None, origin=BASE):
+    def __init__(self, cookies=None, xff=None, origin=BASE, base=None):
         self.op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(CookieJar()), _NoRedirect())
         self.xff = xff or address()
         self.origin = origin
+        self.base = base or BASE
         self.token = None
         self.cookie_header = "; ".join(f"{c['name']}={c['value']}" for c in (cookies or []))
 
@@ -270,7 +282,7 @@ class Client:
         if method == "POST" and self.origin:
             h["Origin"] = self.origin
         h.update(headers or {})
-        req = urllib.request.Request(BASE + path, data=data, method=method, headers=h)
+        req = urllib.request.Request(self.base + path, data=data, method=method, headers=h)
         try:
             with self.op.open(req, timeout=60) as r:
                 return r.status, r.read().decode("utf-8", "replace")
@@ -3182,6 +3194,348 @@ with app.test_request_context("/social/"):
                   json.dumps({f"{s}{' reduced' if r else ''}": g["cycle"] for (s, r), g in got14.items()}))
         except Exception as exc:  # noqa: BLE001
             stopped(14, exc)
+
+    # ----------------------------------------------------------------- 15
+    if part(15, "two hands: his strokes alone, pointing to hers; Both, the three views, her removal, behind the switch"):
+        try:
+            # A SECOND SERVER ON THE SAME DATABASE, the owner's switch on (the
+            # suite's own has it off). Same secret, so a sign-in is good on both.
+            PORT2 = free_port()
+            BASE2 = f"http://localhost:{PORT2}"
+            log2 = open(os.path.join(TMP, "server2.log"), "w")
+            server2 = subprocess.Popen([sys.executable, "-m", "flask", "--app", "app", "run", "--port", str(PORT2),
+                                        "--no-reload"], cwd=ROOT, env=dict(ENV, SKRIBL_SOCIAL_TWO_HANDS="1"),
+                                       stdout=log2, stderr=subprocess.STDOUT)
+            atexit.register(lambda: (server2.terminate(), server2.wait(10)))
+            for _ in range(120):
+                try:
+                    with urllib.request.urlopen(BASE2 + "/api/skribls?limit=1", timeout=2) as r:
+                        if r.status == 200:
+                            break
+                except Exception:  # noqa: BLE001
+                    time.sleep(0.5)
+            hana = someone(b, "hana", "Hana Mori")
+            taro = someone(b, "taro", "Taro Sato")
+            kiko = someone(b, "kiko", "Kiko Ito")
+
+            def on2(who):
+                c = Client(cookies=who.ctx.cookies(BASE), xff=who.xff, origin=BASE2, base=BASE2)
+                c.get("/social/")
+                return c
+
+            def png(rgb):
+                """A small PNG data URL of one colour (a stand-in for the Pad's card)."""
+                import io as _io
+                from PIL import Image as _Im
+                buf = _io.BytesIO()
+                _Im.new("RGB", (60, 32), rgb).save(buf, format="PNG")
+                return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+            def row2(post):
+                got = db("select two_hands, drawn_on_id, drawn_on_skribl_id, undrawable, skribl_id, id from social_posts"
+                         " where public_id = ?", (post or "",))
+                return dict(zip(("two_hands", "on", "on_skribl", "undrawable", "skribl", "id"), got[0])) if got else None
+
+            def side(post_pk):
+                got = db("select picture, line_json from social_two_hands where post_id = ?", (post_pk,))
+                return {"picture": got[0][0], "line": json.loads(got[0][1]) if got[0][1] else None} if got else None
+
+            def raw(url, who=None):
+                h = {"X-Forwarded-For": who.xff, "Cookie": "; ".join(f"{c['name']}={c['value']}" for c in who.ctx.cookies(BASE))} if who else {}
+                req = urllib.request.Request(url if url.startswith("http") else BASE2 + url, headers=h)
+                op = urllib.request.build_opener(_NoRedirect())
+                try:
+                    with op.open(req, timeout=30) as r:
+                        return r.status, r.headers.get("Content-Type"), r.read()
+                except urllib.error.HTTPError as e:
+                    return e.code, e.headers.get("Content-Type"), e.read()
+
+            cat = post_payload(hana, "Section 15, the cat", CAT)
+            cat_row = row2(cat)
+            # 1. THE SWITCH OFF (the suite's own server): joined, as before.
+            st1, j1 = draw_back(taro, cat, answer(n=12, seed=71))
+            old = j1.get("post") if isinstance(j1, dict) else None
+            r1 = row2(old) or {}
+            p1 = ((stored(old) or {}).get("payload") or {}).get("frames", [{}])[0].get("strokes") or []
+            check("with the owner's switch off (as the suite's own server runs), a draw-back is joined as before: her"
+                  " strokes and then his in its drawing, two_hands false, no drawing it points to, nothing kept beside it",
+                  st1 == 200 and r1.get("two_hands") == 0 and r1.get("on_skribl") is None and side(r1.get("id")) is None
+                  and len(p1) == len(CAT["frames"][0]["strokes"]) + 12, json.dumps({"status": st1, "row": r1, "points": len(p1)}))
+            # 2. THE SWITCH ON: his strokes alone, pointing to hers.
+            both_pic, own_pic = png((40, 160, 90)), png((200, 60, 120))
+            mine = answer(n=30, seed=72)
+            mine["frames"][0]["background"] = {"color": "#123456"}
+            st2, j2 = on2(taro).post_json("/social/posts", {"words": "Brought her a ball of yarn", "draw_back": cat,
+                                                            "payload": dict(mine, thumbnail=both_pic, thumbnailOwn=own_pic)})
+            two = j2.get("post") if isinstance(j2, dict) else None
+            r2 = row2(two) or {}
+            s2 = stored(two) or {}
+            pl2 = s2.get("payload") or {}
+            f2 = (pl2.get("frames") or [{}])[0]
+            her = (stored(cat) or {}).get("payload") or {}
+            kept = side(r2.get("id")) or {}
+            check("with the switch on, a draw-back's drawing is his strokes alone, as he drew them, on her paper (her"
+                  " ground, not the one his Pad sent) and her shape, with no picture and no music; its row two hands,"
+                  " pointing to her drawing as it was, and not drawn back on yet (\"hands\")",
+                  st2 == 200 and r2.get("two_hands") == 1 and r2.get("on_skribl") == cat_row["skribl"]
+                  and r2.get("on") == cat_row["id"] and r2.get("undrawable") == "hands"
+                  and xy(f2.get("strokes") or []) == xy(mine["frames"][0]["strokes"])
+                  and f2.get("background") == (her.get("frames") or [{}])[0].get("background")
+                  and pl2.get("canvasSize") == her.get("canvasSize") and not f2.get("photo") and not f2.get("music")
+                  and "thumbnailOwn" not in pl2,
+                  json.dumps({"status": st2, "err": j2 if st2 != 200 else None, "row": r2, "points": len(f2.get("strokes") or []),
+                              "ground": f2.get("background")})[:700])
+            stp, ctp, bodyp = raw(f"/s/{r2.get('skribl')}/poster")
+            check("his drawing rests on his lines alone (the Pad's second picture), and the picture of both is kept"
+                  " beside it, the site's",
+                  stp == 200 and bodyp == base64.b64decode(own_pic.split(",", 1)[1]) and kept.get("picture") == both_pic,
+                  json.dumps({"poster": stp, "type": ctp, "both kept": bool(kept.get("picture"))}))
+            # 3. BOTH, AS EVER, FROM THE SITE.
+            stb, jb = Client(cookies=kiko.ctx.cookies(BASE), xff=kiko.xff, origin=BASE2, base=BASE2).get_json(
+                f"/social/hands/play/both/{r2.get('skribl')}")
+            pb = (((jb or {}).get("skribl") or {}).get("frames") or [{}])[0].get("strokes") if isinstance(jb, dict) else None
+            ops = CAT["frames"][0]["strokes"]
+            line_both = (kept.get("line") or {})
+            check("Both plays from the site as a draw-back always has: her strokes first, squeezed to three seconds,"
+                  " then his at his own pace, one beat after hers; the line kept beside it is the two together's",
+                  stb == 200 and pb and xy(pb[:len(ops)]) == xy(ops) and xy(pb[len(ops):]) == xy(mine["frames"][0]["strokes"])
+                  and pb[len(ops) - 1]["t"] == 3000 and pb[len(ops)]["t"] == 3050
+                  and line_both.get("play") == played(pb, 50)[-1] and len(line_both.get("shape") or "") >= 64,
+                  json.dumps({"status": stb, "points": len(pb or []), "line": {k: line_both.get(k) for k in ("drawn", "play")},
+                              "played": played(pb, 50)[-1] if pb else None})[:600])
+            views = {}
+            for v in ("hers", "his"):
+                stv, jv = Client(cookies=kiko.ctx.cookies(BASE), xff=kiko.xff, origin=BASE2, base=BASE2).get_json(
+                    f"/social/hands/play/{v}/{r2.get('skribl')}")
+                fv = (((jv or {}).get("skribl") or {}).get("frames") or [{}])[0] if isinstance(jv, dict) else {}
+                views[v] = (stv, len(fv.get("strokes") or []), fv.get("background"), xy((fv.get("strokes") or [])[:3]))
+            check("hers alone is her drawing as she posted it; his alone is his strokes at his pace on her paper",
+                  views["hers"][0] == 200 and views["hers"][1] == len(ops) and views["hers"][3] == xy(ops[:3])
+                  and views["his"][0] == 200 and views["his"][1] == 30 and views["his"][3] == xy(mine["frames"][0]["strokes"][:3])
+                  and views["his"][2] == (her.get("frames") or [{}])[0].get("background"), json.dumps(views))
+            # The card, as somebody else sees it on her page's Posts (Home is theirs).
+            ctx, pg = browser_as(b, kiko)
+            pg.goto(BASE2 + "/social/@taro")
+            pg.wait_for_timeout(800)
+            card2 = pg.evaluate("""(post) => { const c = document.querySelector('.post-card[data-post="' + post + '"]'); if (!c) return null;
+              const box = c.querySelector('.skribl-inline'), im = c.querySelector('.skribl-inline-poster');
+              let line = null; try { line = JSON.parse(box.getAttribute('data-skribl-line')); } catch (e) {}
+              return { api: box.getAttribute('data-skribl-api'), poster: im && im.getAttribute('src'), parts: line && line.parts,
+                       pen: !!c.querySelector('.db-pen'), note: c.querySelector('.hands-note') ? c.querySelector('.hands-note').textContent : null }; }""", two)
+            stpic, ctpic, bpic = raw(card2["poster"] if card2 else "/", kiko)
+            check("its card plays Both from the site (`api`, Skribl's seam) and rests on the picture of both; its line"
+                  " says each hand's time; no pen on it yet; no note",
+                  card2 and (card2["api"] or "").endswith("/social/hands/play/both")
+                  and card2["poster"] == f"/social/hands/picture/{r2.get('skribl')}" and stpic == 200
+                  and bpic == base64.b64decode(both_pic.split(",", 1)[1]) and card2["parts"] and len(card2["parts"]) == 2
+                  and not card2["pen"] and card2["note"] is None,
+                  json.dumps({"card": card2, "picture": [stpic, ctpic]}))
+            # 4. THE THREE VIEWS ON ITS OWN PAGE, phone and desk.
+            seen4 = {}
+            for screen in ("phone", "desk"):
+                c4, g4 = browser_as(b, kiko, screen=screen)
+                g4.goto(BASE2 + f"/social/p/{two}")
+                g4.wait_for_timeout(1200)
+                LOOK = """() => { const seg = document.querySelector('.hands-seg'); if (!seg) return null;
+                  const bs = [...seg.querySelectorAll('button')], shown = [...document.querySelectorAll('[data-hands-view]')].filter(v => !v.hidden);
+                  const box = shown[0] && shown[0].querySelector('.skribl-inline'), r = box && box.getBoundingClientRect();
+                  const b0 = bs[0].getBoundingClientRect(), at = document.elementFromPoint(b0.left + b0.width / 2, b0.top + b0.height / 2);
+                  return { words: bs.map(x => x.textContent.trim()), pressed: bs.map(x => x.getAttribute('aria-pressed')),
+                           shown: shown.map(v => v.getAttribute('data-hands-view')), h: Math.round(seg.getBoundingClientRect().height),
+                           painted: !!at && seg.contains(at), box: r ? [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] : null }; }"""
+                first = g4.evaluate(LOOK)
+                got = {}
+                for v, nm in (("hers", "Hana’s"), ("his", "Taro’s")):
+                    with g4.expect_response(lambda r: f"/social/hands/play/{v}/" in r.url, timeout=15000) as resp:
+                        g4.locator(f'.hands-seg button[data-hands="{v}"]').tap() if screen == "phone" else g4.click(f'.hands-seg button[data-hands="{v}"]')
+                        g4.wait_for_timeout(300)
+                        g4.evaluate("() => { const v = [...document.querySelectorAll('[data-hands-view]')].find(x => !x.hidden); const p = v && SkriblInline.mount(v)[0]; if (p) p.play(); }")
+                    got[v] = dict(g4.evaluate(LOOK), status=resp.value.status)
+                    g4.wait_for_timeout(400)
+                seen4[screen] = {"first": first, "hers": got.get("hers"), "his": got.get("his")}
+                close_ctx(c4, g4)
+            ok4 = all(s["first"] and s["first"]["words"] == ["Both", "Hana’s", "Taro’s"] and s["first"]["pressed"] == ["true", "false", "false"]
+                      and s["first"]["shown"] == ["both"] and s["first"]["h"] == 44 and s["first"]["painted"]
+                      and s["hers"]["shown"] == ["hers"] and s["hers"]["pressed"] == ["false", "true", "false"] and s["hers"]["status"] == 200
+                      and s["his"]["shown"] == ["his"] and s["his"]["pressed"] == ["false", "false", "true"] and s["his"]["status"] == 200
+                      and s["hers"]["box"] == s["first"]["box"] == s["his"]["box"] for s in seen4.values())
+            check("on its own page the one pill under the drawing, Both · Hana’s · Taro’s, 44px and painted, Both"
+                  " chosen; a tap shows that view alone, played from the site, the box where it was (phone and desk)",
+                  ok4 and len(seen4) == 2, json.dumps(seen4)[:900])
+            # 6. NOT SHOWN TO YOU: a block between her and the viewer, either way.
+            kiko_id, hana_id = pid_of("kiko")[0], pid_of("hana")[0]
+            db_write("insert into social_blocks (blocker_id, blocked_id, created_at) values (?, ?, ?)",
+                     (kiko_id, hana_id, "2026-11-25 12:00:00"))
+            pg.goto(BASE2 + f"/social/p/{two}")
+            pg.wait_for_timeout(900)
+            hid = pg.evaluate("""() => { const box = document.querySelector('.post-page .skribl-inline'), n = document.querySelector('.post-page .hands-note');
+              return { api: box && box.getAttribute('data-skribl-api'), poster: (box && box.querySelector('.skribl-inline-poster') || {}).getAttribute ? box.querySelector('.skribl-inline-poster').getAttribute('src') : null,
+                       pill: !!document.querySelector('.hands-seg'), note: n ? n.textContent : null, views: document.querySelectorAll('[data-hands-view]').length }; }""")
+            sth = Client(cookies=kiko.ctx.cookies(BASE), xff=kiko.xff, origin=BASE2, base=BASE2).get_json(f"/social/hands/play/both/{r2.get('skribl')}")[0]
+            sthp = raw(f"/social/hands/picture/{r2.get('skribl')}", kiko)[0]
+            nobody = raw(f"/social/hands/play/both/{r2.get('skribl')}")[0]
+            db_write("delete from social_blocks where blocker_id = ? and blocked_id = ?", (kiko_id, hana_id))
+            check("to somebody a block stands between her and: his strokes alone, from Skribl, resting on his own"
+                  " picture, \"The original isn’t shown to you\", no pill; the site's routes as gone (the picture his"
+                  " own, sent on); nobody signed in sees both",
+                  hid["api"] and "/social/hands/" not in hid["api"] and hid["poster"] == f"/s/{r2.get('skribl')}/poster"
+                  and not hid["pill"] and hid["views"] == 0 and hid["note"] == "The original isn’t shown to you"
+                  and sth == 404 and sthp in (301, 302, 303, 307) and nobody == 200,
+                  json.dumps({"page": hid, "play": sth, "picture": sthp, "nobody": nobody}))
+            # 7. TAKEN DOWN: removed, for everybody.
+            db_write("update social_posts set taken_down_at = ? where public_id = ?", ("2026-11-25 12:00:00", cat))
+            pg.goto(BASE2 + f"/social/p/{two}")
+            pg.wait_for_timeout(900)
+            down = pg.evaluate("() => { const n = document.querySelector('.post-page .hands-note'); return [n ? n.textContent : null, !!document.querySelector('.hands-seg')]; }")
+            db_write("update social_posts set taken_down_at = null where public_id = ?", (cat,))
+            check("her post taken down: his strokes alone, \"Hana’s drawing was removed\", no pill",
+                  down == ["Hana’s drawing was removed", False], json.dumps(down))
+            # 8. NOT DRAWN BACK ON YET (the seventh answer: one original, one answer).
+            c8 = taro.client()
+            c8.get("/social/")
+            st8a, j8a = c8.get_json(f"/social/p/{two}/drawback")
+            st8b, j8b = on2(kiko).post_json("/social/posts", {"words": "", "draw_back": two, "payload": answer(n=8, seed=73)})
+            check("a two-hands draw-back is not drawn back on yet: the composer's way in and the post both say"
+                  " \"hands\"",
+                  st8a == 400 and (j8a or {}).get("why") == "hands" and st8b == 400 and (j8b or {}).get("why") == "hands",
+                  json.dumps({"way in": [st8a, j8a], "post": [st8b, j8b]})[:400])
+            # 9. OLD DRAW-BACKS UNTOUCHED, on the switch-on server too.
+            pg.goto(BASE2 + f"/social/p/{old}")
+            pg.wait_for_timeout(900)
+            olds = pg.evaluate("""() => { const box = document.querySelector('.post-page .skribl-inline');
+              return { api: box && box.getAttribute('data-skribl-api'), pill: !!document.querySelector('.hands-seg'), note: !!document.querySelector('.hands-note') }; }""")
+            check("a draw-back from before stays as it was, one joined drawing played from Skribl, no pill and no note",
+                  olds["api"] and "/social/hands/" not in olds["api"] and not olds["pill"] and not olds["note"], json.dumps(olds))
+            # 5. HER REMOVAL: she deletes her post.
+            stdel = on2(hana).post_json(f"/social/p/{cat}/delete", {})[0]
+            pg.goto(BASE2 + f"/social/p/{two}")
+            pg.wait_for_timeout(900)
+            gone = pg.evaluate("""() => { const box = document.querySelector('.post-page .skribl-inline'), n = document.querySelector('.post-page .hands-note');
+              return { api: box && box.getAttribute('data-skribl-api'), poster: box ? box.querySelector('.skribl-inline-poster').getAttribute('src') : null,
+                       pill: !!document.querySelector('.hands-seg'), note: n ? n.textContent : null }; }""")
+            close_ctx(ctx, pg)
+            r5 = row2(two) or {}
+            st5 = raw(f"/social/hands/play/both/{r2.get('skribl')}", kiko)[0]
+            check("she deletes her post: his post shows his strokes alone, from Skribl, resting on his own picture,"
+                  " \"Hana’s drawing was removed\" under it, no pill; the picture and line of both gone, the drawing it"
+                  " answered let go of, still two hands; the site's routes as gone",
+                  stdel == 200 and gone["api"] and "/social/hands/" not in gone["api"]
+                  and gone["poster"] == f"/s/{r2.get('skribl')}/poster" and not gone["pill"]
+                  and gone["note"] == "Hana’s drawing was removed" and side(r2.get("id")) is None
+                  and r5.get("on") is None and r5.get("on_skribl") is None and r5.get("two_hands") == 1 and st5 == 404,
+                  json.dumps({"delete": stdel, "page": gone, "row": r5, "play": st5}))
+            # 10. SAID IN CODE, with SQLite's cascade off on a copy: her post deleted
+            # lets go of his, and takes what is kept beside it; his deleted, his.
+            cat2 = post_payload(hana, "Section 15, a second cat", CAT)
+            st10, j10 = on2(taro).post_json("/social/posts", {"words": "", "draw_back": cat2,
+                                                              "payload": dict(answer(n=10, seed=74), thumbnail=both_pic, thumbnailOwn=own_pic)})
+            ans2 = j10.get("post") if isinstance(j10, dict) else None
+            st10b, j10b = on2(taro).post_json("/social/posts", {"words": "", "draw_back": cat2,
+                                                                "payload": dict(answer(n=10, seed=75), thumbnail=both_pic, thumbnailOwn=own_pic)})
+            ans3 = j10b.get("post") if isinstance(j10b, dict) else None
+            copy = os.path.join(TMP, "hands-probe.db")
+            src_, dst_ = sqlite3.connect(DB, timeout=10), sqlite3.connect(copy)
+            src_.backup(dst_)
+            src_.close()
+            dst_.close()
+            HANDS_PROBE = r"""
+import json, sys
+from app import create_app, db
+import sqlalchemy as sa
+app = create_app()
+with app.app_context():
+    from social.models import Person, Post, TwoHands
+    from social.posts import drop_post
+    fk = db.session.execute(sa.text("PRAGMA foreign_keys")).scalar()
+    n = lambda pid: db.session.execute(sa.select(sa.func.count()).select_from(TwoHands).where(TwoHands.post_id == pid)).scalar()
+    her = db.session.execute(sa.select(Post).where(Post.public_id == sys.argv[1])).scalar_one()
+    a2 = db.session.execute(sa.select(Post).where(Post.public_id == sys.argv[2])).scalar_one()
+    a3 = db.session.execute(sa.select(Post).where(Post.public_id == sys.argv[3])).scalar_one()
+    a2_id, a3_id = a2.id, a3.id
+    out = {"fk": fk, "before": [n(a2_id), n(a3_id)]}
+    drop_post(db.session.get(Person, a3.person_id).public_id, a3)
+    db.session.commit()
+    out["his"] = n(a3_id)
+    drop_post(db.session.get(Person, her.person_id).public_id, her)
+    db.session.commit()
+    r = db.session.execute(sa.select(Post.drawn_on_id, Post.drawn_on_skribl_id, Post.two_hands).where(Post.id == a2_id)).one()
+    out["after"] = [n(a2_id), r[0], r[1], bool(r[2])]
+    print(json.dumps(out))
+"""
+            probe = subprocess.run([sys.executable, "-c", HANDS_PROBE, cat2 or "", ans2 or "", ans3 or ""], cwd=ROOT,
+                                   capture_output=True, text=True, timeout=180,
+                                   env=dict(ENV, DATABASE_URL=f"sqlite:///{copy}", SKRIBL_SQLITE_FOREIGN_KEYS="0"))
+            try:
+                out10 = json.loads(probe.stdout.strip().splitlines()[-1])
+            except Exception:  # noqa: BLE001
+                out10 = {"err": (probe.stderr or probe.stdout)[-600:]}
+            check("with SQLite's cascade off (on a copy), by the code alone: his post deleted takes what is kept beside"
+                  " it; her post deleted lets go of every draw-back on it, each still two hands, and takes what was kept"
+                  " beside them",
+                  st10 == 200 and st10b == 200 and out10.get("fk") == 0 and out10.get("before") == [1, 1]
+                  and out10.get("his") == 0 and out10.get("after") == [0, None, None, True], json.dumps(out10)[:600])
+            # 11. THROUGH THE REAL PAD: his drawing rests on his lines alone.
+            cat3 = post_payload(hana, "Section 15, the Pad's cat", CAT)
+            c11, g11 = browser_as(b, taro)
+            g11.goto(BASE2 + "/social/@hana")
+            g11.wait_for_timeout(900)
+            pen = f'.post-card[data-post="{cat3}"] .db-pen'
+            g11.locator(pen).scroll_into_view_if_needed()
+            g11.click(pen)
+            fe = g11.wait_for_selector("#composePad .facepad-frame", state="attached", timeout=15000)
+            g11.wait_for_function("() => document.querySelector('#composePad').classList.contains('is-ready')", timeout=30000)
+            fr = fe.content_frame()
+            fr.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state()", timeout=15000)
+            g11.wait_for_timeout(400)
+            box = fr.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return [r.left, r.top, r.width]; }")
+            fb = fe.bounding_box()
+            k = box[2] / 816
+            for i in range(3):
+                x0, y0 = fb["x"] + box[0] + (640 + i * 30) * k, fb["y"] + box[1] + 120 * k
+                g11.mouse.move(x0, y0)
+                g11.mouse.down()
+                for s_ in range(1, 12):
+                    g11.mouse.move(x0 + s_ * 3 * k, y0 + (s_ % 4) * 6 * k)
+                g11.mouse.up()
+                g11.wait_for_timeout(120)
+            fr.click("#recordBtn")
+            g11.wait_for_timeout(500)
+            fr.click("#postBtn")
+            g11.wait_for_timeout(600)
+            sub = fr.query_selector("#postSubmitBtn")
+            if sub and sub.is_visible():
+                sub.click()
+            g11.wait_for_function("() => !!window.SocialComposer.attached()", timeout=20000)
+            with g11.expect_navigation(timeout=20000):
+                g11.click("[data-compose-post]")
+            g11.wait_for_timeout(600)
+            landed = urllib.parse.urlparse(g11.url).path.rsplit("/", 1)[-1]
+            close_ctx(c11, g11)
+            r11 = row2(landed) or {}
+            kept11 = side(r11.get("id")) or {}
+
+            def ink_at(data):
+                """How much of the card's cat area is dark ink (her outline), off the picture."""
+                from PIL import Image as _Im
+                import io as _io
+                im = _Im.open(_io.BytesIO(data)).convert("RGB")
+                k_ = im.width / 1200
+                px = im.load()
+                n_ = 0
+                for y in range(int(120 * k_), int(470 * k_), 2):
+                    for x in range(int(380 * k_), int(560 * k_), 2):
+                        r_, g_, b_ = px[x, y]
+                        n_ += (r_ + g_ + b_) < 200
+                return n_
+            own11 = raw(f"/s/{r11.get('skribl')}/poster")[2] if r11.get("skribl") else b""
+            both11 = base64.b64decode((kept11.get("picture") or ",").split(",", 1)[1] or "") if kept11.get("picture") else b""
+            ink_own, ink_both = (ink_at(own11) if own11 else -1), (ink_at(both11) if both11 else -1)
+            check("through the real Pad with the switch on: the post is two hands; its drawing rests on his lines alone"
+                  " (none of her dark ink where her cat is), and the picture of both, kept beside it, has her cat",
+                  r11.get("two_hands") == 1 and r11.get("on_skribl") and ink_own == 0 and ink_both > 50,
+                  json.dumps({"row": r11, "ink on his own": ink_own, "ink on both": ink_both}))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(15, exc)
 
     # ----------------------------------------------------------------- 10
     if part(10, "no page errors, no console errors and no CSP violations"):

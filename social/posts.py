@@ -336,6 +336,88 @@ def drawbacks(posts, viewer):
     return out
 
 
+def hands_states(posts, viewer, drawings=None):
+    """DRAW BACK, TWO HANDS (drawback.py; the owner's "all yes", Nov 25), for
+    a page of posts: what each two-hands draw-back among `posts` shows
+    `viewer`, {its id: state}, one read of the originals and their makers
+    and one describe of the drawings they answered for the page (`drawings`,
+    the page's own describe_posts, is asked first):
+
+      {"view": "both", "hers": her drawing's id, "first": her first name}
+          her drawing is shown to them: the two together, and the three
+          views on its own page;
+      {"view": "removed", "first": her first name, or None}
+          her drawing is gone (she deleted it, or it was taken down, or she
+          or her account was): his strokes alone, "Ana’s drawing was
+          removed" (the first answer); her name only while she is here, not
+          taken down and no block stands between her and the viewer;
+      {"view": "hidden"}
+          a block stands between her and the viewer, either way: his strokes
+          alone, "The original isn’t shown to you" (the third answer).
+
+    Posts that are not two hands are not in it: a joined draw-back from
+    before plays as it always has (the eighth answer)."""
+    twos = [p for p in posts if getattr(p, "two_hands", False) and getattr(p, "id", None) is not None]
+    if not twos:
+        return {}
+    from skribl import describe_posts
+    sess = site().session()
+    on_ids = {p.drawn_on_id for p in twos if p.drawn_on_id is not None}
+    origs = ({o.id: (o, who) for o, who in sess.execute(sa.select(Post, Person).join(Person, Person.id == Post.person_id)
+                                                        .where(Post.id.in_(on_ids))).all()} if on_ids else {})
+    owner_ids = {p.drawn_on_owner_id for p in twos if p.drawn_on_owner_id is not None}
+    owners = ({x.id: x for x in sess.execute(sa.select(Person).where(Person.id.in_(owner_ids))).scalars()}
+              if owner_ids else {})
+    lines = dict(drawings or {})
+    ask = sorted({p.drawn_on_skribl_id for p in twos if p.drawn_on_skribl_id and p.drawn_on_skribl_id not in lines})
+    if ask:
+        lines.update(describe_posts(ask, viewer_id=viewer.public_id if viewer else None))
+    out = {}
+    for p in twos:
+        owner = owners.get(p.drawn_on_owner_id)
+        named = (owner is not None and owner.taken_down_at is None
+                 and not (viewer is not None and between(viewer, owner)))
+        first = first_name(owner.display_name) if named else None
+        got = origs.get(p.drawn_on_id) if p.drawn_on_id is not None else None
+        if got is None or not p.drawn_on_skribl_id:
+            out[p.id] = {"view": "removed", "first": first}
+            continue
+        o, who = got
+        if o.taken_down_at is not None or who.taken_down_at is not None:
+            out[p.id] = {"view": "removed", "first": first}
+        elif viewer is not None and between(viewer, who):
+            out[p.id] = {"view": "hidden"}
+        elif p.drawn_on_skribl_id not in lines:
+            # Not described to them: deleted in Skribl, or withheld.
+            out[p.id] = {"view": "removed", "first": first}
+        else:
+            out[p.id] = {"view": "both", "hers": p.drawn_on_skribl_id, "first": first_name(who.display_name),
+                         "name": who.display_name, "handle": who.handle, "own": who.id == p.person_id,
+                         # Her drawing's own line, for the view of hers alone.
+                         "line": (lines.get(p.drawn_on_skribl_id) or {}).get("line")}
+    return out
+
+
+def hands_lines(ids):
+    """The line both hands make (TwoHands.line_json), for the two-hands
+    draw-backs `ids` shown both: {post id: line}, one read of that column
+    alone (never the picture)."""
+    import json
+    from .models import TwoHands
+    if not ids:
+        return {}
+    out = {}
+    for pid, raw in site().session().execute(sa.select(TwoHands.post_id, TwoHands.line_json)
+                                             .where(TwoHands.post_id.in_(sorted(ids)))).all():
+        try:
+            line = json.loads(raw) if raw else None
+        except (TypeError, ValueError):
+            line = None
+        if isinstance(line, dict):
+            out[pid] = line
+    return out
+
+
 #: HER SAY, WHO CAN DRAW BACK ON A POST: what its maker may choose, in the
 #: pill's order. "everyone" is kept as nothing (Post.drawback_by).
 WHO = ("everyone", "follow", "nobody")
@@ -446,6 +528,35 @@ def hands_said(posts, drawings, viewer):
     return out
 
 
+#: The most characters of a picture a two-hands draw-back keeps beside it
+#: (TwoHands.picture): Skribl's own cap on a drawing's card (MAX_CARD_BYTES,
+#: 2,000,000 bytes) as base64 says it, and its prefix.
+PICTURE_MAX = 2_700_000
+
+
+def _picture(raw):
+    """`raw` if it is a picture the site may keep and serve (a data: URL of a
+    PNG or a JPEG, its base64 whole, within PICTURE_MAX), else None. Never
+    anything a browser would run (an SVG)."""
+    if not isinstance(raw, str) or len(raw) > PICTURE_MAX:
+        return None
+    head, _, data = raw.partition(",")
+    if head not in ("data:image/png;base64", "data:image/jpeg;base64") or not data:
+        return None
+    try:
+        base64.b64decode(data, validate=True)
+    except (ValueError, TypeError):
+        return None
+    return raw
+
+
+def hands_api(view):
+    """Where the in-post player asks for a two-hands draw-back's drawing as
+    `view` plays it (hands_drawing): the address it adds the drawing's id to
+    (Skribl's skribl_inline `api`)."""
+    return url_for("social.hands_drawing", view=view, skribl_id="_")[:-2]
+
+
 def said_line(line, said):
     """A draw-back's line as its players are handed it (Skribl's line, with
     what hands_said found): "drawn" the hands' own times together, "parts"
@@ -533,16 +644,32 @@ def cards(entries, viewer, words=True, aligned=False):
     # "drawn in" is their own times, never the joined drawing's, in which
     # hers plays squeezed.
     whose = hands_said([e["post"] for e in entries if e["kind"] == "p"], drawings, viewer)
+    # ...and, on a TWO-HANDS draw-back (drawback.py), whether her drawing is
+    # shown to this viewer: both hands, with the picture and the line both
+    # make, or his strokes alone and why (hands_states).
+    hands = hands_states([e["post"] for e in entries if e["kind"] == "p"], viewer, drawings)
+    both_lines = hands_lines([pid for pid, st in hands.items() if st["view"] == "both"])
     made = {}
     for e in entries:
         who = e["who"]
         if e["kind"] == "p":
             p = e["post"]
             sk = drawings.get(p.skribl_id)
-            if sk is not None and p.id in whose:
+            st = hands.get(p.id)
+            if sk is not None and st is not None and st["view"] == "both":
+                # TWO HANDS, BOTH SHOWN: the player plays the two together from
+                # the site (hands_drawing), resting on the picture of both
+                # (hands_picture), its line the two together's; and his own
+                # line kept for the view of his alone (post.html).
+                st = dict(st, his_line=sk.get("line"), apis={v: hands_api(v) for v in ("both", "hers", "his")})
+                sk = dict(sk, line=both_lines.get(p.id) or sk.get("line"),
+                          poster=url_for("social.hands_picture", skribl_id=p.skribl_id),
+                          api=st["apis"]["both"])
+            if sk is not None and p.id in whose and (st is None or st["view"] == "both"):
                 # Nobody is named once the drawing it answers is gone for this
                 # viewer: its card says "Drew back on a drawing" then, and its
-                # play button the time alone.
+                # play button the time alone. (A TWO-HANDS one whose original
+                # is not shown plays his strokes alone, and says his own line.)
                 gone_ = (backs["on"].get(p.id) or {}).get("gone")
                 sk = dict(sk, line=said_line(sk.get("line"), dict(whose[p.id], by=None) if gone_ else whose[p.id]))
             url = url_for("social.post_page", public_id=p.public_id)
@@ -574,7 +701,8 @@ def cards(entries, viewer, words=True, aligned=False):
         # post from before that keeps its pen, answered when opened ("photo"
         # and "music" recorded before the yes bar nothing now).
         can_back = (e["kind"] == "p" and not down and sk is not None and sk.get("kind") == "pad"
-                    and getattr(p, "undrawable", None) not in ("pages", "recolors"))
+                    and getattr(p, "undrawable", None) not in ("pages", "recolors", "hands")
+                    and not getattr(p, "two_hands", False))
         made[id(e)] = {"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
                        "plays": plays_text(sk["views"]) if sk else None,
                        "comments": said.get(key, 0),
@@ -627,7 +755,9 @@ def cards(entries, viewer, words=True, aligned=False):
                        # drawn back on (a Flip, words alone).
                        "who_draws": drawback_by(p) if can_back and mine else None,
                        "drawbacks": backs["n"].get(p.id, 0) if e["kind"] == "p" else 0,
-                       "drawn_on": backs["on"].get(p.id) if e["kind"] == "p" else None}
+                       "drawn_on": backs["on"].get(p.id) if e["kind"] == "p" else None,
+                       # TWO HANDS (hands_states): None on every other post.
+                       "hands": st if e["kind"] == "p" else None}
     out = []
     for e in every:
         card = next(said_c) if e["kind"] == "c" else made[id(e)]
@@ -755,10 +885,74 @@ def register(bp, skribl_blueprint="skribl"):
         # pen is not on a page made now). Said kindly, and not why.
         if on.post.id not in open_to([on.post], me):
             return _json_error("drawback_closed", 403)
-        why = drawable(original)
+        # TWO HANDS, THE FIRST STEP: one original and one answer (the
+        # seventh answer), so a two-hands draw-back is not drawn back on yet.
+        why = "hands" if getattr(on.post, "two_hands", False) else drawable(original)
         if why:
             return _json_error("drawback_unsupported", 400, why=why)
         resp = jsonify({"payload": original, "first": first_name(on.owner.display_name), "own": on.owner.id == me.id})
+        resp.headers["Cache-Control"] = "private, no-store"
+        return resp
+
+    def _hands_open(skribl_id, me):
+        """A two-hands draw-back by its drawing's id, as `me` may see it
+        (comments.on_post's rule, as its page's), with what it shows them
+        (hands_states): (post, state), or None."""
+        from .comments import on_post
+        sid = str(skribl_id or "")
+        if not (0 < len(sid) <= 32):
+            return None
+        row = site().session().execute(sa.select(Post).where(Post.skribl_id == sid, Post.two_hands.is_(True))
+                                       .limit(1)).scalar_one_or_none()
+        if row is None:
+            return None
+        if on_post(me, public_id=row.public_id) is None:
+            return None
+        return row, hands_states([row], me)[row.id]
+
+    @bp.get("/hands/play/<view>/<skribl_id>")
+    @_rests(json_answer=True)
+    def hands_drawing(view, skribl_id):
+        """DRAW BACK, TWO HANDS (drawback.py): a two-hands draw-back's
+        drawing as `view` plays it, for the in-post player (its `api`, in
+        Skribl's envelope: {"skribl": ...}): "both", hers then his; "hers";
+        "his". Only while her drawing is shown to the viewer: otherwise the
+        page plays his own drawing from Skribl, and this is as gone as a
+        drawing never made. Each read as the viewer may see it
+        (read_payload); nothing of hers is ever kept in his."""
+        from skribl import read_payload
+        from .drawback import VIEWS, view as as_viewed
+        me = current_person()
+        got = _hands_open(skribl_id, me) if view in VIEWS else None
+        if got is None or got[1]["view"] != "both":
+            return _json_error("gone", 404)
+        row = got[0]
+        who = me.public_id if me else None
+        hers, mine = read_payload(row.drawn_on_skribl_id, viewer_id=who), read_payload(row.skribl_id, viewer_id=who)
+        out = as_viewed(hers, mine, view) if hers is not None and mine is not None else None
+        if out is None:
+            return _json_error("gone", 404)
+        resp = jsonify({"skribl": out})
+        resp.headers["Cache-Control"] = "private, no-store"
+        return resp
+
+    @bp.get("/hands/picture/<skribl_id>")
+    @_rests()
+    def hands_picture(skribl_id):
+        """The picture a two-hands draw-back rests on while her drawing is
+        shown to the viewer: both hands (TwoHands.picture). Not shown to
+        them, or none kept (an older Pad sent none), his own drawing's
+        picture, as Skribl serves it."""
+        from .models import TwoHands
+        me = current_person()
+        got = _hands_open(skribl_id, me)
+        pic = None
+        if got is not None and got[1]["view"] == "both":
+            pic = site().session().execute(sa.select(TwoHands.picture).where(TwoHands.post_id == got[0].id)).scalar()
+        if not _picture(pic):
+            return redirect(url_for(skribl_blueprint + ".skribl_poster", public_id=str(skribl_id or "_")[:32]))
+        head, _, data = pic.partition(",")
+        resp = current_app.response_class(base64.b64decode(data), mimetype=head[5:].split(";")[0])
         resp.headers["Cache-Control"] = "private, no-store"
         return resp
 
@@ -801,7 +995,8 @@ def register(bp, skribl_blueprint="skribl"):
         by = None if by == "everyone" else by
         if body.get("draw_back") is not None:
             # DRAW BACK (drawback.py): the answer's strokes, joined here to
-            # the original's, never beside a quote or an older drawing.
+            # the original's (or, two hands, kept alone and pointing to it),
+            # never beside a quote or an older drawing.
             if quoting is not None or body.get("skribl") is not None:
                 return _json_error("one_drawing", 400)
             joined, refusal = _drawing_back(me, body.get("draw_back"), body.get("payload"))
@@ -809,6 +1004,9 @@ def register(bp, skribl_blueprint="skribl"):
                 return refusal
             body = dict(body, payload=joined["payload"])
             quoting = joined["columns"]
+            both = joined.get("both")
+        else:
+            both = None
         if body.get("skribl") is not None:
             # ONE OF YOUR OLDER DRAWINGS (the composer's Yours, Drawings),
             # never beside a new one: a post holds one drawing.
@@ -850,10 +1048,14 @@ def register(bp, skribl_blueprint="skribl"):
             drawing["caption"] = caption
         else:
             drawing.pop("caption", None)
+        # The Pad's picture of a draw-back's own lines (two hands) is the
+        # site's to use (_drawing_back), never a drawing's to keep.
+        drawing.pop("thumbnailOwn", None)
         # WHETHER IT CAN BE DRAWN BACK ON (drawback.drawable), read from the
-        # drawing as it is sent, before Skribl stores its media apart.
+        # drawing as it is sent, before Skribl stores its media apart. A
+        # two-hands draw-back is not, yet (the seventh answer: "hands").
         from .drawback import drawable
-        undrawable = drawable(drawing)
+        undrawable = "hands" if (quoting or {}).get("two_hands") else drawable(drawing)
         try:
             made = create_post(drawing, author_id=me.public_id)
         except SkriblRejected as exc:
@@ -866,6 +1068,13 @@ def register(bp, skribl_blueprint="skribl"):
         sess = site().session()
         sess.add(row)
         sess.flush()
+        if both is not None:
+            # TWO HANDS: the picture of both and the line of both, beside it.
+            import json
+            from .models import TwoHands
+            sess.add(TwoHands(post_id=row.id, picture=both.get("picture"),
+                              line_json=json.dumps(both["line"]) if both.get("line") else None))
+            sess.flush()
         mentioned(row)
         return jsonify({"ok": True, "post": row.public_id,
                         "go": url_for("social.post_page", public_id=row.public_id)})
@@ -880,7 +1089,7 @@ def register(bp, skribl_blueprint="skribl"):
         strokes drawn on its shape."""
         import json
         from skribl import read_payload
-        from .drawback import _points, drawable, hands, join, same_shape
+        from .drawback import _points, drawable, hands, join, own, same_shape, two_hands
         from .reposts import quotable
         if not isinstance(oid, str) or not (0 < len(oid) <= 32):
             return None, _json_error("drawback_gone", 404)
@@ -899,7 +1108,8 @@ def register(bp, skribl_blueprint="skribl"):
             return None, _json_error("no_drawing", 400)
         # Whose drawing it is that can't be joined yet, so the composer can
         # say how to fix it (a picture of yours can come out; hers can't).
-        why = drawable(original)
+        # A two-hands draw-back is not drawn back on yet (the seventh answer).
+        why = "hands" if getattr(on.post, "two_hands", False) else drawable(original)
         if why:
             return None, _json_error("drawback_unsupported", 400, why=why, on="theirs")
         why = drawable(payload, answer=True)
@@ -916,9 +1126,26 @@ def register(bp, skribl_blueprint="skribl"):
         # mocks, choice 6): read from the two drawings before the join squeezes
         # hers, so the line can say "Drawn in 15 sec + 5 sec".
         whose = hands(original, payload, getattr(on.post, "hands_json", None), on.owner.id, me.id)
-        return {"payload": join(original, payload),
-                "columns": {"is_drawback": True, "drawn_on_id": on.post.id, "drawn_on_owner_id": on.owner.id,
-                            "hands_json": json.dumps(whose)}}, None
+        columns = {"is_drawback": True, "drawn_on_id": on.post.id, "drawn_on_owner_id": on.owner.id,
+                   "hands_json": json.dumps(whose)}
+        joined = join(original, payload)
+        if not two_hands():
+            return {"payload": joined, "columns": columns}, None
+        # TWO HANDS (the owner's switch is on: drawback.two_hands): his
+        # strokes alone, on her paper, resting on a picture of his lines
+        # alone (the Pad's `thumbnailOwn`; none from an older Pad, and his
+        # drawing then rests on its blank paper until it plays); the drawing
+        # it answered, as it was; and beside it the picture of both (the
+        # Pad's own `thumbnail`, her drawing under his lines) and the line
+        # the two make together, the site's, shown while hers is.
+        from skribl import line_of
+        mine = own(original, payload)
+        pic = _picture(payload.get("thumbnailOwn"))
+        if pic:
+            mine["thumbnail"] = pic
+        columns.update(two_hands=True, drawn_on_skribl_id=on.post.skribl_id)
+        return {"payload": mine, "columns": columns, "both": {"picture": _picture(payload.get("thumbnail")),
+                                                              "line": line_of(joined)}}, None
 
     def mentioned(row):
         """MENTIONS (mentions.py): the people its words name, written beside
@@ -1330,14 +1557,32 @@ def drawing_lock(skribl_id):
     s.execute(sa.text("SELECT pg_advisory_xact_lock(:n)"), {"n": n})
 
 
+def drop_post_hands(post_id):
+    """DRAW BACK, in code (posts.drop_post): what a two-hands draw-back keeps
+    beside it goes with it; and the draw-backs on this post let go of it,
+    each keeping its own drawing, a two-hands one losing the picture and the
+    line of both and the drawing it answered, so it shows its maker's
+    strokes alone and says hers was removed (the first answer). The ON
+    DELETE CASCADE and SET NULL are the net under that. Flushes nothing."""
+    from .models import TwoHands
+    sess = site().session()
+    answers = [pid for (pid,) in sess.execute(sa.select(Post.id).where(Post.drawn_on_id == post_id)).all()]
+    sess.execute(sa.delete(TwoHands).where(TwoHands.post_id.in_(answers + [post_id]))
+                 .execution_options(synchronize_session=False))
+    if answers:
+        sess.execute(sa.update(Post).where(Post.id.in_(answers)).values(drawn_on_id=None, drawn_on_skribl_id=None)
+                     .execution_options(synchronize_session=False))
+
+
 def drop_post(author_public_id, row):
     """A post's comments and answers, its likes, its bookmarks, its reposts,
-    its mentions and its pin, and its quotes letting go of it (phase 2, bookmarks,
-    reposts and mentions, said here and not left to a cascade), its drawing (Skribl's
-    delete_post, as its author; a quote of words alone has none) and its
-    row. A drawing already gone is no reason to keep the words. Flushes
-    nothing: the caller does, with whatever else goes in the same
-    transaction."""
+    its mentions and its pin, what a two-hands draw-back keeps beside it,
+    its draw-backs letting go of it (drop_post_hands), and its quotes
+    letting go of it (phase 2, bookmarks, reposts and mentions, said here
+    and not left to a cascade), its drawing (Skribl's delete_post, as its
+    author; a quote of words alone has none) and its row. A drawing already
+    gone is no reason to keep the words. Flushes nothing: the caller does,
+    with whatever else goes in the same transaction."""
     from skribl import SkriblNotFound, delete_post
     from .bookmarks import drop_post_bookmarks
     from .comments import drop_post_comments
@@ -1351,6 +1596,7 @@ def drop_post(author_public_id, row):
     drop_post_reposts(row.id)
     drop_post_mentions(row.id)
     drop_post_pin(row.id)
+    drop_post_hands(row.id)
     if row.skribl_id:
         try:
             delete_post(row.skribl_id, author_id=author_public_id)

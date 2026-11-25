@@ -283,7 +283,7 @@
   // Flatten bg + photo + drawing into a single opaque canvas at native size.
   // Kept local (a few lines duplicated from export) so the delicate export IIFE
   // stays untouched. Returns a <canvas>, or null on failure.
-  function buildPreviewCanvas() {
+  function buildPreviewCanvas(own) {
     /* THE FINISHED DRAWING, NOT THE CANVAS AS IT STANDS. A replay running or
        paused part-way has the canvas cleared and half redrawn, so a card made
        then was a picture of the replay so far: Bloom, posted while it replayed,
@@ -322,8 +322,11 @@
         octx.restore();
       }
       /* DRAWING BACK (lib/drawback.js): her drawing under his lines, as the
-         site posts the two, so the picture a draw-back rests on is both. */
-      if (window.SkriblDrawBack && window.SkriblDrawBack.paintUnder) window.SkriblDrawBack.paintUnder(octx, w);
+         site posts the two, so the picture a draw-back rests on is both.
+         `own`: his lines alone on her paper, the picture a draw-back kept
+         as two hands rests on once hers is not shown (the Skribl site's
+         two hands: social/drawback.py). */
+      if (!own && window.SkriblDrawBack && window.SkriblDrawBack.paintUnder) window.SkriblDrawBack.paintUnder(octx, w);
       octx.drawImage(src, 0, 0, w, h);
       return out;
     } catch (e) {
@@ -410,6 +413,16 @@
     // a null card just falls back to the static branded image server-side.
     const card = buildShareCardDataURL();
     if (card) payload.thumbnail = card;
+    /* DRAWING BACK, the second picture: his lines alone on her paper, for a
+       host that keeps a draw-back as two hands (the Skribl site, behind its
+       owner's switch: social/drawback.py), whose post's own drawing is his
+       strokes alone. A host that joins the two keeps `thumbnail` and lets
+       this go. */
+    if (window.SkriblDrawBack && window.SkriblDrawBack.state && window.SkriblDrawBack.state()) {
+      const PC = window.SkriblPostedCard;
+      const ownCard = PC && PC.build ? PC.build(buildPreviewCanvas(true)) : null;
+      if (ownCard) payload.thumbnailOwn = ownCard;
+    }
     // Crop music down to just the loop for posting. Post-only — drafts keep the
     // full sample so they can be re-trimmed. The trimmed clip IS the loop, so
     // trimStart/trimEnd become 0..loopLen. Falls back to the full sample if the

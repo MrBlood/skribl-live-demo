@@ -183,6 +183,17 @@
 {%- endcall %}
 {%- endmacro %}
 
+{#  DRAW BACK, TWO HANDS (the owner's "all yes", Nov 25, to the Two Hands
+    mock: "A small choice under a draw-back: Both (hers, then his, as
+    today), Ana's alone, or Theo's alone, each at its own pace. It changes
+    only what you watch, never the drawing"): the one pill, under the
+    drawing on a two-hands draw-back's own page. posts.js shows the view
+    chosen. Somebody's draw-back on their own drawing says First and Second,
+    since both would be their name. #}
+{% macro hands_pill(hers, his, own=false) -%}
+{{ _pill('Watch', (('both', 'Both'), ('hers', 'First' if own else hers ~ '’s'), ('his', 'Second' if own else his ~ '’s')), 'both', 'hands', 'hands-seg') }}
+{%- endmacro %}
+
 {#  THE GALLERY'S PILLS (the map's step 3; the Gallery mock's "Following |
     Everyone on top, Home's own pill, New, Hot and search under it as
     today"): the one pill twice. Following | Everyone is Home's, for somebody

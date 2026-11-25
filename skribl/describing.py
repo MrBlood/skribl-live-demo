@@ -53,7 +53,7 @@ from .validation import _iter_media_items
 from .models import SkriblPost, SkriblView, apply_feed_filter, normalise_user_id, session
 # The one spelling of a ground a page may use, the rule creation.py writes the
 # column by (validation.py, beside the payload's other columns).
-from .validation import _ground
+from .validation import _ground, _payload_line
 
 #: The most ids one call reads, in one query: a page of a feed, with room.
 MAX_DESCRIBE = 200
@@ -164,6 +164,19 @@ def read_payload(public_id, *, viewer_id=None, inline_media=False):
     if inline_media:
         _inline_media(payload)
     return payload
+
+
+def line_of(payload):
+    """The line a drawing's player says before anybody presses play, as
+    describe_posts gives each stored drawing's: {"drawn", "play", "speed",
+    "shape"}, the artist's time, how long the replay runs, the author's
+    starting speed and the scrubber's shape (validation._payload_line). For
+    a drawing a host builds and serves itself: the Skribl site's two-hands
+    draw-back, which lays the drawing it answers under its own as it plays,
+    and says the line of the two together. None where a drawing has none (a
+    Flip, fewer than two points). Pure: it reads nothing and stores
+    nothing."""
+    return _payload_line(payload) if isinstance(payload, dict) else None
 
 
 def _inline_media(payload):
