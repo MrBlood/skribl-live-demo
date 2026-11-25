@@ -788,12 +788,15 @@ with sync_playwright() as p:
       return { at: Math.round(row.scrollLeft), end: Math.round(row.scrollWidth - row.clientWidth), arrows,
                card: getComputedStyle(cards[0]).backgroundColor, lastWhole: last.right <= rr.right + 1 && last.left >= rr.left - 1,
                focus: a ? (a.dataset && a.dataset.learnStep ? 'step ' + a.dataset.learnStep : a.tagName) : null }; }"""
-    # Each frame's time and the row's place. A frame this box was slow to
+    # Each frame's time and the row's place IN that frame: read once the
+    # frame's own callbacks have run (the glide's among them), so a place is
+    # never paired with the next frame's time. A frame this box was slow to
     # draw (the examples play beside the row: 100ms and more at times) may
     # carry its share of the glide's time; a step that outruns its own time is
     # a jump on any machine.
     GLIDE = """() => { window.__rf = []; const row = document.getElementById('learnAll'), t0 = performance.now();
-      const step = (now) => { window.__rf.push([now - t0, row.scrollLeft]); if (now - t0 < 1500) requestAnimationFrame(step); };
+      const step = (now) => { setTimeout(() => window.__rf.push([now - t0, row.scrollLeft]), 0);
+        if (now - t0 < 1500) requestAnimationFrame(step); };
       requestAnimationFrame(step); }"""
 
     def glided(fr):
