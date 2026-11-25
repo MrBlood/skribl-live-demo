@@ -52,6 +52,15 @@ section 43). One-glance tell on the owner's phone: draw back on a drawing,
 open the colour drawer, and Recolor is no longer dimmed; a tap on one of
 her lines says "That line is Ana’s. Recolor changes yours."
 
+## Drawers beside the drawing on a desk: all yes, building
+
+The owner's "When is desktop change?" mocked (https://claude.ai/artifact/M4h4mKPYsZuoWL4MJTzkGy)
+and answered "All yes" about 1:00 PM: on a desk every drawer opens beside
+the drawing, the drawing and what sits under it slide left only as far as
+needed, and where the two don't fit (a narrow window, a tablet) the drawer
+opens below as today (`DECISIONS.md`, "Drawers beside the drawing on a
+desk, mocked"). Being built the same day.
+
 ## Waiting on the owner's phone
 
 - Flip's Draw back. One-glance tell for the new build: under a Flip's card,
