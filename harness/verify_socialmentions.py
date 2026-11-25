@@ -679,6 +679,11 @@ LIST = r"""(id) => { const l = document.getElementById(id); if (!l) return null;
                          auto: f.getAttribute('aria-autocomplete'), focused: document.activeElement === f, value: f.value } : null,
            rows, vh: innerHeight, vv: window.visualViewport ? visualViewport.height : innerHeight }; }"""
 
+# How many answers the site has given the page for `q` (the @ list's own
+# question, ?q=, as mentions.js asks it), whole: the resource's body read.
+ANSWERS = r"""(q) => performance.getEntriesByType('resource').filter(e => e.responseEnd > 0
+  && new URL(e.name).searchParams.get('q') === q && /mention|people/.test(new URL(e.name).pathname)).length"""
+
 # The list's opacity on every frame from now for `ms`, into window.__mnFrames:
 # [time, laid out (not hidden), opacity].
 LIST_WATCH = r"""([id, ms]) => { const l = document.getElementById(id), t0 = performance.now(); window.__mnFrames = [];
@@ -959,10 +964,22 @@ with sync_playwright() as p:
         return mira
 
     def typed(pg, words, list_id="composeMentions", field="#composeWords", open_=True):
-        """`words` typed into an empty field, key by key; then the list (open or shut)."""
+        """`words` typed into an empty field, key by key; then the list (open or shut), once the site has
+        answered what is typed. Until then the list shows the rows an earlier @ brought that still fit
+        (mentions.js update): main's run at 8f67f5f, on postgres, read "@pa" as Theo alone, the "@"
+        answer's rows, before the "pa" answer brought Paz Ruiz."""
+        q = words.rsplit("@", 1)[-1].lower()
+        pg.evaluate("() => performance.setResourceTimingBufferSize(5000)")
+        asked = pg.evaluate(ANSWERS, q)
         pg.fill(field, "")
         pg.focus(field)
         pg.keyboard.type(words, delay=25)
+        # Answered once before on this page, it is shown from what the page kept, and nothing is asked.
+        if not asked:
+            try:
+                pg.wait_for_function(f"(q) => ({ANSWERS})(q) > 0", arg=q, timeout=6000)
+            except Exception:  # noqa: BLE001 -- never answered: the list as it is is the row's own red
+                pass
         wait_list(pg, list_id, open_)
         return pg.evaluate(LIST, list_id)
 
