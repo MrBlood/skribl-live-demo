@@ -10100,8 +10100,9 @@ body.drawalong .canvas-empty-hint { display: none; }
    canvas's starter words step aside as Draw along's do. */
 body.drawback .canvas-empty-hint { display: none; }
 /* What steps aside while drawing back (lib/drawback.js): dimmed, still there
-   to say why when tapped. */
-body.drawback :is(#eraserToolBtn, #recolorBtn, #mediaOpenBtn, #customBgBtn, .bg-swatch[data-bg]) { opacity: .4; }
+   to say why when tapped. Recolor works on his own lines since Nov 25 (the
+   owner's yes to the Recolor mock), so it is not among them. */
+body.drawback :is(#eraserToolBtn, #mediaOpenBtn, #customBgBtn, .bg-swatch[data-bg]) { opacity: .4; }
 .db-pill .db-where { color: var(--text-primary); }
 .db-pill .db-where b { color: var(--accent-ink); }
 .db-theirs { display: inline-flex; align-items: center; gap: 6px; min-height: 44px !important; }

@@ -101,6 +101,16 @@ each in a browser with a virtual passkey.
      inside her lines; New Skribl keeps her pages; posted, it lands joined
      and rests on a picture of the two. With the owner's switch on, his
      pages alone, pointing to hers; Both, hers and his from the site.
+ 17. RECOLOURS WHILE DRAWING BACK (the owner's "all yes", Nov 25, to the
+     Recolor mock): a drawing with recolours says nothing when posted, its
+     card has the pen (one from before that said "recolors" too), and the
+     way in hands its recolours over; an answer's own recolour is taken and
+     joined to its own lines (her moments as she made them, his moved past
+     hers), the replay reading four moments; two hands keep each hand's
+     its own. The whole way: Recolor works on his lines, a tap on hers says
+     whose it is (nothing when hers are hidden), the lens shows hers faint
+     and lights none of them; on her own drawing the words say the
+     original; on Flip, page for page.
 
 SOCIALDRAWBACK_PART=<n>[,<m>] runs those sections only (calibration). Every
 row was shown red by breaking one part and green as built: DECISIONS.md,
@@ -853,7 +863,7 @@ with sync_playwright() as p:
             ctx, pg = browser_as(b, theo)
             pg.goto(BASE + "/social/")
             ready(pg)
-            words = pg.evaluate("""() => Object.fromEntries(['photo', 'music', 'recolors', 'erase'].map(k => [k,
+            words = pg.evaluate("""() => Object.fromEntries(['photo', 'music', 'erase'].map(k => [k,
               (document.querySelector('[data-compose-said] [data-word="cmp_drawback_' + k + '"]') || {}).textContent || null]))""")
             close_ctx(ctx, pg)
             check("a picture under HIS answer is refused saying it is his (why photo, on yours), a Flip of hers saying it"
@@ -1081,7 +1091,9 @@ with sync_playwright() as p:
                   and abs(cycle[2][1] - 82) <= 3 and [c_[2] for c_ in cycle] == ["Theirs: full", "Theirs: hidden", "Theirs: faint"],
                   json.dumps(cycle))
             # WHAT STEPS ASIDE (the owner's "All yes", Nov 19): the eraser, the
-            # picture and music, Recolour; each says why, in the editor's toast.
+            # picture and music; each says why, in the editor's toast. Recolor
+            # stepped aside too until the owner's yes to the Recolor mock (Nov
+            # 25): it works now, on his lines (section 17).
             aside = {}
             fr.click("#eraserToolBtn")
             pg.wait_for_timeout(150)
@@ -1092,16 +1104,20 @@ with sync_playwright() as p:
             fr.click("#mediaOpenBtn")
             pg.wait_for_timeout(150)
             aside["media"] = fr.evaluate("() => [document.getElementById('mediaOpenBtn').getAttribute('aria-expanded'), document.getElementById('toast').textContent]")
+            aside["dim"] = fr.evaluate("() => ['eraserToolBtn', 'mediaOpenBtn', 'recolorBtn'].map(i => getComputedStyle(document.getElementById(i)).opacity)")
             fr.evaluate("() => document.getElementById('recolorBtn').click()")
-            pg.wait_for_timeout(150)
-            aside["recolor"] = fr.evaluate("() => document.getElementById('toast').textContent")
-            aside["dim"] = fr.evaluate("() => ['eraserToolBtn', 'mediaOpenBtn'].map(i => getComputedStyle(document.getElementById(i)).opacity)")
+            pg.wait_for_timeout(250)
+            aside["recolor"] = fr.evaluate("() => SkriblPadRecolor.isArmed()")
+            fr.evaluate("() => { const d = [...document.querySelectorAll('.recolor-bar button')].find(b => b.textContent.trim() === 'Done'); if (d) d.click(); }")
+            pg.wait_for_timeout(250)
+            aside["recolor_off"] = fr.evaluate("() => SkriblPadRecolor.isArmed()")
             check("while drawing back the eraser stays aside (the pen stays in hand: \"The eraser is off while drawing back."
                   " Undo takes back your last line.\"), the picture and music drawer stays shut (\"The background and music"
-                  " are Ana’s.\"), and Recolour says it is off; each dimmed",
+                  " are Ana’s.\"), each dimmed; and Recolor works, not dimmed (his lines only: section 17), and its Done"
+                  " gives the pen back",
                   aside["eraser"] == ["pen", "The eraser is off while drawing back. Undo takes back your last line."]
                   and aside["media"] == ["false", "The background and music are Ana’s."]
-                  and aside["recolor"] == "Recolour is off while drawing back." and aside["dim"] == ["0.4", "0.4"],
+                  and aside["dim"] == ["0.4", "0.4", "1"] and aside["recolor"] is True and aside["recolor_off"] is False,
                   json.dumps(aside))
             check("what the eraser says does not land on the pill: it sits under \"Drawing back on Ana’s\" and its Theirs"
                   " button, never over them",
@@ -3007,19 +3023,22 @@ with app.test_request_context("/social/"):
                      "recolours on it": dict(one_, recolors={"a": 1}), "no recolours, an empty list": dict(one_, frames=[dict(f0, recolors=[])]),
                      "no recolours, an empty set": dict(one_, recolors={}), "a photo and music": on_photo_with_music(seed=140),
                      "the Flip demo": FLIPDEMO, "the Flip demo, looped": dict(FLIPDEMO, loop={"from": 2, "to": 4, "times": 2}),
-                     "a Flip with a page that draws itself": dict(FLIPDEMO, frames=[dict(FLIPDEMO["frames"][0], draw=True)] + FLIPDEMO["frames"][1:])}
+                     "a Flip with a page that draws itself": dict(FLIPDEMO, frames=[dict(FLIPDEMO["frames"][0], draw=True)] + FLIPDEMO["frames"][1:]),
+                     "a Flip with recolours on a page": dict(FLIPDEMO, frames=[dict(FLIPDEMO["frames"][0], recolors=[{"g": 0, "n": 1, "k": 0}])] + FLIPDEMO["frames"][1:])}
             ctx, pg = browser_as(b, nia)
             home(pg)
             theirs_ = pg.evaluate("(cs) => Object.fromEntries(Object.entries(cs).map(([k, v]) => [k, window.SocialComposer.drawable(v)]))", cases)
             close_ctx(ctx, pg)
             ours_ = {k: _rules.drawable(v) is None for k, v in cases.items()}
             check("THE COMPOSER SHOWS THE LINE EXACTLY WHERE THE SITE WILL LET IT BE DRAWN BACK ON: its own reading and the"
-                  " site's (drawback.drawable) agree on nineteen drawings, the yes and the no: one page, a replay, a"
-                  " picture and music, empty recolours, a Flip page for page, a Flip with a page that draws itself"
-                  " (yes: hers, then his); two pages said to be a replay, none, a flip of one page, a loop, one kept"
-                  " under, a beat, recolours, a Flip that loops (no)",
-                  theirs_ == ours_ and sum(ours_.values()) == 8 and len(ours_) == 19 and ours_["the Flip demo"]
-                  and not ours_["the Flip demo, looped"] and ours_["a Flip with a page that draws itself"],
+                  " site's (drawback.drawable) agree on twenty drawings, the yes and the no: one page, a replay, a"
+                  " picture and music, recolours on its page or on it (yes since the Recolor mock's yes), empty"
+                  " recolours, a Flip page for page, a Flip with a page that draws itself (yes: hers, then his), a Flip"
+                  " with recolours on a page; two pages said to be a replay, none, a flip of one page, a loop, one kept"
+                  " under, a beat, a Flip that loops (no)",
+                  theirs_ == ours_ and sum(ours_.values()) == 11 and len(ours_) == 20 and ours_["the Flip demo"]
+                  and not ours_["the Flip demo, looped"] and ours_["a Flip with a page that draws itself"]
+                  and ours_["recolours on its page"] and ours_["a Flip with recolours on a page"],
                   json.dumps({"the site": ours_, "differ": {k: [ours_[k], theirs_.get(k)] for k in ours_ if ours_[k] != theirs_.get(k)}}))
 
             # THE WORDS AS PAINTED, light and dark.
@@ -4096,6 +4115,323 @@ with app.app_context():
                   json.dumps({k: ([len(f.get("strokes") or []) for f in v] if isinstance(v, list) else v) for k, v in views.items()}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(16, exc)
+
+    # ----------------------------------------------------------------- 17
+    if part(17, "recolours while drawing back (the owner's all yes to the Recolor mock): a drawing with recolours drawn"
+                " back on, each hand's moments kept to its own lines; Recolor on his lines only, a tap on hers says whose"
+                " it is, the lens shows hers"):
+        try:
+            # HER BALLOONS: How it works' Recolor example, drawn in ink and recoloured (three moments).
+            BAL = json.loads((ROOT / "skribl/static/help/demos/recolor.json").read_text())
+            BAL.pop("thumbnail", None)
+            NB, GB = len(BAL["frames"][0]["strokes"]), len(BAL["frames"][0]["strokeGroups"])
+            HERS17 = BAL["frames"][0]["recolors"]
+            ana17 = someone(b, "ana", "Ana Ruiz")
+            theo17 = someone(b, "theo", "Theo Lin")
+            bal = post_payload(ana17, "Section 17, the balloons", BAL)
+            before17 = post_payload(ana17, "Section 17, balloons from before", BAL)
+            db_write("update social_posts set undrawable = 'recolors' where public_id = ?", (before17 or "",))
+            # Her balloons as a Flip of two pages, the second lower, so a page's lines are told apart.
+            f1 = {k: v for k, v in BAL["frames"][0].items() if k != "recolors"}
+            f2 = dict(f1, strokes=[dict(q, y=round(q["y"] + 90, 2)) for q in f1["strokes"]])
+            FL17 = {"version": 2, "schemaVersion": 2, "playbackMode": "flip", "fps": 6,
+                    "canvasSize": BAL["canvasSize"], "frames": [f1, f2]}
+            flb = post_payload(ana17, "Section 17, the balloons as a Flip", FL17)
+            # A Flip with recolours on a page (Flip writes none; one from elsewhere could).
+            FLR = dict(FL17, frames=[dict(f1, recolors=[{"g": 0, "n": len(f1["strokes"]), "k": 0, "at": 0,
+                                                          "was": "#1f1b2e", "to": "#ff6f91"}]), f2])
+            flr = post_payload(ana17, "Section 17, a Flip with recolours on a page", FLR)
+            flbefore = post_payload(ana17, "Section 17, a Flip with recolours from before", FLR)
+            db_write("update social_posts set undrawable = 'recolors' where public_id = ?", (flbefore or "",))
+            und17 = {k: (db("select undrawable from social_posts where public_id = ?", (v or "",)) or [["?"]])[0][0]
+                     for k, v in (("balloons", bal), ("flip", flb), ("flip with recolours", flr))}
+            check("a drawing with recolours says nothing when it is posted: it can be drawn back on now (her balloons,"
+                  " recoloured three times; a Flip with recolours on a page)",
+                  und17 == {"balloons": None, "flip": None, "flip with recolours": None}, json.dumps(und17))
+
+            # THE PEN on her balloons' card, on a Flip with recolours, and on balloons from before ("recolors").
+            ctx, pg = browser_as(b, theo17)
+            home(pg)
+            seen17 = {k: pg.evaluate(CARD, v) for k, v in (("balloons", bal), ("before", before17), ("flip", flr),
+                                                           ("flip before", flbefore))}
+            close_ctx(ctx, pg)
+            check("the pen after the heart on her balloons' card, 44px, as on any drawing; on a Flip with recolours on a"
+                  " page; and on balloons and a Flip posted before recolours could be drawn back on (each said"
+                  " \"recolors\")",
+                  all(seen17[k] and seen17[k]["pen"] and seen17[k]["pen"]["w"] >= 44 and seen17[k]["pen"]["h"] >= 44
+                      and seen17[k]["kids"].index("pen") == seen17[k]["kids"].index("heart") + 1 for k in seen17),
+                  json.dumps({k: (v or {}).get("kids") for k, v in seen17.items()}))
+
+            # THE WAY IN hands her balloons over with her recolours as she made them.
+            tc17 = theo17.client()
+            tc17.get("/social/")
+            r17 = tc17.get_json(f"/social/p/{bal}/drawback")
+            got17 = (((r17[1] or {}).get("payload") or {}) if isinstance(r17[1], dict) else {})
+            check("the composer's way in hands her balloons over whole, her three recolours as she made them",
+                  r17[0] == 200 and (got17.get("frames") or [{}])[0].get("recolors") == HERS17,
+                  json.dumps({"status": r17[0], "recolors": (got17.get("frames") or [{}])[0].get("recolors")})[:500])
+
+            # HIS ANSWER, WITH A RECOLOUR OF HIS OWN: two lines, the second recoloured orange.
+            def his17(seed):
+                m = answer(n=24, seed=seed)
+                fm = m["frames"][0]
+                fm["strokeGroups"] = [16, 8]
+                fm["strokes"][16]["start"] = True
+                for q in fm["strokes"][16:]:
+                    q["color"] = "#ff6c2f"
+                fm["recolors"] = [{"g": 1, "n": 24, "k": 0, "at": 2, "was": "#7c5cff", "to": "#ff6c2f", "t": 900}]
+                return m
+            KEYS = ("g", "n", "k", "at", "was", "to")
+            mine17 = his17(171)
+            st17, j17 = draw_back(theo17, bal, mine17)
+            back17 = j17.get("post") if isinstance(j17, dict) else None
+            fr17 = (((stored(back17) or {}).get("payload") or {}).get("frames") or [{}])[0]
+            rc17 = [{k: e.get(k) for k in KEYS} for e in fr17.get("recolors") or []]
+            want17 = [{k: e.get(k) for k in KEYS} for e in HERS17] + [
+                {"g": GB + 1, "n": NB + 24, "k": 3, "at": 2, "was": "#7c5cff", "to": "#ff6c2f"}]
+            joined_pts = fr17.get("strokes") or []
+            his_line = joined_pts[NB + 16:NB + 24]
+            check("AN ANSWER WITH ITS OWN RECOLOUR IS TAKEN, and the join keeps each hand's to its own lines: her three"
+                  " moments as she made them; his moved past hers, his line after her twelve (13), his count after her"
+                  " 410 points (434), his gesture after her three (3); the line it names is his, in his colour",
+                  st17 == 200 and rc17 == want17 and len(joined_pts) == NB + 24
+                  and fr17.get("strokeGroups") == BAL["frames"][0]["strokeGroups"] + [16, 8]
+                  and len(his_line) == 8 and all(q["color"] == "#ff6c2f" for q in his_line),
+                  json.dumps({"status": st17, "err": j17 if st17 != 200 else None, "recolors": rc17})[:700])
+            # THE REPLAY'S OWN READING (lib/recolorplay.js moments, which every player and the line follow).
+            ctx, pg = browser_as(b, theo17)
+            pg.goto(BASE + "/skribl-pad")
+            pg.wait_for_function("() => !!window.SkriblRecolorPlay", timeout=15000)
+            ms17 = pg.evaluate("""(f) => SkriblRecolorPlay.moments(f.strokes, f.recolors).map(m => [m.n, m.lines.map(l => l.g)])""", fr17)
+            close_ctx(ctx, pg)
+            check("the replay reads four moments, in order: her three balloons taking their colours right after her last"
+                  " point, then his line after his last; each hand's moment one of its own",
+                  ms17 == [[NB, [0]], [NB, [1]], [NB, [2]], [NB + 24, [GB + 1]]], json.dumps(ms17))
+
+            # TWO HANDS (the owner's switch on): his drawing keeps his recolour as he made it; Both moves it past hers.
+            BASE2 = switch_on()
+
+            def png17(rgb):
+                import io as _io
+                from PIL import Image as _Im
+                buf = _io.BytesIO()
+                _Im.new("RGB", (60, 32), rgb).save(buf, format="PNG")
+                return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+            c2 = Client(cookies=theo17.ctx.cookies(BASE), xff=theo17.xff, origin=BASE2, base=BASE2)
+            c2.get("/social/")
+            st2h, j2h = c2.post_json("/social/posts", {"words": "", "draw_back": bal,
+                                                       "payload": dict(his17(172), thumbnail=png17((40, 160, 90)),
+                                                                       thumbnailOwn=png17((200, 60, 120)))})
+            two17 = j2h.get("post") if isinstance(j2h, dict) else None
+            sk17 = (db("select skribl_id from social_posts where public_id = ?", (two17 or "",)) or [[None]])[0][0]
+            own17 = [{k: e.get(k) for k in KEYS} for e in
+                     ((((stored(two17) or {}).get("payload") or {}).get("frames") or [{}])[0].get("recolors") or [])]
+            views17 = {}
+            for v in ("both", "hers", "his"):
+                stv, jv = Client(cookies=ana17.ctx.cookies(BASE), xff=ana17.xff, origin=BASE2, base=BASE2).get_json(
+                    f"/social/hands/play/{v}/{sk17}")
+                fv = (((jv or {}).get("skribl") or {}).get("frames") or [{}])[0] if isinstance(jv, dict) else {}
+                views17[v] = [{k: e.get(k) for k in KEYS} for e in fv.get("recolors") or []] if stv == 200 else stv
+            mine_rc = [{"g": 1, "n": 24, "k": 0, "at": 2, "was": "#7c5cff", "to": "#ff6c2f"}]
+            check("two hands keep each hand's recolours its own: his drawing keeps his as he made it (his line 1, his 24"
+                  " points); his alone the same; hers alone her three; Both moves his past hers, as the join does",
+                  st2h == 200 and own17 == mine_rc and views17.get("his") == mine_rc
+                  and views17.get("hers") == [{k: e.get(k) for k in KEYS} for e in HERS17] and views17.get("both") == want17,
+                  json.dumps({"status": st2h, "err": j2h if st2h != 200 else None, "own": own17, "views": views17})[:800])
+
+            # THE WHOLE WAY, IN A BROWSER: the pen, the Pad on her balloons, Recolor on his lines.
+            ctx, pg = browser_as(b, theo17)
+            home(pg)
+            pen17 = f'.post-card[data-post="{bal}"] .db-pen'
+            pg.locator(pen17).scroll_into_view_if_needed()
+            pg.click(pen17)
+            fe = pg.wait_for_selector("#composePad .facepad-frame", state="attached", timeout=15000)
+            pg.wait_for_function("() => document.querySelector('#composePad').classList.contains('is-ready')", timeout=30000)
+            fr = fe.content_frame()
+            fr.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state() && !!window.SkriblPadRecolor", timeout=15000)
+            pg.wait_for_timeout(500)
+            box = fr.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return [r.left, r.top, r.width]; }")
+            fb = fe.bounding_box()
+            k17 = box[2] / 816
+
+            def at17(x, y):
+                return fb["x"] + box[0] + x * k17, fb["y"] + box[1] + y * k17
+            for y_ in (565, 595):                          # his two lines, clear of hers
+                x0, y0 = at17(600, y_)
+                pg.mouse.move(x0, y0)
+                pg.mouse.down()
+                for s_ in range(1, 13):
+                    pg.mouse.move(*at17(600 + s_ * 8, y_ + (s_ % 3)))
+                pg.mouse.up()
+                pg.wait_for_timeout(150)
+            TOAST = "() => { const t = document.getElementById('toast'); return t.hidden ? '' : t.textContent; }"
+            CLEAR = "() => { document.getElementById('toast').textContent = ''; }"
+            rec = {"dim": fr.evaluate("() => getComputedStyle(document.getElementById('recolorBtn')).opacity")}
+            fr.evaluate("() => setPenColor('#ff6c2f')")
+            fr.evaluate("() => openDrawer('draw')")
+            pg.wait_for_timeout(450)
+            fr.click("#recolorBtn")
+            pg.wait_for_timeout(450)
+            rec["armed"] = fr.evaluate("() => SkriblPadRecolor.isArmed()")
+            rec["said"] = fr.evaluate(TOAST)
+            rec["before"] = fr.evaluate("() => [strokes.filter(p => p.start).map(p => p.color), undoStack.length]")
+            pg.mouse.click(*at17(648, 566))               # his first line
+            pg.wait_for_timeout(700)
+            rec["his"] = fr.evaluate("() => [strokes.filter(p => p.start).map(p => p.color), undoStack.length]")
+            fr.evaluate(CLEAR)
+            pg.mouse.click(*at17(407, 69))                # the top of her purple balloon
+            pg.wait_for_timeout(350)
+            rec["hers"] = [fr.evaluate(TOAST), fr.evaluate("() => [strokes.filter(p => p.start).map(p => p.color), undoStack.length]")]
+            check("Recolor works while drawing back: not dimmed, and it turns on (nothing says it is off); a tap on his"
+                  " line gives it the pen's colour, one step of Undo",
+                  rec["dim"] == "1" and rec["armed"] is True and rec["said"] == ""
+                  and rec["his"][0] == ["#ff6c2f", rec["before"][0][1]] and rec["his"][1] == rec["before"][1] + 1,
+                  json.dumps(rec))
+            check("A TAP ON HER LINE SAYS WHOSE IT IS (\"That line is Ana’s. Recolor changes yours.\"), and changes"
+                  " nothing: his lines as they were, no step of Undo",
+                  rec["hers"] == ["That line is Ana’s. Recolor changes yours.", rec["his"]], json.dumps(rec["hers"]))
+            # Hidden, her lines say nothing (nothing is seen there).
+            fr.click(".db-theirs")
+            fr.click(".db-theirs")
+            pg.wait_for_timeout(250)
+            hid = {"state": fr.evaluate("() => SkriblDrawBack.state().theirs")}
+            fr.evaluate(CLEAR)
+            pg.mouse.click(*at17(407, 69))
+            pg.wait_for_timeout(350)
+            hid["said"] = fr.evaluate(TOAST)
+            fr.click(".db-theirs")
+            pg.wait_for_timeout(250)
+            hid["back"] = fr.evaluate("() => SkriblDrawBack.state().theirs")
+            check("with hers hidden (Theirs), a tap where her line is says nothing: nothing is seen there",
+                  hid == {"state": "hidden", "said": "", "back": "faint"}, json.dumps(hid))
+            # THE LENS shows her lines, faint as the drawing does: a finger held on her line, hers shown, then hidden.
+            cdp = pg.context.new_cdp_session(pg)
+            LENS = """(keep) => { const l = document.querySelector('.recolor-lens'); if (!l || l.hidden) return null;
+              const c = l.querySelector('canvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+              const lt = document.querySelector('.recolor-light');
+              let lit = 0;
+              if (lt) { const e = lt.getContext('2d').getImageData(0, 0, lt.width, lt.height).data; for (let i = 3; i < e.length; i += 4) if (e[i]) lit++; }
+              if (keep) { window.__lens17 = Array.from(d); return { lit: lit }; }
+              let n = 0; const a = window.__lens17 || [];
+              for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - a[i]) + Math.abs(d[i + 1] - a[i + 1]) + Math.abs(d[i + 2] - a[i + 2]) > 24) n++;
+              return { lit: lit, differ: n }; }"""
+            # A point on her left balloon's string (her group 4, points 289 to 314), far from his lines.
+            near = next(q for q in BAL["frames"][0]["strokes"][289:315] if 400 < q["y"] < 460)
+            hx, hy = at17(near["x"], near["y"])
+            pg.mouse.move(2, 2)                               # no mouse over the drawing, so no hover light
+
+            def hold17(keep):
+                cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": hx, "y": hy, "id": 9}]})
+                pg.wait_for_timeout(650)
+                got = fr.evaluate(LENS, keep)
+                cdp.send("Input.dispatchTouchEvent", {"type": "touchCancel", "touchPoints": []})
+                pg.wait_for_timeout(300)
+                return got
+            lens17 = {"shown": hold17(True)}
+            fr.click(".db-theirs")
+            fr.click(".db-theirs")
+            pg.wait_for_timeout(250)
+            lens17["hidden"] = hold17(False)
+            fr.click(".db-theirs")
+            pg.wait_for_timeout(200)
+            lens17["after"] = fr.evaluate("() => [strokes.filter(p => p.start).map(p => p.color), undoStack.length]")
+            check("THE LENS SHOWS HER LINES, faint as the drawing does: held still on her string, it differs from the"
+                  " lens with hers hidden where her lines run; none of hers lights (only his can), and letting go of the"
+                  " hold changes nothing",
+                  lens17["shown"] is not None and lens17["hidden"] is not None and lens17["shown"]["lit"] == 0
+                  and lens17["hidden"]["differ"] >= 60 and lens17["after"] == rec["his"],
+                  json.dumps(lens17))
+            close_ctx(ctx, pg)
+
+            # ON HER OWN DRAWING the words say the original.
+            ctx, pg = browser_as(b, ana17)
+            home(pg)
+            penA = f'.post-card[data-post="{bal}"] .db-pen'
+            pg.locator(penA).scroll_into_view_if_needed()
+            pg.click(penA)
+            feA = pg.wait_for_selector("#composePad .facepad-frame", state="attached", timeout=15000)
+            pg.wait_for_function("() => document.querySelector('#composePad').classList.contains('is-ready')", timeout=30000)
+            frA = feA.content_frame()
+            frA.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state() && !!window.SkriblPadRecolor", timeout=15000)
+            pg.wait_for_timeout(400)
+            boxA = frA.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return [r.left, r.top, r.width]; }")
+            fbA = feA.bounding_box()
+            frA.evaluate("() => openDrawer('draw')")
+            pg.wait_for_timeout(450)
+            frA.click("#recolorBtn")
+            pg.wait_for_timeout(450)
+            frA.evaluate(CLEAR)
+            kA = boxA[2] / 816
+            pg.mouse.click(fbA["x"] + boxA[0] + 407 * kA, fbA["y"] + boxA[1] + 69 * kA)
+            pg.wait_for_timeout(350)
+            ownA = [frA.evaluate("() => (document.querySelector('.db-pill .db-where') || {}).textContent || null"), frA.evaluate(TOAST)]
+            close_ctx(ctx, pg)
+            check("on her own drawing a tap on the original's line says so: \"That line is in the original. Recolor"
+                  " changes your new lines.\"",
+                  ownA == ["Drawing back on your own drawing", "That line is in the original. Recolor changes your new lines."],
+                  json.dumps(ownA))
+
+            # FLIP, PAGE FOR PAGE: his line on the page he is on; hers on that page says whose.
+            ctx, pg = browser_as(b, theo17)
+            home(pg)
+            penF = f'.post-card[data-post="{flb}"] .db-pen'
+            pg.locator(penF).scroll_into_view_if_needed()
+            pg.click(penF)
+            feF = pg.wait_for_selector("#composeFlip .facepad-frame", state="attached", timeout=15000)
+            pg.wait_for_function("() => document.querySelector('#composeFlip').classList.contains('is-ready')", timeout=30000)
+            frF = feF.content_frame()
+            frF.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state() && typeof _recolor !== 'undefined' && !!_recolor", timeout=15000)
+            pg.wait_for_timeout(500)
+            boxF = frF.evaluate("() => { const r = document.getElementById('pad').getBoundingClientRect(); return [r.left, r.top, r.width]; }")
+            fbF = feF.bounding_box()
+            kF = boxF[2] / 816
+
+            def atF(x, y):
+                return fbF["x"] + boxF[0] + x * kF, fbF["y"] + boxF[1] + y * kF
+            x0, y0 = atF(600, 575)
+            pg.mouse.move(x0, y0)
+            pg.mouse.down()
+            for s_ in range(1, 13):
+                pg.mouse.move(*atF(600 + s_ * 8, 575 + (s_ % 3)))
+            pg.mouse.up()
+            pg.wait_for_timeout(200)
+            CHIP = "() => { const c = document.getElementById('flipChip'); return c && c.classList.contains('show') ? c.textContent : ''; }"
+            CLEARF = "() => { const c = document.getElementById('flipChip'); if (c) { c.textContent = ''; c.classList.remove('show'); } }"
+            fl = {"dim": frF.evaluate("() => getComputedStyle(document.getElementById('recolorBtn')).opacity")}
+            frF.evaluate("() => setColor('#ff6c2f')")
+            frF.evaluate("() => _flipDrawerCtl.open('draw')")
+            pg.wait_for_timeout(450)
+            frF.click("#recolorBtn")
+            pg.wait_for_timeout(450)
+            fl["armed"] = frF.evaluate("() => _recolor.isArmed()")
+            pg.mouse.click(*atF(648, 576))
+            pg.wait_for_timeout(600)
+            fl["his"] = frF.evaluate("() => frame().strokes.filter(p => p.start).map(p => p.color)")
+            frF.evaluate(CLEARF)
+            pg.mouse.click(*atF(407, 69))                 # her purple balloon's top on page 1
+            pg.wait_for_timeout(350)
+            fl["hers1"] = frF.evaluate(CHIP)
+            frF.click(".strip .frame:nth-child(2)")
+            pg.wait_for_timeout(400)
+            fl["page"] = frF.evaluate("() => [idx, SkriblDrawBack.state().page]")
+            frF.evaluate(CLEARF)
+            pg.mouse.click(*atF(407, 69))                 # where page 1's was: nothing of hers on page 2 there
+            pg.wait_for_timeout(350)
+            fl["page2 off"] = frF.evaluate(CHIP)
+            frF.evaluate(CLEARF)
+            pg.mouse.click(*atF(407, 69 + 90))            # her page 2's balloon top
+            pg.wait_for_timeout(350)
+            fl["page2 on"] = frF.evaluate(CHIP)
+            close_ctx(ctx, pg)
+            check("ON FLIP, page for page: Recolor works (not dimmed, on), his line on page 1 takes the pen's colour, a"
+                  " tap on her line there says whose it is; on page 2 her lines are page 2's: nothing where page 1's"
+                  " were, and hers there say whose",
+                  fl["dim"] == "1" and fl["armed"] is True and fl["his"] == ["#ff6c2f"]
+                  and fl["hers1"] == "That line is Ana’s. Recolor changes yours." and fl["page"] == [1, 1]
+                  and fl["page2 off"] == "" and fl["page2 on"] == "That line is Ana’s. Recolor changes yours.",
+                  json.dumps(fl))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(17, exc)
 
     # ----------------------------------------------------------------- 10
     if part(10, "no page errors, no console errors and no CSP violations"):

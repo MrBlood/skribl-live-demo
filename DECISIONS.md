@@ -53752,3 +53752,79 @@ are one moment (`lib/recolorplay.js`).
 
 PAD AND FLIP: shared (`lib/recolor.js`, `lib/drawback.js`, one each for
 both editors); on Flip, his lines on the page he is on, page for page.
+
+## After v330 -- Recolor while drawing back: built
+
+The owner's "All yes" (Nov 25, about 11:20 AM) to the Recolor While Drawing
+Back mock ("Recolor while drawing back, mocked", above), built the same day.
+Two Hands' fifth answer ("each person recolours only their own strokes"),
+on both editors and the site.
+
+1. RECOLOR WORKS WHILE DRAWING BACK, ON HIS LINES. It no longer steps aside
+   (`lib/drawback.js` ASIDE; `styles.css` dims the eraser and her background
+   alone). Her lines lie on a layer of their own, never among the editor's,
+   so Recolor finds only his; nothing else was needed for "only his".
+2. A TAP ON HER LINE SAYS WHOSE IT IS. A tap, or a lifted aim, that finds
+   none of his asks the draw-back module (`SkriblDrawBack.hers`, from
+   `lib/recolor.js`); one of hers within the finger's reach, on the page he
+   is on, says "That line is Ana’s. Recolor changes yours." in the editor's
+   own toast ("That line is in the original. Recolor changes your new
+   lines." on one's own drawing). While hers are hidden (Theirs), nothing is
+   said: nothing is seen there. A drag says nothing. Recolor's `tryAt` now
+   says whether a line of the editor's was under the point.
+3. THE LENS SHOWS HERS. It lays her layer in (`SkriblDrawBack.under`), faint
+   as the drawing shows it, before the light, which only his lines take.
+4. A DRAWING WITH RECOLOURS GETS THE PEN. `drawback.drawable` no longer says
+   "recolors", for a drawing or a Flip's page, nor for an answer. THE JOIN
+   KEEPS EACH HAND'S MOMENTS TO ITS OWN LINES (`drawback._moments`, the Pad's
+   join and Flip's page for page): hers as she made them, since her groups
+   and points open the page; his moved past hers, his line `g` after her
+   groups, his count `n` after her points, his gesture `k` after her last
+   (moments that share a `k` are one, `lib/recolorplay.js`), each moment's
+   clock the joined time of the point before it. Two hands keep his as he
+   made them in his own drawing (`own`, `_own_pages`); Both moves them as the
+   join does. A post that said "recolors" keeps its pen (`posts.cards`
+   `can_back`, Pad and Flip); the composer's reading agrees
+   (`compose.js` `drawableHere`), and its word for a refused recolour
+   (`cmp_drawback_recolors`) goes, since nothing says it now.
+
+Flip writes no recolour moments (its Recolor changes the page in place), so
+on Flip only the refusal went; the join keeps any a page carries the same
+way.
+
+THE CHECKS, `verify_socialdrawback` 17 (new, twelve rows): her balloons (How
+it works' Recolor example) and a Flip with recolours say nothing when posted;
+the pen on their cards, and on a Pad drawing and a Flip from before that
+said "recolors"; the way in hands her recolours over; an answer with its own
+recolour taken, her three moments as she made them and his at line 13,
+count 434, gesture 3; the replay's own reading (`SkriblRecolorPlay.moments`)
+four moments, each hand's its own; two hands, his own drawing and his alone
+keeping his as made, Both moving it; and the whole way: Recolor not dimmed
+and on, a tap on his line one step of Undo, a tap on hers saying whose and
+changing nothing, nothing said while hers are hidden, the lens with hers
+shown differing from the lens with hers hidden where her lines run (none of
+hers lit), her own drawing's words, and on Flip page for page (page 2's
+lines are page 2's). Section 4's row: Recolor not dimmed, on, its Done
+giving the pen back. Section 12: the composer's reading and the site's agree
+on twenty drawings, recolours a yes.
+
+CALIBRATION, sections 4, 12 and 17, a worktree for each tree, each break
+asserted to apply exactly once: as built twelve of twelve in 17; main red on
+section 4's Recolor row, section 12's agreement and every row of 17 it could
+reach (there was no pen to press). Sixteen breaks, one at a time, each red on
+its own row: the Pad refusing recolours again (posting, the way in, the join,
+the replay's reading, two hands; then no Pad to open); Flip refusing them
+(what a Flip says when posted); his moments not moved, his gesture not moved,
+and the Pad's join dropping them (the join, the replay's reading and two
+hands, each); his own drawing dropping his (two hands); a Pad post and a Flip
+post that said "recolors" with no pen (the pen's row, each); Recolor
+stepping aside again (section 4's row and every editor row of 17); Recolor
+dimmed again (section 4's row, Recolor's and Flip's); a tap that asks
+nothing (her line's words on the Pad, on her own drawing and on Flip); hers
+hidden still speaking (the hidden row); her lines read from page 1 always
+(Flip's page 2); her own drawing's words not said (that row); the lens
+leaving hers out (the lens row); the composer refusing recolours again
+(section 12's agreement).
+
+PAD AND FLIP: shared (`lib/recolor.js`, `lib/drawback.js`); the site's
+join and rule serve both.

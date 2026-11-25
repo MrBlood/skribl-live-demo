@@ -2915,12 +2915,13 @@ draw-backs, newest first; and "Watch again" and Draw back rising at a
 drawing's foot when its replay ends (Skribl's player says `skribl:ended`).
 
 NO PEN WHERE IT CAN'T BE DONE YET (DECISIONS.md, "Draw back: no pen where it
-can't be done yet"): a drawing with recolours, and a Flip that loops, keeps a
-page under or plays to a beat, read when its post is made (`undrawable`:
-"recolors", "loop", "under", "beat"); a post from before keeps its pen,
-answered when opened (and so does a Flip posted before Flips could be drawn
-back on, which said "pages", and one from the morning a page that draws
-itself was refused, which said "draw").
+can't be done yet"): a Flip that loops, keeps a page under or plays to a
+beat, read when its post is made (`undrawable`: "loop", "under", "beat"); a
+post from before keeps its pen, answered when opened (and so does a Flip
+posted before Flips could be drawn back on, which said "pages", one from the
+morning a page that draws itself was refused, which said "draw", and a
+drawing posted before recolours could be drawn back on, which said
+"recolors": section 43).
 
 A FLIP, PAGE FOR PAGE (the owner's "all yes", Nov 25, to the Flip Draw Back
 mock; DECISIONS.md, "Flip's Draw back, page for page: built"). The pen on a
@@ -2952,8 +2953,8 @@ its play button who and the whole ("Ana + Theo · 20 sec"), a Gallery tile
 and a quote the whole. Nobody is named to a viewer any of them is hidden
 from, nor once the drawing it answers is gone.
 
-STILL TO COME, in the decided order: her say (hide one from her post; who
-can draw back); recolours.
+Her say (hide one from her post; who can draw back) is built (sections 24
+and 25), and so are recolours (section 43).
 `verify_socialdrawback.py` holds what is built.
 
 ---
@@ -3839,9 +3840,9 @@ NOT YET (the seventh answer: one original and one answer first): a
 two-hands draw-back is not drawn back on (`undrawable` "hands"; no pen,
 and both doors refuse). Draw-backs from before stay one joined drawing
 (the eighth). Plays of Both are not counted (Skribl counts a play only on
-its own route); a quote of a two-hands draw-back shows his own picture;
-recolour stays off while drawing back (the fifth answer opens it for his
-own strokes, later). DELETING IS REAL AND SAID IN CODE: his post takes what
+its own route); a quote of a two-hands draw-back shows his own picture.
+Recolour while drawing back, for his own strokes (the fifth answer), is
+built: section 43. DELETING IS REAL AND SAID IN CODE: his post takes what
 is kept beside it, and her post lets go of every draw-back on it, which
 then shows its maker's strokes alone (`posts.drop_post_hands`).
 `verify_socialdrawback` 15 (a second server with the switch on, on the
@@ -3884,3 +3885,31 @@ while drawing back (the owner: "Keep Copy dimmed"; Draw is her timing).
 
 NOT IN THE FIRST STEP: a Flip that loops, keeps a page under or plays to a
 beat (`undrawable` says which; no pen). `verify_socialdrawback` 16.
+
+## 43. Built: Recolor while drawing back (Nov 25)
+
+The owner's "all yes" (Nov 25, about 11:20 AM) to the Recolor While Drawing
+Back mock: four answers (`DECISIONS.md`, "Recolor while drawing back,
+mocked", and "Recolor while drawing back: built"). Two Hands' fifth answer
+("each person recolours only their own strokes"), on both editors.
+
+IN THE EDITOR (Skribl's `lib/drawback.js` and `lib/recolor.js`, one each for
+the Pad and Flip): Recolor works while drawing back, no longer dimmed. Her
+lines lie on a layer of their own, so it finds only his. A tap (or a lifted
+aim) that finds none of his but lands on one of hers says whose it is, in
+the editor's own toast: "That line is Ana’s. Recolor changes yours." ("That
+line is in the original. Recolor changes your new lines." on one's own
+drawing; nothing while hers are hidden). The lens lays her layer in, faint
+as the drawing shows it, and lights only his. On Flip, the page he is on.
+
+ON THE SITE (`drawback.py`): a drawing with recolours can be drawn back on
+(`drawable` no longer says "recolors"), and an answer can carry its own. The
+join keeps each hand's recolour moments to its own lines (`_moments`): hers
+as she made them; his moved past hers (his line `g` after her groups, his
+count `n` after her points, his gesture `k` after her last, since moments
+that share a `k` are one). Played, her lines draw in and take their colours
+where she gave them, then his do the same. Two hands keep his as he made
+them in his own drawing (`own`), and Both moves them as the join does. A
+post that said "recolors" keeps its pen (`posts.cards` `can_back`); the
+composer's reading agrees (`compose.js` `drawableHere`), and its word for a
+refused recolour goes. `verify_socialdrawback` 17, 4 and 12.

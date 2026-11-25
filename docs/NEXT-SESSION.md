@@ -41,13 +41,16 @@ page playing her strokes, then his (built the same morning). Copy stays
 dimmed, and so does Draw (it is her timing; light it only if the owner
 says so).
 
-## Recolor while drawing back: all yes, building
+## Recolor while drawing back: all yes, built
 
 The decided order's next step, mocked (https://claude.ai/artifact/XUcG9eV3zEBTpGn936wneo)
 and answered "All yes" about 11:20 AM: Recolor on while drawing back, his
 lines only; a tap on hers says whose it is; the magnifier shows hers
 faint; a drawing with recolours gets the pen (`DECISIONS.md`, "Recolor
-while drawing back, mocked"). Being built the same day.
+while drawing back, mocked", and "... built"; `docs/SOCIAL-SITE.md`
+section 43). One-glance tell on the owner's phone: draw back on a drawing,
+open the colour drawer, and Recolor is no longer dimmed; a tap on one of
+her lines says "That line is Ana’s. Recolor changes yours."
 
 ## Waiting on the owner's phone
 
@@ -61,12 +64,13 @@ while drawing back, mocked"). Being built the same day.
 
 ## Then, in the decided order
 
-Recolours on a draw-back, messages as drawn letters, watching first
-everywhere (`DECISIONS.md`, "The owner's clarifications to the final
-recommendations"). Two hands' own next steps are as the morning's handoff
-said (`git show 928e5d7:docs/NEXT-SESSION.md`): plays of Both not counted,
-a quote of a two-hands draw-back shows his own picture, recolour off while
-drawing back, a two-hands draw-back not drawn back on.
+Messages as drawn letters, then watching first everywhere (`DECISIONS.md`,
+"The owner's clarifications to the final recommendations"); recolours on a
+draw-back are built (Nov 25). Two hands' own next steps, from the morning's
+handoff (`git show 928e5d7:docs/NEXT-SESSION.md`): plays of Both not
+counted, a quote of a two-hands draw-back shows his own picture, a
+two-hands draw-back not drawn back on (recolour while drawing back is
+built).
 
 ## What saves time
 
