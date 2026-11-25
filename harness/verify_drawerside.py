@@ -97,7 +97,7 @@ SIDE_W, EDGE = 392, 16
 LOOK = """([cv, move]) => {
   const r = (e) => { if (!e) return null; const b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; };
   const open = [...document.querySelectorAll('#drawPanel, #mediaCard, #txSheet')].find(e => !e.hidden && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 40);
-  return { beside: skriblDrawers.beside(), canvas: r(document.getElementById(cv)), drawer: r(open), id: open ? open.id : null,
+  return { beside: !!(skriblDrawers.beside && skriblDrawers.beside()), canvas: r(document.getElementById(cv)), drawer: r(open), id: open ? open.id : null,
            side: open ? open.classList.contains('drawer-side') : false, scrollY: scrollY, W: document.documentElement.clientWidth, H: innerHeight,
            R: (() => { const p = document.createElement('div'); p.style.cssText = 'position:fixed;top:0;right:0;width:0;height:0';
                        document.body.appendChild(p); const x = p.getBoundingClientRect().left; p.remove(); return x; })(),
@@ -342,7 +342,7 @@ with sync_playwright() as pw:
             q.wait_for_timeout(900)
             pts = q.evaluate("(n) => frame().strokes.slice(n).map(p => [p.x, p.y])", n0)
             lg = q.evaluate(PTS[ed][2])
-            home = not q.evaluate(SHIFT) and not q.evaluate("() => skriblDrawers.beside()")
+            home = not q.evaluate(SHIFT) and not q.evaluate("() => !!(skriblDrawers.beside && skriblDrawers.beside())")
             last_at = ((x + 48 - box[0]) / box[2], (y - 24 - box[1]) / box[3])
             check(f"Flip: with the drawer beside (the drawing slid {slid}), a stroke drawn on the drawing holds it still under the pen"
                   " while it is down, its first and last points landing where they were drawn, and it glides home after",
@@ -356,7 +356,7 @@ with sync_playwright() as pw:
             box = q.evaluate("(cv) => { const c = document.getElementById(cv).getBoundingClientRect(); return [c.left, c.top, c.width, c.height]; }", ED[ed]["cv"])
             q.mouse.click(box[0] + box[2] * 0.6, box[1] + box[3] * 0.4)
             q.wait_for_timeout(900)
-            away = q.evaluate(f"() => {ED[ed]['ctl']}.current()") is None and not q.evaluate("() => skriblDrawers.beside()")
+            away = q.evaluate(f"() => {ED[ed]['ctl']}.current()") is None and not q.evaluate("() => !!(skriblDrawers.beside && skriblDrawers.beside())")
             check(f"Pad: with the drawer beside (the drawing slid {slid}), the first press on the drawing puts it away, as below,"
                   " and the drawing glides home",
                   bool(slid) and away and not q.evaluate(SHIFT), json.dumps({"slid": slid, "away": away}))
