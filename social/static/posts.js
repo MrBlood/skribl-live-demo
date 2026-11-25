@@ -156,7 +156,8 @@
              handle: p.getAttribute('data-handle') || '', first: p.getAttribute('data-first') || '',
              muted: p.hasAttribute('data-muted'), markable: p.hasAttribute('data-markable'),
              marked: p.hasAttribute('data-marked'), repost: p.getAttribute('data-repost') || '',
-             quoted: p.getAttribute('data-quoted') || '' };
+             quoted: p.getAttribute('data-quoted') || '',
+             pinnable: p.hasAttribute('data-pinnable'), pinned: p.hasAttribute('data-pinned') };
   }
   /* What a thing is, wherever the page shows it: a comment by its address,
      a post or a drawing by its card's (a drawing's is b-<its id>). */
@@ -223,6 +224,13 @@
         bm.hidden = !current.markable;
         bm.classList.toggle('is-marked', current.marked);
         bm.querySelector('[data-bm-words]').textContent = say(current.marked ? 'bm_remove' : 'bm_add');
+      }
+      /* PIN THIS POST (pins.py): on your own post alone, Pin to your page,
+         or Unpin from your page once it is the one. */
+      var pn = menuWrap.querySelector('[data-act="pin"]');
+      if (pn) {
+        pn.hidden = !(current.pinnable && current.kind === 'p');
+        pn.querySelector('[data-pin-words]').textContent = say(current.pinned ? 'pin_remove' : 'pin_add');
       }
       /* MUTE (mutes): Mute @them, or Unmute @them, as the card says. */
       var mu = menuWrap.querySelector('[data-act="mute"]');
@@ -307,6 +315,11 @@
           markAct(current, !current.marked, opener, false);
         }
       }
+      else if (act === 'pin' && menuWrap.hasAttribute('data-pin')) {
+        /* Nothing asked first: the sheet goes down, focus back on the ⋯. */
+        menu.close();
+        pinAct(current, !current.pinned, opener, false);
+      }
       else if (act === 'report' && report) {
         menu.close(true);
         resetReport();
@@ -373,8 +386,9 @@
     if (j && j.status === 404) return say('bm_gone');
     return say('bm_failed');
   }
-  function markSay(text, undo, wait) {
-    if (window.SocialToast) window.SocialToast.rise(text, { undo: undo || null, wait: wait, clear: MENUS, icon: 'mark' });
+  function markSay(text, undo, wait, plain) {
+    if (window.SocialToast) window.SocialToast.rise(text, plain ? { undo: undo || null, wait: wait, clear: MENUS, plain: true }
+                                                              : { undo: undo || null, wait: wait, clear: MENUS, icon: 'mark' });
     else tell(pageSay, text);
   }
   /* `want`: kept (true) or taken away. One request at a time a post: what is
@@ -408,6 +422,48 @@
       markShow(p, !want);
       markSay(markWhy(j), null, wait);
     });
+  }
+
+  /* PIN THIS POST (pins.py; the Pin mock's A, the owner's "all yes", Nov
+     25): one of your own posts first on your page. A tap pins it (or takes
+     it away), the sheet goes down, every place on the page that shows it
+     says so at once (data-pinned: the next ⋯ says Unpin), and the post that
+     was pinned before (`was`) is told it is not; the site's toast says what
+     happened, with Undo, which puts back what was. One request at a time;
+     taps made meanwhile are where it ends up. A refusal puts it back, and
+     the toast says why in a bookmark's words, which name no bookmark. */
+  function pinShow(id, on) {
+    Array.prototype.forEach.call(doc.querySelectorAll('.post-card[data-post], .post-page[data-post]'), function (el) {
+      var o = postOf(el);
+      if (!o || o.kind !== 'p' || o.id !== id) return;
+      if (on) el.setAttribute('data-pinned', ''); else el.removeAttribute('data-pinned');
+    });
+  }
+  var pinBusy = false;
+  function pinAct(p, want, opener, undoing) {
+    if (pinBusy) return;
+    pinBusy = true;
+    var t0 = Date.now();
+    pinShow(p.id, want);
+    post(menuWrap.getAttribute('data-pin').replace('__ID__', encodeURIComponent(p.id)), { pinned: want }, { 'X-Social-CSRF': token })
+      .then(function (j) {
+        pinBusy = false;
+        var wait = Math.max(0, MARK_WAIT - (Date.now() - t0));
+        if (!j.ok) {
+          pinShow(p.id, !want);
+          markSay(markWhy(j), null, wait);
+          return;
+        }
+        var was = want && j.was ? j.was : null;
+        if (was) pinShow(was, false);
+        var text = say(want ? (was ? 'pin_moved' : 'pin_added') : 'pin_removed');
+        markSay(text, undoing ? null : function () {
+          if (opener && opener.isConnected) opener.focus({ preventScroll: true });
+          /* Undo puts back what was: the other pin, or none, or this one. */
+          if (was) pinAct({ kind: 'p', id: was }, true, opener, true);
+          else pinAct(p, !want, opener, true);
+        }, wait, true);
+      });
   }
 
   /* A COMMENT'S ⋯ IN ITS THREAD (comments.js; the comment thread, step 3):

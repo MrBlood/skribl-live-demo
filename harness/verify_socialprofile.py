@@ -4362,6 +4362,189 @@ print("PLAN " + json.dumps(out))
               json.dumps({"before": before, "up": up and up.get("open"), "held": held, "after": after,
                           "gone": gone and gone.get("hidden")}))
 
+    # ----------------------------------------------------------------- 22
+    # PIN THIS POST (the owner's idea, Nov 23; the Pin mock's A and A, the
+    # owner's "all yes", Nov 25; pins.py): "Pin to your page" in your own
+    # post's ⋯, after Bookmark; one at a time; the pinned post first on your
+    # Posts tab with "Pinned", for you and anybody who visits, and never again
+    # further down; the toast says what happened, with Undo.
+    if part(22, "pin this post: Pin in your own post's ⋯, one at a time; first on your Posts tab with Pinned, for anyone"):
+        try:
+            pia = _people.get("pinpia") or member(b, "pinpia", "Pia Pinner")
+            tom = _people.get("pintom") or member(b, "pintom", "Tom Visitor")
+            tag = secrets.token_hex(3)
+            ps = [site_post(pia, f"Pia's pin post {k} {tag}", tab_drawing(seed=120 + k)) for k in range(3)]
+            toms = site_post(tom, f"Tom's post {tag}", tab_drawing(seed=130))
+            LIST22 = """() => [...document.querySelectorAll('[data-prof-list] > .post-card[data-post]')].map(c =>
+              [c.getAttribute('data-post'), !!c.querySelector(':scope > .pin-by'),
+               (c.querySelector(':scope > .pin-by') || {}).textContent ? c.querySelector(':scope > .pin-by').textContent.trim() : null])"""
+            ROW22 = """() => { const r = document.querySelector('#postSheet [data-act="pin"]'); if (!r) return null;
+              const box = r.closest('.post-acts'), rows = [...box.querySelectorAll('.post-act')].filter(x => !x.hidden && x.getClientRects().length);
+              const rr = r.getBoundingClientRect(), at = r.hidden ? null : document.elementFromPoint(rr.left + rr.width / 2, rr.top + rr.height / 2);
+              return { shown: !r.hidden && !!r.getClientRects().length, words: r.textContent.trim(), order: rows.map(x => x.getAttribute('data-act')),
+                       mark: [...r.querySelectorAll('svg path')].length, h: Math.round(rr.height), painted: !!at && (at === r || r.contains(at)) }; }"""
+            TOAST22 = "() => { const t = document.querySelector('.mu-toast'); return t && !t.hidden ? [t.querySelector('.mu-toast-words, [data-toast-words]') ? t.querySelector('.mu-toast-words, [data-toast-words]').textContent.trim() : t.textContent.trim(), !!t.querySelector('button:not([hidden])')] : null; }"
+
+            def menu22(pg_, pid):
+                sel = f'.post-card[data-post="{pid}"] [data-post-menu]'
+                pg_.locator(sel).first.scroll_into_view_if_needed(timeout=5000)
+                pg_.locator(sel).first.tap(timeout=5000)
+                pg_.wait_for_timeout(650)
+
+            def pin22(pg_, pid):
+                """Pin (or Unpin) `pid` from its card's ⋯; the toast's words and whether it has Undo."""
+                menu22(pg_, pid)
+                with pg_.expect_response(lambda r: r.url.endswith("/pin") and r.request.method == "POST", timeout=8000):
+                    pg_.locator('#postSheet [data-act="pin"]').tap(timeout=5000)
+                pg_.wait_for_timeout(900)
+                return pg_.evaluate(TOAST22)
+
+            def tab22(who_, path="/social/@pinpia"):
+                ctx_, pg_ = browser_as(b, who_)
+                pg_.goto(BASE + path)
+                pg_.wait_for_timeout(700)
+                out = pg_.evaluate(LIST22)
+                close_ctx(ctx_, pg_)
+                return out
+
+            # The row: on your own post, after Bookmark; on somebody else's, none.
+            ctx, pg = browser_as(b, pia)
+            pg.goto(BASE + "/social/@pinpia")
+            pg.wait_for_timeout(800)
+            before = pg.evaluate(LIST22)
+            menu22(pg, ps[0])
+            own = pg.evaluate(ROW22)
+            pg.keyboard.press("Escape")
+            pg.wait_for_timeout(500)
+            pg.goto(BASE + "/social/@pintom")
+            pg.wait_for_timeout(800)
+            menu22(pg, toms)
+            other = pg.evaluate(ROW22)
+            pg.keyboard.press("Escape")
+            pg.wait_for_timeout(500)
+            check("the ⋯ on your own post offers \"Pin to your page\" right after Bookmark, its pin drawn in our pen, 44px"
+                  " and painted where it stands; on somebody else's post there is none",
+                  all(ps) and bool(toms) and own and own["shown"] and own["words"] == "Pin to your page"
+                  and own["order"][:2] == ["bookmark", "pin"] and own["mark"] >= 2 and own["h"] >= 44 and own["painted"]
+                  and other is not None and not other["shown"],
+                  json.dumps({"own": own, "theirs": other}))
+            # Pin the oldest: the toast, then the page.
+            pg.goto(BASE + "/social/@pinpia")
+            pg.wait_for_timeout(800)
+            said1 = pin22(pg, ps[0])
+            menu22(pg, ps[0])
+            again = pg.evaluate(ROW22)
+            pg.keyboard.press("Escape")
+            pg.wait_for_timeout(500)
+            close_ctx(ctx, pg)
+            mine1, theirs1, nobody1 = tab22(pia), tab22(tom), tab22(None)
+            want1 = [[ps[0], True, "Pinned"], [ps[2], False, None], [ps[1], False, None]]
+            check("pinned: the sheet goes down and the toast says \"Pinned. It’s first on your page.\" with Undo; the next"
+                  " ⋯ says \"Unpin from your page\"",
+                  said1 == ["Pinned. It’s first on your page.", True] and again and again["words"] == "Unpin from your page",
+                  json.dumps({"toast": said1, "then": again}))
+            check("your Posts tab leads with the pinned post, \"Pinned\" above it, and shows it once (the rest newest"
+                  " first); the same for somebody who visits and for nobody signed in",
+                  before[:3] == [[ps[2], False, None], [ps[1], False, None], [ps[0], False, None]]
+                  and mine1 == want1 and theirs1 == want1 and nobody1 == want1,
+                  json.dumps({"before": before, "you": mine1, "visitor": theirs1, "nobody": nobody1}))
+            # Pin another: one at a time, the first back in its place; Undo puts it back.
+            ctx, pg = browser_as(b, pia)
+            pg.goto(BASE + "/social/@pinpia")
+            pg.wait_for_timeout(800)
+            said2 = pin22(pg, ps[1])
+            moved = tab22(pia)
+            pg.locator(".mu-toast button:not([hidden])").first.tap(timeout=5000)
+            pg.wait_for_timeout(1200)
+            undone = tab22(pia)
+            rows = db("select count(*) from social_pins where person_id = (select id from social_people where handle_key = 'pinpia')")
+            check("pinning another moves the pin: \"your other pin is back in its place\", the new one first, the old one"
+                  " back among the rest; Undo puts the first back; one row a person",
+                  said2 == ["Pinned. It’s first on your page, and your other pin is back in its place.", True]
+                  and moved == [[ps[1], True, "Pinned"], [ps[2], False, None], [ps[0], False, None]]
+                  and undone == want1 and rows and rows[0][0] == 1,
+                  json.dumps({"toast": said2, "moved": moved, "undone": undone, "rows": rows}))
+            # Unpin: back in its place.
+            pg.goto(BASE + "/social/@pinpia")
+            pg.wait_for_timeout(800)
+            said3 = pin22(pg, ps[0])
+            close_ctx(ctx, pg)
+            un = tab22(pia)
+            check("Unpin from your page: \"Unpinned. It’s back in its place.\", with Undo, and the tab is newest first again",
+                  said3 == ["Unpinned. It’s back in its place.", True]
+                  and un[:3] == [[ps[2], False, None], [ps[1], False, None], [ps[0], False, None]],
+                  json.dumps({"toast": said3, "tab": un}))
+            # Who may pin: your own post alone, signed in, the token; a deleted post takes its pin.
+            c = pia.client()
+            c.get("/social/@pinpia")
+            st_theirs = c.post_json(f"/social/p/{toms}/pin", {"pinned": True})[0]
+            st_bad = c.post_json(f"/social/p/{ps[2]}/pin", {"pinned": "yes"})[0]
+            st_none = c.post_json("/social/p/nopost00/pin", {"pinned": True})[0]
+            st_mine = c.post_json(f"/social/p/{ps[2]}/pin", {"pinned": True})[0]
+            st_out = http(f"/social/p/{ps[2]}/pin", "POST", json.dumps({"pinned": False}).encode(), {"Content-Type": "application/json"})[0]
+            gone = site_post(pia, f"Pia's short-lived post {tag}", tab_drawing(seed=140))
+            c.post_json(f"/social/p/{gone}/pin", {"pinned": True})
+            pinned_gone = db("select count(*) from social_pins p join social_posts s on s.id = p.post_id where s.public_id = ?", (gone,))
+            d = c.post_json(f"/social/p/{gone}/delete", {})[0]
+            after_del = db("select count(*) from social_pins where person_id = (select id from social_people where handle_key = 'pinpia')")
+            check("who may pin: somebody else's post or one not there, \"gone\" (404); a body that is not a yes or a no, 400;"
+                  " nobody signed in or without the token, refused; your own, done; and a pinned post deleted takes its pin",
+                  st_theirs == 404 and st_bad == 400 and st_none == 404 and st_mine == 200 and st_out in (401, 403)
+                  and pinned_gone and pinned_gone[0][0] == 1 and d == 200 and after_del and after_del[0][0] == 0,
+                  json.dumps({"theirs": st_theirs, "bad": st_bad, "none": st_none, "mine": st_mine, "out": st_out,
+                              "pinned": pinned_gone, "delete": d, "left": after_del}))
+            # SAID IN CODE, with SQLite's cascade off (SKRIBL_SQLITE_FOREIGN_KEYS=0, on a copy): a post goes with
+            # its pin (posts.drop_post), an account with its own (accounts.delete_person), the code alone.
+            c.post_json(f"/social/p/{ps[1]}/pin", {"pinned": True})
+            rob = _people.get("pinrob") or member(b, "pinrob", "Rob Pinner")
+            robs = site_post(rob, f"Rob's pinned post {tag}", tab_drawing(seed=150))
+            cr = rob.client()
+            cr.get("/social/@pinrob")
+            cr.post_json(f"/social/p/{robs}/pin", {"pinned": True})
+            copy = os.path.join(TMP, "pin-probe.db")
+            src = sqlite3.connect(DB, timeout=10)
+            dst = sqlite3.connect(copy)
+            src.backup(dst)
+            src.close()
+            dst.close()
+            PIN_PROBE = r"""
+import json, sys
+from app import create_app, db
+import sqlalchemy as sa
+app = create_app()
+with app.app_context():
+    from social.models import Person, Pin, Post
+    from social.accounts import delete_person
+    from social.posts import drop_post
+    fk = db.session.execute(sa.text("PRAGMA foreign_keys")).scalar()
+    n = lambda w: db.session.execute(sa.select(sa.func.count()).select_from(Pin).where(w)).scalar()
+    row = db.session.execute(sa.select(Post).where(Post.public_id == sys.argv[1])).scalar_one()
+    who = db.session.execute(sa.select(Person).where(Person.handle_key == sys.argv[2])).scalar_one()
+    author = db.session.get(Person, row.person_id)
+    post_id, pid = row.id, who.id
+    out = {"fk": fk, "post": [n(Pin.post_id == post_id)]}
+    drop_post(author.public_id, row)
+    db.session.commit()
+    out["post"].append(n(Pin.post_id == post_id))
+    out["person"] = [n(Pin.person_id == pid)]
+    delete_person(db.session, pid)
+    db.session.commit()
+    out["person"].append(n(Pin.person_id == pid))
+    print(json.dumps(out))
+"""
+            probe = subprocess.run([sys.executable, "-c", PIN_PROBE, ps[1], "pinrob"], cwd=ROOT, capture_output=True,
+                                   text=True, timeout=180,
+                                   env=dict(ENV, DATABASE_URL=f"sqlite:///{copy}", SKRIBL_SQLITE_FOREIGN_KEYS="0"))
+            try:
+                out22 = json.loads(probe.stdout.strip().splitlines()[-1])
+            except Exception:  # noqa: BLE001
+                out22 = {"err": (probe.stderr or probe.stdout)[-600:]}
+            check("with SQLite's cascade off (on a copy), a pinned post deleted takes its pin, and an account deleted its"
+                  " own pin, by the code (posts.drop_post, accounts.delete_person)",
+                  out22.get("fk") == 0 and out22.get("post") == [1, 0] and out22.get("person") == [1, 0], json.dumps(out22)[:500])
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            check("pin this post: the part ran to its end", False, str(exc).splitlines()[0][:200] if str(exc) else repr(exc))
+
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):
             ERRS.extend(f"csp: {v}" for v in p.csp())

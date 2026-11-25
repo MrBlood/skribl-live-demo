@@ -267,7 +267,7 @@ def feed_page(before=None, limit=PAGE, viewer=None, among=None):
     return once(page), (_cursor(page[-1]) if more and page else None)
 
 
-def person_page(person, viewer, before=None, limit=PAGE):
+def person_page(person, viewer, before=None, limit=PAGE, skip=None):
     """A page of one person's posts and reposts, newest first, for their
     profile's Posts tab (the map's step 4; reposts, the owner's "All yes",
     Nov 14): (entries, next cursor or None). Their drawings shown outside a
@@ -276,7 +276,9 @@ def person_page(person, viewer, before=None, limit=PAGE):
     own author, who sees it with the note (a repost of anything taken down,
     never); a mute leaves it as it is (their page is what the viewer went
     to). A repost is the original's card with "Mira Lopez reposted" ("You
-    reposted" on your own); the same post twice in one page shows once."""
+    reposted" on your own); the same post twice in one page shows once.
+    `skip`: their pinned post's id (pins.lead puts it first), never shown
+    again further down, as itself or reposted."""
     from .reposts import once, reposts_before
     from .safety import hidden_ids
     at = _uncursor(before) if before else None
@@ -287,6 +289,8 @@ def person_page(person, viewer, before=None, limit=PAGE):
     shared, more_r = reposts_before(at, limit, viewer, hidden, person=person)
     out = sorted([_entry(p, who) for p, who in rows] + shared, key=lambda e: (e["at"], e["key"]), reverse=True)
     more = len(out) > limit or more or more_r
+    if skip is not None:
+        out = [e for e in out if not (e.get("kind") == "p" and "post" in e and e["post"].id == skip)]
     page = out[:limit]
     return once(page), (_cursor(page[-1]) if more and page else None)
 
@@ -494,6 +498,10 @@ def cards(entries, viewer, words=True, aligned=False):
     drawings = describe_posts([e["post"].skribl_id if e["kind"] == "p" else e["sk"]["id"] for e in entries]
                               + quoted.skribls, viewer_id=viewer.public_id if viewer else None)
     makers = makers_of(drawings, quoted.drawing_ids)
+    # PIN THIS POST (pins.py): which post of theirs this viewer pinned, read
+    # once a page, for the ⋯'s words on their own cards.
+    from .pins import pinned_id
+    my_pin = pinned_id(viewer)
     # HOW MANY COMMENTS each card says (phase 2; a drawing's too, since every
     # drawing has comments): what its page will show this viewer, so a block
     # or a takedown is neither shown nor counted.
@@ -592,6 +600,12 @@ def cards(entries, viewer, words=True, aligned=False):
                        # WHO REPOSTED IT, on a repost's card (Home's Following, a
                        # Posts tab): "Mira Lopez reposted", "You reposted".
                        "by": by, "by_me": by is not None and viewer is not None and by.id == viewer.id,
+                       # PIN THIS POST (pins.py): the Posts tab's first card
+                       # says "Pinned" (`pinned`); the ⋯ on your own post
+                       # offers Pin or Unpin (`pin`: None, or whether it is
+                       # the one), never on a drawing or what is taken down.
+                       "pinned": bool(e.get("pinned")),
+                       "pin": ((my_pin is not None and p.id == my_pin) if e["kind"] == "p" and mine and not down else None),
                        "quote": (quoted.card(p, drawings, makers) if getattr(p, "is_quote", False) else None),
                        # MENTIONS (mentions.py): {as typed, in small letters:
                        # their handle now}, which said() makes links of.
@@ -1317,8 +1331,8 @@ def drawing_lock(skribl_id):
 
 
 def drop_post(author_public_id, row):
-    """A post's comments and answers, its likes, its bookmarks, its reposts
-    and its mentions, and its quotes letting go of it (phase 2, bookmarks,
+    """A post's comments and answers, its likes, its bookmarks, its reposts,
+    its mentions and its pin, and its quotes letting go of it (phase 2, bookmarks,
     reposts and mentions, said here and not left to a cascade), its drawing (Skribl's
     delete_post, as its author; a quote of words alone has none) and its
     row. A drawing already gone is no reason to keep the words. Flushes
@@ -1329,12 +1343,14 @@ def drop_post(author_public_id, row):
     from .comments import drop_post_comments
     from .likes import drop_post_likes
     from .mentions import drop_post_mentions
+    from .pins import drop_post_pin
     from .reposts import drop_post_reposts
     drop_post_comments(row.id)
     drop_post_likes(row.id)
     drop_post_bookmarks(row.id)
     drop_post_reposts(row.id)
     drop_post_mentions(row.id)
+    drop_post_pin(row.id)
     if row.skribl_id:
         try:
             delete_post(row.skribl_id, author_id=author_public_id)

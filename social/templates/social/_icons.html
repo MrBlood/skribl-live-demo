@@ -168,6 +168,14 @@
    across, 4.1 to 19.7 down). Two copies of the line: the inside (.bm-fill),
    filled in the small violet ink once the thing is yours (social.css,
    "BOOKMARKS"), and the line itself, in its row's ink. #}
+{# PIN THIS POST (the Pin mock, the owner's "all yes", Nov 25), in the pen: a
+   pin's head and its needle, as the mock drew it, a hair off true. In the ⋯'s
+   Pin row and on the Posts tab's "Pinned" line. #}
+{% macro pin() -%}
+{{ _pen(['M 9.0,3.5 C 11.0,3.6 13.0,3.4 15.0,3.5 L 13.8,9.1 C 14.9,10.2 16.0,11.4 17.0,12.5 C 13.7,12.6 10.3,12.4 7.0,12.5 C 8.1,11.4 9.1,10.2 10.2,9.1 Z',
+         'M 12.0,12.6 C 12.1,15.3 11.9,17.9 12.0,20.6']) }}
+{%- endmacro %}
+
 {% macro ribbon() -%}
 {%- set d = 'M 16.9,4.3 C 13.7,4.1 10.4,4.2 7.3,4.3 C 6.7,4.3 6.4,4.7 6.4,5.3 C 6.5,10.1 6.4,14.9 6.5,19.6 C 8.3,18.2 10.2,16.8 12.0,15.5 C 13.9,16.8 15.7,18.2 17.6,19.7 C 17.5,14.9 17.6,10.1 17.6,5.2 C 17.6,4.6 17.4,4.3 16.9,4.3' -%}
 <svg class="ic pen-ic ic-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path class="bm-fill" d="{{ d }}" stroke="none"/><path pathLength="1" d="{{ d }}"/></svg>

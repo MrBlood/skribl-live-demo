@@ -334,6 +334,9 @@ def delete_person(sess, person_id):
     from .bookmarks import drop_owner_bookmarks, drop_person_bookmarks
     drop_owner_bookmarks(person_id)
     drop_person_bookmarks(person_id)
+    # Their pin (pins: said here too, never left to the cascade).
+    from .pins import drop_person_pin
+    drop_person_pin(person_id)
     # Their reposts, every repost of what they owned, and the quotes of what
     # they owned letting go of it (reposts: said here too, never left to the
     # cascade or the SET NULL).
