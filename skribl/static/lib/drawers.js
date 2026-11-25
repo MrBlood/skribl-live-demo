@@ -94,12 +94,24 @@
   // don't fit. Read as if nothing had slid (the slide now, mid-glide too, is
   // the first mover's computed `left`); the top is the drawing's own with the
   // page at its top, where a drawer beside brings it (revealPanelEnd).
+  // Where a drawer held to the screen ends on the right: the screen's edge
+  // less the gutter the page keeps for a scrollbar (styles.css, html's
+  // scrollbar-gutter, both edges: 10px on a desk, which clientWidth does not
+  // count). Measured, so the drawing clears the drawer by SIDE_EDGE, not 6px.
+  function fixedRight() {
+    var p = document.createElement('div');
+    p.style.cssText = 'position:fixed;top:0;right:0;width:0;height:0;visibility:hidden;pointer-events:none';
+    document.body.appendChild(p);
+    var x = p.getBoundingClientRect().left;
+    p.remove();
+    return x;
+  }
   function sideFit(side) {
     if (!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches)) return null;
     var cv = _el(side.canvas), m = movers(side);
     if (!cv || !cv.getClientRects().length) return null;
     var off = m.length ? (parseFloat(getComputedStyle(m[0]).left) || 0) : 0;
-    var r = cv.getBoundingClientRect(), W = document.documentElement.clientWidth;
+    var r = cv.getBoundingClientRect(), W = fixedRight();
     var left = r.left - off, right = W - (r.right - off);
     var shift = Math.max(0, SIDE_W + 2 * SIDE_EDGE - right);
     if (shift > left - SIDE_EDGE) return null;

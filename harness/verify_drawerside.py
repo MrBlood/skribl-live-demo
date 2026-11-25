@@ -14,27 +14,37 @@ drawer opens below as before, and phones don't change.
 On the Pad (How it works' cat) and Flip (its bouncing ball):
 
   BESIDE: each drawer opened is a column at the drawing's right, 392px,
-  its top level with the drawing's, inside the screen; the drawing whole on
-  the screen at its own size; the page not scrolled.
-  ONLY AS FAR AS NEEDED: the drawing slides left by the drawer's room less
-  the room at its right (none where there is enough: Flip from 1536px up);
+  ending 16px in from where a drawer held to the screen can end (the page
+  keeps a scrollbar's gutter at each edge), its top level with the
+  drawing's; the drawing whole on the screen at its own size, 16px clear of
+  the drawer at least; the page not scrolled.
+  ONLY AS FAR AS NEEDED: the drawing slides left until it ends 16px from the
+  drawer, and no further (none where there is room: Flip from 1536px up);
   the header stays; what sits under the drawing (the Pad's dock; Flip's page
-  strip and dock) slides with it, by as much.
+  strip and dock) slides with it, by as much; the pen's drawer closed, all
+  of it is back where it was.
   IT GLIDES, AND GLIDES BACK: the drawing's left read on every frame moves
   over three frames or more, never more than 60% of the way in one, and
   never back; closing, the same home again. Under Reduce Motion one frame
   carries it.
   INSIDE THE DRAWER: what a tile opens (the pen's Feel) and Restart's door
   with a song in (taller than the screen) show by the drawer's own column
-  gliding inside itself, the tile tapped still in it; the page stays.
+  gliding inside itself, just far enough for the end of what opened, or
+  until the tile tapped is 8px under its top, whichever comes first (on a
+  1280x600 desk all of Feel's choices show; on a 1280x560 one Flip's tile
+  stays); the page stays.
   THE EYEDROPPER: the drawer stays out while it picks (nothing covers the
   drawing to step aside for).
-  STILL WHERE IT POINTS: a click on the drawing after the slide lands where
-  it points (the drawing's place is read again: a resize at the end).
+  STILL WHERE IT POINTS: on Flip, which draws with a drawer open, a stroke
+  with the drawer beside lands where it is drawn; the Pad's first press on
+  the drawing puts a drawer away, as below, and the drawing glides home. On
+  both, the drawer gone, a stroke lands where it is drawn (the drawing's
+  place is read again: a resize at the slide's end).
 
 Elsewhere:
 
-  BELOW: a 1024x800 desk (the cat would not fit whole beside it), a tablet
+  BELOW: a 900x800 desk (neither drawing fits whole beside a drawer; at
+  1024 Flip's, small on a short screen, does), a tablet
   (a finger: 1180x820 with touch) and a phone open below as before.
   A RESIZE DECIDES AGAIN: open beside, the window narrowed: below; widened
   again: beside.
@@ -87,6 +97,8 @@ LOOK = """([cv, move]) => {
   const open = [...document.querySelectorAll('#drawPanel, #mediaCard, #txSheet')].find(e => !e.hidden && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 40);
   return { beside: skriblDrawers.beside(), canvas: r(document.getElementById(cv)), drawer: r(open), id: open ? open.id : null,
            side: open ? open.classList.contains('drawer-side') : false, scrollY: scrollY, W: document.documentElement.clientWidth, H: innerHeight,
+           R: (() => { const p = document.createElement('div'); p.style.cssText = 'position:fixed;top:0;right:0;width:0;height:0';
+                       document.body.appendChild(p); const x = p.getBoundingClientRect().left; p.remove(); return x; })(),
            header: r(document.querySelector('.header')), moved: move.map(s => r(document.querySelector(s))) }; }"""
 
 
@@ -160,22 +172,23 @@ with sync_playwright() as pw:
             c, q = boot(b, ed, size)
             rest = look(q, ed)
             got = {}
+            back = None
             for name in ("draw", "photo", "music", "text"):
                 open_(q, ed, name)
                 got[name] = look(q, ed)
-                if name == "text":
-                    close_(q, ed)
-            close_(q, ed)
-            back = look(q, ed)
+                close_(q, ed)
+                if name == "draw":
+                    back = look(q, ed)
             c.close()
-            cr, W, H = rest["canvas"], rest["W"], rest["H"]
-            right_room = W - (cr[0] + cr[2])
-            want = max(0, SIDE_W + 2 * EDGE - right_room)
+            cr, W, H, R = rest["canvas"], rest["W"], rest["H"], rest["R"]
+            # The drawer ends EDGE in from where a drawer held to the screen
+            # can end (R: the page keeps a scrollbar's gutter at each edge).
+            want = max(0, SIDE_W + 2 * EDGE - (R - (cr[0] + cr[2])))
 
             def placed(g):
                 cv, d = g["canvas"], g["drawer"]
                 return (g["beside"] and g["side"] and d is not None and abs(d[2] - SIDE_W) <= 1
-                        and d[0] >= cv[0] + cv[2] + 8 and d[0] + d[2] <= W - EDGE + 1 and abs(d[1] - cv[1]) <= 1
+                        and d[0] >= cv[0] + cv[2] + EDGE - 1 and abs(d[0] + d[2] - (R - EDGE)) <= 1 and abs(d[1] - cv[1]) <= 1
                         and d[1] + d[3] <= H + 1 and cv[0] >= 0 and cv[0] + cv[2] <= W and cv[1] >= 0 and cv[1] + cv[3] <= H
                         and abs(cv[2] - cr[2]) <= 1 and abs(cv[3] - cr[3]) <= 1 and g["scrollY"] == 0)
             check(f"{ed} {size[0]}x{size[1]}: Pen, Photo, Music and Text each open beside the drawing, 392px at its right, its top"
@@ -184,13 +197,18 @@ with sync_playwright() as pw:
                   json.dumps({"rest": cr, **{k: [g["beside"], g["canvas"], g["drawer"], g["scrollY"]] for k, g in got.items()}})[:700])
             g = got["draw"]
             slid = cr[0] - g["canvas"][0]
+            # Only as far as needed: slid, the drawing ends EDGE from the
+            # drawer; not slid, it already ended that far from it or more.
+            gap = g["drawer"][0] - (g["canvas"][0] + g["canvas"][2]) if g["drawer"] else None
+            far = gap is not None and ((slid > 0.5 and abs(gap - EDGE) <= 1.5) or (abs(slid) <= 0.5 and gap >= EDGE - 1))
             moved_ok = all(m0 and m1 and abs((m0[0] - m1[0]) - slid) <= 1 for m0, m1 in zip(rest["moved"], g["moved"]))
-            check(f"{ed} {size[0]}x{size[1]}: the drawing slides left only as far as the drawer needs ({want:.0f}px here), what sits"
-                  " under it with it by as much; the header stays; closed, everything is back",
-                  abs(slid - want) <= 1.5 and moved_ok and rest["header"] == g["header"]
-                  and not back["beside"] and abs(back["canvas"][0] - cr[0]) <= 1 and back["moved"] == rest["moved"],
-                  json.dumps({"slid": slid, "want": want, "moved": [rest["moved"], g["moved"]], "header": [rest["header"], g["header"]],
-                              "back": back["canvas"]})[:600])
+            same = lambda u, v: u is not None and v is not None and all(abs(x - y) <= 0.5 for x, y in zip(u, v))
+            check(f"{ed} {size[0]}x{size[1]}: the drawing slides left only as far as the drawer needs ({want:.0f}px here: it ends"
+                  f" {EDGE}px from the drawer), what sits under it with it by as much; the header stays; closed, everything is back",
+                  far and abs(slid - want) <= 1.5 and moved_ok and rest["header"] == g["header"] and back is not None
+                  and not back["beside"] and same(back["canvas"], cr) and all(same(u, v) for u, v in zip(back["moved"], rest["moved"])),
+                  json.dumps({"slid": slid, "want": want, "gap": gap, "moved": [rest["moved"], g["moved"]], "header": [rest["header"], g["header"]],
+                              "back": back and [back["beside"], back["canvas"], back["moved"]]})[:700])
 
     # ------------------------------------------------------------ the glide
     print("\nIT GLIDES — the drawing's left read on every frame, opening and closing; Reduce Motion goes straight there")
@@ -212,21 +230,33 @@ with sync_playwright() as pw:
 
     # ------------------------------------------------------------ inside the drawer
     print("\nINSIDE THE DRAWER — what a tile or a door opens shows by the drawer's own column, never the page")
+    # The column glides just far enough for the end of what opened to show,
+    # or until the tile tapped is 8px under its top, whichever comes first:
+    # on a 1280x600 desk there is room for both; on a 1280x560 one Flip's
+    # Feel has not, and the tile stays, the choices going on below it, as a
+    # Music door's do.
+    took = []
     for ed in ED:
-        c, q = boot(b, ed, (1280, 560))
-        open_(q, ed, "draw")
-        q.evaluate("""() => { window.__opened = null; document.getElementById('drawPanel').addEventListener('drawtile',
-            (e) => { if (e.detail && e.detail.open) window.__opened = e.detail.el; }); }""")
-        q.click("#drawTiles .dp-tile[data-dp='feel']")
-        q.wait_for_timeout(1200)
-        m = q.evaluate("""() => { const box = document.querySelector('.drawer-side'), p = window.__opened,
-            t = document.querySelector("#drawTiles .dp-tile[data-dp='feel']"); if (!box || !p) return null;
-            const b = box.getBoundingClientRect(), r = p.getBoundingClientRect(), tr = t.getBoundingClientRect();
-            return { scroll: box.scrollTop, end: r.top + p.offsetHeight, boxEnd: b.bottom, tile: tr.top, boxTop: b.top, page: scrollY }; }""")
-        c.close()
-        check(f"{ed} 1280x560: the pen's Feel, opened beside, shows all of its choices inside the drawer (its column glides, the"
-              " tile still in it), the page where it was",
-              m is not None and m["scroll"] > 0 and m["end"] <= m["boxEnd"] + 1 and m["tile"] >= m["boxTop"] - 1 and m["page"] == 0, json.dumps(m))
+        for h in (600, 560):
+            c, q = boot(b, ed, (1280, h))
+            open_(q, ed, "draw")
+            q.evaluate("""() => { window.__opened = null; document.getElementById('drawPanel').addEventListener('drawtile',
+                (e) => { if (e.detail && e.detail.open) window.__opened = e.detail.el; }); }""")
+            q.click("#drawTiles .dp-tile[data-dp='feel']")
+            q.wait_for_timeout(1200)
+            m = q.evaluate("""() => { const box = document.querySelector('.drawer-side'), p = window.__opened,
+                t = document.querySelector("#drawTiles .dp-tile[data-dp='feel']"); if (!box || !p) return null;
+                const b = box.getBoundingClientRect(), r = p.getBoundingClientRect(), tr = t.getBoundingClientRect();
+                return { scroll: box.scrollTop, end: r.top + p.offsetHeight, boxEnd: b.bottom, tile: tr.top, boxTop: b.top, page: scrollY }; }""")
+            c.close()
+            shows = m is not None and abs(m["end"] - (m["boxEnd"] - 12)) <= 1.5 and m["tile"] >= m["boxTop"] + 6.5
+            stays = m is not None and abs(m["tile"] - (m["boxTop"] + 8)) <= 1.5 and m["end"] > m["boxEnd"] - 12
+            took.append((ed, h, "all of it" if shows else "the tile" if stays else None))
+            check(f"{ed} 1280x{h}: the pen's Feel, opened beside, shows by its column gliding just far enough for its choices' end,"
+                  " or until the tile tapped is 8px under the column's top, whichever comes first; the page where it was",
+                  m is not None and m["scroll"] > 0 and (shows or stays) and m["page"] == 0, json.dumps(m))
+    check("...both ways seen: all of what opened shown (the tile in view), and the tile kept where the column cannot have both",
+          any(t == "all of it" for *_, t in took) and any(t == "the tile" for *_, t in took), json.dumps(took))
     song = browsing.wav_song(30.0) if hasattr(browsing, "wav_song") else None
     if song is None:
         import io, math, struct, wave
@@ -271,30 +301,53 @@ with sync_playwright() as pw:
                    "() => { const s = getCanvasLogicalSize(); return [s.width, s.height]; }"),
            "Flip": ("() => frame().strokes.length", "(n) => frame().strokes[n] ? [frame().strokes[n].x, frame().strokes[n].y] : null",
                     "() => [CW, CH]")}
-    for ed in ED:
-        c, q = boot(b, ed, (1440, 900), load=False)
-        open_(q, ed, "draw", wait=900)
+    def stroke(q, ed, fx=0.25, fy=0.75):
+        """A stroke begun `fx` across and `fy` down the drawing: its first point, the drawing's logical size."""
         box = q.evaluate("(cv) => { const c = document.getElementById(cv).getBoundingClientRect(); return [c.left, c.top, c.width, c.height]; }", ED[ed]["cv"])
         n0 = q.evaluate(PTS[ed][0])
-        x, y = box[0] + box[2] * 0.25, box[1] + box[3] * 0.75
+        x, y = box[0] + box[2] * fx, box[1] + box[3] * fy
         q.mouse.move(x, y)
         q.mouse.down()
         for k in range(1, 9):
             q.mouse.move(x + k * 6, y - k * 3)
         q.mouse.up()
         q.wait_for_timeout(300)
-        first = q.evaluate(PTS[ed][1], n0)
-        lg = q.evaluate(PTS[ed][2])
-        slid = q.evaluate("() => getComputedStyle(document.documentElement).getPropertyValue('--side-shift').trim()")
+        return q.evaluate(PTS[ed][1], n0), q.evaluate(PTS[ed][2])
+
+    def lands(first, lg, fx=0.25, fy=0.75):
+        return first is not None and abs(first[0] - lg[0] * fx) <= lg[0] * 0.02 and abs(first[1] - lg[1] * fy) <= lg[1] * 0.02
+
+    SHIFT = "() => getComputedStyle(document.documentElement).getPropertyValue('--side-shift').trim()"
+    for ed in ED:
+        c, q = boot(b, ed, (1440, 900), load=False)
+        open_(q, ed, "draw", wait=900)
+        slid = q.evaluate(SHIFT)
+        if ed == "Flip":
+            # Flip draws with a drawer open: the stroke goes where it is drawn, the drawer staying.
+            first, lg = stroke(q, ed)
+            check(f"Flip: with the drawer beside (the drawing slid {slid}), a stroke begun a quarter across and three quarters down"
+                  " the drawing lands there in it",
+                  bool(slid) and lands(first, lg) and q.evaluate(f"() => {ED[ed]['ctl']}.current()") == "draw",
+                  json.dumps({"first": first, "logical": lg, "slid": slid}))
+            close_(q, ed)
+        else:
+            # The Pad's first press on the drawing puts a drawer away, as it does below (and draws nothing).
+            box = q.evaluate("(cv) => { const c = document.getElementById(cv).getBoundingClientRect(); return [c.left, c.top, c.width, c.height]; }", ED[ed]["cv"])
+            q.mouse.click(box[0] + box[2] * 0.6, box[1] + box[3] * 0.4)
+            q.wait_for_timeout(900)
+            away = q.evaluate(f"() => {ED[ed]['ctl']}.current()") is None and not q.evaluate("() => skriblDrawers.beside()")
+            check(f"Pad: with the drawer beside (the drawing slid {slid}), the first press on the drawing puts it away, as below,"
+                  " and the drawing glides home",
+                  bool(slid) and away and not q.evaluate(SHIFT), json.dumps({"slid": slid, "away": away}))
+        # Home again, its place read again (the resize at the slide's end): a stroke lands where it is drawn.
+        first, lg = stroke(q, ed, 0.7, 0.3)
         c.close()
-        check(f"{ed}: with the drawer beside (the drawing slid {slid}), a stroke begun a quarter across and three quarters down the"
-              " drawing lands there in it",
-              first is not None and abs(first[0] - lg[0] * 0.25) <= lg[0] * 0.02 and abs(first[1] - lg[1] * 0.75) <= lg[1] * 0.02,
-              json.dumps({"first": first, "logical": lg, "slid": slid}))
+        check(f"{ed}: the drawer gone and the drawing home, a stroke begun seven tenths across and three tenths down lands there",
+              lands(first, lg, 0.7, 0.3), json.dumps({"first": first, "logical": lg}))
 
     # ------------------------------------------------------------ below
     print("\nBELOW — where the two don't fit, with a finger, and on a phone; a resize decides again; the tools tray as it was")
-    for label, size, kw in (("a 1024x800 desk", (1024, 800), {}), ("a tablet (1180x820, a finger)", (1180, 820), {"touch": True}),
+    for label, size, kw in (("a 900x800 desk", (900, 800), {}), ("a tablet (1180x820, a finger)", (1180, 820), {"touch": True}),
                             ("a phone (402x874)", (402, 874), {"phone": True})):
         for ed in ED:
             c, q = boot(b, ed, size, **kw)
@@ -308,7 +361,7 @@ with sync_playwright() as pw:
         c, q = boot(b, ed, (1440, 900))
         open_(q, ed, "draw")
         a = look(q, ed)["beside"]
-        q.set_viewport_size({"width": 1024, "height": 800})
+        q.set_viewport_size({"width": 900, "height": 800})
         q.wait_for_timeout(900)
         g = look(q, ed)
         q.set_viewport_size({"width": 1440, "height": 900})
@@ -320,7 +373,7 @@ with sync_playwright() as pw:
         t = look(q, ed)
         tray = q.evaluate("() => { const t = document.getElementById('toolTray'); return !!t && !t.hidden && getComputedStyle(t).position; }")
         c.close()
-        check(f"{ed}: opened beside, the window narrowed to 1024 puts the drawer below; widened again, beside",
+        check(f"{ed}: opened beside, the window narrowed to 900 puts the drawer below; widened again, beside",
               a and not g["beside"] and g["drawer"] is not None and g["drawer"][1] > g["canvas"][1] + g["canvas"][3] - 1 and z["beside"],
               json.dumps({"wide": a, "narrow": [g["beside"], g["canvas"], g["drawer"]], "again": z["beside"]}))
         check(f"{ed}: the tools tray is never beside, and opens with the page where it was",

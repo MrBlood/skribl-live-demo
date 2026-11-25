@@ -199,10 +199,13 @@
       var box = sideBox(el);
       if (box) {
         // Inside the drawer's column: just far enough for the end of what
-        // opened to show, never past its own top; only ever down.
+        // opened to show, never so far that the tile tapped leaves the
+        // column (where the two cannot both show, the tile stays, as a
+        // Music door's does); only ever down.
         var br = box.getBoundingClientRect(), er = el.getBoundingClientRect(), at = box.scrollTop;
+        var tile = box.querySelector('.dp-tile[aria-expanded="true"]') || el;
         var end = at + er.top + el.offsetHeight - br.bottom + 12;
-        var cap = at + er.top - br.top - 8;
+        var cap = at + tile.getBoundingClientRect().top - br.top - 8;
         var go = Math.min(end, cap, box.scrollHeight - box.clientHeight);
         if (go <= at + 1) return;
         var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
