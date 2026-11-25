@@ -74,7 +74,7 @@ CAT = json.loads((ROOT / "skribl/static/help/demos/cat.json").read_text())
 BALL = json.loads((ROOT / "skribl/static/help/demos/flip-bounce.json").read_text())
 ED = {
     "Pad": {"route": "/skribl-pad", "cv": "canvas", "ctl": "_padDrawerCtl", "move": ["#toolBar"], "doc": CAT,
-            "load": "d => loadSkribl(d)", "ready": "() => typeof loadSkribl === 'function' && !!window._padDrawerCtl"},
+            "load": "d => loadSkribl(d)", "ready": "() => typeof loadSkribl === 'function' && typeof _padDrawerCtl !== 'undefined' && !!_padDrawerCtl"},
     "Flip": {"route": "/flip", "cv": "pad", "ctl": "_flipDrawerCtl", "move": [".strip-wrap", ".flip-tools"], "doc": BALL,
              "load": "d => applyFlipDraftObject(d)", "ready": "() => typeof applyFlipDraftObject === 'function' && typeof _flipDrawerCtl !== 'undefined'"},
 }
