@@ -101,21 +101,35 @@ def open_page(ctx, path, theme=None):
 
 # ---------------------------------------------------------------- contrast
 TEXT_RECTS = """(sels) => {
-  const out = [];
+  // A BOX'S WORDS WHEREVER THEY SIT IN IT, each read by the element that
+  // paints it. This read a box's own text alone, so it read none of the words
+  // lib/labels.js moves into a span of their own (every pill's: New | Hot),
+  // and the Gallery's chosen New went by at 6.24:1 against the page's 7:1
+  // (DECISIONS, "AND A BLIND SPOT, NOT MENDED HERE"). A word under two
+  // selectors is read once.
+  const out = [], seen = new Set();
   for (const s of sels) for (const el of document.querySelectorAll(s)) {
-    const cs = getComputedStyle(el);
-    if (cs.visibility === 'hidden' || !el.getClientRects().length) continue;
-    // A box a pixel wide paints no words (a count read out but not drawn),
-    // though its text's own rects still report their full width.
-    const own = el.getBoundingClientRect(); if (own.width <= 1 || own.height <= 1) continue;
-    const rects = [];
-    for (const n of el.childNodes) {
-      if (n.nodeType !== 3 || !n.textContent.trim()) continue;
+    if (getComputedStyle(el).visibility === 'hidden' || !el.getClientRects().length) continue;
+    const by = new Map();
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      if (!n.textContent.trim() || seen.has(n)) continue;
+      const host = n.parentElement, cs = getComputedStyle(host);
+      if (cs.visibility === 'hidden' || !host.getClientRects().length) continue;
+      // A box a pixel wide paints no words (a count read out but not drawn),
+      // though its text's own rects still report their full width.
+      const own = host.getBoundingClientRect(); if (own.width <= 1 || own.height <= 1) continue;
+      const rects = [];
       const rg = document.createRange(); rg.selectNodeContents(n);
       for (const r of rg.getClientRects()) if (r.width > 1 && r.bottom > 0 && r.top < innerHeight) rects.push([r.left, r.top, r.right, r.bottom]);
+      if (!rects.length) continue;
+      seen.add(n);
+      let it = by.get(host);
+      if (!it) { it = { sel: s, text: '', color: cs.color, size: parseFloat(cs.fontSize), weight: parseInt(cs.fontWeight, 10), rects: [] };
+                 by.set(host, it); out.push(it); }
+      it.text = (it.text + ' ' + n.textContent.trim()).trim().slice(0, 24);
+      it.rects.push(...rects);
     }
-    if (rects.length) out.push({ sel: s, text: el.textContent.trim().slice(0, 24), color: cs.color,
-                                 size: parseFloat(cs.fontSize), weight: parseInt(cs.fontWeight, 10), rects });
   }
   return out; }"""
 HIDE_TEXT = ("*{color:transparent!important;-webkit-text-fill-color:transparent!important;"
@@ -801,8 +815,10 @@ with sync_playwright() as p:
         check(f"drafts 390 {theme}: ...Open goes to the Pad with the draft, and Delete stands apart, past the 13px rule, with no dead point between the others",
               bool(m) and "?draft=" in m["href"] and 8 <= m["rule"] <= 13 and m["dead"] == 0, str(m and [m["href"], m["rule"], m["dead"]]))
         mc = glass_contrast(pg, ['.draft-row.more-open .draft-act .draft-lbl'], 2)
+        # Four pieces in three rows: " a .skribl" is a span of its own inside
+        # Save a .skribl file (lib/savedrafts.js), and is read as its own.
         check(f"drafts 390 {theme}: every word in the open menu reads 7:1 or more on real pixels ({len(mc)} measured)",
-              len(mc) == 3 and not [x for x in mc if x[1] < 7], str(mc))
+              len(mc) == 4 and not [x for x in mc if x[1] < 7], str(mc))
         _tap(row.locator(".draft-del")); pg.wait_for_timeout(250)
         a = pg.evaluate(DMENU, f"{TAG} file me")
         ac = glass_contrast(pg, ['.draft-row.more-open .draft-del.armed .draft-lbl'], 2)

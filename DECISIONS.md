@@ -53144,3 +53144,29 @@ THE TELL: on the site's How it works page, The Pad, then the ×
 on its How it works: you are back on the page, not in the Pad.
 
 PAD AND FLIP: shared (one script, both editors' compose mode).
+
+## After v330 -- The Gallery's chosen word reads 7:1, and the check that holds the page to it reads every word
+
+On the owner's list since Nov 22 ("AND A BLIND SPOT, NOT MENDED HERE",
+above): Skribl's Gallery holds every word on the page to 7:1, and its
+check, `verify_galib`'s "every word on the page reads 7:1", read only a
+box's own text. `lib/labels.js` moves a button's words into a span of their
+own, so no pill's words had been read since labels.js, and the chosen New
+read 6.24:1 in light. The owner's "all yes", Nov 24, to darkening it.
+
+THE CHECK (a bug, mended first): it reads a box's words wherever they sit
+in it, each by the element that paints it, a word under two selectors once.
+Run whole on the tree as it was, 188 of 192: red at `/gallery` light, desk
+and phone, New at 6.24, and on the Drafts menu's count alone (" a .skribl"
+is a span of its own inside Save a .skribl file, so three rows are four
+pieces now, every one 9.8:1 or more; the row counts four).
+
+THE WORD: the Gallery's chosen ink in light is the Library's own,
+`#301c8c` (the same role on the sister page, `skribl_library.html`), 7.7:1
+on the same tint, a clear violet, never a grey. Dark is unchanged. The
+host's copy of the section (`gallerysection.css`, derived from `/gallery`'s
+sheets) follows by `cssgraph.py --emit`; the player's sheet is unmoved.
+
+PAD AND FLIP: not for them. The editors' pills are held to AA with the app
+(their white action words too), as the record above says; this is the
+Gallery page's own 7:1.
