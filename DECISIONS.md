@@ -54055,3 +54055,64 @@ the build had not read in CI's face or had renamed without its reader:
 `verify_helpclaims` 47/47, `verify_help` 95/95, `verify_helpdemos`
 137/137. Read in CI's face before the next merge of anything about words
 fitting, as WORKING-AGREEMENTS asks; this one fitted by a few pixels.
+
+
+## After v330 -- Two hands: plays of Both counted, and a quote shows both
+
+The owner, Nov 25, about 7:25 PM: "do the Two Hands fixes", of the three
+steps the first one left (`DECISIONS.md`, "Draw back, two hands", NOT YET).
+Two were fixes and are built; the third is not a fix, said below.
+
+PLAYS OF BOTH, COUNTED. Skribl counted a play only when its own route served
+a drawing to a player; Both is served by the site's (`hands_drawing`,
+through the player's `api` seam), so a two-hands draw-back's plays went
+uncounted, and Hot never saw them. Skribl's one count (`count_view`: once a
+client a UTC day, the lifetime total moved by the database, best effort
+inside a savepoint) moved from the routes to `skribl/views.py`, where its
+own route and a host both use it; `skribl.count_play(public_id,
+viewer_id=None)` is the seam (exported, `docs/INTEGRATION.md`, "A play you
+serve yourself"). The site counts Both and his alone as plays of his
+drawing; hers alone counts nothing toward hers, as a draw-back's play never
+did (it is her drawing as he answered it, on his post).
+
+A QUOTE SHOWS BOTH. A quote of a two-hands draw-back showed his own
+picture, his strokes alone (`reposts.Quoted.card` read his drawing as
+Skribl describes it). It shows what its card shows the viewer now
+(`Quoted._both`, read once for the page's quoted posts): while her drawing
+is shown to them, the picture of both (`hands_picture`) and the line the
+two make together; behind a block, or with hers removed, his own drawing.
+The small card's picture takes the drawing's `poster` where it has one
+(`_gallery.html` quote_card).
+
+NOT A FIX, AND NOT BUILT: a two-hands draw-back drawn back on. That is the
+seventh answer's chain (one original and one answer first; once that is
+solid, up to five hands deep), a feature with its own questions (what the
+third hand draws on, how three to five hands show under the drawing), and
+the first step is behind the owner's switch, not yet turned on. Told to the
+owner as needing its own mock.
+
+THE CHECKS: `verify_socialdrawback` 15, three rows: a play of Both counts a
+play of his drawing once a viewer a day, his alone too (another viewer's),
+hers alone nothing toward hers; a quote of it shows the picture of both;
+and behind a block, his own picture. `verify_hostseams`: count_play counts a
+new client's play and moves the total, not the same client's again that
+day, another client's, and nothing for a post there is none of; a
+documented name.
+
+CALIBRATED, each tree its own worktree (the suite runs its own servers):
+as built, every row green; main red on the plays row and the quote row
+(its block row holds on main too, showing his picture to everyone). One
+break at a time, each red on its own row: his alone not counted; hers
+counted toward hers (the plays row, each); the quote reading his strokes
+alone; the quote's picture always Skribl's (the quote row, each); the quote
+showing both behind a block (the block row). `verify_hostseams`'s row red
+with count_play counting nothing.
+
+THE SUITES, side by side, each on its own server: verify_socialdrawback
+150/150, verify_socialreposts 106/106, verify_socialposts 125/125,
+verify_gallery 234/234, verify_hostseams 143/143, verify_createpost 91/91,
+verify_apiedges 70/70, verify_hot 56/56. Not the full battery: main's run
+after the merge is.
+
+PAD AND FLIP: the site's (two hands is the Pad's draw-back today); Skribl's
+count serves both editors' drawings alike.
