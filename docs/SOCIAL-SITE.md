@@ -4154,3 +4154,24 @@ opened below with half the drawing scrolled out of view. Skribl's side of the
 same "All yes" (a drawing that makes a little room, Flip's strip under the
 drawer) is `lib/drawers.js`, held by `verify_drawerside`; this side by
 `verify_composer`.
+
+## 50. Built: The tiles' edge, crisp (Nov 26)
+
+The owner, Nov 26 evening, on a Windows desk: "On the desktop the top edge of the
+gallery chips does not look good (dark is worse). It's not crisp at all." Then
+"All yes on A" to the Crisp Tile Edge mock.
+
+WHY IT WAS SOFT: a Windows screen is usually scaled, 125% or 150%. The tile's
+edge (section 47) was 1px, as the enamel mock drew it: at 150% a screen pixel and
+a half, smeared across two; and in dark the line of light under it blurred into a
+grey band at the top. Every other line on the site is one screen pixel (THE
+EDGES, Nov 15), which is why only the tiles looked soft.
+
+THE EDGE, CRISP (`social.css`): `--tile-line` is whole screen pixels, as near 1px
+as each density allows (one pixel at 1x, 1.25x and 1.5x; two from 1.75x to 2.5x;
+three from 2.625x), by the same density steps as `--hair`; on a phone (3x) it is
+the 1px it was. The line of light and the dark foot are gone: in dark the tile
+is its edge alone, as in light. The hover's line (section 48) is the same width.
+`verify_socialposts` 22 holds it (the edge read where it is painted and nothing
+under or over it; the line at seven densities a whole number of pixels), each
+row shown red by breaking its part.
