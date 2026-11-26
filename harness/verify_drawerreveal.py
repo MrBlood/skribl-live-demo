@@ -54,9 +54,10 @@ And for one tile pressed after another, the pen drawer's Feel and then:
   SkriblDrawerDetent.shrinkGently), and Eraser's choices show.
   BRUSH, ON A DESK, ALREADY IN VIEW: the page stays where it is.
 
-And on a short desk, 720x560 (1280x560 until drawers went beside the drawing
+And on a short desk, 700x560 (1280x560 until drawers went beside the drawing
 on a wider desk, Nov 25: lib/drawers.js, verify_drawerside; at 800 Flip's
-drawing, small on a short screen, fits beside), where the holds bind:
+drawing, small on a short screen, fits beside; 720x560 until Nov 26, when at
+720 it fits a little smaller), where the holds bind:
 
   THE PEN'S FEEL stops with the bar above the drawer at the top of the
   screen, not past it, the choices going on below.
@@ -124,11 +125,14 @@ import waits  # noqa: E402
 
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=1, is_mobile=True, has_touch=True)
 # Desks where a drawer opens below the drawing, the page gliding to it, as
-# these rows were written for (1280x800 and 1280x560 until Nov 25); a wider
-# one opens it beside the drawing (lib/drawers.js), checked in verify_drawerside.
-DESK = dict(viewport={"width": 960, "height": 800}, device_scale_factor=1)
+# these rows were written for (1280x800 and 1280x560 until Nov 25; 960x800
+# and 720x560 until Nov 26, when a drawing up to a quarter too wide began to
+# make room beside a drawer: the Pad's at 960, a fifth smaller, and Flip's at
+# 720); a wider one opens it beside the drawing (lib/drawers.js), checked in
+# verify_drawerside.
+DESK = dict(viewport={"width": 900, "height": 800}, device_scale_factor=1)
 DEVICES = {"phone": PHONE, "desk": DESK}
-SHORT = dict(viewport={"width": 720, "height": 560}, device_scale_factor=1)   # a short desk, where the holds bind
+SHORT = dict(viewport={"width": 700, "height": 560}, device_scale_factor=1)   # a short desk, where the holds bind
 SHORTPHONE = dict(viewport={"width": 402, "height": 664}, device_scale_factor=1, is_mobile=True, has_touch=True)
 EDITORS = {"Pad": {"route": "/skribl-pad", "ctl": "_padDrawerCtl", "dock": "#toolBar"},
            "Flip": {"route": "/flip", "ctl": "_flipDrawerCtl", "dock": ".flip-tools"}}
@@ -354,7 +358,7 @@ with sync_playwright() as p:
                 check(f"{ed} {dev} {drawer}: no page errors", not errs, "; ".join((errs or [])[:2]))
                 c.close()
 
-    # A SHORT DESK, 720x560, where the holds bind. The pen's Feel: the page
+    # A SHORT DESK, 700x560, where the holds bind. The pen's Feel: the page
     # stops with the bar above the drawer at the top of the screen, the
     # choices going on below it. Text with words typed: on the Pad the words
     # hold the page (they stay in view while the slider changes them); on
