@@ -12,7 +12,9 @@ between the two of you.
     /letters/<id>/open              The recipient's page started playing it
     /letters/<id>/take-back         The sender, until it is opened: it goes
     /letters/<id>/delete            Gone from your side; from both, it goes
-    /letters/@<handle>              The two of you (the pages, part three)
+    /letters                        Letters: Activity's own rows (the pages)
+    /letters/write                  Write: the people you may write to
+    /letters/@<handle>              The two of you
 
 WHO CAN WRITE (choice 1): two people who follow each other, and nobody
 across a block (pair_ok). Neither may be taken down. Writing back is
@@ -194,6 +196,24 @@ def dot(me):
     return len(unopened(me))
 
 
+def dot_for_request():
+    """"new" when a letter waits unopened for the person signed in, else None:
+    the envelope's dot, asked once a request (a phone's top and a desk's rail
+    are the same page). A dot that cannot be read is no dot."""
+    from flask import g
+    if "social_letters_dot" in g:
+        return g.social_letters_dot
+    got = None
+    try:
+        got = "new" if dot(current_person()) else None
+    except sa.exc.SQLAlchemyError:
+        site().say_once("letters-dot", "the site could not read the letters waiting for the envelope's dot; "
+                                       "it shows none until it can. Are its tables up to date? "
+                                       "python -m alembic -c social/alembic.ini upgrade head")
+    g.social_letters_dot = got
+    return got
+
+
 def hand_at(original, joined):
     """Where the answer's hand starts in `joined` (drawback.join of
     `original` and an answer): the time of its first point, in the drawing's
@@ -205,6 +225,95 @@ def hand_at(original, joined):
         return None
     t = pts[n].get("t")
     return int(t) if isinstance(t, (int, float)) and not isinstance(t, bool) else None
+
+
+def friends(me):
+    """The people `me` may write to (pair_ok), by name: those who follow each
+    other with them, nobody hidden. For Write's list."""
+    from .follows import _on
+    from .models import Follow
+    from .safety import hidden_ids
+    if me is None:
+        return []
+    from sqlalchemy.orm import aliased
+    a, b2 = aliased(Follow), aliased(Follow)
+    q = (sa.select(Person).join(a, sa.and_(a.followed_id == Person.id, a.follower_id == me.id, a.ended_at.is_(None)))
+         .join(b2, sa.and_(b2.follower_id == Person.id, b2.followed_id == me.id, b2.ended_at.is_(None)))
+         .where(Person.taken_down_at.is_(None)).order_by(sa.func.lower(Person.display_name), Person.id))
+    hid = hidden_ids(me)
+    return [p for p in site().session().execute(q).scalars().all() if p.id not in hid]
+
+
+#: A page of Letters' rows, at most.
+ROWS = 100
+
+
+def _people_of(ids):
+    if not ids:
+        return {}
+    return {p.id: p for p in site().session().execute(sa.select(Person).where(Person.id.in_(sorted(ids)))).scalars()}
+
+
+def rows(me, skribl_blueprint="skribl"):
+    """LETTERS' ROWS (Activity's own, the mock's choice 3 and 4): every sheet
+    on `me`'s side, newest first, each sheet once (a letter written back on
+    is inside the one written on it). Each: the letter, the other person,
+    whether it is to me, `new` (to me and not opened: sealed, its dot), what
+    it says, and its small picture (never a sealed one's: the envelope)."""
+    from skribl import describe_posts
+    from .activity import _pic
+    if me is None:
+        return []
+    got = site().session().execute(
+        sa.select(Letter).where(sa.or_(Letter.sender_id == me.id, Letter.recipient_id == me.id))
+        .order_by(Letter.created_at.desc(), Letter.id.desc()).limit(ROWS * 2)).scalars().all()
+    shown = [r for r in got if shown_to(r, me)]
+    inside = {r.written_on_id for r in shown if r.written_on_id is not None}
+    sheets = [r for r in shown if r.id not in inside][:ROWS]
+    people = _people_of({_other_id(r, me) for r in sheets})
+    seen = describe_posts([r.skribl_id for r in sheets], viewer_id=me.public_id) if sheets else {}
+    out = []
+    for r in sheets:
+        who = people.get(_other_id(r, me))
+        if who is None:
+            continue
+        to_me = r.recipient_id == me.id
+        new = to_me and r.opened_at is None
+        out.append({"letter": r, "who": who, "to_me": to_me, "new": new, "back": r.written_on_id is not None,
+                    "opened": r.opened_at is not None, "down": r.taken_down_at is not None,
+                    "pic": None if new else _pic(r.skribl_id, seen.get(r.skribl_id), skribl_blueprint, inner=50),
+                    "href": url_for("social.letters_with", handle=who.handle) + "#l-" + r.public_id})
+    return out
+
+
+def sheets(me, who, skribl_blueprint="skribl"):
+    """THE TWO OF YOU: the sheets between `me` and `who`, newest first, each
+    with what its page shows: its drawing as Skribl describes it to `me`
+    (its shape and its line), the mark where the last hand starts, whose
+    hands in the order they play, and what `me` may do with it."""
+    from skribl import describe_posts
+    from .models import first_name
+    got = between_us(me, who)
+    seen = describe_posts([r.skribl_id for r in got], viewer_id=me.public_id) if got else {}
+    may = pair_ok(me, who)
+    out = []
+    for r in got:
+        from .drawback import read_hands
+        order = []
+        for pid, _ms in read_hands(r.hands_json) or []:
+            order.append("yours" if pid == me.id else (first_name(who.display_name) + "\u2019s"))
+        to_me = r.recipient_id == me.id
+        # "Theo’s, then yours": whose hands, in the order they play.
+        said = ", then ".join(order)
+        said = (said[:1].upper() + said[1:]) if len(order) > 1 else ""
+        out.append({"letter": r, "to_me": to_me, "sk": seen.get(r.skribl_id), "new": to_me and r.opened_at is None,
+                    "back": r.written_on_id is not None, "down": r.taken_down_at is not None,
+                    "marks": [{"ms": r.hand_at_ms}] if r.hand_at_ms else None,
+                    "hands": said,
+                    "write_back": to_me and may and r.taken_down_at is None,
+                    "take_back": not to_me and r.opened_at is None,
+                    "report": to_me and r.taken_down_at is None})
+    return out
 
 
 # ---- going ------------------------------------------------------------------------
@@ -422,11 +531,52 @@ def register(bp, skribl_blueprint="skribl"):
         site().session().flush()
         return jsonify({"ok": True})
 
+    @bp.get("/letters")
+    @_rests()
+    def letters_page():
+        """LETTERS: Activity's own rows, a new one sealed (the mock's choice 3
+        and 4). Yours alone: nobody signed in goes to sign in."""
+        from .accounts import _page
+        from .security import csrf_token
+        me = current_person()
+        if me is None:
+            return redirect(url_for("social.signin", next=url_for("social.letters_page")), 303)
+        return _page("letters.html", here="letters", rows=rows(me, skribl_blueprint), can_write=bool(friends(me)),
+                     token=csrf_token())
+
+    @bp.get("/letters/write")
+    @_rests()
+    def letters_write():
+        """WRITE, FROM LETTERS: the people you may write to, a row each; a tap
+        opens the Pad, to them."""
+        from .accounts import _page
+        from .security import csrf_token
+        me = current_person()
+        if me is None:
+            return redirect(url_for("social.signin", next=url_for("social.letters_write")), 303)
+        return _page("letters_write.html", here="letters", people=friends(me), token=csrf_token())
+
     @bp.get("/letters/@<handle>")
     @_rests()
     def letters_with(handle):
-        """The two of you. Until its page is built (part three), the other
-        person's page."""
-        return redirect(url_for("social.profile", handle=handle), 303)
+        """THE TWO OF YOU (the mock's choice 4 and 5): every sheet between you,
+        newest first; a new one draws itself the first time (opened by the
+        page's POST as it starts), then rests, Watch again any time. Write back
+        and New letter where you may write; each sheet's ⋯ has Report, Block,
+        and Take back or Delete. Nobody else's: anybody else, a block, or
+        nobody by that name is the kind page for a wrong address."""
+        from flask import abort
+        from .accounts import _page
+        from .safety import _person_by_handle, between
+        from .security import csrf_token
+        me = current_person()
+        if me is None:
+            return redirect(url_for("social.signin", next=url_for("social.letters_with", handle=handle)), 303)
+        who = _person_by_handle(handle)
+        if who is None or who.id == me.id or between(me, who) or (who.taken_down_at is not None):
+            abort(404)
+        got = sheets(me, who, skribl_blueprint)
+        return _page("letters_with.html", here="letters", who=who, sheets=got, may=pair_ok(me, who),
+                     token=csrf_token())
 
     return bp

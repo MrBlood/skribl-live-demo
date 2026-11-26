@@ -185,7 +185,11 @@
           aria-expanded="false" aria-label="Menu" title="Menu">{{ ic.menu() }}</button>{% endif %}
   <a class="brand" href="{{ url_for('social.home') }}" aria-label="Blooby, home">{% include 'social/_blooby_mark.html' %}</a>
   {% if accounts and not me and not hide_nav %}<a class="top-signin" href="{{ url_for('social.signin') }}">Sign in</a>{% endif %}
-  {% if accounts and me and not hide_nav and here in ('home', 'explore', 'search') %}{% set dot = activity_dot() %}
+  {% if accounts and me and not hide_nav and here in ('home', 'explore', 'search') %}{% set ldot = letters_dot() %}
+  {#- LETTERS' ENVELOPE, beside the bell (drawn letters, the mock's choice 3:
+      a phone's top of Home, the Gallery and Search), with its own dot. #}
+  <a class="icon-btn top-letters" href="{{ url_for('social.letters_page') }}" title="Letters"
+     aria-label="{{ 'Letters, a new one' if ldot else 'Letters' }}">{{ ic.envelope(dot=ldot) }}</a>{% set dot = activity_dot() %}
   <a class="icon-btn top-bell" href="{{ url_for('social.activity') }}" data-activity title="Activity"
      aria-label="{{ 'Activity, something new' if dot == 'new' else 'Activity' }}">{{ ic.bell(dot=dot) }}</a>{% endif %}
   {% endblock %}
@@ -207,6 +211,11 @@
   {% if accounts and me %}{% set dot = activity_dot() %}
   <a class="tab tab-activity" href="{{ url_for('social.activity') }}" data-activity{% if here == 'activity' %} aria-current="page"{% endif %}{% if dot == 'new' %} aria-label="Activity, something new"{% endif %}>
     <span class="tab-ic">{{ ic.bell(here == 'activity', dot) }}{% if here == 'activity' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Activity{% if here == 'activity' %}{{ ic.underline() }}{% endif %}</span></a>
+  {#- LETTERS, in a desk's rail under Activity (the mock's choice 3), with
+      the envelope's own dot; a phone has the envelope at its top. #}
+  {% set ldot = letters_dot() %}
+  <a class="tab tab-activity tab-letters" href="{{ url_for('social.letters_page') }}"{% if here == 'letters' %} aria-current="page"{% endif %}{% if ldot %} aria-label="Letters, a new one"{% endif %}>
+    <span class="tab-ic">{{ ic.envelope(here == 'letters', ldot) }}{% if here == 'letters' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Letters{% if here == 'letters' %}{{ ic.underline() }}{% endif %}</span></a>
   {% endif %}
   <button class="tab tab-make" type="button" data-make aria-haspopup="dialog" aria-controls="{{ 'composeSheet' if composing else 'makeSheet' }}" aria-expanded="false">
     <span class="tab-ic">{{ ic.pen() }}</span><span class="tab-name">Make</span></button>
