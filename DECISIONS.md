@@ -54331,3 +54331,42 @@ back between two people, and that a Flip letter is next. `docs/NEXT-SESSION.md`
 is the handoff: what was built, the one-glance tell for the owner's phone,
 the one question asked (the desk's three columns), and what Cal decided
 that the owner can overrule.
+
+## After v330 -- Enamel tiles, mocked: a friend's colours on the Gallery's tiles
+
+The owner, Nov 26, about 10 AM, with a zip of a friend's CSS ("Blooby Gallery
+-- Enamel Card CSS Tokens"): "My friend thought the gallery cards would look
+good with these colors. Can you mock them? In light and dark?"
+
+THE TARGET: the Gallery's tiles (the step of colour under each drawing and
+its name, "The Gallery's rows as tiles", Nov 21); as sent, the page around
+them too. The friend's set: a page of #F6F5FD (dark #0F0F17); a tile white
+to #FBFBFF in light, #171723 under a diagonal glaze in dark; a hairline
+(#DFDCF0; dark white-lilac at 10%); a line of light along its top, and in
+dark a dark line along its foot; a 1px-2px soft shadow; on hover a 2px lift
+and a bigger soft shadow; inks #161524 and #5B5875 (dark #F4F4FA, #9997B3).
+
+THE MOCK (the artifact "Enamel Tiles",
+https://claude.ai/artifact/2bS9nCzMwJtY5UZ6PLUKCK): the real Gallery on a
+fresh database, six real drawings (one on dark paper), a touch phone and a
+desk, light and dark, each board switching in place between now, A (as
+sent, its hover on a desk) and B (Cal's: their tile colours, hairline and
+line of light on Pad's ground, flat, no soft shadow, no lift, the picture's
+own lilac edge kept). Measured off the screen at 2x:
+- tile from page: now 1.08 / 1.09, A 1.07 / 1.16 (its glaze), B 1.06 / 1.06;
+- the tile's edge from the page: A 1.24 / 1.35, B 1.26 / 1.35 (now none);
+- the picture's edge from the tile: now 1.53 / 1.60, A 1.24 / 1.20, B
+  1.57 / 1.60 (in dark that edge is all that outlines a drawing on dark
+  paper);
+- the counts from the tile: now 6.60 / 9.29, A 6.62 / 6.16 (the note's
+  "over 7:1" does not hold as painted), B 7.56 / 9.58.
+
+CAL'S PICK, B, said with what it changes against the record: a line round
+each tile (the tiles were a flat step with none), and in light a tile
+lighter than the page. A's page would drift from Pad and Flip (the site
+wears the editors' ground, the owner's "Yes, A", Nov 14) and its soft
+shadows would end "none at rest" (`verify_socialposts` 23). Asked with it:
+B's edge in their cool lavender, or in the site's own card edge.
+
+NOTHING IS BUILT: it waits for "B", "A" or "leave the tiles". Pad and Flip:
+not theirs.
