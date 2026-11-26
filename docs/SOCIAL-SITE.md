@@ -3839,14 +3839,20 @@ WHAT PEOPLE SEE (`posts.hands_states`, per viewer, one read a page):
 NOT YET (the seventh answer: one original and one answer first): a
 two-hands draw-back is not drawn back on (`undrawable` "hands"; no pen,
 and both doors refuse). Draw-backs from before stay one joined drawing
-(the eighth). Plays of Both are not counted (Skribl counts a play only on
-its own route); a quote of a two-hands draw-back shows his own picture.
-Recolour while drawing back, for his own strokes (the fifth answer), is
+(the eighth). Plays of Both, and of his alone, count a play of his drawing,
+once a viewer a day, as Skribl's own player's fetch does (`hands_drawing`
+calls `skribl.count_play`); hers alone counts nothing toward hers, as a
+draw-back's play never did. A quote of a two-hands draw-back shows what
+its card shows the viewer: the picture of both and the line the two make
+together while her drawing is shown to them, his own drawing otherwise
+(`reposts.Quoted._both`). Recolour while drawing back, for his own
+strokes (the fifth answer), is
 built: section 43. DELETING IS REAL AND SAID IN CODE: his post takes what
 is kept beside it, and her post lets go of every draw-back on it, which
 then shows its maker's strokes alone (`posts.drop_post_hands`).
 `verify_socialdrawback` 15 (a second server with the switch on, on the
-same database), `verify_hostseams` (`line_of`), `verify_socialauth` 14.
+same database), `verify_hostseams` (`line_of`, `count_play`),
+`verify_socialauth` 14.
 
 ## 42. Built: Flip's Draw back, page for page (Nov 25)
 
