@@ -1491,16 +1491,18 @@ with sync_playwright() as pw:
                                " a.getAttribute('href'), a.textContent.trim(), Math.round(a.getBoundingClientRect().height)] : null; }")
             close_ctx(ctx, pg)
             ask = [["Post a drawing", "The pencil, then Draw"], ["Answer a drawing with a drawing", "Draw back: the pen under any drawing"],
-                   ["Comment with a drawing", "The speech bubble, then Draw"], ["Draw your face", "On your profile"]]
-            check("People often ask, signed in: four rows, the question over its answer, each 60px and more with a chevron,"
+                   ["Comment with a drawing", "The speech bubble, then Draw"], ["Draw your face", "On your profile"],
+                   ["Draw someone a letter", "Write, on a friend’s page: only the two of you see it"]]
+            check("People often ask, signed in: five rows, the question over its answer, each 60px and more with a chevron,"
                   " each going where it is done: Post a drawing opens the composer on this page, focus in it; the"
-                  " two about answering go to Home's Everyone; Draw your face to your profile",
+                  " two about answering go to Home's Everyone; Draw your face to your profile; a letter to Letters",
                   [r["words"] for r in rows_in[0]] == ask and all(r["h"] >= 60 and r["go"] for r in rows_in[0])
                   and [(r["tag"], r["href"], r["make"]) for r in rows_in[0]] == [("BUTTON", None, True), ("A", "/social/?tab=everyone", False),
-                                                                             ("A", "/social/?tab=everyone", False), ("A", "/social/@mira", False)]
+                                                                             ("A", "/social/?tab=everyone", False), ("A", "/social/@mira", False),
+                                                                             ("A", "/social/letters", False)]
                   and made == {"open": True, "at": "/social/how", "focus": True, "seen": "visible"},
                   json.dumps({"rows": rows_in[0], "Post a drawing": made})[:700])
-            check("a visitor reads the same four as plain lines, nothing to tap and no chevron, and one line under them says"
+            check("a visitor reads the same five as plain lines, nothing to tap and no chevron, and one line under them says"
                   " why, with Sign in beside it, a 44px button",
                   [r["words"] for r in rows_out[0]] == ask and all(r["tag"] == "DIV" and not r["go"] and r["href"] is None for r in rows_out[0])
                   and note == ["You’ll need an account for these, and Blooby is by invite for now.", "/social/signin", "Sign in", 44],

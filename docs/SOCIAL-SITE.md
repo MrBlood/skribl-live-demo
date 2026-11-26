@@ -4067,7 +4067,9 @@ to you: "Reporting shares this letter with the people who run this site");
 Block. Taken back or deleted, the sheet folds away where it was. Behind a
 block, or for nobody by that name, the kind page for a wrong address.
 
-ACCOUNT DELETION's page says letters go too.
+ACCOUNT DELETION's page says letters go too. HOW IT WORKS asks "Draw someone
+a letter" (Write, on a friend's page: only the two of you see it), opening
+Letters (`verify_socialapp` holds its five rows).
 
 NOT BUILT, AND SAID: the mock's desk board put the list and the letter side
 by side, three columns; here a desk shows Letters and the two of you as two

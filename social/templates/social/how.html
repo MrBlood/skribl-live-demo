@@ -80,11 +80,13 @@
     <a class="how-row" href="{{ url_for('social.home', tab='everyone') }}">{{ words('Answer a drawing with a drawing', 'Draw back: the pen under any drawing') }}{{ ic.go() }}</a>
     <a class="how-row" href="{{ url_for('social.home', tab='everyone') }}">{{ words('Comment with a drawing', 'The speech bubble, then Draw') }}{{ ic.go() }}</a>
     <a class="how-row" href="{{ url_for('social.profile', handle=me.handle) }}">{{ words('Draw your face', 'On your profile') }}{{ ic.go() }}</a>
+    <a class="how-row" href="{{ url_for('social.letters_page') }}">{{ words('Draw someone a letter', 'Write, on a friend’s page: only the two of you see it') }}{{ ic.go() }}</a>
     {% else %}
     <div class="how-row">{{ words('Post a drawing', 'The pencil, then Draw') }}</div>
     <div class="how-row">{{ words('Answer a drawing with a drawing', 'Draw back: the pen under any drawing') }}</div>
     <div class="how-row">{{ words('Comment with a drawing', 'The speech bubble, then Draw') }}</div>
     <div class="how-row">{{ words('Draw your face', 'On your profile') }}</div>
+    <div class="how-row">{{ words('Draw someone a letter', 'Write, on a friend’s page: only the two of you see it') }}</div>
     {% endif %}
   </section>
   {% if not me %}<p class="how-say how-out"><span>You’ll need an account for these, and Blooby is by invite for now.</span>
