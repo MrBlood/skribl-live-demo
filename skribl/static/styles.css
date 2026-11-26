@@ -1966,13 +1966,47 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
    nothing fixed inside them is caught), which the script glides. The header
    stays. Its look is the drawer's own: no new colour or word. */
 body.drawers-beside :is(.canvas-area, #toolBar, .flip-stage, .strip-wrap, .flip-tools) { left: calc(-1 * var(--side-shift, 0px)); }
-body.drawers-beside :is(#drawPanel, #mediaCard, #txSheet).drawer-side {
+/* (.drawer-leaving: a drawer closed beside the drawing keeps its place while it slides away, lib/drawers.js leave().) */
+body.drawers-beside :is(#drawPanel, #mediaCard, #txSheet).drawer-side, :is(#drawPanel, #mediaCard, #txSheet).drawer-leaving {
   position: fixed; top: var(--side-top, 90px); right: max(16px, env(safe-area-inset-right, 0px)); bottom: auto; left: auto;
   width: var(--side-w, 392px); max-width: calc(100vw - 32px);
   /* --side-max: where a strip runs under the drawer (Flip's pages), the drawer ends above it (lib/drawers.js). */
   max-height: min(calc(100vh - var(--side-top, 90px) - 16px), var(--side-max, 100vh));
   overflow-y: auto; overscroll-behavior: contain; margin: 0; z-index: 45;
 }
+/* THE DRAWER'S TAB (lib/drawers.js SIDE_TAB; the owner's "All yes", Nov 26,
+   to the Drawer Tab mock's A, from "Put a tab on the drawer in addition to
+   clicking pen again (and other drawers)"). On the drawer's edge facing the
+   drawing, 22px below its top, 24px out: the drawer's own paper, line and
+   drop. JOINED, NOT LAID ON: it ends where the drawer begins, over the
+   drawer's own line, so the line runs on round the tab and the two are one
+   shape. The paper and line are its ::before, the line the drawer's own
+   ring (--paper-ring, one screen dot: a border is never under a CSS pixel
+   in Chrome, twice the drawer's at 2x), cut off where the drawer begins;
+   the button keeps its focus ring whole. The › is the drawer's ink, a mark
+   (_skribl_marks.html, chev), centred between the tab's line and the
+   drawer's; under a mouse the tab takes a paper control's highlight (Your
+   drafts' choices), solid, so the drawer's line stays covered. Replay rests
+   it as it rests the drawer. */
+.drawer-tab {
+  position: fixed; z-index: 46;
+  top: calc(var(--side-top, 90px) + 22px);
+  right: calc(max(16px, env(safe-area-inset-right, 0px)) + var(--side-w, 392px));
+  width: 24px; height: 56px; box-sizing: border-box; margin: 0; padding: 0 var(--edge) 0 0;
+  display: grid; place-items: center; border: 0; border-radius: 14px 0 0 14px; background: none;
+  color: var(--text-strong); font-size: 18px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.drawer-tab::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: var(--menu-paper); box-shadow: var(--paper-ring), var(--menu-card-drop);
+  clip-path: inset(-4px 0 -4px -4px);
+  transition: background-color .15s ease;
+}
+.drawer-tab[hidden] { display: none; }
+@media (hover: hover) { .drawer-tab:hover::before { background: color-mix(in srgb, var(--accent) 7%, var(--menu-paper)); } }
+body:is(.replaying, .playing) .drawer-tab { pointer-events: none; }
+body:is(.replaying, .playing) .drawer-tab > * { opacity: var(--drawer-rest); }
 
 /* Replay auto-hide: while a preview replays, fade the bottom tool island out so
    the drawing is the show. The header stays (it holds Stop). Opacity only — the

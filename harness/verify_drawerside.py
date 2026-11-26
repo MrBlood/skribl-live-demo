@@ -111,7 +111,7 @@ ED = {
              "load": "d => applyFlipDraftObject(d)", "ready": "() => typeof applyFlipDraftObject === 'function' && typeof _flipDrawerCtl !== 'undefined'"},
 }
 DESKS = ((1440, 900), (1536, 864), (1920, 1080))
-SIDE_W, EDGE = 392, 16
+SIDE_W, EDGE, TAB = 392, 16, 24       # the drawer's width, its gap, and its tab (lib/drawers.js SIDE_TAB)
 
 # The drawing, the open drawer, the header and what slides, as they are now.
 LOOK = """([cv, move]) => {
@@ -208,13 +208,14 @@ with sync_playwright() as pw:
             c.close()
             cr, W, H, R = rest["canvas"], rest["W"], rest["H"], rest["R"]
             # The drawer ends EDGE in from where a drawer held to the screen
-            # can end (R: the page keeps a scrollbar's gutter at each edge).
-            want = max(0, SIDE_W + 2 * EDGE - (R - (cr[0] + cr[2])))
+            # can end (R: the page keeps a scrollbar's gutter at each edge);
+            # its tab stands TAB out of it, and the drawing EDGE clear of that.
+            want = max(0, SIDE_W + TAB + 2 * EDGE - (R - (cr[0] + cr[2])))
 
             def placed(g):
                 cv, d = g["canvas"], g["drawer"]
                 return (g["beside"] and g["side"] and d is not None and abs(d[2] - SIDE_W) <= 1
-                        and d[0] >= cv[0] + cv[2] + EDGE - 1 and abs(d[0] + d[2] - (R - EDGE)) <= 1 and abs(d[1] - cv[1]) <= 1
+                        and d[0] >= cv[0] + cv[2] + TAB + EDGE - 1 and abs(d[0] + d[2] - (R - EDGE)) <= 1 and abs(d[1] - cv[1]) <= 1
                         and d[1] + d[3] <= H + 1 and cv[0] >= 0 and cv[0] + cv[2] <= W and cv[1] >= 0 and cv[1] + cv[3] <= H
                         and abs(cv[2] - cr[2]) <= 1 and abs(cv[3] - cr[3]) <= 1 and g["scrollY"] == 0)
             check(f"{ed} {size[0]}x{size[1]}: Pen, Photo, Music and Text each open beside the drawing, 392px at its right, its top"
@@ -224,12 +225,12 @@ with sync_playwright() as pw:
             g = got["draw"]
             slid = cr[0] - g["canvas"][0]
             # Only as far as needed: slid, the drawing ends EDGE from the
-            # drawer; not slid, it already ended that far from it or more.
-            gap = g["drawer"][0] - (g["canvas"][0] + g["canvas"][2]) if g["drawer"] else None
+            # drawer's tab; not slid, it already ended that far from it or more.
+            gap = g["drawer"][0] - TAB - (g["canvas"][0] + g["canvas"][2]) if g["drawer"] else None
             far = gap is not None and ((slid > 0.5 and abs(gap - EDGE) <= 1.5) or (abs(slid) <= 0.5 and gap >= EDGE - 1))
             moved_ok = all(m0 and m1 and abs((m0[0] - m1[0]) - slid) <= 1 for m0, m1 in zip(rest["moved"], g["moved"]))
             same = lambda u, v: u is not None and v is not None and all(abs(x - y) <= 0.5 for x, y in zip(u, v))
-            ends = f"it ends {EDGE}px from the drawer" if want else f"it has {EDGE}px or more already"
+            ends = f"it ends {EDGE}px from the drawer's tab" if want else f"it has {EDGE}px or more already"
             check(f"{ed} {size[0]}x{size[1]}: the drawing slides left only as far as the drawer needs ({want:.0f}px here: {ends}),"
                   " what sits under it with it by as much; the header stays; closed, everything is back",
                   far and abs(slid - want) <= 1.5 and moved_ok and rest["header"] == g["header"] and back is not None
@@ -428,17 +429,17 @@ with sync_playwright() as pw:
         back = look(q, "Pad")
         c.close()
         cr, cv, d, R, H = rest["canvas"], g["canvas"], g["drawer"], rest["R"], rest["H"]
-        most = R - SIDE_W - 3 * EDGE                      # the widest a drawing beside a drawer can be
+        most = R - SIDE_W - TAB - 3 * EDGE                # the widest a drawing beside a drawer (and its tab) can be
         dock = g["moved"][0]
         ok = (g["beside"] and g["side"] and d is not None and abs(d[2] - SIDE_W) <= 1 and abs(d[0] + d[2] - (R - EDGE)) <= 1
-              and abs(d[1] - cv[1]) <= 1 and cv[0] >= EDGE - 1 and abs(d[0] - (cv[0] + cv[2]) - EDGE) <= 1.5
+              and abs(d[1] - cv[1]) <= 1 and cv[0] >= EDGE - 1 and abs(d[0] - TAB - (cv[0] + cv[2]) - EDGE) <= 1.5
               and cv[1] >= 0 and cv[1] + cv[3] <= H and g["scrollY"] == 0
               and cr[2] > most and most - 6 <= cv[2] <= most + 1 and cv[2] >= 0.75 * cr[2]
               and abs(cv[2] / cv[3] - cr[2] / cr[3]) < 0.01 and abs((dock[0] + dock[2] / 2) - (cv[0] + cv[2] / 2)) <= 2
               and not back["beside"] and all(abs(x - y) <= 0.5 for x, y in zip(back["canvas"], cr)))
         check(f"Pad {size[0]}x{size[1]}, a 16:9 drawing too wide to sit beside a drawer ({cr[2]}px, the most beside one {most}px):"
               " the drawer opens beside it all the same, the drawing a little smaller, the least it needs and never past three"
-              " quarters, its shape kept, whole on the screen, the drawer level with its top and 16px clear of it, the dock"
+              " quarters, its shape kept, whole on the screen, the drawer level with its top, its tab 16px clear of it, the dock"
               " under its middle; closed, the drawing is its own size again where it was",
               ok, json.dumps({"rest": cr, "open": [g["beside"], cv, d, dock, g["scrollY"]], "most": most, "back": back["canvas"]})[:700])
     c, q = boot(b, "Pad", (1366, 768), load=False, shape=WIDE)
@@ -512,6 +513,203 @@ with sync_playwright() as pw:
           so[0] >= 8 and so[1] <= 0.34 and so[2] and so[3] > 50 and sh[0] >= 8 and sh[1] <= 0.34 and sh[2] and abs(sh[3] - so[3]) <= 2,
           json.dumps({"out": so, "home": sh, "xs": [round(x) for x in out_[:20]]}))
 
+    # ------------------------------------------------------------ the tab
+    print("\nTHE DRAWER'S TAB — on the drawer's edge, joined to it; it closes the drawer, which slides away; the keyboard too")
+    TABLOOK = """() => { const t = document.querySelector('.drawer-tab'), d = document.querySelector('.drawer-side');
+      const r = (e) => { if (!e) return null; const b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; };
+      if (!t) return { shown: false };
+      const b = t.getBoundingClientRect(), hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      return { shown: !t.hidden && t.getClientRects().length > 0, tab: r(t), drawer: r(d), id: d ? d.id : null,
+               before: !!d && t.nextElementSibling === d, name: t.getAttribute('aria-label'), button: t.tagName === 'BUTTON' && t.type === 'button',
+               painted: !!hit && (hit === t || t.contains(hit)) }; }"""
+    TABHIDDEN = "() => { const t = document.querySelector('.drawer-tab'); return !t || t.hidden || !t.getClientRects().length; }"
+    for ed in ED:
+        c, q = boot(b, ed, (1366, 768))
+        rest = look(q, ed)
+        got = {}
+        for name in ("draw", "photo", "music", "text"):
+            open_(q, ed, name)
+            got[name] = (look(q, ed), q.evaluate(TABLOOK))
+            close_(q, ed)
+        c.close()
+
+        def on_edge(g, t):
+            cv = g["canvas"]
+            return (t["shown"] and t["button"] and t["name"] == "Close the drawer" and t["before"] and t["painted"]
+                    and abs(t["tab"][2] - TAB) <= 0.5 and abs(t["tab"][3] - 56) <= 0.5
+                    and abs(t["tab"][0] + t["tab"][2] - t["drawer"][0]) <= 0.5 and abs(t["tab"][1] - (t["drawer"][1] + 22)) <= 0.5
+                    and abs(t["tab"][0] - (cv[0] + cv[2]) - EDGE) <= 1.5 and abs(cv[2] - rest["canvas"][2]) <= 1)
+        check(f"{ed} 1366x768: with Pen, Photo, Music or Text beside the drawing, the drawer wears a tab on its edge facing the"
+              " drawing, 22px below its top, 24x56, ending where the drawer begins: a button named \"Close the drawer\", painted,"
+              " just before the drawer in the page's order; the drawing, its own size, slides on to end 16px from the tab",
+              all(on_edge(g, t) for g, t in got.values()),
+              json.dumps({k: [t, g["canvas"]] for k, (g, t) in got.items()})[:900])
+    # JOINED, NOT LAID ON, read off the screen at 2x, screen dot by screen dot: across the tab, 8px under its top, the
+    # paper runs on into the drawer with no line where the two meet; the tab's line is the drawer's, its colour and its
+    # width (one dot here), and runs on into it at the tab's top and foot. The ›: in the middle between the tab's line
+    # and the drawer's (its ink weighed, in the band the › stands in, clear of the tab's round corners).
+    from io import BytesIO
+    from PIL import Image
+    for ed in ED:
+        for scheme in ("dark", "light"):
+            cx = b.new_context(viewport={"width": 1366, "height": 768}, device_scale_factor=2, color_scheme=scheme)
+            q = cx.new_page()
+            browsing.goto(q, BASE, ED[ed]["route"])
+            q.wait_for_function(ED[ed]["ready"], timeout=20000)
+            q.evaluate("() => { window.SkriblHints && SkriblHints.hide && SkriblHints.hide(); }")
+            open_(q, ed, "draw")
+            q.mouse.move(5, 760)
+            q.wait_for_timeout(300)
+            t = q.evaluate(TABLOOK)
+            im = Image.open(BytesIO(q.screenshot())).convert("RGB")
+            cx.close()
+            tl, tt, tw, th = t["tab"]
+            dl = t["drawer"][0]
+            D = lambda v: int(round(v * 2))                  # a CSS length on this 2x screen, in screen dots
+            P = lambda x, y: im.getpixel((x, y))
+            far = lambda u, v: max(abs(a - b_) for a, b_ in zip(u, v))
+            paper = P(D(dl + 6), D(tt + 8))
+            seam = max(far(P(x, D(tt + 8)), paper) for x in range(D(tl + 4), D(dl + 6)))
+            # The drawer's line where it runs straight, under the tab: its colour, and how many dots wide it is
+            # (those neither the page's nor the paper's); the tab's left side the same, at its middle.
+            yb, ym = D(tt + th + 30), D(tt + th / 2)
+            page = P(D(dl) - 12, yb)
+            wide = lambda pts, ground: sum(1 for q_ in pts if far(q_, paper) > 6 and far(q_, ground) > 6)
+            line = P(D(dl) - 1, yb)
+            d_w = wide([P(x, yb) for x in range(D(dl) - 8, D(dl) + 8)], page)
+            t_w = wide([P(x, ym) for x in range(D(tl) - 8, D(tl) + 8)], P(D(tl) - 12, ym))
+            t_line = P(D(tl) - 1, ym)
+            # Where the tab meets the drawer, at its top and its foot: the line turning, the drawer's dot and the tab's.
+            corners = [P(D(dl) - 1, D(tt) - 1), P(D(dl) - 1, D(tt) - 3), P(D(dl) - 1, D(tt + th)), P(D(dl) - 1, D(tt + th) + 2)]
+            # The ›'s ink, weighed by how far each dot is from the paper, in the band it stands in.
+            ink = [(x, y, far(P(x, y), paper)) for x in range(D(tl), D(dl) - 1) for y in range(D(tt + 18), D(tt + 38))]
+            ink = [(x, y, w) for x, y, w in ink if w > 24]
+            wsum = sum(w for *_, w in ink) or 1
+            mx = (sum((x + 0.5) * w for x, _, w in ink) / wsum) / 2
+            my = (sum((y + 0.5) * w for _, y, w in ink) / wsum) / 2
+            mid_x = (tl + dl - 0.5) / 2                       # between the tab's line and the drawer's, a dot (0.5px) each
+            check(f"{ed}, {scheme}: the tab and the drawer are one shape: across the tab the paper runs on into the drawer with no line"
+                  " where they meet; the tab's line is the drawer's, its colour and its width (one screen dot), and runs on into"
+                  " the drawer's at the tab's top and foot; the › in the middle, between the tab's line and the drawer's"
+                  " (within half a pixel)",
+                  seam <= 6 and d_w == 1 and t_w == d_w and far(t_line, line) <= 6 and all(far(c_, line) <= 6 for c_ in corners)
+                  and abs(mx - mid_x) <= 0.5 and abs(my - (tt + th / 2)) <= 0.5 and len(ink) > 20,
+                  json.dumps({"paper": paper, "seam": seam, "line": line, "widths": [d_w, t_w], "tab line": t_line, "corners": corners,
+                              "mark": [round(mx, 2), round(my, 2)], "middle": [mid_x, tt + th / 2], "ink": len(ink)}))
+    # A click on the tab closes the drawer; it slides away (read on every frame) as the drawing glides home.
+    # Read from the frame after the click on (a listener ahead of the tab's own), each frame for `ms`.
+    EXIT = """([cv, ms]) => { const box = document.querySelector('.drawer-side'), tab = document.querySelector('.drawer-tab'),
+        c = document.getElementById(cv), panel = [...document.querySelectorAll('#drawPanel, #photoPanel, #musicPanel, #txSheet')].find(p => !p.hidden),
+        out = []; window.__ex = out;
+      document.addEventListener('click', () => { const t0 = performance.now();
+        requestAnimationFrame(function f() { const s = getComputedStyle(box);
+          out.push({ t: performance.now() - t0, drawn: box.getClientRects().length > 0, op: +s.opacity, x: box.getBoundingClientRect().left,
+                     tab: tab.hidden ? null : +getComputedStyle(tab).opacity, inert: box.inert, hidden: panel.hidden, cv: c.getBoundingClientRect().left });
+          if (performance.now() - t0 < ms) requestAnimationFrame(f); }); }, { capture: true, once: true }); }"""
+    AFTER = """() => ({ leaving: !!document.querySelector('.drawer-leaving'), inert: [...document.querySelectorAll('#drawPanel, #mediaCard, #txSheet, .drawer-tab')].some(e => e.inert),
+                       styled: [...document.querySelectorAll('#drawPanel, #mediaCard, #txSheet, #photoPanel, #musicPanel')].some(e => e.style.display || e.style.height) })"""
+    for ed in ED:
+        c, q = boot(b, ed, (1366, 768))
+        rest = look(q, ed)["canvas"]
+        open_(q, ed, "draw")
+        tb = q.evaluate(TABLOOK)["tab"]
+        q.evaluate(EXIT, [ED[ed]["cv"], 520])
+        q.mouse.click(tb[0] + tb[2] / 2, tb[1] + tb[3] / 2)
+        q.wait_for_timeout(700)
+        fr = q.evaluate("() => window.__ex")
+        g, aft, hid = look(q, ed), q.evaluate(AFTER), q.evaluate(TABHIDDEN)
+        shut = q.evaluate(f"() => {ED[ed]['ctl']}.current()") is None
+        c.close()
+        drawn = [f for f in fr if f["drawn"]]
+        ops = [f["op"] for f in drawn]
+        gone_at = next((f["t"] for f in fr if not f["drawn"]), None)
+        check(f"{ed}: a click on the tab closes the drawer (closed at once, its panel hidden from the first frame) and the drawing"
+              " glides home to where it was",
+              shut and all(f["hidden"] for f in fr) and not g["beside"] and all(abs(x - y) <= 0.5 for x, y in zip(g["canvas"], rest)) and hid,
+              json.dumps({"shut": shut, "canvas": [rest, g["canvas"]], "tab hidden": hid}))
+        check(f"{ed}: ...and the drawer slides away as it goes: drawn where it was, inert, fading over five frames or more, never"
+              " brighter, moving right as it fades, its tab with it; gone within the glide and a little, nothing left inert or held",
+              len([o for o in ops if 0.02 < o < 0.98]) >= 5 and all(b_ <= a + 0.001 for a, b_ in zip(ops, ops[1:]))
+              and all(f["inert"] for f in drawn) and all(f["tab"] is not None and abs(f["tab"] - f["op"]) <= 0.02 for f in drawn)
+              and drawn and 18 <= drawn[-1]["x"] - drawn[0]["x"] <= 24.5 and gone_at is not None and gone_at <= 280 + 150
+              and not aft["leaving"] and not aft["inert"] and not aft["styled"],
+              json.dumps({"frames": [[round(f["t"]), f["drawn"], round(f["op"], 3), round(f["x"], 1), f["tab"]] for f in fr[:24]],
+                          "gone": gone_at, "after": aft})[:900])
+        c, q = boot(b, ed, (1366, 768), reduce=True)
+        open_(q, ed, "draw")
+        tb = q.evaluate(TABLOOK)["tab"]
+        q.evaluate(EXIT, [ED[ed]["cv"], 200])
+        q.mouse.click(tb[0] + tb[2] / 2, tb[1] + tb[3] / 2)
+        q.wait_for_timeout(400)
+        fr = q.evaluate("() => window.__ex")
+        c.close()
+        check(f"{ed}: under Reduce Motion the drawer is gone at once, from the first frame",
+              bool(fr) and not any(f["drawn"] for f in fr), json.dumps([[round(f["t"]), f["drawn"]] for f in fr[:6]]))
+    # The keyboard: Shift+Tab from the drawer's first control lands on the tab; Enter on it closes the drawer, and the focus is
+    # back on the drawer's own button, its ring showing. Pen's and Music's.
+    FIRST = """() => { const d = document.querySelector('.drawer-side');
+      const f = [...d.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])')].find(e => !e.disabled && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden');
+      f.focus(); return document.activeElement === f; }"""
+    for ed in ED:
+        c, q = boot(b, ed, (1366, 768))
+        keys = {}
+        for name, own in (("draw", "penToolBtn"), ("music", "mediaOpenBtn")):
+            open_(q, ed, name)
+            q.evaluate(FIRST)
+            q.keyboard.press("Shift+Tab")
+            on_tab = q.evaluate("() => document.activeElement === document.querySelector('.drawer-tab')")
+            q.keyboard.press("Enter")
+            q.wait_for_timeout(700)
+            keys[name] = {"reached": on_tab, "closed": q.evaluate(f"() => {ED[ed]['ctl']}.current()") is None,
+                          "focus": q.evaluate("() => document.activeElement.id"), "ring": q.evaluate("() => document.activeElement.matches(':focus-visible')"),
+                          "own": own}
+        c.close()
+        check(f"{ed}: the keyboard reaches the tab just before the drawer (Shift+Tab from its first control), and Enter on it closes"
+              " the drawer, the focus back on the drawer's own button with its ring (Pen's; Music's on the Photo and music button)",
+              all(k["reached"] and k["closed"] and k["focus"] == k["own"] and k["ring"] for k in keys.values()), json.dumps(keys))
+    # Under the mouse the tab takes a paper control's highlight, solid (it covers the drawer's line where they meet).
+    HOVERBG = "() => getComputedStyle(document.querySelector('.drawer-tab'), '::before').backgroundColor"
+    for ed in ED:
+        c, q = boot(b, ed, (1366, 768))
+        open_(q, ed, "draw")
+        q.mouse.move(5, 760)
+        q.wait_for_timeout(300)
+        at_rest = q.evaluate(HOVERBG)
+        tb = q.evaluate(TABLOOK)["tab"]
+        q.mouse.move(tb[0] + tb[2] / 2, tb[1] + tb[3] / 2)
+        q.wait_for_timeout(400)
+        lit = q.evaluate(HOVERBG)
+        q.mouse.move(5, 760)
+        q.wait_for_timeout(400)
+        again = q.evaluate(HOVERBG)
+        c.close()
+        def solid(v):
+            if v.startswith("rgba("):
+                return v.rstrip(")").split(",")[-1].strip() in ("1", "1.0")
+            if v.startswith("color("):
+                return "/" not in v or v.rstrip(")").split("/")[-1].strip() in ("1", "1.0")
+            return v.startswith("rgb(")
+        check(f"{ed}: under the mouse the tab lights up (a paper control's highlight, solid), and rests again when it leaves",
+              lit != at_rest and solid(lit) and again == at_rest, json.dumps({"rest": at_rest, "hover": lit, "after": again}))
+    # While the drawing replays, the tab rests with the drawer: no clicks, its › dimmed as the drawer's contents are.
+    PLAY = {"Pad": ("#playBtn", "replaying"), "Flip": ("#play", "playing")}
+    RESTING = """(cls) => { const t = document.querySelector('.drawer-tab'), m = t && t.firstElementChild;
+      return { on: document.body.classList.contains(cls), shown: !!t && !t.hidden, clicks: t ? getComputedStyle(t).pointerEvents : null,
+               dim: m ? +getComputedStyle(m).opacity : null, rest: +getComputedStyle(document.body).getPropertyValue('--drawer-rest') }; }"""
+    for ed in ED:
+        c, q = boot(b, ed, (1366, 768))
+        open_(q, ed, "draw")
+        before = q.evaluate(RESTING, PLAY[ed][1])
+        q.click(PLAY[ed][0])
+        q.wait_for_timeout(700)
+        during = q.evaluate(RESTING, PLAY[ed][1])
+        c.close()
+        check(f"{ed}: while the drawing replays, the tab rests with the drawer: it takes no clicks and its › dims to the drawer's"
+              " rest; before, it is live",
+              during["on"] and during["shown"] and during["clicks"] == "none" and abs(during["dim"] - during["rest"]) <= 0.01
+              and not before["on"] and before["clicks"] != "none" and before["dim"] == 1,
+              json.dumps({"before": before, "during": during}))
+
     # ------------------------------------------------------------ below
     print("\nBELOW — where the two don't fit, with a finger, and on a phone; a resize decides again; the tools tray as it was")
     for label, size, kw in (("an 800x800 desk", (800, 800), {}), ("a tablet (1180x820, a finger)", (1180, 820), {"touch": True}),
@@ -520,10 +718,11 @@ with sync_playwright() as pw:
             c, q = boot(b, ed, size, **kw)
             open_(q, ed, "draw")
             g = look(q, ed)
+            no_tab = q.evaluate(TABHIDDEN)
             c.close()
-            check(f"{ed}, {label}: the drawer opens below the drawing, as before",
-                  not g["beside"] and not g["side"] and g["drawer"] is not None and g["drawer"][1] > g["canvas"][1] + g["canvas"][3] - 1,
-                  json.dumps({"beside": g["beside"], "canvas": g["canvas"], "drawer": g["drawer"]}))
+            check(f"{ed}, {label}: the drawer opens below the drawing, as before, with no tab",
+                  not g["beside"] and not g["side"] and g["drawer"] is not None and g["drawer"][1] > g["canvas"][1] + g["canvas"][3] - 1 and no_tab,
+                  json.dumps({"beside": g["beside"], "canvas": g["canvas"], "drawer": g["drawer"], "no tab": no_tab}))
     for ed in ED:
         c, q = boot(b, ed, (1440, 900))
         open_(q, ed, "draw")
@@ -531,20 +730,25 @@ with sync_playwright() as pw:
         q.set_viewport_size({"width": 800, "height": 800})
         q.wait_for_timeout(900)
         g = look(q, ed)
+        tabs = [q.evaluate(TABHIDDEN)]
         q.set_viewport_size({"width": 1440, "height": 900})
         q.wait_for_timeout(900)
         z = look(q, ed)
+        tabs.append(q.evaluate(TABHIDDEN))
         close_(q, ed)
         q.evaluate(f"() => {ED[ed]['ctl']}.open('tools')")
         q.wait_for_timeout(700)
         t = look(q, ed)
         tray = q.evaluate("() => { const t = document.getElementById('toolTray'); return !!t && !t.hidden && getComputedStyle(t).position; }")
+        tabs.append(q.evaluate(TABHIDDEN))
         c.close()
-        check(f"{ed}: opened beside, the window narrowed to 800 puts the drawer below; widened again, beside",
-              a and not g["beside"] and g["drawer"] is not None and g["drawer"][1] > g["canvas"][1] + g["canvas"][3] - 1 and z["beside"],
-              json.dumps({"wide": a, "narrow": [g["beside"], g["canvas"], g["drawer"]], "again": z["beside"]}))
-        check(f"{ed}: the tools tray is never beside, and opens with the page where it was",
-              not t["beside"] and tray and tray != "fixed" and t["scrollY"] == 0, json.dumps({"tray": tray, "beside": t["beside"], "y": t["scrollY"]}))
+        check(f"{ed}: opened beside, the window narrowed to 800 puts the drawer below, its tab gone; widened again, beside, the tab back",
+              a and not g["beside"] and g["drawer"] is not None and g["drawer"][1] > g["canvas"][1] + g["canvas"][3] - 1 and z["beside"]
+              and tabs[0] and not tabs[1],
+              json.dumps({"wide": a, "narrow": [g["beside"], g["canvas"], g["drawer"]], "again": z["beside"], "tab hidden": tabs[:2]}))
+        check(f"{ed}: the tools tray is never beside, has no tab, and opens with the page where it was",
+              not t["beside"] and tray and tray != "fixed" and t["scrollY"] == 0 and tabs[2],
+              json.dumps({"tray": tray, "beside": t["beside"], "y": t["scrollY"], "tab hidden": tabs[2]}))
     b.close()
 
 summarise_and_exit()
