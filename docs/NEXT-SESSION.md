@@ -69,6 +69,52 @@ WHAT THE CODE ALREADY GIVES (read this session; check it again):
   (`lib/composehost.js`, `lib/drawback.js`). The server then joins the
   two from her drawing as Skribl stores it (`skribl.read_payload`): hers
   first, squeezed to three seconds when longer, then his at his own pace.
+- POSTING: the site makes a Skribl post server-side with
+  `skribl.create_post(payload, author_id=...)` (`skribl/creation.py`),
+  which takes a visibility only if `visibility_values()` has it. So the app
+  must call `set_visibility_values(("letter",), app)` beside its policy. Draw
+  back's own pieces are in `social/drawback.py`: `join(original, answer)`
+  (the squeeze is `OVERTURE_MS`), `drawable(payload, answer=...)`,
+  `same_shape`, and `hands`. `post_drawback` in `social/posts.py` is the
+  model for a GET that hands the composer {payload, first, own}.
+- THE COMPOSER: the Pad sits in an iframe in `_compose.html`, which
+  `SocialPadOverlay` (`social/static/social.js`) runs through
+  `SkriblComposeHost.create`. `underlay` hands it the drawing to draw on,
+  and `lib/drawback.js` `take()` builds the pill. The Pad's own button
+  says "Add to post" in the composer, and the drawing comes back by
+  `skribl:compose:done` to `social/static/compose.js`, which posts to
+  /social/posts and lands on the new post. Letter mode needs its own pill
+  words, Send on the Pad's button, and a landing on the two of you.
+- ACTIVITY AND PUSH: there is no notifications table. Activity's rows are
+  worked out from comments, likes, follows and the like
+  (`social/activity.py` `listing`, the bell's `dot`), and a push
+  (`push.note`) sends the newest Activity row of its kind. Letters are not
+  in Activity, so a push for one needs a path of its own in
+  `social/push.py`.
+- SAFETY: blocks are `safety.between` and `hidden_authors`; there is no
+  helper for two people who follow each other (use `follows.is_following`
+  both ways). Reports allow only the kinds in a CHECK on `social_reports`
+  (person, post, drawing, comment), so a "letter" kind is a migration,
+  and the admin queue's takedown withholds the drawing.
+- THE DATABASE: the migrations' head is `b7e3f9a2c5d1` (two hands); a new
+  one goes on it. `verify_socialauth` 14 holds the exact set of tables
+  and indexes and runs `alembic check`, so a new table goes into both.
+- WHAT WOULD LEAK, and must be guarded and checked:
+  - A letter stored as a site post: Home and the Posts tab list post rows
+    with no visibility filter. Keep letters in their own table.
+  - Skribl's PATCH /api/skribls/<id>: it lets the author change a
+    drawing's visibility, and only "withheld" is protected. Hold
+    "letter" the same way, or a written-back letter, which holds the
+    other person's strokes, could be made public.
+  - The site's eye (`POST /social/b/<id>/gallery`, `social/posts.py`): it
+    guards only posts, comments and faces.
+  - Deleting an account (`accounts.delete_person`): it needs a letters step.
+  - Safe already: Skribl's listings, search, Hot, the Library and the face
+    picker show public (or the author's public, unlisted and private)
+    only, and every page, card, poster and payload asks `visible_to`.
+- A NAME ALREADY TAKEN: the Pad's `?letters=1` is "Your hand", your drawn
+  alphabet (`editor_letters.js`, `letters.css`). Call the new code
+  something that cannot be mistaken for it.
 
 DECIDED WHILE PLANNING (Cal's; say so in the PR, and the owner can
 overrule):
