@@ -54426,3 +54426,49 @@ in light, in dark and on the sheet; a new row for the lavender edge and the
 dark lines, read where they are painted), each shown red by breaking its part
 in a worktree: today's light, dark and sheet colours back, no edge, no line of
 light, no dark foot, the edge in another colour, and A's gradient (8 breaks).
+
+## After v330 -- Bento tiles, mocked: a friend's second file
+
+The owner, Nov 26, about 11 AM, an hour after "Yes to B" was built, with a
+second zip ("Blooby Gallery -- Apple Bento Cards + 1px Border"): "Does this
+file compare?" Its set was made for the site's own page (#F6F8FA, dark
+#0F1218): a card #FFFFFF with a 1px cool-slate border #E1E7EF (dark #1A1F29,
+#272F3E), 24px corners, no shadow; an art well with 16px corners and a 1px
+border (#E8EEF5, dark #222936); its own inks (#11161D and #505C6B, dark
+#F2F5F9 and #909EAE); on hover the card scaled 1.012 and its border a step
+darker (dark: the card #1F2531, the border #354054). "Bento" is Apple's grid
+of mixed sizes; the file's preview shows one card two columns wide, its CSS
+makes none.
+
+THE MOCK (the artifact "Bento Tiles",
+https://claude.ai/artifact/RjQ29ugo2HvBjqEx1kB8pn): the real Gallery (main
+after #1117, the enamel tiles) on a fresh database, the six drawings of the
+enamel mock, a touch phone and a desk, light and dark, switching between now
+and bento laid over it (the picture keeps its own paper); up close at a
+phone's corner; bento's hover on a desk at rest and under the mouse.
+Measured off the screen at 2x, light / dark:
+- tile from page: now 1.06 / 1.06, bento 1.06 / 1.14;
+- the tile's edge from the tile: now 1.34 / 1.27, bento 1.24 / 1.23 (in
+  light their slate has half the lavender's colour, OKLCH chroma 0.013
+  against 0.027);
+- the picture's line from the tile: now 1.57 / 1.60, bento 1.17 / 1.13;
+  the snail's dark paper from a bento tile 1.01 (now 1.06);
+- the counts from the tile: now 7.56 / 9.58, bento 6.81 / 6.04;
+- under the mouse, bento's edge from the tile 1.48 / 1.47 (now no hover).
+  In Chromium the drawing stays sharp at 1.012 (its edge energy within 1%
+  of at rest); Safari not tested. As sent it would scale under Reduce
+  Motion too.
+
+CAL'S PICK: keep what is live. In light the two are near twins; in dark
+bento loses the picture's outline (a drawing on dark paper melts into its
+tile), greys the counts, and trades the lavender for slate. What it has that
+the site has not is a hover on a desk; asked with the pick whether to mock
+one on the enamel tiles (the lavender edge a step darker under the mouse,
+with or without the small grow), and offered: a mock of the mixed sizes, if
+that is what caught the owner's eye.
+
+NOTHING IS BUILT. Pad and Flip: not theirs.
+
+THE OWNER, about 11:20 AM: "I think I like now on the tiles." The tiles stay
+as built, the 1px lavender edge with them; bento is not built. Still open:
+whether to mock a hover for the tiles on a desk.
