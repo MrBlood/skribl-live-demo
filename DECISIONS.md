@@ -54029,3 +54029,29 @@ player's ratchet (`verify_player_isolation`, `verify_jsstrip`), so it was
 carved as `add()` was for Text.
 
 NOT TESTED HERE: WebKit (Safari on a Mac with a mouse), SF and Segoe UI.
+
+## After v330 -- Drawers beside the drawing: what main's run after #1105 taught
+
+Main's full run after #1105 went red on four shards, each for something
+the build had not read in CI's face or had renamed without its reader:
+
+- `verify_drawerside`, "both ways seen": in CI's face (narrower words)
+  Flip's Feel fits whole beside the drawing on a 1280x560 desk, so the
+  case where the tile stays never came. The short desk is 1280x500 now,
+  where neither face fits both: green here in both faces, and the break
+  that lets the tile leave the column red on both editors there.
+- `verify_musicsnap`, "Snap to the beat off, nothing settles": a tap on
+  the whole song for 2.85s landed on 2.82, the timeline beside the drawing
+  a phone's width. Its desk is 960x900 now, where the drawer opens below,
+  as the other music suites' were moved (54/54 here).
+- `verify_helpclaims`: How it works' "Draw in full screen" named
+  `verify_drawfull`'s drawer row by its old words ("under the dock"); it
+  names the row as it reads now. The suite had run before the rename.
+- And How it works' Text said its drawer "opens under the tools, as the
+  pen's does"; on a desk it opens beside the drawing now, so it says
+  "opens where the pen's does" (true on a phone and beside).
+
+`verify_drawerside` 39/39 (and in CI's face), `verify_musicsnap` 54/54,
+`verify_helpclaims` 47/47, `verify_help` 95/95, `verify_helpdemos`
+137/137. Read in CI's face before the next merge of anything about words
+fitting, as WORKING-AGREEMENTS asks; this one fitted by a few pixels.
