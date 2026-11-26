@@ -98,10 +98,12 @@ owner's switch.
 
 ## Then, in the decided order
 
-Messages as drawn letters (being mocked the evening of Nov 25, at the
-owner's "Yes, mock drawn letters"), then watching first everywhere
-(`DECISIONS.md`, "The owner's clarifications to the final
-recommendations"); recolours on a draw-back are built (Nov 25).
+Messages as drawn letters: mocked the evening of Nov 25
+(https://claude.ai/artifact/Ax3ZcVSfR4mnDfRzUtwyfq), six choices, A each
+Cal's pick, waiting on the owner's answer (`DECISIONS.md`, "Drawn letters,
+mocked"). Nothing is built. Then watching first everywhere (`DECISIONS.md`,
+"The owner's clarifications to the final recommendations"); recolours on a
+draw-back are built (Nov 25).
 
 ## What saves time
 
