@@ -21,8 +21,8 @@
     NOTIFICATIONS ON THIS PHONE (push notifications; Blooby's Nudges, the
     owner's "All yes", Nov 18), under Theme: a row a kind, each with Theme's
     own switch (On, Off), starting at the dot's rule (Replies and comments,
-    Mentions and the number on the icon on; Likes, New followers, Reposts
-    and quotes off). The choices are this device's, as the permission is
+    Mentions, Letters (the owner's yes, Nov 26) and the number on the icon
+    on; Likes, New followers, Reposts and quotes off). The choices are this device's, as the permission is
     (push.py). It is there hidden, and push.js shows the one state this
     device is in: its switches; Turn on; told no (where to allow it); or, on
     an iPhone or an iPad in a browser tab, the way to the Home Screen app
@@ -97,7 +97,8 @@
                                       ('likes', 'Likes', 'Someone likes your post or comment'),
                                       ('follows', 'New followers', 'Someone starts following you'),
                                       ('reposts', 'Reposts and quotes', 'Someone reposts or quotes you'),
-                                      ('badge', 'The number on the icon', 'How many replies, comments and mentions are new')] %}
+                                      ('letters', 'Letters', 'Someone sends you a letter or writes back'),
+                                      ('badge', 'The number on the icon', 'How many replies, comments, mentions and letters are new')] %}
           <div class="push-row">
             <div class="theme-words">
               <h3 class="push-name" id="push-{{ kind }}">{{ name }}</h3>

@@ -446,12 +446,12 @@ def quiet(endpoint, since, wait=1.6):
 
 
 def row_of(endpoint):
-    got = db("select person_id, replies, mentions, likes, follows, reposts, badge, gen, browser, told_up_to"
+    got = db("select person_id, replies, mentions, likes, follows, reposts, letters, badge, gen, browser, told_up_to"
              " from social_push_subscriptions where endpoint = ?", (endpoint,))
     return got[0] if got else None
 
 
-DEFAULTS = (1, 1, 0, 0, 0, 1)
+DEFAULTS = (1, 1, 0, 0, 0, 1, 1)
 
 # ---- the pages: a stand-in for the browser's push service ------------------------------
 # Chromium here cannot reach a real push service, so the page's PushManager
@@ -675,11 +675,12 @@ with sync_playwright() as p:
             row = row_of(ep)
             check("a device's address and keys, handed over by somebody signed in, are kept with their sign-in"
                   " (their session's generation and a mark of this browser's sign-in), starting at the dot's rule:"
-                  " replies and comments, mentions and the number on; likes, follows, reposts off",
+                  " replies and comments, mentions, letters and the number on; likes, follows, reposts off",
                   st == 200 and isinstance(j, dict) and j.get("on") == {"replies": True, "mentions": True, "likes": False,
-                                                                       "follows": False, "reposts": False, "badge": True}
-                  and row is not None and row[0] == ann.id() and tuple(row[1:7]) == DEFAULTS and row[7] == 1
-                  and re.fullmatch(r"[0-9a-f]{64}", row[8] or ""), f"{st} {j} {row}")
+                                                                       "follows": False, "reposts": False, "letters": True,
+                                                                       "badge": True}
+                  and row is not None and row[0] == ann.id() and tuple(row[1:8]) == DEFAULTS and row[8] == 1
+                  and re.fullmatch(r"[0-9a-f]{64}", row[9] or ""), f"{st} {j} {row}")
             c = ann.client()
             _, keys = device("ann-x")
             refused = {}
@@ -896,7 +897,7 @@ with sync_playwright() as p:
                   " before it again, though it is moments old (a device is never told a row it was told)",
                   st_m == 200 and len(first) == 1 and first[0].get("title") == "Bea said something on your post"
                   and quiet(E1, n1, wait=2.0) == [], f"{st_m} {len(first)}")
-            told = row_of(E1)[9]
+            told = row_of(E1)[10]
             check("the device keeps the time of the newest row it was told about", bool(told), str(told))
         except Exception as exc:  # noqa: BLE001
             stopped(4, exc)
@@ -980,7 +981,7 @@ with sync_playwright() as p:
             row = row_of(E1)
             check("and one who turns nudges on there takes it, starting at the dot's rule again (Ann's Likes switch"
                   " does not come with it)", st_t == 200 and row is not None and row[0] == cyd.id()
-                  and tuple(row[1:7]) == DEFAULTS and row[9] is None, str(row))
+                  and tuple(row[1:8]) == DEFAULTS and row[10] is None, str(row))
             st_u, _ = cyd.client().post_json("/social/push/unsubscribe", {"endpoint": E1})
             check("turning it off there lets it go", st_u == 200 and row_of(E1) is None, str(st_u))
             gil = member(b, "gil", "Gil Ward")
@@ -1075,7 +1076,7 @@ with sync_playwright() as p:
                           " key, keeps it at the dot's rule, and the card goes", shown and reg
                           and reg["scope"] == BASE + "/social/" and str(reg["script"]).endswith("/social/sw.js")
                           and pg.evaluate("() => window.__subscribed") == 1 and row is not None
-                          and tuple(row[1:7]) == DEFAULTS, f"{shown} {reg} {row}")
+                          and tuple(row[1:8]) == DEFAULTS, f"{shown} {reg} {row}")
                     go(pg, "/social/activity", wait=900)
                     check(f"{look}: once this device is nudged, Activity does not ask",
                           pg.evaluate("() => document.querySelector('[data-push-ask]').hidden") is True, "")
@@ -1107,12 +1108,12 @@ with sync_playwright() as p:
                       return { hidden: f.hidden, title: f.querySelector('#pushTitle').textContent, rows, pills, order,
                                on: f.querySelector('[data-push-when="on"]').hidden, shown }; }""")
                     check(f"{look}: Settings has \"Notifications on this {word}\" under Theme, a row a kind with"
-                          " Theme's own switch, the dot's rule pressed (Replies and comments, Mentions and the number"
-                          " On; Likes, New followers, Reposts and quotes Off), each pill under its choice",
+                          " Theme's own switch, the dot's rule pressed (Replies and comments, Mentions, Letters and the"
+                          " number On; Likes, New followers, Reposts and quotes Off), each pill under its choice",
                           not pan["hidden"] and pan["title"] == f"Notifications on this {word}" and not pan["on"]
                           and [r[0] for r in pan["rows"]] == ["Replies and comments", "Mentions", "Likes", "New followers",
-                                                              "Reposts and quotes", "The number on the icon"]
-                          and [r[2] for r in pan["rows"]] == ["On", "On", "Off", "Off", "Off", "On"]
+                                                              "Reposts and quotes", "Letters", "The number on the icon"]
+                          and [r[2] for r in pan["rows"]] == ["On", "On", "Off", "Off", "Off", "On", "On"]
                           and all(pan["pills"]) and pan["order"][:2] == ["themeTitle", "push"]
                           and pan["shown"] == ["on"], json.dumps(pan)[:400])
                     check(f"{look}: only that state is drawn: no Turn on above switches that are on",

@@ -176,7 +176,7 @@ def set_visibility_policy(fn, app=None):
 _EXTRA_VISIBILITIES = ()
 
 
-def set_visibility_values(values, app=None):
+def set_visibility_values(values, app=None, *, held=()):
     """Widen the set of visibility strings POST /api/skribls will accept.
 
     Same app-local shape as set_visibility_policy: with `app`, only that
@@ -188,8 +188,21 @@ def set_visibility_values(values, app=None):
     reads through the visibility policy, and the built-in feed lists only
     "public". A custom state is invisible to the feed unless the host also
     installs a feed filter (see set_feed_filter).
+
+    HELD STATES (`held`, a few of `values`): states only the host's own code
+    sets. Skribl's HTTP create refuses them as it refuses a state nobody
+    taught it, and an author can neither set a post into one nor out of one
+    (set_post_visibility, PATCH /api/skribls/<id>), as with "withheld"; the
+    host's in-process create_post and an operator (require_author=False)
+    still can. For a state whose readers the host decides and an author must
+    not widen: the site's drawn letters ("letter"), whose drawing a written-
+    back letter shares with the other person, so its author making it public
+    would publish somebody else's letter.
     """
     vals = tuple(str(v) for v in (values or ()))
+    held = tuple(str(v) for v in (held or ()))
+    if not set(held) <= set(vals):
+        raise ValueError(f"held visibility values {sorted(set(held) - set(vals))} must be among the values given")
     for v in vals:
         # 16 because that is String(16) on SkriblPost.visibility. A longer
         # value would be accepted here and then truncated or rejected by the
@@ -201,9 +214,28 @@ def set_visibility_values(values, app=None):
                 "holding it is String(16)")
     if app is not None:
         app.extensions.setdefault("skribl", {})["visibility_values"] = vals
+        app.extensions["skribl"]["visibility_held"] = held
         return
-    global _EXTRA_VISIBILITIES
+    global _EXTRA_VISIBILITIES, _HELD_VISIBILITIES
     _EXTRA_VISIBILITIES = vals
+    _HELD_VISIBILITIES = held
+
+
+#: The host's held states (set_visibility_values' `held`), process-wide.
+_HELD_VISIBILITIES = ()
+
+
+def visibility_held():
+    """The visibility strings only the host's own code sets (`held`)."""
+    held = _HELD_VISIBILITIES
+    try:
+        from flask import current_app
+        local = current_app.extensions.get("skribl", {}).get("visibility_held", _POLICY_UNSET)
+        if local is not _POLICY_UNSET:
+            held = local
+    except (ImportError, RuntimeError):
+        pass
+    return tuple(held or ())
 
 
 def visibility_values():

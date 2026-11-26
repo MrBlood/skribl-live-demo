@@ -309,7 +309,8 @@ def delete_person(sess, person_id):
     that post (drop_post); every mention of them and every one they wrote,
     the words that named them staying, plain (mentions); their follows, both
     ways (follows); their mutes, both ways (mutes); the ways they were found
-    (finding people); the devices nudged for them (push). Flushes; the
+    (finding people); every letter they sent or received, with its drawing
+    (letters); the devices nudged for them (push). Flushes; the
     request commits.
     (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
     for a host to take an author's drawings away in one go: they stay, and
@@ -357,6 +358,10 @@ def delete_person(sess, person_id):
     # the cascade).
     from .people import drop_person_words
     drop_person_words(person_id)
+    # Every letter they sent or received, and the drawings (letters: a
+    # letter is the two's, and one written back on holds both hands).
+    from .letters import drop_person_letters
+    drop_person_letters(person_id)
     # Their devices that were nudged (push: said here too, never left to the
     # cascade).
     from .push import drop_person_pushes

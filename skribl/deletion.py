@@ -103,7 +103,7 @@ import hashlib
 import hmac
 
 from .models import (SkriblPost, SkriblPostMedia, SkriblReport, normalise_user_id,
-                     session, visibility_values)
+                     session, visibility_held, visibility_values)
 
 
 def hash_delete_token(token):
@@ -298,6 +298,13 @@ def set_post_visibility(public_id, visibility, *, author_id=None,
         raise SkriblRefused(
             "This Skribl was withdrawn by the site, so who can see it "
             "can't be changed.")
+    # A HOST'S HELD STATE (set_visibility_values' `held`) is the host's, as
+    # withheld is the operator's: an author sets a post neither into one nor
+    # out of one. Said as a state nobody taught Skribl is, before the lookup
+    # has answered anything else.
+    held = visibility_held()
+    if require_author and (visibility in held or post.visibility in held):
+        raise SkriblRefused("Who can see this Skribl is the site's to say, so it can't be changed here.")
     post.visibility = visibility
     session().flush()
     return visibility
