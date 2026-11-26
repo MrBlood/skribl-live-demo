@@ -69,6 +69,8 @@
  *   host   -> editor skribl:compose:underlay {payload, first} draw back: a
  *                                            drawing faint under the pen
  *                                            (lib/drawback.js)
+ *   host   -> editor skribl:compose:say      {button, lead, rest, aside}
+ *                                            what the host is making (below)
  *   host   -> editor skribl:compose:help     open How it works (lib/ask.js):
  *                                            a host's own page explaining
  *                                            the host, sending people on to
@@ -78,6 +80,14 @@
  * picked, under the canvas as a guide to trace (editor_face.js). It is never
  * part of the face: what goes back on done is the lines alone. Anywhere else
  * the Pad ignores it.
+ *
+ * `say` names what the host is making (Nov 26, the Skribl site's drawn letters;
+ * lib/composehost.js say): the word on the header's button and the post sheet's
+ * (`button`, "Send"), a pill under the header (`lead` bold, then `rest`; while
+ * drawing back, Draw back's own pill says them, lib/drawback.js words), and
+ * what steps aside, dimmed and saying why when tapped, as Draw back's do
+ * (`aside.media`: the picture and music drawer; `aside.editor`: the door to
+ * the other editor). Pad and Flip: this file serves both.
  *
  * `preview` is a flat PNG of the finished drawing, so the host can show
  * something the instant the overlay closes without waiting on anything. The
@@ -145,9 +155,132 @@
   };
   global.SkriblCompose = api;
 
+  /* ---- what the host is making (skribl:compose:say) --------------------- */
+  var aside = {};
+  var ASIDE = { media: '#mediaOpenBtn', editor: '#flipBtn, #padBtn' };
+  var sayPill = null;
+  function tell(words, near) {
+    if (typeof global.showToast === 'function') global.showToast(words, near || null);
+    else if (typeof global.chip === 'function') global.chip(words);
+  }
+  /* What steps aside is held at the press, before the editor's own handler:
+     dimmed (styles.css body.compose-aside-*), and a tap says why. */
+  var guarding = false;
+  function guardAside() {
+    if (guarding) return;
+    guarding = true;
+    ['click', 'input', 'pointerdown'].forEach(function (type) {
+      doc.addEventListener(type, function (e) {
+        if (!e.target || !e.target.closest) return;
+        for (var k in ASIDE) {
+          if (!aside[k]) continue;
+          var hit = e.target.closest(ASIDE[k]);
+          if (!hit) continue;
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          if (type === 'click') tell(aside[k], hit);
+          return;
+        }
+      }, true);
+    });
+  }
+  function canvasEl() { return doc.getElementById('canvas') || doc.getElementById('pad'); }
+  /* THE PILL ON FRESH PAPER: Draw along's pill, under the header, saying what
+     this is and for whom. It stays while it is clear of the drawing; one that
+     lies over the drawing fades away at the first stroke, so nothing sits on
+     what is being drawn (the owner, Nov 23, of Draw back's pill). */
+  function placePill() {
+    if (!sayPill) return;
+    var head = doc.querySelector('.header');
+    var b = head ? head.getBoundingClientRect().bottom : 0;
+    sayPill.style.top = Math.max(8, b + 8) + 'px';
+  }
+  function dropPill() {
+    var p = sayPill;
+    sayPill = null;
+    global.removeEventListener('resize', placePill);
+    if (!p) return;
+    if (!p.animate) { p.remove(); return; }
+    var a = p.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease', fill: 'forwards' });
+    a.onfinish = function () { p.remove(); };
+  }
+  function pillWords(el, lead, rest) {
+    el.textContent = '';
+    if (lead) {
+      var b = doc.createElement('b');
+      b.textContent = lead;
+      el.appendChild(b);
+    }
+    if (rest) el.appendChild(doc.createTextNode(rest));
+  }
+  function showPill(lead, rest) {
+    if (global.SkriblDrawBack && global.SkriblDrawBack.state && global.SkriblDrawBack.state()) {
+      if (sayPill) dropPill();
+      if (global.SkriblDrawBack.words) global.SkriblDrawBack.words(lead, rest);
+      return;
+    }
+    if (!lead && !rest) { dropPill(); return; }
+    if (!sayPill) {
+      sayPill = doc.createElement('div');
+      sayPill.className = 'da-pill cs-pill';
+      sayPill.setAttribute('role', 'note');
+      var w = doc.createElement('span');
+      w.className = 'da-where cs-where';
+      sayPill.appendChild(w);
+      doc.body.appendChild(sayPill);
+      global.addEventListener('resize', placePill);
+      var down = null;
+      var onDown = function (e) { down = (e.isPrimary && e.target === canvasEl()) ? { x: e.clientX, y: e.clientY, d: 0 } : null; };
+      var onMove = function (e) { if (down && e.isPrimary) down.d = Math.max(down.d, Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y)); };
+      var onUp = function () {
+        var was = down;
+        down = null;
+        if (!was || was.d <= 6 || !sayPill) return;
+        var cv = canvasEl(), a = sayPill.getBoundingClientRect(), c = cv ? cv.getBoundingClientRect() : null;
+        if (c && a.bottom > c.top && a.top < c.bottom && a.right > c.left && a.left < c.right) {
+          doc.removeEventListener('pointerdown', onDown, true);
+          doc.removeEventListener('pointermove', onMove, true);
+          doc.removeEventListener('pointerup', onUp, true);
+          dropPill();
+        }
+      };
+      doc.addEventListener('pointerdown', onDown, true);
+      doc.addEventListener('pointermove', onMove, true);
+      doc.addEventListener('pointerup', onUp, true);
+    }
+    pillWords(sayPill.firstChild, lead, rest);
+    sayPill.setAttribute('aria-label', (lead || '') + (rest || ''));
+    placePill();
+  }
+  function onSay(d) {
+    var word = typeof d.button === 'string' ? d.button.slice(0, 24) : '';
+    if (word) {
+      ['#postBtn .btn-label', '#postSubmitLabel'].forEach(function (sel) {
+        var el = doc.querySelector(sel);
+        if (el) el.textContent = word;
+      });
+      /* The sheet puts its idle word back each time it opens (lib/postsheet.js):
+         this one, from now on. */
+      var sub = doc.getElementById('postSubmitLabel');
+      if (sub) sub.setAttribute('data-idle', word);
+      var pb = doc.getElementById('postBtn');
+      if (pb) pb.title = word;
+    }
+    aside = {};
+    var a = d.aside && typeof d.aside === 'object' ? d.aside : {};
+    for (var k in ASIDE) {
+      if (typeof a[k] === 'string' && a[k]) aside[k] = a[k].slice(0, 160);
+      doc.body.classList.toggle('compose-aside-' + k, !!aside[k]);
+    }
+    guardAside();
+    showPill(typeof d.lead === 'string' ? d.lead.slice(0, 60) : '', typeof d.rest === 'string' ? d.rest.slice(0, 160) : '');
+  }
+  api.said = function () { return { aside: Object.keys(aside), pill: !!sayPill }; };
+
   global.addEventListener('message', function (e) {
     if (e.origin !== HOST_ORIGIN) return;
     var d = e.data;
+    if (d && d.type === 'skribl:compose:say') { onSay(d); return; }
     /* A face's photo to trace: face mode alone has the guide (editor_face.js
        is loaded only there), so anywhere else this does nothing. */
     if (d && d.type === 'skribl:compose:guide') {

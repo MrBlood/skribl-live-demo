@@ -150,7 +150,9 @@
         if (publicInput) publicInput.disabled = false;
         submitBtn.disabled = false;
         submitBtn.hidden = false;
-        submitLabel.textContent = IDLE_LABEL;
+        // A host's own word for it (editor_compose.js, skribl:compose:say:
+        // "Send" for a letter), held on the label, wins over the template's.
+        submitLabel.textContent = submitLabel.getAttribute('data-idle') || IDLE_LABEL;
         showBackup(false);
       } else if (state === 'sending') {
         posting = true;
