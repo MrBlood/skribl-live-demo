@@ -1158,6 +1158,8 @@ with sync_playwright() as p:
             check("the ⋯ of a letter that came to you has Delete, Report and Block; its Report sends a report of the letter",
                   shown2 == ["delete", "report", "block"]
                   and bool(db("select id from social_reports where kind = 'letter' and target = ?", (LR,))), f"{shown2}")
+            fay = someone(b, "fay", "Fay Lund")
+            follow(ana, fay)                 # Ana follows Fay; Fay does not follow back
             ctx, pg = browser_as(b, ana)
             pg.goto(BASE + "/social/letters/write")
             ready(pg)
@@ -1168,7 +1170,8 @@ with sync_playwright() as p:
             st_b = status(pg, "/social/letters/@theo")
             close_ctx(ctx, pg)
             block(cyd, theo, on=False)
-            check("Write's list is the people who follow each other with you (not one who follows one way); behind a block"
+            check("Write's list is the people who follow each other with you (not one who follows you, nor one you"
+                  " follow, one way); behind a block"
                   " there is no page of the two of you", sorted(people) == ["cyd", "theo"] and st_b == 404,
                   f"{people} {st_b}")
         except Exception as exc:  # noqa: BLE001
