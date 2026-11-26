@@ -936,8 +936,10 @@ def register(bp, skribl_blueprint="skribl"):
         "his". Only while her drawing is shown to the viewer: otherwise the
         page plays his own drawing from Skribl, and this is as gone as a
         drawing never made. Each read as the viewer may see it
-        (read_payload); nothing of hers is ever kept in his."""
-        from skribl import read_payload
+        (read_payload); nothing of hers is ever kept in his. Both and his
+        alone count a play of his drawing, as Skribl's own route would
+        (skribl.count_play)."""
+        from skribl import count_play, read_payload
         from .drawback import VIEWS, view as as_viewed
         me = current_person()
         got = _hands_open(skribl_id, me) if view in VIEWS else None
@@ -949,6 +951,12 @@ def register(bp, skribl_blueprint="skribl"):
         out = as_viewed(hers, mine, view) if hers is not None and mine is not None else None
         if out is None:
             return _json_error("gone", 404)
+        # A PLAY OF HIS DRAWING, counted as Skribl's own player's fetch is
+        # (once a viewer a day): Both, which a card plays, and his alone.
+        # Hers alone counts nothing toward hers, as a draw-back's play never
+        # did; it is her drawing as he answered it, on his post.
+        if view in ("both", "his"):
+            count_play(row.skribl_id, viewer_id=who)
         resp = jsonify({"skribl": out})
         resp.headers["Cache-Control"] = "private, no-store"
         return resp

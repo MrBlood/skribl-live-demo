@@ -25,7 +25,7 @@ from .core import (HOT_DAYS, MAX_REPORT_NOTE_CHARS, REPORT_REASONS,
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia, SkriblReport, SkriblView,
                      _visibility_policy, as_utc, normalise_user_id,
                      session, apply_feed_filter, author_dict, sources_for)
-from .views import purge_views
+from .views import count_view, purge_views
 from .brand import page_brand
 from .mediameta import STRIPPED, strip_payload
 from .storage import KEY_RE
@@ -1351,76 +1351,6 @@ def register_routes(bp, *, index_route=False):
                 seen[uid] = author_dict(uid)
             item["author"] = seen[uid]
 
-    def _count_view(post):
-        """Count a play; True when it was a new one.
-
-        BEST EFFORT, AND NEVER AT THE READER'S COST (the PRE-331 review's
-        15). A post read on a database that will not take the write (read
-        only, a replica, a file locked by another writer) was a 500: the
-        play's insert failed and took the read with it, while the listing
-        beside it served. The count runs inside one savepoint now, so a
-        store that refuses it unwinds the count alone; the host's
-        transaction is intact and the reader gets the post. Said once per
-        app in the log, not once per read.
-        """
-        s = session()
-        try:
-            with s.begin_nested():
-                counted = _record_view(s, post)
-        except sa.exc.SQLAlchemyError as exc:
-            ext = current_app.extensions.setdefault("skribl", {})
-            if not ext.get("view_count_warned"):
-                ext["view_count_warned"] = True
-                current_app.logger.warning(
-                    "skribl: a play could not be counted (%s); the post was "
-                    "served without it. Said once.", type(exc).__name__)
-            return False
-        if counted:
-            # THE JANITOR RIDES THE WRITE, not the read: only a NEW row
-            # triggers it, so the work is proportional to plays rather than
-            # to page loads, and it is bounded and best-effort. A deployment
-            # that never schedules purge_views() still does not accumulate
-            # view rows for ever (PRESEAL-003). In its own savepoint and
-            # swallowed on purpose, exactly as the rate limiter's janitor
-            # is: a cleanup inside somebody's request must never take their
-            # request down with it, and the next play tries again.
-            try:
-                with s.begin_nested():
-                    purge_views(s)
-            except Exception:                                # pragma: no cover
-                pass
-        return counted
-
-    def _record_view(s, post):
-        who = _rate_key(_client_ip())
-        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        seen = (s.query(SkriblView.id)
-                .filter(SkriblView.post_id == post.id, SkriblView.viewer_hash == who,
-                        SkriblView.day == day).first())
-        if seen is not None:
-            return False
-        try:
-            with s.begin_nested():
-                s.add(SkriblView(post_id=post.id, viewer_hash=who, day=day))
-                s.flush()
-        except sa.exc.IntegrityError:
-            return False
-        # ATOMIC, NOT READ-MODIFY-WRITE (EXT-P1-4). This was
-        # `post.views_total = (post.views_total or 0) + 1`, which reads the
-        # value into Python and writes back a number computed from a snapshot.
-        # The uniqueness row above stops ONE viewer being counted twice; it
-        # does nothing about two DIFFERENT viewers whose requests interleave,
-        # and those are exactly the requests a popular post gets. Both read N,
-        # both write N+1, one play is gone. Under-counting is silent, permanent
-        # and worst on the posts that matter most, and Hot ranks on this
-        # column. The database does the addition now, so concurrent increments
-        # serialise on the row instead of racing in the application.
-        s.query(SkriblPost).filter(SkriblPost.id == post.id).update(
-            {SkriblPost.views_total:
-                sa.func.coalesce(SkriblPost.views_total, 0) + 1},
-            synchronize_session=False)
-        return True
-
     @bp.get("/api/skribls/meta")
     def get_skribl_meta():
         """Metadata for ids the caller already holds. No payload, NO PLAY.
@@ -1499,7 +1429,7 @@ def register_routes(bp, *, index_route=False):
         # moves only when a row is new. No address is stored. The host owns
         # the commit, as on every write here; a host that does not commit on
         # GET simply does not count plays.
-        _count_view(post)
+        count_view(post)
 
         # Shallow-copy so we don't mutate the SQLAlchemy-tracked JSON column
         # (which could otherwise be flushed back to the DB on this GET).
