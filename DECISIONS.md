@@ -54116,3 +54116,67 @@ after the merge is.
 
 PAD AND FLIP: the site's (two hands is the Pad's draw-back today); Skribl's
 count serves both editors' drawings alike.
+
+## After v330 -- Drawn letters, mocked: waiting on the owner
+
+The owner, Nov 25, about 7:25 PM: "Yes, mock drawn letters", the decided
+order's next step after Draw back ("Messages as drawn letters (the map's
+item 8, reshaped)"). On Nov 14 the owner had asked for direct messages ("We
+need direct messages"); their clarifications said a replayable drawn
+letter "is a different feature, possibly a distinctive one for Blooby",
+and that how it is built and delivered, its privacy and its priority are
+separate decisions. Mocked that evening as "Drawn Letters"
+(https://claude.ai/artifact/Ax3ZcVSfR4mnDfRzUtwyfq), sixteen boards:
+- the six choices, and what was measured;
+- on a phone, in light: Ana's page now, and with Write; the real Pad as a
+  letter is written (the draw-back pill saying "A letter to Ana · only she
+  sees it", Post saying Send); Ana's letters; it draws itself; it rests;
+  Theo's side;
+- three of those in dark, and a desk in both themes;
+- choices 1 and 3 side by side, with now.
+Nothing is built.
+
+THE SIX CHOICES, A each Cal's pick:
+
+1. Who can write to you: A people you both follow; B anyone you follow;
+   C anyone, into a Requests tray.
+2. What a letter is: A a drawing on letter paper, words in your own drawn
+   letters (Text); B a drawing only; C typed words, a drawing beside.
+3. Where letters live: A Write on a friend's page, beside Following;
+   letters come to an envelope beside the bell at a phone's top (Home,
+   Gallery, Search) and to Letters in a desk's rail; B a Letters pill
+   inside Activity; C a tab on your own page.
+4. How it opens: A sealed in the list (a drawn envelope, not the picture);
+   it draws itself the first time, at the writer's pace, then rests, and
+   Watch again any time; B it draws itself every time; C it rests, play
+   to watch.
+5. How you answer: A Write back on it, Draw back's way (theirs stays,
+   yours is drawn on it, and it plays theirs, then yours; a mark on the
+   player's line where the hand changes); New letter starts fresh paper;
+   B always fresh paper.
+6. Safe by design: A only ever between the two of you (no reposts, quotes
+   or links); Report and Block on every letter; no photos or music at
+   first; Take back until it is opened, and nothing says when it was; B
+   the same, with photos.
+
+DECIDED IN THE MOCKING, Cal's, until the owner says otherwise:
+- SAME ROLE, SAME TOKEN. A letter's row is Activity's: its row, its 52px
+  picture and its dot. A new letter gets no tint of its own. The
+  envelope's dot is the bell's, and Write wears Following's dress.
+- THE BUTTON SAYS WRITE, with the envelope. "Write a letter" does not fit
+  beside Following, Share and the dots on a 402px phone. Write does in
+  every face here: 348px of 370 in Inter, 347 in Liberation Sans, 367 in
+  DejaVu Sans. Share stays where it is.
+- NOT CHAT, ON PURPOSE: no typing dots and no "seen".
+
+MEASURED, ink on ground as painted, light and dark (the Measured board).
+Every new pair is one the site already wears, with two exceptions:
+- the letter's paper on the light page (1.05:1), where its edge does the
+  work, at every card's 1.54:1;
+- the player's track (1.20:1 light, 1.44:1 dark), where its line and knob
+  carry it, at 4.08:1 and 5.46:1.
+Not tested here: WebKit, SF, Segoe UI.
+
+PAD AND FLIP: shared. A letter is written in the Pad the way Draw back
+opens it. Flip is next, on the list: a Flip letter, written back on page
+for page, as Flip's Draw back is.
