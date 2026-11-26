@@ -1445,16 +1445,13 @@ body.focus .top { justify-content: center; }
    fixed where it stood (--facepad-held, its scroll then, social.js padOver)
    and scrolled back to that same place once the editor has gone. */
 body.facepad-open { overflow: hidden; position: fixed; top: var(--facepad-held, 0px); left: 0; right: 0; }
-@media (min-width: 900px) {
-  .facepad { align-items: center; }
-  .facepad-sheet {
-    width: min(1120px, calc(100vw - 64px)); height: min(840px, calc(100vh - 48px));
-    border-radius: 22px;   /* CRISP: a sheet casts nothing over the scrim (it wore 24px/64px of black at 35%) */
-    opacity: 0; transform: translateY(28px);
-    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
-  }
-  .facepad.is-open .facepad-sheet { opacity: 1; transform: none; }
-}
+/* THE EDITOR FILLS THE WINDOW ON A DESK TOO (the owner's "All yes", Nov 26, to
+   the Room for the Drawer mock: "the window that opens should be
+   full-screen"). On a desk it was a box over the scrim, 1120px by 840 at
+   most; there the Pad's drawing grew too wide for a drawer to sit beside it
+   (707px on a 1366x768 desk) and the drawer opened below, half the drawing
+   scrolled out of view. Now on every screen the sheet is the whole window and
+   rises from below, as it always has on a phone, and its x takes you back. */
 @media (prefers-reduced-motion: reduce) {
   .facepad-sheet, .facepad.is-open .facepad-sheet { transform: none; }
   .facepad-sheet { opacity: 0; transition: opacity 0.2s ease; }

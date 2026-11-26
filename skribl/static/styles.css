@@ -1968,7 +1968,9 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
 body.drawers-beside :is(.canvas-area, #toolBar, .flip-stage, .strip-wrap, .flip-tools) { left: calc(-1 * var(--side-shift, 0px)); }
 body.drawers-beside :is(#drawPanel, #mediaCard, #txSheet).drawer-side {
   position: fixed; top: var(--side-top, 90px); right: max(16px, env(safe-area-inset-right, 0px)); bottom: auto; left: auto;
-  width: var(--side-w, 392px); max-width: calc(100vw - 32px); max-height: calc(100vh - var(--side-top, 90px) - 16px);
+  width: var(--side-w, 392px); max-width: calc(100vw - 32px);
+  /* --side-max: where a strip runs under the drawer (Flip's pages), the drawer ends above it (lib/drawers.js). */
+  max-height: min(calc(100vh - var(--side-top, 90px) - 16px), var(--side-max, 100vh));
   overflow-y: auto; overscroll-behavior: contain; margin: 0; z-index: 45;
 }
 

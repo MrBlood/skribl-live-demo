@@ -54527,3 +54527,103 @@ transform, no blurred layer, and a touch phone with the mouse put on a tile
 unchanged), and `verify_socialsettings` 15 (the hover line under the
 setting, and the site's hover line without it), each shown red by breaking
 its part in a worktree.
+
+## After v330 -- Room for the drawer, mocked: why it opened below, and three changes
+
+The owner, Nov 26, about 12:20 PM, with a picture of the Pad in full screen on
+their desk: "why is the drawer opening on the bottom?"; then the Pad and Flip
+from the site's Make; then "don't you think the window that opens should be
+full-screen and on flip the bottom slides would extend under the right side
+window?"
+
+WHY (measured here): a drawer opens beside the drawing only where the whole
+drawing fits beside it (`lib/drawers.js` sideFit, 440px to spare), and else
+below, the page scrolled 335px. A 16:9 drawing on the Pad fills the window's
+width (162px each side on a 16:9 screen), so it opens below on every desk, in
+full screen or not, 1920x1080 included (the owner's first picture: its
+proportions are a 16:9 drawing on a 1280x720 screen). Make's sheet is 1120px
+wide (social.css .facepad-sheet, a desk); at 1366x768 the Pad's 4:3 drawing
+grows to 707px there and no longer fits (the second picture). Flip's drawing is
+smaller and fits; in the owner's Segoe UI its drawer reached down onto the
+page strip's corner (the third picture; 14px clear in this box's faces).
+
+THE MOCK (the artifact "Room for the Drawer",
+https://claude.ai/artifact/UjuQLQg1cqaYeGadXu6Sev), on a 1366x768 desk (the
+wide drawing at 1920x1080 too), dark and light, each laid over today's app:
+1. Make's editor fills the window on a desk, Pad and Flip: the Pad's drawing
+   55% on screen with the drawer below becomes 100% beside it, 771px wide
+   (707 now).
+2. A drawing that still does not fit gets a little smaller as it slides left,
+   the least it needs, and back when the drawer closes: a 16:9 drawing 58% on
+   screen (73% at 1920) becomes 100%, 88% of its size (92% at 1920); centred
+   in its room, the drawer level with its top, the dock under it.
+3. Flip's page strip runs under the drawer, the full width (694px to 1008, 8
+   pages in view for 6), the drawer always ending above it.
+
+CAL'S PICK: all three. NOTHING IS BUILT. Pad and Flip: shared (2 and 3 in the
+drawers' one rule, 1 the site's sheet for both).
+
+## After v330 -- Room for the drawer: the owner's "All yes", built
+
+The owner, Nov 26, about 1 PM, to the Room for the Drawer mock: "All yes. Does
+the side close?" (It does, as it has since Nov 25: Pen tapped again, a click
+on the drawing, another drawer opened. Escape does not, and was offered.)
+
+BUILT, ONE RULE FOR BOTH EDITORS (`lib/drawers.js`):
+
+- A DRAWING THAT DOESN'T FIT BESIDE A DRAWER GETS A LITTLE SMALLER, the least
+  it needs, never past three quarters of its width (SIDE_MIN 0.75); past that
+  (a narrow window) the drawer opens below as before. The mock said "about 8
+  to 12%"; measured on real windows a wide drawing gives up 4 to 15% in a
+  maximised one and about 22% in a 16:10 full screen. A floor of 0.7 was
+  built first and taken back: it put the Pad's drawer beside at 960x900 (29%
+  smaller), where `verify_musicdoors` and its siblings open it below on
+  purpose, and 29% is not "a little".
+- THE ROOM COMES OUT OF THE DRAWING'S ROW as padding, half each side (each
+  editor names its row, `.canvas-area` and `.flip-stage`, whose padding its
+  own fit takes off the room it has), so the drawing stays centred over its
+  dock as both slide, and the editor's fit runs again at once (`fit`). What
+  comes out is the row's own spare width down to the widest a drawing beside
+  a drawer can be: a drawing its height holds back has room to spare in its
+  row (the first build took out only the drawing's overflow, 128px of the
+  408 needed, and nothing changed).
+- READ AS PAINTED: a drawer just opened sits under the dock in the page's
+  flow until it goes beside, a layout never painted, so the drawing is read
+  with it lifted out (as the Pad's own fit does). Read with it in, a smaller
+  drawing's top was where it sits with a drawer below, and the drawer beside
+  stood 36px above it. (A second reading of the top after the drawer went
+  beside was built too, and taken out: with the lift, its break turned no
+  row red.)
+- IT GLIDES with the slide (FLIP on `.canvas-wrap` and `.flip-wrap`, added
+  to whatever transform they have), and back on close.
+- FLIP'S PAGE STRIP RUNS UNDER THE DRAWER to its right edge, gliding out and
+  home with it, and the drawer ends above the strip (`--side-max`, read by
+  the drawer's rule in `styles.css`; a max-height of its own was cleared by
+  Text's sheet, which sets its own as a keyboard comes and goes). A resize
+  heard while it glides waits for the glide's end (the strip's own growing
+  is heard as one, and decided again mid-glide it landed in one frame), and
+  then decides again only if the window's size changed; and a decision
+  without a glide keeps a pixel's rounding as it was (the drawing and the
+  strip wobbled a pixel left and back after the glide).
+
+MAKE'S EDITOR FILLS THE WINDOW ON A DESK (`social.css` .facepad-sheet; the
+site's side, `docs/SOCIAL-SITE.md` section 49): over Make, a post's box, your
+face and a letter, rising from below as on a phone.
+
+PAD AND FLIP: shared. The link player loads none of it (`app.js` unchanged,
+`player.css` the same).
+
+THE CHECKS: `verify_drawerside`'s ROOM FOR THE DRAWER (a 16:9 drawing beside
+the drawer at 1366x768, 1440x900 and 1920x1080, a little smaller, and its
+glide; below at 1024x640; Flip's strip under every drawer at three sizes, and
+its glide), 48/48; `verify_composer` 11 (Make's Draw on a 1366x768 desk: the
+Pad over the whole window, the drawer beside, the drawing all seen). Each part
+shown red by its own break (room-off, room-noglide, room-floor, room-oneside,
+under-off, under-max, under-noglide, under-wait, wobble, lift-off, make-box).
+TWO CHECKS MOVED WITH IT: `verify_drawerreveal`'s desks, 960x800 and 720x560,
+where a drawer now opens beside the drawing a fifth smaller, to 900x800 and
+700x560, where it still opens below (190/195 on the old ones; 217/217); and
+`verify_socialprofile` 20, which put Make's editor away on a desk with a click
+at the window's corner, beside its card: there is nothing beside it now, the
+click landed in the editor (red beside other suites, green alone only where
+it found the editor's × there), and it uses the × on a desk as on a phone.

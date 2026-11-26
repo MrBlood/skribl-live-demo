@@ -4138,3 +4138,19 @@ list. The Pad and Flip: not theirs. `verify_socialposts` 22 holds it (the
 edge as painted, light and dark, the tile beside it unchanged, no grow, no
 blur, a touch phone unchanged) and `verify_socialsettings` 15 the "more
 contrast" line; each shown red by breaking its part.
+
+## 49. Built: Make's editor fills the window (Nov 26)
+
+The owner, Nov 26, with pictures of the Pad from Make on their desk, its drawer
+opened below: "don't you think the window that opens should be
+full-screen...?", then "All yes" to the Room for the Drawer mock.
+
+ON A DESK THE EDITOR IS THE WHOLE WINDOW (`social.css` .facepad-sheet): the Pad
+or Flip over Make, over a post's box, your face's and a letter's, as it has
+always been on a phone, rising from below; its x takes you back. It was a box
+over the scrim, 1120px by 840 at most, and there the Pad's drawing grew too
+wide for a drawer to sit beside it (707px on a 1366x768 desk): the drawer
+opened below with half the drawing scrolled out of view. Skribl's side of the
+same "All yes" (a drawing that makes a little room, Flip's strip under the
+drawer) is `lib/drawers.js`, held by `verify_drawerside`; this side by
+`verify_composer`.
