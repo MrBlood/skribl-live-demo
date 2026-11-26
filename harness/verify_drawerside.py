@@ -46,10 +46,27 @@ On the Pad (How it works' cat) and Flip (its bouncing ball):
   nothing, and the drawing glides home. On both, the drawer gone, a stroke
   lands where it is drawn.
 
+ROOM FOR THE DRAWER (the owner's "All yes", Nov 26, to the Room for the
+Drawer mock, after "why is the drawer opening on the bottom?"):
+
+  A WIDE DRAWING MAKES A LITTLE ROOM: a 16:9 drawing, which fills a desk's
+  width, on 1366x768, 1440x900 and 1920x1080: the drawer opens beside it
+  all the same, the drawing a little smaller (the least it needs, never past
+  three quarters of its width), its shape kept, whole on the screen, the
+  drawer level with its top and 16px clear of it, the dock under its
+  middle; closed, its own size again where it was. It glides there and
+  back with the slide, over many frames, never more than a third of the way
+  in one. Where it would give up more than a quarter (1024x640) the drawer
+  opens below, as before.
+  FLIP'S STRIP UNDER THE DRAWER: with any drawer beside, the page strip
+  runs from its own left (slid with the drawing) to the drawer's right
+  edge, and the drawer ends above it (on a short desk it scrolls inside
+  itself); closed, the strip is as it was. Its end glides out and home.
+
 Elsewhere:
 
-  BELOW: a 900x800 desk (neither drawing fits whole beside a drawer; at
-  1024 Flip's, small on a short screen, does), a tablet
+  BELOW: an 800x800 desk (neither drawing fits beside a drawer, even a
+  quarter smaller; at 900 Flip's ball does, a fifth smaller), a tablet
   (a finger: 1180x820 with touch) and a phone open below as before.
   A RESIZE DECIDES AGAIN: open beside, the window narrowed: below; widened
   again: beside.
@@ -107,7 +124,7 @@ LOOK = """([cv, move]) => {
            header: r(document.querySelector('.header')), moved: move.map(s => r(document.querySelector(s))) }; }"""
 
 
-def boot(b, ed, size, *, touch=False, phone=False, reduce=False, load=True):
+def boot(b, ed, size, *, touch=False, phone=False, reduce=False, load=True, shape=None):
     e = ED[ed]
     kw = {"viewport": {"width": size[0], "height": size[1]}, "device_scale_factor": 1}
     if touch:
@@ -117,6 +134,10 @@ def boot(b, ed, size, *, touch=False, phone=False, reduce=False, load=True):
     if reduce:
         kw["reduced_motion"] = "reduce"
     c = b.new_context(**kw)
+    if shape:
+        # A drawing of this shape, as a draft of it would start (lib/chromefit.js noted).
+        c.add_init_script("try { localStorage.setItem('skribl.shape.v1.%s', JSON.stringify(%s)); } catch (e) {}"
+                          % (ed.lower(), json.dumps(shape)))
     q = c.new_page()
     browsing.goto(q, BASE, e["route"])
     q.wait_for_function(e["ready"], timeout=20000)
@@ -395,9 +416,105 @@ with sync_playwright() as pw:
           " again (the slide's end reads the drawing's place again)",
           all(o is not None and abs(o[0]) <= 1.5 and abs(o[1]) <= 1.5 for _, o in offs), json.dumps(offs))
 
+    # ------------------------------------------------------------ room for the drawer
+    print("\nROOM FOR THE DRAWER — a drawing too wide to sit beside a drawer gets a little smaller; Flip's strip runs under it")
+    WIDE = {"w": 944, "h": 531, "ink": False}          # the 16:9 preset, which fills a desk's width
+    for size in ((1366, 768), (1440, 900), (1920, 1080)):
+        c, q = boot(b, "Pad", size, load=False, shape=WIDE)
+        rest = look(q, "Pad")
+        open_(q, "Pad", "draw")
+        g = look(q, "Pad")
+        close_(q, "Pad")
+        back = look(q, "Pad")
+        c.close()
+        cr, cv, d, R, H = rest["canvas"], g["canvas"], g["drawer"], rest["R"], rest["H"]
+        most = R - SIDE_W - 3 * EDGE                      # the widest a drawing beside a drawer can be
+        dock = g["moved"][0]
+        ok = (g["beside"] and g["side"] and d is not None and abs(d[2] - SIDE_W) <= 1 and abs(d[0] + d[2] - (R - EDGE)) <= 1
+              and abs(d[1] - cv[1]) <= 1 and cv[0] >= EDGE - 1 and abs(d[0] - (cv[0] + cv[2]) - EDGE) <= 1.5
+              and cv[1] >= 0 and cv[1] + cv[3] <= H and g["scrollY"] == 0
+              and cr[2] > most and most - 6 <= cv[2] <= most + 1 and cv[2] >= 0.75 * cr[2]
+              and abs(cv[2] / cv[3] - cr[2] / cr[3]) < 0.01 and abs((dock[0] + dock[2] / 2) - (cv[0] + cv[2] / 2)) <= 2
+              and not back["beside"] and all(abs(x - y) <= 0.5 for x, y in zip(back["canvas"], cr)))
+        check(f"Pad {size[0]}x{size[1]}, a 16:9 drawing too wide to sit beside a drawer ({cr[2]}px, the most beside one {most}px):"
+              " the drawer opens beside it all the same, the drawing a little smaller, the least it needs and never past three"
+              " quarters, its shape kept, whole on the screen, the drawer level with its top and 16px clear of it, the dock"
+              " under its middle; closed, the drawing is its own size again where it was",
+              ok, json.dumps({"rest": cr, "open": [g["beside"], cv, d, dock, g["scrollY"]], "most": most, "back": back["canvas"]})[:700])
+    c, q = boot(b, "Pad", (1366, 768), load=False, shape=WIDE)
+    trace_w = """() => { const c = document.getElementById('canvas'), out = []; window.__tw = out; const t0 = performance.now();
+      (function f() { const r = c.getBoundingClientRect(); out.push([r.left, r.width]); if (performance.now() - t0 < 700) requestAnimationFrame(f); })(); }"""
+    q.evaluate(trace_w)
+    q.evaluate("() => _padDrawerCtl.open('draw')")
+    q.wait_for_timeout(850)
+    opening = q.evaluate("() => window.__tw")
+    q.evaluate(trace_w)
+    q.evaluate("() => _padDrawerCtl.open(null)")
+    q.wait_for_timeout(850)
+    closing = q.evaluate("() => window.__tw")
+    c.close()
+    gw, gx, bw = glide([w for _, w in opening]), glide([x for x, _ in opening]), glide([w for _, w in closing])
+    check("Pad 1366x768, the 16:9 drawing: opening, it glides smaller and left together over many frames, never more than a"
+          " third of the way in one, never back; closing, it glides to its own size again the same way",
+          gw[0] >= 8 and gw[1] <= 0.34 and gw[2] and gw[3] > 50 and gx[0] >= 8 and gx[2]
+          and bw[0] >= 8 and bw[1] <= 0.34 and bw[2] and abs(bw[3] - gw[3]) <= 1.5,
+          json.dumps({"width": gw, "left": gx, "back": bw, "ws": [round(w) for _, w in opening[:20]]}))
+    c, q = boot(b, "Pad", (1024, 640), load=False, shape=WIDE)
+    open_(q, "Pad", "draw")
+    g = look(q, "Pad")
+    c.close()
+    check("Pad 1024x640, the 16:9 drawing, which would give up more than a quarter of its width: the drawer opens below, as before,"
+          " the drawing its own size",
+          not g["beside"] and g["drawer"] is not None and g["drawer"][1] > g["canvas"][1] + g["canvas"][3] - 1,
+          json.dumps({"beside": g["beside"], "canvas": g["canvas"], "drawer": g["drawer"]}))
+    # Flip's strip: from its own left to the drawer's right edge, every drawer ending above it; on a short desk too,
+    # where the pen's drawer is taller than the room above the strip and scrolls inside itself.
+    for size in ((1366, 768), (1440, 900), (1366, 600)):
+        c, q = boot(b, "Flip", size)
+        rest = look(q, "Flip")
+        got = {}
+        for name in ("draw", "photo", "music", "text"):
+            open_(q, "Flip", name)
+            got[name] = look(q, "Flip")
+            got[name]["inner"] = q.evaluate("() => { const d = document.querySelector('.drawer-side'); return d ? [d.scrollHeight, d.clientHeight] : null; }")
+            close_(q, "Flip")
+        back = look(q, "Flip")
+        c.close()
+        R, st0 = rest["R"], rest["moved"][0]
+
+        def under(g):
+            st, d, cv = g["moved"][0], g["drawer"], g["canvas"]
+            slid = rest["canvas"][0] - cv[0]
+            return (g["beside"] and d is not None and abs(st[0] - (st0[0] - slid)) <= 1 and abs((st[0] + st[2]) - (d[0] + d[2])) <= 2
+                    and d[1] + d[3] <= st[1] - 11 and abs(st[1] - st0[1]) <= 1)
+        check(f"Flip {size[0]}x{size[1]}: with Pen, Photo, Music or Text beside the drawing, the page strip runs under the drawer, from"
+              " its own left (slid with the drawing) to the drawer's right edge, and the drawer ends above it; closed, the strip is"
+              " as it was" + (" (here the pen's drawer is taller than the room, and scrolls inside itself)" if size[1] == 600 else ""),
+              all(under(g) for g in got.values()) and all(abs(x - y) <= 0.5 for x, y in zip(back["moved"][0], st0))
+              and (size[1] != 600 or (got["draw"]["inner"] and got["draw"]["inner"][0] > got["draw"]["inner"][1])),
+              json.dumps({"strip": st0, **{k: [g["beside"], g["moved"][0], g["drawer"], g["inner"]] for k, g in got.items()},
+                          "back": back["moved"][0]})[:800])
+    c, q = boot(b, "Flip", (1366, 768))
+    trace_s = """() => { const s = document.querySelector('.strip-wrap'), out = []; window.__ts = out; const t0 = performance.now();
+      (function f() { out.push(s.getBoundingClientRect().right); if (performance.now() - t0 < 700) requestAnimationFrame(f); })(); }"""
+    q.evaluate(trace_s)
+    q.evaluate("() => _flipDrawerCtl.open('draw')")
+    q.wait_for_timeout(850)
+    out_ = q.evaluate("() => window.__ts")
+    q.evaluate(trace_s)
+    q.evaluate("() => _flipDrawerCtl.open(null)")
+    q.wait_for_timeout(850)
+    home = q.evaluate("() => window.__ts")
+    c.close()
+    so, sh = glide(out_), glide(home)
+    check("Flip 1366x768: the strip's end glides out under the drawer as it comes, over many frames, never more than a third of"
+          " the way in one, never back; and home again the same way as it goes",
+          so[0] >= 8 and so[1] <= 0.34 and so[2] and so[3] > 50 and sh[0] >= 8 and sh[1] <= 0.34 and sh[2] and abs(sh[3] - so[3]) <= 2,
+          json.dumps({"out": so, "home": sh, "xs": [round(x) for x in out_[:20]]}))
+
     # ------------------------------------------------------------ below
     print("\nBELOW — where the two don't fit, with a finger, and on a phone; a resize decides again; the tools tray as it was")
-    for label, size, kw in (("a 900x800 desk", (900, 800), {}), ("a tablet (1180x820, a finger)", (1180, 820), {"touch": True}),
+    for label, size, kw in (("an 800x800 desk", (800, 800), {}), ("a tablet (1180x820, a finger)", (1180, 820), {"touch": True}),
                             ("a phone (402x874)", (402, 874), {"phone": True})):
         for ed in ED:
             c, q = boot(b, ed, size, **kw)
@@ -411,7 +528,7 @@ with sync_playwright() as pw:
         c, q = boot(b, ed, (1440, 900))
         open_(q, ed, "draw")
         a = look(q, ed)["beside"]
-        q.set_viewport_size({"width": 900, "height": 800})
+        q.set_viewport_size({"width": 800, "height": 800})
         q.wait_for_timeout(900)
         g = look(q, ed)
         q.set_viewport_size({"width": 1440, "height": 900})
@@ -423,7 +540,7 @@ with sync_playwright() as pw:
         t = look(q, ed)
         tray = q.evaluate("() => { const t = document.getElementById('toolTray'); return !!t && !t.hidden && getComputedStyle(t).position; }")
         c.close()
-        check(f"{ed}: opened beside, the window narrowed to 900 puts the drawer below; widened again, beside",
+        check(f"{ed}: opened beside, the window narrowed to 800 puts the drawer below; widened again, beside",
               a and not g["beside"] and g["drawer"] is not None and g["drawer"][1] > g["canvas"][1] + g["canvas"][3] - 1 and z["beside"],
               json.dumps({"wide": a, "narrow": [g["beside"], g["canvas"], g["drawer"]], "again": z["beside"]}))
         check(f"{ed}: the tools tray is never beside, and opens with the page where it was",

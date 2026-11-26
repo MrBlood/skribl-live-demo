@@ -132,7 +132,7 @@
    * way. Measured in the mock: a wide drawing 88% of its width on a
    * 1366x768 desk, 92% on 1920x1080, 58% and 73% of it on screen before. */
   var SIDE_MIN = 0.75;
-  var room = 0, roomPad = null, glidingTill = 0;
+  var room = 0, roomPad = null, glidingTill = 0, glideSize = '';
   function rowOf(side) { return side.row ? document.querySelector(side.row) : null; }
   function setRoom(side, px) {
     var row = rowOf(side);
@@ -195,12 +195,14 @@
       el.getAnimations && el.getAnimations().forEach(function (a) { if (a.id === 'under') a.cancel(); });
       el.style.width = ''; el.style.maxWidth = ''; el.style.marginRight = '';
     });
-    if (box) box.style.removeProperty('max-height');
+    document.documentElement.style.removeProperty('--side-max');
     var W = fixedRight(), top = Infinity;
     if (fit && box) {
       els.forEach(function (el) {
         var r = el.getBoundingClientRect(), now = parseFloat(getComputedStyle(el).left) || 0;
         var reach = Math.max(0, Math.floor(W - SIDE_EDGE - (r.right - now - fit.shift)));
+        // (a pixel's rounding on a decision without a glide is kept as it was, as the slide's is)
+        was.forEach(function (u) { if (!glide && u[0] === el && Math.abs(u[2] - reach) <= 1) reach = u[2]; });
         top = Math.min(top, r.top + (window.scrollY || 0));
         if (reach < 1) return;
         el.style.maxWidth = 'none';
@@ -208,7 +210,9 @@
         el.style.marginRight = (-reach) + 'px';
         underNow.push([el, r.width, reach]);
       });
-      if (top < Infinity) box.style.setProperty('max-height', Math.max(120, Math.floor(top - fit.top - 12)) + 'px');
+      // A custom property the drawer's rule reads (styles.css), not its own
+      // max-height: Text's sheet sets that itself as a keyboard comes and goes.
+      if (top < Infinity) document.documentElement.style.setProperty('--side-max', Math.max(120, Math.floor(top - fit.top - 12)) + 'px');
     }
     if (!glide || still()) return;
     els.forEach(function (el) {
@@ -229,7 +233,7 @@
     var body = document.body, root = document.documentElement;
     var was = document.querySelector('.drawer-side');
     var box = panel ? sideBoxOf(panel) : null;
-    if (glide && !still()) glidingTill = Date.now() + SIDE_MS;
+    if (glide && !still()) { glidingTill = Date.now() + SIDE_MS; glideSize = window.innerWidth + 'x' + window.innerHeight; }
     // A drawer just opened sits under the dock in the page's flow until it
     // goes beside, a layout never painted: the drawing is read with it lifted
     // out, as it is on the screen now, and put back before anything paints.
@@ -239,13 +243,19 @@
     // What the drawing needs is read with no room taken; then taken, fitted.
     setRoom(side, 0);
     var need = box ? roomNeed(side) : null;
+    // Decided again without a glide (a resize, or the editor's chrome changing
+    // size: Flip's strip reaching under the drawer is one), a pixel or two
+    // either way is the layout's own rounding, not a move: kept as it was, the
+    // drawing and the strip wobbled a pixel left and back after the glide.
+    if (!glide && need && roomWas && Math.abs(need - roomWas) <= 2) need = roomWas;
     if (need) setRoom(side, need);
     var fit = box && need != null ? sideFit(side) : null;
     if (!fit) setRoom(side, 0);
     if (lifted) lifted.style.removeProperty('position');
     var prev = body.classList.contains('drawers-beside') ? (parseFloat(root.style.getPropertyValue('--side-shift')) || 0) : 0;
     var next = fit ? fit.shift : 0;
-    if (was && (!fit || was !== box)) { was.classList.remove('drawer-side'); was.style.removeProperty('max-height'); }
+    if (fit && !glide && prev && Math.abs(next - prev) <= 1) next = fit.shift = prev;
+    if (was && (!fit || was !== box)) was.classList.remove('drawer-side');
     if (fit) {
       root.style.setProperty('--side-shift', next + 'px');
       root.style.setProperty('--side-top', fit.top + 'px');
@@ -343,7 +353,9 @@
     var side = null;
     // A resize heard while the drawing and the strip glide (the strip's own
     // growing is heard as one, through the editor's watch on its chrome)
-    // waits for the glide's end: decided again mid-glide, it landed at once.
+    // waits for the glide's end, and then decides again only if the window's
+    // size is not what it was: decided again mid-glide, the strip landed at
+    // once, and after it, a pixel off what the glide had decided.
     var later = null;
     function sideOn(s) {
       if (!side) {
@@ -354,7 +366,7 @@
           if (selfResize || currentName == null || currentName === 'tools') return;
           var wait = glidingTill - Date.now();
           clearTimeout(later);
-          if (wait > 0) later = setTimeout(again, wait + 20);
+          if (wait > 0) later = setTimeout(function () { if (window.innerWidth + 'x' + window.innerHeight !== glideSize) again(); }, wait + 20);
           else requestAnimationFrame(again);
         });
       }
