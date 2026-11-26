@@ -54589,9 +54589,11 @@ BUILT, ONE RULE FOR BOTH EDITORS (`lib/drawers.js`):
   408 needed, and nothing changed).
 - READ AS PAINTED: a drawer just opened sits under the dock in the page's
   flow until it goes beside, a layout never painted, so the drawing is read
-  with it lifted out (as the Pad's own fit does); a smaller drawing is
-  centred in its row, so the drawer's top is read again after it goes beside
-  (built without, the drawer stood 36px above the drawing).
+  with it lifted out (as the Pad's own fit does). Read with it in, a smaller
+  drawing's top was where it sits with a drawer below, and the drawer beside
+  stood 36px above it. (A second reading of the top after the drawer went
+  beside was built too, and taken out: with the lift, its break turned no
+  row red.)
 - IT GLIDES with the slide (FLIP on `.canvas-wrap` and `.flip-wrap`, added
   to whatever transform they have), and back on close.
 - FLIP'S PAGE STRIP RUNS UNDER THE DRAWER to its right edge, gliding out and

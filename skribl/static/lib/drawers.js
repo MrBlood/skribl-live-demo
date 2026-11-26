@@ -237,6 +237,8 @@
     // A drawer just opened sits under the dock in the page's flow until it
     // goes beside, a layout never painted: the drawing is read with it lifted
     // out, as it is on the screen now, and put back before anything paints.
+    // (Read with it in, a smaller drawing's top was where it would sit with a
+    // drawer below, and the drawer beside stood 36px above it.)
     var lifted = box && !box.classList.contains('drawer-side') ? box : null;
     if (lifted) lifted.style.setProperty('position', 'absolute', 'important');
     var from = glide ? inRow(side) : null, roomWas = room;
@@ -273,14 +275,7 @@
       body.classList.remove('drawers-beside');
       root.style.removeProperty('--side-shift');
     }
-    // The drawing as it now sits: a smaller one is centred in its row, so the
-    // drawer's top is read again to stand level with it, and the drawing
-    // glides there from where it was.
-    if (fit && room) {
-      var cv = _el(side.canvas);
-      fit.top = Math.round(Math.max(SIDE_EDGE, cv.getBoundingClientRect().top + (window.scrollY || 0)));
-      root.style.setProperty('--side-top', fit.top + 'px');
-    }
+    // The drawing glides to where it now sits from where it was.
     if (room !== roomWas) glideRoom(from, inRow(side));
     underApply(side, fit ? box : null, fit, glide);
     if (prev !== next) slide(side, prev, next, glide);
