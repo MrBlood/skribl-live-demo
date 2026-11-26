@@ -4590,7 +4590,10 @@ print("PLAN " + json.dumps(out))
         # should be individual tiles, not rows", and yes to the mock's A: THE SAME COLOUR, ONE TILE UNDER EACH
         # DRAWING AND ITS NAME, the page showing between two tiles, across and down; a last row that is not full
         # is its tiles and nothing more. READ OFF THE PAINT (a picture of the screen), since a tile's ground is a
-        # part of its cell and has no box of its own to ask.
+        # part of its cell and has no box of its own to ask. ENAMEL SINCE NOV 26 (the owner's "Yes to B, with
+        # their lavender edge", to the Enamel Tiles mock, a friend's colours): the tile white in light and
+        # obsidian in dark, flat, its lavender edge drawn inside it, and in dark a line of light at its top and a
+        # dark line at its foot; the step from the page still in the band Nov 20 asked for.
         try:
             import io as _io
             from PIL import Image as _Image
@@ -4643,13 +4646,27 @@ print("PLAN " + json.dumps(out))
                     at = (min(max(int(round(x)), 0), im.size[0] - 1), min(max(int(round(y)), 0), im.size[1] - 1))
                     return [im.getpixel(at), im0.getpixel(at)]
                 o, rows = g["out"], []
+
+                def lines(x0, y0, dx, dy):
+                    """The two screen pixels a line one CSS pixel wide can fall across, from (x0, y0) on (the
+                    tile's own edge, at this density): what is painted there."""
+                    import math as _m
+                    return [im.getpixel((min(max(int(_m.floor(x0)) + k * dx, 0), im.size[0] - 1),
+                                         min(max(int(_m.floor(y0)) + k * dy, 0), im.size[1] - 1))) for k in (0, 1)]
                 for r in g["rows"]:
                     top, bot = min(t[1] for t in r), max(t[3] for t in r)
                     if top < 75 or bot > g["vh"] - 100:
                         continue
-                    mid, tile, ground = (top + bot) / 2, [], []
+                    mid, tile, ground, edge = (top + bot) / 2, [], [], []
+                    l0, t0, r0, b0 = r[0]
+                    # ENAMEL: the edge drawn inside the tile, its first screen pixel at the tile's own edge;
+                    # in dark the line of light the next pixel down from its top, and the dark line the next up
+                    # from its foot (the tile runs 8px under the name).
+                    lip = lines((l0 + r0) / 2, t0 - o + 1, 0, 1)
+                    foot = lines((l0 + r0) / 2, b0 + 8 - 2, 0, 1)
                     for i, (l, t, rt, bt) in enumerate(r):
                         cx = (l + rt) / 2
+                        edge.append(lines(l - o, mid, 1, 0))
                         # the tile: beside its picture each way, over it, and under its name
                         tile += [px(l - o / 2, mid), px(rt + o / 2 - 1, mid), px(cx, t - o / 2), px(cx, bt + 5)]
                         # the ground: at the tile's rounded corner, and under it, in the middle of the page's 8px
@@ -4660,7 +4677,7 @@ print("PLAN " + json.dumps(out))
                     if len(r) < g["cols"]:                        # a row that is not full: no tile where no cell is
                         w = r[-1][2] - r[-1][0]
                         ground.append(px(r[-1][2] + g["gap"] + w / 2, mid))
-                    rows.append({"tiles": len(r), "tile": tile, "ground": ground})
+                    rows.append({"tiles": len(r), "tile": tile, "ground": ground, "edge": edge, "lip": lip, "foot": foot})
                 rgb = tuple(int(float(x)) for x in re.findall(r"[\d.]+", g["token"])[:3])
                 # every cell as wide as every other: a lone one in a last row is a tile like the rest, not stretched
                 wide = sorted({round(c[2] - c[0], 1) for r in g["rows"] for c in r})
@@ -4685,8 +4702,29 @@ print("PLAN " + json.dumps(out))
                         return False
                 return True
 
+            def near22(cands, want, slack=6):
+                """One of the two pixels a line can fall across is the line's colour, as painted."""
+                return any(max(abs(c[i] - want[i]) for i in range(3)) <= slack for c in cands)
+
+            def enamel(v, want_edge, want_lip=None, want_foot=None):
+                """ENAMEL (the owner's "Yes to B, with their lavender edge", Nov 26): every tile's edge their
+                lavender, read where it is painted (each tile's left side); in dark the line of light under it at
+                the top and the dark line over it at the foot (a row's first tile), each its own colour."""
+                if not v or not v["rows"]:
+                    return False
+                for r in v["rows"]:
+                    if not all(near22(e, want_edge) for e in r["edge"]):
+                        return False
+                    if want_lip and not near22(r["lip"], want_lip):
+                        return False
+                    if want_foot and not near22(r["foot"], want_foot):
+                        return False
+                return True
+
+            # The tile's paint: white porcelain in light, obsidian (#171723) in dark; on a sheet's paper the same.
+            TILE22 = {"light": (255, 255, 255), "dark": (23, 23, 35)}
             seen22 = {}
-            for scheme, tok in (("light", (238, 239, 248)), ("dark", (25, 27, 33))):
+            for scheme, tok in (("light", TILE22["light"]), ("dark", TILE22["dark"])):
                 ctx, pg = browser_as(b, sol, "phone", scheme)
                 pg.goto(BASE + "/social/@solv/gallery")
                 pg.wait_for_load_state("load")
@@ -4712,21 +4750,35 @@ print("PLAN " + json.dumps(out))
                     seen22["picker"] = tiles(pg, "#composeSheet .cmp-grid", scroll=False)
                 close_ctx(ctx, pg)
             check("on a phone every drawing of a profile's Gallery is on a tile of its own: 6px of the tile round its"
-                  " picture and 8px under its name, the colour its token says (the page's own, one part in twelve from"
-                  " it: light and dark), and the page at the tile's rounded corner, between two tiles across and down"
+                  " picture and 8px under its name, the colour its token says (enamel since Nov 26: white in light,"
+                  " obsidian in dark, a step of 1.03 to 1.13 from the page), and the page at the tile's rounded corner,"
+                  " between two tiles across and down"
                   " (8px), and beside the grid; five drawings are two rows of two and a last row of one, and where that"
                   " row has no second drawing there is the page (it was a band right across) and the lone tile is as wide as"
                   " the others; your own profile's grid"
                   " (each tile in a cell with its eye) and somebody else's view of it (tiles alone) the same",
-                  len(ids22) == 5 and all(tiled(seen22.get(k + who), tok, [2, 2, 1], 6) for k, tok in (("light", (238, 239, 248)), ("dark", (25, 27, 33)))
+                  len(ids22) == 5 and all(tiled(seen22.get(k + who), tok, [2, 2, 1], 6) for k, tok in (("light", TILE22["light"]), ("dark", TILE22["dark"]))
                                           for who in ("", ", somebody else's"))
                   and seen22["light"]["cols"] == 2 and seen22["light"]["cells"] == ["gal-cell"]
                   and seen22["light, somebody else's"]["cells"] == ["gal-tile"],
                   json.dumps({k: [v["cells"], v["token"], v["out"], v["gaps"], v["wide"], [r["tiles"] for r in v["rows"]], v["rows"][-1:]] for k, v in seen22.items() if k != "picker"})[:1100])
-            check("Make's \"Use one you made\" is the same grid on a sheet's paper: a tile each, the paper's own step, 4px"
-                  " round a picture (the room the list leaves, so no tile is cut square by it), the paper between two",
-                  bool(seen22.get("picker")) and tiled(seen22["picker"], (235, 231, 252), [2, 1], 4),
+            check("Make's \"Use one you made\" is the same grid on a sheet's paper: a tile each, the page's own white,"
+                  " a step from the paper, 4px round a picture (the room the list leaves, so no tile is cut square by"
+                  " it), the paper between two",
+                  bool(seen22.get("picker")) and tiled(seen22["picker"], TILE22["light"], [2, 1], 4),
                   f"shared alone {alone22}; " + json.dumps(seen22.get("picker"))[:700])
+            # ENAMEL'S LINES, as painted: light, the lavender edge alone (#dfdcf0); dark, the edge as it looks over
+            # the tile (their 10% lavender-white, made solid: #2b2b39), the line of light under it at the top (18%:
+            # #3d3d4b) and the dark line at the foot (65% black: #08080c).
+            check("every tile wears their lavender edge, drawn inside it: #dfdcf0 in light, and in dark the edge"
+                  " (#2b2b39), a line of light under it along the tile's top (#3d3d4b) and a dark line along its foot"
+                  " (#08080c), each read where it is painted, on your own profile, on somebody else's view of it and"
+                  " on Make's list",
+                  all(enamel(seen22.get("light" + who), (223, 220, 240)) for who in ("", ", somebody else's"))
+                  and all(enamel(seen22.get("dark" + who), (43, 43, 57), (61, 61, 75), (8, 8, 12))
+                          for who in ("", ", somebody else's"))
+                  and enamel(seen22.get("picker"), (223, 220, 240)),
+                  json.dumps({k: [(r["edge"][:1], r["lip"], r["foot"]) for r in v["rows"][:1]] for k, v in seen22.items()})[:900])
             dctx, dpg = browser_as(b, sol, "desk")
             dpg.goto(BASE + "/social/@solv/gallery")
             dpg.wait_for_load_state("load")
@@ -4742,7 +4794,8 @@ print("PLAN " + json.dumps(out))
             close_ctx(dctx, dpg)
             check("on a desk the grid is three across and the rule the same: five drawings are a row of three and a row"
                   " of two, four are three and one, each on its own tile, and the page where a row has no drawing",
-                  gone22 == 200 and tiled(d5, (238, 239, 248), [3, 2], 6) and tiled(d4, (238, 239, 248), [3, 1], 6) and d5["cols"] == 3,
+                  gone22 == 200 and tiled(d5, TILE22["light"], [3, 2], 6) and tiled(d4, TILE22["light"], [3, 1], 6)
+                  and d5["cols"] == 3 and enamel(d5, (223, 220, 240)),
                   json.dumps({"five": d5, "four": d4})[:900])
         except Exception as exc:  # noqa: BLE001
             check("section 22 ran to its end", False, str(exc).splitlines()[0][:200])

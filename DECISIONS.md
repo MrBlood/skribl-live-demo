@@ -54391,3 +54391,38 @@ Pad loads only inside a host's composer, and in rules keyed to classes the
 plain Pad never wears; the one shared file it touched (`lib/postsheet.js`)
 changed only which word the Post sheet's button says. Load, not a defect.
 The next fully green run closes #1115 (`harness/tools/mainwatch.py`).
+
+## After v330 -- Enamel tiles: the owner's "Yes to B, with their lavender edge", built
+
+The owner, Nov 26, about 10:30 AM, to the Enamel Tiles mock: "Yes to B, with
+their lavender edge." (The mock's second question, their cool lavender or the
+site's own lilac card edge, answered: theirs.) Asked with it, "What is
+background color we use?": the page is Pad's, #f6f8fa in light and #0f1218 in
+dark, with its purple glow at the top; the friend's were #f6f5fd and #0f0f17.
+
+BUILT (`docs/SOCIAL-SITE.md` section 47): the tile white in light and obsidian
+(#171723) in dark, the same on a sheet's paper; flat; their lavender edge drawn
+inside it; in dark their line of light at its top and their dark line at its
+foot, each made solid as it looked over the tile. The page, the picture's own
+lilac edge, the name and the counts unchanged. Nothing soft added: the
+stylesheet's soft shadows stay at none, and no colour is written into a rule
+(all of it tokens; `verify_surfaces` holds the count at 13).
+
+ONE CHOICE MADE IN THE BUILDING, said to the owner with both side by side at
+their phone's density: the edge is 1px, as the mock drew it (three screen
+pixels on a 3x phone), not one screen pixel as every other outline on the
+site has been since THE EDGES (Nov 15). The mock should have drawn it the
+site's way and did not; built that way, the edge in dark and its line of
+light all but went, which is not what the owner said yes to. `--tile-line`
+takes it to one screen pixel if they would rather.
+
+MAKE'S LIST (on a sheet's lilac paper), NOT IN THE MOCK'S PICTURES, the mock
+saying B would change it too: photographed in light and dark before building,
+white tiles on the lilac (1.12:1), and in dark the edge and the line of light
+carry them, as on the page.
+
+CALIBRATED: `verify_socialposts` 22, its rows held to B (the tile's colour
+in light, in dark and on the sheet; a new row for the lavender edge and the
+dark lines, read where they are painted), each shown red by breaking its part
+in a worktree: today's light, dark and sheet colours back, no edge, no line of
+light, no dark foot, the edge in another colour, and A's gradient (8 breaks).
