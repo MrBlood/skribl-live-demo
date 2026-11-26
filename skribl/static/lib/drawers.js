@@ -117,16 +117,135 @@
     if (shift > left - SIDE_EDGE) return null;
     return { shift: Math.ceil(shift), top: Math.round(Math.max(SIDE_EDGE, r.top + (window.scrollY || 0))) };
   }
+  /* ROOM FOR THE DRAWER (the owner's "All yes", Nov 26, to the Room for the
+   * Drawer mock). Where the drawing doesn't fit whole beside a drawer by
+   * sliding alone (a wide 16:9 drawing fills a desk's width), it gets a
+   * little smaller as well, the least it needs and never past SIDE_MIN of
+   * its width, a quarter off at most: past that (a narrow window) a drawer
+   * opens below as before. In a maximised desk window a wide drawing gives
+   * up 4 to 15%; in full screen on a 16:10 desk, about 22. The room is taken out of the drawing's row as
+   * padding, half each side (side.row; each editor's own fit takes its row's
+   * padding off the room it has), so the drawing stays centred over its dock
+   * as both slide, and the editor fits it again at once (side.fit). The
+   * change glides with the slide (FLIP on side.glide, added to whatever
+   * transform it has), and closing the drawer gives the room back the same
+   * way. Measured in the mock: a wide drawing 88% of its width on a
+   * 1366x768 desk, 92% on 1920x1080, 58% and 73% of it on screen before. */
+  var SIDE_MIN = 0.75;
+  var room = 0, roomPad = null, glidingTill = 0;
+  function rowOf(side) { return side.row ? document.querySelector(side.row) : null; }
+  function setRoom(side, px) {
+    var row = rowOf(side);
+    if (!row || px === room) return;
+    if (px > 0) {
+      if (roomPad == null) { var cs = getComputedStyle(row); roomPad = [parseFloat(cs.paddingLeft) || 0, parseFloat(cs.paddingRight) || 0]; }
+      row.style.paddingLeft = (roomPad[0] + px / 2) + 'px';
+      row.style.paddingRight = (roomPad[1] + px / 2) + 'px';
+    } else {
+      row.style.paddingLeft = '';
+      row.style.paddingRight = '';
+      roomPad = null;
+    }
+    room = px;
+    if (side.fit) side.fit();
+  }
+  // The px to take out of the drawing's row so that it sits beside a drawer,
+  // read with none taken: 0 where it fits as it is, null where it would give
+  // up more than SIDE_MIN allows (or nothing points with a mouse). The row
+  // has room to spare beside a drawing its height holds back, so what comes
+  // out of it is what brings the row's own width down to the drawing's most.
+  function roomNeed(side) {
+    if (!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches)) return null;
+    var cv = _el(side.canvas), row = rowOf(side);
+    if (!cv || !cv.getClientRects().length || !row) return 0;
+    var w = cv.getBoundingClientRect().width, most = fixedRight() - SIDE_W - 3 * SIDE_EDGE;
+    if (w <= most) return 0;
+    if (most < SIDE_MIN * w) return null;
+    var cs = getComputedStyle(row);
+    var inside = row.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    return Math.max(0, Math.ceil(inside - most)) + 2;
+  }
+  // Where side.glide sits in its row, by its centre, and how big it is: the
+  // two ends of the drawing's glide when the room changes.
+  function inRow(side) {
+    var g = side.glide ? document.querySelector(side.glide) : null, row = rowOf(side);
+    if (!g || !row || !g.getClientRects().length) return null;
+    var a = g.getBoundingClientRect(), b = row.getBoundingClientRect();
+    return { el: g, x: a.left - b.left + a.width / 2, y: a.top - b.top + a.height / 2, w: a.width };
+  }
+  function glideRoom(from, to) {
+    if (!from || !to || !to.w || !to.el.animate || still()) return;
+    var s = from.w / to.w, dx = from.x - to.x, dy = from.y - to.y;
+    if (Math.abs(s - 1) < 0.002 && Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+    to.el.animate([{ transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + s + ')' }, { transform: 'none' }],
+                  { duration: SIDE_MS, easing: SIDE_EASE, composite: 'add' });
+  }
+  // FLIP'S PAGE STRIP RUNS UNDER THE DRAWER (the owner's same "All yes", from
+  // "on flip the bottom slides would extend under the right side window"):
+  // what side.under names reaches right to the drawer's own right edge, and
+  // the drawer ends above it, scrolling inside itself when it is taller.
+  // Its end glides with the slide, out to the drawer's edge and back again.
+  var underNow = [];                    // [element, its own width, how far it reaches]
+  function underApply(side, box, fit, glide) {
+    var els = side.under ? Array.prototype.slice.call(document.querySelectorAll(side.under)) : [];
+    if (!els.length) return;
+    var was = underNow;
+    underNow = [];
+    els.forEach(function (el) {
+      el.getAnimations && el.getAnimations().forEach(function (a) { if (a.id === 'under') a.cancel(); });
+      el.style.width = ''; el.style.maxWidth = ''; el.style.marginRight = '';
+    });
+    if (box) box.style.removeProperty('max-height');
+    var W = fixedRight(), top = Infinity;
+    if (fit && box) {
+      els.forEach(function (el) {
+        var r = el.getBoundingClientRect(), now = parseFloat(getComputedStyle(el).left) || 0;
+        var reach = Math.max(0, Math.floor(W - SIDE_EDGE - (r.right - now - fit.shift)));
+        top = Math.min(top, r.top + (window.scrollY || 0));
+        if (reach < 1) return;
+        el.style.maxWidth = 'none';
+        el.style.width = (r.width + reach) + 'px';
+        el.style.marginRight = (-reach) + 'px';
+        underNow.push([el, r.width, reach]);
+      });
+      if (top < Infinity) box.style.setProperty('max-height', Math.max(120, Math.floor(top - fit.top - 12)) + 'px');
+    }
+    if (!glide || still()) return;
+    els.forEach(function (el) {
+      var a = null, b = null;
+      was.forEach(function (u) { if (u[0] === el) a = u; });
+      underNow.forEach(function (u) { if (u[0] === el) b = u; });
+      if (!el.animate || (!a && !b)) return;
+      var own = (b || a)[1];
+      var at = function (u) { return u ? { width: (u[1] + u[2]) + 'px', marginRight: (-u[2]) + 'px' } : { width: own + 'px', marginRight: '0px' }; };
+      if (!b) el.style.maxWidth = 'none';   // held while it glides home, as wide as it was
+      var go = el.animate([at(a), at(b)], { duration: SIDE_MS, easing: SIDE_EASE, id: 'under' });
+      if (!b) go.onfinish = function () { if (underNow.indexOf(el) < 0) el.style.maxWidth = ''; };
+    });
+  }
   // The drawer `panel` beside the drawing where it fits, else below (and
   // null: none open). `glide`: an open or a close, not a resize.
   function sideApply(side, panel, glide) {
     var body = document.body, root = document.documentElement;
     var was = document.querySelector('.drawer-side');
     var box = panel ? sideBoxOf(panel) : null;
-    var fit = box ? sideFit(side) : null;
+    if (glide && !still()) glidingTill = Date.now() + SIDE_MS;
+    // A drawer just opened sits under the dock in the page's flow until it
+    // goes beside, a layout never painted: the drawing is read with it lifted
+    // out, as it is on the screen now, and put back before anything paints.
+    var lifted = box && !box.classList.contains('drawer-side') ? box : null;
+    if (lifted) lifted.style.setProperty('position', 'absolute', 'important');
+    var from = glide ? inRow(side) : null, roomWas = room;
+    // What the drawing needs is read with no room taken; then taken, fitted.
+    setRoom(side, 0);
+    var need = box ? roomNeed(side) : null;
+    if (need) setRoom(side, need);
+    var fit = box && need != null ? sideFit(side) : null;
+    if (!fit) setRoom(side, 0);
+    if (lifted) lifted.style.removeProperty('position');
     var prev = body.classList.contains('drawers-beside') ? (parseFloat(root.style.getPropertyValue('--side-shift')) || 0) : 0;
     var next = fit ? fit.shift : 0;
-    if (was && (!fit || was !== box)) was.classList.remove('drawer-side');
+    if (was && (!fit || was !== box)) { was.classList.remove('drawer-side'); was.style.removeProperty('max-height'); }
     if (fit) {
       root.style.setProperty('--side-shift', next + 'px');
       root.style.setProperty('--side-top', fit.top + 'px');
@@ -144,6 +263,16 @@
       body.classList.remove('drawers-beside');
       root.style.removeProperty('--side-shift');
     }
+    // The drawing as it now sits: a smaller one is centred in its row, so the
+    // drawer's top is read again to stand level with it, and the drawing
+    // glides there from where it was.
+    if (fit && room) {
+      var cv = _el(side.canvas);
+      fit.top = Math.round(Math.max(SIDE_EDGE, cv.getBoundingClientRect().top + (window.scrollY || 0)));
+      root.style.setProperty('--side-top', fit.top + 'px');
+    }
+    if (room !== roomWas) glideRoom(from, inRow(side));
+    underApply(side, fit ? box : null, fit, glide);
     if (prev !== next) slide(side, prev, next, glide);
   }
   // The drawing and what sits under it glide from one slide to the other; at
@@ -212,13 +341,21 @@
     // A window resized with a drawer beside decides again (no glide), once
     // the editor has fitted its drawing to the new window.
     var side = null;
+    // A resize heard while the drawing and the strip glide (the strip's own
+    // growing is heard as one, through the editor's watch on its chrome)
+    // waits for the glide's end: decided again mid-glide, it landed at once.
+    var later = null;
     function sideOn(s) {
       if (!side) {
+        var again = function () {
+          if (currentName != null && currentName !== 'tools' && panels[currentName]) sideApply(side, panels[currentName].panel, false);
+        };
         window.addEventListener('resize', function () {
           if (selfResize || currentName == null || currentName === 'tools') return;
-          requestAnimationFrame(function () {
-            if (currentName != null && currentName !== 'tools' && panels[currentName]) sideApply(side, panels[currentName].panel, false);
-          });
+          var wait = glidingTill - Date.now();
+          clearTimeout(later);
+          if (wait > 0) later = setTimeout(again, wait + 20);
+          else requestAnimationFrame(again);
         });
       }
       side = s;

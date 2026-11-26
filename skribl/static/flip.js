@@ -5927,7 +5927,11 @@ const _flipDrawerCtl = skriblDrawers({
 });
 // On a desk, a drawer beside the drawing; the stage, the page strip and the
 // dock slide (lib/drawers.js side), as the Pad's stage and dock do.
-_flipDrawerCtl.side({ canvas: 'pad', move: '.flip-stage, .strip-wrap, .flip-tools' });
+// Where the drawing doesn't fit beside a drawer it gets a little smaller (the
+// room off .flip-stage's padding, which fitPad takes off the room it has), and
+// the page strip runs under the drawer to its right edge (lib/drawers.js).
+_flipDrawerCtl.side({ canvas: 'pad', move: '.flip-stage, .strip-wrap, .flip-tools', row: '.flip-stage',
+                      glide: '.flip-wrap', fit: () => fitPad(), under: '.strip-wrap' });
 // Only the wrappers with live callers survive the collapse: closePop for the
 // swatch/eyedropper pick handlers, hidePhoto/hideMusic for the outside-click
 // dismisser below. openPop/openPhoto/openMusic/closeMediaDrawers/refitDrawer
