@@ -54208,3 +54208,48 @@ back, delete from your side, Report, Block); writing one in the Pad;
 the pages; the docs. Not started the morning of the yes: the session that
 mocked it had run long, and the owner asked whether to start a new one, so
 the plan went into `docs/NEXT-SESSION.md` for a fresh session instead.
+
+## After v330 -- Drawn letters, the server
+
+The owner, Nov 26, about 7:20 AM, answering the two questions the handoff
+asked: "Yes to both of your picks: 1. A push for a new letter, with its own
+switch in Settings, on by default. 2. A written-back letter replays theirs
+in three seconds first (Draw back's way), then yours at your pace." Then:
+"Keep going, let me know when it's done." The first of the four pull
+requests (`docs/SOCIAL-SITE.md` section 44).
+
+BUILT: `social/letters.py` and its table (`social_letters`); sending and
+writing back, the composer's way in, open, take back, delete from your side;
+the host's policy for the letter's drawing (`app.py`, beside the block
+rule); Report of a letter, its recipient's alone, and its takedown; an
+account's letters going with it; the nudge and its switch, Letters, in
+Settings (on for every device, the migration's default), and the number on
+the icon counting waiting letters; the migration `d3a8f1c6e2b4`.
+
+A SEAM FOR SKRIBL, AND WHY: held states (`set_visibility_values(...,
+held=)`, `skribl.visibility_held()`; `docs/INTEGRATION.md`). Without it, the
+author's PATCH of visibility could make a letter public, and a written-back
+letter holds the other person's strokes; and Skribl's own posting API would
+make "letter" drawings no letter names. Held, Skribl refuses both, as it
+does "withheld"; the host's own create_post and an operator still can.
+Additive: a host that holds nothing sees no change. `verify_hostseams`
+pins it, each row shown red with its guard taken out.
+
+DECIDED IN THE BUILDING, Cal's, until the owner says otherwise:
+- An admin reads a letter only once it is reported to them (the policy),
+  and the Report sheet will say so (part three). A letter's reasons are a
+  post's, but "copies someone else's work".
+- Taken down: gone from the recipient's side, withheld in Skribl; its
+  sender still has theirs, as a post's maker does.
+- Deleting an account takes every letter it sent or received: a letter is
+  the two's, and one written back on holds both hands.
+- A block ends both follows, so it ends writing; the policy also shuts
+  reading while it stands, and lifting it lets both read again.
+- "Nobody by that name", "yourself" and "you may not write to them" are
+  one answer, so the route tells nobody who is there.
+
+CALIBRATED: `verify_socialletters` (27 rows), each row shown red by
+breaking the part it guards, in a worktree a break (24 breaks), green as
+built. Two rows' guards are shared: the block row at Send is held by the
+follow a block ends (pair_ok's own `between` is a second guard that no
+product path can reach alone), and reading across a block by `shown_to`.

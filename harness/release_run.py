@@ -162,6 +162,7 @@ BATCHES = [
     ["verify_socialmute.py"],              # measures — a card folding away, the line, the toast and Show read on every frame, words read from the paint; its own server
     ["verify_socialpush.py"],              # measures — the card's glide read on every frame, the card and the switches read from the paint; its own server and a stand-in push service
     ["verify_socialdrawback.py"],          # measures — the faint original read off its own canvas's pixels; its own server
+    ["verify_socialletters.py"],           # drawn letters' server: who writes, who reads, never listed, held; its own server
     ["verify_clouddrafts.py"],             # measures — real drawings in its own host app (v316)
     ["verify_flipspeed.py"],               # measures — pixels mid-stroke on Flip (v317)
     ["verify_sheetswipe.py"],              # touch — every sheet swipes away (v317)

@@ -144,10 +144,11 @@ def on(public_id, me):
 
 
 def enabled():
-    """Whether the host taught Skribl the letter's state (app.py does, with
-    its policy): without it no letter can be made, and none is offered."""
-    from skribl.models import visibility_held, visibility_values
-    return LETTER in visibility_values() and LETTER in visibility_held()
+    """Whether the host taught Skribl the letter's state, held (app.py does,
+    with its policy): without it no letter can be made, and none is offered.
+    Held is among the values taught (set_visibility_values refuses else)."""
+    from skribl import visibility_held
+    return LETTER in visibility_held()
 
 
 # ---- what the pages read ---------------------------------------------------------
