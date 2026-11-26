@@ -54180,3 +54180,31 @@ Not tested here: WebKit, SF, Segoe UI.
 PAD AND FLIP: shared. A letter is written in the Pad the way Draw back
 opens it. Flip is next, on the list: a Flip letter, written back on page
 for page, as Flip's Draw back is.
+
+## After v330 -- Drawn letters: the owner's yes, A for all six
+
+The owner, Nov 26, about 6:50 AM, after the walkthrough page
+(https://claude.ai/artifact/L3YHdMNbzNUt3htDfxNyVe, the mock on one
+scrolling page, made at the owner's "Yes" to "one plain page you just
+scroll through"): "I like cal's (your) choices". That is A for each of
+the six (`DECISIONS.md`, "Drawn letters, mocked"):
+
+1. People who follow each other can write to each other.
+2. A drawing on letter paper, words in your own drawn letters (Text).
+   The Pad first; a Flip letter next, on the list.
+3. Write on a friend's page; letters come to an envelope beside the bell
+   at a phone's top, and to Letters in a desk's rail.
+4. Sealed in the list; it draws itself the first time, at the writer's
+   pace, then rests; Watch again any time.
+5. Write back on it, Draw back's way: theirs stays, yours is drawn on it,
+   and it plays theirs, then yours. New letter starts fresh paper.
+6. Only ever between the two of you (no reposts, quotes or links); Report
+   and Block on every letter; no photos or music at first; Take back until
+   it is opened, and nothing says when it was.
+
+THE BUILD, in four pull requests: the server (the letters, the drawing
+readable only by its two, who can write, send, write back, open, take
+back, delete from your side, Report, Block); writing one in the Pad;
+the pages; the docs. Not started the morning of the yes: the session that
+mocked it had run long, and the owner asked whether to start a new one, so
+the plan went into `docs/NEXT-SESSION.md` for a fresh session instead.
