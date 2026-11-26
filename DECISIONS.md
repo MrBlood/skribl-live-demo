@@ -54709,6 +54709,11 @@ check that reads `hidden`, unchanged); the drawer is only drawn where it was,
 inert, until the glide ends. A switch to another drawer stays a swap; Reduce
 Motion and a resize don't glide.
 
+HOW IT WORKS SAYS IT, in its "Menus & panels" tip: on a computer the
+drawers open beside the drawing, and the tab on a drawer's edge puts it away,
+as its own button does (`verify_helpclaims` holds every named control
+described there; it was red on "Close the drawer" until it was).
+
 PAD AND FLIP: shared. The link player loads none of it (`player.css` the same).
 
 THE CHECKS, `verify_drawerside`'s THE DRAWER'S TAB (Pad and Flip, 1366x768):
