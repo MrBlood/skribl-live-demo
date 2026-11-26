@@ -1,4 +1,4 @@
-# Next session: the handoff (Nov 25, 2026, Mountain Time, written mid-morning, brought up to the evening)
+# Next session: the handoff (Nov 25, 2026, Mountain Time, written mid-morning, brought up to about 8 PM)
 
 A snapshot from a session of Wednesday, Nov 25. It is not
 maintained: where things stand is the newest entries at the
@@ -85,15 +85,23 @@ lifts (Flip draws with that press).
 - Carried: Pin, Two hands once the switch is on, and Nov 24's list
   (`git show 2c4ba23:docs/NEXT-SESSION.md`).
 
+## Two hands: two fixes built, one step that needs a mock
+
+The owner, about 7:25 PM: "do the Two Hands fixes". Plays of Both count
+now (and his alone), through `skribl.count_play`, the one count Skribl's
+own player's fetch uses; a quote of a two-hands draw-back shows the
+picture of both (`DECISIONS.md`, "Two hands: plays of Both counted, and a
+quote shows both"). The third step, a two-hands draw-back drawn back on, is
+not a fix: it is the seventh answer's chain (up to five hands), told to the
+owner as needing its own mock. Two hands itself is still behind the
+owner's switch.
+
 ## Then, in the decided order
 
-Messages as drawn letters, then watching first everywhere (`DECISIONS.md`,
-"The owner's clarifications to the final recommendations"); recolours on a
-draw-back are built (Nov 25). Two hands' own next steps, from the morning's
-handoff (`git show 928e5d7:docs/NEXT-SESSION.md`): plays of Both not
-counted, a quote of a two-hands draw-back shows his own picture, a
-two-hands draw-back not drawn back on (recolour while drawing back is
-built).
+Messages as drawn letters (being mocked the evening of Nov 25, at the
+owner's "Yes, mock drawn letters"), then watching first everywhere
+(`DECISIONS.md`, "The owner's clarifications to the final
+recommendations"); recolours on a draw-back are built (Nov 25).
 
 ## What saves time
 

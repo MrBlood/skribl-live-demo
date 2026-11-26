@@ -160,7 +160,7 @@
   <span class="qt-head"><b class="qt-name">{{ q.who.display_name }}</b><span class="qt-sub">@{{ q.who.handle }}{% if q.at %} · <time datetime="{{ when_iso(q.at) }}" data-when="ago">{{ when_day(q.at) }}</time>{% endif %}</span></span>
   {%- if q.on %}<span class="qt-on">{{ q.on }}</span>{% endif %}
   {%- if q.words %}<span class="qt-words">{{ q.words }}</span>{% endif %}
-  {%- if q.sk %}<span class="gal-pic qt-pic"{{ plate_ground(q.sk) }}>{{ plate_fill(q.sk) }}<span class="gal-plate" style="{{ plate_frame(q.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=q.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
+  {%- if q.sk %}<span class="gal-pic qt-pic"{{ plate_ground(q.sk) }}>{{ plate_fill(q.sk) }}<span class="gal-plate" style="{{ plate_frame(q.sk) }}"><img src="{{ q.sk.poster or url_for(skribl_bp ~ '.skribl_poster', public_id=q.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
     {%- if q.says %}<span class="gal-dur qt-dur">{{ ic.tri() }}<span>{{ q.says }}</span></span>{% endif %}</span>{% endif %}
 </{{ 'a' if link else 'div' }}>{% endif %}
 {%- endmacro %}

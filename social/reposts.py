@@ -207,6 +207,8 @@ class Quoted:
         self.viewer = viewer
         self.hidden = hidden_ids(viewer)
         self.posts = {}
+        self._hands = None               # the quoted two-hands draw-backs' states (_both), read once
+        self._both_lines = {}
         self.owners = {}
         quotes = [p for p in posts if getattr(p, "is_quote", False)]
         pids = sorted({p.quoted_post_id for p in quotes if p.quoted_post_id is not None})
@@ -300,7 +302,7 @@ class Quoted:
             if not self._shown_post(post, who):
                 return {"gone": True}
             sk = described.get(post.skribl_id) if post.skribl_id else self.lead(post.id, described, makers)
-            sk = _hands_line(post, sk)
+            sk = _hands_line(post, self._both(post, sk, described))
             return {"gone": False, "url": url_for("social.post_page", public_id=post.public_id), "who": who,
                     "words": post.words or "", "at": post.created_at, "sk": sk, "says": _says(sk, says)}
         sid = quote.quoted_drawing_id
@@ -313,6 +315,25 @@ class Quoted:
             return {"gone": False, "url": url_for("social.bloob_page", skribl_id=sid), "who": who,
                     "words": _title_words(sk.get("title")), "at": _made(sk), "sk": sk, "says": _says(sk, says)}
         return {"gone": True}
+
+    def _both(self, post, sk, described):
+        """A QUOTED TWO-HANDS DRAW-BACK (drawback.py) shows what its card
+        shows this viewer: while her drawing is shown to them, the picture of
+        both (hands_picture) and the line the two make together, never his
+        strokes alone; otherwise, his own drawing as it is. Read once for the
+        page's quoted posts, the first time one is asked."""
+        if sk is None or not getattr(post, "two_hands", False):
+            return sk
+        if self._hands is None:
+            from .posts import hands_lines, hands_states
+            twos = [p for p, _who in self.posts.values() if getattr(p, "two_hands", False)]
+            self._hands = hands_states(twos, self.viewer, described)
+            self._both_lines = hands_lines([pid for pid, st in self._hands.items() if st["view"] == "both"])
+        st = self._hands.get(post.id)
+        if not st or st["view"] != "both":
+            return sk
+        return dict(sk, line=self._both_lines.get(post.id) or sk.get("line"),
+                    poster=url_for("social.hands_picture", skribl_id=post.skribl_id))
 
     def lead(self, pid, described, makers):
         """The drawing a quoted post with none of its own leads to (A), as

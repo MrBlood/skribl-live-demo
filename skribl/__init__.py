@@ -50,7 +50,7 @@ from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
                      session, set_card_url, set_visibility_policy)
 from .routes import register_routes
 from .security import register_security
-from .views import purge_views
+from .views import count_play, purge_views
 
 __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            "SkriblBase", "create_all", "session",
@@ -60,6 +60,10 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            # opportunistically, so a host that schedules nothing still does
            # not accumulate for ever. See skribl/views.py.
            "purge_views",
+           # A PLAY A HOST SERVES, counted as Skribl's own player's fetch is:
+           # for a drawing the host composes and plays through the player's
+           # `api` seam (Blooby's two-hands Both). See skribl/views.py.
+           "count_play",
            # Server-side creation, for a host whose composer is a FORM rather
            # than a browser calling POST /api/skribls. Same validation, same
            # media handling, same transaction as the host's own rows. See

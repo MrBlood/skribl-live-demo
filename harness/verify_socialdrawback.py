@@ -3349,6 +3349,11 @@ with app.test_request_context("/social/"):
                   " beside it, the site's",
                   stp == 200 and bodyp == base64.b64decode(own_pic.split(",", 1)[1]) and kept.get("picture") == both_pic,
                   json.dumps({"poster": stp, "type": ctp, "both kept": bool(kept.get("picture"))}))
+            # PLAYS, read before Both plays (skribl.count_play: the site serves Both).
+            def plays(sid):
+                got = db("select views_total from skribl_posts where public_id = ?", (sid or "",))
+                return int(got[0][0] or 0) if got else None
+            his0, hers0 = plays(r2.get("skribl")), plays(r2.get("on_skribl"))
             # 3. BOTH, AS EVER, FROM THE SITE.
             stb, jb = Client(cookies=kiko.ctx.cookies(BASE), xff=kiko.xff, origin=BASE2, base=BASE2).get_json(
                 f"/social/hands/play/both/{r2.get('skribl')}")
@@ -3372,6 +3377,15 @@ with app.test_request_context("/social/"):
                   views["hers"][0] == 200 and views["hers"][1] == len(ops) and views["hers"][3] == xy(ops[:3])
                   and views["his"][0] == 200 and views["his"][1] == 30 and views["his"][3] == xy(mine["frames"][0]["strokes"][:3])
                   and views["his"][2] == (her.get("frames") or [{}])[0].get("background"), json.dumps(views))
+            # Kiko played Both, hers and his: his drawing counted once (a viewer a day); then Hana's his alone.
+            his1, hers1 = plays(r2.get("skribl")), plays(r2.get("on_skribl"))
+            sto = Client(cookies=hana.ctx.cookies(BASE), xff=hana.xff, origin=BASE2, base=BASE2).get_json(
+                f"/social/hands/play/his/{r2.get('skribl')}")[0]
+            his2 = plays(r2.get("skribl"))
+            check("a play of Both counts a play of his drawing, once a viewer a day, as Skribl's own player's fetch does;"
+                  " his alone too (another viewer's); hers alone counts nothing toward hers",
+                  his0 is not None and hers0 is not None and his1 == his0 + 1 and hers1 == hers0 and sto == 200
+                  and his2 == his1 + 1, json.dumps({"his": [his0, his1, his2], "hers": [hers0, hers1], "his alone": sto}))
             # HER PICTURE AND HER SONG (the sixth answer: "hers, as today"): kept
             # out of his drawing, under his strokes and with them when they play.
             ph = post_payload(hana, "Section 15, on a photo with music", on_photo_with_music(seed=76))
@@ -3408,6 +3422,18 @@ with app.test_request_context("/social/"):
                   and bpic == base64.b64decode(both_pic.split(",", 1)[1]) and card2["parts"] and len(card2["parts"]) == 2
                   and not card2["pen"] and card2["note"] is None,
                   json.dumps({"card": card2, "picture": [stpic, ctpic]}))
+            # A QUOTE OF IT (reposts.Quoted._both): its small card shows what its card shows.
+            stq, jq = on2(kiko).post_json("/social/posts", {"words": "Look at these two", "quote": two})
+            qpid = (jq or {}).get("post") if isinstance(jq, dict) else None
+
+            def quoted_img(who):
+                stq_, _ct, body = raw(f"/social/p/{qpid}", who)
+                got = re.findall(r'class="qt-card"[^>]*>.*?<img src="([^"]+)"', (body or b"").decode("utf-8", "replace"), re.S)
+                return stq_, (got[0] if got else None)
+            qseen = quoted_img(kiko)
+            check("a quote of it shows the picture of both, as its card does, not his strokes alone",
+                  stq == 200 and qseen == (200, f"/social/hands/picture/{r2.get('skribl')}"),
+                  json.dumps({"quote": stq, "seen": qseen}))
             # 4. THE THREE VIEWS ON ITS OWN PAGE, phone and desk.
             seen4 = {}
             for screen in ("phone", "desk"):
@@ -3452,7 +3478,10 @@ with app.test_request_context("/social/"):
             sth = Client(cookies=kiko.ctx.cookies(BASE), xff=kiko.xff, origin=BASE2, base=BASE2).get_json(f"/social/hands/play/both/{r2.get('skribl')}")[0]
             sthp = raw(f"/social/hands/picture/{r2.get('skribl')}", kiko)[0]
             nobody = raw(f"/social/hands/play/both/{r2.get('skribl')}")[0]
+            qhid = quoted_img(kiko)
             db_write("delete from social_blocks where blocker_id = ? and blocked_id = ?", (kiko_id, hana_id))
+            check("...and the quote of it shows them his own picture too, his strokes alone",
+                  qhid == (200, f"/s/{r2.get('skribl')}/poster"), json.dumps({"seen": qhid}))
             check("to somebody a block stands between her and: his strokes alone, from Skribl, resting on his own"
                   " picture, \"The original isn’t shown to you\", no pill; the site's routes as gone (the picture his"
                   " own, sent on); nobody signed in sees both",

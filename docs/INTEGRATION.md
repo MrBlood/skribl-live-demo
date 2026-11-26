@@ -449,6 +449,16 @@ names `author` is told which listing this is: `author`'s own (the one author
 it is narrowed to), or `None` for many people's (`authors`, `author_prefix`).
 See "A filter can ask which listing it is", below.
 
+**A play you serve yourself** (Nov 25: Blooby's two-hands draw-back). Skribl
+counts a play when its own route serves a drawing to a player (one play per
+client per post per UTC day, the lifetime total moved by the database). A
+drawing you compose and hand the player through its `api` seam never passes
+that route, so its plays go uncounted unless you say so:
+`skribl.count_play(public_id, viewer_id=None)`, inside your request, counts
+a play of that post as Skribl's own fetch would, if `viewer_id` may see it
+(as `read_payload` takes it), and returns True when the play was a new one.
+You own the commit, as on every write here.
+
 **What is played most, among your own posts** (Nov 14: the Skribl site's
 Gallery of everyone, its Hot). The gallery ranks Hot by plays in the last
 seven days, counted in Skribl's own table; your feed can rank your own posts
