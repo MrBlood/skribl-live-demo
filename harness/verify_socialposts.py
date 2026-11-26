@@ -4592,8 +4592,8 @@ print("PLAN " + json.dumps(out))
         # is its tiles and nothing more. READ OFF THE PAINT (a picture of the screen), since a tile's ground is a
         # part of its cell and has no box of its own to ask. ENAMEL SINCE NOV 26 (the owner's "Yes to B, with
         # their lavender edge", to the Enamel Tiles mock, a friend's colours): the tile white in light and
-        # obsidian in dark, flat, its lavender edge drawn inside it, and in dark a line of light at its top and a
-        # dark line at its foot; the step from the page still in the band Nov 20 asked for.
+        # obsidian in dark, flat, its lavender edge drawn inside it (in whole screen pixels and alone since the
+        # evening's crisp edge, "All yes on A"); the step from the page still in the band Nov 20 asked for.
         try:
             import io as _io
             from PIL import Image as _Image
@@ -4659,9 +4659,9 @@ print("PLAN " + json.dumps(out))
                         continue
                     mid, tile, ground, edge = (top + bot) / 2, [], [], []
                     l0, t0, r0, b0 = r[0]
-                    # ENAMEL: the edge drawn inside the tile, its first screen pixel at the tile's own edge;
-                    # in dark the line of light the next pixel down from its top, and the dark line the next up
-                    # from its foot (the tile runs 8px under the name).
+                    # ENAMEL: the edge drawn inside the tile, its first screen pixel at the tile's own edge; the
+                    # next pixel down from its top and the next up from its foot (the tile runs 8px under the
+                    # name), where a line of light and a dark foot were until the crisp edge.
                     lip = lines((l0 + r0) / 2, t0 - o + 1, 0, 1)
                     foot = lines((l0 + r0) / 2, b0 + 8 - 2, 0, 1)
                     for i, (l, t, rt, bt) in enumerate(r):
@@ -4706,18 +4706,18 @@ print("PLAN " + json.dumps(out))
                 """One of the two pixels a line can fall across is the line's colour, as painted."""
                 return any(max(abs(c[i] - want[i]) for i in range(3)) <= slack for c in cands)
 
-            def enamel(v, want_edge, want_lip=None, want_foot=None):
+            def enamel(v, want_edge, bare=None):
                 """ENAMEL (the owner's "Yes to B, with their lavender edge", Nov 26): every tile's edge their
-                lavender, read where it is painted (each tile's left side); in dark the line of light under it at
-                the top and the dark line over it at the foot (a row's first tile), each its own colour."""
+                lavender, read where it is painted (each tile's left side). And since that evening's crisp edge
+                (the owner's "All yes on A"), the edge alone: the screen pixel under it at the tile's top and over
+                it at its foot (a row's first tile) the tile's own colour, where in dark there were a line of light
+                and a dark line."""
                 if not v or not v["rows"]:
                     return False
                 for r in v["rows"]:
                     if not all(near22(e, want_edge) for e in r["edge"]):
                         return False
-                    if want_lip and not near22(r["lip"], want_lip):
-                        return False
-                    if want_foot and not near22(r["foot"], want_foot):
+                    if bare and not (near22(r["lip"][:1], bare) and near22(r["foot"][:1], bare)):
                         return False
                 return True
 
@@ -4767,18 +4767,40 @@ print("PLAN " + json.dumps(out))
                   " it), the paper between two",
                   bool(seen22.get("picker")) and tiled(seen22["picker"], TILE22["light"], [2, 1], 4),
                   f"shared alone {alone22}; " + json.dumps(seen22.get("picker"))[:700])
-            # ENAMEL'S LINES, as painted: light, the lavender edge alone (#dfdcf0); dark, the edge as it looks over
-            # the tile (their 10% lavender-white, made solid: #2b2b39), the line of light under it at the top (18%:
-            # #3d3d4b) and the dark line at the foot (65% black: #08080c).
-            check("every tile wears their lavender edge, drawn inside it: #dfdcf0 in light, and in dark the edge"
-                  " (#2b2b39), a line of light under it along the tile's top (#3d3d4b) and a dark line along its foot"
-                  " (#08080c), each read where it is painted, on your own profile, on somebody else's view of it and"
-                  " on Make's list",
-                  all(enamel(seen22.get("light" + who), (223, 220, 240)) for who in ("", ", somebody else's"))
-                  and all(enamel(seen22.get("dark" + who), (43, 43, 57), (61, 61, 75), (8, 8, 12))
-                          for who in ("", ", somebody else's"))
-                  and enamel(seen22.get("picker"), (223, 220, 240)),
+            # ENAMEL'S LINE, as painted: light, the lavender edge (#dfdcf0); dark, the edge as it looks over the tile
+            # (their 10% lavender-white, made solid: #2b2b39). Nothing under it at the top or over it at the foot:
+            # the line of light (#3d3d4b) and the dark foot (#08080c) went with the crisp edge (Nov 26, "All yes on A").
+            check("every tile wears their lavender edge, drawn inside it, and that alone: #dfdcf0 in light, #2b2b39 in"
+                  " dark, read where it is painted, the screen pixel under it at the tile's top and over it at its foot"
+                  " the tile's own colour (no line of light, no dark foot), on your own profile, on somebody else's"
+                  " view of it and on Make's list",
+                  all(enamel(seen22.get("light" + who), (223, 220, 240), TILE22["light"]) for who in ("", ", somebody else's"))
+                  and all(enamel(seen22.get("dark" + who), (43, 43, 57), TILE22["dark"]) for who in ("", ", somebody else's"))
+                  and enamel(seen22.get("picker"), (223, 220, 240), TILE22["light"]),
                   json.dumps({k: [(r["edge"][:1], r["lip"], r["foot"]) for r in v["rows"][:1]] for k, v in seen22.items()})[:900])
+            # THE EDGE IN WHOLE SCREEN PIXELS (the owner's "All yes on A", Nov 26, to the Crisp Tile Edge mock, after
+            # "the top edge of the gallery chips does not look good (dark is worse). It's not crisp at all"): at every
+            # density the tile's one line is a whole number of the screen's own pixels, as near 1px as it allows (1px
+            # at Windows' 150% was a pixel and a half, smeared across two). Asked of the line as the browser resolved
+            # it, on a phone's width at each density (the tile's own box-shadow: one layer, its spread).
+            dens22 = {}
+            for d in (1, 1.25, 1.5, 1.75, 2, 2.625, 3):
+                dctx2, dpg2 = browser_as(b, tess, "phone", "dark", scale=d)
+                dpg2.goto(BASE + "/social/@solv/gallery")
+                dpg2.wait_for_load_state("load")
+                dpg2.wait_for_timeout(400)
+                dens22[d] = dpg2.evaluate("""() => { const c = document.querySelector('[data-prof-list].gal-grid > *'); if (!c) return null;
+                  const sh = getComputedStyle(c, '::before').boxShadow, px = (sh.match(/-?[\\d.]+px/g) || []).map(parseFloat);
+                  return { layers: sh.split(/,(?![^(]*\\))/).length, w: px.length >= 4 ? px[3] : null, dpr: devicePixelRatio }; }""")
+                close_ctx(dctx2, dpg2)
+
+            def whole22(v):
+                return (bool(v) and v["layers"] == 1 and v["w"] is not None and round(v["w"] * v["dpr"]) >= 1
+                        and abs(v["w"] * v["dpr"] - round(v["w"] * v["dpr"])) < 0.02 and abs(v["w"] - 1) <= 0.34)
+            check("the tile's edge is a whole number of screen pixels at every density, as near 1px as each allows (1, 1.25"
+                  " and 1.5x one pixel; 1.75 to 2x two; 2.625 and 3x three), and the tile's one line",
+                  len(dens22) == 7 and all(whole22(v) for v in dens22.values()),
+                  json.dumps({str(k): v for k, v in dens22.items()}))
             dctx, dpg = browser_as(b, sol, "desk")
             dpg.goto(BASE + "/social/@solv/gallery")
             dpg.wait_for_load_state("load")

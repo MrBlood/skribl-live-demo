@@ -54627,3 +54627,35 @@ where a drawer now opens beside the drawing a fifth smaller, to 900x800 and
 at the window's corner, beside its card: there is nothing beside it now, the
 click landed in the editor (red beside other suites, green alone only where
 it found the editor's × there), and it uses the × on a desk as on a phone.
+
+## After v330 -- The tiles' edge, crisp: the owner's "All yes on A"
+
+The owner, Nov 26 evening, on their Windows desk: "On the desktop the top edge
+of the gallery chips does not look good (dark is worse). It's not crisp at all",
+then "On the gallery card, dark looks worse.. fyi".
+
+WHY: the enamel tile's edge was 1px (`--tile-line`), as the mock drew it, the one
+line on the site that was not one screen pixel. At Windows' 150% that is a pixel
+and a half: one solid and one smeared. In dark the line of light under it (its
+own 1px band) sat against it, and the two read as a soft grey band 3 to 4 screen
+pixels tall. On the owner's phone (3x) both were whole pixels and crisp.
+
+MOCKED (the artifact "Crisp Tile Edge",
+https://claude.ai/artifact/PtzV1MqdhcQRX4Ejy1TBMz), up close and at size, at
+Windows' 150% and 125% and on a phone, light and dark: A, the edge in whole screen
+pixels with no line of light (Cal's pick); B, whole pixels keeping the line of
+light (a thin double line in dark); C, only the line of light dropped (the edge
+still smeared at 150%). Two counts of "soft rows" were built to measure it and
+both thrown away: the first called a crisp one-pixel line soft (a colour seen
+once), the second read the page's glow as soft; the pictures, magnified, decided.
+At 125% a tile's own place falls between screen pixels on some rows, so no width
+alone is crisp everywhere there; A is the crispest of the three.
+
+The owner, Nov 26: "All yes on A". BUILT (`docs/SOCIAL-SITE.md` section 50):
+`--tile-line` in whole screen pixels by density (as `--hair` steps), the line of
+light and the dark foot taken out (their tokens and their two shadows).
+`verify_socialposts` 22: the enamel row reads the pixel under the edge at the top
+and over it at the foot as the tile's own colour, and a new row asks the line at
+seven densities for a whole number of pixels and one layer; shown red by taking
+the density steps out (the new row) and by putting a line of light back (both).
+Pad and Flip: not theirs.
