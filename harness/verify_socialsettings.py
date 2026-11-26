@@ -1827,9 +1827,12 @@ with sync_playwright() as p:
               const page = rgba(getComputedStyle(document.body).backgroundColor);
               const words = sub ? over(rgba(getComputedStyle(sub).color), cardBg) : null;
               const edge = over(tok('--card-edge'), cardBg);
+              // A TILE'S LAVENDER EDGE (enamel tiles, Nov 26), over the tile it is drawn inside.
+              const tile = tok('--row-band'), tedge = over(tok('--tile-edge'), tile);
               return { theme: document.documentElement.getAttribute('data-theme'), scheme: root.colorScheme,
                        ink2: hex(over(tok('--ink-2'), page)), words: words ? hex(words) : null, wordsOnCard: words ? cr(words, cardBg.slice(0, 3)) : null,
                        edge: hex(edge), edgeOnCard: cr(edge, cardBg.slice(0, 3)), edgeOnPage: cr(edge, page.slice(0, 3)),
+                       tileEdge: hex(tedge), tileEdgeOnTile: cr(tedge, tile.slice(0, 3)),
                        rule: tok('--rule')[3], rowLine: tok('--row-line')[3], navLine: tok('--nav-line')[3], cardLine: tok('--card-line')[3] }; }"""
             seen15 = {}
             # DARK BY THE DEVICE, NOTHING STAMPED: with scripts the boot stamps the device's theme, so this one is read
@@ -1851,20 +1854,23 @@ with sync_playwright() as p:
             bad15 = []
             for label, (ink, floor, edge_floor) in WANT.items():
                 on, off = seen15[(label, True)], seen15[(label, False)]
-                if not (on["ink2"] == ink and on["words"] and on["wordsOnCard"] >= floor and on["edgeOnCard"] >= edge_floor and on["edgeOnPage"] >= edge_floor):
+                if not (on["ink2"] == ink and on["words"] and on["wordsOnCard"] >= floor and on["edgeOnCard"] >= edge_floor and on["edgeOnPage"] >= edge_floor
+                        and on["tileEdgeOnTile"] >= edge_floor):
                     bad15.append(f"{label} with the setting: {on}")
                 if not (on["rule"] >= 2 * off["rule"] - 0.001 and on["rowLine"] >= 2 * off["rowLine"] - 0.001 and on["navLine"] >= 2 * off["navLine"] - 0.001
                         and on["cardLine"] > off["cardLine"]):
                     bad15.append(f"{label} lines: {on['rule'], on['rowLine'], on['navLine'], on['cardLine']} against {off['rule'], off['rowLine'], off['navLine'], off['cardLine']}")
-                if not (off["ink2"] == REST[label] and off["edgeOnCard"] < 2 and off["wordsOnCard"] and off["wordsOnCard"] < on["wordsOnCard"]):
+                if not (off["ink2"] == REST[label] and off["edgeOnCard"] < 2 and off["wordsOnCard"] and off["wordsOnCard"] < on["wordsOnCard"]
+                        and off["tileEdgeOnTile"] < 2):
                     bad15.append(f"{label} without it: {off}")
             check("with \"more contrast\" on, the site answers it, light, dark chosen and dark by the device: a post's grey line in"
                   " the stronger ink (9:1 or more on its card in light, 11:1 in dark), a card's edge 3:1 or more from the card and"
-                  " from the page, and the thin rule, the line between two rows and the bar's top line twice as strong, a tile's"
-                  " line stronger; without the setting every one of them is as it was",
+                  " from the page, a tile's lavender edge 3:1 or more from the tile (enamel tiles, Nov 26), and the thin rule, the"
+                  " line between two rows and the bar's top line twice as strong, a picture's line stronger; without the setting"
+                  " every one of them is as it was",
                   st15 == 200 and len(seen15) == 6 and not bad15 and all(seen15[(l, m)]["theme"] == (None if l == "dark by the device" else l.split()[0])
                                                          for l in WANT for m in (False, True)),
-                  "; ".join(bad15)[:1200] or json.dumps({f"{k[0]}{' +' if k[1] else ''}": (v["ink2"], v["wordsOnCard"], v["edgeOnCard"], v["edgeOnPage"]) for k, v in seen15.items()}))
+                  "; ".join(bad15)[:1200] or json.dumps({f"{k[0]}{' +' if k[1] else ''}": (v["ink2"], v["wordsOnCard"], v["edgeOnCard"], v["edgeOnPage"], v["tileEdgeOnTile"]) for k, v in seen15.items()}))
         except Exception as exc:  # noqa: BLE001
             stopped(15, exc)
 

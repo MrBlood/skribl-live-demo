@@ -4080,3 +4080,38 @@ sheet says its own time.
 
 `verify_socialletters` 15 holds it (each row shown red first). Not tested
 here: WebKit, SF, Segoe UI.
+
+## 47. Built: Enamel tiles (Nov 26)
+
+The owner, Nov 26, about 10 AM, with a friend's CSS ("Blooby Gallery --
+Enamel Card CSS Tokens"): "My friend thought the gallery cards would look
+good with these colors. Can you mock them? In light and dark?" Mocked (the
+artifact "Enamel Tiles"): now, A as sent, B Cal's. The owner, about 10:30
+AM: "Yes to B, with their lavender edge."
+
+THE TILE under each drawing of a grid and its name (section 33's) is
+enamel: white porcelain in light (#ffffff, 1.06:1 from the page), obsidian
+in dark (#171723, 1.06:1), the same on a sheet's paper (Make's "Use one
+you made": 1.12:1 from its lilac); flat, no gradient. ITS EDGE, their
+lavender, drawn inside it as their border was: #dfdcf0 in light; in dark
+their 10% lavender-white made solid as it looks over the tile (#2b2b39),
+with their line of light under it along the top (#3d3d4b) and their dark
+line along the foot (#08080c). No shadow round a tile, at rest or under a
+mouse: their hover's lift and soft shadow, their gradient and their page
+colour were A's, and are not built.
+
+ONE LINE THAT IS NOT ONE SCREEN PIXEL. Every outline on the site is one
+screen pixel (THE EDGES, Nov 15). The mock drew B's edge 1px, three screen
+pixels on a 3x phone, and that is what the owner said yes to; at one screen
+pixel the dark edge and its line of light all but go. So `--tile-line` is
+1px, said in the stylesheet, and one token takes it to one screen pixel if
+the owner would rather.
+
+TOKENS (`social.css`): `--row-band` and `--row-band-sheet` (the tile, both
+names kept), `--tile-line`, `--tile-edge`, `--tile-lip`, `--tile-foot`. FOR
+"MORE CONTRAST" the edge takes a card's firm line (`--card-line-hc`).
+WHEREVER THE ONE GRID IS: the Gallery, a profile's Gallery and Drafts, the
+front door's six, Make's list. The picture keeps its own lilac edge. The Pad
+and Flip: not theirs. `verify_socialposts` 22 holds it (read off the paint;
+the edge and the dark lines where they are painted; each row shown red by
+breaking its part).
