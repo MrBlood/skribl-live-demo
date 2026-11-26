@@ -54527,3 +54527,38 @@ transform, no blurred layer, and a touch phone with the mouse put on a tile
 unchanged), and `verify_socialsettings` 15 (the hover line under the
 setting, and the site's hover line without it), each shown red by breaking
 its part in a worktree.
+
+## After v330 -- Room for the drawer, mocked: why it opened below, and three changes
+
+The owner, Nov 26, about 12:20 PM, with a picture of the Pad in full screen on
+their desk: "why is the drawer opening on the bottom?"; then the Pad and Flip
+from the site's Make; then "don't you think the window that opens should be
+full-screen and on flip the bottom slides would extend under the right side
+window?"
+
+WHY (measured here): a drawer opens beside the drawing only where the whole
+drawing fits beside it (`lib/drawers.js` sideFit, 440px to spare), and else
+below, the page scrolled 335px. A 16:9 drawing on the Pad fills the window's
+width (162px each side on a 16:9 screen), so it opens below on every desk, in
+full screen or not, 1920x1080 included (the owner's first picture: its
+proportions are a 16:9 drawing on a 1280x720 screen). Make's sheet is 1120px
+wide (social.css .facepad-sheet, a desk); at 1366x768 the Pad's 4:3 drawing
+grows to 707px there and no longer fits (the second picture). Flip's drawing is
+smaller and fits; in the owner's Segoe UI its drawer reached down onto the
+page strip's corner (the third picture; 14px clear in this box's faces).
+
+THE MOCK (the artifact "Room for the Drawer",
+https://claude.ai/artifact/UjuQLQg1cqaYeGadXu6Sev), on a 1366x768 desk (the
+wide drawing at 1920x1080 too), dark and light, each laid over today's app:
+1. Make's editor fills the window on a desk, Pad and Flip: the Pad's drawing
+   55% on screen with the drawer below becomes 100% beside it, 771px wide
+   (707 now).
+2. A drawing that still does not fit gets a little smaller as it slides left,
+   the least it needs, and back when the drawer closes: a 16:9 drawing 58% on
+   screen (73% at 1920) becomes 100%, 88% of its size (92% at 1920); centred
+   in its room, the drawer level with its top, the dock under it.
+3. Flip's page strip runs under the drawer, the full width (694px to 1008, 8
+   pages in view for 6), the drawer always ending above it.
+
+CAL'S PICK: all three. NOTHING IS BUILT. Pad and Flip: shared (2 and 3 in the
+drawers' one rule, 1 the site's sheet for both).
