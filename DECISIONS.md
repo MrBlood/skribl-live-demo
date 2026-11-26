@@ -54562,3 +54562,51 @@ wide drawing at 1920x1080 too), dark and light, each laid over today's app:
 
 CAL'S PICK: all three. NOTHING IS BUILT. Pad and Flip: shared (2 and 3 in the
 drawers' one rule, 1 the site's sheet for both).
+
+## After v330 -- Room for the drawer: the owner's "All yes", built
+
+The owner, Nov 26, about 1 PM, to the Room for the Drawer mock: "All yes. Does
+the side close?" (It does, as it has since Nov 25: Pen tapped again, a click
+on the drawing, another drawer opened. Escape does not, and was offered.)
+
+BUILT, ONE RULE FOR BOTH EDITORS (`lib/drawers.js`):
+
+- A DRAWING THAT DOESN'T FIT BESIDE A DRAWER GETS A LITTLE SMALLER, the least
+  it needs, never past three quarters of its width (SIDE_MIN 0.75); past that
+  (a narrow window) the drawer opens below as before. The mock said "about 8
+  to 12%"; measured on real windows a wide drawing gives up 4 to 15% in a
+  maximised one and about 22% in a 16:10 full screen. A floor of 0.7 was
+  built first and taken back: it put the Pad's drawer beside at 960x900 (29%
+  smaller), where `verify_musicdoors` and its siblings open it below on
+  purpose, and 29% is not "a little".
+- THE ROOM COMES OUT OF THE DRAWING'S ROW as padding, half each side (each
+  editor names its row, `.canvas-area` and `.flip-stage`, whose padding its
+  own fit takes off the room it has), so the drawing stays centred over its
+  dock as both slide, and the editor's fit runs again at once (`fit`). What
+  comes out is the row's own spare width down to the widest a drawing beside
+  a drawer can be: a drawing its height holds back has room to spare in its
+  row (the first build took out only the drawing's overflow, 128px of the
+  408 needed, and nothing changed).
+- READ AS PAINTED: a drawer just opened sits under the dock in the page's
+  flow until it goes beside, a layout never painted, so the drawing is read
+  with it lifted out (as the Pad's own fit does); a smaller drawing is
+  centred in its row, so the drawer's top is read again after it goes beside
+  (built without, the drawer stood 36px above the drawing).
+- IT GLIDES with the slide (FLIP on `.canvas-wrap` and `.flip-wrap`, added
+  to whatever transform they have), and back on close.
+- FLIP'S PAGE STRIP RUNS UNDER THE DRAWER to its right edge, gliding out and
+  home with it, and the drawer ends above the strip (`--side-max`, read by
+  the drawer's rule in `styles.css`; a max-height of its own was cleared by
+  Text's sheet, which sets its own as a keyboard comes and goes). A resize
+  heard while it glides waits for the glide's end (the strip's own growing
+  is heard as one, and decided again mid-glide it landed in one frame), and
+  then decides again only if the window's size changed; and a decision
+  without a glide keeps a pixel's rounding as it was (the drawing and the
+  strip wobbled a pixel left and back after the glide).
+
+MAKE'S EDITOR FILLS THE WINDOW ON A DESK (`social.css` .facepad-sheet; the
+site's side, `docs/SOCIAL-SITE.md` section 49): over Make, a post's box, your
+face and a letter, rising from below as on a phone.
+
+PAD AND FLIP: shared. The link player loads none of it (`app.js` unchanged,
+`player.css` the same).
