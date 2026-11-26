@@ -54472,3 +54472,58 @@ NOTHING IS BUILT. Pad and Flip: not theirs.
 THE OWNER, about 11:20 AM: "I think I like now on the tiles." The tiles stay
 as built, the 1px lavender edge with them; bento is not built. Still open:
 whether to mock a hover for the tiles on a desk.
+
+## After v330 -- Tile hover, mocked: what a tile does under a mouse on a desk
+
+The owner, Nov 26, about 11:30 AM, to Cal's offer after the bento mock (bento
+had a hover; the site's tiles have none): "Yes to the mock". THE TARGET: the
+Gallery's tiles on a computer, while the mouse is on one. A phone has no
+hover, and asked, a touch phone does not match `(hover: hover) and (pointer:
+fine)`.
+
+THE MOCK (the artifact "Tile Hover",
+https://claude.ai/artifact/SR6JTbUs9k8sqkRZQj25rz): the real Gallery on a
+desk, light and dark, each look laid over the enamel tiles as built:
+- A (Cal's): the tile's edge takes the site's own hover line, `--btn2-line`,
+  as a face tile and Make's door already do on a desk; it fades in over
+  0.18s;
+- A + grow: A, and the tile grows 1.2% over 0.25s (not under Reduce Motion);
+- B (theirs): the enamel file's hover without its lift and its shadow, the
+  edge #C7C1E5; in dark the tile #1C1C2B, the edge and the line of light
+  brighter.
+Each filmed as a mouse rests on two tiles: 2x screenshots with the page's
+animations at a tenth of their speed (CDP Animation.setPlaybackRate), the
+mouse on the same slowed clock, played back at the real speed at 60 a second
+(this box's screencast gives 1x frames, and a 2x screenshot takes about a
+tenth of a second, which first filmed the fade at 10 frames a second).
+Measured at 2x with the mouse on a tile, light / dark: the edge from the
+tile now 1.34 / 1.27, A 1.57 / 2.14, B 1.72 / 1.86 (B's tile 1.12 from the
+page in dark); the edge's chroma A 0.078 / 0.085, B 0.050 / 0.032.
+
+CAL'S PICK: A without the grow. One hover for the site (the face tiles' and
+Make's door's line), the clearest colour (B's dark edge greys, and B changes
+the tile's colour too), and the drawings stay still as the mouse crosses the
+grid. NOTHING IS BUILT. Pad and Flip: not theirs.
+
+## After v330 -- Tile hover: the owner's "All yes", built
+
+The owner, Nov 26, about 11:45 AM, to the Tile Hover mock: "All yes" (A,
+without the grow).
+
+BUILT (`docs/SOCIAL-SITE.md` section 48): on a desk the tile under the mouse
+takes the site's hover line for its edge (`--tile-hover`, which is
+`--btn2-line`), fading in over 0.18s; no grow, nothing soft, the drawing
+still; a phone unchanged (the rule sits under `(hover: hover) and (pointer:
+fine)`).
+
+ONE THING THE MOCK DID NOT SHOW: with "more contrast" on, the tile's edge at
+rest is already the card's firm line (3:1 or more), and the hover line
+(1.57:1 in light) would have made it fainter under the mouse. So under the
+setting `--tile-hover` is the accent itself: never fainter than at rest.
+
+CALIBRATED: `verify_socialposts` 22, a new row (the edge as painted on a
+desk in light and dark with the mouse on a tile, the tile beside it, no
+transform, no blurred layer, and a touch phone with the mouse put on a tile
+unchanged), and `verify_socialsettings` 15 (the hover line under the
+setting, and the site's hover line without it), each shown red by breaking
+its part in a worktree.
