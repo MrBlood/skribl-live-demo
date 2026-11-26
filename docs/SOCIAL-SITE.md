@@ -3986,3 +3986,44 @@ The migration `d3a8f1c6e2b4` adds the table, the device's switch, and
 built (every row shown red first), `verify_hostseams.py` the held seam,
 `verify_socialpush.py` the switch, `verify_socialauth.py` the chain. The
 Pad and Flip: nothing of theirs yet.
+
+## 45. Built: Drawn letters, written in the Pad (Nov 26)
+
+The second of the four parts (section 44 is the server). A letter is written
+in the Pad, opened the way Draw back opens it, over the page you are on:
+
+    SocialLetters.write({ to: handle, first: name, from })     fresh paper, to them
+    SocialLetters.writeBack({ id: a letter, first, from })     theirs faint under the pen
+
+(`social/static/letters.js`, the overlay `#letterPad` and its words in
+`_compose.html`, on every page of somebody signed in.) Part three puts
+these behind Write on a friend's page, and Write back and New letter on the
+two of you.
+
+IN THE PAD (Skribl's new `composehost.say`, `docs/INTEGRATION.md` "Say what
+you are making"; `editor_compose.js`, shared by the Pad and Flip): its
+button and its sheet's say **Send**; its pill says **A letter** to Ana · only
+the two of you see it (writing back, Draw back's own pill says **Writing
+back** to Ana · only the two of you see it, her drawing faint under the pen,
+and folds into Theirs at the first stroke). On fresh paper the pill stays
+while it is clear of the drawing, and goes at the first stroke where it
+lies over it. The picture and music drawer and the door to Flip are dimmed
+and say why when tapped: "Letters don’t carry photos or music yet." and
+"Letters are drawn in the Pad for now." Writing back, the eraser is aside
+too, as in Draw back.
+
+SEND, WITH NO SHEET BETWEEN: the Pad's own sheet ("Viewers start at", the
+author's pick of speed) ends in Send, and what it hands back goes straight
+to `/letters`; the page goes to the two of you. A letter has no typed words.
+NOTHING IS LOST: a send that does not go says why in the site's toast
+("Letters go between two people who follow each other.", "Letters don’t
+carry photos yet. Take the photo out, then Send.", ...), and Write again
+opens the Pad with the drawing.
+
+"ONLY THE TWO OF YOU SEE IT", not the mock's "only she sees it": the site
+keeps nobody's pronouns, so it does not guess one, and the sender sees a
+letter too. The Letters page's own line says the same.
+
+`verify_socialletters` 13 and 14 hold it, each row shown red first. Flip:
+Skribl's part serves both editors already; a Flip letter is next, on the
+list.
