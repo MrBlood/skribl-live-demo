@@ -1264,11 +1264,11 @@ with app.app_context():
                     close_ctx(ctx, pg)
             want = {("phone", "in"): ["Home", "Gallery", "Make", "Search", "You"],
                     ("phone", "out"): ["Home", "Gallery", "Make", "Search", "Sign in"],
-                    ("desk", "in"): ["Home", "Gallery", "Search", "Activity", "Make", "How it works", "Settings", "You"],
+                    ("desk", "in"): ["Home", "Gallery", "Search", "Activity", "Letters", "Make", "How it works", "Settings", "You"],
                     ("desk", "out"): ["Home", "Gallery", "Search", "Make", "How it works", "Sign in"]}
             names = {" ".join(k): [x["name"] for x in v["seen"]] for k, v in got12.items()}
             check("the places, in the order seen: a phone's bar Home, Gallery, Make, Search, You (Sign in before you"
-                  " sign in); a desk's rail Home, Gallery, Search, Activity, Make, How it works, Settings, You (Search"
+                  " sign in); a desk's rail Home, Gallery, Search, Activity, Letters, Make, How it works, Settings, You (Search"
                   " under the Gallery, Make the big button below); on Home and on Search",
                   len(got12) == 8 and all(names[" ".join(k)] == want[k[:2]] for k in got12), json.dumps(names))
             bar = {}

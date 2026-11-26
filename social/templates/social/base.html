@@ -214,7 +214,7 @@
   {#- LETTERS, in a desk's rail under Activity (the mock's choice 3), with
       the envelope's own dot; a phone has the envelope at its top. #}
   {% set ldot = letters_dot() %}
-  <a class="tab tab-activity tab-letters" href="{{ url_for('social.letters_page') }}"{% if here == 'letters' %} aria-current="page"{% endif %}{% if ldot %} aria-label="Letters, a new one"{% endif %}>
+  <a class="tab tab-letters" href="{{ url_for('social.letters_page') }}"{% if here == 'letters' %} aria-current="page"{% endif %}{% if ldot %} aria-label="Letters, a new one"{% endif %}>
     <span class="tab-ic">{{ ic.envelope(here == 'letters', ldot) }}{% if here == 'letters' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Letters{% if here == 'letters' %}{{ ic.underline() }}{% endif %}</span></a>
   {% endif %}
   <button class="tab tab-make" type="button" data-make aria-haspopup="dialog" aria-controls="{{ 'composeSheet' if composing else 'makeSheet' }}" aria-expanded="false">

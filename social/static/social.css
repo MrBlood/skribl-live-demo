@@ -2884,7 +2884,7 @@ a.post-face { text-decoration: none; }
 .top-letters + .top-bell { margin-left: 0; }
 .top-letters .ic { width: 26px; height: 26px; }
 .ic-env .act-dot { fill: var(--new-dot); stroke: var(--page); stroke-width: 1.8; transition: opacity 0.4s ease; }
-.nav .tab-activity { display: none; }
+.nav :is(.tab-activity, .tab-letters) { display: none; }
 /* THE LIST: a row each, its rule between, as the comments are; every row one
    link, the whole row the target. */
 .act { max-width: 640px; }
@@ -2944,7 +2944,7 @@ a.post-face { text-decoration: none; }
 .act-empty-title { margin: 0 0 8px; font: 700 24px/1.2 var(--font); letter-spacing: -0.01em; }
 .act-empty-words { margin: 0 0 20px; color: var(--ink-2); font-size: 16px; line-height: 1.5; }
 @media (min-width: 900px) {
-  .nav .tab-activity { display: flex; }
+  .nav :is(.tab-activity, .tab-letters) { display: flex; }
   .act-head { position: static; width: auto; height: auto; margin: 4px 0 8px; overflow: visible; clip: auto; white-space: normal; }
   .act-head + .act-sec, .act-head + .push-fold + .act-sec { margin-top: 18px; }
   /* The heading's 8px under it is inside the card's room, so a room shut

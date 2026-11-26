@@ -31,6 +31,7 @@
       <li>Your account: your name, {{ me.display_name }}, and your handle, @{{ me.handle }}</li>
       <li>Your profile{% if me.face_id %}, and the face you drew for it{% endif %}</li>
       {% if n_posts %}<li>Your posts ({{ n_posts }}): their words and their drawings</li>{% endif %}
+      <li>Your letters, the ones you sent and the ones sent to you, both sides</li>
       <li>Your passkeys ({{ n_keys }})</li>
       <li>{% if n_links %}The invite links you made that nobody has used yet ({{ n_links }}){% else %}Any invite links you made{% endif %}</li>
     </ul>
