@@ -141,7 +141,11 @@ from flask import (Blueprint, abort, current_app, g, has_app_context, has_reques
 from .models import PERSON_PREFIX, attach_to_metadata
 
 __all__ = ["init_social", "current_user_id", "describe_author", "hidden_authors", "muted_authors",
-           "attach_to_metadata", "PERSON_PREFIX"]
+           "letter_readable", "LETTER", "attach_to_metadata", "PERSON_PREFIX"]
+
+#: The visibility a drawn letter's drawing has in Skribl (letters.py): the
+#: state a host teaches Skribl, held, with letter_readable as its policy.
+LETTER = "letter"
 
 
 def current_user_id():
@@ -187,6 +191,19 @@ def muted_authors(viewer_id):
         return frozenset()
     from .mutes import muted_authors as _muted
     return _muted(viewer_id)
+
+def letter_readable(post, viewer_id):
+    """For the host's visibility policy (app.py installs it, beside the block
+    rule; docs/SOCIAL-SITE.md, "Drawn letters"): a drawn letter's drawing is
+    its two people's to read and nobody else's (True or False); None for any
+    other drawing, and where the site is not running (an unknown state is
+    then its author's alone, as Skribl decides)."""
+    if getattr(post, "visibility", None) != LETTER:
+        return None
+    if not has_app_context() or "social" not in current_app.extensions:
+        return None
+    from .letters import readable
+    return readable(post, viewer_id)
 
 #: The globals init_skribl() puts in the app's Jinja environment that the
 #: site's pages use: skribl_asset for the player's and the Gallery's files,
@@ -384,8 +401,8 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
                                show="everyone", sort="new", q="", more_url=None)
 
     if site is not None:
-        from . import (accounts, activity, bookmarks, comments, compose, follows, gallery, how, likes, mentions, mutes,
-                       pins, posts, profiles, push, reports, reposts, rules, safety)
+        from . import (accounts, activity, bookmarks, comments, compose, follows, gallery, how, letters, likes, mentions,
+                       mutes, pins, posts, profiles, push, reports, reposts, rules, safety)
         accounts.register(bp)
         gallery.register(bp)
         profiles.register(bp, skribl_blueprint)
@@ -398,6 +415,7 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         reposts.register(bp)
         mentions.register(bp)
         follows.register(bp)
+        letters.register(bp, skribl_blueprint)
         mutes.register(bp)
         activity.register(bp, skribl_blueprint)
         push.register(bp, skribl_blueprint)
@@ -424,7 +442,8 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
                 cap = {"social.face_save": profiles.FACE_MAX_BODY,
                        "social.post_new": posts.POST_MAX_BODY,
                        "social.comment_new": posts.POST_MAX_BODY,
-                       "social.bloob_comment_new": posts.POST_MAX_BODY}.get(request.endpoint, SITE_MAX_BODY)
+                       "social.bloob_comment_new": posts.POST_MAX_BODY,
+                       "social.letter_send": posts.POST_MAX_BODY}.get(request.endpoint, SITE_MAX_BODY)
                 request.max_content_length = cap
                 if (request.content_length or 0) > cap:
                     abort(413)

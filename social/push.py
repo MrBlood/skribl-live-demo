@@ -91,7 +91,7 @@ SWITCH_OF = {"comment": "replies", "answer": "replies", "answer_drawing": "repli
              # A draw-back answers you, in a drawing: Replies (the mock's "it
              # nudges as a reply does").
              "drawback": "replies"}
-SWITCHES = ("replies", "mentions", "likes", "follows", "reposts")
+SWITCHES = ("replies", "mentions", "likes", "follows", "reposts", "letters")
 
 #: The push services browsers use: a nudge goes to one of these, or nowhere.
 PUSH_HOSTS = ("push.apple.com", "fcm.googleapis.com", "android.googleapis.com",
@@ -295,11 +295,25 @@ def service_of(endpoint):
 
 # ---- what a nudge says ------------------------------------------------------------
 
+def letter_row(letter):
+    """A new letter as a nudge reads it, in Activity's row's shape: "Ana
+    sent you a letter" (or "Ana wrote back"), "Tap to open it.", opening the
+    two of you. Sealed: nothing of the drawing is said."""
+    from .models import first_name
+    sender = site().session().get(Person, letter.sender_id)
+    first = first_name(sender.display_name) if sender is not None else "Somebody"
+    return {"kind": "letter", "when": letter.created_at, "words": "",
+            "title": f"{first} wrote back" if letter.written_on_id else f"{first} sent you a letter",
+            "href": url_for("social.letters_with", handle=sender.handle) if sender is not None else url_for("social.home")}
+
+
 def body_of(row):
     """Under the sentence: a drawn reply's invitation, else their words in
     quotes as Activity shows them, cut short for a lock screen."""
     if row["kind"] in ("answer_drawing", "drawing"):
         return "Tap to watch it draw."
+    if row["kind"] == "letter":
+        return "Tap to open it."
     if row["kind"] == "drawback" and not row.get("words"):
         return "Tap to watch yours, then theirs."
     words = " ".join((row.get("words") or "").split())
@@ -314,13 +328,15 @@ def tag_of(row):
     """What a nudge takes the place of: the same kind on the same page (a
     post's comments, a conversation's answers, a post's likes); a mention, a
     quote and a drawing each their own."""
-    one = row["kind"] in ("mention", "quote", "quote_comment", "answer_drawing", "drawing", "drawback")
+    one = row["kind"] in ("mention", "quote", "quote_comment", "answer_drawing", "drawing", "drawback", "letter")
     return f"{row['kind']}:{row['href'] if one else row['href'].split('#', 1)[0]}"
 
 
 def switches_of(row):
     """The switches a row is under: its kind's, and Mentions where it names
     you too (a quote of yours that mentions you)."""
+    if row["kind"] == "letter":
+        return {"letters"}
     return {SWITCH_OF.get(row["kind"], "replies")} | ({"mentions"} if row.get("mentioned") else set())
 
 
@@ -342,9 +358,18 @@ def nudges_for(person, since, wanted):
                     picked.append(row)
                 break
     dot = sum(1 for r in fresh if r["kind"] not in QUIET_KINDS or r.get("mentioned"))
+    # A NEW LETTER (letters.py; the owner's yes, Nov 26) is no Activity row:
+    # the envelope has its own dot. Its nudge is the newest unopened letter,
+    # as new as the request, and the number on the icon counts the waiting
+    # letters too.
+    from .letters import unopened
+    waiting = unopened(person)
+    dot += len(waiting)
+    if "letters" in wanted and waiting and as_utc(waiting[0].created_at) >= since - FRESH:
+        picked.append(letter_row(waiting[0]))
     out = []
     for row in sorted(picked, key=lambda r: as_utc(r["when"])):
-        out.append(({"title": sentence(row), "body": body_of(row), "url": row["href"], "tag": tag_of(row),
+        out.append(({"title": row.get("title") or sentence(row), "body": body_of(row), "url": row["href"], "tag": tag_of(row),
                      "icon": url_for("social.static", filename="blooby-icon-192.png"), "badge": dot},
                     switches_of(row), as_utc(row["when"])))
     return out

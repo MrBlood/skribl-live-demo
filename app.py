@@ -550,10 +550,17 @@ def create_app():
             return query.filter(SkriblPost.user_id.notin_(sorted(hidden))) if hidden else query
 
         def _deny_blocked(post, viewer_id):
-            return False if post.user_id in social.hidden_authors(viewer_id) else None
+            if post.user_id in social.hidden_authors(viewer_id):
+                return False
+            # A DRAWN LETTER (social/letters.py): its two read it, nobody
+            # else; nobody across a block. Held, so no author changes it
+            # through Skribl's own routes, and the listings never show it
+            # (the built-in feed and this filter list public drawings).
+            return social.letter_readable(post, viewer_id)
 
         skribl.models.set_feed_filter(_hide_blocked, app)
         skribl.models.set_visibility_policy(_deny_blocked, app)
+        skribl.models.set_visibility_values((social.LETTER,), app, held=(social.LETTER,))
 
     # So a single db.create_all() covers Skribl's tables too. Optional — see
     # skribl.models.attach_to_metadata; an Alembic host would migrate

@@ -127,6 +127,9 @@ def queue():
     from .comments import landing
     lands = landing([(cm, post.public_id if post is not None else None) for cm, _, post in said.values()])
     seen = describe_posts(skribls) if skribls else {}
+    from .models import Letter
+    letters = {r.public_id: r for r in sess.execute(sa.select(Letter).where(Letter.public_id.in_(
+        [c["target"] for c in cards.values() if c["kind"] == "letter"]))).scalars()}
     people = {p.public_id: p for p in sess.execute(sa.select(Person).where(Person.public_id.in_(
         [c["target"] for c in cards.values() if c["kind"] == "person"]
         + [str((seen.get(t) or {}).get("user_id") or "") for t in skribls]))).scalars()}
@@ -152,6 +155,14 @@ def queue():
             # A drawing answer's card shows its picture; words alone, whose face.
             c["poster"] = (url_for(site_bp() + ".skribl_poster", public_id=cm.skribl_id)
                            if cm is not None and cm.skribl_id else None)
+        elif c["kind"] == "letter":
+            # A DRAWN LETTER'S CARD: whose it is and its picture, readable by
+            # an admin once reported (letters.readable); no page of its own.
+            row = letters.get(c["target"])
+            c["who"] = sess.get(Person, row.sender_id) if row is not None else None
+            c["what"] = row
+            c["poster"] = url_for(site_bp() + ".skribl_poster", public_id=row.skribl_id) if row is not None else None
+            c["url"] = url_for(site_bp() + ".skribl_player", public_id=row.skribl_id) if row is not None else None
         else:
             sk = seen.get(c["target"]) or {}
             c["who"] = people.get(str(sk.get("user_id") or ""))
@@ -210,6 +221,17 @@ def answer(kind, target, me, down):
         if down:
             _withhold(target)
         close_reports(target)
+    elif kind == "letter":
+        # A DRAWN LETTER (letters.py): gone from its recipient's side, its
+        # drawing withheld (its sender still sees theirs, with the note).
+        from .models import Letter
+        row = sess.execute(sa.select(Letter).where(Letter.public_id == target)).scalar_one_or_none()
+        if row is None:
+            return False
+        if down:
+            if row.taken_down_at is None:
+                row.taken_down_at = now
+            _withhold(row.skribl_id)
     elif kind == "comment":
         cm = sess.execute(sa.select(Comment).where(Comment.public_id == target)).scalar_one_or_none()
         if cm is None:

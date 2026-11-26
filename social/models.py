@@ -34,7 +34,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
 __all__ = ["SocialBase", "Person", "PersonWord", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
-           "Comment", "Like", "Bookmark", "TwoHands", "Repost", "Mention", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX",
+           "Comment", "Like", "Bookmark", "TwoHands", "Letter", "Repost", "Mention", "Follow", "Mute", "Block", "Report", "PERSON_PREFIX",
            "WORD_MAX",
            "BIO_MAX",
            "BIO_LINES",
@@ -52,8 +52,9 @@ BIO_LINES = 4
 WORDS_MAX = 500
 
 #: What a report can be about (safety.py): somebody, a post, a drawing shown
-#: outside a post, and a comment (with comments, phase 2's first piece).
-REPORT_KINDS = ("person", "post", "drawing", "comment")
+#: outside a post, a comment (with comments, phase 2's first piece), and a
+#: drawn letter (letters.py, Nov 26).
+REPORT_KINDS = ("person", "post", "drawing", "comment", "letter")
 
 #: Where a report stands: waiting, looked at and kept, or taken down.
 REPORT_STATES = ("open", "kept", "taken_down")
@@ -761,6 +762,70 @@ class TwoHands(SocialBase):
     created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
 
 
+class Letter(SocialBase):
+    """A DRAWN LETTER (the owner's yes, Nov 26, A for all six; DECISIONS.md,
+    "Drawn letters, mocked"; letters.py): one person's drawing for one other
+    person, only ever between the two of them. Its drawing is Skribl's, made
+    with the site's own visibility "letter", which the host's policy lets
+    its two read and nobody else (letters.readable), and which neither of
+    them can change (Skribl's held states). Never a post: Home and the Posts
+    tab list post rows, so a letter keeps a table of its own.
+
+    WRITTEN BACK ON (choice 5, Draw back's way): written_on_id is the letter
+    it answers, and its drawing holds that one's strokes first, squeezed to
+    three seconds when longer, then its own at its own pace (drawback.join);
+    hand_at_ms is where its own hand starts on the player's line. The two of
+    you show each sheet once: a letter written back on is inside the one
+    written on it.
+
+    OPENED (opened_at) when the recipient's page starts playing it, by a POST
+    from the page, never on a GET. The sender can take it back until then
+    (the row and its drawing go); nothing says when it was opened. DELETED
+    FROM ONE SIDE (sender_deleted_at, recipient_deleted_at): gone from that
+    person's pages; once both have, the row and its drawing go. TAKEN DOWN by
+    an admin (taken_down_at), its drawing withheld in Skribl.
+
+    Deleting an account takes every letter it sent or received, and their
+    drawings, in code (accounts.delete_person); the ON DELETE CASCADEs are
+    the net under that."""
+    __tablename__ = "social_letters"
+
+    id = sa.Column(BigId, primary_key=True)
+    public_id = sa.Column(sa.String(24), nullable=False)
+    sender_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    recipient_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: Its drawing, Skribl's public id (visibility "letter").
+    skribl_id = sa.Column(sa.String(32), nullable=False)
+    #: The letter it was written back on, while that one is there.
+    written_on_id = sa.Column(BigId, sa.ForeignKey("social_letters.id", ondelete="SET NULL",
+                                                   name="fk_social_letters_written_on_id"), nullable=True)
+    #: Where this hand starts in the drawing, in the drawing's own time (ms):
+    #: the mark on the player's line. None on fresh paper.
+    hand_at_ms = sa.Column(sa.Integer(), nullable=True)
+    #: Whose hands and how long each drew, as a draw-back's (drawback.hands):
+    #: JSON [[person id, ms], ...] in the order they play.
+    hands_json = sa.Column(sa.Text(), nullable=True)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    opened_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+    sender_deleted_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+    recipient_deleted_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+    taken_down_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        #: Nobody writes to themselves.
+        sa.CheckConstraint("sender_id <> recipient_id", name="ck_social_letters_not_self"),
+        sa.Index("ix_social_letters_public_id", "public_id", unique=True),
+        #: Letters to a person, newest first: Letters, and the envelope's dot.
+        sa.Index("ix_social_letters_recipient_created", "recipient_id", "created_at"),
+        #: Letters from a person, newest first: Letters, and the two of you.
+        sa.Index("ix_social_letters_sender_created", "sender_id", "created_at"),
+        #: A drawing's letter: who may read it (the policy, asked per drawing).
+        sa.Index("ix_social_letters_skribl_id", "skribl_id"),
+        #: A letter's write-backs: the sheet shown once.
+        sa.Index("ix_social_letters_written_on_id", "written_on_id"),
+    )
+
+
 class Repost(SocialBase):
     """A repost (the map, part two, item 3; the owner's "All yes" on the
     reposts mock, Nov 14): one person showing a post (somebody's, or their
@@ -1018,7 +1083,7 @@ class Report(SocialBase):
     handled_by_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="SET NULL"), nullable=True)
 
     __table_args__ = (
-        sa.CheckConstraint("kind IN ('person', 'post', 'drawing', 'comment')", name="ck_social_reports_kind"),
+        sa.CheckConstraint("kind IN ('person', 'post', 'drawing', 'comment', 'letter')", name="ck_social_reports_kind"),
         sa.CheckConstraint("state IN ('open', 'kept', 'taken_down')", name="ck_social_reports_state"),
         sa.Index("ix_social_reports_public_id", "public_id", unique=True),
         sa.Index("ix_social_reports_once", "kind", "target", "reporter_key", unique=True),
@@ -1033,9 +1098,11 @@ class Report(SocialBase):
 #: and what a new one starts with: the dot's rule (the owner's "All yes" to
 #: Blooby's Nudges, Nov 18): what needs an answer buzzes, the rest waits in
 #: Activity; the number on the icon on.
-PUSH_KINDS = ("replies", "mentions", "likes", "follows", "reposts", "badge")
+#: A new letter (letters.py; the owner's yes, Nov 26: "A push for a new
+#: letter, with its own switch in Settings, on by default") is its own kind.
+PUSH_KINDS = ("replies", "mentions", "likes", "follows", "reposts", "letters", "badge")
 PUSH_DEFAULTS = {"replies": True, "mentions": True, "likes": False, "follows": False, "reposts": False,
-                 "badge": True}
+                 "letters": True, "badge": True}
 
 
 class PushSubscription(SocialBase):
@@ -1075,6 +1142,7 @@ class PushSubscription(SocialBase):
     likes = sa.Column(sa.Boolean(), nullable=False, default=False, server_default=sa.false())
     follows = sa.Column(sa.Boolean(), nullable=False, default=False, server_default=sa.false())
     reposts = sa.Column(sa.Boolean(), nullable=False, default=False, server_default=sa.false())
+    letters = sa.Column(sa.Boolean(), nullable=False, default=True, server_default=sa.true())
     badge = sa.Column(sa.Boolean(), nullable=False, default=True, server_default=sa.true())
     created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
     #: The time of the newest Activity row a nudge has told this device about:

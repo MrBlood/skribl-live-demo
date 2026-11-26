@@ -2192,6 +2192,24 @@ skribl.init_skribl(
 )
 ```
 
+**A state you hold.** Some states are yours alone to set: a host's own
+code makes the drawing, and neither its author nor Skribl's own posting API
+may move it into or out of one. Say which with `held`, a few of the values:
+
+```python
+skribl.models.set_visibility_values(("letter",), app, held=("letter",))
+```
+
+`POST /api/skribls` then refuses a held state as it refuses one nobody
+taught it ("Unknown visibility."), and `set_post_visibility` as an author
+(`PATCH /api/skribls/<id>`) refuses to set one or to leave one, as it does
+"withheld"; your in-process `create_post` and an operator
+(`require_author=False`) still can. `skribl.visibility_held()` says which
+states this application holds. The Skribl site's drawn letters use it: a
+letter written back on holds the other person's strokes, so its author
+making it public would publish somebody else's letter
+(`docs/SOCIAL-SITE.md`, "Drawn letters").
+
 `source_resolver` puts `"source": {"url": ...}` on each listed skribl you
 answered for, and on `GET /api/skribls/<id>`; a skribl made in the app has
 none. Only an http(s) address or a path on your site is passed on, because

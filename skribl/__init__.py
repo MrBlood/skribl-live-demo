@@ -47,7 +47,7 @@ from .describing import line_of, read_payload
 from .drafts import list_drafts
 from .moderation import close_reports, list_reports
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
-                     session, set_card_url, set_visibility_policy)
+                     session, set_card_url, set_visibility_policy, visibility_held)
 from .routes import register_routes
 from .security import register_security
 from .views import count_play, purge_views
@@ -76,6 +76,12 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            # docs/INTEGRATION.md for wiring them up.
            "delete_post", "set_post_visibility",
            "SkriblNotFound", "SkriblRefused",
+           # The visibility states this application's host HOLDS
+           # (set_visibility_values' `held`): made by the host's own code
+           # alone, never set or left by an author. A host asks before
+           # offering what needs one (docs/INTEGRATION.md, "Three smaller
+           # seams alongside it").
+           "visibility_held",
            # Reading them for a host's own feed: each skribl's size, line and
            # plays by public id, for the person looking (skribl/describing.py,
            # docs/INTEGRATION.md "Putting a Skribl inside your own posts").

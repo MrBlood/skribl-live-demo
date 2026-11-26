@@ -2,7 +2,8 @@
 5), from the owner's "all yes" on the Safety mock (Nov 12).
 
     /report             a report of somebody, a post, a drawing shown
-                        outside a post, or a comment (phase 2): a reason from
+                        outside a post, a comment (phase 2), or a drawn letter
+                        (Nov 26, its recipient's alone): a reason from
                         REASONS, and a note if they wrote one, into the
                         admins' queue (JSON). From
                         anybody who can see the thing, signed in or not: a
@@ -75,9 +76,12 @@ REASONS = {
 REASONS["drawing"] = REASONS["post"]
 #: A comment's are a post's (phase 2, comments).
 REASONS["comment"] = REASONS["post"]
+#: A drawn letter's (letters.py): a post's, but copying, which a letter
+#: between two is not for.
+REASONS["letter"] = tuple(r for r in REASONS["post"] if r[0] != "copyright")
 
 #: The kinds this route takes.
-KINDS = ("person", "post", "drawing", "comment")
+KINDS = ("person", "post", "drawing", "comment", "letter")
 
 
 # ---- who is blocked, both ways ----------------------------------------------
@@ -200,6 +204,16 @@ def _reported(kind, target, me):
                 or (me is not None and got["who"].id == me.id)):
             return None
         return got["c"].public_id, got["who"]
+    if kind == "letter":
+        # A DRAWN LETTER (letters.py): only its recipient reports it, while it
+        # is theirs to have. The report shares it with the admins
+        # (letters.readable).
+        from .letters import on
+        row = on(target, me)
+        if row is None or row.recipient_id != me.id or row.taken_down_at is not None:
+            return None
+        who = sess.get(Person, row.sender_id)
+        return (row.public_id, who) if who is not None else None
     if kind == "person":
         who = _person_by_handle(target)
         if who is None or who.taken_down_at is not None or (me is not None and (who.id == me.id or between(me, who))):

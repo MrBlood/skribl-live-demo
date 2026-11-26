@@ -315,6 +315,44 @@ check("a custom state does NOT appear in the built-in feed",
       all(item["id"] != draft_id for item in feed["items"]),
       "documented: the feed lists public posts; a custom state needs a filter")
 
+# A STATE THE HOST HOLDS (set_visibility_values' `held`; the Skribl site's
+# drawn letters, Nov 26): made by the host's own code alone. Skribl's own
+# posting API refuses it, and an author can neither set a post into it nor
+# take one out of it; create_post in the host's code and an operator can.
+try:
+    skribl.models.set_visibility_values(("draft",), app=app_e, held=("letter",))
+    check("refused at configuration time: a held state that is not among the values", False, "it was accepted")
+except ValueError as exc:
+    check("refused at configuration time: a held state that is not among the values", True, str(exc)[:90])
+skribl.models.set_visibility_values(("draft", "letter"), app=app_e, held=("letter",))
+with app_e.test_request_context():
+    _held = skribl.visibility_held()
+check("skribl.visibility_held() says which states the app holds, and it is a documented name",
+      _held == ("letter",) and "visibility_held" in skribl.__all__, str(_held))
+r = c_e.post("/api/skribls", json=body("held", visibility="letter"))
+check("Skribl's own posting API refuses a held state, as one nobody taught it",
+      r.status_code == 400 and r.get_json().get("error") == "Unknown visibility.", str(r.status_code))
+with app_e.test_request_context():
+    _made = skribl.create_post(dict(body("by the host"), visibility="letter"), author_id="7")
+    db_e.session.commit()
+    _pub = skribl.create_post(body("a public one"), author_id="7")
+    db_e.session.commit()
+r_out = c_e.patch(f"/api/skribls/{_made.public_id}", json={"visibility": "public"})
+r_in = c_e.patch(f"/api/skribls/{_pub.public_id}", json={"visibility": "letter"})
+r_draft = c_e.patch(f"/api/skribls/{_pub.public_id}", json={"visibility": "draft"})
+with app_e.app_context():
+    _vis = dict(db_e.session.execute(sa.text("select public_id, visibility from skribl_posts where public_id in (:a, :b)"),
+                                     {"a": _made.public_id, "b": _pub.public_id}).all())
+check("the host's create_post makes one; its author can neither take it out (PATCH to public) nor put a post"
+      " into it, while a state not held still changes",
+      r_out.status_code == 400 and r_in.status_code == 400 and r_draft.status_code == 200
+      and _vis == {_made.public_id: "letter", _pub.public_id: "draft"}, f"{r_out.status_code} {r_in.status_code} {r_draft.status_code} {_vis}")
+with app_e.test_request_context():
+    _op = skribl.set_post_visibility(_made.public_id, "withheld", require_author=False)
+    db_e.session.commit()
+check("an operator still can (require_author=False)", _op == "withheld", str(_op))
+skribl.models.set_visibility_values(("draft", "moderated"), app=app_e)
+
 
 print("\n#3 — the feed can finally be filtered in SQL by the host")
 app_pub, db_pub = host_app(11)

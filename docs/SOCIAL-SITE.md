@@ -3919,3 +3919,70 @@ them in his own drawing (`own`), and Both moves them as the join does. A
 post that said "recolors" keeps its pen (`posts.cards` `can_back`); the
 composer's reading agrees (`compose.js` `drawableHere`), and its word for a
 refused recolour goes. `verify_socialdrawback` 17, 4 and 12.
+
+## 44. Built: Drawn letters, the server (Nov 26)
+
+The owner's yes (Nov 26, about 6:50 AM: "I like cal's (your) choices", A for
+all six; `DECISIONS.md`, "Drawn letters, mocked" and "Drawn letters: the
+owner's yes"), and their two answers the same morning: a push for a new
+letter, with its own switch in Settings, on by default; and a written-back
+letter replays theirs in three seconds first (Draw back's way), then yours
+at your pace. The first of four parts: the server. Writing one in the Pad,
+the pages and the docs follow.
+
+    /social/letters                         POST: send ({"to": a handle, "payload"}),
+                                            or write back ({"written_on": a letter, "payload"})
+    /social/letters/<public_id>/write-back  GET: for the composer, the letter to lay under
+                                            the pen ({payload, first, own, to})
+    /social/letters/<public_id>/open        POST: the recipient's page started playing it
+    /social/letters/<public_id>/take-back   POST: its sender, until it is opened
+    /social/letters/<public_id>/delete      POST: gone from your side; from both, it goes
+    /social/letters/@<handle>               GET: the two of you (the pages, part three;
+                                            until then, their page)
+
+WHO CAN WRITE (`letters.pair_ok`): two people who follow each other, and
+nobody across a block; neither taken down. Writing back is writing, under
+the same rule. Nobody by that name, yourself, and somebody you may not write
+to are all said the same ("not_friends").
+
+A LETTER IS A ROW OF ITS OWN (`social_letters`), never a post: Home and the
+Posts tab list post rows. Its drawing is Skribl's, made with the site's own
+visibility, "letter", titled "A letter". THE HOST'S POLICY (`app.py`, beside
+the block rule; `social.letter_readable`) lets its two read it, on their
+side and with no block between them, and an admin once it is reported to
+them; nobody else. THE STATE IS HELD (Skribl's new seam,
+`set_visibility_values(..., held=...)`, `docs/INTEGRATION.md`): Skribl's own
+posting API refuses it, and no author can PATCH a letter into anything else
+or another drawing into a letter, so a written-back letter, which holds the
+other person's strokes, can't be made public. Never listed: Skribl's
+listings show public drawings (an author's own: public, unlisted, private),
+and the site's pages list post rows.
+
+WRITTEN BACK ON, Draw back's way (`drawback.join`, from the letter as Skribl
+stores it): theirs first, squeezed to three seconds when longer, then yours
+at your own pace, on their paper. A letter is one whole drawing, so a sheet
+written back on several times plays in order. `hand_at_ms` keeps where the
+new hand starts (the mark on the player's line). Not on another shape, not
+with an eraser, and only by the one it came to.
+
+NO PHOTOS, NO MUSIC, NO FLIP YET (choice 6; Flip letters are next): refused
+at Send with their word (`letter_unsupported`, why: photo, music, pages).
+
+OPENED by a POST from the recipient's page, never on a GET. TAKE BACK, its
+sender's until it is opened: the letter and its drawing go. DELETE from your
+side; once both have, it goes. REPORT (`/social/report`, kind "letter"): its
+recipient's alone; the admins' queue shows its picture; taken down, it is
+withheld and leaves the recipient's side. DELETING AN ACCOUNT takes every
+letter it sent or received, with their drawings (`letters.drop_person_letters`).
+
+A NUDGE for a new letter (`push.letter_row`): "Ana sent you a letter" (or
+"Ana wrote back"), "Tap to open it.", opening the two of you; under its own
+switch, Letters, in Settings, on for every device, new or not (the
+migration's default). The number on the icon counts letters waiting too.
+Letters are not Activity's: the envelope gets its own dot (`letters.dot`).
+
+The migration `d3a8f1c6e2b4` adds the table, the device's switch, and
+"letter" to the reports' kinds. `verify_socialletters.py` holds what is
+built (every row shown red first), `verify_hostseams.py` the held seam,
+`verify_socialpush.py` the switch, `verify_socialauth.py` the chain. The
+Pad and Flip: nothing of theirs yet.

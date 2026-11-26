@@ -24,7 +24,7 @@ from .core import (HOT_DAYS, MAX_REPORT_NOTE_CHARS, REPORT_REASONS,
                    THEME_GROUND, _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia, SkriblReport, SkriblView,
                      _visibility_policy, as_utc, normalise_user_id,
-                     session, apply_feed_filter, author_dict, sources_for)
+                     session, apply_feed_filter, author_dict, sources_for, visibility_held)
 from .views import count_view, purge_views
 from .brand import page_brand
 from .mediameta import STRIPPED, strip_payload
@@ -806,6 +806,11 @@ def register_routes(bp, *, index_route=False):
                 return prior
 
         payload = request.get_json(silent=True)
+        # A HOST'S HELD STATE (models.set_visibility_values' `held`) is made
+        # by the host's own code alone, never through this route: refused as
+        # a state nobody taught Skribl is.
+        if isinstance(payload, dict) and payload.get("visibility") in visibility_held():
+            return jsonify({"error": "Unknown visibility."}), 400
 
         # Reserve a post slot atomically, right before the only database write.
         # Released below if no row is produced, so a failed insert doesn't burn
