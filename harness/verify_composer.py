@@ -1616,6 +1616,41 @@ with sync_playwright() as p:
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(10, exc)
 
+    # ------------------------------------------------------------------ 11
+    if part(11, "on a desk the editor over a post is the whole window, and its drawer opens beside the drawing"):
+        # The owner, Nov 26, with the Pad from Make on a 1366x768-ish desk, its drawer below and half the drawing
+        # scrolled out of view: "don't you think the window that opens should be full-screen...?", then "All yes"
+        # to the Room for the Drawer mock. The sheet was a box, 1120px by 840 at most; the drawing in it grew too
+        # wide for a drawer beside it. Now it is the window, as on a phone (social.css .facepad-sheet).
+        try:
+            nell = someone(b, "nell", "Nell Ortiz")
+            ctx, pg = browser_as(b, nell, "desk", "dark")
+            pg.set_viewport_size({"width": 1366, "height": 768})
+            go(pg, "/social/")
+            open_composer(pg, "desk")
+            tap(pg, "#composeSheet [data-compose-open=pad]", "desk")
+            fr = editor_frame(pg, "skribl-pad")
+            pg.wait_for_timeout(700)
+            sheet = pg.evaluate("""() => { const w = document.getElementById('composePad'), s = w.querySelector('.facepad-sheet'),
+              f = w.querySelector('iframe'), r = (e) => { const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
+              return { sheet: r(s), frame: r(f), W: innerWidth, H: innerHeight, open: w.classList.contains('is-open') }; }""")
+            inside = {}
+            if fr:
+                fr.evaluate("() => { window.SkriblHints && SkriblHints.hide && SkriblHints.hide(); _padDrawerCtl.open('draw'); }")
+                pg.wait_for_timeout(900)
+                inside = fr.evaluate("""() => { const c = document.getElementById('canvas').getBoundingClientRect(), d = document.getElementById('drawPanel').getBoundingClientRect();
+                  const seen = Math.max(0, Math.min(c.right, innerWidth) - Math.max(c.left, 0)) * Math.max(0, Math.min(c.bottom, innerHeight) - Math.max(c.top, 0));
+                  return { beside: !!(window.skriblDrawers && skriblDrawers.beside()), seen: Math.round(100 * seen / (c.width * c.height)),
+                           gap: Math.round(d.left - c.right), scrollY: Math.round(scrollY) }; }""")
+            close_ctx(ctx, pg)
+            check("on a 1366x768 desk, Draw opens the Pad over the whole window (the sheet and its frame the window's own size, no"
+                  " box over the scrim), and the Pen drawer opens beside the drawing: all of it on the screen, the page not scrolled",
+                  bool(fr) and sheet["open"] and sheet["sheet"] == [0, 0, sheet["W"], sheet["H"]] and sheet["frame"] == sheet["sheet"]
+                  and inside.get("beside") and inside.get("seen") == 100 and inside.get("gap", 0) >= 15 and inside.get("scrollY") == 0,
+                  json.dumps({"sheet": sheet, "inside": inside}))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(11, exc)
+
     # ------------------------------------------------------------------ 8
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):
