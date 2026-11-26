@@ -54321,3 +54321,13 @@ CALIBRATED: `verify_socialletters` 15 (10 rows), each shown red by
 breaking its part (10 breaks); a one-way follow from Ana added so Write's
 list row can go red. `verify_socialactivity` and `verify_socialsearch` pin
 the desk rail's order with Letters under Activity.
+
+## After v330 -- Drawn letters: built, the docs and the handoff
+
+The fourth of the four parts. The map's item 8 (direct messages) says it was
+reshaped and built as drawn letters (`docs/SOCIAL-SITE.md` section 17's
+list, and sections 44 to 46); FUTURE.md's idea 7 says letters are Draw
+back between two people, and that a Flip letter is next. `docs/NEXT-SESSION.md`
+is the handoff: what was built, the one-glance tell for the owner's phone,
+the one question asked (the desk's three columns), and what Cal decided
+that the owner can overrule.

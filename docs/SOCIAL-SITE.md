@@ -2002,7 +2002,9 @@ follow step 7.
 7. Add to Home Screen (part one's step 7), then push notifications. Both
    built: Add to Home Screen below, push notifications in section 19.
 8. Direct messages: one to one, a drawing as easily as words, who may
-   message you, and a requests inbox.
+   message you, and a requests inbox. Reshaped and built as DRAWN LETTERS
+   (the owner's yes, Nov 26, A for all six: between two people who follow
+   each other, no requests inbox; sections 44 to 46). A Flip letter is next.
 9. The smaller things most sites have: pin a post to your profile (built:
    section 40), edit a post's words (shown "edited"; the owner's yes), tags,
    download your data, and words that describe a drawing to a screen reader.
