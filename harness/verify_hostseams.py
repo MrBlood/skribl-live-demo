@@ -1270,6 +1270,34 @@ check("it reads only: nothing added, changed or deleted in the session, the view
 check("it is a documented name: recent_plays in skribl.__all__, its docstring naming as_of",
       "recent_plays" in skribl.__all__ and "as_of" in (skribl.recent_plays.__doc__ or ""))
 
+print("\nA PLAY A HOST SERVES — count_play(): counted as Skribl's own player's fetch counts one (count_play)")
+# Blooby's two-hands draw-back plays Both from the site's own route, through
+# the player's `api` seam, which Skribl's route never sees: its plays went
+# uncounted (DECISIONS.md, "Draw back, two hands"). count_play is the one count
+# Skribl's own fetch uses (skribl/views.py count_view), for a host's play.
+# Asked here as a host asks it, inside its own request, and committed by it.
+with _hp_app.test_request_context("/", environ_base={"REMOTE_ADDR": "203.0.113.41"}):
+    _s = _hp_db.session
+    _total = lambda p: int(_s.execute(sa.select(SkriblPost.views_total).where(SkriblPost.public_id == p)).scalar() or 0)
+    _cp0 = _total(_hids[4])
+    _cp1 = skribl.count_play(_hids[4])
+    _cp2 = skribl.count_play(_hids[4])
+    _s.commit()
+    _cp_after = _total(_hids[4])
+with _hp_app.test_request_context("/", environ_base={"REMOTE_ADDR": "203.0.113.42"}):
+    _cp3 = skribl.count_play(_hids[4])
+    _cp_none = skribl.count_play("NoSuchSkribl"), skribl.count_play(None)
+    _hp_db.session.commit()
+    _cp_other = _total(_hids[4])
+    _rows_today = _hp_db.session.execute(sa.select(sa.func.count(SkriblView.id)).where(SkriblView.post_id == _rowid[_hids[4]])).scalar()
+check("count_play counts a play of a post a host serves: a new client's is counted and moves its total, the same"
+      " client again the same day is not, another client's is; a post there is none of counts nothing",
+      _cp1 is True and _cp2 is False and _cp3 is True and _cp_none == (False, False)
+      and _cp_after == _cp0 + 1 and _cp_other == _cp0 + 2 and _rows_today == 2,
+      f"counted {[_cp1, _cp2, _cp3]}, none {_cp_none}; total {_cp0} -> {_cp_after} -> {_cp_other}; views today {_rows_today}")
+check("it is a documented name: count_play in skribl.__all__, its docstring naming the player's api seam and viewer_id",
+      "count_play" in skribl.__all__ and "`api`" in (skribl.count_play.__doc__ or "") and "viewer_id" in (skribl.count_play.__doc__ or ""))
+
 print("\nA PERSON'S DRAFTS — list_drafts(): their saved drafts, for a host's page that is theirs alone (list_drafts)")
 # The Skribl site's profile (its Drafts tab, the map's step 4, Nov 14) lists a
 # person's drafts on a page of its own, each opening in the editor that made
