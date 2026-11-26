@@ -54468,3 +54468,7 @@ with or without the small grow), and offered: a mock of the mixed sizes, if
 that is what caught the owner's eye.
 
 NOTHING IS BUILT. Pad and Flip: not theirs.
+
+THE OWNER, about 11:20 AM: "I think I like now on the tiles." The tiles stay
+as built, the 1px lavender edge with them; bento is not built. Still open:
+whether to mock a hover for the tiles on a desk.
