@@ -1,0 +1,36 @@
+{#  WRITE, FROM LETTERS (drawn letters): the people you may write to (two
+    people who follow each other: letters.friends), a row each, by name; a tap
+    opens the Pad to them (letters.js). Nobody yet: one quiet line saying who
+    you can write to. #}
+{% extends 'social/base.html' %}
+{% from 'social/_post.html' import face with context %}
+{% import 'social/_icons.html' as ic %}
+{% from 'social/_mute.html' import mute_parts %}
+
+{% block title %}Write a letter · Blooby{% endblock %}
+
+{% block scripts %}<script src="{{ social_asset('mutes.js') }}" defer></script>{% endblock %}
+
+{% block top %}
+  <a class="icon-btn top-back" href="{{ url_for('social.letters_page') }}" aria-label="Back">{{ ic.back() }}</a>
+  <span class="top-title">Write to…</span>
+{% endblock %}
+
+{% block main %}
+<div class="act lt">
+  <header class="page-head act-head lt-head"><h1 class="page-title">Write to…</h1></header>
+  {% if people %}
+  <ul class="lt-people" aria-label="People you can write to">
+    {% for p in people %}
+    <li><button class="lt-person" type="button" data-lt-write data-handle="{{ p.handle }}" data-first="{{ p.display_name|first_name }}">
+      {{ face(p, initial=true) }}<span class="lt-person-name"><b>{{ p.display_name }}</b><small>@{{ p.handle }}</small></span>
+      <span class="lt-person-go" aria-hidden="true">{{ ic.envelope() }}</span></button></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="lt-only">You can write to people who follow you back. Follow someone who follows you, and they’ll be here.</p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block overlays %}{{ mute_parts() }}{% endblock %}

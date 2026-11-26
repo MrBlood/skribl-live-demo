@@ -131,6 +131,19 @@
 </svg>
 {%- endmacro %}
 
+{# LETTERS' ENVELOPE, in the pen (drawn letters; the owner's yes, Nov 26):
+   the envelope's body in one line round its corners, its flap a V that dips
+   a touch past the middle, as a hand draws one; filled on Letters' own
+   pages, as the bell is on Activity's. `dot`: "new" rings the bell's own dot
+   on its shoulder (a letter waits unopened). #}
+{% macro envelope(filled=false, dot=none) -%}
+<svg class="ic pen-ic ic-env{% if dot %} is-new{% endif %}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+<path pathLength="1" d="M 5.4,6.0 C 9.8,5.8 14.2,5.8 18.6,6.0 C 19.6,6.1 20.2,6.7 20.2,7.7 C 20.3,10.6 20.3,13.5 20.2,16.4 C 20.2,17.4 19.6,18.0 18.6,18.0 C 14.2,18.2 9.8,18.2 5.4,18.0 C 4.4,18.0 3.8,17.4 3.8,16.4 C 3.7,13.5 3.7,10.6 3.8,7.7 C 3.8,6.7 4.4,6.1 5.4,6.0 Z"{% if filled %} fill="currentColor" fill-opacity=".18"{% endif %}/>
+<path pathLength="1" d="M 4.6,7.0 C 7.2,9.0 9.5,10.9 12.0,12.6 C 14.5,10.9 16.8,9.0 19.4,7.0"/>
+{%- if dot %}<circle class="act-dot" cx="19.0" cy="5.4" r="3.6"/>{% endif -%}
+</svg>
+{%- endmacro %}
+
 {# A like's heart, in the pen (likes; the owner's "I like d.", Nov 13): one
    line from the notch at the top, round the left lobe, down to the point and
    up the right, back into the notch, as a hand draws one; the right lobe a

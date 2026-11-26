@@ -43,7 +43,7 @@
 
   function tell(text) {
     if (!text) return;
-    if (window.SocialToast) window.SocialToast.rise(text, { wait: 6000 });
+    if (window.SocialToast) window.SocialToast.rise(text, { wait: 6000, plain: true });
   }
   function why(j) {
     if (j && j.error === 'letter_unsupported' && say('why_' + j.why)) return say('why_' + j.why);
@@ -129,8 +129,142 @@
       });
   }
 
-  /* What a page's own doors call (part three: Write on a friend's page,
-     Write back and New letter on the two of you), and what a check reads. */
+  /* ---- THE DOORS (the pages): Write on a friend's page and on Letters'
+     list of people, New letter and Write back on the two of you ---------- */
+  doc.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target : null;
+    if (!t) return;
+    var w = t.closest('[data-lt-write]');
+    if (w) { e.preventDefault(); write({ to: w.getAttribute('data-handle'), first: w.getAttribute('data-first'), from: w }); return; }
+    var wb = t.closest('[data-lt-write-back]');
+    if (wb) { e.preventDefault(); writeBack({ id: wb.getAttribute('data-id'), first: wb.getAttribute('data-first'), from: wb }); }
+  });
+
+  /* ---- THE TWO OF YOU ---------------------------------------------------- */
+  var page = doc.querySelector('[data-letters-with]');
+  if (page) twoOfYou(page);
+
+  function post(url) {
+    return fetch(url, { method: 'POST', credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json', 'X-Social-CSRF': token }, body: '{}' })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) { j.status = r.status; return j; });
+      }, function () { return { error: 'network' }; });
+  }
+
+  function twoOfYou(page) {
+    var PAGE = {};
+    Array.prototype.forEach.call(doc.querySelectorAll('[data-lt-page-said] [data-word]'), function (w) {
+      PAGE[w.getAttribute('data-word')] = w.textContent;
+    });
+    var reduced = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    function at(attr, id) { return page.getAttribute(attr).replace('__ID__', encodeURIComponent(id)); }
+
+    /* OPENED AS IT STARTS PLAYING, never by this page's GET: once, the first
+       time the player of a letter that came to you plays (its own first draw,
+       or a tap under Reduce Motion). */
+    function watchOpen(sheet) {
+      var box = sheet.querySelector('[data-skribl-inline]');
+      if (!box) return;
+      var said = false;
+      function playing() {
+        if (said || !box.classList.contains('is-playing')) return;
+        said = true;
+        sheet.removeAttribute('data-new');
+        post(at('data-open', sheet.getAttribute('data-letter')));
+      }
+      if (window.MutationObserver) new MutationObserver(playing).observe(box, { attributes: true, attributeFilter: ['class'] });
+      playing();
+    }
+    var fresh = Array.prototype.slice.call(page.querySelectorAll('.lt-sheet[data-new]'));
+    fresh.forEach(watchOpen);
+    /* IT DRAWS ITSELF THE FIRST TIME: the newest one waiting, at the
+       writer's pace; then it rests (the player's own end), Watch again any
+       time. Not under Reduce Motion: a tap plays it. */
+    if (window.SkriblInline) {
+      window.SkriblInline.mount(page);
+      if (fresh.length && !(reduced && reduced.matches)) {
+        var box = fresh[0].querySelector('[data-skribl-inline]');
+        var p = box ? window.SkriblInline.find(box.getAttribute('data-skribl-id')) : null;
+        var after = window.BloobySplash ? window.BloobySplash.after : function (fn) { fn(); };
+        if (p && p.play) after(function () { fresh[0].scrollIntoView({ block: 'nearest' }); p.play(); });
+      }
+    }
+
+    /* ---- A SHEET'S ⋯ -------------------------------------------------------- */
+    var sheetWrap = doc.getElementById('letterSheet'), reportWrap = doc.getElementById('letterReportSheet');
+    var menu = sheetWrap && window.SocialSheet ? window.SocialSheet(sheetWrap, { doorCloses: false }) : null;
+    var report = reportWrap && window.SocialSheet ? window.SocialSheet(reportWrap, { doorCloses: false, ownTouch: '.post-note' }) : null;
+    var on = null, opener = null;
+    function sayIn(wrap, text) {
+      var b = wrap.querySelector('[data-lt-say]');
+      if (!b) return;
+      b.textContent = text || '';
+      b.hidden = !text;
+    }
+    page.addEventListener('click', function (e) {
+      var b = e.target && e.target.closest ? e.target.closest('[data-lt-more]') : null;
+      if (!b || !menu) return;
+      on = b.closest('.lt-sheet');
+      opener = b;
+      var mine = on.getAttribute('data-to-me') === 'no';
+      sheetWrap.querySelector('[data-lt-act="take-back"]').hidden = !on.hasAttribute('data-take-back-ok');
+      sheetWrap.querySelector('[data-lt-act="delete"]').hidden = on.hasAttribute('data-take-back-ok');
+      sheetWrap.querySelector('[data-lt-act="report"]').hidden = mine || !on.hasAttribute('data-report-ok');
+      sayIn(sheetWrap, '');
+      menu.open(b);
+    });
+    function gone(text) {
+      var s = on;
+      menu.close();
+      if (window.SocialToast) window.SocialToast.rise(text, { plain: true });
+      if (!s) return;
+      /* It folds away where it was, so nothing below it jumps (Reduce Motion:
+         it goes at once). */
+      if (!s.animate || (reduced && reduced.matches)) { s.remove(); return; }
+      s.style.overflow = 'hidden';
+      var h = s.getBoundingClientRect().height;
+      var a = s.animate([{ opacity: 1, height: h + 'px' }, { opacity: 0, height: '0px', marginTop: '0px', marginBottom: '0px', paddingTop: '0px', paddingBottom: '0px' }],
+                        { duration: 260, easing: 'ease' });
+      a.onfinish = function () { s.remove(); };
+    }
+    if (sheetWrap) sheetWrap.addEventListener('click', function (e) {
+      var b = e.target && e.target.closest ? e.target.closest('[data-lt-act]') : null;
+      if (!b || !on) return;
+      var act = b.getAttribute('data-lt-act'), id = on.getAttribute('data-letter');
+      if (act === 'block') { menu.close(); if (window.SocialSafety) window.SocialSafety.block(page.getAttribute('data-handle'), opener); return; }
+      if (act === 'report') { menu.close(); sayIn(reportWrap, ''); report.open(opener); return; }
+      sayIn(sheetWrap, PAGE.sending);
+      post(at(act === 'take-back' ? 'data-take-back' : 'data-delete', id)).then(function (j) {
+        if (j.ok) { gone(act === 'take-back' ? PAGE.taken : PAGE.deleted); return; }
+        sayIn(sheetWrap, j.error === 'letter_opened' ? PAGE.opened : PAGE.failed);
+        if (j.error === 'letter_opened') {
+          on.removeAttribute('data-take-back-ok');
+          sheetWrap.querySelector('[data-lt-act="take-back"]').hidden = true;
+          sheetWrap.querySelector('[data-lt-act="delete"]').hidden = false;
+        }
+      });
+    });
+    var form = reportWrap ? reportWrap.querySelector('[data-lt-report-form]') : null;
+    if (form) form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!on) return;
+      var picked = form.querySelector('input[name="reason"]:checked');
+      sayIn(reportWrap, PAGE.sending);
+      fetch(page.getAttribute('data-report'), {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-Social-CSRF': token },
+        body: JSON.stringify({ kind: 'letter', target: on.getAttribute('data-letter'), reason: picked ? picked.value : 'other',
+                               note: form.querySelector('textarea').value || null })
+      }).then(function (r) { return r.status; }, function () { return 0; }).then(function (st) {
+        if (st === 202) { report.close(); if (window.SocialToast) window.SocialToast.rise(PAGE.reported, { plain: true }); return; }
+        sayIn(reportWrap, PAGE.failed);
+      });
+    });
+  }
+
+  /* What a page's own doors call (Write on a friend's page, Write back and
+     New letter on the two of you), and what a check reads. */
   window.SocialLetters = {
     write: write,
     writeBack: writeBack,

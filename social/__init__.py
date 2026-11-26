@@ -494,6 +494,9 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             # Activity's dot (notifications): asked only by a page that shows
             # the bell or the rail, and then once a request.
             ctx["activity_dot"] = dot_for_request
+            # Letters' envelope its own dot (drawn letters): once a request.
+            from .letters import dot_for_request as letters_dot
+            ctx["letters_dot"] = letters_dot
             # What each kind of report may say, in its sheet's order (piece 5).
             ctx["report_reasons"] = REASONS
             # A post's or a comment's words as a page shows them: escaped, each

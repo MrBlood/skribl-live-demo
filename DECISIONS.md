@@ -54285,3 +54285,49 @@ DECIDED IN THE BUILDING, Cal's, until the owner says otherwise:
 CALIBRATED: `verify_socialletters` 13 and 14 (7 rows), each shown red by
 breaking its part (8 breaks). Pad and Flip: Skribl's part is one file both
 load; nothing else of Flip's changed.
+
+## After v330 -- Drawn letters, the pages
+
+The third of the four parts (`docs/SOCIAL-SITE.md` section 46), the mock's
+choices 3, 4 and 5 as the owner said yes to them (Nov 26).
+
+BUILT: Write beside Following on a friend's page (only where you follow
+each other); the envelope beside the bell at the top of a phone's Home,
+Gallery and Search, and Letters under Activity in a desk's rail, each with
+the bell's dot while a letter waits; Letters (Activity's own rows, a new
+one sealed: a drawn envelope, "It draws itself when you open it"); Write's
+list of the people you may write to; the two of you (a sheet each, newest
+first; a new one draws itself and is opened as it plays; the mark where the
+hand changes, through the player's own `marks`; "Theo’s, then yours"; Write
+back and New letter once, under the newest; each sheet's ⋯ with Take back
+or Delete, Report this letter and Block). The account deletion page says
+letters go.
+
+DECIDED IN THE BUILDING, Cal's, until the owner says otherwise:
+- One pair of Write back and New letter on the page, under the newest
+  sheet, never one under every sheet ("Never busy, never confusing": the
+  same action many times on one screen is noise).
+- The ⋯ is each sheet's, not the page's: Take back, Delete and Report are
+  about one letter. Block is in it too, as a post's ⋯ has it.
+- The hand-off mark is the player's own dot for a host's moment (`marks`):
+  SAME ROLE, SAME TOKEN, the mock's tick drawn as the line's existing dot.
+- A sheet's time is its own ("· now"); the mock's day heading ("Today")
+  is not drawn.
+- NOT BUILT, said here and in section 46: the desk board's three columns
+  (rail, list, letter side by side). A desk shows Letters and the two of
+  you as two pages. Asked of the owner in the report.
+
+CALIBRATED: `verify_socialletters` 15 (10 rows), each shown red by
+breaking its part (10 breaks); a one-way follow from Ana added so Write's
+list row can go red. `verify_socialactivity` and `verify_socialsearch` pin
+the desk rail's order with Letters under Activity.
+
+## After v330 -- Drawn letters: built, the docs and the handoff
+
+The fourth of the four parts. The map's item 8 (direct messages) says it was
+reshaped and built as drawn letters (`docs/SOCIAL-SITE.md` section 17's
+list, and sections 44 to 46); FUTURE.md's idea 7 says letters are Draw
+back between two people, and that a Flip letter is next. `docs/NEXT-SESSION.md`
+is the handoff: what was built, the one-glance tell for the owner's phone,
+the one question asked (the desk's three columns), and what Cal decided
+that the owner can overrule.

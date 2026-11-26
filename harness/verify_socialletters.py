@@ -40,6 +40,14 @@ with a virtual passkey; the letters through the site's own routes.
  11. DELETING AN ACCOUNT takes every letter it sent or received, with
      their drawings.
  12. No page errors, no console errors and no CSP violations.
+ 15. THE PAGES (part three), on a phone: Write beside Following on a
+     friend's page, nowhere else; the envelope beside the bell at the top of
+     Home with its own dot, and Letters in a desk's rail under Activity;
+     Letters' rows (a new one sealed, its dot, "It draws itself when you
+     open it"; a sheet once); Write's list of people you may write to; the
+     two of you: a new letter draws itself and is opened as it plays (the
+     dot goes), the mark where the hand changes, Write back and New letter
+     opening the Pad, the ⋯'s Take back and Report; behind a block, no page.
  13. WRITING ONE IN THE PAD (part two), on a phone: SocialLetters.write
      opens the Pad over the page, its button and its sheet's saying Send,
      its pill "A letter to Theo · only the two of you see it"; the picture
@@ -412,6 +420,17 @@ def status(pg, path):
     return r.status if r else None
 
 
+
+
+SHOTS = os.environ.get("SOCIALLETTERS_SHOTS")
+
+
+def shot(pg, name):
+    """A picture for a person to look at (SOCIALLETTERS_SHOTS=<dir>), never read by a row."""
+    if SHOTS:
+        os.makedirs(SHOTS, exist_ok=True)
+        pg.wait_for_timeout(400)
+        pg.screenshot(path=os.path.join(SHOTS, name + ".png"))
 
 
 def ready(pg):
@@ -999,6 +1018,164 @@ with sync_playwright() as p:
                   after == (not over), f"over the drawing {over}; there after {after}")
         except Exception as exc:  # noqa: BLE001
             stopped(14, exc)
+
+    # ------------------------------------------------------------------ 15
+    if part(15, "the pages"):
+        try:
+            friends(ana, theo)
+            ctx, pg = browser_as(b, theo)
+            pg.goto(BASE + "/social/@ana")
+            ready(pg)
+            shot(pg, "profile-phone-light")
+            row = pg.evaluate("""() => [...document.querySelectorAll('.prof-acts > *')].map(e => e.matches('[data-lt-write]')
+              ? ['write', e.textContent.trim(), Math.round(e.getBoundingClientRect().height)] : [e.className.split(' ')[1] || e.className])""")
+            close_ctx(ctx, pg)
+            seen = {}
+            for who, at in ((dee, "/social/@ana"), (ana, "/social/@ana"), (cyd, "/social/@dee")):
+                ctx, pg = browser_as(b, who)
+                pg.goto(BASE + at)
+                ready(pg)
+                seen[f"{who.handle} on {at}"] = pg.evaluate("() => !!document.querySelector('[data-lt-write]')")
+                close_ctx(ctx, pg)
+            check("Write sits beside Following on a friend's page (Following, Write, Share, ⋯), 44px, saying Write; not"
+                  " on somebody who doesn't follow back, not on your own page",
+                  [r[0] for r in row][:2] == ["fo-btn", "write"] and row[1][1] == "Write" and row[1][2] >= 44
+                  and not any(seen.values()), f"{row} {seen}")
+            # A letter waits for Theo, and only it.
+            for (lid,) in db("select public_id from social_letters where recipient_id = ? and opened_at is null", (pid_of("theo")[0],)):
+                act(theo, lid, "open")
+            L15 = sent(ana, "theo", drawing(n=50, seed=150))
+            ctx, pg = browser_as(b, theo)
+            pg.goto(BASE + "/social/")
+            ready(pg)
+            shot(pg, "home-phone-light")
+            top = pg.evaluate("""() => { const e = document.querySelector('.top-letters'), bell = document.querySelector('.top-bell');
+              return e ? { dot: !!e.querySelector('.act-dot'), label: e.getAttribute('aria-label'), next: e.nextElementSibling === bell,
+                           h: Math.round(e.getBoundingClientRect().height) } : null; }""")
+            pg.goto(BASE + "/social/letters")
+            ready(pg)
+            shot(pg, "letters-phone-light")
+            rows_ = pg.evaluate("""() => [...document.querySelectorAll('.lt-row')].map(r => ({ say: r.querySelector('.act-say').textContent.trim(),
+              peek: (r.querySelector('.act-peek') || {}).textContent || null, sealed: !!r.querySelector('.lt-seal'), dot: r.classList.contains('is-new'),
+              href: new URL(r.href).pathname + new URL(r.href).hash }))""")
+            only = pg.evaluate("() => (document.querySelector('.lt-only') || {}).textContent")
+            close_ctx(ctx, pg)
+            check("the envelope sits beside the bell at the top of Home (44px), its dot when a letter waits",
+                  top and top["dot"] and top["next"] and top["h"] >= 44 and top["label"] == "Letters, a new one", json.dumps(top))
+            new = [r for r in rows_ if r["dot"]]
+            check("Letters: a new letter's row is sealed (the envelope, not its picture), its dot, \"Ana drew you a letter\","
+                  " \"It draws itself when you open it\", opening the two of you at it; \"Only the two of you ever see a letter.\"",
+                  new and new[0]["sealed"] and new[0]["say"] == "Ana drew you a letter"
+                  and new[0]["peek"] == "It draws itself when you open it" and new[0]["href"] == f"/social/letters/@ana#l-{L15}"
+                  and only == "Only the two of you ever see a letter.", json.dumps(rows_[:3]))
+            ctx, pg = browser_as(b, theo, screen="desk")
+            pg.goto(BASE + "/social/")
+            ready(pg)
+            shot(pg, "home-desk-light")
+            rail = pg.evaluate("""() => { const t = [...document.querySelectorAll('.nav .tab')].filter(e => e.getClientRects().length).map(e => e.textContent.trim());
+              const l = document.querySelector('.nav .tab-letters'); return { tabs: t, dot: !!(l && l.querySelector('.act-dot')) }; }""")
+            close_ctx(ctx, pg)
+            ai = rail["tabs"].index("Activity") if "Activity" in rail["tabs"] else -9
+            check("on a desk, Letters in the rail right under Activity, with its dot",
+                  ai >= 0 and rail["tabs"][ai + 1:ai + 2] == ["Letters"] and rail["dot"], json.dumps(rail))
+            # The two of you: it draws itself, and is opened as it plays.
+            ctx, pg = browser_as(b, theo)
+            pg.goto(BASE + "/social/letters/@ana")
+            ready(pg)
+            pg.wait_for_function("(id) => { const b = document.querySelector('#l-' + id + ' [data-skribl-inline]'); return b && b.classList.contains('is-playing'); }",
+                                 arg=L15, timeout=15000)
+            for _ in range(40):
+                if letter(L15)["opened"]:
+                    break
+                time.sleep(0.25)
+            opened = letter(L15)["opened"]
+            acts = pg.evaluate("""(id) => { const s = document.getElementById('l-' + id);
+              return [...s.querySelectorAll('.lt-acts .btn')].map(b => b.textContent.trim()); }""", L15)
+            pg.click(f"#l-{L15} [data-lt-write-back]")
+            pg.wait_for_function("() => !!SocialLetters.writing() && SocialLetters.isOpen()", timeout=20000)
+            wb = pg.evaluate("() => SocialLetters.writing()")
+            pg.goto(BASE + "/social/")
+            ready(pg)
+            dot_after = pg.evaluate("() => !!document.querySelector('.top-letters .act-dot')")
+            close_ctx(ctx, pg)
+            check("the two of you: the new letter draws itself, and is opened as it plays (the envelope's dot goes);"
+                  " under it Write back and New letter, and Write back opens the Pad on it",
+                  opened is not None and acts == ["Write back", "New letter"] and wb and wb.get("id") == L15
+                  and not dot_after, f"{opened} {acts} {wb} {dot_after}")
+            # The mark where the hand changes, on a written-back letter.
+            st, j = write_back(theo, L15, drawing(n=20, seed=151))
+            LB = j.get("letter") if isinstance(j, dict) else None
+            ctx, pg = browser_as(b, ana)
+            pg.goto(BASE + "/social/letters/@theo")
+            ready(pg)
+            pg.wait_for_timeout(4000)
+            shot(pg, "two-of-you-phone-light")
+            marks = pg.evaluate("(id) => { const b = document.querySelector('#l-' + id + ' [data-skribl-inline]'); return b && JSON.parse(b.getAttribute('data-skribl-marks') || 'null'); }", LB)
+            hands = pg.evaluate("(id) => (document.querySelector('#l-' + id + ' .lt-hands') || {}).textContent", LB)
+            pg.goto(BASE + "/social/letters")
+            ready(pg)
+            ids = pg.evaluate("() => [...document.querySelectorAll('.lt-row')].map(r => new URL(r.href).hash.slice(3))")
+            close_ctx(ctx, pg)
+            check("a sheet once: the letter written back on is inside the one written on it, never a row of its own",
+                  LB in ids and L15 not in ids, f"{ids}")
+            check("a written-back letter carries the mark where his hand starts on its line, and says whose hands, in order",
+                  marks == [{"ms": letter(LB)["hand_at"]}] and hands == "Yours, then Theo’s", f"{marks} {hands!r}")
+            # The ⋯: Take back (yours, not opened) and Report (one that came to you).
+            LT = sent(ana, "theo", seed=152)
+            ctx, pg = browser_as(b, ana)
+            pg.goto(BASE + "/social/letters/@theo")
+            ready(pg)
+            pg.click(f"#l-{LT} [data-lt-more]")
+            pg.wait_for_timeout(500)
+            shown = pg.evaluate("() => [...document.querySelectorAll('#letterSheet [data-lt-act]')].filter(b => !b.hidden).map(b => b.getAttribute('data-lt-act'))")
+            pg.click('#letterSheet [data-lt-act="take-back"]')
+            for _ in range(40):
+                if letter(LT) is None:
+                    break
+                time.sleep(0.25)
+            pg.wait_for_timeout(600)
+            left = pg.evaluate("(id) => !!document.getElementById('l-' + id)", LT)
+            close_ctx(ctx, pg)
+            check("the ⋯ of your letter not opened yet has Take back (no Delete, no Report) and Block; Take back takes it"
+                  " back, and its sheet folds away", shown == ["take-back", "block"] and letter(LT) is None and not left,
+                  f"{shown} {left}")
+            LR = sent(ana, "theo", seed=153)
+            act(theo, LR, "open")
+            ctx, pg = browser_as(b, theo)
+            pg.goto(BASE + "/social/letters/@ana")
+            ready(pg)
+            pg.click(f"#l-{LR} [data-lt-more]")
+            pg.wait_for_timeout(500)
+            shown2 = pg.evaluate("() => [...document.querySelectorAll('#letterSheet [data-lt-act]')].filter(b => !b.hidden).map(b => b.getAttribute('data-lt-act'))")
+            pg.click('#letterSheet [data-lt-act="report"]')
+            pg.wait_for_timeout(600)
+            pg.click('#letterReportSheet button[type="submit"]')
+            for _ in range(40):
+                if db("select id from social_reports where kind = 'letter' and target = ?", (LR,)):
+                    break
+                time.sleep(0.25)
+            close_ctx(ctx, pg)
+            check("the ⋯ of a letter that came to you has Delete, Report and Block; its Report sends a report of the letter",
+                  shown2 == ["delete", "report", "block"]
+                  and bool(db("select id from social_reports where kind = 'letter' and target = ?", (LR,))), f"{shown2}")
+            fay = someone(b, "fay", "Fay Lund")
+            follow(ana, fay)                 # Ana follows Fay; Fay does not follow back
+            ctx, pg = browser_as(b, ana)
+            pg.goto(BASE + "/social/letters/write")
+            ready(pg)
+            people = pg.evaluate("() => [...document.querySelectorAll('[data-lt-write]')].map(b => b.getAttribute('data-handle'))")
+            close_ctx(ctx, pg)
+            block(cyd, theo)
+            ctx, pg = browser_as(b, cyd)
+            st_b = status(pg, "/social/letters/@theo")
+            close_ctx(ctx, pg)
+            block(cyd, theo, on=False)
+            check("Write's list is the people who follow each other with you (not one who follows you, nor one you"
+                  " follow, one way); behind a block"
+                  " there is no page of the two of you", sorted(people) == ["cyd", "theo"] and st_b == 404,
+                  f"{people} {st_b}")
+        except Exception as exc:  # noqa: BLE001
+            stopped(15, exc)
 
     # ------------------------------------------------------------------ 12
     if part(12, "no page errors, no console errors and no CSP violations"):

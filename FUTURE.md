@@ -257,7 +257,10 @@ and puts the tool in front of people who already exist.
    artist's say are in DECISIONS.md, "Draw back, mocked". Built on the Pad
    from Nov 19; on a Flip, page for page, Nov 25 (DECISIONS.md, "Flip's Draw
    back, page for page: built"); with recolours, each hand's its own, the
-   same day (DECISIONS.md, "Recolor while drawing back: built").
+   same day (DECISIONS.md, "Recolor while drawing back: built"). And between
+   two people, as DRAWN LETTERS (Nov 26, docs/SOCIAL-SITE.md sections 44 to
+   46): a letter written back on plays theirs, then yours. Next: a Flip
+   letter, page for page, as Flip's Draw back is.
 
 **Deliberately not doing:**
 

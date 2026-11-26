@@ -285,6 +285,10 @@ def register(bp, skribl_blueprint="skribl"):
         resp.headers["Cache-Control"] = "private, no-store"
         return resp
 
+    def _may_write(me, who):
+        from .letters import enabled, pair_ok
+        return me is not None and enabled() and pair_ok(me, who)
+
     def profile_page(handle, tab):
         who, me, mine, blocked_them, refusal = whose(handle)
         if refusal is not None:
@@ -317,6 +321,9 @@ def register(bp, skribl_blueprint="skribl"):
                      blocked_them=blocked_them,
                      following=not mine and not blocked_them and is_following(me, who),
                      muted=not mine and not blocked_them and i_muted(me, who),
+                     # WRITE beside Following, only where you follow each
+                     # other (drawn letters, the mock's choice 1 and 3).
+                     can_write=not mine and not blocked_them and _may_write(me, who),
                      fo_n=fo_n, fl=for_owner(me, fo_n) if mine else None,
                      tab=tab, tabs=tabs, p=view,
                      signin_here=url_for("social.signin", next=here_url),

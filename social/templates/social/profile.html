@@ -129,6 +129,10 @@
       {% if who.bio %}<p class="prof-bio">{{ who.bio }}</p>{% endif %}
       <div class="prof-acts">
         {% if not mine %}{{ follow_button(who, following) }}{% endif %}
+        {#- WRITE (drawn letters; the mock's choice 1 and 3): beside Following, in
+            its dress, only where you follow each other; letters.js opens the Pad. #}
+        {% if can_write %}<button class="btn lt-write" type="button" data-lt-write data-handle="{{ who.handle }}" data-first="{{ who.display_name|first_name }}"
+                aria-label="Write {{ who.display_name }} a letter">{{ ic.envelope() }}<span>Write</span></button>{% endif %}
         {% if mine %}
         <a class="btn" href="{{ url_for('social.edit_profile') }}">Edit profile</a>
         <button class="btn" type="button" data-face-sheet aria-haspopup="dialog" aria-controls="faceSheet" aria-expanded="false">{{ ic.pen() }}<span>{{ 'Change my face' if who.face_id else 'Add your face' }}</span></button>

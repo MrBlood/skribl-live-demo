@@ -1,0 +1,70 @@
+{#  LETTERS (/social/letters; drawn letters, the mock's choices 3 and 4; the
+    owner's yes, Nov 26): Activity's own rows, a row a sheet, newest first.
+    letters.py says what a row is (rows); this is what it looks like.
+
+    A NEW LETTER COMES SEALED: Activity's dot, and a drawn envelope where its
+    picture would be, so the list doesn't spoil it ("It draws itself when you
+    open it"). Opened, or yours, its picture. Each row opens the two of you,
+    at that sheet. Write, at the top, where there is somebody to write to.
+    ONLY THE TWO OF YOU: said once, quietly, under the list. #}
+{% extends 'social/base.html' %}
+{% from 'social/_post.html' import face, post_words with context %}
+{% import 'social/_icons.html' as ic %}
+{% from 'social/_mute.html' import mute_parts %}
+
+{% block title %}Letters · Blooby{% endblock %}
+{% block scripts %}<script src="{{ social_asset('mutes.js') }}" defer></script>
+<script src="{{ social_asset('posts.js') }}" defer></script>{% endblock %}
+
+{% block top %}
+  <a class="icon-btn top-back" href="{{ url_for('social.home') }}" aria-label="Back">{{ ic.back() }}</a>
+  <span class="top-title">Letters</span>
+  {% if can_write %}<a class="btn lt-top-write" href="{{ url_for('social.letters_write') }}">{{ ic.envelope() }}<span>Write</span></a>{% endif %}
+{% endblock %}
+
+{% macro sealed() -%}
+<svg class="lt-seal" viewBox="0 0 52 52" aria-hidden="true" focusable="false" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M 11.2,15.6 C 21.0,15.1 31.0,15.1 40.8,15.6 C 42.4,15.7 43.2,16.6 43.2,18.2 C 43.4,23.4 43.4,28.6 43.2,33.8 C 43.2,35.4 42.4,36.3 40.8,36.4 C 31.0,36.9 21.0,36.9 11.2,36.4 C 9.6,36.3 8.8,35.4 8.8,33.8 C 8.6,28.6 8.6,23.4 8.8,18.2 C 8.8,16.6 9.6,15.7 11.2,15.6 Z" stroke-width="2.4"/>
+  <path d="M 10.0,17.2 C 15.4,21.2 20.4,24.8 26.0,28.0 C 31.6,24.8 36.6,21.2 42.0,17.2" stroke-width="2.4"/>
+  <circle class="lt-wax" cx="26" cy="28" r="3.4"/>
+</svg>
+{%- endmacro %}
+
+{% macro row(r) -%}
+{%- set first = r.who.display_name|first_name -%}
+<li><a class="act-row lt-row{% if r.new %} is-new{% endif %}" href="{{ r.href }}">
+  <span class="act-mark" aria-hidden="true"></span>
+  {{ face(r.who, initial=true) }}
+  <span class="act-text">{% if r.new %}<span class="sr">New: </span>{% endif %}<span class="act-say">
+    {%- if r.to_me %}<b>{{ first }}</b> {{ 'wrote back on yours' if r.back else 'drew you a letter' }}
+    {%- else %}You {{ 'wrote back to' if r.back else 'wrote to' }} <b>{{ first }}</b>{% endif %}</span>
+    <time class="act-when" datetime="{{ when_iso(r.letter.created_at) }}" data-when="ago">{{ when_day(r.letter.created_at) }}</time>
+    {%- if r.new %}<span class="act-peek lt-peek">It draws itself when you open it</span>
+    {%- elif not r.to_me and r.down %}<span class="act-peek lt-peek">Taken down</span>
+    {%- elif not r.to_me and not r.opened %}<span class="act-peek lt-peek">Not opened yet</span>{% endif %}</span>
+  {%- if r.new %}<span class="act-pic lt-pic is-sealed" aria-hidden="true">{{ sealed() }}</span>
+  {%- else %}<span class="act-pic lt-pic"{% if r.pic %} style="background-image: url('{{ r.pic.src }}'); background-size: {{ r.pic.size }}; background-position: {{ r.pic.at }}"{% endif %} aria-hidden="true"></span>{% endif %}
+</a></li>
+{%- endmacro %}
+
+{% block main %}
+<div class="act lt">
+  <header class="page-head act-head lt-head">
+    <h1 class="page-title">Letters</h1>
+  </header>
+  {% if rows %}
+  <ul class="act-list lt-list" aria-label="Letters">{% for r in rows %}{{ row(r) }}{% endfor %}</ul>
+  <p class="lt-only">Only the two of you ever see a letter.</p>
+  {% else %}
+  <section class="act-empty" aria-labelledby="ltEmptyTitle">
+    <img class="si-icon" src="{{ social_asset('blooby-icon-180.png') }}" alt="" width="64" height="64">
+    <h2 class="act-empty-title" id="ltEmptyTitle">No letters yet</h2>
+    <p class="act-empty-words">A letter is a drawing for one person. It draws itself when they open it, and only the two of you ever see it. You can write to people who follow you back.</p>
+    {% if can_write %}<a class="btn btn-primary btn-big" href="{{ url_for('social.letters_write') }}">{{ ic.envelope() }}<span>Write a letter</span></a>{% endif %}
+  </section>
+  {% endif %}
+</div>
+{{ post_words() }}
+{% endblock %}
+
+{% block overlays %}{{ mute_parts() }}{% endblock %}

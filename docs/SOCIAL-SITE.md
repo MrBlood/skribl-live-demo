@@ -2002,7 +2002,9 @@ follow step 7.
 7. Add to Home Screen (part one's step 7), then push notifications. Both
    built: Add to Home Screen below, push notifications in section 19.
 8. Direct messages: one to one, a drawing as easily as words, who may
-   message you, and a requests inbox.
+   message you, and a requests inbox. Reshaped and built as DRAWN LETTERS
+   (the owner's yes, Nov 26, A for all six: between two people who follow
+   each other, no requests inbox; sections 44 to 46). A Flip letter is next.
 9. The smaller things most sites have: pin a post to your profile (built:
    section 40), edit a post's words (shown "edited"; the owner's yes), tags,
    download your data, and words that describe a drawing to a screen reader.
@@ -4027,3 +4029,54 @@ letter too. The Letters page's own line says the same.
 `verify_socialletters` 13 and 14 hold it, each row shown red first. Flip:
 Skribl's part serves both editors already; a Flip letter is next, on the
 list.
+
+## 46. Built: Drawn letters, the pages (Nov 26)
+
+The third of the four parts (sections 44 and 45: the server, the Pad), the
+mock's choices 3, 4 and 5 as the owner said yes to them.
+
+    /social/letters              Letters: Activity's own rows, a sheet each, newest first
+    /social/letters/write        Write: the people you may write to (letters.friends)
+    /social/letters/@<handle>    The two of you: every sheet between you, newest first
+
+WRITE on a friend's page, beside Following and in its dress, only where you
+follow each other (`profiles.py` can_write, `letters.pair_ok`). It opens
+the Pad (part two). Write at the top of Letters opens the list of people you
+may write to; one who follows you one way is not on it.
+
+THE ENVELOPE beside the bell at the top of a phone's Home, Gallery and
+Search, and LETTERS in a desk's rail under Activity, each with the bell's
+own dot while a letter waits unopened (`letters.dot_for_request`, once a
+request). Letters are not Activity's; Activity's dot is untouched.
+
+LETTERS' ROWS are Activity's (`.act-row`, its 52px picture, its dot). A new
+letter comes SEALED: a drawn envelope where its picture would be (the
+brand's line, a wax dot in the new dot's colour, on the paper a drawing
+waits on), and "It draws itself when you open it". Yours not opened yet say
+so; one written back on is inside the sheet written on it, never a row of
+its own. Under the list, once: "Only the two of you ever see a letter."
+
+THE TWO OF YOU: a sheet each, who wrote it and when, its drawing in Skribl's
+own player (its line, its speed, full screen), the mark where the last hand
+starts (the player's own `marks`, one dot), and for a letter written back
+on, whose hands in order ("Theo’s, then yours"). A NEW ONE DRAWS ITSELF the
+first time (never under Reduce Motion: a tap plays it) and rests; Watch
+again is the player's own. It is OPENED when it starts playing, by the
+page's POST. WRITE BACK and NEW LETTER under the newest sheet alone, where
+you may write: one pair on the page. Each sheet's ⋯: Take back (yours, not
+opened yet) or Delete from your letters; Report this letter (one that came
+to you: "Reporting shares this letter with the people who run this site");
+Block. Taken back or deleted, the sheet folds away where it was. Behind a
+block, or for nobody by that name, the kind page for a wrong address.
+
+ACCOUNT DELETION's page says letters go too. HOW IT WORKS asks "Draw someone
+a letter" (Write, on a friend's page: only the two of you see it), opening
+Letters (`verify_socialapp` holds its five rows).
+
+NOT BUILT, AND SAID: the mock's desk board put the list and the letter side
+by side, three columns; here a desk shows Letters and the two of you as two
+pages, each in the rail's layout. Day headings ("Today") are not drawn: each
+sheet says its own time.
+
+`verify_socialletters` 15 holds it (each row shown red first). Not tested
+here: WebKit, SF, Segoe UI.

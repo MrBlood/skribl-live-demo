@@ -1,0 +1,136 @@
+{#  THE TWO OF YOU (/social/letters/@<handle>; drawn letters, the mock's
+    choices 4 and 5; the owner's yes, Nov 26). letters.py says which sheets
+    and what each may do (sheets); this is what they look like.
+
+    A SHEET EACH, NEWEST FIRST: who wrote it ("Ana wrote back on your
+    letter"), when, its drawing in Skribl's own player (its line saying how
+    long it took to draw and the speed you watch at; the mark on the line
+    where the last hand starts: the player's own `marks`), and for one
+    written back on, whose hands in the order they play ("Theo’s, then
+    yours"). A NEW ONE DRAWS ITSELF the first time, at the writer's pace, and
+    rests; Watch again is the player's own (letters.js; never under Reduce
+    Motion, where a tap plays it). Opening it is the page's POST as it
+    starts, never this page's GET.
+
+    WRITE BACK AND NEW LETTER under the newest sheet only, where you may
+    write: one pair on the page, never one under every sheet. Each sheet's ⋯
+    has Report (one that came to you), Block, and Take back (yours, not
+    opened yet) or Delete. #}
+{% extends 'social/base.html' %}
+{% from 'social/_post.html' import face, post_words with context %}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline %}
+{% from 'social/_safety.html' import safety_sheets with context %}
+{% import 'social/_icons.html' as ic %}
+{% from 'social/_mute.html' import mute_parts %}
+
+{% block title %}{{ who.display_name }} · Letters · Blooby{% endblock %}
+{% block scripts %}<script src="{{ social_asset('mutes.js') }}" defer></script>
+<script src="{{ social_asset('posts.js') }}" defer></script>
+<script src="{{ social_asset('safety.js') }}" defer></script>{% endblock %}
+
+{% set first = who.display_name|first_name %}
+
+{% block top %}
+  <a class="icon-btn top-back" href="{{ url_for('social.letters_page') }}" aria-label="Back">{{ ic.back() }}</a>
+  <a class="lt-who" href="{{ url_for('social.profile', handle=who.handle) }}">{{ face(who, initial=true) }}<span class="top-title">{{ who.display_name }}</span></a>
+{% endblock %}
+
+
+{% block main %}
+<div class="lt lt-with" data-letters-with data-handle="{{ who.handle }}" data-first="{{ first }}"
+     data-open="{{ url_for('social.letter_open', public_id='__ID__') }}"
+     data-take-back="{{ url_for('social.letter_take_back', public_id='__ID__') }}"
+     data-delete="{{ url_for('social.letter_delete', public_id='__ID__') }}"
+     data-report="{{ url_for('social.report') }}">
+  <header class="page-head act-head lt-head"><h1 class="page-title">Letters with {{ who.display_name }}</h1></header>
+  {% for s in sheets %}
+  {%- set l = s.letter -%}
+  <article class="lt-sheet" id="l-{{ l.public_id }}" data-letter="{{ l.public_id }}"{% if s.new %} data-new{% endif %}
+           data-to-me="{{ 'yes' if s.to_me else 'no' }}"{% if s.take_back %} data-take-back-ok{% endif %}{% if s.report %} data-report-ok{% endif %}>
+    <div class="lt-line">
+      {{ face(who if s.to_me else me, initial=true) }}
+      <p class="lt-say">{% if s.to_me %}<b>{{ first }}</b> {{ 'wrote back on your letter' if s.back else 'drew you a letter' }}
+        {%- else %}You {{ 'wrote back to' if s.back else 'wrote to' }} <b>{{ first }}</b>{% endif %}
+        <time class="act-when" datetime="{{ when_iso(l.created_at) }}" data-when="ago">{{ when_day(l.created_at) }}</time>
+        {%- if not s.to_me and s.down %}<span class="lt-note"> · Taken down</span>{% elif s.take_back %}<span class="lt-note"> · Not opened yet</span>{% endif %}</p>
+      <button class="icon-btn lt-more" type="button" data-lt-more aria-haspopup="dialog" aria-controls="letterSheet"
+              aria-expanded="false" aria-label="More for this letter" title="More">{{ ic.dots() }}</button>
+    </div>
+    <div class="lt-art post-art">
+      {%- if s.sk and s.sk.canvas_w %}{{ skribl_inline(l.skribl_id, canvas_w=s.sk.canvas_w, canvas_h=s.sk.canvas_h, line_info=s.sk.line, bp=skribl_bp, marks=s.marks, full=true) }}
+      {%- else %}<p class="lt-gone">This letter isn’t shown anymore.</p>{% endif %}
+    </div>
+    {% if s.back and s.hands %}<p class="lt-hands">{{ s.hands }}</p>{% endif %}
+    {% if loop.first and may %}
+    <div class="lt-acts">
+      {% if s.write_back %}<button class="btn btn-primary btn-big" type="button" data-lt-write-back data-id="{{ l.public_id }}" data-first="{{ first }}">{{ ic.pen() }}<span>Write back</span></button>{% endif %}
+      <button class="btn btn-big" type="button" data-lt-write data-handle="{{ who.handle }}" data-first="{{ first }}">{{ ic.envelope() }}<span>New letter</span></button>
+    </div>
+    {% endif %}
+  </article>
+  {% else %}
+  <section class="act-empty" aria-labelledby="ltNoneTitle">
+    <h2 class="act-empty-title" id="ltNoneTitle">No letters between you yet</h2>
+    {% if may %}<p class="act-empty-words">Draw {{ first }} a letter. It draws itself when they open it.</p>
+    <button class="btn btn-primary btn-big" type="button" data-lt-write data-handle="{{ who.handle }}" data-first="{{ first }}">{{ ic.envelope() }}<span>Write</span></button>
+    {% else %}<p class="act-empty-words">Letters go between two people who follow each other.</p>{% endif %}
+  </section>
+  {% endfor %}
+  {% if sheets %}<p class="lt-only">Only the two of you ever see a letter.</p>{% endif %}
+</div>
+{{ post_words() }}
+{% endblock %}
+
+{% block overlays %}
+{{ mute_parts() }}
+{#  A SHEET'S ⋯: one card, the risky rows a card of their own, as a post's ⋯.
+    letters.js shows the rows this sheet allows. #}
+<div class="make post-sheet" id="letterSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="letterSheetTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="letterSheetTitle">This letter</h2>
+    <div class="post-acts">
+      <button class="post-act" type="button" data-lt-act="take-back">{{ ic.back() }}<span>Take back</span></button>
+      <button class="post-act" type="button" data-lt-act="delete">{{ ic.trash() }}<span>Delete from your letters</span></button>
+    </div>
+    <div class="post-acts">
+      <button class="post-act is-danger" type="button" data-lt-act="report">{{ ic.flag() }}<span>Report this letter</span></button>
+      <button class="post-act is-danger" type="button" data-lt-act="block">{{ ic.block() }}<span>Block @{{ who.handle }}</span></button>
+    </div>
+    <p class="say post-say" data-lt-say role="status" hidden></p>
+  </div>
+</div>
+{#  REPORT A LETTER: a post's reasons but copying (safety.REASONS['letter']);
+    a report shares the letter with the people who run the site, said here. #}
+<div class="make post-sheet" id="letterReportSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <form class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="letterReportTitle" data-lt-report-form>
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="letterReportTitle">Report this letter</h2>
+    <p class="post-lede">Reporting shares this letter with the people who run this site, so they can look at it. Nothing is taken down automatically.</p>
+    <fieldset class="post-reasons">
+      <legend class="sr">Reason</legend>
+      {% for r, words in report_reasons['letter'] %}
+      <label class="post-reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}><span>{{ words }}</span></label>
+      {% endfor %}
+    </fieldset>
+    <label class="post-note-label" for="letterReportNote">Anything else? <span>optional</span></label>
+    <textarea class="post-note" id="letterReportNote" name="note" rows="2" maxlength="300"></textarea>
+    <p class="say post-say" data-lt-say role="status" hidden></p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Cancel</button>
+      <button class="btn btn-primary btn-big" type="submit">Send report</button>
+    </div>
+  </form>
+</div>
+<div class="words" data-lt-page-said hidden>
+  <span data-word="taken">Taken back. It’s gone, and nothing says it was sent.</span>
+  <span data-word="deleted">Deleted from your letters.</span>
+  <span data-word="opened">They’ve opened it, so it can’t be taken back. You can delete it from your letters.</span>
+  <span data-word="reported">Thanks. The people who run this site will look at it.</span>
+  <span data-word="sending">Sending…</span>
+  <span data-word="failed">That didn’t go through. Try again?</span>
+</div>
+{{ safety_sheets() }}
+{% endblock %}
