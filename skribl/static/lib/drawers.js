@@ -86,6 +86,20 @@
    * comes in from the right; under Reduce Motion both simply move. A window
    * resized while one is beside decides again, without gliding. */
   var SIDE_W = 392, SIDE_EDGE = 16, SIDE_MS = 280, SIDE_EASE = 'cubic-bezier(.22,.8,.24,1)';
+  /* A TAB ON THE DRAWER (the owner, Nov 26: "Put a tab on the drawer in
+   * addition to clicking pen again (and other drawers)"; then "All yes on
+   * A", taken for the Drawer Tab mock's A, DECISIONS.md). Beside the
+   * drawing, the drawer wears a tab on its edge facing the drawing, near its
+   * top, that closes it: the drawer's own paper and line, joined to it, with
+   * a › that points the way the drawer goes (styles.css .drawer-tab). It
+   * stands SIDE_TAB out of the drawer, and the drawing gives it that room as
+   * it gives the drawer its own: it slides that much further and clears the
+   * tab by SIDE_EDGE. A button named "Close the drawer", which the keyboard
+   * reaches just before the drawer; closed from the keyboard, the drawer's
+   * own button takes the focus back. One tab per editor, made when side()
+   * is said and moved to sit before whichever drawer is beside; it comes and
+   * goes with the drawer, as one piece. */
+  var SIDE_TAB = 24;
   var selfResize = false;
   function still() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
   function sideBoxOf(panel) { return (panel.closest && panel.closest('.media-card')) || panel; }
@@ -113,7 +127,7 @@
     var off = m.length ? (parseFloat(getComputedStyle(m[0]).left) || 0) : 0;
     var r = cv.getBoundingClientRect(), W = fixedRight();
     var left = r.left - off, right = W - (r.right - off);
-    var shift = Math.max(0, SIDE_W + 2 * SIDE_EDGE - right);
+    var shift = Math.max(0, SIDE_W + SIDE_TAB + 2 * SIDE_EDGE - right);
     if (shift > left - SIDE_EDGE) return null;
     return { shift: Math.ceil(shift), top: Math.round(Math.max(SIDE_EDGE, r.top + (window.scrollY || 0))) };
   }
@@ -158,7 +172,7 @@
     if (!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches)) return null;
     var cv = _el(side.canvas), row = rowOf(side);
     if (!cv || !cv.getClientRects().length || !row) return 0;
-    var w = cv.getBoundingClientRect().width, most = fixedRight() - SIDE_W - 3 * SIDE_EDGE;
+    var w = cv.getBoundingClientRect().width, most = fixedRight() - SIDE_W - SIDE_TAB - 3 * SIDE_EDGE;
     if (w <= most) return 0;
     if (most < SIDE_MIN * w) return null;
     var cs = getComputedStyle(row);
@@ -227,12 +241,67 @@
       if (!b) go.onfinish = function () { if (underNow.indexOf(el) < 0) el.style.maxWidth = ''; };
     });
   }
-  // The drawer `panel` beside the drawing where it fits, else below (and
-  // null: none open). `glide`: an open or a close, not a resize.
-  function sideApply(side, panel, glide) {
-    var body = document.body, root = document.documentElement;
-    var was = document.querySelector('.drawer-side');
+  /* A DRAWER CLOSED BESIDE THE DRAWING SLIDES AWAY (the same mock: "Click the
+   * tab, and the drawer slides away as the drawing glides back"). It vanished
+   * in one frame while the drawing glided back. Closed to nothing now, it
+   * leaves the way it came in, fading as it moves 24px right, its tab with
+   * it. Its panel is hidden at once, as it always was (current() and `hidden`
+   * say closed): the drawer is only drawn where it was until the glide ends,
+   * inert, so nothing in it can be reached or clicked. A switch to another
+   * drawer stays a swap; Reduce Motion, a resize, and a drawer below don't
+   * glide. */
+  var leaving = null;
+  // How a drawer beside looks now, read before its panel is hidden: its box,
+  // the panel inside it where that is another (Photo's, Music's), how each
+  // is displayed, its height and its scroll.
+  function sideNow(panel) {
     var box = panel ? sideBoxOf(panel) : null;
+    if (!box || !box.classList.contains('drawer-side')) return null;
+    var inner = panel !== box ? panel : null;
+    return { box: box, inner: inner, show: getComputedStyle(box).display, showInner: inner ? getComputedStyle(inner).display : '',
+             h: box.getBoundingClientRect().height, top: box.scrollTop, inert: box.inert };
+  }
+  var SIDE_OUT = [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(24px)' }];
+  function leave(g, tab) {
+    var box = g.box, l = { g: g, tab: tab, anims: [] };
+    box.classList.add('drawer-leaving');
+    box.style.setProperty('display', g.show, 'important');
+    if (g.inner) g.inner.style.setProperty('display', g.showInner, 'important');
+    box.style.height = g.h + 'px';
+    box.scrollTop = g.top;
+    box.inert = true;
+    l.anims.push(box.animate(SIDE_OUT, { duration: SIDE_MS, easing: SIDE_EASE, fill: 'forwards' }));
+    if (tab) {
+      tab.hidden = false;
+      tab.inert = true;
+      l.anims.push(tab.animate(SIDE_OUT, { duration: SIDE_MS, easing: SIDE_EASE, fill: 'forwards' }));
+    }
+    leaving = l;
+    l.anims[0].onfinish = function () { if (leaving === l) stopLeaving(); };
+  }
+  // The glide out ends (or is cut short by the next decision): the drawer is
+  // its panel's again, hidden, and the tab goes with it.
+  function stopLeaving() {
+    var l = leaving;
+    if (!l) return;
+    leaving = null;
+    l.anims.forEach(function (a) { a.cancel(); });
+    var box = l.g.box;
+    box.classList.remove('drawer-leaving');
+    box.style.removeProperty('display');
+    if (l.g.inner) l.g.inner.style.removeProperty('display');
+    box.style.height = '';
+    box.inert = l.g.inert;
+    if (l.tab) { l.tab.inert = false; l.tab.hidden = true; }
+  }
+  // The drawer `panel` beside the drawing where it fits, else below (and
+  // null: none open). `glide`: an open or a close, not a resize. `going`:
+  // the drawer that was beside, as sideNow() read it before it closed.
+  function sideApply(side, panel, glide, going) {
+    var body = document.body, root = document.documentElement;
+    stopLeaving();
+    var was = document.querySelector('.drawer-side');
+    var box = panel ? sideBoxOf(panel) : null, tab = side.tab || null;
     if (glide && !still()) { glidingTill = Date.now() + SIDE_MS; glideSize = window.innerWidth + 'x' + window.innerHeight; }
     // A drawer just opened sits under the dock in the page's flow until it
     // goes beside, a layout never painted: the drawing is read with it lifted
@@ -262,16 +331,23 @@
       root.style.setProperty('--side-shift', next + 'px');
       root.style.setProperty('--side-top', fit.top + 'px');
       root.style.setProperty('--side-w', SIDE_W + 'px');
+      // The tab sits just before the drawer, for the keyboard's order.
+      if (tab) {
+        if (tab.nextSibling !== box) box.parentNode.insertBefore(tab, box);
+        tab.hidden = false;
+      }
       if (!box.classList.contains('drawer-side')) {
         box.classList.add('drawer-side');
         box.scrollTop = 0;
         if (glide && !still() && box.animate) {
-          box.animate([{ opacity: 0, transform: 'translateX(24px)' }, { opacity: 1, transform: 'none' }],
-                      { duration: SIDE_MS, easing: SIDE_EASE });
+          var into = [{ opacity: 0, transform: 'translateX(24px)' }, { opacity: 1, transform: 'none' }];
+          box.animate(into, { duration: SIDE_MS, easing: SIDE_EASE });
+          if (tab && tab.animate) tab.animate(into, { duration: SIDE_MS, easing: SIDE_EASE });
         }
       }
       body.classList.add('drawers-beside');
     } else {
+      if (tab) tab.hidden = true;
       body.classList.remove('drawers-beside');
       root.style.removeProperty('--side-shift');
     }
@@ -279,6 +355,8 @@
     if (room !== roomWas) glideRoom(from, inRow(side));
     underApply(side, fit ? box : null, fit, glide);
     if (prev !== next) slide(side, prev, next, glide);
+    // Closed to nothing beside it, the drawer that was there slides away.
+    if (!fit && going && glide && !still() && going.box.animate) leave(going, tab);
   }
   // The drawing and what sits under it glide from one slide to the other; at
   // the end (or at once) everything that keeps the drawing's place hears a
@@ -337,9 +415,10 @@
       }
       currentName = name;               // set BEFORE hooks: a hook asking
       if (name == null && prev != null) holdHeight();
+      var going = side && prev != null ? sideNow(panels[prev].panel) : null;   // before it is hidden
       if (prev != null) _set(prev, false);   // current() must see the new state
       if (name != null) _set(name, true);
-      if (side) sideApply(side, name != null && name !== 'tools' ? panels[name].panel : null, true);
+      if (side) sideApply(side, name != null && name !== 'tools' ? panels[name].panel : null, true, going);
       if (cfg.reveal) cfg.reveal(name != null ? panels[name].panel : null, name);
     }
     // Beside the drawing on a desk, once the editor says what slides (side()).
@@ -351,8 +430,31 @@
     // waits for the glide's end, and then decides again only if the window's
     // size is not what it was: decided again mid-glide, the strip landed at
     // once, and after it, a pixel off what the glide had decided.
-    var later = null;
+    var later = null, tab = null;
+    // The drawer's tab (SIDE_TAB, above): closes whichever drawer is beside.
+    // Pressed from the keyboard (a click with no pointer behind it), the
+    // focus goes back to that drawer's own button, where it came from.
+    function makeTab() {
+      var t = document.createElement('button');
+      t.type = 'button';
+      t.className = 'drawer-tab';
+      t.setAttribute('aria-label', 'Close the drawer');
+      t.title = 'Close the drawer';
+      t.hidden = true;
+      var mark = window.SkriblMarks && window.SkriblMarks.get('chev');
+      if (mark) t.appendChild(mark); else t.textContent = '›';
+      t.addEventListener('click', function (e) {
+        var d = currentName != null ? panels[currentName] : null;
+        var keys = e.detail === 0 && document.activeElement === t;
+        open(null);
+        if (keys && d && d.button && d.button.focus) d.button.focus({ preventScroll: true });
+      });
+      document.body.appendChild(t);
+      return t;
+    }
     function sideOn(s) {
+      if (!tab) tab = makeTab();
+      s.tab = tab;
       if (!side) {
         var again = function () {
           if (currentName != null && currentName !== 'tools' && panels[currentName]) sideApply(side, panels[currentName].panel, false);

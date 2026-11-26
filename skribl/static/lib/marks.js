@@ -1,5 +1,5 @@
 /* The app's marks for controls a script builds: plus, minus, close, check,
- * arrow, cloned from the <template id="skriblMark-NAME"> that
+ * arrow, chev, cloned from the <template id="skriblMark-NAME"> that
  * _skribl_marks.html puts on the page, so a script and a template draw the
  * same mark from one source.
  *
