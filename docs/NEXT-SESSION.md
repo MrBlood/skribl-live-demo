@@ -1,75 +1,104 @@
-# Next session: the handoff (Nov 25, 2026, Mountain Time, written mid-morning, brought up to about 8 PM)
+# Next session: the handoff (Nov 26, 2026, Mountain Time, written about 7 AM)
 
-A snapshot from a session of Wednesday, Nov 25. It is not
-maintained: where things stand is the newest entries at the
-bottom of `DECISIONS.md`, and how to work is `WORKING-AGREEMENTS.md`. Read
-this after `START-HERE.md`; once you have, replace it with your own or
-delete it, so it never goes stale here.
+A snapshot from a session that ran from Nov 25 into the morning of Thursday,
+Nov 26. It is not maintained: where things stand is the newest entries at
+the bottom of `DECISIONS.md`, and how to work is `WORKING-AGREEMENTS.md`.
+Read this after `START-HERE.md`; once you have, replace it with your own or
+delete it, so it never goes stale here. The handoff before this one is
+`git show 9d2f6e4:docs/NEXT-SESSION.md` (Nov 25: Flip's Draw back, Recolor
+while drawing back, drawers beside the drawing on a desk).
 
 ## Before anything: read main's newest full runs
 
 Every job, before believing main is green. Main was green on every job
-after #1107 (about 7:15 PM, Nov 25): every shard on both databases, the
-MP4, Firefox and WebKit. That run covers Drawers beside the drawing
-(#1105), the @ list's race in `verify_socialmentions` (#1106: main had gone
-red on it after #1103, issue #1104) and what main's run after #1105 found
-(#1107: a row that fitted in this box's face and not in CI's, a suite's
-desk still beside the drawing, a help claim naming a renamed row). Not
-sealed since v330, which is fine (`WORKING-AGREEMENTS.md`, "Sealing a
-release").
+after #1110 (finished about 9:14 PM, Nov 25): every shard on both
+databases, the MP4, Firefox and WebKit. That run covers the Two Hands fixes
+(#1109); #1109's own run was cancelled when #1110 merged, as main keeps
+only its newest run. Not sealed since v330, which is fine
+(`WORKING-AGREEMENTS.md`, "Sealing a release").
 
-## What happened this session
+## The job: build drawn letters
 
-- THE FRIEND'S THREE DESIGN PACKS, weighed (nothing built from them):
-  https://claude.ai/artifact/SpdandvSjk9XzLcQAywQLk. Most of the 78 screens
-  show what is already built (they were drawn from v330's code). Worth a
-  mock, the owner's to pick: drawers beside the drawing on a desk (measured:
-  Pen open on a 1440×900 desk leaves 66% of the Pad's drawing on screen,
-  53% of Flip's; 49% for Flip at 1536×864); Blooby peeking in empty places
-  (drawn by hand in the Pad: their peek is the "little car" dropped on Nov
-  12); a weekly prompt that is a draw-back ("Draw back on Blooby"). Left:
-  the glossy Blooby, a permanent tool rail and side panel, words under the
-  phone bar, header buttons for Save draft, Export and Share, busy panels.
-  The friend's brand vision was already in the tree with Cal's notes of Nov
-  24 (`docs/research/blooby-brand-and-mascot-vision/`); the packs
-  themselves are not in the tree.
-- #1098 FLIP'S DRAW BACK, PAGE FOR PAGE (merged about 10:20 AM): the five
-  answers, A each, and what was decided in the building (`DECISIONS.md`,
-  "Flip's Draw back, page for page: built"; `docs/SOCIAL-SITE.md` section
-  42). Main's run after it was still going when this was written.
+The owner, Nov 26, about 6:50 AM: "I like cal's (your) choices", A for all
+six (`DECISIONS.md`, "Drawn letters, mocked", and "Drawn letters: the
+owner's yes, A for all six"). The mock is a design canvas,
+https://claude.ai/artifact/Ax3ZcVSfR4mnDfRzUtwyfq, and the same screens on
+one scrolling page for a phone,
+https://claude.ai/artifact/L3YHdMNbzNUt3htDfxNyVe. Nothing is built. Set
+the hourly check-in when the build starts (WORKING-AGREEMENTS, "When the
+owner's usage runs out mid-work").
 
-## The owner's two small calls from #1098, answered
+FOUR PULL REQUESTS, one per part:
 
-The owner, Nov 25, about 10:30 AM: "Keep Copy dimmed; draw-on pages play
-hers then his". A Flip with a page that draws itself has the pen now, that
-page playing her strokes, then his (built the same morning). Copy stays
-dimmed, and so does Draw (it is her timing; light it only if the owner
-says so).
+1. THE SERVER. A letters table on the site: sender, recipient, the
+   drawing (a Skribl post), the letter it was written back on, where this
+   hand starts in the drawing (the mark on the player's line), when it
+   was opened, and deleted from each side. The drawing is a Skribl post
+   with a visibility of the site's own, "letter", that only its two people
+   can read. Who can write: two people who follow each other, and nobody
+   across a block. The routes: send, write back, open, take back (the
+   sender, until it is opened), delete from your side, and Report. Each
+   row of a new suite is shown red first.
+2. WRITING ONE IN THE PAD: opened the way Draw back opens it. Its pill
+   says "A letter to Ana · only she sees it" (writing back: theirs faint
+   under the pen), Post says Send, and Send lands on the two of you. The
+   Pad only; Flip letters are next, on the list.
+3. THE PAGES. Write beside Following, only where you follow each other.
+   Letters: Activity's own rows, a new one sealed (a drawn envelope, not
+   the picture). The two of you: it draws itself the first time, then
+   rests, with Watch again, Write back, New letter, and a ⋯ with Report,
+   Block, Take back or Delete. The envelope beside the bell at a phone's
+   top, with its own dot, and Letters in a desk's rail. Light and dark,
+   phone and desk, with `verify_contrast`'s rules for anything new.
+4. THE DOCS AND THE RECORD: `docs/SOCIAL-SITE.md`, How it works if it
+   covers letters, `DECISIONS.md`.
 
-## Recolor while drawing back: all yes, built
+WHAT THE CODE ALREADY GIVES (read this session; check it again):
+- Skribl lets a host add a visibility state of its own and decide who
+  reads it. `skribl/models.py`: `set_visibility_values` lets
+  POST /api/skribls accept the state. `visible_to` asks the host's policy
+  first (`set_visibility_policy`), and a state Skribl doesn't know is the
+  author's alone. The built-in feed lists only "public".
+- The site already installs a policy and a feed filter for blocks
+  (`app.py`, `_deny_blocked` and `_hide_blocked`). The letter rule
+  belongs beside them: readable by the letter's two, and by nobody across
+  a block.
+- Draw back's flow is the model for writing back (`docs/SOCIAL-SITE.md`
+  section 20; `social/drawback.py`). A GET hands the composer
+  {payload, first}, and the composer lays her drawing faint under the pen
+  (`lib/composehost.js`, `lib/drawback.js`). The server then joins the
+  two from her drawing as Skribl stores it (`skribl.read_payload`): hers
+  first, squeezed to three seconds when longer, then his at his own pace.
 
-The decided order's next step, mocked (https://claude.ai/artifact/XUcG9eV3zEBTpGn936wneo)
-and answered "All yes" about 11:20 AM: Recolor on while drawing back, his
-lines only; a tap on hers says whose it is; the magnifier shows hers
-faint; a drawing with recolours gets the pen (`DECISIONS.md`, "Recolor
-while drawing back, mocked", and "... built"; `docs/SOCIAL-SITE.md`
-section 43). One-glance tell on the owner's phone: draw back on a drawing,
-open the colour drawer, and Recolor is no longer dimmed; a tap on one of
-her lines says "That line is Ana’s. Recolor changes yours."
+DECIDED WHILE PLANNING (Cal's; say so in the PR, and the owner can
+overrule):
+- A LETTER IS ONE WHOLE DRAWING, the way draw-backs were before two hands.
+  Writing back joins theirs and yours into the new letter's drawing, so a
+  sheet written back on several times still plays in order. The two of
+  you show each sheet once: a letter that was written back on is inside
+  the one written on it.
+- OPENED when the recipient's page starts playing it, by a POST from the
+  page, not on the GET, so a prefetch opens nothing.
+- TAKE BACK deletes the letter and its drawing. DELETE hides it from your
+  side, and once both have deleted it, it is gone.
+- NEVER LISTED ANYWHERE. A letter's drawing must not show up in either
+  Gallery, your Library, the Make sheet's list of your drawings, Hot, More
+  from, search, or a card or poster for anyone but the two. A letter
+  written back on holds the other person's strokes, so posting it would
+  publish their letter. The new suite checks every one of these.
+- NOT IN ACTIVITY: the envelope has its own dot.
+- NO PHOTOS OR MUSIC: refused at Send with a kind word, and the Pad dims
+  those tools in letter mode.
 
-## Drawers beside the drawing on a desk: all yes, built
-
-The owner's "When is desktop change?" mocked (https://claude.ai/artifact/M4h4mKPYsZuoWL4MJTzkGy)
-and answered "All yes" about 1:00 PM: on a desk every drawer opens beside
-the drawing, the drawing and what sits under it slide left only as far as
-needed, and where the two don't fit (a narrow window, a tablet) the drawer
-opens below as today. Built the same afternoon (#1105; `DECISIONS.md`,
-"Drawers beside the drawing on a desk: built"). Its first full run taught
-three things worth keeping: the page's scrollbar gutter (10px at each edge)
-moves a drawer held to the screen, so its edge is measured; a tile's
-choices in the column never scroll the tile away; and a press on the
-drawing that puts a drawer away holds the drawing still until the pen
-lifts (Flip draws with that press).
+ASKED OF THE OWNER when this was handed over (their answers are in the
+conversation that follows, or in `DECISIONS.md` once recorded):
+1. A push notification for a new letter? Cal's pick: yes, under a switch
+   of its own in Settings, on by default.
+2. When you write back, how should the replay start? Draw back squeezes
+   theirs to three seconds when it runs longer, then plays yours. The
+   mock's Theo's-side screen showed theirs at its own pace (0:24 for
+   14 seconds and 10). Cal's pick: Draw back's way, so a long letter
+   doesn't make the answer wait.
 
 ## Waiting on the owner's desk and phone
 
@@ -82,28 +111,15 @@ lifts (Flip draws with that press).
   composer on her pages, her page faint under the one you are on, her pages
   faint in the strip; Blank and the rest dimmed. Draw on a page or two, Add,
   Post. Not tested here on WebKit or in SF.
-- Carried: Pin, Two hands once the switch is on, and Nov 24's list
-  (`git show 2c4ba23:docs/NEXT-SESSION.md`).
-
-## Two hands: two fixes built, one step that needs a mock
-
-The owner, about 7:25 PM: "do the Two Hands fixes". Plays of Both count
-now (and his alone), through `skribl.count_play`, the one count Skribl's
-own player's fetch uses; a quote of a two-hands draw-back shows the
-picture of both (`DECISIONS.md`, "Two hands: plays of Both counted, and a
-quote shows both"). The third step, a two-hands draw-back drawn back on, is
-not a fix: it is the seventh answer's chain (up to five hands), told to the
-owner as needing its own mock. Two hands itself is still behind the
-owner's switch.
+- Two hands, still behind the owner's switch. Plays of Both count now, and
+  a quote shows both (#1109). Drawing back on a two-hands draw-back is the
+  chain of up to five hands, and needs its own mock.
+- Carried: Pin, and Nov 24's list (`git show 2c4ba23:docs/NEXT-SESSION.md`).
 
 ## Then, in the decided order
 
-Messages as drawn letters: mocked the evening of Nov 25
-(https://claude.ai/artifact/Ax3ZcVSfR4mnDfRzUtwyfq), six choices, A each
-Cal's pick, waiting on the owner's answer (`DECISIONS.md`, "Drawn letters,
-mocked"). Nothing is built. Then watching first everywhere (`DECISIONS.md`,
-"The owner's clarifications to the final recommendations"); recolours on a
-draw-back are built (Nov 25).
+Watching first everywhere, once letters are built (`DECISIONS.md`, "The
+owner's clarifications to the final recommendations").
 
 ## What saves time
 
