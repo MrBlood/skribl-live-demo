@@ -299,9 +299,10 @@
    changed; the editors had answered it since v290. For somebody who asks:
    the grey words a step stronger, and every edge firmer (a card's and a
    tile's, the thin rule and the line between two rows, the bar's top line),
-   each theme's own -hc value above. Nobody without the setting sees any of
-   it (a tile's lavender edge takes a card's firm line). After both dark copies, and as specific as each, so it wins in light,
-   in dark chosen and in dark by the device alike. verify_socialsettings 15. */
+   each theme's own -hc value above (a tile's lavender edge takes a card's
+   firm line). Nobody without the setting sees any of it. After both dark
+   copies, and as specific as each, so it wins in light, in dark chosen and
+   in dark by the device alike. verify_socialsettings 15. */
 @media (prefers-contrast: more) {
   :root, :root[data-theme], :root:not([data-theme]) {
     --ink-2: var(--ink-2-hc);
