@@ -102,7 +102,11 @@ def eds(name):
     return EDITORS if not PART or PART == name else []
 
 
-DESK = dict(viewport={"width": 1280, "height": 900})
+# A desk where the drawer opens below the drawing, as these rows were written
+# for: beside it (lib/drawers.js, verify_drawerside) the timeline is a phone's
+# width, and a tap on the whole song lands a pixel's worth of seconds off
+# (main's run after #1105: 2.82 for 2.85).
+DESK = dict(viewport={"width": 960, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
 
 
