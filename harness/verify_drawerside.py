@@ -31,7 +31,7 @@ On the Pad (How it works' cat) and Flip (its bouncing ball):
   with a song in (taller than the screen) show by the drawer's own column
   gliding inside itself, just far enough for the end of what opened, or
   until the tile tapped is 8px under its top, whichever comes first (on a
-  1280x600 desk all of Feel's choices show; on a 1280x560 one Flip's tile
+  1280x600 desk all of Feel's choices show; on a 1280x500 one Flip's tile
   stays); the page stays.
   THE EYEDROPPER: the drawer stays out while it picks (nothing covers the
   drawing to step aside for).
@@ -238,12 +238,13 @@ with sync_playwright() as pw:
     print("\nINSIDE THE DRAWER — what a tile or a door opens shows by the drawer's own column, never the page")
     # The column glides just far enough for the end of what opened to show,
     # or until the tile tapped is 8px under its top, whichever comes first:
-    # on a 1280x600 desk there is room for both; on a 1280x560 one Flip's
-    # Feel has not, and the tile stays, the choices going on below it, as a
-    # Music door's do.
+    # on a 1280x600 desk there is room for both; on a 1280x500 one Flip's
+    # Feel has not, in any face (at 560 it had in CI's, whose words are
+    # narrower: main's run after #1105), and the tile stays, the choices going
+    # on below it, as a Music door's do.
     took = []
     for ed in ED:
-        for h in (600, 560):
+        for h in (600, 500):
             c, q = boot(b, ed, (1280, h))
             open_(q, ed, "draw")
             q.evaluate("""() => { window.__opened = null; document.getElementById('drawPanel').addEventListener('drawtile',

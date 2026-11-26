@@ -147,7 +147,7 @@ CLAIMS = {
     "Move the controls": ["probe:dock"],
     "Draw in full screen": ["verify_drawfull.py::pressed, the page itself goes full screen, the header and the dock still on it",
                             "verify_drawfull.py::pressed again, the page comes back out, and the button says so",
-                            "verify_drawfull.py::a drawer opens where it opens out of full screen, under the dock"],
+                            "verify_drawfull.py::a drawer opens where it opens out of full screen"],
     # Recording (Pad)
     "Auto-record": ["verify_ux.py::AUTO-RECORD: the first stroke starts the take",
                     "verify_ux.py::THE DOT BREATHES: while a take records",
