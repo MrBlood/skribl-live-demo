@@ -78,17 +78,16 @@
      21, EACH ROW DISTINCT). ENAMEL SINCE NOV 26 (the owner's "Yes to B, with their lavender edge", to the
      Enamel Tiles mock: a friend's colours, kept to the record): white porcelain in light, 1.06:1 from the
      page, and the same on a sheet's paper; flat (no gradient), its edge their lavender drawn inside it as
-     their border was. In light the edge is all; in dark a line of light under it along its top and a dark
-     one over it along its foot. Each line is made solid, as it looked over the tile (a card's edge the same
-     way). --tile-line, THE ONE LINE ON THE SITE THAT IS NOT ONE SCREEN PIXEL (THE EDGES, Nov 15): 1px, as
-     the mock the owner said yes to drew it, three screen pixels on their phone; B's enamel is its edge and
-     its line of light, and at one screen pixel both all but go in dark. */
+     their border was (in dark made solid, as it looked over the tile). CRISP SINCE THE SAME EVENING (the
+     owner's "All yes on A" to the Crisp Tile Edge mock, after "the top edge of the gallery chips does not
+     look good (dark is worse). It's not crisp at all"): --tile-line is whole screen pixels, as near 1px as
+     each density allows (by --hair's list, below). Drawn 1px at Windows' 150% it was a pixel and a half,
+     smeared across two, and in dark the line of light under it blurred into a grey band: that line, and the
+     dark one at the foot, are gone. On a phone (3x) it is the 1px it was. */
   --row-band: #ffffff;
   --row-band-sheet: #ffffff;
   --tile-line: 1px;
   --tile-edge: #dfdcf0;
-  --tile-lip: transparent;
-  --tile-foot: transparent;
   /* The tile's edge under a mouse (THE TILE ANSWERS A MOUSE, below): the site's own hover line, the one a face
      tile and Make's door wear on a desk, in each theme its own; with "more contrast" on, the accent itself. */
   --tile-hover: var(--btn2-line);
@@ -197,8 +196,6 @@
   --row-band: #171723;              /* obsidian (ENAMEL, above): 1.06:1 from the page */
   --row-band-sheet: #171723;
   --tile-edge: color-mix(in srgb, rgb(226 224 255) 10%, var(--row-band));
-  --tile-lip: color-mix(in srgb, rgb(235 233 255) 18%, var(--row-band));
-  --tile-foot: color-mix(in srgb, rgb(0 0 0) 65%, var(--row-band));
   --quote-well: #16112b;            /* No dinge: violet, 1.15:1 on the card (it was #161626) */
   --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
   --draw-lift: 0 0 0 transparent;
@@ -261,8 +258,6 @@
     --row-band: #171723;
     --row-band-sheet: #171723;
     --tile-edge: color-mix(in srgb, rgb(226 224 255) 10%, var(--row-band));
-    --tile-lip: color-mix(in srgb, rgb(235 233 255) 18%, var(--row-band));
-    --tile-foot: color-mix(in srgb, rgb(0 0 0) 65%, var(--row-band));
     --quote-well: #16112b;
     --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
     --draw-lift: 0 0 0 transparent;
@@ -786,9 +781,9 @@ html.is-app .app-edge {
    plus that; 8px of the page between two tiles, across and down. No blur. A LAST ROW THAT IS NOT FULL is its
    tiles and nothing more (it was a band right across). Wherever this grid is: the Gallery, a profile's tabs, the
    front door, Make's "Use one you made". ENAMEL (the owner's "Yes to B", Nov 26; the tokens say how): white or
-   obsidian, flat, its lavender edge drawn inside it (--tile-line wide), and in dark the line of light under
-   that edge at its top and the dark line over it at its foot; no shadow round it, at rest or under a mouse
-   (where on a desk its edge takes the site's hover line: THE TILE ANSWERS A MOUSE, below). */
+   obsidian, flat, its lavender edge drawn inside it (--tile-line wide: whole screen pixels, the evening's
+   "All yes on A"); no shadow round it, at rest or under a mouse (where on a desk its edge takes the site's
+   hover line: THE TILE ANSWERS A MOUSE, below). */
 .cmp-grid { --row-band: var(--row-band-sheet); --tile-out: 4px; }
 /* The tile is each CELL's, whatever the cell is: a tile, or on your own profile the cell that holds a tile and
    its eye. */
@@ -796,8 +791,7 @@ html.is-app .app-edge {
 .gal-grid > *::before {
   content: ""; position: absolute; z-index: -1; inset: calc(-1 * var(--tile-out)) calc(-1 * var(--tile-out)) -8px;
   border-radius: calc(14px + var(--tile-out)); background: var(--row-band); pointer-events: none;
-  box-shadow: inset 0 0 0 var(--tile-line) var(--tile-edge), inset 0 calc(2 * var(--tile-line)) 0 0 var(--tile-lip),
-    inset 0 calc(-2 * var(--tile-line)) 0 0 var(--tile-foot);
+  box-shadow: inset 0 0 0 var(--tile-line) var(--tile-edge);
 }
 /* THE TILE ANSWERS A MOUSE (the owner's "All yes", Nov 26, to the Tile Hover mock: A, without the grow). On a
    desk, the tile under the mouse takes the site's own hover line for its edge (--tile-hover), as a face tile and
@@ -1989,6 +1983,18 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 @media (min-resolution: 2.625dppx) { :root { --hair: 0.381; } }
 @media (min-resolution: 2.75dppx) { :root { --hair: 0.3637; } }
 @media (min-resolution: 3dppx) { :root { --hair: 0.3334; } }
+/* THE TILES' EDGE IN WHOLE SCREEN PIXELS (the Crisp Tile Edge mock's A, "All yes", Nov 26): --tile-line as
+   near 1px as each density allows and never a part of a pixel: one at 1x, 1.25x and 1.5x, two from 1.75x
+   to 2.5x, three from 2.625x (1px times the density, rounded, over the density). */
+@media (min-resolution: 1.25dppx) { :root { --tile-line: 0.8px; } }
+@media (min-resolution: 1.5dppx) { :root { --tile-line: 0.6667px; } }
+@media (min-resolution: 1.75dppx) { :root { --tile-line: 1.1429px; } }
+@media (min-resolution: 2dppx) { :root { --tile-line: 1px; } }
+@media (min-resolution: 2.25dppx) { :root { --tile-line: 0.8889px; } }
+@media (min-resolution: 2.5dppx) { :root { --tile-line: 0.8px; } }
+@media (min-resolution: 2.625dppx) { :root { --tile-line: 1.1429px; } }
+@media (min-resolution: 2.75dppx) { :root { --tile-line: 1.0909px; } }
+@media (min-resolution: 3dppx) { :root { --tile-line: 1px; } }
 /* THE EDGES (the owner, Nov 15, "The edges", B): every outline the site
    draws is one screen pixel, the rows' thin line given to every edge. A
    border cannot draw it (Chromium rounds a border, and an outline, under
