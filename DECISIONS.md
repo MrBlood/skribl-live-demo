@@ -54659,3 +54659,80 @@ and over it at the foot as the tile's own colour, and a new row asks the line at
 seven densities for a whole number of pixels and one layer; shown red by taking
 the density steps out (the new row) and by putting a line of light back (both).
 Pad and Flip: not theirs.
+
+## After v330 -- The drawer's tab: the owner's "All yes on A", built
+
+The owner, Nov 26, about 1:30 PM, of the drawer beside the drawing: "Put a tab
+on the drawer in addition to clicking pen again (and other drawers)". The
+Drawer Tab mock (https://claude.ai/artifact/5tZKForkzj6wCEMTfpQTyq), the real
+Pad and Flip at 1366x768, dark and light: A, a tab on the drawer's edge facing
+the drawing, with a › (Cal's pick); B, the phone's pill at the drawer's top
+(2.5:1 in light, faint, and the drawer 32px taller); C, an × in its corner.
+The owner's next answer, "All yes on A", was to the Crisp Tile Edge mock; Cal
+took it for this one's A too, said so, and the owner could say otherwise.
+
+BUILT, ONE RULE FOR BOTH EDITORS (`lib/drawers.js`, `styles.css` .drawer-tab):
+
+- THE TAB: beside the drawing, on the drawer's edge facing it, 22px below its
+  top, 24x56: the drawer's paper, its ring (`--paper-ring`) and its drop. One
+  tab per editor, made when the editor says side(), moved to sit before
+  whichever drawer is beside.
+- JOINED, NOT LAID ON: it ends where the drawer begins, over the drawer's own
+  line, so the line runs on round the tab and the two are one shape. (The
+  mock's tab was laid on: its line ran on into the drawer and stopped there.)
+  Its paper and line are its ::before, the ring cut off where the drawer
+  begins. A border was built first: Chrome draws no border under a CSS
+  pixel, so at 2x its line was two screen dots to the drawer's one, seen up
+  close before any check said so.
+- THE ›: a new mark, `chev` (`_skribl_marks.html`, `lib/marks.js`), in the
+  drawer's ink, centred between the tab's line and the drawer's.
+- ITS ROOM, 24px, as the mock's words said: the drawing slides that much
+  further and clears the tab by 16px, as it cleared the drawer (SIDE_TAB in
+  the slide and in the room a wide drawing makes). The mock's pictures had
+  the tab 14px out: Cal's slip, placing it by the screen's coordinates where
+  what is held to the screen starts 10px in, after the page's scrollbar
+  gutter.
+- A BUTTON named "Close the drawer" (its tooltip too), just before the drawer
+  in the keyboard's order; pressed from the keyboard, the focus goes back to
+  the drawer's own button (Pen's; Photo and music's). Under a mouse it takes
+  a paper control's highlight (Your drafts' choices), solid, so the drawer's
+  line stays covered. In a replay it rests with the drawer: no clicks, its ›
+  dimmed to the drawer's rest.
+
+A DRAWER CLOSED BESIDE THE DRAWING SLIDES AWAY (the mock's How it works:
+"Click the tab, and the drawer slides away as the drawing glides back").
+Found building the tab: closed by the tab, by Pen again or by a click on the
+drawing, the drawer vanished in one frame while the drawing glided back. It
+leaves the way it came now, fading as it moves 24px right, its tab with it.
+Its panel is hidden at once as it always was (the machine's state, and every
+check that reads `hidden`, unchanged); the drawer is only drawn where it was,
+inert, until the glide ends. A switch to another drawer stays a swap; Reduce
+Motion and a resize don't glide.
+
+PAD AND FLIP: shared. The link player loads none of it (`player.css` the same).
+
+THE CHECKS, `verify_drawerside`'s THE DRAWER'S TAB (Pad and Flip, 1366x768):
+the tab on the drawer's edge with every drawer (where, its size, its name, its
+order, painted, the drawing 16px clear); JOINED, read off the screen at 2x in
+dark and light, dot by dot (no line where the two meet; the tab's line the
+drawer's colour and width, running on into it; the › centred within half a
+pixel); a click closes the drawer and it slides away, read by the glide's own
+clock as the click ends and on the frames shown (never brighter, inert, its
+tab with it, gone after, nothing held); under Reduce Motion gone at once; the
+keyboard (Shift+Tab reaches it, Enter closes, the focus back on the drawer's
+button); the hover; the rest in a replay. BESIDE and ROOM count the tab's room
+(Flip at 1536x864 slides 12px now, where it had room); BELOW, the resize and
+the tray say no tab. Calibrated in a worktree per break, each red in its own
+rows: tab-off (all of them), room-off, join-line (the ring's cut taken off),
+join-reach (a pixel short), join-border (the first build's border: a line two
+dots wide), centre-2px, order-off (the tab after the drawer), focus-off,
+click-off, exit-off, exit-inert, exit-tab, exit-still (a glide under Reduce
+Motion), exit-held (a height left on the drawer), hover-off, rest-off,
+below-shown and name-off. Two instruments were mended on the way: name-off
+first took only the tab's aria-label, and the app's tooltips name a button
+from its title (lib/tooltip.js), so it took both; and the slide-away was first
+judged by frames counted, which a busy machine thins (Flip's row went red
+beside other suites, its glide the same): it is read from its own clock now.
+On Flip a click anywhere outside the drawer already puts it away (flip.js, the
+tap away), so click-off leaves Flip's click row green; the keyboard's row,
+which needs the tab's own press, goes red there and holds it.
