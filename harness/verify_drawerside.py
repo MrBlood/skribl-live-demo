@@ -523,6 +523,11 @@ with sync_playwright() as pw:
                before: !!d && t.nextElementSibling === d, name: t.getAttribute('aria-label'), button: t.tagName === 'BUTTON' && t.type === 'button',
                painted: !!hit && (hit === t || t.contains(hit)) }; }"""
     TABHIDDEN = "() => { const t = document.querySelector('.drawer-tab'); return !t || t.hidden || !t.getClientRects().length; }"
+
+    def where_tab(q, ed):
+        """The tab's box; with none, where it would be (a click there lands on no tab, and the rows say so)."""
+        t, d = q.evaluate(TABLOOK), look(q, ed)["drawer"]
+        return t.get("tab") or ([d[0] - TAB, d[1] + 22, TAB, 56] if d else [EDGE, EDGE, 1, 1])
     for ed in ED:
         c, q = boot(b, ed, (1366, 768))
         rest = look(q, ed)
@@ -563,6 +568,13 @@ with sync_playwright() as pw:
             t = q.evaluate(TABLOOK)
             im = Image.open(BytesIO(q.screenshot())).convert("RGB")
             cx.close()
+            JOINED = (f"{ed}, {scheme}: the tab and the drawer are one shape: across the tab the paper runs on into the drawer with"
+                      " no line where they meet; the tab's line is the drawer's, its colour and its width (one screen dot), and runs"
+                      " on into the drawer's at the tab's top and foot; the › in the middle, between the tab's line and the"
+                      " drawer's (within half a pixel)")
+            if not t.get("shown"):
+                check(JOINED, False, "no tab: " + json.dumps(t))
+                continue
             tl, tt, tw, th = t["tab"]
             dl = t["drawer"][0]
             D = lambda v: int(round(v * 2))                  # a CSS length on this 2x screen, in screen dots
@@ -588,10 +600,7 @@ with sync_playwright() as pw:
             mx = (sum((x + 0.5) * w for x, _, w in ink) / wsum) / 2
             my = (sum((y + 0.5) * w for _, y, w in ink) / wsum) / 2
             mid_x = (tl + dl - 0.5) / 2                       # between the tab's line and the drawer's, a dot (0.5px) each
-            check(f"{ed}, {scheme}: the tab and the drawer are one shape: across the tab the paper runs on into the drawer with no line"
-                  " where they meet; the tab's line is the drawer's, its colour and its width (one screen dot), and runs on into"
-                  " the drawer's at the tab's top and foot; the › in the middle, between the tab's line and the drawer's"
-                  " (within half a pixel)",
+            check(JOINED,
                   seam <= 6 and d_w == 1 and t_w == d_w and far(t_line, line) <= 6 and all(far(c_, line) <= 6 for c_ in corners)
                   and abs(mx - mid_x) <= 0.5 and abs(my - (tt + th / 2)) <= 0.5 and len(ink) > 20,
                   json.dumps({"paper": paper, "seam": seam, "line": line, "widths": [d_w, t_w], "tab line": t_line, "corners": corners,
@@ -612,11 +621,11 @@ with sync_playwright() as pw:
         c, q = boot(b, ed, (1366, 768))
         rest = look(q, ed)["canvas"]
         open_(q, ed, "draw")
-        tb = q.evaluate(TABLOOK)["tab"]
+        tb = where_tab(q, ed)
         q.evaluate(EXIT, [ED[ed]["cv"], 520])
         q.mouse.click(tb[0] + tb[2] / 2, tb[1] + tb[3] / 2)
         q.wait_for_timeout(700)
-        fr = q.evaluate("() => window.__ex")
+        fr = q.evaluate("() => window.__ex") or []
         g, aft, hid = look(q, ed), q.evaluate(AFTER), q.evaluate(TABHIDDEN)
         shut = q.evaluate(f"() => {ED[ed]['ctl']}.current()") is None
         c.close()
@@ -625,7 +634,7 @@ with sync_playwright() as pw:
         gone_at = next((f["t"] for f in fr if not f["drawn"]), None)
         check(f"{ed}: a click on the tab closes the drawer (closed at once, its panel hidden from the first frame) and the drawing"
               " glides home to where it was",
-              shut and all(f["hidden"] for f in fr) and not g["beside"] and all(abs(x - y) <= 0.5 for x, y in zip(g["canvas"], rest)) and hid,
+              shut and bool(fr) and all(f["hidden"] for f in fr) and not g["beside"] and all(abs(x - y) <= 0.5 for x, y in zip(g["canvas"], rest)) and hid,
               json.dumps({"shut": shut, "canvas": [rest, g["canvas"]], "tab hidden": hid}))
         check(f"{ed}: ...and the drawer slides away as it goes: drawn where it was, inert, fading over five frames or more, never"
               " brighter, moving right as it fades, its tab with it; gone within the glide and a little, nothing left inert or held",
@@ -637,14 +646,15 @@ with sync_playwright() as pw:
                           "gone": gone_at, "after": aft})[:900])
         c, q = boot(b, ed, (1366, 768), reduce=True)
         open_(q, ed, "draw")
-        tb = q.evaluate(TABLOOK)["tab"]
+        tb = where_tab(q, ed)
         q.evaluate(EXIT, [ED[ed]["cv"], 200])
         q.mouse.click(tb[0] + tb[2] / 2, tb[1] + tb[3] / 2)
         q.wait_for_timeout(400)
-        fr = q.evaluate("() => window.__ex")
+        fr = q.evaluate("() => window.__ex") or []
+        shut = q.evaluate(f"() => {ED[ed]['ctl']}.current()") is None
         c.close()
         check(f"{ed}: under Reduce Motion the drawer is gone at once, from the first frame",
-              bool(fr) and not any(f["drawn"] for f in fr), json.dumps([[round(f["t"]), f["drawn"]] for f in fr[:6]]))
+              shut and bool(fr) and not any(f["drawn"] for f in fr), json.dumps({"shut": shut, "frames": [[round(f["t"]), f["drawn"]] for f in fr[:6]]}))
     # The keyboard: Shift+Tab from the drawer's first control lands on the tab; Enter on it closes the drawer, and the focus is
     # back on the drawer's own button, its ring showing. Pen's and Music's.
     FIRST = """() => { const d = document.querySelector('.drawer-side');
@@ -668,14 +678,14 @@ with sync_playwright() as pw:
               " the drawer, the focus back on the drawer's own button with its ring (Pen's; Music's on the Photo and music button)",
               all(k["reached"] and k["closed"] and k["focus"] == k["own"] and k["ring"] for k in keys.values()), json.dumps(keys))
     # Under the mouse the tab takes a paper control's highlight, solid (it covers the drawer's line where they meet).
-    HOVERBG = "() => getComputedStyle(document.querySelector('.drawer-tab'), '::before').backgroundColor"
+    HOVERBG = "() => { const t = document.querySelector('.drawer-tab'); return t ? getComputedStyle(t, '::before').backgroundColor : null; }"
     for ed in ED:
         c, q = boot(b, ed, (1366, 768))
         open_(q, ed, "draw")
         q.mouse.move(5, 760)
         q.wait_for_timeout(300)
         at_rest = q.evaluate(HOVERBG)
-        tb = q.evaluate(TABLOOK)["tab"]
+        tb = where_tab(q, ed)
         q.mouse.move(tb[0] + tb[2] / 2, tb[1] + tb[3] / 2)
         q.wait_for_timeout(400)
         lit = q.evaluate(HOVERBG)
@@ -684,13 +694,15 @@ with sync_playwright() as pw:
         again = q.evaluate(HOVERBG)
         c.close()
         def solid(v):
+            if not isinstance(v, str):
+                return False
             if v.startswith("rgba("):
                 return v.rstrip(")").split(",")[-1].strip() in ("1", "1.0")
             if v.startswith("color("):
                 return "/" not in v or v.rstrip(")").split("/")[-1].strip() in ("1", "1.0")
             return v.startswith("rgb(")
         check(f"{ed}: under the mouse the tab lights up (a paper control's highlight, solid), and rests again when it leaves",
-              lit != at_rest and solid(lit) and again == at_rest, json.dumps({"rest": at_rest, "hover": lit, "after": again}))
+              bool(at_rest) and lit != at_rest and solid(lit) and again == at_rest, json.dumps({"rest": at_rest, "hover": lit, "after": again}))
     # While the drawing replays, the tab rests with the drawer: no clicks, its › dimmed as the drawer's contents are.
     PLAY = {"Pad": ("#playBtn", "replaying"), "Flip": ("#play", "playing")}
     RESTING = """(cls) => { const t = document.querySelector('.drawer-tab'), m = t && t.firstElementChild;
@@ -706,7 +718,7 @@ with sync_playwright() as pw:
         c.close()
         check(f"{ed}: while the drawing replays, the tab rests with the drawer: it takes no clicks and its › dims to the drawer's"
               " rest; before, it is live",
-              during["on"] and during["shown"] and during["clicks"] == "none" and abs(during["dim"] - during["rest"]) <= 0.01
+              during["on"] and during["shown"] and during["clicks"] == "none" and during["dim"] is not None and abs(during["dim"] - during["rest"]) <= 0.01
               and not before["on"] and before["clicks"] != "none" and before["dim"] == 1,
               json.dumps({"before": before, "during": during}))
 
