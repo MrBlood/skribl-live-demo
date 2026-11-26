@@ -126,7 +126,8 @@ events with pressure, a hand's timing).
       of the sheet painted on any frame until Add (only the editor is seen
       rising: a phone, a desk, Reduce Motion) and the words never taking
       focus; the draft on its canvas, Add its button and its × there; put away without
-      Add (its ×; on a desk a tap beside its card) the sheet goes with it,
+      Add (its ×, on a desk as on a phone: the editor fills the window there
+      since Nov 26, nothing beside it to tap) the sheet goes with it,
       nothing attached, focus back on the tile; Add brings it attached,
       the sheet under it; with a drawing attached already the sheet opens on
       it and says a post holds one; a Flip draft in Flip the same.
@@ -4242,12 +4243,12 @@ print("PLAN " + json.dumps(out))
                 got["in"] = fr.evaluate("() => ({ current: SkriblSavedDrafts.current(), name: window.SkriblName ? SkriblName.get() : null,"
                                         " drawn: " + read + ", add: document.getElementById('postBtn').textContent.trim(),"
                                         " close: document.getElementById('composeCloseBtn').getClientRects().length > 0 })")
-                # Put away, nothing added: its ×; on a desk, a tap beside its card.
+                # Put away, nothing added: its ×. On a desk too: the editor
+                # fills the window there since Nov 26 (Room for the Drawer),
+                # and a click at the corner, which was beside its card, lands
+                # in the editor (green alone only where it found the × there).
                 pg.evaluate(WATCH20)
-                if screen == "desk":
-                    pg.mouse.click(8, 8)
-                else:
-                    fr.click("#composeCloseBtn")
+                fr.click("#composeCloseBtn")
                 pg.wait_for_timeout(1500)
                 got["away"] = judge20(pg.evaluate("() => ({ frames: window.__rise, glide: window.__glide })"), False, glides=not reduced)
                 got["after"] = pg.evaluate(HOST20, did)
@@ -4299,15 +4300,15 @@ print("PLAN " + json.dumps(out))
               and up_ok(seen20["pad, a desk"], "composePad", lambda n: n > 0),
               json.dumps({k: {x: v.get(x) for x in ("up", "in", "stopped")} for k, v in seen20.items()})[:900])
         check("ONLY THE EDITOR IS SEEN, read on every frame: from the tap until it rests nothing of the sheet is painted, nor"
-              " its scrim, and the editor glides one way, never a step back, its own transition running its time (a phone:"
-              " up from the foot; a desk: its card rising a little as it fades in; under Reduce Motion a fade where it"
+              " its scrim, and the editor glides one way, never a step back, its own transition running its time (a phone"
+              " and a desk: up from the foot, the whole window; under Reduce Motion a fade where it"
               " sits); put away without Add the same, until it is gone (the Pad and Flip on a phone, a desk, Reduce Motion)",
               all((v.get("rise") or {}).get("ok") and (v.get("away") or {}).get("ok") for v in seen20.values()),
               json.dumps({k: {x: v.get(x) for x in ("rise", "away")} for k, v in seen20.items()})[:2000])
         want_after = {"at": "/social/@tabpia/drafts", "sheet": False, "sheetSeen": False, "editor": None, "focus": "the tile",
                       "attached": None, "inert": False}
         make_after = seen20["flip"].get("make after") or {}
-        check("put away without Add (its × on a phone; on a desk a tap beside its card): the sheet goes with it and you are"
+        check("put away without Add (its ×, on a phone and a desk): the sheet goes with it and you are"
               " on your drafts as you were, nothing attached, the page in reach again and focus back on the tile; and Make,"
               " pressed after that, opens the sheet SEEN, calm as Make opens it on a touch phone (focus on the sheet itself)",
               all({k: (v.get("after") or {}).get(k) for k in want_after} == want_after for v in seen20.values())

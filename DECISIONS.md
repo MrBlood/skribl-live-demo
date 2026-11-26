@@ -54612,3 +54612,18 @@ face and a letter, rising from below as on a phone.
 
 PAD AND FLIP: shared. The link player loads none of it (`app.js` unchanged,
 `player.css` the same).
+
+THE CHECKS: `verify_drawerside`'s ROOM FOR THE DRAWER (a 16:9 drawing beside
+the drawer at 1366x768, 1440x900 and 1920x1080, a little smaller, and its
+glide; below at 1024x640; Flip's strip under every drawer at three sizes, and
+its glide), 48/48; `verify_composer` 11 (Make's Draw on a 1366x768 desk: the
+Pad over the whole window, the drawer beside, the drawing all seen). Each part
+shown red by its own break (room-off, room-noglide, room-floor, room-oneside,
+under-off, under-max, under-noglide, under-wait, wobble, lift-off, make-box).
+TWO CHECKS MOVED WITH IT: `verify_drawerreveal`'s desks, 960x800 and 720x560,
+where a drawer now opens beside the drawing a fifth smaller, to 900x800 and
+700x560, where it still opens below (190/195 on the old ones; 217/217); and
+`verify_socialprofile` 20, which put Make's editor away on a desk with a click
+at the window's corner, beside its card: there is nothing beside it now, the
+click landed in the editor (red beside other suites, green alone only where
+it found the editor's × there), and it uses the × on a desk as on a phone.
