@@ -4115,3 +4115,26 @@ front door's six, Make's list. The picture keeps its own lilac edge. The Pad
 and Flip: not theirs. `verify_socialposts` 22 holds it (read off the paint;
 the edge and the dark lines where they are painted; each row shown red by
 breaking its part).
+
+## 48. Built: The tile answers a mouse (Nov 26)
+
+The owner, Nov 26, after the bento mock (a friend's second file, whose card
+answered a mouse): "Yes to the mock", then "All yes" to the Tile Hover mock
+(the artifact "Tile Hover"): A, without the grow.
+
+ON A DESK (`(hover: hover) and (pointer: fine)`), the tile under the mouse
+(section 47's) takes the site's own hover line for its edge, the one a face
+tile and Make's door wear under a mouse: `--btn2-line`, over the tile
+#d2c7ff in light (1.57:1 from it) and #50477b in dark (2.14:1). It fades in
+over 0.18s and out as the mouse leaves. Nothing else changes: the drawing,
+its name and its counts stay still, the tile does not grow, nothing soft
+appears. A phone has no hover, and the rule cannot reach one.
+
+TOKEN (`social.css`): `--tile-hover`, the site's hover line; FOR "MORE
+CONTRAST" the accent itself (`--brand`), so the edge under a mouse is never
+fainter than the firm line the setting gives the tile at rest. WHEREVER THE
+ONE GRID IS on a desk: the Gallery, a profile's, the front door's six, Make's
+list. The Pad and Flip: not theirs. `verify_socialposts` 22 holds it (the
+edge as painted, light and dark, the tile beside it unchanged, no grow, no
+blur, a touch phone unchanged) and `verify_socialsettings` 15 the "more
+contrast" line; each shown red by breaking its part.

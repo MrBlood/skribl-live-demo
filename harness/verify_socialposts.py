@@ -4797,6 +4797,54 @@ print("PLAN " + json.dumps(out))
                   gone22 == 200 and tiled(d5, TILE22["light"], [3, 2], 6) and tiled(d4, TILE22["light"], [3, 1], 6)
                   and d5["cols"] == 3 and enamel(d5, (223, 220, 240)),
                   json.dumps({"five": d5, "four": d4})[:900])
+            # THE TILE ANSWERS A MOUSE (the owner's "All yes", Nov 26, to the Tile Hover mock: A, without the grow).
+            # On a desk, light and dark, the mouse on the second tile: its edge, read where it is painted, is the
+            # site's hover line as it lies over the tile (--btn2-line: #d2c7ff in light, #50477b in dark), the tile
+            # beside it keeps its lavender, it does not grow and nothing soft appears. A touch phone has no hover:
+            # a mouse put on a tile there changes nothing.
+            HOVER22 = """(n) => { const g = document.querySelector('[data-prof-list].gal-grid'); const c = g.children[n];
+              const r = c.getBoundingClientRect(), pic = c.querySelector('.gal-pic').getBoundingClientRect();
+              return { left: r.left, mid: pic.top + pic.height / 2, cx: pic.left + pic.width / 2,
+                       out: parseFloat(getComputedStyle(g).getPropertyValue('--tile-out')),
+                       transform: getComputedStyle(c).transform, shadow: getComputedStyle(c, '::before').boxShadow }; }"""
+
+            def soft22(v):
+                """The layers of a shadow that carry any blur (each layer's third length)."""
+                out = []
+                for layer in re.split(r",(?![^(]*\))", v or ""):
+                    lens = re.findall(r"(-?[\d.]+)px", re.sub(r"(?:rgba?|color)\([^)]*\)", "", layer))
+                    if len(lens) >= 3 and float(lens[2]) > 0:
+                        out.append(layer.strip())
+                return out
+
+            hov22 = {}
+            for scheme, shape in (("light", "desk"), ("dark", "desk"), ("light", "phone")):
+                hctx, hpg = browser_as(b, tess, shape, scheme)
+                hpg.goto(BASE + "/social/@solv/gallery")
+                hpg.wait_for_load_state("load")
+                hpg.wait_for_timeout(900)
+                one, two = hpg.evaluate(HOVER22, 0), hpg.evaluate(HOVER22, 1)
+                hpg.mouse.move(two["cx"], two["mid"])
+                hpg.wait_for_timeout(500)
+                two = hpg.evaluate(HOVER22, 1)
+                him = _Image.open(_io.BytesIO(hpg.screenshot())).convert("RGB")
+
+                def at22(x, y):
+                    return [him.getpixel((min(max(int(math.floor(x)) + d, 0), him.size[0] - 1), int(y))) for d in (0, 1)]
+                hov22[f"{shape}, {scheme}"] = {"hovered": at22(two["left"] - two["out"], two["mid"]),
+                                               "beside": at22(one["left"] - one["out"], one["mid"]),
+                                               "transform": two["transform"], "soft": soft22(two["shadow"])}
+                close_ctx(hctx, hpg)
+            HOVER_WANT = {"desk, light": ((210, 199, 255), (223, 220, 240)), "desk, dark": ((80, 71, 123), (43, 43, 57)),
+                          "phone, light": ((223, 220, 240), (223, 220, 240))}
+            check("on a desk the tile under the mouse takes the site's hover line for its edge (a face tile's and Make's"
+                  " door's: #d2c7ff over the tile in light, #50477b in dark), the tile beside it keeps its lavender, the"
+                  " tile does not grow and nothing soft appears; on a touch phone a mouse put on a tile changes nothing"
+                  " (the owner's \"All yes\" to the Tile Hover mock, Nov 26)",
+                  len(hov22) == 3 and all(near22(hov22[k]["hovered"], want) and near22(hov22[k]["beside"], beside)
+                                          and hov22[k]["transform"] == "none" and not hov22[k]["soft"]
+                                          for k, (want, beside) in HOVER_WANT.items()),
+                  json.dumps(hov22)[:900])
         except Exception as exc:  # noqa: BLE001
             check("section 22 ran to its end", False, str(exc).splitlines()[0][:200])
 

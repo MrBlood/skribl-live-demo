@@ -54504,3 +54504,26 @@ CAL'S PICK: A without the grow. One hover for the site (the face tiles' and
 Make's door's line), the clearest colour (B's dark edge greys, and B changes
 the tile's colour too), and the drawings stay still as the mouse crosses the
 grid. NOTHING IS BUILT. Pad and Flip: not theirs.
+
+## After v330 -- Tile hover: the owner's "All yes", built
+
+The owner, Nov 26, about 11:45 AM, to the Tile Hover mock: "All yes" (A,
+without the grow).
+
+BUILT (`docs/SOCIAL-SITE.md` section 48): on a desk the tile under the mouse
+takes the site's hover line for its edge (`--tile-hover`, which is
+`--btn2-line`), fading in over 0.18s; no grow, nothing soft, the drawing
+still; a phone unchanged (the rule sits under `(hover: hover) and (pointer:
+fine)`).
+
+ONE THING THE MOCK DID NOT SHOW: with "more contrast" on, the tile's edge at
+rest is already the card's firm line (3:1 or more), and the hover line
+(1.57:1 in light) would have made it fainter under the mouse. So under the
+setting `--tile-hover` is the accent itself: never fainter than at rest.
+
+CALIBRATED: `verify_socialposts` 22, a new row (the edge as painted on a
+desk in light and dark with the mouse on a tile, the tile beside it, no
+transform, no blurred layer, and a touch phone with the mouse put on a tile
+unchanged), and `verify_socialsettings` 15 (the hover line under the
+setting, and the site's hover line without it), each shown red by breaking
+its part in a worktree.

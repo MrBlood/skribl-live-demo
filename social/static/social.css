@@ -89,6 +89,9 @@
   --tile-edge: #dfdcf0;
   --tile-lip: transparent;
   --tile-foot: transparent;
+  /* The tile's edge under a mouse (THE TILE ANSWERS A MOUSE, below): the site's own hover line, the one a face
+     tile and Make's door wear on a desk, in each theme its own; with "more contrast" on, the accent itself. */
+  --tile-hover: var(--btn2-line);
   /* CRISP, THREE HEIGHTS (B): what sits ON THE PAGE has its edge and ONE LINE OF SHADE under it, 1px, no blur
      (it was 1px/2px at 8% and 6px/18px at 9%, which tinted all 16px between two cards: "blurry", "muddy").
      What sits IN A CARD has its edge alone (--draw-lift, below); what FLOATS has the one close shadow. */
@@ -310,6 +313,7 @@
     --card-edge: var(--card-edge-hc);
     --card-line: var(--card-line-hc);
     --tile-edge: var(--card-line-hc);
+    --tile-hover: var(--brand);
     --rule: var(--rule-hc);
     --row-line: var(--row-line-hc);
     --nav-line: var(--nav-line-hc);
@@ -783,7 +787,8 @@ html.is-app .app-edge {
    tiles and nothing more (it was a band right across). Wherever this grid is: the Gallery, a profile's tabs, the
    front door, Make's "Use one you made". ENAMEL (the owner's "Yes to B", Nov 26; the tokens say how): white or
    obsidian, flat, its lavender edge drawn inside it (--tile-line wide), and in dark the line of light under
-   that edge at its top and the dark line over it at its foot; no shadow round it, at rest or under a mouse. */
+   that edge at its top and the dark line over it at its foot; no shadow round it, at rest or under a mouse
+   (where on a desk its edge takes the site's hover line: THE TILE ANSWERS A MOUSE, below). */
 .cmp-grid { --row-band: var(--row-band-sheet); --tile-out: 4px; }
 /* The tile is each CELL's, whatever the cell is: a tile, or on your own profile the cell that holds a tile and
    its eye. */
@@ -793,6 +798,14 @@ html.is-app .app-edge {
   border-radius: calc(14px + var(--tile-out)); background: var(--row-band); pointer-events: none;
   box-shadow: inset 0 0 0 var(--tile-line) var(--tile-edge), inset 0 calc(2 * var(--tile-line)) 0 0 var(--tile-lip),
     inset 0 calc(-2 * var(--tile-line)) 0 0 var(--tile-foot);
+}
+/* THE TILE ANSWERS A MOUSE (the owner's "All yes", Nov 26, to the Tile Hover mock: A, without the grow). On a
+   desk, the tile under the mouse takes the site's own hover line for its edge (--tile-hover), as a face tile and
+   Make's door do, fading in over 0.18s; nothing else changes: the drawing, its name and its counts stay still,
+   the tile does not grow, and nothing soft appears. A phone has no hover, and the rule cannot reach one. */
+@media (hover: hover) and (pointer: fine) {
+  .gal-grid > *::before { transition: box-shadow 0.18s ease; }
+  .gal-grid > *:hover::before { --tile-edge: var(--tile-hover); }
 }
 .gal-pic {
   position: relative; display: grid; place-items: center; aspect-ratio: 650 / 486; overflow: hidden;
