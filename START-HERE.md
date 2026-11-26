@@ -910,7 +910,7 @@ rather than a shared rule.
 | `learncard.js` | Pad+Flip | The card on the button: help where the question is (owner, after v323: "Can we combine them so we get the best, most helpful yet unobtrusive?", then "All yes" to the button cards mock). |
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
 | `lostlift.js` | Pad+Flip | A stroke whose lift never came — the two editors only, never the player. |
-| `marks.js` | Pad+Flip+library+gallery | The app's marks for controls a script builds: plus, minus, close, check, arrow, cloned from the <template id="skriblMark-NAME"> that _skribl_marks.html puts on the page, so a script and a template draw the same mark from one source. |
+| `marks.js` | Pad+Flip+library+gallery | The app's marks for controls a script builds: plus, minus, close, check, arrow, chev, cloned from the <template id="skriblMark-NAME"> that _skribl_marks.html puts on the page, so a script and a template draw the same mark from one source. |
 | `media_validation.js` | Pad+Flip | media_validation.js — one owner for media format policy and byte verification. |
 | `mediatabs.js` | Pad+Flip | The Media button and its Photo and Music tabs -- shared by Pad and Flip. |
 | `menupages.js` | Pad+Flip | The ⋯ menu's pages: the main page, New Skribl and Settings, one sheet (templates/skribl/_skribl_menu.html; owner, after v323, from the menu mock). |
