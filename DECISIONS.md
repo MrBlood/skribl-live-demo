@@ -54253,3 +54253,35 @@ breaking the part it guards, in a worktree a break (24 breaks), green as
 built. Two rows' guards are shared: the block row at Send is held by the
 follow a block ends (pair_ok's own `between` is a second guard that no
 product path can reach alone), and reading across a block by `shown_to`.
+
+## After v330 -- Drawn letters, written in the Pad
+
+The second of the four parts (`docs/SOCIAL-SITE.md` section 45), built on
+the owner's yes (Nov 26) to the mock's "the real Pad, opened the way Draw
+back opens it. The pill says who it’s for, and Post says Send."
+
+BUILT: Skribl's `composehost.say({button, lead, rest, aside})` and its
+message, `skribl:compose:say` (`editor_compose.js`, both editors): the
+button's word and its sheet's, a pill under the header (Draw back's own,
+writing back: `drawback.js words`), and what steps aside, dimmed and saying
+why. The site's `letters.js`: `SocialLetters.write` and `writeBack`, the
+Pad over the page, Send straight to `/letters`, landing on the two of you;
+a send that fails keeps the drawing.
+
+DECIDED IN THE BUILDING, Cal's, until the owner says otherwise:
+- "only the two of you see it" in place of the mock's "only she sees it":
+  the site keeps no pronouns and must not guess one, and the sender sees
+  the letter too. It is the Letters page's own line.
+- On fresh paper the pill has no Theirs to fold into: it stays where it is
+  clear of the drawing (as in the mock), and goes at the first stroke where
+  it lies over the drawing (the owner, Nov 23, of Draw back's pill: "you
+  can't draw there (under it)").
+- Send goes through the Pad's own sheet, which ends in Send: its "Viewers
+  start at" is the author's pick of speed, which the owner asked for (Pad
+  first: "The author picks the default speed").
+- The door to Flip steps aside in a letter, saying "Letters are drawn in the
+  Pad for now."; Flip letters are next.
+
+CALIBRATED: `verify_socialletters` 13 and 14 (7 rows), each shown red by
+breaking its part (8 breaks). Pad and Flip: Skribl's part is one file both
+load; nothing else of Flip's changed.

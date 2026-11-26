@@ -40,6 +40,18 @@ with a virtual passkey; the letters through the site's own routes.
  11. DELETING AN ACCOUNT takes every letter it sent or received, with
      their drawings.
  12. No page errors, no console errors and no CSP violations.
+ 13. WRITING ONE IN THE PAD (part two), on a phone: SocialLetters.write
+     opens the Pad over the page, its button and its sheet's saying Send,
+     its pill "A letter to Theo · only the two of you see it"; the picture
+     and music drawer and the door to Flip dimmed, each saying why when
+     tapped. Drawn and sent, it lands on the two of you, a letter to him
+     with the strokes drawn. A send that does not go (a block meanwhile)
+     says why and keeps the drawing: Write again opens the Pad with it.
+ 14. WRITING BACK IN THE PAD: SocialLetters.writeBack opens the Pad on her
+     shape and paper, hers faint under the pen, Draw back's pill saying
+     "Writing back to Ana · only the two of you see it", the eraser aside;
+     sent, the letter is written back on, hers then his. A pill on fresh
+     paper over the drawing goes at the first stroke; one clear of it stays.
 
 SOCIALLETTERS_PART=<n>[,<m>] runs those sections only (calibration). Every
 row was shown red by breaking one part and green as built: DECISIONS.md,
@@ -835,6 +847,158 @@ with sync_playwright() as p:
                   and all(drawing_of(s) is None for s in sids), f"{st} {sids}")
         except Exception as exc:  # noqa: BLE001
             stopped(11, exc)
+
+    # ------------------------------------------------------------------ 13
+    PADDING = """() => { const f = document.querySelector('#letterPad .facepad-frame');
+      return !!f && document.querySelector('#letterPad').classList.contains('is-ready'); }"""
+
+    def pad_of(pg):
+        pg.wait_for_function(PADDING, timeout=30000)
+        fe = pg.query_selector("#letterPad .facepad-frame")
+        fr = fe.content_frame()
+        fr.wait_for_function("() => !!window.SkriblCompose && document.readyState === 'complete'", timeout=15000)
+        pg.wait_for_timeout(400)
+        return fe, fr
+
+    def strokes(pg, fe, fr, n=3, at=(300, 200)):
+        box = fr.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return [r.left, r.top, r.width]; }")
+        fb = fe.bounding_box()
+        k = box[2] / 816
+        for i in range(n):
+            x0, y0 = fb["x"] + box[0] + (at[0] + i * 40) * k, fb["y"] + box[1] + at[1] * k
+            pg.mouse.move(x0, y0)
+            pg.mouse.down()
+            for s_ in range(1, 12):
+                pg.mouse.move(x0 + s_ * 4 * k, y0 + (s_ % 4) * 7 * k)
+            pg.mouse.up()
+            pg.wait_for_timeout(120)
+
+    def send_it(pg, fr):
+        fr.click("#recordBtn")               # Done drawing, as a person presses it
+        pg.wait_for_timeout(500)
+        fr.click("#postBtn")
+        pg.wait_for_timeout(600)
+        sub = fr.query_selector("#postSubmitBtn")
+        words = fr.evaluate("() => document.getElementById('postSubmitLabel').textContent")
+        if sub and sub.is_visible():
+            sub.click()
+        return words
+
+    PILL = """() => { const p = document.querySelector('.cs-pill, .db-pill');
+      return p ? { text: p.querySelector('.da-where').textContent, cls: p.className } : null; }"""
+
+    if part(13, "writing one in the Pad"):
+        try:
+            ctx, pg = browser_as(b, ana)
+            pg.goto(BASE + "/social/@theo")
+            ready(pg)
+            pg.evaluate("() => SocialLetters.write({ to: 'theo', first: 'Theo' })")
+            fe, fr = pad_of(pg)
+            look = fr.evaluate("""() => ({ btn: document.querySelector('#postBtn .btn-label').textContent,
+              sheet: document.getElementById('postSubmitLabel').textContent,
+              dim: ['mediaOpenBtn', 'flipBtn'].map(i => getComputedStyle(document.getElementById(i)).opacity) })""")
+            look["pill"] = fr.evaluate(PILL)
+            check("SocialLetters.write opens the Pad over the page: its button and its sheet's say Send, its pill \"A letter"
+                  " to Theo · only the two of you see it\" (A letter in bold), the photo and music drawer and the door to"
+                  " Flip dimmed",
+                  look["btn"] == "Send" and look["sheet"] == "Send" and look["pill"]
+                  and look["pill"]["text"] == "A letter to Theo · only the two of you see it" and "cs-pill" in look["pill"]["cls"]
+                  and look["dim"] == ["0.4", "0.4"], json.dumps(look))
+            said = {}
+            fr.click("#mediaOpenBtn")
+            pg.wait_for_timeout(200)
+            said["media"] = fr.evaluate("() => [document.getElementById('mediaOpenBtn').getAttribute('aria-expanded'), document.getElementById('toast').textContent]")
+            fr.evaluate("() => document.getElementById('flipBtn').click()")
+            pg.wait_for_timeout(300)
+            said["flip"] = fr.evaluate("() => [location.pathname, document.getElementById('toast').textContent]")
+            check("tapped, each says why and stays shut: \"Letters don’t carry photos or music yet.\", \"Letters are drawn"
+                  " in the Pad for now.\" (the frame stays the Pad)",
+                  said["media"] == ["false", "Letters don’t carry photos or music yet."]
+                  and said["flip"][1] == "Letters are drawn in the Pad for now." and "flip" not in said["flip"][0],
+                  json.dumps(said))
+            before = len(db("select id from social_letters"))
+            strokes(pg, fe, fr)
+            with pg.expect_navigation(timeout=20000):
+                words = send_it(pg, fr)
+            got = db("select l.public_id, l.recipient_id, s.payload_json from social_letters l join skribl_posts s"
+                     " on s.public_id = l.skribl_id order by l.id desc limit 1")
+            pts = json.loads(got[0][2])["frames"][0]["strokes"] if got else []
+            check("drawn and sent (its sheet saying Send), it lands on the two of you: a letter to him, his strokes in it",
+                  words == "Send" and len(db("select id from social_letters")) == before + 1 and got
+                  and got[0][1] == pid_of("theo")[0] and len(pts) >= 30, f"{words} {len(pts)} {pg.url}")
+            close_ctx(ctx, pg)
+            # A SEND THAT DOES NOT GO keeps the drawing.
+            ctx, pg = browser_as(b, ana)
+            pg.goto(BASE + "/social/@theo")
+            ready(pg)
+            pg.evaluate("() => SocialLetters.write({ to: 'theo', first: 'Theo' })")
+            fe, fr = pad_of(pg)
+            strokes(pg, fe, fr, n=2)
+            block(theo, ana)
+            send_it(pg, fr)
+            pg.wait_for_function("() => { const t = document.querySelector('.mu-toast, [data-toast], .toast'); return !!t && /follow each other/.test(t.textContent); }",
+                                 timeout=15000)
+            toast = pg.evaluate("() => (document.querySelector('.mu-toast, [data-toast], .toast') || {}).textContent")
+            n_after = len(db("select id from social_letters"))
+            block(theo, ana, on=False)
+            friends(ana, theo)
+            pg.evaluate("() => SocialLetters.write({ to: 'theo', first: 'Theo' })")
+            fe, fr = pad_of(pg)
+            kept = fr.evaluate("() => (typeof strokes !== 'undefined' ? strokes.length : -1)")
+            close_ctx(ctx, pg)
+            check("a send that does not go (a block meanwhile) says why, kindly, sends nothing, and keeps the drawing:"
+                  " Write again opens the Pad with it",
+                  "follow each other" in (toast or "") and n_after == before + 1 and kept > 0, f"{toast!r} {n_after} {kept}")
+        except Exception as exc:  # noqa: BLE001
+            stopped(13, exc)
+
+    # ------------------------------------------------------------------ 14
+    if part(14, "writing back in the Pad"):
+        try:
+            friends(ana, theo)
+            L14 = sent(ana, "theo", drawing(n=60, seed=140))
+            ctx, pg = browser_as(b, theo)
+            pg.goto(BASE + "/social/@ana")
+            ready(pg)
+            pg.evaluate("(id) => SocialLetters.writeBack({ id, first: 'Ana' })", L14)
+            fe, fr = pad_of(pg)
+            fr.wait_for_function("() => !!window.SkriblDrawBack && !!SkriblDrawBack.state()", timeout=15000)
+            look = fr.evaluate("""() => ({ size: getCanvasLogicalSize(), ground: String(bgColor).toLowerCase(),
+              under: SkriblDrawBack.state().strokes, btn: document.querySelector('#postBtn .btn-label').textContent,
+              dim: ['eraserToolBtn', 'mediaOpenBtn'].map(i => getComputedStyle(document.getElementById(i)).opacity) })""")
+            look["pill"] = fr.evaluate(PILL)
+            check("SocialLetters.writeBack opens the Pad on her shape and paper, hers faint under the pen, Draw back's pill"
+                  " saying \"Writing back to Ana · only the two of you see it\", Send, the eraser and the drawer aside",
+                  look["size"] == {"width": 816, "height": 612} and look["ground"] == "#f6f2ea" and look["under"] >= 1
+                  and look["pill"] and look["pill"]["text"] == "Writing back to Ana · only the two of you see it"
+                  and "db-pill" in look["pill"]["cls"] and look["btn"] == "Send" and look["dim"] == ["0.4", "0.4"],
+                  json.dumps(look))
+            strokes(pg, fe, fr, n=2, at=(560, 420))
+            with pg.expect_navigation(timeout=20000):
+                send_it(pg, fr)
+            got = db("select l.written_on_id, l.recipient_id, s.payload_json from social_letters l join skribl_posts s"
+                     " on s.public_id = l.skribl_id order by l.id desc limit 1")
+            pts = json.loads(got[0][2])["frames"][0]["strokes"] if got else []
+            close_ctx(ctx, pg)
+            check("sent, the letter is written back on: to her, hers first (her 60 points), then his",
+                  got and got[0][0] == letter(L14)["id"] and got[0][1] == pid_of("ana")[0] and len(pts) > 60
+                  and xy(pts[:60]) == xy(drawing(n=60, seed=140)["frames"][0]["strokes"]), f"{got and got[0][:2]} {len(pts)}")
+            # The pill on fresh paper: over the drawing, it goes at the first stroke.
+            ctx, pg = browser_as(b, ana, screen="desk")
+            pg.goto(BASE + "/social/@theo")
+            ready(pg)
+            pg.evaluate("() => SocialLetters.write({ to: 'theo', first: 'Theo' })")
+            fe, fr = pad_of(pg)
+            over = fr.evaluate("""() => { const p = document.querySelector('.cs-pill').getBoundingClientRect(), c = document.getElementById('canvas').getBoundingClientRect();
+              return p.bottom > c.top && p.top < c.bottom && p.right > c.left && p.left < c.right; }""")
+            strokes(pg, fe, fr, n=1)
+            pg.wait_for_timeout(400)
+            after = fr.evaluate("() => !!document.querySelector('.cs-pill')")
+            close_ctx(ctx, pg)
+            check("on fresh paper a pill clear of the drawing stays after the first stroke, and one over the drawing goes",
+                  after == (not over), f"over the drawing {over}; there after {after}")
+        except Exception as exc:  # noqa: BLE001
+            stopped(14, exc)
 
     # ------------------------------------------------------------------ 12
     if part(12, "no page errors, no console errors and no CSP violations"):

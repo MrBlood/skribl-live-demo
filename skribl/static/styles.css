@@ -10126,6 +10126,15 @@ body.drawback .canvas-empty-hint { display: none; }
    to say why when tapped. Recolor works on his own lines since Nov 25 (the
    owner's yes to the Recolor mock), so it is not among them. */
 body.drawback :is(#eraserToolBtn, #mediaOpenBtn, #customBgBtn, .bg-swatch[data-bg]) { opacity: .4; }
+/* WHAT A HOST'S COMPOSER SETS ASIDE (editor_compose.js, skribl:compose:say;
+   the Skribl site's drawn letters, Nov 26): dimmed as Draw back's are, still
+   there to say why when tapped. */
+body.compose-aside-media #mediaOpenBtn, body.compose-aside-editor :is(#flipBtn, #padBtn) { opacity: .4; }
+/* ...and the pill saying what it is on fresh paper: Draw back's words, with
+   no button of its own. */
+.cs-pill { padding: 9px 16px; }
+.cs-pill .cs-where { color: var(--text-primary); }
+.cs-pill .cs-where b { color: var(--accent-ink); }
 .db-pill .db-where { color: var(--text-primary); }
 .db-pill .db-where b { color: var(--accent-ink); }
 .db-theirs { display: inline-flex; align-items: center; gap: 6px; min-height: 44px !important; }

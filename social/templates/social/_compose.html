@@ -145,6 +145,42 @@
     <iframe class="facepad-frame" title="Flip: make a flip book for your post"></iframe>
   </div>
 </div>
+{#  A DRAWN LETTER (docs/SOCIAL-SITE.md section 44; the owner's yes, Nov 26,
+    A for all six): the Pad over the page, opened the way Draw back opens it
+    (letters.js), its button saying Send and its pill whom it is for; Send
+    goes to /letters and lands on the two of you. The Pad only: a Flip letter
+    is next. Words for what letters.js says are here, the page's. #}
+<div class="facepad" id="letterPad" hidden data-compose="{{ url_for(skribl_bp ~ '.skribl_editor', compose=1) }}"
+     data-send="{{ url_for('social.letter_send') }}" data-write-back="{{ url_for('social.letter_write_back', public_id='__ID__') }}">
+  <div class="facepad-scrim"></div>
+  <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Draw your letter">
+    <p class="facepad-wait">Opening the Pad…</p>
+    <iframe class="facepad-frame" title="The Pad: draw your letter"></iframe>
+  </div>
+</div>
+<div class="words" data-letter-said hidden>
+  <span data-word="lt_send">Send</span>
+  <span data-word="lt_letter">A letter</span>
+  <span data-word="lt_to"> to {first} · only the two of you see it</span>
+  <span data-word="lt_back">Writing back</span>
+  <span data-word="lt_media">Letters don’t carry photos or music yet.</span>
+  <span data-word="lt_editor">Letters are drawn in the Pad for now.</span>
+  <span data-word="lt_sending">Sending…</span>
+  <span data-word="lt_opening">Opening…</span>
+  <span data-word="lt_not_friends">Letters go between two people who follow each other.</span>
+  <span data-word="lt_letter_gone">That letter isn’t here anymore.</span>
+  <span data-word="lt_letter_shape">Something changed. Open Write back again; your drawing is still here.</span>
+  <span data-word="lt_why_photo">Letters don’t carry photos yet. Take the photo out, then Send.</span>
+  <span data-word="lt_why_music">Letters don’t carry music yet. Take the music out, then Send.</span>
+  <span data-word="lt_why_pages">Letters are drawn in the Pad for now.</span>
+  <span data-word="lt_why_erase">Writing back adds to theirs, so nothing can be erased. Undo takes back a line.</span>
+  <span data-word="lt_no_drawing">Draw something first, then Send.</span>
+  <span data-word="lt_limited">Lots of letters in a short while. Wait a little, then try again. Your letter is still here.</span>
+  <span data-word="lt_stale">This page went stale. Reload it, then send again.</span>
+  <span data-word="lt_signed_out">You’ve been signed out. Sign in again to send.</span>
+  <span data-word="lt_too_big">That letter is too big to send.</span>
+  <span data-word="lt_failed">That didn’t send. Try again in a moment; your letter is still here.</span>
+</div>
 <div class="words" data-compose-said hidden>
   <span data-word="cmp_posting">Posting…</span>
   <span data-word="cmp_post">Post</span>

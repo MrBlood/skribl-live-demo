@@ -532,8 +532,28 @@
     return true;
   }
 
+  /* THE HOST'S WORDS FOR IT (editor_compose.js, skribl:compose:say): what
+     the pill says instead of "Drawing back on Ana’s", `lead` in bold, while
+     it has its words (a letter written back: "Writing back to Ana · only
+     the two of you see it"). It folds at the first stroke as ever. */
+  function words(lead, rest) {
+    if (!run) return false;
+    var w = run.pill.querySelector('.db-where');
+    if (!w) return false;
+    w.textContent = '';
+    if (lead) {
+      var b = document.createElement('b');
+      b.textContent = lead;
+      w.appendChild(b);
+    }
+    if (rest) w.appendChild(document.createTextNode(rest));
+    run.pill.setAttribute('aria-label', (lead || '') + (rest || ''));
+    place();
+    return true;
+  }
+
   window.SkriblDrawBack = {
-    take: take, stop: stop, paintUnder: paintUnder, page: page, inkPage: inkPage, refuse: refuse, hers: tapOnHers, under: under,
+    take: take, words: words, stop: stop, paintUnder: paintUnder, page: page, inkPage: inkPage, refuse: refuse, hers: tapOnHers, under: under,
     state: function () {
       return run ? { theirs: STATES[run.state].key, strokes: strokesOf().length, size: run.size, photo: !!run.photo,
                      pages: run.pages.length, page: run.page } : null;

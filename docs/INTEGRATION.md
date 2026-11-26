@@ -993,6 +993,19 @@ again afterwards, the frame is the one the handle loaded, so the drawing
 that was added is pushed back in (the second rule above). The Skribl site's
 composer does this from its "Use one you made" (Nov 14).
 
+**Say what you are making.** `pad.say({button, lead, rest, aside})` names it
+in the editor, Pad or Flip, on every load until `clear()`: `button` is the
+word on the header's button and its sheet's ("Send" where Add would hand the
+drawing to a post); `lead` (bold) and `rest` are a pill under the header
+("A letter to Ana · only the two of you see it"; while drawing back,
+`underlay`'s own pill says them, and folds at the first stroke as ever; on
+fresh paper, a pill lying over the drawing goes at the first stroke); and
+`aside` sets parts aside, dimmed, each saying your words when tapped:
+`{media: "...", editor: "..."}`, the picture and music drawer and the door
+to the other editor. Nothing else changes: what comes back on done is a
+payload as ever. The Skribl site's drawn letters use it (`docs/SOCIAL-SITE.md`
+section 45).
+
 **One button, both editors.** Your composer needs one Skribl button, not two.
 The Pad opens; its ⋯ menu's "Flip Mode" row, while composing, opens Flip in
 the same frame, in compose mode, and Flip's "Skribl Pad" row comes back.

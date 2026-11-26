@@ -11,7 +11,17 @@
  *   pad.guide(file);   // a face's only: open it with a photo to trace
  *   pad.openDraft(id); // one of the person's saved drafts, in the editor
  *   pad.underlay({payload, first}); // draw back: a drawing faint under the pen
+ *   pad.say({button, lead, rest, aside}); // what the host is making (below)
  *
+ * WHAT THE HOST IS MAKING, SAID IN THE EDITOR (Nov 26, the Skribl site's drawn
+ * letters: "Words follow what the user does"). say(o) gives the editor the
+ * word on its button and its sheet's (`button`: "Send" where Add would hand
+ * the drawing to a post), a pill under its header (`lead` in bold, then
+ * `rest`: "A letter to Ana · only the two of you see it"; while drawing back,
+ * Draw back's own pill says them), and what steps aside, each with the words
+ * a tap on it says (`aside`: {media: "...", flip: "..."}, the picture and
+ * music drawer and the door to the other editor). Sent on every `ready`
+ * until clear(), as underlay is; null says nothing.
  * A SAVED DRAFT, OPENED IN YOUR COMPOSER (Nov 14, the Skribl site's "Use one
  * you made"). openDraft(id) opens the editor at its own address with
  * ?draft=<id>, the editors' own hand-off (lib/savedrafts.js), so the draft
@@ -115,6 +125,9 @@
        `ready` (before a re-edit's load, so the drawing comes back onto its
        shape) until clear(). */
     var under = null;
+    /* WHAT THE HOST IS MAKING ({button, lead, rest, aside}; say), sent on
+       every `ready` until clear(). */
+    var words = null;
     /* The address this handle last gave the frame: `src`, or a draft's
        (openDraft). A frame holding either is this handle's own editor. */
     var current = null;
@@ -141,6 +154,7 @@
         loaded = true;
         frameEditor = d.editor || 'pad';
         if (under) post('underlay', under);
+        if (words) post('say', words);
         /* Re-editing: hand back what the draft is holding. A first open has no
            payload and sends nothing, which is what leaves the canvas blank. */
         if (payload && payloadEditor === frameEditor) post('load', { payload: payload });
@@ -201,6 +215,13 @@
       if (opts.onOpen) opts.onOpen();
     }
 
+    /* What the host is making (the header's WHAT THE HOST IS MAKING): kept
+       for every `ready`, and said at once to an editor already up. */
+    function say(o) {
+      words = o ? { button: o.button || '', lead: o.lead || '', rest: o.rest || '', aside: o.aside || null } : null;
+      if (loaded && words) post('say', words);
+    }
+
     function close() {
       if (!open_) return;
       open_ = false;
@@ -225,6 +246,7 @@
       payload = null;
       guideFile = null;
       under = null;
+      words = null;
       payloadEditor = frameEditor = 'pad';
       loaded = false;
       current = null;
@@ -238,6 +260,7 @@
       guide: guide,
       openDraft: openDraft,
       underlay: underlay,
+      say: say,
       close: close,
       clear: clear,
       isOpen: function () { return open_; },
@@ -251,6 +274,7 @@
         payload = null;
         guideFile = null;
         under = null;
+        words = null;
         loaded = false;
         current = null;
       }
