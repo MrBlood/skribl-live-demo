@@ -54370,3 +54370,24 @@ B's edge in their cool lavender, or in the site's own card edge.
 
 NOTHING IS BUILT: it waits for "B", "A" or "leave the tiles". Pad and Flip:
 not theirs.
+
+## After v330 -- Main red after #1113: verify_musicdoors' finger, on the PostgreSQL shard alone
+
+Main's run after #1113 (e46338a; issue #1115, opened by the main watch):
+one row of 1,953 in its shard red, in one of 18 jobs, PostgreSQL 6/7:
+`verify_musicdoors`, "Pad: a person who scrolls back up as a song lands is
+left where they scrolled to (a finger on the phone)": "the page at 561px,
+scrolled up to 225px, let go 730ms after the song landed; then over 56
+frames 220-223px". The same suite was green on the same run's SQLite shard.
+
+NOT REPRODUCED, AND NOT #1113's: 118/118 here on main as it stood after
+#1114, alone, that row reading 346px and then 346px for 46 frames. The
+page went FURTHER UP after the finger let go (225 to 220), the direction
+the gesture was moving, never back down toward the drawer, which is what
+the row guards: the synthetic finger, run slower on that machine, scrolled
+less far (336px here, 225 there) and coasted a few pixels on. #1113's
+behaviour lives in `editor_compose.js` and `lib/drawback.js`, which the
+Pad loads only inside a host's composer, and in rules keyed to classes the
+plain Pad never wears; the one shared file it touched (`lib/postsheet.js`)
+changed only which word the Post sheet's button says. Load, not a defect.
+The next fully green run closes #1115 (`harness/tools/mainwatch.py`).
