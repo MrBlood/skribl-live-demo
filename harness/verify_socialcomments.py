@@ -110,7 +110,7 @@ yes to everything. Make it smart and beautiful", Nov 20, of a page that
      frame: what is under it moves by the box's room less the line's 44px,
      the line fading away under it); Esc or a press elsewhere folds it away,
      keeping the words, the line back; the Pad over the page is not
-     "elsewhere".
+     "elsewhere" (a press on it, and its ×, leave the box open).
  32. REPLY: a phone's sheet, "Reply to Theo" and Theo's words in a line; a
      desk's fold under the conversation, folding first from the bar's
      place, Reply again folding it; the page glides to it under a long thread.
@@ -3993,21 +3993,31 @@ with sync_playwright() as p:
                       and v["bar"] and v["line"] and v["words"] == f"Typed, then {k}" for k, v in folds.items())
                   and folds["Esc"]["focus"].startswith("ans-say cm-say"),
                   f"{folds}")
-            # Draw opens the Pad over the page with the box open; a press on the Pad's ground is not "elsewhere".
+            # Draw opens the Pad over the page with the box open, and the Pad is not "elsewhere": a press on it leaves the
+            # box open, and its × puts the Pad away with the box still open. On a desk the Pad fills the window since Nov 26
+            # (Room for the Drawer), nothing beside it, and a press inside it never reaches the page: so the page's own
+            # view of a press on the Pad, its overlay pressed, is what is pressed. (It was a click at the window's edge,
+            # beside the Pad's card, which lands in the editor now.)
             def pad_kept():
                 open_post(dpg, post)
                 open_box(dpg)
                 dpg.click("[data-cm-open=pad]", timeout=8000)
                 fr = editor_frame(dpg, "skribl-pad")
-                dpg.mouse.click(30, 400)                 # beside the Pad's card: puts the Pad away, the drawing kept in it
+                dpg.evaluate("() => document.getElementById('commentPad').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))")
+                dpg.wait_for_timeout(300)
+                pressed = {"box": dpg.evaluate(BOX)["open"], "pad": dpg.evaluate("() => document.getElementById('commentPad').hidden")}
+                fr.click("#composeCloseBtn", timeout=8000)
                 dpg.wait_for_timeout(800)
-                return {"frame": bool(fr), "box": dpg.evaluate(BOX)["open"], "pad": dpg.evaluate("() => document.getElementById('commentPad').hidden")}
+                return {"frame": bool(fr), "pressed": pressed, "box": dpg.evaluate(BOX)["open"],
+                        "pad": dpg.evaluate("() => document.getElementById('commentPad').hidden")}
 
             got, err = steps(pad_kept)
             close_ctx(dctx, dpg)
-            check("a press beside the Pad (opened by Draw in the box) puts the Pad away and leaves the box open: the editor over"
-                  " the page is not \"elsewhere\"",
-                  err is None and got.get("frame") and got.get("box") == "home" and got.get("pad"), f"{got}; stopped {err}")
+            check("a press on the Pad (opened by Draw in the box) leaves the box open under it, and its × puts the Pad away with"
+                  " the box still open: the editor over the page is not \"elsewhere\"",
+                  err is None and got.get("frame") and (got.get("pressed") or {}).get("box") == "home"
+                  and (got.get("pressed") or {}).get("pad") is False and got.get("box") == "home" and got.get("pad") is True,
+                  f"{got}; stopped {err}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(31, exc)
 

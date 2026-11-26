@@ -54736,3 +54736,19 @@ beside other suites, its glide the same): it is read from its own clock now.
 On Flip a click anywhere outside the drawer already puts it away (flip.js, the
 tap away), so click-off leaves Flip's click row green; the keyboard's row,
 which needs the tab's own press, goes red there and holds it.
+
+## After v330 -- Main red after #1120: verify_socialcomments put the Pad away beside a card that is gone
+
+Main's run after #1120 (08f3b80; issue #1123, opened by the main watch): one
+row red, on both shard 6s (SQLite and PostgreSQL): `verify_socialcomments` 31,
+"a press beside the Pad (opened by Draw in the box) puts the Pad away and
+leaves the box open". #1120'S OWN, NOT LOAD: on a desk the Pad over the page
+fills the window now, and the row's click at the window's edge, beside the
+Pad's card, landed in the editor, which put nothing away. The same step as
+`verify_socialprofile` 20's, which #1120 moved; this suite was not among those
+run for it (it opens the Pad from a comment's box, not from Make). Mended with
+the drawer's tab (#1122): the row presses the Pad's overlay as the page sees a
+press on it (a press inside the editor never reaches the page) and puts the
+Pad away by its ×, the box open under it both times; shown red by letting a
+press on the Pad count as elsewhere (`comments.js`), green as built. The next
+fully green run on main closes #1123.
