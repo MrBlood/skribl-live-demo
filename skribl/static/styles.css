@@ -1974,13 +1974,13 @@ body.drawers-beside :is(#drawPanel, #mediaCard, #txSheet).drawer-side, :is(#draw
   max-height: min(calc(100vh - var(--side-top, 90px) - 16px), var(--side-max, 100vh));
   overflow-y: auto; overscroll-behavior: contain; margin: 0; z-index: 45;
 }
-/* THE DRAWER'S TAB (lib/drawers.js SIDE_TAB; the owner's "All yes", Nov 26,
-   to the Drawer Tab mock's A, from "Put a tab on the drawer in addition to
-   clicking pen again (and other drawers)"). On the drawer's edge facing the
-   drawing, 22px below its top, 24px out: the drawer's own paper, line and
-   drop. JOINED, NOT LAID ON: it ends where the drawer begins, over the
-   drawer's own line, so the line runs on round the tab and the two are one
-   shape. The paper and line are its ::before, the line the drawer's own
+/* THE DRAWER'S TAB (lib/drawers.js SIDE_TAB; the owner, Nov 26: "Put a tab
+   on the drawer in addition to clicking pen again (and other drawers)", then
+   "All yes on A", taken for the Drawer Tab mock's A). On the drawer's edge
+   facing the drawing, 22px below its top, 24px out: the drawer's own paper,
+   line and drop. JOINED, NOT LAID ON: it ends where the drawer begins, over
+   the drawer's own line, so the line runs on round the tab and the two are
+   one shape. The paper and line are its ::before, the line the drawer's own
    ring (--paper-ring, one screen dot: a border is never under a CSS pixel
    in Chrome, twice the drawer's at 2x), cut off where the drawer begins;
    the button keeps its focus ring whole. The › is the drawer's ink, a mark

@@ -87,17 +87,18 @@
    * resized while one is beside decides again, without gliding. */
   var SIDE_W = 392, SIDE_EDGE = 16, SIDE_MS = 280, SIDE_EASE = 'cubic-bezier(.22,.8,.24,1)';
   /* A TAB ON THE DRAWER (the owner, Nov 26: "Put a tab on the drawer in
-   * addition to clicking pen again (and other drawers)", and "All yes" to the
-   * Drawer Tab mock's A). Beside the drawing, the drawer wears a tab on its
-   * edge facing the drawing, near its top, that closes it: the drawer's own
-   * paper and line, joined to it, with a › that points the way the drawer
-   * goes (styles.css .drawer-tab). It stands SIDE_TAB out of the drawer, and
-   * the drawing gives it that room as it gives the drawer its own: it slides
-   * that much further and clears the tab by SIDE_EDGE. A button named "Close
-   * the drawer", which the keyboard reaches just before the drawer; closed
-   * from the keyboard, the drawer's own button takes the focus back. One tab
-   * per editor, made when side() is said and moved to sit before whichever
-   * drawer is beside; it comes and goes with the drawer, as one piece. */
+   * addition to clicking pen again (and other drawers)"; then "All yes on
+   * A", taken for the Drawer Tab mock's A, DECISIONS.md). Beside the
+   * drawing, the drawer wears a tab on its edge facing the drawing, near its
+   * top, that closes it: the drawer's own paper and line, joined to it, with
+   * a › that points the way the drawer goes (styles.css .drawer-tab). It
+   * stands SIDE_TAB out of the drawer, and the drawing gives it that room as
+   * it gives the drawer its own: it slides that much further and clears the
+   * tab by SIDE_EDGE. A button named "Close the drawer", which the keyboard
+   * reaches just before the drawer; closed from the keyboard, the drawer's
+   * own button takes the focus back. One tab per editor, made when side()
+   * is said and moved to sit before whichever drawer is beside; it comes and
+   * goes with the drawer, as one piece. */
   var SIDE_TAB = 24;
   var selfResize = false;
   function still() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
