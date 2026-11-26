@@ -17,9 +17,9 @@ On the Pad (How it works' cat) and Flip (its bouncing ball):
   ending 16px in from where a drawer held to the screen can end (the page
   keeps a scrollbar's gutter at each edge), its top level with the
   drawing's; the drawing whole on the screen at its own size, 16px clear of
-  the drawer at least; the page not scrolled.
+  the drawer's tab at least (24px out of it); the page not scrolled.
   ONLY AS FAR AS NEEDED: the drawing slides left until it ends 16px from the
-  drawer, and no further (none where there is room: Flip from 1536px up);
+  drawer's tab, and no further (none where there is room: Flip at 1920px);
   the header stays; what sits under the drawing (the Pad's dock; Flip's page
   strip and dock) slides with it, by as much; the pen's drawer closed, all
   of it is back where it was.
@@ -53,8 +53,8 @@ Drawer mock, after "why is the drawer opening on the bottom?"):
   width, on 1366x768, 1440x900 and 1920x1080: the drawer opens beside it
   all the same, the drawing a little smaller (the least it needs, never past
   three quarters of its width), its shape kept, whole on the screen, the
-  drawer level with its top and 16px clear of it, the dock under its
-  middle; closed, its own size again where it was. It glides there and
+  drawer level with its top and its tab 16px clear of it, the dock under
+  its middle; closed, its own size again where it was. It glides there and
   back with the slide, over many frames, never more than a third of the way
   in one. Where it would give up more than a quarter (1024x640) the drawer
   opens below, as before.
@@ -63,14 +63,41 @@ Drawer mock, after "why is the drawer opening on the bottom?"):
   edge, and the drawer ends above it (on a short desk it scrolls inside
   itself); closed, the strip is as it was. Its end glides out and home.
 
+THE DRAWER'S TAB (the owner's "All yes on A", Nov 26, to the Drawer Tab
+mock, after "Put a tab on the drawer in addition to clicking pen again (and
+other drawers)"), the Pad and Flip on a 1366x768 desk:
+
+  ON ITS EDGE: with Pen, Photo, Music or Text beside the drawing, the drawer
+  wears a tab on its edge facing the drawing, 22px below its top, 24x56,
+  ending where the drawer begins: a button named "Close the drawer",
+  painted, just before the drawer in the page's order; the drawing slides
+  on to end 16px from it.
+  JOINED, NOT LAID ON, read off the screen at 2x, dark and light: across
+  the tab the paper runs on into the drawer with no line where they meet;
+  the tab's line is the drawer's, its colour and its width (one screen
+  dot), running on into the drawer's at the tab's top and foot; the › in
+  the middle between the two lines, within half a pixel.
+  IT CLOSES THE DRAWER, WHICH SLIDES AWAY: a click on it closes the drawer
+  at once (its panel hidden from the first frame) and the drawing glides
+  home; read on every frame from the click, the drawer is drawn where it
+  was, inert, fading over five frames or more, never brighter, moving right
+  as it fades, its tab with it, and is gone within the glide and a little,
+  nothing left inert or held. Under Reduce Motion it is gone at once.
+  THE KEYBOARD: Shift+Tab from the drawer's first control lands on the
+  tab; Enter on it closes the drawer, the focus back on the drawer's own
+  button with its ring (Pen's; Music's on Photo and music).
+  UNDER A MOUSE it lights up, solid, and rests again. IN A REPLAY it rests
+  with the drawer: no clicks, its › dimmed to the drawer's rest.
+
 Elsewhere:
 
   BELOW: an 800x800 desk (neither drawing fits beside a drawer, even a
   quarter smaller; at 900 Flip's ball does, a fifth smaller), a tablet
-  (a finger: 1180x820 with touch) and a phone open below as before.
-  A RESIZE DECIDES AGAIN: open beside, the window narrowed: below; widened
-  again: beside.
-  THE TOOLS TRAY stays as it is: never beside, the page never moved.
+  (a finger: 1180x820 with touch) and a phone open below as before, with
+  no tab.
+  A RESIZE DECIDES AGAIN: open beside, the window narrowed: below, the tab
+  gone; widened again: beside, the tab back.
+  THE TOOLS TRAY stays as it is: never beside, no tab, the page never moved.
 
 Every row was shown red by breaking one part and green as built: DECISIONS.md,
 "Drawers beside the drawing on a desk: built".
@@ -605,16 +632,23 @@ with sync_playwright() as pw:
                   and abs(mx - mid_x) <= 0.5 and abs(my - (tt + th / 2)) <= 0.5 and len(ink) > 20,
                   json.dumps({"paper": paper, "seam": seam, "line": line, "widths": [d_w, t_w], "tab line": t_line, "corners": corners,
                               "mark": [round(mx, 2), round(my, 2)], "middle": [mid_x, tt + th / 2], "ink": len(ink)}))
-    # A click on the tab closes the drawer; it slides away (read on every frame) as the drawing glides home.
-    # Read from the frame after the click on (a listener ahead of the tab's own), each frame for `ms`.
+    # A click on the tab closes the drawer; it slides away as the drawing glides home. THE GLIDE IS READ FROM ITS OWN
+    # CLOCK as the click ends (a listener after the tab's own): the animation each of the drawer and the tab is given, its
+    # time and its ends, which a busy machine cannot thin out; then the frames this page is shown, each for `ms`, which
+    # can only say what they can say truly at any pace: never brighter, inert, the tab with it, moving right, no further
+    # than 24px. (Counting frames, Flip's row went red beside other suites in the calibration, its clock all the same.)
     EXIT = """([cv, ms]) => { const box = document.querySelector('.drawer-side'), tab = document.querySelector('.drawer-tab'),
         c = document.getElementById(cv), panel = [...document.querySelectorAll('#drawPanel, #photoPanel, #musicPanel, #txSheet')].find(p => !p.hidden),
-        out = []; window.__ex = out;
+        out = []; window.__ex = out; window.__clock = null;
+      const clock = (e) => !e ? null : e.getAnimations().map(a => { const k = a.effect.getKeyframes(), t = a.effect.getTiming();
+        return { ms: +t.duration, op: k.map(f => f.opacity === undefined ? null : +f.opacity), tr: k.map(f => f.transform || null) }; });
       document.addEventListener('click', () => { const t0 = performance.now();
+        window.__clock = { box: clock(box), tab: clock(tab), inert: box.inert, hidden: panel.hidden };
         requestAnimationFrame(function f() { const s = getComputedStyle(box);
           out.push({ t: performance.now() - t0, drawn: box.getClientRects().length > 0, op: +s.opacity, x: box.getBoundingClientRect().left,
-                     tab: tab.hidden ? null : +getComputedStyle(tab).opacity, inert: box.inert, hidden: panel.hidden, cv: c.getBoundingClientRect().left });
-          if (performance.now() - t0 < ms) requestAnimationFrame(f); }); }, { capture: true, once: true }); }"""
+                     tab: !tab || tab.hidden ? null : +getComputedStyle(tab).opacity, inert: box.inert, hidden: panel.hidden });
+          if (performance.now() - t0 < ms) requestAnimationFrame(f); }); }, { once: true }); }"""
+    GONE = "() => !document.querySelector('#drawPanel').getClientRects().length && !document.querySelector('.drawer-leaving')"
     AFTER = """() => ({ leaving: !!document.querySelector('.drawer-leaving'), inert: [...document.querySelectorAll('#drawPanel, #mediaCard, #txSheet, .drawer-tab')].some(e => e.inert),
                        styled: [...document.querySelectorAll('#drawPanel, #mediaCard, #txSheet, #photoPanel, #musicPanel')].some(e => e.style.display || e.style.height) })"""
     for ed in ED:
@@ -622,28 +656,43 @@ with sync_playwright() as pw:
         rest = look(q, ed)["canvas"]
         open_(q, ed, "draw")
         tb = where_tab(q, ed)
+        x0 = look(q, ed)["drawer"][0]
         q.evaluate(EXIT, [ED[ed]["cv"], 520])
         q.mouse.click(tb[0] + tb[2] / 2, tb[1] + tb[3] / 2)
+        try:
+            q.wait_for_function(GONE, timeout=5000)
+            gone = True
+        except Exception:  # noqa: BLE001 -- still drawn after 5s is the row's red
+            gone = False
         q.wait_for_timeout(700)
         fr = q.evaluate("() => window.__ex") or []
+        clk = q.evaluate("() => window.__clock") or {}
         g, aft, hid = look(q, ed), q.evaluate(AFTER), q.evaluate(TABHIDDEN)
         shut = q.evaluate(f"() => {ED[ed]['ctl']}.current()") is None
         c.close()
         drawn = [f for f in fr if f["drawn"]]
         ops = [f["op"] for f in drawn]
-        gone_at = next((f["t"] for f in fr if not f["drawn"]), None)
+
+        def out_glide(anims):
+            """One animation, 250ms or more, from solid where it is to clear 24px right."""
+            return any(a["ms"] >= 250 and a["op"][:1] == [1] and a["op"][-1:] == [0] and (a["tr"][0] in ("none", None))
+                       and "translateX(24px)" in (a["tr"][-1] or "") for a in (anims or []))
         check(f"{ed}: a click on the tab closes the drawer (closed at once, its panel hidden from the first frame) and the drawing"
               " glides home to where it was",
-              shut and bool(fr) and all(f["hidden"] for f in fr) and not g["beside"] and all(abs(x - y) <= 0.5 for x, y in zip(g["canvas"], rest)) and hid,
+              shut and bool(fr) and all(f["hidden"] for f in fr) and clk.get("hidden") is True and not g["beside"]
+              and all(abs(x - y) <= 0.5 for x, y in zip(g["canvas"], rest)) and hid,
               json.dumps({"shut": shut, "canvas": [rest, g["canvas"]], "tab hidden": hid}))
-        check(f"{ed}: ...and the drawer slides away as it goes: drawn where it was, inert, fading over five frames or more, never"
-              " brighter, moving right as it fades, its tab with it; gone within the glide and a little, nothing left inert or held",
-              len([o for o in ops if 0.02 < o < 0.98]) >= 5 and all(b_ <= a + 0.001 for a, b_ in zip(ops, ops[1:]))
-              and all(f["inert"] for f in drawn) and all(f["tab"] is not None and abs(f["tab"] - f["op"]) <= 0.02 for f in drawn)
-              and drawn and 18 <= drawn[-1]["x"] - drawn[0]["x"] <= 24.5 and gone_at is not None and gone_at <= 280 + 150
-              and not aft["leaving"] and not aft["inert"] and not aft["styled"],
-              json.dumps({"frames": [[round(f["t"]), f["drawn"], round(f["op"], 3), round(f["x"], 1), f["tab"]] for f in fr[:24]],
-                          "gone": gone_at, "after": aft})[:900])
+        check(f"{ed}: ...and the drawer slides away as it goes, by its own clock: it and its tab are each given a glide of 250ms"
+              " or more, from solid where they are to clear 24px right, the drawer inert; on every frame shown it is never"
+              " brighter, inert, its tab with it, moving right and no further than 24px; once the glide ends it is gone, nothing"
+              " left inert or held",
+              out_glide(clk.get("box")) and out_glide(clk.get("tab")) and clk.get("inert") is True
+              and all(b_ <= a + 0.001 for a, b_ in zip(ops, ops[1:])) and all(f["inert"] for f in drawn)
+              and all(f["tab"] is not None and abs(f["tab"] - f["op"]) <= 0.02 for f in drawn)
+              and all(b_["x"] >= a["x"] - 0.01 for a, b_ in zip(drawn, drawn[1:])) and all(x0 - 0.5 <= f["x"] <= x0 + 24.5 for f in drawn)
+              and gone and not aft["leaving"] and not aft["inert"] and not aft["styled"],
+              json.dumps({"clock": clk, "frames": [[round(f["t"]), f["drawn"], round(f["op"], 3), round(f["x"], 1), f["tab"]] for f in fr[:16]],
+                          "gone": gone, "after": aft})[:1100])
         c, q = boot(b, ed, (1366, 768), reduce=True)
         open_(q, ed, "draw")
         tb = where_tab(q, ed)
@@ -651,10 +700,12 @@ with sync_playwright() as pw:
         q.mouse.click(tb[0] + tb[2] / 2, tb[1] + tb[3] / 2)
         q.wait_for_timeout(400)
         fr = q.evaluate("() => window.__ex") or []
+        clk = q.evaluate("() => window.__clock") or {}
         shut = q.evaluate(f"() => {ED[ed]['ctl']}.current()") is None
         c.close()
-        check(f"{ed}: under Reduce Motion the drawer is gone at once, from the first frame",
-              shut and bool(fr) and not any(f["drawn"] for f in fr), json.dumps({"shut": shut, "frames": [[round(f["t"]), f["drawn"]] for f in fr[:6]]}))
+        check(f"{ed}: under Reduce Motion the drawer is gone at once: no glide given it, and not drawn from the first frame",
+              shut and bool(fr) and not any(f["drawn"] for f in fr) and clk.get("box") == [],
+              json.dumps({"shut": shut, "clock": clk, "frames": [[round(f["t"]), f["drawn"]] for f in fr[:6]]}))
     # The keyboard: Shift+Tab from the drawer's first control lands on the tab; Enter on it closes the drawer, and the focus is
     # back on the drawer's own button, its ring showing. Pen's and Music's.
     FIRST = """() => { const d = document.querySelector('.drawer-side');
