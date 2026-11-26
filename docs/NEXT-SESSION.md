@@ -1,6 +1,6 @@
-# Next session: the handoff (Nov 25, 2026, Mountain Time, written mid-morning)
+# Next session: the handoff (Nov 25, 2026, Mountain Time, written mid-morning, brought up to the evening)
 
-A snapshot from a session of Wednesday morning, Nov 25. It is not
+A snapshot from a session of Wednesday, Nov 25. It is not
 maintained: where things stand is the newest entries at the
 bottom of `DECISIONS.md`, and how to work is `WORKING-AGREEMENTS.md`. Read
 this after `START-HERE.md`; once you have, replace it with your own or
@@ -8,10 +8,15 @@ delete it, so it never goes stale here.
 
 ## Before anything: read main's newest full runs
 
-Every job, before believing main is green. The run after #1098 (Flip's Draw
-back) is the one that covers it: read it whole. Main was green on every job
-after #1095 (it covered Pin and Two Hands). Not sealed since v330, which is
-fine (`WORKING-AGREEMENTS.md`, "Sealing a release").
+Every job, before believing main is green. Main was green on every job
+after #1107 (about 7:15 PM, Nov 25): every shard on both databases, the
+MP4, Firefox and WebKit. That run covers Drawers beside the drawing
+(#1105), the @ list's race in `verify_socialmentions` (#1106: main had gone
+red on it after #1103, issue #1104) and what main's run after #1105 found
+(#1107: a row that fitted in this box's face and not in CI's, a suite's
+desk still beside the drawing, a help claim naming a renamed row). Not
+sealed since v330, which is fine (`WORKING-AGREEMENTS.md`, "Sealing a
+release").
 
 ## What happened this session
 
@@ -91,6 +96,16 @@ two-hands draw-back not drawn back on (recolour while drawing back is
 built).
 
 ## What saves time
+
+- A row about room (what fits where) is read in CI's face before it
+  merges: a fontconfig that leaves Inter out (WORKING-AGREEMENTS, "A ROW
+  ABOUT WORDS FITTING"). Main's run after #1105 was red on one that fitted
+  here by a few pixels; and a suite renamed is a reason to run
+  `verify_helpclaims`, which names rows.
+- A flake that will not show here may be the shared database, not the
+  clock: CI's shards share one database across suites, so the people and
+  posts other suites made are there (the @ list's race showed only with
+  two people sorting before Paz Ruiz).
 
 - `SOCIALDRAWBACK_PART=16` runs Flip's Draw back alone in about 30 seconds
   on its own server; `switch_on()` in the suite starts the second server
