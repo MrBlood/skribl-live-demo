@@ -980,7 +980,7 @@ def judge_pill(fs, reduced=False):
 
 
 # The page's own colour, the editors' ground since the owner's "Yes, A", Nov 14 (verify_socialsettings holds it to styles.css).
-LIGHT_PAGE, DARK_PAGE = "rgb(246, 248, 250)", "rgb(15, 18, 24)"
+LIGHT_PAGE, DARK_PAGE = "rgb(247, 245, 250)", "rgb(15, 18, 24)"
 SHEET_PAPER = {"light": "rgb(243, 240, 255)", "dark": "rgb(23, 20, 42)"}
 FILL, WHITE = "rgb(109, 76, 240)", "rgb(255, 255, 255)"
 # The second button (and every switch's track): Skribl's lilac in both themes

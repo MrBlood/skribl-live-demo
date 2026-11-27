@@ -9667,7 +9667,7 @@ body.replaying .media-card { pointer-events: none; }
   /* Surfaces — the deepest dark becomes the lightest light */
   --surface-deep:            #ffffff;   /* the toolbar row's ground */
   --surface-base:            #fbfcfd;
-  --surface-raised:          #f6f8fa;
+  --surface-raised:          #f7f5fa;
   --surface-sheet:           #f3f5f8;
   --surface-panel:           #f1f3f7;
   --surface-sheet-2:         #eff2f6;

@@ -513,9 +513,9 @@ with sync_playwright() as pw:
             metas = re.findall(r'<meta name="theme-color"[^>]*>', raw.decode("utf-8", "replace"))
             want = [f'<meta name="theme-color" content="{g.get("light")}" media="(prefers-color-scheme: light)" data-light="{g.get("light")}" data-dark="{g.get("dark")}">',
                     f'<meta name="theme-color" content="{g.get("dark")}" media="(prefers-color-scheme: dark)" data-light="{g.get("light")}" data-dark="{g.get("dark")}">']
-            check("both theme-color metas, as the page is sent, say social.SITE_GROUND (#f6f8fa, #0f1218): the browser's bar"
+            check("both theme-color metas, as the page is sent, say social.SITE_GROUND (#f7f5fa, #0f1218): the browser's bar"
                   " in the page's ground, from the one place the manifest's colour comes from too",
-                  metas == want and g == {"light": "#f6f8fa", "dark": "#0f1218"}, json.dumps(metas))
+                  metas == want and g == {"light": "#f7f5fa", "dark": "#0f1218"}, json.dumps(metas))
             sk = {}
             for name, path in (("the Pad", "/skribl-pad"), ("Flip", "/flip")):
                 st, _, raw = get(path)
@@ -1043,7 +1043,7 @@ with sync_playwright() as pw:
             check("...then it fades on several frames (no frame more than a third at once) and is gone by 4.6 s, the "
                   "bar back in the page's ground, marked seen and this launch's",
                   len(mids) >= 4 and (max(steps) if steps else 1) <= 0.34 and 2600 <= gone_at <= 4600
-                  and not {"is-splashing", "is-splash-first"} & set(after["cls"].split()) and after["bar"] == "#f6f8fa"
+                  and not {"is-splashing", "is-splash-first"} & set(after["cls"].split()) and after["bar"] == "#f7f5fa"
                   and after["seen"] == "1" and after["launch"] == "1",
                   json.dumps({"fade": [round(v, 2) for v in fade[:8]], "gone": round(gone_at), "after": after}))
             check("...once a launch: the next page in the app has none (it is the app's still: is-app, not is-splashing)",

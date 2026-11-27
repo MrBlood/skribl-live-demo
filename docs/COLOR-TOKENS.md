@@ -6,8 +6,8 @@ what it found, is `docs/COLOR-AUDIT.md`.
 **A snapshot, and nothing keeps it in step.** It is these stylesheets as they stood (a content stamp is
 the first eight of the file's SHA-256, the `?v=` its link carries):
 
-- `social/static/social.css`, content stamp `03f32e71`
-- `skribl/static/styles.css`, content stamp `b8638f18`
+- `social/static/social.css`, content stamp `644df935`
+- `skribl/static/styles.css`, content stamp `6b1b3517`
 
 `python3 harness/tools/coloraudit.py --check docs/COLOR-TOKENS.md` says in a second, with no browser,
 whether either has changed since. Making it again needs a running copy and a browser (the command is in
@@ -23,23 +23,23 @@ which properties read the token, and how often.
 
 ## The site (`social/static/social.css`)
 
-59 colour tokens.
+61 colour tokens.
 
 | Token | Light HEX/sRGB | Light OKLCH | Dark HEX/sRGB | Dark OKLCH | Usage |
 |---|---|---|---|---|---|
-| `--page` | `#f6f8fa` | `oklch(97.8% 0.003 248)` | `#0f1218` | `oklch(18.2% 0.013 264)` | fill ×4; ring or shadow ×3; icon ×3 |
-| `--ink` | `#14171d` | `oklch(20.4% 0.013 264)` | `#eef1f6` | `oklch(95.7% 0.007 261)` | text ×56 |
-| `--ink-2` | `#4b5563` | `oklch(44.6% 0.026 257)` | `#b7bfcc` | `oklch(80.2% 0.020 260)` | text ×87; feeds `--text-dim` |
-| `--accent-ink` | `#4c31c4` | `oklch(44.8% 0.213 282)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | text ×28; focus ×1 |
-| `--brand` | `#7c5cff` | `oklch(59.9% 0.230 286)` | `#8f74ff` | `oklch(65.2% 0.198 289)` | text ×5; icon ×4; edge ×4 |
+| `--page` | `#f7f5fa` | `oklch(97.3% 0.007 304)` | `#0f1218` | `oklch(18.2% 0.013 264)` | icon ×4; fill ×4; ring or shadow ×3 |
+| `--ink` | `#14171d` | `oklch(20.4% 0.013 264)` | `#eef1f6` | `oklch(95.7% 0.007 261)` | text ×60 |
+| `--ink-2` | `#4b5563` | `oklch(44.6% 0.026 257)` | `#b7bfcc` | `oklch(80.2% 0.020 260)` | text ×93; feeds `--text-dim` |
+| `--accent-ink` | `#4c31c4` | `oklch(44.8% 0.213 282)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | text ×29; focus ×1 |
+| `--brand` | `#7c5cff` | `oklch(59.9% 0.230 286)` | `#8f74ff` | `oklch(65.2% 0.198 289)` | text ×5; icon ×5; edge ×4; feeds `--tile-hover` |
 | `--blooby-ink` | `#1f1b2e` | `oklch(23.6% 0.036 293)` | `#1f1b2e` | `oklch(23.6% 0.036 293)` | icon ×4 |
 | `--blooby-blush` | `#ff6f91` | `oklch(72.5% 0.177 8)` | `#ff6f91` | `oklch(72.5% 0.177 8)` | icon ×3; feeds `--heart`, `--heart-line`, `--new-dot` |
-| `--blooby-paper` | `#f6f2ea` | `oklch(96.2% 0.011 85)` | `#f6f2ea` | `oklch(96.2% 0.011 85)` | icon ×1; fill ×1 |
+| `--blooby-paper` | `#f6f2ea` | `oklch(96.2% 0.011 85)` | `#f6f2ea` | `oklch(96.2% 0.011 85)` | fill ×2; icon ×1 |
 | `--fill` | `#6d4cf0` | `oklch(55.2% 0.232 285)` | `#6d4cf0` | `oklch(55.2% 0.232 285)` | fill ×8; native control ×3 |
 | `--on-fill` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#ffffff` | `oklch(100.0% 0.000 none)` | text ×8 |
-| `--focus` | `#6d4cf0` | `oklch(55.2% 0.232 285)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | focus ×11 |
+| `--focus` | `#6d4cf0` | `oklch(55.2% 0.232 285)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | focus ×12 |
 | `--btn2-bg` | `#e7e0ff` | `oklch(92.2% 0.042 296)` | `#332a58` | `oklch(32.0% 0.080 290)` | fill ×8; feeds `--tint` |
-| `--btn2-line` | `rgb(124 92 255 / 0.34)` | `oklch(59.9% 0.230 286 / 0.34)` | `rgb(167 146 255 / 0.4)` | `oklch(72.4% 0.155 291 / 0.4)` | ring or shadow ×6; edge ×1; feeds `--line` |
+| `--btn2-line` | `rgb(124 92 255 / 0.34)` | `oklch(59.9% 0.230 286 / 0.34)` | `rgb(167 146 255 / 0.4)` | `oklch(72.4% 0.155 291 / 0.4)` | ring or shadow ×6; edge ×1; feeds `--line`, `--tile-hover` |
 | `--btn2-ink` | `#14171d` | `oklch(20.4% 0.013 264)` | `#eef1f6` | `oklch(95.7% 0.007 261)` | text ×3 |
 | `--nav-bg` | `rgb(251 252 253 / 0.94)` | `oklch(99.1% 0.002 248 / 0.94)` | `rgb(11 13 18 / 0.92)` | `oklch(15.9% 0.011 268 / 0.92)` | fill ×2 |
 | `--nav-line` | `rgb(20 23 29 / 0.08)` | `oklch(20.4% 0.013 264 / 0.08)` | `rgb(255 255 255 / 0.09)` | `oklch(100.0% 0.000 none / 0.09)` | ring or shadow ×3 |
@@ -50,20 +50,22 @@ which properties read the token, and how often.
 | `--row-bg` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#231e3b` | `oklch(25.6% 0.054 290)` | fill ×7 |
 | `--grip` | `rgb(20 23 29 / 0.2)` | `oklch(20.4% 0.013 264 / 0.2)` | `rgb(255 255 255 / 0.22)` | `oklch(100.0% 0.000 none / 0.22)` | fill ×1 |
 | `--scrim` | `rgb(23 20 42 / 0.36)` | `oklch(20.7% 0.043 288 / 0.36)` | `rgb(0 0 0 / 0.5)` | `oklch(0.0% 0.000 none / 0.5)` | fill ×2 |
-| `--draw-wait` | `#ece6ff` | `oklch(93.7% 0.034 297)` | `#2e2650` | `oklch(30.0% 0.074 290)` | fill ×8; feeds `--bg-elev`, `--draw-edge` |
+| `--draw-wait` | `#ece6ff` | `oklch(93.7% 0.034 297)` | `#2e2650` | `oklch(30.0% 0.074 290)` | fill ×9; feeds `--bg-elev`, `--draw-edge` |
 | `--draw-edge` | `#dbd5ed` | `oklch(88.6% 0.032 296)` | `#3f375e` | `oklch(36.4% 0.066 292)` | ring or shadow ×2 |
 | `--card` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#231e3b` | `oklch(25.6% 0.054 290)` | fill ×12; ring or shadow ×2; feeds `--card-edge`, `--card-edge-hc` |
 | `--card-line` | `rgb(124 92 255 / 0.34)` | `oklch(59.9% 0.230 286 / 0.34)` | `rgb(167 146 255 / 0.26)` | `oklch(72.4% 0.155 291 / 0.26)` | ring or shadow ×10 |
 | `--card-edge` | `#d2c8ff` | `oklch(85.9% 0.077 294)` | `#453c6e` | `oklch(39.0% 0.083 290)` | ring or shadow ×14; edge ×5; feeds `--line` |
 | `--quote-well` | `#f0ecff` | `oklch(95.2% 0.026 296)` | `#16112b` | `oklch(20.0% 0.051 290)` | fill ×1 |
-| `--row-band` | `#eeeff8` | `oklch(95.4% 0.012 281)` | `#191b21` | `oklch(22.3% 0.012 271)` | fill ×1 |
-| `--row-band-sheet` | `#ebe7fc` | `oklch(93.7% 0.028 295)` | `#1f1c32` | `oklch(24.1% 0.042 289)` | feeds `--row-band` |
+| `--row-band` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#171723` | `oklch(21.1% 0.024 284)` | fill ×1; feeds `--tile-edge` |
+| `--row-band-sheet` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#171723` | `oklch(21.1% 0.024 284)` | feeds `--row-band` |
+| `--tile-edge` | `#dfdcf0` | `oklch(90.3% 0.027 293)` | `#2b2b39` | `oklch(29.6% 0.025 285)` | ring or shadow ×1 |
+| `--tile-hover` | `rgb(124 92 255 / 0.34)` | `oklch(59.9% 0.230 286 / 0.34)` | `rgb(167 146 255 / 0.4)` | `oklch(72.4% 0.155 291 / 0.4)` | feeds `--tile-edge` |
 | `--sheet-top` | `rgb(255 255 255 / 0.85)` | `oklch(100.0% 0.000 none / 0.85)` | `rgb(255 255 255 / 0.1)` | `oklch(100.0% 0.000 none / 0.1)` | ring or shadow ×1 |
-| `--rule` | `rgb(80 60 170 / 0.1)` | `oklch(44.4% 0.168 286 / 0.1)` | `rgb(167 146 255 / 0.12)` | `oklch(72.4% 0.155 291 / 0.12)` | ring or shadow ×11; fill ×1 |
+| `--rule` | `rgb(80 60 170 / 0.1)` | `oklch(44.4% 0.168 286 / 0.1)` | `rgb(167 146 255 / 0.12)` | `oklch(72.4% 0.155 291 / 0.12)` | ring or shadow ×13; fill ×1 |
 | `--row-line` | `rgb(20 10 60 / 0.16)` | `oklch(20.0% 0.090 284 / 0.16)` | `rgb(255 255 255 / 0.16)` | `oklch(100.0% 0.000 none / 0.16)` | fill ×3 |
 | `--ink-2-hc` | `#374151` | `oklch(37.3% 0.031 260)` | `#d6dbe3` | `oklch(89.0% 0.012 260)` | feeds `--ink-2`, `--nav-ink` |
 | `--card-edge-hc` | `#9074ff` | `oklch(65.4% 0.198 289)` | `#7264b1` | `oklch(55.0% 0.118 291)` | feeds `--card-edge` |
-| `--card-line-hc` | `rgb(124 92 255 / 0.85)` | `oklch(59.9% 0.230 286 / 0.85)` | `rgb(167 146 255 / 0.6)` | `oklch(72.4% 0.155 291 / 0.6)` | feeds `--card-line` |
+| `--card-line-hc` | `rgb(124 92 255 / 0.85)` | `oklch(59.9% 0.230 286 / 0.85)` | `rgb(167 146 255 / 0.6)` | `oklch(72.4% 0.155 291 / 0.6)` | feeds `--card-line`, `--tile-edge` |
 | `--rule-hc` | `rgb(80 60 170 / 0.3)` | `oklch(44.4% 0.168 286 / 0.3)` | `rgb(167 146 255 / 0.36)` | `oklch(72.4% 0.155 291 / 0.36)` | feeds `--rule` |
 | `--row-line-hc` | `rgb(20 10 60 / 0.36)` | `oklch(20.0% 0.090 284 / 0.36)` | `rgb(255 255 255 / 0.36)` | `oklch(100.0% 0.000 none / 0.36)` | feeds `--row-line` |
 | `--nav-line-hc` | `rgb(20 23 29 / 0.24)` | `oklch(20.4% 0.013 264 / 0.24)` | `rgb(255 255 255 / 0.24)` | `oklch(100.0% 0.000 none / 0.24)` | feeds `--nav-line` |
@@ -72,7 +74,7 @@ which properties read the token, and how often.
 | `--tint` | `#e7e0ff` | `oklch(92.2% 0.042 296)` | `#332a58` | `oklch(32.0% 0.080 290)` | fill ×16 |
 | `--danger-ink` | `#7a0a2d` | `oklch(37.5% 0.142 12)` | `#ffb3c6` | `oklch(84.4% 0.091 3)` | text ×4; edge ×2 |
 | `--danger-fill` | `#b3283f` | `oklch(50.8% 0.174 17)` | `#b3283f` | `oklch(50.8% 0.174 17)` | fill ×2; ring or shadow ×1; edge ×1 |
-| `--new-dot` | `#e64a78` | `oklch(63.8% 0.194 7)` | `#ff6f91` | `oklch(72.5% 0.177 8)` | icon ×1; fill ×1 |
+| `--new-dot` | `#e64a78` | `oklch(63.8% 0.194 7)` | `#ff6f91` | `oklch(72.5% 0.177 8)` | icon ×3; fill ×1 |
 | `--heart` | `#e64a78` | `oklch(63.8% 0.194 7)` | `#ff6f91` | `oklch(72.5% 0.177 8)` | icon ×1; fill ×1; feeds `--mark` |
 | `--heart-line` | `#d11a32` | `oklch(55.2% 0.211 23)` | `#ff6f91` | `oklch(72.5% 0.177 8)` | icon ×1 |
 | `--heart-2` | `#e33157` | `oklch(60.4% 0.211 15)` | `#ff4d78` | `oklch(68.1% 0.214 11)` | feeds `--mark-2` |
@@ -105,52 +107,56 @@ widest Delta E OK between two of those colours: how much the token changes with 
 
 | Token | Solid | on `--page` | on `--row-band` | on `--card` | on `--sheet-paper` | on `--row-band-sheet` | on `--btn2-bg` | Wanders |
 |---|---|---|---|---|---|---|---|---|
-| `--btn2-line` | 0.34 | `#cdc3fc` 1.54 | `#c7bdfa` 1.52 | `#d2c8ff` 1.56 | `#cbbeff` 1.52 | `#c5b8fd` 1.49 | `#c3b3ff` 1.47 | 0.059 |
-| `--nav-bg` | 0.94 | `#fbfcfd` 1.03 | `#fafbfd` 1.11 | `#fbfcfd` 1.03 | `#fbfbfd` 1.09 | `#fafbfd` 1.17 | `#fafafd` 1.22 | 0.005 |
-| `--nav-line` | 0.08 | `#e4e6e8` 1.18 | `#dddee6` 1.17 | `#ececed` 1.18 | `#e1dfed` 1.17 | `#dad6ea` 1.17 | `#d6d0ed` 1.17 | 0.083 |
-| `--nav-hover` | 0.08 | `#ececfa` 1.10 | `#e5e3f9` 1.10 | `#f5f2ff` 1.10 | `#e9e4ff` 1.10 | `#e2dcfc` 1.09 | `#ded5ff` 1.09 | 0.082 |
-| `--grip` | 0.2 | `#c9cbce` 1.53 | `#c2c4cc` 1.52 | `#d0d1d2` 1.53 | `#c6c5d2` 1.52 | `#c0bdcf` 1.52 | `#bdb8d2` 1.51 | 0.074 |
-| `--scrim` | 0.36 | `#a6a6af` 2.27 | `#a1a0ae` 2.25 | `#abaab2` 2.29 | `#a4a1b2` 2.25 | `#9f9bb0` 2.23 | `#9c97b2` 2.21 | 0.061 |
-| `--card-line` | 0.34 | `#cdc3fc` 1.54 | `#c7bdfa` 1.52 | `#d2c8ff` 1.56 | `#cbbeff` 1.52 | `#c5b8fd` 1.49 | `#c3b3ff` 1.47 | 0.059 |
-| `--sheet-top` | 0.85 | `#fefefe` 1.05 | `#fcfdfe` 1.12 | `#ffffff` 1.00 | `#fdfdff` 1.10 | `#fcfbff` 1.18 | `#fbfaff` 1.23 | 0.013 |
-| `--rule` | 0.1 | `#e5e5f2` 1.17 | `#deddf0` 1.17 | `#eeecf6` 1.17 | `#e3def6` 1.17 | `#dcd6f4` 1.16 | `#d8d0f6` 1.16 | 0.081 |
-| `--row-line` | 0.16 | `#d2d2dc` 1.41 | `#cbcada` 1.41 | `#d9d8e0` 1.42 | `#cfcbe0` 1.41 | `#c9c4dd` 1.40 | `#c5bee0` 1.40 | 0.077 |
-| `--card-line-hc` | 0.85 | `#8e73fe` 3.25 | `#8d72fe` 3.07 | `#9074ff` 3.42 | `#8e72ff` 3.12 | `#8d71ff` 2.93 | `#8c70ff` 2.81 | 0.012 |
-| `--rule-hc` | 0.3 | `#c4c0e2` 1.65 | `#bfb9e1` 1.63 | `#cac4e6` 1.67 | `#c2bae6` 1.63 | `#bcb4e3` 1.61 | `#baafe6` 1.60 | 0.064 |
-| `--row-line-hc` | 0.36 | `#a5a2b6` 2.33 | `#a09db4` 2.31 | `#aaa7b9` 2.35 | `#a39db9` 2.31 | `#9e97b7` 2.29 | `#9b93b9` 2.27 | 0.061 |
-| `--nav-line-hc` | 0.24 | `#c0c2c5` 1.68 | `#babbc3` 1.67 | `#c7c7c9` 1.69 | `#bdbcc9` 1.67 | `#b7b5c6` 1.66 | `#b4b0c9` 1.65 | 0.071 |
-| `--field-line` | 0.82 | `#9278fe` 3.11 | `#9176fe` 2.94 | `#9479ff` 3.26 | `#9177ff` 2.98 | `#9075fe` 2.82 | `#8f74ff` 2.70 | 0.015 |
-| `--pill-on-fill` | 0.22 | `#dbd6fb` 1.32 | `#d5cffa` 1.30 | `#e2dbff` 1.33 | `#d9cfff` 1.30 | `#d3c8fd` 1.29 | `#cfc3ff` 1.28 | 0.070 |
-| `--says-glass` | 0.82 | `#fdfefe` 1.05 | `#fcfcfe` 1.12 | `#ffffff` 1.00 | `#fdfcff` 1.10 | `#fbfbfe` 1.17 | `#fbf9ff` 1.22 | 0.016 |
+| `--btn2-line` | 0.34 | `#cdc1fc` 1.54 | `#d2c8ff` 1.56 | `#d2c8ff` 1.56 | `#cbbeff` 1.52 | `#d2c8ff` 1.56 | `#c3b3ff` 1.47 | 0.059 |
+| `--nav-bg` | 0.94 | `#fbfcfd` 1.05 | `#fbfcfd` 1.03 | `#fbfcfd` 1.03 | `#fbfbfd` 1.09 | `#fbfcfd` 1.03 | `#fafafd` 1.22 | 0.005 |
+| `--nav-line` | 0.08 | `#e5e3e8` 1.17 | `#ececed` 1.18 | `#ececed` 1.18 | `#e1dfed` 1.17 | `#ececed` 1.18 | `#d6d0ed` 1.17 | 0.083 |
+| `--nav-hover` | 0.08 | `#ede9fa` 1.10 | `#f5f2ff` 1.10 | `#f5f2ff` 1.10 | `#e9e4ff` 1.10 | `#f5f2ff` 1.10 | `#ded5ff` 1.09 | 0.082 |
+| `--grip` | 0.2 | `#cac9ce` 1.53 | `#d0d1d2` 1.53 | `#d0d1d2` 1.53 | `#c6c5d2` 1.52 | `#d0d1d2` 1.53 | `#bdb8d2` 1.51 | 0.074 |
+| `--scrim` | 0.36 | `#a6a4af` 2.27 | `#abaab2` 2.29 | `#abaab2` 2.29 | `#a4a1b2` 2.25 | `#abaab2` 2.29 | `#9c97b2` 2.21 | 0.061 |
+| `--card-line` | 0.34 | `#cdc1fc` 1.54 | `#d2c8ff` 1.56 | `#d2c8ff` 1.56 | `#cbbeff` 1.52 | `#d2c8ff` 1.56 | `#c3b3ff` 1.47 | 0.059 |
+| `--tile-hover` | 0.34 | `#cdc1fc` 1.54 | `#d2c8ff` 1.56 | `#d2c8ff` 1.56 | `#cbbeff` 1.52 | `#d2c8ff` 1.56 | `#c3b3ff` 1.47 | 0.059 |
+| `--sheet-top` | 0.85 | `#fefefe` 1.07 | `#ffffff` 1.00 | `#ffffff` 1.00 | `#fdfdff` 1.10 | `#ffffff` 1.00 | `#fbfaff` 1.23 | 0.013 |
+| `--rule` | 0.1 | `#e6e2f2` 1.17 | `#eeecf6` 1.17 | `#eeecf6` 1.17 | `#e3def6` 1.17 | `#eeecf6` 1.17 | `#d8d0f6` 1.16 | 0.081 |
+| `--row-line` | 0.16 | `#d3cfdc` 1.41 | `#d9d8e0` 1.42 | `#d9d8e0` 1.42 | `#cfcbe0` 1.41 | `#d9d8e0` 1.42 | `#c5bee0` 1.40 | 0.077 |
+| `--card-line-hc` | 0.85 | `#8e73fe` 3.21 | `#9074ff` 3.42 | `#9074ff` 3.42 | `#8e72ff` 3.12 | `#9074ff` 3.42 | `#8c70ff` 2.81 | 0.012 |
+| `--rule-hc` | 0.3 | `#c5bee2` 1.64 | `#cac4e6` 1.67 | `#cac4e6` 1.67 | `#c2bae6` 1.63 | `#cac4e6` 1.67 | `#baafe6` 1.60 | 0.064 |
+| `--row-line-hc` | 0.36 | `#a5a0b6` 2.33 | `#aaa7b9` 2.35 | `#aaa7b9` 2.35 | `#a39db9` 2.31 | `#aaa7b9` 2.35 | `#9b93b9` 2.27 | 0.061 |
+| `--nav-line-hc` | 0.24 | `#c1c0c5` 1.68 | `#c7c7c9` 1.69 | `#c7c7c9` 1.69 | `#bdbcc9` 1.67 | `#c7c7c9` 1.69 | `#b4b0c9` 1.65 | 0.071 |
+| `--field-line` | 0.82 | `#9278fe` 3.07 | `#9479ff` 3.26 | `#9479ff` 3.26 | `#9177ff` 2.98 | `#9479ff` 3.26 | `#8f74ff` 2.70 | 0.015 |
+| `--pill-on-fill` | 0.22 | `#dcd3fb` 1.31 | `#e2dbff` 1.33 | `#e2dbff` 1.33 | `#d9cfff` 1.30 | `#e2dbff` 1.33 | `#cfc3ff` 1.28 | 0.070 |
+| `--says-glass` | 0.82 | `#fefdfe` 1.07 | `#ffffff` 1.00 | `#ffffff` 1.00 | `#fdfcff` 1.10 | `#ffffff` 1.00 | `#fbf9ff` 1.22 | 0.016 |
 
 **Dark**
 
 | Token | Solid | on `--page` | on `--row-band` | on `--card` | on `--sheet-paper` | on `--row-band-sheet` | on `--btn2-bg` | Wanders |
 |---|---|---|---|---|---|---|---|---|
-| `--btn2-line` | 0.4 | `#4c4574` 2.16 | `#524b7a` 2.16 | `#584c89` 2.14 | `#51467f` 2.17 | `#554b84` 2.15 | `#61549b` 2.01 | 0.080 |
-| `--nav-bg` | 0.92 | `#0b0d12` 1.03 | `#0c0e13` 1.12 | `#0d0e15` 1.21 | `#0c0e14` 1.08 | `#0d0e15` 1.16 | `#0e0f18` 1.46 | 0.013 |
-| `--nav-line` | 0.09 | `#25272d` 1.26 | `#2e3035` 1.30 | `#37324d` 1.31 | `#2c293d` 1.28 | `#333044` 1.30 | `#453d67` 1.32 | 0.130 |
-| `--nav-hover` | 0.08 | `#18182a` 1.07 | `#212033` 1.08 | `#2a234b` 1.09 | `#1f1a3b` 1.08 | `#262142` 1.09 | `#392e65` 1.09 | 0.138 |
-| `--grip` | 0.22 | `#44464b` 1.99 | `#4c4d52` 2.04 | `#535066` 2.04 | `#4a4859` 2.01 | `#504e5f` 2.04 | `#60597d` 1.99 | 0.103 |
-| `--scrim` | 0.5 | `#08090c` 1.06 | `#0c0e10` 1.13 | `#120f1e` 1.19 | `#0c0a15` 1.09 | `#100e19` 1.16 | `#1a152c` 1.36 | 0.084 |
-| `--card-line` | 0.26 | `#373354` 1.58 | `#3e3a5b` 1.61 | `#453c6e` 1.61 | `#3c3561` 1.60 | `#423b67` 1.61 | `#514583` 1.57 | 0.102 |
-| `--sheet-top` | 0.1 | `#272a2f` 1.30 | `#303237` 1.34 | `#39344f` 1.35 | `#2e2c3f` 1.32 | `#353346` 1.35 | `#473f69` 1.36 | 0.128 |
-| `--rule` | 0.12 | `#212134` 1.19 | `#2a293c` 1.22 | `#332c53` 1.23 | `#282344` 1.21 | `#2f2a4b` 1.23 | `#41366c` 1.23 | 0.128 |
-| `--row-line` | 0.16 | `#35383d` 1.59 | `#3e3f45` 1.65 | `#46425a` 1.66 | `#3c3a4c` 1.62 | `#434053` 1.65 | `#544c73` 1.65 | 0.115 |
-| `--card-line-hc` | 0.6 | `#6a5fa3` 3.37 | `#6e62a6` 3.26 | `#7264b1` 3.15 | `#6d60aa` 3.33 | `#7163ad` 3.21 | `#7968bc` 2.81 | 0.051 |
-| `--rule-hc` | 0.36 | `#46406b` 1.97 | `#4c4671` 1.98 | `#534882` 1.97 | `#4b4177` 1.99 | `#50467c` 1.98 | `#5d4f94` 1.87 | 0.086 |
-| `--row-line-hc` | 0.36 | `#65676b` 3.32 | `#6c6d71` 3.33 | `#726f82` 3.27 | `#6b6977` 3.32 | `#706e7c` 3.30 | `#7c7794` 3.05 | 0.080 |
-| `--nav-line-hc` | 0.24 | `#494b4f` 2.14 | `#505256` 2.19 | `#58546a` 2.19 | `#4f4c5d` 2.17 | `#555263` 2.19 | `#645d80` 2.12 | 0.100 |
-| `--field-line` | 0.7 | `#796cba` 4.15 | `#7c6ebc` 3.96 | `#7f6fc4` 3.78 | `#7c6cbf` 4.07 | `#7e6fc2` 3.87 | `#8473cd` 3.29 | 0.037 |
-| `--pill-on-fill` | 0.22 | `#27224b` 1.27 | `#2f2952` 1.28 | `#372c66` 1.29 | `#2d2459` 1.29 | `#332a5f` 1.29 | `#43357d` 1.27 | 0.112 |
-| `--says-glass` | 0.82 | `#d4d4d5` 12.69 | `#d6d6d7` 11.84 | `#d7d6dc` 11.06 | `#d5d5d9` 12.24 | `#d7d6da` 11.43 | `#dad9e1` 9.28 | 0.020 |
+| `--btn2-line` | 0.4 | `#4c4574` 2.16 | `#51487b` 2.17 | `#584c89` 2.14 | `#51467f` 2.17 | `#51487b` 2.17 | `#61549b` 2.01 | 0.080 |
+| `--nav-bg` | 0.92 | `#0b0d12` 1.03 | `#0c0e13` 1.09 | `#0d0e15` 1.21 | `#0c0e14` 1.08 | `#0c0e13` 1.09 | `#0e0f18` 1.46 | 0.013 |
+| `--nav-line` | 0.09 | `#25272d` 1.26 | `#2c2c37` 1.28 | `#37324d` 1.31 | `#2c293d` 1.28 | `#2c2c37` 1.28 | `#453d67` 1.32 | 0.130 |
+| `--nav-hover` | 0.08 | `#18182a` 1.07 | `#1f1d35` 1.08 | `#2a234b` 1.09 | `#1f1a3b` 1.08 | `#1f1d35` 1.08 | `#392e65` 1.09 | 0.138 |
+| `--grip` | 0.22 | `#44464b` 1.99 | `#4a4a53` 2.03 | `#535066` 2.04 | `#4a4859` 2.01 | `#4a4a53` 2.03 | `#60597d` 1.99 | 0.103 |
+| `--scrim` | 0.5 | `#08090c` 1.06 | `#0c0c12` 1.10 | `#120f1e` 1.19 | `#0c0a15` 1.09 | `#0c0c12` 1.10 | `#1a152c` 1.36 | 0.084 |
+| `--card-line` | 0.26 | `#373354` 1.58 | `#3c375c` 1.60 | `#453c6e` 1.61 | `#3c3561` 1.60 | `#3c375c` 1.60 | `#514583` 1.57 | 0.102 |
+| `--tile-hover` | 0.4 | `#4c4574` 2.16 | `#51487b` 2.17 | `#584c89` 2.14 | `#51467f` 2.17 | `#51487b` 2.17 | `#61549b` 2.01 | 0.080 |
+| `--sheet-top` | 0.1 | `#272a2f` 1.30 | `#2e2e39` 1.33 | `#39344f` 1.35 | `#2e2c3f` 1.32 | `#2e2e39` 1.33 | `#473f69` 1.36 | 0.128 |
+| `--rule` | 0.12 | `#212134` 1.19 | `#28263d` 1.21 | `#332c53` 1.23 | `#282344` 1.21 | `#28263d` 1.21 | `#41366c` 1.23 | 0.128 |
+| `--row-line` | 0.16 | `#35383d` 1.59 | `#3c3c46` 1.63 | `#46425a` 1.66 | `#3c3a4c` 1.62 | `#3c3c46` 1.63 | `#544c73` 1.65 | 0.115 |
+| `--card-line-hc` | 0.6 | `#6a5fa3` 3.37 | `#6d61a7` 3.31 | `#7264b1` 3.15 | `#6d60aa` 3.33 | `#6d61a7` 3.31 | `#7968bc` 2.81 | 0.051 |
+| `--rule-hc` | 0.36 | `#46406b` 1.97 | `#4b4372` 1.99 | `#534882` 1.97 | `#4b4177` 1.99 | `#4b4372` 1.99 | `#5d4f94` 1.87 | 0.086 |
+| `--row-line-hc` | 0.36 | `#65676b` 3.32 | `#6b6b72` 3.34 | `#726f82` 3.27 | `#6b6977` 3.32 | `#6b6b72` 3.34 | `#7c7794` 3.05 | 0.080 |
+| `--nav-line-hc` | 0.24 | `#494b4f` 2.14 | `#4f4f58` 2.18 | `#58546a` 2.19 | `#4f4c5d` 2.17 | `#4f4f58` 2.18 | `#645d80` 2.12 | 0.100 |
+| `--field-line` | 0.7 | `#796cba` 4.15 | `#7c6dbd` 4.04 | `#7f6fc4` 3.78 | `#7c6cbf` 4.07 | `#7c6dbd` 4.04 | `#8473cd` 3.29 | 0.037 |
+| `--pill-on-fill` | 0.22 | `#27224b` 1.27 | `#2d2653` 1.28 | `#372c66` 1.29 | `#2d2459` 1.29 | `#2d2653` 1.28 | `#43357d` 1.27 | 0.112 |
+| `--says-glass` | 0.82 | `#d4d4d5` 12.69 | `#d5d5d7` 12.14 | `#d7d6dc` 11.06 | `#d5d5d9` 12.24 | `#d5d5d7` 12.14 | `#dad9e1` 9.28 | 0.020 |
 
 ### One colour under several names (the same in both themes)
 
 - `--ink`, `--btn2-ink`
 - `--ink-2`, `--nav-ink`
 - `--btn2-bg`, `--tint`
+- `--btn2-line`, `--tile-hover`
 - `--row-bg`, `--card`
+- `--row-band`, `--row-band-sheet`
 - `--new-dot`, `--heart`
 
 ### Near-twins (Delta E OK under 0.012 in both themes, and not identical)
@@ -167,7 +173,7 @@ here too; the audit says which are which.
 | Token | Light HEX/sRGB | Light OKLCH | Dark HEX/sRGB | Dark OKLCH | Usage |
 |---|---|---|---|---|---|
 | `--surface-base` | `#fbfcfd` | `oklch(99.1% 0.002 248)` | `#0b0d12` | `oklch(15.9% 0.011 268)` | fill ×3; ring or shadow ×1 |
-| `--surface-raised` | `#f6f8fa` | `oklch(97.8% 0.003 248)` | `#0f1218` | `oklch(18.2% 0.013 264)` | fill ×9; ring or shadow ×2; feeds `--raised-edge` |
+| `--surface-raised` | `#f7f5fa` | `oklch(97.3% 0.007 304)` | `#0f1218` | `oklch(18.2% 0.013 264)` | fill ×9; ring or shadow ×2; feeds `--raised-edge` |
 | `--surface-panel` | `#f1f3f7` | `oklch(96.4% 0.006 265)` | `#13161c` | `oklch(20.0% 0.013 264)` | fill ×4 |
 | `--surface-control` | `#edf0f4` | `oklch(95.4% 0.006 255)` | `#171b23` | `oklch(22.2% 0.017 264)` | fill ×12; feeds `--control-edge`, `--control-edge-strong` |
 | `--surface-control-hover` | `#e2e7ee` | `oklch(92.6% 0.011 257)` | `#1c212c` | `oklch(24.8% 0.022 266)` | fill ×12 |
@@ -194,7 +200,7 @@ here too; the audit says which are which.
 | `--text-bright-2` | `#343b47` | `oklch(35.1% 0.023 261)` | `#c8cdd6` | `oklch(84.7% 0.014 262)` | text ×1 |
 | `--text-bright` | `#343b47` | `oklch(35.1% 0.023 261)` | `#c8cede` | `oklch(85.2% 0.023 269)` | text ×5 |
 | `--text-strong-3` | `#1f252f` | `oklch(26.3% 0.021 261)` | `#e7e9ee` | `oklch(93.4% 0.007 269)` | text ×1 |
-| `--text-strong` | `#1f252f` | `oklch(26.3% 0.021 261)` | `#e7e9ea` | `oklch(93.3% 0.003 229)` | text ×17; feeds `--pen-nib` |
+| `--text-strong` | `#1f252f` | `oklch(26.3% 0.021 261)` | `#e7e9ea` | `oklch(93.3% 0.003 229)` | text ×18; feeds `--pen-nib` |
 | `--text-heading` | `#171c25` | `oklch(22.6% 0.019 262)` | `#f2f4f8` | `oklch(96.7% 0.006 265)` | text ×4 |
 | `--surface-tint` | `#f0edff` | `oklch(95.4% 0.024 294)` | `#161528` | `oklch(20.7% 0.037 285)` | fill ×1 |
 | `--surface-tint-lit` | `#e6e0ff` | `oklch(92.1% 0.042 294)` | `#1a1830` | `oklch(22.5% 0.046 286)` | fill ×1 |
@@ -202,10 +208,10 @@ here too; the audit says which are which.
 | `--control-edge` | `#d8dade` | `oklch(88.9% 0.006 255)` | `#24282f` | `oklch(27.4% 0.015 264)` | ring or shadow ×1 |
 | `--control-edge-strong` | `#c9cccf` | `oklch(84.4% 0.005 255)` | `#2c3037` | `oklch(30.7% 0.014 264)` | ring or shadow ×2; edge ×1 |
 | `--deep-edge` | `#d9d9d9` | `oklch(88.5% 0.000 none)` | `#1c1d20` | `oklch(23.2% 0.005 271)` | ring or shadow ×1 |
-| `--raised-edge` | `#e0e2e4` | `oklch(91.1% 0.003 248)` | `#1c1f25` | `oklch(23.9% 0.012 264)` | ring or shadow ×1 |
+| `--raised-edge` | `#e1dfe4` | `oklch(90.6% 0.006 304)` | `#1c1f25` | `oklch(23.9% 0.012 264)` | ring or shadow ×1 |
 | `--hairline` | `rgb(0 0 0 / 0.09)` | `oklch(0.0% 0.000 none / 0.09)` | `rgb(255 255 255 / 0.055)` | `oklch(100.0% 0.000 none / 0.055)` | edge ×30; ring or shadow ×9; fill ×2 |
 | `--hairline-strong` | `rgb(0 0 0 / 0.15)` | `oklch(0.0% 0.000 none / 0.15)` | `rgb(255 255 255 / 0.09)` | `oklch(100.0% 0.000 none / 0.09)` | edge ×14; ring or shadow ×2 |
-| `--text-primary` | `#11161e` | `oklch(19.9% 0.018 260)` | `#f6f7f9` | `oklch(97.6% 0.003 265)` | text ×94; fill ×3; ring or shadow ×1; feeds `--row-line` |
+| `--text-primary` | `#11161e` | `oklch(19.9% 0.018 260)` | `#f6f7f9` | `oklch(97.6% 0.003 265)` | text ×96; fill ×3; ring or shadow ×1; feeds `--row-line` |
 | `--text-secondary` | `#3b4251` | `oklch(37.9% 0.027 265)` | `#b7bfcc` | `oklch(80.2% 0.020 260)` | text ×81; fill ×4; feeds `--text-muted`, `--text-soft`, `--text-soft-2` … |
 | `--text-muted` | `#3b4251` | `oklch(37.9% 0.027 265)` | `#b7bfcc` | `oklch(80.2% 0.020 260)` | text ×23; edge ×1 |
 | `--text-dim` | `#8c94a3` | `oklch(66.5% 0.024 263)` | `#575f6e` | `oklch(48.4% 0.026 263)` | text ×2 |
@@ -217,8 +223,8 @@ here too; the audit says which are which.
 | `--header-rim` | `rgb(255 255 255 / 0.9)` | `oklch(100.0% 0.000 none / 0.9)` | `rgb(0 0 0 / 0.55)` | `oklch(0.0% 0.000 none / 0.55)` | ring or shadow ×1; feeds `--glass` |
 | `--glass-fill` | `rgb(234 238 244 / 0.78)` | `oklch(94.8% 0.009 258 / 0.78)` | `rgb(23 26 34 / 0.78)` | `oklch(21.8% 0.016 269 / 0.78)` | fill ×4 |
 | `--glass-drop` | `rgb(20 24 40 / 0.14)` | `oklch(21.3% 0.032 273 / 0.14)` | `rgb(0 0 0 / 0.5)` | `oklch(0.0% 0.000 none / 0.5)` | feeds `--glass` |
-| `--menu-paper` | `#f3f0ff` | `oklch(96.2% 0.020 295)` | `#17142a` | `oklch(20.7% 0.043 288)` | fill ×18; feeds `--menu-paper-edge` |
-| `--menu-card` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#231e3b` | `oklch(25.6% 0.054 290)` | fill ×53; ring or shadow ×1; feeds `--menu-card-edge` |
+| `--menu-paper` | `#f3f0ff` | `oklch(96.2% 0.020 295)` | `#17142a` | `oklch(20.7% 0.043 288)` | fill ×20; feeds `--menu-paper-edge` |
+| `--menu-card` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#231e3b` | `oklch(25.6% 0.054 290)` | fill ×55; ring or shadow ×1; feeds `--menu-card-edge` |
 | `--menu-card-line` | `rgb(124 92 255 / 0.34)` | `oklch(59.9% 0.230 286 / 0.34)` | `rgb(167 146 255 / 0.26)` | `oklch(72.4% 0.155 291 / 0.26)` | fill ×7; ring or shadow ×3; edge ×2 |
 | `--menu-card-rule` | `rgb(80 60 170 / 0.1)` | `oklch(44.4% 0.168 286 / 0.1)` | `rgb(167 146 255 / 0.12)` | `oklch(72.4% 0.155 291 / 0.12)` | edge ×6; ring or shadow ×1 |
 | `--seg-on-fill` | `rgb(124 92 255 / 0.22)` | `oklch(59.9% 0.230 286 / 0.22)` | `rgb(124 92 255 / 0.22)` | `oklch(59.9% 0.230 286 / 0.22)` | fill ×25 |
@@ -233,13 +239,13 @@ here too; the audit says which are which.
 | `--tip-well` | `#f0ecff` | `oklch(95.2% 0.026 296)` | `#16112b` | `oklch(20.0% 0.051 290)` | fill ×1 |
 | `--count-fill` | `#ece6ff` | `oklch(93.7% 0.034 297)` | `#2b2450` | `oklch(29.3% 0.078 288)` | fill ×1 |
 | `--draw-wait` | `#ece6ff` | `oklch(93.7% 0.034 297)` | `#2e2650` | `oklch(30.0% 0.074 290)` | fill ×1 |
-| `--accent` | `#7c5cff` | `oklch(59.9% 0.230 286)` | `#7c5cff` | `oklch(59.9% 0.230 286)` | fill ×26; focus ×6; text ×5; ring or shadow ×4; edge ×3; stop-color ×1; icon ×1; feeds `--focus-ring`, `--ui-active`, `--ui-hi` … |
+| `--accent` | `#7c5cff` | `oklch(59.9% 0.230 286)` | `#7c5cff` | `oklch(59.9% 0.230 286)` | fill ×28; focus ×6; text ×5; ring or shadow ×4; edge ×3; stop-color ×1; icon ×1; feeds `--focus-ring`, `--ui-active`, `--ui-hi` … |
 | `--accent-2` | `#5b8cff` | `oklch(66.2% 0.179 265)` | `#5b8cff` | `oklch(66.2% 0.179 265)` | stop-color ×1; fill ×1 |
 | `--accent-bright` | `#9179ff` | `oklch(66.2% 0.191 288)` | `#9179ff` | `oklch(66.2% 0.191 288)` | fill ×3; text ×1; edge ×1; feeds `--brand-ink` |
 | `--accent-fill` | `#6d4cf0` | `oklch(55.2% 0.232 285)` | `#6d4cf0` | `oklch(55.2% 0.232 285)` | fill ×33; ring or shadow ×1 |
 | `--accent-2-fill` | `#3f6ae0` | `oklch(56.0% 0.186 266)` | `#3f6ae0` | `oklch(56.0% 0.186 266)` | fill ×1 |
 | `--accent-glow` | `rgb(0 0 0 / 0.16)` | `oklch(0.0% 0.000 none / 0.16)` | `rgb(0 0 0 / 0.32)` | `oklch(0.0% 0.000 none / 0.32)` | ring or shadow ×2 |
-| `--ui-hi` | `#7c5cff` | `oklch(59.9% 0.230 286)` | `#7c5cff` | `oklch(59.9% 0.230 286)` | focus ×21; text ×10; fill ×8; ring or shadow ×4; native control ×2; icon ×1; edge ×1 |
+| `--ui-hi` | `#7c5cff` | `oklch(59.9% 0.230 286)` | `#7c5cff` | `oklch(59.9% 0.230 286)` | focus ×22; text ×10; fill ×8; ring or shadow ×4; native control ×2; icon ×1; edge ×1 |
 | `--ui-active` | `#7c5cff` | `oklch(59.9% 0.230 286)` | `#7c5cff` | `oklch(59.9% 0.230 286)` | fill ×5; feeds `--switch-off` |
 | `--ui-line` | `#7c5cff` | `oklch(59.9% 0.230 286)` | `#7c5cff` | `oklch(59.9% 0.230 286)` | edge ×8; ring or shadow ×2 |
 | `--focus-ring` | `#7c5cff` | `oklch(59.9% 0.230 286)` | `#7c5cff` | `oklch(59.9% 0.230 286)` | focus ×9 |
@@ -256,7 +262,7 @@ here too; the audit says which are which.
 | `--good` | `#0a7350` | `oklch(49.3% 0.103 163)` | `#30e8a7` | `oklch(82.8% 0.169 163)` | fill ×2 |
 | `--accent-tint` | `#4c31c4` | `oklch(44.8% 0.213 282)` | `#d6ccff` | `oklch(87.0% 0.071 294)` | text ×1 |
 | `--accent-tint-2` | `#4c31c4` | `oklch(44.8% 0.213 282)` | `#d5cfff` | `oklch(87.5% 0.066 291)` | not read in this sheet |
-| `--accent-ink` | `#4c31c4` | `oklch(44.8% 0.213 282)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | text ×22; fill ×2 |
+| `--accent-ink` | `#4c31c4` | `oklch(44.8% 0.213 282)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | text ×23; fill ×2 |
 | `--menu-card-edge` | `#d2c8ff` | `oklch(85.9% 0.077 294)` | `#453c6e` | `oklch(39.0% 0.083 290)` | ring or shadow ×3; feeds `--card-ring` |
 | `--menu-paper-edge` | `#cbbeff` | `oklch(83.4% 0.091 293)` | `#3c3561` | `oklch(35.8% 0.076 290)` | edge ×1; feeds `--paper-ring` |
 | `--on-glass-2` | `#3b4251` | `oklch(37.9% 0.027 265)` | – | – | feeds `--text-muted`, `--text-secondary`, `--text-soft` … |
@@ -268,10 +274,10 @@ here too; the audit says which are which.
 | `--label-edge` | `0 1 0 #ffffff at 0.95` | `0 1 0 #000000 at 0.55` | text shadow ×1 |
 | `--glass` | `0 0 0 1 #ffffff at 0.9`; `0 1 2 #141828 at 0.14` | `0 0 0 1 #000000 at 0.55`; `0 1 2 #000000 at 0.5` | ring or shadow ×12 |
 | `--fill-drop` | `inset 0 1 0 #ffffff at 0.32`; `inset 0 -1 0 #241078 at 0.34`; `0 1 2 #3c288c at 0.36` | `inset 0 1 0 #ffffff at 0.32`; `inset 0 -1 0 #241078 at 0.34`; `0 1 2 #3c288c at 0.36` | ring or shadow ×3 |
-| `--menu-card-drop` | `0 1 0 #3c288c at 0.13` | `inset 0 1 0 #ffffff at 0.07` | ring or shadow ×14 |
-| `--chip-lift` | `0 1 0 #3c288c at 0.14`; `0 12 22 -12 #1e1450 at 0.45` | `inset 0 1 0 #ffffff at 0.08`; `0 12 22 -12 #000000 at 0.8` | ring or shadow ×16 |
-| `--card-ring` | `0 0 0 1 #d2c8ff` | `0 0 0 1 #453c6e` | ring or shadow ×38 |
-| `--paper-ring` | `0 0 0 1 #cbbeff` | `0 0 0 1 #3c3561` | ring or shadow ×6 |
+| `--menu-card-drop` | `0 1 0 #3c288c at 0.13` | `inset 0 1 0 #ffffff at 0.07` | ring or shadow ×15 |
+| `--chip-lift` | `0 1 0 #3c288c at 0.14`; `0 12 22 -12 #1e1450 at 0.45` | `inset 0 1 0 #ffffff at 0.08`; `0 12 22 -12 #000000 at 0.8` | ring or shadow ×17 |
+| `--card-ring` | `0 0 0 1 #d2c8ff` | `0 0 0 1 #453c6e` | ring or shadow ×39 |
+| `--paper-ring` | `0 0 0 1 #cbbeff` | `0 0 0 1 #3c3561` | ring or shadow ×7 |
 
 ### See-through tokens, on the grounds they can land on
 
@@ -282,20 +288,20 @@ widest Delta E OK between two of those colours: how much the token changes with 
 
 | Token | Solid | on `--surface-base` | on `--surface-raised` | on `--surface-control` | on `--menu-paper` | on `--menu-card` | on `--btn2-bg` | Wanders |
 |---|---|---|---|---|---|---|---|---|
-| `--hairline` | 0.09 | `#e4e5e6` 1.22 | `#e0e2e4` 1.22 | `#d8dade` 1.22 | `#dddae8` 1.22 | `#e8e8e8` 1.22 | `#d2cce8` 1.22 | 0.083 |
-| `--hairline-strong` | 0.15 | `#d5d6d7` 1.41 | `#d1d3d4` 1.41 | `#c9cccf` 1.41 | `#cfccd9` 1.41 | `#d9d9d9` 1.41 | `#c4bed9` 1.40 | 0.078 |
-| `--hairline-hc` | 0.28 | `#b5b5b6` 1.99 | `#b1b3b4` 1.98 | `#abadb0` 1.97 | `#afadb8` 1.98 | `#b8b8b8` 1.99 | `#a6a1b8` 1.96 | 0.068 |
-| `--hairline-strong-hc` | 0.42 | `#929293` 3.03 | `#8f9091` 3.01 | `#898b8e` 2.98 | `#8d8b94` 2.99 | `#949494` 3.04 | `#868294` 2.93 | 0.057 |
-| `--header-rim` | 0.9 | `#ffffff` 1.02 | `#fefefe` 1.06 | `#fdfefe` 1.13 | `#fefeff` 1.11 | `#ffffff` 1.00 | `#fdfcff` 1.24 | 0.009 |
-| `--glass-fill` | 0.78 | `#eef1f6` 1.10 | `#edf0f5` 1.07 | `#ebeef4` 1.01 | `#eceef6` 1.03 | `#eff2f6` 1.13 | `#e9ebf6` 1.07 | 0.020 |
-| `--glass-drop` | 0.14 | `#dbdcdf` 1.33 | `#d6d9dd` 1.33 | `#cfd2d7` 1.33 | `#d4d2e1` 1.33 | `#dedfe1` 1.34 | `#c9c4e1` 1.32 | 0.079 |
-| `--menu-card-line` | 0.34 | `#d0c6fe` 1.56 | `#cdc3fc` 1.54 | `#c7bef8` 1.52 | `#cbbeff` 1.52 | `#d2c8ff` 1.56 | `#c3b3ff` 1.47 | 0.059 |
-| `--menu-card-rule` | 0.1 | `#eae9f5` 1.17 | `#e5e5f2` 1.17 | `#dddeed` 1.17 | `#e3def6` 1.17 | `#eeecf6` 1.17 | `#d8d0f6` 1.16 | 0.081 |
-| `--seg-on-fill` | 0.22 | `#dfd9fd` 1.32 | `#dbd6fb` 1.32 | `#d4cff6` 1.30 | `#d9cfff` 1.30 | `#e2dbff` 1.33 | `#cfc3ff` 1.28 | 0.070 |
-| `--press-fill` | 0.22 | `#dfd9fd` 1.32 | `#dbd6fb` 1.32 | `#d4cff6` 1.30 | `#d9cfff` 1.30 | `#e2dbff` 1.33 | `#cfc3ff` 1.28 | 0.070 |
-| `--chip-glass` | 0.96 | `#ffffff` 1.03 | `#ffffff` 1.06 | `#fefeff` 1.14 | `#fffeff` 1.12 | `#ffffff` 1.00 | `#fefeff` 1.26 | 0.004 |
-| `--chip-line` | 0.3 | `#d5ccfe` 1.47 | `#d1c9fc` 1.46 | `#cbc4f7` 1.44 | `#cfc4ff` 1.44 | `#d8ceff` 1.48 | `#c7b8ff` 1.40 | 0.063 |
-| `--accent-glow` | 0.16 | `#d3d4d5` 1.45 | `#cfd0d2` 1.45 | `#c7cacd` 1.44 | `#cccad6` 1.44 | `#d6d6d6` 1.45 | `#c2bcd6` 1.44 | 0.077 |
+| `--hairline` | 0.09 | `#e4e5e6` 1.22 | `#e1dfe4` 1.22 | `#d8dade` 1.22 | `#dddae8` 1.22 | `#e8e8e8` 1.22 | `#d2cce8` 1.22 | 0.083 |
+| `--hairline-strong` | 0.15 | `#d5d6d7` 1.41 | `#d2d0d4` 1.41 | `#c9cccf` 1.41 | `#cfccd9` 1.41 | `#d9d9d9` 1.41 | `#c4bed9` 1.40 | 0.078 |
+| `--hairline-hc` | 0.28 | `#b5b5b6` 1.99 | `#b2b0b4` 1.98 | `#abadb0` 1.97 | `#afadb8` 1.98 | `#b8b8b8` 1.99 | `#a6a1b8` 1.96 | 0.068 |
+| `--hairline-strong-hc` | 0.42 | `#929293` 3.03 | `#8f8e91` 3.00 | `#898b8e` 2.98 | `#8d8b94` 2.99 | `#949494` 3.04 | `#868294` 2.93 | 0.057 |
+| `--header-rim` | 0.9 | `#ffffff` 1.02 | `#fefefe` 1.07 | `#fdfefe` 1.13 | `#fefeff` 1.11 | `#ffffff` 1.00 | `#fdfcff` 1.24 | 0.009 |
+| `--glass-fill` | 0.78 | `#eef1f6` 1.10 | `#edf0f5` 1.06 | `#ebeef4` 1.01 | `#eceef6` 1.03 | `#eff2f6` 1.13 | `#e9ebf6` 1.07 | 0.020 |
+| `--glass-drop` | 0.14 | `#dbdcdf` 1.33 | `#d7d6dd` 1.33 | `#cfd2d7` 1.33 | `#d4d2e1` 1.33 | `#dedfe1` 1.34 | `#c9c4e1` 1.32 | 0.079 |
+| `--menu-card-line` | 0.34 | `#d0c6fe` 1.56 | `#cdc1fc` 1.54 | `#c7bef8` 1.52 | `#cbbeff` 1.52 | `#d2c8ff` 1.56 | `#c3b3ff` 1.47 | 0.059 |
+| `--menu-card-rule` | 0.1 | `#eae9f5` 1.17 | `#e6e2f2` 1.17 | `#dddeed` 1.17 | `#e3def6` 1.17 | `#eeecf6` 1.17 | `#d8d0f6` 1.16 | 0.081 |
+| `--seg-on-fill` | 0.22 | `#dfd9fd` 1.32 | `#dcd3fb` 1.31 | `#d4cff6` 1.30 | `#d9cfff` 1.30 | `#e2dbff` 1.33 | `#cfc3ff` 1.28 | 0.070 |
+| `--press-fill` | 0.22 | `#dfd9fd` 1.32 | `#dcd3fb` 1.31 | `#d4cff6` 1.30 | `#d9cfff` 1.30 | `#e2dbff` 1.33 | `#cfc3ff` 1.28 | 0.070 |
+| `--chip-glass` | 0.96 | `#ffffff` 1.03 | `#ffffff` 1.08 | `#fefeff` 1.14 | `#fffeff` 1.12 | `#ffffff` 1.00 | `#fefeff` 1.26 | 0.004 |
+| `--chip-line` | 0.3 | `#d5ccfe` 1.47 | `#d2c7fc` 1.46 | `#cbc4f7` 1.44 | `#cfc4ff` 1.44 | `#d8ceff` 1.48 | `#c7b8ff` 1.40 | 0.063 |
+| `--accent-glow` | 0.16 | `#d3d4d5` 1.45 | `#cfced2` 1.45 | `#c7cacd` 1.44 | `#cccad6` 1.44 | `#d6d6d6` 1.45 | `#c2bcd6` 1.44 | 0.077 |
 
 **Dark**
 
@@ -356,21 +362,22 @@ or a near miss.
 
 | The site | The editors | Light (site / editors) | Dark (site / editors) | Delta E OK |
 |---|---|---|---|---|
-| `--row-band` | `--surface-control` | `#eeeff8` / `#edf0f4` | `#191b21` / `#171b23` | 0.0070 |
 | `--btn2-ink` | `--text-primary` | `#14171d` / `#11161e` | `#eef1f6` / `#f6f7f9` | 0.0192 |
 | `--ink` | `--text-primary` | `#14171d` / `#11161e` | `#eef1f6` / `#f6f7f9` | 0.0192 |
-| `--row-band-sheet` | `--surface-tint-lit` | `#ebe7fc` / `#e6e0ff` | `#1f1c32` / `#1a1830` | 0.0215 |
+| `--tile-edge` | `--line-2` | `#dfdcf0` / `#dde2ea` | `#2b2b39` / `#262c38` | 0.0202 |
 | `--nav-on` | `--text-primary` | `#14171d` / `#11161e` | `#ffffff` / `#f6f7f9` | 0.0242 |
 | `--draw-edge` | `--btn2-hover` | `#dbd5ed` / `#ddd4ff` | `#3f375e` / `#3b3166` | 0.0273 |
+| `--row-band-sheet` | `--surface-pop` | `#ffffff` / `#ffffff` | `#171723` / `#1b1f27` | 0.0299 |
+| `--row-band` | `--surface-pop` | `#ffffff` / `#ffffff` | `#171723` / `#1b1f27` | 0.0299 |
 
-Exact copies: 18 of the site's 59 colour tokens.
+Exact copies: 18 of the site's 61 colour tokens.
 
 ## What the stylesheets say
 
 | Stylesheet | Tokens | Colours written into rules | color-mix() | Gradients | Shadow lines | of them soft (blur over 2.5px) | Forced-colours blocks | More-contrast blocks |
 |---|---|---|---|---|---|---|---|---|
-| `social/static/social.css` | 91 | 13 | 10 | 7 | 75 | 0 | 1 | 1 |
-| `skribl/static/styles.css` | 160 | 216 | 40 | 21 | 164 | 30 | 3 | 1 |
+| `social/static/social.css` | 94 | 13 | 12 | 7 | 78 | 0 | 1 | 1 |
+| `skribl/static/styles.css` | 160 | 216 | 42 | 21 | 166 | 30 | 3 | 1 |
 | `skribl/static/flip.css` | 8 | 31 | 1 | 0 | 30 | 3 | 0 | 0 |
 | `skribl/static/inlineplayer.css` | 1 | 56 | 7 | 2 | 5 | 2 | 0 | 0 |
 | `skribl/static/pagemenu.css` | 20 | 1 | 4 | 0 | 5 | 0 | 0 | 0 |
