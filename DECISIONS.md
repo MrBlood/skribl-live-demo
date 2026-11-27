@@ -54817,7 +54817,9 @@ PAD AND FLIP: shared. Flip's book, loop and scissors are Skribl's own files
 both editors load (the menu, the page menu, flip.js's page menu); the site's
 four are the site's alone. Nothing else of either editor changed.
 
-THE REST OF THE CHECK is a mock, waiting on the owner: sizes and line
+THE REST OF THE CHECK is a mock, waiting on the owner
+(https://claude.ai/artifact/BDqzjy8ghYVfSJDcdgaBNf, "Blooby icon check"):
+sizes and line
 weights inside each set (the ☰ drawn at 22px beside a 26px envelope and
 bell; Make's pencil at a 1.6px line beside 2.8; the sheets' icons 15.4 to
 17.8px tall), and the "Blooby font" (yes to a set with a written rule and a
