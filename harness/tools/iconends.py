@@ -411,25 +411,79 @@ def _templated(s):
     return any(t in s for t in ("{{", "{%", "${", "' +", '" +', "+ '", '+ "'))
 
 
-def site_drawings():
-    """The site's icons, each macro rendered as its pages draw it."""
+def _icons_module():
     import jinja2
-    path = os.path.join(ROOT, "social/templates/social/_icons.html")
-    src = open(path, encoding="utf-8").read()
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.join(ROOT, "social/templates")))
-    mod = env.get_template("social/_icons.html").module
+    return env.get_template("social/_icons.html").module
+
+
+def site_macros():
+    """(label, name, kwargs, html) for each of the site's icons, each macro
+    rendered as its pages draw it, and its filled, lit and `fit` copies."""
+    src = open(os.path.join(ROOT, "social/templates/social/_icons.html"), encoding="utf-8").read()
+    mod = _icons_module()
     for name, args in re.findall(r"{%\s*macro\s+([a-z_]+)\s*\(([^)]*)\)", src):
         if name.startswith("_"):
             continue
         variants = [({}, name)]
-        if "filled" in args:
-            variants.append(({"filled": True}, name + "(filled)"))
-        if "lit" in args:
-            variants.append(({"lit": True}, name + "(lit)"))
+        for flag in ("filled", "lit", "fit"):
+            if flag in args:
+                variants.append(({flag: True}, f"{name}({flag})"))
         for kw, label in variants:
-            html = str(getattr(mod, name)(**kw))
-            for m in _SVG.finditer(html):
-                yield "social/templates/social/_icons.html " + label, _strokes(_attrs(m.group(1)), m.group(2))
+            yield label, name, kw, str(getattr(mod, name)(**kw))
+
+
+def site_drawings():
+    """The site's icons, each macro rendered as its pages draw it."""
+    for label, name, kw, html in site_macros():
+        for m in _SVG.finditer(html):
+            yield "social/templates/social/_icons.html " + label, _strokes(_attrs(m.group(1)), m.group(2))
+
+
+def ink(html):
+    """An icon's ink, read from its drawing: (x0, y0, x1, y1) in its own units,
+    each part's line included (a round end and a round join reach half the
+    line past the path every way), the box (its viewBox), and the lines its
+    parts are drawn in. A "new" dot (.act-dot) is the dot's, not the icon's."""
+    m = _SVG.search(html)
+    sa, body = _attrs(m.group(1)), m.group(2)
+    vb = [float(v) for v in sa.get("viewBox", "0 0 24 24").split()]
+    x0 = y0 = math.inf
+    x1 = y1 = -math.inf
+    lines = set()
+    for em in _EL.finditer(body):
+        tag, ea = em.group(1), _attrs(em.group(2))
+        if "act-dot" in ea.get("class", ""):
+            continue
+        stroke = ea.get("stroke", sa.get("stroke", "none"))
+        sw = float(ea.get("stroke-width", sa.get("stroke-width", "1"))) if stroke not in ("none", "") else 0.0
+        if sw:
+            lines.add(sw)
+        for pts, _closed in shape_polylines(tag, ea):
+            for x, y in pts:
+                x0, y0 = min(x0, x - sw / 2), min(y0, y - sw / 2)
+                x1, y1 = max(x1, x + sw / 2), max(y1, y + sw / 2)
+    return (x0, y0, x1, y1), vb, lines
+
+
+def sheet_rows():
+    """Every icon a sheet's rows draw, read off the templates: (template,
+    macro, kwargs) for each `.post-act` row's first icon, and the heading of
+    who can draw back. Read from the markup, so a row added tomorrow is in."""
+    out = []
+    for f in sorted(glob.glob(os.path.join(ROOT, "social/templates/social/*.html"))):
+        src = open(f, encoding="utf-8").read()
+        for m in re.finditer(r'class="(post-act|who-head)[ "]', src):
+            end = src.find("</button>" if m.group(1) == "post-act" else "</p>", m.end())
+            end = min(e for e in (end, src.find("</a>", m.end())) if e != -1) if m.group(1) == "post-act" else end
+            call = re.search(r"ic\.([a-z_]+)\(([^)]*)\)", src[m.end():end])
+            if not call:
+                continue
+            kw = {}
+            for k, v in re.findall(r"(\w+)\s*=\s*(\w+)", call.group(2)):
+                kw[k] = {"true": True, "false": False}.get(v, v)
+            out.append((os.path.relpath(f, ROOT), call.group(1), kw))
+    return out
 
 
 def source_drawings():

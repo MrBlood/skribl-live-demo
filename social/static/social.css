@@ -430,7 +430,8 @@ body {
 .nav .tab-ic { position: relative; display: grid; place-items: center; height: 36px; }
 .nav .tab .ic { width: 32.4px; height: 32.4px; }                 /* 92% of 35.2 */
 .nav .tab .ic-blooby { width: var(--bar-blooby, 31.9px); height: var(--bar-blooby, 31.9px); }   /* 92% of 34.7 */
-.nav .tab-you .ic { width: 34.9px; height: 34.9px; }    /* Sign in's person, drawn smaller in its box: 92% of 37.9 */
+.nav .tab-you .ic { width: 32.9px; height: 32.9px; }    /* Sign in's person, its ink the 25px the bar's
+   others are: 34.9 (92% of 37.9) until the icon check drew it to a sheet's height, 6% larger in its box */
 /* Lit, his size is the theme's (--bar-blooby-lit: 96% of 34.7 on the dark
    bar, said in both dark copies as every dark value is; 92% on the light). A
    variable, so a desk's rail, which names its own size below, keeps it. */
@@ -503,6 +504,10 @@ body {
    none. Its sheet is the ⋯'s (.post-sheet, its rows .post-act): a row there
    is a link, or Sign out's form, dressed as the ⋯'s buttons are. */
 .top > .top-menu { margin-left: -10px; margin-right: 2px; color: var(--ink); }
+/* ...and the bell's size, 26px, so its three lines are drawn in the bell's
+   and the envelope's line (the icon check, Nov 27: at an .icon-btn's 22px its
+   lines were shorter and thinner than theirs, 1.93px to their 2.27). */
+.top > .top-menu .ic { width: 26px; height: 26px; }
 a.post-act { text-decoration: none; }
 .menu-out { margin: 0; }
 /* THE BLOOBY APP'S SPLASH (the owner, Nov 15, with Bluesky's: "make a splash
@@ -2533,7 +2538,9 @@ a.post-face { text-decoration: none; }
 .cm-acts .rp-btn .ic { width: 18px; height: 18px; }
 .cm-acts .rp-btn.is-on { color: var(--accent-ink); }
 .cm-acts .icon-btn { color: var(--ink-2); }
-.cm-acts .icon-btn .ic { width: 20px; height: 20px; }
+/* A comment's ⋯ at its row's 18px, as its bubble, repost and heart are (the
+   icon check, Nov 27: at 20 it read bolder than its row). */
+.cm-acts .icon-btn .ic { width: 18px; height: 18px; }
 @media (max-width: 899px) {
   .cm-act .cm-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }

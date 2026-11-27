@@ -113,8 +113,10 @@
       {# A FACE (?face=1) says a face's words here too: its title, and what a
          press on an empty canvas says (editor_compose.js, ADD IS NEVER GREYED
          OUT HERE). #}
+      {# Post's plane is drawn at 2.4, Tune's line beside it at its smaller size
+         (the icon check, Nov 27: at 2 it was 1.33px to Tune's 1.65). #}
       <button type="button" id="postBtn" class="btn post" disabled title="{{ 'Keep it as your face' if face else 'Post it and get a link anyone can open' }}"{% if face %} data-waiting-words="Draw your face first"{% endif %}>
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         {# In compose mode nothing is published here: the drawing goes back to
            the host's post, and THEIR Post button publishes it. #}
         {# A FACE (?face=1) is not added to a post: it is kept as your face. #}
