@@ -54887,3 +54887,23 @@ ribbon), verify_socialmute (the closed eye).
 
 PAD AND FLIP: shared. The Post button's plane is the same line in both
 headers (verify_parity compares them); nothing else of theirs changed.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3, 23 of them, on
+43b0e2b; the commits after it are this entry alone): verify_icons 76/76,
+verify_docs 144/144, verify_social 46/46, verify_socialposts 128/128,
+verify_socialcomments 154/154, verify_socialmute 68/68,
+verify_socialreposts 106/106, verify_socialsafety 38/38,
+verify_socialactivity 48/48, verify_socialprofile 106/106,
+verify_socialsettings 57/57, verify_socialbookmarks 37/37,
+verify_socialdrawback 150/150, verify_socialauth 77/77, verify_socialapp
+101/101, verify_socialletters 45/45; and the header's, for Post's plane:
+verify_parity 436/436, verify_pointerpad 56/56, verify_ux 491/491,
+verify_layout 257/257, verify_sizeclass 89/89, verify_a11y 478/478,
+verify_a11ypages 162/162. NOT RUN: the full battery (main's run after the
+merge does it); verify_contrast (no colour or token changed, and the sheets
+it reads are the editors'). The owner, shown Post's plane before and after
+in the Pad's header, light and dark: "Keep the change".
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: on a phone's Home, the ☰'s three lines as thick as the
+bell's; in the ☰'s sheet, Settings' gear with its hole in its middle.
