@@ -583,6 +583,51 @@ with sync_playwright() as _pe:
         _pg.close()
     _be.close()
 
+# ---------------------------------------------------------------------------
+# THE ENDS (the owner, Nov 27, a screenshot of Make's pencil with a circle
+# drawn round "a little nub that needs fixing"). Where one line of an icon ends
+# on another it ends ON it: a round end that runs past the line it meets pokes
+# out of it, and a phone at 3x shows the bump. The pencil's band ran 0.21 past
+# its left edge; the check found fifteen more such ends in eight drawings
+# (Flip's book in five places, Flip's loop arrows in two, the heart, both eyes,
+# Flip's scissors). Read from the source, every icon drawing in the tree;
+# harness/tools/iconends.py says how, and what it does not call a nub (an
+# overhang drawn on purpose, a gap).
+print("\nTHE ENDS — no line of an icon pokes out of the line it ends on")
+sys.path.insert(0, str(_pl.Path(__file__).resolve().parent / "tools"))
+import iconends as _ie  # noqa: E402
+# The instrument first, on drawings whose answer is known.
+_PENCIL = "M4.5 19.5l1-4.2L16.2 4.6a2.4 2.4 0 0 1 3.4 3.4L8.9 18.7z"
+
+
+def _ends(ds, w=2):
+    return _ie.nubs([(p, c, w, "round") for d in ds for p, c in _ie.path_polylines(d)])
+
+
+_was = _ends(["M15 5.5 18.5 9", _PENCIL])
+check("the instrument finds the pencil's nub as Make drew it (0.21 past its edge)",
+      len(_was) == 1 and abs(_was[0]["by"] - 0.212) < 0.01, f"{_was}")
+_now = _ends(["M15.15 5.65 18.55 9.05", _PENCIL])
+check("...and none once the band's ends sit on the pencil's two edges", not _now, f"{_now}")
+_lid = _ends(["M3 6h18", "M8 6V4h8v2", "M19 6l-1 14H6L5 6"])
+check("...nor on a bin whose lid is drawn wider than it on purpose (an overhang, not a nub)", not _lid, f"{_lid}")
+_t = _ends(["M4 6 L20 6", "M12 5.6 L12 18"])
+check("...and a T whose stem runs 0.4 past its bar pokes out by 0.4",
+      len(_t) == 1 and abs(_t[0]["by"] - 0.4) < 0.01, f"{_t}")
+_site = [w for w, st in _ie.site_drawings() if st]
+_macros = [m for m in _re.findall(r"{%\s*macro\s+([a-z_]+)\s*\(",
+                                  (_ROOT.parent / "social/templates/social/_icons.html").read_text(encoding="utf-8"))
+           if not m.startswith("_") and m != "underline"]
+check("it reads every one of the site's icons (each macro, filled and lit too)",
+      len({w.split(" ")[-1].split("(")[0] for w in _site}) >= len(_macros) - 1,
+      f"{len(_site)} drawings for {len(_macros)} macros")
+_src = [w for w, st in _ie.source_drawings() if st]
+check("...and the inline icons of the templates and scripts (no silent zero)", len(_src) >= 200,
+      f"{len(_src)} drawings read")
+_found = _ie.report()
+check(f"no icon's line pokes out of the line it ends on by {_ie.NUB_MIN} units or more",
+      not _found, "; ".join(f"{w} at {a} by {b}" for w, a, b in _found[:6]))
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))

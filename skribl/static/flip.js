@@ -3617,7 +3617,7 @@ const _OPS_ICON = {
   'Delete': '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>'
 };
 _OPS_ICON['Stop drawing'] = _OPS_ICON['Draw on'];
-_OPS_ICON['Loop'] = '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>';
+_OPS_ICON['Loop'] = '<path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>';
 ['Loop \u00d72', 'Loop \u00d73', 'Loop \u00d74', 'Loop 2 s', 'Loop 4 s', 'Loop 6 s', 'Loop forever', 'Loop off']
   .forEach(k => { _OPS_ICON[k] = _OPS_ICON['Loop']; });
 _OPS_ICON['Keep under'] = '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 16l9 5 9-5"/>';

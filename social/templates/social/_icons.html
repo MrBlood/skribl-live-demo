@@ -147,12 +147,14 @@
 {# A like's heart, in the pen (likes; the owner's "I like d.", Nov 13): one
    line from the notch at the top, round the left lobe, down to the point and
    up the right, back into the notch, as a hand draws one; the right lobe a
-   touch higher and fuller. Its ink centred across its box. Three copies of
+   touch higher and fuller. It ends where it began (the icon check, Nov 27:
+   it ran 0.32 past its start, a bump in the notch). Its ink centred across
+   its box. Three copies of
    the one line: the blush inside (.ht-fill), the line you see before you like
    it (.ht-line, in the words' ink), and the blush line that draws itself
    round when you do (.ht-ink, one unit long). social.css, "LIKES". #}
 {% macro heart() -%}
-{%- set d = 'M 11.9,7.5 C 10.9,5.3 9.3,4.3 7.6,4.3 C 5.3,4.3 3.7,6.3 3.7,8.8 C 3.7,13.2 8.0,16.6 11.95,19.8 C 15.9,16.6 20.3,13.0 20.3,8.6 C 20.3,6.1 18.7,4.1 16.4,4.1 C 14.6,4.1 13.0,5.2 11.8,7.8' -%}
+{%- set d = 'M 11.9,7.5 C 10.9,5.3 9.3,4.3 7.6,4.3 C 5.3,4.3 3.7,6.3 3.7,8.8 C 3.7,13.2 8.0,16.6 11.95,19.8 C 15.9,16.6 20.3,13.0 20.3,8.6 C 20.3,6.1 18.7,4.1 16.4,4.1 C 14.6,4.1 13.0,5.2 11.9,7.5' -%}
 <svg class="ic pen-ic ic-heart" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path class="ht-fill" d="{{ d }}"/><path class="ht-line" pathLength="1" d="{{ d }}"/><path class="ht-ink" pathLength="1" d="{{ d }}"/></svg>
 {%- endmacro %}
 
@@ -205,12 +207,14 @@
 
 {# MUTE (the mute mock; the owner's "Yes to all", Nov 13), in the pen: a
    closed eye, the lid and three lashes as a hand draws them, its ink centred
-   in its box (3.4 to 20.6 across, 7.6 to 16.4 down). Never a speaker: a
+   in its box (3.4 to 20.6 across, 7.6 to 16.4 down). Each lash starts on
+   the lid's line (the icon check, Nov 27: two began a little above it, a
+   bump on the lid each). Never a speaker: a
    drawing's own sound switch is the speaker, and mute here is about seeing
    less, not hearing less. #}
 {% macro eye_closed() -%}
 {{ _pen(['M 3.4,7.8 C 6.1,11.7 9.0,13.3 12.0,13.3 C 15.1,13.3 17.9,11.6 20.6,7.6',
-         'M 6.6,11.1 L 5.0,13.5', 'M 12.0,13.4 L 11.9,16.4', 'M 17.4,11.0 L 19.0,13.4']) }}
+         'M 6.49,11.23 L 5.0,13.5', 'M 12.0,13.3 L 11.9,16.4', 'M 17.52,11.15 L 19.0,13.4']) }}
 {%- endmacro %}
 
 {# THE ☰ ON A PHONE (the quick-patterns mock; the owner's "Yes on
@@ -275,8 +279,12 @@
 {{ _svg('<path stroke-width="1.7" d="M9.25 6.5C6.35 7.6 4.75 9.9 4.75 13v4.5h5.5V12h-2.5c.1-1.6.8-2.7 2.3-3.5z"/><path stroke-width="1.7" d="M18.25 6.5c-2.9 1.1-4.5 3.4-4.5 6.5v4.5h5.5V12h-2.5c.1-1.6.8-2.7 2.3-3.5z"/>') }}
 {%- endmacro %}
 
+{# The pencil: its body, and the band across it below the cap. THE BAND'S
+   ENDS SIT ON THE BODY'S TWO EDGES (the owner, Nov 27, circling "a little
+   nub" on Make's pencil): a round end that runs past the line it meets pokes
+   out of it, and this one ran 0.21 past the left edge. #}
 {% macro pen() -%}
-{{ _svg('<path d="M15 5.5 18.5 9"/><path d="M4.5 19.5l1-4.2L16.2 4.6a2.4 2.4 0 0 1 3.4 3.4L8.9 18.7z"/>') }}
+{{ _svg('<path d="M15.15 5.65 18.55 9.05"/><path d="M4.5 19.5l1-4.2L16.2 4.6a2.4 2.4 0 0 1 3.4 3.4L8.9 18.7z"/>') }}
 {%- endmacro %}
 
 {# A file you saved (Open a file..., as the editors' own menu draws it). #}
@@ -314,13 +322,15 @@
 
 {# THE EYE on your own Gallery tab (the tile-eye mock; the owner's "Yes, the
    eye in view", Nov 14), the mock's own lines: an open eye, in the Gallery;
-   crossed, hidden from it. Its button says which to a screen reader. #}
+   crossed, hidden from it, the lower lid ending on the slash (the icon
+   check, Nov 27: it ran 0.57 past it). Its button says which to a screen
+   reader. #}
 {% macro eye_open() -%}
 <svg class="ic ic-eye-open" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
 {%- endmacro %}
 
 {% macro eye_shut() -%}
-<svg class="ic ic-eye-shut" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.3 4.2M6.1 6.1C3.6 7.8 2 12 2 12s3.6 7 10 7a9.8 9.8 0 0 0 5.9-1.9"/></svg>
+<svg class="ic ic-eye-shut" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.3 4.2M6.1 6.1C3.6 7.8 2 12 2 12s3.6 7 10 7a9.8 9.8 0 0 0 5.55-1.45"/></svg>
 {%- endmacro %}
 
 {# Share a profile (the profile mock's). #}
