@@ -54974,7 +54974,10 @@ THE CHECKS: the pins of the page as painted move with it
 theme-color metas and the bar after the splash; the ring round the bell's
 dot in verify_socialactivity, verify_socialfollow, verify_sociallikes and
 verify_socialmute). The check that holds the site to Pad's ground
-(verify_socialsettings 8) is unchanged and holds the new one.
+(verify_socialsettings 8) is unchanged and holds the new one: shown red in a
+throwaway copy where only the site moved (styles.css left at #f6f8fa: 56/57,
+that row), green on the tree (57/57). docs/COLOR-TOKENS.md made again from a
+running copy (it was stale from earlier changes too).
 
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: the page behind Home's posts in light is a lilac-grey (a
