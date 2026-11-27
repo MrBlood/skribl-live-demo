@@ -594,7 +594,10 @@ with sync_playwright() as _pe:
 # harness/tools/iconends.py says how, and what it does not call a nub (an
 # overhang drawn on purpose, a gap).
 print("\nTHE ENDS — no line of an icon pokes out of the line it ends on")
-sys.path.insert(0, str(_pl.Path(__file__).resolve().parent / "tools"))
+# Names of its own: `_pl` above is a measurement by now, not pathlib.
+import pathlib as _ends_pl, re as _ends_re  # noqa: E402
+_ENDS_ROOT = _ends_pl.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ENDS_ROOT / "harness" / "tools"))
 import iconends as _ie  # noqa: E402
 # The instrument first, on drawings whose answer is known.
 _PENCIL = "M4.5 19.5l1-4.2L16.2 4.6a2.4 2.4 0 0 1 3.4 3.4L8.9 18.7z"
@@ -615,8 +618,8 @@ _t = _ends(["M4 6 L20 6", "M12 5.6 L12 18"])
 check("...and a T whose stem runs 0.4 past its bar pokes out by 0.4",
       len(_t) == 1 and abs(_t[0]["by"] - 0.4) < 0.01, f"{_t}")
 _site = [w for w, st in _ie.site_drawings() if st]
-_macros = [m for m in _re.findall(r"{%\s*macro\s+([a-z_]+)\s*\(",
-                                  (_ROOT.parent / "social/templates/social/_icons.html").read_text(encoding="utf-8"))
+_macros = [m for m in _ends_re.findall(r"{%\s*macro\s+([a-z_]+)\s*\(",
+                                       (_ENDS_ROOT / "social/templates/social/_icons.html").read_text(encoding="utf-8"))
            if not m.startswith("_") and m != "underline"]
 check("it reads every one of the site's icons (each macro, filled and lit too)",
       len({w.split(" ")[-1].split("(")[0] for w in _site}) >= len(_macros) - 1,
