@@ -22,7 +22,7 @@
 :root {
   color-scheme: light;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --page: #f6f8fa;                  /* the editors' ground: Pad's and Flip's column (styles.css --surface-raised) */
+  --page: #f7f5fa;                  /* the editors' ground: Pad's and Flip's column (styles.css --surface-raised); Skribl's lilac since Nov 27 */
   --ink: #14171d;                   /* the Gallery's first ink */
   --ink-2: #4b5563;                 /* its second */
   --accent-ink: #4c31c4;            /* small violet words */

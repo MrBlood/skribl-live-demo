@@ -196,9 +196,10 @@ SCREENS = (("phone", PHONE), ("desk", DESK))
 KEY = "skribl_theme_v1"
 # THE SITE'S GROUND IS PAD'S (the owner's "Yes, A", Nov 14): the editors' column's
 # surface (styles.css --surface-raised), which section 8 reads off styles.css and
-# holds these to; the browser's bar wears it too.
-GROUND = {"light": "#f6f8fa", "dark": "#0f1218"}
-PAGE_RGB = {"light": "rgb(246, 248, 250)", "dark": "rgb(15, 18, 24)"}
+# holds these to; the browser's bar wears it too. The light one is Skribl's lilac
+# since the owner's "Go for it", Nov 27 (it was #f6f8fa).
+GROUND = {"light": "#f7f5fa", "dark": "#0f1218"}
+PAGE_RGB = {"light": "rgb(247, 245, 250)", "dark": "rgb(15, 18, 24)"}
 ERRS = []
 WATCH = ("document.addEventListener('securitypolicyviolation', e => "
          "(window.__csp = window.__csp || []).push(e.violatedDirective + ' ' + e.blockedURI));")

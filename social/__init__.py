@@ -211,9 +211,10 @@ def letter_readable(post, viewer_id):
 _SKRIBL_GLOBALS = ("skribl_asset", "skribl_csrf", "skribl_report")
 
 #: The site's ground in each theme (the editors' column's, since the owner's
-#: "Yes, A", Nov 14). base.html's theme-color metas say it to the browser's
-#: own bar, and the Home Screen app's manifest says the dark one.
-SITE_GROUND = {"light": "#f6f8fa", "dark": "#0f1218"}
+#: "Yes, A", Nov 14; the light one Skribl's lilac since the owner's "Go for
+#: it", Nov 27). base.html's theme-color metas say it to the browser's own
+#: bar, and the Home Screen app's manifest says the dark one.
+SITE_GROUND = {"light": "#f7f5fa", "dark": "#0f1218"}
 
 
 def shared_folder(*urls):

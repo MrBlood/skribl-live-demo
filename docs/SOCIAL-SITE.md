@@ -2045,7 +2045,8 @@ Skribl's own Pad and Flip, whose own share stays Skribl's.
 **The page is Pad's** (the owner, Nov 14: "background color on /social? Here's
 flip and pad", then "Yes, A", choosing the site to follow the editors rather than
 the editors the site): the site's ground is the editors' column surface
-(styles.css `--surface-raised`, #f6f8fa light and #0f1218 dark) with its
+(styles.css `--surface-raised`, #f7f5fa light since Nov 27, #f6f8fa before,
+and #0f1218 dark) with its
 purple glow at the top, one screen tall, and the browser's bar wears it
 (social.css `--page`, base.html's theme-color; verify_socialsettings holds
 both to styles.css).

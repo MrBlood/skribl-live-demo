@@ -54931,3 +54931,52 @@ directions, A the sketchbook (Cal's pick) and B a gallery wall; and eight
 ideas to become indispensable. The owner: "Record these new ideas. Mock up
 the sketchbook look." Recorded as said in FUTURE.md 6am, with the two Home
 ideas beside the eight; the sketchbook look is mocked next, nothing built.
+
+## After v330 -- The light page is Skribl's lilac: #F7F5FA (the owner's "Go for it")
+
+The owner, Nov 27 (Mountain Time), after the sketchbook mocks
+(FUTURE.md 6am, look A): "I definitely like 1 and 2" (the paper, and
+sheets, not boxes), then "I do like the purple glow. Mock the site wide
+changes", then, of the warm paper (#fffcf6): "Seems like the new light page
+color is too bright". Cal mocked three calmer warm papers; the owner asked
+"What about #F7F5FA or #F4F1FA. Do either of those work?" Both did for
+words; #F4F1FA put the drawings' own paper at 1.00:1 from the page. Cal's
+pick, #F7F5FA: as calm as today (1.8% darker), Skribl's lilac where the
+page was the grey GitHub uses for its own backgrounds, the drawings the
+warm thing on it. Shown alone beside today's on fourteen pages ("Show me
+now light theme page next to new light page",
+https://claude.ai/artifact/RjPU6HYzk2yGGEppi4gBUE), and asked "Is it good?
+Should we?", Cal said yes, quiet but ours. The owner: "Go for it".
+
+WHAT CHANGES: the light page, #f6f8fa to #f7f5fa, in every place that held
+one ground since Nov 14 (the site follows Pad) and Nov 15 (the Library and
+the Gallery follow it): social.css `--page`, styles.css `--surface-raised`
+(and so player.css, re-emitted), the Library's and the Gallery's `--base`,
+the Gallery section's (gallerysection.css, re-emitted from the Gallery's
+template), and `social.SITE_GROUND`, so the browser's bar and the Home
+Screen app say it too. The purple glow is drawn over the page as before.
+
+WHAT DOES NOT: dark (#0f1218); the cards, the tiles, the sheets and every
+other surface; and `--surface-base` with `core.THEME_GROUND` (#fbfcfd),
+which are Skribl's own colour rather than the shared page: the hello's
+ground and the Pad's browser bar (verify_identity holds the two together).
+The rest of the mocked overhaul (sheets, not boxes; a dark page; 5 and 6)
+waits, each mocked again first (Cal's order to the owner: the light page
+now; the four kinds of post for sheets; dark on its own; 5 and 6 parked).
+
+CONTRAST, as painted on the page: words 16.9 to 16.6:1, second words 7.1
+to 7.0, violet words 7.8 to 7.6. A white tile or card stands 1.083:1 from
+the page (1.065 before), a drawing's own paper 1.031 (1.049), the pill and
+the second buttons 1.175 (1.195).
+
+THE CHECKS: the pins of the page as painted move with it
+(verify_socialsettings' GROUND and PAGE_RGB; verify_socialapp's
+theme-color metas and the bar after the splash; the ring round the bell's
+dot in verify_socialactivity, verify_socialfollow, verify_sociallikes and
+verify_socialmute). The check that holds the site to Pad's ground
+(verify_socialsettings 8) is unchanged and holds the new one.
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: the page behind Home's posts in light is a lilac-grey (a
+hint of violet), not the blue-grey it was; the Pad's column beside the
+canvas the same.
