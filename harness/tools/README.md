@@ -132,7 +132,10 @@ pokes out of the line it ends on, and by how much in the icon's own units
 (the owner's "little nub" on Make's pencil, Nov 27: its band ran 0.21 past
 its edge). It needs no browser and no server; `verify_icons` THE ENDS holds
 the tree to none at 0.06 units or more, and drives the instrument on known
-drawings first.
+drawings first. It also reads each site icon's ink (its box, its middle, its
+lines) and every icon a sheet's rows draw, off the templates, for
+`verify_icons` THE BLOOBY SET (the set's rule is at the top of
+`social/templates/social/_icons.html`).
 
 ## refgraph.js
 

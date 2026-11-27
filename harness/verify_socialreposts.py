@@ -655,8 +655,9 @@ ROW = r"""(sel) => { const root = document.querySelector(sel); if (!root) return
     controls: b.getAttribute('aria-controls'), hit: !!at && (at === b || b.contains(at)) };
   return out; }"""
 
-# The arrows, as _icons.html draws them (the mock's own lines, rp_mock.py's RP).
-ARROWS = ["M16.5 3l3 3-3 3", "M4.5 11.5V10a4 4 0 0 1 4-4h11", "M7.5 21l-3-3 3-3", "M19.5 12.5V14a4 4 0 0 1-4 4h-11"]
+# The arrows, as _icons.html draws them (the mock's own lines, rp_mock.py's RP,
+# drawn to a sheet's one height and centred since the icon check, Nov 27).
+ARROWS = ["M 16.06,3.89 L 18.76,6.59 L 16.06,9.3", "M 5.24,11.55 V 10.2 A 3.61,3.61 0 0 1 8.84,6.59 H 18.76", "M 7.94,20.11 L 5.24,17.41 L 7.94,14.7", "M 18.76,12.45 V 13.8 A 3.61,3.61 0 0 1 15.16,17.41 H 5.24"]
 
 # THE FEED in `sel`'s list, in order: each card's post, whose it is, the line
 # at its top (its words, where it sits, its type), and its small card.
@@ -693,10 +694,11 @@ SHEET = r"""() => { const s = document.getElementById('repostSheet'); if (!s) re
 # Edit drawing. Quote has its own mark now, a pair of quote marks (_icons.html
 # quote()), and the row is held to it and to NOT being the pencil.
 PEN = "() => [...document.querySelectorAll('.tab-make svg path')].map(p => p.getAttribute('d'))"
-QUOTE_MARK = ["M9.25 6.5C6.35 7.6 4.75 9.9 4.75 13v4.5h5.5V12h-2.5c.1-1.6.8-2.7 2.3-3.5z",
-              "M18.25 6.5c-2.9 1.1-4.5 3.4-4.5 6.5v4.5h5.5V12h-2.5c.1-1.6.8-2.7 2.3-3.5z"]
-# Post it's mark (the owner's A, Nov 24): Follow's plus, two strokes in the pen.
-PLUS = ["M 12.0,5.2 C 12.1,9.4 11.9,14.6 12.0,18.8", "M 5.2,12.1 C 9.4,11.9 14.6,12.0 18.8,12.0"]
+QUOTE_MARK = ["M 8.85,5.69 C 5.52,6.95 3.69,9.59 3.69,13.15 V 18.31 H 9.99 V 12 H 7.13 C 7.24,10.17 8.04,8.9 9.76,7.99 Z",
+              "M 19.17,5.69 C 15.84,6.95 14.01,9.59 14.01,13.15 V 18.31 H 20.31 V 12 H 17.45 C 17.56,10.17 18.36,8.9 20.08,7.99 Z"]
+# Post it's mark (the owner's A, Nov 24): Follow's plus, two strokes in the pen,
+# drawn to a sheet's one height since the icon check (Nov 27; _icons.html plus(fit)).
+PLUS = ["M 12,3.89 C 12.12,8.9 11.88,15.1 12,20.11", "M 3.89,12.12 C 8.9,11.88 15.1,12 20.11,12"]
 
 
 def open_rp(pg, sel):
