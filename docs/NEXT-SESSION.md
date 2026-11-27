@@ -1,74 +1,70 @@
-# Next session: the handoff (Nov 26, 2026, Mountain Time, written about 9 AM)
+# Next session: the handoff (Nov 26, 2026, Mountain Time, written about 7:15 PM)
 
-A snapshot from the session that built drawn letters on the morning of
-Thursday, Nov 26. It is not maintained: where things stand is the newest
-entries at the bottom of `DECISIONS.md`, and how to work is
+A snapshot from the session that, after drawn letters in the morning, built
+the day's tile and drawer changes. It is not maintained: where things stand
+is the newest entries at the bottom of `DECISIONS.md`, and how to work is
 `WORKING-AGREEMENTS.md`. Read this after `START-HERE.md`; once you have,
-replace it with your own or delete it. The handoff before this one is
-`git show 9a8542c:docs/NEXT-SESSION.md` (the plan for drawn letters, and
-what the code already gave them).
+replace it with your own or delete it. The handoff before this one (drawn
+letters, and what waited on the owner that morning) is
+`git show 4749eb0:docs/NEXT-SESSION.md`; its open items stand unless a newer
+`DECISIONS.md` entry says otherwise.
 
-## Before anything: read main's newest full runs
+## Before anything: read main's newest full run
 
-Every job. Main was green after #1111 (the docs before the build). The runs
-after #1112, #1113 and #1114 (the server, the Pad, the pages) were still
-going when this was written: read the newest one whole before believing
-main is green. Not sealed since v330, which is fine.
+Every job. Main was green after #1122 (the drawer's tab), Nov 26, 5:31 PM,
+and the main watch closed #1123 (main red after #1120). Not sealed since
+v330, which is fine.
 
-## What was built: drawn letters, all four parts
+## What was built after the letters (newest last; each has its entry)
 
-The owner's yes (Nov 26, A for all six), and their two answers: a push for a
-new letter under its own switch in Settings, on by default; a written-back
-letter plays theirs in three seconds, then yours. `docs/SOCIAL-SITE.md`
-sections 44 (the server), 45 (the Pad), 46 (the pages); `DECISIONS.md`, the
-three "Drawn letters" entries after "the owner's yes".
-
-- THE SERVER (#1112): `social/letters.py`, `social_letters`, migration
-  `d3a8f1c6e2b4`; the letter's drawing is Skribl's with the site's HELD
-  visibility "letter" (Skribl's new `set_visibility_values(..., held=)`),
-  read by its two through `app.py`'s policy. Report of a letter, takedown,
-  account deletion, the nudge and its Settings switch.
-- THE PAD (#1113): Skribl's `composehost.say` (`skribl:compose:say`, both
-  editors): Send, the pill, what steps aside. The site's `letters.js`.
-- THE PAGES (#1114): Write on a friend's page, the envelope and Letters,
-  Letters' rows, Write to…, the two of you.
-- `verify_socialletters` holds all of it; every row was shown red by
-  breaking its part (the calibration script's breaks are listed in the
-  DECISIONS entries).
+- ENAMEL TILES, B (#1117): the Gallery's tiles white and obsidian, a
+  friend's colours, with their lavender edge. Bento tiles were mocked after
+  it and the owner kept these (#1118, the record).
+- THE TILE ANSWERS A MOUSE (#1119): on a desk, the tile under the mouse
+  takes the site's hover line.
+- ROOM FOR THE DRAWER (#1120): a drawing too wide to sit beside a drawer
+  gets a little smaller (a quarter at most), Flip's page strip runs under
+  the drawer, and Make's editor fills the window on a desk.
+- CRISP TILE EDGE (#1121): the tiles' edge in whole screen pixels at every
+  density (Windows' 125% and 150% smeared it), and in dark no line of light.
+- THE DRAWER'S TAB (#1122): a tab on the drawer beside the drawing closes
+  it; a drawer closed there slides away instead of vanishing; How it works
+  says so. With it, the fix for main red after #1120.
+- A DRAWN LETTER on the live site, from Pip (@pip_test) to the owner, at the
+  owner's ask, to feel getting one: their own cat (the How it works line
+  drawing) waving, with "hi!" by the Text tool. Sent through the site as a
+  person sends one (the pattern is `harness/tools/demo_people.py`'s: a
+  sign-in link from the owner, a passkey of Pip's own); the link is spent.
 
 ## Waiting on the owner
 
-- ONE-GLANCE TELL for the new build, on a phone: an envelope beside the
-  bell at the top of Home. On a friend's page (you follow each other),
-  Write beside Following. Not tested here on WebKit, SF or Segoe UI.
-- ASKED: the desk board's three columns (list and letter side by side) were
-  not built; a desk shows Letters and the two of you as two pages. Build it,
-  or keep two pages?
-- SAID, overrulable: "only the two of you see it" in the Pad's pill (the
-  mock said "only she sees it"; the site keeps no pronouns); one Write back
-  and New letter per page; the ⋯ per sheet; the hand-off mark as the
-  player's own dot; no "Today" headings.
-- Carried from before: drawers beside the drawing on a desk, Flip's Draw
-  back, two hands behind the owner's switch, Pin
-  (`git show 9a8542c:docs/NEXT-SESSION.md`, "Waiting on the owner's desk
-  and phone").
-
-## Then, in the decided order
-
-Watching first everywhere (`DECISIONS.md`, "The owner's clarifications to
-the final recommendations"). On the list for letters: a Flip letter, page
-for page, as Flip's Draw back is (Skribl's part already serves both
-editors); photos and music in letters, if the owner wants them later.
+- THE DARK GALLERY CARDS. The owner, Nov 26 evening: "The dark theme gallery
+  cards look weird. Not right", then "We'll leave gallery cards for now".
+  Nothing was broken on the live site (Windows 150% and a phone, beside how
+  they looked that morning and after Enamel). Two suspects, put to the
+  owner and not answered: two frames round each drawing (the tile's faint
+  edge, then the drawing's own brighter line just inside it), and three
+  blacks (the page's blue-black, the tile's purple obsidian, a dark
+  drawing's own canvas). Mock before changing anything; ask which first.
+- ESCAPE closing a drawer beside the drawing: offered, not answered.
+- TOGGLES AND CARDS (the owner's "Do we have any consistence in our toggles
+  and cards? Backgrounds? Borders?", with eight screenshots): answered with
+  a census; mocks offered for the composer's pills (white on the lilac
+  paper, as the Pad's controls are) and the corners (20 against 16), not
+  answered.
 
 ## What saves time
 
-- `SOCIALLETTERS_PART=15` runs the pages' rows alone in about a minute on
-  their own server; `SOCIALLETTERS_SHOTS=<dir>` writes screenshots of the
-  pages as the rows walk them.
-- Calibration as a script, one worktree per break, three at a time: each
-  break a (file, exact text, replacement, part) asserted to apply once,
-  the suite run with that part alone. Thirty-odd breaks took under an hour.
-- The rail's order is pinned by `verify_socialactivity` and
-  `verify_socialsearch`: a new rail item changes both.
-- A new site page that reuses a class another suite reads by (the rail's
-  `.tab-activity`) shows up as that suite's red: give it a class of its own.
+- A local rehearsal of anything a signed-in person does on the site wants
+  `localhost`, not 127.0.0.1 (a passkey cannot live on an address), and for
+  letters `SKRIBL_CSRF_PROTECT=1` on the server: `harness/bootstrap.sh`'s
+  servers run with it off, and with it off Skribl's player reads as nobody,
+  so a letter's drawing says it isn't there anymore.
+- `verify_recolor`'s 320px rows ("the bar's words ... two lines at most")
+  are red in this box's Inter on main as it stands, three lines, and green
+  with Inter left out, as CI draws the editors: not a CI red. Whether SF at
+  320px wraps like Inter is not tested here.
+- A suite that put an editor away with a click beside its card (Make,
+  Draw in a comment's box) needed its × once the editor filled the window
+  on a desk: two did (`verify_socialprofile` 20, `verify_socialcomments` 31).
+  Look for a third before changing an overlay's size again.
