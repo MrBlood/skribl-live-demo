@@ -54907,3 +54907,27 @@ in the Pad's header, light and dark: "Keep the change".
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: on a phone's Home, the ☰'s three lines as thick as the
 bell's; in the ☰'s sheet, Settings' gear with its hole in its middle.
+
+## After v330 -- The look, talked about: what is ours, what is trite, and the ideas (recorded)
+
+The owner, Nov 27 (Mountain Time), the morning the icon set merged: "What
+could we do to make the blooby home page more exciting?" Cal's three for
+Home (watching first, Blooby's daily doodle, watch the whole conversation),
+watching first the pick: it is the third of the owner's own Nov 18 order,
+after Draw back and drawn letters, both built. Then the owner: "Should blooby
+be more playful? I like your ideas, but first let's talk about the look
+overall. Be creative. Let's be something no other site is. What are we doing
+that is unique? What is trite? What else could we do to be
+innovative/inventive and become indispensable?"
+
+Cal's answer, in short: yes, more playful, the way a drawing is (the hand,
+and things moving), not cartoon chrome; what is ours (a drawing as a
+performance, Draw back, drawn letters and faces, people's own lettering,
+kindness by design); what is trite (the post card's shape, the pill, the
+☰, the dots, lilac pastel and rounded white cards in a system font: keep
+the familiar skeleton, change the surface); the one idea, "everything on
+Blooby is drawn, and everything drawn comes alive"; the look in two
+directions, A the sketchbook (Cal's pick) and B a gallery wall; and eight
+ideas to become indispensable. The owner: "Record these new ideas. Mock up
+the sketchbook look." Recorded as said in FUTURE.md 6am, with the two Home
+ideas beside the eight; the sketchbook look is mocked next, nothing built.

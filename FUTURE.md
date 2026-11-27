@@ -2242,6 +2242,82 @@ read back off the filed pictures. The site's pages, its manifest and its small
 Blooby wear it; Skribl's files, manifest and app identity are unchanged.
 `verify_socialapp` 3 reads the site's files against the filed pictures.
 
+## 6am. Blooby, more itself: the look and the ideas (owner, Nov 27: "Record these new ideas. Mock up the sketchbook look")
+
+The owner, Nov 27 morning, after the icon check: "What could we do to make
+the blooby home page more exciting?", then "Should blooby be more playful? I
+like your ideas, but first let's talk about the look overall. Be creative.
+Let's be something no other site is. What are we doing that is unique? What
+is trite? What else could we do to be innovative/inventive and become
+indispensable?" Cal's answer, recorded as said; the sketchbook look is being
+mocked first (DECISIONS.md, "The look, talked about").
+
+**More playful, the way a drawing is:** through the hand and through things
+moving, not through cartoon chrome ("Colorful but not cartoonish", Nov 16).
+The drawings are alive and personal; the site round them is a tidy, polite
+social app. WORKING-AGREEMENTS already names the gap: the drawings say
+sketchbook, the chrome says inspected.
+
+**What is ours, to push harder:** a drawing is a performance (every line
+keeps its time and pressure: you watch someone's hand, not a picture or a
+video); Draw back (answering a drawing on it, theirs then yours); drawn
+letters and drawn faces; each person's own lettering ("Your hand", and
+Skribl's hand for Text); kindness by design (no algorithm, no "0
+followers", quiet mutes, real deletion).
+
+**What is trite, as plumbing:** the post card (face, name, @handle, time,
+words, the drawing as an attachment, then reply, repost, heart, ⋯), which is
+Twitter's and Bluesky's shape; the Following | Everyone pill, the ☰, red
+dots, the bell and the envelope; lilac pastel, white rounded cards, purple
+pills and a system font, which is the look of a thousand apps. Keep the
+familiar skeleton so it stays easy to use ("It has to work intuitively",
+Nov 18); change the surface and the moments.
+
+**The one idea: everything on Blooby is drawn, and everything drawn comes
+alive** (the interface, the words, the reactions, not only the posts).
+
+**The look, two directions to mock:**
+- A. THE SKETCHBOOK, NOT A DASHBOARD (Cal's pick, mocked first at the
+  owner's word): bright paper; the drawings sit on the page like pinned
+  sheets rather than inside boxes; rules, underlines and edges are pen lines
+  that draw themselves in, quick and once; headings and the empty places in
+  a hand; the interface takes the colours of the drawing on the screen,
+  Skribl's purple the brand's ink; Blooby a rare companion, not a sticker
+  (he draws the empty places, waves in the morning, cheers a first post).
+- B. A GALLERY WALL: a darker, museum feel, the drawings lit like artworks.
+
+**Ideas, each to be mocked before it is built:**
+1. WATCHING FIRST, the third of the owner's Nov 18 order (after Draw back
+   and drawn letters, both built): a drawing in view draws itself once,
+   fitted to a few seconds ("drawn in 47 min · watching at 8×"), then rests;
+   a tap watches at the author's speed; one plays at a time, sound off until
+   asked, still under Reduce Motion.
+2. SCRATCH TO WATCH: a finger dragged across any drawing plays its making at
+   the finger's speed, like a record; held, it runs on fast.
+3. WORDS IN YOUR HAND: captions and letters in each person's own lettering,
+   writing themselves as the drawing plays (the real words stay for screen
+   readers and search).
+4. DRAWN REACTIONS: besides the heart, a tiny mark doodled in a drawing's
+   margin, which plays for its author.
+5. DRAW LIVE: friends watch you draw as you draw, by your choice, your face
+   glowing "drawing now" (the owner's own wish for the Pad: "Watching
+   someone's drawing proceed in real time").
+6. DRAW ALONG WITH ANYONE: any drawing a lesson, traced at the artist's
+   pace (Draw along already does it for the little book's drawings).
+   The strongest reason to come back each day: it makes people better at
+   drawing.
+7. PASS THE PAGE: a Flip where each friend draws the next page.
+8. YOUR YEAR IN DRAWINGS: one replay of everything you drew this year.
+9. BLOOBY'S DAILY DOODLE (said first, for Home): each morning Blooby starts
+   a drawing at the top of Home and leaves it to be finished ("a cat with no
+   whiskers yet"); people finish it with Draw back, and the answers play
+   underneath.
+10. WATCH THE WHOLE CONVERSATION (said first, for Home): a post's
+    draw-backs, its hands named ("Ana + Theo + Mira"), played as one little
+    film, the original and then each answer drawn on it.
+
+Cal's order, offered: the look first; then 1, 2 and 6.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
