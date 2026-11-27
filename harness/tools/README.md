@@ -125,6 +125,15 @@ know.) Contrast in it is WCAG's sum on sRGB; OKLCH and
 Delta E OK are for comparing colours and never say whether words can be
 read.
 
+`iconends.py` reads every icon drawing in the tree from the source (the
+site's icons through their macros, every inline `<svg>` in the templates and
+scripts, Flip's bare `<path>` strings) and says where a line's round end
+pokes out of the line it ends on, and by how much in the icon's own units
+(the owner's "little nub" on Make's pencil, Nov 27: its band ran 0.21 past
+its edge). It needs no browser and no server; `verify_icons` THE ENDS holds
+the tree to none at 0.06 units or more, and drives the instrument on known
+drawings first.
+
 ## refgraph.js
 
 An AST reference graph over `skribl/static/app.js`, built with acorn. Covers

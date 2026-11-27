@@ -334,7 +334,7 @@
     '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
     + ' stroke-linecap="round" stroke-linejoin="round">'
     + '<path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/>'
-    + '<path d="M12 6.5v13.3"/></svg>';
+    + '<path d="M12 6.5v13"/></svg>';
   var ICON_PAD =
     '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
     + ' stroke-linecap="round" stroke-linejoin="round">'

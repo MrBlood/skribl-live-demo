@@ -54757,3 +54757,72 @@ press on it (a press inside the editor never reaches the page) and puts the
 Pad away by its ×, the box open under it both times; shown red by letting a
 press on the Pad count as elsewhere (`comments.js`), green as built. The next
 fully green run on main closes #1123.
+
+## After v330 -- The icon check, part 1: no line of an icon pokes out of the line it ends on (bug fix)
+
+The owner, Nov 27 (Mountain Time), about 6:30 AM, a close-up of Make's
+pencil in dark with a circle drawn round "a little nub that needs fixing",
+and: "There seem to be imperfections and inconsistencies with the icons
+through the app. Sometimes items in a set seem diff sizes or from diff set.
+Everything should be consistent, at least within its own menu ... Can you do
+a site icon scan? Look for stuff like the nub on the pencil or sizes or
+inconsistency. Let's really tighten up our icons. Maybe we should have a
+blooby font type for our icons? Not sure but let's at least do a quality
+check".
+
+WHAT WAS WRONG. A line with round ends is a pen dragged along it, so where
+one line ends ON another its round end hides inside that line only when the
+end point sits on the other line's centre; past it by d, the end pokes out
+by d, and a phone at 3x shows the bump. The pencil's band (`_icons.html`
+pen(): Make, every "Make a skribl", Edit drawing, Write back, Add your face)
+ran 0.21 units past the pencil's left edge. Read the same way, every icon
+drawing in the tree (harness/tools/iconends.py, new) had eight more such
+drawings, sixteen ends with every copy.
+
+WHAT CHANGED, the drawings' numbers only (nothing moves, grows or changes
+colour):
+- THE PENCIL (site): the band's ends on the body's two edges.
+- THE HEART (site, every like): it ends where it began, in the notch; it ran
+  0.32 past its start.
+- MUTE'S CLOSED EYE (site): the two outer lashes start on the lid's line
+  (0.17 and 0.19 above it); verify_socialmute's pinned drawing with them.
+- THE CROSSED EYE (site, a drawing hidden from your Gallery): the lower lid
+  ends on the slash (0.57 past it).
+- FLIP'S BOOK (Skribl: the Pad | Flip switch, the page menu, the Gallery,
+  the Library's rows, Your drafts; five copies): the spine ends at the
+  pages' foot (0.3 past).
+- FLIP'S LOOP ARROWS (Skribl: Loop this page, and a page's ⋯; two copies):
+  each arrowhead on its shaft; they sat a whole unit off them. The shafts
+  come in half a unit and the heads go to them, so the loop keeps its
+  height. Not the flatter loop the players drew before the infinity sign:
+  that one stays retired (verify_icons ONE SET OF PLAYER ICONS, which went
+  red on the first try at this fix, the flatter loop by its path data), and
+  the arrows in a ring stay where they mean a page repeated.
+- FLIP'S SCISSORS (Skribl: Cut the selection): each blade starts on its
+  ring (0.1 inside it).
+
+THE CHECK: verify_icons THE ENDS (7 rows). The instrument first, on
+drawings whose answer is known (the pencil as it was finds 0.21, as it is
+finds none; a bin's lid drawn wider than the bin is an overhang, not a nub;
+a T's stem 0.4 past its bar is 0.4); then that it read every one of the
+site's icons and the 244 inline drawings of the templates and scripts (no
+silent zero); then none at 0.06 units or more. Shown red on main's drawings
+(all sixteen ends named), green on the fix. The first run of the section
+inside the suite crashed: `_pl`, the pathlib name the ONE BIN section
+imports, is a measurement by the time THE ENDS runs, so the section takes
+names of its own (a trimmed copy had defined its own `_pl` and could not
+see it).
+
+PAD AND FLIP: shared. Flip's book, loop and scissors are Skribl's own files
+both editors load (the menu, the page menu, flip.js's page menu); the site's
+four are the site's alone. Nothing else of either editor changed.
+
+THE REST OF THE CHECK is a mock, waiting on the owner
+(https://claude.ai/artifact/BDqzjy8ghYVfSJDcdgaBNf, "Blooby icon check"):
+sizes and line
+weights inside each set (the ☰ drawn at 22px beside a 26px envelope and
+bell; Make's pencil at a 1.6px line beside 2.8; the sheets' icons 15.4 to
+17.8px tall), and the "Blooby font" (yes to a set with a written rule and a
+check, no to a font file). The scan read 1,606 icons on 136 screens (phone
+and desk, light and dark), 101 drawings; its tools stayed in the session's
+scratch folder.
