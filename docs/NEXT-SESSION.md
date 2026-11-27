@@ -36,7 +36,12 @@ v330, which is fine.
   person sends one (the pattern is `harness/tools/demo_people.py`'s: a
   sign-in link from the owner, a passkey of Pip's own); the link is spent.
 
-## Waiting on the owner
+## Parked, not a list to work through
+
+The owner, of these three, as the session closed: "I'm not sure any of those
+things on the todo list need to be dealt with immediately, if at all." So
+don't lead with them or offer them; they are here only so that, if the
+owner raises one, its history is at hand.
 
 - THE DARK GALLERY CARDS. The owner, Nov 26 evening: "The dark theme gallery
   cards look weird. Not right", then "We'll leave gallery cards for now".
@@ -45,7 +50,8 @@ v330, which is fine.
   owner and not answered: two frames round each drawing (the tile's faint
   edge, then the drawing's own brighter line just inside it), and three
   blacks (the page's blue-black, the tile's purple obsidian, a dark
-  drawing's own canvas). Mock before changing anything; ask which first.
+  drawing's own canvas). If the owner raises it: ask which, and mock
+  before changing anything.
 - ESCAPE closing a drawer beside the drawing: offered, not answered.
 - TOGGLES AND CARDS (the owner's "Do we have any consistence in our toggles
   and cards? Backgrounds? Borders?", with eight screenshots): answered with
