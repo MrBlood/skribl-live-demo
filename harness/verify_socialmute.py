@@ -570,9 +570,10 @@ ACTS = r"""(sel) => [...document.querySelectorAll(sel + ' .post-act')].filter(b 
            weight: cs.fontWeight, h: Math.round(r.height * 10) / 10, hit: !!at && (at === b || b.contains(at)) }; })"""
 
 # The closed eye's four strokes, as _icons.html draws them (the mock's, each
-# lash starting on the lid's line since the icon check of Nov 27).
-EYE = ("M 3.4,7.8 C 6.1,11.7 9.0,13.3 12.0,13.3 C 15.1,13.3 17.9,11.6 20.6,7.6|M 6.49,11.23 L 5.0,13.5|"
-       "M 12.0,13.3 L 11.9,16.4|M 17.52,11.15 L 19.0,13.4")
+# lash starting on the lid's line, drawn to a sheet's one height and centred,
+# since the icon check of Nov 27).
+EYE = ("M 3.89,8.04 C 6.43,11.72 9.17,13.23 12,13.23 C 14.92,13.23 17.57,11.62 20.11,7.85|M 6.8,11.27 L 5.4,13.42|"
+       "M 12,13.23 L 11.91,16.15|M 17.21,11.2 L 18.6,13.32")
 
 # The toast: shown, its words, Undo (shown, its box, and where a finger
 # lands: its middle and 21px out each way), its box, the bar's top, whether

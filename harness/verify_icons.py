@@ -631,6 +631,99 @@ _found = _ie.report()
 check(f"no icon's line pokes out of the line it ends on by {_ie.NUB_MIN} units or more",
       not _found, "; ".join(f"{w} at {a} by {b}" for w, a, b in _found[:6]))
 
+# ---------------------------------------------------------------------------
+# THE BLOOBY SET (the owner's "Default to yes on all but make's pencil", Nov 27,
+# to the icon check; the rule is written at the top of social/_icons.html).
+# Inside one menu the icons were drawn at different sizes and lines: the ☰
+# sheet's ran 15.4 to 17.6px tall, a post's ⋯ 16.1 to 17.8, the plain line at
+# 2 beside the pen's 2.1, and the gear's hole sat half a unit below the middle
+# of its teeth ("the circle in the gear icon looks off-center"). Read from the
+# source, every site icon as its pages draw it; the top of Home, as painted, is
+# verify_socialletters 15's.
+print("\nTHE BLOOBY SET — one line, each icon centred, a sheet's icons one height")
+_SHEET_H = 16.8 * 24 / 22          # 16.8px at a sheet's 22px, the line included
+
+
+def _box(html):
+    (x0, y0, x1, y1), vb, lines = _ie.ink(html)
+    return max(x1 - x0, y1 - y0), (x0 + x1) / 2 - (vb[0] + vb[2] / 2), (y0 + y1) / 2 - (vb[1] + vb[3] / 2), lines
+
+
+def _svg24(body, sw="2"):
+    return (f'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{sw}" '
+            f'stroke-linecap="round" stroke-linejoin="round">{body}</svg>')
+
+
+def _hole_off(d, cx, cy):
+    """How far a gear's hole sits from the middle of its teeth (its path's box)."""
+    pts = [q for p, _ in _ie.path_polylines(d) for q in p]
+    xs, ys = [q[0] for q in pts], [q[1] for q in pts]
+    return cx - (min(xs) + max(xs)) / 2, cy - (min(ys) + max(ys)) / 2
+
+
+# The instrument first, on the drawings as they were (main before Nov 27).
+_GEAR_WAS = ("M10.3 3.5h3.4l.5 2.4 1.6.9 2.3-.8 1.7 2.9-1.8 1.6v1.9l1.8 1.6-1.7 2.9-2.3-.8-1.6.9-.5 2.4h-3.4"
+             "l-.5-2.4-1.6-.9-2.3.8-1.7-2.9 1.8-1.6v-1.9L4.2 8.9l1.7-2.9 2.3.8 1.6-.9z")
+_was = _hole_off(_GEAR_WAS, 12, 12)
+check("the instrument: the gear as it was has its hole (12, 12) half a unit below its teeth's middle",
+      abs(_was[0]) < 0.01 and abs(_was[1] - 0.55) < 0.02, f"hole off by {_was[0]:+.2f}, {_was[1]:+.2f}")
+_lock_was = _box(_svg24('<path d="M 6.0,11.0 C 9.8,10.8 14.2,10.9 18.0,11.1 L 17.9,19.6 C 14.0,19.8 9.9,19.7 6.1,19.6 Z"/>'
+                        '<path d="M 8.6,10.9 C 8.4,7.6 9.6,5.0 12.0,5.0 C 14.4,5.0 15.6,7.4 15.4,10.9"/>'
+                        '<path d="M 12.0,14.4 L 12.0,16.2"/>', "2.1"))
+check("...and the padlock as it was stands 16.8 units, short of a sheet's 18.33",
+      abs(_lock_was[0] - 16.82) < 0.05, f"{_lock_was[0]:.2f}")
+_flag_was = _box(_svg24('<path d="M6 21V4.5"/><path d="M6 4.5h10.5l-1.8 4 1.8 4H6"/>'))
+check("...and the flag as it was sits three quarters of a unit off its box's middle, both ways",
+      abs(_flag_was[1] + 0.75) < 0.02 and abs(_flag_was[2] - 0.75) < 0.02, f"{_flag_was[1]:+.2f}, {_flag_was[2]:+.2f}")
+
+# A sheet's icons, read off the templates: every row's icon, one height, centred.
+_rows = _ie.sheet_rows()
+_mod = _ie._icons_module()
+_names = {m for _, m, _ in _rows}
+check("it reads every sheet's rows off the templates: the ☰'s, a post's, a comment's, a person's, a letter's"
+      " and the repost sheet's (no silent zero)",
+      len(_rows) >= 30 and {"how", "gear", "lock", "pin", "eye_closed", "quote", "drawback"} <= _names
+      and ("back", (("fit", True),)) in {(m, tuple(sorted(k.items()))) for _, m, k in _rows},
+      f"{len(_rows)} rows, {sorted(_names)}")
+_off = []
+for _t, _m, _k in _rows:
+    _l, _dx, _dy, _ = _box(str(getattr(_mod, _m)(**_k)))
+    if abs(_l - _SHEET_H) > 0.05 or abs(_dx) > 0.05 or abs(_dy) > 0.05:
+        _off.append(f"{_t}: {_m}{_k or ''} {_l:.2f} tall, off {_dx:+.2f},{_dy:+.2f}")
+check(f"every icon a sheet's rows draw stands {_SHEET_H:.2f} units at its longer side, its line included (16.8px at a"
+      " sheet's 22px), its ink centred in its box", not _off, "; ".join(_off[:5]))
+
+# One line, and each icon centred: every site icon as its pages draw it.
+# Each named exception says why, and nothing else may differ.
+_OWN_LINE = {"explore": 1.6, "explore(filled)": 1.6,    # Blooby in the bar: his own drawing's line
+             "search(lit)": 2.9,                          # Search lit: the place you are on, heavier
+             "draft": 2.4,                                # a draft's tiny chip, so at 11px it reads as a pen
+             "quote": 1.7,                                # its two marks' insides stay open at 22px
+             "pen": 2.0,                                  # Make's pencil: the owner's "Leave it alone"
+             "underline": 2.6}                            # the pen's line under a place: not an icon
+_OWN_MIDDLE = {"play",                                    # a triangle's weight is at its back
+               "face_edit",                               # the face is centred; its curl runs off to the side
+               "explore", "explore(filled)",              # Blooby in the bar, as the owner chose him
+               "pen",                                     # Make's pencil: "Leave it alone"
+               "underline"}                               # not an icon
+_lines, _middles = [], []
+for _label, _name, _kw, _html in _ie.site_macros():
+    _l, _dx, _dy, _ls = _box(_html)
+    _want = _OWN_LINE.get(_label, 2.1)
+    if any(abs(x - _want) > 1e-6 for x in _ls):
+        _lines.append(f"{_label} {sorted(_ls)}")
+    if _label not in _OWN_MIDDLE and (abs(_dx) > 1 / 3 + 1e-3 or abs(_dy) > 1 / 3 + 1e-3):
+        _middles.append(f"{_label} {_dx:+.2f},{_dy:+.2f}")
+check("one line: every site icon is drawn in the set's 2.1, but for the six that say why", not _lines, "; ".join(_lines))
+check("each site icon's ink centred in its box, within a third of a unit, but for the ones that say why",
+      not _middles, "; ".join(_middles))
+_g = str(_mod.gear())
+_gd = _ends_re.search(r'<path d="([^"]+)"', _g).group(1)
+_gc = _ends_re.search(r'<circle cx="([^"]+)" cy="([^"]+)"', _g)
+_now = _hole_off(_gd, float(_gc.group(1)), float(_gc.group(2)))
+check("the gear's hole sits at its teeth's middle (the owner: \"the circle in the gear icon looks off-center\")",
+      abs(_now[0]) < 0.05 and abs(_now[1]) < 0.05, f"hole off by {_now[0]:+.2f}, {_now[1]:+.2f}")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))

@@ -1052,6 +1052,17 @@ with sync_playwright() as p:
             top = pg.evaluate("""() => { const e = document.querySelector('.top-letters'), bell = document.querySelector('.top-bell');
               return e ? { dot: !!e.querySelector('.act-dot'), label: e.getAttribute('aria-label'), next: e.nextElementSibling === bell,
                            h: Math.round(e.getBoundingClientRect().height) } : null; }""")
+            # THE TOP'S THREE ICONS, ONE SIZE AND ONE LINE (the icon check, Nov 27;
+            # the owner: "The three line menu icons look weird size and
+            # inconsistent"): the ☰ was drawn at an .icon-btn's 22px beside the
+            # envelope's and the bell's 26, its lines 1.93px to their 2.27. Each
+            # icon's drawn size and its line on the screen, as painted.
+            trio = pg.evaluate("""() => ['.top-menu', '.top-letters', '.top-bell'].map(sel => {
+              const svg = document.querySelector('header.top ' + sel + ' svg.ic'); if (!svg) return null;
+              const r = svg.getBoundingClientRect(), p = [...svg.querySelectorAll('path')].find(q => !q.classList.contains('act-dot'));
+              const m = p.getScreenCTM();
+              return { sel, size: Math.round(r.width * 100) / 100,
+                       line: Math.round(parseFloat(getComputedStyle(p).strokeWidth) * Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) * 100) / 100 }; })""")
             pg.goto(BASE + "/social/letters")
             ready(pg)
             shot(pg, "letters-phone-light")
@@ -1062,6 +1073,10 @@ with sync_playwright() as p:
             close_ctx(ctx, pg)
             check("the envelope sits beside the bell at the top of Home (44px), its dot when a letter waits",
                   top and top["dot"] and top["next"] and top["h"] >= 44 and top["label"] == "Letters, a new one", json.dumps(top))
+            check("the top of Home draws its ☰, envelope and bell at one size with one line (the ☰ was 22px, its line 1.93px"
+                  " to their 2.27)",
+                  all(trio) and len({t["size"] for t in trio}) == 1 and max(t["line"] for t in trio) - min(t["line"] for t in trio) < 0.05,
+                  json.dumps(trio))
             new = [r for r in rows_ if r["dot"]]
             check("Letters: a new letter's row is sealed (the envelope, not its picture), its dot, \"Ana drew you a letter\","
                   " \"It draws itself when you open it\", opening the two of you at it; \"Only the two of you ever see a letter.\"",

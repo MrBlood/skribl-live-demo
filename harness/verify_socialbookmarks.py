@@ -530,10 +530,10 @@ ROWS = r"""() => { const s = document.getElementById('postSheet'); if (!s) retur
                  size: cs.fontSize, weight: cs.fontWeight, h: Math.round(r.height * 10) / 10,
                  hit: !!at && (at === b || b.contains(at)) }; })) }; }"""
 
-# The ribbon, as _icons.html draws it (the mock's own line, bm_mock.py's D).
-RIBBON = ("M 16.9,4.3 C 13.7,4.1 10.4,4.2 7.3,4.3 C 6.7,4.3 6.4,4.7 6.4,5.3 C 6.5,10.1 6.4,14.9 6.5,19.6 "
-          "C 8.3,18.2 10.2,16.8 12.0,15.5 C 13.9,16.8 15.7,18.2 17.6,19.7 C 17.5,14.9 17.6,10.1 17.6,5.2 "
-          "C 17.6,4.6 17.4,4.3 16.9,4.3")
+# The ribbon, as _icons.html draws it (the mock's own line, bm_mock.py's D,
+# drawn to a sheet's one height and centred since the icon check, Nov 27).
+RIBBON = ("M 17.12,4.01 C 13.78,3.8 10.33,3.9 7.08,4.01 C 6.46,4.01 6.14,4.43 6.14,5.05 "
+          "C 6.25,10.07 6.14,15.09 6.25,20.01 C 8.13,18.54 10.12,17.08 12,15.72 C 13.99,17.08 15.87,18.54 17.86,20.11 C 17.75,15.09 17.86,10.07 17.86,4.95 C 17.86,4.32 17.65,4.01 17.12,4.01")
 
 # THE TOAST: up, its words, Undo shown, which icon it wears (the ribbon, or
 # the eye), and whether the ⋯ sheet has gone down.

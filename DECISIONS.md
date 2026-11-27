@@ -54826,3 +54826,84 @@ bell; Make's pencil at a 1.6px line beside 2.8; the sheets' icons 15.4 to
 check, no to a font file). The scan read 1,606 icons on 136 screens (phone
 and desk, light and dark), 101 drawings; its tools stayed in the session's
 scratch folder.
+
+## After v330 -- The icon check, part 2: Blooby's icon set, built (the owner's "Default to yes on all but make's pencil")
+
+The owner, Nov 27 (Mountain Time), about 7:30 AM, to the icon check page
+(https://claude.ai/artifact/BDqzjy8ghYVfSJDcdgaBNf): "Default to yes on all
+but make's pencil. Leave it alone. Also the circle in the gear icon looks
+off-center". Yes, then, to choices 1, 3, 4 and 5; choice 2 (a heavier line
+for Make's pencil) is no, and Make's pencil is left as it was in every way.
+
+WHAT CHANGED (social/templates/social/_icons.html, social.css, the Pad and
+Flip's headers):
+- THE TOP (choice 1): the ☰ at the top of a phone's Home, Gallery and
+  Search is drawn at the bell's 26px, so its lines are the envelope's and the
+  bell's line (2.27px; it was 22px and 1.93).
+- A SHEET'S ICONS ONE HEIGHT (choice 3): every icon a sheet's rows draw (the
+  ☰'s sheet, a post's ⋯, a comment's ⋯, a person's ⋯, a letter's ⋯, the
+  repost sheet, and the heading of who can draw back) redrawn by its numbers
+  to 18.33 units at its longer side, its line included (16.8px at a sheet's
+  22px), its ink centred in its box. Each keeps its own shape. They stood
+  15.4 to 17.8px tall. `plus` and `back` draw a sheet-height copy (`fit`) for
+  Post it and a letter's Take back, so Follow's plus and the way back at the
+  top keep their own sizes.
+- THE GEAR'S HOLE at the middle of its teeth (the owner's report): the teeth
+  were centred half a unit above the hole.
+- ONE LINE: the plain line's 2 is the pen's 2.1, and the eyes' 2.2 too.
+- CENTRED: the way back, the passkey and a draft's chip, their size kept.
+- A COMMENT'S ⋯ at its row's 18px (it was 20); POST'S PAPER PLANE in the Pad
+  and Flip at 2.4, Tune's 1.6px line beside it at its size (it was 1.33).
+- THE RULE (choice 5), written at the top of _icons.html: a 24 grid, one
+  line, each icon centred, a sheet's icons one height, every end on its line;
+  the icons with their own line or middle each named, with why.
+
+JUDGMENT CALLS, Cal's until the owner says otherwise:
+- THE QUOTE KEEPS ITS 1.7 LINE, drawn to the sheet's height: at 2.1 its two
+  marks' small insides fill in at 22px, the reason it was drawn lighter
+  (Nov 19).
+- THE BAR'S SIGN IN keeps the 25px the owner chose for the bar (Nov 15):
+  its person is drawn 6% larger in its box now, so the box is 32.9 (34.9).
+- A REDRAWN ICON CHANGES WHEREVER IT IS DRAWN: the repost arrows and Draw
+  back's pen under a post (a little smaller, nearer the comment bubble and
+  the heart beside them), How it works and Settings in a desk's rail, the
+  profile's Share and Settings, Activity's badges.
+- Make's pencil (pen()) keeps its own line, 2, and its middle: "Leave it
+  alone".
+
+CHECKS, each row shown red by a break of its own and green as built:
+verify_icons THE BLOOBY SET (8 rows): the instrument on the drawings as they
+were (the gear's hole half a unit low, the padlock 16.8 not 18.33, the flag
+three quarters of a unit off); every sheet row's icon, read off the
+templates (33 rows), at the one height and centred (red: the padlock as it
+was); one line but for the six that say why (red: the plain line back at 2);
+each icon centred but for the ones that say why (red: the passkey as it
+was); the gear's hole at its teeth's middle (red: the hole back low).
+verify_socialletters 15: the ☰, the envelope and the bell at one size and
+one line, as painted (red: the ☰ back at 22px). Three suites pinned the
+drawings by their numbers, and move with them: verify_socialreposts (the
+arrows, the quote marks, Post it's plus), verify_socialbookmarks (the
+ribbon), verify_socialmute (the closed eye).
+
+PAD AND FLIP: shared. The Post button's plane is the same line in both
+headers (verify_parity compares them); nothing else of theirs changed.
+
+THE AFFECTED SUITES, side by side (run_parallel -j 3, 23 of them, on
+43b0e2b; the commits after it are this entry alone): verify_icons 76/76,
+verify_docs 144/144, verify_social 46/46, verify_socialposts 128/128,
+verify_socialcomments 154/154, verify_socialmute 68/68,
+verify_socialreposts 106/106, verify_socialsafety 38/38,
+verify_socialactivity 48/48, verify_socialprofile 106/106,
+verify_socialsettings 57/57, verify_socialbookmarks 37/37,
+verify_socialdrawback 150/150, verify_socialauth 77/77, verify_socialapp
+101/101, verify_socialletters 45/45; and the header's, for Post's plane:
+verify_parity 436/436, verify_pointerpad 56/56, verify_ux 491/491,
+verify_layout 257/257, verify_sizeclass 89/89, verify_a11y 478/478,
+verify_a11ypages 162/162. NOT RUN: the full battery (main's run after the
+merge does it); verify_contrast (no colour or token changed, and the sheets
+it reads are the editors'). The owner, shown Post's plane before and after
+in the Pad's header, light and dark: "Keep the change".
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: on a phone's Home, the ☰'s three lines as thick as the
+bell's; in the ☰'s sheet, Settings' gear with its hole in its middle.
