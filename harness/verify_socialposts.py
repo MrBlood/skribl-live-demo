@@ -1717,8 +1717,10 @@ with sync_playwright() as p:
               const g = document.createRange(); g.setStart(n, i); g.setEnd(n, i + needle.length); return g.getBoundingClientRect(); } }
             return null; };
           let xy;
-          if (what === 'ground') { const f = R('.post-row'), n = R('.post-row .post-more');
-            xy = [(n.right + f.right) / 2, f.top + f.height / 2]; }
+          // The card's own ground: since Bluesky's columns (Nov 28) the face's column under the face, at the
+          // row's middle (the row spread across its column leaves no open space past the ⋯).
+          if (what === 'ground') { const f = R('.post-row'), m = R('.post-head .post-face');
+            xy = [m.left + m.width / 2, f.top + f.height / 2]; }
           else if (what === 'words') xy = mid(text(c.querySelector('.post-words'), 'a card'));
           else if (what === 'drawing') xy = mid(R('.post-art .skribl-inline'));
           else if (what === 'under the time') { const t = R('.post-when'), a = R('.post-art .skribl-inline');
@@ -1850,9 +1852,10 @@ with sync_playwright() as p:
         ok_open = all(r.get("ground") == ("card", page) and r.get("words", (None, None))[1] == page
                       and r.get("count", (None, None))[1] in (page, page + "#say") for r in res.values())
         # NO OPEN › (the owner's "completely remove open", Nov 19): the card's
-        # own ground is the door, so the row's open space past the ⋯ is ground.
-        check("a tap anywhere on a card's own ground (here in the row's open space past the ⋯, where Open › was"
-              " until Nov 19 and no finger is snapped to a button) opens its page, as a tap on its words does;"
+        # own ground is the door; since Bluesky's columns (Nov 28) the face's
+        # column under the face is ground (the row spreads to the ⋯ at its end).
+        check("a tap anywhere on a card's own ground (here the face's column under the face, beside the row: no"
+              " finger is snapped to a button there) opens its page, as a tap on its words does;"
               " the 💬 opens it too, asking for its answer box (#say, which the page drops once it has opened it:"
               " verify_socialcomments 34 holds the box): a touch on a phone, a click on a desk",
               bool(card) and ok_open,
@@ -1969,9 +1972,10 @@ with sync_playwright() as p:
                  (G12, "/gallery", TILE.format(lone), lone, to_lone, None),
                  (G12, "/gallery", TILE.format(nobodys), nobodys, to_skribl, None)]
         # Where a finger goes on a card: the drawing's middle, the name's, and
-        # the ground's: on Home's calm card the row's open space past the ⋯
-        # (its line waits until played, Nov 13; no Open › since Nov 19), a Gallery card's
-        # time; scrolled to the screen's middle first.
+        # the ground's: on Home's calm card the face's column under the face,
+        # beside the row (Bluesky's columns, Nov 28: the row spreads to the ⋯
+        # at its end; no Open › since Nov 19), a Gallery card's time; scrolled
+        # to the screen's middle first.
         SPOT12 = """([sel, what]) => { const c = document.querySelector(sel); if (!c) return null;
           const text = (root, needle) => { if (!root) return null; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
             for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.textContent.indexOf(needle); if (i >= 0) {
@@ -1979,9 +1983,9 @@ with sync_playwright() as p:
             return null; };
           const at = { drawing: () => c.querySelector('.skribl-inline'),
                        name: () => { const e = c.querySelector('.post-name, .tdn'); return e && text(e, e.textContent.trim()); },
-                       ground: () => { const m = c.querySelector('.post-row .post-more'), o = c.querySelector('.post-row');
+                       ground: () => { const m = c.querySelector('.post-head .post-face'), o = c.querySelector('.post-row');
                          if (m && o) return { getBoundingClientRect: () => { const a = m.getBoundingClientRect(), z = o.getBoundingClientRect();
-                           return { left: a.right, top: a.top, width: z.right - a.right, height: a.height }; } };
+                           return { left: a.left, top: z.top, width: a.width, height: z.height }; } };
                          return text(c.querySelector('.tm'), c.querySelector('.tm') ? c.querySelector('.tm').textContent.trim() : ''); } }[what];
           const it = at && at(); if (!it || !it.getBoundingClientRect().width) return null;
           let r = it.getBoundingClientRect();
@@ -2076,7 +2080,7 @@ with sync_playwright() as p:
               f"{ {r['label']: r.get('person') for r in cards12} }")
         check("...and a finger's tap on the ground opens the right page, followed: a post's drawing its post"
               " (/social/p/…), one on its own its page (/social/b/…), one by somebody not on the site Skribl's own"
-              " page for it (/s/…); on Home in the row's open space past the ⋯, on a Gallery card at its time",
+              " page for it (/s/…); on Home in the face's column beside the row, on a Gallery card at its time",
               made and all(r.get("finger") == r["want"] for r in cards12),
               f"{ {r['label']: r.get('finger') for r in cards12 if r.get('finger') != r['want']} }")
 
@@ -2234,7 +2238,7 @@ with sync_playwright() as p:
         close_ctx(ctx, cpg)
         close_ctx(octx, opg)
         check("on a desk, Ctrl or the middle button opens the card in a new tab and this page stays: Home's card (in"
-              " its row, past the ⋯) and a Gallery card of Skribl's where a host says (at its time)",
+              " the face's column beside its row) and a Gallery card of Skribl's where a host says (at its time)",
               made and all(desk.get(k) == (w, p_) for k, w, p_ in (("home ctrl", to_post, "/social/"),
                                                                   ("home middle", to_post, "/social/"),
                                                                   ("gallery ctrl", to_lone, "/gallery"),
