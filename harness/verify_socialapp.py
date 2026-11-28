@@ -91,10 +91,13 @@ Chromium's virtual authenticator for the site's people.
      keyboard going, or the phone stuck differently, is a new spell; once
      put right, once; never while words
      are typed, with the page pinched larger, with a finger down, on a desk,
-     or on a page that cannot scroll. And the keyboard is put away before
-     the app changes page: as Post is pressed, as a form really goes, as the
-     page goes; a search that stays on its page keeps its keyboard. Whether
-     an iPhone then measures again is the owner's phone's to say.
+     or on a page that cannot scroll. Read in a browser tab since Nov 27:
+     in the Home Screen app the page scrolls in its own frame (16), the
+     window never, so nothing is asked there (a row). And the keyboard is
+     put away before the app changes page: as Post is pressed, as a form
+     really goes, as the page goes; a search that stays on its page keeps
+     its keyboard. Whether an iPhone then measures again is the owner's
+     phone's to say.
   13. A HELD FINGER SELECTS NO CONTROL (the owner's iPhone, Nov 22: a finger
      held by Make brought up the text-selection handles; a phone's bar keeps
      its names in a pixel). Home on a phone and a desk with a post of words,
@@ -1702,8 +1705,11 @@ with sync_playwright() as pw:
                 changedTouches: [t], bubbles: true, cancelable: true, view: window })); }"""
             REST = 900          # longer than three askings take (each waits 150 ms of rest, then 50 ms to come back)
 
-            def phone(path="/social/", y=300, init=(), who=mira):
-                ctx, pg = browser_as(b, who, ua=IPHONE_UA, init=(STANDALONE, SPLASHED, STUCK) + tuple(init))
+            # IN A BROWSER TAB (Nov 27): in the Home Screen app the page never scrolls now (section 16, its frame),
+            # so there is no page for the fault to make the bar ride, and nothing to ask; the asking stays for a tab.
+            # The keyboard put away before the page changes is the app's (app=True).
+            def phone(path="/social/", y=300, init=(), who=mira, app=False):
+                ctx, pg = browser_as(b, who, ua=IPHONE_UA, init=((STANDALONE, SPLASHED) if app else (SPLASHED,)) + (STUCK,) + tuple(init))
                 go(pg, path)
                 if y is not None:
                     pg.evaluate(TALL, y)
@@ -1867,6 +1873,21 @@ with sync_playwright() as pw:
                   fine and desk["asked"] == [] and fits and short_page["asked"] == [],
                   json.dumps({"desk": desk["asked"], "fine": fine, "a page that fits": short_page["asked"], "fits": fits}))
 
+            # IN THE APP'S FRAME NOTHING IS ASKED (section 16): the window never scrolls there, so what is pinned has no
+            # page to ride, and a phone left short is not asked to scroll a page that cannot.
+            ctx, pg = phone(y=None, app=True)
+            pg.evaluate("""() => { const d = document.createElement('div'); d.style.cssText = 'height:2400px';
+              (document.querySelector('main') || document.body).appendChild(d); document.body.scrollTop = 300; }""")
+            pg.wait_for_timeout(400)
+            pg.evaluate("() => window.__vv({ short: 336 })")
+            pg.wait_for_timeout(REST + 400)
+            framed = pg.evaluate("""() => ({ asked: window.__asked.map(a => a.dy), frame: !!(window.SocialScroll && window.SocialScroll.frame),
+              body: Math.round(document.body.scrollTop), win: Math.round(scrollY) })""")
+            close_ctx(ctx, pg)
+            check("in the Home Screen app's frame nothing is asked (section 16: the window never scrolls there, so what is pinned "
+                  "has no page to ride): left short, the frame where it was and the window at its top",
+                  framed["frame"] and framed["asked"] == [] and framed["body"] == 300 and framed["win"] == 0, json.dumps(framed))
+
             # THE KEYBOARD IS PUT AWAY BEFORE THE APP CHANGES PAGE.
             # What happened, in order, kept where the next page can read it.
             ORDER = """(() => { if (window.top !== window) return;      // the page's own, not a frame's inside it
@@ -1880,7 +1901,7 @@ with sync_playwright() as pw:
             # held back here until that has been read). PRESSED AS AN IPHONE PRESSES A BUTTON: Safari there does
             # not give a tapped button the focus, so the words keep it unless the page takes it; Chromium's own
             # click would move the focus by itself and this row would hold nothing.
-            ctx, pg = phone(y=None, init=(ORDER,))
+            ctx, pg = phone(y=None, init=(ORDER,), app=True)
             held = []
             pg.route("**/social/posts", lambda r: held.append(r))
             new_url = pg.evaluate("() => document.getElementById('composeSheet').getAttribute('data-post-new')")
@@ -1913,7 +1934,7 @@ with sync_playwright() as pw:
             close_ctx(ctx, pg)
 
             # 2. A form that really goes (Edit profile's Save): put away as it goes, before the page does.
-            ctx, pg = phone("/social/you/edit", y=None, init=(ORDER,))
+            ctx, pg = phone("/social/you/edit", y=None, init=(ORDER,), app=True)
             pg.click("#editName")
             pg.keyboard.type("!")
             pg.keyboard.press("Backspace")
@@ -1927,7 +1948,7 @@ with sync_playwright() as pw:
             close_ctx(ctx, pg)
 
             # 3. A search that stays on its page keeps its keyboard; and a page left with a field in hand lets it go as it goes.
-            ctx, pg = phone("/social/explore", y=None, init=(ORDER,))
+            ctx, pg = phone("/social/explore", y=None, init=(ORDER,), app=True)
             pg.click("[data-gal-q]")
             pg.keyboard.type("ca")
             pg.keyboard.press("Enter")
@@ -2166,6 +2187,110 @@ with sync_playwright() as pw:
                   bool(names15) and all(v == k.split(" ", 1)[1] for k, v in names15.items()), json.dumps(names15)[:700])
         except Exception as exc:  # noqa: BLE001
             stopped(15, exc)
+
+    # ------------------------------------------------------------------ 16
+    # THE APP'S FRAME (the owner, Nov 27: "Yes on the bottom bar"; social.css THE APP'S FRAME, social.js THE APP
+    # SCROLLS IN ITS OWN FRAME). An iPhone left thinking its keyboard is up stops moving what is pinned to the
+    # screen as the page scrolls: the bar stayed where the screen's foot was with the page at its top, and rode
+    # the feed (Nov 21, and again Nov 27 past section 12's asking). In the Home Screen app the page now never
+    # scrolls; the body does, a frame the screen's size. NO ROW HERE CAN MAKE THE iPHONE'S FAULT (no iPhone
+    # engine): what is read is what makes it harmless, that the page itself never moves, and what the frame
+    # must keep (the bar at the foot, Back to where you were, Home to the top, the place under a swap). The
+    # owner's phone says the rest.
+    if part(16, "the app's frame: the page never scrolls, the body does; the bar at the foot; Back keeps the place; Home to the top"):
+        try:
+            mira = member(b, "mira", "Mira Lopez")
+            POST16 = """async ([words, on]) => { const t = document.querySelector('meta[name="social-csrf"]').content;
+              const r = await fetch(on ? '/social/p/' + on + '/comments' : '/social/posts', { method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-Social-CSRF': t }, body: JSON.stringify({ words }) });
+              return r.status; }"""
+            go(mira.pg, "/social/")
+            made16 = [mira.pg.evaluate(POST16, [f"Section 16, a line of the feed, number {k}. Long enough to take two lines on a phone.", None])
+                      for k in range(18)]
+            FRAME16 = """() => { const h = document.documentElement, b = document.body, nav = document.querySelector('body > .nav');
+              const r = nav ? nav.getBoundingClientRect() : null;
+              return { app: h.classList.contains('is-app'), page: getComputedStyle(h).overflowY, body: getComputedStyle(b).overflowY,
+                       frameH: Math.round(b.clientHeight), tall: b.scrollHeight - b.clientHeight, inner: innerHeight,
+                       win: Math.round(scrollY), y: Math.round(b.scrollTop), foot: r ? Math.round(r.bottom * 10) / 10 : null }; }"""
+            # In the app (iOS's own say, and the splash already seen this launch), and in a browser tab.
+            actx, apg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE, SPLASHED))
+            go(apg, "/social/?show=everyone", wait=900)
+            a_rest = apg.evaluate(FRAME16)
+            apg.evaluate("() => { document.body.scrollTop = 600; }")
+            apg.wait_for_timeout(300)
+            a_down = apg.evaluate(FRAME16)
+            tctx, tpg = browser_as(b, mira, ua=IPHONE_UA)
+            go(tpg, "/social/?show=everyone", wait=900)
+            tpg.evaluate("() => window.scrollTo(0, 600)")
+            tpg.wait_for_timeout(300)
+            t_down = tpg.evaluate(FRAME16)
+            close_ctx(tctx, tpg)
+            check("in the Home Screen app the page itself never scrolls and the body is its frame, the screen's height:"
+                  " scrolled 600px, the frame is and the page is not, and the bar's foot is the screen's foot before and"
+                  " after (so an iPhone that stops moving what is pinned has no scroll to lag behind)",
+                  all(made16_ == 200 for made16_ in made16) and a_rest["app"] and a_rest["page"] == "hidden"
+                  and a_rest["body"] == "auto" and a_rest["frameH"] == a_rest["inner"] and a_rest["tall"] > 600
+                  and a_down["y"] == 600 and a_down["win"] == 0 and a_rest["foot"] == a_rest["inner"] and a_down["foot"] == a_down["inner"],
+                  json.dumps({"posted": made16[:3], "rest": a_rest, "down": a_down}))
+            check("in a browser tab nothing changes: the page scrolls as it did (600px), the body is no frame, the bar at the foot",
+                  not t_down["app"] and t_down["win"] == 600 and t_down["body"] == "visible" and t_down["foot"] == t_down["inner"],
+                  json.dumps(t_down))
+            # BACK PUTS YOU WHERE YOU WERE: a browser keeps the window's place for Back, never a frame's; the app keeps
+            # it for each address and puts it back. The browser's memory of the page (which would keep it by itself)
+            # is off in a browser of this row's own, so Back loads the page again and the kept place is read. (A page
+            # listening for unload turned it off before, and Chromium says so as a console error.)
+            nob = pw.chromium.launch(args=["--disable-features=BackForwardCache"])
+            bctx, bpg = browser_as(nob, mira, ua=IPHONE_UA, init=(STANDALONE, SPLASHED))
+            go(bpg, "/social/?show=everyone", wait=900)
+            bpg.evaluate("() => { document.body.scrollTop = 640; }")
+            bpg.wait_for_timeout(400)
+            there = bpg.evaluate("() => Math.round(document.body.scrollTop)")
+            go(bpg, "/social/explore", wait=600)
+            bpg.go_back(wait_until="load")
+            bpg.wait_for_timeout(1600)
+            back16 = bpg.evaluate("""() => ({ y: Math.round(document.body.scrollTop), win: Math.round(scrollY),
+              how: (performance.getEntriesByType('navigation')[0] || {}).type, at: location.pathname + location.search })""")
+            close_ctx(bctx, bpg)
+            nob.close()
+            check("in the app, Back puts you where you were: Home scrolled 640px in its frame, a page away and Back (loaded"
+                  " again, not from the browser's memory), and the frame is at 640 again",
+                  there == 640 and back16["how"] == "back_forward" and abs(back16["y"] - 640) <= 2 and back16["win"] == 0
+                  and back16["at"] == "/social/?show=everyone", json.dumps({"there": there, "back": back16}))
+            # HOME TAPPED ON HOME GOES TO THE TOP, gliding, and nowhere else (the page is the same page: a mark left on
+            # it is still there); a tap on an iPhone's clock does this for a page that scrolls itself, never a frame.
+            apg.evaluate("() => { document.body.scrollTop = 900; window.__still16 = 1; }")
+            apg.wait_for_timeout(300)
+            try:
+                glide16 = apg.evaluate("""() => new Promise(res => { const ys = []; const a = document.querySelector('a[data-tab-home]');
+                  a.click(); const t0 = performance.now();
+                  (function f() { ys.push(Math.round(document.body.scrollTop)); if (performance.now() - t0 > 1600) res(ys); else requestAnimationFrame(f); })(); })""")
+            except Exception as exc:  # noqa: BLE001 -- the tap went to another page: the row's red, said below
+                glide16 = ["went: " + str(exc).splitlines()[0][:60]]
+                apg.wait_for_load_state("load")
+                apg.wait_for_timeout(600)
+            home16 = apg.evaluate("() => ({ still: window.__still16 === 1, at: location.pathname, y: Math.round(document.body.scrollTop) })")
+            between = sorted({y for y in glide16 if isinstance(y, int) and 0 < y < 900})
+            check("in the app, Home tapped while on Home glides the frame to the top and goes nowhere else: the same page"
+                  " (its mark kept), at 0, passing through the places between",
+                  home16["still"] and home16["y"] == 0 and home16["at"] == "/social/" and len(between) >= 3
+                  and all(isinstance(y, int) for y in glide16) and glide16 == sorted(glide16, reverse=True),
+                  json.dumps({"home": home16, "frames": len(glide16), "between": between[:6]}))
+            # THE PLACE UNDER A SWAP: Home's Following and Everyone change the feed while it can't be seen, the page
+            # held at its height and its place (follows.js); in the frame the place is the frame's.
+            apg.evaluate("() => { document.body.scrollTop = 500; }")
+            apg.wait_for_timeout(300)
+            pill = apg.locator("button[data-show='following']")
+            swap16 = {"there": apg.evaluate("() => Math.round(document.body.scrollTop)")}
+            if pill.count():
+                pill.first.evaluate("b => b.click()")
+                apg.wait_for_timeout(1400)
+            swap16.update(apg.evaluate("() => ({ y: Math.round(document.body.scrollTop), win: Math.round(scrollY), pressed: (document.querySelector(\"button[data-show='following']\") || {}).getAttribute ? document.querySelector(\"button[data-show='following']\").getAttribute('aria-pressed') : null })"))
+            close_ctx(actx, apg)
+            check("in the app, Home's Following and Everyone change the feed in place: the frame where it was (500px), the"
+                  " page itself still unscrolled",
+                  swap16["pressed"] == "true" and abs(swap16["y"] - swap16["there"]) <= 1 and swap16["win"] == 0, json.dumps(swap16))
+        except Exception as exc:  # noqa: BLE001
+            stopped(16, exc)
 
     # ------------------------------------------------------------------ 10
     if part(10, "no page errors, no console errors and no CSP violations"):

@@ -4231,3 +4231,23 @@ and the tail as painted on a phone at 3x and a desk at 2x, light and dark;
 45: a drawing alone or linked, in every list), and `verify_socialposts` 23
 (a balloon is its drawn line alone; a drawing in a balloon its edge alone).
 
+## 52. Built: The Home Screen app's page scrolls in its own frame (Nov 27)
+
+The owner, from the Home Screen app: "The bottom menu bar is moving again. We
+fixed it, but it's back". The same iOS 26 fault as Nov 21 (DECISIONS, "The
+moving bottom bar"): after the keyboard has been up the phone can stop moving
+what is pinned to the screen as the page scrolls, and the bar rides the feed.
+The page's asking the phone to measure again (section 12 of
+`verify_socialapp`) did not hold, and the owner said yes to the sure cure.
+
+IN THE APP ALONE (`html.is-app`, `splash-boot.js`): the page never scrolls;
+the body does, a frame the screen's height (`social.css`, THE APP'S FRAME).
+`window.SocialScroll` (`social.js`) answers where the page is, the frame's
+place in the app and the window's in a tab, for every script that reads or
+moves it. Back puts you where you were (the frame's place is kept for each
+address); Home tapped on Home glides to the top, in place of the tap on the
+phone's clock, which an iPhone does only for a page that scrolls itself. The
+page behind the editor is held by overflow in the frame. A browser tab is as
+it was. `verify_socialapp` 16 and `verify_socialprofile` 21 hold it. Not
+testable here: whether iOS's fault is gone, which the owner's phone says.
+

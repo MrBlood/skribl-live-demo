@@ -46,6 +46,74 @@
 (function () {
   'use strict';
   var doc = document;
+
+  /* THE APP SCROLLS IN ITS OWN FRAME (the owner, Nov 27: "Yes on the bottom
+     bar"; DECISIONS, "The Home Screen app's page scrolls in its own frame").
+     An iPhone left thinking its keyboard is up stops moving what is pinned to
+     the screen as the page scrolls (THE BAR STAYS AT THE SCREEN'S FOOT,
+     below): the bar stays where the screen's foot was with the page at its
+     top, and rides. In the Home Screen app (html.is-app, splash-boot.js) the
+     page itself never scrolls; the body does, a frame the screen's size
+     (social.css, THE APP'S FRAME), so where the screen's foot was with the
+     page at its top is where it is. Everything that reads or moves the page's
+     scroll asks this: the body's in the app, the window's in a browser tab,
+     where nothing changes. */
+  var inFrame = doc.documentElement.classList.contains('is-app');
+  function scroller() { return inFrame ? doc.body : window; }
+  window.SocialScroll = {
+    frame: inFrame,
+    y: function () { return inFrame ? doc.body.scrollTop : (window.scrollY || window.pageYOffset || 0); },
+    to: function (y, how) {
+      try { scroller().scrollTo({ top: y, behavior: how || 'auto' }); }
+      catch (e) { if (inFrame) doc.body.scrollTop = y; else window.scrollTo(0, y); }
+    },
+    by: function (dy, how) {
+      try { scroller().scrollBy({ top: dy, behavior: how || 'auto' }); }
+      catch (e) { if (inFrame) doc.body.scrollTop += dy; else window.scrollBy(0, dy); }
+    },
+    on: function (fn) { scroller().addEventListener('scroll', fn, { passive: true }); },
+    height: function () { return inFrame ? doc.body.scrollHeight : doc.documentElement.scrollHeight; },
+    view: function () { return inFrame ? doc.body.clientHeight : window.innerHeight; }
+  };
+  /* IN THE APP, BACK STILL PUTS YOU WHERE YOU WERE. A browser keeps the
+     window's place for Back by itself, never a frame's: the frame's place is
+     kept for each address as it scrolls and as the page goes, and put back
+     when Back (or Forward) comes to it, once the page is tall enough to hold
+     it (its pictures may still be coming), a second at the most. A page kept
+     whole for Back (the browser's own memory of it) is still where it was. */
+  (function keepPlace() {
+    if (!inFrame) return;
+    var key = 'blooby.place:' + window.location.pathname + window.location.search, t = 0;
+    function save() { try { window.sessionStorage.setItem(key, String(Math.round(doc.body.scrollTop))); } catch (e) { /* not kept */ } }
+    window.SocialScroll.on(function () { clearTimeout(t); t = setTimeout(save, 120); });
+    window.addEventListener('pagehide', save);
+    var how = '';
+    try { how = (window.performance.getEntriesByType('navigation')[0] || {}).type || ''; } catch (e) { /* none */ }
+    if (how !== 'back_forward') return;
+    var y = 0;
+    try { y = +window.sessionStorage.getItem(key) || 0; } catch (e) { /* none */ }
+    if (!y) return;
+    var tries = 0;
+    (function put() {
+      if (doc.body.scrollHeight - doc.body.clientHeight >= y || ++tries > 20) doc.body.scrollTop = y;
+      else setTimeout(put, 50);
+    })();
+  })();
+  /* IN THE APP, HOME TAPPED ON HOME GOES TO THE TOP (the owner's yes, with
+     the frame): a tap on an iPhone's clock goes to the top of a page that
+     scrolls itself, never of a frame, so the bar's Home does it there,
+     gliding (put there under Reduce Motion), and goes nowhere else. */
+  (function homeToTop() {
+    if (!inFrame) return;
+    doc.addEventListener('click', function (e) {
+      var a = e.target.closest && e.target.closest('a[data-tab-home][aria-current="page"]');
+      if (!a || e.defaultPrevented || e.button > 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      var still = false;
+      try { still = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (err) { /* moving */ }
+      window.SocialScroll.to(0, still ? 'auto' : 'smooth');
+    });
+  })();
   var desk = window.matchMedia ? window.matchMedia('(min-width: 900px)') : null;
   /* Longer than the slowest fade (the scrim's), in case its transitionend
      never comes: a tab put in the background mid-glide, say. */
@@ -359,11 +427,14 @@
     /* The page behind holds where it stands while the editor is up (social.css
        body.facepad-open: fixed at its own scroll, which a phone cannot move to
        show what is typed), and is put back at that scroll once it has gone. */
+    /* IN THE APP'S FRAME the body is the page that scrolls: it is held by
+       overflow alone (social.css), which keeps its place, and is put back
+       there should anything have moved it. */
     var held = null;
     function hold() {
       if (held !== null) return;
-      held = window.scrollY || window.pageYOffset || 0;
-      doc.body.style.setProperty('--facepad-held', (-held) + 'px');
+      held = window.SocialScroll.y();
+      if (!window.SocialScroll.frame) doc.body.style.setProperty('--facepad-held', (-held) + 'px');
       doc.body.classList.add('facepad-open');
     }
     function letGo() {
@@ -372,6 +443,7 @@
       if (held === null) return;
       var y = held;
       held = null;
+      if (window.SocialScroll.frame) { if (Math.abs(doc.body.scrollTop - y) > 1) doc.body.scrollTop = y; return; }
       try { window.scrollTo({ top: y, behavior: 'instant' }); } catch (e) { window.scrollTo(0, y); }
     }
 

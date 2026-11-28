@@ -612,6 +612,23 @@ html.is-app .app-edge {
   display: block; position: fixed; z-index: 25; top: 0; left: 0; right: 0; height: 6px;
   background: var(--page);
 }
+/* THE APP'S FRAME (the owner, Nov 27: "Yes on the bottom bar"; social.js,
+   THE APP SCROLLS IN ITS OWN FRAME). In the Home Screen app the page never
+   scrolls: the body does, a frame the screen's height, so an iPhone that
+   stops moving what is pinned as the page scrolls (an iOS 26 fault: the bar
+   rode the feed, Nov 21 and Nov 27) has no scroll to lag behind. The frame
+   keeps the bars' height clear when it brings anything into view, as the
+   page's scroller did (...AND WHAT THE KEYBOARD REACHES, above), and the editor
+   over the page holds it by overflow alone, which keeps its place (the
+   page's own hold is a fixed body, which a frame cannot be). A browser tab:
+   nothing here. */
+html.is-app { height: 100%; overflow: hidden; }
+html.is-app body { height: 100%; min-height: 0; overflow-y: auto; }
+html.is-app body.facepad-open { position: static; top: auto; overflow: hidden; }
+@media (max-width: 899.98px) {
+  html.is-app body { scroll-padding-bottom: calc(65px + env(safe-area-inset-bottom)); }
+  html.is-app body:has(.ans-bar) { scroll-padding-bottom: calc(125px + env(safe-area-inset-bottom)); }
+}
 
 /* THE STEPS TO THE HOME SCREEN (the Home Screen mock; the owner, Nov 15),
    the ☰'s Add to Home Screen opens them (_homescreen.html): the ☰'s own

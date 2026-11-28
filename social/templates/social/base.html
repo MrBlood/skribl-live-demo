@@ -197,7 +197,7 @@
 {% if not hide_nav %}
 <nav class="nav" aria-label="Main">
   <a class="brand" href="{{ url_for('social.home') }}" aria-label="Blooby, home">{% include 'social/_blooby_mark.html' %}</a>
-  <a class="tab" href="{{ url_for('social.home') }}"{% if here == 'home' %} aria-current="page"{% endif %}>
+  <a class="tab" href="{{ url_for('social.home') }}" data-tab-home{% if here == 'home' %} aria-current="page"{% endif %}>
     <span class="tab-ic">{{ ic.home(here == 'home') }}{% if here == 'home' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Home{% if here == 'home' %}{{ ic.underline() }}{% endif %}</span></a>
   <a class="tab" href="{{ url_for('social.explore') }}"{% if here == 'explore' %} aria-current="page"{% endif %}>
     <span class="tab-ic">{{ ic.explore(here == 'explore') }}{% if here == 'explore' %}{{ ic.underline() }}{% endif %}</span><span class="tab-name">Gallery{% if here == 'explore' %}{{ ic.underline() }}{% endif %}</span></a>

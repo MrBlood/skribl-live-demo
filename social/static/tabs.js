@@ -125,8 +125,8 @@
   function letGo() {
     var p = swap.querySelector('[data-prof-panel]');
     var own = p ? Math.ceil(p.getBoundingClientRect().height) : 0;
-    var rest = doc.documentElement.scrollHeight - swap.offsetHeight;
-    var need = Math.ceil(window.scrollY + window.innerHeight - rest);
+    var rest = window.SocialScroll.height() - swap.offsetHeight;
+    var need = Math.ceil(window.SocialScroll.y() + window.SocialScroll.view() - rest);
     swap.style.minHeight = need > own ? need + 'px' : '';
   }
 
@@ -136,7 +136,7 @@
     var a = tabNamed(key);
     if (!a) return;
     var n = ++turn;
-    var y = window.scrollY;
+    var y = window.SocialScroll.y();
     tell('');
     mark(key);
     Promise.all([faded(), ask(key)]).then(function (res) {
@@ -153,7 +153,7 @@
         if (a.pathname.toLowerCase() === window.location.pathname.toLowerCase()) history.replaceState({ profTab: key }, '', a.href);
         else history.pushState({ profTab: key }, '', a.href);
       }
-      if (window.scrollY !== y) window.scrollTo(0, y);
+      if (window.SocialScroll.y() !== y) window.SocialScroll.to(y);
       requestAnimationFrame(function () {
         if (n !== turn) return;
         swap.classList.remove('is-out');

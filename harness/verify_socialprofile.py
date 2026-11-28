@@ -431,7 +431,7 @@ class Person:
         self.ctx.close()
 
 
-def browser_as(b, who, screen="phone", scheme="light", reduced=False, scripts=True):
+def browser_as(b, who, screen="phone", scheme="light", reduced=False, scripts=True, init=()):
     """Another browser carrying `who`'s cookies (or nobody's), from its address.
     `scripts` False: a browser that runs none of the page's scripts, inline or
     not (what a page is before any script runs)."""
@@ -442,6 +442,8 @@ def browser_as(b, who, screen="phone", scheme="light", reduced=False, scripts=Tr
     ctx = b.new_context(color_scheme=scheme, extra_http_headers={"X-Forwarded-For": who.xff if who else address()},
                         **opts, **kw)
     ctx.add_init_script(WATCH)
+    for s_ in init:
+        ctx.add_init_script(s_)
     if who:
         ctx.add_cookies([{k: v for k, v in c.items() if k in ("name", "value", "domain", "path", "httpOnly",
                                                              "sameSite", "secure", "expires")}
@@ -670,6 +672,16 @@ SAMPLE = """(ms) => { const w = document.getElementById('facePad'), s = w.queryS
   const t0 = performance.now();
   (function f() { const r = s.getBoundingClientRect(); out.push([Math.round(r.top * 10) / 10, +getComputedStyle(s).opacity, w.hidden]);
     if (performance.now() - t0 < ms) requestAnimationFrame(f); })(); }"""
+
+
+def gone_by(pg, most=6000):
+    """Until the editor over the page has gone (its wrap hidden), `most` ms at the longest, then a breath for the
+    page behind to be put back: a read that waits for the thing, never a set time after it began."""
+    try:
+        pg.wait_for_function("() => { const w = document.getElementById('facePad'); return !w || w.hidden; }", timeout=most)
+    except Exception:  # noqa: BLE001 -- still up: the row that reads it says so
+        pass
+    pg.wait_for_timeout(200)
 
 
 def close_glide(pg, frame, ms=1400):
@@ -4352,7 +4364,9 @@ print("PLAN " + json.dumps(out))
             return { position: cs.position, at: at, tried: m() }; }""")
         fr = pad_frame(pg)
         close_glide(pg, fr)
-        pg.wait_for_timeout(400)
+        # THE READ WAITS FOR THE EDITOR TO HAVE GONE, not a set 400ms after its close (alone, two runs in three on
+        # main read it while it was still going: "gone" false, the page still held at 0).
+        gone_by(pg)
         after, gone = pg.evaluate(MARK), pg.evaluate(OVERLAY)
         check("while the editor is over the page, the page behind holds still: fixed where it stood (scrolled 400px, it"
               " shows the same), and tries to scroll it move nothing; once the editor has gone it is scrolled to that same"
@@ -4362,6 +4376,39 @@ print("PLAN " + json.dumps(out))
               and held["tried"] == before["mark"] and gone and gone["hidden"] and after == before,
               json.dumps({"before": before, "up": up and up.get("open"), "held": held, "after": after,
                           "gone": gone and gone.get("hidden")}))
+        # ...AND IN THE APP'S FRAME (the owner's "Yes on the bottom bar", Nov 27; social.css THE APP'S FRAME): in the
+        # Home Screen app the body is the page that scrolls, a frame, which a fixed body would lose its place in; it
+        # is held by overflow alone (the user's finger cannot move it, and nothing of the page moves) and is where it
+        # stood once the editor goes. The app is iOS's own say, the splash already seen this launch.
+        actx, apg = browser_as(b, holda, init=("Object.defineProperty(navigator, 'standalone', { value: true, configurable: true });",
+                                               "try { sessionStorage.setItem('blooby.splash.launch', '1'); } catch (e) {}"))
+        apg.goto(BASE + "/social/@holda")
+        apg.wait_for_timeout(500)
+        open_face_sheet(apg)
+        apg.evaluate("""() => { const s = document.createElement('div'); s.id = 'holdMark'; s.style.height = '2400px';
+            document.getElementById('main').appendChild(s); document.body.scrollTop = 400; }""")
+        apg.wait_for_timeout(200)
+        AMARK = """() => ({ app: document.documentElement.classList.contains('is-app'), y: Math.round(document.body.scrollTop),
+            win: Math.round(scrollY), mark: Math.round(document.getElementById('holdMark').getBoundingClientRect().top) })"""
+        abefore = apg.evaluate(AMARK)
+        apg.evaluate(GLIDE, ["#faceSheet [data-face-open]", 900])
+        aup = apg.evaluate(OVERLAY)
+        aheld = apg.evaluate("""() => { const cs = getComputedStyle(document.body);
+            return { position: cs.position, overflow: cs.overflowY, y: Math.round(document.body.scrollTop),
+                     at: Math.round(document.getElementById('holdMark').getBoundingClientRect().top) }; }""")
+        afr = pad_frame(apg)
+        close_glide(apg, afr)
+        gone_by(apg)
+        aafter, agone = apg.evaluate(AMARK), apg.evaluate(OVERLAY)
+        close_ctx(actx, apg)
+        check("in the app's frame the page behind holds still too: the body, which is the page that scrolls there, held by"
+              " overflow and not fixed (a fixed frame loses its place), everything behind where it stood (scrolled 400px),"
+              " and the frame at 400 once the editor has gone",
+              abefore["app"] and abefore["y"] == 400 and abefore["win"] == 0 and aup and aup["open"]
+              and aheld["position"] == "static" and aheld["overflow"] == "hidden" and aheld["y"] == 400
+              and aheld["at"] == abefore["mark"] and agone and agone["hidden"] and aafter == abefore,
+              json.dumps({"before": abefore, "up": aup and aup.get("open"), "held": aheld, "after": aafter,
+                          "gone": agone and agone.get("hidden")}))
 
     # ----------------------------------------------------------------- 22
     # PIN THIS POST (the owner's idea, Nov 23; the Pin mock's A and A, the
