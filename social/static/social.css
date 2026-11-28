@@ -2513,8 +2513,8 @@ a.post-face { text-decoration: none; }
 .cm-box .composer-draft .skribl-inline { width: min(100%, 150px); }
 /* A DRAWN COMMENT OR REPLY (the owner's B, Nov 17, "Drawings in the
    Thread"): its drawing in its bubble, under its words (under its name when
-   it is a drawing alone), as wide as the bubble's room (294px on a phone,
-   264 on a desk), so it can be watched where it sits. Its line under it is
+   it is a drawing alone), as wide as the bubble's room (286px on a phone,
+   256 on a desk, since the tail's room of Nov 28), so it can be watched where it sits. Its line under it is
    the player's own, as everywhere.
    AND NO TALLER THAN THE PAGE'S OWN DRAWING, UNTIL IT PLAYS (the
    walkthrough's mocks, choice 4, the owner's "all yes", Nov 19). A comment
@@ -2528,8 +2528,8 @@ a.post-face { text-decoration: none; }
    plays where it sits.
    WHY LENGTHS, NOT PERCENTAGES: a box that hugs its drawing has no width
    for a percentage to be of, so the room and the page's drawing are said
-   from the page's own layout (.col's 16px gutters; a face's 36px and 12px
-   beside the bubble's 14px sides; a desk's 248px rail, its 28px gutters
+   from the page's own layout (.col's 16px gutters; a face's 36px and the
+   tail's 20px beside the bubble's 14px sides; a desk's 248px rail, its 28px gutters
    and the 340px column with 40px before it), and verify_socialcomments
    holds them to what is painted. A desk gives up 17px for a scrollbar the
    viewport's width may or may not count, so a drawn comment there can be
@@ -2538,9 +2538,9 @@ a.post-face { text-decoration: none; }
    drawing of its own, the Pad's 4:3), --ar the comment's (_comments.html),
    and 70vh and 640px are the player's own ceiling for a drawing's height
    (inlineplayer.css, .is-shaped), which the page's drawing keeps to too. */
-.post-page { --art-w: 4; --art-h: 3; --page-art: calc(100vw - 32px); --cm-room: calc(100vw - 108px); }
+.post-page { --art-w: 4; --art-h: 3; --page-art: calc(100vw - 32px); --cm-room: calc(100vw - 116px); }
 @media (min-width: 900px) {
-  .post-page { --page-art: calc(min(100vw - 265px, 1100px) - 436px); --cm-room: 264px; }
+  .post-page { --page-art: calc(min(100vw - 265px, 1100px) - 436px); --cm-room: 256px; }
 }
 .cm-art {
   --ar: 1.77778;

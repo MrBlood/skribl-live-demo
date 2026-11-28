@@ -189,6 +189,16 @@ built, tried and set aside; docs/SOCIAL-SITE.md section 18):
      the bar, walked with Tab from its top to its foot; every stop read at
      nine points of it, and not one of them covered by either bar.
 
+ 51. THE BALLOON, DRAWN BY HAND (the owner's "I like C. It looks
+     imperfect like I want", Nov 28): every balloon one closed line of 2px
+     --balloon-ink round --card, the CSS line, tail and neck stepped aside;
+     never ruler-straight and never much (each side's waver read off the
+     line), the same for the same comment and different from another's; its
+     tail's point at the face's middle, 2.5px short of it, 20px of room; a
+     drawing with words in the same line, neck and all, following its
+     drawing's glide on every frame; with no script the CSS balloon, its
+     still tail at the face's middle; High Contrast an outline.
+
 SOCIALCOMMENTS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
 part and green as built: DECISIONS.md, "Comments at /social", "Comments on
@@ -1279,7 +1289,12 @@ LINKED15 = """(id) => { const li = document.getElementById('c-' + id); if (!li) 
   const bub = li.querySelector(':scope > .cm-main > .cm-bubble'), art = li.querySelector(':scope > .cm-main > .cm-art');
   if (!bub || !art) return { why: 'not linked' };
   const b = bub.getBoundingClientRect(), a = art.getBoundingClientRect();
-  return { vw: innerWidth, b: [b.left, b.top, b.right, b.bottom], a: [a.left, a.top, a.right, a.bottom] }; }"""
+  // The tail as drawn by hand (since the owner's C): where its two sides cross 5px out from the balloon.
+  const main = li.querySelector(':scope > .cm-main'), m = main.getBoundingClientRect(), hl = main.querySelector(':scope > svg.cm-hand .cm-hand-line');
+  const pts = ((hl && hl.getAttribute('d')) || '').match(/-?[\\d.]+ -?[\\d.]+/g) || [], X = b.left - 5 - m.left, ys = [];
+  for (let i = 1; i < pts.length; i++) { const [x0, y0] = pts[i - 1].split(' ').map(Number), [x1, y1] = pts[i].split(' ').map(Number);
+    if ((x0 - X) * (x1 - X) <= 0 && x0 !== x1) ys.push(y0 + (y1 - y0) * (X - x0) / (x1 - x0) + m.top); }
+  return { vw: innerWidth, b: [b.left, b.top, b.right, b.bottom], a: [a.left, a.top, a.right, a.bottom], tail: ys.sort((p, q) => p - q) }; }"""
 
 
 def linked_paint(pg, cid):
@@ -1316,9 +1331,10 @@ def linked_paint(pg, cid):
             "the words' line, past the neck": ("ink", al + 70, bb + 0.75, "y"),
             "the drawing's line, open into the neck": ("card", al + 37.75, at_ - 0.75, None),
             "the drawing's line, past the neck": ("ink", al + 70, at_ - 0.75, "y"),
-            "the tail's middle": ("card", bl - 5, bt + 24.4, None),
-            "the tail's stroke": ("ink", bl - 5, bt + 22.6, "y"),
-            "above the tail": ("page", bl - 5, bt + 19.5, None)}
+            **({"the tail's middle": ("card", bl - 5, (g["tail"][0] + g["tail"][1]) / 2, None),
+                "the tail's stroke": ("ink", bl - 5, g["tail"][1], "y"),
+                "above the tail": ("page", bl - 5, g["tail"][0] - 3, None)} if len(g.get("tail") or []) == 2
+               else {"the tail, drawn": ("ink", bl - 5, bt + 18, None)})}
 
     def near(c, r):
         return max(abs(x - y) for x, y in zip(c, r)) <= 4
@@ -1424,17 +1440,18 @@ LOOK = """([cid, rid]) => { """ + TOKEN_JS + """
   const one = (id, wide) => { const li = document.getElementById('c-' + id), b = li && li.querySelector(':scope > .cm-main > .cm-bubble');
     if (!b) { bad.push(id + ': no bubble'); return; }
     const cs = getComputedStyle(b), room = b.parentElement.getBoundingClientRect().width, w = b.getBoundingClientRect().width;
-    if (cs.backgroundColor !== want.bg) bad.push(id + ' ground ' + cs.backgroundColor + ' not ' + want.bg);
-    if (cs.boxShadow !== want.ring) bad.push(id + ' line ' + cs.boxShadow + ' not ' + want.ring);
-    const tail = b.querySelector(':scope > svg.cm-tail'), card = tail && tail.querySelector('.cm-tail-card'), line = tail && tail.querySelector('.cm-tail-line');
-    const ringW = parseFloat((cs.boxShadow.match(/-?[\\d.]+px/g) || [])[3] || 'NaN');
-    if (!tail || !card || !line || getComputedStyle(tail).display === 'none' || getComputedStyle(card).fill !== want.bg
-        || getComputedStyle(line).stroke !== want.ink || Math.abs(parseFloat(getComputedStyle(line).strokeWidth) - ringW) > 0.01
-        || Math.abs(parseFloat(getComputedStyle(tail).left) + 12 + ringW / 2) > 0.01
-        || getComputedStyle(b, '::before').content !== 'none' || getComputedStyle(b, '::after').content !== 'none')
-      bad.push(id + ' tail ' + (tail ? [getComputedStyle(card).fill, getComputedStyle(line).stroke, getComputedStyle(line).strokeWidth, ringW,
-                                        getComputedStyle(tail).left].join(' ') : 'none'));
-    if (cs.borderTopLeftRadius !== '18px') bad.push(id + ' corner ' + cs.borderTopLeftRadius);
+    // DRAWN BY HAND since the owner's C (Nov 28; section 51 reads its line): the one line behind the comment,
+    // the card inside it and its ink 2px; the CSS ground and line, the still tail and the neck stepped aside.
+    const main = b.parentElement, svg = main.querySelector(':scope > svg.cm-hand');
+    const hc = svg && svg.querySelector('.cm-hand-card'), hl = svg && svg.querySelector('.cm-hand-line');
+    if (!main.classList.contains('is-hand') || !hc || !hl || getComputedStyle(hc).fill !== want.bg || getComputedStyle(hl).stroke !== want.ink
+        || getComputedStyle(hl).strokeWidth !== '2px')
+      bad.push(id + ' not drawn by hand: ' + (hl ? [getComputedStyle(hc).fill, getComputedStyle(hl).stroke, getComputedStyle(hl).strokeWidth].join(' ') : 'no line'));
+    if (cs.backgroundColor !== 'rgba(0, 0, 0, 0)' || cs.boxShadow !== 'none') bad.push(id + ' its CSS ground or line still there: ' + cs.backgroundColor + ' ' + cs.boxShadow);
+    const tail = b.querySelector(':scope > svg.cm-tail');
+    if (!tail || getComputedStyle(tail).display !== 'none' || getComputedStyle(b, '::before').content !== 'none' || getComputedStyle(b, '::after').content !== 'none')
+      bad.push(id + ' the still tail shows');
+    if (cs.borderTopLeftRadius !== '24px') bad.push(id + ' corner ' + cs.borderTopLeftRadius);
     if (!b.querySelector('.cm-name') || !b.querySelector('.cm-when') || !b.querySelector('.cm-words')) bad.push(id + ': name, when or words outside');
     if (wide ? Math.abs(w - room) > 1 : w > room - 40) bad.push(id + ' width ' + Math.round(w) + ' of ' + Math.round(room));
     const lc = getComputedStyle(li);
@@ -1534,6 +1551,76 @@ STRAIGHT = """(id) => { """ + TOKEN_JS + """
     ['::before', '::after'].forEach(p => { const cs = getComputedStyle(e, p);
       if (cs.content !== 'none' && cs.borderBottomStyle !== 'none' && cs.borderBottomWidth !== '0px') bad.push('a curve: ' + e.className); }));
   return { ok: !bad.length, bad: bad.slice(0, 6) }; }"""
+# THE BALLOON, DRAWN BY HAND (section 51): comment `id`'s drawn line, read off
+# its own path (every point of it, relative to its .cm-main): drawn or not, one
+# closed path, its line's ink and width, its inside's fill; the CSS line and
+# tail stepped aside; its tail's point against the face (its height from the
+# face's middle, its distance from the face's edge); the top side's waver (its
+# largest step from the straight line, between the corners); how far down it
+# runs against the drawing's balloon (a drawing with words); and the path.
+HAND_OF = """(id) => { """ + TOKEN_JS + """
+  const li = document.getElementById('c-' + id); if (!li) return null;
+  const main = li.querySelector(':scope > .cm-main'), bub = main.querySelector(':scope > .cm-bubble'), art = main.querySelector(':scope > .cm-art');
+  const svg = main.querySelector(':scope > svg.cm-hand'), face = li.querySelector(':scope > .face-ring');
+  const card = svg && svg.querySelector('.cm-hand-card'), line = svg && svg.querySelector('.cm-hand-line');
+  const m = main.getBoundingClientRect(), b = bub.getBoundingClientRect(), f = face ? face.getBoundingClientRect() : null;
+  const d = line ? line.getAttribute('d') || '' : '';
+  const pts = (d.match(/-?[\\d.]+ -?[\\d.]+/g) || []).map(p => p.split(' ').map(Number));
+  const bx = b.left - m.left, by = b.top - m.top, top = pts.filter(p => p[0] > bx + 40 && p[0] < bx + b.width - 40 && Math.abs(p[1] - by + 1) < 3);
+  const tip = pts.reduce((a, p) => (!a || p[0] < a[0]) ? p : a, null);
+  const cs = getComputedStyle(bub), tail = bub.querySelector(':scope > svg.cm-tail'), a = art ? art.getBoundingClientRect() : null;
+  const lc = line ? getComputedStyle(line) : null, cc = card ? getComputedStyle(card) : null;
+  return { drawn: main.classList.contains('is-hand'), subpaths: (d.match(/M/g) || []).length, closed: /Z$/.test(d), n: pts.length,
+           ink: !!lc && lc.stroke === tok(main, 'color', 'var(--balloon-ink)'), width: lc ? lc.strokeWidth : null,
+           fill: !!cc && cc.fill === tok(main, 'color', 'var(--card)'), same: !!card && card.getAttribute('d') === d,
+           ring: cs.boxShadow, ground: cs.backgroundColor, tail: tail ? getComputedStyle(tail).display : null,
+           tipY: tip && f ? Math.round((tip[1] - (f.top + f.height / 2 - m.top)) * 100) / 100 : null,
+           tipGap: tip && f ? Math.round((tip[0] - (f.right - m.left)) * 100) / 100 : null,
+           room: f ? Math.round((b.left - f.right) * 100) / 100 : null,
+           waver: top.length ? Math.round(Math.max(...top.map(p => Math.abs(p[1] - by + 1))) * 1000) / 1000 : null, topN: top.length,
+           profile: top.map(p => Math.round((p[1] - by + 1) * 100) / 100).slice(0, 40),
+           low: pts.length ? Math.round(Math.max(...pts.map(p => p[1])) * 100) / 100 : null,
+           artLow: a ? Math.round((a.bottom - m.top) * 100) / 100 : null, neck: a && !bub.classList.contains('is-pic')
+             ? pts.filter(p => p[1] > b.bottom - m.top + 3 && p[1] < a.top - m.top - 3).length : null, d }; }"""
+# Every balloon on the page: how many, how many drawn, and any not drawn as the
+# rule says (the CSS line, tail and neck stepped aside, one closed path).
+HAND_ALL = """() => { const out = { all: 0, drawn: 0, bad: [] };
+  document.querySelectorAll('[data-cm-list] .cm > .cm-main').forEach(main => { const bub = main.querySelector(':scope > .cm-bubble'); if (!bub) return;
+    out.all++; const svg = main.querySelector(':scope > svg.cm-hand'), d = svg ? (svg.querySelector('.cm-hand-line').getAttribute('d') || '') : '';
+    const ok = main.classList.contains('is-hand') && /^M[^M]*Z$/.test(d) && getComputedStyle(bub).boxShadow === 'none'
+      && (!bub.querySelector(':scope > svg.cm-tail') || getComputedStyle(bub.querySelector(':scope > svg.cm-tail')).display === 'none');
+    if (ok) out.drawn++; else out.bad.push(main.parentElement.dataset.comment); });
+  return out; }"""
+# A drawing with words, played (the drawing grows to its room in 0.3s): on every
+# frame, the drawn line's lowest point and its right against the drawing's
+# balloon, AS PAINTED: read in a ResizeObserver made after comments.js's, so
+# each reading comes after the line was drawn again for that frame and before
+# it is painted (a requestAnimationFrame reads before the frame's resize step,
+# a frame behind what is painted).
+HAND_GLIDE = """async ([id, most]) => { const li = document.getElementById('c-' + id), main = li.querySelector(':scope > .cm-main');
+  const art = main.querySelector(':scope > .cm-art'), box = art.querySelector('.skribl-inline'), line = main.querySelector(':scope > svg.cm-hand .cm-hand-line');
+  const read = () => { const m = main.getBoundingClientRect(), a = art.getBoundingClientRect();
+    const pts = ((line.getAttribute('d') || '').match(/-?[\\d.]+ -?[\\d.]+/g) || []).map(p => p.split(' ').map(Number));
+    return [Math.round((Math.max(...pts.map(p => p[1])) - (a.bottom - m.top)) * 100) / 100,
+            Math.round((Math.max(...pts.map(p => p[0])) - (a.right - m.left)) * 100) / 100, Math.round(a.width * 100) / 100]; };
+  const frames = [read()];
+  const ro = new ResizeObserver(() => frames.push(read()));
+  ro.observe(art);
+  const r0 = box.getBoundingClientRect(), o = { bubbles: true, cancelable: true, clientX: r0.left + r0.width / 2, clientY: r0.top + r0.height / 2, view: window };
+  const at = document.elementFromPoint(o.clientX, o.clientY) || box;
+  at.dispatchEvent(new PointerEvent('pointerdown', o)); at.dispatchEvent(new PointerEvent('pointerup', o)); at.dispatchEvent(new MouseEvent('click', o));
+  await new Promise(res => setTimeout(res, most));
+  ro.disconnect();
+  return frames; }"""
+# With no script: the CSS balloon, its line, its corner and its still tail, its
+# point (the drawing's -17.5, 18 in the balloon's own measure) against the face.
+HAND_NONE = """(id) => { const li = document.getElementById('c-' + id), bub = li.querySelector(':scope > .cm-main > .cm-bubble');
+  const t = bub.querySelector(':scope > svg.cm-tail'), f = li.querySelector(':scope > .face-ring').getBoundingClientRect(), r = t.getBoundingClientRect();
+  const k = r.width / 22, cs = getComputedStyle(bub);
+  return { drawn: !!li.querySelector('svg.cm-hand'), ring: cs.boxShadow, corner: cs.borderTopLeftRadius, tail: getComputedStyle(t).display,
+           tipY: Math.round((r.top + 18 * k - (f.top + f.height / 2)) * 100) / 100, tipGap: Math.round((r.left + 2.5 * k - f.right) * 100) / 100,
+           room: Math.round((bub.getBoundingClientRect().left - f.right) * 100) / 100 }; }"""
+
 # The count by each talk cloud, for each of `ids`: what it says, Reply's name,
 # the word (shown, or clipped for a screen reader), whether it is the count
 # alone (signed out), and its ink on the page.
@@ -4668,8 +4755,9 @@ with sync_playwright() as p:
                     close_ctx(cctx, cpg)
             bad = {" ".join(k): v["bad"] for k, v in seen.items() if v["bad"]}
             check("every comment's name, time and words sit in a balloon drawn in ink (the owner's \"All yes (my row)\","
-                  " Nov 27): the site's card (--card), its line --balloon-line of --balloon-ink and no lift, its tail at the face"
-                  " (its card over the line, its line the balloon's own ink and width), 18px round; as wide as its words (the short one's"
+                  " Nov 27), drawn by hand since the owner's C (Nov 28): its one line 2px of --balloon-ink round the site's"
+                  " card (--card), no lift, the CSS line, the still tail and the neck stepped aside, 24px round as its"
+                  " CSS; as wide as its words (the short one's"
                   " balloon narrower than its room, the long one's reaching it); no line between comments: phone and desk,"
                   " light and dark",
                   not bad and all(v["read"] for v in seen.values()),
@@ -4678,35 +4766,42 @@ with sync_playwright() as p:
             # a line a part of a pixel wide is smeared across two on Windows' 125% and 150%): at each density the
             # balloon's ring is a whole number of the screen's own pixels, as near the mock's 1.5px as it allows
             # (a tie the heavier), as the browser resolved it on the balloon itself.
+            # SINCE THE OWNER'S C (Nov 28) the CSS line is the balloon until comments.js draws it by hand (and with
+            # no script): read here with the script held back.
             dens38 = {}
             for d in (1, 1.25, 1.5, 1.75, 2, 2.625, 3):
                 dctx38, dpg38 = browser_as(b, ben, "phone", "light", scale=d)
+                dpg38.route("**/comments.js*", lambda r: r.abort())
                 open_post(dpg38, post)
                 dens38[d] = dpg38.evaluate("""(id) => { const b = document.querySelector('#c-' + id + ' > .cm-main > .cm-bubble'); if (!b) return null;
                   const sh = getComputedStyle(b).boxShadow, px = (sh.match(/-?[\\d.]+px/g) || []).map(parseFloat);
                   const t = b.querySelector(':scope > svg.cm-tail'), l = t && t.querySelector('.cm-tail-line'), br = b.getBoundingClientRect();
-                  const tr = t ? t.getBoundingClientRect() : null, at = (y) => tr ? Math.round((tr.top - br.top + y * tr.height / 17) * 100) / 100 : null;
+                  const tr = t ? t.getBoundingClientRect() : null, at = (y) => tr ? Math.round((tr.top - br.top + y * tr.height / 26) * 100) / 100 : null;
                   return { layers: sh.split(/,(?![^(]*\\))/).length, w: px.length >= 4 ? px[3] : null, dpr: devicePixelRatio,
                            tail: l ? parseFloat(getComputedStyle(l).strokeWidth) : null, corner: parseFloat(getComputedStyle(b).borderTopLeftRadius),
-                           joins: [at(2.5), at(13.5)], h: Math.round(br.height) }; }""", e38)
+                           joins: [at(13), at(25)], tip: at(18), h: Math.round(br.height) }; }""", e38)
                 close_ctx(dctx38, dpg38)
 
             def whole38(v):
                 return (bool(v) and v["layers"] == 1 and v["w"] is not None and abs(v["w"] * v["dpr"] - round(v["w"] * v["dpr"])) < 0.02
                         and abs(v["w"] * v["dpr"] - 1.5 * v["dpr"]) <= 0.5 + 0.02)
-            check("a balloon's line is a whole number of screen pixels at every density, as near 1.5px as each allows (1,"
-                  " 1.25 and 1.5x two pixels; 1.75 and 2x three; 2.625x four; 3x five), its one ring",
+            check("a balloon's CSS line (until it is drawn by hand, or with no script) is a whole number of screen pixels at"
+                  " every density, as near 1.5px as each allows (1, 1.25 and 1.5x two pixels; 1.75 and 2x three; 2.625x four;"
+                  " 3x five), its one ring",
                   len(dens38) == 7 and all(whole38(v) for v in dens38.values()), json.dumps({str(k): v for k, v in dens38.items()}))
             # ITS TAIL IS ONE LINE WITH IT (the owner, Nov 27, from a phone, the tail's two ends circled: "Fix this part
             # ... so it looks uniform and connected. It's off"): the tail's line is the balloon's own width at every
-            # density (the masks drew 1.5px, the line 1.67 at three to one), and both its ends are on the straight
-            # edge, below the corner's round (its top met the corner where it still curves, 14px down an 18px round).
-            check("a balloon's tail is one line with it at every density: its line the balloon's own width (1 to 3x), and"
-                  " both its ends on the straight edge below the corner's 18px and above the foot's, so it leaves the edge"
-                  " and runs back into it",
-                  len(dens38) == 7 and all(v and v["tail"] is not None and abs(v["tail"] - v["w"]) < 0.01
-                                           and v["joins"][0] >= v["corner"] and v["joins"][1] <= v["h"] - v["corner"] for v in dens38.values()),
-                  json.dumps({str(k): {x: v[x] for x in ("w", "tail", "joins", "corner", "h")} if v else None for k, v in dens38.items()}))
+            # density (the masks drew 1.5px, the line 1.67 at three to one). Since the owner's C (Nov 28, "Start the
+            # bubble in the middle of the avatar circle") its point is at the face's middle, 18px down: it leaves the
+            # corner's curve (13px down) along the curve's own way, and runs back into the straight edge below the
+            # corner's 24px.
+            check("a balloon's still tail is one line with it at every density: its line the balloon's own width (1 to 3x),"
+                  " its point at the face's middle (18px down), its upper end on the corner's curve and its lower end on"
+                  " the straight edge below the corner's 24px",
+                  len(dens38) == 7 and all(v and v["tail"] is not None and abs(v["tail"] - v["w"]) < 0.01 and v["corner"] == 24
+                                           and 0 < v["joins"][0] < v["corner"] and v["corner"] <= v["joins"][1] <= v["h"] - v["corner"]
+                                           and abs(v["tip"] - 18) <= 0.5 for v in dens38.values()),
+                  json.dumps({str(k): {x: v[x] for x in ("w", "tail", "joins", "tip", "corner", "h")} if v else None for k, v in dens38.items()}))
             faces = {" ".join(k): v["faces"] for k, v in seen.items()}
             check("a face not drawn yet shows its initial: the name's first letter, in the small violet words' ink"
                   " (--accent-ink) on the site's disc (--tint), at 4.5:1 or more; and the count is the small label's own"
@@ -4807,9 +4902,10 @@ with sync_playwright() as p:
                   all(st["ok"] and bare["line"] is False and bare["more"] is False for st, bare in lines.values()),
                   f"{lines}")
             rooms = {" ".join(k): (v["room"], v["page_room"]) for k, v in seen.items()}
-            check("every reply in a list has a comment's room, nothing nested to take it: 322px on a phone, 292 on a desk, on"
+            check("every reply in a list has a comment's room, nothing nested to take it: 314px on a phone, 284 on a desk (the"
+                  " tail's 20px since the owner's C), on"
                   " the post's page and on a comment's own",
-                  all(set(a + c) == ({322} if k.startswith("phone") else {292}) for k, (a, c) in rooms.items()), f"{rooms}")
+                  all(set(a + c) == ({314} if k.startswith("phone") else {284}) for k, (a, c) in rooms.items()), f"{rooms}")
             when = {" ".join(k): v["when"] for k, v in seen.items()}
             check("the way to a comment's own page is its time: a 44px tap in the row's second ink, 4.5:1 or more on the page",
                   all(v["h"] >= 44 and v["ratio"] >= 4.5 and v["href"] == f"/social/c/{c1}" for v in when.values()), f"{when}")
@@ -5437,9 +5533,9 @@ with sync_playwright() as p:
                   " desk, light and dark",
                   all(v["line1"]["ok"] and v["line3"]["ok"] for v in seen.values()),
                   f"{ {k: (v['line1'], v['line3']) for k, v in seen.items()} }")
-            check("the words keep a comment's room at every depth, the drawing its full width: 322px on a phone, 292 on a"
+            check("the words keep a comment's room at every depth, the drawing its full width: 314px on a phone, 284 on a"
                   " desk",
-                  all(set(v["room"]) == ({322} if k.startswith("phone") else {292}) for k, v in seen.items()),
+                  all(set(v["room"]) == ({314} if k.startswith("phone") else {284}) for k, v in seen.items()),
                   f"{ {k: v['room'] for k, v in seen.items()} }")
             check("the count by the talk cloud in the row's own ink, 4.5:1 or more; Reply says it (\"Reply, 5 replies\");"
                   " on a desk in the word's place (the word clipped, still in the button), one with none saying Reply;"
@@ -5814,6 +5910,101 @@ with sync_playwright() as p:
                   f"{[(s['name'], s['which'], s['bar'], s['own']) for s in under50][:8]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(50, exc)
+
+    if part(51, "the balloon drawn by hand: one wavering line, its tail at the face's middle, the neck in it, the glide, no script"):
+        try:
+            nell = someone(b, "nell", "Nell Avery")
+            otto = someone(b, "otto", "Otto Brandt")
+            post = make_post(nell, "Section 51, a kite over the dunes", seed=511)
+            long_c = said(otto, post, "Section 51: the kite's tail curls like a question mark, and the string runs all the way"
+                                      " down to the little figure on the dune.")
+            reply = said(nell, post, "It does!", answer_to=long_c)
+            oc = otto.client()
+            oc.get(f"/social/p/{post}")
+            st_l, j_l = oc.post_json(f"/social/p/{post}/comments", {"words": "Section 51, mine, tall",
+                                                                    "payload": drawing(n=40, seed=512, size=(612, 900))})
+            linked = j_l.get("comment") if st_l == 200 and isinstance(j_l, dict) else None
+            st_a, j_a = oc.post_json(f"/social/p/{post}/comments", {"words": "", "payload": drawing(n=40, seed=513)})
+            alone = j_a.get("comment") if st_a == 200 and isinstance(j_a, dict) else None
+            kinds = {"long": long_c, "reply": reply, "linked": linked, "alone": alone}
+            seen = {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    cctx, cpg = browser_as(b, nell, screen=screen, scheme=scheme, scale=3 if screen == "phone" else 2)
+                    open_post(cpg, post)
+                    cpg.wait_for_timeout(500)
+                    seen[f"{screen} {scheme}"] = {"all": cpg.evaluate(HAND_ALL), **{k: cpg.evaluate(HAND_OF, v) for k, v in kinds.items()}}
+                    close_ctx(cctx, cpg)
+            one = seen["phone light"]
+            check("THE BALLOON, DRAWN BY HAND (the owner's \"I like C. It looks imperfect like I want\", Nov 28): every"
+                  " balloon on the page is drawn, one closed line of 2px --balloon-ink round --card, the CSS line, tail and"
+                  " neck stepped aside and the balloon's own ground clear (nothing moves): words, a reply, a drawing with"
+                  " words and a drawing alone, phone and desk, light and dark",
+                  all(v["all"]["all"] >= 4 and v["all"]["drawn"] == v["all"]["all"]
+                      and all(v[k] and v[k]["drawn"] and v[k]["subpaths"] == 1 and v[k]["closed"] and v[k]["ink"]
+                              and v[k]["width"] == "2px" and v[k]["fill"] and v[k]["same"] and v[k]["ring"] == "none"
+                              and v[k]["ground"] == "rgba(0, 0, 0, 0)" and v[k]["tail"] == "none" for k in kinds)
+                      for v in seen.values()),
+                  f"{ {k: v['all'] for k, v in seen.items()} }; long {({x: one['long'][x] for x in ('drawn', 'subpaths', 'closed', 'ink', 'width', 'fill', 'same', 'ring', 'ground', 'tail')} if one['long'] else None)}")
+            again_ctx, again_pg = browser_as(b, nell, screen="phone", scale=3)
+            open_post(again_pg, post)
+            again_pg.wait_for_timeout(500)
+            again = again_pg.evaluate(HAND_OF, long_c)
+            close_ctx(again_ctx, again_pg)
+            check("...never ruler-straight and never much: along its top, between the corners, the long comment's line"
+                  " wavers 0.15 to 0.6px from straight; the same comment is drawn the same on another visit, and another"
+                  " comment's line wavers its own way",
+                  one["long"]["topN"] >= 20 and 0.15 <= one["long"]["waver"] <= 0.6
+                  and again["d"] == one["long"]["d"] and one["reply"]["profile"][:8] != one["long"]["profile"][:8],
+                  f"waver {one['long']['waver']} over {one['long']['topN']} points; again the same {again['d'] == one['long']['d']};"
+                  f" long {one['long']['profile'][:8]}, reply {one['reply']['profile'][:8]}")
+            check("ITS TAIL'S POINT AT THE MIDDLE OF THE FACE (\"Start the bubble in the middle of the avatar circle\"), 2.5px"
+                  " short of it, with 20px between a face and its balloon: every kind, phone and desk, light and dark",
+                  all(v[k] and abs(v[k]["tipY"]) <= 0.5 and abs(v[k]["tipGap"] - 2.5) <= 0.5 and abs(v[k]["room"] - 20) <= 0.5
+                      for v in seen.values() for k in kinds),
+                  f"{ {k: (one[k]['tipY'], one[k]['tipGap'], one[k]['room']) for k in kinds} }")
+            check("a drawing with words is one line, neck and all: the line runs down between the two balloons and round"
+                  " the drawing's, a pixel outside it (the line's own half)",
+                  all(v["linked"]["subpaths"] == 1 and v["linked"]["neck"] and v["linked"]["neck"] >= 6
+                      and abs(v["linked"]["low"] - v["linked"]["artLow"] - 1) <= 0.6 for v in seen.values()),
+                  f"{ {k: (v['linked']['neck'], v['linked']['low'], v['linked']['artLow']) for k, v in seen.items()} }")
+            gctx, gpg = browser_as(b, nell, screen="phone", scale=3)
+            open_post(gpg, post)
+            gpg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", linked)
+            gpg.wait_for_timeout(400)
+            frames = gpg.evaluate(HAND_GLIDE, [linked, 1600])
+            close_ctx(gctx, gpg)
+            grew = frames[-1][2] - frames[0][2] if frames else 0
+            check("AS THE DRAWING GROWS TO ITS ROOM, its line goes with it on every frame, never a step behind: the line's"
+                  " foot and its right a pixel outside the drawing's balloon all the way",
+                  len(frames) > 10 and grew > 20 and all(abs(f[0] - 1) <= 0.6 and abs(f[1] - 1) <= 0.6 for f in frames),
+                  f"{len(frames)} frames, grew {round(grew, 2)}px; foot {min(f[0] for f in frames) if frames else None} to"
+                  f" {max(f[0] for f in frames) if frames else None}; right {min(f[1] for f in frames) if frames else None} to"
+                  f" {max(f[1] for f in frames) if frames else None}")
+            nctx, npg = browser_as(b, nell, screen="phone", scale=3)
+            npg.route("**/comments.js*", lambda r: r.abort())
+            open_post(npg, post)
+            npg.wait_for_timeout(400)
+            bare = npg.evaluate(HAND_NONE, long_c)
+            ring_want = npg.evaluate("""() => { const d = document.createElement('div'); d.style.boxShadow = '0 0 0 var(--balloon-line) var(--balloon-ink)';
+                document.body.appendChild(d); const v = getComputedStyle(d).boxShadow; d.remove(); return v; }""")
+            close_ctx(nctx, npg)
+            check("WITH NO SCRIPT (or until it draws): the CSS balloon, its line --balloon-line of --balloon-ink, 24px round,"
+                  " its still tail's point at the face's middle and 2.5px short of it, the same 20px of room",
+                  not bare["drawn"] and bare["ring"] == ring_want and bare["corner"] == "24px" and bare["tail"] != "none"
+                  and abs(bare["tipY"]) <= 0.5 and abs(bare["tipGap"] - 2.5) <= 0.5 and abs(bare["room"] - 20) <= 0.5,
+                  json.dumps(bare))
+            hctx, hpg = browser_as(b, nell, screen="phone")
+            hpg.emulate_media(forced_colors="active")
+            open_post(hpg, post)
+            hpg.wait_for_timeout(300)
+            hc = hpg.evaluate("""(id) => { const li = document.getElementById('c-' + id), h = li.querySelector('svg.cm-hand'), bub = li.querySelector('.cm-bubble');
+                return { hand: h ? getComputedStyle(h).display : null, outline: getComputedStyle(bub).outlineStyle }; }""", long_c)
+            close_ctx(hctx, hpg)
+            check("Windows' High Contrast: the drawn line steps aside and the balloon is its outline in the mode's own ink",
+                  hc["hand"] == "none" and hc["outline"] == "solid", json.dumps(hc))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(51, exc)
 
     if part(19, "no page errors, no console errors and no CSP violations"):
         try:
