@@ -102,7 +102,7 @@
       Gallery: "it shows the new drawing, but not that it's a drawback"): the
       card's line, under the header, since the name and handle here are one
       link and hers is another. #}
-  {% if card.drawn_on %}<p class="post-on-page">{{ drawn_on(card) }}</p>{% endif %}
+  {% if card.drawn_on %}<p class="post-on-page">{{ drawn_on(card, start) }}</p>{% endif %}
   {% if card.down and card.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
   {% if p.words %}<p class="post-words is-big">{{ said(p.words, card.mentions) }}</p>{% endif %}
   {% if p.skribl_id %}<div class="post-art"{{ plate_ground(card.sk) }}>{% if card.hands and card.hands.view == 'both' and card.sk and card.sk.canvas_w %}{% call hands_views(card) %}{{ hands_pill(card.hands.first, card.who.display_name|first_name, card.hands.own) }}{% endcall %}{% else %}{{ player(card, waits=false) }}{% endif %}

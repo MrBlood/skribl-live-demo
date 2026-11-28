@@ -55328,3 +55328,78 @@ NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: zoom in on a comment's tail; its line is as thick as the
 balloon's and flows out of the straight edge below the corner.
 
+## After v330 -- A drawing's family, one step at a time (the owner's "Yes on S")
+
+The owner, Nov 27, of draw-backs: "What about drawbacks on drawbacks on
+drawbacks etc? The family tree thing?", then "what does the family view look
+like?". Draw-backs on draw-backs already worked (each is a post with its own
+strip), but only one step of a family showed: nothing said a tile had
+answers of its own, and a draw-back's page named its parent and nothing
+above. The family mock (https://claude.ai/artifact/TRLX52aKE6ZGGrbYF8vc43;
+Mira's cat, twenty draw-backs on it, five on those, two on those) offered G
+(the page of every draw-back in sections by generation), S (one step: a
+count where there is more, and a line that says where a draw-back came
+from) and T (a tree down the page). Cal's pick, S: the smallest change for
+the most, the same for a family of three or three hundred. T, at twenty
+answers, was twenty rows before the family's second step; G gets long
+fast. Asked "What does S look like?" and shown it on a phone, the owner:
+"Yes on S".
+
+THEN, BEFORE IT SHIPPED, the owner: "Make sure all of this makes simple
+visual sense. It should be intuitive and easy to understand." Read for
+"would a person get it without being told?", See all passed; S had two
+places that did not, and they were shown beside the mocked S
+(sclear-light/dark, a phone): the count was violet, which on this site
+says "tap me", though it is not a button of its own, where the row under
+every post says the same pen and number in its own ink; and "Drew back on
+Mira’s › Theo’s" put the first drawing first, so it could read as answering
+Mira; on Mira's own draw-back of Juno's it read "Mira Lopez · Drew back on
+Mira’s › Theo’s › Juno’s". The clearer line: "Drew back on Theo’s · started
+with Mira’s", whom they answered first, then where it began; always one
+line, nothing to fold.
+
+WHAT CHANGED:
+- A COUNT BESIDE THE NAME (_backs.html, social.css .db-n): a tile whose
+  draw-back has draw-backs of its own says how many at the end of the
+  name's line, the row's pen and the number in the row's ink (7.1:1 light,
+  10.12:1 dark on the page), never on the drawing (the eye's rule; on her
+  own tile it stops where her eye's room begins). The card's own count, as
+  its pen says it. To a screen reader "Theo, 3 draw-backs on it". On the
+  page of every draw-back and on a post's strip alike, since they are one
+  tile (said to the owner).
+- WHERE THE FAMILY STARTED (posts.started_with; _post.html drawn_on): on a
+  draw-back's own page, when the one it answers is itself a draw-back, the
+  line under its maker's name ends "· started with Mira’s", the family's
+  first drawing, a link to its post. Every drawing above the one it answers
+  must be one this viewer may see (the rule for the one it answers: taken
+  down, or a block either way, is not there); a family that runs through
+  one they cannot see says nothing of where it started, and never names a
+  later one as its start. A card in a list keeps the short line.
+
+Nothing else changes: no new page, no new buttons. Pad and Flip: not
+touched; the family is the site's.
+
+THE CHECKS (verify_socialdrawback 6; a family five generations deep on the
+crowd's post: Ana's, Noa's, Kai's, Pia's, Noa's again; and two through Lea,
+whom Theo blocked): the count on the page and the strip, its ink, place and
+words, and none where there is none; the line on each generation's page,
+each name its post, a card's short line; a family through Lea for Theo
+(nothing said) and for Ana (started with Ana's), one of them with a drawing
+Theo may see between his and Lea's. SHOWN RED, one part broken at a time in
+throwaway copies (sections 6 and 10; 19/19 as built): the count in violet,
+its row; no "started with", both line rows; the start read past a block,
+the block row (Theo read "started with Ana’s" through Lea's); a family
+through a hidden drawing naming the oldest one this viewer can see, the
+block row (Theo read "Drew back on Ola’s · started with Kai’s"). The
+mocked S was built and calibrated first the same way (19/19; its count,
+its line, its fold and its block each red alone).
+
+FOUND ON THE WAY: two of the first count row's readings were the check's,
+not the page's: it read the paint of a tile scrolled off the screen (it
+scrolls each one into view now), and it asked her own tile's count to end
+at the name's edge, where her eye's room begins (it asks that the count
+stops short of her eye now).
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: open a draw-back of a draw-back; under the name, "Drew back
+on Theo’s · started with Mira’s".

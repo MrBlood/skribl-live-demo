@@ -13,13 +13,19 @@
 {% from 'social/_gallery.html' import plate_frame, plate_ground, plate_fill with context %}
 {% import 'social/_icons.html' as ic %}
 
+{#- S, A DRAW-BACK WITH ITS OWN (the owner's "Yes on S", Nov 27): how many
+    have drawn back on this one (the card's own count, as its pen says it),
+    beside the name, "✎ 3"; to a screen reader "Theo, 3 draw-backs on it". #}
 {% macro back_tile(m, mine) -%}
 {%- set first = m.who.display_name|first_name -%}
+{%- set n = m.drawbacks or 0 -%}
+{%- set said = first ~ ((', ' ~ n ~ (' draw-back on it' if n == 1 else ' draw-backs on it')) if n else '') -%}
 {%- set off = mine and m.post.drawn_on_hidden_at is not none %}
 {% if mine %}<div class="gal-cell db-cell{% if off %} is-hidden{% endif %}" data-eye-cell>{% endif %}
-<a class="db-tile" href="{{ m.url }}"{% if mine %} aria-label="{{ first }}{% if off %}, hidden from your post{% endif %}" data-label-shown="{{ first }}" data-label-hidden="{{ first }}, hidden from your post"{% endif %}>
+<a class="db-tile" href="{{ m.url }}"{% if mine %} aria-label="{{ said }}{% if off %}, hidden from your post{% endif %}" data-label-shown="{{ said }}" data-label-hidden="{{ said }}, hidden from your post"{% endif %}>
   <span class="more-pic db-pic"{{ plate_ground(m.sk) }}>{{ plate_fill(m.sk) }}<span class="more-plate" style="{{ plate_frame(m.sk) }}"><img src="{{ m.sk.poster or url_for(skribl_bp ~ '.skribl_poster', public_id=m.post.skribl_id) }}" alt="" loading="lazy" decoding="async"></span></span>
-  <span class="db-by">{{ first }}</span>
+  {% if n %}<span class="db-by has-n"><span class="db-who">{{ first }}</span><span class="db-n" aria-hidden="true">{{ ic.drawback() }}{{ n }}</span>{% if not mine %}<span class="sr">, {{ n }} {{ 'draw-back' if n == 1 else 'draw-backs' }} on it</span>{% endif %}</span>
+  {%- else %}<span class="db-by">{{ first }}</span>{% endif %}
 </a>
 {% if mine %}<button class="gal-eye db-eye" type="button" data-eye="{{ url_for('social.drawback_shown', public_id=m.post.public_id) }}" data-eye-key="shown"
         data-eye-hidden-words="Hidden. {{ first }} isn’t told." data-eye-back-words="Back on your post."

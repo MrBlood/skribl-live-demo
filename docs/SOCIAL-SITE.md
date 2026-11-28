@@ -4295,3 +4295,34 @@ end; B, more in the row; C, "See all" by the count), and the owner: "C".
 none on the cat's three; the page for Theo, a desk, nobody signed in and
 Ana; her eye's count on the strip and on the page; Load more past
 twenty-four; a block, a post that is not there, a cursor that is not one.
+
+## 54. Built: A drawing's family, one step at a time (Nov 27)
+
+The owner, Nov 27: "What about drawbacks on drawbacks on drawbacks etc? The
+family tree thing?" Draw-backs on draw-backs already worked (each is a post
+with its own strip), but only one step of a family showed. The family mock
+offered G (the page of every draw-back in sections by generation), S (one
+step: a count where there is more, and a line that says where a draw-back
+came from) and T (a tree down the page). Cal's pick, S, and the owner: "Yes
+on S"; then "Make sure all of this makes simple visual sense", and its
+clearer look and line.
+
+- **A count beside the name.** A tile whose draw-back has draw-backs of its
+  own says how many at the end of who drew back, as the row under every post
+  says it: its pen and the number in the row's ink (not the violet that
+  says "tap me"), never on the drawing (the eye's rule); "Theo, 3 draw-backs
+  on it" to a screen reader. On the page of every draw-back and on a post's
+  strip alike: one tile (`_backs.html`), the card's own count.
+- **The line says where the family started.** On a draw-back's own page,
+  when the one it answers is itself a draw-back, the line under its maker's
+  name ends with the family's first drawing: "Drew back on Theo’s · started
+  with Mira’s", whom they answered first and then where it began, each name
+  a link to its post. The family is walked one step up at a time from
+  there (Theo's page says what his answered). A family that runs through a
+  drawing this viewer cannot see (taken down, or a block either way) says
+  nothing of where it started, and never names a later one as its start. A
+  card in a list keeps the short line. (`posts.started_with`.)
+
+Nothing else changes: no new page and no new buttons. Pad and Flip: not
+touched. `verify_socialdrawback` 6 holds it: a family five generations
+deep, and two through Lea, whom Theo blocked.

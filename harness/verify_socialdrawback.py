@@ -1786,6 +1786,107 @@ with app.test_request_context("/social/"):
                   and la["after"]["off"] == [made[0]] and la["after"]["eyes"] == 27 and lt["after"]["sub"] == "25 draw-backs on Ana’s drawing, newest first",
                   json.dumps({k: {"first": len(v["first"]["ids"]), "after": len(v["after"]["ids"]), "new": v["new"],
                                   "dupes": len(v["after"]["ids"]) - len(set(v["after"]["ids"]))} for k, v in loads.items()}))
+            # S, THE FAMILY (the owner's "Yes on S", Nov 27, to the family mock): draw-backs on draw-backs. Noa's (the
+            # crowd's newest of the first fourteen) is drawn back on by Kai and Ola; Kai's by Pia; Pia's by Noa: Ana's,
+            # Noa's, Kai's, Pia's, Noa's again, five generations. And Lea's (whom Theo blocked) by Kai, Kai's by Ola.
+            fam_a = made[13]
+            kid1 = (draw_back(kai, fam_a, answer(n=8, seed=660))[1] or {}).get("post")
+            time.sleep(0.02)
+            kid2 = (draw_back(ola, fam_a, answer(n=8, seed=661))[1] or {}).get("post")
+            gkid = (draw_back(pia, kid1, answer(n=8, seed=662))[1] or {}).get("post")
+            ggkid = (draw_back(noa, gkid, answer(n=8, seed=663))[1] or {}).get("post")
+            lkid = (draw_back(kai, lea_back, answer(n=8, seed=664))[1] or {}).get("post")
+            lgkid = (draw_back(ola, lkid, answer(n=8, seed=665))[1] or {}).get("post")
+            lggkid = (draw_back(pia, lgkid, answer(n=8, seed=666))[1] or {}).get("post")
+            # A DRAW-BACK WITH ITS OWN SAYS HOW MANY beside its name, on the page of every draw-back and on the strip
+            # (one tile): the row's pen and the count in the small violet words, under the drawing, never on it; to a
+            # screen reader "Noa, 2 draw-backs on it" (her own, the eye's words carry it).
+            COUNTS = """() => [...document.querySelectorAll('.db-tile')].map(t => { const n = t.querySelector('.db-n');
+              const id = new URL(t.href).pathname.split('/').pop(); if (!n) return [id, null];
+              n.scrollIntoView({ block: 'center', inline: 'center' });     // a paint is read on the screen
+              const r = n.getBoundingClientRect(), pic = t.querySelector('.db-pic').getBoundingClientRect(), by = t.querySelector('.db-by').getBoundingClientRect();
+              const eye = t.parentElement && t.parentElement.querySelector('[data-eye]');
+              const hit = document.elementFromPoint(r.left + r.width - 4, r.top + r.height / 2), probe = document.createElement('i');
+              probe.style.color = 'var(--ink-2)'; document.body.appendChild(probe); const ink = getComputedStyle(probe).color; probe.remove();
+              const sr = t.querySelector('.db-by .sr'), cs = getComputedStyle(n);
+              return [id, { says: n.textContent.trim(), pen: !!n.querySelector('svg'), ink: cs.color === ink, type: [cs.fontSize, cs.fontWeight],
+                under: r.top >= pic.bottom - 0.5, inLine: r.top >= by.top - 0.5 && r.bottom <= by.bottom + 0.5,
+                end: eye ? null : Math.round((by.right - r.right) * 10) / 10, eyeGap: eye ? Math.round((eye.getBoundingClientRect().left - r.right) * 10) / 10 : null,
+                painted: !!hit && n.contains(hit), named: t.getAttribute('aria-label') || (t.querySelector('.db-who').textContent + (sr ? sr.textContent : '')) }]; })"""
+            counts6 = {}
+            for key, who, path, screen in (("theo page", theo, f"/social/p/{crowd}/draw-backs", "phone"),
+                                           ("theo desk", theo, f"/social/p/{crowd}/draw-backs", "desk"),
+                                           ("ana page", ana, f"/social/p/{crowd}/draw-backs", "phone"),
+                                           ("strip", theo, f"/social/p/{fam_a}", "phone")):
+                ctx, pg = browser_as(b, who, screen=screen)
+                pg.goto(BASE + path)
+                ready(pg)
+                pg.wait_for_timeout(300)
+                counts6[key] = dict(pg.evaluate(COUNTS))
+                close_ctx(ctx, pg)
+            tp, td_, ap, al = (counts6["theo page"].get(fam_a), counts6["theo desk"].get(fam_a), counts6["ana page"].get(fam_a),
+                               counts6["ana page"].get(lea_back))
+            st6 = counts6["strip"].get(kid1)
+            others = ([v for k in ("theo page", "theo desk") for i, v in counts6[k].items() if i != fam_a]
+                      + [v for i, v in counts6["ana page"].items() if i not in (fam_a, lea_back)]
+                      + [v for i, v in counts6["strip"].items() if i != kid1])
+            check("a draw-back with its own says how many beside its name, on the page of every draw-back and on the strip"
+                  " (one tile): Noa's, drawn back on by Kai and Ola, \"2\" with the row's pen, in the row's ink as under every post (not the violet that says tap me), at"
+                  " the name's line's end (on her own, where her eye's room begins), under the drawing and never on it,"
+                  " painted, a desk the same; a screen reader hears"
+                  " \"Noa, 2 draw-backs on it\"; on Noa's own strip Kai's says \"1\" (\"Kai, 1 draw-back on it\"); Lea's \"1\""
+                  " for Ana and not there for Theo; every other tile says nothing more",
+                  all(x and x["says"] == "2" and x["pen"] and x["ink"] and x["under"] and x["inLine"] and x["painted"]
+                      for x in (tp, td_, ap))
+                  and abs(tp["end"]) <= 0.5 and abs(td_["end"]) <= 0.5 and ap["eyeGap"] is not None and ap["eyeGap"] >= 0
+                  and tp["named"] == "Noa, 2 draw-backs on it" and ap["named"] == "Noa, 2 draw-backs on it"
+                  and bool(st6) and st6["says"] == "1" and st6["named"] == "Kai, 1 draw-back on it" and st6["painted"]
+                  and bool(al) and al["says"] == "1" and lea_back not in counts6["theo page"]
+                  and others and all(v is None for v in others) and bool(kid1) and bool(kid2),
+                  json.dumps({k: {i[:4]: v for i, v in d.items() if v} for k, d in counts6.items()})[:900])
+            # A DRAW-BACK'S LINE SAYS WHERE ITS FAMILY STARTED, on its own page: whom it answers first, then the family's
+            # first drawing, each name its own post; a card keeps the short line.
+            LINE = """() => { const l = document.querySelector('.post-page .post-on-page .post-on'); if (!l) return null;
+              return { says: l.textContent.replace(/\\s+/g, ' ').trim(), to: [...l.querySelectorAll('a')].map(a => new URL(a.href).pathname.split('/').pop()) }; }"""
+            lines6 = {}
+            for key, who, post in (("fam_a", theo, fam_a), ("kid1", theo, kid1), ("gkid", theo, gkid), ("ggkid", theo, ggkid),
+                                   ("lgkid theo", theo, lgkid), ("lgkid ana", ana, lgkid), ("lggkid theo", theo, lggkid),
+                                   ("lggkid ana", ana, lggkid)):
+                ctx, pg = browser_as(b, who)
+                pg.goto(BASE + f"/social/p/{post}")
+                ready(pg)
+                lines6[key] = pg.evaluate(LINE)
+                close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, theo)
+            pg.goto(BASE + "/social/@pia")
+            ready(pg)
+            pg.wait_for_timeout(300)
+            card6 = pg.evaluate("""(id) => { const c = document.querySelector('.post-card[data-post="' + id + '"] .post-on');
+              return c ? c.textContent.replace(/\\s+/g, ' ').trim() : null; }""", gkid)
+            close_ctx(ctx, pg)
+            L = lines6
+            check("a draw-back's line says where its family started on its own page, whom it answers first: Noa's (on Ana's)"
+                  " \"Drew back on Ana’s\"; Kai's \"Drew back on Noa’s · started with Ana’s\"; Pia's \"Drew back on Kai’s ·"
+                  " started with Ana’s\"; Noa's again, five generations down, \"Drew back on Pia’s · started with Ana’s\"; each"
+                  " name its own post; a card keeps the short line",
+                  bool(gkid) and bool(ggkid)
+                  and (L["fam_a"] or {}).get("says") == "Drew back on Ana’s" and L["fam_a"]["to"] == [crowd]
+                  and (L["kid1"] or {}).get("says") == "Drew back on Noa’s · started with Ana’s" and L["kid1"]["to"] == [fam_a, crowd]
+                  and (L["gkid"] or {}).get("says") == "Drew back on Kai’s · started with Ana’s" and L["gkid"]["to"] == [kid1, crowd]
+                  and (L["ggkid"] or {}).get("says") == "Drew back on Pia’s · started with Ana’s" and L["ggkid"]["to"] == [gkid, crowd]
+                  and card6 == "Drew back on Kai’s",
+                  json.dumps({"lines": L, "card": card6})[:900])
+            check("a family that runs through one a viewer cannot see says nothing of where it started, and never names a"
+                  " later one as its start: Ola's on Kai's on Lea's, for Theo (who blocked Lea) \"Drew back on Kai’s\"; Pia's on"
+                  " Ola's on Kai's on Lea's, for Theo \"Drew back on Ola’s\" (not \"started with Kai’s\"); for Ana each \"started"
+                  " with Ana’s\"",
+                  bool(lgkid) and bool(lggkid)
+                  and (L["lgkid theo"] or {}).get("says") == "Drew back on Kai’s" and L["lgkid theo"]["to"] == [lkid]
+                  and (L["lggkid theo"] or {}).get("says") == "Drew back on Ola’s" and L["lggkid theo"]["to"] == [lgkid]
+                  and (L["lgkid ana"] or {}).get("says") == "Drew back on Kai’s · started with Ana’s"
+                  and L["lgkid ana"]["to"] == [lkid, crowd]
+                  and (L["lggkid ana"] or {}).get("says") == "Drew back on Ola’s · started with Ana’s",
+                  json.dumps({k: v for k, v in L.items() if k.startswith("lg")}))
             # NOTHING A BLOCK HIDES, AND NOTHING THAT IS NOT THERE: Theo blocked Lea, so the cat's page holds two for him; a
             # post that is not there is as gone on its page of draw-backs, and its Load more says so.
             ctx, pg = browser_as(b, theo)

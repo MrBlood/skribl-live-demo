@@ -384,6 +384,38 @@ def drawbacks(posts, viewer):
     return out
 
 
+def started_with(post, viewer, most=64):
+    """S, WHERE A DRAW-BACK'S FAMILY STARTED (the owner's "Yes on S", Nov 27,
+    to the family mock, and its clearer line): on a draw-back's own page,
+    when the one it answers is itself a draw-back, the family's first
+    drawing, {"url", "first"}, for the line's end: "Drew back on Theo’s ·
+    started with Mira’s" (whom they answered first, then where it began).
+    Only when every drawing above the one it answers is one this viewer may
+    see, by drawbacks()'s rule for that one (taken down, or a block either
+    way, is not there): a family that runs through one they cannot see says
+    nothing of where it started, and never names a later one as its start.
+    None when the one it answers is the first drawing, or is not there."""
+    sess = site().session()
+    if getattr(post, "drawn_on_id", None) is None:
+        return None
+    at, first, steps = sess.get(Post, post.drawn_on_id), None, 0
+    while at is not None and at.drawn_on_id is not None:
+        if steps >= most:
+            return None
+        row = sess.execute(sa.select(Post, Person).join(Person, Person.id == Post.person_id)
+                           .where(Post.id == at.drawn_on_id)).first()
+        if row is None:
+            return None
+        orig, owner = row
+        if (orig.taken_down_at is not None or owner.taken_down_at is not None
+                or (viewer is not None and between(viewer, owner))):
+            return None
+        at, first, steps = orig, owner, steps + 1
+    if at is None or first is None:
+        return None
+    return {"url": url_for("social.post_page", public_id=at.public_id), "first": first_name(first.display_name)}
+
+
 def hands_states(posts, viewer, drawings=None):
     """DRAW BACK, TWO HANDS (drawback.py; the owner's "all yes", Nov 25), for
     a page of posts: what each two-hands draw-back among `posts` shows
@@ -1425,9 +1457,14 @@ def register(bp, skribl_blueprint="skribl"):
             shown = drawbacks([card["post"]], me)["n"].get(card["post"].id, 0)
             hidden = hidden_backs(card["post"], me) if card["mine"] else 0
         # The page's token for everybody: Report is anybody's (piece 5).
+        # S, WHERE ITS FAMILY STARTED (the owner's "Yes on S", Nov 27): on a
+        # draw-back's own page its line ends with the family's first drawing
+        # (started_with), while the one it answers is there.
+        on = card.get("drawn_on")
+        start = started_with(card["post"], me) if card["kind"] == "p" and on and not on.get("gone") else None
         return _page("post.html", here="post", card=card, backs=backs, backs_shown=shown, backs_hidden=hidden,
-                     backs_every=every, share_url=public_origin() + card["url"], token=csrf_token(), cm=cm, lk=lk,
-                     signin_here=url_for("social.signin", next=card["url"]))
+                     backs_every=every, start=start, share_url=public_origin() + card["url"], token=csrf_token(), cm=cm,
+                     lk=lk, signin_here=url_for("social.signin", next=card["url"]))
 
     def _seen_post(public_id):
         """(its card, me) for a post this viewer may see, or None: as gone to
