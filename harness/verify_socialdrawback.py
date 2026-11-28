@@ -1603,6 +1603,40 @@ with app.test_request_context("/social/"):
                           and zero[k]["headings"] == [] for k in ("signed out", "a Flip"))
                   and "pen" not in " ".join(zero["signed out"]["row"]) and "pen" not in " ".join(zero["a Flip"]["row"]),
                   json.dumps(zero)[:900])
+            # PAST THE STRIP'S TWELVE THE LABEL STILL SAYS HOW MANY (a bug; the owner's "Yes", Nov 27, to "fix the
+            # count now"): the strip shows the newest twelve (posts.BACKS) and its label counted those, so fourteen
+            # read "12 draw-backs" on the post's page while its pen said 14. Fourteen drawn back on a post of Ana's,
+            # the oldest hidden from it by her (so not among the twelve): Theo's label says 13, as his pen does; hers
+            # says 13 and, under it, "1 hidden from your post"; each strip holds twelve.
+            crowd = post_payload(ana, "Section 6, a crowd draws back", drawing(n=20, seed=63))
+            made = []
+            for i in range(14):
+                made.append((draw_back((theo, uma)[i % 2], crowd, answer(n=8, seed=600 + i))[1] or {}).get("post"))
+                time.sleep(0.02)
+            hc = ana.client()
+            hc.get(f"/social/p/{crowd}")
+            hid_st = hc.post_json(f"/social/p/{made[0]}/shown", {"shown": False})[0]
+            COUNT6 = """() => { const page = document.querySelector('.post-page'), s = page.querySelector('.db-strip');
+              const pen = page.querySelector(':scope > .post-row .db-pen'), seen = e => !!e && !e.hidden && e.getClientRects().length > 0;
+              const label = s && s.querySelector('.db-title'), note = s && s.querySelector('.db-note');
+              return { label: seen(label) ? label.innerText.replace(/\\s+/g, ' ').trim() : null,
+                       note: seen(note) ? note.innerText.replace(/\\s+/g, ' ').trim() : null,
+                       tiles: s ? s.querySelectorAll('.db-tile').length : 0,
+                       pen: pen ? (pen.querySelector('span') || {}).textContent || '' : null }; }"""
+            many = {}
+            for key, who in (("theo", theo), ("ana", ana)):
+                ctx, pg = browser_as(b, who)
+                pg.goto(BASE + f"/social/p/{crowd}")
+                ready(pg)
+                many[key] = pg.evaluate(COUNT6)
+                close_ctx(ctx, pg)
+            check("past the strip's twelve its label still says how many there are, as the post's pen does: fourteen drawn"
+                  " back, the oldest hidden by her, \"13 draw-backs\" for Theo and for Ana, and under hers \"1 hidden from"
+                  " your post\"; each strip holds twelve",
+                  len([m for m in made if m]) == 14 and hid_st == 200
+                  and many["theo"] == {"label": "13 draw-backs", "note": None, "tiles": 12, "pen": "13"}
+                  and many["ana"] == {"label": "13 draw-backs", "note": "1 hidden from your post", "tiles": 12, "pen": "13"},
+                  json.dumps({"made": len([m for m in made if m]), "hidden": hid_st, "seen": many}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(6, exc)
 
