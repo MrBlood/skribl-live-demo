@@ -55748,3 +55748,23 @@ Repost. The owner: "Keep it as it is".
 So Everyone stays posts only (verify_socialfollow 8 holds it), and a plain
 repost shows on Following and on the reposter's Posts tab, the original's
 card with "You reposted" at its top. No code changed.
+
+## After v330 -- Main red after #1144: "more contrast" reads a post's words on what is painted behind them (bug fix)
+
+Main's full run after Sheets everywhere (#1144, run 2696) was red in one
+place, both databases' seventh shard: verify_socialsettings 56/57, section
+15's "more contrast". It read a post's grey line against the post card's own
+background, and since #1144 a post on Home has none (a sheet on the page):
+the see-through ground was taken for black, and the words read 2.04:1 with
+the setting (2.78 without) where they are 9.52:1 on the page. The card's edge
+was read on that same missing ground. The page was right; the instrument was
+not.
+
+The words are read now on what is painted behind them (the card's ground
+where one is painted, else the page), and a card's edge on the card the site
+still draws (Settings' panels: --card and --card-edge, as verify_socialposts
+17 has read it since #1144), and that card on the page. Read now: light
+9.52:1 with the setting (6.98 without), dark 13.48:1 (10.12); the edge 3.42:1
+on the card and 3.16 on the page in light, 3.15 and 3.71 in dark. SHOWN RED,
+in throwaway copies of social.css: "more contrast" no longer firming the
+card's edge, and no longer strengthening the grey words, each red alone.
