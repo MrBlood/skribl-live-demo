@@ -764,6 +764,9 @@
     .posted-foot { border-top-color: transparent; box-shadow: 0 calc(-1 * var(--edge)) 0 0 var(--hairline); }
     /* Undo after a remove: its accent line, over its tint. */
     .posted-undo { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--ui-line); }
+    /* On the lilac page (Nov 27) an 8% wash brought the bar within 1.07:1 of its Undo; at 6% the bar stands
+       1.07:1 from the page and Undo 1.10:1 from the bar, the steps they had on the grey page. */
+    :root[data-theme="light"] .posted-undo { background: rgba(124, 92, 255, 0.06); }
     .posted-undo-btn { border-color: transparent; box-shadow: 0 0 0 var(--edge) var(--line-strong); }
     @media (hover: hover) { .posted-undo-btn:hover { box-shadow: none; } }
     @media (max-width: 640px) {
