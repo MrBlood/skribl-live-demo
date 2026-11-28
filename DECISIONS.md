@@ -55021,8 +55021,14 @@ by searching for the old value. This fix ran the three red suites and the
 ones that read the same colours, and the full harness on its branch
 (dispatched; Actions costs nothing here) before merging.
 
-THE CHECKS: main's run is the red for each row (bb3cab0); green with the
-fix: RUNCOUNTS. docs/COLOR-TOKENS.md made again; START-HERE's invariant
-names the new value. The next fully green run on main closes #1130.
+THE CHECKS: main's run is the red for each row (bb3cab0). Green with the
+fix, side by side here: verify_a11y 478/478, verify_galib 192/192,
+verify_socialsearch 48/48, verify_theme 127/127, verify_parity 436/436,
+verify_musicundo 106/106, verify_player_isolation 85/85, verify_jsstrip
+35/35, verify_socialsettings 57/57, and verify_docs 144/144 alone. And the
+full harness dispatched on the branch (run 2659): every job green, both
+databases' seven shards, the MP4, Firefox and WebKit lanes.
+docs/COLOR-TOKENS.md made again; START-HERE's invariant names the new
+value. The next fully green run on main closes #1130.
 
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site.
