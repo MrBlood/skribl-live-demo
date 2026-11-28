@@ -798,10 +798,12 @@ READ = r"""(sel) => {
     if (r.bottom < 0 || r.top > innerHeight) return;
     // A pill's option (Home's Following | Everyone: follows) is 36px to see and
     // 44px to a finger, by its band: it counts when a press at its middle and
-    // 21px above and below lands on it (verify_socialposts' census, the same).
-    // Home's cards shorter in Bluesky's columns (Nov 28), the pill is now in
-    // view where this census reads Home; before, it was scrolled past.
-    if (e.matches('.fo-seg > button')) { const mid = r.left + r.width / 2, hit = d => { const x = document.elementFromPoint(mid, r.top + r.height / 2 + d); return !!x && (x === e || e.contains(x)); }; if (r.width >= 44 && hit(0) && hit(-21) && hit(21)) return; }
+    // 21px above and below lands on it (verify_socialposts' census, the same);
+    // one whose middle is scrolled off the screen is not in view. (Home's cards
+    // shorter in Bluesky's columns, Nov 28, this census's scroll left the pill's
+    // last 10px on the screen, where it had been scrolled past.)
+    if (e.matches('.fo-seg > button')) { const cy = r.top + r.height / 2; if (cy < 0 || cy > innerHeight) return;
+      const mid = r.left + r.width / 2, hit = d => { const x = document.elementFromPoint(mid, cy + d); return !!x && (x === e || e.contains(x)); }; if (r.width >= 44 && hit(0) && hit(-21) && hit(21)) return; }
     if (r.width < 44 || r.height < 44) out.small.push((e.className || e.tagName) + ' "' + (e.textContent || e.value || '').trim().slice(0, 20) + '" ' + Math.round(r.width) + 'x' + Math.round(r.height));
   });
   document.querySelectorAll('input[type=text], input:not([type]), input[type=search], textarea, select').forEach(e => {
