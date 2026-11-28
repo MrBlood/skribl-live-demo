@@ -55284,3 +55284,47 @@ size now.
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: on a post with more than twelve draw-backs, "See all" at
 the end of the "13 draw-backs" line.
+
+## After v330 -- A comment balloon's tail is one line with it (bug fix)
+
+The owner, Nov 27, from an iPhone in dark, a comment's balloon zoomed in and
+the tail's two ends circled: "Fix this part (circled parts) so it looks
+uniform and connected. It's off". The target: where the balloon's tail
+leaves its line and where it comes back.
+
+WHY IT WAS OFF (#1132's tail, two masks over the line): its two strokes were
+1.5px where the balloon's line is --balloon-line, whole screen pixels, 1.67
+at three to one, so the tail was thinner than the line it left; and its top
+end was 14px down a balloon 18px round, where the corner still curves, so
+the stroke met the curve at a kink. Seen here in Chromium at three to one,
+light and dark, as on the owner's phone.
+
+THE FIX (_comments.html, social.css .cm-tail): the tail is a small drawing
+in the balloon, its line var(--balloon-line) of --balloon-ink, so it is the
+balloon's own width at every density, placed on the line's own middle. It
+leaves the straight edge 18.5px down, below the corner, running along it a
+moment before it bends out to the tip and back, and rejoins it at 29.5px, so
+each end flows out of the edge. Its tip is 25px down (21 before), still at
+the face. Its card covers the line between the ends and reaches into the
+balloon, so no hairline of the line shows at any density. Windows' High
+Contrast hides it, as it hid the masks. The neck between a comment's words
+and its drawing was looked at too: it meets straight edges and reads clean;
+its strokes stay as they are.
+
+THE CHECKS (verify_socialcomments): 38's look row reads the tail as built
+(its card's fill, its line's ink and width against the balloon's, its place
+on the line's middle, no tail left on the balloon's ::before and ::after),
+and a new row reads it at seven densities: its line the balloon's width, both
+ends on the straight edge below the corner and above the foot's. 15's paint
+row reads the tail's middle, its stroke and the page above it where they are
+now. Green here (18/18, sections 38, 15 and 10). SHOWN RED: main as it was,
+15/18 (the three tail rows); the fix with its line set to 1.5px, the new row
+(six densities of seven) and the look row; the fix moved up 4px into the
+corner, the new row (its ends at 14.5 and 25.5).
+
+Pad and Flip: not touched; comments are the site's.
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: zoom in on a comment's tail; its line is as thick as the
+balloon's and flows out of the straight edge below the corner.
+

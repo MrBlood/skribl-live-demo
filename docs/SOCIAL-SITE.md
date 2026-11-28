@@ -4200,8 +4200,14 @@ art_box):
 - **Every comment is a balloon drawn in ink**: the card, its line in
   `--balloon-ink` (the mock's ink as it looked on the card, made solid:
   7.6:1 on the light page, 7.3:1 on the dark one), and a tail at the face
-  (its tip 21px down). No lift: a drawn line needs no shadow. The line lies
-  outside the balloon where the edge was, so nothing in it moved.
+  (its tip 25px down). No lift: a drawn line needs no shadow. The line lies
+  outside the balloon where the edge was, so nothing in it moved. The tail
+  is a small drawing in the balloon (`_comments.html`), its line the
+  balloon's own width at every density, leaving the straight edge below
+  the corner and running back into it (Nov 27: drawn as masks, its line was
+  1.5px where the balloon's is 1.67 at 3x, and its top met the corner where
+  it still curves; the owner circled both ends: "so it looks uniform and
+  connected").
 - **The line is whole screen pixels** (`--balloon-line`, section 50's rule):
   the mock's 1.5px rounded to the screen's own pixels at each density, two
   at 1x to 1.5x, three at 1.75x to 2.25x, four from 2.5x, five at 3x.

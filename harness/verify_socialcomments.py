@@ -1316,9 +1316,9 @@ def linked_paint(pg, cid):
             "the words' line, past the neck": ("ink", al + 70, bb + 0.75, "y"),
             "the drawing's line, open into the neck": ("card", al + 37.75, at_ - 0.75, None),
             "the drawing's line, past the neck": ("ink", al + 70, at_ - 0.75, "y"),
-            "the tail's middle": ("card", bl - 5, bt + 20, None),
-            "the tail's stroke": ("ink", bl - 5, bt + 17.75, "y"),
-            "above the tail": ("page", bl - 5, bt + 14.5, None)}
+            "the tail's middle": ("card", bl - 5, bt + 24.4, None),
+            "the tail's stroke": ("ink", bl - 5, bt + 22.6, "y"),
+            "above the tail": ("page", bl - 5, bt + 19.5, None)}
 
     def near(c, r):
         return max(abs(x - y) for x, y in zip(c, r)) <= 4
@@ -1412,7 +1412,8 @@ TOKEN_JS = """const tok = (at, prop, val) => { const d = document.createElement(
 
 # THE LOOK: [a long comment, a short reply under it] read against their tokens:
 # each balloon's card, its drawn line (--balloon-line of --balloon-ink, no lift), its tail
-# (the card over the line where it leaves, the ink's two strokes, each a mask)
+# (a small drawing in the balloon: its card over the line where it leaves, its line the
+# balloon's own ink and width, the line's own middle its edge's)
 # and its corner, the long one as wide as its room and the short one narrower; no
 # line between comments; a face not drawn yet with its initial; the count's pill;
 # the row under the balloon, its word on a desk only.
@@ -1425,11 +1426,14 @@ LOOK = """([cid, rid]) => { """ + TOKEN_JS + """
     const cs = getComputedStyle(b), room = b.parentElement.getBoundingClientRect().width, w = b.getBoundingClientRect().width;
     if (cs.backgroundColor !== want.bg) bad.push(id + ' ground ' + cs.backgroundColor + ' not ' + want.bg);
     if (cs.boxShadow !== want.ring) bad.push(id + ' line ' + cs.boxShadow + ' not ' + want.ring);
-    const tb = getComputedStyle(b, '::before'), ta = getComputedStyle(b, '::after'), mask = x => x.maskImage || x.webkitMaskImage || '';
-    if (tb.content === 'none' || ta.content === 'none' || tb.display === 'none' || ta.display === 'none'
-        || tb.backgroundColor !== want.bg || ta.backgroundColor !== want.ink
-        || !mask(tb).includes('svg') || !mask(ta).includes('svg') || tb.left !== '-11.5px' || ta.left !== '-11.5px')
-      bad.push(id + ' tail ' + [tb.content, tb.backgroundColor, ta.backgroundColor, tb.left, mask(ta).slice(0, 30)].join(' '));
+    const tail = b.querySelector(':scope > svg.cm-tail'), card = tail && tail.querySelector('.cm-tail-card'), line = tail && tail.querySelector('.cm-tail-line');
+    const ringW = parseFloat((cs.boxShadow.match(/-?[\\d.]+px/g) || [])[3] || 'NaN');
+    if (!tail || !card || !line || getComputedStyle(tail).display === 'none' || getComputedStyle(card).fill !== want.bg
+        || getComputedStyle(line).stroke !== want.ink || Math.abs(parseFloat(getComputedStyle(line).strokeWidth) - ringW) > 0.01
+        || Math.abs(parseFloat(getComputedStyle(tail).left) + 12 + ringW / 2) > 0.01
+        || getComputedStyle(b, '::before').content !== 'none' || getComputedStyle(b, '::after').content !== 'none')
+      bad.push(id + ' tail ' + (tail ? [getComputedStyle(card).fill, getComputedStyle(line).stroke, getComputedStyle(line).strokeWidth, ringW,
+                                        getComputedStyle(tail).left].join(' ') : 'none'));
     if (cs.borderTopLeftRadius !== '18px') bad.push(id + ' corner ' + cs.borderTopLeftRadius);
     if (!b.querySelector('.cm-name') || !b.querySelector('.cm-when') || !b.querySelector('.cm-words')) bad.push(id + ': name, when or words outside');
     if (wide ? Math.abs(w - room) > 1 : w > room - 40) bad.push(id + ' width ' + Math.round(w) + ' of ' + Math.round(room));
@@ -4665,7 +4669,7 @@ with sync_playwright() as p:
             bad = {" ".join(k): v["bad"] for k, v in seen.items() if v["bad"]}
             check("every comment's name, time and words sit in a balloon drawn in ink (the owner's \"All yes (my row)\","
                   " Nov 27): the site's card (--card), its line --balloon-line of --balloon-ink and no lift, its tail at the face"
-                  " (the card over the line, the ink's two strokes), 18px round; as wide as its words (the short one's"
+                  " (its card over the line, its line the balloon's own ink and width), 18px round; as wide as its words (the short one's"
                   " balloon narrower than its room, the long one's reaching it); no line between comments: phone and desk,"
                   " light and dark",
                   not bad and all(v["read"] for v in seen.values()),
@@ -4680,7 +4684,11 @@ with sync_playwright() as p:
                 open_post(dpg38, post)
                 dens38[d] = dpg38.evaluate("""(id) => { const b = document.querySelector('#c-' + id + ' > .cm-main > .cm-bubble'); if (!b) return null;
                   const sh = getComputedStyle(b).boxShadow, px = (sh.match(/-?[\\d.]+px/g) || []).map(parseFloat);
-                  return { layers: sh.split(/,(?![^(]*\\))/).length, w: px.length >= 4 ? px[3] : null, dpr: devicePixelRatio }; }""", e38)
+                  const t = b.querySelector(':scope > svg.cm-tail'), l = t && t.querySelector('.cm-tail-line'), br = b.getBoundingClientRect();
+                  const tr = t ? t.getBoundingClientRect() : null, at = (y) => tr ? Math.round((tr.top - br.top + y * tr.height / 17) * 100) / 100 : null;
+                  return { layers: sh.split(/,(?![^(]*\\))/).length, w: px.length >= 4 ? px[3] : null, dpr: devicePixelRatio,
+                           tail: l ? parseFloat(getComputedStyle(l).strokeWidth) : null, corner: parseFloat(getComputedStyle(b).borderTopLeftRadius),
+                           joins: [at(2.5), at(13.5)], h: Math.round(br.height) }; }""", e38)
                 close_ctx(dctx38, dpg38)
 
             def whole38(v):
@@ -4689,6 +4697,16 @@ with sync_playwright() as p:
             check("a balloon's line is a whole number of screen pixels at every density, as near 1.5px as each allows (1,"
                   " 1.25 and 1.5x two pixels; 1.75 and 2x three; 2.625x four; 3x five), its one ring",
                   len(dens38) == 7 and all(whole38(v) for v in dens38.values()), json.dumps({str(k): v for k, v in dens38.items()}))
+            # ITS TAIL IS ONE LINE WITH IT (the owner, Nov 27, from a phone, the tail's two ends circled: "Fix this part
+            # ... so it looks uniform and connected. It's off"): the tail's line is the balloon's own width at every
+            # density (the masks drew 1.5px, the line 1.67 at three to one), and both its ends are on the straight
+            # edge, below the corner's round (its top met the corner where it still curves, 14px down an 18px round).
+            check("a balloon's tail is one line with it at every density: its line the balloon's own width (1 to 3x), and"
+                  " both its ends on the straight edge below the corner's 18px and above the foot's, so it leaves the edge"
+                  " and runs back into it",
+                  len(dens38) == 7 and all(v and v["tail"] is not None and abs(v["tail"] - v["w"]) < 0.01
+                                           and v["joins"][0] >= v["corner"] and v["joins"][1] <= v["h"] - v["corner"] for v in dens38.values()),
+                  json.dumps({str(k): {x: v[x] for x in ("w", "tail", "joins", "corner", "h")} if v else None for k, v in dens38.items()}))
             faces = {" ".join(k): v["faces"] for k, v in seen.items()}
             check("a face not drawn yet shows its initial: the name's first letter, in the small violet words' ink"
                   " (--accent-ink) on the site's disc (--tint), at 4.5:1 or more; and the count is the small label's own"
