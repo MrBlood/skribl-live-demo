@@ -55204,6 +55204,17 @@ rather than a set 400ms; the press itself is for a look of its own (a person
 may press x that early too). In the full run, after section 20 has opened
 the editor, it has been green.
 
+TWO OF ITS OWN CHECKS, PUT RIGHT BEFORE IT MERGED (the side-by-side run,
+verify_socialapp 95/106): section 12 read its askings in the Home Screen
+app, where the window no longer scrolls, so ten of its rows read nothing to
+ask. The asking stays for a browser tab, and they are read there now; a row
+more reads the app's frame asking nothing (red with the frame taken out:
+asked six times, the frame at 0). And section 16's Back row turned the
+browser's memory of the page off by listening for unload, which Chromium
+reports as a console error, so section 10 went red. The row has a browser
+of its own with that memory off now (red still with the kept place taken
+out; section 10 green).
+
 NOT TESTED HERE: an iPhone (WebKit), so not whether iOS's fault is gone. The
 owner's phone says. The one-glance tell: in the app, a tap on Home while on
 Home glides the feed to the top.

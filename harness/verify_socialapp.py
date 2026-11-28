@@ -91,10 +91,13 @@ Chromium's virtual authenticator for the site's people.
      keyboard going, or the phone stuck differently, is a new spell; once
      put right, once; never while words
      are typed, with the page pinched larger, with a finger down, on a desk,
-     or on a page that cannot scroll. And the keyboard is put away before
-     the app changes page: as Post is pressed, as a form really goes, as the
-     page goes; a search that stays on its page keeps its keyboard. Whether
-     an iPhone then measures again is the owner's phone's to say.
+     or on a page that cannot scroll. Read in a browser tab since Nov 27:
+     in the Home Screen app the page scrolls in its own frame (16), the
+     window never, so nothing is asked there (a row). And the keyboard is
+     put away before the app changes page: as Post is pressed, as a form
+     really goes, as the page goes; a search that stays on its page keeps
+     its keyboard. Whether an iPhone then measures again is the owner's
+     phone's to say.
   13. A HELD FINGER SELECTS NO CONTROL (the owner's iPhone, Nov 22: a finger
      held by Make brought up the text-selection handles; a phone's bar keeps
      its names in a pixel). Home on a phone and a desk with a post of words,
@@ -1702,8 +1705,11 @@ with sync_playwright() as pw:
                 changedTouches: [t], bubbles: true, cancelable: true, view: window })); }"""
             REST = 900          # longer than three askings take (each waits 150 ms of rest, then 50 ms to come back)
 
-            def phone(path="/social/", y=300, init=(), who=mira):
-                ctx, pg = browser_as(b, who, ua=IPHONE_UA, init=(STANDALONE, SPLASHED, STUCK) + tuple(init))
+            # IN A BROWSER TAB (Nov 27): in the Home Screen app the page never scrolls now (section 16, its frame),
+            # so there is no page for the fault to make the bar ride, and nothing to ask; the asking stays for a tab.
+            # The keyboard put away before the page changes is the app's (app=True).
+            def phone(path="/social/", y=300, init=(), who=mira, app=False):
+                ctx, pg = browser_as(b, who, ua=IPHONE_UA, init=((STANDALONE, SPLASHED) if app else (SPLASHED,)) + (STUCK,) + tuple(init))
                 go(pg, path)
                 if y is not None:
                     pg.evaluate(TALL, y)
@@ -1867,6 +1873,21 @@ with sync_playwright() as pw:
                   fine and desk["asked"] == [] and fits and short_page["asked"] == [],
                   json.dumps({"desk": desk["asked"], "fine": fine, "a page that fits": short_page["asked"], "fits": fits}))
 
+            # IN THE APP'S FRAME NOTHING IS ASKED (section 16): the window never scrolls there, so what is pinned has no
+            # page to ride, and a phone left short is not asked to scroll a page that cannot.
+            ctx, pg = phone(y=None, app=True)
+            pg.evaluate("""() => { const d = document.createElement('div'); d.style.cssText = 'height:2400px';
+              (document.querySelector('main') || document.body).appendChild(d); document.body.scrollTop = 300; }""")
+            pg.wait_for_timeout(400)
+            pg.evaluate("() => window.__vv({ short: 336 })")
+            pg.wait_for_timeout(REST + 400)
+            framed = pg.evaluate("""() => ({ asked: window.__asked.map(a => a.dy), frame: !!(window.SocialScroll && window.SocialScroll.frame),
+              body: Math.round(document.body.scrollTop), win: Math.round(scrollY) })""")
+            close_ctx(ctx, pg)
+            check("in the Home Screen app's frame nothing is asked (section 16: the window never scrolls there, so what is pinned "
+                  "has no page to ride): left short, the frame where it was and the window at its top",
+                  framed["frame"] and framed["asked"] == [] and framed["body"] == 300 and framed["win"] == 0, json.dumps(framed))
+
             # THE KEYBOARD IS PUT AWAY BEFORE THE APP CHANGES PAGE.
             # What happened, in order, kept where the next page can read it.
             ORDER = """(() => { if (window.top !== window) return;      // the page's own, not a frame's inside it
@@ -1880,7 +1901,7 @@ with sync_playwright() as pw:
             # held back here until that has been read). PRESSED AS AN IPHONE PRESSES A BUTTON: Safari there does
             # not give a tapped button the focus, so the words keep it unless the page takes it; Chromium's own
             # click would move the focus by itself and this row would hold nothing.
-            ctx, pg = phone(y=None, init=(ORDER,))
+            ctx, pg = phone(y=None, init=(ORDER,), app=True)
             held = []
             pg.route("**/social/posts", lambda r: held.append(r))
             new_url = pg.evaluate("() => document.getElementById('composeSheet').getAttribute('data-post-new')")
@@ -1913,7 +1934,7 @@ with sync_playwright() as pw:
             close_ctx(ctx, pg)
 
             # 2. A form that really goes (Edit profile's Save): put away as it goes, before the page does.
-            ctx, pg = phone("/social/you/edit", y=None, init=(ORDER,))
+            ctx, pg = phone("/social/you/edit", y=None, init=(ORDER,), app=True)
             pg.click("#editName")
             pg.keyboard.type("!")
             pg.keyboard.press("Backspace")
@@ -1927,7 +1948,7 @@ with sync_playwright() as pw:
             close_ctx(ctx, pg)
 
             # 3. A search that stays on its page keeps its keyboard; and a page left with a field in hand lets it go as it goes.
-            ctx, pg = phone("/social/explore", y=None, init=(ORDER,))
+            ctx, pg = phone("/social/explore", y=None, init=(ORDER,), app=True)
             pg.click("[data-gal-q]")
             pg.keyboard.type("ca")
             pg.keyboard.press("Enter")
@@ -2216,8 +2237,10 @@ with sync_playwright() as pw:
                   json.dumps(t_down))
             # BACK PUTS YOU WHERE YOU WERE: a browser keeps the window's place for Back, never a frame's; the app keeps
             # it for each address and puts it back. The browser's memory of the page (which would keep it by itself)
-            # is turned off here by a page that listens for unload, so Back loads it again and the kept place is read.
-            bctx, bpg = browser_as(b, mira, ua=IPHONE_UA, init=(STANDALONE, SPLASHED, "window.addEventListener('unload', () => {});"))
+            # is off in a browser of this row's own, so Back loads the page again and the kept place is read. (A page
+            # listening for unload turned it off before, and Chromium says so as a console error.)
+            nob = pw.chromium.launch(args=["--disable-features=BackForwardCache"])
+            bctx, bpg = browser_as(nob, mira, ua=IPHONE_UA, init=(STANDALONE, SPLASHED))
             go(bpg, "/social/?show=everyone", wait=900)
             bpg.evaluate("() => { document.body.scrollTop = 640; }")
             bpg.wait_for_timeout(400)
@@ -2228,6 +2251,7 @@ with sync_playwright() as pw:
             back16 = bpg.evaluate("""() => ({ y: Math.round(document.body.scrollTop), win: Math.round(scrollY),
               how: (performance.getEntriesByType('navigation')[0] || {}).type, at: location.pathname + location.search })""")
             close_ctx(bctx, bpg)
+            nob.close()
             check("in the app, Back puts you where you were: Home scrolled 640px in its frame, a page away and Back (loaded"
                   " again, not from the browser's memory), and the frame is at 640 again",
                   there == 640 and back16["how"] == "back_forward" and abs(back16["y"] - 640) <= 2 and back16["win"] == 0
