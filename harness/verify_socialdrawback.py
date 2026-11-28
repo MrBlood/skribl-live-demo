@@ -1608,10 +1608,13 @@ with app.test_request_context("/social/"):
             # read "12 draw-backs" on the post's page while its pen said 14. Fourteen drawn back on a post of Ana's,
             # the oldest hidden from it by her (so not among the twelve): Theo's label says 13, as his pen does; hers
             # says 13 and, under it, "1 hidden from your post"; each strip holds twelve.
+            # Two people of the crowd's own, seven each: a person may post forty times an hour (security.LIMITS),
+            # and Theo and Uma post in every section after this one.
+            kai, noa = someone(b, "kai", "Kai Moss"), someone(b, "noa", "Noa Park")
             crowd = post_payload(ana, "Section 6, a crowd draws back", drawing(n=20, seed=63))
             made = []
             for i in range(14):
-                made.append((draw_back((theo, uma)[i % 2], crowd, answer(n=8, seed=600 + i))[1] or {}).get("post"))
+                made.append((draw_back((kai, noa)[i % 2], crowd, answer(n=8, seed=600 + i))[1] or {}).get("post"))
                 time.sleep(0.02)
             hc = ana.client()
             hc.get(f"/social/p/{crowd}")
