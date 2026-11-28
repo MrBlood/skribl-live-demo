@@ -267,13 +267,186 @@
     if (chain.querySelectorAll(':scope > .cm').length >= CHAIN_MAX) return null;
     return { parent: chain, before: null };
   }
+  /* ---- THE BALLOON, DRAWN BY HAND (the owner's "I like C. It looks
+     imperfect like I want", Nov 28, to the Speech Bubbles mock; and "make
+     sure the lines on the speech bubble are not perfectly straight") --------
+     Every comment's balloon is one line in the balloon's ink, drawn as a hand
+     draws it: its sides waver a little (under half a pixel, in long waves),
+     never ruler-straight, and always the same for the same comment (its id
+     is the seed); its corners round (24px); its tail a point at the middle of
+     the face, 2.5px short of it; and a drawing with words joined to its own
+     balloon by the neck, in the same line, so the tail and the neck can never
+     come apart from the balloon. Drawn behind the comment (an SVG in its
+     .cm-main, social.css THE BALLOON, DRAWN BY HAND) from the boxes as laid
+     out, and drawn again whenever they change size (a drawing growing as it
+     plays, words wrapping on a turned phone): each side's waver is measured
+     from its fixed end (the top or the left), so a balloon that grows
+     stretches and never shimmers, and fades to nothing where the side meets
+     a corner, the tail or the neck, so every join is smooth. Until it is
+     drawn, or with no script, the balloon is its CSS line and tail. */
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var HAND = { r: 24, line: 2, a: [0.32, 0.16], waves: [[110, 40], [46, 12]], ramp: 12, step: 2, gap: 2.5,
+               half: 5, neck: [28.75, 46.75], fillet: 5 };
+  function seeded(id) {
+    var h = 2166136261;
+    for (var i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    if (!h) h = 1;
+    return function () { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; };
+  }
+  function waverOf(rnd) {
+    var l1 = HAND.waves[0][0] + rnd() * HAND.waves[0][1], l2 = HAND.waves[1][0] + rnd() * HAND.waves[1][1];
+    var p1 = rnd() * 6.2832, p2 = rnd() * 6.2832;
+    return function (t) { return HAND.a[0] * Math.sin(6.2832 * t / l1 + p1) + HAND.a[1] * Math.sin(6.2832 * t / l2 + p2); };
+  }
+  function outline(main) {
+    var li = main.parentNode, bub = main.querySelector(':scope > .cm-bubble');
+    if (!bub || !li || !li.getAttribute) return null;
+    var art = main.querySelector(':scope > .cm-art');
+    var linked = !!art && !bub.classList.contains('is-pic');
+    var face = li.querySelector(':scope > .face-ring, :scope > .cm-gone-face');
+    var m = main.getBoundingClientRect(), b = bub.getBoundingClientRect();
+    if (!b.width || !b.height || !m.width) return null;
+    var h = HAND.line / 2, R = Math.max(4, Math.min(HAND.r, b.height / 2 - 1, b.width / 2 - 1)), Rr = R + h;
+    var X0 = b.left - m.left - h, Y0 = b.top - m.top - h, X1 = b.right - m.left + h, Y1 = b.bottom - m.top + h;
+    var rnd = seeded(li.getAttribute('data-comment') || 'balloon');
+    var wv = [waverOf(rnd), waverOf(rnd), waverOf(rnd), waverOf(rnd)];
+    var pts = [];
+    function put(x, y) { pts.push((Math.round(x * 100) / 100) + ' ' + (Math.round(y * 100) / 100)); }
+    /* A straight run from (x0, y0) to (x1, y1), pushed out along (nx, ny) by
+       `w` of its side's own measure, t0 to t1 (from the side's fixed end), to
+       nothing at both of the run's ends. */
+    function run(x0, y0, x1, y1, nx, ny, w, t0, t1) {
+      var len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.round(len / HAND.step)), lo = Math.min(t0, t1), hi = Math.max(t0, t1);
+      for (var i = 1; i <= n; i++) {
+        var f = i / n, t = t0 + (t1 - t0) * f, k = Math.min(1, (t - lo) / HAND.ramp, (hi - t) / HAND.ramp);
+        var o = w && k > 0 ? w(t) * k * k * (3 - 2 * k) : 0;
+        put(x0 + (x1 - x0) * f + nx * o, y0 + (y1 - y0) * f + ny * o);
+      }
+    }
+    function arc(cx, cy, r, a0, a1) {
+      var n = Math.max(2, Math.round(Math.abs(a1 - a0) * r / HAND.step));
+      for (var i = 1; i <= n; i++) { var a = a0 + (a1 - a0) * i / n; put(cx + r * Math.cos(a), cy + r * Math.sin(a)); }
+    }
+    function bez(p0, c1, c2, p1) {
+      for (var i = 1; i <= 16; i++) {
+        var t = i / 16, u = 1 - t;
+        put(u * u * u * p0[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * p1[0],
+            u * u * u * p0[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * p1[1]);
+      }
+    }
+    function quad(p0, c, p1) { bez(p0, [p0[0] + (c[0] - p0[0]) * 2 / 3, p0[1] + (c[1] - p0[1]) * 2 / 3], [p1[0] + (c[0] - p1[0]) * 2 / 3, p1[1] + (c[1] - p1[1]) * 2 / 3], p1); }
+    var Q = Math.PI / 2;
+    put(X0 + Rr, Y0);
+    run(X0 + Rr, Y0, X1 - Rr, Y0, 0, -1, wv[0], 0, X1 - X0 - 2 * Rr);
+    arc(X1 - Rr, Y0 + Rr, Rr, -Q, 0);
+    run(X1, Y0 + Rr, X1, Y1 - Rr, 1, 0, wv[1], 0, Y1 - Y0 - 2 * Rr);
+    arc(X1 - Rr, Y1 - Rr, Rr, 0, Q);
+    var bottom = X1 - X0 - 2 * Rr;
+    if (linked) {
+      var a = art.getBoundingClientRect();
+      var AX0 = a.left - m.left - h, AY0 = a.top - m.top - h, AX1 = a.right - m.left + h, AY1 = a.bottom - m.top + h;
+      var ARr = Math.max(4, Math.min(HAND.r, a.height / 2 - 1, a.width / 2 - 1)) + h;
+      var NL = a.left - m.left + HAND.neck[0], NR = a.left - m.left + HAND.neck[1];
+      var f = Math.max(1, Math.min(HAND.fillet, (AY0 - Y1) / 2));
+      var wa = [waverOf(rnd), waverOf(rnd), waverOf(rnd), waverOf(rnd)];
+      run(X1 - Rr, Y1, NR + f, Y1, 0, 1, wv[2], bottom, NR + f - X0 - Rr);
+      quad([NR + f, Y1], [NR, Y1], [NR, Y1 + f]);
+      put(NR, AY0 - f);
+      quad([NR, AY0 - f], [NR, AY0], [NR + f, AY0]);
+      run(NR + f, AY0, AX1 - ARr, AY0, 0, -1, wa[0], NR + f - AX0 - ARr, AX1 - AX0 - 2 * ARr);
+      arc(AX1 - ARr, AY0 + ARr, ARr, -Q, 0);
+      run(AX1, AY0 + ARr, AX1, AY1 - ARr, 1, 0, wa[1], 0, AY1 - AY0 - 2 * ARr);
+      arc(AX1 - ARr, AY1 - ARr, ARr, 0, Q);
+      run(AX1 - ARr, AY1, AX0 + ARr, AY1, 0, 1, wa[2], AX1 - AX0 - 2 * ARr, 0);
+      arc(AX0 + ARr, AY1 - ARr, ARr, Q, 2 * Q);
+      run(AX0, AY1 - ARr, AX0, AY0 + ARr, -1, 0, wa[3], AY1 - AY0 - 2 * ARr, 0);
+      arc(AX0 + ARr, AY0 + ARr, ARr, 2 * Q, 3 * Q);
+      run(AX0 + ARr, AY0, NL - f, AY0, 0, -1, wa[0], 0, NL - f - AX0 - ARr);
+      quad([NL - f, AY0], [NL, AY0], [NL, AY0 - f]);
+      put(NL, Y1 + f);
+      quad([NL, Y1 + f], [NL, Y1], [NL - f, Y1]);
+      run(NL - f, Y1, X0 + Rr, Y1, 0, 1, wv[2], NL - f - X0 - Rr, 0);
+    } else {
+      run(X1 - Rr, Y1, X0 + Rr, Y1, 0, 1, wv[2], bottom, 0);
+    }
+    arc(X0 + Rr, Y1 - Rr, Rr, Q, 2 * Q);
+    var side = Y1 - Y0 - 2 * Rr, tip = null;
+    if (face) {
+      var fr = face.getBoundingClientRect();
+      if (fr.width) tip = [fr.right - m.left + HAND.gap, fr.top + fr.height / 2 - m.top];
+    }
+    if (tip && tip[0] < X0 - 4 && tip[1] > Y0 && tip[1] < Y1 - Rr) {
+      var arcY = Y0 + Rr, uy = tip[1] - HAND.half, wy = Math.min(Y1 - Rr, Math.max(tip[1] + HAND.half, arcY + 1));
+      var th = uy < arcY ? Math.asin(Math.min(1, (arcY - uy) / Rr)) : 0;
+      var ux = uy < arcY ? X0 + Rr - Rr * Math.cos(th) : X0;
+      var len = X0 - tip[0], ud = [Math.sin(th), -Math.cos(th)];
+      run(X0, Y1 - Rr, X0, wy, -1, 0, wv[3], side, wy - arcY);
+      bez([X0, wy], [X0, wy - 2.5], [tip[0] + len * 0.42, tip[1] + 1.4], tip);
+      bez(tip, [tip[0] + len * 0.42, tip[1] - 1.4], [ux - ud[0] * 2.5, uy - ud[1] * 2.5], [ux, uy]);
+      if (uy < arcY) arc(X0 + Rr, Y0 + Rr, Rr, Math.PI + th, 3 * Q);
+      else { run(X0, uy, X0, arcY, -1, 0, wv[3], uy - arcY, 0); arc(X0 + Rr, Y0 + Rr, Rr, 2 * Q, 3 * Q); }
+    } else {
+      run(X0, Y1 - Rr, X0, Y0 + Rr, -1, 0, wv[3], side, 0);
+      arc(X0 + Rr, Y0 + Rr, Rr, 2 * Q, 3 * Q);
+    }
+    return { d: 'M' + pts.join('L') + 'Z', tip: tip };
+  }
+  function handDraw(main) {
+    var got = outline(main);
+    if (!got) return;
+    var svg = main.querySelector(':scope > svg.cm-hand');
+    if (!svg) {
+      svg = doc.createElementNS(SVGNS, 'svg');
+      svg.setAttribute('class', 'cm-hand');
+      svg.setAttribute('aria-hidden', 'true');
+      svg.setAttribute('focusable', 'false');
+      ['cm-hand-card', 'cm-hand-line'].forEach(function (k) {
+        var p = doc.createElementNS(SVGNS, 'path');
+        p.setAttribute('class', k);
+        svg.appendChild(p);
+      });
+      main.insertBefore(svg, main.firstChild);
+    }
+    svg.setAttribute('width', String(main.offsetWidth));
+    svg.setAttribute('height', String(main.offsetHeight));
+    Array.prototype.forEach.call(svg.childNodes, function (p) { p.setAttribute('d', got.d); });
+    if (!main.classList.contains('is-hand')) main.classList.add('is-hand');
+  }
+  var handWatch = window.ResizeObserver ? new ResizeObserver(function (es) {
+    var seen = [];
+    es.forEach(function (e) {
+      var main = e.target.classList.contains('cm-main') ? e.target : e.target.parentNode;
+      if (main && seen.indexOf(main) < 0) { seen.push(main); handDraw(main); }
+    });
+  }) : null;
+  /* Every balloon in `el` (a list, or a comment as it arrives), drawn and
+     watched. */
+  function hand(el) {
+    if (!el || !el.querySelectorAll) return;
+    var mains = el.matches && el.matches('.cm') ? [el.querySelector(':scope > .cm-main')] : [];
+    Array.prototype.push.apply(mains, el.querySelectorAll('.cm > .cm-main'));
+    mains.forEach(function (main) {
+      if (!main || main.hasAttribute('data-hand')) return;
+      main.setAttribute('data-hand', '');
+      handDraw(main);
+      if (handWatch) {
+        handWatch.observe(main);
+        var bub = main.querySelector(':scope > .cm-bubble'), art = main.querySelector(':scope > .cm-art');
+        if (bub) handWatch.observe(bub);
+        if (art) handWatch.observe(art);
+      }
+    });
+  }
+  hand(root);
+
   /* What arrives later is said as what was there: its times, and its
      drawing's player (still until tapped, as Skribl asks of a feed that adds
-     posts later). */
+     posts later); and its balloon is drawn. */
   function settle(el) {
     if (window.SocialWhen) window.SocialWhen(el);
     if (window.SkriblInline) window.SkriblInline.mount(el);
     fitQuiet(el);
+    hand(el);
   }
 
   /* ---- SOMEBODY YOU MUTED: one quiet line, and Show -------------------------- */

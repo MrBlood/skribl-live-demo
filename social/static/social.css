@@ -2555,7 +2555,10 @@ a.post-face { text-decoration: none; }
   .cm-art:has(> .skribl-inline-line:not(.is-waiting)) { width: var(--cm-rest); }
 }
 .cm-list, .cm-chain { margin: 0; padding: 0; list-style: none; }
-.cm { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 12px; padding: 12px 0 0; }
+/* ROOM FOR THE TAIL (the owner's C, Nov 28: the balloon drawn by hand, its
+   tail a point at the middle of the face): 20px between a face and its
+   balloon (it was 12), so the tail is long enough to read as a tail. */
+.cm { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 20px; padding: 12px 0 0; }
 /* MORE ROOM BEFORE A NEW CONVERSATION THAN INSIDE ONE (the walkthrough's
    mocks, choice 5, the owner's "all yes", Nov 19): 30px between one
    comment's conversation and the next comment, 12 between a comment and the
@@ -2630,35 +2633,37 @@ a.post-face { text-decoration: none; }
    Nov 17), its lilac edge one screen pixel and its lift; its line is now the
    balloon's own ink, the mock's 1.5px in whole screen pixels (--balloon-line,
    above), outside it where the edge was (so nothing in it moves), and no
-   lift: a drawn line needs no shadow (crisp). 18px round and
+   lift: a drawn line needs no shadow (crisp). 24px round since the
+   owner's C (Nov 28; it was 18) and
    as wide as its words; the name, when and the words in it. No lines between
    comments: the balloons set them apart. A comment that is a drawing and
    words is two balloons, the words' and the drawing's, joined by a neck
    (below); a drawing with no words rides in the one balloon, under its name.
    The row under it is the owner's (Nov 17 and 18), as it was. */
 .cm-bubble {
-  position: relative; box-sizing: border-box; width: fit-content; max-width: 100%; padding: 7px 14px 9px; border-radius: 18px;
+  position: relative; box-sizing: border-box; width: fit-content; max-width: 100%; padding: 7px 14px 9px; border-radius: 24px;
   background: var(--card); box-shadow: 0 0 0 var(--balloon-line) var(--balloon-ink);
 }
 .cm-bubble .cm-words { margin-top: 1px; }
-/* ITS TAIL, pointing at the face: a small drawing in the balloon
-   (_comments.html), its line the balloon's own (--balloon-line of
-   --balloon-ink) on every screen, so the two are one width; it leaves the
-   balloon's straight edge below its corner's 18px and runs back into it,
-   each end along the edge a moment before it bends (the owner, Nov 27, of
-   the tail as masks: "Fix this part ... so it looks uniform and connected.
-   It's off": on a phone at three to one the masks' 1.5px met the line's
-   1.67, and the tail's top met the corner where it still curves). Its card
-   covers the balloon's line between the two ends, reaching into the
-   balloon so no hairline of it shows. A tap on the tail is a tap on
-   nothing (the balloon's is its own page's way). */
-.cm-tail { position: absolute; left: calc(-12px - var(--balloon-line) / 2); top: 16px; width: 14px; height: 17px;
+/* ITS TAIL, pointing at the middle of the face: a small drawing in the
+   balloon (_comments.html), its line the balloon's own (--balloon-line of
+   --balloon-ink) on every screen, so the two are one width (the owner, Nov
+   27, of the tail as masks: "Fix this part ... so it looks uniform and
+   connected. It's off"). Since the owner's C (Nov 28) it is the drawn
+   balloon's own tail, held still: from the corner's curve (13px down, along
+   the curve's own direction) and the straight edge below it (25px) to its
+   point at the face's middle (18px), 2.5px short of the face. Its card
+   covers the balloon's line between its two ends, reaching into the
+   balloon so no hairline of it shows. It shows only until comments.js has
+   drawn the balloon by hand (or with no script). A tap on the tail is a tap
+   on nothing (the balloon's is its own page's way). */
+.cm-tail { position: absolute; left: -20px; top: 0; width: 22px; height: 26px;
            overflow: visible; pointer-events: none; }
 .cm-tail-card { fill: var(--card); }
 .cm-tail-line { fill: none; stroke: var(--balloon-ink); stroke-width: var(--balloon-line); stroke-linecap: round; stroke-linejoin: round; }
 /* A DRAWING AND WORDS: THE DRAWING'S OWN BALLOON, LINKED (the owner's pick,
    "I like the linked look"): under the words' balloon, 13px down, the drawing
-   on 7px of the card inside its own line, 18px round, and a neck 18px wide
+   on 7px of the card inside its own line, 24px round (18 until the owner's C), and a neck 18px wide
    joining the two, 22px in from their left, as a comic joins two balloons one
    person says. The drawing keeps its size and its glide (above: no taller
    than the post's drawing until it plays, then its room), and its balloon is
@@ -2669,7 +2674,7 @@ a.post-face { text-decoration: none; }
    least wide enough for the neck to land on its straight foot. */
 .cm-main > .cm-art {
   position: relative; box-sizing: content-box; max-width: calc(100% - 17px); margin: 13px 0 3px; padding: 7px;
-  border-radius: 18px; background: var(--card); box-shadow: 0 0 0 var(--balloon-line) var(--balloon-ink); --radius: 10px;
+  border-radius: 24px; background: var(--card); box-shadow: 0 0 0 var(--balloon-line) var(--balloon-ink); --radius: 10px;
 }
 .cm-main:has(> .cm-art) > .cm-bubble { min-width: 76px; }
 .cm-main > .cm-art::before, .cm-main > .cm-art::after {
@@ -2687,8 +2692,22 @@ a.post-face { text-decoration: none; }
    tail and the neck step aside rather than show as gaps. */
 @media (forced-colors: active) {
   .cm-bubble, .cm-main > .cm-art { outline: 1.5px solid CanvasText; }
-  .cm-tail, .cm-main > .cm-art::before, .cm-main > .cm-art::after { display: none; }
+  .cm-tail, .cm-main > .cm-art::before, .cm-main > .cm-art::after, .cm-hand { display: none; }
 }
+/* THE BALLOON, DRAWN BY HAND (the owner's "I like C. It looks imperfect like
+   I want", Nov 28, to the Speech Bubbles mock): once comments.js has drawn a
+   comment's balloon (.is-hand), its one line is the SVG behind the comment
+   (.cm-hand): the balloon, its tail and, for a drawing with words, the neck
+   and the drawing's own balloon, each side wavering a little, never
+   ruler-straight, the line 2px of the balloon's ink, the inside the card.
+   The CSS line, the tail and the neck step aside for it; the comment's own
+   parts stay where they were, so nothing moves when it is drawn. */
+.cm-main.is-hand { position: relative; isolation: isolate; }
+.cm-main.is-hand > .cm-bubble, .cm-main.is-hand > .cm-art { background: transparent; box-shadow: none; }
+.cm-main.is-hand .cm-tail, .cm-main.is-hand > .cm-art::before, .cm-main.is-hand > .cm-art::after { display: none; }
+.cm-hand { position: absolute; left: 0; top: 0; z-index: -1; overflow: visible; pointer-events: none; }
+.cm-hand-card { fill: var(--card); }
+.cm-hand-line { fill: none; stroke: var(--balloon-ink); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; }
 /* A FACE NOT DRAWN YET shows its initial on the site's disc, the letter in
    the small violet words' ink (6.5:1 light, 6.9:1 dark). */
 .face-blank.has-initial { background: var(--tint); color: var(--accent-ink); font-size: 16px; font-weight: 700; line-height: 1; }
@@ -2703,7 +2722,7 @@ a.post-face { text-decoration: none; }
    so the landing's glow keeps each comment's own ::before. */
 .cm:has(> .cm-chain) > .cm-main, .cm-chain > .cm:not(:last-child) > .cm-main { position: relative; }
 .cm:has(> .cm-chain) > .cm-main::before, .cm-chain > .cm:not(:last-child) > .cm-main::before {
-  content: ""; position: absolute; left: -31px; top: 40px; bottom: 0; border-left: 2px solid var(--card-edge);
+  content: ""; position: absolute; left: -39px; top: 40px; bottom: 0; border-left: 2px solid var(--card-edge);
 }
 .cm-chain > .cm > :is(.face-ring, .cm-gone-face), .cm-fold-ic { position: relative; }
 .cm-chain > .cm > :is(.face-ring, .cm-gone-face)::before {
