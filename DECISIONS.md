@@ -55032,3 +55032,80 @@ docs/COLOR-TOKENS.md made again; START-HERE's invariant names the new
 value. The next fully green run on main closes #1130.
 
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site.
+
+## After v330 -- Comments as drawn balloons, a drawing linked under its words (the owner's "All yes (my row)")
+
+The owner, Nov 27 (Mountain Time): "Comments doesn't look very good. What
+could we do?" Mocked three quiet ways (A, B, C), then "Not sure what looks
+best. Let's try something else. What looks artistic but organized and
+clear": Comments, Drawn (https://claude.ai/artifact/Cfbq7jru7F8R66Tcyp77FG),
+D a speech balloon drawn in ink round each comment, E captions, F a pen
+thread; Cal's pick D. "The drawn balloons looks cool but with image needs to
+look more connected. It seems kinda separate now. Mock some alternatives":
+Balloons, Connected (https://claude.ai/artifact/1WbYpAdHajckp6wEgPxTiC), the
+drawing inside the balloon (G), in a balloon of its own linked by a neck
+(H), tucked behind it (I). "I like the linked look. What will that affect?"
+Cal read the record first: the mocks' quieter row under a comment would take
+back three of the owner's choices (Repost in the row and icons alone on a
+phone, Nov 17; the count by the talk cloud, Nov 18), and a drawing with no
+words has nothing to link to. Linked Balloons
+(https://claude.ai/artifact/Lsz19uWdrG6rhiwMJgy5Up) showed it as it would be
+built, the owner's row beside the quiet one, and a drawing alone as one
+balloon. The owner: "All yes (my row)".
+
+WHAT CHANGED (social.css, THE BALLOON; _comments.html, comment and art_box):
+- Every comment's bubble is a balloon drawn in ink: the card, a line of
+  --balloon-ink (the mock's ink as it looked on the card, made solid: 7.6:1
+  on the light page, 7.3:1 on the dark one), no lift, and a tail at the face
+  (its tip 21px down): the card over the line where it leaves, and the
+  ink's two strokes, each a mask of one drawing over the theme's colour. The
+  line lies outside the box where the edge was, so nothing in it moved.
+- THE LINE IN WHOLE SCREEN PIXELS (--balloon-line; the tiles' rule of Nov
+  26, read before building): the mock's 1.5px rounded to the screen's own
+  pixels at each density, a tie the heavier: two at 1x to 1.5x, three at
+  1.75x to 2.25x, four from 2.5x, five at 3x. Drawn 1.5px at Windows' 125%
+  and 150% it would have been the soft line the owner sent back on Nov 26.
+- A drawing with words is two balloons, linked: the drawing in its own,
+  13px under the words', on 7px of the card, 18px round, and a neck 18px
+  wide, 22px in, its strokes curving into both lines. The drawing keeps Nov
+  19's sizes (no taller than the post's drawing until it plays, then its
+  room) and its 0.3s glide, and its balloon is it and its 7px, so the
+  balloon grows with it. It keeps its own one-pixel edge (in a card, the
+  edge alone); the mock had none.
+- A drawing with no words sits in the one balloon under the name (.is-pic),
+  on the same 7px.
+- The row under each comment is the owner's, as it was.
+- Windows' High Contrast draws each balloon as an outline in the mode's ink
+  and puts the tail and the neck aside.
+
+WHAT DID NOT: the comment you opened on its own page (its band; "I don't
+want to make another bubble", Nov 18), a comment's card out in the world,
+the comment box, the answer bar, Pad and Flip (comments are the site's),
+Letters and posts. The drawings are their real sizes, not the mock's 230px.
+
+THE CHECKS. verify_socialcomments: 38's look reads the balloon's card, line
+and tail (its two layers shown, on the card's and the ink's colours, as
+masks), and a new row holds its line to whole screen pixels at seven
+densities; 15's at-rest row reads the drawing in its own balloon (its 7px
+each side, 13px under the words'); a new row reads every frame of its glide
+(the balloon 14px wider than the drawing, the neck's 13px held); a new row
+reads the neck and the tail off a screenshot, a phone at 3 to 1 and a desk
+at 2 to 1, light and dark (a stroke found within a screen pixel of its
+place: a 4.5-pixel line read a pixel low landed on its soft edge, the first
+run's one red); 45 reads a drawing alone in the one balloon and one with
+words linked, in every list. verify_socialposts 23: a balloon is its drawn
+line alone; a drawing in a balloon its edge alone.
+
+SHOWN RED, one part broken at a time in throwaway copies (sections 15, 38
+and 45 of verify_socialcomments; 19/19 green as built): the neck gone, 10/11
+(the paint row, on the neck's points alone); the drawing 16px down, 8/11 (at
+rest, every frame, the paint); the tail gone, 15/16 (the paint), and 4/5 in
+38 once the look row asked that the tail is shown (it read the tail's
+colours and not whether it showed: fixed); the drawing short of its
+balloon, 7/11 (at rest, the glide, every frame, the desk); the old template,
+the drawing in the words' balloon, 10/14 (at rest, every frame, the paint,
+45); the line 1.5px at every density, 4/5 (the density row).
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: a comment's balloon has a dark ink outline and a little
+tail pointing at the face.
