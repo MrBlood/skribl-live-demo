@@ -1615,10 +1615,12 @@ HAND_GLIDE = """async ([id, most]) => { const li = document.getElementById('c-' 
 # With no script: the CSS balloon, its line, its corner and its still tail, its
 # point (the drawing's -17.5, 18 in the balloon's own measure) against the face.
 HAND_NONE = """(id) => { const li = document.getElementById('c-' + id), bub = li.querySelector(':scope > .cm-main > .cm-bubble');
-  const t = bub.querySelector(':scope > svg.cm-tail'), f = li.querySelector(':scope > .face-ring').getBoundingClientRect(), r = t.getBoundingClientRect();
-  const k = r.width / 22, cs = getComputedStyle(bub);
+  const t = bub.querySelector(':scope > svg.cm-tail'), f = li.querySelector(':scope > .face-ring').getBoundingClientRect(), cs = getComputedStyle(bub);
+  const l = t.querySelector('.cm-tail-line'), L = l.getTotalLength(), ctm = l.getScreenCTM(); let tip = null;
+  for (let i = 0; i <= 400; i++) { const q = l.getPointAtLength(L * i / 400); if (!tip || q.x < tip.x) tip = q; }
+  const sx = ctm.a * tip.x + ctm.c * tip.y + ctm.e, sy = ctm.b * tip.x + ctm.d * tip.y + ctm.f;
   return { drawn: !!li.querySelector('svg.cm-hand'), ring: cs.boxShadow, corner: cs.borderTopLeftRadius, tail: getComputedStyle(t).display,
-           tipY: Math.round((r.top + 18 * k - (f.top + f.height / 2)) * 100) / 100, tipGap: Math.round((r.left + 2.5 * k - f.right) * 100) / 100,
+           tipY: Math.round((sy - (f.top + f.height / 2)) * 100) / 100, tipGap: Math.round((sx - f.right) * 100) / 100,
            room: Math.round((bub.getBoundingClientRect().left - f.right) * 100) / 100 }; }"""
 
 # The count by each talk cloud, for each of `ids`: what it says, Reply's name,
@@ -4776,10 +4778,14 @@ with sync_playwright() as p:
                 dens38[d] = dpg38.evaluate("""(id) => { const b = document.querySelector('#c-' + id + ' > .cm-main > .cm-bubble'); if (!b) return null;
                   const sh = getComputedStyle(b).boxShadow, px = (sh.match(/-?[\\d.]+px/g) || []).map(parseFloat);
                   const t = b.querySelector(':scope > svg.cm-tail'), l = t && t.querySelector('.cm-tail-line'), br = b.getBoundingClientRect();
-                  const tr = t ? t.getBoundingClientRect() : null, at = (y) => tr ? Math.round((tr.top - br.top + y * tr.height / 26) * 100) / 100 : null;
+                  // The tail's ends and its point, read off its own path and put on the screen (a box is not a paint).
+                  const scr = (q) => { const c = l.getScreenCTM(); return [c.a * q.x + c.c * q.y + c.e, c.b * q.x + c.d * q.y + c.f]; };
+                  const L = l ? l.getTotalLength() : 0, ends = l ? [scr(l.getPointAtLength(L)), scr(l.getPointAtLength(0))] : null;
+                  let tipq = null; for (let i = 0; l && i <= 400; i++) { const q = l.getPointAtLength(L * i / 400); if (!tipq || q.x < tipq.x) tipq = q; }
+                  const y = (p) => p ? Math.round((p[1] - br.top) * 100) / 100 : null;
                   return { layers: sh.split(/,(?![^(]*\\))/).length, w: px.length >= 4 ? px[3] : null, dpr: devicePixelRatio,
                            tail: l ? parseFloat(getComputedStyle(l).strokeWidth) : null, corner: parseFloat(getComputedStyle(b).borderTopLeftRadius),
-                           joins: [at(13), at(25)], tip: at(18), h: Math.round(br.height) }; }""", e38)
+                           joins: ends ? [y(ends[0]), y(ends[1])] : [null, null], tip: tipq ? y(scr(tipq)) : null, h: Math.round(br.height) }; }""", e38)
                 close_ctx(dctx38, dpg38)
 
             def whole38(v):
