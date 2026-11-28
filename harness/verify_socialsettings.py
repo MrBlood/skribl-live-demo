@@ -1824,17 +1824,24 @@ with sync_playwright() as p:
               const root = getComputedStyle(document.documentElement);
               const tok = (n) => { const p = document.createElement('i'); p.style.color = 'var(' + n + ')'; document.body.appendChild(p); const c = getComputedStyle(p).color; p.remove(); return rgba(c); };
               const card = document.querySelector('.post-card'), sub = card && card.querySelector('.post-sub');
-              const cardBg = card ? rgba(getComputedStyle(card).backgroundColor) : [255, 255, 255, 1];
               const page = rgba(getComputedStyle(document.body).backgroundColor);
+              // WHAT IS PAINTED BEHIND THE WORDS: since Sheets everywhere (#1144) a post on Home has no ground of its
+              // own and its words sit on the page; read on the card's ground only where one is painted. (Read as the
+              // card's colour regardless, a see-through ground was taken for black: 2.04:1, main red after #1144.)
+              const own = card ? rgba(getComputedStyle(card).backgroundColor) : [0, 0, 0, 0];
+              const cardBg = own[3] > 0 ? over(own, page).concat(1) : page;
               const words = sub ? over(rgba(getComputedStyle(sub).color), cardBg) : null;
-              const edge = over(tok('--card-edge'), cardBg);
+              // A CARD'S EDGE on the card the site still draws (Settings' panels: --card, --card-edge), and that card
+              // on the page.
+              const panel = over(tok('--card'), page).concat(1);
+              const edge = over(tok('--card-edge'), panel);
               // A TILE'S LAVENDER EDGE (enamel tiles, Nov 26), over the tile it is drawn inside.
               const tile = tok('--row-band'), tedge = over(tok('--tile-edge'), tile);
               // ITS EDGE UNDER A MOUSE (the tile hover, Nov 26): the site's hover line, and with the setting the accent.
               const thover = over(tok('--tile-hover'), tile);
               return { theme: document.documentElement.getAttribute('data-theme'), scheme: root.colorScheme,
                        ink2: hex(over(tok('--ink-2'), page)), words: words ? hex(words) : null, wordsOnCard: words ? cr(words, cardBg.slice(0, 3)) : null,
-                       edge: hex(edge), edgeOnCard: cr(edge, cardBg.slice(0, 3)), edgeOnPage: cr(edge, page.slice(0, 3)),
+                       edge: hex(edge), edgeOnCard: cr(edge, panel.slice(0, 3)), edgeOnPage: cr(edge, page.slice(0, 3)),
                        tileEdge: hex(tedge), tileEdgeOnTile: cr(tedge, tile.slice(0, 3)),
                        tileHoverOnTile: cr(thover, tile.slice(0, 3)), hoverIsBtn2: tok('--tile-hover').join() === tok('--btn2-line').join(),
                        rule: tok('--rule')[3], rowLine: tok('--row-line')[3], navLine: tok('--nav-line')[3], cardLine: tok('--card-line')[3] }; }"""
