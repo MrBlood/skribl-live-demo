@@ -71,17 +71,16 @@
   /* A COMMENT'S BALLOON (the owner's "All yes (my row)", Nov 27): its drawn line, the mock's ink as it
      looked on the card (the ink at 78%), made solid. 7.6:1 on the page, 8.2:1 on the card. */
   --balloon-ink: color-mix(in srgb, rgb(31 27 46) 78%, var(--card));
-  /* A quote's small card inside a post's card (the owner's "d2 is good",
-     Nov 16): a well, a clear lilac and no line, so the change of colour is
-     its edge and it sits in the card. No dinge (Nov 16): it was the page's
-     grey with 6% of the lilac, which read as grey (chroma 0.015); now a
-     chosen lilac, the same depth (1.16:1 on its card), a deep violet in dark. */
-  --quote-well: #f0ecff;
   /* THE SAME WELL ON THE PAGE (the owner's "I like a", Nov 28, to One Quote
      Look): a quote on its post's own page, where no card is round it, is the
      well too, its lilac one step from the page as the well is from its card
-     (1.15:1 on #f7f5fa), a clear violet in dark (1.15:1 on #0f1218). */
+     (1.15:1 on #f7f5fa), a clear violet in dark (1.15:1 on #0f1218). SINCE
+     SHEETS (the same evening) no card is round a post anywhere: this is a
+     quote's one well (--quote-well, the well in a card, has gone). */
   --quote-page: #e8e3fb;
+  /* THE PEN LINE BETWEEN TWO POSTS (SHEETS): Skribl's violet, solid on the
+     page, 60% of it in light, 90% in dark, as the mock drew it. */
+  --sheet-line: color-mix(in srgb, rgb(124 92 255) 60%, var(--page));
   /* An initial's circle in a quote's well (the small face by the name, Nov
      28): the tint is the well's own lilac in light (1.02:1 on the page's
      well, the letter left floating), so in a well it is a deeper lilac, as
@@ -211,8 +210,8 @@
   --row-band: #171723;              /* obsidian (ENAMEL, above): 1.06:1 from the page */
   --row-band-sheet: #171723;
   --tile-edge: color-mix(in srgb, rgb(226 224 255) 10%, var(--row-band));
-  --quote-well: #16112b;            /* No dinge: violet, 1.15:1 on the card (it was #161626) */
   --quote-page: #201b3c;            /* the well on the page: a clear violet, 1.15:1 on it (Nov 28) */
+  --sheet-line: color-mix(in srgb, rgb(124 92 255) 90%, var(--page));
   --quote-face: var(--tint);
   --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
   --draw-lift: 0 0 0 transparent;
@@ -276,8 +275,8 @@
     --row-band: #171723;
     --row-band-sheet: #171723;
     --tile-edge: color-mix(in srgb, rgb(226 224 255) 10%, var(--row-band));
-    --quote-well: #16112b;
     --quote-page: #201b3c;
+    --sheet-line: color-mix(in srgb, rgb(124 92 255) 90%, var(--page));
     --quote-face: var(--tint);
     --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
     --draw-lift: 0 0 0 transparent;
@@ -1652,9 +1651,9 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    picture has had its ring alone since it was made):
    the card under it has the page's line already, and a second one inside it
    is the stack the owner called muddy. On the page itself (a post's own page,
-   How it works, the front door) and on a sheet's paper it keeps the one line,
-   as a card does. Dark has no line either way. */
-:is(.post-card, .cm-bubble, .cm-main > .cm-art, .composer) .skribl-inline { --draw-lift: 0 0 0 transparent; }
+   a feed's posts since SHEETS, How it works, the front door) and on a sheet's
+   paper it keeps the one line, as a card does. Dark has no line either way. */
+:is(.cm-bubble, .cm-main > .cm-art, .composer) .skribl-inline { --draw-lift: 0 0 0 transparent; }
 
 /* THE COMMENT BOX'S CARD (it was Home's box too, until Home's went: the
    owner's "All yes", Nov 14, Make being the way to post): your face beside
@@ -1808,12 +1807,32 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
   .cmp-sheet { width: 600px; max-width: calc(100vw - 48px); height: min(660px, calc(100vh - 64px)); }
 }
 
-/* THE FEED: a column of cards, the mock's. */
-.feed { display: flex; flex-direction: column; gap: 16px; }
-.post-card {
-  padding: 16px; border: 1px solid transparent; border-radius: 24px; background: var(--card);
-  box-shadow: 0 0 0 var(--edge) var(--card-edge), var(--card-drop);
+/* THE FEED: a column of posts. SHEETS, NOT CARDS (the owner, Nov 28: "Mock
+   sheets (without cards again) in all contexts", then "The sheets look right
+   plus it looks great with the hand drawn lines separators"): a post in a
+   feed (Home, a person's Posts, Likes and Bookmarks) sits on the page, as on
+   its own page, with no card round it; between two posts a pen line drawn
+   by hand, in Skribl's violet (--sheet-line), one of three wavers taken in
+   turn so two neighbours never match. Drawn with no script (a mask on the
+   next post's ::before), it is there however the posts came (Load more,
+   a person's tabs). Its 24px: 6 under a post, the line's 16, 2 over the next. */
+.feed { display: flex; flex-direction: column; gap: 24px; }
+.post-card { position: relative; padding: 14px 0 8px; }
+.feed > .post-card + .post-card::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -18px; height: 16px; pointer-events: none;
+  background: var(--sheet-line);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 16' preserveAspectRatio='none'%3E%3Cpath d='M4 9.2C70 7.4 132 10.6 206 8.8S332 7.2 396 9' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 16' preserveAspectRatio='none'%3E%3Cpath d='M4 9.2C70 7.4 132 10.6 206 8.8S332 7.2 396 9' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
 }
+.feed > .post-card:nth-child(3n + 2)::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 16' preserveAspectRatio='none'%3E%3Cpath d='M4 8.4C60 9.8 140 7.2 210 8.9S340 10.1 396 8.2' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+          mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 16' preserveAspectRatio='none'%3E%3Cpath d='M4 8.4C60 9.8 140 7.2 210 8.9S340 10.1 396 8.2' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.feed > .post-card:nth-child(3n)::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 16' preserveAspectRatio='none'%3E%3Cpath d='M4 9.6C80 8.1 150 9.9 220 8.3S330 9.4 396 8.7' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+          mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 16' preserveAspectRatio='none'%3E%3Cpath d='M4 9.6C80 8.1 150 9.9 220 8.3S330 9.4 396 8.7' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+@media (forced-colors: active) { .feed > .post-card + .post-card::before { forced-color-adjust: none; background: CanvasText; } }
 .post-head { display: flex; align-items: center; gap: 12px; }
 .post-face { display: block; flex: none; }
 .post-face .face-ring { --skribl-face-size: 44px; width: 44px; height: 44px; }
@@ -1903,7 +1922,7 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 }
 .post-on-who:focus-visible { outline: 2px solid var(--focus); outline-offset: -8px; border-radius: 10px; }
 .post-face.has-back { position: relative; }
-.post-face .db-face { position: absolute; right: -5px; bottom: -5px; border-radius: 50%; box-shadow: 0 0 0 2px var(--card); }
+.post-face .db-face { position: absolute; right: -5px; bottom: -5px; border-radius: 50%; box-shadow: 0 0 0 2px var(--page); }
 .post-face .db-face .face-ring { --skribl-face-size: 22px; width: 22px; height: 22px; }
 /* The small face's initial, when hers is not drawn yet: 11px in its 22px
    (24px on the page) disc, where the card's own face has 16 (and a page's
@@ -1996,21 +2015,22 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    15): on a post's own page it sat on the page's ground with only its line,
    which nearly vanished in dark. INSIDE A POST'S CARD, A WELL (the owner's
    "d2 is good", Nov 16): there it was the card's colour on the card's colour
-   with only its line between, so on Home and a person's page it is
-   --quote-well, a clear lilac (No dinge: the page's ground touched with
-   lilac read as grey), and no line. AND ON ITS POST'S OWN PAGE TOO (the
+   with only its line between, so on Home and a person's page it was a
+   well, a clear lilac (No dinge: the page's ground touched with lilac read
+   as grey), and no line. AND ON ITS POST'S OWN PAGE TOO (the
    owner, Nov 28: "They are 2 diff looks for same post ... Shouldn't post
    page look the same as timeline?", then "I like a"): the same well, no
    line, its lilac one step from the page (--quote-page), as Home's is from
    its card. Make's preview of a quote, on the sheet's own paper, stays a
    card. A SMALL FACE BY THE NAME (the owner: "put a small user avatar next
    to the person being reposted too"): theirs, 22px, as a Gallery tile puts
-   one by a name. */
+   one by a name. SINCE SHEETS (the same evening) every post is on the page:
+   a quote in one is the page's well everywhere (--quote-page). */
 .qt-card {
   display: block; margin-top: 12px; padding: 12px; border: 1px solid transparent; border-radius: 18px;
   background: var(--card); color: inherit; text-decoration: none; box-shadow: 0 0 0 var(--edge) var(--card-edge);
 }
-.post-card .qt-card { position: relative; z-index: 1; background: var(--quote-well); box-shadow: none; }
+.post-card .qt-card { position: relative; z-index: 1; background: var(--quote-page); box-shadow: none; }
 .post-page > .qt-card { background: var(--quote-page); box-shadow: none; }
 .qt-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .qt-head { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; line-height: 1.3; }

@@ -133,6 +133,13 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      a reposted line's words there too, its arrows just before them; the
      row spread across the column; a post's own page keeps its full width.
      Phone and desk.
+ 25. SHEETS, NOT CARDS (the owner's "The sheets look right plus it looks
+     great with the hand drawn lines separators", Nov 28): a post in a feed
+     has no card round it (no ground, edge, shadow or corner); between two
+     posts a pen line drawn by hand in Skribl's violet, across the post's
+     width, never ruler-straight, each neighbour's waver its own, read off
+     the paint; a drawing on a sheet dressed as on its post's own page.
+     Phone and desk, light and dark.
 
 SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
@@ -5131,6 +5138,95 @@ print("PLAN " + json.dumps(out))
                   json.dumps(page24))
         except Exception as exc:  # noqa: BLE001
             check("section 24 ran to its end", False, str(exc).splitlines()[0][:200])
+
+    if part(25, "sheets: no card round a post in a feed; a pen line drawn by hand between two posts"):
+        # SHEETS, NOT CARDS (the owner, Nov 28: "Mock sheets (without cards again) in all contexts", then "The
+        # sheets look right plus it looks great with the hand drawn lines separators"). Three posts, the newest on
+        # Home's Everyone for somebody who follows nobody: each read where it is painted.
+        try:
+            sa = someone(b, "sheeta", "Sasha Sheet")
+            sbb = someone(b, "sheetb", "Sol Sheet")
+            sv = someone(b, "sheetv", "Vee Sheet")
+            got25 = [make_post(w, f"Section 25, post {i}", seed=250 + i, card=True) for i, w in enumerate((sa, sbb, sa))]
+            ids25 = [j.get("post") if st == 200 and isinstance(j, dict) else None for st, j in got25][::-1]   # newest first
+            SHEET = r"""(ids) => { const cards = ids.map(i => document.querySelector('.feed > .post-card[data-post="' + i + '"]'));
+              if (cards.some(c => !c)) return null;
+              const probe = document.createElement('i'); probe.style.cssText = 'position:fixed;left:-9px;top:0;width:1px;height:1px;background:var(--sheet-line)';
+              document.body.appendChild(probe); const line = getComputedStyle(probe).backgroundColor; probe.remove();
+              return { line, cards: cards.map((c, n) => { const cs = getComputedStyle(c), b = getComputedStyle(c, '::before'), r = c.getBoundingClientRect();
+                return { ground: cs.backgroundColor, shadow: cs.boxShadow, radius: cs.borderTopLeftRadius, border: cs.borderTopWidth,
+                         before: b.content, h: b.height, mask: (((b.maskImage || b.webkitMaskImage || '').match(/d='([^']*)'/) || [])[1] || ''),
+                         box: [r.left, r.top + scrollY, r.right, r.bottom + scrollY],
+                         lift: (c.querySelector('.post-art .skribl-inline') ? getComputedStyle(c.querySelector('.post-art .skribl-inline')).boxShadow : null) }; }) }; }"""
+
+            def rgb3(s_):
+                m_ = [float(x) for x in re.findall(r"[\d.]+", s_ or "")]
+                if (s_ or "").startswith("color(srgb"):
+                    return tuple(round(x * 255) for x in m_[:3])
+                return tuple(round(x) for x in m_[:3])
+
+            def line_paint(pg_, prev_box, box, ink):
+                """The pen line between two posts off the paint: for every CSS px across the post's width, the
+                middle of what is painted in the line's colour in the room between them (None where nothing)."""
+                k_ = 3 if pg_.viewport_size["width"] < 500 else 2
+                top_, bottom_ = prev_box[3], box[1]
+                pg_.evaluate("(y) => window.scrollTo(0, Math.max(0, y - 200))", top_)
+                pg_.wait_for_timeout(250)
+                sy = pg_.evaluate("() => scrollY")
+                im_ = Image.open(io.BytesIO(pg_.screenshot(clip={"x": box[0], "y": top_ - sy, "width": box[2] - box[0],
+                                                                 "height": bottom_ - top_}, scale="device"))).convert("RGB")
+                px_ = im_.load()
+                mids = []
+                for x in range(0, im_.width, k_):
+                    ys = [y for y in range(im_.height) if max(abs(a - c) for a, c in zip(px_[x, y], ink)) <= 34]
+                    mids.append(sum(ys) / len(ys) / k_ if ys else None)
+                return mids
+            sheet25, paint25, page25 = {}, {}, {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    tag = f"{screen} {scheme}"
+                    ctx, pg = browser_as(b, sv, screen=screen, scheme=scheme, scale=3 if screen == "phone" else 2)
+                    pg.goto(BASE + "/social/")
+                    pg.wait_for_timeout(900)
+                    sh = pg.evaluate(SHEET, ids25)
+                    sheet25[tag] = sh
+                    if sh:
+                        ink = rgb3(sh["line"])
+                        paint25[tag] = [line_paint(pg, sh["cards"][i - 1]["box"], sh["cards"][i]["box"], ink) for i in (1, 2)]
+                    pg.goto(BASE + f"/social/p/{ids25[0]}")
+                    pg.wait_for_timeout(900)
+                    page25[tag] = pg.evaluate("() => { const e = document.querySelector('.post-page .post-art .skribl-inline'); return e ? getComputedStyle(e).boxShadow : null; }")
+                    close_ctx(ctx, pg)
+
+            def bare(c_):
+                return (c_["ground"] in ("rgba(0, 0, 0, 0)", "transparent") and c_["shadow"] == "none"
+                        and c_["radius"] == "0px" and c_["border"] == "0px")
+
+            def drawn(mids):
+                seen_ = [m_ for m_ in mids if m_ is not None]
+                return len(mids) > 20 and len(seen_) >= 0.9 * len(mids) and (max(seen_) - min(seen_)) >= 0.5
+            check("sheets, not cards (the owner, Nov 28: \"The sheets look right\"): a post in a feed has no card round"
+                  " it, no ground, edge, shadow or corner, phone and desk, light and dark",
+                  len(sheet25) == 4 and all(v and all(bare(c_) for c_ in v["cards"]) for v in sheet25.values()),
+                  json.dumps({k: v and [{x: c_[x] for x in ("ground", "shadow", "radius", "border")} for c_ in v["cards"]]
+                              for k, v in sheet25.items()})[:700])
+            check("...and between two posts a pen line drawn by hand (\"it looks great with the hand drawn lines"
+                  " separators\"): in Skribl's violet (--sheet-line), across the post's width, never ruler-straight"
+                  " (half a pixel or more of waver), each neighbour's waver its own; none over the first post; read off"
+                  " the paint, phone and desk, light and dark",
+                  len(paint25) == 4 and all(
+                      sheet25[k]["cards"][0]["before"] in ("none", "normal") and sheet25[k]["cards"][1]["before"] == '""'
+                      and sheet25[k]["cards"][1]["mask"] != sheet25[k]["cards"][2]["mask"]
+                      and all(drawn(m_) for m_ in v)
+                      and max(abs(a - c) for a, c in zip(v[0], v[1]) if a is not None and c is not None) >= 0.3
+                      for k, v in paint25.items()),
+                  json.dumps({k: [[round(x, 2) for x in m_ if x is not None][:12] for m_ in v] for k, v in paint25.items()})[:900])
+            check("...a drawing on a sheet dressed as on its post's own page: its edge and, in light, its one line of"
+                  " shade (a card's drawing had its edge alone)",
+                  len(page25) == 4 and all(sheet25[k] and sheet25[k]["cards"][0]["lift"] == page25[k] and page25[k] for k in page25),
+                  json.dumps({k: [sheet25[k] and sheet25[k]["cards"][0]["lift"], page25[k]] for k in page25})[:600])
+        except Exception as exc:  # noqa: BLE001
+            check("section 25 ran to its end", False, str(exc).splitlines()[0][:200])
 
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):
