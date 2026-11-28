@@ -1717,7 +1717,12 @@ with app.app_context():
               const rgb = s => s.match(/[\d.]+/g).slice(0, 3).map(Number);
               const lum = c => { const v = c.map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                                  return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
-              let g = a, bg = 'rgba(0, 0, 0, 0)'; while (g && (bg = getComputedStyle(g).backgroundColor) && /rgba\(.*, 0\)$/.test(bg)) g = g.parentElement;
+              let g = a, bg = 'rgba(0, 0, 0, 0)';
+              while (g && (bg = getComputedStyle(g).backgroundColor) && /rgba\(.*, 0\)$/.test(bg)) {
+                // A BALLOON DRAWN BY HAND (the owner's C, Nov 28): its ground is the card drawn behind it.
+                const hc = g.matches && g.matches('.cm-main.is-hand > .cm-bubble') && g.parentElement.querySelector(':scope > svg.cm-hand .cm-hand-card');
+                if (hc) { bg = getComputedStyle(hc).fill; break; }
+                g = g.parentElement; }
               const x = lum(rgb(getComputedStyle(a).color)), y = lum(rgb(bg));
               return Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100; }"""
             paints, calcs, lows, smalls, inline, reads, fields = {}, {}, [], [], [], {}, []

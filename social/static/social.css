@@ -3462,7 +3462,8 @@ button.fo-n {
 @media (min-width: 900px) { .mu-line { justify-content: flex-start; } }
 
 /* A COMMENT FOLDED AWAY: where it was, one quiet line, the eye where the face
-   would be, in Activity's own voice, and Show. The whole line is the button
+   would be (its words the tail's 20px from it, where the balloons start since
+   the owner's C), in Activity's own voice, and Show. The whole line is the button
    (56px at least); its words wrap if a column is narrow, and the line grows
    with them (comments.js measures it: --cm-fold-h). The comment's own parts
    wait under it, hidden for real (no tap and no screen reader reaches its
@@ -3474,7 +3475,7 @@ button.fo-n {
 /* Its room is the line's: a comment's 12px above and its own height under it. */
 .cm.is-quiet > .cm-main { height: calc(var(--cm-fold-h, 56px) - 12px); overflow: hidden; }
 .cm-fold-line {
-  position: absolute; z-index: 1; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 12px;
+  position: absolute; z-index: 1; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 20px;
   min-height: 56px; margin: 0; padding: 6px 0; border: 0; background: none; color: var(--ink-2);
   font: 400 15px/1.35 var(--font); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }

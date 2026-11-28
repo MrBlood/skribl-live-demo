@@ -5329,12 +5329,12 @@ with sync_playwright() as p:
                         got += cpg.evaluate(ARTS, [one])
                     seen[(screen, scheme)] = got
                     close_ctx(cctx, cpg)
-            want = {"phone": [294, 294, 294], "desk": [264, 264, 264]}
+            want = {"phone": [286, 286, 286], "desk": [256, 256, 256]}   # 294 and 264 until the tail's 20px (Nov 28)
             widths = {" ".join(k): [a["w"] for a in v] for k, v in seen.items()}
             wheres = {" ".join(k): [a["where"] for a in v] for k, v in seen.items()}
             check("a drawn comment or reply (the owner's \"All yes (my row)\", Nov 27): a drawing alone sits in the one"
                   " balloon under its name, a drawing with words in its own balloon linked under the words'; the drawing as"
-                  " wide as its room (294px on a phone, 264 on a desk), the balloon that holds it the drawing and its 7px"
+                  " wide as its room (286px on a phone, 256 on a desk), the balloon that holds it the drawing and its 7px"
                   " each side, in every list (one level, everywhere: Dora's on the post's page, Aria's on Elio's"
                   " comment's, Elio's on Aria's); still until tapped, with its line",
                   all(widths[k] == want[k.split()[0]] for k in widths)
