@@ -4271,7 +4271,8 @@ end; B, more in the row; C, "See all" by the count), and the owner: "C".
   draw-backs on Mira’s drawing, newest first"; the strip's tiles in a grid,
   two across on a phone and four on a desk, each opening its own page;
   twenty-four at a time (`posts.ALL_BACKS`, the Gallery's page), then Load
-  more in place, the new tiles fading in.
+  more in place (`/social/p/<id>/draw-backs/more?before=`, the next tiles
+  and the next cursor), the new tiles fading in.
 - **The strip's rules, on the page too** (`posts.backs_on`, one query for
   both): nobody a block hides either way, nothing taken down. On her own
   post the ones she hid are there, faded, each with its eye, and the line

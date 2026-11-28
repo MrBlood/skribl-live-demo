@@ -1091,12 +1091,15 @@ check("docs/INTEGRATION.md documents it: `on_photo` beside `ground`, both column
                                                 "`ground IS NULL", "nothing breaks")),
       (_pgw[:160] or "no ground paragraph") + " | " + (_bgw[:120] or "no backfill paragraph"))
 _gal_tpl = (ROOT / "social" / "templates" / "social" / "_gallery.html").read_text(encoding="utf-8")
-_post_tpl = (ROOT / "social" / "templates" / "social" / "post.html").read_text(encoding="utf-8")
+# A draw-back's tile is _backs.html's since See all (Nov 27): the strip under a
+# post and the page of every draw-back draw the one tile (it was post.html's).
+_backs_tpl = (ROOT / "social" / "templates" / "social" / "_backs.html").read_text(encoding="utf-8")
 _fill_m = re.search(r"\{% macro plate_fill\(sk\) -%\}(.*?)\{%- endmacro %\}", _gal_tpl, re.S)
 check("the site's tiles take it from the seam: plate_fill asks Skribl's description (`sk.on_photo`), the Gallery's"
-      " tile and More from's call it, and no module of social/ reaches Skribl's rows itself",
+      " tile and a draw-back's tile (the strip's and See all's) call it, and no module of social/ reaches Skribl's"
+      " rows itself",
       bool(_fill_m) and "sk.on_photo" in _fill_m.group(1) and "{{ plate_fill(t.sk) }}" in _gal_tpl
-      and "{{ plate_fill(m.sk) }}" in _post_tpl and not any(v for v in _site_rows.values()),
+      and "{{ plate_fill(m.sk) }}" in _backs_tpl and not any(v for v in _site_rows.values()),
       (_fill_m.group(1)[:120] if _fill_m else "no plate_fill macro"))
 
 bad = [r for r in results if not r[0]]
