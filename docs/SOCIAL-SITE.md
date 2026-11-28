@@ -4326,3 +4326,45 @@ clearer look and line.
 Nothing else changes: no new page and no new buttons. Pad and Flip: not
 touched. `verify_socialdrawback` 6 holds it: a family five generations
 deep, and two through Lea, whom Theo blocked.
+
+## 55. Built: Replies as a tree, an option in Settings (Nov 28)
+
+The owner, Nov 27: "Once we finish this we should make comments have the
+option of having the tree (we had it at one point but it got complicated) we
+ran 2 deep I think." The tree of Nov 18 was tapped open: a tap on a comment
+opened its replies, "+" more, "Hide" folded them; with many replies it "gets
+weird", and the owner chose Bluesky's way, each conversation followed down
+in one column (section 18). The tree mock kept it simple and made it a
+choice; the owner, Nov 28: "All yes".
+
+- **A choice in Settings, kept with the account.** Under Theme, "Replies",
+  "How the replies under a comment show", and Theme's own switch: In a line,
+  where everyone starts, or As a tree (`Person.replies_view`, its migration
+  `c9e4a7b2f815`; `POST /social/you/replies`, its own limit, "replies-pick").
+  It holds on every device and changes only how you see replies. The pill
+  slides to a tap; if the choice does not take, it slides back and the line
+  under it says so (`you.js`). The signed-in person's snapshot carries it,
+  read once a request (`security._Snapshot`).
+- **The tree.** For whoever picked it, on a post's page and on a comment's
+  own page: under each comment every reply to it, oldest first, a step in
+  (the face's column and its gap, 48px), and every reply to those one more
+  step in; two steps at most. Where one two steps in still has replies
+  under it, "Read N more replies", the same link as In a line, to its own
+  page, where the tree starts again from its replies. Nothing to open or
+  fold. A place (a deleted reply with replies under it) and a muted reply
+  stand in the tree as they do in a line. (`comments._trees`, `as_tree`;
+  `_comments.html` `kids_of`.)
+- **The thread's line bends into each face.** The same 2px of the card's
+  edge: down from a face with replies under it, on past each reply but the
+  last, and into each reply's face, round 14px, meeting its middle 2px short
+  of it; into a muted one's eye, and into the circled plus of Read more.
+  Each piece is drawn from its own (a reply's face, its eye, the plus),
+  never from the comment, whose `::before` is the landing's glow.
+- **A reply lands in the tree.** Under the one it answers, last, glowing,
+  wherever that one shows its replies (the list says it is a tree,
+  `data-cm-tree`); two steps in, where the tree stops, its count takes it
+  and Read more says one more. Deleting the last reply under one takes its
+  step in with it.
+
+In a line is unchanged for everybody else. Pad and Flip: not touched;
+comments are the site's. `verify_socialcomments` 51 holds it.

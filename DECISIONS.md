@@ -55404,3 +55404,83 @@ stops short of her eye now).
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: open a draw-back of a draw-back; under the name, "Drew back
 on Theo’s · started with Mira’s".
+
+## After v330 -- Replies as a tree, an option in Settings (the owner's "All yes")
+
+The owner, Nov 27, as See all and S were going in: "Once we finish this we
+should make comments have the option of having the tree (we had it at one
+point but it got complicated) we ran 2 deep I think." The tree of Nov 18 was
+tapped open (a tap on a comment opened its replies, "+" more, "Hide" folded
+them) and with many replies "the tree thing gets weird", so the owner chose
+Bluesky's way, each conversation followed down in one column. The tree mock
+(https://claude.ai/artifact/1odLXaPoH9PPv4GjrS5Tvf; a busy thread on Mira's
+cat) kept the tree simple, nothing to tap open or fold, and made it a
+choice in Settings, In a line where everyone starts. Cal's pick: the option
+in Settings, since a switch on every post puts one more control under every
+drawing and most people never change it. The owner, Nov 28: "All yes".
+
+WHAT CHANGED:
+- SETTINGS' REPLIES (you.html, you.js; accounts.replies_pick): under Theme,
+  "Replies", "How the replies under a comment show", Theme's own switch, In
+  a line or As a tree. Kept with the account so it holds on every device
+  (Person.replies_view, migration c9e4a7b2f815; POST /social/you/replies,
+  its own limit, "replies-pick"), as Home's pill is. The pill slides to a
+  tap; if the choice doesn't take, it slides back and the line under it
+  says so. The signed-in person's snapshot carries it (security._Snapshot),
+  read once a request with the rest.
+- THE TREE (comments._trees, as_tree; _comments.html kids_of): for whoever
+  picked it, on a post's page and on a comment's own page, every reply
+  under the one it answers, oldest first, a step in (the face's column and
+  its gap, 48px), two steps at most, then "Read N more replies", the same
+  link as In a line, to that one's own page, where the tree starts again
+  from its replies. A place and a muted reply stand in it as they do in a
+  line. Everybody else, and anybody signed out, In a line.
+- THE LINE (social.css, THE TREE): the thread's own 2px of the card's edge,
+  down from a face with replies under it, on past each reply but the last,
+  and into each reply's face, bending round 14px to meet its middle 2px
+  short of it; into a muted one's eye and into the circled plus of Read
+  more. Each piece is drawn from its own (a reply's face, its eye, the
+  plus), never from the comment itself, whose ::before is the landing's
+  glow.
+- A REPLY LANDS IN THE TREE (comments.js treeLanding): under the one it
+  answers, last, glowing, wherever that one shows its replies; two steps
+  in, its count takes it and Read more says one more; the last reply under
+  one deleted takes its step in with it.
+
+Pad and Flip: not touched; comments are the site's.
+
+THE CHECKS (verify_socialcomments 51; a thread on Kip's lighthouse four
+replies deep, one reply muted, one comment with none): Settings' Replies
+and the route's refusals; the tree's shape at each step, phone and desk,
+light and dark; every piece of the line read off its computed style
+against the faces it joins, to a pixel; the words' room at each step; In a
+line for Kip and for nobody signed in; a comment's own page; replying at
+each depth and deleting. SHOWN RED, one part broken at a time in throwaway
+copies (10/10 as built):
+- nobody's choice the tree (as_tree always no): the tree, the room and a
+  comment's page (and replying could not go on, a red row);
+- three steps in, not two: the tree, a comment's page, two steps in;
+- newest first: the tree, a comment's page, replying, two steps in,
+  deleting;
+- no bend into a reply's face: the line;
+- the bend into a muted reply's eye 29px wide, as first built: the line
+  ("ends 10px short");
+- a line on past the last reply: the line;
+- the route keeping nothing: Settings, the route's row, the tree;
+- the snapshot without the choice: Settings, the tree;
+- comments.js with no landing in the tree: replying;
+- the count not finding Read more in the tree: two steps in;
+- a delete leaving its empty step in: deleting.
+
+FOUND ON THE WAY: the choice was kept but the page never saw it, since the
+signed-in person is a snapshot of a few fields and this was not one of
+them (seen at the first look, before any check); the comment's own
+::before is the landing's glow, so a bend drawn there would vanish from a
+reply opened from Activity; and the bend into a muted reply's eye stopped
+10px short (the eye is 20px in the face's 36), caught by the line's check
+and fixed.
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: Settings, Replies, As a tree; then a post with replies to
+replies shows each one stepping in under the one it answers, the line
+bending into each face.

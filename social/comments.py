@@ -59,6 +59,14 @@ and Report this comment; on anybody else's, Report this comment. A link to a
 comment lands where it shows (landing()): a comment on its post's or
 drawing's page, a reply on the page of what it answers.
 
+THE TREE, AN OPTION (the owner's "All yes", Nov 28, to the tree mock;
+docs/SOCIAL-SITE.md section 55): whoever picked "Replies: As a tree" in
+Settings (Person.replies_view; as_tree) sees, in place of each conversation
+followed down, every reply under the one it answers, oldest first, a step
+in, two steps at most, then "Read N more replies" to that one's own page
+(_trees), on a post's page and on a comment's own. Everybody else, and
+anybody signed out, In a line.
+
 WHO MAY COMMENT: somebody signed in who is not taken down, with no block
 either way with the author of the post or the drawing; an answer also with
 none with the author of the comment it answers. The route refuses anybody

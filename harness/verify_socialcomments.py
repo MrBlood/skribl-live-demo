@@ -5958,6 +5958,20 @@ with sync_playwright() as p:
                                              {"id": r6, "n": "1", "kids": [], "more": ("Read 1 more reply", r6), "quiet": True}]},
                 {"id": r2, "n": None, "kids": []}]}
 
+            def at(t, *ix):
+                """The reply at `ix` down the tree `t` (TREE_OF's), or None: a tree not as it should be is a red row,
+                never a stop."""
+                try:
+                    for i in ix:
+                        t = t["kids"][i]
+                    return t
+                except (IndexError, KeyError, TypeError):
+                    return None
+
+            def stepped(t):
+                a, b2 = at(t, 0), at(t, 0, 0)
+                return (a["x"] - t["x"], b2["x"] - t["x"], (b2["more"] or {}).get("h")) if t and a and b2 else None
+
             def shape(t):
                 return {"id": t["id"], "n": t["n"], "kids": [shape(k) for k in t["kids"]],
                         **({"more": (t["more"]["words"], t["more"]["href"].rsplit("/", 1)[-1])} if t["more"] else {}),
@@ -5982,10 +5996,9 @@ with sync_playwright() as p:
                   " each count by its talk cloud as In a line (7, 5, 2, 1); a step is 48px; the list says it is a"
                   " tree, with no conversation followed down: phone and desk, light and dark",
                   all(v["t1"]["tree"] and not v["t1"]["chain"] and shape(v["t1"]) == want
-                      and v["t1"]["kids"][0]["x"] - v["t1"]["x"] == 48 and v["t1"]["kids"][0]["kids"][0]["x"] - v["t1"]["x"] == 96
-                      and v["t1"]["kids"][0]["kids"][0]["more"]["h"] >= 44
+                      and (stepped(v["t1"]) or (0, 0, 0))[:2] == (48, 96) and ((stepped(v["t1"]) or (0, 0, 0))[2] or 0) >= 44
                       and v["t2"]["kids"] == [] and v["t2"]["more"] is None for v in seen.values()),
-                  f"{shape(one['t1'])}; steps {one['t1']['x']}, {one['t1']['kids'][0]['x']}, {one['t1']['kids'][0]['kids'][0]['x']}")
+                  f"{shape(one['t1'])}; steps and Read more's height {stepped(one['t1'])}")
             check("THE TREE'S LINE, 2px of --card-edge: down from each face with replies under it (and from the muted"
                   " one's eye), on past each reply but the last and never past it, and into each reply's face, the eye"
                   " and the circled plus, a bend round 14px that leaves the face above's column and meets the middle"
@@ -6046,16 +6059,17 @@ with sync_playwright() as p:
                   " under Kip's (its first, a step further in), under Olu's after Ines's and Wren's; every count on the"
                   " way says it; the line bends into each new face",
                   to_kip["id"] and to_kip["shown"] == to_kip["id"] and to_kip["landed"]
-                  and [k["id"] for k in after_kip["kids"][1]["kids"]] == [to_kip["id"]] and after_kip["n"] == "8"
+                  and [k["id"] for k in (at(after_kip, 1) or {}).get("kids", [])] == [to_kip["id"]] and after_kip["n"] == "8"
                   and to_olu["id"] and to_olu["shown"] == to_olu["id"]
-                  and [k["id"] for k in after_olu["kids"][0]["kids"]] == [r3, r6, to_olu["id"]] and after_olu["kids"][0]["n"] == "6"
-                  and grown["ok"], f"{to_kip}; {to_olu}; Ines's {after_kip['n']}; Kip's {after_kip['kids'][1]};"
-                  f" Olu's {after_olu['kids'][0]['n']} {[k['id'] for k in after_olu['kids'][0]['kids']]}; {grown}")
-            ines_now = after_ines["kids"][0]["kids"][0]
+                  and [k["id"] for k in (at(after_olu, 0) or {}).get("kids", [])] == [r3, r6, to_olu["id"]]
+                  and (at(after_olu, 0) or {}).get("n") == "6"
+                  and grown["ok"], f"{to_kip}; {to_olu}; Ines's {after_kip['n']}; Kip's {at(after_kip, 1)};"
+                  f" Olu's {[k['id'] for k in (at(after_olu, 0) or {}).get('kids', [])]}; {grown}")
+            ines_now = at(after_ines, 0, 0) or {}
             check("...two steps in, where the tree stops, a reply doesn't show: Ines's count takes it (3) and glows, and"
                   " its Read more says 3",
-                  to_ines["id"] and not to_ines["shown"] and to_ines["glow"] and ines_now["n"] == "3"
-                  and ines_now["more"] and ines_now["more"]["words"] == "Read 3 more replies",
+                  to_ines["id"] and not to_ines["shown"] and to_ines["glow"] and ines_now.get("n") == "3"
+                  and (ines_now.get("more") or {}).get("words") == "Read 3 more replies",
                   f"{to_ines}; Ines's {ines_now}")
             gone = pg.evaluate(DELETE_AND_WATCH, [to_kip["id"], "delete"])
             pg.wait_for_timeout(500)
@@ -6063,8 +6077,8 @@ with sync_playwright() as p:
             left_kids = pg.evaluate("(id) => !!document.querySelector('#c-' + id + ' > .cm-kids')", r2)
             check("deleting the only reply under Kip's: it goes, and its step in with it (no line left hanging); the"
                   " counts on the way say so",
-                  gone["gone"] and left["kids"][1]["kids"] == [] and not left_kids and left["n"] == "9",
-                  f"{gone}; Kip's {left['kids'][1]}; its list {left_kids}; Ines's {left['n']}")
+                  gone["gone"] and (at(left, 1) or {}).get("kids") == [] and not left_kids and left["n"] == "9",
+                  f"{gone}; Kip's {at(left, 1)}; its list {left_kids}; Ines's {left['n']}")
             pg.set_viewport_size({"width": 402, "height": 874})
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(51, exc)
