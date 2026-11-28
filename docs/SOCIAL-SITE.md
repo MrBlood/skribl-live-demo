@@ -4403,8 +4403,14 @@ columns", and of the faces, "Leave the avatars the size they are."
   everything under the head starts where the name does (`--post-col`: the
   face's 44 and the 12 beside it): the words, the drawing, a quote, a
   taken-down note, and the row, whose first icon stays on the words' line.
-  A reposted or pinned line keeps its mark over the face's middle; its words
-  start in the column too. A comment card's way to it was already there.
+  A comment card's way to it was already there.
+- **Two refinements, the owner's "Yes" the same day.** A reposted or pinned
+  line's mark sits just before its words, 6px from them, as Bluesky's does
+  (it was over the face's middle), its words in the column. And a card's row
+  spreads across the column, its parts at least 6px apart and the ⋯ at the
+  column's end, as Bluesky's row does: on an ordinary card that is where
+  14px apart put them, and three counts in the hundreds still fit their own
+  buttons in a phone's 300px (at 14px apart they ran 12px past them).
 - **Everywhere a card is:** Home, a person's page, Search, Bookmarks.
 - **A post's own page keeps its full width**, as Bluesky's own post page
   does.
