@@ -4391,3 +4391,32 @@ on the page, and this well is its one look, Home included.
 
 Pad and Flip: not touched; quotes are the site's. `verify_socialreposts` 11
 holds it, and 13's census holds the page's well to a clear lilac.
+
+## 57. Built: Bluesky's columns on every card (Nov 28)
+
+The owner, Nov 28, with a Bluesky quote post: "Should we indent also? Like
+Bluesky?" Indent the Quote? offered keeping the card as it was, B (the quote
+alone in to the name) and C (Bluesky's columns); the owner: "I like Bluesky
+columns", and of the faces, "Leave the avatars the size they are."
+
+- **Two columns on a card.** The face has a column of its own, and
+  everything under the head starts where the name does (`--post-col`: the
+  face's 44 and the 12 beside it): the words, the drawing, a quote, a
+  taken-down note, and the row, whose first icon stays on the words' line.
+  A comment card's way to it was already there.
+- **Two refinements, the owner's "Yes" the same day.** A reposted or pinned
+  line's mark sits just before its words, 6px from them, as Bluesky's does
+  (it was over the face's middle), its words in the column. And a card's row
+  spreads across the column, its parts at least 6px apart and the ⋯ at the
+  column's end, as Bluesky's row does: on an ordinary card that is where
+  14px apart put them, and three counts in the hundreds still fit their own
+  buttons in a phone's 300px (at 14px apart they ran 12px past them).
+- **Everywhere a card is:** Home, a person's page, Search, Bookmarks.
+- **A post's own page keeps its full width**, as Bluesky's own post page
+  does.
+- **The faces stay their size:** 44 on a card, 48 on a post's page, 22 in a
+  quote.
+
+On a phone a card's drawing is 280px wide where it was 336 (the column's
+56px); its height follows its own shape. Pad and Flip: not touched; cards
+are the site's. `verify_socialposts` 24 holds it.

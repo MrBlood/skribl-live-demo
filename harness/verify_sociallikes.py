@@ -7,7 +7,8 @@ authenticator for the site's people.
      line): in the row under the drawing, on Home's cards and on a post's page
      and a drawing's, after the comments and before the ⋯ (Share in it, and
      no Open › since Nov 19): 44px to a finger, a 20px pen heart in the comments' ink and
-     on their middle, 14px after them, nothing else moving (the time-and-plays
+     on their middle, 14px after them (on a card, since Bluesky's columns of
+     Nov 28, the row spread across the column, 6px or more), nothing else moving (the time-and-plays
      line as it was); empty until liked, named "Like"; no number at zero; the
      count everyone's, "1 like", "2 likes".
   2. A TAP LIKES, THE SAME TAP TAKES IT BACK: pressed and counted at once,
@@ -568,7 +569,9 @@ ROW = r"""(sel) => { const root = document.querySelector(sel); if (!root) return
   const name = e => e.classList.contains('db-pen') ? 'pen' : e.classList.contains('post-count') ? 'count' : e.classList.contains('lk-heart') ? 'heart'
     : e.classList.contains('rp-btn') ? 'repost' : e.classList.contains('post-share') ? 'share'
     : e.classList.contains('post-more') ? 'more' : e.classList.contains('post-open') ? 'open' : e.className;
-  const out = { kids: [...row.children].filter(e => e.getClientRects().length).map(name),
+  const shown = [...row.children].filter(e => e.getClientRects().length), last = shown[shown.length - 1];
+  const out = { kids: shown.map(name), card: root.classList.contains('post-card'),
+                spread: last ? rd(row.getBoundingClientRect().right - last.getBoundingClientRect().right) : null,
                 h: rd(row.getBoundingClientRect().height),
                 inLine: !!root.querySelector('.skribl-inline-line .lk-heart, .skribl-inline-lead'), heart: null };
   const heart = row.querySelector('.lk-heart'), count = row.querySelector('.post-count');
@@ -615,17 +618,22 @@ def placed(rw, kids=CARD_ROW):
     and the repost, before the ⋯ (no Open › since Nov 19); 44px to a finger
     with a 20px pen heart, in the comments' own ink and on their middle, 14px
     after the repost, on no ground of its own; a press lands on it at every
-    edge; none left on the drawing's line."""
+    edge; none left on the drawing's line. ON A CARD, in Bluesky's columns
+    (the owner's "Yes", Nov 28), the row spreads across the column: the heart
+    6px or more after the repost, the ⋯ at the row's end."""
     h = (rw or {}).get("heart") or {}
+    gap = (h.get("gap", 0) >= 5.4 and rw.get("spread") is not None and abs(rw["spread"]) < 0.6) if (rw or {}).get("card") \
+        else abs(h.get("gap", 0) - 14) < 0.6
     return (bool(rw) and rw["kids"] == kids and not rw["inLine"] and h.get("h") == 44 and h.get("w", 0) >= 44
-            and h.get("icon") == 20 and abs(h.get("gap", 0) - 14) < 0.6 and abs(h.get("mid", 0) - h.get("countMid", 99)) < 0.6
+            and h.get("icon") == 20 and gap and abs(h.get("mid", 0) - h.get("countMid", 99)) < 0.6
             and h.get("ink") == h.get("countInk") and h.get("ground") in ("rgba(0, 0, 0, 0)", "transparent")
             and all(h.get("hits") or [False]))
 
 
 def told(rw):
     h = (rw or {}).get("heart") or {}
-    return (f"row {rw and rw['kids']} (a heart on the line: {rw and rw['inLine']}); heart {h.get('w')}x{h.get('h')},"
+    return (f"row {rw and rw['kids']} (a heart on the line: {rw and rw['inLine']}; a card: {rw and rw.get('card')},"
+            f" {rw and rw.get('spread')}px left at its end); heart {h.get('w')}x{h.get('h')},"
             f" icon {h.get('icon')}, {h.get('gap')}px after the repost, middle {h.get('mid')} / {h.get('countMid')};"
             f" ink {h.get('ink')} / {h.get('countInk')}, ground {h.get('ground')}; lands {h.get('hits')}")
 
@@ -796,6 +804,14 @@ READ = r"""(sel) => {
     if (e.matches('input[type=radio]')) return;
     const r = e.getBoundingClientRect();
     if (r.bottom < 0 || r.top > innerHeight) return;
+    // A pill's option (Home's Following | Everyone: follows) is 36px to see and
+    // 44px to a finger, by its band: it counts when a press at its middle and
+    // 21px above and below lands on it (verify_socialposts' census, the same);
+    // one whose middle is scrolled off the screen is not in view. (Home's cards
+    // shorter in Bluesky's columns, Nov 28, this census's scroll left the pill's
+    // last 10px on the screen, where it had been scrolled past.)
+    if (e.matches('.fo-seg > button')) { const cy = r.top + r.height / 2; if (cy < 0 || cy > innerHeight) return;
+      const mid = r.left + r.width / 2, hit = d => { const x = document.elementFromPoint(mid, cy + d); return !!x && (x === e || e.contains(x)); }; if (r.width >= 44 && hit(0) && hit(-21) && hit(21)) return; }
     if (r.width < 44 || r.height < 44) out.small.push((e.className || e.tagName) + ' "' + (e.textContent || e.value || '').trim().slice(0, 20) + '" ' + Math.round(r.width) + 'x' + Math.round(r.height));
   });
   document.querySelectorAll('input[type=text], input:not([type]), input[type=search], textarea, select').forEach(e => {
@@ -1142,7 +1158,8 @@ with sync_playwright() as p:
             h = pg.evaluate(HEART, card(p1) + " .lk-heart")
             check("on Home's card the heart is in the row under the drawing, after the comments and the repost and before"
                   " the ⋯ (nothing after it): 44px to a finger, the pen's heart 20px, in the comments' own ink and on their"
-                  " middle, 14px after the repost, on no ground of its own, a press landing at every edge; none on the"
+                  " middle, 6px or more after the repost in a row spread across the column (Bluesky's columns, Nov 28;"
+                  " 14px on a post's page), on no ground of its own, a press landing at every edge; none on the"
                   " drawing's line",
                   placed(rw), told(rw))
             check("with nothing liked it stays empty and says so: not pressed, named 'Like', no number at zero; the"
@@ -2269,7 +2286,8 @@ with sync_playwright() as p:
                   not smalls and not fields, f"small {smalls[:4]}; fields {fields[:3]}")
             off = [f"{t} {w}: {told(rw)}" for t, w, rw, kids in sits if not placed(rw, kids)]
             check("the heart sits as built on every screen, light and dark, on Home's card and a post's page: in the row"
-                  " after the comments, their ink and middle, 44px to a finger where a press lands, 14px after them",
+                  " after the comments, their ink and middle, 44px to a finger where a press lands, 14px after them on"
+                  " a post's page, 6px or more in a card's row spread across the column",
                   len(sits) == 8 and not off, f"{len(sits)} read; off {off[:2]}")
             kinds = {m["what"] for _, _, m in marks}
             weak = [(t, w, m) for t, w, m in marks if m["k"] < (4.5 if m.get("word") else 3)]

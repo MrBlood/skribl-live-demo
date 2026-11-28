@@ -2579,15 +2579,16 @@ with sync_playwright() as p:
             # the icon alone, named Comment, the same way in, where the number goes.
             # (Since the reposts mock, Nov 14, the repost comes next, where the heart was.)
             check("Home's card says how many comments first in the row under the drawing (the comment icon and the"
-                  " number, \"3 comments\"), 14px before the repost and on its middle, a way to the post with its answer box"
+                  " number, \"3 comments\"), 6px or more before the repost (the row spread across its column since"
+                  " Bluesky's columns, Nov 28) and on its middle, a way to the post with its answer box"
                   " open (#say: the cloud answers, the owner's yes, Nov 21; it went to the comments), 44px; a post with"
                   " none shows the icon alone, no number, named \"Comment\", the same way in at the same place",
                   got is not None and got.get("label") == "3 comments" and got.get("text") == "3" and got.get("icon")
                   and got.get("first") and got.get("next")
-                  and got.get("href") == f"/social/p/{post}#say" and got.get("beside") == 14
+                  and got.get("href") == f"/social/p/{post}#say" and got.get("beside", 0) >= 6
                   and got.get("middle") and got.get("w", 0) >= 44 and got.get("h", 0) >= 44
                   and none.get("label") == "Comment" and none.get("text") == "" and none.get("icon")
-                  and none.get("href") == f"/social/p/{bare}#say" and none.get("beside") == got.get("beside")
+                  and none.get("href") == f"/social/p/{bare}#say" and none.get("beside", 0) >= 6
                   and none.get("middle") and none.get("w", 0) >= 44 and none.get("h", 0) >= 44,
                   f"{got}; with none {none}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop

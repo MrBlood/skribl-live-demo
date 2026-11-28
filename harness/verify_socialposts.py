@@ -127,6 +127,12 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      a swipe down; the card's colour in each row's margin and the paper
      between two cards, read off the screen; a key's ring drawn inside the
      row. Phone and desk, light and dark.
+ 24. BLUESKY'S COLUMNS (the owner's "I like Bluesky columns", Nov 28): on a
+     card the face has its own column, and the words, the drawing, a quote
+     and the row's first icon start where the name does, beyond the face;
+     a reposted line's words there too, its arrows just before them; the
+     row spread across the column; a post's own page keeps its full width.
+     Phone and desk.
 
 SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
@@ -1711,8 +1717,10 @@ with sync_playwright() as p:
               const g = document.createRange(); g.setStart(n, i); g.setEnd(n, i + needle.length); return g.getBoundingClientRect(); } }
             return null; };
           let xy;
-          if (what === 'ground') { const f = R('.post-row'), n = R('.post-row .post-more');
-            xy = [(n.right + f.right) / 2, f.top + f.height / 2]; }
+          // The card's own ground: since Bluesky's columns (Nov 28) the face's column under the face, at the
+          // row's middle (the row spread across its column leaves no open space past the ⋯).
+          if (what === 'ground') { const f = R('.post-row'), m = R('.post-head .post-face');
+            xy = [m.left + m.width / 2, f.top + f.height / 2]; }
           else if (what === 'words') xy = mid(text(c.querySelector('.post-words'), 'a card'));
           else if (what === 'drawing') xy = mid(R('.post-art .skribl-inline'));
           else if (what === 'under the time') { const t = R('.post-when'), a = R('.post-art .skribl-inline');
@@ -1844,9 +1852,10 @@ with sync_playwright() as p:
         ok_open = all(r.get("ground") == ("card", page) and r.get("words", (None, None))[1] == page
                       and r.get("count", (None, None))[1] in (page, page + "#say") for r in res.values())
         # NO OPEN › (the owner's "completely remove open", Nov 19): the card's
-        # own ground is the door, so the row's open space past the ⋯ is ground.
-        check("a tap anywhere on a card's own ground (here in the row's open space past the ⋯, where Open › was"
-              " until Nov 19 and no finger is snapped to a button) opens its page, as a tap on its words does;"
+        # own ground is the door; since Bluesky's columns (Nov 28) the face's
+        # column under the face is ground (the row spreads to the ⋯ at its end).
+        check("a tap anywhere on a card's own ground (here the face's column under the face, beside the row: no"
+              " finger is snapped to a button there) opens its page, as a tap on its words does;"
               " the 💬 opens it too, asking for its answer box (#say, which the page drops once it has opened it:"
               " verify_socialcomments 34 holds the box): a touch on a phone, a click on a desk",
               bool(card) and ok_open,
@@ -1963,9 +1972,10 @@ with sync_playwright() as p:
                  (G12, "/gallery", TILE.format(lone), lone, to_lone, None),
                  (G12, "/gallery", TILE.format(nobodys), nobodys, to_skribl, None)]
         # Where a finger goes on a card: the drawing's middle, the name's, and
-        # the ground's: on Home's calm card the row's open space past the ⋯
-        # (its line waits until played, Nov 13; no Open › since Nov 19), a Gallery card's
-        # time; scrolled to the screen's middle first.
+        # the ground's: on Home's calm card the face's column under the face,
+        # beside the row (Bluesky's columns, Nov 28: the row spreads to the ⋯
+        # at its end; no Open › since Nov 19), a Gallery card's time; scrolled
+        # to the screen's middle first.
         SPOT12 = """([sel, what]) => { const c = document.querySelector(sel); if (!c) return null;
           const text = (root, needle) => { if (!root) return null; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
             for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.textContent.indexOf(needle); if (i >= 0) {
@@ -1973,9 +1983,9 @@ with sync_playwright() as p:
             return null; };
           const at = { drawing: () => c.querySelector('.skribl-inline'),
                        name: () => { const e = c.querySelector('.post-name, .tdn'); return e && text(e, e.textContent.trim()); },
-                       ground: () => { const m = c.querySelector('.post-row .post-more'), o = c.querySelector('.post-row');
+                       ground: () => { const m = c.querySelector('.post-head .post-face'), o = c.querySelector('.post-row');
                          if (m && o) return { getBoundingClientRect: () => { const a = m.getBoundingClientRect(), z = o.getBoundingClientRect();
-                           return { left: a.right, top: a.top, width: z.right - a.right, height: a.height }; } };
+                           return { left: a.left, top: z.top, width: a.width, height: z.height }; } };
                          return text(c.querySelector('.tm'), c.querySelector('.tm') ? c.querySelector('.tm').textContent.trim() : ''); } }[what];
           const it = at && at(); if (!it || !it.getBoundingClientRect().width) return null;
           let r = it.getBoundingClientRect();
@@ -2070,7 +2080,7 @@ with sync_playwright() as p:
               f"{ {r['label']: r.get('person') for r in cards12} }")
         check("...and a finger's tap on the ground opens the right page, followed: a post's drawing its post"
               " (/social/p/…), one on its own its page (/social/b/…), one by somebody not on the site Skribl's own"
-              " page for it (/s/…); on Home in the row's open space past the ⋯, on a Gallery card at its time",
+              " page for it (/s/…); on Home in the face's column beside the row, on a Gallery card at its time",
               made and all(r.get("finger") == r["want"] for r in cards12),
               f"{ {r['label']: r.get('finger') for r in cards12 if r.get('finger') != r['want']} }")
 
@@ -2228,7 +2238,7 @@ with sync_playwright() as p:
         close_ctx(ctx, cpg)
         close_ctx(octx, opg)
         check("on a desk, Ctrl or the middle button opens the card in a new tab and this page stays: Home's card (in"
-              " its row, past the ⋯) and a Gallery card of Skribl's where a host says (at its time)",
+              " the face's column beside its row) and a Gallery card of Skribl's where a host says (at its time)",
               made and all(desk.get(k) == (w, p_) for k, w, p_ in (("home ctrl", to_post, "/social/"),
                                                                   ("home middle", to_post, "/social/"),
                                                                   ("gallery ctrl", to_lone, "/gallery"),
@@ -5038,6 +5048,89 @@ print("PLAN " + json.dumps(out))
                   json.dumps(sheet23)[:600])
         except Exception as exc:  # noqa: BLE001
             check("section 23 ran to its end", False, str(exc).splitlines()[0][:200])
+
+    if part(24, "Bluesky's columns: on a card everything under the head starts on the name's line, the face in its own column"):
+        # BLUESKY'S COLUMNS (the owner, Nov 28, with a Bluesky quote post: "Should we indent also? Like Bluesky?",
+        # then to Indent the Quote?'s C: "I like Bluesky columns"). Cora reposts Colm's drawing and quotes it: on
+        # her Home the repost is Colm's card under "You reposted" (its words, its drawing, its row), and her quote
+        # is her card with Colm's small inside. Each part's left edge read where it is painted: a text's own
+        # letters (a Range over them), a box's own edge, the row's first icon; on Colm's post's own page the same.
+        try:
+            colm = someone(b, "colm", "Colm Ray")
+            cora = someone(b, "colfan", "Cora Fan")
+            st24, j24 = make_post(colm, "Section 24, a drawing in the column", seed=24, card=True)
+            pd24 = j24.get("post") if st24 == 200 and isinstance(j24, dict) else None
+            cc = cora.client()
+            cc.get(f"/social/p/{pd24}")
+            rst24, _ = cc.post_json(f"/social/p/{pd24}/repost", {"reposted": True})
+            qst24, qj24 = cc.post_json("/social/posts", {"words": "Section 24, a quote in the column", "quote": pd24})
+            qd24 = qj24.get("post") if qst24 == 200 and isinstance(qj24, dict) else None
+            fst24, _ = cc.post_json("/social/@colm/follow", {"following": True})    # Home opens on Following
+            COLS = r"""(sel) => { const c = document.querySelector(sel); if (!c) return null;
+              const ink = e => { if (!e) return null; const r = document.createRange(); r.selectNodeContents(e);
+                                 const b = r.getBoundingClientRect(); return b.width ? Math.round(b.left * 100) / 100 : null; };
+              const box = e => e ? Math.round(e.getBoundingClientRect().left * 100) / 100 : null;
+              const face = c.querySelector(':scope > .post-head .post-face .face-ring'), fr = face ? face.getBoundingClientRect() : null;
+              const rpIc = c.querySelector(':scope > .rp-by .ic'), ir = rpIc ? rpIc.getBoundingClientRect() : null;
+              const row = c.querySelector(':scope > .post-row'), last = row && [...row.children].filter(e => e.getClientRects().length).pop();
+              return { face: fr ? [Math.round(fr.left * 100) / 100, Math.round(fr.right * 100) / 100] : null,
+                       faceMid: fr ? Math.round((fr.left + fr.right) * 50) / 100 : null,
+                       name: ink(c.querySelector(':scope > .post-head .post-name')),
+                       words: ink(c.querySelector(':scope > .post-words')),
+                       art: box(c.querySelector(':scope > .post-art')),
+                       quote: box(c.querySelector(':scope > .qt-card')),
+                       icon: box(c.querySelector(':scope > .post-row svg')),
+                       rp: ink(c.querySelector(':scope > .rp-by span')),
+                       rpRight: ir ? Math.round(ir.right * 100) / 100 : null,
+                       spread: row && last ? Math.round((row.getBoundingClientRect().right - last.getBoundingClientRect().right) * 100) / 100 : null }; }"""
+            cols24, page24 = {}, {}
+            for screen in ("phone", "desk"):
+                ctx, pg = browser_as(b, cora, screen=screen)
+                pg.goto(BASE + "/social/")
+                pg.wait_for_timeout(900)
+                cols24[(screen, "repost")] = pg.evaluate(COLS, f'.post-card[data-post="{pd24}"]')
+                cols24[(screen, "quote")] = pg.evaluate(COLS, f'.post-card[data-post="{qd24}"]')
+                pg.goto(BASE + f"/social/p/{pd24}")
+                pg.wait_for_timeout(900)
+                page24[screen] = pg.evaluate(r"""() => { const p = document.querySelector('.post-page'); if (!p) return null;
+                  const ink = e => { if (!e) return null; const r = document.createRange(); r.selectNodeContents(e);
+                                     const b = r.getBoundingClientRect(); return b.width ? Math.round(b.left * 100) / 100 : null; };
+                  const box = e => e ? Math.round(e.getBoundingClientRect().left * 100) / 100 : null;
+                  return { face: box(p.querySelector(':scope > .post-head .face-ring')), words: ink(p.querySelector(':scope > .post-words')),
+                           art: box(p.querySelector(':scope > .post-art')) }; }""")
+                close_ctx(ctx, pg)
+
+            def on_line(v, keys):
+                return v and v["name"] is not None and all(v.get(k) is not None and abs(v[k] - v["name"]) <= 1 for k in keys)
+
+            def beyond(v, keys):
+                return v and v["face"] and all(v.get(k) is not None and v[k] >= v["face"][1] + 8 for k in keys)
+            check("Bluesky's columns (the owner's \"I like Bluesky columns\", Nov 28): on a card the words, the drawing, a"
+                  " quote and the row's first icon start where the name does (within a pixel), beyond the face, whose column"
+                  " is its own: a drawing's card and a quote's, on a phone and a desk",
+                  rst24 == 200 and fst24 == 200 and bool(qd24) and len(cols24) == 4
+                  and all(on_line(cols24[(sc, "repost")], ("words", "art", "icon")) and beyond(cols24[(sc, "repost")], ("words", "art"))
+                          and on_line(cols24[(sc, "quote")], ("words", "quote", "icon")) and beyond(cols24[(sc, "quote")], ("words", "quote"))
+                          for sc in ("phone", "desk")),
+                  f"repost {rst24}, quote {qst24}, follow {fst24}; " + json.dumps({" ".join(k): v for k, v in cols24.items()}))
+            check("...a reposted line's words start there too, its arrows just before them, 6px from them, as Bluesky's"
+                  " (the owner's \"Yes\", Nov 28; within a pixel); and the row spread across the column, its ⋯ at the"
+                  " column's end (the same yes)",
+                  all(cols24[(sc, k)] and cols24[(sc, "repost")]["rp"] is not None
+                      and abs(cols24[(sc, "repost")]["rp"] - cols24[(sc, "repost")]["name"]) <= 1
+                      and abs(cols24[(sc, "repost")]["rp"] - cols24[(sc, "repost")]["rpRight"] - 6) <= 1
+                      and cols24[(sc, k)]["spread"] is not None and abs(cols24[(sc, k)]["spread"]) <= 0.6
+                      for sc in ("phone", "desk") for k in ("repost", "quote")),
+                  json.dumps({" ".join(k): v for k, v in cols24.items()}))
+            # (On a desk a post's page puts its drawing in a column of its own, at the left: its words are read there.)
+            check("...and a post's own page keeps its full width, as Bluesky's does: its words start where its face does,"
+                  " on a phone and a desk, and on a phone its drawing too",
+                  len(page24) == 2 and all(v and v["face"] is not None and v["words"] is not None
+                                           and abs(v["words"] - v["face"]) <= 1 for v in page24.values())
+                  and page24["phone"]["art"] is not None and abs(page24["phone"]["art"] - page24["phone"]["face"]) <= 1,
+                  json.dumps(page24))
+        except Exception as exc:  # noqa: BLE001
+            check("section 24 ran to its end", False, str(exc).splitlines()[0][:200])
 
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):

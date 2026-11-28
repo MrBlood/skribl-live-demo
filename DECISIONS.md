@@ -55576,3 +55576,74 @@ as an unlucky id moves it, the old reference read the card (red) and the new
 one found the ink (green); moved 0.8px, more than any waver, red on the
 desk's neck stroke, outside the screen pixel a stroke is allowed; no line
 painted, red.
+
+## After v330 -- Bluesky's columns on every card (the owner's "I like Bluesky columns")
+
+The owner, Nov 28, with a Bluesky quote post on their phone: "Should we
+indent also? Like Bluesky?" Indent the Quote?
+(https://claude.ai/artifact/1bixq56dmwdAMUXLVn4n87) showed now (my pick:
+the quote set apart by its well, the drawing as wide as the card), B (the
+quote alone in to the name) and C (Bluesky's columns: everything under the
+name in, the drawing 280px wide on a phone instead of 336). The owner: "I
+like Bluesky columns". Asked the sizes of the faces beside Bluesky's
+(measured off their screenshot: theirs 42 on a post or a repost and 16 in
+a quote, ours 44 and 22), then: "Leave the avatars the size they are."
+
+- TWO COLUMNS ON A CARD: the face in a column of its own, and everything
+  under the head starting where the name does (--post-col, 56px: the face's
+  44 and the 12 beside it): the words, the drawing, a quote, a taken-down
+  note, and the row, whose first icon stays on the words' line (the row
+  starts 10px out). A comment card's way to it was already in the column.
+- THE MARK BESIDE ITS WORDS, THE ROW SPREAD (the owner, with our "You
+  reposted" beside Bluesky's "Pinned": "See where the reposted icon and
+  pinned icon go?"; mocked, then "Yes on decisions you're holding 1143"): a
+  reposted or pinned line's mark sits just before its words, 6px from them,
+  over the face's right edge as Bluesky's does (it was over the face's
+  middle, 26px from them); its words in the column. And a card's row spreads
+  across the column, its parts at least 6px apart and the ⋯ at the column's
+  end. In the column a phone's row is 300px (it was 356): at the owner's
+  14px apart (Nov 13), three counts in the hundreds ran 12px past their own
+  buttons (verify_socialreposts 1, red); spread, an ordinary card's parts
+  sit within a pixel of where 14px put them, and the busy one fits.
+- Everywhere a card is (Home, a person's page, Search, Bookmarks). A post's
+  own page keeps its full width, as Bluesky's own post page does.
+- The faces stay their size: 44 on a card, 48 on a post's page, 22 in a
+  quote.
+
+Pad and Flip: not touched; cards are the site's.
+
+THE CHECKS (verify_socialposts 24): Cora reposts and quotes Colm's drawing;
+on her Home (Following) each part's left edge read where it is painted (a
+text's own letters, a box's edge, the row's first icon): the words, the
+drawing, the quote and the row's first icon on the name's line within a
+pixel and beyond the face; the reposted line's words on it, its arrows over
+the face's middle; Colm's post's own page with its words where its face
+starts (on a phone its drawing too; on a desk the drawing has a column of
+its own), phone and desk. SHOWN RED, one part broken at a time in
+throwaway copies (3/3 as built; as refined, verify_socialposts 24 3/3,
+verify_sociallikes 1 and 12 14/14, verify_socialreposts 1 5/5):
+- no columns: the columns row;
+- the row not pulled 10px out (its first icon 10px past the words): the
+  columns row;
+- the reposted line's words where they were: the reposted row;
+- the mark back over the face's middle: the reposted row;
+- the row packed at 6px apart, not spread: the reposted row (the ⋯ short of
+  the column's end) and verify_sociallikes' heart rows;
+- the row spread at 14px apart: verify_socialreposts 1's three counts;
+- a post's own page indented too: the page row.
+The page row first read a desk's post page as wrong for its drawing in its
+own left column (an instrument that did not know the page); it reads the
+words there now, and the drawing on a phone.
+
+FOUND ON THE WAY: verify_sociallikes 12's census of targets counted Home's
+Following | Everyone pill as two 36px buttons. Home's cards shorter in the
+columns, its scroll left the pill's last 10px on the screen, where a press
+at an option's middle lands on nothing (it had been scrolled past). An
+option whose middle is off the screen is not in view now; one in view is
+judged by its 44px band, as verify_socialposts' census does (7/8 before,
+8/8 after; the band itself is held where the pill is in view, by
+verify_socialposts and verify_socialfollow).
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: on Home, a post's words start under its name, not under
+its face.
