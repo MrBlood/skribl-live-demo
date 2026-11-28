@@ -33,8 +33,9 @@
 {%- endmacro %}
 
 {% macro safety_sheets() -%}
-{#  REPORT A PERSON: their own reasons (safety.REASONS['person']), the first
-    picked as it opens; sent to the site's own queue. #}
+{#  REPORT A PERSON: their own reasons (safety.REASONS['person']), none
+    picked as it opens (Send says "Pick a reason first."; the Bluesky
+    diagnostic, Nov 28); sent to the site's own queue. #}
 <div class="make post-sheet" id="personReportSheet" hidden data-report="{{ url_for('social.report') }}">
   <div class="make-scrim" data-make-close></div>
   <form class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="personReportTitle" data-report-form>
@@ -44,7 +45,7 @@
     <fieldset class="post-reasons">
       <legend class="sr">Reason</legend>
       {% for r, words in report_reasons['person'] %}
-      <label class="post-reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}><span>{{ words }}</span></label>
+      <label class="post-reason"><input type="radio" name="reason" value="{{ r }}"><span>{{ words }}</span></label>
       {% endfor %}
     </fieldset>
     <label class="post-note-label" for="personReportNote">Anything else? <span>optional</span></label>
@@ -78,6 +79,7 @@
   <span data-word="block_title">Block @{handle}?</span>
   <span data-word="block_who">Block @{handle}</span>
   <span data-word="s_sending">Sending…</span>
+  <span data-word="s_pick">Pick a reason first.</span>
   <span data-word="s_reported">Thanks. The people who run this site will look at it.</span>
   <span data-word="s_blocking">Blocking…</span>
   <span data-word="s_unblocking">Unblocking…</span>

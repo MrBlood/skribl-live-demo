@@ -283,6 +283,8 @@ with sync_playwright() as sp:
     pg.route(re.compile(r"/report$"), lambda route: route.fulfill(status=429, content_type="application/json",
                                                                    body=json.dumps({"error": "slow down"})))
     open_report(target)
+    # Nothing is picked for the reader (the Bluesky diagnostic, Nov 28): a reason first.
+    pg.check("#reportSheet input[name=reason][value=spam]")
     pg.click("#reportSend")
     pg.wait_for_timeout(600)
     refused = pg.evaluate("""() => ({ open: !document.getElementById('reportSheet').hidden,

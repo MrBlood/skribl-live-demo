@@ -147,6 +147,37 @@ print("RESULT " + json.dumps({{"social": c.get("/social/").status_code,
 """
 
 
+#: How it works made to break, for part 10: once plainly, once after a write
+#: the database refused. Prints its own RESULT line before the app's.
+BROKE_PRELUDE = r"""
+import json as _j
+from app import app as _a, db as _db
+import sqlalchemy as _sa
+_a.testing = False
+_a.config["PROPAGATE_EXCEPTIONS"] = False
+def _plain():
+    raise RuntimeError("made to break")
+def _refused():
+    try:
+        _db.session.execute(_sa.text("insert into social_people (id) values (null)"))
+    except Exception:
+        pass
+    raise RuntimeError("made to break after a refused write")
+_out = {}
+with _a.app_context():
+    _db.create_all()
+_t = _a.test_client()
+for _how, _fn in (("plain", _plain), ("after a refused write", _refused)):
+    _a.view_functions["social.how"] = _fn
+    _r = _t.get("/social/how", headers={"Accept": "text/html,application/xhtml+xml,*/*;q=0.8"})
+    _s = _t.get("/social/how", headers={"Accept": "*/*"})
+    _out[_how] = {"status": _r.status_code, "page": _r.get_data(as_text=True),
+                  "script": _s.status_code, "script_body": _s.get_data(as_text=True)}
+print("RESULT " + _j.dumps(_out))
+raise SystemExit(0)
+"""
+
+
 def ask_app(env=None, prelude=""):
     with tempfile.TemporaryDirectory() as tmp:
         e = dict(os.environ)
@@ -1245,6 +1276,30 @@ with sync_playwright() as p:
               bool(m) and _html.unescape(m.group(2)).strip() == "No drawings here yet. Share one in a post, and it shows up here."
               and "gallery" not in m.group(2).lower() and bool(m.group(1)) == (tiles > 0),
               f"{(m.group(2) if m else None)!r}; hidden {bool(m and m.group(1))}; tiles {tiles}")
+
+    # ------------------------------------------------------------------ 10
+    if part(10, "something broke: a browser gets the kind card, a script its bare 500"):
+        # The Bluesky diagnostic's kind error page (the owner's "yes to
+        # everything", Nov 28): a view of the site's that raises was Flask's
+        # bare "Internal Server Error", with no way back. Asked in a process of
+        # its own, with How it works made to break, once plainly and once after
+        # a write the database refused. (The rollback the handler does first is
+        # not pinned here: signed out, the page reads nothing from the database.)
+        broke = ask_app(prelude=BROKE_PRELUDE)[0] or {}
+        for how in ("plain", "after a refused write"):
+            got = broke.get(how) or {}
+            page = got.get("page") or ""
+            check(f"something broke ({how}), asked by a browser: a 500 that is the kind card, its words never"
+                  " blaming the person, Try again first and Back to Blooby, with the site's bar",
+                  got.get("status") == 500 and 'class="si-card"' in page
+                  and "Something broke on our side" in page and "on us, not you" in page
+                  and re.search(r'class="btn btn-primary btn-big" href="">Try again</a>', page) is not None
+                  and re.search(r'class="btn btn-big" href="[^"]*">Back to Blooby</a>', page) is not None
+                  and 'data-tab-home' in page and "Internal Server Error" not in page,
+                  f"{got.get('status')}; card {'si-card' in page}; {page[:160]!r}")
+            check(f"something broke ({how}), asked by a script: the bare 500 it always read, not the page",
+                  got.get("script") == 500 and "si-card" not in (got.get("script_body") or ""),
+                  f"{got.get('script')}; {(got.get('script_body') or '')[:80]!r}")
 
     check("no page errors on the site's pages", not errs, "; ".join(errs[:2]))
     b.close()

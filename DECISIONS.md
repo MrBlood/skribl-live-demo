@@ -55768,3 +55768,55 @@ still draws (Settings' panels: --card and --card-edge, as verify_socialposts
 on the card and 3.16 on the page in light, 3.15 and 3.71 in dark. SHOWN RED,
 in throwaway copies of social.css: "more contrast" no longer firming the
 card's edge, and no longer strengthening the grey words, each red alone.
+
+## After v330 -- Bluesky, side by side: the diagnostic, and its first two fixes (bug fixes)
+
+The owner, Nov 28: "Are there any functions or menu items or arrangements or
+ui that Bluesky is doing that we should be emulating?", then "Dive deeper
+and do a more comprehensive check. I may have said no to things, but don't
+disregard them because of that. I might have been wrong. Also look how they
+handle processes." Blooby beside Bluesky
+(https://claude.ai/artifact/UWNuK1dk49Em9M5s5z4sUD) read Bluesky's open app
+(bluesky-social/social-app) beside Skribl's code, four areas: feeds, posts
+and threads; making and posting; people, Activity and letters; safety,
+settings and the app as a whole. About seventy findings, each marked fix,
+do it (often remade for drawings), theirs is better, ours is better, or
+leave it, every earlier "no" looked at again. The owner: "I'd say yes to
+everything except things we do better and things you say to leave alone
+(for now)". So: the fixes go up as bug fixes; what changes a screen is
+mocked first, the Watch feed first; the plumbing (one book of words, the
+shared sheets) quietly. Earlier answers looked at again and changed by
+this yes: "Follow back" (NEVER, Nov 13) is to be mocked; the still card is
+to be mocked beside a glimpse. Kept: lists yours alone, letters between two
+who follow each other, Liked by the maker's alone, reposts off Everyone.
+
+FIRST, TWO OF THE FIXES:
+- SOMETHING BROKE, A KIND PAGE: a view of the site's that raised was
+  Flask's bare "Internal Server Error". The blueprint's handler for a 500
+  (`_broke`) draws `broke.html`: "Something broke on our side", "That one’s
+  on us, not you. Try again in a moment.", Try again (filled) and Back to
+  Blooby, with the bar; a script's fetch keeps the bare 500. It rolls back
+  what the request began first. `_kind.html`'s `again` draws Try again (it
+  was accepted and drew nothing).
+- A REPORT PICKS NOTHING FOR YOU: all five report sheets (a person's, a
+  post's, a comment's, a letter's, Skribl's Gallery's) opened with the first
+  reason ticked, so a quick Send filed "Spam". None is ticked; an empty Send
+  says "Pick a reason first." (the Gallery's own sheet already said "Pick a
+  reason.") and files nothing. Its first focus is the first reason.
+
+THE CHECKS: verify_social 10 (a view made to break, plainly and after a
+refused write, asked by a browser and by a script); verify_socialsafety 1
+(every sheet as drawn, a letter's template as source; a person's empty
+Send), verify_socialposts 5, verify_socialcomments 8, verify_socialletters
+15 (a post's, a comment's, a letter's empty Send; the letter's check had
+leaned on the first reason being ticked, as verify_tilereport's 429 row
+had on the Gallery's: each picks a reason now). SHOWN RED, one part broken at a
+time: no handler, no Try again (both browser rows); each of the five
+templates' tick put back (the census, and a person's own rows); each of
+the four Send guards taken out (its own row; the letter's as a section
+that cannot run to its end). NOT PINNED: the rollback (signed out, the
+error page reads nothing from the database). Two of the checks' follow-up
+Sends are a script's click now, so a broken build reads red in its rows
+rather than as a click waiting for a hidden button.
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site.

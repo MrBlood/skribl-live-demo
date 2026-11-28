@@ -250,6 +250,7 @@
       e.preventDefault();
       if (!on) return;
       var picked = form.querySelector('input[name="reason"]:checked');
+      if (!picked) { sayIn(reportWrap, PAGE.pick); return; }   /* nothing picked for them */
       sayIn(reportWrap, PAGE.sending);
       fetch(page.getAttribute('data-report'), {
         method: 'POST', credentials: 'same-origin',

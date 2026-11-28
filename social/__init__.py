@@ -561,6 +561,32 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             g.social_hidden = True
         return err
 
+    @bp.errorhandler(500)
+    def _broke(err):
+        """Something broke in one of the site's own views (the owner's "yes
+        to everything", Nov 28, the Bluesky diagnostic's kind error page):
+        it was a bare "Internal Server Error", with no bar and no way back.
+        Flask has logged it already. To a browser going there: the kind
+        card, Try again and a way home, never blaming the person; whatever
+        the request had begun is rolled back first, so the page's own reads
+        can run. To a script's fetch: the bare answer it always read, so a
+        page's own words for a failure still say it."""
+        if not _asks_for_a_page():
+            return err
+        try:
+            from .security import site as _site
+            _site().session().rollback()
+        except Exception:        # noqa: BLE001 -- nothing begun, or nothing more to undo
+            pass
+        try:
+            resp = current_app.response_class(render_template("social/broke.html", here="broke"),
+                                              status=500, mimetype="text/html")
+        except Exception:        # noqa: BLE001 -- a page that cannot be drawn leaves as the bare 500
+            current_app.logger.debug("the kind error page could not be drawn", exc_info=True)
+            return err
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
+
     @bp.after_request
     def _headers(resp):
         if g.get("social_hidden"):

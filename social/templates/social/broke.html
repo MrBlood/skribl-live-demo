@@ -1,0 +1,9 @@
+{#  SOMETHING BROKE ON OUR SIDE (500): one of the site's own views failed.
+    The owner, Nov 28, "yes" to the Bluesky diagnostic's kind error page: it
+    was Flask's bare "Internal Server Error", with nothing on it. The kind
+    card the other small pages have, the bar, Try again (this address once
+    more) and a way home; nobody is blamed but us. #}
+{% extends 'social/base.html' %}
+{% from 'social/_kind.html' import card with context %}
+{% block title %}Something broke · Blooby{% endblock %}
+{% block main %}{{ card("Something broke on our side", "That one’s on us, not you. Try again in a moment.", again=true) }}{% endblock %}

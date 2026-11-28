@@ -2386,11 +2386,17 @@ with sync_playwright() as p:
             pg.wait_for_function(OPEN, arg="commentReportSheet", timeout=10000)
             title = pg.evaluate("() => document.getElementById('commentReportTitle').textContent")
             reasons = pg.evaluate(REASONS, "#commentReportSheet")
+            # Nothing is picked for them (the Bluesky diagnostic, Nov 28).
+            cm_picked = pg.evaluate("() => !!document.querySelector('#commentReportSheet input[name=reason]:checked')")
+            pg.click("#commentReportSheet [data-cm-report-send]")
+            pg.wait_for_timeout(500)
+            cm_unpicked = pg.evaluate("() => document.querySelector('#commentReportSheet [data-cm-report-say]').textContent")
+            cm_unpicked_rows = len(db("select id from social_reports where target = ?", (theo_c,)))
             pg.check("#commentReportSheet input[value=abuse]")
             pg.fill("#commentReportNote", "Not kind")
-            pg.click("#commentReportSheet [data-cm-report-send]")
-            pg.wait_for_function("() => (document.querySelector('#commentReportSheet [data-cm-report-say]') || {}).textContent.length > 12",
-                                 timeout=10000)
+            pg.evaluate("() => document.querySelector('#commentReportSheet [data-cm-report-send]').click()")   # see verify_socialsafety 1
+            pg.wait_for_function("() => { const t = (document.querySelector('#commentReportSheet [data-cm-report-say]') || {}).textContent || '';"
+                                 " return t.length > 12 && t !== 'Pick a reason first.' && t !== 'Sending…'; }", timeout=10000)
             thanks = pg.evaluate("() => document.querySelector('#commentReportSheet [data-cm-report-say]').textContent")
             tid, _ = pid_of("theo")
             kid, _ = pid_of("kim")
@@ -2403,8 +2409,9 @@ with sync_playwright() as p:
             own = tc.post_json("/social/report", {"kind": "comment", "target": theo_c, "reason": "spam"})[0]
             check("Report this comment rises as its sheet with a post's reasons, in order, into the site's own queue"
                   " (kind comment, the comment, whose it is, the reason, the note, who sent it), and says thanks; your own"
-                  " is not yours to report (404)",
+                  " is not yours to report (404); none picked for them, an empty Send says \"Pick a reason first.\" and files nothing",
                   title == "Report this comment" and reasons == POST_REASONS and thanks == THANKS
+                  and not cm_picked and cm_unpicked == "Pick a reason first." and cm_unpicked_rows == 0
                   and rows == [("comment", theo_c, tid, "abuse", "Not kind", kid, "open")] and own == 404,
                   f"title {title!r}; reasons {reasons}; said {thanks!r}; rows {rows}; own {own}")
             apg = juno.pg

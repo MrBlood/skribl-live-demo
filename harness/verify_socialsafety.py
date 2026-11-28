@@ -522,22 +522,32 @@ with sync_playwright() as p:
         pg.wait_for_function(OPEN, arg="personReportSheet", timeout=10000)
         title = pg.evaluate("() => document.getElementById('personReportTitle').textContent")
         reasons = pg.evaluate(REASONS, "#personReportSheet")
-        first = pg.evaluate("() => document.querySelector('#personReportSheet input[name=reason]:checked').value")
+        # NOTHING IS PICKED FOR THEM (the Bluesky diagnostic, Nov 28): a quick
+        # Send used to file the first reason; it says what is missing.
+        first = pg.evaluate("() => (document.querySelector('#personReportSheet input[name=reason]:checked') || {}).value || null")
+        pg.click("#personReportSheet [data-safety-send]")
+        pg.wait_for_timeout(500)
+        unpicked = pg.evaluate("() => document.querySelector('#personReportSheet [data-safety-say]').textContent")
+        unpicked_rows = db("select count(*) from social_reports where kind = 'person'")[0][0]
         pg.check("#personReportSheet input[value=impersonation]")
         pg.fill("#personReportNote", "Says she is me")
-        pg.click("#personReportSheet [data-safety-send]")
-        pg.wait_for_function("() => (document.querySelector('#personReportSheet [data-safety-say]') || {}).textContent.length > 12",
-                             timeout=10000)
+        # A script's click: had the empty Send gone through, its button would
+        # be hidden now, and the rows below say so rather than a click waiting.
+        pg.evaluate("() => document.querySelector('#personReportSheet [data-safety-send]').click()")
+        pg.wait_for_function("() => { const t = (document.querySelector('#personReportSheet [data-safety-say]') || {}).textContent || '';"
+                             " return t.length > 12 && t !== 'Pick a reason first.' && t !== 'Sending…'; }", timeout=10000)
         said = pg.evaluate("() => document.querySelector('#personReportSheet [data-safety-say]').textContent")
         done = pg.evaluate("() => document.querySelector('#personReportSheet .post-sheet-acts [data-make-close]').textContent")
         mid, _ = pid_of("mira")
         jid, jpub = pid_of("juno")
         rows = db("select kind, target, about_id, reason, note, reporter_id, state from social_reports where kind = 'person'")
         check("a profile's ⋯ (never on your own) offers Report @them and, signed in, Block @them (after Mute @them,"
-              " first: mutes); Report @them rises with a person's own reasons, in order, the first picked",
+              " first: mutes); Report @them rises with a person's own reasons, in order, none picked for them",
               not own_more and sheet == ["Mute @juno", "Report @juno", "Block @juno"] and title == "Report @juno"
-              and reasons == PERSON_REASONS and first == "fake",
-              f"own ⋯ {own_more}; sheet {sheet}; title {title!r}; reasons {reasons}; first {first}")
+              and reasons == PERSON_REASONS and first is None,
+              f"own ⋯ {own_more}; sheet {sheet}; title {title!r}; reasons {reasons}; picked {first}")
+        check("Send with no reason picked says so (\"Pick a reason first.\") and files nothing",
+              unpicked == "Pick a reason first." and unpicked_rows == 0, f"{unpicked!r}; {unpicked_rows} row(s)")
         c = mira.client()
         c.get("/social/@juno")
         again = c.post_json("/social/report", {"kind": "person", "target": "juno", "reason": "abuse", "note": None})[0]
@@ -565,6 +575,27 @@ with sync_playwright() as p:
         check("signed out, the ⋯ offers Report alone, and the report lands naming nobody as its sender",
               nsheet == ["Report @juno"] and nsaid == THANKS and anon == [("fake", None)],
               f"sheet {nsheet}; said {nsaid!r}; rows {anon}")
+        # EVERY REPORT SHEET, AS DRAWN: none starts with a reason ticked (a
+        # person's, a post's, a comment's, Skribl's own Gallery's; a letter's
+        # template, whose page needs two who follow each other, read as source).
+        st1, j1 = make_post(juno, "Section 1, a post to report", seed=11)
+        p1 = j1.get("post") if isinstance(j1, dict) else None
+        drawn = {}
+        for path, sheets in (("/social/@juno", ("personReportSheet",)),
+                             (f"/social/p/{p1}", ("reportSheet", "commentReportSheet")),
+                             ("/gallery", ("reportSheet",))):
+            pg.goto(BASE + path)
+            pg.wait_for_timeout(400)
+            for sid in sheets:
+                drawn[(path, sid)] = pg.evaluate(
+                    "s => { const e = document.getElementById(s); return e ? [e.querySelectorAll('input[name=reason]').length,"
+                    " e.querySelectorAll('input[name=reason][checked], input[name=reason]:checked').length] : null }", sid)
+        letter_src = (ROOT / "social/templates/social/letters_with.html").read_text()
+        letter_ticked = re.search(r'name="reason"[^>]*(checked)', letter_src)
+        check("no report sheet starts with a reason ticked: a person's, a post's, a comment's, Skribl's own Gallery's"
+              " (as drawn), and a letter's (its template)",
+              bool(p1) and all(v and v[0] >= 4 and v[1] == 0 for v in drawn.values()) and not letter_ticked,
+              f"{drawn}; letter ticked {bool(letter_ticked)}")
 
     # ------------------------------------------------------------------ 2
     if part(2, "report a post or a drawing: the Gallery's reasons and a child's safety, into the site's queue"):

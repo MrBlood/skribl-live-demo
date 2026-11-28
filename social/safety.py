@@ -57,7 +57,7 @@ from .models import (PERSON_PREFIX, REPORT_NOTE_MAX, Block, Person, Post, Report
 from .security import client_subject, current_person, origin_ok, over, read_aside, site, token_ok
 
 #: The reasons each kind of report may give, in the order its sheet lists
-#: them (the first is the one picked when the sheet opens), with the words.
+#: them (none is picked when the sheet opens: the Bluesky diagnostic, Nov 28), with the words.
 #: A post's and a drawing's are the Gallery's own, and "A child's safety";
 #: a person's are a person's (the owner's "all yes", Nov 12).
 REASONS = {
