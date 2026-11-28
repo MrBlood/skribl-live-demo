@@ -4431,7 +4431,7 @@ drawn lines separators".
 
 - **No card round a post** in a feed: Home, a person's Posts, Likes and
   Bookmarks. A post sits on the page as on its own page: no ground, edge,
-  shadow or corner. The columns stay; a phone's drawing is 312px wide where
+  shadow or corner. The columns stay; a phone's drawing is 314px wide where
   a card's was 280.
 - **A pen line drawn by hand between two posts**, in Skribl's violet
   (`--sheet-line`: 60% of it on the light page, 90% on the dark), one of three

@@ -55660,7 +55660,8 @@ sheets look right plus it looks great with the hand drawn lines separators".
 
 - NO CARD ROUND A POST in a feed: no ground, edge, shadow or corner; a post
   sits on the page as on its own page. The columns stay; a phone's drawing
-  is 312px wide where a card's was 280.
+  is 314px wide where a card's was 280 (the mock read 312: it kept the
+  card's 1px see-through border, which the build took away).
 - A PEN LINE DRAWN BY HAND BETWEEN TWO POSTS, in Skribl's violet
   (--sheet-line: 60% of it on the light page, #ad99fd; 90% on the dark,
   #7155e8), one of three wavers taken in turn (by the post's place among its
