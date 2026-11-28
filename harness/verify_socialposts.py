@@ -4956,7 +4956,8 @@ print("PLAN " + json.dumps(out))
                                                "the fill": cpg.evaluate(OF23, ".nav .tab-make .tab-ic"), "the pill": cpg.evaluate(OF23, ".skribl-inline-play")}
                             sheet23[scheme] = cpg.evaluate(SHEET23)
                         if screen == "phone" and name == "a post":
-                            heights[scheme].update({"a bubble": cpg.evaluate(OF23, ".cm-bubble"), "in a bubble": cpg.evaluate(OF23, ".cm-bubble .skribl-inline"),
+                            heights[scheme].update({"a balloon": cpg.evaluate(OF23, ".cm-bubble"),
+                                                    "in a balloon": cpg.evaluate(OF23, ".cm-bubble .skribl-inline, .cm-main > .cm-art .skribl-inline"),
                                                     "on the page": cpg.evaluate(OF23, ".post-page > .post-art .skribl-inline")})
                         if screen == "phone" and name == "the Gallery":
                             heights[scheme]["a tile"] = cpg.evaluate(OF23, ".gal-pic")
@@ -4994,17 +4995,20 @@ print("PLAN " + json.dumps(out))
 
             def three(tone):
                 h = heights.get(tone) or {}
-                on_page = [h.get(k) or [] for k in ("a card", "a bubble", "a tile")]
-                in_card = [h.get(k) or [] for k in ("in a card", "in a bubble")]
+                on_page = [h.get(k) or [] for k in ("a card", "a tile")]
+                in_card = [h.get(k) or [] for k in ("in a card", "in a balloon")]
+                balloon = h.get("a balloon") or []
                 plate = h.get("on the page") or []
                 fill = h.get("the fill") or []
                 return (all(len(v) == 2 and ring(v[0]) and line(v[1], tone) for v in on_page)
+                        and len(balloon) == 1 and ring(balloon[0])
                         and all(len(v) == 1 and ring(v[0]) for v in in_card)
                         and (len(plate) == 2 and ring(plate[0]) and line(plate[1], "light") if tone == "light" else len(plate) == 1 and ring(plate[0]))
                         and len(fill) == 3 and fill[0] == ["in", 0, 1, 0, 0] and fill[1] == ["in", 0, -1, 0, 0] and fill[2] == ["out", 0, 1, 2, 0])
-            check("THREE HEIGHTS, read off what is painted: ON THE PAGE (a card, a comment's bubble, a tile) the edge and one"
-                  " line under it, 1px with no blur (in dark a line of light inside the top); IN A CARD (the drawing in a"
-                  " post's card, in a bubble) the edge alone; the drawing on a post's own page as a card on the page (the"
+            check("THREE HEIGHTS, read off what is painted: ON THE PAGE (a card, a tile) the edge and one line under it, 1px"
+                  " with no blur (in dark a line of light inside the top), and a comment's balloon its drawn line alone"
+                  " (a ring, no lift: the owner's \"All yes (my row)\", Nov 27); IN A CARD (the drawing in a post's card,"
+                  " in a comment's balloon) the edge alone; the drawing on a post's own page as a card on the page (the"
                   " edge alone in dark); THE FILL enamel: light on its top edge, shade on its foot, 1px/2px under it, no glow",
                   three("light") and three("dark"), json.dumps(heights)[:900])
 

@@ -443,10 +443,11 @@ class Person:
             return []
 
 
-def browser_as(b, who, screen="phone", scheme="light", reduced=False):
+def browser_as(b, who, screen="phone", scheme="light", reduced=False, scale=1):
     kw = {"reduced_motion": "reduce"} if reduced else {}
+    shape = dict(PHONE if screen == "phone" else DESK, device_scale_factor=scale)
     ctx = b.new_context(color_scheme=scheme, extra_http_headers={"X-Forwarded-For": who.xff if who else address()},
-                        **(PHONE if screen == "phone" else DESK), **kw)
+                        **shape, **kw)
     ctx.add_init_script(WATCH)
     if who:
         ctx.add_cookies([{k: v for k, v in c.items() if k in ("name", "value", "domain", "path", "httpOnly",
@@ -1227,6 +1228,7 @@ REST15 = """(id) => { const r1 = x => Math.round(x * 10) / 10;
   const boxEl = art.querySelector('.skribl-inline'), box = boxEl.getBoundingClientRect(), line = art.querySelector('.skribl-inline-line');
   const post = document.querySelector('.post-page > .post-art .skribl-inline').getBoundingClientRect();
   const bub = li.querySelector(':scope > .cm-main > .cm-bubble').getBoundingClientRect(), room = li.querySelector(':scope > .cm-main').getBoundingClientRect();
+  const ab = art.getBoundingClientRect(), linked = art.parentElement === li.querySelector(':scope > .cm-main');
   const play = art.querySelector('.skribl-inline-play'), pr = play.getBoundingClientRect();
   // The play button takes no taps of its own (the whole drawing is the tap), so the point under it answers
   // with the drawing: painted means it is shown, and nothing else of the page lies over that spot.
@@ -1234,6 +1236,7 @@ REST15 = """(id) => { const r1 = x => Math.round(x * 10) / 10;
   return { w: r1(box.width), h: r1(box.height), postW: r1(post.width), postH: r1(post.height), ar: +art.style.getPropertyValue('--ar') || 0,
            line: line ? [line.classList.contains('is-waiting'), r1(line.getBoundingClientRect().height)] : null,
            bubble: r1(bub.width), room: r1(room.width), says: play.textContent.trim(),
+           linked, artBox: r1(ab.width), gap: r1(ab.top - bub.bottom),
            playPainted: !!at && boxEl.contains(at) && ps.visibility === 'visible' && ps.display !== 'none' && +ps.opacity > 0.5 && pr.width > 20,
            playInside: pr.left >= box.left - 0.5 && pr.right <= box.right + 0.5 && pr.bottom <= box.bottom + 0.5, playFoot: r1(box.bottom - pr.bottom) }; }"""
 # A tap on it, and on every frame after: its drawing's width, its bubble's, its top on the screen.
@@ -1252,8 +1255,9 @@ REST15 = """(id) => { const r1 = x => Math.round(x * 10) / 10;
 GROW15 = """async ([id, most]) => { const li = document.getElementById('c-' + id), art = li.querySelector(':scope > .cm-main .cm-art'), box = art.querySelector('.skribl-inline');
   const line = art.querySelector('.skribl-inline-line'), clock = [];
   art.addEventListener('transitionend', (e) => { if (e.target === art) clock.push([e.propertyName, Math.round(e.elapsedTime * 1000)]); });
-  const read = () => { const r = box.getBoundingClientRect(), b = li.querySelector(':scope > .cm-main > .cm-bubble').getBoundingClientRect();
-                       return [Math.round(r.width * 100) / 100, Math.round(b.width * 100) / 100, Math.round(r.top * 100) / 100]; };
+  const read = () => { const r = box.getBoundingClientRect(), b = li.querySelector(':scope > .cm-main > .cm-bubble').getBoundingClientRect(), a = art.getBoundingClientRect();
+                       return [Math.round(r.width * 100) / 100, Math.round(b.width * 100) / 100, Math.round(r.top * 100) / 100,
+                               Math.round(a.width * 100) / 100, Math.round((a.top - b.bottom) * 100) / 100]; };
   const frames = [read()];
   const r0 = box.getBoundingClientRect(), o = { bubbles: true, cancelable: true, clientX: r0.left + r0.width / 2, clientY: r0.top + r0.height / 2, view: window };
   const at = document.elementFromPoint(o.clientX, o.clientY) || box;
@@ -1266,6 +1270,65 @@ GROW15 = """async ([id, most]) => { const li = document.getElementById('c-' + id
     if (now - t0 > most || (opened !== null && still !== null && now - Math.max(opened, still) >= 400)) res(); else requestAnimationFrame(step); };
     requestAnimationFrame(step); });
   return { frames, clock, opened: opened === null ? null : Math.round(opened - t0), ms: Math.round(performance.now() - t0) }; }"""
+
+
+# A LINKED COMMENT'S NECK AND ITS TAIL, AS PAINTED (a rect is not a paint): its
+# words' balloon and its drawing's, for linked_paint to read the shot at.
+LINKED15 = """(id) => { const li = document.getElementById('c-' + id); if (!li) return null;
+  li.scrollIntoView({ block: 'center' });
+  const bub = li.querySelector(':scope > .cm-main > .cm-bubble'), art = li.querySelector(':scope > .cm-main > .cm-art');
+  if (!bub || !art) return { why: 'not linked' };
+  const b = bub.getBoundingClientRect(), a = art.getBoundingClientRect();
+  return { vw: innerWidth, b: [b.left, b.top, b.right, b.bottom], a: [a.left, a.top, a.right, a.bottom] }; }"""
+
+
+def linked_paint(pg, cid):
+    """A linked comment's neck and its words' tail read off a screenshot at
+    named points (CSS px, scaled to the shot), each against the card, the ink
+    and the page as sampled beside the drawing's balloon on the same shot: the
+    card inside its 7px, the ink on its left line, the page 6px out from it."""
+    from PIL import Image
+    import io
+    g = pg.evaluate(LINKED15, cid)
+    if not g or g.get("why"):
+        return {"why": (g or {}).get("why", "no comment")}
+    pg.wait_for_timeout(450)
+    g = pg.evaluate(LINKED15, cid)
+    im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+    k = im.size[0] / g["vw"]
+    bl, bt, _br, bb = g["b"]
+    al, at_, _ar, _ab = g["a"]
+
+    def px(x, y, dx=0, dy=0):
+        return im.getpixel((min(max(round(x * k) + dx, 0), im.size[0] - 1), min(max(round(y * k) + dy, 0), im.size[1] - 1)))
+    mid = (bb + at_) / 2
+    ref = {"card": px(al + 3.5, at_ + 40), "ink": px(al - 0.75, at_ + 40), "page": px(al - 6, at_ + 40)}
+    # A STROKE IS FOUND WITHIN A SCREEN PIXEL OF ITS PLACE: a box's edges are
+    # put on whole screen pixels as it is painted, so a line's middle can sit a
+    # pixel from where its box's rect says (a line 4.5 pixels wide read one
+    # pixel low lands on its soft edge). Each stroke is read at its place and
+    # one screen pixel either side across it (`across`: 'y' for a line along
+    # the page, 'x' for one down it); a card or the page is read where it is.
+    want = {"the neck's middle": ("card", al + 37.75, mid, None),
+            "the gap beside it": ("page", al + 10, mid, None),
+            "the neck's stroke": ("ink", al + 28.75, mid, "x"),
+            "the words' line, open into the neck": ("card", al + 37.75, bb + 0.75, None),
+            "the words' line, past the neck": ("ink", al + 70, bb + 0.75, "y"),
+            "the drawing's line, open into the neck": ("card", al + 37.75, at_ - 0.75, None),
+            "the drawing's line, past the neck": ("ink", al + 70, at_ - 0.75, "y"),
+            "the tail's middle": ("card", bl - 5, bt + 20, None),
+            "the tail's stroke": ("ink", bl - 5, bt + 17.75, "y"),
+            "above the tail": ("page", bl - 5, bt + 14.5, None)}
+
+    def near(c, r):
+        return max(abs(x - y) for x, y in zip(c, r)) <= 4
+    wrong = {}
+    for name, (kind, x, y, across) in want.items():
+        reads = [px(x, y)] + ([px(x, y, **{"d" + across: d}) for d in (-1, 1)] if across else [])
+        if not any(near(c, ref[kind]) for c in reads):
+            wrong[name] = [kind, reads, ref[kind]]
+    apart = all(not near(ref[a_], ref[b_]) for a_, b_ in (("card", "ink"), ("card", "page"), ("ink", "page")))
+    return {"ok": not wrong and apart, "wrong": wrong, "ref": ref, "apart": apart, "scale": round(k, 2)}
 
 
 def grew15(got, want):
@@ -1348,18 +1411,25 @@ TOKEN_JS = """const tok = (at, prop, val) => { const d = document.createElement(
   const ratio = (a, b) => { const x = lum(rgb(a)), y = lum(rgb(b)); return Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100; };"""
 
 # THE LOOK: [a long comment, a short reply under it] read against their tokens:
-# each bubble's card, edge, lift and corner, the long one as wide as its room and
-# the short one narrower; no line between comments; a face not drawn yet with its
-# initial; the count's pill; the row under the bubble, its word on a desk only.
+# each balloon's card, its drawn line (--balloon-line of --balloon-ink, no lift), its tail
+# (the card over the line where it leaves, the ink's two strokes, each a mask)
+# and its corner, the long one as wide as its room and the short one narrower; no
+# line between comments; a face not drawn yet with its initial; the count's pill;
+# the row under the balloon, its word on a desk only.
 LOOK = """([cid, rid]) => { """ + TOKEN_JS + """
   const sec = document.getElementById('comments'), bad = [];
   const want = { bg: tok(sec, 'color', 'var(--card)'),
-                 ring: tok(sec, 'boxShadow', '0 0 0 var(--edge) var(--card-edge), var(--card-drop)') };
+                 ring: tok(sec, 'boxShadow', '0 0 0 var(--balloon-line) var(--balloon-ink)'), ink: tok(sec, 'color', 'var(--balloon-ink)') };
   const one = (id, wide) => { const li = document.getElementById('c-' + id), b = li && li.querySelector(':scope > .cm-main > .cm-bubble');
     if (!b) { bad.push(id + ': no bubble'); return; }
     const cs = getComputedStyle(b), room = b.parentElement.getBoundingClientRect().width, w = b.getBoundingClientRect().width;
     if (cs.backgroundColor !== want.bg) bad.push(id + ' ground ' + cs.backgroundColor + ' not ' + want.bg);
-    if (cs.boxShadow !== want.ring) bad.push(id + ' edge ' + cs.boxShadow + ' not ' + want.ring);
+    if (cs.boxShadow !== want.ring) bad.push(id + ' line ' + cs.boxShadow + ' not ' + want.ring);
+    const tb = getComputedStyle(b, '::before'), ta = getComputedStyle(b, '::after'), mask = x => x.maskImage || x.webkitMaskImage || '';
+    if (tb.content === 'none' || ta.content === 'none' || tb.display === 'none' || ta.display === 'none'
+        || tb.backgroundColor !== want.bg || ta.backgroundColor !== want.ink
+        || !mask(tb).includes('svg') || !mask(ta).includes('svg') || tb.left !== '-11.5px' || ta.left !== '-11.5px')
+      bad.push(id + ' tail ' + [tb.content, tb.backgroundColor, ta.backgroundColor, tb.left, mask(ta).slice(0, 30)].join(' '));
     if (cs.borderTopLeftRadius !== '18px') bad.push(id + ' corner ' + cs.borderTopLeftRadius);
     if (!b.querySelector('.cm-name') || !b.querySelector('.cm-when') || !b.querySelector('.cm-words')) bad.push(id + ': name, when or words outside');
     if (wide ? Math.abs(w - room) > 1 : w > room - 40) bad.push(id + ' width ' + Math.round(w) + ' of ' + Math.round(room));
@@ -1550,15 +1620,19 @@ PAST_AND_WATCH = """async (id) => { """ + TOKEN_JS + """
            count: (document.querySelector('[data-cm-count]') || {}).textContent }; }"""
 
 
-# Each drawn comment's drawing: how wide, whether it sits in its bubble and
-# fills the bubble's room (the owner's B), and whether it waits still.
+# Each drawn comment's drawing: how wide, where it sits (alone in the one
+# balloon under its name, or in its own balloon linked under the words': the
+# owner's "All yes (my row)", Nov 27), whether the balloon that holds it is it
+# and its 7px each side within its room, and whether it waits still.
 ARTS = """(ids) => ids.map(id => { const li = document.getElementById('c-' + id), a = li && li.querySelector(':scope > .cm-main .cm-art');
-  if (!a) return { w: null, inBubble: false, full: false, still: false };
-  const bub = a.closest('.cm-bubble'), room = li.querySelector(':scope > .cm-main').getBoundingClientRect().width;
-  const cs = bub ? getComputedStyle(bub) : null, inner = bub ? bub.getBoundingClientRect().width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) : 0;
-  const box = a.querySelector('.skribl-inline'), st = window.SkriblInline && box ? (SkriblInline.players().find(p => p.el === box) || null) : null;
-  return { w: Math.round(a.getBoundingClientRect().width), inBubble: !!bub && bub.parentElement === li.querySelector(':scope > .cm-main'),
-           full: !!bub && Math.abs(bub.getBoundingClientRect().width - room) <= 1 && Math.abs(a.getBoundingClientRect().width - inner) <= 1,
+  if (!a) return { w: null, where: null, fits: false, still: false };
+  const main = li.querySelector(':scope > .cm-main'), bub = main.querySelector(':scope > .cm-bubble'), room = main.getBoundingClientRect().width;
+  const box = a.querySelector('.skribl-inline'), w = box ? box.getBoundingClientRect().width : 0;
+  const where = a.parentElement === bub ? (bub.classList.contains('is-pic') && !bub.querySelector('.cm-words') ? 'alone' : 'in the words')
+              : a.parentElement === main && a.previousElementSibling === bub ? 'linked' : 'elsewhere';
+  const hw = (where === 'linked' ? a : bub).getBoundingClientRect().width;
+  const st = window.SkriblInline && box ? (SkriblInline.players().find(p => p.el === box) || null) : null;
+  return { w: Math.round(w), where, fits: Math.abs(hw - (w + 14)) <= 1 && hw + 3 <= room + 0.5,
            still: !st || (st.state().state !== 'playing' && !st.state().loaded) }; })"""
 
 # A drawn reply's own page: its drawing's box against the page's column, which
@@ -2755,11 +2829,14 @@ with sync_playwright() as p:
                   f"post {own}; comment's before {mine}, tapped {tapped}")
             tall = rest15["ar"] and (rest15["room"] - 28) / rest15["ar"] > rest15["postH"] + 1
             check("at rest a drawn comment is no taller than the post's own drawing: one drawn on a phone exactly as tall"
-                  " (to a pixel), in its own shape, its bubble as wide as it and its words need and no wider than its room;"
-                  " its line waits (no room for it yet), and its play button says how long it took, painted inside the"
-                  " drawing at its foot",
+                  " (to a pixel), in its own shape; with words, the drawing in its own balloon under the words' (the"
+                  " owner's \"All yes (my row)\", Nov 27), the drawing and its 7px each side, linked 13px below, each"
+                  " balloon no wider than its room; its line waits (no room for it yet), and its play button says how"
+                  " long it took, painted inside the drawing at its foot",
                   tall and abs(rest15["h"] - rest15["postH"]) <= 1 and abs(rest15["w"] - rest15["h"] * rest15["ar"]) <= 1
-                  and rest15["w"] + 27 <= rest15["bubble"] <= rest15["room"] + 0.5 and rest15["line"] == [True, 0]
+                  and rest15["linked"] and abs(rest15["artBox"] - (rest15["w"] + 14)) <= 1 and abs(rest15["gap"] - 13) <= 0.5
+                  and rest15["artBox"] + 3 <= rest15["room"] + 0.5 and rest15["bubble"] <= rest15["room"] + 0.5
+                  and rest15["line"] == [True, 0]
                   and rest15["says"].endswith("sec") and rest15["playPainted"] and rest15["playInside"] and rest15["playFoot"] >= 11,
                   json.dumps(rest15))
             g15 = grew15(grow15, rest15["room"] - 28 - rest15["w"])
@@ -2770,6 +2847,16 @@ with sync_playwright() as p:
                   g15["ok"] and abs(after15["w"] - (after15["room"] - 28)) <= 1
                   and after15["line"] and after15["line"][0] is False and after15["line"][1] > 20,
                   f"{g15}; top {min(f[2] for f in grow15['frames'])} to {max(f[2] for f in grow15['frames'])}; after {after15}")
+            # ITS BALLOON GROWS WITH IT, never a step behind (Kind transitions): the
+            # drawing's balloon is the drawing and its 7px, so on every frame of the
+            # glide it is 14px wider than the drawing, and the neck's 13px between
+            # it and the words' balloon holds.
+            pads = [round(f[3] - f[0], 2) for f in grow15["frames"]]
+            gaps = [f[4] for f in grow15["frames"]]
+            check("as it grows its balloon grows with it: on every frame of the glide the drawing and its 7px each side,"
+                  " and the neck's 13px between its balloon and the words' held, never a step behind",
+                  g15["frames"] > 3 and all(abs(x - 14) <= 0.5 for x in pads) and all(abs(x - 13) <= 0.5 for x in gaps),
+                  f"14px over: {min(pads)} to {max(pads)}; the neck's room {min(gaps)} to {max(gaps)}; {g15['frames']} frames moved")
             # ONE DRAWN WIDE is in its room from the start, as before; and under
             # Reduce Motion nothing grows: it plays where it sits.
             wc = mira.client()
@@ -2806,6 +2893,21 @@ with sync_playwright() as p:
                   " may or may not count a scrollbar)",
                   desk15["h"] <= desk15["postH"] + 0.5 and desk15["h"] >= min(desk15["postH"], (desk15["room"] - 28) / desk15["ar"]) - 14
                   and desk15["line"] == [True, 0], json.dumps(desk15))
+            # THE NECK AND THE TAIL AS PAINTED, at a phone's three pixels to one and
+            # a desk's two, light and dark: a rect is not a paint, so the shot is read.
+            paint15 = {}
+            for screen15, scale15 in (("phone", 3), ("desk", 2)):
+                for scheme15 in ("light", "dark"):
+                    pctx, ppg = browser_as(b, mira, screen=screen15, scheme=scheme15, scale=scale15)
+                    open_post(ppg, post)
+                    paint15[f"{screen15} {scheme15}"] = linked_paint(ppg, got["id"])
+                    close_ctx(pctx, ppg)
+            bad15 = {k: v for k, v in paint15.items() if not v.get("ok")}
+            check("the neck and the tail as painted: between the two balloons the neck is the card, the ink's stroke at its"
+                  " side and the page beside it; the words' line and the drawing's open into the neck and go on past it;"
+                  " the tail's middle is the card, its stroke the ink, the page above it; on a phone (3 to 1) and a desk"
+                  " (2 to 1), light and dark",
+                  len(paint15) == 4 and not bad15, json.dumps(bad15)[:900])
             listed = [i["id"] for i in json.loads(urllib.request.urlopen(BASE + "/api/skribls?limit=100", timeout=20)
                                                   .read().decode())["items"]]
             pg.goto(BASE + "/social/")
@@ -4545,7 +4647,7 @@ with sync_playwright() as p:
     # replies in place (section 47).
 
     # ------------------------------------------------------------------ 38
-    if part(38, "the thread's look: bubbles, initials, the count plain in its label, no lines between; phone and desk, light and dark"):
+    if part(38, "the thread's look: balloons, initials, the count plain in its label, no lines between; phone and desk, light and dark"):
         try:
             ana = someone(b, "aria", "Aria Reyes")
             eli = someone(b, "elio", "Elio Moss")
@@ -4561,12 +4663,32 @@ with sync_playwright() as p:
                     seen[(screen, scheme)] = cpg.evaluate(LOOK, [e38, a38])
                     close_ctx(cctx, cpg)
             bad = {" ".join(k): v["bad"] for k, v in seen.items() if v["bad"]}
-            check("every comment's name, time and words sit in a bubble: the site's card (--card), its lilac edge one screen"
-                  " pixel (--card-edge at --edge) and its lift (--card-drop), 18px round; as wide as its words (the short"
-                  " one's bubble narrower than its room, the long one's reaching it); no line between comments:"
-                  " phone and desk, light and dark",
+            check("every comment's name, time and words sit in a balloon drawn in ink (the owner's \"All yes (my row)\","
+                  " Nov 27): the site's card (--card), its line --balloon-line of --balloon-ink and no lift, its tail at the face"
+                  " (the card over the line, the ink's two strokes), 18px round; as wide as its words (the short one's"
+                  " balloon narrower than its room, the long one's reaching it); no line between comments: phone and desk,"
+                  " light and dark",
                   not bad and all(v["read"] for v in seen.values()),
                   f"{ {k: v[:3] for k, v in bad.items()} }; read {[v['read'] for v in seen.values()]}")
+            # THE BALLOON'S LINE IN WHOLE SCREEN PIXELS (the tiles' rule, the owner's "All yes on A", Nov 26:
+            # a line a part of a pixel wide is smeared across two on Windows' 125% and 150%): at each density the
+            # balloon's ring is a whole number of the screen's own pixels, as near the mock's 1.5px as it allows
+            # (a tie the heavier), as the browser resolved it on the balloon itself.
+            dens38 = {}
+            for d in (1, 1.25, 1.5, 1.75, 2, 2.625, 3):
+                dctx38, dpg38 = browser_as(b, ben, "phone", "light", scale=d)
+                open_post(dpg38, post)
+                dens38[d] = dpg38.evaluate("""(id) => { const b = document.querySelector('#c-' + id + ' > .cm-main > .cm-bubble'); if (!b) return null;
+                  const sh = getComputedStyle(b).boxShadow, px = (sh.match(/-?[\\d.]+px/g) || []).map(parseFloat);
+                  return { layers: sh.split(/,(?![^(]*\\))/).length, w: px.length >= 4 ? px[3] : null, dpr: devicePixelRatio }; }""", e38)
+                close_ctx(dctx38, dpg38)
+
+            def whole38(v):
+                return (bool(v) and v["layers"] == 1 and v["w"] is not None and abs(v["w"] * v["dpr"] - round(v["w"] * v["dpr"])) < 0.02
+                        and abs(v["w"] * v["dpr"] - 1.5 * v["dpr"]) <= 0.5 + 0.02)
+            check("a balloon's line is a whole number of screen pixels at every density, as near 1.5px as each allows (1,"
+                  " 1.25 and 1.5x two pixels; 1.75 and 2x three; 2.625x four; 3x five), its one ring",
+                  len(dens38) == 7 and all(whole38(v) for v in dens38.values()), json.dumps({str(k): v for k, v in dens38.items()}))
             faces = {" ".join(k): v["faces"] for k, v in seen.items()}
             check("a face not drawn yet shows its initial: the name's first letter, in the small violet words' ink"
                   " (--accent-ink) on the site's disc (--tint), at 4.5:1 or more; and the count is the small label's own"
@@ -5054,7 +5176,7 @@ with sync_playwright() as p:
             stopped(44, exc)
 
     # ------------------------------------------------------------------ 45
-    if part(45, "drawings in the thread: in the bubble, as wide as its room; a drawn reply's page; stills on the way"):
+    if part(45, "drawings in the thread: alone in its balloon, or linked under the words; as wide as its room; a drawn reply's page; stills on the way"):
         try:
             ana = someone(b, "aria", "Aria Reyes")
             eli = someone(b, "elio", "Elio Moss")
@@ -5089,13 +5211,16 @@ with sync_playwright() as p:
                     close_ctx(cctx, cpg)
             want = {"phone": [294, 294, 294], "desk": [264, 264, 264]}
             widths = {" ".join(k): [a["w"] for a in v] for k, v in seen.items()}
-            check("a drawn comment or reply (the owner's B, Nov 17): its drawing sits in its bubble under its words (a drawing"
-                  " alone under its name), as wide as the bubble's room (294px on a phone, 264 on a desk), the bubble the"
-                  " room's width with it, in every list (one level, everywhere: Dora's on the post's page, Aria's on Elio's"
+            wheres = {" ".join(k): [a["where"] for a in v] for k, v in seen.items()}
+            check("a drawn comment or reply (the owner's \"All yes (my row)\", Nov 27): a drawing alone sits in the one"
+                  " balloon under its name, a drawing with words in its own balloon linked under the words'; the drawing as"
+                  " wide as its room (294px on a phone, 264 on a desk), the balloon that holds it the drawing and its 7px"
+                  " each side, in every list (one level, everywhere: Dora's on the post's page, Aria's on Elio's"
                   " comment's, Elio's on Aria's); still until tapped, with its line",
                   all(widths[k] == want[k.split()[0]] for k in widths)
-                  and all(a["inBubble"] and a["full"] and a["still"] for v in seen.values() for a in v),
-                  f"{widths}; {[(a['inBubble'], a['full'], a['still']) for v in seen.values() for a in v][:6]}")
+                  and all(w_ == ["alone", "linked", "linked"] for w_ in wheres.values())
+                  and all(a["fits"] and a["still"] for v in seen.values() for a in v),
+                  f"{widths}; {wheres}; {[(a['fits'], a['still']) for v in seen.values() for a in v][:6]}")
             # A TAP ON THE DRAWING PLAYS IT: it never opens the comment's page, as a tap on its bubble does.
             pg = ben.pg
             open_post(pg, post)

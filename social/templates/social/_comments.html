@@ -86,11 +86,22 @@
 {%- else %}{{ skribl_inline(it.c.skribl_id, bp=skribl_bp, line_waits=waits, full=true, full_meta=fm) }}{% endif %}
 {%- endmacro %}
 
+{#- ITS DRAWING, NO TALLER THAN THE PAGE'S OWN (the walkthrough's mocks,
+    choice 4, the owner's "all yes", Nov 19): --ar is its shape, which
+    social.css (.cm-art) needs to size its box; its line waits for the first
+    play, as a card's does, and then it grows to its room. In the one balloon
+    under a name, or in its own balloon under the words (comment, below). #}
+{% macro art_box(it) -%}
+<div class="cm-art"{% if it.sk and ((it.sk.canvas_w and it.sk.canvas_h) or it.sk.ground) %} style="{% if it.sk.canvas_w and it.sk.canvas_h %}--ar: {{ '%.5f'|format(it.sk.canvas_w|float / it.sk.canvas_h|float) }};{% endif %}{% if it.sk.ground %} --plate-ground: {{ it.sk.ground }}{% endif %}"{% endif %}>{{ comment_art(it, waits=true) }}</div>
+{%- endmacro %}
+
 {#  ONE COMMENT, OR ONE REPLY (the comment thread, step 1; the owner's yes,
     Nov 17, to the Read More Replies mock): its face (one not drawn yet
-    shows its initial, on the site's disc), and beside it a BUBBLE, the
-    site's card with its lilac edge and its lift, as wide as its words: its
-    name, when (a way to its own page), its words and its drawing. Under the
+    shows its initial, on the site's disc), and beside it a BALLOON drawn in
+    ink, its tail at the face (the owner's "All yes (my row)", Nov 27), as
+    wide as its words: its name, when (a way to its own page), its words; its
+    drawing in a balloon of its own under them, linked by a neck, or, with no
+    words, in the one balloon under its name. Under the
     bubble its row, the post's own: Reply (the word on a desk, the icon
     alone on a phone), its repost and how many (step 3), its heart and how
     many (step 2), and ⋯. BLUESKY'S WAY, OUR LOOK (the owner's yes, Nov
@@ -119,16 +130,20 @@
   {%- endif %}
   {{ face(who, initial=true) }}
   <div class="cm-main">
-    <div class="cm-bubble">
+    {#- A DRAWING AND WORDS ARE TWO BALLOONS, LINKED (the owner's "All yes (my
+        row)", Nov 27): the words' balloon, and under it the drawing's own,
+        joined by a neck (social.css, THE BALLOON). A drawing with no words
+        rides in the one balloon, under its name (.is-pic). #}
+    {%- set linked = c.skribl_id and c.words %}
+    <div class="cm-bubble{% if c.skribl_id and not c.words %} is-pic{% endif %}">
       <div class="cm-head"><b class="cm-name">{{ who.display_name }}</b><a class="cm-when" href="{{ url }}"><time datetime="{{ when_iso(c.created_at) }}" data-when="ago">{{ when_day(c.created_at) }}</time></a></div>
       {% if c.taken_down_at and me and me.id == c.person_id %}<p class="post-down cm-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
       {% if c.words %}<p class="cm-words">{{ said(c.words, it.mentions) }}</p>{% endif %}
-      {#- ITS DRAWING, NO TALLER THAN THE PAGE'S OWN (the walkthrough's mocks,
-          choice 4, the owner's "all yes", Nov 19): --ar is its shape, which
-          social.css (.cm-art) needs to size its box; its line waits for the
-          first play, as a card's does, and then it grows to its room. #}
-      {% if c.skribl_id %}<div class="cm-art"{% if it.sk and ((it.sk.canvas_w and it.sk.canvas_h) or it.sk.ground) %} style="{% if it.sk.canvas_w and it.sk.canvas_h %}--ar: {{ '%.5f'|format(it.sk.canvas_w|float / it.sk.canvas_h|float) }};{% endif %}{% if it.sk.ground %} --plate-ground: {{ it.sk.ground }}{% endif %}"{% endif %}>{{ comment_art(it, waits=true) }}</div>{% endif %}
+      {% if c.skribl_id and not linked %}{{ art_box(it) }}{% endif %}
     </div>
+    {%- if linked %}
+    {{ art_box(it) }}
+    {%- endif %}
     <div class="cm-acts">
       {#- THE COUNT BY THE TALK CLOUD (the owner's yes, Nov 18): how many
           replies are under it, at any depth, beside Reply's cloud (on a

@@ -3390,12 +3390,13 @@ and luxurious. Shadows seem blurry and kind of muddy the page." Their "All
 yes" to the crisp mock's B. Depth on the site is three heights now, and a
 soft shadow (more than 2.5px of blur) is only for what floats:
 
-- **On the page** (a post's card, a comment's bubble, a tile, a panel, the
-  answer line, the comment box): the edge and one line of shade under it,
-  1px with no blur (`--card-drop`). In dark, a line of light inside the top
-  edge.
-- **In a card** (the drawing in a post's card, a bubble or the comment
-  box): the edge alone. A drawing on the page itself (a post's own page,
+- **On the page** (a post's card, a tile, a panel, the answer line, the
+  comment box): the edge and one line of shade under it, 1px with no blur
+  (`--card-drop`). In dark, a line of light inside the top edge. A
+  comment's balloon (a bubble until Nov 27, section 51) is its drawn line
+  alone.
+- **In a card** (the drawing in a post's card, a comment's balloon or the
+  comment box): the edge alone. A drawing on the page itself (a post's own page,
   How it works, the front door, a sheet's paper) keeps the page's line
   (`--draw-lift`).
 - **Floating** (a toast, the list under an @): the one shadow, short and
@@ -4176,3 +4177,57 @@ is its edge alone, as in light. The hover's line (section 48) is the same width.
 `verify_socialposts` 22 holds it (the edge read where it is painted and nothing
 under or over it; the line at seven densities a whole number of pixels), each
 row shown red by breaking its part.
+
+## 51. Built: Comments as drawn balloons, a drawing linked under its words (Nov 27)
+
+The owner, Nov 27: "Comments doesn't look very good. What could we do?"
+Mocked three quiet ways, then "Not sure what looks best. Let's try something
+else. What looks artistic but organized and clear": Comments, Drawn
+(https://claude.ai/artifact/Cfbq7jru7F8R66Tcyp77FG), where D drew each
+comment as a speech balloon in ink. "The drawn balloons looks cool but with
+image needs to look more connected. It seems kinda separate now. Mock some
+alternatives": Balloons, Connected
+(https://claude.ai/artifact/1WbYpAdHajckp6wEgPxTiC), the drawing inside the
+balloon, linked to it, or tucked behind it. "I like the linked look. What
+will that affect?": Linked Balloons
+(https://claude.ai/artifact/Lsz19uWdrG6rhiwMJgy5Up), as it would be built,
+with the owner's own row under each comment beside the mock's quieter one,
+and a drawing posted with no words. The owner: "All yes (my row)".
+
+WHAT IT IS (`social.css`, THE BALLOON; `_comments.html`, comment and
+art_box):
+
+- **Every comment is a balloon drawn in ink**: the card, its line in
+  `--balloon-ink` (the mock's ink as it looked on the card, made solid:
+  7.6:1 on the light page, 7.3:1 on the dark one), and a tail at the face
+  (its tip 21px down). No lift: a drawn line needs no shadow. The line lies
+  outside the balloon where the edge was, so nothing in it moved.
+- **The line is whole screen pixels** (`--balloon-line`, section 50's rule):
+  the mock's 1.5px rounded to the screen's own pixels at each density, two
+  at 1x to 1.5x, three at 1.75x to 2.25x, four from 2.5x, five at 3x.
+- **A drawing and words are two balloons, linked**: the words' balloon, and
+  13px under it the drawing's own, the drawing on 7px of the card, 18px
+  round, joined by a neck 18px wide, 22px in from the left, its strokes
+  curving into both lines. The drawing keeps Nov 19's sizes (no taller than
+  the post's drawing until it plays, then its room) and its glide; its
+  balloon is the drawing and its 7px, so it grows with it.
+- **A drawing with no words** sits in the one balloon under the name, on
+  the same 7px.
+- **The row under each comment is the owner's** (Nov 17 and 18: Reply's
+  cloud and its count, Repost, the heart, ⋯; the icons alone on a phone).
+  The mock's quieter row would have taken those back.
+- **Windows' High Contrast** draws each balloon as an outline in the mode's
+  ink; the tail and the neck step aside.
+
+WHAT DID NOT CHANGE: the comment you opened, on its own page (its band, not
+a balloon: section 18's "I don't want to make another bubble"), a comment's
+card out in the world (a repost or a quote of it), the comment box, the
+answer bar, Pad and Flip (comments are the site's), Letters and posts.
+
+`verify_socialcomments` holds it (38: the balloon's card, line and tail, and
+its line in whole screen pixels at seven densities; 15: the drawing in its
+own balloon at rest, the balloon growing with it on every frame, and the neck
+and the tail as painted on a phone at 3x and a desk at 2x, light and dark;
+45: a drawing alone or linked, in every list), and `verify_socialposts` 23
+(a balloon is its drawn line alone; a drawing in a balloon its edge alone).
+

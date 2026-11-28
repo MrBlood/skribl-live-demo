@@ -6,7 +6,7 @@ what it found, is `docs/COLOR-AUDIT.md`.
 **A snapshot, and nothing keeps it in step.** It is these stylesheets as they stood (a content stamp is
 the first eight of the file's SHA-256, the `?v=` its link carries):
 
-- `social/static/social.css`, content stamp `644df935`
+- `social/static/social.css`, content stamp `53d1f6d5`
 - `skribl/static/styles.css`, content stamp `09bc7166`
 
 `python3 harness/tools/coloraudit.py --check docs/COLOR-TOKENS.md` says in a second, with no browser,
@@ -23,7 +23,7 @@ which properties read the token, and how often.
 
 ## The site (`social/static/social.css`)
 
-61 colour tokens.
+62 colour tokens.
 
 | Token | Light HEX/sRGB | Light OKLCH | Dark HEX/sRGB | Dark OKLCH | Usage |
 |---|---|---|---|---|---|
@@ -52,9 +52,10 @@ which properties read the token, and how often.
 | `--scrim` | `rgb(23 20 42 / 0.36)` | `oklch(20.7% 0.043 288 / 0.36)` | `rgb(0 0 0 / 0.5)` | `oklch(0.0% 0.000 none / 0.5)` | fill ×2 |
 | `--draw-wait` | `#ece6ff` | `oklch(93.7% 0.034 297)` | `#2e2650` | `oklch(30.0% 0.074 290)` | fill ×9; feeds `--bg-elev`, `--draw-edge` |
 | `--draw-edge` | `#dbd5ed` | `oklch(88.6% 0.032 296)` | `#3f375e` | `oklch(36.4% 0.066 292)` | ring or shadow ×2 |
-| `--card` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#231e3b` | `oklch(25.6% 0.054 290)` | fill ×12; ring or shadow ×2; feeds `--card-edge`, `--card-edge-hc` |
+| `--card` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#231e3b` | `oklch(25.6% 0.054 290)` | fill ×15; ring or shadow ×2; feeds `--balloon-ink`, `--card-edge`, `--card-edge-hc` |
 | `--card-line` | `rgb(124 92 255 / 0.34)` | `oklch(59.9% 0.230 286 / 0.34)` | `rgb(167 146 255 / 0.26)` | `oklch(72.4% 0.155 291 / 0.26)` | ring or shadow ×10 |
-| `--card-edge` | `#d2c8ff` | `oklch(85.9% 0.077 294)` | `#453c6e` | `oklch(39.0% 0.083 290)` | ring or shadow ×14; edge ×5; feeds `--line` |
+| `--card-edge` | `#d2c8ff` | `oklch(85.9% 0.077 294)` | `#453c6e` | `oklch(39.0% 0.083 290)` | ring or shadow ×13; edge ×5; feeds `--line` |
+| `--balloon-ink` | `#504d5c` | `oklch(42.9% 0.024 295)` | `#a1a1af` | `oklch(71.3% 0.020 286)` | ring or shadow ×2; fill ×2 |
 | `--quote-well` | `#f0ecff` | `oklch(95.2% 0.026 296)` | `#16112b` | `oklch(20.0% 0.051 290)` | fill ×1 |
 | `--row-band` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#171723` | `oklch(21.1% 0.024 284)` | fill ×1; feeds `--tile-edge` |
 | `--row-band-sheet` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#171723` | `oklch(21.1% 0.024 284)` | feeds `--row-band` |
@@ -95,7 +96,7 @@ which properties read the token, and how often.
 |---|---|---|---|
 | `--fill-drop` | `inset 0 1 0 #ffffff at 0.32`; `inset 0 -1 0 #241078 at 0.34`; `0 1 2 #3c288c at 0.36` | `inset 0 1 0 #ffffff at 0.32`; `inset 0 -1 0 #241078 at 0.34`; `0 1 2 #3c288c at 0.36` | ring or shadow ×7 |
 | `--draw-lift` | `0 1 0 #3c288c at 0.13` | `0 0 0 #000000 at 0` | ring or shadow ×1 |
-| `--card-drop` | `0 1 0 #3c288c at 0.13` | `inset 0 1 0 #ffffff at 0.07` | ring or shadow ×16; feeds `--draw-lift` |
+| `--card-drop` | `0 1 0 #3c288c at 0.13` | `inset 0 1 0 #ffffff at 0.07` | ring or shadow ×15; feeds `--draw-lift` |
 | `--float-drop` | `0 1 0 #3c288c at 0.14`; `0 12 22 -12 #1e1450 at 0.45` | `inset 0 1 0 #ffffff at 0.08`; `0 12 22 -12 #000000 at 0.8` | ring or shadow ×2 |
 
 ### See-through tokens, on the grounds they can land on
@@ -367,16 +368,17 @@ or a near miss.
 | `--tile-edge` | `--line-2` | `#dfdcf0` / `#dde2ea` | `#2b2b39` / `#262c38` | 0.0202 |
 | `--nav-on` | `--text-primary` | `#14171d` / `#11161e` | `#ffffff` / `#f6f7f9` | 0.0242 |
 | `--draw-edge` | `--btn2-hover` | `#dbd5ed` / `#ddd4ff` | `#3f375e` / `#3b3166` | 0.0273 |
+| `--balloon-ink` | `--text-dim-hc` | `#504d5c` / `#4f5765` | `#a1a1af` / `#9aa2b1` | 0.0293 |
 | `--row-band-sheet` | `--surface-pop` | `#ffffff` / `#ffffff` | `#171723` / `#1b1f27` | 0.0299 |
 | `--row-band` | `--surface-pop` | `#ffffff` / `#ffffff` | `#171723` / `#1b1f27` | 0.0299 |
 
-Exact copies: 18 of the site's 61 colour tokens.
+Exact copies: 18 of the site's 62 colour tokens.
 
 ## What the stylesheets say
 
 | Stylesheet | Tokens | Colours written into rules | color-mix() | Gradients | Shadow lines | of them soft (blur over 2.5px) | Forced-colours blocks | More-contrast blocks |
 |---|---|---|---|---|---|---|---|---|
-| `social/static/social.css` | 94 | 13 | 12 | 7 | 78 | 0 | 1 | 1 |
+| `social/static/social.css` | 96 | 13 | 15 | 7 | 79 | 0 | 2 | 1 |
 | `skribl/static/styles.css` | 160 | 216 | 42 | 21 | 166 | 30 | 3 | 1 |
 | `skribl/static/flip.css` | 8 | 31 | 1 | 0 | 30 | 3 | 0 | 0 |
 | `skribl/static/inlineplayer.css` | 1 | 56 | 7 | 2 | 5 | 2 | 0 | 0 |
