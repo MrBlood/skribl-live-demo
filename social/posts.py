@@ -302,6 +302,23 @@ def person_page(person, viewer, before=None, limit=PAGE, skip=None):
     return once(page), (_cursor(page[-1]) if more and page else None)
 
 
+def hidden_backs(post, viewer):
+    """HER SAY's count on her own post's page: how many of the draw-backs on
+    `post` its maker has hidden from it (drawn_on_hidden_at), counted as
+    drawbacks() counts the ones everybody sees: nothing taken down, and
+    nobody either side of a block with `viewer`."""
+    from .models import Block
+    if getattr(post, "id", None) is None:
+        return 0
+    q = (sa.select(sa.func.count(Post.id)).join(Person, Person.id == Post.person_id)
+         .where(Post.drawn_on_id == post.id, Post.taken_down_at.is_(None), Person.taken_down_at.is_(None),
+                Post.drawn_on_hidden_at.isnot(None)))
+    if viewer is not None:
+        q = q.where(~sa.exists().where(sa.or_(sa.and_(Block.blocker_id == viewer.id, Block.blocked_id == Post.person_id),
+                                              sa.and_(Block.blocker_id == Post.person_id, Block.blocked_id == viewer.id))))
+    return site().session().execute(q).scalar() or 0
+
+
 def drawbacks(posts, viewer):
     """DRAW BACK, for a page of posts (`posts`, the site's rows): {"n": {post
     id: how many draw-backs it has}, "on": {a draw-back's id: {"url", "first",
@@ -1384,8 +1401,14 @@ def register(bp, skribl_blueprint="skribl"):
                 q = q.where(Post.drawn_on_hidden_at.is_(None))
             got = site().session().execute(q).all()
             backs = [c for c in cards([_entry(pp, who) for pp, who in got], me, words=False) if c and c["sk"]]
-            hidden = sum(1 for c in backs if c["post"].drawn_on_hidden_at is not None)
-            shown = len(backs) - hidden
+            # THE LABEL SAYS HOW MANY THERE ARE, NOT HOW MANY THE STRIP HOLDS (a
+            # bug, the owner's "Yes", Nov 27): the strip is the newest BACKS,
+            # and its label counted those, so fourteen read "12 draw-backs"
+            # here while the post's pen said 14 (and the eye's answer, n, the
+            # true count, once she tapped one). Both now as the pen counts:
+            # drawbacks() for what everybody sees, hidden_backs() for hers.
+            shown = drawbacks([card["post"]], me)["n"].get(card["post"].id, 0)
+            hidden = hidden_backs(card["post"], me) if card["mine"] else 0
         # The page's token for everybody: Report is anybody's (piece 5).
         return _page("post.html", here="post", card=card, backs=backs, backs_shown=shown, backs_hidden=hidden,
                      share_url=public_origin() + card["url"], token=csrf_token(), cm=cm, lk=lk,

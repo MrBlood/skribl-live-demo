@@ -55109,3 +55109,30 @@ the drawing in the words' balloon, 10/14 (at rest, every frame, the paint,
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: a comment's balloon has a dark ink outline and a little
 tail pointing at the face.
+
+## After v330 -- A post's page counts every draw-back, not the strip's twelve (bug fix)
+
+The owner, Nov 27: "How many drawbacks can be done on one drawing?" As many
+as people like: nothing limits them but the forty posts an hour the site
+lets each person make (security.LIMITS; Cal said twenty at first, which is
+Skribl's own Gallery's limit for posting from the Pad, and said so). Reading
+it showed a gap: a post's own page shows the newest
+twelve draw-backs in its strip (posts.BACKS), and its label counted those, so
+fourteen read "12 draw-backs" there while the post's pen said 14 (and the
+eye's answer, which is the true count, once she tapped one), and the older
+ones cannot be reached from that page. Asked whether to fix the count now
+and mock a way to the rest, the owner: "Yes".
+
+WHAT CHANGED (posts.py, _post_page): the label's number is the pen's
+(drawbacks(): nothing taken down, nobody either side of a block, nothing
+she hid), and on her own post the line under it is hidden_backs(), the same
+count of the ones she hid. The strip still holds the newest twelve; a way
+to the rest is mocked first.
+
+THE CHECK: verify_socialdrawback 6, fourteen drawn back on one post by two
+people of its own (seven each: the first run had Theo and Uma make them,
+and five rows of later sections were refused with "limited", their forty an
+hour spent), the oldest hidden by its maker (so not among the twelve): "13
+draw-backs" for Theo and for her, "1 hidden from your post" under hers,
+twelve tiles each. Red on main as it was (8/9: "12 draw-backs" beside a pen
+saying 13, and no line of the hidden one), green with the fix (9/9).
