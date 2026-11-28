@@ -2751,8 +2751,10 @@ a.post-face { text-decoration: none; }
 }
 .cm-kids > .cm-rm::before { top: 0; height: 25px; }
 /* The eye sits in the middle of its line, which grows when its words wrap:
-   the bend meets the eye's middle and reaches up past the comment's top. */
-.cm-kids > .cm > .cm-fold-line .cm-fold-ic::before { top: auto; bottom: calc(50% - 1px); height: 60px; }
+   the bend meets the eye's middle and reaches up past the comment's top; the
+   eye is 20px in the face's 36, so the bend runs 8px further to stop 2px
+   short of it. */
+.cm-kids > .cm > .cm-fold-line .cm-fold-ic::before { top: auto; bottom: calc(50% - 1px); width: 37px; height: 60px; }
 .cm.is-quiet:has(> .cm-kids) > .cm-fold-line .cm-fold-ic::after {
   content: ""; position: absolute; left: 17px; top: 100%; height: 40px; border-left: 2px solid var(--card-edge);
 }

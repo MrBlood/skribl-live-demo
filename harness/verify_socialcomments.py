@@ -189,6 +189,16 @@ built, tried and set aside; docs/SOCIAL-SITE.md section 18):
      the bar, walked with Tab from its top to its foot; every stop read at
      nine points of it, and not one of them covered by either bar.
 
+ 51. THE TREE, AN OPTION (the owner's "All yes", Nov 28, to the tree mock):
+     Settings' Replies (In a line where everyone starts, As a tree kept with
+     the account; the route refuses what it should); for whoever picked it,
+     every reply under the one it answers, oldest first, a step in each, two
+     steps at most, then "Read N more replies" to that one's own page; the
+     thread's line down from each face, on past each reply but the last,
+     bending into each face, a muted one's eye and the circled plus; the
+     words' room at each step; In a line for everybody else; a comment's own
+     page the same; a reply lands under the one it answers, last.
+
 SOCIALCOMMENTS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
 part and green as built: DECISIONS.md, "Comments at /social", "Comments on
@@ -1534,6 +1544,73 @@ STRAIGHT = """(id) => { """ + TOKEN_JS + """
     ['::before', '::after'].forEach(p => { const cs = getComputedStyle(e, p);
       if (cs.content !== 'none' && cs.borderBottomStyle !== 'none' && cs.borderBottomWidth !== '0px') bad.push('a curve: ' + e.className); }));
   return { ok: !bad.length, bad: bad.slice(0, 6) }; }"""
+# THE TREE (section 51): under comment `id` as the page shows it, each reply's
+# id, its count by the talk cloud, whether it is folded away (muted), the left
+# of its face, and what it holds: its replies one step in, or "Read N more
+# replies" (its words, where it goes, its height).
+TREE_OF = """(id) => { const li = document.getElementById('c-' + id); if (!li) return null;
+  const n = x => (x.querySelector(':scope > .cm-main .cm-acts .cm-n') || {}).textContent || null;
+  const at = x => { const f = x.querySelector(':scope > .face-ring, :scope > .cm-gone-face'); return f ? Math.round(f.getBoundingClientRect().left) : null; };
+  const walk = x => { const k = x.querySelector(':scope > .cm-kids'), rm = k && k.querySelector(':scope > .cm-rm'), a = rm && rm.querySelector('.rm-link');
+    return { id: x.dataset.comment, n: n(x), quiet: x.classList.contains('is-quiet'), x: at(x),
+             kids: k ? [...k.querySelectorAll(':scope > .cm')].map(walk) : [],
+             more: a ? { words: a.textContent.trim(), href: a.getAttribute('href'), h: Math.round(a.getBoundingClientRect().height) } : null }; };
+  return Object.assign(walk(li), { tree: !!li.closest('[data-cm-tree]'), chain: !!li.querySelector(':scope > .cm-chain') }); }"""
+# Every piece of the tree's line under comment `id`, read off the computed
+# styles where it is drawn: down from a face (or a muted one's eye) with
+# replies under it; into each reply's face, its eye, or the circled plus, a
+# bend of 2px of --card-edge, round 14px, leaving the column of the face above
+# (to a pixel), meeting the middle of what it runs into (to a pixel) and
+# ending 2px short of it; on past every reply but the last, and never past the
+# last.
+BENDS = """(id) => { """ + TOKEN_JS + """
+  const li = document.getElementById('c-' + id), edge = tok(li, 'color', 'var(--card-edge)'), bad = [];
+  const r2 = v => Math.round(v * 100) / 100;
+  const faceOf = x => x.querySelector(':scope > .face-ring, :scope > .cm-gone-face');
+  const eyeOf = x => x.querySelector(':scope > .cm-fold-line .cm-fold-ic');
+  const mid = e => { const r = e.getBoundingClientRect(); return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, left: r.left }; };
+  const spot = x => x.classList.contains('is-quiet') ? mid(eyeOf(x).querySelector('.ic')) : mid(faceOf(x));
+  const line = cs => cs.content !== 'none' && cs.borderLeftColor === edge && cs.borderLeftWidth === '2px';
+  const bendOf = (host, pseudo) => { const cs = getComputedStyle(host, pseudo), r = host.getBoundingClientRect();
+    if (!line(cs) || cs.borderBottomColor !== edge || cs.borderBottomWidth !== '2px' || cs.borderBottomLeftRadius !== '14px') return null;
+    const left = r.left + parseFloat(cs.left), top = r.top + parseFloat(cs.top);
+    return { col: r2(left + 1), y: r2(top + parseFloat(cs.height) - 1), end: r2(left + parseFloat(cs.width)) }; };
+  const walk = x => {
+    const kids = x.querySelector(':scope > .cm-kids'); if (!kids) return;
+    const me = spot(x);
+    const down = x.classList.contains('is-quiet') ? getComputedStyle(eyeOf(x), '::after') : getComputedStyle(x.querySelector(':scope > .cm-main'), '::before');
+    if (!line(down)) bad.push((x.dataset.comment || '?') + ': no line down');
+    const items = [...kids.children];
+    items.forEach((k, i) => {
+      const rm = k.classList.contains('cm-rm'), nm = rm ? 'Read more under ' + x.dataset.comment : k.dataset.comment;
+      const to = rm ? mid(k.querySelector('.rm-link .ic')) : spot(k);
+      const b = rm ? bendOf(k, '::before') : k.classList.contains('is-quiet') ? bendOf(eyeOf(k), '::before') : bendOf(faceOf(k), '::after');
+      if (!b) bad.push(nm + ': no bend');
+      else {
+        if (Math.abs(b.col - me.cx) > 1) bad.push(nm + ': leaves ' + b.col + ', the face above at ' + r2(me.cx));
+        if (Math.abs(b.y - to.cy) > 1) bad.push(nm + ': meets ' + b.y + ', its middle ' + r2(to.cy));
+        if (Math.abs(to.left - b.end - 2) > 1) bad.push(nm + ': ends ' + r2(to.left - b.end) + 'px short');
+      }
+      const last = i === items.length - 1;
+      if (line(getComputedStyle(k, '::after')) === last) bad.push(nm + (last ? ': a line past the last' : ': no line on'));
+      if (!rm) walk(k);
+    });
+  };
+  walk(li);
+  return { ok: !bad.length, bad: bad.slice(0, 8) }; }"""
+# Settings' Replies, as the page shows it: its title and words, each choice
+# and whether it is pressed, and the pill's left and width against the
+# pressed one's (once it has faded in).
+REPLIES_PANEL = """() => { const p = document.querySelector('.replies-panel'); if (!p) return null;
+  const sw = p.querySelector('[data-replies-switch]'), pill = sw.querySelector('.theme-pill'), on = sw.querySelector('button[aria-pressed="true"]');
+  const pr = pill.getBoundingClientRect(), br = on ? on.getBoundingClientRect() : null;
+  const theme = document.querySelector('.theme-panel:not(.replies-panel)');
+  return { title: p.querySelector('.panel-title').textContent, sub: p.querySelector('.panel-sub').textContent,
+           choices: [...sw.querySelectorAll('button')].map(b => [b.textContent, b.getAttribute('aria-pressed')]),
+           pill: br ? Math.round(Math.abs(pr.left - br.left) + Math.abs(pr.width - br.width)) : null, shown: getComputedStyle(pill).opacity,
+           underTheme: !!theme && theme.nextElementSibling === p, width: Math.round(sw.getBoundingClientRect().width),
+           themeWidth: theme ? Math.round(theme.querySelector('.theme-switch').getBoundingClientRect().width) : null }; }"""
+
 # The count by each talk cloud, for each of `ids`: what it says, Reply's name,
 # the word (shown, or clipped for a screen reader), whether it is the count
 # alone (signed out), and its ink on the page.
@@ -5814,6 +5891,183 @@ with sync_playwright() as p:
                   f"{[(s['name'], s['which'], s['bar'], s['own']) for s in under50][:8]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(50, exc)
+
+    if part(51, "the tree, an option: Settings' Replies; two steps in, oldest first, then Read more; its line bends into each face"):
+        try:
+            tova = someone(b, "tova", "Tova Lund")
+            ines = someone(b, "ines", "Ines Cole")
+            kip = someone(b, "kipr", "Kip Rowe")
+            olu = someone(b, "olua", "Olu Ade")
+            wren = someone(b, "wren", "Wren Hale")
+            post = make_post(kip, "Section 51, the lighthouse at dusk", seed=511)
+            c1 = said(ines, post, "The beam is lovely.")
+            r1 = said(olu, post, "It turns every nine seconds.", answer_to=c1)
+            r2 = said(kip, post, "Drawn from the pier.", answer_to=c1)
+            r3 = said(ines, post, "Every nine? I'll count.", answer_to=r1)
+            r4 = said(olu, post, "Nine it is.", answer_to=r3)
+            r5 = said(kip, post, "Ten, by my watch.", answer_to=r4)
+            r6 = said(wren, post, "Lovely light.", answer_to=r1)
+            r7 = said(ines, post, "Thanks, Wren.", answer_to=r6)
+            c2 = said(olu, post, "Section 51, nothing under this one.")
+            mc = tova.client()
+            mc.get("/social/@wren")
+            mc.post_json("/social/@wren/mute", {})
+            # SETTINGS' REPLIES: In a line where everyone starts; As a tree, kept with the account.
+            pg = tova.pg
+            pg.set_viewport_size({"width": 402, "height": 874})
+            pg.goto(BASE + "/social/you")
+            ready(pg)
+            pg.wait_for_timeout(500)
+            first = pg.evaluate(REPLIES_PANEL)
+            with pg.expect_response(lambda r: r.url.endswith("/social/you/replies"), timeout=8000) as rsp:
+                pg.click("[data-replies-switch] button[data-choice=tree]")
+            answered = rsp.value.status
+            pg.wait_for_timeout(450)
+            picked = pg.evaluate(REPLIES_PANEL)
+            kept = db("select replies_view from social_people where handle_key = 'tova'")
+            pg.goto(BASE + "/social/you")
+            ready(pg)
+            pg.wait_for_timeout(500)
+            again = pg.evaluate(REPLIES_PANEL)
+            check("SETTINGS' REPLIES (the owner's \"All yes\", Nov 28, to the tree mock): under Theme, \"Replies\", \"How the"
+                  " replies under a comment show\", Theme's own switch and width; In a line pressed for somebody who never"
+                  " picked, the pill under it; a tap on As a tree slides the pill there and keeps it with the account"
+                  " (the row says tree), and Settings opened again presses it",
+                  first and first["title"] == "Replies" and first["sub"] == "How the replies under a comment show"
+                  and first["underTheme"] and first["width"] == first["themeWidth"]
+                  and first["choices"] == [["In a line", "true"], ["As a tree", "false"]] and first["pill"] is not None
+                  and first["pill"] <= 1 and first["shown"] == "1"
+                  and answered == 200 and picked["choices"] == [["In a line", "false"], ["As a tree", "true"]] and picked["pill"] <= 1
+                  and kept == [("tree",)] and again["choices"] == [["In a line", "false"], ["As a tree", "true"]] and again["pill"] <= 1,
+                  f"first {first}; answered {answered}; then {picked}; kept {kept}; again {again}")
+            bad_view = tova.client()
+            bad_view.get("/social/you")
+            st_bad, _ = bad_view.post_json("/social/you/replies", {"view": "sideways"})
+            st_token, _ = bad_view.post_json("/social/you/replies", {"view": "line"}, token=False)
+            nobody = Client()
+            nobody.get(f"/social/p/{post}")
+            st_out, _ = nobody.post_json("/social/you/replies", {"view": "tree"})
+            check("...and the route keeps nothing else: a view that isn't one 400, no token 403, signed out 401; the row"
+                  " still says tree",
+                  st_bad == 400 and st_token == 403 and st_out == 401
+                  and db("select replies_view from social_people where handle_key = 'tova'") == [("tree",)],
+                  f"bad {st_bad}, no token {st_token}, signed out {st_out}")
+            # THE TREE, for Tova: phone and desk, light and dark.
+            want = {"id": c1, "n": "7", "kids": [
+                {"id": r1, "n": "5", "kids": [{"id": r3, "n": "2", "kids": [], "more": ("Read 2 more replies", r3)},
+                                             {"id": r6, "n": "1", "kids": [], "more": ("Read 1 more reply", r6), "quiet": True}]},
+                {"id": r2, "n": None, "kids": []}]}
+
+            def shape(t):
+                return {"id": t["id"], "n": t["n"], "kids": [shape(k) for k in t["kids"]],
+                        **({"more": (t["more"]["words"], t["more"]["href"].rsplit("/", 1)[-1])} if t["more"] else {}),
+                        **({"quiet": True} if t["quiet"] else {})}
+            seen = {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    cctx, cpg = browser_as(b, tova, screen=screen, scheme=scheme)
+                    open_post(cpg, post)
+                    t1 = cpg.evaluate(TREE_OF, c1)
+                    seen[f"{screen} {scheme}"] = {"t1": t1, "t2": cpg.evaluate(TREE_OF, c2), "bends": cpg.evaluate(BENDS, c1),
+                                                  "room": cpg.evaluate(ROOM, [c1, r1, r3])}
+                    out = os.environ.get("TREE_SHOTS")
+                    if out:
+                        cpg.locator("#comments").screenshot(path=f"{out}/{screen}-{scheme}-tree.png")
+                    close_ctx(cctx, cpg)
+            one = seen["phone light"]
+            check("THE TREE, for whoever picked it: under Ines's comment every reply to it, oldest first, a step in (Olu's,"
+                  " then Kip's), and every reply to those one more step in (Ines's and Wren's under Olu's, Wren's muted"
+                  " and folded to its line); two steps in, one with replies under it says \"Read 2 more replies\" (and"
+                  " \"Read 1 more reply\" under the muted one) to its own page, a 44px tap, and nothing deeper shows;"
+                  " each count by its talk cloud as In a line (7, 5, 2, 1); a step is 48px; the list says it is a"
+                  " tree, with no conversation followed down: phone and desk, light and dark",
+                  all(v["t1"]["tree"] and not v["t1"]["chain"] and shape(v["t1"]) == want
+                      and v["t1"]["kids"][0]["x"] - v["t1"]["x"] == 48 and v["t1"]["kids"][0]["kids"][0]["x"] - v["t1"]["x"] == 96
+                      and v["t1"]["kids"][0]["kids"][0]["more"]["h"] >= 44
+                      and v["t2"]["kids"] == [] and v["t2"]["more"] is None for v in seen.values()),
+                  f"{shape(one['t1'])}; steps {one['t1']['x']}, {one['t1']['kids'][0]['x']}, {one['t1']['kids'][0]['kids'][0]['x']}")
+            check("THE TREE'S LINE, 2px of --card-edge: down from each face with replies under it (and from the muted"
+                  " one's eye), on past each reply but the last and never past it, and into each reply's face, the eye"
+                  " and the circled plus, a bend round 14px that leaves the face above's column and meets the middle"
+                  " of what it runs into, each to a pixel, ending 2px short: phone and desk, light and dark",
+                  all(v["bends"]["ok"] for v in seen.values()), f"{ {k: v['bends'] for k, v in seen.items()} }")
+            check("the words keep their room at each step: on a phone 322px, 274 a step in and 226 two in; on a desk 292,"
+                  " 244 and 196",
+                  all(v["room"] == ([322, 274, 226] if k.startswith("phone") else [292, 244, 196]) for k, v in seen.items()),
+                  f"{ {k: v['room'] for k, v in seen.items()} }")
+            # Everybody else: In a line, Bluesky's way.
+            kctx, kpg = browser_as(b, kip, screen="phone")
+            open_post(kpg, post)
+            kip_sees = kpg.evaluate(CHAIN, c1)
+            kip_list = kpg.evaluate("() => document.querySelector('[data-cm-list]').hasAttribute('data-cm-tree')")
+            close_ctx(kctx, kpg)
+            nctx, npg = browser_as(b, None, screen="phone")
+            open_post(npg, post)
+            out_sees = npg.evaluate(CHAIN, c1)
+            close_ctx(nctx, npg)
+            check("everybody else sees In a line: Kip, who never picked, and somebody signed out, each conversation"
+                  " followed down in one column (Olu's, Ines's, Olu's, Kip's), nothing stepping in",
+                  not kip_list and [x[0] for x in kip_sees["chain"]] == [r1, r3, r4, r5]
+                  and [x[0] for x in out_sees["chain"]] == [r1, r3, r4, r5] and len(set(kip_sees["faces"])) == 1,
+                  f"Kip {kip_sees['chain']} tree {kip_list}; signed out {out_sees['chain']}")
+            # A comment's own page, as a tree.
+            pg.goto(BASE + f"/social/c/{c1}")
+            ready(pg)
+            pg.wait_for_timeout(300)
+            on_page = pg.evaluate(TREE_OF, r1)
+            page_bends = pg.evaluate(BENDS, r1)
+            check("a comment's own page is a tree too, starting again from its replies: Ines's comment's replies stand"
+                  " where a post's comments do, Olu's with Ines's and Wren's a step in under it and theirs two in (Olu's"
+                  " and Ines's), then \"Read 1 more reply\" under Olu's, the line bending into each",
+                  on_page and on_page["tree"] and shape(on_page) == {
+                      "id": r1, "n": "5", "kids": [
+                          {"id": r3, "n": "2", "kids": [{"id": r4, "n": "1", "kids": [], "more": ("Read 1 more reply", r4)}]},
+                          {"id": r6, "n": "1", "kids": [{"id": r7, "n": None, "kids": []}], "quiet": True}]}
+                  and page_bends["ok"], f"{on_page and shape(on_page)}; {page_bends}")
+            # REPLYING in the tree (a desk).
+            pg.set_viewport_size({"width": 1280, "height": 860})
+            open_post(pg, post)
+
+            def post_reply(to, words):
+                answer_box(pg, to)
+                pg.fill("[data-cm-words]", words)
+                got = pg.evaluate(POST_WATCH)
+                found = db("select public_id from social_comments where words = ?", (words,))
+                got["id"] = found[0][0] if found else None
+                return got
+            to_kip = post_reply(r2, "Section 51, Tova to Kip")
+            after_kip = pg.evaluate(TREE_OF, c1)
+            to_olu = post_reply(r1, "Section 51, Tova to Olu")
+            after_olu = pg.evaluate(TREE_OF, c1)
+            to_ines = post_reply(r3, "Section 51, Tova to Ines")
+            after_ines = pg.evaluate(TREE_OF, c1)
+            grown = pg.evaluate(BENDS, c1)
+            check("REPLYING IN THE TREE lands under the one it answers, last, glowing a moment in the landing's tint:"
+                  " under Kip's (its first, a step further in), under Olu's after Ines's and Wren's; every count on the"
+                  " way says it; the line bends into each new face",
+                  to_kip["id"] and to_kip["shown"] == to_kip["id"] and to_kip["landed"]
+                  and [k["id"] for k in after_kip["kids"][1]["kids"]] == [to_kip["id"]] and after_kip["n"] == "8"
+                  and to_olu["id"] and to_olu["shown"] == to_olu["id"]
+                  and [k["id"] for k in after_olu["kids"][0]["kids"]] == [r3, r6, to_olu["id"]] and after_olu["kids"][0]["n"] == "6"
+                  and grown["ok"], f"{to_kip}; {to_olu}; Ines's {after_kip['n']}; Kip's {after_kip['kids'][1]};"
+                  f" Olu's {after_olu['kids'][0]['n']} {[k['id'] for k in after_olu['kids'][0]['kids']]}; {grown}")
+            ines_now = after_ines["kids"][0]["kids"][0]
+            check("...two steps in, where the tree stops, a reply doesn't show: Ines's count takes it (3) and glows, and"
+                  " its Read more says 3",
+                  to_ines["id"] and not to_ines["shown"] and to_ines["glow"] and ines_now["n"] == "3"
+                  and ines_now["more"] and ines_now["more"]["words"] == "Read 3 more replies",
+                  f"{to_ines}; Ines's {ines_now}")
+            gone = pg.evaluate(DELETE_AND_WATCH, [to_kip["id"], "delete"])
+            pg.wait_for_timeout(500)
+            left = pg.evaluate(TREE_OF, c1)
+            left_kids = pg.evaluate("(id) => !!document.querySelector('#c-' + id + ' > .cm-kids')", r2)
+            check("deleting the only reply under Kip's: it goes, and its step in with it (no line left hanging); the"
+                  " counts on the way say so",
+                  gone["gone"] and left["kids"][1]["kids"] == [] and not left_kids and left["n"] == "9",
+                  f"{gone}; Kip's {left['kids'][1]}; its list {left_kids}; Ines's {left['n']}")
+            pg.set_viewport_size({"width": 402, "height": 874})
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(51, exc)
 
     if part(19, "no page errors, no console errors and no CSP violations"):
         try:
