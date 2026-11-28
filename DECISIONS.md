@@ -55730,3 +55730,21 @@ build). It posts a tile of its own now.
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: on Home no card round a post, and a violet pen line, a
 little wavy, between two.
+
+## After v330 -- Reposts stay off Everyone (the owner's "Keep it as it is")
+
+The owner, Nov 28, after a plain repost did not show on Home's Everyone
+(they had Home on Everyone; on Following it was there, "You reposted" at
+its top): "Why not show on everyone? Is there a reason?" Cal's answer: a
+repost is for the reposter's followers, as the sheet's own words say ("Show
+it to the people who follow you"), so "Mira reposted" on Following is a
+friend's recommendation; and Everyone is where every new drawing gets its
+turn, each post once and newest first, where a repost would bring a popular
+drawing back to the top each time and push newer drawings down. Bluesky's
+Discover works the same. Offered instead: reposts on Everyone with "Mira
+reposted" above, each drawing once in its newest place, and new words on
+Repost. The owner: "Keep it as it is".
+
+So Everyone stays posts only (verify_socialfollow 8 holds it), and a plain
+repost shows on Following and on the reposter's Posts tab, the original's
+card with "You reposted" at its top. No code changed.
