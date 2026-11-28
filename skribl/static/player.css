@@ -258,8 +258,8 @@
   --chip-lift: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 22px -12px rgba(0, 0, 0, 0.8);
   /* A control when off (No dinge): at full strength, only its words quiet. */
   --off-ink: #756e9c;
-  /* No dinge's solid lilacs: a tip's well (the site's --quote-well), a
-     count's pill, and where a drawing will be (the site's --draw-wait). */
+  /* No dinge's solid lilacs: a tip's well, a count's pill, and where a
+     drawing will be (the site's --draw-wait). */
   --tip-well: #16112b;
   --count-fill: #2b2450;
   --draw-wait: #2e2650;

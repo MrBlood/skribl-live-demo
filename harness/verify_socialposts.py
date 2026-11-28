@@ -133,6 +133,13 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      a reposted line's words there too, its arrows just before them; the
      row spread across the column; a post's own page keeps its full width.
      Phone and desk.
+ 25. SHEETS, NOT CARDS (the owner's "The sheets look right plus it looks
+     great with the hand drawn lines separators", Nov 28): a post in a feed
+     has no card round it (no ground, edge, shadow or corner); between two
+     posts a pen line drawn by hand in Skribl's violet, across the post's
+     width, never ruler-straight, each neighbour's waver its own, read off
+     the paint; a drawing on a sheet dressed as on its post's own page.
+     Phone and desk, light and dark.
 
 SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
@@ -3729,11 +3736,15 @@ print("PLAN " + json.dumps(out))
             def _one_line(rows):
                 return bool(rows) and 2 <= len(rows) <= 3 and rows == list(range(rows[0], rows[0] + len(rows)))
             ed = member(b, "edgy", "Eddie Edge")
-            st17, _ = make_post(ed, "Edges, one screen pixel.", card=True)
+            # A tile of its own in the Gallery, so the section reads one when it runs alone (SOCIALPOSTS_PART=17).
+            st17, _ = make_post(ed, "Edges, one screen pixel.", gallery=True)
             edges, lift = {}, None
             for scheme in ("light", "dark"):
                 ctx, pg = browser_as(b, ed, screen="phone", scheme=scheme, scale=3)
-                for path, sels in (("/social/", [".post-card"]), ("/social/explore", [".gal-find input", ".fo-seg", ".gal-pic"])):
+                # A POST IN A FEED IS A SHEET since the owner's "The sheets look right" (Nov 28): no card round it
+                # (section 25). The card the site still draws (--card, its ring --card-edge, its lift --card-drop)
+                # is read where a post's card on Home was: Settings' first panel, Theme.
+                for path, sels in (("/social/you", [".theme-panel"]), ("/social/explore", [".gal-find input", ".fo-seg", ".gal-pic"])):
                     pg.goto(BASE + path)
                     pg.wait_for_timeout(900)
                     im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
@@ -3755,8 +3766,8 @@ print("PLAN " + json.dumps(out))
                         got = _band(im, [(x6, j) for j in range(y - 6, y + 8)], page, inside)
                         edges[f"{scheme} the bar"] = {"n": len(got), "px": got[:3]}
                 close_ctx(ctx, pg)
-            check("every outline is one screen pixel at 3x, light and dark: a post's card on Home, the Gallery's search box,"
-                  " New | Hot, a tile, and the bar's line along its top",
+            check("every outline is one screen pixel at 3x, light and dark: a card (Settings' Theme panel; a post on Home"
+                  " has none since the sheets), the Gallery's search box, New | Hot, a tile, and the bar's line along its top",
                   st17 == 200 and len(edges) == 10 and all(v and v["n"] == 1 for v in edges.values()),
                   json.dumps({k: (v and v["n"]) for k, v in edges.items()}) + " " + json.dumps(edges)[:500])
             check("...a Gallery tile sits on the light page with the cards' own lift, which is one line of shade (crisp):"
@@ -3767,18 +3778,19 @@ print("PLAN " + json.dumps(out))
             # may have overdone it with the shadows and now it looks less crisp in areas"; yes to step 3 of "The
             # Little V", "everywhere"). Dark's edge was 12% of the lilac over its card, set that faint while soft
             # shadows did the work: 1.23:1 from the card. It is 26% now, 1.61:1, where light's 34% of the accent
-            # stands 1.56:1 from its white. The same pixels the row above counted: a post's card on Home (its ring is
-            # --card-edge) against the card inside it and the page beside it, and a Gallery tile's line (--card-line,
+            # stands 1.56:1 from its white. The same pixels the row above counted: a card, Settings' Theme panel since
+            # the sheets (its ring is --card-edge, as a post's card on Home's was), against the card inside it and the
+            # page beside it, and a Gallery tile's line (--card-line,
             # a see-through lilac over whatever it lies on) against the ground beside it; inside a tile is somebody's
             # drawing, which is not asked.
             apart = {}
             for sc in ("light", "dark"):
-                v = edges.get(f"{sc} .post-card")
+                v = edges.get(f"{sc} .theme-panel")
                 apart[f"{sc}, a card"] = (round(_cr(v["px"][0], v["inside"]), 2), round(_cr(v["px"][0], v["page"]), 2)) if v and v.get("px") else None
                 v = edges.get(f"{sc} .gal-pic")
                 apart[f"{sc}, a tile"] = (round(_cr(v["px"][0], v["page"]), 2),) if v and v.get("px") else None
-            check("...and the edge does the separating in both themes: read off the paint, a post's card's edge stands 1.4 to"
-                  " 1 or more apart from the card inside it and from the page beside it, and a Gallery tile's line as far"
+            check("...and the edge does the separating in both themes: read off the paint, a card's edge (Settings' Theme"
+                  " panel) stands 1.4 to 1 or more apart from the card inside it and from the page beside it, and a Gallery tile's line as far"
                   " from the ground beside it, light and dark (dark's stood 1.23 from its card until Nov 21)",
                   all(v is not None and min(v) >= 1.4 for v in apart.values()), json.dumps(apart))
             fld = edges.get("light .gal-find input") or {}
@@ -3794,12 +3806,15 @@ print("PLAN " + json.dumps(out))
             # made solid; on the light page the cards' own lift. SINCE THE
             # CRISP BUILD (Nov 20) that lift is the page's one line of shade,
             # and only where the drawing sits on the page itself: IN A CARD it
-            # wears its edge and nothing else. Read as part
+            # wore its edge and nothing else. SINCE THE SHEETS (Nov 28) a post
+            # in a feed is on the page, so Home's drawing is dressed as on its
+            # post's own page; a comment's drawing keeps its edge alone (no
+            # lift: the owner's "All yes (my row)", Nov 27). Read as part
             # four reads the link page: the drawing hidden for the photograph,
             # and the screen pixels that stand apart from both their neighbours
             # (a line one pixel wide does; a wider line, or a shadow's soft
-            # fall, does not). The box's left side on Home's card and on the
-            # post's page, and a comment's drawing.
+            # fall, does not). The box's left side on Home and on the post's
+            # page, and a comment's drawing.
             def _line1(im, pts):
                 far = lambda c, d: max(abs(c[k] - d[k]) for k in range(3)) > 4
                 px = [im.getpixel(q_) for q_ in pts]
@@ -3847,19 +3862,20 @@ print("PLAN " + json.dumps(out))
                         if mech["border"] or mech["w"] is None or abs(mech["w"] * 3 - 1) > 0.05:
                             got = f"{got} and {mech}"
                         art[f"{scheme} {sel}"] = got
-                        if ".cm-art" not in sel:
-                            # The lift: what its shadow paints under it, past its ring.
-                            lifts[f"{scheme} {'in a card' if path == '/social/' else 'on the page'}"] = _shade(pg, im, sel, r, 0.3, "var(--draw-edge)")
+                        # The lift: what its shadow paints under it, past its ring.
+                        where = "a comment's" if ".cm-art" in sel else "on a sheet" if path == "/social/" else "on the page"
+                        lifts[f"{scheme} {where}"] = _shade(pg, im, sel, r, 0.3, "var(--draw-edge)")
                         hide.evaluate("s => s.remove()")
                 close_ctx(ctx, pg)
-            check("a drawing on the site wears a line of one screen pixel at 3x, light and dark: a post's on Home's card"
-                  " and on its own page, and a comment's",
+            check("a drawing on the site wears a line of one screen pixel at 3x, light and dark: a post's on Home and on"
+                  " its own page, and a comment's",
                   stc17 == 200 and stcm == 200 and len(art) == 6 and all(v == 1 for v in art.values()), json.dumps(art))
-            check("...and its lift is the crisp one: ON THE PAGE in light (a post's own page) one line of shade under its"
-                  " edge (two or three screen rows together, nothing below them); IN A CARD (Home's) its edge alone, the"
-                  " shadow painting nothing; in dark, nothing either way",
-                  len(lifts) == 4 and _one_line(lifts.get("light on the page")) and lifts.get("light in a card") == []
-                  and lifts.get("dark in a card") == [] and lifts.get("dark on the page") == [],
+            check("...and its lift is the crisp one: ON THE PAGE in light, on a post's own page and on a sheet in Home's"
+                  " feed (since the sheets, Nov 28), one line of shade under its edge (two or three screen rows together,"
+                  " nothing below them); a comment's its edge alone, the shadow painting nothing (the owner's \"All yes (my"
+                  " row)\", Nov 27); in dark, nothing for any",
+                  len(lifts) == 6 and _one_line(lifts.get("light on the page")) and _one_line(lifts.get("light on a sheet"))
+                  and lifts.get("light a comment's") == [] and all(lifts.get(f"dark {w}") == [] for w in ("on a sheet", "on the page", "a comment's")),
                   json.dumps(lifts))
             # AND BETWEEN THE THREE (the colour audit of Nov 21, choice 1; the owner's "All yes"). --hair was 1, a
             # half and a third: one sharp screen pixel at 1x, 2x and 3x, and two soft ones between (a Windows screen
@@ -3867,9 +3883,10 @@ print("PLAN " + json.dumps(out))
             # each page's own sheet says (--hair, as the browser resolves it, times the screen's density: one
             # screen pixel, at every density from 1x to 3x, on the site, the Pad, Skribl's Gallery and its Library:
             # social.css, styles.css, and pagemenu.css with the Gallery section's sheet made from styles.css). And
-            # what is painted: a post's card on Home on a touch phone at the five in-between densities the audit
-            # read, its left edge counted as the row above counts it at 3x (16px in from the screen's edge, a whole
-            # screen pixel at every one of them, so a line that is one is one).
+            # what is painted: a card on a touch phone at the five in-between densities the audit read (Settings'
+            # Theme panel, where it was a post's card on Home until the sheets), its left edge counted as the row
+            # above counts it at 3x (16px in from the screen's edge, a whole screen pixel at every one of them, so a
+            # line that is one is one).
             DENS = (1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.625, 2.75, 3)
             HAIR = "() => { const e = document.querySelector('#skriblGallery') || document.body; const v = getComputedStyle(e).getPropertyValue('--hair').trim(); return v ? parseFloat(v) : null; }"
             per = {}
@@ -3889,18 +3906,18 @@ print("PLAN " + json.dumps(out))
             for dpr in (1.25, 1.5, 1.75, 2.625, 2.75):
                 for scheme in ("light", "dark"):
                     ctx, pg = browser_as(b, ed, screen="phone", scheme=scheme, scale=dpr)
-                    pg.goto(BASE + "/social/")
+                    pg.goto(BASE + "/social/you")
                     pg.wait_for_timeout(900)
                     im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
-                    r = pg.evaluate(BOX, ".post-card")
+                    r = pg.evaluate(BOX, ".theme-panel")
                     x, y = round(r[0] * dpr), round((r[1] + min(r[3], 300) / 2) * dpr)
                     k = lambda n: round(n * dpr)
                     page, inside = im.getpixel((x - k(3), y)), im.getpixel((x + k(4), y))
                     got = _band(im, [(i, y) for i in range(x - k(2), x + k(3))], page, inside)
                     between[f"{dpr} {scheme}"] = {"n": len(got), "at": round(r[0] * dpr, 3), "px": got[:3]}
                     close_ctx(ctx, pg)
-            check("...and painted so: a post's card's edge is one screen pixel at 1.25, 1.5, 1.75, 2.625 and 2.75, light and"
-                  " dark, on a whole screen pixel (where it was two soft ones)",
+            check("...and painted so: a card's edge (Settings' Theme panel) is one screen pixel at 1.25, 1.5, 1.75, 2.625"
+                  " and 2.75, light and dark, on a whole screen pixel (where it was two soft ones)",
                   len(between) == 10 and all(v["n"] == 1 and abs(v["at"] - round(v["at"])) < 0.01 for v in between.values()),
                   json.dumps(between)[:900])
         except Exception as exc:  # noqa: BLE001
@@ -4962,7 +4979,8 @@ print("PLAN " + json.dumps(out))
                             cpg.wait_for_timeout(500)
                         seen23[f"{name}, {screen} {scheme}"] = cpg.evaluate(SOFT23)
                         if screen == "phone" and name == "Home":
-                            heights[scheme] = {"a card": cpg.evaluate(OF23, ".post-card"), "in a card": cpg.evaluate(OF23, ".post-card .skribl-inline"),
+                            # A POST IN A FEED IS A SHEET since Nov 28: its drawing on the page, as on its own page.
+                            heights[scheme] = {"on a sheet": cpg.evaluate(OF23, ".post-card .skribl-inline"),
                                                "the fill": cpg.evaluate(OF23, ".nav .tab-make .tab-ic"), "the pill": cpg.evaluate(OF23, ".skribl-inline-play")}
                             sheet23[scheme] = cpg.evaluate(SHEET23)
                         if screen == "phone" and name == "a post":
@@ -4977,6 +4995,8 @@ print("PLAN " + json.dumps(out))
                                                     "on the page": cpg.evaluate(OF23, ".post-page > .post-art .skribl-inline")})
                         if screen == "phone" and name == "the Gallery":
                             heights[scheme]["a tile"] = cpg.evaluate(OF23, ".gal-pic")
+                        if screen == "phone" and name == "Settings":
+                            heights[scheme]["a card"] = cpg.evaluate(OF23, ".panel")     # a card the site still draws
                     if screen == "phone":
                         cpg.goto(BASE + "/social/?show=everyone")
                         cpg.wait_for_load_state("load")
@@ -5012,21 +5032,22 @@ print("PLAN " + json.dumps(out))
             def three(tone):
                 h = heights.get(tone) or {}
                 on_page = [h.get(k) or [] for k in ("a card", "a tile")]
-                in_card = [h.get(k) or [] for k in ("in a card", "in a balloon")]
+                in_card = h.get("in a balloon") or []
                 balloon = h.get("a balloon") or []
-                plate = h.get("on the page") or []
+                plates = [h.get(k) or [] for k in ("on the page", "on a sheet")]
                 fill = h.get("the fill") or []
                 return (all(len(v) == 2 and ring(v[0]) and line(v[1], tone) for v in on_page)
                         and balloon == [] and h.get("drawn") is True
-                        and all(len(v) == 1 and ring(v[0]) for v in in_card)
-                        and (len(plate) == 2 and ring(plate[0]) and line(plate[1], "light") if tone == "light" else len(plate) == 1 and ring(plate[0]))
+                        and len(in_card) == 1 and ring(in_card[0])
+                        and all(len(p) == 2 and ring(p[0]) and line(p[1], "light") if tone == "light" else len(p) == 1 and ring(p[0]) for p in plates)
                         and len(fill) == 3 and fill[0] == ["in", 0, 1, 0, 0] and fill[1] == ["in", 0, -1, 0, 0] and fill[2] == ["out", 0, 1, 2, 0])
-            check("THREE HEIGHTS, read off what is painted: ON THE PAGE (a card, a tile) the edge and one line under it, 1px"
-                  " with no blur (in dark a line of light inside the top), and a comment's balloon its drawn line alone"
-                  " (no lift: the owner's \"All yes (my row)\", Nov 27; drawn by hand since the owner's C, Nov 28, its"
-                  " line the drawing behind it, nothing round it); IN A CARD (the drawing in a post's card,"
-                  " in a comment's balloon) the edge alone; the drawing on a post's own page as a card on the page (the"
-                  " edge alone in dark); THE FILL enamel: light on its top edge, shade on its foot, 1px/2px under it, no glow",
+            check("THREE HEIGHTS, read off what is painted: ON THE PAGE (a card, as Settings' panels; a tile) the edge and"
+                  " one line under it, 1px with no blur (in dark a line of light inside the top), and a comment's balloon"
+                  " its drawn line alone (no lift: the owner's \"All yes (my row)\", Nov 27; drawn by hand since the owner's"
+                  " C, Nov 28, its line the drawing behind it, nothing round it); IN A BALLOON (a comment's drawing) the"
+                  " edge alone; a post's drawing on its own page, and on a sheet in a feed since the sheets (Nov 28), as a"
+                  " card on the page (the edge alone in dark); THE FILL enamel: light on its top edge, shade on its foot,"
+                  " 1px/2px under it, no glow",
                   three("light") and three("dark"), json.dumps(heights)[:900])
 
             def floating(tone):
@@ -5131,6 +5152,95 @@ print("PLAN " + json.dumps(out))
                   json.dumps(page24))
         except Exception as exc:  # noqa: BLE001
             check("section 24 ran to its end", False, str(exc).splitlines()[0][:200])
+
+    if part(25, "sheets: no card round a post in a feed; a pen line drawn by hand between two posts"):
+        # SHEETS, NOT CARDS (the owner, Nov 28: "Mock sheets (without cards again) in all contexts", then "The
+        # sheets look right plus it looks great with the hand drawn lines separators"). Three posts, the newest on
+        # Home's Everyone for somebody who follows nobody: each read where it is painted.
+        try:
+            sa = someone(b, "sheeta", "Sasha Sheet")
+            sbb = someone(b, "sheetb", "Sol Sheet")
+            sv = someone(b, "sheetv", "Vee Sheet")
+            got25 = [make_post(w, f"Section 25, post {i}", seed=250 + i, card=True) for i, w in enumerate((sa, sbb, sa))]
+            ids25 = [j.get("post") if st == 200 and isinstance(j, dict) else None for st, j in got25][::-1]   # newest first
+            SHEET = r"""(ids) => { const cards = ids.map(i => document.querySelector('.feed > .post-card[data-post="' + i + '"]'));
+              if (cards.some(c => !c)) return null;
+              const probe = document.createElement('i'); probe.style.cssText = 'position:fixed;left:-9px;top:0;width:1px;height:1px;background:var(--sheet-line)';
+              document.body.appendChild(probe); const line = getComputedStyle(probe).backgroundColor; probe.remove();
+              return { line, cards: cards.map((c, n) => { const cs = getComputedStyle(c), b = getComputedStyle(c, '::before'), r = c.getBoundingClientRect();
+                return { ground: cs.backgroundColor, shadow: cs.boxShadow, radius: cs.borderTopLeftRadius, border: cs.borderTopWidth,
+                         before: b.content, h: b.height, mask: (((b.maskImage || b.webkitMaskImage || '').match(/d='([^']*)'/) || [])[1] || ''),
+                         box: [r.left, r.top + scrollY, r.right, r.bottom + scrollY],
+                         lift: (c.querySelector('.post-art .skribl-inline') ? getComputedStyle(c.querySelector('.post-art .skribl-inline')).boxShadow : null) }; }) }; }"""
+
+            def rgb3(s_):
+                m_ = [float(x) for x in re.findall(r"[\d.]+", s_ or "")]
+                if (s_ or "").startswith("color(srgb"):
+                    return tuple(round(x * 255) for x in m_[:3])
+                return tuple(round(x) for x in m_[:3])
+
+            def line_paint(pg_, prev_box, box, ink):
+                """The pen line between two posts off the paint: for every CSS px across the post's width, the
+                middle of what is painted in the line's colour in the room between them (None where nothing)."""
+                k_ = 3 if pg_.viewport_size["width"] < 500 else 2
+                top_, bottom_ = prev_box[3], box[1]
+                pg_.evaluate("(y) => window.scrollTo(0, Math.max(0, y - 200))", top_)
+                pg_.wait_for_timeout(250)
+                sy = pg_.evaluate("() => scrollY")
+                im_ = Image.open(io.BytesIO(pg_.screenshot(clip={"x": box[0], "y": top_ - sy, "width": box[2] - box[0],
+                                                                 "height": bottom_ - top_}, scale="device"))).convert("RGB")
+                px_ = im_.load()
+                mids = []
+                for x in range(0, im_.width, k_):
+                    ys = [y for y in range(im_.height) if max(abs(a - c) for a, c in zip(px_[x, y], ink)) <= 34]
+                    mids.append(sum(ys) / len(ys) / k_ if ys else None)
+                return mids
+            sheet25, paint25, page25 = {}, {}, {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    tag = f"{screen} {scheme}"
+                    ctx, pg = browser_as(b, sv, screen=screen, scheme=scheme, scale=3 if screen == "phone" else 2)
+                    pg.goto(BASE + "/social/")
+                    pg.wait_for_timeout(900)
+                    sh = pg.evaluate(SHEET, ids25)
+                    sheet25[tag] = sh
+                    if sh:
+                        ink = rgb3(sh["line"])
+                        paint25[tag] = [line_paint(pg, sh["cards"][i - 1]["box"], sh["cards"][i]["box"], ink) for i in (1, 2)]
+                    pg.goto(BASE + f"/social/p/{ids25[0]}")
+                    pg.wait_for_timeout(900)
+                    page25[tag] = pg.evaluate("() => { const e = document.querySelector('.post-page .post-art .skribl-inline'); return e ? getComputedStyle(e).boxShadow : null; }")
+                    close_ctx(ctx, pg)
+
+            def bare(c_):
+                return (c_["ground"] in ("rgba(0, 0, 0, 0)", "transparent") and c_["shadow"] == "none"
+                        and c_["radius"] == "0px" and c_["border"] == "0px")
+
+            def drawn(mids):
+                seen_ = [m_ for m_ in mids if m_ is not None]
+                return len(mids) > 20 and len(seen_) >= 0.9 * len(mids) and (max(seen_) - min(seen_)) >= 0.5
+            check("sheets, not cards (the owner, Nov 28: \"The sheets look right\"): a post in a feed has no card round"
+                  " it, no ground, edge, shadow or corner, phone and desk, light and dark",
+                  len(sheet25) == 4 and all(v and all(bare(c_) for c_ in v["cards"]) for v in sheet25.values()),
+                  json.dumps({k: v and [{x: c_[x] for x in ("ground", "shadow", "radius", "border")} for c_ in v["cards"]]
+                              for k, v in sheet25.items()})[:700])
+            check("...and between two posts a pen line drawn by hand (\"it looks great with the hand drawn lines"
+                  " separators\"): in Skribl's violet (--sheet-line), across the post's width, never ruler-straight"
+                  " (half a pixel or more of waver), each neighbour's waver its own; none over the first post; read off"
+                  " the paint, phone and desk, light and dark",
+                  len(paint25) == 4 and all(
+                      sheet25[k]["cards"][0]["before"] in ("none", "normal") and sheet25[k]["cards"][1]["before"] == '""'
+                      and sheet25[k]["cards"][1]["mask"] != sheet25[k]["cards"][2]["mask"]
+                      and all(drawn(m_) for m_ in v)
+                      and max(abs(a - c) for a, c in zip(v[0], v[1]) if a is not None and c is not None) >= 0.3
+                      for k, v in paint25.items()),
+                  json.dumps({k: [[round(x, 2) for x in m_ if x is not None][:12] for m_ in v] for k, v in paint25.items()})[:900])
+            check("...a drawing on a sheet dressed as on its post's own page: its edge and, in light, its one line of"
+                  " shade (a card's drawing had its edge alone)",
+                  len(page25) == 4 and all(sheet25[k] and sheet25[k]["cards"][0]["lift"] == page25[k] and page25[k] for k in page25),
+                  json.dumps({k: [sheet25[k] and sheet25[k]["cards"][0]["lift"], page25[k]] for k in page25})[:600])
+        except Exception as exc:  # noqa: BLE001
+            check("section 25 ran to its end", False, str(exc).splitlines()[0][:200])
 
     if part(8, "no page errors, no console errors, no CSP violations"):
         for who in list(_people.values()):

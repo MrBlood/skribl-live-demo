@@ -1737,7 +1737,7 @@ with app.app_context():
                     bx = pg.evaluate(BOX, sel)
                     paints[(tag, "card")] = off_paint(pg, bx and bx["box"], bx and bx["ground"])
                     calcs[(tag, "card")] = pg.evaluate(CALC, sel)
-                    got = [("Home's card", pg.evaluate(READ, card(p10)))]
+                    got = [("a post on Home", pg.evaluate(READ, card(p10)))]
                     open_composer(pg)
                     lst = typed(pg, "@v")
                     got.append(("the list", pg.evaluate(READ, "#composeMentions")))
@@ -1770,19 +1770,22 @@ with app.app_context():
                     smalls += [f"{tag} {w}: {x}" for w, r in got for x in r["small"]]
                     inline += [(tag, w, x) for w, r in got for x in r["inline"]]
             # A COMMENT SITS IN A BUBBLE since the comment thread (step 1, Nov 17): the site's card, so a mention in one
-            # reads as on a post's card (it was 7.75 and 9.89 on the page's ground).
-            mock = {("light", "card"): 8.26, ("dark", "card"): 8.39, ("light", "comment"): 8.26, ("dark", "comment"): 8.39}
+            # reads 8.26:1 light and 8.39 dark, as on a post's card did. A POST IN A FEED IS A SHEET since the owner's
+            # "The sheets look right" (Nov 28): no card round it, so its mention sits on the page, as on its post's own
+            # page (#F7F5FA light, 7.63:1; the dark page, 9.89).
+            mock = {("light", "card"): 7.63, ("dark", "card"): 9.89, ("light", "comment"): 8.26, ("dark", "comment"): 8.39}
             off = {" ".join(k): v for k, v in calcs.items() if k[1] in ("card", "comment")
                    and v != mock[(k[0].split()[1], k[1])]}
-            check("the mention's ink is the mock's, against what it sits on: 8.26:1 on the card light, 8.39 dark, and the"
-                  " same in a comment, whose bubble is the card (the comment thread); phone and desk",
+            check("the mention's ink against what it sits on: on a post in Home's feed, the page since the sheets (Nov 28),"
+                  " 7.63:1 light and 9.89 dark, as on a post's own page; in a comment, whose bubble is the card (the"
+                  " comment thread), 8.26 light and 8.39 dark; phone and desk",
                   len([k for k in calcs if k[1] in ("card", "comment")]) == 8 and not off, json.dumps({"off": off}))
-            check("...and read off the paint, 4.5:1 or more against the ground beside it, on the card and on a"
+            check("...and read off the paint, 4.5:1 or more against the ground beside it, on a post in the feed and on a"
                   " comment's ground, phone and desk, light and dark",
                   all(v and v["best"] >= 4.5 for k, v in paints.items() if k[1] in ("card", "comment"))
                   and len([k for k in paints if k[1] in ("card", "comment")]) == 8,
                   json.dumps({" ".join(k): v and v["best"] for k, v in paints.items() if k[1] != "badge"}))
-            check("every word at 4.5:1 or more on what is painted behind it, phone and desk, light and dark: Home's card"
+            check("every word at 4.5:1 or more on what is painted behind it, phone and desk, light and dark: a post on Home"
                   " with its mention, the list (its highlighted row too), a post's page and its comments, Activity's"
                   " mention rows; the field 16px or more",
                   len(reads) == 4 and all(n > 0 for v in reads.values() for _, n, _ in v) and not lows
