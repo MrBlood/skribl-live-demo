@@ -55136,3 +55136,74 @@ hour spent), the oldest hidden by its maker (so not among the twelve): "13
 draw-backs" for Theo and for her, "1 hidden from your post" under hers,
 twelve tiles each. Red on main as it was (8/9: "12 draw-backs" beside a pen
 saying 13, and no line of the hidden one), green with the fix (9/9).
+
+## After v330 -- The Home Screen app's page scrolls in its own frame (the owner's "Yes on the bottom bar")
+
+The owner, Nov 27, from the Home Screen app, with a picture: "The bottom
+menu bar is moving again. We fixed it, but it's back". Measured as on Nov
+21: the bar's top 546px down the app's window and the page scrolled about
+167, so its top lay 713px down the page, where the first screenful ends, and
+it rode the feed. The same iOS 26 fault ("The moving bottom bar", Nov 21):
+after the keyboard has been up the phone can stop moving what is pinned to
+the screen as the page scrolls. Section 12's asking (a pixel of scroll and
+back, one person's report of what cures it) did not hold this time; the
+record had named the sure cure, "for the page to scroll inside the app's
+frame", as the owner's to say. Asked "Why does the bar do that?" and "How
+hard is it to build the fix?", and told what changes and what goes (a tap on
+the phone's clock goes to the top of a page that scrolls itself, never of a
+frame; Home tapped on Home in its place), the owner: "Yes on the bottom bar".
+
+WHAT CHANGED, IN THE APP ALONE (html.is-app, splash-boot.js; a browser tab
+is as it was):
+- THE FRAME (social.css, THE APP'S FRAME): the page never scrolls (html
+  overflow hidden) and the body does, its height the screen's. The bars'
+  height is kept clear when the frame brings anything into view, as the
+  page's scroller did.
+- ONE ANSWER FOR WHERE THE PAGE IS (social.js, window.SocialScroll): the
+  frame's place in the app, the window's in a tab. Home's Following and
+  Everyone, the Gallery's swap, a profile's tabs, a comment's box brought
+  into view and the toast that watches the scroll ask it (follows.js,
+  explore.js, tabs.js, comments.js, mutes.js).
+- BACK PUTS YOU WHERE YOU WERE: a browser keeps the window's place for
+  Back, never a frame's; the app keeps the frame's for each address and puts
+  it back when Back comes to it.
+- HOME TAPPED ON HOME glides to the top and goes nowhere else (the tap on
+  the clock's stand-in).
+- THE PAGE BEHIND THE EDITOR is held by overflow alone in the frame (a fixed
+  body, the page's own hold since Nov 22, would lose a frame's place).
+Section 12's asking stays for a browser tab; in the frame it finds no page
+to scroll and does nothing. Skribl's own pages, the Pad and Flip: not
+touched (they do not scroll their page, or are not the site's).
+
+WHAT GOES: in the app a tap on the phone's clock no longer goes to the top.
+
+THE CHECKS (no iPhone engine here: no row can make the fault; they read what
+makes it harmless, and what the frame must keep): verify_socialapp 16, in
+the app as iOS says it is (navigator.standalone) and in a browser tab: the
+page never scrolls in the app, the body does, the bar's foot the screen's
+foot before and after 600px; a tab as it was; Back to 640px again (the
+browser's memory of the page turned off, so the kept place is what puts it
+back); Home on Home gliding to 0 on the same page; Home's swap keeping the
+frame's place. verify_socialprofile 21, a row more: in the frame the page
+behind the editor held by overflow, not fixed, and where it stood after.
+SHOWN RED, each part broken alone in a throwaway copy (verify_socialapp 16,
+5/5 green as built, twice; verify_socialprofile 21's new row green in every
+run): no frame, 2/5 (the frame, Back and Home rows) and the hold row red;
+no place kept, 4/5 (Back); Home on Home not taken, 4/5 (the tap went to the
+page again, its mark lost); the frame held as the page is held (fixed), the
+hold row red. The new hold row found the first build's gap: the frame's own
+overflow outranked the hold's, so the frame scrolled behind the editor; it
+holds now. NOT PINNED ALONE: the swap's place (follows.js, explore.js,
+tabs.js) holds in the frame without them too, the held height keeping it;
+they are there for a swap the browser would scroll.
+FOUND ON THE WAY, NOT THIS CHANGE'S: verify_socialprofile 21's first row is
+intermittent when its section runs alone (red 2 runs of 3 on main as it was,
+1 of 3 on the branch): the Pad's x, pressed on an editor just loaded,
+sometimes does not close it. Its read now waits for the editor to have gone
+rather than a set 400ms; the press itself is for a look of its own (a person
+may press x that early too). In the full run, after section 20 has opened
+the editor, it has been green.
+
+NOT TESTED HERE: an iPhone (WebKit), so not whether iOS's fault is gone. The
+owner's phone says. The one-glance tell: in the app, a tap on Home while on
+Home glides the feed to the top.

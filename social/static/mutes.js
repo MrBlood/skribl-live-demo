@@ -133,7 +133,7 @@
       if (under(clearOf, r.top, r.bottom, r.left, r.right) !== null) fall();
     });
   }
-  window.addEventListener('scroll', watch, { passive: true });
+  window.SocialScroll.on(watch);
   window.addEventListener('resize', watch);
 
   /* `text`, with Undo when `then` is given, rising `wait` ms from now (the

@@ -357,7 +357,7 @@
     }
     if (bar && !onDesk()) floor = Math.min(floor, bar.getBoundingClientRect().top);
     var over = r.bottom - (floor - 12);
-    if (over > 0) window.scrollBy({ top: Math.min(over, r.top - 12), behavior: still() ? 'auto' : 'smooth' });
+    if (over > 0) window.SocialScroll.by(Math.min(over, r.top - 12), still() ? 'auto' : 'smooth');
   }
 
   /* A GLIDE'S END: `fn` once `el`'s `prop` has finished moving, or a little

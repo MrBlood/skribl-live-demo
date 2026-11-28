@@ -380,7 +380,7 @@
       var n = ++turn;
       choose(home, b);
       post(home.getAttribute('data-pick'), { show: show });
-      var y = window.scrollY;
+      var y = window.SocialScroll.y();
       var got = fetch(home.getAttribute('data-first') + '?show=' + encodeURIComponent(show), { credentials: 'same-origin' })
         .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); });
       Promise.all([faded(), got]).then(function (res) {
@@ -398,7 +398,7 @@
           more.hidden = !j.next;
         }
         if (none) none.hidden = !!feed.children.length;
-        if (window.scrollY !== y) window.scrollTo(0, y);
+        if (window.SocialScroll.y() !== y) window.SocialScroll.to(y);
         requestAnimationFrame(function () {
           if (n !== turn) return;
           swap.classList.remove('is-out');

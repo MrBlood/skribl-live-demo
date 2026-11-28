@@ -134,7 +134,7 @@
   function load() {
     var s = { show: want.show, sort: want.sort, q: want.q };
     var n = ++turn;
-    var y = window.scrollY;
+    var y = window.SocialScroll.y();
     tell('');
     Promise.all([faded(), ask(s)]).then(function (res) {
       if (n !== turn) return;
@@ -151,7 +151,7 @@
       empties();
       swap.dispatchEvent(new CustomEvent('gal:swap', { detail: { q: s.q } }));
       if (window.history && history.replaceState) history.replaceState(history.state, '', page + query(s));
-      if (window.scrollY !== y) window.scrollTo(0, y);
+      if (window.SocialScroll.y() !== y) window.SocialScroll.to(y);
       requestAnimationFrame(function () {
         if (n !== turn) return;
         swap.classList.remove('is-out');
