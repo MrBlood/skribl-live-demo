@@ -55356,7 +55356,8 @@ Mira’s › Theo’s" put the first drawing first, so it could read as answerin
 Mira; on Mira's own draw-back of Juno's it read "Mira Lopez · Drew back on
 Mira’s › Theo’s › Juno’s". The clearer line: "Drew back on Theo’s · started
 with Mira’s", whom they answered first, then where it began; always one
-line, nothing to fold.
+line, nothing to fold. Asked "Yes to the clearer version?", the owner, Nov
+28: "All yes".
 
 WHAT CHANGED:
 - A COUNT BESIDE THE NAME (_backs.html, social.css .db-n): a tile whose
