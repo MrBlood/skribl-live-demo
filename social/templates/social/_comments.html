@@ -122,6 +122,7 @@
   <span class="cm-gone-face" aria-hidden="true"></span>
   <div class="cm-main"><p class="cm-gone">{{ it.gone }}</p></div>
   {{- chain_of(it, can, post_mine) }}
+  {{- kids_of(it, can, post_mine) }}
 </li>
 {%- else %}
 <li class="cm{% if it.quiet %} is-quiet{% endif %}" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name|first_name }}" data-url="{{ url }}"{% if it.more %} data-replies="{{ it.more }}"{% endif %}{% if me and me.id == c.person_id %} data-mine{% endif %}{{ share_data(it) }}>
@@ -162,6 +163,7 @@
     </div>
   </div>
   {{- chain_of(it, can, post_mine) }}
+  {{- kids_of(it, can, post_mine) }}
 </li>
 {%- endif %}
 {%- endmacro %}
@@ -176,6 +178,21 @@
 {%- if it.chain %}
   <ol class="cm-chain">{% for a in it.chain %}{{ comment(a, can, post_mine) }}{% endfor %}
   {%- if it.chain_more %}{{ chain_more(it.chain_more.c, it.chain_more.more) }}{% endif %}</ol>
+{%- endif %}
+{%- endmacro %}
+
+{#  THE TREE (the owner's "All yes", Nov 28, to the tree mock; comments.py
+    _trees), for whoever picked it in Settings ("Replies: As a tree"): under
+    one, every reply to it, oldest first, one step in, each a comment() of
+    its own with its replies one more step in; the thread's line runs down
+    from its face and bends into each of theirs (social.css, THE TREE). Two
+    steps in, one that still has replies under it says "Read N more
+    replies", to its own page, where the line would bend. #}
+{% macro kids_of(it, can, post_mine) -%}
+{%- if it.kids %}
+  <ol class="cm-kids">{% for k in it.kids %}{{ comment(k, can, post_mine) }}{% endfor %}</ol>
+{%- elif it.kids_more %}
+  <ol class="cm-kids">{{ chain_more(it.kids_more.c, it.kids_more.more) }}</ol>
 {%- endif %}
 {%- endmacro %}
 
@@ -323,7 +340,7 @@
 <section class="comments" id="comments" aria-labelledby="commentsTitle" data-comments data-new="{{ cm.new }}"
          data-more="{{ cm.more }}" data-drop="{{ cm.drop }}"{% if cm.post_mine %} data-post-mine{% endif %}{% if cm.subject %} data-subject="{{ cm.subject }}"{% endif %}>
   <h2 class="pp-label comments-title" id="commentsTitle" data-cm-head{% if not cm.count %} hidden{% endif %}><span class="cm-count" data-cm-count>{{ cm.count }}</span> <span data-cm-noun data-one="{{ noun[0] }}" data-many="{{ noun[1] }}">{{ noun[0] if cm.count == 1 else noun[1] }}</span></h2>
-  <ol class="cm-list" data-cm-list>{% for it in cm.cards %}{{ comment(it, cm.can, cm.post_mine) }}{% endfor %}</ol>
+  <ol class="cm-list" data-cm-list{% if cm.tree %} data-cm-tree{% endif %}>{% for it in cm.cards %}{{ comment(it, cm.can, cm.post_mine) }}{% endfor %}</ol>
   <button class="btn btn-wide feed-more cm-more" type="button" data-cm-next="{{ cm.next or '' }}"{% if not cm.next %} hidden{% endif %}>Load more</button>
   <p class="say" data-cm-page-say role="status" hidden></p>
 </section>

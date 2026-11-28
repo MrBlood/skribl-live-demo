@@ -66,6 +66,11 @@ REPORT_NOTE_MAX = 300
 #: you, or everyone's posts.
 HOME_FEEDS = ("following", "everyone")
 
+#: How the replies under a comment show (Settings, "Replies"; the owner's
+#: "All yes", Nov 28, to the tree mock): each conversation followed down in
+#: one column, or every reply under the one it answers, two steps in.
+REPLIES_VIEWS = ("line", "tree")
+
 #: A 64-bit integer key that SQLite will still number by itself: SQLite only
 #: fills in an INTEGER PRIMARY KEY, so there it is INTEGER (64 bits wide on
 #: SQLite anyway), and BIGINT everywhere else.
@@ -164,6 +169,11 @@ class Person(SocialBase):
     #: it holds on every device. None until they pick: then Following once
     #: they follow somebody, and Everyone before that (follows.home_shows).
     home_feed = sa.Column(sa.String(12), nullable=True)
+    #: HOW THE REPLIES UNDER A COMMENT SHOW TO THEM (Settings, "Replies"; the
+    #: owner's "All yes", Nov 28): one of REPLIES_VIEWS, kept with the account
+    #: so it holds on every device. None until they pick: In a line, where
+    #: everyone starts (comments.as_tree).
+    replies_view = sa.Column(sa.String(8), nullable=True)
 
     __table_args__ = (
         sa.Index("ix_social_people_public_id", "public_id", unique=True),

@@ -225,12 +225,22 @@
         else host.removeAttribute('aria-label');
       }
     }
-    var rm = li.nextElementSibling;
-    if (rm && rm.classList.contains('cm-rm') && rm.getAttribute('data-rm') === li.getAttribute('data-comment')) {
+    var id = li.getAttribute('data-comment'), rm = li.nextElementSibling;
+    if (!(rm && rm.classList.contains('cm-rm') && rm.getAttribute('data-rm') === id)) {
+      /* In the tree it is under the one it counts, where the line would bend. */
+      var kids = li.querySelector(':scope > .cm-kids');
+      rm = kids ? kids.querySelector(':scope > .cm-rm') : null;
+      if (rm && rm.getAttribute('data-rm') !== id) rm = null;
+    }
+    if (rm) {
       if (n) {
         rm.setAttribute('data-n', String(n));
         rm.querySelector('[data-rm-words]').textContent = plural(n, 'c_more_one', 'c_more_many');
-      } else rm.parentNode.removeChild(rm);
+      } else {
+        var held = rm.parentNode;
+        held.removeChild(rm);
+        if (held.classList.contains('cm-kids') && !held.firstElementChild && held.parentNode) held.parentNode.removeChild(held);
+      }
     }
   }
   function recount(counts) {
@@ -254,6 +264,7 @@
      other under it: `first`), and there is room for one more (ten deep);
      null anywhere else, where its count says it instead. */
   function landing(top, first) {
+    if (list && list.hasAttribute('data-cm-tree')) return treeLanding(top);
     if (!first || top.classList.contains('is-gone')) return null;
     if (top.parentNode === list) {
       if (top.querySelector(':scope > .cm-chain')) return null;
@@ -266,6 +277,29 @@
     if (!chain || !chain.classList || !chain.classList.contains('cm-chain') || top.nextElementSibling) return null;
     if (chain.querySelectorAll(':scope > .cm').length >= CHAIN_MAX) return null;
     return { parent: chain, before: null };
+  }
+  /* IN THE TREE (the owner's "All yes", Nov 28, to the tree mock; for whoever
+     picked it in Settings: the list says so, data-cm-tree): a reply lands
+     under the one it answers, after its others (oldest first), wherever that
+     one shows its replies, in the list or one step in; the box was open at
+     its end, so the reply comes in just above it. Two steps in, where the
+     tree stops, its count says it (and "Read N more replies" under it). */
+  var TREE_DEPTH = 2;
+  function treeLanding(top) {
+    if (top.classList.contains('is-gone')) return null;
+    var depth = 0, up = top.parentNode;
+    while (up && up !== list) {
+      if (up.classList && up.classList.contains('cm-kids')) depth++;
+      up = up.parentNode;
+    }
+    if (up !== list || depth >= TREE_DEPTH) return null;
+    var kids = top.querySelector(':scope > .cm-kids');
+    if (!kids) {
+      kids = doc.createElement('ol');
+      kids.className = 'cm-kids';
+      top.insertBefore(kids, fold && fold.parentNode === top ? fold : null);
+    }
+    return { parent: kids, before: null };
   }
   /* What arrives later is said as what was there: its times, and its
      drawing's player (still until tapped, as Skribl asks of a feed that adds
@@ -1032,7 +1066,7 @@
       gone = true;
       var ol = li.parentNode;
       if (ol) ol.removeChild(li);
-      if (ol && ol.classList.contains('cm-chain') && !ol.querySelector(':scope > .cm') && ol.parentNode) {
+      if (ol && (ol.classList.contains('cm-chain') || ol.classList.contains('cm-kids')) && !ol.querySelector(':scope > .cm') && ol.parentNode) {
         ol.parentNode.removeChild(ol);
       }
     }

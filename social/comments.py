@@ -350,7 +350,7 @@ def thread(on, viewer, before=None, limit=PAGE):
         convo = _conversations([i["c"].id for i in items], viewer, hidden)
         _fold(items, convo)
         items = [i for i in items if _kept(i)]
-        every = items + _chains(items, convo, muted)
+        every = items + (_trees if as_tree(viewer) else _chains)(items, convo, muted)
         described(every, viewer)
         named(every)
         hearts(every, viewer)
@@ -702,7 +702,7 @@ def replies_of(got, viewer):
     tops = [_item(c, who, muted) for c, who in rows if answered(c) == got["c"].id]
     _fold(tops, rows)
     tops = [t for t in tops if _kept(t)]
-    every = tops + _chains(tops, rows, muted)
+    every = tops + (_trees if as_tree(viewer) else _chains)(tops, rows, muted)
     described(every, viewer)
     named(every)
     hearts(every, viewer)
@@ -752,6 +752,50 @@ def _chains(items, rows, muted):
     return made
 
 
+#: How far the tree steps in under a comment before "Read N more replies"
+#: (the owner's tree of Nov 18, "we ran 2 deep I think", and its mock).
+TREE_DEPTH = 2
+
+
+def as_tree(viewer):
+    """Whether `viewer` picked the tree for the replies under a comment
+    (Settings, "Replies"; Person.replies_view). In a line, Bluesky's way,
+    for everybody else and for anybody signed out."""
+    return viewer is not None and getattr(viewer, "replies_view", None) == "tree"
+
+
+def _trees(items, rows, muted):
+    """THE TREE (the owner's "All yes", Nov 28, to the tree mock; for whoever
+    picked it in Settings, as_tree): under each of `items` (a list's comments
+    or a comment's replies, already folded) every reply to it, oldest first,
+    one step in ("kids"), and every reply to each of those, one more step in.
+    A place in the way stands while something hangs under it (_kept), with
+    its own under it. Past TREE_DEPTH steps nothing nests: where one two
+    steps in still has replies under it, "Read N more replies" opens its
+    own page ("kids_more": it, with its "more"). Nothing to open or fold.
+    Answers every item it made, for reading their cards at once."""
+    who = {c.id: p for c, p in rows}
+    kids = _kids(rows)
+    made = []
+
+    def grow(it, depth):
+        it["kids"], it["kids_more"] = [], None
+        if depth >= TREE_DEPTH:
+            it["kids_more"] = it if it["more"] else None
+            return
+        for c in kids.get(it["c"].id, ()):
+            k = _item(c, who.get(c.id), muted)
+            _fold([k], rows)
+            if _kept(k):
+                it["kids"].append(k)
+                made.append(k)
+                grow(k, depth + 1)
+
+    for it in items:
+        grow(it, 0)
+    return made
+
+
 def tally(way, viewer):
     """HOW MANY UNDER EACH, ALL THE WAY UP (Nov 18): {public id:
     every reply under it, at any depth, that `viewer` may see} for each of
@@ -787,6 +831,9 @@ def section(on, viewer, skribl_blueprint="skribl", focus=None):
         more = url_for("social.bloob_comments_more", skribl_id=on.drawing)
     return {"cards": items, "next": nxt,
             "count": count,
+            # How the replies under a comment show to this viewer (as_tree):
+            # comments.js lands a new reply where the list shows it.
+            "tree": as_tree(viewer),
             # A place takes no reply: nothing is there to reply to.
             "can": may_comment(viewer) and on.open_to(viewer) and (focus is None or focus["c"].gone is None),
             "post_mine": viewer is not None and viewer.id == on.owner.id,

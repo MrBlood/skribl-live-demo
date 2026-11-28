@@ -2723,6 +2723,39 @@ a.post-face { text-decoration: none; }
 }
 /* Its ⊕ sits on the line, centred under the faces. */
 .cm-chain > .cm-rm .rm-link { margin-left: 0; padding-left: 9px; }
+/* THE TREE (the owner's "All yes", Nov 28, to the tree mock), for whoever
+   picked it in Settings: every reply under the one it answers, a step in
+   (the face's column and its gap, 48px), two steps at most (comments.py
+   _trees, _comments.html kids_of). The thread's own line, the same 2px of
+   the card's edge: down from a face with replies under it, on past each
+   reply to the next under the same face, and into each reply's face,
+   bending round (14px) to meet its middle, 2px short of it; into a muted
+   one's eye, and into the ⊕ of "Read N more replies" where the tree stops
+   with more. Nothing to open or fold. Each piece is drawn from its own (a
+   reply's face, its eye, the ⊕), never from the comment itself, whose own
+   ::before is the landing's glow. */
+.cm-kids { grid-column: 2 / -1; margin: 0; padding: 0; list-style: none; }
+.cm-kids > .cm, .cm-kids > .cm-rm { position: relative; }
+.cm:has(> .cm-kids) > .cm-main { position: relative; }
+.cm:has(> .cm-kids) > .cm-main::before {
+  content: ""; position: absolute; left: -31px; top: 40px; bottom: 0; border-left: 2px solid var(--card-edge);
+}
+.cm-kids > :not(:last-child)::after {
+  content: ""; position: absolute; left: -31px; top: 0; bottom: 0; border-left: 2px solid var(--card-edge);
+}
+.cm-kids > .cm > :is(.face-ring, .cm-gone-face) { position: relative; }
+.cm-kids > .cm > :is(.face-ring, .cm-gone-face)::after, .cm-kids > .cm-rm::before,
+.cm-kids > .cm > .cm-fold-line .cm-fold-ic::before {
+  content: ""; position: absolute; left: -31px; top: -12px; width: 29px; height: 31px;
+  border-left: 2px solid var(--card-edge); border-bottom: 2px solid var(--card-edge); border-bottom-left-radius: 14px;
+}
+.cm-kids > .cm-rm::before { top: 0; height: 25px; }
+/* The eye sits in the middle of its line, which grows when its words wrap:
+   the bend meets the eye's middle and reaches up past the comment's top. */
+.cm-kids > .cm > .cm-fold-line .cm-fold-ic::before { top: auto; bottom: calc(50% - 1px); height: 60px; }
+.cm.is-quiet:has(> .cm-kids) > .cm-fold-line .cm-fold-ic::after {
+  content: ""; position: absolute; left: 17px; top: 100%; height: 40px; border-left: 2px solid var(--card-edge);
+}
 /* A TAP ON A COMMENT OPENS ITS OWN PAGE (comments.js), as a post's card
    opens the post: a pointer says so on a desk, and nothing changes on a
    phone. */

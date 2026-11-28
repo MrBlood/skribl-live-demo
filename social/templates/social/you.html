@@ -78,6 +78,31 @@
     </div>
   </section>
 
+  {#- REPLIES (the owner's "All yes", Nov 28, to the tree mock): how the
+      replies under a comment show to you, kept with the account so it holds
+      on every device (Person.replies_view): In a line, where everyone starts
+      (each conversation followed down in one column), or As a tree (every
+      reply under the one it answers, two steps in; comments.as_tree).
+      Theme's own switch, pressed here as kept; you.js slides its pill to a
+      tap and keeps the choice (/you/replies), and puts it back, saying so
+      under it, if it did not take. #}
+  {%- set tree = me.replies_view == 'tree' %}
+  <section class="panel theme-panel replies-panel" aria-labelledby="repliesTitle">
+    <div class="theme-row">
+      <div class="theme-words">
+        <h2 class="panel-title" id="repliesTitle">Replies</h2>
+        <p class="panel-sub">How the replies under a comment show</p>
+      </div>
+      <div class="theme-switch" role="group" aria-labelledby="repliesTitle" data-replies-switch data-at="{{ url_for('social.replies_pick') }}">
+        <span class="theme-pill" aria-hidden="true"></span>
+        <button type="button" data-choice="line" aria-pressed="{{ 'false' if tree else 'true' }}">In a line</button>
+        <button type="button" data-choice="tree" aria-pressed="{{ 'true' if tree else 'false' }}">As a tree</button>
+      </div>
+    </div>
+    <p class="push-said" role="status" data-replies-said data-failed="That didn’t work. Try again in a moment."
+       data-limited="Lots of that in a short while. Wait a little, then try again."></p>
+  </section>
+
   <div class="push-fold" data-push-panel hidden>
     <div class="push-fold-in">
       <section class="panel push-panel" aria-labelledby="pushTitle">

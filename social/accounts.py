@@ -794,6 +794,29 @@ def register(bp):
                      note=note if note in ("added", "renamed", "removed", "last", "name",
                                            "unmuted", "unblocked", "limited") else None)
 
+    @bp.post("/you/replies")
+    @_rests(json_answer=True)
+    def replies_pick():
+        """How the replies under a comment show to you (Settings, "Replies";
+        the owner's "All yes", Nov 28): {view}, "line" or "tree", kept with
+        the account so it holds on every device (comments.as_tree)."""
+        from .models import REPLIES_VIEWS
+        if not origin_ok() or not token_ok():
+            return _json_error("stale", 403)
+        person = current_person()
+        if person is None:
+            return _json_error("signed_out", 401)
+        if over("replies-pick", "person|" + person.public_id):
+            return _json_error("limited", 429)
+        body = request.get_json(silent=True)
+        view = body.get("view") if isinstance(body, dict) else None
+        if view not in REPLIES_VIEWS:
+            return _json_error("bad", 400)
+        sess = site().session()
+        sess.execute(sa.update(Person).where(Person.id == person.id).values(replies_view=view))
+        sess.flush()
+        return jsonify({"ok": True, "view": view})
+
     @bp.post("/you/passkeys/options")
     @_rests(json_answer=True)
     def passkey_add_options():

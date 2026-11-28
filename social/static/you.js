@@ -66,16 +66,12 @@
     });
   });
 
-  var T = window.SkriblTheme, sw = doc.querySelector('[data-theme-switch]');
-  if (!T || !sw) return;
-  var pill = sw.querySelector('.theme-pill');
-  var opts = Array.prototype.slice.call(sw.querySelectorAll('button[data-choice]'));
-  var fading = null, waiting = null;
-
-  /* The pill under the pressed choice, from the rendered boxes to the
+  /* A SWITCH'S PILL under its pressed choice, from the rendered boxes to the
      hundredth of a pixel (as the site's other pill is placed, follows.js).
-     The first time it fades in where it belongs; after that it slides. */
-  function place(first) {
+     The first time it fades in where it belongs; after that it slides.
+     Theme's and Replies' alike. */
+  function placePill(sw, first) {
+    var pill = sw.querySelector('.theme-pill');
     var on = sw.querySelector('button[aria-pressed="true"]');
     var g = sw.getBoundingClientRect(), b = on ? on.getBoundingClientRect() : null;
     if (!pill || !b || !b.width || !g.width) { sw.removeAttribute('data-pill'); return; }
@@ -89,6 +85,62 @@
       pill.style.transition = '';
     }
   }
+
+  /* REPLIES (the owner's "All yes", Nov 28, to the tree mock): how the
+     replies under a comment show to you, In a line or As a tree, kept with
+     the account (/you/replies), so the page sends it pressed. A tap slides
+     the pill there at once and keeps the choice; if it does not take, the
+     pill slides back to what is kept and the line under the switch says
+     so. A second tap before the first answered wins: only the last one's
+     answer is heard. */
+  (function () {
+    var rsw = doc.querySelector('[data-replies-switch]');
+    if (!rsw) return;
+    var ropts = Array.prototype.slice.call(rsw.querySelectorAll('button[data-choice]'));
+    var said = doc.querySelector('[data-replies-said]');
+    var tokenMeta = doc.querySelector('meta[name="social-csrf"]');
+    var kept = pressed(), last = null;
+    function pressed() {
+      var on = rsw.querySelector('button[aria-pressed="true"]');
+      return on ? on.getAttribute('data-choice') : 'line';
+    }
+    function press(choice, first) {
+      ropts.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-choice') === choice ? 'true' : 'false'); });
+      placePill(rsw, first);
+    }
+    function fail(why) {
+      press(kept, false);
+      if (said) said.textContent = said.getAttribute('data-' + why) || '';
+    }
+    press(kept, true);
+    rsw.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('button[data-choice]') : null;
+      if (!b) return;
+      var want = b.getAttribute('data-choice');
+      if (want === pressed()) return;
+      press(want, false);
+      if (said) said.textContent = '';
+      var mine = last = {};
+      fetch(rsw.getAttribute('data-at'), {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-Social-CSRF': tokenMeta ? tokenMeta.getAttribute('content') : '' },
+        body: JSON.stringify({ view: want })
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok && j && j.ok, status: r.status }; });
+      }).then(function (res) {
+        if (mine !== last) return;
+        if (res.ok) kept = want; else fail(res.status === 429 ? 'limited' : 'failed');
+      }, function () { if (mine === last) fail('failed'); });
+    });
+    window.addEventListener('pageshow', function (e) { if (e.persisted) press(pressed(), true); });
+  })();
+
+  var T = window.SkriblTheme, sw = doc.querySelector('[data-theme-switch]');
+  if (!T || !sw) return;
+  var opts = Array.prototype.slice.call(sw.querySelectorAll('button[data-choice]'));
+  var fading = null, waiting = null;
+
+  function place(first) { placePill(sw, first); }
   function show(choice, first) {
     opts.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-choice') === choice ? 'true' : 'false'); });
     place(first);
