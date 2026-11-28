@@ -4420,3 +4420,29 @@ columns", and of the faces, "Leave the avatars the size they are."
 On a phone a card's drawing is 280px wide where it was 336 (the column's
 56px); its height follows its own shape. Pad and Flip: not touched; cards
 are the site's. `verify_socialposts` 24 holds it.
+
+## 58. Built: Sheets everywhere (Nov 28)
+
+The owner, Nov 28: "Mock sheets (without cards again) in all contexts". After
+the Sheets Everywhere mock, on the columns as built (Home's Following and
+Everyone, a person's page, Likes, Bookmarks, beside a post's page and a
+comment's page): "The sheets look right plus it looks great with the hand
+drawn lines separators".
+
+- **No card round a post** in a feed: Home, a person's Posts, Likes and
+  Bookmarks. A post sits on the page as on its own page: no ground, edge,
+  shadow or corner. The columns stay; a phone's drawing is 312px wide where
+  a card's was 280.
+- **A pen line drawn by hand between two posts**, in Skribl's violet
+  (`--sheet-line`: 60% of it on the light page, 90% on the dark), one of three
+  wavers taken in turn so two neighbours never match. No script draws it (a
+  mask on the next post's `::before`), so it is there however the posts came.
+  High Contrast draws it in the system's text colour. The mock drew each line
+  in its drawing's colour; the site knows a drawing's paper but not its ink,
+  so it is one violet.
+- **A quote is the page's well everywhere** (`--quote-page`); the well made
+  for a card (`--quote-well`) has gone.
+- **A drawing is dressed as on its post's own page**: its edge and, in light,
+  its one line of shade. The small draw-back face's ring is the page's.
+
+Pad and Flip: not touched. `verify_socialposts` 25 holds it.

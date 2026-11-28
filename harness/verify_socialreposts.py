@@ -2160,9 +2160,10 @@ with sync_playwright() as p:
             # like a", Nov 28, to One Quote Look: "They are 2 diff looks for same
             # post"): a point of the quote's own ground inside it (24px in, 6px down,
             # under its corner's curve), what it stands on just beside it (the post's
-            # card; the page), the well as it paints (--quote-well; --quote-page, a
-            # chosen lilac since No dinge: it was the page's --page with 6% of
-            # Skribl's lilac, which read as grey), and what could draw a line round it.
+            # card; the page), the well as it paints (--quote-page, a chosen lilac
+            # since No dinge: it was the page's --page with 6% of Skribl's lilac,
+            # which read as grey; in a card it was --quote-well until sheets, Nov 28,
+            # and is the page's since), and what could draw a line round it.
             QT_WELL = r"""(sel) => { const q = document.querySelector(sel); if (!q) return null;
               const r = q.getBoundingClientRect(), cs = getComputedStyle(q), x = r.left + 24, y = r.top + 6;
               return { pt: [x, y], beside: [r.left - 4, r.top + r.height / 2], hit: document.elementFromPoint(x, y) === q,

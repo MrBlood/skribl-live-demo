@@ -235,8 +235,8 @@
   --chip-lift: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 22px -12px rgba(0, 0, 0, 0.8);
   /* A control when off (No dinge): at full strength, only its words quiet. */
   --off-ink: #756e9c;
-  /* No dinge's solid lilacs: a tip's well (the site's --quote-well), a
-     count's pill, and where a drawing will be (the site's --draw-wait). */
+  /* No dinge's solid lilacs: a tip's well, a count's pill, and where a
+     drawing will be (the site's --draw-wait). */
   --tip-well: #16112b;
   --count-fill: #2b2450;
   --draw-wait: #2e2650;
@@ -9002,7 +9002,9 @@ body.stroking .toolbar, body.stroking .flip-tools {
    16): on its section's card it was the card's own white with only its ring
    between (1.00:1); a well, the editors' ground touched with lilac, and no
    line, as the site's quote is (1.14:1 light, 1.12:1 dark): the site's
-   --quote-well, value for value (--surface-raised is the site's --page). */
+   --quote-well, value for value (--surface-raised is the site's --page).
+   That token went with the site's cards (sheets, Nov 28); a tip keeps its
+   values. */
 .help-tip { background: color-mix(in srgb, rgb(124 92 255) 6%, var(--surface-raised)); box-shadow: none; }
 .learn-card { box-shadow: var(--card-ring), var(--menu-card-drop); }
 
@@ -10328,7 +10330,8 @@ html[data-input="pointer"] .sdrafts-row:has(> .sdrafts-open:focus-visible) { out
    on, and a flat grey is dingy. Each surface here wears a chosen colour, the
    site's values (social.css), the same in Pad and Flip. Last in the sheet, so
    it outranks the rules it amends at equal weight.
-   - A tip's well: a clear lilac, a deep violet in dark (the site's --quote-well).
+   - A tip's well: a clear lilac, a deep violet in dark (the site's --quote-well
+     until sheets, Nov 28; a tip keeps its values).
    - Toasts, Flip's chip, the save status and the hints: clear glass, white
      with a lilac edge and a soft lift in light, violet in dark, not grey
      (--chip-glass, --chip-line, --chip-lift, at their own rules, which the

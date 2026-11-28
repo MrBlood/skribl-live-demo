@@ -55647,3 +55647,85 @@ verify_socialposts and verify_socialfollow).
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: on Home, a post's words start under its name, not under
 its face.
+
+## After v330 -- Sheets everywhere (the owner's "The sheets look right")
+
+The owner, Nov 28, with Bluesky's columns built: "Mock sheets (without cards
+again) in all contexts". The Sheets Everywhere mock
+(https://claude.ai/artifact/TM3R2raVZc6bt2jGgm4LSL) laid sheets over every
+place a post is a card (Home's Following and Everyone, a person's Posts,
+Likes, Bookmarks) beside the two places a post was a sheet already (its own
+page, a comment's page), phone and desk, light and dark. The owner: "The
+sheets look right plus it looks great with the hand drawn lines separators".
+
+- NO CARD ROUND A POST in a feed: no ground, edge, shadow or corner; a post
+  sits on the page as on its own page. The columns stay; a phone's drawing
+  is 312px wide where a card's was 280.
+- A PEN LINE DRAWN BY HAND BETWEEN TWO POSTS, in Skribl's violet
+  (--sheet-line: 60% of it on the light page, #ad99fd; 90% on the dark,
+  #7155e8), one of three wavers taken in turn (by the post's place among its
+  siblings) so two neighbours never match. A mask on the next post's
+  ::before, so no script draws it and it is there however the posts came
+  (Load more, a person's tabs); High Contrast draws it in CanvasText. The
+  mock drew each line in its drawing's colour; Skribl says a drawing's paper
+  (describe_posts' ground) but not its ink, so the line is one violet, the
+  colour most of the mock's lines were.
+- A QUOTE IS THE PAGE'S WELL EVERYWHERE (--quote-page). --quote-well, the
+  well made for a white card, has gone; the editors' tip in How it works
+  keeps those colours as its own (--tip-well, #f0ecff and #16112b). Of the
+  three comments in styles.css that named the site's token, two say so now;
+  the third, in the block the player ships, names it no more and is shorter.
+- A DRAWING DRESSED AS ON ITS POST'S OWN PAGE: its edge and, in light, its
+  one line of shade (in a card it had its edge alone: CRISP's "in a card").
+  The small draw-back face's cut-out ring is the page's, as on a post's page.
+
+Pad and Flip: not touched; feeds are the site's.
+
+THE CHECKS (verify_socialposts 25), phone and desk, light and dark, on three
+new posts at the top of Home's Everyone: no card (no ground, shadow, corner
+or border on any); a pen line between two, read off the paint, in
+--sheet-line, across the post's width, never ruler-straight (half a pixel of
+waver or more), each neighbour's waver its own (their paths differ, their
+lines read apart), none over the first post; a drawing on a sheet wearing
+what it wears on its post's own page. SHOWN RED, one part broken at a time
+in throwaway copies (3/3 as built):
+- cards back: all three rows;
+- the lines ruler-straight: the line row;
+- a drawing dressed as in a card: the drawing row.
+The line row first went red on the good build: it compared the three lines
+by the last 80 characters of their images, the same for all three. It
+compares their paths now.
+
+MOVED WITH THE SHEETS (the checks that read a post's card):
+- verify_socialposts 17 read a post's card on Home for three things: every
+  outline one screen pixel at 3x, the edge standing 1.4:1 apart from the
+  card and the page in both themes (The Little V, Nov 21), and one screen
+  pixel at 1.25, 1.5, 1.75, 2.625 and 2.75. A card the site still draws is
+  read instead: Settings' Theme panel, the same --card, --card-edge and
+  --card-drop. Its drawing's lift: Home's drawing is on the page now, the
+  one line of shade in light as on its own page; a comment's drawing is the
+  one with its edge alone (no lift, the owner's "All yes (my row)", Nov 27),
+  read off the paint as Home's was.
+- verify_socialposts 23 (three heights): "a card" is Settings' panel;
+  Home's drawing is read with the post page's (edge and line in light, the
+  edge alone in dark); "in a card" is a comment's drawing.
+- verify_socialmentions 10: a post's mention on Home sits on the page,
+  7.63:1 light and 9.89 dark, as on its post's own page (it was 8.26 and
+  8.39 on the card); a comment's stays 8.26 and 8.39 in its balloon.
+SHOWN RED, the moved rows, one part broken at a time in throwaway copies
+(as built: verify_socialposts 17 and 23 12/12, verify_socialmentions 10
+5/5):
+- cards back (the columns' build's sheet): the drawing's lift row, three
+  heights, and the mention's ink;
+- a comment's drawing lifted: the drawing's lift row, three heights;
+- a card's ring two screen pixels: the outline census and the in-between
+  densities;
+- dark's card edge back to 12% (before The Little V): the edge's 1.4:1;
+- a card with no lift: three heights.
+FOUND ON THE WAY: section 17 read a Gallery tile that only earlier
+sections made, so run alone it read none (three rows red on the good
+build). It posts a tile of its own now.
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: on Home no card round a post, and a violet pen line, a
+little wavy, between two.
