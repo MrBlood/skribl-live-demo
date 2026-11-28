@@ -300,8 +300,15 @@
     that post is not there for this viewer; on its maker's own drawing "Drew
     back on their own drawing", the link to it (the owner's "All yes", Nov
     19), and one face. #}
-{% macro drawn_on(c) -%}
-<span class="post-on">{% if c.drawn_on.gone %}Drew back on a drawing{% elif c.drawn_on.own %}Drew back on <a class="post-on-who" href="{{ c.drawn_on.url }}">their own drawing</a>{% else %}Drew back on <a class="post-on-who" href="{{ c.drawn_on.url }}">{{ c.drawn_on.first }}’s</a>{% endif %}</span>
+{#- S, WHERE ITS FAMILY STARTED (the owner's "Yes on S", Nov 27, and its
+    clearer line; posts.started_with): on a draw-back's own page, when the
+    one it answers is itself a draw-back, the line ends with the family's
+    first drawing: "Drew back on Theo’s · started with Mira’s", whom they
+    answered first, then where it began; each name its own post, the
+    family one step up at a time from there. Cards keep the short line. #}
+{% macro drawn_on(c, start=none) -%}
+<span class="post-on">{% if c.drawn_on.gone %}Drew back on a drawing{% elif c.drawn_on.own %}Drew back on <a class="post-on-who" href="{{ c.drawn_on.url }}">their own drawing</a>{% else %}Drew back on <a class="post-on-who" href="{{ c.drawn_on.url }}">{{ c.drawn_on.first }}’s</a>{% endif %}
+{%- if start and not c.drawn_on.gone %}<span class="post-on-sep"> · </span>started with <a class="post-on-who" href="{{ start.url }}">{{ start.first }}’s</a>{% endif %}</span>
 {%- endmacro %}
 
 {% macro post_card(c) -%}

@@ -1895,6 +1895,11 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
 .post-face .db-face .face-ring .face-blank.has-initial { font-size: 11px; }
 /* On a draw-back's own page the line sits under the header, in its column. */
 .post-on-page { margin: 6px 0 0; }
+/* S, WHERE ITS FAMILY STARTED (the owner's "Yes on S", Nov 27): on a
+   draw-back's own page the line ends with the family's first drawing ("Drew
+   back on Theo’s · started with Mira’s"), a link as the one it answers is,
+   after the dot the site's lines use between two facts. */
+.post-on-sep { color: var(--ink-2); }
 /* Drawing back, the composer says on whose, where a quote would sit. */
 .cmp-back { margin: 0 0 10px; color: var(--ink-2); font-size: 15px; }
 .cmp-back b { color: var(--ink); font-weight: 650; }
@@ -2323,6 +2328,18 @@ a.post-face { text-decoration: none; }
   text-decoration: none; scroll-snap-align: start; }
 .db-tile:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 14px; }
 .db-by { overflow: hidden; font-size: 15px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+/* S, A DRAW-BACK WITH ITS OWN (the owner's "Yes on S", Nov 27, to the family
+   mock, and its clearer look): beside who drew back, how many have drawn
+   back on theirs, as the row under every post says it: its pen and the
+   count in the row's ink (7.1:1 light, 10.12:1 dark on the page), not the
+   violet that says "tap me", at the name's end; never on the drawing (the
+   eye's rule). The name gives way to it (an ellipsis), on the strip and on
+   the page of every draw-back alike: one tile. */
+.db-by.has-n { display: flex; align-items: center; gap: 8px; }
+.db-by.has-n > .db-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.db-n { flex: none; display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--ink-2);
+        font-weight: 400; font-variant-numeric: tabular-nums; }
+.db-n .ic { width: 18px; height: 18px; }
 /* HER SAY, THE EYE ON HER OWN STRIP (the owner's "All yes to everything", Nov
    20, to the Her say mock's A): on her own post each draw-back's tile and
    its eye sit side by side in one cell, the Gallery tab's own eye (.gal-eye,
