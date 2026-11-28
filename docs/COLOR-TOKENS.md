@@ -7,7 +7,7 @@ what it found, is `docs/COLOR-AUDIT.md`.
 the first eight of the file's SHA-256, the `?v=` its link carries):
 
 - `social/static/social.css`, content stamp `644df935`
-- `skribl/static/styles.css`, content stamp `6b1b3517`
+- `skribl/static/styles.css`, content stamp `09bc7166`
 
 `python3 harness/tools/coloraudit.py --check docs/COLOR-TOKENS.md` says in a second, with no browser,
 whether either has changed since. Making it again needs a running copy and a browser (the command is in
@@ -235,7 +235,7 @@ here too; the audit says which are which.
 | `--btn2-hover` | `#ddd4ff` | `oklch(89.1% 0.059 295)` | `#3b3166` | `oklch(35.2% 0.090 290)` | fill ×6 |
 | `--chip-glass` | `rgb(255 255 255 / 0.96)` | `oklch(100.0% 0.000 none / 0.96)` | `rgb(46 38 88 / 0.94)` | `oklch(30.6% 0.087 287 / 0.94)` | fill ×7 |
 | `--chip-line` | `rgb(124 92 255 / 0.3)` | `oklch(59.9% 0.230 286 / 0.3)` | `rgb(167 146 255 / 0.32)` | `oklch(72.4% 0.155 291 / 0.32)` | edge ×4; ring or shadow ×2 |
-| `--off-ink` | `#928ab8` | `oklch(65.7% 0.068 292)` | `#756e9c` | `oklch(56.3% 0.071 291)` | text ×2 |
+| `--off-ink` | `#9088b6` | `oklch(65.1% 0.068 292)` | `#756e9c` | `oklch(56.3% 0.071 291)` | text ×2 |
 | `--tip-well` | `#f0ecff` | `oklch(95.2% 0.026 296)` | `#16112b` | `oklch(20.0% 0.051 290)` | fill ×1 |
 | `--count-fill` | `#ece6ff` | `oklch(93.7% 0.034 297)` | `#2b2450` | `oklch(29.3% 0.078 288)` | fill ×1 |
 | `--draw-wait` | `#ece6ff` | `oklch(93.7% 0.034 297)` | `#2e2650` | `oklch(30.0% 0.074 290)` | fill ×1 |

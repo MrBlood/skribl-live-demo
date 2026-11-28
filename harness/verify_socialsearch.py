@@ -32,10 +32,11 @@ people.
      whether a search finds three people or twenty-two.
   9. KIND: a search's People part fades out and back with the tiles, changed
      only unseen, read on every frame; the page does not scroll.
- 10. CONTRAST AND TARGETS: the mock's own figures (the name 16.86 / 16.56,
-     the @handle 7.10 / 10.12, the headings 16.86 / 16.56 on the page
-     ground), read off the paint too; every word at 4.5:1, every target
-     44px, the box 16px.
+ 10. CONTRAST AND TARGETS: the mock's own figures (the name 16.58 / 16.56,
+     the @handle 6.98 / 10.12, the headings 16.58 / 16.56 on the page
+     ground; 16.86 and 7.10 in light before the page went lilac, Nov 27),
+     read off the paint too; every word at 4.5:1, every target 44px, the
+     box 16px.
  12. SEARCH OF ITS OWN, ITS PLACE (the owner's "Yes to all", Nov 22, to
      round two of the "Blooby and Search" mock): a phone's bar Home, Gallery,
      Make, Search, You, one width each, Make's round in the very middle; a
@@ -1201,11 +1202,13 @@ with app.app_context():
                         smalls += [f"{tag} {name} (lower): {x}" for x in got["small"]]
                         lows += [f"{tag} {name} (lower): {x}" for x in got["low"]]
                         close_ctx(ctx, pg)
-            mock = {"light": {"name": 16.86, "handle": 7.1, "people": 16.86, "drawings": 16.86},
+            # The page went lilac on Nov 27 (#f7f5fa, the owner's "Go for it"): the light figures the mock had on
+            # #f6f8fa (16.86 and 7.10) are 16.58 and 6.98 on it.
+            mock = {"light": {"name": 16.58, "handle": 6.98, "people": 16.58, "drawings": 16.58},
                     "dark": {"name": 16.56, "handle": 10.12, "people": 16.56, "drawings": 16.56}}
             off = {" ".join(k): v for k, v in calcs.items() if v != mock[k[0].split()[1]][k[1]]}
-            check("the mock's own figures, phone and desk: the name 16.86:1 light and 16.56:1 dark on the page's"
-                  " ground, the @handle 7.10 and 10.12, the \"People\" and \"Drawings\" headings 16.86 and 16.56",
+            check("the mock's own figures, phone and desk: the name 16.58:1 light and 16.56:1 dark on the page's"
+                  " ground, the @handle 6.98 and 10.12, the \"People\" and \"Drawings\" headings 16.58 and 16.56",
                   len(calcs) == 16 and not off, json.dumps({"off": off, "all": {" ".join(k): v for k, v in calcs.items()}})[:700])
             check("...and read off the paint: the name, the @handle and both headings 4.5:1 or more against the ground"
                   " beside them, phone and desk, light and dark",

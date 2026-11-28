@@ -54983,3 +54983,46 @@ NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: the page behind Home's posts in light is a lilac-grey (a
 hint of violet), not the blue-grey it was; the Pad's column beside the
 canvas the same.
+
+## After v330 -- Main red after #1129: three measures read on the lilac page (bug fix)
+
+Main's run after #1129 (bb3cab0, run 2658; issue #1130, opened by the main
+watch): three rows red, each on both databases (shards 4, 5 and 7).
+#1129'S OWN, NOT LOAD. #1129 ran the suites that name the page's colour by
+value; these three read a ratio against the page as painted and name no
+value, so nothing it searched for found them.
+
+1. `verify_a11y` 11d, the Pad and Flip: with nothing to undo, Undo and Redo
+read 2.96 to 1 in light (`--off-ink` #928ab8 on #f7f5fa), under the 3 to 1
+the owner said yes to in the colour audit (choice 7: "3.01: still clearly
+off, and you can tell what the button is"). Light's `--off-ink` is one step
+deeper at the same hue and chroma, #9088b6 (oklch 65.7% to 65.1%, 0.068,
+292): 3.04 on the lilac page. Dark's is unchanged (3.99).
+
+2. `verify_galib` 11: on the Library, the Undo on the bar after a post
+stood 1.068 to 1 from its bar in light, under the 1.08 every second button
+keeps (Nov 16, "Yes to all"). The bar is a violet wash over the page, 8%,
+and on the lilac page it came within a step of the button's own lilac
+(#e7e0ff, the one every second button wears). In light the Library's bar
+is a 6% wash: Undo 1.094 from it (1.085 on the grey page), the bar 1.074
+from the page (1.102 before), its ring still drawing its edge. The button
+keeps its token (same role, same token); dark is unchanged.
+
+3. `verify_socialsearch` 10, the mock's own figures: the light ones were
+pinned on the grey page (the name and the headings 16.86, the @handle
+7.10); on the lilac page they read 16.58 and 6.98, and the pin follows
+(dark unchanged, 16.56 and 10.12). A pin, not a defect; main's run is its
+red (it read 16.58 where it said 16.86).
+
+THE LESSON: a change to the page's colour moves every ratio measured on
+it, so it rewires suites that never name it. That is the full battery's
+case ("changes that rewire many suites"), not an affected-suite list built
+by searching for the old value. This fix ran the three red suites and the
+ones that read the same colours, and the full harness on its branch
+(dispatched; Actions costs nothing here) before merging.
+
+THE CHECKS: main's run is the red for each row (bb3cab0); green with the
+fix: RUNCOUNTS. docs/COLOR-TOKENS.md made again; START-HERE's invariant
+names the new value. The next fully green run on main closes #1130.
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site.
