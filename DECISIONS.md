@@ -55555,3 +55555,24 @@ card and ink are an SVG's now); made again with this change.
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: open a quote post's own page; the quote sits in lilac with
 no line round it, and a small face is before the quoted person's name.
+
+## After v330 -- Main red after #1139: the neck's paint check finds its ink across the line (bug fix)
+
+Main's full run after the hand-drawn balloons (#1139, run 2683) was red in
+one place: verify_socialcomments 164/165, section 15's "the neck and the tail
+as painted", on a phone in light and dark. Every stroke it read was the
+balloon's ink (80,77,92 light, 161,161,175 dark); the ink it read them
+against was not (143,141,150 and 115,113,133). That reference was one point
+0.75px beside the drawing's balloon, chosen when the line was the CSS ring.
+The line is drawn by hand now and wavers up to half a pixel, seeded by the
+comment's id, so for some ids the point fell on the line's soft edge: green
+here, red in CI, by the id each run happened to make. The page was right;
+the instrument was not.
+
+The ink is found across the line now: the pixel farthest from the card on a
+run 2px either side of the drawing's left line. SHOWN, section 15 in
+throwaway copies: as built, green (11/11); the drawn line moved half a pixel,
+as an unlucky id moves it, the old reference read the card (red) and the new
+one found the ink (green); moved 0.8px, more than any waver, red on the
+desk's neck stroke, outside the screen pixel a stroke is allowed; no line
+painted, red.

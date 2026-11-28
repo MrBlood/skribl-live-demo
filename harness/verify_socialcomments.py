@@ -1301,7 +1301,13 @@ def linked_paint(pg, cid):
     """A linked comment's neck and its words' tail read off a screenshot at
     named points (CSS px, scaled to the shot), each against the card, the ink
     and the page as sampled beside the drawing's balloon on the same shot: the
-    card inside its 7px, the ink on its left line, the page 6px out from it."""
+    card inside its 7px, the ink on its left line, the page 6px out from it.
+    THE INK IS FOUND ACROSS THE LINE, NOT AT ONE POINT: the line is drawn by
+    hand (C, Nov 28) and wavers up to half a pixel, seeded by the comment's
+    id, so one point beside its box landed on its soft edge for some ids and
+    not others (main red after #1139: the ink read 143,141,150 where it is
+    80,77,92). It is the pixel farthest from the card on a run across the
+    left line, 2px either side of it."""
     from PIL import Image
     import io
     g = pg.evaluate(LINKED15, cid)
@@ -1317,7 +1323,10 @@ def linked_paint(pg, cid):
     def px(x, y, dx=0, dy=0):
         return im.getpixel((min(max(round(x * k) + dx, 0), im.size[0] - 1), min(max(round(y * k) + dy, 0), im.size[1] - 1)))
     mid = (bb + at_) / 2
-    ref = {"card": px(al + 3.5, at_ + 40), "ink": px(al - 0.75, at_ + 40), "page": px(al - 6, at_ + 40)}
+    card = px(al + 3.5, at_ + 40)
+    run = [px(al - 1, at_ + 40, dx=d) for d in range(-round(2 * k), round(2 * k) + 1)]
+    ink = max(run, key=lambda c: max(abs(x - y) for x, y in zip(c, card)))
+    ref = {"card": card, "ink": ink, "page": px(al - 6, at_ + 40)}
     # A STROKE IS FOUND WITHIN A SCREEN PIXEL OF ITS PLACE: a box's edges are
     # put on whole screen pixels as it is painted, so a line's middle can sit a
     # pixel from where its box's rect says (a line 4.5 pixels wide read one
