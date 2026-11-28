@@ -1640,6 +1640,174 @@ with app.test_request_context("/social/"):
                   and many["theo"] == {"label": "13 draw-backs", "note": None, "tiles": 12, "pen": "13"}
                   and many["ana"] == {"label": "13 draw-backs", "note": "1 hidden from your post", "tiles": 12, "pen": "13"},
                   json.dumps({"made": len([m for m in made if m]), "hidden": hid_st, "seen": many}))
+            # SEE ALL (the owner's C, Nov 27, to the Every draw-back mock): past the strip's twelve, "See all" at the end
+            # of its label's line, the small violet words on the label's baseline, 44px to a finger, opening the page of
+            # every draw-back; the strip where it was. Twelve or fewer (the cat's), nothing changes.
+            SEEALL = """() => { const s = document.querySelector('.post-page .db-strip'); if (!s) return null;
+              const t = s.querySelector('.db-title'), a = s.querySelector('.db-all'), tile = s.querySelector('.db-tile');
+              const meta = document.querySelector('.post-page .post-meta'), one = v => Math.round(v * 10) / 10;
+              const out = { gapAbove: one(t.getBoundingClientRect().top - meta.getBoundingClientRect().bottom),
+                            gapUnder: one(tile.getBoundingClientRect().top - t.getBoundingClientRect().bottom), there: !!a };
+              if (!a) return out;
+              const r = a.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              const text = el => { const g = document.createRange(); g.selectNodeContents(el); return g.getBoundingClientRect(); };
+              const cs = getComputedStyle(a), lum = c => { const v = c.match(/[\\d.]+/g).slice(0, 3).map(x => { x /= 255;
+                return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+              let g = a, ground = 'rgba(0, 0, 0, 0)';
+              while (g && /rgba\\(0, 0, 0, 0\\)|transparent/.test(ground)) { ground = getComputedStyle(g).backgroundColor; g = g.parentElement; }
+              const L1 = lum(cs.color), L2 = lum(ground), probe = document.createElement('i');
+              probe.style.color = 'var(--accent-ink)'; document.body.appendChild(probe); const ink = getComputedStyle(probe).color; probe.remove();
+              return Object.assign(out, { says: a.textContent.trim(), href: new URL(a.href).pathname, h: one(r.height),
+                type: [cs.fontSize, cs.fontWeight], ink: cs.color === ink, ratio: one((Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)),
+                painted: !!hit && (hit === a || a.contains(hit)), baseline: one(text(a).bottom - text(t).bottom),
+                end: one(s.getBoundingClientRect().right - r.right), described: a.getAttribute('aria-describedby') }); }"""
+            seen6 = {}
+            for key, who, post, screen in (("theo phone", theo, crowd, "phone"), ("theo desk", theo, crowd, "desk"),
+                                           ("ana phone", ana, crowd, "phone"), ("cat", theo, cat, "phone")):
+                ctx, pg = browser_as(b, who, screen=screen)
+                pg.goto(BASE + f"/social/p/{post}")
+                ready(pg)
+                pg.wait_for_timeout(300)
+                seen6[key] = pg.evaluate(SEEALL)
+                close_ctx(ctx, pg)
+            alls = [seen6[k] for k in ("theo phone", "theo desk", "ana phone")]
+            check("past the strip's twelve, \"See all\" at the end of its label's line, opening the page of every draw-back:"
+                  " the small violet words (15px, 600) on the label's baseline, 44px to a finger, painted, at 4.5:1 and more,"
+                  " described by the label; the strip where it was (its label as far from the date and from the tiles as on"
+                  " the cat's three, which have none)",
+                  all(x and x.get("there") and x["says"] == "See all" and x["href"] == f"/social/p/{crowd}/draw-backs"
+                      and x["h"] >= 44 and x["type"] == ["15px", "600"] and x["ink"] and x["ratio"] >= 4.5 and x["painted"]
+                      and abs(x["baseline"]) <= 0.5 and abs(x["end"]) <= 0.5 and x["described"] == "dbTitle" for x in alls)
+                  and bool(seen6["cat"]) and seen6["cat"]["there"] is False
+                  and abs(seen6["theo phone"]["gapAbove"] - seen6["cat"]["gapAbove"]) <= 0.5
+                  and abs(seen6["theo phone"]["gapUnder"] - seen6["cat"]["gapUnder"]) <= 0.5,
+                  json.dumps(seen6))
+            # THE PAGE OF EVERY DRAW-BACK: newest first, each its drawing and who drew back opening its own page, two
+            # across on a phone and four on a desk; its line says how many and whose; its arrow goes back to the post.
+            PAGE6 = """() => { const g = document.querySelector('[data-db-grid]'); if (!g) return null;
+              const tiles = [...g.querySelectorAll('.db-tile')], one = v => Math.round(v * 10) / 10, seen = e => !!e && !e.hidden && e.getClientRects().length > 0;
+              const lefts = [...new Set(tiles.map(t => one(t.getBoundingClientRect().left)))];
+              const back = document.querySelector('.top .top-back'), more = document.querySelector('[data-db-more]');
+              const sub = document.querySelector('.db-page-sub'), note = document.querySelector('[data-db-note]'), h1 = document.querySelector('.db-page h1');
+              return { ids: tiles.map(t => new URL(t.href).pathname.split('/').pop()), by: tiles.map(t => t.querySelector('.db-by').textContent.trim()),
+                       cols: lefts.length, widths: [...new Set(tiles.map(t => one(t.getBoundingClientRect().width)))].length,
+                       eyes: document.querySelectorAll('[data-eye]').length, off: [...g.querySelectorAll('.db-cell.is-hidden .db-tile')].map(t => new URL(t.href).pathname.split('/').pop()),
+                       sub: sub ? sub.innerText.replace(/\\s+/g, ' ').trim() : null, note: seen(note) ? note.innerText.trim() : null,
+                       top: (document.querySelector('.top .top-title') || {}).textContent || null,
+                       heading: h1 && h1.getBoundingClientRect().width > 2 && h1.getBoundingClientRect().height > 2 ? h1.textContent.trim() : null,
+                       back: seen(back) ? new URL(back.href).pathname : null, more: seen(more),
+                       wide: document.documentElement.scrollWidth <= innerWidth, title: document.title }; }"""
+            pages = {}
+            for key, who, screen in (("theo", theo, "phone"), ("theo desk", theo, "desk"), ("nobody", None, "phone"), ("ana", ana, "phone")):
+                ctx, pg = browser_as(b, who, screen=screen)
+                r = pg.goto(BASE + f"/social/p/{crowd}/draw-backs")
+                ready(pg)
+                pg.wait_for_timeout(300)
+                pages[key] = dict(pg.evaluate(PAGE6) or {}, status=r.status if r else None)
+                close_ctx(ctx, pg)
+            newest = [m for m in reversed(made) if m]
+            t6, td, tn, a6 = pages["theo"], pages["theo desk"], pages["nobody"], pages["ana"]
+            check("the page of every draw-back: Theo's thirteen, newest first, each opening its own page and saying who"
+                  " drew back, the one she hid not there; two across on a phone, four on a desk; \"13 draw-backs on Ana’s"
+                  " drawing, newest first\"; the top says Draw-backs and its arrow goes to the post (a desk, which has no"
+                  " top, shows the heading); nothing past the screen; signed out the same thirteen; no eye for anybody but her",
+                  all(p.get("status") == 200 for p in (t6, td, tn, a6))
+                  and t6.get("ids") == newest[:13] and td.get("ids") == newest[:13] and tn.get("ids") == newest[:13]
+                  and t6["by"][:2] == ["Noa", "Kai"] and t6["cols"] == 2 and td["cols"] == 4 and t6["widths"] == 1
+                  and t6["eyes"] == 0 and tn["eyes"] == 0 and t6["sub"] == "13 draw-backs on Ana’s drawing, newest first"
+                  and t6["top"] == "Draw-backs" and t6["back"] == f"/social/p/{crowd}" and t6["heading"] is None
+                  and td["heading"] == "Draw-backs" and t6["more"] is False and t6["wide"] and td["wide"],
+                  json.dumps({k: {x: y for x, y in v.items() if x != "ids"} for k, v in pages.items()})[:1400])
+            check("on her own post's page of every draw-back, every one, the one she hid last and faded with its eye: fourteen,"
+                  " an eye on each; \"13 draw-backs on your drawing, newest first\" and under it \"1 hidden from your post\"",
+                  a6.get("ids") == newest and a6.get("off") == [made[0]] and a6.get("eyes") == 14
+                  and a6.get("sub") == "13 draw-backs on your drawing, newest first" and a6.get("note") == "1 hidden from your post",
+                  json.dumps({k: v for k, v in a6.items() if k != "ids"}))
+            # HER EYE KEEPS THE TRUE COUNT, on her strip and on the page (Nov 27): the counts are every draw-back's, and the
+            # strip holds twelve, the page a page at a time; a tap is one fewer, or one more (posts.js).
+            EYES6 = """async () => { const say = () => { const n = document.querySelector('[data-db-n]'), h = document.querySelector('[data-db-hidden]'),
+                pen = document.querySelector('.post-page > .post-row .db-pen span');
+                return [n ? n.textContent : null, h ? h.textContent : null, pen ? pen.textContent : null]; };
+              const eye = document.querySelector('[data-eye-cell] [data-eye]'), wait = ms => new Promise(r => setTimeout(r, ms));
+              const was = say(); eye.click(); await wait(900); const hid = say(); eye.click(); await wait(900);
+              return { was, hid, back: say() }; }"""
+            eyes6 = {}
+            for key, path in (("strip", f"/social/p/{crowd}"), ("page", f"/social/p/{crowd}/draw-backs")):
+                ctx, pg = browser_as(b, ana)
+                pg.goto(BASE + path)
+                ready(pg)
+                pg.wait_for_timeout(300)
+                eyes6[key] = pg.evaluate(EYES6)
+                close_ctx(ctx, pg)
+            check("her eye keeps the true count, on her strip and on the page of every draw-back: one tap is one fewer seen and"
+                  " one more hidden (13 and 1 to 12 and 2, the pen 12), the next one back (not a count of the twelve tiles a"
+                  " strip holds)",
+                  eyes6["strip"] == {"was": ["13", "1", "13"], "hid": ["12", "2", "12"], "back": ["13", "1", "13"]}
+                  and eyes6["page"] == {"was": ["13", "1", None], "hid": ["12", "2", None], "back": ["13", "1", None]},
+                  json.dumps(eyes6))
+            # LOAD MORE: twenty-four a page (posts.ALL_BACKS), the next in place, newest first, none twice, then none. Twelve
+            # more drawn back by two people of their own, and the newest by Lea, whom Theo blocked: twenty-seven, Theo
+            # shown twenty-five. HIS PAGE IS WHOLE: the read leaves Lea's out, so twenty-four tiles fill his first page
+            # (the drawing's own description hides hers from him too, so without the read's rule a page would come one
+            # short, not show hers).
+            ola, pia = someone(b, "ola", "Ola Berg"), someone(b, "pia", "Pia Holm")
+            more6 = []
+            for i in range(12):
+                more6.append((draw_back((ola, pia)[i % 2], crowd, answer(n=8, seed=640 + i))[1] or {}).get("post"))
+                time.sleep(0.02)
+            time.sleep(0.02)
+            lea_back = (draw_back(kim, crowd, answer(n=8, seed=652))[1] or {}).get("post")
+            every = [m for m in reversed(more6) if m] + newest
+            every_ana = [lea_back] + every
+            loads = {}
+            for key, who in (("theo", theo), ("ana", ana)):
+                ctx, pg = browser_as(b, who)
+                pg.goto(BASE + f"/social/p/{crowd}/draw-backs")
+                ready(pg)
+                pg.wait_for_timeout(300)
+                first6 = pg.evaluate(PAGE6)
+                pg.click("[data-db-more]")
+                try:                        # a Load more that brings nothing is the row's red, never a stop
+                    pg.wait_for_function("() => document.querySelector('[data-db-more]').hidden", timeout=8000)
+                except Exception:
+                    pass
+                pg.wait_for_timeout(400)
+                loads[key] = {"first": first6, "after": pg.evaluate(PAGE6),
+                              "new": pg.evaluate("() => document.querySelectorAll('[data-db-grid] > .is-new').length")}
+                close_ctx(ctx, pg)
+            lt, la = loads["theo"], loads["ana"]
+            check("Load more: twenty-four a page, then the rest in place, newest first, none twice, and no Load more after;"
+                  " the new ones fade in (Theo, Lea's left out by the read so his first page is whole: 24 and 1 more; Ana,"
+                  " Lea's and her hidden one too: 24 and 3 more)",
+                  len([m for m in more6 if m]) == 12 and bool(lea_back)
+                  and lt["first"]["ids"] == every[:24] and lt["first"]["more"] is True and lt["after"]["ids"] == [e for e in every if e != made[0]]
+                  and lt["after"]["more"] is False and lt["new"] == 1
+                  and la["first"]["ids"] == every_ana[:24] and la["after"]["ids"] == every_ana and la["after"]["more"] is False and la["new"] == 3
+                  and la["after"]["off"] == [made[0]] and la["after"]["eyes"] == 27 and lt["after"]["sub"] == "25 draw-backs on Ana’s drawing, newest first",
+                  json.dumps({k: {"first": len(v["first"]["ids"]), "after": len(v["after"]["ids"]), "new": v["new"],
+                                  "dupes": len(v["after"]["ids"]) - len(set(v["after"]["ids"]))} for k, v in loads.items()}))
+            # NOTHING A BLOCK HIDES, AND NOTHING THAT IS NOT THERE: Theo blocked Lea, so the cat's page holds two for him; a
+            # post that is not there is as gone on its page of draw-backs, and its Load more says so.
+            ctx, pg = browser_as(b, theo)
+            pg.goto(BASE + f"/social/p/{cat}/draw-backs")
+            ready(pg)
+            cat6 = pg.evaluate(PAGE6)
+            gone6 = status(pg, "/social/p/nope000000/draw-backs")
+            more_gone = pg.evaluate("async () => (await fetch('/social/p/nope000000/draw-backs/more?before=x')).status")
+            more_bad = pg.evaluate("async (p) => (await fetch('/social/p/' + p + '/draw-backs/more?before=%25%25')).status", crowd)
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, kim)
+            lea6 = [status(pg, f"/social/p/{first}"), status(pg, f"/social/p/{first}/draw-backs"),
+                    pg.evaluate("async (p) => (await fetch('/social/p/' + p + '/draw-backs/more?before=x')).status", first)]
+            close_ctx(ctx, pg)
+            check("nothing a block hides on the page either (Theo blocked Lea: the cat's page holds Uma's and his own); a post"
+                  " a block hides is as gone on its page of draw-backs as on its own (Lea, of Theo's: 404, 404, its Load more"
+                  " 404); a post that is not there is gone there too (404), its Load more too (404), and a cursor that is not"
+                  " one is refused (400)",
+                  bool(cat6) and cat6["ids"] == [second, first] and lea6 == [404, 404, 404] and gone6 == 404
+                  and more_gone == 404 and more_bad == 400,
+                  json.dumps({"cat": (cat6 or {}).get("ids"), "want": [second, first], "lea": lea6, "gone": gone6,
+                              "more gone": more_gone, "bad": more_bad}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(6, exc)
 

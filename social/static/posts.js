@@ -704,17 +704,22 @@
      so on its cell), the page's own counts follow at once: the label is what
      everyone else sees ("2 draw-backs"; none at none), the quiet line under
      it how many are hidden, hers alone ("1 hidden from your post"), and the
-     row's pen one fewer or one more, with its name. */
+     row's pen one fewer or one more, with its name. ONE FEWER OR ONE MORE,
+     FROM WHAT THEY SAID (Nov 27): the counts are every draw-back's (the
+     page says them), and the strip holds twelve, SEE ALL's page a page at
+     a time, so the tiles on the page are not all there are to count. The
+     page of every draw-back is a strip to this too ([data-db-strip]). */
   doc.addEventListener('social:eye', function (e) {
     var cell = e.target, strip = cell && cell.closest ? cell.closest('[data-db-strip]') : null;
     if (!strip) return;
-    var hidden = strip.querySelectorAll('.db-cell.is-hidden').length;
-    var shown = strip.querySelectorAll('.db-cell').length - hidden;
+    var off = !!(e.detail && e.detail.hidden), h = strip.querySelector('[data-db-hidden]');
     var label = strip.querySelector('.db-title'), n = strip.querySelector('[data-db-n]'), noun = strip.querySelector('[data-db-noun]');
+    var shown = Math.max(0, (n ? +n.textContent || 0 : 0) + (off ? -1 : 1));
+    var hidden = Math.max(0, (h ? +h.textContent || 0 : 0) + (off ? 1 : -1));
     if (n) n.textContent = String(shown);
     if (noun) noun.textContent = noun.getAttribute(shown === 1 ? 'data-one' : 'data-many');
     if (label) label.hidden = !shown;
-    var note = strip.querySelector('[data-db-note]'), h = strip.querySelector('[data-db-hidden]');
+    var note = strip.querySelector('[data-db-note]');
     if (h) h.textContent = String(hidden);
     if (note) note.hidden = !hidden;
     var page = strip.closest('.post-page'), pen = page ? page.querySelector(':scope > .post-row .db-pen') : null;
@@ -724,6 +729,33 @@
     if (c) { if (now) c.textContent = String(now); else pen.removeChild(c); }
     pen.setAttribute('aria-label', (say('db_go') || 'Draw back')
       + (now ? ', ' + now + ' ' + (now === 1 ? say('db_one') || 'draw-back' : say('db_many') || 'draw-backs') : ''));
+  });
+
+  /* SEE ALL'S LOAD MORE (the page of every draw-back on a post; the owner's
+     C, Nov 27): the next page of tiles after the last, fading in (social.css,
+     .db-grid > .is-new), and the button gone once there are no more. One
+     that did not come leaves the button to try again, and the page says so. */
+  doc.addEventListener('click', function (e) {
+    var more = e.target.closest ? e.target.closest('[data-db-more]') : null;
+    var grid = doc.querySelector('[data-db-grid]'), next = more ? more.getAttribute('data-db-next') : '';
+    if (!more || !grid || !next || more.disabled) return;
+    more.disabled = true;
+    fetch(more.getAttribute('data-db-more') + '?before=' + encodeURIComponent(next), { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); })
+      .then(function (j) {
+        var box = doc.createElement('div');
+        box.innerHTML = j.html || '';
+        Array.prototype.slice.call(box.children).forEach(function (t) {
+          if (!(reduced && reduced.matches)) t.classList.add('is-new');
+          grid.appendChild(t);
+        });
+        more.setAttribute('data-db-next', j.next || '');
+        more.hidden = !j.next;
+        more.disabled = false;
+      }, function () {
+        more.disabled = false;
+        tell(pageSay, say('network'));
+      });
   });
 
   /* DRAW BACK (the owner's "All yes", Nov 19): the row's pen opens the

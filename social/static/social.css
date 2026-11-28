@@ -2349,6 +2349,31 @@ a.post-face { text-decoration: none; }
 .db-note { margin: -4px 0 10px; color: var(--ink-2); font-size: 14px; line-height: 1.35; font-variant-numeric: tabular-nums; }
 .db-note[hidden] { display: none; }
 .db-title[hidden] + .db-note { margin-top: 22px; }
+/* SEE ALL (the owner's C, Nov 27, to the Every draw-back mock): past the
+   strip's twelve, "See all" at the end of the label's line, the way Apple's
+   own apps label a row: the small violet words, 15px and 600 as the label,
+   on its baseline and its line's height (19.5px), 44px to a finger (its
+   room taken back from the line, so the line is the label's own height). The line takes the label's margins
+   and the label none, so the strip sits where it did. It opens the page of
+   every draw-back (drawbacks.html). */
+.db-head { display: flex; align-items: baseline; gap: 12px; margin: 22px 0 10px; }
+.db-head > .db-title { margin: 0; }
+.db-all {
+  flex: none; margin: -12.25px 0 -12.25px auto; padding: 12.25px 0; border-radius: 6px;
+  color: var(--accent-ink); font: 600 15px/1.3 var(--font); text-decoration: none; -webkit-tap-highlight-color: transparent;
+}
+.db-all:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* THE PAGE OF EVERY DRAW-BACK (See all; drawbacks.html): the strip's tiles
+   in a grid, newest first, two across on a phone and four on a desk, each
+   as wide as its column (the strip's are 132px); the page's line says how
+   many in the page's ink, whose in its second. Load more's tiles fade in. */
+.db-page-sub b { color: var(--ink); font-weight: 600; }
+.db-page .db-note { margin: -8px 0 16px; }
+.db-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; margin: 0 0 24px; }
+@media (min-width: 900px) { .db-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px 16px; } }
+.db-grid .db-tile, .db-grid .db-cell { width: auto; }
+.db-grid > .is-new { animation: pp-in 0.24s ease both; }
+@media (prefers-reduced-motion: reduce) { .db-grid > .is-new { animation: none; } }
 /* HER SAY, WHO CAN DRAW BACK (the owner's "All yes to everything", Nov 20, to
    the Her say mock; _who.html). Every piece is one the site has.
    THE QUIET LINE ON HER OWN POST'S PAGE, while it is not Everyone: the
