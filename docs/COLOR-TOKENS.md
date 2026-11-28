@@ -6,7 +6,7 @@ what it found, is `docs/COLOR-AUDIT.md`.
 **A snapshot, and nothing keeps it in step.** It is these stylesheets as they stood (a content stamp is
 the first eight of the file's SHA-256, the `?v=` its link carries):
 
-- `social/static/social.css`, content stamp `53d1f6d5`
+- `social/static/social.css`, content stamp `f519bfe1`
 - `skribl/static/styles.css`, content stamp `09bc7166`
 
 `python3 harness/tools/coloraudit.py --check docs/COLOR-TOKENS.md` says in a second, with no browser,
@@ -23,21 +23,21 @@ which properties read the token, and how often.
 
 ## The site (`social/static/social.css`)
 
-62 colour tokens.
+64 colour tokens.
 
 | Token | Light HEX/sRGB | Light OKLCH | Dark HEX/sRGB | Dark OKLCH | Usage |
 |---|---|---|---|---|---|
 | `--page` | `#f7f5fa` | `oklch(97.3% 0.007 304)` | `#0f1218` | `oklch(18.2% 0.013 264)` | icon ×4; fill ×4; ring or shadow ×3 |
-| `--ink` | `#14171d` | `oklch(20.4% 0.013 264)` | `#eef1f6` | `oklch(95.7% 0.007 261)` | text ×60 |
-| `--ink-2` | `#4b5563` | `oklch(44.6% 0.026 257)` | `#b7bfcc` | `oklch(80.2% 0.020 260)` | text ×93; feeds `--text-dim` |
-| `--accent-ink` | `#4c31c4` | `oklch(44.8% 0.213 282)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | text ×29; focus ×1 |
+| `--ink` | `#14171d` | `oklch(20.4% 0.013 264)` | `#eef1f6` | `oklch(95.7% 0.007 261)` | text ×61 |
+| `--ink-2` | `#4b5563` | `oklch(44.6% 0.026 257)` | `#b7bfcc` | `oklch(80.2% 0.020 260)` | text ×95; feeds `--text-dim` |
+| `--accent-ink` | `#4c31c4` | `oklch(44.8% 0.213 282)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | text ×30; focus ×1 |
 | `--brand` | `#7c5cff` | `oklch(59.9% 0.230 286)` | `#8f74ff` | `oklch(65.2% 0.198 289)` | text ×5; icon ×5; edge ×4; feeds `--tile-hover` |
 | `--blooby-ink` | `#1f1b2e` | `oklch(23.6% 0.036 293)` | `#1f1b2e` | `oklch(23.6% 0.036 293)` | icon ×4 |
 | `--blooby-blush` | `#ff6f91` | `oklch(72.5% 0.177 8)` | `#ff6f91` | `oklch(72.5% 0.177 8)` | icon ×3; feeds `--heart`, `--heart-line`, `--new-dot` |
 | `--blooby-paper` | `#f6f2ea` | `oklch(96.2% 0.011 85)` | `#f6f2ea` | `oklch(96.2% 0.011 85)` | fill ×2; icon ×1 |
 | `--fill` | `#6d4cf0` | `oklch(55.2% 0.232 285)` | `#6d4cf0` | `oklch(55.2% 0.232 285)` | fill ×8; native control ×3 |
 | `--on-fill` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#ffffff` | `oklch(100.0% 0.000 none)` | text ×8 |
-| `--focus` | `#6d4cf0` | `oklch(55.2% 0.232 285)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | focus ×12 |
+| `--focus` | `#6d4cf0` | `oklch(55.2% 0.232 285)` | `#c1b2ff` | `oklch(80.4% 0.108 293)` | focus ×13 |
 | `--btn2-bg` | `#e7e0ff` | `oklch(92.2% 0.042 296)` | `#332a58` | `oklch(32.0% 0.080 290)` | fill ×8; feeds `--tint` |
 | `--btn2-line` | `rgb(124 92 255 / 0.34)` | `oklch(59.9% 0.230 286 / 0.34)` | `rgb(167 146 255 / 0.4)` | `oklch(72.4% 0.155 291 / 0.4)` | ring or shadow ×6; edge ×1; feeds `--line`, `--tile-hover` |
 | `--btn2-ink` | `#14171d` | `oklch(20.4% 0.013 264)` | `#eef1f6` | `oklch(95.7% 0.007 261)` | text ×3 |
@@ -52,11 +52,13 @@ which properties read the token, and how often.
 | `--scrim` | `rgb(23 20 42 / 0.36)` | `oklch(20.7% 0.043 288 / 0.36)` | `rgb(0 0 0 / 0.5)` | `oklch(0.0% 0.000 none / 0.5)` | fill ×2 |
 | `--draw-wait` | `#ece6ff` | `oklch(93.7% 0.034 297)` | `#2e2650` | `oklch(30.0% 0.074 290)` | fill ×9; feeds `--bg-elev`, `--draw-edge` |
 | `--draw-edge` | `#dbd5ed` | `oklch(88.6% 0.032 296)` | `#3f375e` | `oklch(36.4% 0.066 292)` | ring or shadow ×2 |
-| `--card` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#231e3b` | `oklch(25.6% 0.054 290)` | fill ×15; ring or shadow ×2; feeds `--balloon-ink`, `--card-edge`, `--card-edge-hc` |
+| `--card` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#231e3b` | `oklch(25.6% 0.054 290)` | fill ×14; ring or shadow ×2; icon ×2; feeds `--balloon-ink`, `--card-edge`, `--card-edge-hc` |
 | `--card-line` | `rgb(124 92 255 / 0.34)` | `oklch(59.9% 0.230 286 / 0.34)` | `rgb(167 146 255 / 0.26)` | `oklch(72.4% 0.155 291 / 0.26)` | ring or shadow ×10 |
 | `--card-edge` | `#d2c8ff` | `oklch(85.9% 0.077 294)` | `#453c6e` | `oklch(39.0% 0.083 290)` | ring or shadow ×13; edge ×5; feeds `--line` |
-| `--balloon-ink` | `#504d5c` | `oklch(42.9% 0.024 295)` | `#a1a1af` | `oklch(71.3% 0.020 286)` | ring or shadow ×2; fill ×2 |
+| `--balloon-ink` | `#504d5c` | `oklch(42.9% 0.024 295)` | `#a1a1af` | `oklch(71.3% 0.020 286)` | ring or shadow ×2; icon ×2; fill ×1 |
 | `--quote-well` | `#f0ecff` | `oklch(95.2% 0.026 296)` | `#16112b` | `oklch(20.0% 0.051 290)` | fill ×1 |
+| `--quote-page` | `#e8e3fb` | `oklch(92.7% 0.033 295)` | `#201b3c` | `oklch(24.7% 0.061 288)` | fill ×1 |
+| `--quote-face` | `#d9cfff` | `oklch(87.8% 0.066 295)` | `#332a58` | `oklch(32.0% 0.080 290)` | fill ×1 |
 | `--row-band` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#171723` | `oklch(21.1% 0.024 284)` | fill ×1; feeds `--tile-edge` |
 | `--row-band-sheet` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#171723` | `oklch(21.1% 0.024 284)` | feeds `--row-band` |
 | `--tile-edge` | `#dfdcf0` | `oklch(90.3% 0.027 293)` | `#2b2b39` | `oklch(29.6% 0.025 285)` | ring or shadow ×1 |
@@ -72,7 +74,7 @@ which properties read the token, and how often.
 | `--nav-line-hc` | `rgb(20 23 29 / 0.24)` | `oklch(20.4% 0.013 264 / 0.24)` | `rgb(255 255 255 / 0.24)` | `oklch(100.0% 0.000 none / 0.24)` | feeds `--nav-line` |
 | `--field` | `#ffffff` | `oklch(100.0% 0.000 none)` | `#17142a` | `oklch(20.7% 0.043 288)` | fill ×5 |
 | `--field-line` | `rgb(124 92 255 / 0.82)` | `oklch(59.9% 0.230 286 / 0.82)` | `rgb(167 146 255 / 0.7)` | `oklch(72.4% 0.155 291 / 0.7)` | ring or shadow ×5 |
-| `--tint` | `#e7e0ff` | `oklch(92.2% 0.042 296)` | `#332a58` | `oklch(32.0% 0.080 290)` | fill ×16 |
+| `--tint` | `#e7e0ff` | `oklch(92.2% 0.042 296)` | `#332a58` | `oklch(32.0% 0.080 290)` | fill ×16; feeds `--quote-face` |
 | `--danger-ink` | `#7a0a2d` | `oklch(37.5% 0.142 12)` | `#ffb3c6` | `oklch(84.4% 0.091 3)` | text ×4; edge ×2 |
 | `--danger-fill` | `#b3283f` | `oklch(50.8% 0.174 17)` | `#b3283f` | `oklch(50.8% 0.174 17)` | fill ×2; ring or shadow ×1; edge ×1 |
 | `--new-dot` | `#e64a78` | `oklch(63.8% 0.194 7)` | `#ff6f91` | `oklch(72.5% 0.177 8)` | icon ×3; fill ×1 |
@@ -367,18 +369,19 @@ or a near miss.
 | `--ink` | `--text-primary` | `#14171d` / `#11161e` | `#eef1f6` / `#f6f7f9` | 0.0192 |
 | `--tile-edge` | `--line-2` | `#dfdcf0` / `#dde2ea` | `#2b2b39` / `#262c38` | 0.0202 |
 | `--nav-on` | `--text-primary` | `#14171d` / `#11161e` | `#ffffff` / `#f6f7f9` | 0.0242 |
+| `--quote-page` | `--surface-tint-lit` | `#e8e3fb` / `#e6e0ff` | `#201b3c` / `#1a1830` | 0.0269 |
 | `--draw-edge` | `--btn2-hover` | `#dbd5ed` / `#ddd4ff` | `#3f375e` / `#3b3166` | 0.0273 |
 | `--balloon-ink` | `--text-dim-hc` | `#504d5c` / `#4f5765` | `#a1a1af` / `#9aa2b1` | 0.0293 |
 | `--row-band-sheet` | `--surface-pop` | `#ffffff` / `#ffffff` | `#171723` / `#1b1f27` | 0.0299 |
 | `--row-band` | `--surface-pop` | `#ffffff` / `#ffffff` | `#171723` / `#1b1f27` | 0.0299 |
 
-Exact copies: 18 of the site's 62 colour tokens.
+Exact copies: 18 of the site's 64 colour tokens.
 
 ## What the stylesheets say
 
 | Stylesheet | Tokens | Colours written into rules | color-mix() | Gradients | Shadow lines | of them soft (blur over 2.5px) | Forced-colours blocks | More-contrast blocks |
 |---|---|---|---|---|---|---|---|---|
-| `social/static/social.css` | 96 | 13 | 15 | 7 | 79 | 0 | 2 | 1 |
+| `social/static/social.css` | 98 | 13 | 15 | 7 | 79 | 0 | 2 | 1 |
 | `skribl/static/styles.css` | 160 | 216 | 42 | 21 | 166 | 30 | 3 | 1 |
 | `skribl/static/flip.css` | 8 | 31 | 1 | 0 | 30 | 3 | 0 | 0 |
 | `skribl/static/inlineplayer.css` | 1 | 56 | 7 | 2 | 5 | 2 | 0 | 0 |

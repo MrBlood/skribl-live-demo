@@ -55484,3 +55484,74 @@ painted), and the still tail's point read off its box rather than its path
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: zoom in on a comment; its line wavers a little, and its
 tail points at the middle of the face.
+
+## After v330 -- One look for a quote, and a small face by the name (the owner's "I like a")
+
+The owner, Nov 28, with two screenshots of one quote post, on its own page
+and on Home: "They are 2 diff looks for same post. Sits in lavender on white
+card on home and sits in white circle on bg in post page. Shouldn't post page
+look the same as timeline?" On Home a quote had been a well inside its post's
+card since "d2 is good" (Nov 16); on its post's own page, where no card is
+round it, it had stayed the raised card of "Yes to B" (Nov 15). The One
+Quote Look mock offered A (the well on the post's page too, as far from the
+page as Home's is from its card) and B (the whole post in Home's card on its
+own page, the quote the same well inside); the owner: "I like a. Also think
+you should put a small user avatar next to the person being reposted too."
+
+- ONE LOOK: on its post's own page a quote is the well: a clear lilac with
+  no line round it (--quote-page, #e8e3fb light, #201b3c dark: 1.154:1 and
+  1.146:1 from the page, where Home's well is 1.157:1 and 1.149:1 from its
+  card). Its words: the name 14.4:1 light and 14.5:1 dark, the @handle and
+  when 6.05:1 and 8.83:1. Make's preview of a quote, on the sheet's own
+  paper, stays a card.
+- A SMALL FACE BY THE NAME: the quoted person's face, 22px (a Gallery
+  tile's), first in the quote's head, its middle level with the name's line
+  (the head centres now; it set the name and the @handle on one baseline,
+  which a face has none of). In Make's preview too, as the card is one
+  macro (_gallery.html quote_card).
+- AN INITIAL'S CIRCLE IN A WELL (found in the first shots of the build):
+  the tint (#e7e0ff) is the page's well's own lilac, 1.02:1 on it, and the
+  letter floated with no circle round it (1.10:1 on Home's well). In a well
+  the circle is --quote-face, #d9cfff, a deeper lilac: 1.27:1 on Home's well
+  and 1.17:1 on the page's, as far as the tint stands from a card and from
+  the page; the letter 5.63:1 on it. In dark the tint was already clear
+  (1.40:1 and 1.26:1) and stays. A white circle read too (1.25 and 1.16), but
+  No dinge holds an empty face to a lilac (13's census), and white is none.
+
+If posts become sheets (the owner asked the same evening: "how would this
+change if we do away with cards and go to the sheets with handsaws lines
+separating posts?"; mocked, not decided), no card is round a post anywhere
+and every quote stands on the page: this well, --quote-page, is its one look,
+Home included, and --quote-well has nothing left to do.
+
+Pad and Flip: not touched; quotes are the site's.
+
+THE CHECKS (verify_socialreposts 11; 13's census): on Home's card the quote
+a well (as before), and on its post's own page the same well, read off the
+paint: its lilac painted inside it, no line round it, 1.08:1 or more from the
+page beside it and within 0.03 of Home's step, phone and desk, light and
+dark; the face first in the head, 22px, painted at its middle, its middle
+within 1px of the name's line, and for Juno, who has drawn none, her
+initial's circle 1.12:1 or more from the well off the paint and her letter
+4.5:1 on it, on Home's card and on the post's page; 13's census of what must
+read as lilac takes the page's well among the wells. SHOWN RED, one part
+broken at a time in throwaway copies (9/9 as built, sections 11 and 13):
+- the page's rule taken out (the quote its card again, white inside its
+  line): the page's well (a line round it, 1.08:1 from the page in light)
+  and 13's no-dinge census (a well read white, chroma 0);
+- the page's well at Home's well's lilac: the page's well (1.07:1 from the
+  page, where Home's is 1.16:1 from its card);
+- no face in the card: the face;
+- the face without its size (6 by 11px): the face;
+- the head on one baseline again: the face (its middle 1.75px off the
+  name's);
+- the circle the tint again: the face (1.10:1 on Home's well, 1.02:1 on the
+  page's).
+
+FOUND ON THE WAY: docs/COLOR-TOKENS.md was last made with #1132, and
+social.css has moved since (the balloon's tail, its line drawn by hand: its
+card and ink are an SVG's now); made again with this change.
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: open a quote post's own page; the quote sits in lilac with
+no line round it, and a small face is before the quoted person's name.
