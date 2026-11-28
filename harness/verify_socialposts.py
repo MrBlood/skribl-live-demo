@@ -3736,6 +3736,8 @@ print("PLAN " + json.dumps(out))
             def _one_line(rows):
                 return bool(rows) and 2 <= len(rows) <= 3 and rows == list(range(rows[0], rows[0] + len(rows)))
             ed = member(b, "edgy", "Eddie Edge")
+            # A tile of its own in the Gallery, so the section reads one when it runs alone (SOCIALPOSTS_PART=17).
+            st17, _ = make_post(ed, "Edges, one screen pixel.", gallery=True)
             edges, lift = {}, None
             for scheme in ("light", "dark"):
                 ctx, pg = browser_as(b, ed, screen="phone", scheme=scheme, scale=3)
@@ -3766,7 +3768,7 @@ print("PLAN " + json.dumps(out))
                 close_ctx(ctx, pg)
             check("every outline is one screen pixel at 3x, light and dark: a card (Settings' Theme panel; a post on Home"
                   " has none since the sheets), the Gallery's search box, New | Hot, a tile, and the bar's line along its top",
-                  len(edges) == 10 and all(v and v["n"] == 1 for v in edges.values()),
+                  st17 == 200 and len(edges) == 10 and all(v and v["n"] == 1 for v in edges.values()),
                   json.dumps({k: (v and v["n"]) for k, v in edges.items()}) + " " + json.dumps(edges)[:500])
             check("...a Gallery tile sits on the light page with the cards' own lift, which is one line of shade (crisp):"
                   " under its edge the shadow paints two or three screen rows together (1px), and nothing below them for"
