@@ -612,7 +612,9 @@ ON_TINT = r"""(id) => { const li = document.getElementById('c-' + id); if (!li) 
   const g = over(tint, page);
   // THE BUBBLE (the comment thread, step 1) is the card, opaque: the words in it read on it, and the row under
   // it on the tint round it.
-  const bub = li.querySelector(':scope > .cm-main > .cm-bubble'), card = bub ? rgba(getComputedStyle(bub).backgroundColor) : null;
+  // DRAWN BY HAND since the owner's C (Nov 28): the balloon's ground is the card drawn behind it.
+  const bub = li.querySelector(':scope > .cm-main > .cm-bubble'), hc = li.querySelector(':scope > .cm-main.is-hand > svg.cm-hand .cm-hand-card');
+  const card = hc ? rgba(getComputedStyle(hc).fill) : bub ? rgba(getComputedStyle(bub).backgroundColor) : null;
   const k = (sel, on) => { const e = li.querySelector(':scope > .cm-main ' + sel); return e ? ratio(over(rgba(getComputedStyle(e).color), on), on) : null; };
   if (!card || card[3] < 1) return { landed: true, bubble: false };
   return { landed: true, bubble: true, words: k('.cm-words', card), name: k('.cm-name', card), when: k('.cm-when', card),

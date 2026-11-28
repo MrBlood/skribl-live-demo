@@ -55404,3 +55404,83 @@ stops short of her eye now).
 NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
 one-glance tell: open a draw-back of a draw-back; under the name, "Drew back
 on Theo’s · started with Mira’s".
+
+## After v330 -- Comment balloons drawn by hand (the owner's "I like C")
+
+The owner, Nov 28, with a comic balloon (a bold dark line, a narrow tail at
+its foot): "show me a couple different speech bubbles. If you rotate this 90
+degrees to the right? I like that it looks a little comic bookish. Can you
+draw up a few different speech bubbles. Start the bubble in the middle of the
+avatar circle. Right now it starts closer to the bottom. Try some examples".
+The Speech Bubbles mock (https://claude.ai/artifact/ST2MCNRRLBCQxb1fSYDBdK)
+drew three on the real post page, each one line with its tail and neck, its
+tail's point at the face's middle, beside now: B inked (a weighted line, Cal's
+pick), A comic (a lilac offset), C hand-drawn (a gentle waver, rounder). A
+comic tail needs room: in today's 12px it read as a notch ("B in today's
+room"), so each sat 8px further from the face. A tail tucked behind the face,
+starting at its centre, was tried and read as a bracket going into the face;
+it was not offered. The owner: "I like C. It looks imperfect like I want", and
+"Just try to make sure the lines on the speech bubble are not perfectly
+straight like the separation line you're going to use on the new sheets" (the
+sheets mock's pen line between posts, which wavers).
+
+WHAT CHANGED:
+- ONE LINE, DRAWN BY HAND (comments.js, THE BALLOON, DRAWN BY HAND; social.css
+  .cm-hand): every comment's balloon is one closed line, 2px of --balloon-ink
+  round --card: the balloon, its tail and, for a drawing with words, the neck
+  and the drawing's own balloon, so nothing can come apart from anything (the
+  owner's "uniform and connected" of Nov 27, by construction). Each side
+  wavers a little (under half a pixel, in long waves, 0.48 at the most);
+  corners 24px round (they were 18). The comment's id is the seed: the same
+  comment is drawn the same every time and differently from the next.
+- THE TAIL AT THE MIDDLE OF THE FACE: its point at the face's middle, 2.5px
+  short of it; the face and the balloon 20px apart (they were 12), so the
+  tail is long enough to read as a tail. A drawing's room follows (286px on
+  a phone, 256 on a desk: --cm-room), and the thread's line (left: -39px).
+- IT FOLLOWS THE DRAWING: drawn again whenever its boxes change size (a
+  ResizeObserver on the comment, its balloon and its drawing), each side's
+  waver measured from its fixed end and fading to nothing where it meets a
+  corner, the tail or the neck, so a balloon that grows stretches and never
+  shimmers, and every join is smooth.
+- UNTIL IT IS DRAWN, or with no script, the balloon is its CSS line, 24px
+  round, with its still tail redrawn to the same shape (_comments.html), its
+  point at the face's middle. High Contrast an outline, as before.
+
+Pad and Flip: not touched; comments are the site's.
+
+THE CHECKS (verify_socialcomments 51, and 38, 15, 39, 47 moved to it): every
+balloon drawn, one closed line of its ink and width round its card, the CSS
+parts stepped aside; the top side's waver read off the line (0.15 to 0.6px),
+the same on another visit, another comment's its own; the tail's point at
+the face's middle, 2.5px short of it, 20px of room, for words, a reply, a
+drawing with words and a drawing alone, phone and desk, light and dark; the
+neck in the one line; the line following the drawing's glide on every frame
+as painted; with comments.js held back the CSS balloon and its still tail's
+point at the face's middle (read off the tail's own path), and at seven
+densities its line in whole screen pixels; High Contrast. SHOWN RED, one part
+broken at a time in throwaway copies (13/13 as built, sections 38 and 51):
+- nothing drawn (comments.js drawing none): the look, every balloon drawn,
+  the waver;
+- no waver: the waver (ruler-straight);
+- a waver of 1.8px: the waver, the neck, the glide;
+- a waver seeded at random: the waver (not the same on another visit), the
+  glide;
+- the tail's point 7px under the face's middle: the tail;
+- 12px of room again: the tail, the no-script balloon;
+- no neck in the line: the neck, the glide;
+- no drawing again as it grows: the glide;
+- the still tail moved down 6px in its box: the still tail at every density,
+  the no-script balloon;
+- High Contrast keeping the drawn line: High Contrast.
+
+FOUND ON THE WAY: a drawing's room is said in lengths from the page's own
+layout, and still counted the old 12px (it grew to 294 where 286 was its
+room); two of the first readings were the instrument's, not the page's: the
+glide read in requestAnimationFrame, a frame before the line is drawn again
+for that frame (read now in a ResizeObserver made after comments.js's, as
+painted), and the still tail's point read off its box rather than its path
+(a path moved inside its box stayed green; read off the path now).
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: zoom in on a comment; its line wavers a little, and its
+tail points at the middle of the face.
