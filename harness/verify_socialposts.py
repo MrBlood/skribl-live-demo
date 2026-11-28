@@ -1126,10 +1126,16 @@ with sync_playwright() as p:
         jp.wait_for_timeout(800)
         rsheet = jp.evaluate("""() => ({ open: document.getElementById('reportSheet').classList.contains('is-open'),
           menu: document.getElementById('postSheet').classList.contains('is-open'),
-          reasons: [...document.querySelectorAll('#reportSheet input[name=reason]')].map(i => [i.value, i.closest('label').textContent.trim()]) })""")
+          reasons: [...document.querySelectorAll('#reportSheet input[name=reason]')].map(i => [i.value, i.closest('label').textContent.trim()]),
+          picked: !!document.querySelector('#reportSheet input[name=reason]:checked') })""")
+        # Nothing picked for them (the Bluesky diagnostic, Nov 28): Send says so.
+        jp.click("#reportSheet [data-report-send]")
+        jp.wait_for_timeout(500)
+        unpicked = jp.evaluate("() => document.querySelector('[data-report-say]').textContent")
+        unpicked_rows = db("select count(*) from social_reports where kind = 'post' and target = ?", (pid,))[0][0]
         jp.check("#reportSheet input[value=abuse]")
         jp.fill("#reportNote", "Testing the queue")
-        jp.click("#reportSheet [data-report-send]")
+        jp.evaluate("() => document.querySelector('#reportSheet [data-report-send]').click()")   # see verify_socialsafety 1
         jp.wait_for_timeout(1200)
         thanks = jp.evaluate("() => document.querySelector('[data-report-say]').textContent")
         reported = db("select reason, note from social_reports where kind = 'post' and target = ?", (pid,))
@@ -1140,9 +1146,11 @@ with sync_playwright() as p:
               and theirs == ["Bookmark", "Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
               and (copied == "Link copied." or copied.startswith("Here’s the link to copy: " + BASE + f"/social/p/{pid}")),
               f"mine {mine}; theirs {theirs}; copied {copied!r}")
-        check("Report this post rises as a sheet of its own with the Gallery's reasons and A child's safety, sends"
+        check("Report this post rises as a sheet of its own with the Gallery's reasons and A child's safety, none"
+              " picked for them (Send says \"Pick a reason first.\" and files nothing); sends"
               " into the site's own queue (the reason, the note), and says thanks",
-              rsheet["open"] and not rsheet["menu"]
+              rsheet["open"] and not rsheet["menu"] and not rsheet["picked"]
+              and unpicked == "Pick a reason first." and unpicked_rows == 0
               and rsheet["reasons"] == [["spam", "Spam or misleading"], ["abuse", "Abusive or hateful"],
                                         ["copyright", "Copies someone else’s work"],
                                         ["child_safety", "A child’s safety"], ["other", "Something else"]]

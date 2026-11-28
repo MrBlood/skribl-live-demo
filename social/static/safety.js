@@ -58,7 +58,7 @@
   var person = sheet('personSheet');
   var report = sheet('personReportSheet', {
     doorCloses: false, ownTouch: '.post-note',
-    first: function () { return doc.querySelector('#personReportSheet input[name=reason]:checked'); }
+    first: function () { return doc.querySelector('#personReportSheet input[name=reason]'); }
   });
   var block = sheet('blockSheet', {
     doorCloses: false,
@@ -90,6 +90,7 @@
       e.preventDefault();
       var go = report.wrap.querySelector('[data-safety-send]'), box = report.wrap.querySelector('[data-safety-say]');
       var picked = report.wrap.querySelector('input[name=reason]:checked');
+      if (!picked) { tell(box, say('s_pick')); return; }   /* nothing picked for them */
       go.disabled = true;
       tell(box, say('s_sending'));
       send(report.wrap.getAttribute('data-report'),

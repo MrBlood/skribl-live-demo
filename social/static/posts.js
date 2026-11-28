@@ -181,7 +181,7 @@
   var menu = menuWrap && window.SocialSheet ? window.SocialSheet(menuWrap, { doorCloses: false }) : null;
   var report = reportWrap && window.SocialSheet
     ? window.SocialSheet(reportWrap, { doorCloses: false, ownTouch: '.post-note',
-                                       first: function () { return reportWrap.querySelector('input[name=reason]:checked'); } })
+                                       first: function () { return reportWrap.querySelector('input[name=reason]'); } })
     : null;
   var del = deleteWrap && window.SocialSheet
     ? window.SocialSheet(deleteWrap, { doorCloses: false, first: function () { return deleteWrap.querySelector('[data-make-close]:not(.make-scrim):not(.make-grip)'); } })
@@ -832,6 +832,9 @@
       if (!current) return;
       var send = reportWrap.querySelector('[data-report-send]'), box = reportWrap.querySelector('[data-report-say]');
       var picked = reportWrap.querySelector('input[name=reason]:checked');
+      /* NOTHING IS PICKED FOR THEM (the Bluesky diagnostic, Nov 28): a
+         quick Send used to file the first reason; it says what is missing. */
+      if (!picked) { tell(box, say('pick')); return; }
       send.disabled = true;
       tell(box, say('sending'));
       /* A drawing shown outside a post is reported as itself, and a

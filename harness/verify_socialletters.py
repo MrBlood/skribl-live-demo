@@ -1164,15 +1164,24 @@ with sync_playwright() as p:
             shown2 = pg.evaluate("() => [...document.querySelectorAll('#letterSheet [data-lt-act]')].filter(b => !b.hidden).map(b => b.getAttribute('data-lt-act'))")
             pg.click('#letterSheet [data-lt-act="report"]')
             pg.wait_for_timeout(600)
+            # Nothing is picked for them (the Bluesky diagnostic, Nov 28): an
+            # empty Send says so and files nothing; then a reason, and Send.
+            pg.click('#letterReportSheet button[type="submit"]')
+            pg.wait_for_timeout(500)
+            lt_unpicked = pg.evaluate("() => document.querySelector('#letterReportSheet [data-lt-say]').textContent")
+            lt_unpicked_rows = len(db("select id from social_reports where kind = 'letter' and target = ?", (LR,)))
+            pg.check('#letterReportSheet input[value=abuse]')
             pg.click('#letterReportSheet button[type="submit"]')
             for _ in range(40):
                 if db("select id from social_reports where kind = 'letter' and target = ?", (LR,)):
                     break
                 time.sleep(0.25)
             close_ctx(ctx, pg)
-            check("the ⋯ of a letter that came to you has Delete, Report and Block; its Report sends a report of the letter",
-                  shown2 == ["delete", "report", "block"]
-                  and bool(db("select id from social_reports where kind = 'letter' and target = ?", (LR,))), f"{shown2}")
+            check("the ⋯ of a letter that came to you has Delete, Report and Block; its Report, with nothing picked for"
+                  " them, says \"Pick a reason first.\" and files nothing, and with a reason sends a report of the letter",
+                  shown2 == ["delete", "report", "block"] and lt_unpicked == "Pick a reason first." and lt_unpicked_rows == 0
+                  and bool(db("select id from social_reports where kind = 'letter' and target = ?", (LR,))),
+                  f"{shown2}; {lt_unpicked!r}, {lt_unpicked_rows} row(s)")
             fay = someone(b, "fay", "Fay Lund")
             follow(ana, fay)                 # Ana follows Fay; Fay does not follow back
             ctx, pg = browser_as(b, ana)

@@ -4446,3 +4446,37 @@ drawn lines separators".
   its one line of shade. The small draw-back face's ring is the page's.
 
 Pad and Flip: not touched. `verify_socialposts` 25 holds it.
+
+## 59. Built: something broke, a kind page (Nov 28)
+
+The first of the Bluesky diagnostic's fixes (the owner's "yes to
+everything" but what we do better and what to leave, Nov 28). A view of
+the site's own that raised was Flask's bare "Internal Server Error": no
+bar, no way back, as a wrong address was before section 30. It is the
+kind card now (`broke.html`): Blooby, "Something broke on our side",
+"That one’s on us, not you. Try again in a moment.", **Try again** (the
+same address once more) and Back to Blooby, with the bar.
+
+- **The blueprint's own handler for a 500** (`_broke`, `social/__init__.py`),
+  beside the 404's: only the site's own views, never the host's or
+  Skribl's. Flask has logged the error before it runs; it rolls back
+  whatever the request had begun, then draws the card. A page that cannot
+  be drawn leaves as the bare 500.
+- **A person going there gets the page; a script's fetch gets the bare
+  500**, as with a 404, so each page's own words for a failure still say it.
+- The small kind card (`_kind.html`) draws **Try again** where it is asked
+  for (`again`), first and filled, and Back to Blooby beside it plain.
+
+`verify_social` 10 holds it (a browser's ask and a script's, plainly and
+after a refused write; the rollback itself is not pinned, since signed
+out the page reads nothing from the database).
+
+**And a report picks nothing for you.** Every report sheet (a person's, a
+post's, a comment's, a letter's, and Skribl's own Gallery's) opened with
+its first reason ticked, so a quick Send filed "Spam". None is ticked now;
+Send with none says "Pick a reason first." and files nothing, as the
+Gallery's own sheet already did. `verify_socialsafety` 1 reads every sheet
+as drawn (a letter's template as source) and a person's empty Send;
+`verify_socialposts` 5, `verify_socialcomments` 8 and `verify_socialletters`
+15 a post's, a comment's and a letter's.
+

@@ -1076,7 +1076,7 @@
   var menu = menuWrap && window.SocialSheet ? window.SocialSheet(menuWrap, { doorCloses: false, first: firstAct(menuWrap) }) : null;
   var report = reportWrap && window.SocialSheet
     ? window.SocialSheet(reportWrap, { doorCloses: false, ownTouch: '.post-note',
-                                       first: function () { return reportWrap.querySelector('input[name=reason]:checked'); } })
+                                       first: function () { return reportWrap.querySelector('input[name=reason]'); } })
     : null;
   var current = null, opener = null;
 
@@ -1282,6 +1282,7 @@
       if (!current) return;
       var go = reportWrap.querySelector('[data-cm-report-send]'), sayIt = reportWrap.querySelector('[data-cm-report-say]');
       var picked = reportWrap.querySelector('input[name=reason]:checked');
+      if (!picked) { tell(sayIt, say('c_pick')); return; }   /* nothing picked for them */
       go.disabled = true;
       tell(sayIt, say('c_sending'));
       send(reportWrap.getAttribute('data-report'),
