@@ -1930,14 +1930,18 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    columns"): on a card the face has a column of its own, and everything under
    the head sits in the column its name starts (--post-col: the face's 44 and
    the 12 beside it): the words, the drawing, a quote, a taken-down note and
-   the row, whose first icon stays on the words' line (it starts 10px out). A
-   reposted or pinned line's mark stays over the face's middle and its words
-   start in the column too. A comment card's way to it was already there (its
-   faces in a 44px column, 12px beside them). A post's own page keeps its full
-   width, as Bluesky's own post page does. */
+   the row, whose first icon stays on the words' line (it starts 10px out).
+   THE ROW SPREADS ACROSS THE COLUMN, as Bluesky's does (the owner's "Yes",
+   Nov 28): its parts at least 6px apart, the ⋯ at the column's end; on an
+   ordinary card that is where 14px apart put them, and three counts in the
+   hundreds still fit their own buttons in a phone's 300px. A reposted or
+   pinned line's mark sits just before its words, 6px from them, as Bluesky's
+   does (the same "Yes"), its words in the column. A comment card's way to it
+   was already there (its faces in a 44px column, 12px beside them). A post's
+   own page keeps its full width, as Bluesky's own post page does. */
 .post-card { --post-col: 56px; }
 .post-card > :is(.post-down, .post-words, .post-art, .qt-card) { margin-left: var(--post-col); }
-.post-card > .post-row { margin-left: calc(var(--post-col) - 10px); }
+.post-card > .post-row { margin-left: calc(var(--post-col) - 10px); gap: 6px; justify-content: space-between; }
 @media (hover: hover) and (pointer: fine) {
   .post-card { cursor: pointer; }
 }
@@ -1951,7 +1955,8 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    where the words above it start. THREE COUNTS IN THE HUNDREDS STILL FIT A
    PHONE: the counted three give a little of the room past their counts
    (flex-shrink; never below 44px, their icons keeping their place, 10px in),
-   so nothing runs past the card. */
+   so nothing runs past the card. On a card, in Bluesky's columns, the row
+   spreads across the column instead, at least 6px apart (below). */
 .post-row { display: flex; align-items: center; gap: 14px; margin: 2px -10px 0; }
 .post-row .post-count, .post-row .lk-heart, .post-row .rp-btn {
   display: inline-flex; align-items: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px;
@@ -1977,8 +1982,10 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
   font-size: 14px; font-weight: 600; line-height: 1.3;
 }
 .rp-by .ic { flex: none; width: 16px; height: 16px; margin-left: 14px; margin-right: 6px; }
-/* ...its words in the card's column (BLUESKY'S COLUMNS): 14 + 16 + 18 + 8 = 56. */
-.post-card > .rp-by .ic { margin-right: calc(var(--post-col) - 38px); }
+/* ...on a card, its mark just before its words, its words in the column
+   (BLUESKY'S COLUMNS): 34 + 16 + 6 = 56. */
+.post-card > .rp-by { gap: 6px; }
+.post-card > .rp-by .ic { margin-left: calc(var(--post-col) - 22px); margin-right: 0; }
 /* A QUOTE (reposts): the original small inside the post, one link (the
    mock's sizes): a card, the card's own colour under the card's own line and
    an 18px corner round it, its author's name (700) and "@handle · when" in

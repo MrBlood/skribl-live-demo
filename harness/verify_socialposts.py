@@ -130,8 +130,9 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
  24. BLUESKY'S COLUMNS (the owner's "I like Bluesky columns", Nov 28): on a
      card the face has its own column, and the words, the drawing, a quote
      and the row's first icon start where the name does, beyond the face;
-     a reposted line's words there too, its arrows over the face's middle;
-     a post's own page keeps its full width. Phone and desk.
+     a reposted line's words there too, its arrows just before them; the
+     row spread across the column; a post's own page keeps its full width.
+     Phone and desk.
 
 SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
@@ -5067,6 +5068,7 @@ print("PLAN " + json.dumps(out))
               const box = e => e ? Math.round(e.getBoundingClientRect().left * 100) / 100 : null;
               const face = c.querySelector(':scope > .post-head .post-face .face-ring'), fr = face ? face.getBoundingClientRect() : null;
               const rpIc = c.querySelector(':scope > .rp-by .ic'), ir = rpIc ? rpIc.getBoundingClientRect() : null;
+              const row = c.querySelector(':scope > .post-row'), last = row && [...row.children].filter(e => e.getClientRects().length).pop();
               return { face: fr ? [Math.round(fr.left * 100) / 100, Math.round(fr.right * 100) / 100] : null,
                        faceMid: fr ? Math.round((fr.left + fr.right) * 50) / 100 : null,
                        name: ink(c.querySelector(':scope > .post-head .post-name')),
@@ -5075,7 +5077,8 @@ print("PLAN " + json.dumps(out))
                        quote: box(c.querySelector(':scope > .qt-card')),
                        icon: box(c.querySelector(':scope > .post-row svg')),
                        rp: ink(c.querySelector(':scope > .rp-by span')),
-                       rpMid: ir ? Math.round((ir.left + ir.right) * 50) / 100 : null }; }"""
+                       rpRight: ir ? Math.round(ir.right * 100) / 100 : null,
+                       spread: row && last ? Math.round((row.getBoundingClientRect().right - last.getBoundingClientRect().right) * 100) / 100 : null }; }"""
             cols24, page24 = {}, {}
             for screen in ("phone", "desk"):
                 ctx, pg = browser_as(b, cora, screen=screen)
@@ -5106,11 +5109,15 @@ print("PLAN " + json.dumps(out))
                           and on_line(cols24[(sc, "quote")], ("words", "quote", "icon")) and beyond(cols24[(sc, "quote")], ("words", "quote"))
                           for sc in ("phone", "desk")),
                   f"repost {rst24}, quote {qst24}, follow {fst24}; " + json.dumps({" ".join(k): v for k, v in cols24.items()}))
-            check("...a reposted line's words start there too, its arrows over the face's middle (within a pixel)",
-                  all(cols24[(sc, "repost")] and cols24[(sc, "repost")]["rp"] is not None
+            check("...a reposted line's words start there too, its arrows just before them, 6px from them, as Bluesky's"
+                  " (the owner's \"Yes\", Nov 28; within a pixel); and the row spread across the column, its ⋯ at the"
+                  " column's end (the same yes)",
+                  all(cols24[(sc, k)] and cols24[(sc, "repost")]["rp"] is not None
                       and abs(cols24[(sc, "repost")]["rp"] - cols24[(sc, "repost")]["name"]) <= 1
-                      and abs(cols24[(sc, "repost")]["rpMid"] - cols24[(sc, "repost")]["faceMid"]) <= 1 for sc in ("phone", "desk")),
-                  json.dumps({sc: cols24[(sc, "repost")] for sc in ("phone", "desk")}))
+                      and abs(cols24[(sc, "repost")]["rp"] - cols24[(sc, "repost")]["rpRight"] - 6) <= 1
+                      and cols24[(sc, k)]["spread"] is not None and abs(cols24[(sc, k)]["spread"]) <= 0.6
+                      for sc in ("phone", "desk") for k in ("repost", "quote")),
+                  json.dumps({" ".join(k): v for k, v in cols24.items()}))
             # (On a desk a post's page puts its drawing in a column of its own, at the left: its words are read there.)
             check("...and a post's own page keeps its full width, as Bluesky's does: its words start where its face does,"
                   " on a phone and a desk, and on a phone its drawing too",
