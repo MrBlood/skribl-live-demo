@@ -57,7 +57,9 @@ authenticator for the site's people.
  11. CONTRAST AND TARGETS: the "reposted" line and the lit arrows read off
      the paint, phone and desk, light and dark; every word on the sheet, the
      signed-out sheet and a quote's small card (and its gone words) at 4.5:1,
-     every target 44px; inside a post's card the quote a well (D2).
+     every target 44px; inside a post's card the quote a well (D2), and on
+     its post's own page the same well (One Quote Look, A); a small face
+     before the quoted person's name, an initial's circle seen in its well.
  13. JUST A BORDER: on the site's pages, phone and desk, light and dark, no
      box with something in it is set apart from what it sits on by its line
      alone (the owner's question, Nov 16). A lift counts, and since the
@@ -2153,41 +2155,22 @@ with sync_playwright() as p:
                 best = max((ratio(im.getpixel((x, y)), gpx) for x in range(x0, x0 + max(1, w)) for y in range(y0, y0 + max(1, h))
                             if 0 <= x < im.width and 0 <= y < im.height), default=1)
                 return {"ground": gpx, "best": round(best, 2)}
-            # A point of the quote's own ground inside its line (6px in, under its
-            # corner's curve), what is painted there (the card, nothing over it), the
-            # card's colour as the page resolves --card, and the page's ground beside it.
-            QT_AT = r"""() => { const q = document.querySelector('.post-page > .qt-card'); if (!q) return null;
-              const r = q.getBoundingClientRect(), x = r.left + 24, y = r.top + 6, hit = document.elementFromPoint(x, y);
-              return { pt: [x, y], beside: [Math.max(1, r.left - 6), r.top + r.height / 2], hit: hit === q,
-                       card: getComputedStyle(document.documentElement).getPropertyValue('--card').trim(),
-                       seen: r.top >= 0 && r.top + 12 <= innerHeight }; }"""
-
-            def qt_fill(pg):
-                at = pg.evaluate(QT_AT)
-                if not at or not at["seen"]:
-                    return at
-                im = Image.open(io.BytesIO(pg.screenshot(scale="device"))).convert("RGB")
-                k = im.width / pg.viewport_size["width"]
-                px = im.getpixel((int(at["pt"][0] * k), int(at["pt"][1] * k)))
-                gd = im.getpixel((int(at["beside"][0] * k), int(at["beside"][1] * k)))
-                h = at["card"].lstrip("#")
-                want = tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) if len(h) == 6 else None
-                return {"hit": at["hit"], "painted": px, "card": want, "ground": gd,
-                        "on_ground": round(ratio(px, gd), 2)}
-            # INSIDE A POST'S CARD, A WELL (the owner's "d2 is good", Nov 16): a point
-            # of the quote's own ground inside it (6px in, under its corner's curve),
-            # the post card's ground just beside it, the well --quote-well (a chosen
-            # lilac since No dinge; it was the page's --page with 6% of Skribl's
-            # lilac, which read as grey), and what could draw a line round it.
-            QT_WELL = r"""(post) => { const c = document.querySelector('.post-card[data-post="' + post + '"]'); if (!c) return null;
-              const q = c.querySelector(':scope > .qt-card'); if (!q) return null;
+            # A QUOTE'S WELL, where it is painted. INSIDE A POST'S CARD (the owner's
+            # "d2 is good", Nov 16), and ON ITS POST'S OWN PAGE too (the owner's "I
+            # like a", Nov 28, to One Quote Look: "They are 2 diff looks for same
+            # post"): a point of the quote's own ground inside it (24px in, 6px down,
+            # under its corner's curve), what it stands on just beside it (the post's
+            # card; the page), the well as it paints (--quote-well; --quote-page, a
+            # chosen lilac since No dinge: it was the page's --page with 6% of
+            # Skribl's lilac, which read as grey), and what could draw a line round it.
+            QT_WELL = r"""(sel) => { const q = document.querySelector(sel); if (!q) return null;
               const r = q.getBoundingClientRect(), cs = getComputedStyle(q), x = r.left + 24, y = r.top + 6;
               return { pt: [x, y], beside: [r.left - 4, r.top + r.height / 2], hit: document.elementFromPoint(x, y) === q,
                        page: cs.backgroundColor,
                        shadow: cs.boxShadow, border: cs.borderTopColor,
                        seen: r.top >= 0 && r.top + 12 <= innerHeight && r.left >= 6 }; }"""
-            def qt_well(pg, post):
-                at = pg.evaluate(QT_WELL, post)
+            def qt_well(pg, sel):
+                at = pg.evaluate(QT_WELL, sel)
                 if not at or not at["seen"]:
                     return at
                 im = Image.open(io.BytesIO(pg.screenshot(scale="device"))).convert("RGB")
@@ -2196,9 +2179,37 @@ with sync_playwright() as p:
                 gd = im.getpixel((int(at["beside"][0] * k), int(at["beside"][1] * k)))
                 rgb = re.findall(r"[\d.]+", at["page"] or "")
                 want = tuple(round(float(x)) for x in rgb[:3]) if len(rgb) >= 3 else None   # the well's own colour, as it paints
-                return {"hit": at["hit"], "painted": px, "want": want, "card": gd, "on_card": round(ratio(px, gd), 2),
+                return {"hit": at["hit"], "painted": px, "want": want, "beside": gd, "step": round(ratio(px, gd), 3),
                         "shadow": at["shadow"], "border": at["border"]}
-            paints, lows, smalls, reads, fills, wells = {}, [], [], {}, {}, {}
+            # THE SMALL FACE BY THE NAME (the owner, Nov 28: "put a small user avatar
+            # next to the person being reposted too"): first in the quote's head, the
+            # name after it, its size, whether it is what is painted at its middle,
+            # and how far its middle is from the name's line's. Juno has drawn no
+            # face, so it is her initial's circle: a point of the circle beside its
+            # letter (3px in from its left) and of the well just left of it, read off
+            # the paint (the tint was the page's well's own lilac: the letter floated).
+            QT_FACE = r"""(sel) => { const q = document.querySelector(sel); if (!q) return null;
+              const f = q.querySelector(':scope > .qt-head > .qt-face:first-child'), n = q.querySelector(':scope > .qt-head > .qt-face + .qt-name');
+              if (!f || !n) return { none: true };
+              const fr = f.getBoundingClientRect(), nr = n.getBoundingClientRect(), mx = (fr.left + fr.right) / 2, my = (fr.top + fr.bottom) / 2;
+              const hit = document.elementFromPoint(mx, my), blank = f.querySelector('.face-blank.has-initial');
+              const rgb = s => (s.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+              return { w: fr.width, h: fr.height, painted: !!hit && (hit === f || f.contains(hit)), level: Math.abs(my - (nr.top + nr.bottom) / 2),
+                       initial: blank ? blank.textContent.trim() : null, letter: blank ? rgb(getComputedStyle(blank).color) : null,
+                       disc: blank ? rgb(getComputedStyle(blank).backgroundColor) : null, in_disc: [fr.left + 3, my], on_well: [fr.left - 4, my],
+                       seen: fr.top >= 0 && fr.bottom <= innerHeight }; }"""
+            def qt_face(pg, sel):
+                at = pg.evaluate(QT_FACE, sel)
+                if not at or at.get("none") or not at["seen"]:
+                    return at
+                im = Image.open(io.BytesIO(pg.screenshot(scale="device"))).convert("RGB")
+                k = im.width / pg.viewport_size["width"]
+                d = im.getpixel((int(at["in_disc"][0] * k), int(at["in_disc"][1] * k)))
+                w = im.getpixel((int(at["on_well"][0] * k), int(at["on_well"][1] * k)))
+                return {"w": at["w"], "h": at["h"], "painted": at["painted"], "level": round(at["level"], 2), "initial": at["initial"],
+                        "disc": d, "well": w, "disc_step": round(ratio(d, w), 3),
+                        "letter": round(ratio(tuple(at["letter"]), tuple(at["disc"])), 2) if at["letter"] and at["disc"] else None}
+            paints, lows, smalls, reads, pwells, wells, faces = {}, [], [], {}, {}, {}, {}
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
                     tag = f"{screen} {scheme}"
@@ -2215,7 +2226,8 @@ with sync_playwright() as p:
                     got = [("the card with its line", pg.evaluate(READ, card(j11)))]
                     to(pg, card(q11), 160)
                     got.append(("a quote's small card", pg.evaluate(READ, card(q11))))
-                    wells[tag] = qt_well(pg, q11)
+                    wells[tag] = qt_well(pg, card(q11) + " > .qt-card")
+                    faces[(tag, "Home")] = qt_face(pg, card(q11) + " > .qt-card")
                     to(pg, card(qg11), 160)
                     got.append(("a gone one's", pg.evaluate(READ, card(qg11))))
                     to(pg, card(j11), 160)
@@ -2227,12 +2239,14 @@ with sync_playwright() as p:
                     press(pg, PAGE_ROW + " .rp-btn")
                     pg.wait_for_timeout(800)
                     got.append(("the signed-out sheet", pg.evaluate(READ, "#repostOutSheet")))
-                    # THE QUOTE ON ITS OWN PAGE, a card (the owner's "Yes to B", Nov 15): its
-                    # words on it, and the card's colour read off the paint inside its line.
+                    # THE QUOTE ON ITS POST'S OWN PAGE, the well (A, Nov 28; a card from the
+                    # owner's "Yes to B", Nov 15): its words on it, its lilac read off the
+                    # paint, and the face by the name.
                     go(pg, f"/social/p/{q11}")
                     to(pg, ".post-page > .qt-card", 120)
                     got.append(("a quote on its own page", pg.evaluate(READ, ".post-page > .qt-card")))
-                    fills[tag] = qt_fill(pg)
+                    pwells[tag] = qt_well(pg, ".post-page > .qt-card")
+                    faces[(tag, "its page")] = qt_face(pg, ".post-page > .qt-card")
                     close_ctx(ctx, pg)
                     reads[tag] = [(w, r["read"], r["lowest"]) for w, r in got]
                     lows += [f"{tag} {w}: {x}" for w, r in got for x in r["low"]]
@@ -2251,22 +2265,31 @@ with sync_playwright() as p:
                   len(reads) == 4 and all(n > 0 for v in reads.values() for _, n, _ in v) and not lows,
                   f"low {lows[:4]}; read {json.dumps(reads)[:500]}")
             check("every target 44px or more, on all of them", not smalls, f"small {smalls[:4]}")
-            check("a quote on its post's own page is a card: the card's own colour painted inside its line, nothing"
-                  " over it, phone and desk, light and dark (on the page's ground, not an outline)",
-                  len(fills) == 4 and all(v and v.get("hit") and v.get("card")
-                                          and all(abs(a - c) <= 3 for a, c in zip(v["painted"], v["card"]))
-                                          for v in fills.values()),
-                  json.dumps(fills))
+            def _well(v):
+                return (v and v.get("hit") and v.get("want") and all(abs(a - c) <= 3 for a, c in zip(v["painted"], v["want"]))
+                        and v["step"] >= 1.08 and v["shadow"] == "none" and v["border"] in ("rgba(0, 0, 0, 0)", "transparent"))
             check("inside a post's card on Home, a quote's small card is a well (the owner's \"d2 is good\", Nov 16):"
                   " a clear lilac painted inside it (No dinge), set apart from the post's card by its"
-                  " colour alone (1.08:1 or more against the card's ground beside it: the mock's 1.14 light, 1.12"
+                  " colour alone (1.08:1 or more against the card's ground beside it: 1.157 light, 1.149"
                   " dark), and no line round it, phone and desk, light and dark",
-                  len(wells) == 4 and all(v and v.get("hit") and v.get("want")
-                                          and all(abs(a - c) <= 3 for a, c in zip(v["painted"], v["want"]))
-                                          and v["on_card"] >= 1.08 and v["shadow"] == "none"
-                                          and v["border"] in ("rgba(0, 0, 0, 0)", "transparent")
-                                          for v in wells.values()),
-                  json.dumps(wells))
+                  len(wells) == 4 and all(_well(v) for v in wells.values()), json.dumps(wells))
+            check("on its post's own page, a quote is the same well (the owner's \"I like a\", Nov 28, to One Quote Look:"
+                  " \"Shouldn't post page look the same as timeline?\"): a clear lilac painted inside it, no line round it,"
+                  " set apart from the page beside it by its colour alone, as far as Home's is from its card (within"
+                  " 0.03: 1.154 light, 1.146 dark), phone and desk, light and dark",
+                  len(pwells) == 4 and all(_well(v) and wells.get(k) and abs(v["step"] - wells[k]["step"]) <= 0.03
+                                           for k, v in pwells.items()),
+                  json.dumps(pwells))
+            check("a small face before the quoted person's name (the owner, Nov 28: \"put a small user avatar next to the"
+                  " person being reposted too\"), on Home's card and on its post's own page: 22px, painted, its middle"
+                  " level with the name's line (1px or less); Juno has drawn none, so her initial, its circle set apart"
+                  " from the well it sits in off the paint (1.12:1 or more: 1.27 on Home's, 1.17 on the page's in light;"
+                  " the tint was 1.10 and 1.02, the letter left floating) and her letter 4.5:1 or more on it, phone and"
+                  " desk, light and dark",
+                  len(faces) == 8 and all(v and not v.get("none") and abs(v["w"] - 22) <= 0.5 and abs(v["h"] - 22) <= 0.5
+                                          and v["painted"] and v["level"] <= 1 and v["initial"] == "J"
+                                          and v["disc_step"] >= 1.12 and (v["letter"] or 0) >= 4.5 for v in faces.values()),
+                  json.dumps({" ".join(k): v for k, v in faces.items()}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(11, exc)
 
@@ -2381,7 +2404,7 @@ with sync_playwright() as p:
               // line and wears the site's card, as a comment's bubble does: no role of
               // these. The bar's Draw back beside it is a .btn, and is read.)
               const ROLES = [["a second button", ".btn:not(.btn-primary):not(.btn-danger):not(.cmp-post), .icon-btn.boxed, .chip"],
-                             ["a switch's track", ".fo-seg, .theme-switch"], ["a well", ".post-card > .qt-card"],
+                             ["a switch's track", ".fo-seg, .theme-switch"], ["a well", ".post-card > .qt-card, .post-page > .qt-card"],
                              ["a placeholder", ".face-blank:not(.nav .face-blank), .act-pic, .skribl-inline"],
                              ["a note", ".note, .prof-blocked, .legal-draft, .post-down, .prof-down, .rep-what"],
                              ["a disc", ".key-ic, .home-steps-list i, .face-lead-me, .make-ic.is-pen"]];
