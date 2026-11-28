@@ -4359,3 +4359,35 @@ are not perfectly straight".
 
 The thread's line moves with the balloons (`left: -39px`). Pad and Flip: not
 touched; comments are the site's. `verify_socialcomments` 51 holds it.
+
+## 56. Built: One look for a quote, and a small face by the name (Nov 28)
+
+The owner, Nov 28, with a quote post on its own page and on Home: "They are 2
+diff looks for same post. Sits in lavender on white card on home and sits in
+white circle on bg in post page. Shouldn't post page look the same as
+timeline?" The One Quote Look mock offered A (the well on the post's page
+too) and B (the whole post in Home's card on its own page); the owner: "I like
+a. Also think you should put a small user avatar next to the person being
+reposted too."
+
+- **One look.** On its post's own page a quote is the well it is inside a
+  post's card on Home: a clear lilac with no line round it (`--quote-page`,
+  #e8e3fb light, #201b3c dark), as far from the page (1.15:1) as Home's well
+  is from its card (1.16:1 light, 1.15:1 dark). Its words read 14.4:1 (the
+  name) and 6.05:1 (the @handle and when) in light, 14.5:1 and 8.83:1 in
+  dark. Make's preview of a quote, on the sheet's own paper, stays a card.
+- **A small face by the name.** The quoted person's face, 22px, before their
+  name, its middle level with the name's line (`_gallery.html` `quote_card`,
+  a Gallery tile's size). Before they have drawn one, their initial in its
+  circle; in a well that circle is a deeper lilac (`--quote-face`, #d9cfff;
+  the tint in dark), because the tint is the page's well's own lilac (1.02:1)
+  and left the letter floating. It stands as far from the wells (1.27:1 on
+  Home's, 1.17:1 on the page's) as the tint does from a card and the page.
+
+If posts become sheets (the owner asked, Nov 28: "how would this change if
+we do away with cards and go to the sheets with handsaws lines separating
+posts?"; not decided), no card is round a post anywhere, every quote stands
+on the page, and this well is its one look, Home included.
+
+Pad and Flip: not touched; quotes are the site's. `verify_socialreposts` 11
+holds it, and 13's census holds the page's well to a clear lilac.

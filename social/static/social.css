@@ -77,6 +77,18 @@
      grey with 6% of the lilac, which read as grey (chroma 0.015); now a
      chosen lilac, the same depth (1.16:1 on its card), a deep violet in dark. */
   --quote-well: #f0ecff;
+  /* THE SAME WELL ON THE PAGE (the owner's "I like a", Nov 28, to One Quote
+     Look): a quote on its post's own page, where no card is round it, is the
+     well too, its lilac one step from the page as the well is from its card
+     (1.15:1 on #f7f5fa), a clear violet in dark (1.15:1 on #0f1218). */
+  --quote-page: #e8e3fb;
+  /* An initial's circle in a quote's well (the small face by the name, Nov
+     28): the tint is the well's own lilac in light (1.02:1 on the page's
+     well, the letter left floating), so in a well it is a deeper lilac, as
+     far from the wells (1.27:1 on Home's, 1.17:1 on the page's) as the tint
+     is from a card and from the page; the letter 5.6:1 on it. The tint in
+     dark (1.40:1 and 1.26:1). */
+  --quote-face: #d9cfff;
   /* The tile under each drawing of a grid (A TILE FOR EACH DRAWING; a band under each row from Nov 20 to Nov
      21, EACH ROW DISTINCT). ENAMEL SINCE NOV 26 (the owner's "Yes to B, with their lavender edge", to the
      Enamel Tiles mock: a friend's colours, kept to the record): white porcelain in light, 1.06:1 from the
@@ -200,6 +212,8 @@
   --row-band-sheet: #171723;
   --tile-edge: color-mix(in srgb, rgb(226 224 255) 10%, var(--row-band));
   --quote-well: #16112b;            /* No dinge: violet, 1.15:1 on the card (it was #161626) */
+  --quote-page: #201b3c;            /* the well on the page: a clear violet, 1.15:1 on it (Nov 28) */
+  --quote-face: var(--tint);
   --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
   --draw-lift: 0 0 0 transparent;
   --card: #231e3b;
@@ -263,6 +277,8 @@
     --row-band-sheet: #171723;
     --tile-edge: color-mix(in srgb, rgb(226 224 255) 10%, var(--row-band));
     --quote-well: #16112b;
+    --quote-page: #201b3c;
+    --quote-face: var(--tint);
     --draw-edge: color-mix(in srgb, rgb(255 255 255) 8%, var(--draw-wait));
     --draw-lift: 0 0 0 transparent;
     --card: #231e3b;
@@ -1960,14 +1976,25 @@ button.gal-tile { width: 100%; margin: 0; padding: 0; border: 0; background: non
    "d2 is good", Nov 16): there it was the card's colour on the card's colour
    with only its line between, so on Home and a person's page it is
    --quote-well, a clear lilac (No dinge: the page's ground touched with
-   lilac read as grey), and no line. */
+   lilac read as grey), and no line. AND ON ITS POST'S OWN PAGE TOO (the
+   owner, Nov 28: "They are 2 diff looks for same post ... Shouldn't post
+   page look the same as timeline?", then "I like a"): the same well, no
+   line, its lilac one step from the page (--quote-page), as Home's is from
+   its card. Make's preview of a quote, on the sheet's own paper, stays a
+   card. A SMALL FACE BY THE NAME (the owner: "put a small user avatar next
+   to the person being reposted too"): theirs, 22px, as a Gallery tile puts
+   one by a name. */
 .qt-card {
   display: block; margin-top: 12px; padding: 12px; border: 1px solid transparent; border-radius: 18px;
   background: var(--card); color: inherit; text-decoration: none; box-shadow: 0 0 0 var(--edge) var(--card-edge);
 }
 .post-card .qt-card { position: relative; z-index: 1; background: var(--quote-well); box-shadow: none; }
+.post-page > .qt-card { background: var(--quote-page); box-shadow: none; }
 .qt-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.qt-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 15px; line-height: 1.3; }
+.qt-head { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; line-height: 1.3; }
+.qt-face.face-ring { --skribl-face-size: 22px; width: 22px; height: 22px; }
+.qt-face .face-blank.has-initial { font-size: 11px; }
+.post-card .qt-card .face-blank.has-initial, .post-page > .qt-card .face-blank.has-initial { background: var(--quote-face); }
 .qt-name { flex: none; max-width: 60%; overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .qt-sub { min-width: 0; overflow: hidden; color: var(--ink-2); text-overflow: ellipsis; white-space: nowrap; }
 /* A COMMENT QUOTED (the comment thread, step 3; "A Comment Shared", the

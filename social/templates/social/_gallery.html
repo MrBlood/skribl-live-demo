@@ -157,7 +157,7 @@
 {% macro quote_card(q, link=true) -%}
 {%- if q.gone %}<p class="qt-card is-gone" data-quote-card>This {{ q.what or 'post' }} is gone.</p>
 {%- else %}<{{ 'a' if link else 'div' }} class="qt-card"{% if link %} href="{{ q.url }}"{% endif %} data-quote-card>
-  <span class="qt-head"><b class="qt-name">{{ q.who.display_name }}</b><span class="qt-sub">@{{ q.who.handle }}{% if q.at %} · <time datetime="{{ when_iso(q.at) }}" data-when="ago">{{ when_day(q.at) }}</time>{% endif %}</span></span>
+  <span class="qt-head">{{ face(q.who, 'qt-face', initial=true) }}<b class="qt-name">{{ q.who.display_name }}</b><span class="qt-sub">@{{ q.who.handle }}{% if q.at %} · <time datetime="{{ when_iso(q.at) }}" data-when="ago">{{ when_day(q.at) }}</time>{% endif %}</span></span>
   {%- if q.on %}<span class="qt-on">{{ q.on }}</span>{% endif %}
   {%- if q.words %}<span class="qt-words">{{ q.words }}</span>{% endif %}
   {%- if q.sk %}<span class="gal-pic qt-pic"{{ plate_ground(q.sk) }}>{{ plate_fill(q.sk) }}<span class="gal-plate" style="{{ plate_frame(q.sk) }}"><img src="{{ q.sk.poster or url_for(skribl_bp ~ '.skribl_poster', public_id=q.sk.id) }}" alt="" loading="lazy" decoding="async"></span>
