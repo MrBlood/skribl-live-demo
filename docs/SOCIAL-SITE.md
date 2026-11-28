@@ -4326,3 +4326,36 @@ clearer look and line.
 Nothing else changes: no new page and no new buttons. Pad and Flip: not
 touched. `verify_socialdrawback` 6 holds it: a family five generations
 deep, and two through Lea, whom Theo blocked.
+
+## 55. Built: Comment balloons drawn by hand (Nov 28)
+
+The owner, Nov 28, with a comic balloon turned on its side: "show me a couple
+different speech bubbles ... I like that it looks a little comic bookish ...
+Start the bubble in the middle of the avatar circle. Right now it starts
+closer to the bottom." The Speech Bubbles mock offered B (inked, a weighted
+line), A (comic, a lilac offset) and C (hand-drawn); the owner: "I like C. It
+looks imperfect like I want", and "make sure the lines on the speech bubble
+are not perfectly straight".
+
+- **One line, drawn by hand.** Every comment's balloon is one closed line,
+  2px of `--balloon-ink` round `--card`: the balloon, its tail, and for a
+  drawing with words the neck and the drawing's own balloon, so nothing can
+  come apart from anything (`comments.js`, THE BALLOON, DRAWN BY HAND; an
+  SVG behind the comment, `.cm-hand`). Each side wavers a little (under half
+  a pixel, in long waves), never ruler-straight; the comment's id is the
+  seed, so a comment is drawn the same every time and differently from the
+  next. Corners 24px round (they were 18).
+- **The tail at the middle of the face.** Its point is at the face's middle,
+  2.5px short of it, and a face and its balloon are 20px apart (they were
+  12), so the tail is long enough to read as one.
+- **It follows the drawing.** Drawn again whenever its boxes change size (a
+  drawing growing to its room as it plays, words wrapping): each side's
+  waver is measured from its fixed end, so a balloon that grows stretches
+  and never shimmers, and fades to nothing where it meets a corner, the tail
+  or the neck.
+- **Until it is drawn**, or with no script, the balloon is its CSS line,
+  24px round, with its still tail at the face's middle. High Contrast shows
+  an outline, as before.
+
+The thread's line moves with the balloons (`left: -39px`). Pad and Flip: not
+touched; comments are the site's. `verify_socialcomments` 51 holds it.
