@@ -4251,3 +4251,41 @@ page behind the editor is held by overflow in the frame. A browser tab is as
 it was. `verify_socialapp` 16 and `verify_socialprofile` 21 hold it. Not
 testable here: whether iOS's fault is gone, which the owner's phone says.
 
+## 53. Built: See all, the page of every draw-back (Nov 27)
+
+The owner, Nov 27, asked how many draw-backs one drawing can have. Any
+number; a post's page showed the newest twelve (`posts.BACKS`), and the rest
+could not be reached from it (each was still on its maker's page and in the
+feed). Its label counted the twelve too: that was a bug, fixed first
+(#1133). Then the Every draw-back mock (A, a "See all" tile at the strip's
+end; B, more in the row; C, "See all" by the count), and the owner: "C".
+
+- **See all, on the label's line.** Past the strip's twelve, "See all" at
+  the end of the line that says "20 draw-backs", the way Apple's own apps
+  label a row: the small violet words, the label's size and weight on its
+  baseline, 44px to a finger, described by the label for a screen reader.
+  The strip sits where it did. Twelve or fewer, nothing changes.
+- **The page of every draw-back** (`/social/p/<id>/draw-backs`,
+  `drawbacks.html`): "Draw-backs" at the top, its arrow back to the post (a
+  desk shows the heading instead, as every page there does); one line, "20
+  draw-backs on Mira’s drawing, newest first"; the strip's tiles in a grid,
+  two across on a phone and four on a desk, each opening its own page;
+  twenty-four at a time (`posts.ALL_BACKS`, the Gallery's page), then Load
+  more in place (`/social/p/<id>/draw-backs/more?before=`, the next tiles
+  and the next cursor), the new tiles fading in.
+- **The strip's rules, on the page too** (`posts.backs_on`, one query for
+  both): nobody a block hides either way, nothing taken down. On her own
+  post the ones she hid are there, faded, each with its eye, and the line
+  under the count says how many ("1 hidden from your post"); nobody else
+  has an eye. The page is as gone as the post to anybody the post is gone
+  to.
+- **One tile for both** (`_backs.html`): the strip's and the page's are the
+  same markup, so they cannot drift.
+- **Her eye keeps the true count**: a tap is one fewer seen and one more
+  hidden, from what the page said. Until now the strip recounted its own
+  tiles, which past twelve is not every draw-back (found building this).
+
+`verify_socialdrawback` 6 holds it: See all's place, size, ink and line, and
+none on the cat's three; the page for Theo, a desk, nobody signed in and
+Ana; her eye's count on the strip and on the page; Load more past
+twenty-four; a block, a post that is not there, a cursor that is not one.

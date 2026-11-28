@@ -1,0 +1,43 @@
+{#  A DRAW-BACK'S TILE (Draw back, step 2): a post's strip (post.html) and
+    SEE ALL's page of every draw-back on it (drawbacks.html, and its Load
+    more, _back_tiles.html) draw the same one: the drawing on its plate, a
+    Gallery tile's, and who drew back under it, opening its own page (which
+    plays hers, then theirs).
+    HER SAY (the owner's "All yes to everything", Nov 20): on her own post
+    (`mine`) each sits in a cell with the eye her Gallery tab has, beside the
+    name so it never covers what somebody drew (a link holds no button). One
+    tap hides that draw-back from her post (eye.js; posts.py /p/<id>/shown);
+    hidden, it stays with her, faded, so she can bring it back. Nobody else
+    has an eye, a hidden tile, or eye.js: not in the page and not in its
+    source. back_eye_words: the eye's words, hers alone, as the eye is. #}
+{% from 'social/_gallery.html' import plate_frame, plate_ground, plate_fill with context %}
+{% import 'social/_icons.html' as ic %}
+
+{% macro back_tile(m, mine) -%}
+{%- set first = m.who.display_name|first_name -%}
+{%- set off = mine and m.post.drawn_on_hidden_at is not none %}
+{% if mine %}<div class="gal-cell db-cell{% if off %} is-hidden{% endif %}" data-eye-cell>{% endif %}
+<a class="db-tile" href="{{ m.url }}"{% if mine %} aria-label="{{ first }}{% if off %}, hidden from your post{% endif %}" data-label-shown="{{ first }}" data-label-hidden="{{ first }}, hidden from your post"{% endif %}>
+  <span class="more-pic db-pic"{{ plate_ground(m.sk) }}>{{ plate_fill(m.sk) }}<span class="more-plate" style="{{ plate_frame(m.sk) }}"><img src="{{ m.sk.poster or url_for(skribl_bp ~ '.skribl_poster', public_id=m.post.skribl_id) }}" alt="" loading="lazy" decoding="async"></span></span>
+  <span class="db-by">{{ first }}</span>
+</a>
+{% if mine %}<button class="gal-eye db-eye" type="button" data-eye="{{ url_for('social.drawback_shown', public_id=m.post.public_id) }}" data-eye-key="shown"
+        data-eye-hidden-words="Hidden. {{ first }} isn’t told." data-eye-back-words="Back on your post."
+        aria-pressed="{{ 'false' if off else 'true' }}" aria-label="On your post: {{ first }}’s draw-back"><span class="gal-eye-chip"><span class="gal-eye-ics">{{ ic.eye_open() }}{{ ic.eye_shut() }}</span><span class="gal-eye-word">Hidden</span></span></button></div>{% endif %}
+{%- endmacro %}
+
+{#  THE EYE'S WORDS (eye.js), hers alone, as the eye is. What it says when
+    one is hidden or back is the eye's own (it names who). #}
+{% macro back_eye_words() -%}
+<div class="words" data-eye-words hidden>
+  <span data-word="eye_hidden">Hidden from your post</span>
+  <span data-word="eye_back">Back on your post.</span>
+  <span data-word="eye_stale">This page went stale. Reload it, then try again.</span>
+  <span data-word="eye_limited">Lots of that in a short while. Wait a little, then try again.</span>
+  <span data-word="eye_signed_out">You’ve been signed out. Sign in again, then try again.</span>
+  <span data-word="eye_gone">That one isn’t here anymore. Reload the page to see what’s new.</span>
+  <span data-word="eye_taken_down">That one was taken down, so it stays as it is.</span>
+  <span data-word="eye_network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="eye_failed">That didn’t go through. Try again?</span>
+</div>
+{%- endmacro %}

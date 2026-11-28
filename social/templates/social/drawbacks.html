@@ -1,0 +1,56 @@
+{#  SEE ALL, THE PAGE OF EVERY DRAW-BACK ON A POST (/social/p/<id>/draw-backs;
+    the owner's C, Nov 27, to the Every draw-back mock: "20 draw-backs" on
+    the left of the strip's label line, "See all" on the right, the way
+    Apple's own apps label a row, opening this page).
+
+    Every draw-back on the post this viewer is shown, newest first, in a
+    grid: two across on a phone, four on a desk. Each is the strip's tile
+    (_backs.html): the drawing on its plate and who drew back, opening its
+    own page, which plays hers, then theirs. Over them one line, what the
+    strip's label says and to whom it belongs ("13 draw-backs on Ana’s
+    drawing, newest first"). ALL_BACKS (posts.py) at a time, then Load more
+    in place, as the Gallery's.
+
+    HER SAY on her own post, as on her strip: the ones she hid are here too,
+    faded, each with its eye to bring it back, and the line under the count
+    says how many ("1 hidden from your post"); the counts follow her taps
+    at once (posts.js, "HER SAY, ON HER OWN STRIP"). Nobody else has an eye.
+
+    THE WAY BACK (the owner's "there's no back button on so many screens"):
+    its arrow is the browser's own Back while the page before was the
+    site's (social.js), and the post's own page otherwise, never Home. #}
+{% extends 'social/base.html' %}
+{% from 'social/_backs.html' import back_tile, back_eye_words with context %}
+{% from 'social/_post.html' import post_words with context %}
+{% import 'social/_icons.html' as ic %}
+{% set who = card.who %}{% set first = who.display_name|first_name %}
+
+{% block title %}Draw-backs on {{ 'your' if card.mine else first ~ '’s' }} drawing · Blooby{% endblock %}
+{% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
+{#- The eye on her own tiles (Her say): hers alone, as the eye is. #}
+{% if card.mine and backs %}<script src="{{ social_asset('eye.js') }}" defer></script>{% endif %}{% endblock %}
+
+{% block top %}
+  <a class="icon-btn top-back" href="{{ card.url }}" aria-label="Back">{{ ic.back() }}</a>
+  <span class="top-title">Draw-backs</span>
+{% endblock %}
+
+{% block main %}
+<section class="db-page" aria-labelledby="dbTitle" data-db-strip>
+  {#- The page's name is the top's on a phone and its own heading on a desk,
+      which has no top bar (THE WAY BACK, PART TWO); the line under it says
+      how many, as the strip's label does, and whose. #}
+  <header class="page-head in-top">
+    <h1 class="page-title" id="dbTitle">Draw-backs</h1>
+    <p class="page-sub db-page-sub"><b><span data-db-n>{{ backs_shown }}</span> <span data-db-noun data-one="draw-back" data-many="draw-backs">{{ 'draw-back' if backs_shown == 1 else 'draw-backs' }}</span></b>
+      on {{ 'your' if card.mine else first ~ '’s' }} drawing, newest first</p>
+  </header>
+  {% if card.mine %}<p class="db-note" data-db-note{% if not backs_hidden %} hidden{% endif %}><span data-db-hidden>{{ backs_hidden }}</span> hidden from your post</p>{% endif %}
+  <div class="db-grid" data-db-grid>{% for m in backs %}{{ back_tile(m, card.mine) }}{% endfor %}</div>
+  <button class="btn btn-wide feed-more" type="button" data-db-more="{{ url_for('social.post_backs_more', public_id=card.post.public_id) }}"
+          data-db-next="{{ backs_next or '' }}"{% if not backs_next %} hidden{% endif %}>Load more</button>
+</section>
+<p class="say" data-page-say role="status" hidden></p>
+{{ post_words() }}
+{% if card.mine and backs %}{{ back_eye_words() }}{% endif %}
+{% endblock %}

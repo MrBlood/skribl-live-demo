@@ -55218,3 +55218,69 @@ out; section 10 green).
 NOT TESTED HERE: an iPhone (WebKit), so not whether iOS's fault is gone. The
 owner's phone says. The one-glance tell: in the app, a tap on Home while on
 Home glides the feed to the top.
+
+## After v330 -- See all: the page of every draw-back (the owner's "C")
+
+The owner, Nov 27, asked how many draw-backs one drawing can have: as many
+as people like, but a post's page showed the newest twelve, and the rest
+could not be reached from it (each was still on its maker's page and in
+the feed). The count was fixed first (#1133). The Every draw-back mock
+offered A (a "See all" tile at the strip's end), B (the rest brought into
+the row) and C ("See all" on the label's line, the way Apple's own apps
+label a row, opening a page of every one), with C picked. The owner: "C".
+Asked in the same breath about the family (draw-backs on draw-backs), the
+family view is a mock of its own, waiting on the owner.
+
+WHAT CHANGED:
+- SEE ALL (post.html, social.css .db-head, .db-all): past the strip's
+  twelve, "See all" at the end of the label's line, in the small violet
+  words, the label's size, weight, line and baseline, 44px to a finger,
+  described by the label. The strip sits where it did (the line takes the
+  label's margins and the label none). Twelve or fewer, nothing changes.
+- THE PAGE OF EVERY DRAW-BACK (/social/p/<id>/draw-backs, drawbacks.html;
+  posts.py post_backs and post_backs_more): "Draw-backs" at the top, its
+  arrow back to the post (a desk shows the page's heading, as every page
+  there does); "13 draw-backs on Ana's drawing, newest first"; the strip's
+  tiles in a grid, two across on a phone and four on a desk; twenty-four
+  at a time (ALL_BACKS, the Gallery's page), then Load more in place, the
+  new tiles fading in (still under Reduce Motion).
+- ONE QUERY AND ONE TILE FOR BOTH (posts.backs_on, _backs.html): the strip
+  and the page read the same rules (nobody a block hides either way,
+  nothing taken down, the ones she hid hers alone, faded, with their eyes)
+  and draw the same tile. The page is as gone as the post to anybody the
+  post is gone to (_seen_post, post_page's own gate, now shared).
+- HER EYE KEEPS THE TRUE COUNT (posts.js): a tap on her eye is one fewer
+  seen and one more hidden, from what the page said. The strip recounted
+  its own tiles until now, which past twelve is not every draw-back: on a
+  post with fourteen her first tap read "11" where twelve were seen. Found
+  building this; a bug of #1133's fix, fixed with it.
+
+Pad and Flip: not touched; the strip and the page are the site's.
+
+THE CHECKS (verify_socialdrawback 6, on the post with fourteen draw-backs):
+See all's place, size, ink, line and baseline, and none on the cat's three;
+the page for Theo (phone and desk), nobody signed in and Ana, with her
+hidden one and its eye; her eye's count on the strip and on the page; Load
+more past twenty-four, twelve more drawn back by two people of their own and
+the newest by Lea, whom Theo blocked; a block, a blocked viewer, a post that
+is not there, a cursor that is not one. SHOWN RED, one part broken at a time
+in throwaway copies (sections 6 and 10; 16/16 as built): no See all, its row
+(15/16); the strip's old count, the eye's row (on the strip her first tap
+read 11 and 1 where 12 and 2 were true; on the page, which held every tile,
+it was right); no Load more, its row (the page stayed at 24); no four across
+on a desk, the page's row (two); the page's gate without the block, the
+gone row (Lea read Theo's post and its page, 200). AND ONE THAT STAYED GREEN
+AT FIRST: the read's own block rule taken out changed nothing a person could
+see, since the drawing's own description (Skribl's hooks, hidden_authors)
+leaves a blocked maker's drawing out too. What the read's rule does is keep
+a page whole: Lea draws back newest, and without it Theo's first page held
+23 (red); with it, 24.
+
+FOUND ON THE WAY: the first run read 15/16 on the check, not the page: it
+took the phone's page heading, kept for a screen reader and clipped to a
+pixel, for one shown (a rect is not a paint). It reads the heading's painted
+size now.
+
+NOT TESTED HERE: an iPhone (WebKit), SF, Segoe UI, the live site. The
+one-glance tell: on a post with more than twelve draw-backs, "See all" at
+the end of the "13 draw-backs" line.

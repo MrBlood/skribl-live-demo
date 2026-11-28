@@ -196,6 +196,9 @@ def _uncursor(text):
 
 #: The most draw-backs a post's page shows in its strip (Draw back, step 2).
 BACKS = 12
+#: A page of SEE ALL's page of every draw-back on a post (the owner's C, Nov
+#: 27): the Gallery's page, two rows of tiles to a phone's screen.
+ALL_BACKS = 24
 
 
 def _entry(post, who):
@@ -300,6 +303,27 @@ def person_page(person, viewer, before=None, limit=PAGE, skip=None):
         out = [e for e in out if not (e.get("kind") == "p" and "post" in e and e["post"].id == skip)]
     page = out[:limit]
     return once(page), (_cursor(page[-1]) if more and page else None)
+
+
+def backs_on(post, viewer, mine):
+    """The draw-backs on `post` that `viewer` is shown, with who drew back,
+    newest first, as a query (Draw back, step 2): nobody hidden from this
+    viewer (safety.hidden_ids: a block either way, or taken down), nothing
+    taken down, and one its maker hid from her post (drawn_on_hidden_at,
+    Her say) on nobody's but hers (`mine`), where it stays so she can bring
+    it back. A post's strip is its first BACKS; SEE ALL's page every one,
+    ALL_BACKS at a time. The order is the feed's, so a page's cursor
+    (_cursor of its last) reads the next where it ended."""
+    from .safety import hidden_ids
+    hid = sorted(hidden_ids(viewer))
+    q = (sa.select(Post, Person).join(Person, Person.id == Post.person_id)
+         .where(Post.drawn_on_id == post.id, Post.taken_down_at.is_(None))
+         .order_by(Post.created_at.desc(), Post.public_id.desc()))
+    if hid:
+        q = q.where(Post.person_id.notin_(hid))
+    if not mine:
+        q = q.where(Post.drawn_on_hidden_at.is_(None))
+    return q
 
 
 def hidden_backs(post, viewer):
@@ -1321,17 +1345,12 @@ def register(bp, skribl_blueprint="skribl"):
     @_rests()
     def post_page(public_id):
         """A post on a page of its own: it plays by itself (posts.js)."""
-        sess = site().session()
-        found = sess.execute(sa.select(Post, Person).join(Person, Post.person_id == Person.id)
-                             .where(Post.public_id == public_id)).first()
-        me = current_person()
-        mine = found is not None and me is not None and found[1].id == me.id
-        if (found is None or between(me, found[1])
-                or (not mine and (found[0].taken_down_at is not None or found[1].taken_down_at is not None))):
+        got = _seen_post(public_id)
+        if got is None:
             # A block, either way, or a takedown makes it as gone as a deleted
             # one, to all but its author.
             return _page("post_gone.html", 404, here="post")
-        return _post_page(cards([found], me)[0], me)
+        return _post_page(*got)
 
     @bp.get("/b/<skribl_id>")
     @_rests()
@@ -1388,19 +1407,15 @@ def register(bp, skribl_blueprint="skribl"):
         # maker hid from her post (drawn_on_hidden_at) is on nobody's strip
         # but her own, where it stays, faded, with its eye, so she can bring
         # it back. `shown` is how many everyone sees, `hidden` hers alone.
-        backs, shown, hidden = [], 0, 0
+        backs, shown, hidden, every = [], 0, 0, None
         if card["kind"] == "p":
-            from .safety import hidden_ids
-            hid = sorted(hidden_ids(me))
-            q = (sa.select(Post, Person).join(Person, Person.id == Post.person_id)
-                 .where(Post.drawn_on_id == card["post"].id, Post.taken_down_at.is_(None))
-                 .order_by(Post.created_at.desc(), Post.id.desc()).limit(BACKS))
-            if hid:
-                q = q.where(Post.person_id.notin_(hid))
-            if not card["mine"]:
-                q = q.where(Post.drawn_on_hidden_at.is_(None))
-            got = site().session().execute(q).all()
-            backs = [c for c in cards([_entry(pp, who) for pp, who in got], me, words=False) if c and c["sk"]]
+            got = site().session().execute(backs_on(card["post"], me, card["mine"]).limit(BACKS + 1)).all()
+            # SEE ALL (the owner's C, Nov 27, to the Every draw-back mock): past
+            # the strip's twelve, "See all" on its label's line opens the page
+            # of every one (post_backs). Twelve or fewer, nothing changes.
+            if len(got) > BACKS:
+                every = url_for("social.post_backs", public_id=card["post"].public_id)
+            backs = [c for c in cards([_entry(pp, who) for pp, who in got[:BACKS]], me, words=False) if c and c["sk"]]
             # THE LABEL SAYS HOW MANY THERE ARE, NOT HOW MANY THE STRIP HOLDS (a
             # bug, the owner's "Yes", Nov 27): the strip is the newest BACKS,
             # and its label counted those, so fourteen read "12 draw-backs"
@@ -1411,8 +1426,69 @@ def register(bp, skribl_blueprint="skribl"):
             hidden = hidden_backs(card["post"], me) if card["mine"] else 0
         # The page's token for everybody: Report is anybody's (piece 5).
         return _page("post.html", here="post", card=card, backs=backs, backs_shown=shown, backs_hidden=hidden,
-                     share_url=public_origin() + card["url"], token=csrf_token(), cm=cm, lk=lk,
+                     backs_every=every, share_url=public_origin() + card["url"], token=csrf_token(), cm=cm, lk=lk,
                      signin_here=url_for("social.signin", next=card["url"]))
+
+    def _seen_post(public_id):
+        """(its card, me) for a post this viewer may see, or None: as gone to
+        anybody a block either way hides it from, and once it or its maker is
+        taken down, to all but its maker (post_page's rule)."""
+        found = site().session().execute(sa.select(Post, Person).join(Person, Post.person_id == Person.id)
+                                         .where(Post.public_id == public_id)).first()
+        me = current_person()
+        mine = found is not None and me is not None and found[1].id == me.id
+        if (found is None or between(me, found[1])
+                or (not mine and (found[0].taken_down_at is not None or found[1].taken_down_at is not None))):
+            return None
+        return cards([found], me)[0], me
+
+    def _backs_page(card, me, at):
+        """A page of SEE ALL's tiles, after the cursor `at` (None: the
+        first), and the cursor of the next, or None at the last."""
+        q = backs_on(card["post"], me, card["mine"])
+        if at is not None:
+            from .gallery import _after
+            q = q.where(_after(Post.created_at, Post.public_id, "p", at))
+        got = site().session().execute(q.limit(ALL_BACKS + 1)).all()
+        rows = [_entry(pp, who) for pp, who in got[:ALL_BACKS]]
+        tiles = [c for c in cards(rows, me, words=False) if c and c["sk"]]
+        return tiles, (_cursor(rows[-1]) if len(got) > ALL_BACKS and rows else None)
+
+    @bp.get("/p/<public_id>/draw-backs")
+    @_rests()
+    def post_backs(public_id):
+        """SEE ALL, THE PAGE OF EVERY DRAW-BACK ON A POST (the owner's C, Nov
+        27, to the Every draw-back mock): what "See all" by the strip's label
+        opens past its twelve. Every draw-back this viewer is shown on it
+        (backs_on: the strip's rules, her hidden ones hers alone, faded, with
+        their eyes), newest first, two across on a phone and four on a desk,
+        each its drawing and who drew back, opening its own page; ALL_BACKS
+        at a time, then Load more. Its arrow goes back to the post. As gone
+        as the post to anybody it is gone to."""
+        got = _seen_post(public_id)
+        if got is None:
+            return _page("post_gone.html", 404, here="post")
+        card, me = got
+        tiles, nxt = _backs_page(card, me, None) if card["kind"] == "p" else ([], None)
+        shown = drawbacks([card["post"]], me)["n"].get(card["post"].id, 0)
+        hidden = hidden_backs(card["post"], me) if card["mine"] else 0
+        return _page("drawbacks.html", here="post", card=card, backs=tiles, backs_next=nxt, backs_shown=shown,
+                     backs_hidden=hidden, token=csrf_token())
+
+    @bp.get("/p/<public_id>/draw-backs/more")
+    @_rests(json_answer=True)
+    def post_backs_more(public_id):
+        """SEE ALL's Load more: the next page of its tiles, {html, next}."""
+        got = _seen_post(public_id)
+        if got is None:
+            return _json_error("gone", 404)
+        at = _uncursor(request.args.get("before") or "")
+        if at is None:
+            return _json_error("bad", 400)
+        card, me = got
+        tiles, nxt = _backs_page(card, me, at)
+        html = render_template("social/_back_tiles.html", backs=tiles, mine=card["mine"], me=me)
+        return jsonify({"html": html, "next": nxt})
 
     @bp.post("/p/<public_id>/delete")
     @_rests(json_answer=True)

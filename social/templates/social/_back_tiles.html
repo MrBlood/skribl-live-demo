@@ -1,0 +1,5 @@
+{#  A page of SEE ALL's tiles, as its Load more sends it (posts.py
+    post_backs_more): the tile the page draws (_backs.html), so one loaded
+    later is the one the page would have shown. #}
+{% from 'social/_backs.html' import back_tile with context %}
+{% for m in backs %}{{ back_tile(m, mine) }}{% endfor %}
